@@ -4,7 +4,10 @@ import Element from "../models/Element"
 const styled = tagName => (...args) => {
   return Element(tagName, css(...args))
 }
+export default styled
 
+/* Shorthands for all valid HTML properties */
+// Thanks to ReactDOMFactories for this handy list!
 styled.a = styled('a')
 styled.abbr = styled('abbr')
 styled.address = styled('address')
@@ -139,5 +142,3 @@ styled.stop = styled('stop')
 styled.svg = styled('svg')
 styled.text = styled('text')
 styled.tspan = styled('tspan')
-
-export default styled
