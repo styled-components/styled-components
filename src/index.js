@@ -15,6 +15,7 @@ import trait from './constructors/trait'
 import media from './constructors/media'
 import nested from './constructors/nested'
 import pseudo from './constructors/pseudo'
+import styled from './constructors/styled'
 
 /* Two main entry points */
 const elem = Element
@@ -24,3 +25,5 @@ export {
   elem, rule, rules, units, nested, concat,
   css, simple, toggle, trait, media, pseudo
 }
+
+export default styled
