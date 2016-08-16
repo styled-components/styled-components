@@ -27,7 +27,8 @@
   "homepage": "https://github.com/css-components/styled-components#readme",
   "dependencies": {
     "aphrodite": "^0.5.0",
-    "fbjs": "^0.8.3"
+    "fbjs": "^0.8.3",
+    "react": "^15.3.0"
   },
   "devDependencies": {
     "babel-core": "^6.13.2",
