@@ -6,7 +6,7 @@ import NestedSelector from "../models/NestedSelector";
 import ValidRuleSetChild from "../models/ValidRuleSetChild";
 
 const declaration = /^\s*([\w-]+):\s*([^;]*);\s*$/
-const startNesting = /^\s*([\w\.:&>][^{]+?)\s*\{\s*$/
+const startNesting = /^\s*([\w\.#:&>][^{]+?)\s*\{\s*$/
 const stopNesting = /^\s*}\s*$/
 
 /* This is a bit complicated.
@@ -66,6 +66,11 @@ export default (strings, ...interpolations) => {
       const newRule = rule(camelize(property), value)
       currentLevel.ruleSet.add(newRule)
     } else if (popNesting) {
+      if (!currentLevel.parent) {
+        console.error(linesAndInterpolations)
+        console.error(currentLevel)
+        throw new Error("CSS Syntax Error — Trying to un-nest one too many times")
+      }
       currentLevel = currentLevel.parent
     }
   }
