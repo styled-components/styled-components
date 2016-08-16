@@ -9,7 +9,10 @@ import ValidRuleSetChild from "./ValidRuleSetChild";
 * Use concat() to create one easily.
 * */
 export default class RuleSet extends ValidRuleSetChild {
-  rules = []
+  constructor() {
+    super()
+    this.rules = []
+  }
 
   add(...other) {
     other.forEach(r => {

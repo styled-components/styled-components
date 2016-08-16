@@ -34,11 +34,11 @@
     "expect": "^1.20.2",
     "mocha": "^3.0.2"
   },
-  "babelConfig": {
-    "plugins": [
-      "babel-preset-es2015",
-      "babel-preset-es2016",
-      "babel-preset-react"
+  "babel": {
+    "presets": [
+      "es2015",
+      "es2016",
+      "react"
     ]
   }
 }
