@@ -1,0 +1,24 @@
+{
+  "name": "styled-components",
+  "version": "0.0.1",
+  "description": "",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/css-components/styled-components.git"
+  },
+  "keywords": [
+    "react",
+    "css",
+    "css-in-js"
+  ],
+  "author": "Glen Maddern",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/css-components/styled-components/issues"
+  },
+  "homepage": "https://github.com/css-components/styled-components#readme"
+}
