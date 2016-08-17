@@ -1,8 +1,8 @@
 import expect from 'expect'
-import css from './css'
-import concat from './concat'
-import rule from './rule'
-import nested from './nested'
+import css from '../css'
+import concat from '../concat'
+import rule from '../rule'
+import nested from '../nested'
 
 describe('css', () => {
   describe('simple inputs', () => {

@@ -18,7 +18,16 @@ import pseudo from './constructors/pseudo'
 import styled from './constructors/styled'
 
 /* Two main entry points */
-const elem = Element
+
+const elem = (...properties) => {
+  const [tagName, ...rules] = ensureTagThenStyles(properties)
+  return Element(tagName, ...rules)  
+}
+
+/* Either ['tagName', ...styles] or [...styles] can be passed in */
+const ensureTagThenStyles = list =>
+  typeof list[0] === 'string' ? list : ['div'].concat(list)
+
 const generateClassnames = (...rules) => new Root(...rules).injectStyles()
 
 export {

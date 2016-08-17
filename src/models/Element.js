@@ -2,12 +2,7 @@ import {createElement} from 'react'
 
 import Root from './Root'
 
-/* Either ['tagName', ...styles] or [...styles] can be passed in */
-const ensureTagThenStyles = list =>
-  typeof list[0] === 'string' ? list : ['div'].concat(list)
-
-const Element = (...properties) => {
-  const [tagName, ...rules] = ensureTagThenStyles(properties)
+const Element = (tagName, ...rules) => {
   const styleRoot = new Root(...rules)
   /* Don't generate the styles now, only on render */
   let className
