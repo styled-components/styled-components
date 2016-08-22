@@ -134,5 +134,25 @@ describe('css', () => {
         )
       ))
     })
+
+    it('should all nesting syntaxes', () => {
+      expect(css`
+        animation: fade-in 1s both;
+        + * {
+          animation: fade-in 1s 1s both;
+        }
+        ~ * {
+          animation: fade-in 1s 2s both;
+        }
+      `).toEqual(concat(
+        rule('animation', 'fade-in 1s both'),
+        nested('+ *',
+          rule('animation', 'fade-in 1s 1s both')
+        ),
+        nested('~ *',
+          rule('animation', 'fade-in 1s 2s both')
+        )
+      ))
+    })
   })
 })
