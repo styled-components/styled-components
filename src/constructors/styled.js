@@ -1,7 +1,12 @@
 import css from "./css"
+import objectCSS from "./object-css"
 import Element from "../models/Element"
+import isPlainObject from "lodash/isPlainObject"
 
 const styled = tagName => (...args) => {
+  if (isPlainObject(args[0])) {
+    return Element(tagName, objectCSS(args[0]))
+  }
   return Element(tagName, css(...args))
 }
 export default styled
