@@ -1,13 +1,15 @@
 import camelize from 'fbjs/lib/camelizeStyleName'
 
 import rule from "./rule"
+import MediaQuery from "../models/MediaQuery"
 import RuleSet from "../models/RuleSet";
 import NestedSelector from "../models/NestedSelector";
 import ValidRuleSetChild from "../models/ValidRuleSetChild";
 
 const declaration = /^\s*([\w-]+):\s*([^;]*);\s*$/
 const startNesting = /^\s*([\w\.#:&>~+][^{]+?)\s*\{\s*$/
-const stopNesting = /^\s*}\s*$/
+const startMedia = /^\s*@media\s*\((.*)\)[^{]+?\s*\{\s*$/
+const stopNestingOrMedia = /^\s*}\s*$/
 
 /* This is a bit complicated.
 *  Basically, you get an array of strings and an array of interpolations.
@@ -49,7 +51,8 @@ export default (strings, ...interpolations) => {
   const processLine = line => {
     const [_, subSelector] = startNesting.exec(line) || []
     const [__, property, value] = declaration.exec(line) || []
-    const popNesting = stopNesting.exec(line)
+    const [___, mediaQuery] = startMedia.exec(line) || []
+    let popNestingOrMedia = stopNestingOrMedia.exec(line)
 
     /* ARE WE STARTING A NESTING? */
     if (subSelector) {
@@ -61,11 +64,21 @@ export default (strings, ...interpolations) => {
         ruleSet: subRules
       }
 
+    /* ARE WE STARTING A MEDIA QUERY? */
+    } else if (mediaQuery) {
+      const subRules = new RuleSet()
+      const media = new MediaQuery(mediaQuery, subRules)
+      currentLevel.ruleSet.add(media)
+      currentLevel = {
+        parent: currentLevel,
+        ruleSet: subRules,
+      }
+
       /* ARE WE A NORMAL RULE? */
     } else if (property && value) {
       const newRule = rule(camelize(property), value)
       currentLevel.ruleSet.add(newRule)
-    } else if (popNesting) {
+    } else if (popNestingOrMedia) {
       if (!currentLevel.parent) {
         console.error(linesAndInterpolations)
         console.error(currentLevel)
