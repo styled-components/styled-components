@@ -3,6 +3,7 @@ import css from '../css'
 import concat from '../concat'
 import rule from '../rule'
 import nested from '../nested'
+import media from '../media'
 
 describe('css', () => {
   describe('simple inputs', () => {
@@ -151,6 +152,22 @@ describe('css', () => {
         ),
         nested('~ *',
           rule('animation', 'fade-in 1s 2s both')
+        )
+      ))
+    })
+  })
+
+  describe('@media', () => {
+    it('should handle a simple media query', () => {
+      expect(css`
+        background: red;
+        @media (max-width: 500px) {
+          background: blue;
+        }
+      `).toEqual(concat(
+        rule('background', 'red'),
+        media('max-width: 500px',
+          rule('background', 'blue')
         )
       ))
     })
