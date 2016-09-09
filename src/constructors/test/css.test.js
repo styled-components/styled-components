@@ -166,7 +166,23 @@ describe('css', () => {
         }
       `).toEqual(concat(
         rule('background', 'red'),
-        media('max-width: 500px',
+        media('(max-width: 500px)',
+          rule('background', 'blue')
+        )
+      ))
+    })
+  })
+
+  describe('@media', () => {
+    it('should handle a complex media query', () => {
+      expect(css`
+        background: red;
+        @media screen and (max-width: 500px) and (min-width: 1000px) {
+          background: blue;
+        }
+      `).toEqual(concat(
+        rule('background', 'red'),
+        media('screen and (max-width: 500px) and (min-width: 1000px)',
           rule('background', 'blue')
         )
       ))

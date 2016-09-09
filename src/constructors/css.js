@@ -8,7 +8,7 @@ import ValidRuleSetChild from "../models/ValidRuleSetChild";
 
 const declaration = /^\s*([\w-]+):\s*([^;]*);\s*$/
 const startNesting = /^\s*([\w\.#:&>~+][^{]+?)\s*\{\s*$/
-const startMedia = /^\s*@media\s*\((.*)\)[^{]+?\s*\{\s*$/
+const startMedia = /^\s*@media\s+([^{]+?)\s*\{\s*$/
 const stopNestingOrMedia = /^\s*}\s*$/
 
 /* This is a bit complicated.
