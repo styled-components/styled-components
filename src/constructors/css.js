@@ -1,5 +1,5 @@
 import camelize from 'fbjs/lib/camelizeStyleName'
-import isObject from "lodash/isObject"
+import isPlainObject from "lodash/isPlainObject"
 
 import rule from "./rule"
 import MediaQuery from "../models/MediaQuery"
@@ -33,7 +33,7 @@ const interleave = (strings, interpolations) => {
       linesAndInterpolations.push(interp)
       if (strings[i + 1]) linesAndInterpolations.push(...strings[i + 1].split('\n'))
     /* CSS-in-JS */
-    } else if (isObject(interp)) {
+  } else if (isPlainObject(interp)) {
       Object.keys(interp).forEach((prop) => {
         linesAndInterpolations.push(`${prop}: ${interp[prop]};`)
       })
