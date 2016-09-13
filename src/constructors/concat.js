@@ -1,4 +1,4 @@
-import RuleSet from "../models/RuleSet"
+import RuleSet from '../models/RuleSet'
 
 /* Deliberately making the RuleSet constructor awkward to encourage
 *  people to use this helper instead, so I can change out the implementation

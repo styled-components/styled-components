@@ -1,4 +1,4 @@
-import ValidRuleSetChild from "./ValidRuleSetChild";
+import ValidRuleSetChild from './ValidRuleSetChild'
 /*
 * Basic leaf node of a style tree
 * */

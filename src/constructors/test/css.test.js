@@ -16,24 +16,24 @@ describe('css', () => {
     it('should handle a single simple rule', () => {
       const expected = concat(
         rule('background', 'red')
-      );
+      )
       expect(css`background:red;`).toEqual(expected)
-      expect(css`background: red;`).toEqual(expected);
+      expect(css`background: red;`).toEqual(expected)
     })
 
     it('should handle dashed rules', () => {
       const expected = concat(
         rule('flexGrow', '1')
-      );
+      )
       expect(css`flex-grow: 1;`).toEqual(expected)
-      expect(css`flexGrow: 1;`).toEqual(expected);
+      expect(css`flexGrow: 1;`).toEqual(expected)
     })
 
     it('should handle multiple lines', () => {
       const expected = concat(
         rule('flexGrow', '1'),
         rule('flexShrink', '0')
-      );
+      )
       expect(css`flex-grow: 1;\nflex-shrink: 0;`).toEqual(expected)
     })
 
@@ -42,7 +42,7 @@ describe('css', () => {
         rule('flexGrow', '1'),
         rule('flexShrink', '0'),
         rule('flexGrow', '0')
-      );
+      )
       expect(css`flex-grow: 1;\nflex-shrink: 0;\nflex-grow: 0;`).toEqual(expected)
     })
   })
@@ -54,9 +54,9 @@ describe('css', () => {
         img {
           background: white;
         }
-      `).toEqual(concat(
-        rule('background', 'red'),
-        nested('img',
+        `).toEqual(concat(
+          rule('background', 'red'),
+          nested('img',
           rule('background', 'white')
         )
       ))
@@ -68,9 +68,9 @@ describe('css', () => {
         > img + img, .push-left {
           margin-left: 1rem;
         }
-      `).toEqual(concat(
-        rule('margin', '0 auto'),
-        nested('> img + img, .push-left',
+        `).toEqual(concat(
+          rule('margin', '0 auto'),
+          nested('> img + img, .push-left',
           rule('marginLeft', '1rem')
         )
       ))
@@ -82,9 +82,9 @@ describe('css', () => {
         &:hover {
           text-decoration: underline;
         }
-      `).toEqual(concat(
-        rule('textDecoration', 'none'),
-        nested('&:hover',
+        `).toEqual(concat(
+          rule('textDecoration', 'none'),
+          nested('&:hover',
           rule('textDecoration', 'underline')
         )
       ))
@@ -96,9 +96,9 @@ describe('css', () => {
         &:hover, &:active, :root.ios & {
           text-decoration: underline;
         }
-      `).toEqual(concat(
-        rule('textDecoration', 'none'),
-        nested('&:hover, &:active, :root.ios &',
+        `).toEqual(concat(
+          rule('textDecoration', 'none'),
+          nested('&:hover, &:active, :root.ios &',
           rule('textDecoration', 'underline')
         )
       ))
@@ -119,23 +119,24 @@ describe('css', () => {
             font-weight: normal;
           }
         }
-      `).toEqual(concat(
-        rule('position', 'relative'),
-        nested('img',
-          rule('position', 'absolute'),
-          nested('&.-in-flow',
-            rule('position', 'static')
-          )
-        ),
-        nested('> span',
-          rule('fontWeight', 'bold'),
-          nested('html.ios &',
-            rule('fontWeight', 'normal')
+      `).toEqual(
+        concat(
+          rule('position', 'relative'),
+          nested('img',
+            rule('position', 'absolute'),
+            nested('&.-in-flow',
+              rule('position', 'static')
+            )
+          ),
+          nested('> span',
+            rule('fontWeight', 'bold'),
+            nested('html.ios &',
+              rule('fontWeight', 'normal')
+            )
           )
         )
-      ))
+      )
     })
-
     it('should all nesting syntaxes', () => {
       expect(css`
         animation: fade-in 1s both;
@@ -145,61 +146,63 @@ describe('css', () => {
         ~ * {
           animation: fade-in 1s 2s both;
         }
-      `).toEqual(concat(
-        rule('animation', 'fade-in 1s both'),
-        nested('+ *',
-          rule('animation', 'fade-in 1s 1s both')
-        ),
-        nested('~ *',
-          rule('animation', 'fade-in 1s 2s both')
+      `).toEqual(
+        concat(
+          rule('animation', 'fade-in 1s both'),
+          nested('+ *',
+            rule('animation', 'fade-in 1s 1s both')
+          ),
+          nested('~ *',
+            rule('animation', 'fade-in 1s 2s both')
+          )
         )
-      ))
+      )
     })
   })
 
   describe('in JS', () => {
     it('should be ok with nonce inputs', () => {
-  		expect(css`${{}}`.rules).toEqual([])
-  		expect(css`${undefined}`.rules).toEqual([])
-  		expect(css`${null}`.rules).toEqual([])
-  	})
+      expect(css`${{}}`.rules).toEqual([])
+      expect(css`${undefined}`.rules).toEqual([])
+      expect(css`${null}`.rules).toEqual([])
+    })
 
-  	it('should handle a simple rule', () => {
-  		expect(css`${{
-  			backgroundColor: 'blue'
-  		}}`).toEqual(concat(
+    it('should handle a simple rule', () => {
+      expect(css`${{
+        backgroundColor: 'blue',
+      }}`).toEqual(concat(
         rule('backgroundColor', 'blue')
       ))
-  	})
+    })
 
-  	it('should handle dashed rules', () => {
-  		expect(css`${{
-  			'background-color': 'blue'
-  		}}`).toEqual(concat(
+    it('should handle dashed rules', () => {
+      expect(css`${{
+        'background-color': 'blue',
+      }}`).toEqual(concat(
         rule('backgroundColor', 'blue')
       ))
-  	})
+    })
 
-  	it('should handle multiple rules', () => {
-  		expect(css`${{
-  			backgroundColor: 'blue',
-  			border: 'none',
-  		}}`).toEqual(concat(
+    it('should handle multiple rules', () => {
+      expect(css`${{
+        backgroundColor: 'blue',
+        border: 'none',
+      }}`).toEqual(concat(
         rule('backgroundColor', 'blue'),
         rule('border', 'none')
       ))
-  	})
+    })
 
-  	it('should not pass through duplicates', () => {
-  		expect(css`${{
-  			backgroundColor: 'blue',
-  			border: 'none',
-  			backgroundColor: 'red',
-  		}}`).toEqual(concat(
+    it('should not pass through duplicates', () => {
+      expect(css`${{
+        backgroundColor: 'blue',
+        border: 'none',
+        backgroundColor: 'red', // eslint-disable-line no-dupe-keys
+      }}`).toEqual(concat(
         rule('backgroundColor', 'red'),
         rule('border', 'none')
       ))
-  	})
+    })
   })
 
   describe('@media', () => {
@@ -209,9 +212,9 @@ describe('css', () => {
         @media (max-width: 500px) {
           background: blue;
         }
-      `).toEqual(concat(
-        rule('background', 'red'),
-        media('(max-width: 500px)',
+        `).toEqual(concat(
+          rule('background', 'red'),
+          media('(max-width: 500px)',
           rule('background', 'blue')
         )
       ))
@@ -223,9 +226,9 @@ describe('css', () => {
         @media screen and (max-width: 500px) and (min-width: 1000px) {
           background: blue;
         }
-      `).toEqual(concat(
-        rule('background', 'red'),
-        media('screen and (max-width: 500px) and (min-width: 1000px)',
+        `).toEqual(concat(
+          rule('background', 'red'),
+          media('screen and (max-width: 500px) and (min-width: 1000px)',
           rule('background', 'blue')
         )
       ))

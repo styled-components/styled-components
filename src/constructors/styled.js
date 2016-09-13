@@ -1,6 +1,6 @@
-import css from "./css"
-import Element from "../models/Element"
-import isPlainObject from "lodash/isPlainObject"
+import isPlainObject from 'lodash/isPlainObject'
+import css from './css'
+import Element from '../models/Element'
 
 const styled = tagName => (...args) => {
   if (isPlainObject(args[0])) {

@@ -1,11 +1,11 @@
 import camelize from 'fbjs/lib/camelizeStyleName'
-import isPlainObject from "lodash/isPlainObject"
+import isPlainObject from 'lodash/isPlainObject'
 
-import rule from "./rule"
-import MediaQuery from "../models/MediaQuery"
-import RuleSet from "../models/RuleSet";
-import NestedSelector from "../models/NestedSelector";
-import ValidRuleSetChild from "../models/ValidRuleSetChild";
+import rule from './rule'
+import MediaQuery from '../models/MediaQuery'
+import RuleSet from '../models/RuleSet'
+import NestedSelector from '../models/NestedSelector'
+import ValidRuleSetChild from '../models/ValidRuleSetChild'
 
 const declaration = /^\s*([\w-]+):\s*([^;]*);\s*$/
 const startNesting = /^\s*([\w\.#:&>~+][^{]+?)\s*\{\s*$/
@@ -33,7 +33,7 @@ const interleave = (strings, interpolations) => {
       linesAndInterpolations.push(interp)
       if (strings[i + 1]) linesAndInterpolations.push(...strings[i + 1].split('\n'))
     /* CSS-in-JS */
-  } else if (isPlainObject(interp)) {
+    } else if (isPlainObject(interp)) {
       Object.keys(interp).forEach((prop) => {
         linesAndInterpolations.push(`${prop}: ${interp[prop]};`)
       })
@@ -43,22 +43,22 @@ const interleave = (strings, interpolations) => {
       linesAndInterpolations.push(...(lastStr + interp + (strings[i + 1] || '')).split('\n'))
     }
   })
-  return linesAndInterpolations;
+  return linesAndInterpolations
 }
 
 export default (strings, ...interpolations) => {
   /* A data structure we can use to traverse the CSS */
   let currentLevel = {
     parent: null,
-    ruleSet: new RuleSet()
+    ruleSet: new RuleSet(),
   }
-  var linesAndInterpolations = interleave(strings, interpolations);
+  const linesAndInterpolations = interleave(strings, interpolations)
 
-  const processLine = line => {
+  const processLine = (line) => {
     const [_, subSelector] = startNesting.exec(line) || []
     const [__, property, value] = declaration.exec(line) || []
     const [___, mediaQuery] = startMedia.exec(line) || []
-    let popNestingOrMedia = stopNestingOrMedia.exec(line)
+    const popNestingOrMedia = stopNestingOrMedia.exec(line)
 
     /* ARE WE STARTING A NESTING? */
     if (subSelector) {
@@ -67,7 +67,7 @@ export default (strings, ...interpolations) => {
       currentLevel.ruleSet.add(nesting)
       currentLevel = {
         parent: currentLevel,
-        ruleSet: subRules
+        ruleSet: subRules,
       }
 
     /* ARE WE STARTING A MEDIA QUERY? */
@@ -88,13 +88,13 @@ export default (strings, ...interpolations) => {
       if (!currentLevel.parent) {
         console.error(linesAndInterpolations)
         console.error(currentLevel)
-        throw new Error("CSS Syntax Error — Trying to un-nest one too many times")
+        throw new Error('CSS Syntax Error — Trying to un-nest one too many times')
       }
       currentLevel = currentLevel.parent
     }
   }
 
-  const processLineOrInterp = lineOrInterp => {
+  const processLineOrInterp = (lineOrInterp) => {
     if (typeof lineOrInterp === 'string') {
       processLine(lineOrInterp)
     } else if (lineOrInterp instanceof ValidRuleSetChild) {

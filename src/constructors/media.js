@@ -1,6 +1,4 @@
-import concat from "./concat"
-import MediaQuery from "../models/MediaQuery";
+import concat from './concat'
+import MediaQuery from '../models/MediaQuery'
 
-export default (query, ...rules) => {
-  return new MediaQuery(query, concat(...rules))
-}
+export default (query, ...rules) => new MediaQuery(query, concat(...rules))

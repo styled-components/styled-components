@@ -1,6 +1,23 @@
 {
   "extends": "airbnb",
   "rules": {
-    "semi": [2, "never"]
+    "semi": [2, "never"],
+    "class-methods-use-this": 0,
+    "symbol-description": 0,
+    "no-unused-vars": [2, { "varsIgnorePattern": "^_+$" }],
+    "import/no-extraneous-dependencies": 0
+  },
+  "env": {
+    "mocha": true,
+    "browser": "true"
+  },
+  "parserOptions": {
+    "ecmaVersion": 7,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "impliedStrict": true,
+      "jsx": true,
+      "experimentalObjectRestSpread": true
+    }
   }
 }

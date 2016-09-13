@@ -1,4 +1,4 @@
-import {createElement} from 'react'
+import { createElement } from 'react'
 
 import Root from './Root'
 
@@ -9,11 +9,11 @@ const Element = (tagName, ...rules) => {
 
   /* Return a stateless functional component that simply renders
   * a HTML element with our styles applied. */
-  return props => {
+  return (props) => {
     /* Need to be able to regenerate styles if things change, but for now everything's static */
     if (!className) className = styleRoot.injectStyles()
     return createElement(tagName, Object.assign({}, props, {
-      className: [props.className, className].join(' ')
+      className: [props.className, className].join(' '),
     }))
   }
 }

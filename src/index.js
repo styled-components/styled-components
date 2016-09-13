@@ -8,7 +8,7 @@ import trait from './constructors/trait'
 import styled from './constructors/styled'
 
 export {
-  css, toggle, trait
+  css, toggle, trait,
 }
 
 export default styled

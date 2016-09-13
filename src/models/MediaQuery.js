@@ -1,4 +1,4 @@
-import ValidRuleSetChild from "./ValidRuleSetChild";
+import ValidRuleSetChild from './ValidRuleSetChild'
 
 export default class MediaQuery extends ValidRuleSetChild {
   constructor(query, ruleSet) {
@@ -9,7 +9,7 @@ export default class MediaQuery extends ValidRuleSetChild {
 
   /* Wrap the media query in brackets if needed. */
   fullQuery() {
-    return '@media ' + (/^\(|\)$/.exec(this.query) ? this.query : `(${this.query})`)
+    return `@media ${(/^\(|\)$/.exec(this.query) ? this.query : `(${this.query})`)}`
   }
 
   /* No nesting! */

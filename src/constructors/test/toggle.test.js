@@ -17,7 +17,7 @@ describe('toggle', () => {
 
   it('should always inject default even if no input passed', () => {
     const namespace = toggle('namespace', {
-      default: defaultRule
+      default: defaultRule,
     })
     expect(namespace()).toEqual(concat(defaultRule))
     expect(namespace('')).toEqual(concat(defaultRule))
@@ -28,7 +28,7 @@ describe('toggle', () => {
     const namespace = toggle('namespace', {
       default: defaultRule,
       a: optionA,
-      b: optionB
+      b: optionB,
     })
     expect(namespace()).toEqual(concat(defaultRule))
     expect(namespace('a')).toEqual(concat(defaultRule, optionA))
@@ -40,7 +40,7 @@ describe('toggle', () => {
   it('should be ok without a default', () => {
     const namespace = toggle('namespace', {
       a: optionA,
-      b: optionB
+      b: optionB,
     })
     expect(namespace()).toEqual(concat())
     expect(namespace('a')).toEqual(concat(optionA))
@@ -51,7 +51,7 @@ describe('toggle', () => {
 
   it('should throw if passed something not present', () => {
     const namespace = toggle('namespace', {
-      a: optionA
+      a: optionA,
     })
     expect(() => namespace('b')).toThrow("namespace: Unknown value 'b'. Valid values are:\na")
   })
@@ -59,7 +59,7 @@ describe('toggle', () => {
   it('should not mention the default as a valid', () => {
     const namespace = toggle('namespace', {
       default: defaultRule,
-      a: optionA
+      a: optionA,
     })
     expect(() => namespace('b')).toThrow("namespace: Unknown value 'b'. Valid values are:\na")
   })

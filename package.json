@@ -29,6 +29,7 @@
   "dependencies": {
     "aphrodite": "^0.5.0",
     "fbjs": "^0.8.3",
+    "lodash": "^4.15.0",
     "react": "^15.3.0"
   },
   "devDependencies": {

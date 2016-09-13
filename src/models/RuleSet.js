@@ -1,7 +1,7 @@
-import Rule from "./Rule"
-import MediaQuery from "./MediaQuery"
-import NestedSelector from "./NestedSelector";
-import ValidRuleSetChild from "./ValidRuleSetChild";
+import Rule from './Rule'
+import MediaQuery from './MediaQuery'
+import NestedSelector from './NestedSelector'
+import ValidRuleSetChild from './ValidRuleSetChild'
 
 /*
 * A RuleSet stores the leaf nodes that apply to some level
@@ -15,7 +15,7 @@ export default class RuleSet extends ValidRuleSetChild {
   }
 
   add(...other) {
-    other.forEach(r => {
+    other.forEach((r) => {
       if (!r) return
       if (r instanceof RuleSet) this.rules.push(...r.rules)
       else if (r instanceof ValidRuleSetChild) this.rules.push(r)
@@ -29,7 +29,7 @@ export default class RuleSet extends ValidRuleSetChild {
   flatten() {
     const rules = {}
     const fragments = []
-    this.rules.forEach(r => {
+    this.rules.forEach((r) => {
       if (r instanceof Rule) {
         rules[r.property] = r.value
       } else if (r instanceof MediaQuery) {

@@ -1,4 +1,4 @@
-import ValidRuleSetChild from "./ValidRuleSetChild";
+import ValidRuleSetChild from './ValidRuleSetChild'
 
 export default class NestedSelector extends ValidRuleSetChild {
   constructor(selector, ruleSet) {
