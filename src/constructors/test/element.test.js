@@ -1,3 +1,4 @@
+import { isValidElement } from 'react'
 import proxyquire from 'proxyquire'
 import expect from 'expect'
 
@@ -22,35 +23,65 @@ describe('element', () => {
     constructorSpy.restore()
   })
 
-  it('should return a stateless functional component', () => {
-    expect(element('div')).toBeA('function')
-  })
-
-  it('should add the rules to the style root on creation', () => {
-    const rule1 = 'background: "red";'
-    const rule2 = 'color: "blue";'
-    element('div', rule1, rule2)
-    expect(constructorSpy).toHaveBeenCalled()
-    expect(constructorSpy).toHaveBeenCalledWith(rule1, rule2)
-  })
-
-  it('should call injectStyles of the style root on render', () => {
-    // Pretend a react render is happening
-    element('div')({})
-    expect(injectStylesSpy).toHaveBeenCalled()
-  })
-
-  it('should adopt the classname of the injectStyles call', () => {
-    // Pretend a react render is happening
-    const renderedComp = element('div')({})
-    expect(renderedComp.props.className).toEqual(` ${generatedClassname}`)
-  })
-
-  it('should adopt a passed in className', () => {
-    const className = 'other-classname'
-    const renderedComp = element('div')({
-      className,
+  describe('development', () => {
+    beforeEach(() => {
+      global.process.env.NODE_ENV = 'development'
     })
-    expect(renderedComp.props.className).toEqual(`${className} ${generatedClassname}`)
+
+    afterEach(() => {
+      global.process.env.NODE_ENV = 'test'
+    })
+
+    it('should return a ReactElement', () => {
+      expect(isValidElement(element('div'))).toBe(true)
+    })
+
+    it('should call injectStyles immediately', () => {
+      element('div')
+      expect(injectStylesSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe('production', () => {
+    beforeEach(() => {
+      global.process.env.NODE_ENV = 'production'
+    })
+
+    afterEach(() => {
+      global.process.env.NODE_ENV = 'test'
+    })
+
+    it('should return a stateless functional component', () => {
+      expect(isValidElement(element('div'))).toBe(false)
+      expect(element('div')).toBeA('function')
+    })
+
+    it('should add the rules to the style root on creation', () => {
+      const rule1 = 'background: "red";'
+      const rule2 = 'color: "blue";'
+      element('div', rule1, rule2)
+      expect(constructorSpy).toHaveBeenCalled()
+      expect(constructorSpy).toHaveBeenCalledWith(rule1, rule2)
+    })
+
+    it('should call injectStyles of the style root on render', () => {
+      // Pretend a react render is happening
+      element('div')({})
+      expect(injectStylesSpy).toHaveBeenCalled()
+    })
+
+    it('should adopt the classname of the injectStyles call on render', () => {
+      // Pretend a react render is happening
+      const renderedComp = element('div')({})
+      expect(renderedComp.props.className).toEqual(` ${generatedClassname}`)
+    })
+
+    it('should adopt a passed in className on render', () => {
+      const className = 'other-classname'
+      const renderedComp = element('div')({
+        className,
+      })
+      expect(renderedComp.props.className).toEqual(`${className} ${generatedClassname}`)
+    })
   })
 })
