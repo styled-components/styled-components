@@ -1,16 +1,14 @@
-/* Higher-order constructors */
-import concat from './constructors/concat'
+/**
+ * Export constructors for consumption by users
+ */
+
 import css from './constructors/css'
-import rule from './constructors/rule'
 import toggle from './constructors/toggle'
 import trait from './constructors/trait'
-import media from './constructors/media'
-import nested from './constructors/nested'
-import pseudo from './constructors/pseudo'
 import styled from './constructors/styled'
 
 export {
-  rule, nested, concat, css, toggle, trait, media, pseudo
+  css, toggle, trait
 }
 
 export default styled
