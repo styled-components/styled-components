@@ -3,6 +3,7 @@ import css from '../css'
 import concat from '../concat'
 import rule from '../rule'
 import nested from '../nested'
+import media from '../media'
 
 describe('css', () => {
   describe('simple inputs', () => {
@@ -176,7 +177,7 @@ describe('css', () => {
   			'background-color': 'blue'
   		}}`).toEqual(concat(
         rule('backgroundColor', 'blue')
-      ));
+      ))
   	})
 
   	it('should handle multiple rules', () => {
@@ -186,7 +187,7 @@ describe('css', () => {
   		}}`).toEqual(concat(
         rule('backgroundColor', 'blue'),
         rule('border', 'none')
-      ));
+      ))
   	})
 
   	it('should not pass through duplicates', () => {
@@ -197,7 +198,37 @@ describe('css', () => {
   		}}`).toEqual(concat(
         rule('backgroundColor', 'red'),
         rule('border', 'none')
-      ));
+      ))
   	})
+  })
+
+  describe('@media', () => {
+    it('should handle a simple media query', () => {
+      expect(css`
+        background: red;
+        @media (max-width: 500px) {
+          background: blue;
+        }
+      `).toEqual(concat(
+        rule('background', 'red'),
+        media('(max-width: 500px)',
+          rule('background', 'blue')
+        )
+      ))
+    })
+
+    it('should handle a complex media query', () => {
+      expect(css`
+        background: red;
+        @media screen and (max-width: 500px) and (min-width: 1000px) {
+          background: blue;
+        }
+      `).toEqual(concat(
+        rule('background', 'red'),
+        media('screen and (max-width: 500px) and (min-width: 1000px)',
+          rule('background', 'blue')
+        )
+      ))
+    })
   })
 })
