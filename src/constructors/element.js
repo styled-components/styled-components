@@ -9,13 +9,15 @@ const element = (tagName, ...rules) => {
 
   /* Return a stateless functional component that simply renders
   * a HTML element with our styles applied. */
-  return (props) => {
+  const component = (props) => {
     /* Need to be able to regenerate styles if things change, but for now everything's static */
     if (!className) className = styleRoot.injectStyles()
     return createElement(tagName, Object.assign({}, props, {
       className: [props.className, className].join(' '),
     }))
   }
+  component.displayName = `Styled(${tagName.displayName || tagName})`
+  return component
 }
 
 export default element
