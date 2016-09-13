@@ -1,20 +1,20 @@
 import expect from 'expect'
 import styled from '../styled'
-import Element from '../../models/Element'
+import element from '../element'
 import css from '../css'
 
 describe('styled', () => {
   it('should handle template strings', () => {
     const tagName = 'div'
     expect(styled(tagName)`background-color: blue;`)
-    .toEqual(new Element(tagName, css('background-color: blue')))
+    .toEqual(element(tagName, css('background-color: blue')))
   })
 
   it('should handle tagged template strings', () => {
     const tagName = 'div'
     const bgColor = 'blue'
     expect(styled(tagName)`background-color: ${bgColor};`)
-    .toEqual(new Element(tagName, css`background-color: ${bgColor};`))
+    .toEqual(element(tagName, css`background-color: ${bgColor};`))
   })
 
   it('should handle CSS in JS', () => {
@@ -22,7 +22,7 @@ describe('styled', () => {
     const styles = {
       backgroundColor: 'blue',
     }
-    expect(styled(tagName)(styles)).toEqual(new Element(tagName, css`${styles}`))
+    expect(styled(tagName)(styles)).toEqual(element(tagName, css`${styles}`))
   })
 
   it('should have all valid HTML5 elements defined as properties', () => {

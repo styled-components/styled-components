@@ -1,8 +1,8 @@
 import { createElement } from 'react'
 
-import Root from './Root'
+import Root from '../models/Root'
 
-const Element = (tagName, ...rules) => {
+const element = (tagName, ...rules) => {
   const styleRoot = new Root(...rules)
   /* Don't generate the styles now, only on render */
   let className
@@ -18,4 +18,4 @@ const Element = (tagName, ...rules) => {
   }
 }
 
-export default Element
+export default element
