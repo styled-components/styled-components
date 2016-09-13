@@ -157,6 +157,51 @@ describe('css', () => {
     })
   })
 
+  describe('in JS', () => {
+    it('should be ok with nonce inputs', () => {
+  		expect(css`${{}}`.rules).toEqual([])
+  		expect(css`${undefined}`.rules).toEqual([])
+  		expect(css`${null}`.rules).toEqual([])
+  	})
+
+  	it('should handle a simple rule', () => {
+  		expect(css`${{
+  			backgroundColor: 'blue'
+  		}}`).toEqual(concat(
+        rule('backgroundColor', 'blue')
+      ))
+  	})
+
+  	it('should handle dashed rules', () => {
+  		expect(css`${{
+  			'background-color': 'blue'
+  		}}`).toEqual(concat(
+        rule('backgroundColor', 'blue')
+      ))
+  	})
+
+  	it('should handle multiple rules', () => {
+  		expect(css`${{
+  			backgroundColor: 'blue',
+  			border: 'none',
+  		}}`).toEqual(concat(
+        rule('backgroundColor', 'blue'),
+        rule('border', 'none')
+      ))
+  	})
+
+  	it('should not pass through duplicates', () => {
+  		expect(css`${{
+  			backgroundColor: 'blue',
+  			border: 'none',
+  			backgroundColor: 'red',
+  		}}`).toEqual(concat(
+        rule('backgroundColor', 'red'),
+        rule('border', 'none')
+      ))
+  	})
+  })
+
   describe('@media', () => {
     it('should handle a simple media query', () => {
       expect(css`
@@ -171,9 +216,7 @@ describe('css', () => {
         )
       ))
     })
-  })
 
-  describe('@media', () => {
     it('should handle a complex media query', () => {
       expect(css`
         background: red;
