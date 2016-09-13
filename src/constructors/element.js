@@ -4,11 +4,16 @@ import Root from '../models/Root'
 
 const element = (tagName, ...rules) => {
   const styleRoot = new Root(...rules)
-  /* Don't generate the styles now, only on render */
-  let className
+  /* In development directly return the ReactElement for easier debugging */
+  if (process.env.NODE_ENV !== 'production') {
+    const className = styleRoot.injectStyles()
+    return createElement(tagName, {
+      className,
+    })
+  }
 
-  /* Return a stateless functional component that simply renders
-  * a HTML element with our styles applied. */
+  /* In prod return a stateless functional component that generates the styles on render for SSR. */
+  let className
   return (props) => {
     /* Need to be able to regenerate styles if things change, but for now everything's static */
     if (!className) className = styleRoot.injectStyles()
