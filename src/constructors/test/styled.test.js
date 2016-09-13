@@ -2,7 +2,6 @@ import expect from "expect"
 import styled from "../styled"
 import Element from "../../models/Element"
 import css from "../css"
-import objectCSS from "../object-css"
 
 describe('styled', () => {
 	it('should handle template strings', () => {
@@ -23,7 +22,7 @@ describe('styled', () => {
 		const styles = {
 			backgroundColor: 'blue',
 		};
-		expect(styled(tagName)(styles)).toEqual(new Element(tagName, objectCSS(styles)))
+		expect(styled(tagName)(styles)).toEqual(new Element(tagName, css`${styles}`))
 	})
 
 	it('should have all valid HTML5 elements defined as properties', () => {
