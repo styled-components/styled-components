@@ -6,7 +6,7 @@
   "scripts": {
     "build": "babel --out-dir lib src",
     "build:watch": "npm run build -- --watch",
-    "test": "mocha 'src/**/*.test.js' --require babel-core/register",
+    "test": "mocha \"./src/**/*.test.js\" --require babel-core/register",
     "test:watch": "npm run test -- --watch",
     "lint": "eslint src",
     "prepublish": "rm -rf lib/* && npm run build"
@@ -33,6 +33,7 @@
     "react": "^15.3.0"
   },
   "devDependencies": {
+    "babel-cli": "^6.14.0",
     "babel-core": "^6.13.2",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-preset-es2015": "^6.13.2",
