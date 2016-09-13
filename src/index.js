@@ -1,6 +1,3 @@
-import Element from './models/Element'
-import Root from "./models/Root";
-
 /* Wrap the base functions in objects and export*/
 import * as rules from './rules'
 import * as units from './units'
@@ -17,21 +14,8 @@ import nested from './constructors/nested'
 import pseudo from './constructors/pseudo'
 import styled from './constructors/styled'
 
-/* Two main entry points */
-
-const elem = (...properties) => {
-  const [tagName, ...rules] = ensureTagThenStyles(properties)
-  return Element(tagName, ...rules)  
-}
-
-/* Either ['tagName', ...styles] or [...styles] can be passed in */
-const ensureTagThenStyles = list =>
-  typeof list[0] === 'string' ? list : ['div'].concat(list)
-
-const generateClassnames = (...rules) => new Root(...rules).injectStyles()
-
 export {
-  elem, rule, rules, units, nested, concat,
+  rule, rules, units, nested, concat,
   css, simple, toggle, trait, media, pseudo
 }
 
