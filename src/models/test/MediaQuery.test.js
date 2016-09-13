@@ -1,5 +1,5 @@
 import expect from 'expect'
-import MediaQuery from './MediaQuery'
+import MediaQuery from '../MediaQuery'
 
 describe('MediaQuery', () => {
   describe('#fullQuery', () => {
