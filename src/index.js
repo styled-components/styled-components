@@ -1,6 +1,5 @@
 /* Wrap the base functions in objects and export*/
 import * as rules from './rules'
-import * as units from './units'
 
 /* Higher-order constructors */
 import concat from './constructors/concat'
@@ -15,7 +14,7 @@ import pseudo from './constructors/pseudo'
 import styled from './constructors/styled'
 
 export {
-  rule, rules, units, nested, concat,
+  rule, rules, nested, concat,
   css, simple, toggle, trait, media, pseudo
 }
 
