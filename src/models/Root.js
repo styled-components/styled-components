@@ -25,8 +25,8 @@ export default class Root {
   }
 
   /* This is aphrodite-specifc but could be changed up */
-  injectStyles() {
-    const { rules, fragments } = this.ruleSet.flatten()
+  injectStyles(context) {
+    const { rules, fragments } = this.ruleSet.flatten(context)
     const className = `_${hashObject({ rules, fragments })}`
     injectCss(`.${className}`, rules, fragments)
     return className

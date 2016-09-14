@@ -4,16 +4,14 @@ import Root from '../models/Root'
 
 const element = (tagName, ...rules) => {
   const styleRoot = new Root(...rules)
-  /* Don't generate the styles now, only on render */
-  let className
+  console.log(styleRoot)
 
   /* Return a stateless functional component that simply renders
   * a HTML element with our styles applied. */
   const component = (props) => {
     /* Need to be able to regenerate styles if things change, but for now everything's static */
-    if (!className) className = styleRoot.injectStyles()
     return createElement(tagName, Object.assign({}, props, {
-      className: [props.className, className].join(' '),
+      className: [props.className, styleRoot.injectStyles(props)].join(' '),
     }))
   }
   component.displayName = `Styled(${tagName.displayName || tagName})`
