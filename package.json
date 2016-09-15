@@ -45,7 +45,8 @@
     "eslint-plugin-jsx-a11y": "^2.2.2",
     "eslint-plugin-react": "^6.2.1",
     "expect": "^1.20.2",
-    "mocha": "^3.0.2"
+    "mocha": "^3.0.2",
+    "proxyquire": "^1.7.10"
   },
   "babel": {
     "presets": [
