@@ -1,15 +1,22 @@
+// @flow
 import { hashObject } from 'aphrodite/lib/util'
 import { injectStyleOnce } from 'aphrodite/lib/inject'
 import concat from '../constructors/concat'
+import ValidRuleSetChild from './ValidRuleSetChild'
+import type RuleSet, { FragmentType } from './RuleSet'
 
-const joinSelectors = (outer, inner) => outer.split(/\s*,\s*/)
+const joinSelectors = (outer: string, inner: string): string => outer.split(/\s*,\s*/)
   .map(outerPart => console.log(`"${outer}" — "${outerPart}"`) || (
       /&/.exec(inner) ? inner.replace(/&/g, outerPart) : `${outerPart} ${inner}`
     ).replace(/\s+$/, '')
   ).join(', ')
 
 /* Recursive CSS injector */
-const injectCss = (selector, rules, fragments) => {
+const injectCss = (
+  selector: string,
+  rules: Array<ValidRuleSetChild>,
+  fragments: Array<FragmentType>
+) => {
   injectStyleOnce(selector, selector, [rules], false)
   fragments.forEach((fragment) => {
     injectCss(joinSelectors(selector, fragment.selector), fragment.rules, fragment.fragments)
@@ -20,12 +27,14 @@ const injectCss = (selector, rules, fragments) => {
  * The root node of a styling tree.
  * */
 export default class Root {
-  constructor(...rules) {
+  ruleSet: RuleSet;
+
+  constructor(...rules: Array<typeof ValidRuleSetChild>) {
     this.ruleSet = concat(...rules)
   }
 
   /* This is aphrodite-specifc but could be changed up */
-  injectStyles() {
+  injectStyles(): string {
     const { rules, fragments } = this.ruleSet.flatten()
     const className = `_${hashObject({ rules, fragments })}`
     injectCss(`.${className}`, rules, fragments)

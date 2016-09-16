@@ -1,3 +1,4 @@
+// @flow
 import concat from './concat'
 
 /*
@@ -13,8 +14,12 @@ import concat from './concat'
 * flex('inline vertical') => `display: flex; display: inline-flex; flex-direction: column;`
 * */
 
-export default (name, options) => (valueString = '') => {
-  const throwUnknown = (unknownValue) => {
+type Options = {
+  [name: string]: any,
+}
+
+export default (name: string, options: Options): Function => (valueString: string = ''): concat => {
+  const throwUnknown = (unknownValue: string) => {
     const validValues = Object.keys(options).filter(v => v !== 'default')
     throw new Error(`${name}: Unknown value '${unknownValue}'. Valid values are:\n${validValues.join('\n')}`)
   }

@@ -4,9 +4,23 @@ import MediaQuery from './MediaQuery'
 import NestedSelector from './NestedSelector'
 import ValidRuleSetChild from './ValidRuleSetChild'
 
-type FlatRuleSetType = {
-  rules: any,
-  fragments: Array<typeof ValidRuleSetChild>,
+export type FragmentType = {
+  selector: string,
+  rules: Array<ValidRuleSetChild>,
+  fragments: Array<FragmentType>
+}
+
+type RuleType = {
+  [property: string]: {
+    property: string,
+    value: string
+  }
+}
+
+export type FlatRuleSetType = {
+  selector?: string,
+  rules: RuleType,
+  fragments: Array<FragmentType>,
 }
 
 /*

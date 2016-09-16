@@ -1,3 +1,4 @@
+// @flow
 import Rule from '../models/Rule'
 
-export default (property, value) => new Rule(property, value)
+export default (property: string, value: string): Rule => new Rule(property, value)
