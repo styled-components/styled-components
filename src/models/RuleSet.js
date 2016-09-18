@@ -2,6 +2,7 @@ import Rule from './Rule'
 import MediaQuery from './MediaQuery'
 import NestedSelector from './NestedSelector'
 import ValidRuleSetChild from './ValidRuleSetChild'
+import DynamicRule from "./DynamicRule";
 
 /*
 * A RuleSet stores the leaf nodes that apply to some level
@@ -26,16 +27,20 @@ export default class RuleSet extends ValidRuleSetChild {
     })
   }
 
-  flatten() {
+  flatten(context) {
     const rules = {}
     const fragments = []
     this.rules.forEach((r) => {
       if (r instanceof Rule) {
         rules[r.property] = r.value
       } else if (r instanceof MediaQuery) {
-        rules[r.fullQuery()] = r.flatten()
+        rules[r.fullQuery()] = r.flatten(context)
       } else if (r instanceof NestedSelector) {
-        fragments.push(r.flatten())
+        fragments.push(r.flatten(context))
+      } else if (r instanceof DynamicRule) {
+        const dynamic = r.flatten(context)
+        Object.keys(dynamic.rules).forEach(rr => rules[rr] = dynamic.rules[rr])
+        fragments.push(...dynamic.fragments)
       }
     })
 

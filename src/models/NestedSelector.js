@@ -7,9 +7,9 @@ export default class NestedSelector extends ValidRuleSetChild {
     this.ruleSet = ruleSet
   }
 
-  flatten() {
+  flatten(context) {
     const { selector } = this
-    const { rules, fragments } = this.ruleSet.flatten()
+    const { rules, fragments } = this.ruleSet.flatten(context)
     return { selector, rules, fragments }
   }
 }

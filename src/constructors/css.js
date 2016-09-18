@@ -1,12 +1,16 @@
 import camelize from 'fbjs/lib/camelizeStyleName'
 import isPlainObject from 'lodash/isPlainObject'
+import isFunction from 'lodash/isFunction'
 
 import rule from './rule'
 import MediaQuery from '../models/MediaQuery'
 import RuleSet from '../models/RuleSet'
 import NestedSelector from '../models/NestedSelector'
 import ValidRuleSetChild from '../models/ValidRuleSetChild'
+import DynamicRule from '../models/DynamicRule'
 
+/* Split on \n but keep \n */
+const NEWLINES = /^/m
 const declaration = /^\s*([\w-]+):\s*([^;]*);\s*$/
 const startNesting = /^\s*([\w\.#:&>~+][^{]+?)\s*\{\s*$/
 const startMedia = /^\s*@media\s+([^{]+?)\s*\{\s*$/
@@ -26,23 +30,42 @@ const stopNestingOrMedia = /^\s*}\s*$/
 *  Anyway, this needs to be replaced by a real CSS parser. TODO: that.
 * */
 const interleave = (strings, interpolations) => {
-  const linesAndInterpolations = strings[0].split('\n')
+  const linesAndInterpolations = strings[0].split(NEWLINES)
+  const pushLine = i => strings[i + 1] && linesAndInterpolations.push(...strings[i + 1].split(NEWLINES))
   interpolations.forEach((interp, i) => {
     /* Complex, Rule-based interpolation (could be multi-line, or nesting etc) */
     if (interp instanceof ValidRuleSetChild) {
       linesAndInterpolations.push(interp)
-      if (strings[i + 1]) linesAndInterpolations.push(...strings[i + 1].split('\n'))
+      pushLine(i)
     /* CSS-in-JS */
     } else if (isPlainObject(interp)) {
       Object.keys(interp).forEach((prop) => {
         linesAndInterpolations.push(`${prop}: ${interp[prop]};`)
       })
+      pushLine(i)
+    } else if (isFunction(interp)) {
+      /* If the last string didn't newline, add it to our rule */
+      const lastStr = linesAndInterpolations[linesAndInterpolations.length - 1]
+      const nextStr = strings[i+1]
+      let beginLine = ''
+      let endLine = ''
+      let postNext
+      if (typeof lastStr === 'string' && !lastStr.endsWith("\n")) {
+        linesAndInterpolations.pop()
+        beginLine = lastStr
+      }
+      if (nextStr) {
+        [endLine, ...postNext] = strings[i + 1].split(NEWLINES)
+      }
+      linesAndInterpolations.push(new DynamicRule(beginLine, interp, endLine))
+      if (postNext) linesAndInterpolations.push(...postNext)
     } else {
       /* Simple (value) interpolation. Concatenate and move on. */
       const lastStr = linesAndInterpolations.pop()
-      linesAndInterpolations.push(...(lastStr + interp + (strings[i + 1] || '')).split('\n'))
+      linesAndInterpolations.push(...(lastStr + interp + (strings[i + 1] || '')).split(NEWLINES))
     }
   })
+  console.log(JSON.stringify(linesAndInterpolations))
   return linesAndInterpolations
 }
 
