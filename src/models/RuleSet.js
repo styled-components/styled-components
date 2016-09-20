@@ -1,7 +1,27 @@
+// @flow
 import Rule from './Rule'
 import MediaQuery from './MediaQuery'
 import NestedSelector from './NestedSelector'
 import ValidRuleSetChild from './ValidRuleSetChild'
+
+export type FragmentType = {
+  selector: string,
+  rules: Array<ValidRuleSetChild>,
+  fragments: Array<FragmentType>
+}
+
+type RuleType = {
+  [property: string]: {
+    property: string,
+    value: string
+  }
+}
+
+export type FlatRuleSetType = {
+  selector?: string,
+  rules: RuleType,
+  fragments: Array<FragmentType>,
+}
 
 /*
 * A RuleSet stores the leaf nodes that apply to some level
@@ -9,12 +29,16 @@ import ValidRuleSetChild from './ValidRuleSetChild'
 * Use concat() to create one easily.
 * */
 export default class RuleSet extends ValidRuleSetChild {
+  rules: Array<typeof ValidRuleSetChild>;
+  add: Function;
+  flatten: Function;
+
   constructor() {
     super()
     this.rules = []
   }
 
-  add(...other) {
+  add(...other: Array<typeof RuleSet|typeof ValidRuleSetChild>) {
     other.forEach((r) => {
       if (!r) return
       if (r instanceof RuleSet) this.rules.push(...r.rules)
@@ -26,7 +50,7 @@ export default class RuleSet extends ValidRuleSetChild {
     })
   }
 
-  flatten() {
+  flatten(): FlatRuleSetType {
     const rules = {}
     const fragments = []
     this.rules.forEach((r) => {

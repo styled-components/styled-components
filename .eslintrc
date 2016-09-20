@@ -1,7 +1,9 @@
 {
+  "parser": "babel-eslint",
   "extends": "airbnb",
   "rules": {
     "semi": [2, "never"],
+    "arrow-parens": 0,
     "class-methods-use-this": 0,
     "symbol-description": 0,
     "no-unused-vars": [2, { "varsIgnorePattern": "^_+$" }],

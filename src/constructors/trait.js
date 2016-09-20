@@ -1,8 +1,15 @@
+// @flow
 import concat from './concat'
 
-export default (name, definitions, cb) => {
+type Definitions = {
+  [category: string]: {
+    [option: string]: string
+  }
+}
+
+export default (name: string, definitions: Definitions, cb: Function): Function => {
   const flatDefinitions = {}
-  const throwInvalidValue = (message) => {
+  const throwInvalidValue = (message: string) => {
     throw new Error(`${message}\nValid values for '${name}' are:\n${Object.keys(flatDefinitions).join('\n')}`)
   }
   Object.keys(definitions).forEach((category) => {
@@ -12,7 +19,7 @@ export default (name, definitions, cb) => {
       flatDefinitions[option] = { category, option, value: definitions[category][option] }
     })
   })
-  return (valueString = '') => {
+  return (valueString: string = ''): concat | cb => {
     const values = valueString.split(/ +/)
     const obj = {}
     values.filter(x => x).forEach((v) => {

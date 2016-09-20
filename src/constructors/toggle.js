@@ -1,4 +1,7 @@
+// @flow
 import concat from './concat'
+import ValidRuleSetChild from '../models/ValidRuleSetChild'
+import RuleSet from '../models/RuleSet'
 
 /*
 * Toggle: Simple Namespaced styling
@@ -13,8 +16,12 @@ import concat from './concat'
 * flex('inline vertical') => `display: flex; display: inline-flex; flex-direction: column;`
 * */
 
-export default (name, options) => (valueString = '') => {
-  const throwUnknown = (unknownValue) => {
+type Options = {
+  [name: string]: typeof RuleSet|typeof ValidRuleSetChild,
+}
+
+export default (name: string, options: Options): Function => (valueString: string = ''): concat => {
+  const throwUnknown = (unknownValue: string) => {
     const validValues = Object.keys(options).filter(v => v !== 'default')
     throw new Error(`${name}: Unknown value '${unknownValue}'. Valid values are:\n${validValues.join('\n')}`)
   }
