@@ -3,7 +3,7 @@ import isPlainObject from 'lodash/isPlainObject'
 import css from './css'
 import element from './element'
 
-const styled = (tagName: string) => (...args: Array<any>) => {
+const styled = (tagName: string) => (...args: Array<Object|string>) => {
   if (isPlainObject(args[0])) {
     return element(tagName, css`${args[0]}`)
   }

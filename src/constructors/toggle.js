@@ -1,5 +1,7 @@
 // @flow
 import concat from './concat'
+import ValidRuleSetChild from '../models/ValidRuleSetChild'
+import RuleSet from '../models/RuleSet'
 
 /*
 * Toggle: Simple Namespaced styling
@@ -15,7 +17,7 @@ import concat from './concat'
 * */
 
 type Options = {
-  [name: string]: any,
+  [name: string]: typeof RuleSet|typeof ValidRuleSetChild,
 }
 
 export default (name: string, options: Options): Function => (valueString: string = ''): concat => {

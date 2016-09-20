@@ -4,7 +4,7 @@ import ValidRuleSetChild from '../models/ValidRuleSetChild'
 
 import Root from '../models/Root'
 
-const element = (tagName: string, ...rules: Array<typeof ValidRuleSetChild>): Function => {
+const element = (tagName: string, ...rules: Array<typeof ValidRuleSetChild>): createElement => {
   const styleRoot = new Root(...rules)
   /* Don't generate the styles now, only on render */
   let className
