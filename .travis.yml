@@ -4,7 +4,7 @@ dist: trusty
 node_js:
   - "4.0"
   - "6.0"
-script: npm run lint && npm run test
+script: npm run lint && npm run test && npm run flow
 notifications:
   email:
     on_failure: change
