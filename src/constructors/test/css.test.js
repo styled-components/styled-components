@@ -249,7 +249,7 @@ describe('css', () => {
         }
         animation-name: some-name;
       `).toEqual(concat(
-        keyframes(generateName('some-name', 1),
+        keyframes(generateName('some-name', false, 24),
           nested('0%',
             rule('opacity', '0'),
           ),
@@ -257,7 +257,107 @@ describe('css', () => {
             rule('opacity', '1'),
           )
         ),
-        rule('animationName', generateName('some-name', 1))
+        rule('animationName', generateName('some-name', false, 24))
+      ))
+    })
+
+    it('should handle multiple keyframes', () => {
+      expect(css`
+        @keyframes some-name {
+          0% {
+            opacity: 0;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+        @keyframes some-other-name {
+          0% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+        animation-name: some-name;
+        animation-name: some-other-name;
+      `).toEqual(concat(
+        keyframes(generateName('some-name', false, 25),
+          nested('0%',
+            rule('opacity', '0'),
+          ),
+          nested('100%',
+            rule('opacity', '1'),
+          )
+        ),
+        keyframes(generateName('some-other-name', false, 25),
+          nested('0%',
+            rule('opacity', '1'),
+          ),
+          nested('100%',
+            rule('opacity', '0'),
+          )
+        ),
+        rule('animationName', generateName('some-name', false, 25)),
+        rule('animationName', generateName('some-other-name', false, 25))
+      ))
+    })
+
+    // TODO
+    it.skip('should handle overrides', () => {
+      expect(css`
+        @keyframes some-name {
+          0% {
+            opacity: 0;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+        @keyframes some-name {
+          0% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+        animation-name: some-name;
+      `).toEqual(concat(
+        keyframes(generateName('some-name', false, 26),
+          nested('0%',
+            rule('opacity', '1'),
+          ),
+          nested('100%',
+            rule('opacity', '0'),
+          )
+        ),
+        rule('animationName', generateName('some-name', false, 26))
+      ))
+    })
+
+    // TODO
+    it.skip('should handle animation name inside animation declaration', () => {
+      expect(css`
+        @keyframes some-name {
+          0% {
+            opacity: 0;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+        animation: some-name 150ms;
+      `).toEqual(concat(
+        keyframes(generateName('some-name', false, 27),
+          nested('0%',
+            rule('opacity', '1'),
+          ),
+          nested('100%',
+            rule('opacity', '0'),
+          )
+        ),
+        rule('animation', `${generateName('some-name', false, 27)} 150ms`)
       ))
     })
   })
