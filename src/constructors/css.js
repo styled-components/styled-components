@@ -15,14 +15,19 @@ const startMedia = /^\s*@media\s+([^{]+?)\s*\{\s*$/
 const startKeyframes = /^\s*@keyframes\s+([^{]+?)\s*\{\s*$/
 const stopNestingOrMedia = /^\s*}\s*$/
 
-let keyframeIndex = 0
-export const generateName = (originalName, overridenIndex) => {
-  let index = overridenIndex
-  if (!overridenIndex) {
-    keyframeIndex += 1
-    index = keyframeIndex
+let instance = 0
+export const generateName = (originalName, map, overridenIndex) => {
+  let name
+  if (!map || !map[originalName]) {
+    name = `_${originalName}_${stringHash(originalName).toString(36).substr(0, 5)}_${overridenIndex || instance}`
+    if (map) {
+      // eslint-disable-next-line no-param-reassign
+      map[originalName] = name
+    }
+  } else {
+    name = map[originalName]
   }
-  return `_${originalName}_${stringHash(originalName).toString(36).substr(0, 5)}_${index}`
+  return name
 }
 
 /* This is a bit complicated.
@@ -65,6 +70,7 @@ export default (strings, ...interpolations) => {
     parent: null,
     ruleSet: new RuleSet(),
   }
+  const keyframesMap = {}
   const linesAndInterpolations = interleave(strings, interpolations)
 
   const processLine = (line) => {
@@ -97,7 +103,7 @@ export default (strings, ...interpolations) => {
     /* ARE WE STARTING KEYFRAMES? */
     } else if (keyframes) {
       const subRules = new RuleSet()
-      currentLevel.ruleSet.add(new Keyframes(generateName(keyframes), subRules))
+      currentLevel.ruleSet.add(new Keyframes(generateName(keyframes, keyframesMap), subRules))
       currentLevel = {
         parent: currentLevel,
         ruleSet: subRules,
@@ -107,7 +113,7 @@ export default (strings, ...interpolations) => {
     } else if (property && value) {
       let ruleValue = value
       if (property === 'animation-name') {
-        ruleValue = generateName(value, keyframeIndex)
+        ruleValue = generateName(value, keyframesMap)
       }
       const newRule = rule(camelize(property), ruleValue)
       currentLevel.ruleSet.add(newRule)
@@ -132,5 +138,6 @@ export default (strings, ...interpolations) => {
   }
 
   linesAndInterpolations.forEach(processLineOrInterp)
+  instance += 1
   return currentLevel.ruleSet
 }
