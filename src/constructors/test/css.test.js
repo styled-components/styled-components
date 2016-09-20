@@ -4,6 +4,7 @@ import concat from '../concat'
 import rule from '../rule'
 import nested from '../nested'
 import media from '../media'
+import keyframes from '../keyframes'
 
 describe('css', () => {
   describe('simple inputs', () => {
@@ -230,6 +231,31 @@ describe('css', () => {
           rule('background', 'red'),
           media('screen and (max-width: 500px) and (min-width: 1000px)',
           rule('background', 'blue')
+        )
+      ))
+    })
+  })
+
+  describe('keyframes', () => {
+    it('should handle simple keyframes', () => {
+      expect(css`
+        @keyframes some-name {
+          0% {
+            opacity: 0;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+        animation: some-name 150ms;
+      `).toEqual(concat(
+        keyframes('some-name',
+          nested('0%',
+            rule('opacity', '0'),
+          ),
+          nested('100%',
+            rule('opacity', '1'),
+          )
         )
       ))
     })
