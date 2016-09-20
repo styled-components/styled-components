@@ -3,6 +3,7 @@ import isPlainObject from 'lodash/isPlainObject'
 
 import rule from './rule'
 import MediaQuery from '../models/MediaQuery'
+import Keyframes from '../models/Keyframes'
 import RuleSet from '../models/RuleSet'
 import NestedSelector from '../models/NestedSelector'
 import ValidRuleSetChild from '../models/ValidRuleSetChild'
@@ -10,6 +11,7 @@ import ValidRuleSetChild from '../models/ValidRuleSetChild'
 const declaration = /^\s*([\w-]+):\s*([^;]*);\s*$/
 const startNesting = /^\s*([\w\.#:&>~+][^{]+?)\s*\{\s*$/
 const startMedia = /^\s*@media\s+([^{]+?)\s*\{\s*$/
+const startKeyframes = /^\s*@keyframes\s+([^{]+?)\s*\{\s*$/
 const stopNestingOrMedia = /^\s*}\s*$/
 
 /* This is a bit complicated.
@@ -58,6 +60,7 @@ export default (strings, ...interpolations) => {
     const [_, subSelector] = startNesting.exec(line) || []
     const [__, property, value] = declaration.exec(line) || []
     const [___, mediaQuery] = startMedia.exec(line) || []
+    const [____, keyframes] = startKeyframes.exec(line) || []
     const popNestingOrMedia = stopNestingOrMedia.exec(line)
 
     /* ARE WE STARTING A NESTING? */
@@ -75,6 +78,15 @@ export default (strings, ...interpolations) => {
       const subRules = new RuleSet()
       const media = new MediaQuery(mediaQuery, subRules)
       currentLevel.ruleSet.add(media)
+      currentLevel = {
+        parent: currentLevel,
+        ruleSet: subRules,
+      }
+
+    /* ARE WE STARTING KEYFRAMES? */
+    } else if (keyframes) {
+      const subRules = new RuleSet()
+      currentLevel.ruleSet.add(new Keyframes(keyframes, subRules))
       currentLevel = {
         parent: currentLevel,
         ruleSet: subRules,

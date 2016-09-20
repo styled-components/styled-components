@@ -256,7 +256,8 @@ describe('css', () => {
           nested('100%',
             rule('opacity', '1'),
           )
-        )
+        ),
+        rule('animation', 'some-name 150ms')
       ))
     })
   })
