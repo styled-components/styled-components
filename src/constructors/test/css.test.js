@@ -1,5 +1,5 @@
 import expect from 'expect'
-import css from '../css'
+import css, { generateName } from '../css'
 import concat from '../concat'
 import rule from '../rule'
 import nested from '../nested'
@@ -247,9 +247,9 @@ describe('css', () => {
             opacity: 1;
           }
         }
-        animation: some-name 150ms;
+        animation-name: some-name;
       `).toEqual(concat(
-        keyframes('some-name',
+        keyframes(generateName('some-name', 1),
           nested('0%',
             rule('opacity', '0'),
           ),
@@ -257,7 +257,7 @@ describe('css', () => {
             rule('opacity', '1'),
           )
         ),
-        rule('animation', 'some-name 150ms')
+        rule('animationName', generateName('some-name', 1))
       ))
     })
   })

@@ -1,5 +1,6 @@
 import camelize from 'fbjs/lib/camelizeStyleName'
 import isPlainObject from 'lodash/isPlainObject'
+import stringHash from 'string-hash'
 
 import rule from './rule'
 import MediaQuery from '../models/MediaQuery'
@@ -13,6 +14,16 @@ const startNesting = /^\s*([\w\.#:&>~+][^{]+?)\s*\{\s*$/
 const startMedia = /^\s*@media\s+([^{]+?)\s*\{\s*$/
 const startKeyframes = /^\s*@keyframes\s+([^{]+?)\s*\{\s*$/
 const stopNestingOrMedia = /^\s*}\s*$/
+
+let keyframeIndex = 0
+export const generateName = (originalName, overridenIndex) => {
+  let index = overridenIndex
+  if (!overridenIndex) {
+    keyframeIndex += 1
+    index = keyframeIndex
+  }
+  return `_${originalName}_${stringHash(originalName).toString(36).substr(0, 5)}_${index}`
+}
 
 /* This is a bit complicated.
 *  Basically, you get an array of strings and an array of interpolations.
@@ -86,7 +97,7 @@ export default (strings, ...interpolations) => {
     /* ARE WE STARTING KEYFRAMES? */
     } else if (keyframes) {
       const subRules = new RuleSet()
-      currentLevel.ruleSet.add(new Keyframes(keyframes, subRules))
+      currentLevel.ruleSet.add(new Keyframes(generateName(keyframes), subRules))
       currentLevel = {
         parent: currentLevel,
         ruleSet: subRules,
@@ -94,7 +105,11 @@ export default (strings, ...interpolations) => {
 
       /* ARE WE A NORMAL RULE? */
     } else if (property && value) {
-      const newRule = rule(camelize(property), value)
+      let ruleValue = value
+      if (property === 'animation-name') {
+        ruleValue = generateName(value, keyframeIndex)
+      }
+      const newRule = rule(camelize(property), ruleValue)
       currentLevel.ruleSet.add(newRule)
     } else if (popNestingOrMedia) {
       if (!currentLevel.parent) {
