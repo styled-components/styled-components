@@ -3,7 +3,8 @@ import parse from '../postcss/parse'
 import postcssNested from '../postcss/postcss-nested'
 import { hashObject } from 'aphrodite/lib/util'
 import {StyleSheet }from 'glamor/lib/sheet'
-let styleSheet
+const styleSheet = new StyleSheet()
+styleSheet.inject()
 
 import type {RuleSet} from "../types"
 import flatten from "../utils/flatten"
@@ -24,7 +25,6 @@ export default class ComponentStyle {
    * Figures out how to inject it
    * */
   injectStyles(executionContext: Array<any>) {
-    if (!styleSheet) (styleSheet = new StyleSheet()) && styleSheet.inject()
     const flatCSS = flatten(this.rules, executionContext).join("")
     console.log(flatCSS)
     const hash = '_' + hashObject(flatCSS)
