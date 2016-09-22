@@ -234,4 +234,66 @@ describe('css', () => {
       ))
     })
   })
+
+  describe('keyframes', () => {
+    it('should handle keyframes', () => {
+      expect(css`
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      `).toEqual(concat(
+        nested('0%',
+          rule('opacity', '0')
+        ),
+        nested('100%',
+          rule('opacity', '1')
+        )
+      ))
+    })
+
+    it('should handle keyframes with from/to', () => {
+      expect(css`
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      `).toEqual(concat(
+        nested('from',
+          rule('opacity', '0')
+        ),
+        nested('to',
+          rule('opacity', '1')
+        )
+      ))
+    })
+
+    it('should handle keyframes with mixed from/to and percentages', () => {
+      expect(css`
+        from {
+          opacity: 0;
+        }
+        50% {
+          opacity: 0.25;
+        }
+        to {
+          opacity: 1;
+        }
+      `).toEqual(concat(
+        nested('from',
+          rule('opacity', '0')
+        ),
+        nested('50%',
+          rule('opacity', '0.25')
+        ),
+        nested('to',
+          rule('opacity', '1')
+        )
+      ))
+    })
+  })
 })
