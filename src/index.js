@@ -3,7 +3,7 @@
  * Export constructors for consumption by users
  */
 
-import css from './constructors/css'
+import css from './constructors/css2'
 import toggle from './constructors/toggle'
 import trait from './constructors/trait'
 import styled from './constructors/styled'
