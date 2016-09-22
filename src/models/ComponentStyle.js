@@ -2,8 +2,8 @@
 import parse from '../postcss/parse'
 import postcssNested from '../postcss/postcss-nested'
 import { hashObject } from 'aphrodite/lib/util'
-
-import camelizeStyleName from 'fbjs/lib/camelizeStyleName'
+import {StyleSheet }from 'glamor/lib/sheet'
+let styleSheet
 
 import type {RuleSet} from "../types"
 import flatten from "../utils/flatten"
@@ -24,14 +24,18 @@ export default class ComponentStyle {
    * Figures out how to inject it
    * */
   injectStyles(executionContext: Array<any>) {
+    if (!styleSheet) (styleSheet = new StyleSheet()) && styleSheet.inject()
     const flatCSS = flatten(this.rules, executionContext).join("")
     console.log(flatCSS)
-    const hash = hashObject(flatCSS)
+    const hash = '_' + hashObject(flatCSS)
     console.log(hash)
-    const root = parse(`._${hash} { ${ flatCSS } }`);
+    const root = parse(`.${hash} { ${ flatCSS } }`);
     console.log(root)
     postcssNested(root)
-    console.log(root.toResult().css)
+    const result = root.toResult().css;
+    console.log(result)
+    styleSheet.insert(result)
+    return hash
 
     /* Thoughts. I don't need to follow the existing implementation with
     * rules and fragments because i can start injecting styles directly.
