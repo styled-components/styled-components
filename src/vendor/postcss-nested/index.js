@@ -67,7 +67,7 @@ function processRule(rule, bubble) {
 
 var bubble = ['media', 'supports', 'document'];
 
-export default function (node) {
+const process = node => {
   node.each(function (child) {
     if (child.type === 'rule') {
       processRule(child, bubble);
@@ -76,3 +76,5 @@ export default function (node) {
     }
   });
 };
+
+export default process;
