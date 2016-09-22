@@ -27,4 +27,5 @@ export default (name: string, options: Options): Function => (valueString: strin
   const values = valueString.split(/ +/).filter(s => s.length > 0)
   return (options.default ? [options.default] : [])
     .concat(...values.map(v => (v in options) ? options[v] : throwUnknown(v)))
+    .concat('').join('; ')
 }
