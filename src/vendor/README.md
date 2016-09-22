@@ -5,4 +5,4 @@ Vendored postcss-nested source as of [e709092](https://github.com/postcss/postcs
 Then hacked things around:
 
 * Deleted `previous-map.js` and all references to it because it `require('fs')`ed
-* Delted reference to `postcss` within `postcss-nested` & simply exported the transform function
+* Deleted reference to `postcss` within `postcss-nested` & simply exported the transform function
