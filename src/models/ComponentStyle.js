@@ -1,5 +1,8 @@
 // @flow
 import parse from '../postcss/parse'
+import postcssNested from '../postcss/postcss-nested'
+import { hashObject } from 'aphrodite/lib/util'
+
 import camelizeStyleName from 'fbjs/lib/camelizeStyleName'
 
 import type {RuleSet} from "../types"
@@ -23,23 +26,27 @@ export default class ComponentStyle {
   injectStyles(executionContext: Array<any>) {
     const flatCSS = flatten(this.rules, executionContext).join("")
     console.log(flatCSS)
-    const root = parse(flatCSS);
+    const hash = hashObject(flatCSS)
+    console.log(hash)
+    const root = parse(`._${hash} { ${ flatCSS } }`);
     console.log(root)
+    postcssNested(root)
+    console.log(root.toResult().css)
 
     /* Thoughts. I don't need to follow the existing implementation with
     * rules and fragments because i can start injecting styles directly.
     * We can simply hash the entire string as it comes through at this point.
     * Then... maybe we use postcss nested on it and wrap it all in .hash {} */
-    const rules = {}
-    const fragments = []
-    root.each(node => {
-      if (node.type === 'decl') {
-        rules[camelizeStyleName(node.prop)] = node.value;
-      } else if (node.type === 'rule') {
-
-      }
-    })
-    console.log(rules)
-    console.log(fragments)
+    // const rules = {}
+    // const fragments = []
+    // root.each(node => {
+    //   if (node.type === 'decl') {
+    //     rules[camelizeStyleName(node.prop)] = node.value;
+    //   } else if (node.type === 'rule') {
+    //
+    //   }
+    // })
+    // console.log(rules)
+    // console.log(fragments)
   }
 }
