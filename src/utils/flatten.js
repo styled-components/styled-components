@@ -16,13 +16,7 @@ const flatten = (chunks: Array<Interpolation>) : StaticAndDynamic => (
     /* Defer functions but wrap in a flatten call */
     if (typeof chunk === 'function') return array.concat(chunk)
     /* Handle objects */
-    const stringChunk: string = typeof chunk === 'object' ? objToCss(chunk) : chunk.toString()
-    const last = array[array.length - 1]
-    if (last && typeof last === "string") {
-      return array.slice(0, -1).concat(`${last}${stringChunk}`)
-    } else {
-      return array.concat(stringChunk)
-    }
+    return array.concat(typeof chunk === 'object' ? objToCss(chunk) : chunk.toString())
   }, [])
 )
 
