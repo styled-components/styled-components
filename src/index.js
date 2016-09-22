@@ -8,7 +8,7 @@ import toggle from './constructors/toggle'
 import styled from './constructors/styled'
 
 export {
-  css, toggle
+  css, toggle,
 }
 
 export default styled

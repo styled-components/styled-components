@@ -1,5 +1,5 @@
 // @flow
-import type {RuleSet, Interpolation} from "../types"
+import type { RuleSet, Interpolation } from '../types'
 
 /*
 * Toggle: Simple Namespaced styling

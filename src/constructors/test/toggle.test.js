@@ -2,9 +2,9 @@ import expect from 'expect'
 import toggle from '../toggle'
 
 describe('toggle', () => {
-  const defaultRule = `default: rule`
-  const optionA = `option: a`
-  const optionB = `option: b`
+  const defaultRule = 'default: rule'
+  const optionA = 'option: a'
+  const optionB = 'option: b'
 
   it('should handle an empty case', () => {
     const namespace = toggle('namespace', {})

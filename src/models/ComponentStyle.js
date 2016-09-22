@@ -1,21 +1,22 @@
 // @flow
+import hashStr from 'glamor/lib/hash'
+import { StyleSheet } from 'glamor/lib/sheet'
+
+import type { RuleSet } from '../types'
+import flatten from '../utils/flatten'
 import parse from '../vendor/postcss/parse'
 import postcssNested from '../vendor/postcss-nested'
-import hashStr from 'glamor/lib/hash'
-import {StyleSheet} from 'glamor/lib/sheet'
+
 const styleSheet = new StyleSheet()
 styleSheet.inject()
 const inserted = {}
-
-import type {RuleSet} from "../types"
-import flatten from "../utils/flatten"
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
  the React-specific stuff.
  */
 export default class ComponentStyle {
-  rules: RuleSet;
+  rules: RuleSet
 
   constructor(rules: RuleSet) {
     this.rules = rules
@@ -28,12 +29,12 @@ export default class ComponentStyle {
    * Injects that using Glamor's StyleSheet impl.
    * */
   injectStyles(executionContext: Array<any>) {
-    const flatCSS = flatten(this.rules, executionContext).join("")
-    const hash = '_' + hashStr(flatCSS)
+    const flatCSS = flatten(this.rules, executionContext).join('')
+    const hash = `_${hashStr(flatCSS)}`
     if (!inserted[hash]) {
-      const root = parse(`.${hash} { ${ flatCSS } }`);
+      const root = parse(`.${hash} { ${flatCSS} }`)
       postcssNested(root)
-      const result = root.toResult().css;
+      const result = root.toResult().css
       styleSheet.insert(result)
       inserted[hash] = true
     }

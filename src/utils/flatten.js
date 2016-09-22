@@ -1,9 +1,9 @@
 // @flow
 import hyphenate from 'fbjs/lib/hyphenateStyleName'
-import type {RuleSet,Interpolation} from '../types'
+import type { RuleSet, Interpolation } from '../types'
 
 export const objToCss = (obj: Object): string => (
-  Object.keys(obj).map(k => `${hyphenate(k)}: ${obj[k]};`).join(" ")
+  Object.keys(obj).map(k => `${hyphenate(k)}: ${obj[k]};`).join(' ')
 )
 
 const flatten = (chunks: RuleSet, executionContext: ?Array<any>) : RuleSet => (
@@ -13,9 +13,11 @@ const flatten = (chunks: RuleSet, executionContext: ?Array<any>) : RuleSet => (
     /* Flatten arrays */
     if (Array.isArray(chunk)) return array.concat(...flatten(chunk, executionContext))
     /* Either execute or defer the function */
-    if (typeof chunk === 'function') return executionContext
-      ? array.concat(...flatten([chunk(...executionContext)], executionContext))
-      : array.concat(chunk)
+    if (typeof chunk === 'function') {
+      return executionContext
+        ? array.concat(...flatten([chunk(...executionContext)], executionContext))
+        : array.concat(chunk)
+    }
     /* Handle objects */
     return array.concat(typeof chunk === 'object' ? objToCss(chunk) : chunk.toString())
   }, [])

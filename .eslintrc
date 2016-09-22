@@ -7,7 +7,8 @@
     "class-methods-use-this": 0,
     "symbol-description": 0,
     "no-unused-vars": [2, { "varsIgnorePattern": "^_+$" }],
-    "import/no-extraneous-dependencies": 0
+    "import/no-extraneous-dependencies": 0,
+    "no-confusing-arrow": 0
   },
   "env": {
     "mocha": true,
