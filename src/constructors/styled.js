@@ -1,7 +1,7 @@
 // @flow
-import css from './css'
+import css from './css2'
 import element from './element'
-import type { Interpolation } from './css2'
+import type { Interpolation } from '../types'
 
 /* todo: replace any with React.Component */
 const styled = (tag: string | any) =>

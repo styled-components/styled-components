@@ -1,5 +1,5 @@
 // @flow
-import type { Interpolation } from '../constructors/css2'
+import type { Interpolation } from '../types'
 
 export default (strings: Array<string>, interpolations: Array<Interpolation>) : Array<Interpolation> => (
   interpolations.reduce((array, interp, i) => (

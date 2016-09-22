@@ -1,22 +1,20 @@
 // @flow
 import hyphenate from 'fbjs/lib/hyphenateStyleName'
-import type {Interpolation} from "../constructors/css2";
-
-type StaticAndDynamic = Array<string | Function>
+import type {RuleSet,Interpolation} from '../types'
 
 export const objToCss = (obj: Object): string => (
   Object.keys(obj).map(k => `${hyphenate(k)}: ${obj[k]};`).join(" ")
 )
 
-const flatten = (chunks: Array<Interpolation>, execContext: ?Array<any>) : StaticAndDynamic => (
+const flatten = (chunks: RuleSet, executionContext: ?Array<any>) : RuleSet => (
   chunks.reduce((array, chunk: Interpolation) => {
     /* Remove falsey values */
     if (!chunk) return array
     /* Flatten arrays */
-    if (Array.isArray(chunk)) return array.concat(...flatten(chunk, execContext))
+    if (Array.isArray(chunk)) return array.concat(...flatten(chunk, executionContext))
     /* Either execute or defer the function */
-    if (typeof chunk === 'function') return execContext
-      ? array.concat(...flatten([chunk(...execContext)], execContext))
+    if (typeof chunk === 'function') return executionContext
+      ? array.concat(...flatten([chunk(...executionContext)], executionContext))
       : array.concat(chunk)
     /* Handle objects */
     return array.concat(typeof chunk === 'object' ? objToCss(chunk) : chunk.toString())
