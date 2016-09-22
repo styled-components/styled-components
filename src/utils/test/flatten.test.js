@@ -25,6 +25,22 @@ describe('flatten', () => {
   })
   it('defers functions', () => {
     const func = () => 'bar'
+    const funcWFunc = bool => ['static', subfunc => subfunc ? 'bar' : 'baz']
     expect(flatten(['foo', func, 'baz'])).toEqual(['foo', func, 'baz'])
+    expect(flatten(['foo', funcWFunc, 'baz'])).toEqual(['foo', funcWFunc, 'baz'])
+  })
+  it('executes functions', () => {
+    const func = () => 'bar'
+    expect(flatten(['foo', func, 'baz'], [true])).toEqual(['foo', 'bar', 'baz'])
+  })
+  it('passes values to function', () => {
+    const func = bool => bool ? 'bar' : 'baz'
+    expect(flatten(['foo', func], [true])).toEqual(['foo', 'bar'])
+    expect(flatten(['foo', func], [false])).toEqual(['foo', 'baz'])
+  })
+  it('recursively calls functions', () => {
+    const func = bool => ['static', subfunc => subfunc ? 'bar' : 'baz']
+    expect(flatten(['foo', func], [true])).toEqual(['foo', 'static', 'bar'])
+    expect(flatten(['foo', func], [false])).toEqual(['foo', 'static', 'baz'])
   })
 })
