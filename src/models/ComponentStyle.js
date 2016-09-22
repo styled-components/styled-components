@@ -29,16 +29,13 @@ export default class ComponentStyle {
    * */
   injectStyles(executionContext: Array<any>) {
     const flatCSS = flatten(this.rules, executionContext).join("")
-    console.log(flatCSS)
     const hash = '_' + hashObject(flatCSS)
     if (!inserted[hash]) {
       const root = parse(`.${hash} { ${ flatCSS } }`);
-      console.log(root)
       postcssNested(root)
       const result = root.toResult().css;
-      console.log(result)
-      inserted[hash] = true
       styleSheet.insert(result)
+      inserted[hash] = true
     }
     return hash
   }
