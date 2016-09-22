@@ -1,8 +1,10 @@
 [ignore]
-.*/node_modules/fbjs/.*
 
 [include]
 
 [libs]
+./node_modules/fbjs/node_modules/promise
+./node_modules/fbjs/flow/lib
 
 [options]
+suppress_type=$FlowIssue
