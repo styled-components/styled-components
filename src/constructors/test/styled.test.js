@@ -22,7 +22,7 @@ describe('styled', () => {
     const styles = {
       backgroundColor: 'blue',
     }
-    expect(styled(tagName)(styles)).toEqual(element(tagName, css`${styles}`))
+    expect(styled(tagName)(`${styles}`)).toEqual(element(tagName, css`${styles}`))
   })
 
   it('should have all valid HTML5 elements defined as properties', () => {
