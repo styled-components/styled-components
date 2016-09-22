@@ -1,6 +1,8 @@
 // @flow
-import type {RuleSet} from "../types";
-import flatten from "../utils/flatten";
+import parse from '../postcss/parse'
+
+import type {RuleSet} from "../types"
+import flatten from "../utils/flatten"
 
 /*
   ComponentStyle is all the CSS-specific stuff, not
@@ -19,5 +21,7 @@ export default class ComponentStyle {
    * */
   injectStyles(executionContext: Array<any>) {
     const flatCSS = flatten(this.rules, executionContext).join("")
+    console.log(flatCSS)
+    console.log(parse(flatCSS))
   }
 }
