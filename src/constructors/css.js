@@ -1,10 +1,8 @@
 import camelize from 'fbjs/lib/camelizeStyleName'
 import isPlainObject from 'lodash/isPlainObject'
-import stringHash from 'string-hash'
 
 import rule from './rule'
 import MediaQuery from '../models/MediaQuery'
-import Keyframes from '../models/Keyframes'
 import RuleSet from '../models/RuleSet'
 import NestedSelector from '../models/NestedSelector'
 import ValidRuleSetChild from '../models/ValidRuleSetChild'
@@ -12,23 +10,7 @@ import ValidRuleSetChild from '../models/ValidRuleSetChild'
 const declaration = /^\s*([\w-]+):\s*([^;]*);\s*$/
 const startNesting = /^\s*([\w\.#:&>~+][^{]+?)\s*\{\s*$/
 const startMedia = /^\s*@media\s+([^{]+?)\s*\{\s*$/
-const startKeyframes = /^\s*@keyframes\s+([^{]+?)\s*\{\s*$/
 const stopNestingOrMedia = /^\s*}\s*$/
-
-let instance = 0
-export const generateName = (originalName, map, overridenIndex) => {
-  let name
-  if (!map || !map[originalName]) {
-    name = `_${originalName}_${stringHash(originalName).toString(36).substr(0, 5)}_${overridenIndex || instance}`
-    if (map) {
-      // eslint-disable-next-line no-param-reassign
-      map[originalName] = name
-    }
-  } else {
-    name = map[originalName]
-  }
-  return name
-}
 
 /* This is a bit complicated.
 *  Basically, you get an array of strings and an array of interpolations.
@@ -70,14 +52,12 @@ export default (strings, ...interpolations) => {
     parent: null,
     ruleSet: new RuleSet(),
   }
-  const keyframesMap = {}
   const linesAndInterpolations = interleave(strings, interpolations)
 
   const processLine = (line) => {
     const [_, subSelector] = startNesting.exec(line) || []
     const [__, property, value] = declaration.exec(line) || []
     const [___, mediaQuery] = startMedia.exec(line) || []
-    const [____, keyframes] = startKeyframes.exec(line) || []
     const popNestingOrMedia = stopNestingOrMedia.exec(line)
 
     /* ARE WE STARTING A NESTING? */
@@ -100,22 +80,9 @@ export default (strings, ...interpolations) => {
         ruleSet: subRules,
       }
 
-    /* ARE WE STARTING KEYFRAMES? */
-    } else if (keyframes) {
-      const subRules = new RuleSet()
-      currentLevel.ruleSet.add(new Keyframes(generateName(keyframes, keyframesMap), subRules))
-      currentLevel = {
-        parent: currentLevel,
-        ruleSet: subRules,
-      }
-
       /* ARE WE A NORMAL RULE? */
     } else if (property && value) {
-      let ruleValue = value
-      if (property === 'animation-name') {
-        ruleValue = generateName(value, keyframesMap)
-      }
-      const newRule = rule(camelize(property), ruleValue)
+      const newRule = rule(camelize(property), value)
       currentLevel.ruleSet.add(newRule)
     } else if (popNestingOrMedia) {
       if (!currentLevel.parent) {
@@ -138,6 +105,5 @@ export default (strings, ...interpolations) => {
   }
 
   linesAndInterpolations.forEach(processLineOrInterp)
-  instance += 1
   return currentLevel.ruleSet
 }
