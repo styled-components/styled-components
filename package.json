@@ -31,6 +31,7 @@
     "aphrodite": "^0.5.0",
     "fbjs": "^0.8.3",
     "lodash": "^4.15.0",
+    "node-uuid": "^1.4.7",
     "react": "^15.3.0",
     "string-hash": "^1.1.0"
   },

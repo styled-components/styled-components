@@ -1,14 +1,19 @@
 // @flow
 import ValidRuleSetChild from './ValidRuleSetChild'
-import RuleSet from './RuleSet'
+import Root from './Root'
 
-export default class MediaQuery extends ValidRuleSetChild {
+export default class Keyframes extends ValidRuleSetChild {
   name: string;
-  keyframes: RuleSet;
+  styleRoot: Root;
 
-  constructor(name: string, keyframes: RuleSet) {
+  constructor(name: string, styleRoot: Root) {
     super()
     this.name = name
-    this.keyframes = keyframes
+    this.styleRoot = styleRoot
+    styleRoot.injectStyles()
+  }
+
+  getName(): string {
+    return this.name
   }
 }
