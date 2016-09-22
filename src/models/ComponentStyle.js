@@ -1,8 +1,8 @@
 // @flow
-import parse from '../postcss/parse'
-import postcssNested from '../postcss/postcss-nested'
-import {hashObject} from 'aphrodite/lib/util'
-import {StyleSheet}from 'glamor/lib/sheet'
+import parse from '../vendor/postcss/parse'
+import postcssNested from '../vendor/postcss-nested'
+import hashStr from 'glamor/lib/hash'
+import {StyleSheet} from 'glamor/lib/sheet'
 const styleSheet = new StyleSheet()
 styleSheet.inject()
 const inserted = {}
@@ -29,7 +29,7 @@ export default class ComponentStyle {
    * */
   injectStyles(executionContext: Array<any>) {
     const flatCSS = flatten(this.rules, executionContext).join("")
-    const hash = '_' + hashObject(flatCSS)
+    const hash = '_' + hashStr(flatCSS)
     if (!inserted[hash]) {
       const root = parse(`.${hash} { ${ flatCSS } }`);
       postcssNested(root)

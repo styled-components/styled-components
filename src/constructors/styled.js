@@ -1,5 +1,5 @@
 // @flow
-import css from './css2'
+import css from './css'
 import element from './element'
 import type { Interpolation } from '../types'
 

@@ -1,7 +1,5 @@
 // @flow
-import concat from './concat'
-import ValidRuleSetChild from '../models/ValidRuleSetChild'
-import RuleSet from '../models/RuleSet'
+import type {RuleSet, Interpolation} from "../types"
 
 /*
 * Toggle: Simple Namespaced styling
@@ -17,18 +15,16 @@ import RuleSet from '../models/RuleSet'
 * */
 
 type Options = {
-  [name: string]: typeof RuleSet|typeof ValidRuleSetChild,
+  [name: string]: Interpolation | RuleSet
 }
 
-export default (name: string, options: Options): Function => (valueString: string = ''): concat => {
+export default (name: string, options: Options): Function => (valueString: string = ''): RuleSet => {
   const throwUnknown = (unknownValue: string) => {
     const validValues = Object.keys(options).filter(v => v !== 'default')
     throw new Error(`${name}: Unknown value '${unknownValue}'. Valid values are:\n${validValues.join('\n')}`)
   }
 
   const values = valueString.split(/ +/).filter(s => s.length > 0)
-  return concat(options.default, ...values.map(
-    // eslint-disable-next-line no-confusing-arrow
-    v => (v in options) ? options[v] : throwUnknown(v)
-  ))
+  return (options.default ? [options.default] : [])
+    .concat(...values.map(v => (v in options) ? options[v] : throwUnknown(v)))
 }
