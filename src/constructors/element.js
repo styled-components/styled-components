@@ -11,7 +11,7 @@ const element = (tagName: string | any, rules: RuleSet): createElement => {
    * a HTML element with our styles applied. */
   const component = (props) => (
     createElement(tagName, Object.assign({}, props, {
-      className: [props.className, styleRoot.injectStyles([props])].join(' '),
+      className: props.className ? [props.className]: [].concat(styleRoot.injectStyles([props])).join(' '),
     }))
   )
   component.displayName = `Styled(${tagName.displayName || tagName})`
