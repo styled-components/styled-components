@@ -6,6 +6,7 @@ import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
 import parse from '../vendor/postcss/parse'
 import postcssNested from '../vendor/postcss-nested'
+import toEmoji from '../utils/toEmoji'
 
 const styleSheet = new StyleSheet()
 styleSheet.inject()
@@ -30,14 +31,15 @@ export default class ComponentStyle {
    * */
   injectStyles(executionContext: Array<any>) {
     const flatCSS = flatten(this.rules, executionContext).join('')
-    const hash = `_${hashStr(flatCSS)}`
+    const hash = hashStr(flatCSS)
+    const emojis = toEmoji(hash)
     if (!inserted[hash]) {
-      const root = parse(`.${hash} { ${flatCSS} }`)
+      const root = parse(`.${emojis} { ${flatCSS} }`)
       postcssNested(root)
       const result = root.toResult().css
       styleSheet.insert(result)
       inserted[hash] = true
     }
-    return hash
+    return emojis
   }
 }
