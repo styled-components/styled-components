@@ -1,3 +1,3 @@
-export default keys => (props, theme) => (
-  keys.split(' ').map(k => theme[k]).join('\n')
+export default (key, fallback) => (props, theme) => (
+  theme[key] || fallback
 )

@@ -33,7 +33,7 @@ export default (tagName: any, rules: RuleSet) => {
         /* Don't pass through non HTML tags through to HTML elements */
         !isTag || ValidAttrs[propName] !== undefined
       )).forEach(propName => {
-        propsForElement[propName] = this.props.propName
+        propsForElement[propName] = this.props[propName]
       })
       propsForElement.className = [className, this.generatedClassName].filter(x => x).join(' ')
 
