@@ -9,7 +9,8 @@
     "no-unused-vars": [2, { "varsIgnorePattern": "^_+$" }],
     "import/no-extraneous-dependencies": 0,
     "no-confusing-arrow": 0,
-    "no-else-return": 0
+    "no-else-return": 0,
+    "react/sort-comp": 0
   },
   "env": {
     "mocha": true,

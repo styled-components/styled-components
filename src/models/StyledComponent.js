@@ -1,31 +1,31 @@
 // @flow
 import { Component, createElement, PropTypes } from 'react'
 import { Properties as ValidAttrs } from 'react/lib/HTMLDOMPropertyConfig'
-import shallowEqual from 'fbjs/lib/shallowEqual'
 
 import type RuleSet from '../utils/flatten'
 import ComponentStyle from '../models/ComponentStyle'
 
-export default (tagName: string | typeof Component, rules: RuleSet) => {
+export default (tagName: any, rules: RuleSet) => {
   const isTag = typeof tagName === 'string'
   const componentStyle = new ComponentStyle(rules)
-  const displayName = isTag ? `styled.${tagName}` : `Styled(${tagName.displayName})`
 
   class StyledComponent extends Component {
+    theme: Object
+    generatedClassName: string
+
     getChildContext() {
-      return {theme: this.theme};
+      return { theme: this.theme }
     }
     componentWillMount() {
       this.componentWillReceiveProps(this.props, this.context)
     }
-    componentWillReceiveProps(newProps, newContext) {
-      this.theme = Object.assign({}, newContext.theme)
-      this.generatedClassName = componentStyle.injectStyles([newProps, this.theme]);
+    componentWillReceiveProps(newProps: Object, newContext: ?any) {
+      this.theme = Object.assign({}, (newContext || {}).theme)
+      this.generatedClassName = componentStyle.injectStyles([newProps, this.theme])
     }
     /* eslint-disable react/prop-types */
     render() {
       const { className, children } = this.props
-      console.log(this.theme)
 
       // const contextForStyles
       const propsForElement = {}
@@ -41,7 +41,7 @@ export default (tagName: string | typeof Component, rules: RuleSet) => {
     }
   }
 
-  StyledComponent.displayName = displayName
+  StyledComponent.displayName = isTag ? `styled.${tagName}` : `Styled(${tagName.displayName})`
   StyledComponent.childContextTypes = {
     theme: PropTypes.object,
   }
