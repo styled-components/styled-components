@@ -4,7 +4,7 @@ import { StyleSheet } from 'glamor/lib/sheet'
 
 import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
-import parse from '../vendor/postcss/parse'
+import parse from '../vendor/postcss-safe-parser/parse'
 import postcssNested from '../vendor/postcss-nested'
 import toEmoji from '../utils/toEmoji'
 
