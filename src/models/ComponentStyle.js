@@ -8,8 +8,7 @@ import parse from '../vendor/postcss/parse'
 import postcssNested from '../vendor/postcss-nested'
 import toEmoji from '../utils/toEmoji'
 
-const styleSheet = new StyleSheet()
-styleSheet.inject()
+const styleSheet = new StyleSheet({speedy: false, maxLength: 40})
 const inserted = {}
 
 /*
