@@ -1,12 +1,12 @@
 // @flow
 import css from './css'
-import StyledComponent from '../models/StyledComponent'
+import styledComponent from '../models/StyledComponent'
 import type { Interpolation } from '../types'
 
 /* todo: replace any with React.Component */
 const styled = (tag: string | any) =>
   (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
-    StyledComponent(tag, css(strings, ...interpolations))
+    styledComponent(tag, css(strings, ...interpolations))
 
 export default styled
 
