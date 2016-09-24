@@ -1,28 +1,36 @@
 // @flow
-import {Component, createElement} from 'react'
+import {Component, createElement, PropTypes} from 'react'
 import ComponentStyle from '../models/ComponentStyle'
-import HTMLDOMPropertyConfig from 'react/lib/HTMLDOMPropertyConfig'
-const PassthroughAttributes = Object.keys(HTMLDOMPropertyConfig.Properties)
+import {Properties as ValidAttrs} from 'react/lib/HTMLDOMPropertyConfig'
 
 import type RuleSet from '../utils/flatten'
 
 export default (tagName: string | typeof Component, rules: RuleSet) => {
+  const isTag = typeof tagName === 'string'
   const componentStyle = new ComponentStyle(rules)
   const displayName = `styled.${tagName.displayName || tagName}`
 
   class StyledComponent extends Component {
     render() {
-      const { className } = this.props
+      const { className, children } = this.props
+      const { theme } = this.context
       // const contextForStyles
-      // const elementClassName = componentStyle.injectStyles([...contextForStyles])
-      // const propsForElement =
+      const propsForElement = {}
+      Object.keys(this.props).filter(propName => (
+        /* Don't pass through non HTML tags through to HTML elements */
+        !isTag || ValidAttrs[propName] != undefined
+      )).forEach(propName => {
+        propsForElement[propName] = this.props.propName
+      })
+      propsForElement.className = [className, componentStyle.injectStyles([this.props])].filter(x => x).join(' ')
 
-      return createElement(tagName, Object.assign({}, this.props, {
-        className: className ? [className] : [].concat(componentStyle.injectStyles([this.props])).join(' '),
-      }))
+      return createElement(tagName, propsForElement, children)
     }
   }
 
   StyledComponent.displayName = displayName
+  StyledComponent.contextTypes = {
+    theme: PropTypes.object
+  }
   return StyledComponent
 }
