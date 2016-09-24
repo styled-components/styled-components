@@ -30,6 +30,7 @@ export default class ComponentStyle {
    * Injects that using Glamor's StyleSheet impl.
    * */
   injectStyles(executionContext: Array<any>) {
+    if (!styleSheet.injected) styleSheet.inject()
     const flatCSS = flatten(this.rules, executionContext).join('')
     const hash = hashStr(flatCSS)
     const emojis = toEmoji(hash)
