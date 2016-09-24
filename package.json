@@ -33,6 +33,7 @@
     "js-base64": "^2.1.9",
     "lodash": "^4.15.0",
     "react": "^15.3.2",
+    "source-map": "^0.5.6",
     "supports-color": "^3.1.2"
   },
   "devDependencies": {
