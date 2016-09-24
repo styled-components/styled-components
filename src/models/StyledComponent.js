@@ -15,6 +15,8 @@ export default (tagName: string | typeof Component, rules: RuleSet) => {
     render() {
       const { className, children } = this.props
       const { theme } = this.context
+      const generatedClassName = componentStyle.injectStyles([this.props, theme]);
+
       // const contextForStyles
       const propsForElement = {}
       Object.keys(this.props).filter(propName => (
@@ -23,7 +25,7 @@ export default (tagName: string | typeof Component, rules: RuleSet) => {
       )).forEach(propName => {
         propsForElement[propName] = this.props.propName
       })
-      propsForElement.className = [className, componentStyle.injectStyles([this.props])].filter(x => x).join(' ')
+      propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
 
       return createElement(tagName, propsForElement, children)
     }
