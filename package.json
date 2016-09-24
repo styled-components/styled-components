@@ -31,7 +31,7 @@
     "fbjs": "^0.8.4",
     "glamor": "^2.15.5",
     "lodash": "^4.15.0",
-    "react": "^15.3.0",
+    "react": "^15.3.2",
     "supports-color": "^3.1.2"
   },
   "devDependencies": {
