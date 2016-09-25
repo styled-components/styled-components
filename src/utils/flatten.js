@@ -6,7 +6,7 @@ export const objToCss = (obj: Object): string => (
   Object.keys(obj).map(k => `${hyphenate(k)}: ${obj[k]};`).join(' ')
 )
 
-const flatten = (chunks: RuleSet, executionContext: Object) : RuleSet => (
+const flatten = (chunks: RuleSet, executionContext: ?Object) : RuleSet => (
   chunks.reduce((array, chunk: Interpolation) => {
     /* Remove falsey values */
     if (!chunk) return array
