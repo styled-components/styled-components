@@ -8,6 +8,9 @@ describe('flatten', () => {
   it('drops nulls', () => {
     expect(flatten(['foo', false, 'bar', undefined, 'baz', null])).toEqual(['foo', 'bar', 'baz'])
   })
+  it('doesnt drop any numbers', () => {
+    expect(flatten(['foo', 0, 'bar', NaN, 'baz', -1])).toEqual(['foo', '0', 'bar', 'NaN', 'baz', '-1'])
+  })
   it('toStrings everything', () => {
     expect(flatten([1, true])).toEqual(['1', 'true'])
   })

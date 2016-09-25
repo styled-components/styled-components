@@ -9,7 +9,7 @@ export const objToCss = (obj: Object): string => (
 const flatten = (chunks: RuleSet, executionContext: ?Object) : RuleSet => (
   chunks.reduce((array, chunk: Interpolation) => {
     /* Remove falsey values */
-    if (!chunk) return array
+    if (chunk === undefined || chunk === null || chunk === false || chunk === '') return array
     /* Flatten arrays */
     if (Array.isArray(chunk)) return array.concat(...flatten(chunk, executionContext))
     /* Either execute or defer the function */
