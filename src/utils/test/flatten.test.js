@@ -31,16 +31,16 @@ describe('flatten', () => {
   })
   it('executes functions', () => {
     const func = () => 'bar'
-    expect(flatten(['foo', func, 'baz'], [true])).toEqual(['foo', 'bar', 'baz'])
+    expect(flatten(['foo', func, 'baz'], { bool: true })).toEqual(['foo', 'bar', 'baz'])
   })
   it('passes values to function', () => {
-    const func = bool => bool ? 'bar' : 'baz'
-    expect(flatten(['foo', func], [true])).toEqual(['foo', 'bar'])
-    expect(flatten(['foo', func], [false])).toEqual(['foo', 'baz'])
+    const func = ({bool}) => bool ? 'bar' : 'baz'
+    expect(flatten(['foo', func], { bool: true })).toEqual(['foo', 'bar'])
+    expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'baz'])
   })
   it('recursively calls functions', () => {
-    const func = () => ['static', subfunc => subfunc ? 'bar' : 'baz']
-    expect(flatten(['foo', func], [true])).toEqual(['foo', 'static', 'bar'])
-    expect(flatten(['foo', func], [false])).toEqual(['foo', 'static', 'baz'])
+    const func = () => ['static', ({bool}) => bool ? 'bar' : 'baz']
+    expect(flatten(['foo', func], { bool: true })).toEqual(['foo', 'static', 'bar'])
+    expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'static', 'baz'])
   })
 })
