@@ -20,8 +20,12 @@ export default (tagName: any, rules: RuleSet) => {
       this.componentWillReceiveProps(this.props, this.context)
     }
     componentWillReceiveProps(newProps: Object, newContext: ?any) {
-      this.theme = Object.assign({}, (newContext || {}).theme)
-      this.generatedClassName = componentStyle.injectStyles([newProps, this.theme])
+      this.theme = newContext ? newContext.theme : {} // pass through theme
+      const theme = Object.assign({}, this.theme) // copy to pass to styles so no side effects
+      const updateTheme = values => this.theme = Object.assign({}, this.theme, values)
+      /* Execution context is props + theme + updateTheme */
+      const executionContext = Object.assign({}, newProps, {theme, updateTheme});
+      this.generatedClassName = componentStyle.injectStyles(executionContext)
     }
     /* eslint-disable react/prop-types */
     render() {

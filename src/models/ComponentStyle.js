@@ -28,7 +28,7 @@ export default class ComponentStyle {
    * Parses that with PostCSS then runs PostCSS-Nested on it
    * Injects that using Glamor's StyleSheet impl.
    * */
-  injectStyles(executionContext: Array<any>) {
+  injectStyles(executionContext: Object) {
     if (!styleSheet.injected) styleSheet.inject()
     const flatCSS = flatten(this.rules, executionContext).join('')
     const hash = hashStr(flatCSS)
