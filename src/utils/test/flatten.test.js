@@ -34,12 +34,12 @@ describe('flatten', () => {
     expect(flatten(['foo', func, 'baz'], { bool: true })).toEqual(['foo', 'bar', 'baz'])
   })
   it('passes values to function', () => {
-    const func = ({bool}) => bool ? 'bar' : 'baz'
+    const func = ({ bool }) => bool ? 'bar' : 'baz'
     expect(flatten(['foo', func], { bool: true })).toEqual(['foo', 'bar'])
     expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'baz'])
   })
   it('recursively calls functions', () => {
-    const func = () => ['static', ({bool}) => bool ? 'bar' : 'baz']
+    const func = () => ['static', ({ bool }) => bool ? 'bar' : 'baz']
     expect(flatten(['foo', func], { bool: true })).toEqual(['foo', 'static', 'bar'])
     expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'static', 'baz'])
   })
