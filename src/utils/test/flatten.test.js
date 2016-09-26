@@ -23,6 +23,14 @@ describe('flatten', () => {
     expect(flatten([obj])).toEqual([css])
     expect(flatten(['some:thing;', obj, 'something: else;'])).toEqual(['some:thing;', css, 'something: else;'])
   })
+  it('toStrings class instances', () => {
+    class SomeClass {
+      toString() {
+        return 'some: thing;'
+      }
+    }
+    expect(flatten([new SomeClass()])).toEqual(['some: thing;'])
+  })
   it('flattens subarrays', () => {
     expect(flatten([1, 2, [3, 4, 5], 'come:on;', 'lets:ride;'])).toEqual(['1', '2', '3', '4', '5', 'come:on;', 'lets:ride;'])
   })

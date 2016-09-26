@@ -1,5 +1,7 @@
 // @flow
 import hyphenate from 'fbjs/lib/hyphenateStyleName'
+import isPlainObject from 'lodash/isPlainObject'
+
 import type { RuleSet, Interpolation } from '../types'
 
 export const objToCss = (obj: Object): string => (
@@ -19,7 +21,7 @@ const flatten = (chunks: RuleSet, executionContext: ?Object) : RuleSet => (
         : array.concat(chunk)
     }
     /* Handle objects */
-    return array.concat(typeof chunk === 'object' ? objToCss(chunk) : chunk.toString())
+    return array.concat(isPlainObject(chunk) ? objToCss(chunk) : chunk.toString())
   }, [])
 )
 
