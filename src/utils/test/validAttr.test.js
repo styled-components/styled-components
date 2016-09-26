@@ -16,6 +16,7 @@ describe('validAttr', () => {
     expect(validAttr('suppressContentEditableWarning')).toEqual(true)
     expect(validAttr('onFocusIn')).toEqual(true)
     expect(validAttr('onFocusOut')).toEqual(true)
+    expect(validAttr('className')).toEqual(true)
   })
   it('should allow all the html props', () => {
     expect(validAttr('accept')).toEqual(true)

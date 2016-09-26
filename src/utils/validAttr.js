@@ -20,6 +20,7 @@ const reactProps = {
   suppressContentEditableWarning: true,
   onFocusIn: true,
   onFocusOut: true,
+  className: true,
 }
 
 const hasOwnProperty = {}.hasOwnProperty

@@ -9,6 +9,7 @@ import postcssNested from '../vendor/postcss-nested'
 import toEmoji from '../utils/toEmoji'
 
 const styleSheet = new StyleSheet({ speedy: false, maxLength: 40 })
+const generated = {}
 const inserted = {}
 
 /*
@@ -26,20 +27,24 @@ export default class ComponentStyle {
    * Flattens a rule set into valid CSS
    * Hashes it, wraps the whole chunk in a ._hashName {}
    * Parses that with PostCSS then runs PostCSS-Nested on it
-   * Injects that using Glamor's StyleSheet impl.
+   * Returns the hash to be injected on render()
    * */
-  injectStyles(executionContext: Object) {
+  generateStyles(executionContext: Object) {
     if (!styleSheet.injected) styleSheet.inject()
     const flatCSS = flatten(this.rules, executionContext).join('')
-    const hash = hashStr(flatCSS)
-    const emojis = toEmoji(hash)
-    if (!inserted[hash]) {
+    const emojis = toEmoji(hashStr(flatCSS))
+    if (!generated[emojis]) {
       const root = parse(`.${emojis} { ${flatCSS} }`)
       postcssNested(root)
-      const result = root.toResult().css
-      styleSheet.insert(result)
-      inserted[hash] = true
+      generated[emojis] = root.toResult().css
     }
     return emojis
+  }
+
+  injectStyles(emojis: string) {
+    if (inserted[emojis]) return
+
+    styleSheet.insert(generated[emojis])
+    inserted[emojis] = true
   }
 }
