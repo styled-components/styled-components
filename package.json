@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "0.0.6",
+  "version": "0.2.0",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
@@ -8,6 +8,7 @@
     "build:watch": "npm run build -- --watch",
     "test": "mocha \"./src/**/*.test.js\" --require babel-core/register",
     "test:watch": "npm run test -- --watch",
+    "flow": "flow; test $? -eq 0 -o $? -eq 2",
     "lint": "eslint src",
     "prepublish": "rm -rf lib/* && npm run build"
   },
@@ -27,15 +28,20 @@
   },
   "homepage": "https://github.com/css-components/styled-components#readme",
   "dependencies": {
-    "aphrodite": "^0.5.0",
-    "fbjs": "^0.8.3",
+    "fbjs": "^0.8.4",
+    "glamor": "^2.15.5",
+    "js-base64": "^2.1.9",
     "lodash": "^4.15.0",
-    "react": "^15.3.0"
+    "react": "^15.3.2",
+    "source-map": "^0.5.6",
+    "supports-color": "^3.1.2"
   },
   "devDependencies": {
     "babel-cli": "^6.14.0",
     "babel-core": "^6.13.2",
+    "babel-eslint": "^6.1.2",
     "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-plugin-transform-flow-strip-types": "^6.14.0",
     "babel-preset-es2015": "^6.13.2",
     "babel-preset-es2016": "^6.11.3",
     "babel-preset-react": "^6.11.1",
@@ -45,7 +51,9 @@
     "eslint-plugin-jsx-a11y": "^2.2.2",
     "eslint-plugin-react": "^6.2.1",
     "expect": "^1.20.2",
-    "mocha": "^3.0.2"
+    "flow-bin": "^0.32.0",
+    "mocha": "^3.0.2",
+    "proxyquire": "^1.7.10"
   },
   "babel": {
     "presets": [
@@ -54,7 +62,8 @@
       "react"
     ],
     "plugins": [
-      "add-module-exports"
+      "add-module-exports",
+      "transform-flow-strip-types"
     ]
   }
 }

@@ -1,4 +1,5 @@
-import concat from './concat'
+// @flow
+import type { RuleSet, Interpolation } from '../types'
 
 /*
 * Toggle: Simple Namespaced styling
@@ -13,15 +14,18 @@ import concat from './concat'
 * flex('inline vertical') => `display: flex; display: inline-flex; flex-direction: column;`
 * */
 
-export default (name, options) => (valueString = '') => {
-  const throwUnknown = (unknownValue) => {
+type Options = {
+  [name: string]: Interpolation | RuleSet
+}
+
+export default (name: string, options: Options): Function => (valueString: string = ''): RuleSet => {
+  const throwUnknown = (unknownValue: string) => {
     const validValues = Object.keys(options).filter(v => v !== 'default')
     throw new Error(`${name}: Unknown value '${unknownValue}'. Valid values are:\n${validValues.join('\n')}`)
   }
 
   const values = valueString.split(/ +/).filter(s => s.length > 0)
-  return concat(options.default, ...values.map(
-    // eslint-disable-next-line no-confusing-arrow
-    v => (v in options) ? options[v] : throwUnknown(v)
-  ))
+  return (options.default ? [options.default] : [])
+    .concat(...values.map(v => (v in options) ? options[v] : throwUnknown(v)))
+    .map(v => `${v};`)
 }
