@@ -25,7 +25,7 @@ const emojiList = emojiCodes.split(',').reduce((arr, range) => {
 /* Some high number, usually 9-digit base-10. Map it to base-😎 */
 const toEmoji = code => {
   const lastDigit = String.fromCodePoint(emojiList[code % emojiList.length])
-  return code > emojiList.length ? `${toEmoji(Math.floor(code / emojiList.length))}${lastDigit}` : lastDigit
+  return code > emojiList.length ? `${toEmoji(Math.floor(code / emojiList.length))}${String.fromCodePoint(0x2006)}${lastDigit}` : lastDigit
 }
 
 export default toEmoji
