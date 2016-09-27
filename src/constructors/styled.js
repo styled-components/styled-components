@@ -1,14 +1,13 @@
 // @flow
-import isPlainObject from 'lodash/isPlainObject'
 import css from './css'
-import element from './element'
+import styledComponent from '../models/StyledComponent'
+import type { Interpolation } from '../types'
 
-const styled = (tagName: string) => (...args: Array<Object|string>) => {
-  if (isPlainObject(args[0])) {
-    return element(tagName, css`${args[0]}`)
-  }
-  return element(tagName, css(...args))
-}
+/* todo: replace any with React.Component */
+const styled = (tag: string | any) =>
+  (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
+    styledComponent(tag, css(strings, ...interpolations))
+
 export default styled
 
 /* Shorthands for all valid HTML properties */
