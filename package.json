@@ -42,8 +42,7 @@
     "babel-eslint": "^6.1.2",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-plugin-transform-flow-strip-types": "^6.14.0",
-    "babel-preset-es2015": "^6.13.2",
-    "babel-preset-es2016": "^6.11.3",
+    "babel-preset-latest": "^6.14.0",
     "babel-preset-react": "^6.11.1",
     "eslint": "^3.5.0",
     "eslint-config-airbnb": "^11.1.0",
@@ -57,8 +56,7 @@
   },
   "babel": {
     "presets": [
-      "es2015",
-      "es2016",
+      "latest",
       "react"
     ],
     "plugins": [
