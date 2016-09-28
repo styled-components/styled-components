@@ -32,6 +32,7 @@ export default (tagName: any, rules: RuleSet) => {
       const executionContext = Object.assign({}, newProps, { theme, updateTheme })
       /* Do all the work to generate the CSS because this can modify the theme */
       this.generatedClassName = componentStyle.generateStyles(executionContext)
+      componentStyle.injectStyles(this.generatedClassName)
     }
 
     /* eslint-disable react/prop-types */
@@ -57,7 +58,6 @@ export default (tagName: any, rules: RuleSet) => {
       this.componentDidUpdate()
     }
     componentDidUpdate() {
-      componentStyle.injectStyles(this.generatedClassName)
     }
   }
 

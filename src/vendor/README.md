@@ -2,7 +2,10 @@ Vendored postcss source as of [31ae472](https://github.com/postcss/postcss/tree/
 
 Vendored postcss-nested source as of [e709092](https://github.com/postcss/postcss-nested/tree/e7090926839cf916f6a24c3ad4079c1206d93b2d)
 
+Vendored glamor/sheet.js as of [582dde4](https://github.com/threepointone/glamor/blob/582dde44713bcbe9212a961706c06a34a4ebccb0/src/sheet.js)
+
 Then hacked things around:
 
 * Deleted `previous-map.js` and all references to it because it `require('fs')`ed
 * Deleted reference to `postcss` within `postcss-nested` & simply exported the transform function
+* Made `StyleSheet.insert()` return something with an `update()` method
