@@ -32,6 +32,8 @@ export default (tagName: any, rules: RuleSet) => {
       const executionContext = Object.assign({}, newProps, { theme, updateTheme })
       /* Do all the work to generate the CSS because this can modify the theme */
       this.generatedClassName = componentStyle.generateStyles(executionContext)
+      /* Inject the styles */
+      componentStyle.injectStyles(this.generatedClassName)
     }
 
     /* eslint-disable react/prop-types */
@@ -48,16 +50,6 @@ export default (tagName: any, rules: RuleSet) => {
       propsForElement.className = [className, this.generatedClassName].filter(x => x).join(' ')
 
       return createElement(tagName, propsForElement, children)
-    }
-
-    /* Once rendered, inject the CSS. This means that nested elements' CSS
-    * is injected first, then the wrapping elements. This allows a StyleComponent
-    * to wrap another. */
-    componentDidMount() {
-      this.componentDidUpdate()
-    }
-    componentDidUpdate() {
-      componentStyle.injectStyles(this.generatedClassName)
     }
   }
 
