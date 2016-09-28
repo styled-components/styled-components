@@ -12,9 +12,6 @@ const styleSheet = new StyleSheet({ speedy: false, maxLength: 40 })
 const generated = {}
 const inserted = {}
 
-interface UpdateableRule {
-}
-
 /*
  ComponentStyle is all the CSS-specific stuff, not
  the React-specific stuff.
@@ -22,13 +19,11 @@ interface UpdateableRule {
 export default class ComponentStyle {
   rules: RuleSet
   insertedRule: Object
-  builtState: string
 
   constructor(rules: RuleSet) {
     this.rules = rules
     if (!styleSheet.injected) styleSheet.inject()
     this.insertedRule = styleSheet.insert('')
-    this.builtState = ''
   }
 
   /*
@@ -51,8 +46,7 @@ export default class ComponentStyle {
   injectStyles(emojis: string) {
     if (inserted[emojis]) return
 
-    this.builtState += generated[emojis]
-    this.insertedRule.updateRule(this.builtState)
+    this.insertedRule.appendRule(generated[emojis])
     inserted[emojis] = true
   }
 }

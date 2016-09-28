@@ -87,7 +87,7 @@ export class StyleSheet {
           // in other words, just the cssText field
           const serverRule = { cssText: rule }
           this.sheet.cssRules.push(serverRule)
-          return {serverRule, updateRule: (newCss => serverRule.cssText = newCss)}
+          return {serverRule, appendRule: (newCss => serverRule.cssText += newCss)}
         }
       }
     }
@@ -128,7 +128,7 @@ export class StyleSheet {
       else{
         const textNode = document.createTextNode(rule)
         last(this.tags).appendChild(textNode)
-        insertedRule = { textNode, updateRule: newCss => (textNode.data = newCss)}
+        insertedRule = { textNode, appendRule: newCss => textNode.appendData(newCss)}
 
         if(!this.isSpeedy) {
           // sighhh
