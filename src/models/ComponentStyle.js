@@ -1,6 +1,6 @@
 // @flow
 import hashStr from 'glamor/lib/hash'
-import { StyleSheet } from 'glamor/lib/sheet'
+import { StyleSheet } from '../vendor/glamor/sheet'
 
 import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
@@ -18,9 +18,12 @@ const inserted = {}
  */
 export default class ComponentStyle {
   rules: RuleSet
+  insertedRule: Object
 
   constructor(rules: RuleSet) {
     this.rules = rules
+    if (!styleSheet.injected) styleSheet.inject()
+    this.insertedRule = styleSheet.insert('')
   }
 
   /*
@@ -30,7 +33,6 @@ export default class ComponentStyle {
    * Returns the hash to be injected on render()
    * */
   generateStyles(executionContext: Object) {
-    if (!styleSheet.injected) styleSheet.inject()
     const flatCSS = flatten(this.rules, executionContext).join('')
     const emojis = toEmoji(hashStr(flatCSS))
     if (!generated[emojis]) {
@@ -44,7 +46,7 @@ export default class ComponentStyle {
   injectStyles(emojis: string) {
     if (inserted[emojis]) return
 
-    styleSheet.insert(generated[emojis])
+    this.insertedRule.appendRule(generated[emojis])
     inserted[emojis] = true
   }
 }
