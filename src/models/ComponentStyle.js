@@ -32,19 +32,19 @@ export default class ComponentStyle {
   generateStyles(executionContext: Object) {
     if (!styleSheet.injected) styleSheet.inject()
     const flatCSS = flatten(this.rules, executionContext).join('')
-    const emojis = toEmoji(hashStr(flatCSS))
-    if (!generated[emojis]) {
-      const root = parse(`.${emojis} { ${flatCSS} }`)
+    const selector = toEmoji(hashStr(flatCSS))
+    if (!generated[selector]) {
+      const root = parse(`.${selector} { ${flatCSS} }`)
       postcssNested(root)
-      generated[emojis] = root.toResult().css
+      generated[selector] = root.toResult().css
     }
-    return emojis
+    return selector
   }
 
-  injectStyles(emojis: string) {
-    if (inserted[emojis]) return
+  injectStyles(selector: string) {
+    if (inserted[selector]) return
 
-    styleSheet.insert(generated[emojis])
-    inserted[emojis] = true
+    styleSheet.insert(generated[selector])
+    inserted[selector] = true
   }
 }
