@@ -162,7 +162,7 @@ const Input = styled.input`
 
 <div align="center">
   <a href="http://www.webpackbin.com/NkZ61pHab">
-    <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/5LtwpPU.jpg" />
+    <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/9Etm2yl.jpg" />
     <em>Live demo</em>
   </a>
 </div>
