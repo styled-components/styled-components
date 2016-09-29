@@ -49,7 +49,7 @@ This is what our `<HelloWorld>` component looks like when rendered:
 
 <img alt="Screenshot of the above code ran in a browser" src="http://i.imgur.com/wUJpcjY.jpg" />
 
-*<div align="center"><a href="http://www.webpackbin.com/VyQ9AYHpZ" target="_blank">Live demo</a></div>*
+*<div align="center"><a href="http://www.webpackbin.com/VyQ9AYHpZ">Live demo</a></div>*
 
 ### Passed props
 
@@ -84,11 +84,11 @@ Here's what this looks like in the browser, once empty showing the placeholder a
 
 <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/QoQiSui.jpg" />
 
-*<div align="center"><a href="http://www.webpackbin.com/EyBu49rab" target="_blank">Live demo</a></div>*
+*<div align="center"><a href="http://www.webpackbin.com/EyBu49rab">Live demo</a></div>*
 
 ### Pseudo elements
 
-To adjust the placeholder color of the input in the example above, we need to use the <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/::placeholder" target="_blank">`::placeholder`</a> pseudo element.
+To adjust the placeholder color of the input in the example above, we need to use the <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/::placeholder">`::placeholder`</a> pseudo element.
 
 To attach pseudo elements to your styled component, you need to use `&`. For example, to style the placeholder:
 
@@ -156,7 +156,7 @@ const Input = styled.input`
 
 <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/5LtwpPU.jpg" />
 
-*<div align="center"><a href="http://www.webpackbin.com/NkZ61pHab" target="_blank">Live demo</a></div>*
+*<div align="center"><a href="http://www.webpackbin.com/NkZ61pHab">Live demo</a></div>*
 
 ## Alternative Installation Methods
 
