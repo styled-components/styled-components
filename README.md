@@ -47,9 +47,12 @@ export default function HelloWorld() {
 
 This is what our `<HelloWorld>` component looks like when rendered:
 
-<img alt="Screenshot of the above code ran in a browser" src="http://i.imgur.com/wUJpcjY.jpg" />
-
-*<div align="center"><a href="http://www.webpackbin.com/VyQ9AYHpZ">Live demo</a></div>*
+<div align="center">
+  <a href="http://www.webpackbin.com/VyQ9AYHpZ">
+    <img alt="Screenshot of the above code ran in a browser" src="http://i.imgur.com/wUJpcjY.jpg" />
+    <em>Live demo</em>
+  </a>
+</div>
 
 ### Passed props
 
@@ -82,9 +85,12 @@ export default function Form() {
 
 Here's what this looks like in the browser, once empty showing the placeholder and once filled in:
 
-<img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/QoQiSui.jpg" />
-
-*<div align="center"><a href="http://www.webpackbin.com/EyBu49rab">Live demo</a></div>*
+<div align="center">
+  <a href="http://www.webpackbin.com/EyBu49rab">
+    <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/QoQiSui.jpg" />
+    <em>Live demo</em>
+  </a>
+</div>
 
 ### Pseudo elements
 
@@ -154,9 +160,12 @@ const Input = styled.input`
 `;
 ```
 
-<img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/5LtwpPU.jpg" />
-
-*<div align="center"><a href="http://www.webpackbin.com/NkZ61pHab">Live demo</a></div>*
+<div align="center">
+  <a href="http://www.webpackbin.com/NkZ61pHab">
+    <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/5LtwpPU.jpg" />
+    <em>Live demo</em>
+  </a>
+</div>
 
 ## Alternative Installation Methods
 
