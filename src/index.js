@@ -6,7 +6,8 @@
 import css from './constructors/css'
 import toggle from './constructors/toggle'
 import styled from './constructors/styled'
+import global from './constructors/global'
 
-export { css, toggle }
+export { css, toggle, global }
 
 export default styled
