@@ -8,9 +8,11 @@ npm install --save styled-components
 
 > Note: If you're not using `npm` as your package manager, aren't using a module bundler or aren't sure about either of those jump to [Alternative Installation Methods](#alternative-installation-methods).
 
-## Basic Usage
+## Usage
 
-This is what the basic usage of `styled-components` looks like.
+This is what the usage of `styled-components` looks like.
+
+### Basic
 
 We create two react components, `<Title>` and `<Wrapper>`, and render them from our `<HelloWorld>` component:
 
@@ -49,6 +51,8 @@ This is what our `<HelloWorld>` component looks like when rendered:
 
 *<div align="center"><a href="http://www.webpackbin.com/VyQ9AYHpZ" target="_blank">Live demo</a></div>*
 
+### Passed props
+
 Styled components pass on all their props. Let's see an example of an `<input>` with a placeholder:
 
 ```JSX
@@ -76,11 +80,83 @@ export default function Form() {
 }
 ```
 
-Here's what this looks like in the browser, once empty and once filled in:
+Here's what this looks like in the browser, once empty showing the placeholder and once filled in:
 
 <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/QoQiSui.jpg" />
 
 *<div align="center"><a href="http://www.webpackbin.com/EyBu49rab" target="_blank">Live demo</a></div>*
+
+### Pseudo elements
+
+To adjust the placeholder color of the input in the example above, we need to use the <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/::placeholder" target="_blank">`::placeholder`</a> pseudo element.
+
+To attach pseudo elements to your styled component, you need to use `&`. For example, to style the placeholder:
+
+```JSX
+const Input = styled.input`
+  // Old styles here…
+
+  // Style the placeholder
+  &::placeholder {
+    color: palevioletred;
+    opacity: 0.5;
+  }
+`;
+```
+
+> Note: This also applies to `&:before`, `&:after`, etc.
+
+### Using JavaScript to our advantage
+
+If you tried to actually run the above example, you'd likely see that the placeholder is still gray.
+
+The unprefixed `::placeholder` pseudo-element is currently only supported in Firefox 51 – we also need to use `::-webkit-input-placeholder`, `::-moz-placeholder`, `:-moz-placeholder` (notice the single colon) and `:-ms-input-placeholder`.
+
+Instead of hardcoding them into our `<Input>`, we can write a JavaScript function that adds those automatically! We can then reuse that function whenever we need to style a placeholder:
+
+```JS
+// placeholder.js
+
+export default function placeholder(rules) {
+  return `
+    &::placeholder {
+      ${rules}
+    }
+
+    &::-webkit-input-placeholder {
+      ${rules}
+    }
+
+    &::-moz-placeholder {
+      ${rules}
+    }
+
+    &:-ms-input-placeholder {
+      ${rules}
+    }
+  `;
+}
+```
+
+Which would be used like this:
+
+```JSX
+import placeholder from '../placeholder';
+
+const Input = styled.input`
+  // Old styles here…
+
+  // Style the placeholder
+  ${placeholder(`
+    color: palevioletred;
+    opacity: 0.5;
+  `)}
+`;
+```
+
+<img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/5LtwpPU.jpg" />
+
+*<div align="center"><a href="http://www.webpackbin.com/NkZ61pHab" target="_blank">Live demo</a></div>*
 
 ## Alternative Installation Methods
 
