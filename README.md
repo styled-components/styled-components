@@ -14,7 +14,7 @@ This is what the usage of `styled-components` looks like.
 
 ### Basic
 
-We create two react components, `<Title>` and `<Wrapper>`, and render them from our `<HelloWorld>` component:
+Let's create two react components, `<Title>` and `<Wrapper>`, and render them:
 
 ```JSX
 import React from 'react';
@@ -33,19 +33,16 @@ const Wrapper = styled.section`
   padding: 4em;
   background: papayawhip;
 `;
-
-export default function HelloWorld() {
-  // Render these styled components like normal react components. They will pass on all props and work
-  // like normal react components – except they're styled!
-  return (
-    <Wrapper>
-      <Title>Hello World, this is my first styled component!</Title>
-    </Wrapper>
-  );
-}
 ```
 
-This is what our `<HelloWorld>` component looks like when rendered:
+```JSX
+// These are like any other react component – except they're styled!
+<Wrapper>
+  <Title>Hello World, this is my first styled component!</Title>
+</Wrapper>
+```
+
+This what the above JSX looks like when rendered to the DOM:
 
 <div align="center">
   <a href="http://www.webpackbin.com/VyQ9AYHpZ">
@@ -58,7 +55,7 @@ This is what our `<HelloWorld>` component looks like when rendered:
 
 Styled components pass on all their props. Let's see an example of an `<input>` with a placeholder:
 
-```JSX
+```JS
 import React from 'react';
 import styled from 'styled-components';
 
@@ -72,15 +69,11 @@ const Input = styled.input`
   border: none;
   border-radius: 3px;
 `;
+```
 
-export default function Form() {
-  return (
-    <form>
-      {/* Render a styled input with a placeholder of "@mxstbr" */}
-      <Input placeholder="@mxstbr" type="text" />
-    </form>  
-  );
-}
+```JSX
+// Render a styled input with a placeholder of "@mxstbr"
+<Input placeholder="@mxstbr" type="text" />
 ```
 
 Here's what this looks like in the browser, once empty showing the placeholder and once filled in:
@@ -114,14 +107,12 @@ const Button = styled.button`
 export default Button;
 ```
 
-Let's render a normal button and a primary button, just like you normally would:
+How'd you render a primary button? Well, just like any other react component!
 
 ```JSX
 <Button>Normal</Button>
 <Button primary={true}>Primary</Button>
 ```
-
-This is what this looks like in the browser:
 
 <div align="center">
   <a href="http://www.webpackbin.com/4JAqcmL6Z">
@@ -130,11 +121,11 @@ This is what this looks like in the browser:
   </a>
 </div>
 
-Overriding based on props: done. But there's other way to override styles!
+Overriding based on props: done. But there's another way to override styles!
 
 ### Overriding component styles
 
-If we go back to our button example, let's get rid of the primary stuff and only ever render the "normal" button:
+If we go back to our button example, let's get rid of the dynamic primary stuff and just have the "normal" button styles.
 
 ```JSX
 import styled from 'styled-components';
@@ -154,9 +145,9 @@ export default Button;
 
 Nothing fancy happening here, just a button.
 
-Let's say someplace else you want to reuse most of the styles, but want to make the color and border color `tomato` instead of `palevioletred`. Instead of factoring out the CSS into a separate function or, dare I say it, copy and pasting the styles, we make this easy!
+Let's say someplace else you want to reuse _most_ of the styles, but you want the color and border color to be `tomato` instead of `palevioletred`.
 
-You can simply use `styled` like a function and pass in the previous component to override some styles, but preserving all the others:
+To do this, you can call `styled` as a function and pass in the previous component. Then you style that like any other styled-component, except it overrides the styles you pass in and keeps the not overridden ones around:
 
 ```JSX
 // Tomatobutton.js
@@ -183,11 +174,15 @@ When rendered, this is what the `TomatoButton` looks like:
   </a>
 </div>
 
+Instead of copy and pasting the styles or factoring out the CSS into a separate function we've now reused a part of the styles. By leveraging components as our low-level styling construct, our codebase becomes a lot clearer!
+
+> Note: `styled.tagname` are just aliases of `styled('tagname')`!
+
 #### Third-party components
 
-Imagine want to style a third-party component, like a `<Link>` from `react-router`. Well, the above works perfectly for that case too!
+Guess what, the above works perfectly for styling third-party components too, like a `react-router` `<Link />`!
 
-```JSX
+```JS
 import styled from 'styled-components';
 import { Link } from 'react-router';
 
@@ -201,15 +196,11 @@ const StyledLink = styled(Link)`
     text-decoration: underline;
   }
 `;
+```
 
-render(
-  <div>
-    <Link to="/">Standard, unstyled Link</Link>
-    <br />
-    <StyledLink to="/">This Link is styled!</StyledLink>
-  </div>,
-  document.querySelector('#app')
-);
+```JSX
+<Link to="/">Standard, unstyled Link</Link>
+<StyledLink to="/">This Link is styled!</StyledLink>
 ```
 
 <div align="center">
