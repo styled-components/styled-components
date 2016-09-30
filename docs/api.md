@@ -2,6 +2,7 @@
 
 ## Primary
 
+
 ### `styled`
 
 Default export. This is a low-level factory we use to create the `styled.tagname` helper methods.
@@ -40,6 +41,7 @@ background: tomato;
 
 - We encourage you to not use the `styled('tagname')` notation directly. Instead, rely on the `styled.tagname` helpers like `styled.button`. We define all valid HTML5 and SVG elements. (it's an automatic fat finger check too)
 
+
 ### `TaggedTemplateLiteral`
 
 This is what you pass into your `styled` calls – a tagged template literal. This is an ES6 language feature, so you can learn more about the basics on [MDN](https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Template_literals#Tagged_template_literals).
@@ -72,15 +74,59 @@ background: ${(props) => props.background || 'palevioletred'};
 <Section background="papayawhip">I have a papayawhip background</Section>
 ```
 
-### `StyledComponent`
+#### Tips
 
-TK
+- You're writing CSS, but with the power of JavaScript – utilise it! (see [Tips and Tricks](./tips-and-tricks.md) for some ideas)
 
-## Helpers
 
 ### `css`
 
-TK
+A helper function to generate CSS from a template literal with interpolations. You need to use this if you return a template literal with interpolations inside an interpolation. (this is due to how tagged template literals work)
+
+If you're just returning a normal string you do not need to use this.
+
+#### Arguments
+
+1. `TaggedTemplateLiteral`: A tagged template literal with your keyframes inside.
+
+#### Returns
+
+- `Interpolations` (`Array`): A flattened data structure which you can pass into an interpolation.
+
+#### Examples
+
+```JS
+import styled, { css } from 'styled-components';
+
+const colorIfComplex = 'red';
+
+const StyledComp = styled.div`
+${(props) => {
+	if (props.complex) {
+		// Returning a template literal with interpolations? You need to use `css`
+		return css`
+			color: ${colorIfComplex};
+		`;
+	} else {
+		// Returning a standard string? No need to use `css`
+		return 'color: blue;';
+	}
+}}
+`;
+```
+
+
+### `StyledComponent`
+
+A styled react component. This is returned when you call `styled.tagname` or `styled(Component)` with styles.
+
+#### Tips
+
+- This component can take any prop. It passes it on the HTML node if it's a valid attribute, otherwise it only passes it into interpolated functions. (see [TaggedTemplateLiteral](#taggedtemplateliteral))
+- You can pass an arbitrary classname to a styled component without problem and it will be applied next to the styles defined by the `styled` call. (e.g. `<MyStyledComp className="bootstrap__btn" />`)
+
+## Helpers
+
 
 ### `keyframes`
 
@@ -88,7 +134,7 @@ A helper method to create keyframes for animations.
 
 #### Arguments
 
-- `TaggedTemplateLiteral`: A tagged template literal with your keyframes inside.
+1. `TaggedTemplateLiteral`: A tagged template literal with your keyframes inside.
 
 #### Returns
 
@@ -123,6 +169,7 @@ animation: 1s ${fadeIn} ease-out;
 `;
 ```
 
+
 ### `global`
 
 A helper method to write global CSS. Does not return a component, adds the styles to the stylesheet directly.
@@ -131,7 +178,7 @@ A helper method to write global CSS. Does not return a component, adds the style
 
 #### Arguments
 
-- `TaggedTemplateLiteral`: A tagged template literal with your global styles inside.
+1. `TaggedTemplateLiteral`: A tagged template literal with your global styles inside.
 
 #### Example
 
