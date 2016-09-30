@@ -1,7 +1,6 @@
 import expect from 'expect'
 import proxyquire from 'proxyquire'
-
-let keyframes = require('../keyframes')
+import keyframes from '../keyframes'
 
 const KEYFRAMES_REGEX = /@keyframes\s*(\S+)\s*\{/
 
@@ -34,10 +33,14 @@ const stubbedSheet = {
   '@global': true,
 }
 
+const stubbedKeyframes = proxyquire('../keyframes', {
+  '../vendor/glamor/sheet': stubbedSheet,
+  './vendor/glamor/sheet': stubbedSheet,
+  'glamor/lib/sheet': stubbedSheet,
+})
+
 describe.only('keyframes', () => {
   beforeEach(() => {
-    keyframes = require('../keyframes') // eslint-disable-line global-require
-
     insertSpy.reset()
   })
 
@@ -65,12 +68,8 @@ describe.only('keyframes', () => {
         opacity: 1;
       }
     `
-    keyframes = proxyquire('../keyframes', {
-      '../vendor/glamor/sheet': stubbedSheet,
-      './vendor/glamor/sheet': stubbedSheet,
-      'glamor/lib/sheet': stubbedSheet,
-    })
-    const name = keyframes`${rules}`
+
+    const name = stubbedKeyframes`${rules}`
 
     expect(insertSpy).toHaveBeenCalled()
     expect(insertSpy.calls.length).toEqual(1)
