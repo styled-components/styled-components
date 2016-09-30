@@ -1,3 +1,4 @@
+// @flow
 import { StyleSheet } from 'glamor/lib/sheet'
 
 import type { RuleSet } from '../types'
@@ -9,14 +10,19 @@ const styleSheet = new StyleSheet({ speedy: false, maxLength: 40 })
 
 export default class ComponentStyle {
   rules: RuleSet
+  selector: ?string
 
-  constructor(rules: RuleSet) {
+  constructor(rules: RuleSet, selector: ?string) {
     this.rules = rules
+    this.selector = selector
   }
 
   generateAndInject() {
     if (!styleSheet.injected) styleSheet.inject()
-    const flatCSS = flatten(this.rules).join('')
+    let flatCSS = flatten(this.rules).join('')
+    if (this.selector) {
+      flatCSS = `${this.selector} {${flatCSS}\n}`
+    }
     const root = parse(flatCSS)
     postcssNested(root)
     styleSheet.insert(root.toResult().css)
