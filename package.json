@@ -49,6 +49,7 @@
     "babel-plugin-transform-flow-strip-types": "^6.14.0",
     "babel-preset-latest": "^6.14.0",
     "babel-preset-react": "^6.11.1",
+    "enzyme": "^2.4.1",
     "eslint": "^3.5.0",
     "eslint-config-airbnb": "^11.1.0",
     "eslint-plugin-import": "^1.15.0",
@@ -58,6 +59,8 @@
     "flow-bin": "^0.32.0",
     "mocha": "^3.0.2",
     "proxyquire": "^1.7.10",
+    "react-addons-test-utils": "^15.3.2",
+    "react-dom": "^15.3.2",
     "webpack": "^1.13.2"
   },
   "babel": {
