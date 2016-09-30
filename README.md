@@ -210,6 +210,60 @@ const StyledLink = styled(Link)`
   </a>
 </div>
 
+### Keyframes
+
+Keyframes in CSS are meant to be reused, and they don't make sense to be scoped to a single component.
+We export a `keyframes` helper which will generate a unique name for your keyframes. You can then use that unique name throughout your app:
+
+```JS
+import { keyframes } from 'styled-components';
+
+const keyframes = {
+  fadeIn: keyframes`
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  `,
+};
+
+export default keyframes;
+```
+
+```JSX
+import styled from 'styled-components';
+import keyframes from '../keyframes';
+
+const ComponentThatFadesIn = styled.div`
+animation: 1s ease-out ${keyframes.fadeIn};
+`;
+
+export default ComponentThatFadesIn;
+```
+
+This component will then have that animation when rendered.
+
+### Global styles
+
+Sometimes, you might need to add some global styling, like a `@font-face`. We export a helper method called `global` that allows you to write global CSS so you can avoid having to add a build step to your module bundler for those few lines of global code. It does not return a component, it just adds those styles to the stylesheet:
+
+```JS
+// global-styles.js
+
+import { global } from 'styled-components';
+
+global`
+@font-face {
+  font-family: 'Operator Mono';
+  src: url('../fonts/Operator-Mono.ttf');
+}
+`;
+```
+
+**We do not encourage the use of this. Use once per app, contained in a single file.** The whole point of using CSS-in-JS is to avoid global styling. This is an escape hatch, so use it for the rare usecase like `@font-face`, but only that.
+
 ## Alternative Installation Methods
 
 If you're not using a module bundler or not using `npm` as your package manager, we also have a global ("UMD") build!
