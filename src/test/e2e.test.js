@@ -19,8 +19,8 @@ let styled
 class StubStylesheet {
   constructor() {
     // TODO: there must be a better way to get a handle on the instance each time
-    // Weirdly the constructor gets called twice each run but the first instance
-    // is the one that gets used. NFI.
+    // For the tests so far, the first stylesheet to be created is the good one
+    // TODO: fix GlobalStyle.js
     if (!styleSheet) styleSheet = this
     this.injected = false
     this.rules = []
@@ -63,8 +63,6 @@ describe('e2e', () => {
     index = 0
     styled = proxyquire('../index', {
       '../vendor/glamor/sheet': stubbedSheet,
-      './vendor/glamor/sheet': stubbedSheet,
-      'glamor/lib/sheet': stubbedSheet,
       '../utils/toEmoji': stubbedEmoji
     }).default
   })

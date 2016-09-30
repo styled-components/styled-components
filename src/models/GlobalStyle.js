@@ -1,4 +1,4 @@
-import { StyleSheet } from 'glamor/lib/sheet'
+import { StyleSheet } from '../vendor/glamor/sheet'
 
 import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
