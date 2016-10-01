@@ -139,9 +139,9 @@ const Button = styled.button`
 export default Button;
 ```
 
-Let's say someplace else you want to reuse _most_ of the styles, but you want the color and border color to be `tomato` instead of `palevioletred`. Now you _could_ pass in an interpolated function and change them, but you want to have another component for this instead.
+Let's say someplace else you want to use your button component, but just in this one case you want the color and border color to be `tomato` instead of `palevioletred`. Now you _could_ pass in an interpolated function and change them based on some props, but that's quite a lot of effort for overriding the styles once.
 
-To accomplish this you can call `styled` as a function and pass in the previous component. Then you style that like any other styled-component, except it overrides the styles you pass in and keeps the not overridden ones around:
+To do this in an easier way you can call `styled` as a function and pass in the previous component. You style that like any other styled-component. It overrides duplicate styles from the initial component and keeps the others around:
 
 ```JSX
 // Tomatobutton.js
@@ -159,6 +159,8 @@ border-color: tomato;
 export default TomatoButton;
 ```
 
+Even though we have only specified the `color` and the `border-color`, this is what our TomatoButton looks like:
+
 <div align="center">
   <a href="http://www.webpackbin.com/VJZQkBU6Z">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/LZZ3h5i.jpg" />
@@ -166,7 +168,7 @@ export default TomatoButton;
   </a>
 </div>
 
-Instead of copy and pasting the styles or factoring out the CSS into a separate function we've now reused a part of the styles. By leveraging components as our low-level styling construct, our codebase becomes a lot clearer!
+Instead of copy and pasting or factoring out the styles into a separate function we've now reused them.
 
 > You can also pass tag names into the `styled()` call, like so: `styled('div')`. In fact, the styled.tagname helpers are just aliases of `styled('tagname')`!
 
@@ -204,7 +206,7 @@ const StyledLink = styled(Link)`
 
 ### Keyframes
 
-Keyframes in CSS don't make sense to be scoped to a single component, they are meant to be global. This is why we export a `keyframes` helper which will generate a unique name for your keyframes. You can then use that unique name throughout your app.
+CSS animations with `@keyframes` don't make sense to be scoped to a single component. This is why we export a `keyframes` helper which will generate a unique name for your keyframes. You can then use that unique name throughout your app.
 
 This way, you get all the benefits of using JavaScript, are avoiding name clashes and get your keyframes like always:
 
