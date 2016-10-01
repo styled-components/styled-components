@@ -209,28 +209,27 @@ Keyframes in CSS don't make sense to be scoped to a single component, they are m
 This way, you get all the benefits of using JavaScript, are avoiding name clashes and get your keyframes like always:
 
 ```JS
+// fadeIn.js
 import { keyframes } from 'styled-components';
 
-const keyframes = {
-  fadeIn: keyframes`
-    0% {
-      opacity: 0;
-    }
-    100% {
-      opacity: 1;
-    }
-  `,
-};
+const fadeIn = keyframes`
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+`;
 
-export default keyframes;
+export default fadeIn;
 ```
 
 ```JSX
 import styled from 'styled-components';
-import keyframes from '../keyframes';
+import fadeIn from '../fadeIn';
 
 const ComponentThatFadesIn = styled.div`
-animation: 1s ease-out ${keyframes.fadeIn};
+animation: 1s ease-out ${fadeIn};
 `;
 
 export default ComponentThatFadesIn;

@@ -10,9 +10,9 @@ To adjust the placeholder color of an input, we need to use the <a href="https:/
 
 ```JSX
 const Input = styled.input`
-  // Some other styles here…
+  /* Some other styles here… */
 
-  // Style the placeholder
+  /* Style the placeholder */
   &::placeholder {
     color: palevioletred;
     opacity: 0.5;
