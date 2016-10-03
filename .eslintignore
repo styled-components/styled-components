@@ -1,1 +1,2 @@
 src/vendor/**/*.js
+*.test.js
