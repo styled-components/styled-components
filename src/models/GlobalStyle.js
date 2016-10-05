@@ -1,10 +1,10 @@
 // @flow
-import { StyleSheet } from 'glamor/lib/sheet'
+import parse from '../vendor/postcss-safe-parser/parse'
+import { StyleSheet } from '../vendor/glamor/sheet'
+import postcssNested from '../vendor/postcss-nested'
 
 import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
-import parse from '../vendor/postcss-safe-parser/parse'
-import postcssNested from '../vendor/postcss-nested'
 
 const styleSheet = new StyleSheet({ speedy: false, maxLength: 40 })
 
