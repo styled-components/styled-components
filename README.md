@@ -1,6 +1,6 @@
 # `styled-components`
 
-The best way to style react apps!
+Style your react apps with the power of Javascript and actual CSS!
 
 ```
 npm install --save styled-components
