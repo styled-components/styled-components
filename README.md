@@ -1,4 +1,5 @@
-# `styled-components`
+<img alt="styled-components" src="./logo/logo.png" height="150px" />
+<br />
 
 Style your react apps with the power of Javascript and actual CSS!
 
@@ -77,6 +78,8 @@ You can just pass a `placeholder` prop into the `styled-component`. It will pass
 // Render a styled input with a placeholder of "@mxstbr"
 <Input placeholder="@mxstbr" type="text" />
 ```
+
+Here is one input without any content showing the placeholder, and one with some content:
 
 <div align="center">
   <a href="http://www.webpackbin.com/EyBu49rab">
