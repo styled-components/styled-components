@@ -4,6 +4,8 @@
 
 The best way to style react apps!
 
+**This is a work in progress** based off of [this demo](https://github.com/geelen/css-components-demo).
+
 ```
 npm install --save styled-components
 ```
