@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="318px" height="318px" viewBox="0 0 318 318" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 40.1 (33804) - http://www.bohemiancoding.com/sketch -->
+    <title>logo</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="318" height="318"></rect>
+        <mask id="mask-2" maskContentUnits="userSpaceOnUse" maskUnits="objectBoundingBox" x="0" y="0" width="318" height="318" fill="white">
+            <use xlink:href="#path-1"></use>
+        </mask>
+    </defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="logo">
+            <g id="Group-2">
+                <use id="Rectangle" stroke="#000000" mask="url(#mask-2)" stroke-width="8" xlink:href="#path-1"></use>
+                <text id="styled" font-family="FiraCode-Regular, Fira Code" font-size="36" font-weight="normal" letter-spacing="0.179999992" fill="#000000">
+                    <tspan x="35.16" y="234">styled</tspan>
+                </text>
+                <text id="components" font-family="FiraCode-Regular, Fira Code" font-size="36" font-weight="normal" letter-spacing="0.179999992" fill="#000000">
+                    <tspan x="34.1" y="280">components</tspan>
+                </text>
+                <g id="Group" transform="translate(23.000000, 19.000000)" fill="#000000" font-weight="normal">
+                    <text id="&lt;" font-family="FiraCode-Regular, Fira Code" font-size="140" letter-spacing="0.699999928">
+                        <tspan x="0" y="132">&lt;</tspan>
+                    </text>
+                    <text id="&gt;" font-family="FiraCode-Regular, Fira Code" font-size="140" letter-spacing="0.699999928">
+                        <tspan x="186" y="131">&gt;</tspan>
+                    </text>
+                    <text id="💅" font-family="AppleColorEmoji, Apple Color Emoji" font-size="100" letter-spacing="0.49999997">
+                        <tspan x="85" y="125">💅</tspan>
+                    </text>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>
