@@ -9,6 +9,9 @@ module.exports = [{
     library: 'styled-components',
     libraryTarget: 'umd',
   },
+  externals: {
+    react: 'React',
+  },
   module: {
     loaders: [
       {
@@ -30,6 +33,9 @@ module.exports = [{
     filename: 'styled-components.min.js',
     library: 'styled-components',
     libraryTarget: 'umd',
+  },
+  externals: {
+    react: 'React',
   },
   module: {
     loaders: [
