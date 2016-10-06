@@ -1,11 +1,13 @@
 <img alt="styled-components" src="./logo/logo.png" height="150px" />
 <br />
 
-Style your react apps with the power of Javascript and actual CSS!
+Style your react apps with the power of ES6 and actual CSS code!
 
 ```
 npm install --save styled-components
 ```
+
+Utilising [tagged template literals](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/template_strings#Tagged_Template-Strings), an ES6 feature, `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
 > Note: If you're not using `npm` as your package manager, aren't using a module bundler or aren't sure about either of those jump to [Alternative Installation Methods](#alternative-installation-methods).
 
@@ -256,11 +258,15 @@ See [the documentation](./docs) for more information about using `styled-compone
 
 ## Syntax highlighting
 
-The one thing you loose when writing CSS in template literals is syntax highlighting. Thankfully, @gandm, the creator of `language-babel`, has helped us add support for `styled-components` in Atom!
+The one thing you loose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom.
+
+This is what it looks like when properly highlighted:
+
+<img alt="Syntax highlighted styled component" src="http://imgur.com/k7h45c3.jpg" height="150px" />
 
 ### Atom
 
-To get proper syntax highlighting, follow these steps:
+[**@gandm**](https://github.com/gandm), the creator of `language-babel`, has helped us add support for `styled-components` in Atom! To get proper syntax highlighting, follow these steps:
 
 > Note: You need to have `language-babel` installed for this to work.
 
@@ -273,6 +279,14 @@ To get proper syntax highlighting, follow these steps:
 ### Other Editors
 
 We're working on getting syntax highlighting support to other editors too, and we could use your help! If you want to start working on syntax highlighting for your editor, open an issue to let us know.
+
+## Further Reading
+
+These are some great articles and talks about related topics in case you're hungry for more:
+
+- [📝 "Scale" FUD and Style Components](https://medium.com/learnreact/scale-fud-and-style-components-c0ce87ec9772#.kzjba8lcg): Using components as low-level styling constructs
+- [🎙 The Future of Reusable CSS](https://www.youtube.com/watch?v=XR6eM_5pAb0): How component libraries should be styled, and why they're not yet
+- [📝 Rendering Khan Academy’s Learn Menu Wherever I Please](https://medium.com/@jdan/rendering-khan-academys-learn-menu-wherever-i-please-4b58d4a9432d#.w9nshye05): Documenting the move from the handlebars + less combo to react and inline styles
 
 ## Alternative Installation Methods
 
@@ -295,5 +309,7 @@ To use it from your HTML, add this at the bottom of your `index.html`, and you'l
 ## License
 
 Licensed under the MIT License, copyright © 2016 Glen Maddern and Maximilian Stoiber. With thanks to Charlie Somerville & lots of others.
+
+Special thanks to [@okonet](https://github.com/okonet) for the fantastic logo.
 
 See [LICENSE](./LICENSE) for more information.
