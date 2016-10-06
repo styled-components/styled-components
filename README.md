@@ -11,8 +11,6 @@ npm install --save styled-components
 
 ## Usage
 
-This is what the usage of `styled-components` looks like.
-
 ### Basic
 
 This creates two react components, `<Title>` and `<Wrapper>`:
@@ -214,33 +212,38 @@ CSS animations with `@keyframes` don't make sense to be scoped to a single compo
 This way, you get all the benefits of using JavaScript, are avoiding name clashes and get your keyframes like always:
 
 ```JS
-// fadeIn.js
-import { keyframes } from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 
-const fadeIn = keyframes`
-  0% {
-    opacity: 0;
+// keyframes returns a unique name based on a hash of the contents of the keyframes
+const rotate360 = keyframes`
+  from {
+    transform: rotate(0deg);
   }
-  100% {
-    opacity: 1;
+
+  to {
+    transform: rotate(360deg);
   }
 `;
 
-export default fadeIn;
+// Here we create a component that will rotate everything we pass in over two seconds
+const Rotate = styled.div`
+  display: inline-block;
+  animation: ${rotate360} 2s linear infinite;
+`;
 ```
+
+This will now rotate it's children over and over again, for example our logo:
 
 ```JSX
-import styled from 'styled-components';
-import fadeIn from '../fadeIn';
-
-const ComponentThatFadesIn = styled.div`
-animation: 1s ease-out ${fadeIn};
-`;
-
-export default ComponentThatFadesIn;
+<Rotate>&lt;💅&gt;</Rotate>
 ```
 
-This component will then have that animation when rendered.
+<div align="center">
+  <a href="http://www.webpackbin.com/EkgdOEkAZ">
+    <img alt="Animated GIF of the above code ran in a browser" height="100px" src="http://imgur.com/I7Sobjv.gif" />
+    <div><em>Live demo</em></div>
+  </a>
+</div>
 
 ## Docs
 
