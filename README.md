@@ -1,5 +1,7 @@
 # Styled components
 
+![Styled components logo](https://github.com/styled-components/styled-components/logo/logo.png)
+
 The best way to style react apps!
 
 ```
@@ -32,6 +34,7 @@ const Title = styled.h1`
 const Wrapper = styled.section`
   padding: 4em;
   background: papayawhip;
+<<<<<<< Updated upstream
 `;
 
 export default function HelloWorld() {
@@ -78,7 +81,7 @@ export default function Form() {
     <form>
       {/* Render a styled input with a placeholder of "@mxstbr" */}
       <Input placeholder="@mxstbr" type="text" />
-    </form>  
+    </form>
   );
 }
 ```
@@ -106,6 +109,17 @@ const Input = styled.input`
   &::placeholder {
     color: palevioletred;
     opacity: 0.5;
+=======
+
+  > * + * {
+    margin: 1rem 0 0 0;
+  }
+  > h1 {
+    font-size: 2rem;
+  }
+  > h2 {
+    font-size: 1.5rem;
+>>>>>>> Stashed changes
   }
 `;
 ```
