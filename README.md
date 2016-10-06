@@ -1,8 +1,6 @@
-# Styled components
+# `styled-components`
 
-![Styled components logo](https://github.com/styled-components/styled-components/logo/logo.png)
-
-The best way to style react apps!
+Style your react apps with the power of Javascript and actual CSS!
 
 ```
 npm install --save styled-components
@@ -16,7 +14,7 @@ This is what the usage of `styled-components` looks like.
 
 ### Basic
 
-We create two react components, `<Title>` and `<Wrapper>`, and render them from our `<HelloWorld>` component:
+This creates two react components, `<Title>` and `<Wrapper>`:
 
 ```JSX
 import React from 'react';
@@ -36,32 +34,29 @@ const Wrapper = styled.section`
   background: papayawhip;
 <<<<<<< Updated upstream
 `;
-
-export default function HelloWorld() {
-  // Render these styled components like normal react components. They will pass on all props and work
-  // like normal react components – except they're styled!
-  return (
-    <Wrapper>
-      <Title>Hello World, this is my first styled component!</Title>
-    </Wrapper>
-  );
-}
 ```
 
-This is what our `<HelloWorld>` component looks like when rendered:
+This is what they look like when rendered:
+
+```JSX
+// These are like any other react component – except they're styled!
+<Wrapper>
+  <Title>Hello World, this is my first styled component!</Title>
+</Wrapper>
+```
 
 <div align="center">
   <a href="http://www.webpackbin.com/VyQ9AYHpZ">
     <img alt="Screenshot of the above code ran in a browser" src="http://i.imgur.com/wUJpcjY.jpg" />
-    <em>Live demo</em>
+    <div><em>Live demo</em></div>
   </a>
 </div>
 
 ### Passed props
 
-Styled components pass on all their props. Let's see an example of an `<input>` with a placeholder:
+Styled components pass on all their props. This is a styled `<input>`:
 
-```JSX
+```JS
 import React from 'react';
 import styled from 'styled-components';
 
@@ -75,6 +70,7 @@ const Input = styled.input`
   border: none;
   border-radius: 3px;
 `;
+<<<<<<< HEAD
 
 export default function Form() {
   return (
@@ -84,27 +80,32 @@ export default function Form() {
     </form>
   );
 }
+=======
+>>>>>>> upstream/docs
 ```
 
-Here's what this looks like in the browser, once empty showing the placeholder and once filled in:
+You can just pass a `placeholder` prop into the `styled-component`. It will pass it on to the DOM node like any other react component:
+
+```JSX
+// Render a styled input with a placeholder of "@mxstbr"
+<Input placeholder="@mxstbr" type="text" />
+```
 
 <div align="center">
   <a href="http://www.webpackbin.com/EyBu49rab">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/QoQiSui.jpg" />
-    <em>Live demo</em>
+    <div><em>Live demo</em></div>
   </a>
 </div>
 
-### Pseudo elements
+### Adapting based on props
 
-To adjust the placeholder color of the input in the example above, we need to use the <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/::placeholder">`::placeholder`</a> pseudo element.
-
-To attach pseudo elements to your styled component, you need to use `&`. For example, to style the placeholder:
+This is a button component that has a `primary` state. By setting `primary` to `true` when rendering it we adjust the background and text color.
 
 ```JSX
-const Input = styled.input`
-  // Old styles here…
+import styled from 'styled-components';
 
+<<<<<<< HEAD
   // Style the placeholder
   &::placeholder {
     color: palevioletred;
@@ -121,65 +122,183 @@ const Input = styled.input`
     font-size: 1.5rem;
 >>>>>>> Stashed changes
   }
+=======
+const Button = styled.button`
+  /* Adapt the colors based on primary prop */
+  background: ${(props) => props.primary ? 'palevioletred' : 'white'};
+  color: ${(props) => props.primary ? 'white' : 'palevioletred'};
+
+  font-size: 1em;
+  margin: 1em;
+  padding: 0.25em 1em;
+  border: 2px solid palevioletred;
+  border-radius: 3px;
+>>>>>>> upstream/docs
 `;
+
+export default Button;
 ```
-
-> Note: This also applies to `&:before`, `&:after`, etc.
-
-### Using JavaScript to our advantage
-
-If you tried to actually run the above example, you'd likely see that the placeholder is still gray.
-
-The unprefixed `::placeholder` pseudo-element is currently only supported in Firefox 51 – we also need to use `::-webkit-input-placeholder`, `::-moz-placeholder`, `:-moz-placeholder` (notice the single colon) and `:-ms-input-placeholder`.
-
-Instead of hardcoding them into our `<Input>`, we can write a JavaScript function that adds those automatically! We can then reuse that function whenever we need to style a placeholder:
-
-```JS
-// placeholder.js
-
-export default function placeholder(rules) {
-  return `
-    &::placeholder {
-      ${rules}
-    }
-
-    &::-webkit-input-placeholder {
-      ${rules}
-    }
-
-    &::-moz-placeholder {
-      ${rules}
-    }
-
-    &:-ms-input-placeholder {
-      ${rules}
-    }
-  `;
-}
-```
-
-Which would be used like this:
 
 ```JSX
-import placeholder from '../placeholder';
-
-const Input = styled.input`
-  // Old styles here…
-
-  // Style the placeholder
-  ${placeholder(`
-    color: palevioletred;
-    opacity: 0.5;
-  `)}
-`;
+<Button>Normal</Button>
+<Button primary={true}>Primary</Button>
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/NkZ61pHab">
-    <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/9Etm2yl.jpg" />
-    <em>Live demo</em>
+  <a href="http://www.webpackbin.com/4JAqcmL6Z">
+    <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/4qlEdsx.jpg" />
+    <div><em>Live demo</em></div>
   </a>
 </div>
+
+### Overriding component styles
+
+Taking the `Button` component from above and removing the primary rules, this is what we're left with – just a normal button:
+
+```JSX
+import styled from 'styled-components';
+
+const Button = styled.button`
+  background: white;
+  color: palevioletred;
+  font-size: 1em;
+  margin: 1em;
+  padding: 0.25em 1em;
+  border: 2px solid palevioletred;
+  border-radius: 3px;
+`;
+
+export default Button;
+```
+
+Let's say someplace else you want to use your button component, but just in this one case you want the color and border color to be `tomato` instead of `palevioletred`. Now you _could_ pass in an interpolated function and change them based on some props, but that's quite a lot of effort for overriding the styles once.
+
+To do this in an easier way you can call `styled` as a function and pass in the previous component. You style that like any other styled-component. It overrides duplicate styles from the initial component and keeps the others around:
+
+```JSX
+// Tomatobutton.js
+
+import React from 'react';
+import styled from 'styled-components';
+
+import Button from './Button';
+
+const TomatoButton = styled(Button)`
+color: tomato;
+border-color: tomato;
+`;
+
+export default TomatoButton;
+```
+
+Even though we have only specified the `color` and the `border-color`, this is what our TomatoButton looks like:
+
+<div align="center">
+  <a href="http://www.webpackbin.com/VJZQkBU6Z">
+    <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/LZZ3h5i.jpg" />
+    <div><em>Live demo</em></div>
+  </a>
+</div>
+
+Instead of copy and pasting or factoring out the styles into a separate function we've now reused them.
+
+> You can also pass tag names into the `styled()` call, like so: `styled('div')`. In fact, the styled.tagname helpers are just aliases of `styled('tagname')`!
+
+#### Third-party components
+
+The above also works perfectly for styling third-party components, like a `react-router` `<Link />`!
+
+```JS
+import styled from 'styled-components';
+import { Link } from 'react-router';
+
+const StyledLink = styled(Link)`
+  color: palevioletred;
+  display: block;
+  margin: 0.5em 0;
+  font-family: Helvetica, Arial, sans-serif;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+```
+
+```JSX
+<Link to="/">Standard, unstyled Link</Link>
+<StyledLink to="/">This Link is styled!</StyledLink>
+```
+
+<div align="center">
+  <a href="http://www.webpackbin.com/41PeBHU6-">
+    <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/JJw4MdX.jpg" />
+    <div><em>Live demo</em></div>
+  </a>
+</div>
+
+### Keyframes
+
+CSS animations with `@keyframes` don't make sense to be scoped to a single component. This is why we export a `keyframes` helper which will generate a unique name for your keyframes. You can then use that unique name throughout your app.
+
+This way, you get all the benefits of using JavaScript, are avoiding name clashes and get your keyframes like always:
+
+```JS
+// fadeIn.js
+import { keyframes } from 'styled-components';
+
+const fadeIn = keyframes`
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+`;
+
+export default fadeIn;
+```
+
+```JSX
+import styled from 'styled-components';
+import fadeIn from '../fadeIn';
+
+const ComponentThatFadesIn = styled.div`
+animation: 1s ease-out ${fadeIn};
+`;
+
+export default ComponentThatFadesIn;
+```
+
+This component will then have that animation when rendered.
+
+## Docs
+
+See [the documentation](./docs) for more information about using `styled-components`.
+
+### Table of Contents
+
+- [API Reference](./docs/api.md)
+- [Tips and Tricks](./docs/tips-and-tricks.md)
+
+## Syntax highlighting
+
+The one thing you loose when writing CSS in template literals is syntax highlighting. Thankfully, @gandm, the creator of `language-babel`, has helped us add support for `styled-components` in Atom!
+
+### Atom
+
+To get proper syntax highlighting, follow these steps:
+
+> Note: You need to have `language-babel` installed for this to work.
+
+1. Install the `language-styled-css` package in Atom
+
+2. Copy and paste the following regex into the `language-babel` "Javascript Tagged Template Literal Grammar Extension" option: `"styled((\\.(\\w+))|(\\(\\w+\\))|(\\([\"']\\w+[\"']\\)))":source.styledcss`
+
+  ![Screenshot showcasing step 2](http://imgur.com/7YhQUVp.jpg)
+
+### Other Editors
+
+We're working on getting syntax highlighting support to other editors too, and we could use your help! If you want to start working on syntax highlighting for your editor, open an issue to let us know.
 
 ## Alternative Installation Methods
 
