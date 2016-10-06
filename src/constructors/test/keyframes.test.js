@@ -41,7 +41,7 @@ describe('keyframes', () => {
       100% {
         opacity: 1;
       }
-    `).toBeA('number')
+    `).toBeA('string')
   })
 
   it('should insert the correct styles', () => {
