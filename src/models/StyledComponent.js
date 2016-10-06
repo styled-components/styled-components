@@ -11,8 +11,8 @@ export default (tagName: any, rules: RuleSet) => {
   const componentStyle = new ComponentStyle(rules)
 
   class StyledComponent extends Component {
-    theme: Object
-    generatedClassName: string
+    theme: Object;
+    generatedClassName: string;
 
     getChildContext() {
       return { theme: this.theme }
