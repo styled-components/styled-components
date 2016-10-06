@@ -248,6 +248,26 @@ See [the documentation](./docs) for more information about using `styled-compone
 - [API Reference](./docs/api.md)
 - [Tips and Tricks](./docs/tips-and-tricks.md)
 
+## Syntax highlighting
+
+The one thing you loose when writing CSS in template literals is syntax highlighting. Thankfully, @gandm, the creator of `language-babel`, has helped us add support for `styled-components` in Atom!
+
+### Atom
+
+To get proper syntax highlighting, follow these steps:
+
+> Note: You need to have `language-babel` installed for this to work.
+
+1. Install the `language-styled-css` package in Atom
+
+2. Copy and paste the following regex into the `language-babel` "Javascript Tagged Template Literal Grammar Extension" option: `"styled((\\.(\\w+))|(\\(\\w+\\))|(\\([\"']\\w+[\"']\\)))":source.styledcss`
+
+  ![Screenshot showcasing step 2](http://imgur.com/7YhQUVp.jpg)
+
+### Other Editors
+
+We're working on getting syntax highlighting support to other editors too, and we could use your help! If you want to start working on syntax highlighting for your editor, open an issue to let us know.
+
 ## Alternative Installation Methods
 
 If you're not using a module bundler or not using `npm` as your package manager, we also have a global ("UMD") build!
