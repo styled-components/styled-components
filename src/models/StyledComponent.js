@@ -11,11 +11,11 @@ class AbstractStyledComponent extends Component {
 }
 
 const createStyledComponent = (tagName: any, rules: RuleSet) => {
-  const isTag = typeof tagName === 'string'
-
+  /* Handle styled(OtherStyledComponent) differently */
   const isStyledComponent = AbstractStyledComponent.isPrototypeOf(tagName)
   if (isStyledComponent) return createStyledComponent(tagName.tag, tagName.rules.concat(rules))
 
+  const isTag = typeof tagName === 'string'
   const componentStyle = new ComponentStyle(rules)
 
   class StyledComponent extends AbstractStyledComponent {
