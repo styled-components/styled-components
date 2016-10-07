@@ -36,7 +36,7 @@ class StubStylesheet {
   }
 
   toCSS() {
-    return this.rules.map(r => r.join("\n")).join("\n")
+    return this.rules.map(r => r.join('\n')).join('\n')
   }
 }
 
@@ -48,10 +48,10 @@ const stubbedSheet = {
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let index = 0
 const classNames = code => {
-  const lastLetter = String.fromCodePoint(97+code)
+  const lastLetter = String.fromCodePoint(97 + code)
   return code > 26 ? `${classNames(Math.floor(code / 26))}${lastLetter}` : lastLetter
 }
-const stubbedEmoji = () => classNames(index++)
+const stubbedEmoji = () => classNames(index++) // eslint-disable-line no-plusplus
 stubbedEmoji['@global'] = true
 
 describe('e2e', () => {
@@ -63,7 +63,7 @@ describe('e2e', () => {
     index = 0
     styled = proxyquire('../index', {
       '../vendor/glamor/sheet': stubbedSheet,
-      '../utils/toEmoji': stubbedEmoji
+      '../utils/toEmoji': stubbedEmoji,
     }).default
   })
 
@@ -114,7 +114,7 @@ describe('e2e', () => {
         ${rule}
       `
       shallow(<Comp />)
-      expect(styleSheet.toCSS().replace(/\s+/g,' ')).toEqual('.a { color: blue; }')
+      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
     })
 
     it('should append multiple styles', () => {
@@ -125,7 +125,7 @@ describe('e2e', () => {
         ${rule2}
       `
       shallow(<Comp />)
-      expect(styleSheet.toCSS().replace(/\s+/g,' ')).toEqual('.a { color: blue; background: red; }')
+      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual('.a { color: blue; background: red; }')
     })
 
     it('should inject styles of multiple components', () => {
@@ -141,7 +141,7 @@ describe('e2e', () => {
       shallow(<FirstComp />)
       shallow(<SecondComp />)
 
-      expect(styleSheet.toCSS().replace(/\s+/g,' ')).toEqual('.a { background: blue; } .b { background: red; }')
+      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual('.a { background: blue; } .b { background: red; }')
     })
 
     it('should inject styles of multiple components based on creation, not rendering order', () => {
@@ -159,10 +159,10 @@ describe('e2e', () => {
       shallow(<FirstComp />)
 
       // Classes _do_ get generated in the order of rendering but that's ok
-      expect(styleSheet.toCSS().replace(/\s+/g,' ')).toEqual(`
+      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual(`
         .b { content: "first rule"; }
         .a { content: "second rule"; }
-      `.trim().replace(/\s+/g,' '))
+      `.trim().replace(/\s+/g, ' '))
     })
 
     it('should ignore a JS-style (invalid) comment in the styles', () => {
@@ -173,12 +173,12 @@ describe('e2e', () => {
         ${rule}
       `
       shallow(<Comp />)
-      expect(styleSheet.toCSS().replace(/\s+/g,' ')).toEqual(`
+      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual(`
         .a {
           // This is an invalid comment ${''/* TODO: this probably should be stripped */}
           color: blue;
         }
-      `.trim().replace(/\s+/g,' '))
+      `.trim().replace(/\s+/g, ' '))
     })
   })
 })
