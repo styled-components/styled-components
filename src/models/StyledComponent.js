@@ -12,7 +12,7 @@ class AbstractStyledComponent extends Component {
 
 const createStyledComponent = (tagName: any, rules: RuleSet) => {
   const isTag = typeof tagName === 'string'
-  
+
   const isStyledComponent = AbstractStyledComponent.isPrototypeOf(tagName)
   if (isStyledComponent) return createStyledComponent(tagName.tag, tagName.rules.concat(rules))
 
