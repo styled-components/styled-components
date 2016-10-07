@@ -4,13 +4,21 @@ import { Component, createElement, PropTypes } from 'react'
 import ComponentStyle from '../models/ComponentStyle'
 import validAttr from '../utils/validAttr'
 
-import type RuleSet from '../utils/flatten'
+import type RuleSet from '../types'
 
-export default (tagName: any, rules: RuleSet) => {
+/* eslint-disable react/prefer-stateless-function */
+class AbstractStyledComponent extends Component {
+}
+
+const createStyledComponent = (tagName: any, rules: RuleSet) => {
+  /* Handle styled(OtherStyledComponent) differently */
+  const isStyledComponent = AbstractStyledComponent.isPrototypeOf(tagName)
+  if (isStyledComponent) return createStyledComponent(tagName.tag, tagName.rules.concat(rules))
+
   const isTag = typeof tagName === 'string'
   const componentStyle = new ComponentStyle(rules)
 
-  class StyledComponent extends Component {
+  class StyledComponent extends AbstractStyledComponent {
     theme: Object
     generatedClassName: string
 
@@ -51,6 +59,10 @@ export default (tagName: any, rules: RuleSet) => {
     }
   }
 
+  /* Used for inheritance */
+  StyledComponent.rules = rules
+  StyledComponent.tag = tagName
+
   StyledComponent.displayName = isTag ? `styled.${tagName}` : `Styled(${tagName.displayName})`
   StyledComponent.childContextTypes = {
     theme: PropTypes.object,
@@ -60,3 +72,5 @@ export default (tagName: any, rules: RuleSet) => {
   }
   return StyledComponent
 }
+
+export default createStyledComponent

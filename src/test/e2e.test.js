@@ -181,4 +181,73 @@ describe('e2e', () => {
       `.trim().replace(/\s+/g, ' '))
     })
   })
+
+  describe('extending', () => {
+    it('should generate a single class with no styles', () => {
+      const Parent = styled.div``
+      const Child = styled(Parent)``
+
+      shallow(<Parent />)
+      shallow(<Child />)
+
+      expect(styleSheet.toCSS().trim().replace(/\s+/g, ' ')).toEqual('.a { }')
+    })
+
+    it('should generate a single class if only parent has styles', () => {
+      const Parent = styled.div`color: blue;`
+      const Child = styled(Parent)``
+
+      shallow(<Parent />)
+      shallow(<Child />)
+
+      expect(styleSheet.toCSS().trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
+    })
+
+    it('should generate a single class if only child has styles', () => {
+      const Parent = styled.div`color: blue;`
+      const Child = styled(Parent)``
+
+      shallow(<Parent />)
+      shallow(<Child />)
+
+      expect(styleSheet.toCSS().trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
+    })
+
+    it('should generate a class for the child with the rules of the parent', () => {
+      const Parent = styled.div`color: blue;`
+      const Child = styled(Parent)`color: red;`
+
+      shallow(<Child />)
+
+      expect(styleSheet.toCSS().trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue;color: red; }')
+    })
+
+    it('should generate different classes for both parent and child', () => {
+      const Parent = styled.div`color: blue;`
+      const Child = styled(Parent)`color: red;`
+
+      shallow(<Parent />)
+      shallow(<Child />)
+
+      expect(styleSheet.toCSS().trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; } .b { color: blue;color: red; }')
+    })
+
+    it('should copy nested rules to the child', () => {
+      const Parent = styled.div`
+        color: blue;
+        > h1 { font-size: 4rem; }
+      `
+      const Child = styled(Parent)`color: red;`
+
+      shallow(<Parent />)
+      shallow(<Child />)
+
+      expect(styleSheet.toCSS().trim().replace(/\s+/g, ' ')).toEqual(`
+        .a { color: blue; }
+        .a > h1 { font-size: 4rem; }
+        .b { color: blue; color: red; }
+        .b > h1 { font-size: 4rem; }
+      `.trim().replace(/\s+/g, ' '))
+    })
+  })
 })

@@ -11,7 +11,8 @@
     "no-confusing-arrow": 0,
     "no-else-return": 0,
     "react/sort-comp": 0,
-    "react/jsx-filename-extension": 0
+    "react/jsx-filename-extension": 0,
+    "no-prototype-builtins": 0
   },
   "env": {
     "mocha": true,
