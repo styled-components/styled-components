@@ -31,9 +31,7 @@ export default (tagName: any, rules: RuleSet) => {
       /* Execution context is props + theme + updateTheme */
       const executionContext = Object.assign({}, newProps, { theme, updateTheme })
       /* Do all the work to generate the CSS because this can modify the theme */
-      this.generatedClassName = componentStyle.generateStyles(executionContext)
-      /* Inject the styles */
-      componentStyle.injectStyles(this.generatedClassName)
+      this.generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
     }
 
     /* eslint-disable react/prop-types */

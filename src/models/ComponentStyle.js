@@ -9,7 +9,6 @@ import postcssNested from '../vendor/postcss-nested'
 import toEmoji from '../utils/toEmoji'
 
 const styleSheet = new StyleSheet({ speedy: false, maxLength: 40 })
-const generated = {}
 const inserted = {}
 
 /*
@@ -32,21 +31,17 @@ export default class ComponentStyle {
    * Parses that with PostCSS then runs PostCSS-Nested on it
    * Returns the hash to be injected on render()
    * */
-  generateStyles(executionContext: Object) {
+  generateAndInjectStyles(executionContext: Object) {
     const flatCSS = flatten(this.rules, executionContext).join('')
-    const selector = toEmoji(hashStr(flatCSS))
-    if (!generated[selector]) {
+    const hash = hashStr(flatCSS)
+    if (!inserted[hash]) {
+      const selector = toEmoji(hash)
+      inserted[hash] = selector
       const root = parse(`.${selector} { ${flatCSS} }`)
       postcssNested(root)
-      generated[selector] = root.toResult().css
+      this.insertedRule.appendRule(root.toResult().css)
     }
-    return selector
+    return inserted[hash]
   }
 
-  injectStyles(selector: string) {
-    if (inserted[selector]) return
-
-    this.insertedRule.appendRule(generated[selector])
-    inserted[selector] = true
-  }
 }
