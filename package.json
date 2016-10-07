@@ -11,7 +11,7 @@
     "build:umd": "webpack --config webpack.config.js src/index.js dist/styled-components.js",
     "build:umd:min": "MINIFY_JS=true webpack --config webpack.config.js src/index.js dist/styled-components.min.js",
     "build:watch": "npm run build:lib -- --watch",
-    "test": "mocha \"./src/**/*.test.js\" --require babel-core/register",
+    "test": "mocha \"./src/**/*.test.js\" --require babel-core/register --timeout 5000",
     "test:watch": "npm run test -- --watch",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
     "lint": "eslint src",
