@@ -1,13 +1,13 @@
 <img alt="styled-components" src="./logo/logo.png" height="150px" />
 <br />
 
-Style your react apps with the power of ES6 and actual CSS code!
+Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅
 
 ```
 npm install --save styled-components
 ```
 
-Utilising [tagged template literals](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/template_strings#Tagged_Template-Strings), an ES6 feature, `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
+Utilising [tagged template literals](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/template_strings#Tagged_Template-Strings), an ES6 (i.e. built into Javascript) feature, `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
 > Note: If you're not using `npm` as your package manager, aren't using a module bundler or aren't sure about either of those jump to [Alternative Installation Methods](#alternative-installation-methods).
 
@@ -266,15 +266,7 @@ This is what it looks like when properly highlighted:
 
 ### Atom
 
-[**@gandm**](https://github.com/gandm), the creator of `language-babel`, has helped us add support for `styled-components` in Atom! To get proper syntax highlighting, follow these steps:
-
-> Note: You need to have `language-babel` installed for this to work.
-
-1. Install the `language-styled-css` package in Atom
-
-2. Copy and paste the following regex into the `language-babel` "Javascript Tagged Template Literal Grammar Extension" option: `"styled((\\.(\\w+))|(\\(\\w+\\))|(\\([\"']\\w+[\"']\\)))":source.styledcss`
-
-  ![Screenshot showcasing step 2](http://imgur.com/7YhQUVp.jpg)
+[**@gandm**](https://github.com/gandm), the creator of `language-babel`, has helped us add support for `styled-components` in Atom! To get proper syntax highlighting, you just have to have the `language-babel` package installed and use it for syntax highlighting your component files!
 
 ### Other Editors
 
