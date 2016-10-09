@@ -12,7 +12,9 @@
     "no-confusing-arrow": 0,
     "no-else-return": 0,
     "react/sort-comp": 0,
-    "flowtype-errors/show-errors": 2
+    "react/jsx-filename-extension": 0,
+    "flowtype-errors/show-errors": 2,
+    "no-prototype-builtins": 0
   },
   "env": {
     "mocha": true,
