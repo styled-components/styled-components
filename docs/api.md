@@ -2,7 +2,6 @@
 
 ## Primary
 
-
 ### `styled`
 
 Default export. This is a low-level factory we use to create the `styled.tagname` helper methods.
@@ -170,7 +169,7 @@ animation: 1s ${fadeIn} ease-out;
 ```
 
 
-### `global`
+### `injectGlobal`
 
 A helper method to write global CSS. Does not return a component, adds the styles to the stylesheet directly.
 
@@ -185,9 +184,9 @@ A helper method to write global CSS. Does not return a component, adds the style
 ```JS
 // global-styles.js
 
-import { global } from 'styled-components';
+import { injectGlobal } from 'styled-components';
 
-global`
+injectGlobal`
 @font-face {
   font-family: 'Operator Mono';
   src: url('../fonts/Operator-Mono.ttf');
