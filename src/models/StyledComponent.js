@@ -8,6 +8,7 @@ import type RuleSet from '../types'
 
 /* eslint-disable react/prefer-stateless-function */
 class AbstractStyledComponent extends Component {
+  static isPrototypeOf: Function;
 }
 
 const createStyledComponent = (tagName: any, rules: RuleSet) => {
@@ -19,8 +20,10 @@ const createStyledComponent = (tagName: any, rules: RuleSet) => {
   const componentStyle = new ComponentStyle(rules)
 
   class StyledComponent extends AbstractStyledComponent {
-    theme: Object
-    generatedClassName: string
+    static rules: RuleSet;
+    static tag: any;
+    theme: Object;
+    generatedClassName: string;
 
     getChildContext() {
       return { theme: this.theme }

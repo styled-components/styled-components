@@ -9,8 +9,8 @@ import flatten from '../utils/flatten'
 const styleSheet = new StyleSheet({ speedy: false, maxLength: 40 })
 
 export default class ComponentStyle {
-  rules: RuleSet
-  selector: ?string
+  rules: RuleSet;
+  selector: ?string;
 
   constructor(rules: RuleSet, selector: ?string) {
     this.rules = rules
