@@ -6,9 +6,9 @@
 import css from './constructors/css'
 import toggle from './constructors/toggle'
 import styled from './constructors/styled'
-import global from './constructors/global'
+import injectGlobal from './constructors/injectGlobal'
 import keyframes from './constructors/keyframes'
 
-export { css, toggle, global, keyframes }
+export { css, toggle, injectGlobal, keyframes }
 
 export default styled
