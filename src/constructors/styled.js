@@ -3,7 +3,6 @@ import css from './css'
 import styledComponent from '../models/StyledComponent'
 import type { Interpolation, Target } from '../types'
 
-/* todo: replace any with React.Component */
 const styled = (tag: Target) =>
   (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
     styledComponent(tag, css(strings, ...interpolations))

@@ -10,10 +10,10 @@ import type { RuleSet, Target } from '../types'
 class AbstractStyledComponent extends Component {
 }
 
-const createStyledComponent = (target: Target, rules: RuleSet) => {
+const createStyledComponent = (target: Target, rules: RuleSet, options) => {
   /* Handle styled(OtherStyledComponent) differently */
   const isStyledComponent = {}.isPrototypeOf.call(AbstractStyledComponent, target)
-  if (isStyledComponent) return createStyledComponent(target.target, target.rules.concat(rules))
+  if (isStyledComponent) return createStyledComponent(target.target, target.rules.concat(rules), options)
 
   const isTag = typeof target === 'string'
   const componentStyle = new ComponentStyle(rules)
@@ -33,14 +33,17 @@ const createStyledComponent = (target: Target, rules: RuleSet) => {
     }
 
     componentWillReceiveProps(newProps: Object, newContext: ?any) {
-      this.theme = (newContext && newContext.theme) || {} // pass through theme
-      const theme = Object.assign({}, this.theme) // copy to pass to styles so no side effects
-      const updateTheme = values => {
-        this.theme = Object.assign({}, this.theme, values)
-      }
-      /* Execution context is props + theme + updateTheme */
-      const executionContext = Object.assign({}, newProps, { theme, updateTheme })
-      /* Do all the work to generate the CSS because this can modify the theme */
+      // Always pass down a theme, even if it's empty
+      this.theme = (newContext && newContext.theme) || {}
+      // Local copy for this instance with an update() method
+      const theme = Object.assign({}, this.theme, {
+        update(values) {
+          this.theme = Object.assign({}, this.theme, values)
+        },
+      })
+
+      /* Generate and inject the styles and potentially update theme */
+      const executionContext = Object.assign({}, newProps, { theme })
       this.generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
     }
 
