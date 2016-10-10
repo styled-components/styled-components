@@ -10,10 +10,10 @@ import type { RuleSet, Target } from '../types'
 class AbstractStyledComponent extends Component {
 }
 
-const createStyledComponent = (target: Target, rules: RuleSet, options) => {
+const createStyledComponent = (target: Target, rules: RuleSet) => {
   /* Handle styled(OtherStyledComponent) differently */
   const isStyledComponent = {}.isPrototypeOf.call(AbstractStyledComponent, target)
-  if (isStyledComponent) return createStyledComponent(target.target, target.rules.concat(rules), options)
+  if (isStyledComponent) return createStyledComponent(target.target, target.rules.concat(rules))
 
   const isTag = typeof target === 'string'
   const componentStyle = new ComponentStyle(rules)

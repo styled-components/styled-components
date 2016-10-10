@@ -1,6 +1,7 @@
 // @flow
 import hashStr from 'glamor/lib/hash'
 import camelizeStyleName from 'fbjs/lib/camelizeStyleName'
+import { StyleSheet } from 'react-native'
 
 import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
@@ -26,13 +27,18 @@ export default class InlineStyle {
       const styleObject = {}
       root.each(node => {
         if (node.type === 'decl') {
-          styleObject[camelizeStyleName(node.prop)] = node.value
+          const { value } = node
+          const isNumber = value !== '' && !isNaN(value)
+          styleObject[camelizeStyleName(node.prop)] = isNumber ? parseFloat(value) : value
         } else {
           /* eslint-disable no-console */
           console.warn(`Node of type ${node.type} not supported as an inline style`)
         }
       })
-      generated[hash] = styleObject
+      const styles = StyleSheet.create({
+        generated: styleObject,
+      })
+      generated[hash] = styles.generated
     }
     return generated[hash]
   }

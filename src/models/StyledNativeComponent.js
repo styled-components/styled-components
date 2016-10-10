@@ -8,11 +8,11 @@ import type { RuleSet, Target } from '../types'
 class AbstractStyledNativeComponent extends Component {
 }
 
-const createStyledNativeComponent = (target: Target, rules: RuleSet, options) => {
+const createStyledNativeComponent = (target: Target, rules: RuleSet) => {
   /* Handle styled(OtherStyledNativeComponent) differently */
   const isStyledNativeComponent = {}.isPrototypeOf.call(AbstractStyledNativeComponent, target)
   if (isStyledNativeComponent) {
-    return createStyledNativeComponent(target.target, target.rules.concat(rules), options)
+    return createStyledNativeComponent(target.target, target.rules.concat(rules))
   }
 
   const inlineStyle = new InlineStyle(rules)
