@@ -165,7 +165,7 @@ describe('e2e', () => {
       `.trim().replace(/\s+/g, ' '))
     })
 
-    it('should ignore a JS-style (invalid) comment in the styles', () => {
+    it('should strip a JS-style (invalid) comment in the styles', () => {
       const comment = '// This is an invalid comment'
       const rule = 'color: blue;'
       const Comp = styled.div`
@@ -175,7 +175,6 @@ describe('e2e', () => {
       shallow(<Comp />)
       expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual(`
         .a {
-          // This is an invalid comment ${''/* TODO: this probably should be stripped */}
           color: blue;
         }
       `.trim().replace(/\s+/g, ' '))
@@ -248,6 +247,16 @@ describe('e2e', () => {
         .b { color: blue; color: red; }
         .b > h1 { font-size: 4rem; }
       `.trim().replace(/\s+/g, ' '))
+    })
+  })
+
+  describe('prefixes', () => {
+    it('should add them', () => {
+      const Comp = styled.div`
+        transition: opacity 0.3s;
+      `
+      shallow(<Comp />)
+      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual('.a { -ms-transition: opacity 0.3s; -moz-transition: opacity 0.3s; -webkit-transition: opacity 0.3s; transition: opacity 0.3s; }')
     })
   })
 })
