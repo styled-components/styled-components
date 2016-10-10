@@ -1,4 +1,6 @@
-<img alt="styled-components" src="./logo/logo.png" height="150px" />
+<a href="https://github.com/styled-components/styled-components">
+  <img alt="styled-components" src="./docs/assets/logo.png" height="150px" />
+</a>
 <br />
 
 Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅
