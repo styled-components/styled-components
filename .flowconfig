@@ -1,4 +1,5 @@
 [ignore]
+./node_modules/react-native/**/*.js
 
 [include]
 

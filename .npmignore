@@ -4,3 +4,4 @@ webpack.config.js
 .flowconfig
 .eslintrc
 .eslintignore
+.babelrc
