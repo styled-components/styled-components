@@ -81,5 +81,8 @@
       "git add"
     ]
   },
-  "pre-commit": "lint-staged"
+  "pre-commit": "lint-staged",
+  "optionalDependencies": {
+    "react-native": "^0.34.1"
+  }
 }
