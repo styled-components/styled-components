@@ -37,7 +37,7 @@ const createStyledComponent = (target: Target, rules: RuleSet) => {
       this.theme = (newContext && newContext.theme) || {}
       // Local copy for this instance with an update() method
       const theme = Object.assign({}, this.theme, {
-        update(values) {
+        update: values => {
           this.theme = Object.assign({}, this.theme, values)
         },
       })

@@ -36,7 +36,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet) => {
       this.theme = (newContext && newContext.theme) || {}
       // Local copy for this instance with an update() method
       const theme = Object.assign({}, this.theme, {
-        update(values) {
+        update: values => {
           this.theme = Object.assign({}, this.theme, values)
         },
       })
@@ -51,7 +51,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet) => {
       const { style, children } = this.props
 
       const propsForElement = Object.assign({}, this.props)
-      propsForElement.style = Object.assign({}, style, this.generatedStyles)
+      propsForElement.style = [this.generatedStyles, style]
 
       return createElement(target, propsForElement, children)
     }
