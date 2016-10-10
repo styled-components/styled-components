@@ -213,6 +213,61 @@ const StyledLink = styled(Link)`
   </a>
 </div>
 
+### Theming
+
+We inject a property called `theme` into your styled components. This property has a function attached called `update()`. These two combined allow you to set and get themes based on context.
+
+First, let's set a `theme.main` property from the parent:
+
+```JS
+import styled from 'styled-components';
+
+// Set the theme for all components rendered within this parent to mediumseagreen
+const GreenSection = styled.div`
+  ${props => props.theme.update({
+    main: 'mediumseagreen',
+  })}
+`;
+```
+
+Second, let's react to that property from a `Button`:
+
+```JS
+// Button.js
+import styled from 'styled-components';
+
+const Button = styled.button`
+  /* Adjust the Button styling based on the theme, defaulting to use palevioletred */
+  background: ${(props) => props.theme.main || 'palevioletred'};
+  border: 2px solid ${(props) => props.theme.main || 'palevioletred'};
+
+  /* …more styles here… */
+`;
+```
+
+```JSX
+<Button>Normal Button</Button>
+<GreenSection>
+  {/* Notice how there's no code changes for the button, it just adapts to the theme passed from GreenSection! */}
+  <Button>Green Button!</Button>
+  <div>
+    <div>
+      <div>
+        {/* This works unlimited levels deep within the component tree since we use React's context to pass the theme down. */}
+        <Button>Another green button!</Button>
+      </div>
+    </div>
+  </div>
+</GreenSection>
+```
+
+<div align="center">
+  <a href="http://www.webpackbin.com/4yZoOD40Z">
+    <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/XfkzxqV.jpg" />
+    <div><em>Live demo</em></div>
+  </a>
+</div>
+
 ### Keyframes
 
 CSS animations with `@keyframes` don't make sense to be scoped to a single component. This is why we export a `keyframes` helper which will generate a unique name for your keyframes. You can then use that unique name throughout your app.
