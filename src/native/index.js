@@ -1,3 +1,6 @@
+// @flow
+
+/* eslint-disable import/no-unresolved */
 import reactNative from 'react-native'
 
 import css from '../constructors/css'

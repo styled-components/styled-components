@@ -1,6 +1,7 @@
 // @flow
 import hashStr from 'glamor/lib/hash'
 import camelizeStyleName from 'fbjs/lib/camelizeStyleName'
+/* eslint-disable import/no-unresolved */
 import { StyleSheet } from 'react-native'
 
 import type { RuleSet } from '../types'
