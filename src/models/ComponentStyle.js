@@ -16,8 +16,8 @@ const inserted = {}
  the React-specific stuff.
  */
 export default class ComponentStyle {
-  rules: RuleSet
-  insertedRule: Object
+  rules: RuleSet;
+  insertedRule: Object;
 
   constructor(rules: RuleSet) {
     this.rules = rules
