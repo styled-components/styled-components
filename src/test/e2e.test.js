@@ -251,7 +251,7 @@ describe('e2e', () => {
   })
 
   describe('prefixes', () => {
-    it('should add them', () => {
+    it('should add them in the right order', () => {
       const Comp = styled.div`
         transition: opacity 0.3s;
       `
