@@ -1,8 +1,6 @@
 import CssSyntaxError from './css-syntax-error';
 // import PreviousMap    from './previous-map';
 
-import path from 'path';
-
 let sequence = 0;
 
 /**
