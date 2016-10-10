@@ -28,9 +28,10 @@ Instead of hardcoding them into our `<Input>`, we can write a JavaScript functio
 
 ```JS
 // placeholder.js
+import { css } from 'styled-components';
 
 export default function placeholder(rules) {
-  return `
+  return css`
     &::placeholder {
       ${rules}
     }
@@ -53,13 +54,14 @@ export default function placeholder(rules) {
 Which would be used like this:
 
 ```JSX
+import { css } from 'styled-components';
 import placeholder from '../placeholder';
 
 const Input = styled.input`
   // Old styles here…
 
   // Style the placeholder
-  ${placeholder(`
+  ${placeholder(css`
     color: palevioletred;
     opacity: 0.5;
   `)}

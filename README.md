@@ -11,6 +11,8 @@ npm install --save styled-components
 
 Utilising [tagged template literals](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/template_strings#Tagged_Template-Strings), an ES6 (i.e. built into Javascript) feature, `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
+`styled-components` is compatible with both React (for web) and ReactNative – meaning it's the perfect choice even for truly universal apps! See the [ReactNative section](#react-native) for more information
+
 > Note: If you're not using `npm` as your package manager, aren't using a module bundler or aren't sure about either of those jump to [Alternative Installation Methods](#alternative-installation-methods).
 
 ## Usage
@@ -249,6 +251,32 @@ This will now rotate it's children over and over again, for example our logo:
   </a>
 </div>
 
+### React Native
+
+`styled-components` has a ReactNative mode that works _exactly_ the same, except you import the things from `styled-components/native`:
+
+```JSX
+import styled from 'styled-components/native';
+
+const StyledView = styled.View`
+  background-color: papayawhip;
+`;
+
+const StyledText = styled.Text`
+  color: palevioletred;
+`;
+
+class MyReactNativeComponent extends React.Component {
+  render() {
+    <StyledView>
+      <StyledText>Hello World!</StyledText>
+    </StyledView>
+  }
+}
+```
+
+> Since ReactNative doesn't support any of that, we don't export the `keyframes` and `injectGlobal` helpers. We will also log a warning if you use media queries or nesting in your CSS.
+
 ## Docs
 
 See [the documentation](./docs) for more information about using `styled-components`.
@@ -268,11 +296,13 @@ This is what it looks like when properly highlighted:
 
 ### Atom
 
-[**@gandm**](https://github.com/gandm), the creator of `language-babel`, has helped us add support for `styled-components` in Atom! To get proper syntax highlighting, you just have to have the `language-babel` package installed and use it for syntax highlighting your component files!
+[**@gandm**](https://github.com/gandm), the creator of `language-babel`, has added support for `styled-components` in Atom!
+
+To get proper syntax highlighting, all you have to do is install and use the `language-babel` package for your Javascript files!
 
 ### Other Editors
 
-We're working on getting syntax highlighting support to other editors too, and we could use your help! If you want to start working on syntax highlighting for your editor, open an issue to let us know.
+We could use your help to get syntax highlighting support to other editors! If you want to start working on syntax highlighting for your editor, open an issue to let us know.
 
 ## Further Reading
 
@@ -281,6 +311,7 @@ These are some great articles and talks about related topics in case you're hung
 - [📝 "Scale" FUD and Style Components](https://medium.com/learnreact/scale-fud-and-style-components-c0ce87ec9772#.kzjba8lcg): Using components as low-level styling constructs
 - [🎙 The Future of Reusable CSS](https://www.youtube.com/watch?v=XR6eM_5pAb0): How component libraries should be styled, and why they're not yet
 - [📝 Rendering Khan Academy’s Learn Menu Wherever I Please](https://medium.com/@jdan/rendering-khan-academys-learn-menu-wherever-i-please-4b58d4a9432d#.w9nshye05): Documenting the move from the handlebars + less combo to react and inline styles
+- [🖥 Ryan's random thoughts about inline styles](https://www.youtube.com/watch?v=EkPcGS4TzdQ): Explaining some benefits of using styles in js
 
 ## Alternative Installation Methods
 

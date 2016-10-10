@@ -1,10 +1,18 @@
 # API Reference
 
+The APIs marked as `web` work with React, the APIs marked as `native` work with ReactNative. To switch to ReactNative mode:
+
+```JS
+import styled, { css } from 'styled-components/native';
+```
+
 ## Primary
 
 ### `styled`
 
-Default export. This is a low-level factory we use to create the `styled.tagname` helper methods.
+Default export. `web`, `native`.
+
+This is a low-level factory we use to create the `styled.tagname` helper methods.
 
 #### Arguments
 
@@ -20,14 +28,14 @@ Default export. This is a low-level factory we use to create the `styled.tagname
 import styled from 'styled-components';
 
 const Button = styled.button`
-background: palevioletred;
-border-radius: 3px;
-border: none;
-color: white;
+	background: palevioletred;
+	border-radius: 3px;
+	border: none;
+	color: white;
 `;
 
 const TomatoButton = styled(Button)`
-background: tomato;
+	background: tomato;
 `;
 ```
 
@@ -42,6 +50,8 @@ background: tomato;
 
 
 ### `TaggedTemplateLiteral`
+
+`web`, `native`.
 
 This is what you pass into your `styled` calls – a tagged template literal. This is an ES6 language feature, so you can learn more about the basics on [MDN](https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Template_literals#Tagged_template_literals).
 
@@ -62,9 +72,9 @@ import styled from 'styled-components';
 const padding = '3em';
 
 const Section = styled.section`
-color: white;
-padding: ${padding};
-background: ${(props) => props.background || 'palevioletred'};
+	color: white;
+	padding: ${padding};
+	background: ${(props) => props.background || 'palevioletred'};
 `;
 ```
 
@@ -79,6 +89,8 @@ background: ${(props) => props.background || 'palevioletred'};
 
 
 ### `css`
+
+`web`, `native`.
 
 A helper function to generate CSS from a template literal with interpolations. You need to use this if you return a template literal with interpolations inside an interpolation. (this is due to how tagged template literals work)
 
@@ -117,6 +129,8 @@ ${(props) => {
 
 ### `StyledComponent`
 
+`web`, `native`.
+
 A styled react component. This is returned when you call `styled.tagname` or `styled(Component)` with styles.
 
 #### Tips
@@ -126,8 +140,9 @@ A styled react component. This is returned when you call `styled.tagname` or `st
 
 ## Helpers
 
-
 ### `keyframes`
+
+`web` only.
 
 A helper method to create keyframes for animations.
 
@@ -146,12 +161,12 @@ A helper method to create keyframes for animations.
 import { keyframes } from 'styled-components';
 
 const fadeIn = keyframes`
-0% {
-	opacity: 0;
-}
-100% {
-	opacity: 1;
-}
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
 `;
 
 export {
@@ -164,12 +179,14 @@ import styled from 'styled-components';
 import { fadeIn } from '../keyframes';
 
 const FadeInButton = styled.button`
-animation: 1s ${fadeIn} ease-out;
+	animation: 1s ${fadeIn} ease-out;
 `;
 ```
 
 
 ### `injectGlobal`
+
+`web` only.
 
 A helper method to write global CSS. Does not return a component, adds the styles to the stylesheet directly.
 
@@ -187,13 +204,13 @@ A helper method to write global CSS. Does not return a component, adds the style
 import { injectGlobal } from 'styled-components';
 
 injectGlobal`
-@font-face {
-  font-family: 'Operator Mono';
-  src: url('../fonts/Operator-Mono.ttf');
-}
+	@font-face {
+	  font-family: 'Operator Mono';
+	  src: url('../fonts/Operator-Mono.ttf');
+	}
 
-body {
-	margin: 0;
-}
+	body {
+		margin: 0;
+	}
 `;
 ```
