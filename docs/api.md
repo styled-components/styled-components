@@ -64,6 +64,8 @@ This can take any combination of
 - `Rule` (`String`): Any CSS rule
 - `Interpolation` (`String`|`Function`|`Object`): If this is a string, we take it as-is. If this is a function, we pass in the props passed to the component as the first (and only) argument. If this is an object, we interpret it as inline styles.
 
+The properties that are passed into an interpolated function get attached a special property, `theme`. `theme` has another property called `update()`, and it allows you to get and set themes from parent components.
+
 #### Examples
 
 ```JS
@@ -74,13 +76,33 @@ const padding = '3em';
 const Section = styled.section`
 	color: white;
 	padding: ${padding};
+
+	/* Adjust the background from the properties */
 	background: ${(props) => props.background || 'palevioletred'};
+
+	/* Set the theme for child components */
+	border: ${(props) => props.theme.update({
+		main: 'mediumseagreen',
+	})}
+`;
+
+const Button = styled.button`
+	color: white;
+
+	/* Adapt based on the theme of the parent */
+	background: ${(props) => props.theme.main || 'palevioletred'}
 `;
 ```
 
 ```JSX
-<Section>I have a palevioletred background</Section>
-<Section background="papayawhip">I have a papayawhip background</Section>
+<Button>Red Button</Button>
+<Section>
+  <p>Section with a red background</p>
+	<Button>Green Button</Button>
+</Section>
+<Section background="mediumseagreen">
+	Section with a green background
+</Section>
 ```
 
 #### Tips
