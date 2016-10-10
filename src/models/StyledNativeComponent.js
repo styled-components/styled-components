@@ -6,11 +6,12 @@ import type { RuleSet, Target } from '../types'
 
 /* eslint-disable react/prefer-stateless-function */
 class AbstractStyledNativeComponent extends Component {
+  static isPrototypeOf: Function
 }
 
 const createStyledNativeComponent = (target: Target, rules: RuleSet) => {
   /* Handle styled(OtherStyledNativeComponent) differently */
-  const isStyledNativeComponent = {}.isPrototypeOf.call(AbstractStyledNativeComponent, target)
+  const isStyledNativeComponent = AbstractStyledNativeComponent.isPrototypeOf(target)
   if (isStyledNativeComponent) {
     return createStyledNativeComponent(target.target, target.rules.concat(rules))
   }

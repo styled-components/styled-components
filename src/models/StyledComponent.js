@@ -8,11 +8,12 @@ import type { RuleSet, Target } from '../types'
 
 /* eslint-disable react/prefer-stateless-function */
 class AbstractStyledComponent extends Component {
+  static isPrototypeOf: Function
 }
 
 const createStyledComponent = (target: Target, rules: RuleSet) => {
   /* Handle styled(OtherStyledComponent) differently */
-  const isStyledComponent = {}.isPrototypeOf.call(AbstractStyledComponent, target)
+  const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
   if (isStyledComponent) return createStyledComponent(target.target, target.rules.concat(rules))
 
   const isTag = typeof target === 'string'
