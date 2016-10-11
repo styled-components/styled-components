@@ -1,6 +1,6 @@
 # ES6 Tagged Template Literals
 
-Tagged Template Literals are a new feature in ES6 that lets you define _custom string interpolation_ rules, which is how we're able to create Styled Components.
+Tagged Template Literals are a new feature in ES6 that lets you define _custom string interpolation_ rules, which is how we're able to create styled components.
 
 ```js
 /* If you have no interpolations, they're the same. */
@@ -38,7 +38,7 @@ styled.div`
 
 ## In Styled Components
 
-Whenever you call ``styled.xyz` ... ` `` the tagged template function underneath is called `css`. You can use it yourself if you ever need a chunk of CSS to work like a styled component, like, in a mixin.
+Whenever you call ``styled.xyz` ... ` ``, underneath we call `css` with the CSS code. You can use `css` yourself if you ever need a chunk of CSS to work like a styled component: (kind of like a mixin!)
 
 ```js
 import styled, { css } from 'styled-component'
@@ -53,4 +53,4 @@ const Div = styled.div`
 `
 ```
 
-If you leave off the `css` in `chunk` your function will be `toString()`ed which is not what you want.
+If you leave off the `css` in `chunk` your function will be `toString()`ed, which will mess it up and you'll not get the results you expected.

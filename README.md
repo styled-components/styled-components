@@ -15,7 +15,7 @@ Utilising [tagged template literals](./docs/tagged-template-literals.md) (a rece
 
 `styled-components` is compatible with both React (for web) and ReactNative – meaning it's the perfect choice even for truly universal apps! See the [ReactNative section](#react-native) for more information
 
-> Note: If you're not using `npm` as your package manager, aren't using a module bundler or aren't sure about either of those jump to [Alternative Installation Methods](#alternative-installation-methods).
+> **Note:** If you're not using `npm` as your package manager, aren't using a module bundler or aren't sure about either of those jump to [Alternative Installation Methods](#alternative-installation-methods).
 
 ## Usage
 
@@ -181,7 +181,7 @@ Even though we have only specified the `color` and the `border-color`, this is w
 
 Instead of copy and pasting or factoring out the styles into a separate function we've now reused them.
 
-> **Note:** you can also pass tag names into the `styled()` call, like so: `styled('div')`. In fact, the styled.tagname helpers are just aliases of `styled('tagname')`!
+> **Note:** You can also pass tag names into the `styled()` call, like so: `styled('div')`. In fact, the styled.tagname helpers are just aliases of `styled('tagname')`!
 
 #### Third-party components
 
@@ -346,6 +346,8 @@ See [the documentation](./docs) for more information about using `styled-compone
 
 - [API Reference](./docs/api.md)
 - [Tips and Tricks](./docs/tips-and-tricks.md)
+- [Tagged Template Literals](./docs/tagged-template-literals.md): How do they work?
+- [What CSS we support](./docs/css-we-support.md): What parts & extensions of CSS can you use within a component?
 
 ## Syntax highlighting
 
@@ -394,12 +396,12 @@ To use it from your HTML, add this at the bottom of your `index.html`, and you'l
 
 ## License
 
-Licensed under the MIT License, copyright © 2016 Glen Maddern and Maximilian Stoiber.
+Licensed under the MIT License, Copyright © 2016 Glen Maddern and Maximilian Stoiber.
 
 See [LICENSE](./LICENSE) for more information.
 
 ## Acknowledgements
 
-This project builds on a long line of earlier work by clever folks all around the world. We'd like to thank  Charlie Somerville, Nik Graf, Sunil Pai, Michael Chan, Andrey Popp, Jed Watson & Andrey Sitnik who contributed ideas, code or inspiration.
+This project builds on a long line of earlier work by clever folks all around the world. We'd like to thank Charlie Somerville, Nik Graf, Sunil Pai, Michael Chan, Andrey Popp, Jed Watson & Andrey Sitnik who contributed ideas, code or inspiration.
 
 Special thanks to [@okonet](https://github.com/okonet) for the fantastic logo.

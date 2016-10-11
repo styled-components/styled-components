@@ -1,6 +1,6 @@
 # CSS We Support
 
-Within a Styled Component, we support quite a lot of CSS, plus nesting like Sass:
+Within a styled component, we support quite a lot of CSS: (including nesting)
 
 ```js
 styled.div`
@@ -9,12 +9,12 @@ styled.div`
   &:pseudo-selectors {
     all good;
   }
+  @media (min-width: 600px) {
+    aint-no: thing;
+  }
   > h1 {
     direct-descendants: fine too; /* all descendants work fine too
                                      but not recommended. */
-  }
-  @media (min-width: 600px) {
-    aint-no: thing;
   }
   html.what-about-contextual & {
     sall: good;
@@ -22,7 +22,9 @@ styled.div`
 `
 ```
 
-If you want something else, you can always use `injectGlobal`
+> **Note:** Essentially, all ampersands (`&`) get replaced by our generated, unique classname
+
+On top of that you can always use `injectGlobal` for actually global things like `@font-face`:
 
 ```js
 import { injectGlobal } from 'styled-components'
@@ -34,4 +36,3 @@ injectGlobal`
 	}
 `
 ```
-
