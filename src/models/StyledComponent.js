@@ -25,23 +25,13 @@ const createStyledComponent = (target: Target, rules: RuleSet) => {
     static rules: RuleSet
     static target: Target
 
-    getChildContext() {
-      return { theme: this.theme }
-    }
-
     componentWillMount() {
       this.componentWillReceiveProps(this.props, this.context)
     }
 
     componentWillReceiveProps(newProps: Object, newContext: ?any) {
       // Always pass down a theme, even if it's empty
-      this.theme = (newContext && newContext.theme) || {}
-      // Local copy for this instance with an update() method
-      const theme = Object.assign({}, this.theme, {
-        update: values => {
-          this.theme = Object.assign({}, this.theme, values)
-        },
-      })
+      const theme = (newContext && newContext.theme) || {}
 
       /* Generate and inject the styles and potentially update theme */
       const executionContext = Object.assign({}, newProps, { theme })
@@ -70,9 +60,6 @@ const createStyledComponent = (target: Target, rules: RuleSet) => {
   StyledComponent.target = target
 
   StyledComponent.displayName = isTag ? `styled.${target}` : `Styled(${target.displayName})`
-  StyledComponent.childContextTypes = {
-    theme: PropTypes.object,
-  }
   StyledComponent.contextTypes = {
     theme: PropTypes.object,
   }
