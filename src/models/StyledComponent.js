@@ -1,5 +1,6 @@
 // @flow
 import { Component, createElement, PropTypes } from 'react'
+import { Subscriber } from 'react-broadcast'
 
 import ComponentStyle from '../models/ComponentStyle'
 import validAttr from '../utils/validAttr'
@@ -20,38 +21,27 @@ const createStyledComponent = (target: Target, rules: RuleSet) => {
   const componentStyle = new ComponentStyle(rules)
 
   class StyledComponent extends AbstractStyledComponent {
-    theme: Object
-    generatedClassName: string
     static rules: RuleSet
     static target: Target
-
-    componentWillMount() {
-      this.componentWillReceiveProps(this.props, this.context)
-    }
-
-    componentWillReceiveProps(newProps: Object, newContext: ?any) {
-      // Always pass down a theme, even if it's empty
-      const theme = (newContext && newContext.theme) || {}
-
-      /* Generate and inject the styles and potentially update theme */
-      const executionContext = Object.assign({}, newProps, { theme })
-      this.generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
-    }
 
     /* eslint-disable react/prop-types */
     render() {
       const { className, children } = this.props
 
-      const propsForElement = {}
-      /* Don't pass through non HTML tags through to HTML elements */
-      Object.keys(this.props)
-        .filter(propName => !isTag || validAttr(propName))
-        .forEach(propName => {
-          propsForElement[propName] = this.props[propName]
-        })
-      propsForElement.className = [className, this.generatedClassName].filter(x => x).join(' ')
-
-      return createElement(target, propsForElement, children)
+      return createElement(Subscriber, { channel: 'styled-components' },
+        (theme) => {
+          const generatedClassName = componentStyle.generateAndInjectStyles(theme)
+          const propsForElement = {}
+          /* Don't pass through non HTML tags through to HTML elements */
+          Object.keys(this.props)
+            .filter(propName => !isTag || validAttr(propName))
+            .forEach(propName => {
+              propsForElement[propName] = this.props[propName]
+            })
+          propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
+          return createElement(target, propsForElement, children)
+        }
+      )
     }
   }
 

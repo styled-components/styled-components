@@ -1,9 +1,14 @@
-// @flow
-import { PropTypes, Component, Children } from 'react'
+import React, { PropTypes, Component } from 'react'
 import { isFunction, isPlainObject } from 'lodash'
+import { Broadcast } from 'react-broadcast'
 
 class ThemeProvider extends Component {
-  getChildContext() {
+  constructor() {
+    super()
+    this.getTheme = this.getTheme.bind(this)
+  }
+
+  getTheme() {
     if (isFunction(this.props.theme)) {
       const mergedTheme = this.props.theme(this.context.theme)
       if (!isPlainObject(mergedTheme)) {
@@ -14,7 +19,13 @@ class ThemeProvider extends Component {
     return { theme: Object.assign({}, this.context.theme, this.props.theme) }
   }
 
-  render() { return Children.only(this.props.children) }
+  render() {
+    return (
+      <Broadcast channel="styled-components" value={this.getTheme()}>
+        {this.props.children}
+      </Broadcast>
+    )
+  }
 }
 
 ThemeProvider.propTypes = {
