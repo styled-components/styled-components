@@ -30,22 +30,22 @@ Instead of hardcoding them into our `<Input>`, we can write a JavaScript functio
 // placeholder.js
 import { css } from 'styled-components';
 
-export default function placeholder(rules) {
+export default function placeholder(...rules) {
   return css`
     &::placeholder {
-      ${rules}
+      ${css(...rules)}
     }
 
     &::-webkit-input-placeholder {
-      ${rules}
+      ${css(...rules)}
     }
 
     &::-moz-placeholder {
-      ${rules}
+      ${css(...rules)}
     }
 
     &:-ms-input-placeholder {
-      ${rules}
+      ${css(...rules)}
     }
   `;
 }
@@ -61,10 +61,10 @@ const Input = styled.input`
   // Old styles here…
 
   // Style the placeholder
-  ${placeholder(css`
+  ${placeholder`
     color: palevioletred;
     opacity: 0.5;
-  `)}
+  `}
 `;
 ```
 
@@ -76,3 +76,5 @@ const Input = styled.input`
 </div>
 
 Does this remind you of anything? Exactly, this is kind of like a mixin in Sass – except it's not an arbitrarily added construct on top of CSS, it's just JavaScript! 👍
+
+Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals]('./tagged-template-literals.md')
