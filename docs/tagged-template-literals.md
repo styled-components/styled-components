@@ -17,6 +17,7 @@ const str = `1 + 2 = ${1 + 2}. Array: ${ [1,2,3] }. Object: ${ { a: 1 } }`
 /* But if you pass this to a template function, you get passed
    all the strings and interpolations and can do whatever you like! */
 const myFunction = (...args) => JSON.stringify([...args])
+myFunction`1 + 2 = ${1 + 2}. Array: ${ [1,2,3] }. Object: ${ { a: 1 } }`
 //#> [
 //#>   ["1 + 2 = ", ". Array: ", ". Object: ", "" ],
 //#>   3,
