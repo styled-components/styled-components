@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "0.2.5",
+  "version": "0.3.4",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
@@ -33,6 +33,7 @@
   },
   "homepage": "https://github.com/css-components/styled-components#readme",
   "dependencies": {
+    "buffer": "^5.0.0",
     "fbjs": "^0.8.4",
     "glamor": "^2.15.5",
     "js-base64": "^2.1.9",
@@ -65,16 +66,6 @@
     "react-addons-test-utils": "^15.3.2",
     "react-dom": "^15.3.2",
     "webpack": "^1.13.2"
-  },
-  "babel": {
-    "presets": [
-      "latest",
-      "react"
-    ],
-    "plugins": [
-      "add-module-exports",
-      "transform-flow-strip-types"
-    ]
   },
   "lint-staged": {
     "*.js": [
