@@ -11,7 +11,7 @@ npm install --save styled-components
 
 [![Travis Build Status](https://travis-ci.org/styled-components/styled-components.svg?branch=master)](https://travis-ci.org/styled-components/styled-components) [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/gruntjs/grunt?branch=master&svg=true)](https://ci.appveyor.com/project/mxstbr/styled-components) [![Supported by Thinkmill](https://thinkmill.github.io/badge/heart.svg)](http://thinkmill.com.au/?utm_source=github&utm_medium=badge&utm_campaign=styled-components)
 
-Utilising [tagged template literals](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/template_strings#Tagged_Template-Strings), an ES6 (i.e. built into Javascript) feature, `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
+Utilising [tagged template literals](./docs/tagged-template-literals.md) (a recent addition to Javascript) and the [power of CSS](./docs/css-we-support.md), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
 `styled-components` is compatible with both React (for web) and ReactNative – meaning it's the perfect choice even for truly universal apps! See the [ReactNative section](#react-native) for more information
 
@@ -28,24 +28,26 @@ import React from 'react';
 
 import styled from 'styled-components';
 
-// Create a <Title> react component that renders an <h1> which is centered, palevioletred and sized at 1.5em
+// Create a <Title> react component that renders an <h1> which is
+// centered, palevioletred and sized at 1.5em
 const Title = styled.h1`
   font-size: 1.5em;
   text-align: center;
   color: palevioletred;
 `;
 
-// Create a <Wrapper> react component that renders a <section> with some padding and a papayawhip background
+// Create a <Wrapper> react component that renders a <section> with
+// some padding and a papayawhip background
 const Wrapper = styled.section`
   padding: 4em;
   background: papayawhip;
 `;
 ```
 
-This is what they look like when rendered:
+You render them like so:
 
 ```JSX
-// These are like any other react component – except they're styled!
+// Use them like any other React component – except they're styled!
 <Wrapper>
   <Title>Hello World, this is my first styled component!</Title>
 </Wrapper>
@@ -103,8 +105,8 @@ import styled from 'styled-components';
 
 const Button = styled.button`
   /* Adapt the colors based on primary prop */
-  background: ${(props) => props.primary ? 'palevioletred' : 'white'};
-  color: ${(props) => props.primary ? 'white' : 'palevioletred'};
+  background: ${props => props.primary ? 'palevioletred' : 'white'};
+  color: ${props => props.primary ? 'white' : 'palevioletred'};
 
   font-size: 1em;
   margin: 1em;
@@ -118,11 +120,11 @@ export default Button;
 
 ```JSX
 <Button>Normal</Button>
-<Button primary={true}>Primary</Button>
+<Button primary>Primary</Button>
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/4JAqcmL6Z">
+  <a href="http://www.webpackbin.com/E1YCXdHCb">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/4qlEdsx.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -161,8 +163,8 @@ import styled from 'styled-components';
 import Button from './Button';
 
 const TomatoButton = styled(Button)`
-color: tomato;
-border-color: tomato;
+  color: tomato;
+  border-color: tomato;
 `;
 
 export default TomatoButton;
@@ -179,7 +181,7 @@ Even though we have only specified the `color` and the `border-color`, this is w
 
 Instead of copy and pasting or factoring out the styles into a separate function we've now reused them.
 
-> You can also pass tag names into the `styled()` call, like so: `styled('div')`. In fact, the styled.tagname helpers are just aliases of `styled('tagname')`!
+> **Note:** you can also pass tag names into the `styled()` call, like so: `styled('div')`. In fact, the styled.tagname helpers are just aliases of `styled('tagname')`!
 
 #### Third-party components
 
@@ -237,9 +239,9 @@ Second, let's react to that property from a `Button`:
 import styled from 'styled-components';
 
 const Button = styled.button`
-  /* Adjust the Button styling based on the theme, defaulting to use palevioletred */
-  background: ${(props) => props.theme.main || 'palevioletred'};
-  border: 2px solid ${(props) => props.theme.main || 'palevioletred'};
+  /* Color the background and border with theme.main, otherwise 'palevioletred' */
+  background: ${props => props.theme.main || 'palevioletred'};
+  border: 2px solid ${props => props.theme.main || 'palevioletred'};
 
   /* …more styles here… */
 `;
@@ -248,12 +250,14 @@ const Button = styled.button`
 ```JSX
 <Button>Normal Button</Button>
 <GreenSection>
-  {/* Notice how there's no code changes for the button, it just adapts to the theme passed from GreenSection! */}
+  {/* Notice how there's no code changes for the button, it just
+      adapts to the theme passed from GreenSection! */}
   <Button>Green Button!</Button>
   <div>
     <div>
       <div>
-        {/* This works unlimited levels deep within the component tree since we use React's context to pass the theme down. */}
+        {/* This works unlimited levels deep within the component
+            tree since we use React's context to pass the theme down. */}
         <Button>Another green button!</Button>
       </div>
     </div>
@@ -268,9 +272,9 @@ const Button = styled.button`
   </a>
 </div>
 
-### Keyframes
+### Animations
 
-CSS animations with `@keyframes` don't make sense to be scoped to a single component. This is why we export a `keyframes` helper which will generate a unique name for your keyframes. You can then use that unique name throughout your app.
+CSS animations with `@keyframes` aren't scoped to a single component but you still don't want them to be global. This is why we export a `keyframes` helper which will generate a unique name for your keyframes. You can then use that unique name throughout your app.
 
 This way, you get all the benefits of using JavaScript, are avoiding name clashes and get your keyframes like always:
 
@@ -298,7 +302,7 @@ const Rotate = styled.div`
 This will now rotate it's children over and over again, for example our logo:
 
 ```JSX
-<Rotate>&lt;💅&gt;</Rotate>
+<Rotate>&lt; 💅 &gt;</Rotate>
 ```
 
 <div align="center">
@@ -390,8 +394,12 @@ To use it from your HTML, add this at the bottom of your `index.html`, and you'l
 
 ## License
 
-Licensed under the MIT License, copyright © 2016 Glen Maddern and Maximilian Stoiber. With thanks to Charlie Somerville & lots of others.
-
-Special thanks to [@okonet](https://github.com/okonet) for the fantastic logo.
+Licensed under the MIT License, copyright © 2016 Glen Maddern and Maximilian Stoiber.
 
 See [LICENSE](./LICENSE) for more information.
+
+## Acknowledgements
+
+This project builds on a long line of earlier work by clever folks all around the world. We'd like to thank  Charlie Somerville, Nik Graff, Sunil Pai, Michael Chan, Andrey Popp, Jed Watson & Andrey Sitnik who contributed ideas, code or inspiration.
+
+Special thanks to [@okonet](https://github.com/okonet) for the fantastic logo.
