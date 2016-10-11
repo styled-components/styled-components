@@ -1,11 +1,55 @@
 import React, { PropTypes, Component } from 'react'
 import { isFunction, isPlainObject } from 'lodash'
-import { Broadcast } from 'react-broadcast'
+
+export const CHANNEL = '__styled-components__'
+
+const createBroadcast = (initialValue) => {
+  let listeners = []
+  let currentValue = initialValue
+
+  return {
+    publish(value) {
+      currentValue = value
+      listeners.forEach(listener => listener(currentValue))
+    },
+    subscribe(listener) {
+      listeners.push(listener)
+
+      // Publish to this subscriber once immediately.
+      listener(currentValue)
+
+      // eslint-disable-next-line no-return-assign
+      return () =>
+        listeners = listeners.filter(item => item !== listener)
+    },
+  }
+}
 
 class ThemeProvider extends Component {
   constructor() {
     super()
     this.getTheme = this.getTheme.bind(this)
+    this.getBroadcastsContext = this.getBroadcastsContext.bind(this)
+  }
+
+  componentWillMount() {
+    this.broadcast = createBroadcast(this.props.theme)
+  }
+
+  getChildContext() {
+    return {
+      broadcasts: this.getBroadcastsContext(),
+    }
+  }
+
+  componentWillReceiveProps(nextProps) {
+    if (this.props.theme !== nextProps.theme) this.broadcast.publish(nextProps.theme)
+  }
+
+  getBroadcastsContext() {
+    const { broadcasts } = this.context
+
+    return Object.assign({}, broadcasts, { [CHANNEL]: this.broadcast.subscribe })
   }
 
   getTheme() {
@@ -20,11 +64,7 @@ class ThemeProvider extends Component {
   }
 
   render() {
-    return (
-      <Broadcast channel="styled-components" value={this.getTheme()}>
-        {this.props.children}
-      </Broadcast>
-    )
+    return React.Children.only(this.props.children)
   }
 }
 
@@ -36,10 +76,10 @@ ThemeProvider.propTypes = {
   ]),
 }
 ThemeProvider.childContextTypes = {
-  theme: PropTypes.object,
+  broadcasts: PropTypes.object.isRequired,
 }
 ThemeProvider.contextTypes = {
-  theme: PropTypes.object,
+  broadcasts: PropTypes.object,
 }
 
 export default ThemeProvider
