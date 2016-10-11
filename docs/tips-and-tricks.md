@@ -1,6 +1,38 @@
 # Tips and tricks
 
-A bunch of useful tips and tricks when working with `styled-components`!
+A collection of useful tips and tricks when working with `styled-components`!
+
+## Component adjustments
+
+Say you have a `<Button>` that has a `padding` of `0.5em 2em`:
+
+```JS
+const Button = styled.button`
+  padding: 0.5em 2em;
+
+  /* …more styles here… */
+`;
+```
+
+Now your designer has added a new comment section to your articles, and they want the buttons in that section to be smaller than the regular ones.
+
+Using interpolated functions, adjusting the button size is easy as pie:
+
+```JS
+const Button = styled.button`
+  /* If it's a small button use less padding */
+  padding: ${props => props.small ? '0.25em 1em' : '0.5em 2em'};
+
+  /* …more styles here… */
+`;
+```
+
+Then, in your comment section, you can simply say that the `<Button>` should be small:
+
+```JSX
+<Button>This is a normal button!</Button>
+<Button small>This is a small button!</Button>
+```
 
 ## Using JavaScript to our advantage
 

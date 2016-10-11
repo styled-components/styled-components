@@ -62,7 +62,9 @@ This is what you pass into your `styled` calls – a tagged template literal. Th
 This can take any combination of
 
 - `Rule` (`String`): Any CSS rule
-- `Interpolation` (`String`|`Function`|`Object`): If this is a string, we take it as-is. If this is a function, we pass in the props passed to the component as the first (and only) argument. If this is an object, we interpret it as inline styles.
+- `Interpolation` (`String`|`Function`): If this is a string, we take it as-is. If this is a function, we pass in the props passed to the component as the first (and only) argument.
+
+> **Note**: You can also pass an Object as an interpolation, and we will treat it like inline styles. This is highly discouraged, as the CSS syntax has support for media queries, nesting, etc., which the object syntax doesn't.
 
 The properties that are passed into an interpolated function get attached a special property, `theme`. `theme` has another property called `update()`, and it allows you to get and set themes from parent components.
 

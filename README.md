@@ -130,6 +130,8 @@ export default Button;
   </a>
 </div>
 
+*See [Tips and Tricks](./docs/tips-and-tricks.md#component-adjustments) for more examples of this pattern!*
+
 ### Overriding component styles
 
 Taking the `Button` component from above and removing the primary rules, this is what we're left with – just a normal button:
