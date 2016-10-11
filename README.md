@@ -400,6 +400,6 @@ See [LICENSE](./LICENSE) for more information.
 
 ## Acknowledgements
 
-This project builds on a long line of earlier work by clever folks all around the world. We'd like to thank  Charlie Somerville, Nik Graff, Sunil Pai, Michael Chan, Andrey Popp, Jed Watson & Andrey Sitnik who contributed ideas, code or inspiration.
+This project builds on a long line of earlier work by clever folks all around the world. We'd like to thank  Charlie Somerville, Nik Graf, Sunil Pai, Michael Chan, Andrey Popp, Jed Watson & Andrey Sitnik who contributed ideas, code or inspiration.
 
 Special thanks to [@okonet](https://github.com/okonet) for the fantastic logo.

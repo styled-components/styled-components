@@ -35,3 +35,22 @@ styled.div`
 /* into an object and re-evaluate it whenever a StyledComponent's
    componentWillReceiveProps lifecycle method is called. Neat hey! */
 ```
+
+## In Styled Components
+
+Whenever you call ``styled.xyz` ... ` `` the tagged template function underneath is called `css`. You can use it yourself if you ever need a chunk of CSS to work like a styled component, like, in a mixin.
+
+```js
+import styled, { css } from 'styled-component'
+
+const chunk = css`
+  color: red;
+  ${ props => props.background && 'background: white' }
+`
+
+const Div = styled.div`
+  ${ chunk }
+`
+```
+
+If you leave off the `css` in `chunk` your function will be `toString()`ed which is not what you want.
