@@ -7,6 +7,7 @@ import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
 import postcssNested from '../vendor/postcss-nested'
 import toEmoji from '../utils/toEmoji'
+import autoprefix from '../utils/autoprefix'
 
 const styleSheet = new StyleSheet({ speedy: false, maxLength: 40 })
 const inserted = {}
@@ -33,12 +34,14 @@ export default class ComponentStyle {
    * */
   generateAndInjectStyles(executionContext: Object) {
     const flatCSS = flatten(this.rules, executionContext).join('')
+      .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
     const hash = hashStr(flatCSS)
     if (!inserted[hash]) {
       const selector = toEmoji(hash)
       inserted[hash] = selector
       const root = parse(`.${selector} { ${flatCSS} }`)
       postcssNested(root)
+      autoprefix(root)
       this.insertedRule.appendRule(root.toResult().css)
     }
     return inserted[hash]
