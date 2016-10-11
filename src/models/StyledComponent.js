@@ -4,26 +4,26 @@ import { Component, createElement, PropTypes } from 'react'
 import ComponentStyle from '../models/ComponentStyle'
 import validAttr from '../utils/validAttr'
 
-import type RuleSet from '../types'
+import type { RuleSet, Target } from '../types'
 
 /* eslint-disable react/prefer-stateless-function */
 class AbstractStyledComponent extends Component {
-  static isPrototypeOf: Function;
+  static isPrototypeOf: Function
 }
 
-const createStyledComponent = (tagName: any, rules: RuleSet) => {
+const createStyledComponent = (target: Target, rules: RuleSet) => {
   /* Handle styled(OtherStyledComponent) differently */
-  const isStyledComponent = AbstractStyledComponent.isPrototypeOf(tagName)
-  if (isStyledComponent) return createStyledComponent(tagName.tag, tagName.rules.concat(rules))
+  const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
+  if (isStyledComponent) return createStyledComponent(target.target, target.rules.concat(rules))
 
-  const isTag = typeof tagName === 'string'
+  const isTag = typeof target === 'string'
   const componentStyle = new ComponentStyle(rules)
 
   class StyledComponent extends AbstractStyledComponent {
-    static rules: RuleSet;
-    static tag: any;
-    theme: Object;
-    generatedClassName: string;
+    theme: Object
+    generatedClassName: string
+    static rules: RuleSet
+    static target: Target
 
     getChildContext() {
       return { theme: this.theme }
@@ -34,14 +34,17 @@ const createStyledComponent = (tagName: any, rules: RuleSet) => {
     }
 
     componentWillReceiveProps(newProps: Object, newContext: ?any) {
-      this.theme = (newContext && newContext.theme) || {} // pass through theme
-      const theme = Object.assign({}, this.theme) // copy to pass to styles so no side effects
-      const updateTheme = values => {
-        this.theme = Object.assign({}, this.theme, values)
-      }
-      /* Execution context is props + theme + updateTheme */
-      const executionContext = Object.assign({}, newProps, { theme, updateTheme })
-      /* Do all the work to generate the CSS because this can modify the theme */
+      // Always pass down a theme, even if it's empty
+      this.theme = (newContext && newContext.theme) || {}
+      // Local copy for this instance with an update() method
+      const theme = Object.assign({}, this.theme, {
+        update: values => {
+          this.theme = Object.assign({}, this.theme, values)
+        },
+      })
+
+      /* Generate and inject the styles and potentially update theme */
+      const executionContext = Object.assign({}, newProps, { theme })
       this.generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
     }
 
@@ -58,15 +61,15 @@ const createStyledComponent = (tagName: any, rules: RuleSet) => {
         })
       propsForElement.className = [className, this.generatedClassName].filter(x => x).join(' ')
 
-      return createElement(tagName, propsForElement, children)
+      return createElement(target, propsForElement, children)
     }
   }
 
   /* Used for inheritance */
   StyledComponent.rules = rules
-  StyledComponent.tag = tagName
+  StyledComponent.target = target
 
-  StyledComponent.displayName = isTag ? `styled.${tagName}` : `Styled(${tagName.displayName})`
+  StyledComponent.displayName = isTag ? `styled.${target}` : `Styled(${target.displayName})`
   StyledComponent.childContextTypes = {
     theme: PropTypes.object,
   }
