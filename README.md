@@ -287,7 +287,7 @@ Now, when we render the `Button` inside a `GreenSection`, it'll be green! If not
   </a>
 </div>
 
-See the [theming doc](./docs/theming.md) for more detailled instructions about theming.
+See the [theming doc](./docs/theming.md) for more detailed instructions about theming and the [shared component libraries doc](./docs/shared-component-libraries.md) for information about setting up a shared component library with `styled-components`.
 
 ### Animations
 
@@ -365,7 +365,8 @@ See [the documentation](./docs) for more information about using `styled-compone
 - [Tips and Tricks](./docs/tips-and-tricks.md)
 - [Tagged Template Literals](./docs/tagged-template-literals.md): How do they work?
 - [What CSS we support](./docs/css-we-support.md): What parts & extensions of CSS can you use within a component?
-- [Theming](./docs/theming.md): Detailed instruction for theming and setting up a shared component library
+- [Theming](./docs/theming.md): How to work with themes
+- [Shared Component Libraries](./docs/shared-component-libraries.md): Tips for setting up a shared component library
 
 ## Syntax highlighting
 
