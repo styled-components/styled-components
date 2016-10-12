@@ -24,7 +24,7 @@ describe('ThemeProvider', () => {
     expect(renderedComp.contains(child)).toEqual(true)
   })
 
-  it('should merge it\'s theme with an outer theme', (done) => {
+  it('should merge its theme with an outer theme', (done) => {
     const outerTheme = { main: 'black' }
     const innerTheme = { secondary: 'black' }
     // Setup Child
@@ -50,7 +50,7 @@ describe('ThemeProvider', () => {
     )
   })
 
-  it('should merge it\'s theme with multiple outer themes', (done) => {
+  it('should merge its theme with multiple outer themes', (done) => {
     const outerestTheme = { main: 'black' }
     const outerTheme = { main: 'blue' }
     const innerTheme = { secondary: 'black' }
