@@ -217,6 +217,72 @@ const StyledLink = styled(Link)`
   </a>
 </div>
 
+### Animations
+
+CSS animations with `@keyframes` aren't scoped to a single component but you still don't want them to be global. This is why we export a `keyframes` helper which will generate a unique name for your keyframes. You can then use that unique name throughout your app.
+
+This way, you get all the benefits of using JavaScript, are avoiding name clashes and get your keyframes like always:
+
+```JS
+import styled, { keyframes } from 'styled-components';
+
+// keyframes returns a unique name based on a hash of the contents of the keyframes
+const rotate360 = keyframes`
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+`;
+
+// Here we create a component that will rotate everything we pass in over two seconds
+const Rotate = styled.div`
+  display: inline-block;
+  animation: ${rotate360} 2s linear infinite;
+`;
+```
+
+This will now rotate it's children over and over again, for example our logo:
+
+```JSX
+<Rotate>&lt; 💅 &gt;</Rotate>
+```
+
+<div align="center">
+  <a href="http://www.webpackbin.com/EkgdOEkAZ">
+    <img alt="Animated GIF of the above code ran in a browser" height="100px" src="http://imgur.com/I7Sobjv.gif" />
+    <div><em>Live demo</em></div>
+  </a>
+</div>
+
+### React Native
+
+`styled-components` has a ReactNative mode that works _exactly_ the same, except you import the things from `styled-components/native`:
+
+```JSX
+import styled from 'styled-components/native';
+
+const StyledView = styled.View`
+  background-color: papayawhip;
+`;
+
+const StyledText = styled.Text`
+  color: palevioletred;
+`;
+
+class MyReactNativeComponent extends React.Component {
+  render() {
+    <StyledView>
+      <StyledText>Hello World!</StyledText>
+    </StyledView>
+  }
+}
+```
+
+> We don't export the `keyframes` and `injectGlobal` helpers from `/native`, since ReactNative doesn't support keyframes or global styles. We will also log a warning if you use media queries or nesting in your CSS.
+
 ### Theming
 
 `styled-components` has full theming support by exporting a wrapper `<ThemeProvider>` component. This component provides a theme to all react components underneath itself in the render tree, even multiple levels deep.
@@ -288,72 +354,6 @@ Now, when we render the `Button` inside a `GreenSection`, it'll be green! If not
 </div>
 
 See the [theming doc](./docs/theming.md) for more detailed instructions about theming and the [shared component libraries doc](./docs/shared-component-libraries.md) for information about setting up a shared component library with `styled-components`.
-
-### Animations
-
-CSS animations with `@keyframes` aren't scoped to a single component but you still don't want them to be global. This is why we export a `keyframes` helper which will generate a unique name for your keyframes. You can then use that unique name throughout your app.
-
-This way, you get all the benefits of using JavaScript, are avoiding name clashes and get your keyframes like always:
-
-```JS
-import styled, { keyframes } from 'styled-components';
-
-// keyframes returns a unique name based on a hash of the contents of the keyframes
-const rotate360 = keyframes`
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-`;
-
-// Here we create a component that will rotate everything we pass in over two seconds
-const Rotate = styled.div`
-  display: inline-block;
-  animation: ${rotate360} 2s linear infinite;
-`;
-```
-
-This will now rotate it's children over and over again, for example our logo:
-
-```JSX
-<Rotate>&lt; 💅 &gt;</Rotate>
-```
-
-<div align="center">
-  <a href="http://www.webpackbin.com/EkgdOEkAZ">
-    <img alt="Animated GIF of the above code ran in a browser" height="100px" src="http://imgur.com/I7Sobjv.gif" />
-    <div><em>Live demo</em></div>
-  </a>
-</div>
-
-### React Native
-
-`styled-components` has a ReactNative mode that works _exactly_ the same, except you import the things from `styled-components/native`:
-
-```JSX
-import styled from 'styled-components/native';
-
-const StyledView = styled.View`
-  background-color: papayawhip;
-`;
-
-const StyledText = styled.Text`
-  color: palevioletred;
-`;
-
-class MyReactNativeComponent extends React.Component {
-  render() {
-    <StyledView>
-      <StyledText>Hello World!</StyledText>
-    </StyledView>
-  }
-}
-```
-
-> Since ReactNative doesn't support any of that, we don't export the `keyframes` and `injectGlobal` helpers. We will also log a warning if you use media queries or nesting in your CSS.
 
 ## Docs
 
