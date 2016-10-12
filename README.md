@@ -219,22 +219,33 @@ const StyledLink = styled(Link)`
 
 ### Theming
 
-We inject a property called `theme` into your styled components. This property has a function attached called `update()`. These two combined allow you to set and get themes based on context.
+`styled-components` has full theming support by exporting a wrapper `<ThemeProvider>` component. This component provides a theme to all react components underneath itself in the render tree, even multiple levels deep.
 
-First, let's set a `theme.main` property from the parent:
+To illustrate this, let's create a component that renders its children with a theme. We do so by wrapping all its children in a `ThemeProvider` that has a `theme`:
 
-```JS
-import styled from 'styled-components';
+```JSX
+import { ThemeProvider } from 'styled-components';
 
-// Set the theme for all components rendered within this parent to mediumseagreen
-const GreenSection = styled.div`
-  ${props => props.theme.update({
+const theme = {
+  myApp: {
     main: 'mediumseagreen',
-  })}
-`;
+  },
+};
+
+// Create a GreenSection component that renders its children wrapped in
+// a ThemeProvider with a green theme
+const GreenSection = (props) => {
+  return (
+    <ThemeProvider theme={theme}>
+      {props.children}
+    </ThemeProvider>
+  );
+}
 ```
 
-Second, let's react to that property from a `Button`:
+Second, let's create a styled component that reacts to the theme. `styled-components` injects the current theme via `props.theme` into the components, which means you can adapt your component to the theme with interpolated functions.
+
+We'll create a `button` that adapts based on the `main` property of the theme:
 
 ```JS
 // Button.js
@@ -242,12 +253,14 @@ import styled from 'styled-components';
 
 const Button = styled.button`
   /* Color the background and border with theme.main, otherwise 'palevioletred' */
-  background: ${props => props.theme.main || 'palevioletred'};
-  border: 2px solid ${props => props.theme.main || 'palevioletred'};
+  background: ${props => (props.theme.myApp && props.theme.myApp.main) || 'palevioletred'};
+  border: 2px solid ${props => (props.theme.myApp && props.theme.myApp.main) || 'palevioletred'};
 
   /* …more styles here… */
 `;
 ```
+
+Now, when we render the `Button` inside a `GreenSection`, it'll be green! If not, it'll be red.
 
 ```JSX
 <Button>Normal Button</Button>
@@ -273,6 +286,8 @@ const Button = styled.button`
     <div><em>Live demo</em></div>
   </a>
 </div>
+
+See the [theming doc](./docs/theming.md) for more detailled instructions about theming.
 
 ### Animations
 
@@ -350,6 +365,7 @@ See [the documentation](./docs) for more information about using `styled-compone
 - [Tips and Tricks](./docs/tips-and-tricks.md)
 - [Tagged Template Literals](./docs/tagged-template-literals.md): How do they work?
 - [What CSS we support](./docs/css-we-support.md): What parts & extensions of CSS can you use within a component?
+- [Theming](./docs/theming.md): Detailed instruction for theming and setting up a shared component library
 
 ## Syntax highlighting
 

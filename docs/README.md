@@ -8,3 +8,4 @@ This is the `styled-components` documentation.
 - [Tips and Tricks](./tips-and-tricks.md): A few handy tips for working with `styled-components`
 - [Tagged Template Literals](./tagged-template-literals.md): How do they work?
 - [What CSS we support](./css-we-support.md): What parts & extensions of CSS can you use within a component?
+- [Theming](./docs/theming.md): Detailed instruction for theming and setting up a shared component library
