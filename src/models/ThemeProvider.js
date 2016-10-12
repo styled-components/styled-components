@@ -1,30 +1,13 @@
 import React, { PropTypes, Component } from 'react'
 import { isFunction, isPlainObject } from 'lodash'
+import createBroadcast from '../utils/create-broadcast'
 
 export const CHANNEL = '__styled-components__'
 
-const createBroadcast = (initialValue) => {
-  let listeners = []
-  let currentValue = initialValue
-
-  return {
-    publish(value) {
-      currentValue = value
-      listeners.forEach(listener => listener(currentValue))
-    },
-    subscribe(listener) {
-      listeners.push(listener)
-
-      // Publish to this subscriber once immediately.
-      listener(currentValue)
-
-      // eslint-disable-next-line no-return-assign
-      return () =>
-        listeners = listeners.filter(item => item !== listener)
-    },
-  }
-}
-
+/**
+ * Provide a theme to an entire react component tree via context and event listeners (have to do
+ * both context and event emitter as pure components block context updates)
+ */
 class ThemeProvider extends Component {
   constructor() {
     super()
@@ -33,7 +16,15 @@ class ThemeProvider extends Component {
   }
 
   componentWillMount() {
-    this.broadcast = createBroadcast(this.props.theme)
+    // If there is a ThemeProvider wrapper anywhere around this theme provider, merge this theme
+    // with the outer theme
+    if (this.context.broadcasts && this.context.broadcasts[CHANNEL]) {
+      const subscribe = this.context.broadcasts[CHANNEL]
+      this.unsubscribeToOuter = subscribe(theme => {
+        this.outerTheme = theme
+      })
+    }
+    this.broadcast = createBroadcast(this.getTheme())
   }
 
   getChildContext() {
@@ -43,24 +34,32 @@ class ThemeProvider extends Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    if (this.props.theme !== nextProps.theme) this.broadcast.publish(nextProps.theme)
+    if (this.props.theme !== nextProps.theme) this.broadcast.publish(this.getTheme(nextProps.theme))
   }
 
+  componentWillUnmount() {
+    this.unsubscribeToOuter()
+  }
+
+  // Merge new broadcast with existing ones
   getBroadcastsContext() {
-    const { broadcasts } = this.context
-
-    return Object.assign({}, broadcasts, { [CHANNEL]: this.broadcast.subscribe })
+    return Object.assign({}, this.context.broadcasts, { [CHANNEL]: this.broadcast.subscribe })
   }
 
-  getTheme() {
-    if (isFunction(this.props.theme)) {
-      const mergedTheme = this.props.theme(this.context.theme)
+  // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
+  getTheme(passedTheme) {
+    const theme = passedTheme || this.props.theme
+    if (isFunction(theme)) {
+      const mergedTheme = theme(this.outerTheme)
       if (!isPlainObject(mergedTheme)) {
         throw new Error('[ThemeProvider] Please return an object from your theme function, i.e. theme={() => ({})}!')
       }
-      return { theme: mergedTheme }
+      return mergedTheme
     }
-    return { theme: Object.assign({}, this.context.theme, this.props.theme) }
+    if (!isPlainObject(theme)) {
+      throw new Error('[ThemeProvider] Please make your theme prop a plain object')
+    }
+    return Object.assign({}, this.outerTheme, theme)
   }
 
   render() {

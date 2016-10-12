@@ -26,27 +26,25 @@ const createStyledComponent = (target: Target, rules: RuleSet) => {
     constructor() {
       super()
       this.state = {
-        value: null,
-        broadcast: true,
+        theme: null,
       }
     }
 
     componentWillMount() {
+      // If there is a theme in the context, subscribe to the event emitter. This is necessary
+      // due to pure components blocking context updates, this circumvents that by updating when an
+      // event is emitted
       if (this.context.broadcasts) {
         const subscribe = this.context.broadcasts[CHANNEL]
         this.unsubscribe = subscribe(theme => {
-          // This function will be called once immediately.
+          // This will be called once immediately
           this.setState({ theme })
-        })
-      } else {
-        this.setState({
-          broadcast: false,
         })
       }
     }
 
     componentWillUnmount() {
-      if (this.state.broadcast) {
+      if (this.unsubscribe) {
         this.unsubscribe()
       }
     }
