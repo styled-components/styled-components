@@ -3,10 +3,12 @@ import { Component, createElement, PropTypes } from 'react'
 
 import InlineStyle from './InlineStyle'
 import type { RuleSet, Target } from '../types'
+import { CHANNEL } from './ThemeProvider'
 
 /* eslint-disable react/prefer-stateless-function */
 class AbstractStyledNativeComponent extends Component {
   static isPrototypeOf: Function
+  state: any
 }
 
 const createStyledNativeComponent = (target: Target, rules: RuleSet) => {
@@ -19,40 +21,47 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet) => {
   const inlineStyle = new InlineStyle(rules)
 
   class StyledNativeComponent extends AbstractStyledNativeComponent {
-    theme: Object
-    generatedStyles: Object
     static rules: RuleSet
     static target: Target
+    unsubscribe: Function
+    state: {
+      theme: any
+    }
 
-    getChildContext() {
-      return { theme: this.theme }
+    constructor() {
+      super()
+      this.state = {
+        theme: null,
+      }
     }
 
     componentWillMount() {
-      this.componentWillReceiveProps(this.props, this.context)
+      // If there is a theme in the context, subscribe to the event emitter. This is necessary
+      // due to pure components blocking context updates, this circumvents that by updating when an
+      // event is emitted
+      if (this.context.broadcasts) {
+        const subscribe = this.context.broadcasts[CHANNEL]
+        this.unsubscribe = subscribe(theme => {
+          // This will be called once immediately
+          this.setState({ theme })
+        })
+      }
     }
 
-    componentWillReceiveProps(newProps: Object, newContext: ?any) {
-      // Always pass down a theme, even if it's empty
-      this.theme = (newContext && newContext.theme) || {}
-      // Local copy for this instance with an update() method
-      const theme = Object.assign({}, this.theme, {
-        update: values => {
-          this.theme = Object.assign({}, this.theme, values)
-        },
-      })
-
-      /* Generate and inject the styles and potentially update theme */
-      const executionContext = Object.assign({}, newProps, { theme })
-      this.generatedStyles = inlineStyle.generateStyleObject(executionContext)
+    componentWillUnmount() {
+      if (this.unsubscribe) {
+        this.unsubscribe()
+      }
     }
 
     /* eslint-disable react/prop-types */
     render() {
       const { style, children } = this.props
+      const theme = this.state.theme || {}
 
+      const generatedStyles = inlineStyle.generateStyleObject({ theme })
       const propsForElement = Object.assign({}, this.props)
-      propsForElement.style = [this.generatedStyles, style]
+      propsForElement.style = [generatedStyles, style]
 
       return createElement(target, propsForElement, children)
     }
@@ -63,11 +72,8 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet) => {
   StyledNativeComponent.target = target
 
   StyledNativeComponent.displayName = target.displayName ? `Styled(${target.displayName})` : `styled.${target}`
-  StyledNativeComponent.childContextTypes = {
-    theme: PropTypes.object,
-  }
   StyledNativeComponent.contextTypes = {
-    theme: PropTypes.object,
+    broadcasts: PropTypes.object,
   }
   return StyledNativeComponent
 }
