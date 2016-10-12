@@ -66,7 +66,7 @@ This can take any combination of
 
 > **Note**: You can also pass an Object as an interpolation, and we will treat it like inline styles. This is highly discouraged, as the CSS syntax has support for media queries, nesting, etc., which the object syntax doesn't.
 
-The properties that are passed into an interpolated function get attached a special property, `theme`. `theme` has another property called `update()`, and it allows you to get and set themes from parent components.
+The properties that are passed into an interpolated function get attached a special property, `theme`, which is injected by a higher level [`ThemeProvider`](#theme-provider) component.
 
 #### Examples
 
@@ -82,34 +82,21 @@ const Section = styled.section`
 	/* Adjust the background from the properties */
 	background: ${(props) => props.background || 'palevioletred'};
 
-	/* Set the theme for child components */
-	border: ${(props) => props.theme.update({
-		main: 'mediumseagreen',
-	})}
-`;
-
-const Button = styled.button`
-	color: white;
-
-	/* Adapt based on the theme of the parent */
-	background: ${(props) => props.theme.main || 'palevioletred'}
+	/* Adapt based on the theme set in a parent ThemeProvider */
+	border: ${(props) => props.theme.main || 'palevioletred'}
 `;
 ```
 
 ```JSX
 <Button>Red Button</Button>
-<Section>
-  <p>Section with a red background</p>
+<ThemeProvider theme={{ main: 'mediumseagreen' }}>
 	<Button>Green Button</Button>
-</Section>
-<Section background="mediumseagreen">
-	Section with a green background
-</Section>
+</ThemeProvider>
 ```
 
 #### Tips
 
-- You're writing CSS, but with the power of JavaScript – utilise it! (see [Tips and Tricks](./tips-and-tricks.md) for some ideas)
+- You're writing CSS, but with the power of JavaScript - utilise it! (see [Tips and Tricks](./tips-and-tricks.md) for some ideas)
 
 
 ### `css`
@@ -207,6 +194,30 @@ const FadeInButton = styled.button`
 `;
 ```
 
+
+### `ThemeProvider`
+
+`web`, `native`.
+
+A helper component for theming. Injects the theme into all styled components anywhere beneath it in the component tree.
+
+#### Props
+
+- `theme` _(Object)_: The data that should be injected into the child styled components.
+
+#### Example
+
+```JS
+const Box = styled.div`
+	color: ${props => props.theme.color};
+`;
+```
+
+```JSX
+<ThemeProvider theme={{ color: 'mediumseagreen' }}>
+	<Box>I'm mediumseagreen!</Box>
+</ThemeProvider>
+```
 
 ### `injectGlobal`
 
