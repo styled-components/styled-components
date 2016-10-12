@@ -1,4 +1,4 @@
-// @noflow
+// @flow
 import { Component, createElement, PropTypes } from 'react'
 
 import ComponentStyle from '../models/ComponentStyle'
@@ -10,6 +10,7 @@ import type { RuleSet, Target } from '../types'
 /* eslint-disable react/prefer-stateless-function */
 class AbstractStyledComponent extends Component {
   static isPrototypeOf: Function
+  state: any
 }
 
 const createStyledComponent = (target: Target, rules: RuleSet) => {
@@ -23,6 +24,11 @@ const createStyledComponent = (target: Target, rules: RuleSet) => {
   class StyledComponent extends AbstractStyledComponent {
     static rules: RuleSet
     static target: Target
+    state: {
+      theme: any,
+    }
+    unsubscribe: Function
+
     constructor() {
       super()
       this.state = {
