@@ -58,8 +58,9 @@ const createStyledComponent = (target: Target, rules: RuleSet) => {
     /* eslint-disable react/prop-types */
     render() {
       const { className, children } = this.props
+      const theme = this.state.theme || {}
 
-      const generatedClassName = componentStyle.generateAndInjectStyles({ theme: this.state.theme })
+      const generatedClassName = componentStyle.generateAndInjectStyles({ theme })
       const propsForElement = {}
       /* Don't pass through non HTML tags through to HTML elements */
       Object.keys(this.props)
