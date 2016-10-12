@@ -44,6 +44,8 @@ const Wrapper = styled.section`
 `;
 ```
 
+*(The CSS rules are automatically vendor prefixed, so you don't have to think about it!)*
+
 You render them like so:
 
 ```JSX
@@ -59,8 +61,6 @@ You render them like so:
     <div><em>Live demo</em></div>
   </a>
 </div>
-
-The CSS rules are also automatically vendor prefixed, (autoprefixed) so you don't have to think about it!
 
 ### Passed props
 
@@ -100,7 +100,7 @@ Here is one input without any content showing the placeholder, and one with some
 
 ### Adapting based on props
 
-This is a button component that has a `primary` state. By setting `primary` to `true` when rendering it we adjust the background and text color.
+This is a button component that has a `primary` state. By setting `primary` to `true` when rendering it we adjust the background and text color. *(see [tips and tricks](./docs/tips-and-tricks.md#component-adjustments) for more examples of this pattern!)*
 
 ```JSX
 import styled from 'styled-components';
@@ -131,8 +131,6 @@ export default Button;
     <div><em>Live demo</em></div>
   </a>
 </div>
-
-*See [Tips and Tricks](./docs/tips-and-tricks.md#component-adjustments) for more examples of this pattern!*
 
 ### Overriding component styles
 
@@ -174,7 +172,7 @@ const TomatoButton = styled(Button)`
 export default TomatoButton;
 ```
 
-Even though we have only specified the `color` and the `border-color`, this is what our TomatoButton looks like:
+This is what our `TomatoButton` looks like, even though we have only specified the `color` and the `border-color`. Instead of copy and pasting or factoring out the styles into a separate function we've now reused them.
 
 <div align="center">
   <a href="http://www.webpackbin.com/VJZQkBU6Z">
@@ -183,7 +181,7 @@ Even though we have only specified the `color` and the `border-color`, this is w
   </a>
 </div>
 
-Instead of copy and pasting or factoring out the styles into a separate function we've now reused them.
+<br />
 
 > **Note:** You can also pass tag names into the `styled()` call, like so: `styled('div')`. In fact, the styled.tagname helpers are just aliases of `styled('tagname')`!
 
@@ -283,7 +281,7 @@ class MyReactNativeComponent extends React.Component {
 }
 ```
 
-> We don't export the `keyframes` and `injectGlobal` helpers from `/native`, since ReactNative doesn't support keyframes or global styles. We will also log a warning if you use media queries or nesting in your CSS.
+> You cannot use the `keyframes` and `injectGlobal` helpers since ReactNative doesn't support keyframes or global styles. We will also log a warning if you use media queries or nesting in your CSS.
 
 ### Theming
 
@@ -311,7 +309,9 @@ const GreenSection = (props) => {
 }
 ```
 
-Second, let's create a styled component that reacts to the theme. `styled-components` injects the current theme via `props.theme` into the components, which means you can adapt your component to the theme with interpolated functions.
+Second, let's create a styled component that adapts to the theme.
+
+`styled-components` injects the current theme via `props.theme` into the components, which means you can adapt your component to the theme with interpolated functions.
 
 We'll create a `button` that adapts based on the `main` property of the theme:
 
