@@ -60,6 +60,8 @@ You render them like so:
   </a>
 </div>
 
+The CSS rules are also automatically vendor prefixed, (autoprefixed) so you don't have to think about it!
+
 ### Passed props
 
 Styled components pass on all their props. This is a styled `<input>`:

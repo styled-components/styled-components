@@ -36,77 +36,59 @@ Then, in your comment section, you can simply say that the `<Button>` should be 
 
 ## Using JavaScript to our advantage
 
-To adjust the placeholder color of an input, we need to use the <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/::placeholder">`::placeholder`</a> pseudo element.
+To make a line overflow with an ellipsis (`…`) when the text is longer than the container element is wide, you need three CSS properties:
 
-> To attach pseudo elements to your styled component, you need to use `&`. For example, to style the placeholder:
-
-```JSX
-const Input = styled.input`
-  /* Some other styles here… */
-
-  /* Style the placeholder */
-  &::placeholder {
-    color: palevioletred;
-    opacity: 0.5;
-  }
-`;
+```CSS
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 ```
 
-If you tried to actually run the above example, you'd likely see that the placeholder is still grey.
+The width of the container element also needs to be set explicitly:
 
-The unprefixed `::placeholder` pseudo-element is currently only supported in Firefox 51 – we also need to use `::-webkit-input-placeholder`, `::-moz-placeholder`, `:-moz-placeholder` (notice the single colon) and `:-ms-input-placeholder`.
+```CSS
+.truncate {
+  /* Needs to be specific width */
+  width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+```
 
-Instead of hardcoding them into our `<Input>`, we can write a JavaScript function that adds those automatically! We can then reuse that function whenever we need to style a placeholder:
+You could create a separate component for truncating, but in this case reusing the CSS might not be a bad idea! Instead of hardcoding those lines of code in every component you want to truncate though, you could write a function that does it for you:
 
 ```JS
-// placeholder.js
+// truncate.js
 import { css } from 'styled-components';
 
-export default function placeholder(...rules) {
+export default function truncate(...rules) {
   return css`
-    &::placeholder {
-      ${css(...rules)}
-    }
-
-    &::-webkit-input-placeholder {
-      ${css(...rules)}
-    }
-
-    &::-moz-placeholder {
-      ${css(...rules)}
-    }
-
-    &:-ms-input-placeholder {
-      ${css(...rules)}
-    }
+    ${css(...rules)}
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   `;
 }
 ```
 
-Which would be used like this:
+Then you can use it like this:
 
 ```JSX
 import { css } from 'styled-components';
-import placeholder from '../placeholder';
+import truncate from '../truncate';
 
-const Input = styled.input`
-  // Old styles here…
-
-  // Style the placeholder
-  ${placeholder`
-    color: palevioletred;
-    opacity: 0.5;
+// Make this div truncate the text with an ellipsis
+const Box = styled.div`
+  ${truncate`
+    background-color: papayawhip;
+    width: 250px;
   `}
 `;
 ```
 
-<div align="center">
-  <a href="http://www.webpackbin.com/NkZ61pHab">
-    <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/9Etm2yl.jpg" />
-    <div><em>Live demo</em></div>
-  </a>
-</div>
-
 Does this remind you of anything? Exactly, this is kind of like a mixin in Sass – except it's not an arbitrarily added construct on top of CSS, it's just JavaScript! 👍
 
-Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals]('./tagged-template-literals.md')
+*Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals]('./tagged-template-literals.md')*
