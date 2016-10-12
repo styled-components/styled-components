@@ -27,6 +27,10 @@ install:
 # Disable automatic builds
 build: off
 
+# Only run on 64 bit machines, see https://github.com/styled-components/styled-components/pull/42#issuecomment-251980845
+platform:
+  - x64
+
 # Post-install test scripts
 test_script:
   # Output debugging info

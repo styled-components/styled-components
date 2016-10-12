@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "0.2.3",
+  "version": "0.3.4",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
@@ -10,7 +10,7 @@
     "prebuild:umd": "rm -rf dist/*",
     "build:umd": "webpack --config webpack.config.babel.js",
     "build:watch": "npm run build:lib -- --watch",
-    "test": "mocha \"./src/**/*.test.js\" --require babel-core/register",
+    "test": "mocha \"./src/**/*.test.js\" --require babel-core/register --timeout 5000",
     "test:watch": "npm run test -- --watch",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
     "lint": "eslint src",
@@ -33,6 +33,7 @@
   },
   "homepage": "https://github.com/css-components/styled-components#readme",
   "dependencies": {
+    "buffer": "^5.0.0",
     "fbjs": "^0.8.4",
     "glamor": "^2.15.5",
     "js-base64": "^2.1.9",
@@ -49,8 +50,10 @@
     "babel-plugin-transform-flow-strip-types": "^6.14.0",
     "babel-preset-latest": "^6.14.0",
     "babel-preset-react": "^6.11.1",
+    "enzyme": "^2.4.1",
     "eslint": "^3.5.0",
     "eslint-config-airbnb": "^11.1.0",
+    "eslint-plugin-flowtype-errors": "^1.3.0",
     "eslint-plugin-import": "^1.15.0",
     "eslint-plugin-jsx-a11y": "^2.2.2",
     "eslint-plugin-react": "^6.2.1",
@@ -60,17 +63,9 @@
     "mocha": "^3.0.2",
     "pre-commit": "^1.1.3",
     "proxyquire": "^1.7.10",
+    "react-addons-test-utils": "^15.3.2",
+    "react-dom": "^15.3.2",
     "webpack": "^1.13.2"
-  },
-  "babel": {
-    "presets": [
-      "latest",
-      "react"
-    ],
-    "plugins": [
-      "add-module-exports",
-      "transform-flow-strip-types"
-    ]
   },
   "lint-staged": {
     "*.js": [

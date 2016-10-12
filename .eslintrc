@@ -1,6 +1,7 @@
 {
   "parser": "babel-eslint",
   "extends": "airbnb",
+  "plugins": ["flowtype-errors"],
   "rules": {
     "semi": [2, "never"],
     "arrow-parens": 0,
@@ -10,7 +11,10 @@
     "import/no-extraneous-dependencies": 0,
     "no-confusing-arrow": 0,
     "no-else-return": 0,
-    "react/sort-comp": 0
+    "react/sort-comp": 0,
+    "react/jsx-filename-extension": 0,
+    "flowtype-errors/show-errors": 2,
+    "no-prototype-builtins": 0
   },
   "env": {
     "mocha": true,

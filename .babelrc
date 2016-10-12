@@ -1,0 +1,10 @@
+{
+  "presets": [
+    "latest",
+    "react"
+  ],
+  "plugins": [
+    "add-module-exports",
+    "transform-flow-strip-types"
+  ]
+}

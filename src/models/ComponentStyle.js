@@ -7,9 +7,9 @@ import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
 import postcssNested from '../vendor/postcss-nested'
 import toEmoji from '../utils/toEmoji'
+import autoprefix from '../utils/autoprefix'
 
 const styleSheet = new StyleSheet({ speedy: false, maxLength: 40 })
-const generated = {}
 const inserted = {}
 
 /*
@@ -17,8 +17,8 @@ const inserted = {}
  the React-specific stuff.
  */
 export default class ComponentStyle {
-  rules: RuleSet
-  insertedRule: Object
+  rules: RuleSet;
+  insertedRule: Object;
 
   constructor(rules: RuleSet) {
     this.rules = rules
@@ -32,21 +32,19 @@ export default class ComponentStyle {
    * Parses that with PostCSS then runs PostCSS-Nested on it
    * Returns the hash to be injected on render()
    * */
-  generateStyles(executionContext: Object) {
+  generateAndInjectStyles(executionContext: Object) {
     const flatCSS = flatten(this.rules, executionContext).join('')
-    const selector = toEmoji(hashStr(flatCSS))
-    if (!generated[selector]) {
+      .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
+    const hash = hashStr(flatCSS)
+    if (!inserted[hash]) {
+      const selector = toEmoji(hash)
+      inserted[hash] = selector
       const root = parse(`.${selector} { ${flatCSS} }`)
       postcssNested(root)
-      generated[selector] = root.toResult().css
+      autoprefix(root)
+      this.insertedRule.appendRule(root.toResult().css)
     }
-    return selector
+    return inserted[hash]
   }
 
-  injectStyles(selector: string) {
-    if (inserted[selector]) return
-
-    this.insertedRule.appendRule(generated[selector])
-    inserted[selector] = true
-  }
 }
