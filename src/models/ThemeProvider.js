@@ -63,6 +63,9 @@ class ThemeProvider extends Component {
   }
 
   render() {
+    if (!this.props.children) {
+      return null
+    }
     return React.Children.only(this.props.children)
   }
 }
