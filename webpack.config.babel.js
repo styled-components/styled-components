@@ -6,7 +6,7 @@ module.exports = [{
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'styled-components.js',
-    library: 'styled-components',
+    library: 'styled',
     libraryTarget: 'umd',
   },
   externals: {
@@ -25,13 +25,12 @@ module.exports = [{
       },
     ],
   },
-  plugins: [new webpack.DefinePlugin({ 'process.env.NODE_ENV': 'production' })],
 }, {
   entry: './src/index.js',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'styled-components.min.js',
-    library: 'styled-components',
+    library: 'styled',
     libraryTarget: 'umd',
   },
   externals: {
@@ -51,7 +50,6 @@ module.exports = [{
     ],
   },
   plugins: [
-    new webpack.DefinePlugin({ 'process.env.NODE_ENV': 'production' }),
     new webpack.optimize.UglifyJsPlugin({
       compress: {
         warnings: false,
