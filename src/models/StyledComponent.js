@@ -37,9 +37,9 @@ export default (ComponentStyle: any) => {
       }
 
       componentWillMount() {
-        // If there is a theme in the context, subscribe to the event emitter. This is necessary
-        // due to pure components blocking context updates, this circumvents that by updating when an
-        // event is emitted
+        // If there is a theme in the context, subscribe to the event emitter. This
+        // is necessary due to pure components blocking context updates, this circumvents
+        // that by updating when an event is emitted
         if (this.context.broadcasts) {
           const subscribe = this.context.broadcasts[CHANNEL]
           this.unsubscribe = subscribe(theme => {
