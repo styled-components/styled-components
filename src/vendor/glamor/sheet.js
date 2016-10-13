@@ -62,6 +62,7 @@ export class StyleSheet {
     speedy = !isDev && !isTest,
     maxLength = (isBrowser && oldIE) ? 4000 : 65000
   } = {}) {
+    StyleSheet.instance = this // for testing TODO: something better
     this.isSpeedy = speedy // the big drawback here is that the css won't be editable in devtools
     this.sheet = undefined
     this.tags = []

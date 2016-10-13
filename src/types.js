@@ -6,3 +6,5 @@ export type RuleSet = Array<Interpolation>
 
 /* eslint-disable no-undef */
 export type Target = string | Class<Component>
+
+export type NameGenerator = (hash: number) => string
