@@ -1,36 +1,20 @@
 import expect from 'expect'
-import proxyquire from 'proxyquire'
-import keyframes from '../keyframes'
+import { StyleSheet } from '../../vendor/glamor/sheet'
 
-const KEYFRAMES_REGEX = /@keyframes\s*(\S+)\s*\{/
+import _keyframes from '../keyframes'
 
-const hasValidKeyframesDeclaration = (str) => KEYFRAMES_REGEX.test(str)
-const getKeyframesNameFromCSS = (str) => str.match(KEYFRAMES_REGEX)[1]
+let index = 0
+const keyframes = _keyframes(() => `keyframe_${index++}`)
+const getInjectedCSS = () => StyleSheet.instance.rules().map(rule => rule.cssText).join(' ')
 
 /**
  * Setup
  */
-const insertSpy = expect.createSpy()
-
-class StubStylesheet {
-  inject() {}
-  insert(...args) {
-    insertSpy(...args)
-  }
- }
-
-const stubbedSheet = {
-  StyleSheet: StubStylesheet,
-  '@global': true,
-}
-
-const stubbedKeyframes = proxyquire('../keyframes', {
-  '../vendor/glamor/sheet': stubbedSheet,
-})
 
 describe('keyframes', () => {
   beforeEach(() => {
-    insertSpy.reset()
+    if (StyleSheet.instance && StyleSheet.instance.sheet) StyleSheet.instance.flush()
+    index = 0
   })
 
   it('should return its name', () => {
@@ -41,7 +25,7 @@ describe('keyframes', () => {
       100% {
         opacity: 1;
       }
-    `).toBeA('string')
+    `).toEqual('keyframe_0')
   })
 
   it('should insert the correct styles', () => {
@@ -54,16 +38,16 @@ describe('keyframes', () => {
       }
     `
 
-    const name = stubbedKeyframes`${rules}`
-
-    expect(insertSpy).toHaveBeenCalled()
-    expect(insertSpy.calls.length).toEqual(1)
-    expect(
-      hasValidKeyframesDeclaration(insertSpy.calls[0].arguments[0])
-    ).toEqual(true)
-    expect(
-      getKeyframesNameFromCSS(insertSpy.calls[0].arguments[0])
-    ).toEqual(name)
-    expect(insertSpy.calls[0].arguments[0]).toInclude(rules)
+    const name = keyframes`${rules}`
+    expect(getInjectedCSS().replace(/\s+/g, ' ')).toEqual(`
+      @keyframes keyframe_0 {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+    `.trim().replace(/\s+/g, ' '))
   })
 })

@@ -19,7 +19,7 @@ let styleSheet
 let index = 0
 const classNames = () => String.fromCodePoint(97 + index++)
 
-const toCSS = styleSheet => styleSheet.rules().map(rule => rule.cssText).join(' ')
+const toCSS = styleSheet => styleSheet.rules().map(rule => rule.cssText).join('\n')
 
 describe('e2e', () => {
   /**
