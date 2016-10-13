@@ -2,7 +2,7 @@
 import hashStr from 'glamor/lib/hash'
 import { StyleSheet } from '../vendor/glamor/sheet'
 
-import type { RuleSet } from '../types'
+import type { RuleSet, NameGenerator } from '../types'
 import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
 import postcssNested from '../vendor/postcss-nested'
@@ -15,7 +15,7 @@ const inserted = {}
  ComponentStyle is all the CSS-specific stuff, not
  the React-specific stuff.
  */
-export default (classNameGenerator: (hash: Number) => string) =>
+export default (nameGenerator: NameGenerator) => {
   class ComponentStyle {
     rules: RuleSet
     insertedRule: Object
@@ -37,7 +37,7 @@ export default (classNameGenerator: (hash: Number) => string) =>
         .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
       const hash = hashStr(flatCSS)
       if (!inserted[hash]) {
-        const selector = classNameGenerator(hash)
+        const selector = nameGenerator(hash)
         inserted[hash] = selector
         const root = parse(`.${selector} { ${flatCSS} }`)
         postcssNested(root)
@@ -47,3 +47,6 @@ export default (classNameGenerator: (hash: Number) => string) =>
       return inserted[hash]
     }
   }
+
+  return ComponentStyle
+}
