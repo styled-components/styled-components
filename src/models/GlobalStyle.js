@@ -1,12 +1,10 @@
 // @flow
 import parse from '../vendor/postcss-safe-parser/parse'
-import { StyleSheet } from '../vendor/glamor/sheet'
 import postcssNested from '../vendor/postcss-nested'
 
 import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
-
-const styleSheet = new StyleSheet({ speedy: false, maxLength: 40 })
+import styleSheet from './StyleSheet'
 
 export default class ComponentStyle {
   rules: RuleSet;
