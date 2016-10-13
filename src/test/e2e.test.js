@@ -6,66 +6,30 @@
 
 import React from 'react'
 import expect from 'expect'
-import proxyquire from 'proxyquire'
 import { shallow, render } from 'enzyme'
 import ThemeProvider from '../models/ThemeProvider'
-
-/**
- * Setup
- */
-
-let styleSheet
-let styled
-
-class StubStylesheet {
-  constructor() {
-    // TODO: there must be a better way to get a handle on the instance each time
-    // For the tests so far, the first stylesheet to be created is the good one
-    // TODO: fix GlobalStyle.js
-    if (!styleSheet) styleSheet = this
-    this.injected = false
-    this.rules = []
-  }
-  inject() {
-    this.injected = true
-  }
-
-  insert(string) {
-    const rule = string ? [string] : []
-    this.rules.push(rule)
-    return { appendRule: css => rule.push(css) }
-  }
-
-  toCSS() {
-    return this.rules.map(r => r.join('\n')).join('\n')
-  }
-}
-
-const stubbedSheet = {
-  StyleSheet: StubStylesheet,
-  '@global': true,
-}
+import _styled from '../constructors/styled'
+import { StyleSheet } from '../vendor/glamor/sheet'
+import _styledComponent from '../models/StyledComponent'
+import _ComponentStyle from '../models/ComponentStyle'
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let index = 0
-const classNames = code => {
-  const lastLetter = String.fromCodePoint(97 + code)
-  return code > 26 ? `${classNames(Math.floor(code / 26))}${lastLetter}` : lastLetter
-}
-const stubbedEmoji = () => classNames(index++) // eslint-disable-line no-plusplus
-stubbedEmoji['@global'] = true
+const classNames = code => String.fromCodePoint(97 + code)
+const alwaysRegen = css =>
+
+const styled = _styled(_styledComponent(_ComponentStyle(classNames)))
+let styleSheet
+const toCSS = styleSheet => console.log(styleSheet.rules()) || styleSheet.rules().map(rule => rule.cssText).join(' ')
 
 describe('e2e', () => {
   /**
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    styleSheet = null
+    if (StyleSheet.instance && StyleSheet.instance.sheet) StyleSheet.instance.flush()
+    styleSheet = StyleSheet.instance
     index = 0
-    styled = proxyquire('../index', {
-      '../vendor/glamor/sheet': stubbedSheet,
-      '../utils/toEmoji': stubbedEmoji,
-    }).default
   })
 
   /**
@@ -84,27 +48,27 @@ describe('e2e', () => {
 
     it('should not generate any styles by default', () => {
       styled.div``
-      expect(styleSheet.toCSS()).toEqual('')
+      expect(toCSS(styleSheet)).toEqual('')
     })
 
     it('should generate an empty tag once rendered', () => {
       const Comp = styled.div``
       shallow(<Comp />)
-      expect(styleSheet.toCSS()).toEqual('.a {  }')
+      expect(toCSS(styleSheet)).toEqual('.a {  }')
     })
 
     /* TODO: we should probably pretty-format the output so this test might have to change */
     it('should pass through all whitespace', () => {
       const Comp = styled.div`   \n   `
       shallow(<Comp />)
-      expect(styleSheet.toCSS()).toEqual('.a {    \n    }')
+      expect(toCSS(styleSheet)).toEqual('.a {    \n    }')
     })
 
     it('should inject only once for a styled component, no matter how often it\'s mounted', () => {
       const Comp = styled.div``
       shallow(<Comp />)
       shallow(<Comp />)
-      expect(styleSheet.toCSS()).toEqual('.a {  }')
+      expect(toCSS(styleSheet)).toEqual('.a {  }')
     })
   })
 
@@ -115,7 +79,7 @@ describe('e2e', () => {
         ${rule}
       `
       shallow(<Comp />)
-      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
     })
 
     it('should append multiple styles', () => {
@@ -126,7 +90,7 @@ describe('e2e', () => {
         ${rule2}
       `
       shallow(<Comp />)
-      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual('.a { color: blue; background: red; }')
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { color: blue; background: red; }')
     })
 
     it('should inject styles of multiple components', () => {
@@ -142,7 +106,7 @@ describe('e2e', () => {
       shallow(<FirstComp />)
       shallow(<SecondComp />)
 
-      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual('.a { background: blue; } .b { background: red; }')
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { background: blue; } .b { background: red; }')
     })
 
     it('should inject styles of multiple components based on creation, not rendering order', () => {
@@ -160,7 +124,7 @@ describe('e2e', () => {
       shallow(<FirstComp />)
 
       // Classes _do_ get generated in the order of rendering but that's ok
-      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual(`
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`
         .b { content: "first rule"; }
         .a { content: "second rule"; }
       `.trim().replace(/\s+/g, ' '))
@@ -174,7 +138,7 @@ describe('e2e', () => {
         ${rule}
       `
       shallow(<Comp />)
-      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual(`
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`
         .a {
           color: blue;
         }
@@ -190,7 +154,7 @@ describe('e2e', () => {
       shallow(<Parent />)
       shallow(<Child />)
 
-      expect(styleSheet.toCSS().trim().replace(/\s+/g, ' ')).toEqual('.a { }')
+      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { }')
     })
 
     it('should generate a single class if only parent has styles', () => {
@@ -200,36 +164,36 @@ describe('e2e', () => {
       shallow(<Parent />)
       shallow(<Child />)
 
-      expect(styleSheet.toCSS().trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
+      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
     })
 
-    it('should generate a single class if only child has styles', () => {
+    it.only('should generate a single class if only child has styles', () => {
       const Parent = styled.div`color: blue;`
       const Child = styled(Parent)``
 
       shallow(<Parent />)
       shallow(<Child />)
 
-      expect(styleSheet.toCSS().trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
+      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
     })
 
-    it('should generate a class for the child with the rules of the parent', () => {
+    it.only('should generate a class for the child with the rules of the parent', () => {
       const Parent = styled.div`color: blue;`
       const Child = styled(Parent)`color: red;`
 
       shallow(<Child />)
 
-      expect(styleSheet.toCSS().trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue;color: red; }')
+      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue;color: red; }')
     })
 
-    it('should generate different classes for both parent and child', () => {
+    it.only('should generate different classes for both parent and child', () => {
       const Parent = styled.div`color: blue;`
       const Child = styled(Parent)`color: red;`
 
       shallow(<Parent />)
       shallow(<Child />)
 
-      expect(styleSheet.toCSS().trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; } .b { color: blue;color: red; }')
+      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; } .b { color: blue;color: red; }')
     })
 
     it('should copy nested rules to the child', () => {
@@ -242,7 +206,7 @@ describe('e2e', () => {
       shallow(<Parent />)
       shallow(<Child />)
 
-      expect(styleSheet.toCSS().trim().replace(/\s+/g, ' ')).toEqual(`
+      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual(`
         .a { color: blue; }
         .a > h1 { font-size: 4rem; }
         .b { color: blue; color: red; }
@@ -257,7 +221,7 @@ describe('e2e', () => {
         transition: opacity 0.3s;
       `
       shallow(<Comp />)
-      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual('.a { -ms-transition: opacity 0.3s; -moz-transition: opacity 0.3s; -webkit-transition: opacity 0.3s; transition: opacity 0.3s; }')
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { -ms-transition: opacity 0.3s; -moz-transition: opacity 0.3s; -webkit-transition: opacity 0.3s; transition: opacity 0.3s; }')
     })
   })
 
@@ -272,7 +236,7 @@ describe('e2e', () => {
           <Comp />
         </ThemeProvider>
       )
-      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual(`.a { color: ${theme.color}; }`)
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`.a { color: ${theme.color}; }`)
     })
 
     it('should inject props.theme into a styled component multiple levels deep', () => {
@@ -289,7 +253,7 @@ describe('e2e', () => {
           </div>
         </ThemeProvider>
       )
-      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual(`.a { color: ${theme.color}; }`)
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`.a { color: ${theme.color}; }`)
     })
 
     it('should only inject props.theme into styled components within its child component tree', () => {
@@ -310,7 +274,7 @@ describe('e2e', () => {
           <Comp2 />
         </div>
       )
-      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual(`.a { color: ${theme.color}; } .b { background: ; }`)
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`.a { color: ${theme.color}; } .b { background: ; }`)
     })
 
     it('should inject props.theme into all styled components within the child component tree', () => {
@@ -331,7 +295,7 @@ describe('e2e', () => {
           </div>
         </ThemeProvider>
       )
-      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual(`.a { color: ${theme.color}; } .b { background: ${theme.color}; }`)
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`.a { color: ${theme.color}; } .b { background: ${theme.color}; }`)
     })
 
     it('should inject new CSS when the theme changes', () => {
@@ -350,12 +314,12 @@ describe('e2e', () => {
         )
       }
       renderComp()
-      const initialCSS = styleSheet.toCSS().replace(/\s+/g, ' ')
+      const initialCSS = toCSS(styleSheet).replace(/\s+/g, ' ')
       expect(initialCSS).toEqual(`.a { color: ${theme.color}; }`)
       // Change the theme
       theme = newTheme
       renderComp()
-      expect(styleSheet.toCSS().replace(/\s+/g, ' ')).toEqual(`${initialCSS} .b { color: ${newTheme.color}; }`)
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`${initialCSS} .b { color: ${newTheme.color}; }`)
     })
   })
 })

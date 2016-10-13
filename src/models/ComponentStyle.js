@@ -1,14 +1,11 @@
 // @flow
-import hashStr from 'glamor/lib/hash'
-import { StyleSheet } from '../vendor/glamor/sheet'
-
 import type { RuleSet, NameGenerator } from '../types'
 import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
 import postcssNested from '../vendor/postcss-nested'
 import autoprefix from '../utils/autoprefix'
+import styleSheet from './StyleSheet'
 
-const styleSheet = new StyleSheet({ speedy: false, maxLength: 40 })
 const inserted = {}
 
 /*
@@ -35,16 +32,15 @@ export default (nameGenerator: NameGenerator) => {
     generateAndInjectStyles(executionContext: Object) {
       const flatCSS = flatten(this.rules, executionContext).join('')
         .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
-      const hash = hashStr(flatCSS)
-      if (!inserted[hash]) {
-        const selector = nameGenerator(hash)
-        inserted[hash] = selector
+      const selector = nameGenerator(flatCSS)
+      if (!inserted[selector]) {
+        inserted[selector] = selector
         const root = parse(`.${selector} { ${flatCSS} }`)
         postcssNested(root)
         autoprefix(root)
         this.insertedRule.appendRule(root.toResult().css)
       }
-      return inserted[hash]
+      return inserted[selector]
     }
   }
 
