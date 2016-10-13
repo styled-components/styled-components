@@ -91,4 +91,4 @@ const Box = styled.div`
 
 Does this remind you of anything? Exactly, this is kind of like a mixin in Sass – except it's not an arbitrarily added construct on top of CSS, it's just JavaScript! 👍
 
-*Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals]('./tagged-template-literals.md')*
+*Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals](./tagged-template-literals.md)*
