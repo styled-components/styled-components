@@ -1,30 +1,7 @@
 import expect from 'expect'
-import styled from '../styled'
-import styledComponent from '../../models/StyledComponent'
-import css from '../css'
+import styled from '../../index'
 
 describe('styled', () => {
-  it('should handle template strings', () => {
-    const tagName = 'div'
-    expect(styled(tagName)`background-color: blue;`)
-    .toEqual(styledComponent(tagName, css('background-color: blue')))
-  })
-
-  it('should handle tagged template strings', () => {
-    const tagName = 'div'
-    const bgColor = 'blue'
-    expect(styled(tagName)`background-color: ${bgColor};`)
-    .toEqual(styledComponent(tagName, css`background-color: ${bgColor};`))
-  })
-
-  it('should handle CSS in JS', () => {
-    const tagName = 'div'
-    const styles = {
-      backgroundColor: 'blue',
-    }
-    expect(styled(tagName)(`${styles}`)).toEqual(styledComponent(tagName, css`${styles}`))
-  })
-
   it('should have all valid HTML5 elements defined as properties', () => {
     expect(styled.a).toExist()
     expect(styled.abbr).toExist()

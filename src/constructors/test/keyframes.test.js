@@ -3,13 +3,12 @@ import { StyleSheet } from '../../vendor/glamor/sheet'
 
 import _keyframes from '../keyframes'
 
-let index = 0
-const keyframes = _keyframes(() => `keyframe_${index++}`)
-const getInjectedCSS = () => StyleSheet.instance.rules().map(rule => rule.cssText).join(' ')
-
 /**
  * Setup
  */
+let index = 0
+const keyframes = _keyframes(() => `keyframe_${index++}`)
+const getInjectedCSS = () => StyleSheet.instance.rules().map(rule => rule.cssText).join(' ')
 
 describe('keyframes', () => {
   beforeEach(() => {

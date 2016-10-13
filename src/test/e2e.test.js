@@ -93,6 +93,17 @@ describe('e2e', () => {
       expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { color: blue; background: red; }')
     })
 
+    it('should handle inline style objects', () => {
+      const rule1 = {
+        backgroundColor: 'blue',
+      }
+      const Comp = styled.div`
+        ${rule1}
+      `
+      shallow(<Comp />)
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { background-color: blue; }')
+    })
+
     it('should inject styles of multiple components', () => {
       const firstRule = 'background: blue;'
       const secondRule = 'background: red;'
