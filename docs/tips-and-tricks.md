@@ -61,12 +61,10 @@ The width of the container element also needs to be set explicitly:
 You could create a separate component for truncating, but in this case reusing the CSS might not be a bad idea! Instead of hardcoding those lines of code in every component you want to truncate though, you could write a function that does it for you:
 
 ```JS
-// truncate.js
-import { css } from 'styled-components';
-
-export default function truncate(...rules) {
-  return css`
-    ${css(...rules)}
+// style-utils.js
+export function truncate(width) {
+  return `
+    width: ${width};
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -77,18 +75,62 @@ export default function truncate(...rules) {
 Then you can use it like this:
 
 ```JSX
-import { css } from 'styled-components';
-import truncate from '../truncate';
+import { truncate } from '../style-utils';
 
 // Make this div truncate the text with an ellipsis
 const Box = styled.div`
-  ${truncate`
-    background-color: papayawhip;
-    width: 250px;
-  `}
+  ${ truncate('250px') }
+  background: papayawhip;
 `;
 ```
 
 Does this remind you of anything? Exactly, this is kind of like a mixin in Sass – except it's not an arbitrarily added construct on top of CSS, it's just JavaScript! 👍
+
+## More powerful example
+
+One of the more powerful features of Sass mixins is `@content`, which works a bit like passing `props.children` to a React component, except for CSS:
+
+```scss
+@mixin handheld {
+  @media (max-width: 420px) {
+    @content;
+  }
+}
+
+.box {
+  font-size: 16px;
+  @include handheld {
+    font-size: 14px;
+  }
+}
+```
+
+Now we have javascript, we can do 🌟 _more powerful things_ 🌟
+
+```js
+// style-utils.js
+
+export const media = {
+  handheld: (...args) => css`
+    @media (max-width: 420px) {
+      ${ css(...args) }
+    }
+  `
+}
+```
+
+```js
+import { media } from '../style-utils';
+
+// Make this div truncate the text with an ellipsis
+const Box = styled.div`
+  font-size: 16px;
+  ${ media.handheld`
+    font-size: 14px;
+  ` }
+`;
+```
+
+And voila! 💅
 
 *Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals](./tagged-template-literals.md)*
