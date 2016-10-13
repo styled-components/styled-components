@@ -59,8 +59,9 @@ export default (ComponentStyle: any) => {
       render() {
         const { className, children } = this.props
         const theme = this.state.theme || {}
+        const executionContext = Object.assign({}, this.props, { theme })
 
-        const generatedClassName = componentStyle.generateAndInjectStyles({ theme })
+        const generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
         const propsForElement = {}
         /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)

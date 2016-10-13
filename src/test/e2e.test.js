@@ -236,6 +236,23 @@ describe('e2e', () => {
     })
   })
 
+  describe('props', () => {
+    it('should execute interpolations and fall back', () => {
+      const Comp = styled.div`
+        color: ${props => props.fg || 'black'};
+      `
+      shallow(<Comp />)
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { color: black; }')
+    })
+    it('should execute interpolations and inject props', () => {
+      const Comp = styled.div`
+        color: ${props => props.fg || 'black'};
+      `
+      shallow(<Comp fg="red"/>)
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { color: red; }')
+    })
+  })
+
   describe('theming', () => {
     it('should inject props.theme into a styled component', () => {
       const Comp = styled.div`
