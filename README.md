@@ -11,7 +11,7 @@ npm install --save styled-components
 
 [![Travis Build Status](https://travis-ci.org/styled-components/styled-components.svg?branch=master)](https://travis-ci.org/styled-components/styled-components) [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/gruntjs/grunt?branch=master&svg=true)](https://ci.appveyor.com/project/mxstbr/styled-components) [![Supported by Thinkmill](https://thinkmill.github.io/badge/heart.svg)](http://thinkmill.com.au/?utm_source=github&utm_medium=badge&utm_campaign=styled-components)
 
-Utilising [tagged template literals](./docs/tagged-template-literals.md) (a recent addition to Javascript) and the [power of CSS](./docs/css-we-support.md), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
+Utilising [tagged template literals](./docs/tagged-template-literals.md) (a recent addition to JavaScript) and the [power of CSS](./docs/css-we-support.md), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
 `styled-components` is compatible with both React (for web) and ReactNative – meaning it's the perfect choice even for truly universal apps! See the [ReactNative section](#react-native) for more information
 
@@ -383,7 +383,7 @@ This is what it looks like when properly highlighted:
 
 [**@gandm**](https://github.com/gandm), the creator of `language-babel`, has added support for `styled-components` in Atom!
 
-To get proper syntax highlighting, all you have to do is install and use the `language-babel` package for your Javascript files!
+To get proper syntax highlighting, all you have to do is install and use the `language-babel` package for your JavaScript files!
 
 ### Other Editors
 
