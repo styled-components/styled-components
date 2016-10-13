@@ -297,9 +297,7 @@ To illustrate this, let's create a component that renders its children with a th
 import { ThemeProvider } from 'styled-components';
 
 const theme = {
-  myApp: {
-    main: 'mediumseagreen',
-  },
+  main: 'mediumseagreen',
 };
 
 // Create a GreenSection component that renders its children wrapped in
@@ -325,8 +323,8 @@ import styled from 'styled-components';
 
 const Button = styled.button`
   /* Color the background and border with theme.main, otherwise 'palevioletred' */
-  background: ${props => (props.theme.myApp && props.theme.myApp.main) || 'palevioletred'};
-  border: 2px solid ${props => (props.theme.myApp && props.theme.myApp.main) || 'palevioletred'};
+  background: ${props => props.theme.main || 'palevioletred'};
+  border: 2px solid ${props => props.theme.main || 'palevioletred'};
 
   /* …more styles here… */
 `;
@@ -359,7 +357,7 @@ Now, when we render the `Button` inside a `GreenSection`, it'll be green! If not
   </a>
 </div>
 
-See the [theming doc](./docs/theming.md) for more detailed instructions about theming and the [shared component libraries doc](./docs/shared-component-libraries.md) for information about setting up a shared component library with `styled-components`.
+See the [theming doc](./docs/theming.md) for more detailed instructions.
 
 ## Docs
 
@@ -372,11 +370,10 @@ See [the documentation](./docs) for more information about using `styled-compone
 - [Tagged Template Literals](./docs/tagged-template-literals.md): How do they work?
 - [What CSS we support](./docs/css-we-support.md): What parts & extensions of CSS can you use within a component?
 - [Theming](./docs/theming.md): How to work with themes
-- [Shared Component Libraries](./docs/shared-component-libraries.md): Tips for setting up a shared component library
 
 ## Syntax highlighting
 
-The one thing you loose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom.
+The one thing you lose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom.
 
 This is what it looks like when properly highlighted:
 
@@ -430,3 +427,5 @@ See [LICENSE](./LICENSE) for more information.
 This project builds on a long line of earlier work by clever folks all around the world. We'd like to thank Charlie Somerville, Nik Graf, Sunil Pai, Michael Chan, Andrey Popp, Jed Watson & Andrey Sitnik who contributed ideas, code or inspiration.
 
 Special thanks to [@okonet](https://github.com/okonet) for the fantastic logo.
+
+Development supported by [Front End Center](https://frontend.center) and [Thinkmill](http://thinkmill.com.au/)
