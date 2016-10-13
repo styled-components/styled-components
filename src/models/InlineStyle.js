@@ -10,6 +10,11 @@ import parse from '../vendor/postcss-safe-parser/parse'
 
 const generated = {}
 
+/* Whitelist of properties that need string values even when they're numbers */
+const propNeedsStrings = {
+  'font-weight': true,
+}
+
 /*
  InlineStyle takes arbitrary CSS and generates a flat object
  */
@@ -30,7 +35,8 @@ export default class InlineStyle {
         if (node.type === 'decl') {
           const { value } = node
           const isNumber = value !== '' && !isNaN(value)
-          styleObject[camelizeStyleName(node.prop)] = isNumber ? parseFloat(value) : value
+          const typedVal = isNumber && !propNeedsStrings[node.prop] ? parseFloat(value) : value
+          styleObject[camelizeStyleName(node.prop)] = typedVal
         } else {
           /* eslint-disable no-console */
           console.warn(`Node of type ${node.type} not supported as an inline style`)
