@@ -56,7 +56,7 @@ You render them like so:
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/VyQ9AYHpZ">
+  <a href="http://www.webpackbin.com/VkbO4mdR-">
     <img alt="Screenshot of the above code ran in a browser" src="http://i.imgur.com/wUJpcjY.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -96,7 +96,7 @@ You can just pass a `placeholder` prop into the `styled-component`. It will pass
 Here is one input without any content showing the placeholder, and one with some content:
 
 <div align="center">
-  <a href="http://www.webpackbin.com/EyBu49rab">
+  <a href="http://www.webpackbin.com/VJSbrmOA-">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/QoQiSui.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -130,7 +130,7 @@ export default Button;
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/E1YCXdHCb">
+  <a href="http://www.webpackbin.com/NkHNNXuAW">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/4qlEdsx.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -179,7 +179,7 @@ export default TomatoButton;
 This is what our `TomatoButton` looks like, even though we have only specified the `color` and the `border-color`. Instead of copy and pasting or factoring out the styles into a separate function we've now reused them.
 
 <div align="center">
-  <a href="http://www.webpackbin.com/VJZQkBU6Z">
+  <a href="http://www.webpackbin.com/4yOENXOCZ">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/LZZ3h5i.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -215,7 +215,7 @@ const StyledLink = styled(Link)`
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/41PeBHU6-">
+  <a href="http://www.webpackbin.com/NyCcBm_C-">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/JJw4MdX.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -255,7 +255,7 @@ This will now rotate it's children over and over again, for example our logo:
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/EkgdOEkAZ">
+  <a href="http://www.webpackbin.com/EJjD8QdCZ">
     <img alt="Animated GIF of the above code ran in a browser" height="100px" src="http://imgur.com/I7Sobjv.gif" />
     <div><em>Live demo</em></div>
   </a>
@@ -351,7 +351,7 @@ Now, when we render the `Button` inside a `GreenSection`, it'll be green! If not
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/4yZoOD40Z">
+  <a href="http://www.webpackbin.com/4ypo8QORb">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/XfkzxqV.jpg" />
     <div><em>Live demo</em></div>
   </a>
