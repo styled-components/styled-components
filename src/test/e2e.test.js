@@ -14,19 +14,19 @@ import _styledComponent from '../models/StyledComponent'
 import _ComponentStyle from '../models/ComponentStyle'
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
-let index = 0
-const classNames = code => String.fromCodePoint(97 + code)
-const alwaysRegen = css =>
-
-const styled = _styled(_styledComponent(_ComponentStyle(classNames)))
+let styled
 let styleSheet
-const toCSS = styleSheet => console.log(styleSheet.rules()) || styleSheet.rules().map(rule => rule.cssText).join(' ')
+let index = 0
+const classNames = () => String.fromCodePoint(97 + index++)
+
+const toCSS = styleSheet => styleSheet.rules().map(rule => rule.cssText).join(' ')
 
 describe('e2e', () => {
   /**
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
+    styled = _styled(_styledComponent(_ComponentStyle(classNames)))
     if (StyleSheet.instance && StyleSheet.instance.sheet) StyleSheet.instance.flush()
     styleSheet = StyleSheet.instance
     index = 0
@@ -167,7 +167,7 @@ describe('e2e', () => {
       expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
     })
 
-    it.only('should generate a single class if only child has styles', () => {
+    it('should generate a single class if only child has styles', () => {
       const Parent = styled.div`color: blue;`
       const Child = styled(Parent)``
 
@@ -177,7 +177,7 @@ describe('e2e', () => {
       expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
     })
 
-    it.only('should generate a class for the child with the rules of the parent', () => {
+    it('should generate a class for the child with the rules of the parent', () => {
       const Parent = styled.div`color: blue;`
       const Child = styled(Parent)`color: red;`
 
@@ -186,7 +186,7 @@ describe('e2e', () => {
       expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue;color: red; }')
     })
 
-    it.only('should generate different classes for both parent and child', () => {
+    it('should generate different classes for both parent and child', () => {
       const Parent = styled.div`color: blue;`
       const Child = styled(Parent)`color: red;`
 
@@ -319,7 +319,7 @@ describe('e2e', () => {
       // Change the theme
       theme = newTheme
       renderComp()
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`${initialCSS} .b { color: ${newTheme.color}; }`)
+      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`${initialCSS}.b { color: ${newTheme.color}; }`)
     })
   })
 })

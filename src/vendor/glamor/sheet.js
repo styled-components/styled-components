@@ -62,7 +62,6 @@ export class StyleSheet {
     speedy = !isDev && !isTest,
     maxLength = (isBrowser && oldIE) ? 4000 : 65000
   } = {}) {
-    console.log("CONSTRUCTING YO")
     StyleSheet.instance = this // for testing TODO: something better
     this.isSpeedy = speedy // the big drawback here is that the css won't be editable in devtools
     this.sheet = undefined
@@ -85,15 +84,11 @@ export class StyleSheet {
       this.sheet  = {
         cssRules: [],
         insertRule: rule => {
-          console.log(`Inserting rule! ${rule}`)
           // enough 'spec compliance' to be able to extract the rules later
           // in other words, just the cssText field
           const serverRule = { cssText: rule }
           this.sheet.cssRules.push(serverRule)
-          return {serverRule, appendRule: (newCss => {
-            console.log(`Adding CSS ${rule}`)
-            serverRule.cssText += newCss
-          })}
+          return {serverRule, appendRule: (newCss => serverRule.cssText += newCss)}
         }
       }
     }
