@@ -64,7 +64,6 @@
     "lint-staged": "^3.0.3",
     "mocha": "^3.0.2",
     "pre-commit": "^1.1.3",
-    "proxyquire": "^1.7.10",
     "react-addons-test-utils": "^15.3.2",
     "react-dom": "^15.3.2",
     "webpack": "^1.13.2"
