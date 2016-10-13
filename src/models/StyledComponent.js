@@ -3,12 +3,14 @@ import { Component, createElement, PropTypes } from 'react'
 
 import ComponentStyle from '../models/ComponentStyle'
 import validAttr from '../utils/validAttr'
+import { CHANNEL } from './ThemeProvider'
 
 import type { RuleSet, Target } from '../types'
 
 /* eslint-disable react/prefer-stateless-function */
 class AbstractStyledComponent extends Component {
   static isPrototypeOf: Function
+  state: any
 }
 
 const createStyledComponent = (target: Target, rules: RuleSet) => {
@@ -20,38 +22,45 @@ const createStyledComponent = (target: Target, rules: RuleSet) => {
   const componentStyle = new ComponentStyle(rules)
 
   class StyledComponent extends AbstractStyledComponent {
-    theme: Object
-    generatedClassName: string
     static rules: RuleSet
     static target: Target
+    state: {
+      theme: any,
+    }
+    unsubscribe: Function
 
-    getChildContext() {
-      return { theme: this.theme }
+    constructor() {
+      super()
+      this.state = {
+        theme: null,
+      }
     }
 
     componentWillMount() {
-      this.componentWillReceiveProps(this.props, this.context)
+      // If there is a theme in the context, subscribe to the event emitter. This is necessary
+      // due to pure components blocking context updates, this circumvents that by updating when an
+      // event is emitted
+      if (this.context.broadcasts) {
+        const subscribe = this.context.broadcasts[CHANNEL]
+        this.unsubscribe = subscribe(theme => {
+          // This will be called once immediately
+          this.setState({ theme })
+        })
+      }
     }
 
-    componentWillReceiveProps(newProps: Object, newContext: ?any) {
-      // Always pass down a theme, even if it's empty
-      this.theme = (newContext && newContext.theme) || {}
-      // Local copy for this instance with an update() method
-      const theme = Object.assign({}, this.theme, {
-        update: values => {
-          this.theme = Object.assign({}, this.theme, values)
-        },
-      })
-
-      /* Generate and inject the styles and potentially update theme */
-      const executionContext = Object.assign({}, newProps, { theme })
-      this.generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
+    componentWillUnmount() {
+      if (this.unsubscribe) {
+        this.unsubscribe()
+      }
     }
 
     /* eslint-disable react/prop-types */
     render() {
       const { className, children } = this.props
+      const theme = this.state.theme || {}
 
+      const generatedClassName = componentStyle.generateAndInjectStyles({ theme })
       const propsForElement = {}
       /* Don't pass through non HTML tags through to HTML elements */
       Object.keys(this.props)
@@ -59,7 +68,7 @@ const createStyledComponent = (target: Target, rules: RuleSet) => {
         .forEach(propName => {
           propsForElement[propName] = this.props[propName]
         })
-      propsForElement.className = [className, this.generatedClassName].filter(x => x).join(' ')
+      propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
 
       return createElement(target, propsForElement, children)
     }
@@ -70,11 +79,8 @@ const createStyledComponent = (target: Target, rules: RuleSet) => {
   StyledComponent.target = target
 
   StyledComponent.displayName = isTag ? `styled.${target}` : `Styled(${target.displayName})`
-  StyledComponent.childContextTypes = {
-    theme: PropTypes.object,
-  }
   StyledComponent.contextTypes = {
-    theme: PropTypes.object,
+    broadcasts: PropTypes.object,
   }
   return StyledComponent
 }

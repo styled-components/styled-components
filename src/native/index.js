@@ -6,6 +6,7 @@ import reactNative from 'react-native'
 import css from '../constructors/css'
 
 import styledNativeComponent from '../models/StyledNativeComponent'
+import ThemeProvider from '../models/ThemeProvider'
 import type { Interpolation, Target } from '../types'
 
 const styled = (tag: Target) =>
@@ -32,5 +33,5 @@ aliases.split(/\s+/m).forEach(alias => Object.defineProperty(styled, alias, {
   },
 }))
 
-export { css }
+export { css, ThemeProvider }
 export default styled
