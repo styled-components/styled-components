@@ -130,7 +130,7 @@ export default Button;
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/NkHNNXuAW">
+  <a href="http://www.webpackbin.com/VkFaQgtA-">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/4qlEdsx.jpg" />
     <div><em>Live demo</em></div>
   </a>
