@@ -1,7 +1,7 @@
 {
   "name": "styled-components",
   "version": "0.4.0",
-  "description": "",
+  "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "main": "lib/index.js",
   "scripts": {
     "build": "npm run build:lib && npm run build:umd",
@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/css-components/styled-components.git"
+    "url": "git+https://github.com/styled-components/styled-components.git"
   },
   "keywords": [
     "react",
@@ -29,9 +29,9 @@
   "author": "Glen Maddern",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/css-components/styled-components/issues"
+    "url": "https://github.com/styled-components/styled-components/issues"
   },
-  "homepage": "https://github.com/css-components/styled-components#readme",
+  "homepage": "https://styled-components.com",
   "dependencies": {
     "buffer": "^5.0.0",
     "fbjs": "^0.8.4",
