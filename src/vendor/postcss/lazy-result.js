@@ -1,4 +1,3 @@
-import MapGenerator from './map-generator';
 import stringify    from './stringify';
 import warnOnce     from './warn-once';
 import Result       from './result';
@@ -347,10 +346,11 @@ class LazyResult {
         if ( opts.stringifier ) str = opts.stringifier;
         if ( str.stringify )    str = str.stringify;
 
-        let map  = new MapGenerator(str, this.result.root, this.result.opts);
-        let data = map.generate();
-        this.result.css = data[0];
-        this.result.map = data[1];
+        let result = '';
+        str(this.root, i => {
+            result += i;
+        });
+        this.result.css = result;
 
         return this.result;
     }
