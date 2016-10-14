@@ -42,7 +42,7 @@ export default (ComponentStyle: any) => {
         // that by updating when an event is emitted
         if (this.context.broadcasts) {
           const subscribe = this.context.broadcasts[CHANNEL]
-          this.unsubscribe = subscribe(theme => {
+          this.unsubscribe = subscribe && subscribe(theme => {
             // This will be called once immediately
             this.setState({ theme })
           })
