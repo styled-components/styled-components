@@ -258,13 +258,22 @@ describe('e2e', () => {
     })
 
     it('should keep custom static member from parent', () => {
-      const Parent = styled.div`
-        color: ${(props) => props.color};
-      `
+      const Parent = styled.div`color: red;`
 
       Parent.fetchData = () => 1
 
-      const Child = styled(Parent)`background-color: green;`
+      const Child = styled(Parent)`color: green;`
+
+      expect(Child.fetchData).toExist()
+      expect(Child.fetchData()).toEqual(1)
+    })
+
+    it('should keep static member in triple inheritance', () => {
+      const GrandParent = styled.div`color: red;`
+      GrandParent.fetchData = () => 1
+
+      const Parent = styled(GrandParent)`color: red;`
+      const Child = styled(Parent)`color:red;`
 
       expect(Child.fetchData).toExist()
       expect(Child.fetchData()).toEqual(1)
