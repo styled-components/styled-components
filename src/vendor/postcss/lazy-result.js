@@ -312,13 +312,13 @@ class LazyResult {
 
         if ( this.error ) throw this.error;
 
-        for ( let plugin of this.result.processor.plugins ) {
+        this.result.processor.plugins.forEach(plugin => {
             let promise = this.run(plugin);
             if ( isPromise(promise) ) {
                 throw new Error(
                     'Use process(css).then(cb) to work with async plugins');
             }
-        }
+        })
 
         return this.result;
     }

@@ -327,10 +327,10 @@ class Container extends Node {
      * root.first.append('color: black; z-index: 1');
      */
     append(...children) {
-        for ( let child of children ) {
+        children.forEach(child => {
             let nodes = this.normalize(child, this.last);
-            for ( let node of nodes ) this.nodes.push(node);
-        }
+            nodes.forEach(node => this.nodes.push(node));
+        })
         return this;
     }
 
@@ -356,20 +356,20 @@ class Container extends Node {
      */
     prepend(...children) {
         children = children.reverse();
-        for ( let child of children ) {
+        children.forEach(child => {
             let nodes = this.normalize(child, this.first, 'prepend').reverse();
-            for ( let node of nodes ) this.nodes.unshift(node);
+            nodes.forEach(node => this.nodes.unshift(node))
             for ( let id in this.indexes ) {
                 this.indexes[id] = this.indexes[id] + nodes.length;
             }
-        }
+        })
         return this;
     }
 
     cleanRaws(keepBetween) {
         super.cleanRaws(keepBetween);
         if ( this.nodes ) {
-            for ( let node of this.nodes ) node.cleanRaws(keepBetween);
+          this.nodes.forEach(node => node.cleanRaws(keepBetween));
         }
     }
 
@@ -389,7 +389,7 @@ class Container extends Node {
 
         let type  = exist === 0 ? 'prepend' : false;
         let nodes = this.normalize(add, this.nodes[exist], type).reverse();
-        for ( let node of nodes ) this.nodes.splice(exist, 0, node);
+        nodes.forEach(node => this.nodes.splice(exist, 0, node));
 
         let index;
         for ( let id in this.indexes ) {
@@ -414,7 +414,7 @@ class Container extends Node {
         exist = this.index(exist);
 
         let nodes = this.normalize(add, this.nodes[exist]).reverse();
-        for ( let node of nodes ) this.nodes.splice(exist + 1, 0, node);
+        nodes.forEach(node =>  this.nodes.splice(exist + 1, 0, node))
 
         let index;
         for ( let id in this.indexes ) {
@@ -479,7 +479,7 @@ class Container extends Node {
      * rule.nodes.length //=> 0
      */
     removeAll() {
-        for ( let node of this.nodes ) node.parent = undefined;
+        this.nodes.forEach(node =>  node.parent = undefined)
         this.nodes = [];
         return this;
     }

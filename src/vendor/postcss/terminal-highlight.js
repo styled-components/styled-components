@@ -21,7 +21,7 @@ function code(color) {
 function terminalHighlight(css) {
     let tokens = tokenize(new Input(css), { ignoreErrors: true });
     let result = [];
-    for ( let token of tokens ) {
+    tokens.forEach(token =>  {
         let color = HIGHLIGHT_THEME[token[0]];
         if ( color ) {
             result.push(token[1].split(/\r?\n/)
@@ -30,7 +30,7 @@ function terminalHighlight(css) {
         } else {
             result.push(token[1]);
         }
-    }
+    })
     return result.join('');
 }
 
