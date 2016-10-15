@@ -1,6 +1,7 @@
+.github
 .travis.yml
 appveyor.yml
-webpack.config.js
+rollup.config.js
 .flowconfig
 .eslintrc
 .eslintignore
