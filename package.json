@@ -4,11 +4,13 @@
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "main": "lib/index.js",
   "scripts": {
-    "build": "npm run build:lib && npm run build:umd",
+    "build": "npm run build:lib && npm run build:dist",
     "prebuild:lib": "rm -rf lib/*",
     "build:lib": "babel --out-dir lib src",
     "prebuild:umd": "rm -rf dist/*",
     "build:umd": "webpack --config webpack.config.babel.js",
+    "prebuild:dist": "rm -rf dist/*",
+    "build:dist": "rollup -c && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
     "test": "mocha \"./src/**/*.test.js\" --require babel-core/register --timeout 5000",
     "test:watch": "npm run test -- --watch",
@@ -46,6 +48,7 @@
     "babel-eslint": "^6.1.2",
     "babel-loader": "^6.2.5",
     "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-plugin-external-helpers": "^6.8.0",
     "babel-plugin-transform-flow-strip-types": "^6.14.0",
     "babel-preset-latest": "^6.14.0",
     "babel-preset-react": "^6.11.1",
@@ -64,7 +67,15 @@
     "pre-commit": "^1.1.3",
     "react-addons-test-utils": "^15.3.2",
     "react-dom": "^15.3.2",
-    "webpack": "^1.13.2"
+    "rollup": "^0.36.3",
+    "rollup-plugin-babel": "^2.6.1",
+    "rollup-plugin-commonjs": "^5.0.5",
+    "rollup-plugin-flow": "^1.0.1",
+    "rollup-plugin-inject": "^2.0.0",
+    "rollup-plugin-json": "^2.0.2",
+    "rollup-plugin-node-resolve": "^2.0.0",
+    "rollup-plugin-replace": "^1.1.1",
+    "rollup-plugin-uglify": "^1.0.1"
   },
   "lint-staged": {
     "*.js": [
