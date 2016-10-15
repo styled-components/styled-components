@@ -13,15 +13,18 @@ class AbstractStyledComponent extends Component {
 }
 
 export default (ComponentStyle: any) => {
-  const createStyledComponent = (target: Target, rules: RuleSet) => {
+  const createStyledComponent = (target: Target, rules: RuleSet, parent?: Target) => {
     /* Handle styled(OtherStyledComponent) differently */
     const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
-    if (isStyledComponent) return createStyledComponent(target.target, target.rules.concat(rules))
+    if (isStyledComponent) {
+      return createStyledComponent(target.target, target.rules.concat(rules), target)
+    }
 
     const isTag = typeof target === 'string'
     const componentStyle = new ComponentStyle(rules)
+    const ParentComponent = parent || AbstractStyledComponent
 
-    class StyledComponent extends AbstractStyledComponent {
+    class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
       state: {

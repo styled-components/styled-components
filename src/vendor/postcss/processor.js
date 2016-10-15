@@ -180,7 +180,7 @@ class Processor {
 
     normalize(plugins) {
         let normalized = [];
-        for ( let i of plugins ) {
+        plugins.forEach(i => {
             if ( i.postcss ) i = i.postcss;
 
             if ( typeof i === 'object' && Array.isArray(i.plugins) ) {
@@ -190,7 +190,7 @@ class Processor {
             } else {
                 throw new Error(i + ' is not a PostCSS plugin');
             }
-        }
+        })
         return normalized;
     }
 
