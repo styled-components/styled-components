@@ -24,6 +24,9 @@ const targets = prod ?
 ]
 
 const plugins = [
+  // Unlike Webpack and Browserify, Rollup doesn't automatically shim Node
+  // builtins like `process`. This ad-hoc plugin creates a 'virtual module'
+  // which includes a shim containing just the parts the bundle needs.
   {
     resolveId(importee) {
       if (importee === processShim) return importee
