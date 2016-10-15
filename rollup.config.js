@@ -12,7 +12,7 @@ const processShim = '\0process-shim'
 const prod = process.env.PRODUCTION
 const mode = prod ? 'production' : 'development'
 
-console.error(`creating ${mode} bundle...`)
+console.log(`Creating ${mode} bundle...`)
 
 const targets = prod ?
 [
