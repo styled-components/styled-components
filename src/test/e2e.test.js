@@ -243,6 +243,32 @@ describe('e2e', () => {
         .b { color: red; background-color: green; }
       `.trim().replace(/\s+/g, ' '))
     })
+
+    it('should keep prop types from parent', () => {
+      const Parent = styled.div`
+        color: ${(props) => props.color};
+      `
+      Parent.propTypes = {
+        color: React.PropTypes.string
+      }
+
+      const Child = styled(Parent)`background-color: green;`
+
+      expect(Child.propTypes).toEqual(Parent.propTypes)
+    })
+
+    it('should keep custom static member from parent', () => {
+      const Parent = styled.div`
+        color: ${(props) => props.color};
+      `
+
+      Parent.fetchData = () => 1
+
+      const Child = styled(Parent)`background-color: green;`
+
+      expect(Child.fetchData).toExist()
+      expect(Child.fetchData()).toEqual(1)
+    })
   })
 
   describe('prefixes', () => {
