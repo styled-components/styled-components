@@ -224,6 +224,25 @@ describe('e2e', () => {
         .b > h1 { font-size: 4rem; }
       `.trim().replace(/\s+/g, ' '))
     })
+
+    it('should keep default props from parent', () => {
+      const Parent = styled.div`
+        color: ${(props) => props.color};
+      `
+      Parent.defaultProps = {
+        color: 'red'
+      }
+
+      const Child = styled(Parent)`background-color: green;`
+
+      shallow(<Parent />)
+      shallow(<Child />)
+
+      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual(`
+        .a { color: red; }
+        .b { color: red; background-color: green; }
+      `.trim().replace(/\s+/g, ' '))
+    })
   })
 
   describe('prefixes', () => {
