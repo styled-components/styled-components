@@ -10,10 +10,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 - `CHANGELOG.md` for tracking changes between versions
 - Support for Internet Explorer by removing `Symbol` from the transpiled output
+- `.es.js` bundle for Webpack v2 or Rollup users to take advantage of tree shaking, thanks to [@Rich-Harris](https://github.com/Rich-Harris)! (see [#96](https://github.com/styled-components/styled-components/pull/96))
 
 ### Changed
 
 - Fixed inheritance of statics (like `defaultProps`) with `styled(StyledComponent)`, thanks to [@diegohaz](https://github.com/diegohaz)! (see [#90](https://github.com/styled-components/styled-components/pull/90))
+- UMD bundle is now built with Rollup, which means a 22% reduction in size and a 60% reducing in parse time, thanks to [@Rich-Harris](https://github.com/Rich-Harris)! (see [#96](https://github.com/styled-components/styled-components/pull/96))
 
 ## [v1.0.5] - 2016-10-15
 
