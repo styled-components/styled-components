@@ -392,6 +392,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 ## Built with `styled-components`
 
 - [`grid-styled`](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
+- [ARc](https://github.com/diegohaz/arc): Atomic React App boilerplate with styled components ([demo](https://diegohaz.github.io/arc))
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
