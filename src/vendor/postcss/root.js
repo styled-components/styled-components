@@ -40,9 +40,9 @@ class Root extends Container {
                     delete sample.raws.before;
                 }
             } else if ( this.first !== sample ) {
-                for ( let node of nodes ) {
+                nodes.forEach(node => {
                     node.raws.before = sample.raws.before;
-                }
+                })
             }
         }
 

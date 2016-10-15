@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file. If a contri
 ### Added
 
 - `CHANGELOG.md` for tracking changes between versions
+- Support for Internet Explorer by removing `Symbol` from the transpiled output
 
 ### Changed
 

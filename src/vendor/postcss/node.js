@@ -237,9 +237,9 @@ class Node {
      */
     replaceWith(...nodes) {
         if (this.parent) {
-            for (let node of nodes) {
+            nodes.forEach(node => {
                 this.parent.insertBefore(this, node);
-            }
+            })
 
             this.remove();
         }
