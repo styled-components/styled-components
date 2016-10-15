@@ -11,16 +11,17 @@ class AbstractStyledNativeComponent extends Component {
   state: any
 }
 
-const createStyledNativeComponent = (target: Target, rules: RuleSet) => {
+const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Target) => {
   /* Handle styled(OtherStyledNativeComponent) differently */
   const isStyledNativeComponent = AbstractStyledNativeComponent.isPrototypeOf(target)
   if (isStyledNativeComponent) {
-    return createStyledNativeComponent(target.target, target.rules.concat(rules))
+    return createStyledNativeComponent(target.target, target.rules.concat(rules), target)
   }
 
   const inlineStyle = new InlineStyle(rules)
+  const ParentComponent = parent || AbstractStyledNativeComponent
 
-  class StyledNativeComponent extends AbstractStyledNativeComponent {
+  class StyledNativeComponent extends ParentComponent {
     static rules: RuleSet
     static target: Target
     unsubscribe: Function
