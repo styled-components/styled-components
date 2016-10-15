@@ -10,7 +10,6 @@
     "prebuild:lib": "rm -rf lib/*",
     "build:lib": "babel --out-dir lib src",
     "prebuild:umd": "rm -rf dist/*",
-    "build:umd": "webpack --config webpack.config.babel.js",
     "prebuild:dist": "rm -rf dist/*",
     "build:dist": "rollup -c && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
