@@ -22,8 +22,9 @@ export default (ComponentStyle: any) => {
 
     const isTag = typeof target === 'string'
     const componentStyle = new ComponentStyle(rules)
+    const ParentComponent = parent || AbstractStyledComponent
 
-    class StyledComponent extends AbstractStyledComponent {
+    class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
       state: {
@@ -80,7 +81,6 @@ export default (ComponentStyle: any) => {
     /* Used for inheritance */
     StyledComponent.rules = rules
     StyledComponent.target = target
-    StyledComponent.defaultProps = parent && parent.defaultProps
 
     StyledComponent.displayName = isTag ? `styled.${target}` : `Styled(${target.displayName})`
     StyledComponent.contextTypes = {
