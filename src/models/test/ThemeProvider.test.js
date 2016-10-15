@@ -30,7 +30,7 @@ describe('ThemeProvider', () => {
     // Setup Child
     class Child extends React.Component {
       componentWillMount() {
-        this.context.broadcasts[CHANNEL](theme => {
+        this.context[CHANNEL](theme => {
           expect(theme).toEqual(Object.assign({}, outerTheme, innerTheme))
           done()
         })
@@ -38,7 +38,7 @@ describe('ThemeProvider', () => {
       render() { return null }
     }
     Child.contextTypes = {
-      broadcasts: React.PropTypes.object,
+      [CHANNEL]: React.PropTypes.object,
     }
 
     render(
@@ -57,7 +57,7 @@ describe('ThemeProvider', () => {
     // Setup Child
     class Child extends React.Component {
       componentWillMount() {
-        this.context.broadcasts[CHANNEL](theme => {
+        this.context[CHANNEL](theme => {
           expect(theme).toEqual(Object.assign({}, outerestTheme, outerTheme, innerTheme))
           done()
         })
@@ -65,7 +65,7 @@ describe('ThemeProvider', () => {
       render() { return null }
     }
     Child.contextTypes = {
-      broadcasts: React.PropTypes.object,
+      [CHANNEL]: React.PropTypes.object,
     }
 
     render(
@@ -88,7 +88,7 @@ describe('ThemeProvider', () => {
     // Setup Child
     class Child extends React.Component {
       componentWillMount() {
-        this.context.broadcasts[CHANNEL](theme => {
+        this.context[CHANNEL](theme => {
           // eslint-disable-next-line react/prop-types
           expect(theme).toEqual(themes[this.props.shouldHaveTheme])
           childRendered++ // eslint-disable-line no-plusplus
@@ -100,7 +100,7 @@ describe('ThemeProvider', () => {
       render() { return null }
     }
     Child.contextTypes = {
-      broadcasts: React.PropTypes.object,
+      [CHANNEL]: React.PropTypes.object,
     }
 
     render(

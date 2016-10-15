@@ -3,6 +3,7 @@ import isFunction from 'lodash/isFunction'
 import isPlainObject from 'lodash/isPlainObject'
 import createBroadcast from '../utils/create-broadcast'
 
+// NOTE: DO NOT CHANGE, changing this is a semver major change!
 export const CHANNEL = '__styled-components__'
 
 /**
@@ -13,14 +14,13 @@ class ThemeProvider extends Component {
   constructor() {
     super()
     this.getTheme = this.getTheme.bind(this)
-    this.getBroadcastsContext = this.getBroadcastsContext.bind(this)
   }
 
   componentWillMount() {
     // If there is a ThemeProvider wrapper anywhere around this theme provider, merge this theme
     // with the outer theme
-    if (this.context.broadcasts && this.context.broadcasts[CHANNEL]) {
-      const subscribe = this.context.broadcasts[CHANNEL]
+    if (this.context[CHANNEL]) {
+      const subscribe = this.context[CHANNEL]
       this.unsubscribeToOuter = subscribe(theme => {
         this.outerTheme = theme
       })
@@ -29,9 +29,7 @@ class ThemeProvider extends Component {
   }
 
   getChildContext() {
-    return {
-      broadcasts: this.getBroadcastsContext(),
-    }
+    return Object.assign({}, this.context, { [CHANNEL]: this.broadcast.subscribe })
   }
 
   componentWillReceiveProps(nextProps) {
@@ -40,11 +38,6 @@ class ThemeProvider extends Component {
 
   componentWillUnmount() {
     this.unsubscribeToOuter()
-  }
-
-  // Merge new broadcast with existing ones
-  getBroadcastsContext() {
-    return Object.assign({}, this.context.broadcasts, { [CHANNEL]: this.broadcast.subscribe })
   }
 
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
@@ -79,10 +72,10 @@ ThemeProvider.propTypes = {
   ]),
 }
 ThemeProvider.childContextTypes = {
-  broadcasts: PropTypes.object.isRequired,
+  [CHANNEL]: PropTypes.func.isRequired,
 }
 ThemeProvider.contextTypes = {
-  broadcasts: PropTypes.object,
+  [CHANNEL]: PropTypes.func,
 }
 
 export default ThemeProvider

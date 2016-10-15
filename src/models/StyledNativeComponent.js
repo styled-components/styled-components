@@ -11,16 +11,17 @@ class AbstractStyledNativeComponent extends Component {
   state: any
 }
 
-const createStyledNativeComponent = (target: Target, rules: RuleSet) => {
+const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Target) => {
   /* Handle styled(OtherStyledNativeComponent) differently */
   const isStyledNativeComponent = AbstractStyledNativeComponent.isPrototypeOf(target)
   if (isStyledNativeComponent) {
-    return createStyledNativeComponent(target.target, target.rules.concat(rules))
+    return createStyledNativeComponent(target.target, target.rules.concat(rules), target)
   }
 
   const inlineStyle = new InlineStyle(rules)
+  const ParentComponent = parent || AbstractStyledNativeComponent
 
-  class StyledNativeComponent extends AbstractStyledNativeComponent {
+  class StyledNativeComponent extends ParentComponent {
     static rules: RuleSet
     static target: Target
     unsubscribe: Function
@@ -39,8 +40,8 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet) => {
       // If there is a theme in the context, subscribe to the event emitter. This is necessary
       // due to pure components blocking context updates, this circumvents that by updating when an
       // event is emitted
-      if (this.context.broadcasts) {
-        const subscribe = this.context.broadcasts[CHANNEL]
+      if (this.context[CHANNEL]) {
+        const subscribe = this.context[CHANNEL]
         this.unsubscribe = subscribe(theme => {
           // This will be called once immediately
           this.setState({ theme })
@@ -73,7 +74,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet) => {
 
   StyledNativeComponent.displayName = target.displayName ? `Styled(${target.displayName})` : `styled.${target}`
   StyledNativeComponent.contextTypes = {
-    broadcasts: PropTypes.object,
+    [CHANNEL]: PropTypes.object,
   }
   return StyledNativeComponent
 }

@@ -122,7 +122,7 @@ export const media = {
 ```js
 import { media } from '../style-utils';
 
-// Make this div truncate the text with an ellipsis
+// Make the text smaller on handheld devices
 const Box = styled.div`
   font-size: 16px;
   ${ media.handheld`
