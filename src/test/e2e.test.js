@@ -224,6 +224,60 @@ describe('e2e', () => {
         .b > h1 { font-size: 4rem; }
       `.trim().replace(/\s+/g, ' '))
     })
+
+    it('should keep default props from parent', () => {
+      const Parent = styled.div`
+        color: ${(props) => props.color};
+      `
+      Parent.defaultProps = {
+        color: 'red'
+      }
+
+      const Child = styled(Parent)`background-color: green;`
+
+      shallow(<Parent />)
+      shallow(<Child />)
+
+      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual(`
+        .a { color: red; }
+        .b { color: red; background-color: green; }
+      `.trim().replace(/\s+/g, ' '))
+    })
+
+    it('should keep prop types from parent', () => {
+      const Parent = styled.div`
+        color: ${(props) => props.color};
+      `
+      Parent.propTypes = {
+        color: React.PropTypes.string
+      }
+
+      const Child = styled(Parent)`background-color: green;`
+
+      expect(Child.propTypes).toEqual(Parent.propTypes)
+    })
+
+    it('should keep custom static member from parent', () => {
+      const Parent = styled.div`color: red;`
+
+      Parent.fetchData = () => 1
+
+      const Child = styled(Parent)`color: green;`
+
+      expect(Child.fetchData).toExist()
+      expect(Child.fetchData()).toEqual(1)
+    })
+
+    it('should keep static member in triple inheritance', () => {
+      const GrandParent = styled.div`color: red;`
+      GrandParent.fetchData = () => 1
+
+      const Parent = styled(GrandParent)`color: red;`
+      const Child = styled(Parent)`color:red;`
+
+      expect(Child.fetchData).toExist()
+      expect(Child.fetchData()).toEqual(1)
+    })
   })
 
   describe('prefixes', () => {
