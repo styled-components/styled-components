@@ -1,3 +1,5 @@
+import './root' // break cyclical dependency deadlock – #87
+
 import CssSyntaxError from './css-syntax-error';
 // import PreviousMap    from './previous-map';
 

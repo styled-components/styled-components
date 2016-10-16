@@ -1,3 +1,7 @@
+import parse       from './parse';
+import Root        from './root';
+import Rule        from './rule';
+import AtRule      from './at-rule';
 import Declaration from './declaration';
 import warnOnce    from './warn-once';
 import Comment     from './comment';
@@ -605,7 +609,6 @@ class Container extends Node {
 
     normalize(nodes, sample) {
         if ( typeof nodes === 'string' ) {
-            let parse = require('./parse');
             nodes = cleanSource(parse(nodes).nodes);
         } else if ( !Array.isArray(nodes) ) {
             if ( nodes.type === 'root' ) {
@@ -620,10 +623,8 @@ class Container extends Node {
                 }
                 nodes = [new Declaration(nodes)];
             } else if ( nodes.selector ) {
-                let Rule = require('./rule');
                 nodes = [new Rule(nodes)];
             } else if ( nodes.name ) {
-                let AtRule = require('./at-rule');
                 nodes = [new AtRule(nodes)];
             } else if ( nodes.text ) {
                 nodes = [new Comment(nodes)];
@@ -651,13 +652,10 @@ class Container extends Node {
     rebuild(node, parent) {
         let fix;
         if ( node.type === 'root' ) {
-            let Root = require('./root');
             fix = new Root();
         } else if ( node.type === 'atrule' ) {
-            let AtRule = require('./at-rule');
             fix = new AtRule();
         } else if ( node.type === 'rule' ) {
-            let Rule = require('./rule');
             fix = new Rule();
         } else if ( node.type === 'decl' ) {
             fix = new Declaration();
