@@ -17,6 +17,8 @@ Utilising [tagged template literals](./docs/tagged-template-literals.md) (a rece
 
 > **Note:** If you're not using `npm` as your package manager, aren't using a module bundler or aren't sure about either of those jump to [Alternative Installation Methods](#alternative-installation-methods).
 
+*Made by [Glen Maddern](https://twitter.com/glenmaddern) and [Max Stoiber](https://twitter.com/mxstbr), supported by [Front End Center](https://frontend.center) and [Thinkmill](http://thinkmill.com.au/). Thank you for making this project possible!*
+
 ## Usage
 
 ### Basic
@@ -443,5 +445,3 @@ See [LICENSE](./LICENSE) for more information.
 This project builds on a long line of earlier work by clever folks all around the world. We'd like to thank Charlie Somerville, Nik Graf, Sunil Pai, Michael Chan, Andrey Popp, Jed Watson & Andrey Sitnik who contributed ideas, code or inspiration.
 
 Special thanks to [@okonet](https://github.com/okonet) for the fantastic logo.
-
-Development supported by [Front End Center](https://frontend.center) and [Thinkmill](http://thinkmill.com.au/)
