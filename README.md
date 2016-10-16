@@ -221,6 +221,8 @@ const StyledLink = styled(Link)`
   </a>
 </div>
 
+> **Note:** `styled-components` generates a real stylesheet with classes. It attaches those classes to styled components via the `className` prop. If a third-party (or any non-styled react component really) isn't styleable with the `styled(MyComponent)` notation, it's likely because that component does not attach the passed-in `className` prop to a DOM node! (see the ["Using `styled-components` with existing CSS"](./docs/existing-css.md)) doc for more information!)
+
 ### Animations
 
 CSS animations with `@keyframes` aren't scoped to a single component but you still don't want them to be global. This is why we export a `keyframes` helper which will generate a unique name for your keyframes. You can then use that unique name throughout your app.
