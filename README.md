@@ -373,7 +373,7 @@ See [the documentation](./docs) for more information about using `styled-compone
 
 ## Syntax highlighting
 
-The one thing you lose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom.
+The one thing you lose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom, and soon Sublime Text.
 
 This is what it looks like when properly highlighted:
 
@@ -384,6 +384,12 @@ This is what it looks like when properly highlighted:
 [**@gandm**](https://github.com/gandm), the creator of `language-babel`, has added support for `styled-components` in Atom!
 
 To get proper syntax highlighting, all you have to do is install and use the `language-babel` package for your JavaScript files!
+
+### Sublime Text
+
+There is an [open PR](https://github.com/babel/babel-sublime/pull/289) by [@garetmckinley](https://github.com/garetmckinley) to add support for `styled-components` to `babel-sublime`! (if you want the PR to land, feel free to 👍 the initial comment to let the maintainers know there's a need for this!)
+
+As soon as that PR is merged and a new version released, all you'll have to do is install and use `babel-sublime` to highlight your JavaScript files!
 
 ### Other Editors
 
