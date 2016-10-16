@@ -8,6 +8,16 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
+- N/A
+
+### Changed
+
+- N/A
+
+## [v1.0.6] - 2016-10-16
+
+### Added
+
 - `CHANGELOG.md` for tracking changes between versions
 - Support for Internet Explorer by removing `Symbol` from the transpiled output
 - `.es.js` bundle for Webpack v2 or Rollup users to take advantage of tree shaking, thanks to [@Rich-Harris](https://github.com/Rich-Harris)! (see [#96](https://github.com/styled-components/styled-components/pull/96))
@@ -29,6 +39,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.5...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.6...master
+[v1.0.6]: https://github.com/styled-components/styled-components/compare/v1.0.5...v1.0.6
 [v1.0.5]: https://github.com/styled-components/styled-components/compare/v1.0.4...v1.0.5
 [v1.0.4]: https://github.com/styled-components/styled-components/compare/v1.0.3...v1.0.4
