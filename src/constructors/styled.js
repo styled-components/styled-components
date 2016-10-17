@@ -7,7 +7,7 @@ export default (styledComponent: any) => {
     (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
       styledComponent(tag, css(strings, ...interpolations))
 
-  /* Shorthands for all valid HTML properties */
+  /* Shorthands for all valid HTML Elements */
 // Thanks to ReactDOMFactories for this handy list!
   styled.a = styled('a')
   styled.abbr = styled('abbr')
