@@ -1,6 +1,6 @@
 # CSS We Support
 
-Within a styled component, we support quite a lot of CSS: (including nesting)
+Within a styled component, we support all of CSS, including nesting – since we generate an actual stylesheet and not inline styles, whatever works in CSS works in a styled component!
 
 ```js
 styled.div`
@@ -22,9 +22,9 @@ styled.div`
 `
 ```
 
-> **Note:** Essentially, all ampersands (`&`) get replaced by our generated, unique classname
+> **Note:** Ampersands (`&`) get replaced by our generated, unique classname for that styled component, making it easy to have complex logic
 
-On top of that you can always use `injectGlobal` for actually global things like `@font-face`:
+On top of that you can always use `injectGlobal` for actually global things, like `@font-face`:
 
 ```js
 import { injectGlobal } from 'styled-components'
