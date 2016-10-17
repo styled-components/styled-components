@@ -36,3 +36,18 @@ injectGlobal`
 	}
 `
 ```
+
+Or to use CSS Custom Properties in your components via `var(--foo)`, define the Custom Property globally:
+
+```js
+import { injectGlobal } from 'styled-components'
+
+injectGlobal`
+	:root {
+	  --foo: red;
+	}
+`
+```
+
+_Note that styled-components doesn’t transpile Custom Properties into normal values like CSSnext does but
+lets you use them natively without a fallback in browsers._
