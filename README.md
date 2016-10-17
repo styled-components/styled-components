@@ -17,6 +17,8 @@ Utilising [tagged template literals](./docs/tagged-template-literals.md) (a rece
 
 > **Note:** If you're not using `npm` as your package manager, aren't using a module bundler or aren't sure about either of those jump to [Alternative Installation Methods](#alternative-installation-methods).
 
+*Made by [Glen Maddern](https://twitter.com/glenmaddern) and [Max Stoiber](https://twitter.com/mxstbr), supported by [Front End Center](https://frontend.center) and [Thinkmill](http://thinkmill.com.au/). Thank you for making this project possible!*
+
 ## Usage
 
 ### Basic
@@ -221,6 +223,8 @@ const StyledLink = styled(Link)`
   </a>
 </div>
 
+> **Note:** `styled-components` generate a real stylesheet with classes. The class names are then passed to the react component (including third party components) via the `className` prop. For the styles to be applied, third-party components must attach the passed-in `className` prop to a DOM node. See [Using `styled-components` with existing CSS](./docs/existing-css.md) for more information!
+
 ### Animations
 
 CSS animations with `@keyframes` aren't scoped to a single component but you still don't want them to be global. This is why we export a `keyframes` helper which will generate a unique name for your keyframes. You can then use that unique name throughout your app.
@@ -368,12 +372,13 @@ See [the documentation](./docs) for more information about using `styled-compone
 - [API Reference](./docs/api.md)
 - [Tips and Tricks](./docs/tips-and-tricks.md)
 - [Tagged Template Literals](./docs/tagged-template-literals.md): How do they work?
-- [What CSS we support](./docs/css-we-support.md): What parts & extensions of CSS can you use within a component?
+- [Using `styled-components` with existing CSS](./docs/existing-css.md): Some edge cases you should be aware of when using `styled-components` with an existing CSS codebase
+- [What CSS we support](./docs/css-we-support.md): What parts & extensions of CSS can you use within a component? *(Spoiler: all of CSS plus even more)*
 - [Theming](./docs/theming.md): How to work with themes
 
 ## Syntax highlighting
 
-The one thing you lose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom.
+The one thing you lose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom, and soon Sublime Text.
 
 This is what it looks like when properly highlighted:
 
@@ -384,6 +389,12 @@ This is what it looks like when properly highlighted:
 [**@gandm**](https://github.com/gandm), the creator of `language-babel`, has added support for `styled-components` in Atom!
 
 To get proper syntax highlighting, all you have to do is install and use the `language-babel` package for your JavaScript files!
+
+### Sublime Text
+
+There is an [open PR](https://github.com/babel/babel-sublime/pull/289) by [@garetmckinley](https://github.com/garetmckinley) to add support for `styled-components` to `babel-sublime`! (if you want the PR to land, feel free to 👍 the initial comment to let the maintainers know there's a need for this!)
+
+As soon as that PR is merged and a new version released, all you'll have to do is install and use `babel-sublime` to highlight your JavaScript files!
 
 ### Other Editors
 
@@ -434,5 +445,3 @@ See [LICENSE](./LICENSE) for more information.
 This project builds on a long line of earlier work by clever folks all around the world. We'd like to thank Charlie Somerville, Nik Graf, Sunil Pai, Michael Chan, Andrey Popp, Jed Watson & Andrey Sitnik who contributed ideas, code or inspiration.
 
 Special thanks to [@okonet](https://github.com/okonet) for the fantastic logo.
-
-Development supported by [Front End Center](https://frontend.center) and [Thinkmill](http://thinkmill.com.au/)
