@@ -1,10 +1,10 @@
 # Using `styled-components` with existing CSS
 
-`styled-components` generates an actual stylesheet with classes, and attaches those classes to the DOM nodes of styled components via the `className` prop. It injects the generated stylesheet at the end of the HEAD of the document.
+`styled-components` generate an actual stylesheet with classes, and attaches those classes to the DOM nodes of styled components via the `className` prop. It injects the generated stylesheet at the end of the HEAD of the document.
 
 ## Styling normal React components
 
-If you use the `styled(MyNormalComponent)` notation with an existing, non-styled-components react component that doesn't use the passed-in `className` prop the styles won't be applied.
+If you use the `styled(MyNormalComponent)` notation and `MyNormalComponent` does not render the passed-in `className` prop the styles will **not** be applied.
 
 To avoid this issue, make sure your component (in this case `MyNormalComponent`) attaches the passed-in `className` to a DOM node:
 
@@ -35,7 +35,7 @@ class MyNormalComponent extends React.Component {
 
 ## Global class always overridden
 
-The other way around might happen too. You have a styled component, and a standard, global CSS class you're trying to override some styles with. For some reason though, the `styled-components` styles always end up overriding the styles of the global class, no matter what you do!
+You can apply a global CSS class to a styled component by adding a `className` prop. This will work, but if a specific CSS property (e.g. `background-color`) is defined in both the global CSS _and_ the styled component the results may not be what your expecting!
 
 A contrived example:
 
