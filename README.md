@@ -326,18 +326,17 @@ We'll create a `button` that adapts based on the `main` property of the theme:
 import styled from 'styled-components';
 
 const Button = styled.button`
-  /* Color the background and border with theme.main, otherwise 'palevioletred' */
-  background: ${props => props.theme.main || 'palevioletred'};
-  border: 2px solid ${props => props.theme.main || 'palevioletred'};
+  /* Color the background and border with theme.main */
+  background: ${props => props.theme.main};
+  border: 2px solid ${props => props.theme.main};
 
   /* …more styles here… */
 `;
 ```
 
-Now, when we render the `Button` inside a `GreenSection`, it'll be green! If not, it'll be red.
+Now, when we render the `Button` inside a `GreenSection`, it'll be green!
 
 ```JSX
-<Button>Normal Button</Button>
 <GreenSection>
   {/* Notice how there's no code changes for the button, it just
       adapts to the theme passed from GreenSection! */}
@@ -362,6 +361,33 @@ Now, when we render the `Button` inside a `GreenSection`, it'll be green! If not
 </div>
 
 See the [theming doc](./docs/theming.md) for more detailed instructions.
+
+#### Defaults
+
+The problem with the above code is that if the button is rendered outside a `ThemeProvider`, it won't have any background or border!
+
+There is an easy remedy though. Since `Button` is just a react component we can assign `defaultProps`, which will be used if no theme is provided:
+
+```JS
+// Button.js
+import styled from 'styled-components';
+
+const Button = styled.button`
+  /* Color the background and border with theme.main */
+  background: ${props => props.theme.main};
+  border: 2px solid ${props => props.theme.main};
+
+  /* …more styles here… */
+`;
+
+// Set the default theme, in our case main will be
+// palevioletred if no other theme is specified
+Button.defaultProps = {
+  theme: {
+    main: 'palevioletred',
+  },
+};
+```
 
 ## Docs
 
