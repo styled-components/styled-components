@@ -1,6 +1,5 @@
 import React from 'react'
-import expect from 'expect'
-import { shallow, render } from 'enzyme'
+import { shallow } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
