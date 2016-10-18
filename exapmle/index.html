@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Basic Example</title>
+  </head>
+  <body>
+    <h1>Basic Example</h1>
+    <div id="container">
+    <script src="https://unpkg.com/react@15.3.2/dist/react.min.js"></script>
+    <script src="https://unpkg.com/react-dom@15.3.2/dist/react-dom.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.24/browser.min.js"></script>
+    <script src="../dist/styled-components.js"></script>
+    <script type="text/babel">
+    // Create a <Title> react component that renders an <h1> which is
+    // centered, palevioletred and sized at 1.5em
+    const Title = styled.default.h1`
+      font-size: 1.5em;
+      text-align: center;
+      color: palevioletred;
+    `;
+
+    // Create a <Wrapper> react component that renders a <section> with
+    // some padding and a papayawhip background
+    const Wrapper = styled.default.section`
+      padding: 4em;
+      background: papayawhip;
+    `;
+      class Example extends React.Component {
+        render() {
+          return (
+            <Wrapper>
+              <Title>Hello World, this is my first styled component!</Title>
+            </Wrapper>
+          )
+        }
+      }
+
+      ReactDOM.render(
+        <Example />,
+        document.getElementById('container')
+      );
+    </script>
+  </body>
+</html>
