@@ -125,7 +125,7 @@ describe('theming', () => {
     expectCSSMatches(`.a { color: black; }`)
   })
 
-  it('should translate the theme using a prop', () => {
+  it('should override the themeAdapter using a prop of the same name', () => {
     const Comp = styled.div`
       background: ${props => props.theme.bgColor};
     `
