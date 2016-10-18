@@ -5,7 +5,7 @@ const watch = require('node-watch')
 
 const srcPath = __dirname.split('/example')[0] + '/src';
 
-const hotBuild = () => exec('npm run build:dev', (err, stdout, stderr) => {
+const hotBuild = () => exec('npm run build:dist', (err, stdout, stderr) => {
   if (err) throw err
   if (stdout) {
     console.log(`npm run build:dist --- ${stdout}`)
