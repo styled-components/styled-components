@@ -1,44 +1,19 @@
-/* eslint-disable no-unused-expressions */
-/**
- * This is our end-to-end test suite, which essentially makes sure our public API works the way we
- * promise/want
- */
-
 import React from 'react'
 import expect from 'expect'
 import { shallow, render } from 'enzyme'
+
+import { resetStyled, expectCSSMatches } from './utils'
 import ThemeProvider from '../models/ThemeProvider'
-import _styled from '../constructors/styled'
 import { StyleSheet } from '../vendor/glamor/sheet'
-import _styledComponent from '../models/StyledComponent'
-import _ComponentStyle from '../models/ComponentStyle'
 
-/* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let styled
-let styleSheet
-let index = 0
-const classNames = () => String.fromCodePoint(97 + index++)
-
-const stripWhitespace = str => str.trim().replace(/\s+/g, ' ')
-const expectCSSMatches = (expectation, opts = { ignoreWhitespace: true }) => {
-  const css = StyleSheet.instance.rules().map(rule => rule.cssText).join('\n')
-  if (opts.ignoreWhitespace) {
-    expect(stripWhitespace(css)).toEqual(stripWhitespace(expectation))
-  } else {
-    expect(css).toEqual(expectation)
-  }
-  return css
-}
 
 describe('e2e', () => {
   /**
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    styled = _styled(_styledComponent(_ComponentStyle(classNames)))
-    if (StyleSheet.instance && StyleSheet.instance.sheet) StyleSheet.instance.flush()
-    styleSheet = StyleSheet.instance
-    index = 0
+    styled = resetStyled()
   })
 
   /**
@@ -52,7 +27,7 @@ describe('e2e', () => {
     it('should inject a stylesheet when a component is created', () => {
       const Comp = styled.div``
       shallow(<Comp />)
-      expect(styleSheet.injected).toBe(true)
+      expect(StyleSheet.instance.injected).toBe(true)
     })
 
     it('should not generate any styles by default', () => {
