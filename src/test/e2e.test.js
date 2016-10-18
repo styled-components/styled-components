@@ -19,7 +19,16 @@ let styleSheet
 let index = 0
 const classNames = () => String.fromCodePoint(97 + index++)
 
-const toCSS = styleSheet => styleSheet.rules().map(rule => rule.cssText).join('\n')
+const stripWhitespace = str => str.trim().replace(/\s+/g, ' ')
+const expectCSSMatches = (expectation, opts = { ignoreWhitespace: true }) => {
+  const css = StyleSheet.instance.rules().map(rule => rule.cssText).join('\n')
+  if (opts.ignoreWhitespace) {
+    expect(stripWhitespace(css)).toEqual(stripWhitespace(expectation))
+  } else {
+    expect(css).toEqual(expectation)
+  }
+  return css
+}
 
 describe('e2e', () => {
   /**
@@ -48,27 +57,27 @@ describe('e2e', () => {
 
     it('should not generate any styles by default', () => {
       styled.div``
-      expect(toCSS(styleSheet)).toEqual('')
+      expectCSSMatches('')
     })
 
     it('should generate an empty tag once rendered', () => {
       const Comp = styled.div``
       shallow(<Comp />)
-      expect(toCSS(styleSheet)).toEqual('.a {  }')
+      expectCSSMatches('.a {  }')
     })
 
     /* TODO: we should probably pretty-format the output so this test might have to change */
     it('should pass through all whitespace', () => {
       const Comp = styled.div`   \n   `
       shallow(<Comp />)
-      expect(toCSS(styleSheet)).toEqual('.a {    \n    }')
+      expectCSSMatches('.a {    \n    }', { skipWhitespace: false })
     })
 
     it('should inject only once for a styled component, no matter how often it\'s mounted', () => {
       const Comp = styled.div``
       shallow(<Comp />)
       shallow(<Comp />)
-      expect(toCSS(styleSheet)).toEqual('.a {  }')
+      expectCSSMatches('.a {  }')
     })
   })
 
@@ -79,7 +88,7 @@ describe('e2e', () => {
         ${rule}
       `
       shallow(<Comp />)
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
+      expectCSSMatches('.a { color: blue; }')
     })
 
     it('should append multiple styles', () => {
@@ -90,7 +99,7 @@ describe('e2e', () => {
         ${rule2}
       `
       shallow(<Comp />)
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { color: blue; background: red; }')
+      expectCSSMatches('.a { color: blue; background: red; }')
     })
 
     it('should handle inline style objects', () => {
@@ -101,7 +110,7 @@ describe('e2e', () => {
         ${rule1}
       `
       shallow(<Comp />)
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { background-color: blue; }')
+      expectCSSMatches('.a { background-color: blue; }')
     })
 
     it('should inject styles of multiple components', () => {
@@ -117,7 +126,7 @@ describe('e2e', () => {
       shallow(<FirstComp />)
       shallow(<SecondComp />)
 
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { background: blue; } .b { background: red; }')
+      expectCSSMatches('.a { background: blue; } .b { background: red; }')
     })
 
     it('should inject styles of multiple components based on creation, not rendering order', () => {
@@ -135,10 +144,10 @@ describe('e2e', () => {
       shallow(<FirstComp />)
 
       // Classes _do_ get generated in the order of rendering but that's ok
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`
+      expectCSSMatches(`
         .b { content: "first rule"; }
         .a { content: "second rule"; }
-      `.trim().replace(/\s+/g, ' '))
+      `)
     })
 
     it('should strip a JS-style (invalid) comment in the styles', () => {
@@ -149,11 +158,11 @@ describe('e2e', () => {
         ${rule}
       `
       shallow(<Comp />)
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`
+      expectCSSMatches(`
         .a {
           color: blue;
         }
-      `.trim().replace(/\s+/g, ' '))
+      `)
     })
   })
 
@@ -165,7 +174,7 @@ describe('e2e', () => {
       shallow(<Parent />)
       shallow(<Child />)
 
-      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { }')
+      expectCSSMatches('.a { }')
     })
 
     it('should generate a single class if only parent has styles', () => {
@@ -175,7 +184,7 @@ describe('e2e', () => {
       shallow(<Parent />)
       shallow(<Child />)
 
-      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
+      expectCSSMatches('.a { color: blue; }')
     })
 
     it('should generate a single class if only child has styles', () => {
@@ -185,7 +194,7 @@ describe('e2e', () => {
       shallow(<Parent />)
       shallow(<Child />)
 
-      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; }')
+      expectCSSMatches('.a { color: blue; }')
     })
 
     it('should generate a class for the child with the rules of the parent', () => {
@@ -194,7 +203,7 @@ describe('e2e', () => {
 
       shallow(<Child />)
 
-      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue;color: red; }')
+      expectCSSMatches('.a { color: blue;color: red; }')
     })
 
     it('should generate different classes for both parent and child', () => {
@@ -204,7 +213,7 @@ describe('e2e', () => {
       shallow(<Parent />)
       shallow(<Child />)
 
-      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual('.a { color: blue; } .b { color: blue;color: red; }')
+      expectCSSMatches('.a { color: blue; } .b { color: blue;color: red; }')
     })
 
     it('should copy nested rules to the child', () => {
@@ -217,12 +226,12 @@ describe('e2e', () => {
       shallow(<Parent />)
       shallow(<Child />)
 
-      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual(`
+      expectCSSMatches(`
         .a { color: blue; }
         .a > h1 { font-size: 4rem; }
         .b { color: blue; color: red; }
         .b > h1 { font-size: 4rem; }
-      `.trim().replace(/\s+/g, ' '))
+      `)
     })
 
     it('should keep default props from parent', () => {
@@ -238,10 +247,10 @@ describe('e2e', () => {
       shallow(<Parent />)
       shallow(<Child />)
 
-      expect(toCSS(styleSheet).trim().replace(/\s+/g, ' ')).toEqual(`
+      expectCSSMatches(`
         .a { color: red; }
         .b { color: red; background-color: green; }
-      `.trim().replace(/\s+/g, ' '))
+      `)
     })
 
     it('should keep prop types from parent', () => {
@@ -286,7 +295,7 @@ describe('e2e', () => {
         transition: opacity 0.3s;
       `
       shallow(<Comp />)
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { -ms-transition: opacity 0.3s; -moz-transition: opacity 0.3s; -webkit-transition: opacity 0.3s; transition: opacity 0.3s; }')
+      expectCSSMatches('.a { -ms-transition: opacity 0.3s; -moz-transition: opacity 0.3s; -webkit-transition: opacity 0.3s; transition: opacity 0.3s; }')
     })
   })
 
@@ -296,14 +305,14 @@ describe('e2e', () => {
         color: ${props => props.fg || 'black'};
       `
       shallow(<Comp />)
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { color: black; }')
+      expectCSSMatches('.a { color: black; }')
     })
     it('should execute interpolations and inject props', () => {
       const Comp = styled.div`
         color: ${props => props.fg || 'black'};
       `
       shallow(<Comp fg="red"/>)
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual('.a { color: red; }')
+      expectCSSMatches('.a { color: red; }')
     })
   })
 
@@ -318,7 +327,7 @@ describe('e2e', () => {
           <Comp />
         </ThemeProvider>
       )
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`.a { color: ${theme.color}; }`)
+      expectCSSMatches(`.a { color: ${theme.color}; }`)
     })
 
     it('should inject props.theme into a styled component multiple levels deep', () => {
@@ -335,7 +344,7 @@ describe('e2e', () => {
           </div>
         </ThemeProvider>
       )
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`.a { color: ${theme.color}; }`)
+      expectCSSMatches(`.a { color: ${theme.color}; }`)
     })
 
     it('should only inject props.theme into styled components within its child component tree', () => {
@@ -356,7 +365,7 @@ describe('e2e', () => {
           <Comp2 />
         </div>
       )
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`.a { color: ${theme.color}; } .b { background: ; }`)
+      expectCSSMatches(`.a { color: ${theme.color}; } .b { background: ; }`)
     })
 
     it('should inject props.theme into all styled components within the child component tree', () => {
@@ -377,7 +386,7 @@ describe('e2e', () => {
           </div>
         </ThemeProvider>
       )
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`.a { color: ${theme.color}; } .b { background: ${theme.color}; }`)
+      expectCSSMatches(`.a { color: ${theme.color}; } .b { background: ${theme.color}; }`)
     })
 
     it('should inject new CSS when the theme changes', () => {
@@ -396,12 +405,11 @@ describe('e2e', () => {
         )
       }
       renderComp()
-      const initialCSS = toCSS(styleSheet).replace(/\s+/g, ' ')
-      expect(initialCSS).toEqual(`.a { color: ${theme.color}; }`)
+      const initialCSS = expectCSSMatches(`.a { color: ${theme.color}; }`)
       // Change the theme
       theme = newTheme
       renderComp()
-      expect(toCSS(styleSheet).replace(/\s+/g, ' ')).toEqual(`${initialCSS}.b { color: ${newTheme.color}; }`)
+      expectCSSMatches(`${initialCSS}.b { color: ${newTheme.color}; }`)
     })
   })
 })
