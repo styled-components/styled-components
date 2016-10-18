@@ -14,7 +14,20 @@ All notable changes to this project will be documented in this file. If a contri
 
 - N/A
 
-## [v1.0.6] - 2016-10-16
+## [v1.0.7] – 2016-10-18
+
+### Added
+
+- Documentation about integrating with an existing CSS codebase
+- Support for CSS custom variables
+
+### Changed
+
+- Move react from dependencies to `peer–` & `devDependencies`, thanks to [@sheepsteak](https://github.com/sheepsteak)! (see [#93](https://github.com/styled-components/styled-components/pull/93))
+- Fix cyclical dependency deadlock in `.es.js` bundle that forced us to revert v1.0.6, thanks to [@Rich-Harris](https://github.com/Rich-Harris)! (see [#100](https://github.com/styled-components/styled-components/pull/100))
+- Refactored and added to e2e test suite
+
+## [v1.0.6] - 2016-10-16 REVERTED
 
 ### Added
 
