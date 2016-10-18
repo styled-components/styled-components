@@ -80,23 +80,32 @@ const Section = styled.section`
 	padding: ${padding};
 
 	/* Adjust the background from the properties */
-	background: ${(props) => props.background || 'palevioletred'};
+	background: ${(props) => props.background};
 
 	/* Adapt based on the theme set in a parent ThemeProvider */
-	border: ${(props) => props.theme.main || 'palevioletred'}
+	border: ${(props) => props.theme.main}
 `;
+
+// Set the default theme and props fallback
+Section.defaultProps = {
+	background: 'palevioletred',
+	theme: {
+		main: 'palevioletred',
+	},
+};
 ```
 
 ```JSX
 <Button>Red Button</Button>
 <ThemeProvider theme={{ main: 'mediumseagreen' }}>
-	<Button>Green Button</Button>
+	<Button background="mediumseagreen">Green Button</Button>
 </ThemeProvider>
 ```
 
 #### Tips
 
 - You're writing CSS, but with the power of JavaScript - utilise it! (see [Tips and Tricks](./tips-and-tricks.md) for some ideas)
+- Use `defaultProps` for defaulting certain props or a theme. (it will inherit with the `styled(StyledComponent)` notation)
 
 
 ### `css`
