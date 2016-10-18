@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
-- N/A
+- Fixed `<ThemeProvider>` component not liking hot reloading
 
 ## [v1.0.7] – 2016-10-18
 

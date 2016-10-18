@@ -37,7 +37,9 @@ class ThemeProvider extends Component {
   }
 
   componentWillUnmount() {
-    this.unsubscribeToOuter()
+    if (this.context[CHANNEL]) {
+      this.unsubscribeToOuter()
+    }
   }
 
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
