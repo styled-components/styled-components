@@ -20,7 +20,7 @@
     "lint": "eslint src",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
-    "dev": "node devServer.js"
+    "dev": "node example/devServer.js"
   },
   "repository": {
     "type": "git",

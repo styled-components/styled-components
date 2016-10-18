@@ -3,6 +3,8 @@ const exec = require('child_process').exec
 const Express = require('express')
 const watch = require('node-watch')
 
+const srcPath = __dirname.split('/example')[0] + '/src';
+
 const hotBuild = () => exec('npm run build:dev', (err, stdout, stderr) => {
   if (err) throw err
   if (stdout) {
@@ -13,7 +15,7 @@ const hotBuild = () => exec('npm run build:dev', (err, stdout, stderr) => {
   }
 })
 
-watch(path.join(__dirname, 'src'), (filename) => {
+watch(srcPath, (filename) => {
   console.log(`${filename} file has changed`)
   hotBuild()
 })
@@ -24,7 +26,7 @@ const port = 3000
 app.use(Express.static('dist'))
 
 app.get('/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'example/index.html'))
+  res.sendFile(path.join(__dirname, 'index.html'))
 })
 
 app.listen(port, error => {
