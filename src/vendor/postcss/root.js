@@ -1,4 +1,8 @@
+import './rule'; // break cyclical dependency deadlock – #87
+
 import Container from './container';
+import LazyResult from './lazy-result';
+import Processor from './processor';
 import warnOnce  from './warn-once';
 
 /**
@@ -63,9 +67,6 @@ class Root extends Container {
      * const result = root1.toResult({ to: 'all.css', map: true });
      */
     toResult(opts = { }) {
-        let LazyResult = require('./lazy-result');
-        let Processor  = require('./processor');
-
         let lazy = new LazyResult(new Processor(), this, opts);
         return lazy.stringify();
     }

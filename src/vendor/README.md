@@ -9,3 +9,4 @@ Then hacked things around:
 * Deleted `previous-map.js` and all references to it because it `require('fs')`ed
 * Deleted reference to `postcss` within `postcss-nested` & simply exported the transform function
 * Made `StyleSheet.insert()` return something with an `update()` method
+* Replaced nested `require` statements with `import` declarations for the sake of a leaner bundle. This entails adding empty imports to three files to guarantee correct ordering – see https://github.com/styled-components/styled-components/pull/100

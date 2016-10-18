@@ -1,3 +1,5 @@
+import './at-rule'; // break cyclical dependency deadlock – #87
+
 import Container from './container';
 import warnOnce  from './warn-once';
 import list      from './list';
