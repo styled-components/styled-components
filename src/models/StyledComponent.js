@@ -61,8 +61,9 @@ export default (ComponentStyle: any) => {
       /* eslint-disable react/prop-types */
       render() {
         const { className, children } = this.props
-        const theme = this.state.theme || {}
-        const executionContext = Object.assign({}, this.props, { theme })
+        const theme = Object.assign({}, this.state.theme)
+        const themeAdapter = (this.props.themeAdapter || StyledComponent.themeAdapter || (x => x))
+        const executionContext = Object.assign({}, this.props, { theme: themeAdapter(theme) })
 
         const generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
         const propsForElement = {}

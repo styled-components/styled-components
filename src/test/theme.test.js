@@ -105,4 +105,102 @@ describe('theming', () => {
     renderComp()
     expectCSSMatches(`${initialCSS}.b { color: ${newTheme.color}; }`)
   })
+
+  it('should translate the theme naming convention', () => {
+    const Comp = styled.div`
+      color: ${props => props.theme.fgColor};
+    `
+    Comp.themeAdapter = theme => ({
+      fgColor: theme.color
+    })
+    const theme = { color: 'black' }
+    const renderComp = () => {
+      render(
+        <ThemeProvider theme={theme}>
+          <Comp />
+        </ThemeProvider>
+      )
+    }
+    renderComp()
+    expectCSSMatches(`.a { color: black; }`)
+  })
+
+  it('should translate the theme using a prop', () => {
+    const Comp = styled.div`
+      background: ${props => props.theme.bgColor};
+    `
+    const theme = { color: 'red' }
+    Comp.themeAdapter = theme => ({
+      fgColor: theme.color
+    })
+    const renderComp = () => {
+      render(
+        <ThemeProvider theme={theme}>
+          <Comp themeAdapter={theme => ({
+            bgColor: theme.color
+          })}/>
+        </ThemeProvider>
+      )
+    }
+    renderComp()
+    expectCSSMatches(`.a { background: red; }`)
+  })
+
+  it('should let the theme be passed on and manipulated', () => {
+    const Fg = styled.div`
+      color: ${props => props.theme.fgColor};
+      background: none;
+      content: '${props => props.label}';
+    `
+    const Bg = styled.div`
+      color: transparent;
+      background: ${props => props.theme.bgColor};
+      content: '${props => props.label}';
+    `
+    const theme = { color: 'red', alt: 'blue' }
+    const invert = theme => ({ color: theme.alt, alt: theme.color })
+    Fg.themeAdapter = Bg.themeAdapter = theme => ({
+      fgColor: theme.color,
+      bgColor: theme.alt
+    })
+    const renderComp = () => {
+      render(
+        <ThemeProvider theme={theme}>
+          <Bg label="outer bg">
+            <Fg label="outer fg">
+              <ThemeProvider theme={invert}>
+                <Bg label="inner bg">
+                  <Fg label="inner fg">
+                  </Fg>
+                </Bg>
+              </ThemeProvider>
+            </Fg>
+          </Bg>
+        </ThemeProvider>
+      )
+    }
+    renderComp()
+    expectCSSMatches(`
+      .b {
+        color: red;
+        background: none;
+        content: 'outer fg';
+      }
+      .d {
+        color: blue;
+        background: none;
+        content: 'inner fg';
+      }
+      .a {
+        color: transparent;
+        background: blue;
+        content: 'outer bg';
+      }
+      .c {
+        color: transparent;
+        background: red;
+        content: 'inner bg';
+      }
+    `)
+  })
 })

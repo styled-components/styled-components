@@ -19,7 +19,7 @@ export const resetStyled = () => {
   return _styled(_styledComponent(_ComponentStyle(classNames)))
 }
 
-const stripWhitespace = str => str.trim().replace(/\s+/g, ' ')
+const stripWhitespace = str => str.trim().replace(/\s+/g, ' ').replace(/}\s*/g,'}\n')
 export const expectCSSMatches = (expectation, opts = { ignoreWhitespace: true }) => {
   const css = StyleSheet.instance.rules().map(rule => rule.cssText).join('\n')
   if (opts.ignoreWhitespace) {
