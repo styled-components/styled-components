@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { Component } from 'react'
 import expect from 'expect'
-import { shallow, render } from 'enzyme'
+import { shallow, mount } from 'enzyme'
+import jsdom from 'mocha-jsdom'
 
 import styleSheet from '../models/StyleSheet'
 import { resetStyled, expectCSSMatches } from './utils'
@@ -48,5 +49,20 @@ describe('basic', () => {
     shallow(<Comp />)
     shallow(<Comp />)
     expectCSSMatches('.a {  }')
+  })
+
+  describe('jsdom tests', () => {
+    jsdom()
+    it('should pass ref to the component', () => {
+      const Comp = styled.div``
+      const WrapperComp = class extends Component {
+        render() {
+          return <Comp innerRef={(comp) => { this.testRef = comp }} />
+        }
+      }
+
+      const wrapper = mount(<WrapperComp />)
+      expect(wrapper.node.testRef).toExist()
+    })
   })
 })

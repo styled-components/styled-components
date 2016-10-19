@@ -60,7 +60,7 @@ export default (ComponentStyle: any) => {
 
       /* eslint-disable react/prop-types */
       render() {
-        const { className, children } = this.props
+        const { className, children, innerRef } = this.props
         const theme = this.state.theme || {}
         const executionContext = Object.assign({}, this.props, { theme })
 
@@ -73,6 +73,9 @@ export default (ComponentStyle: any) => {
             propsForElement[propName] = this.props[propName]
           })
         propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
+        if (innerRef) {
+          propsForElement.ref = innerRef
+        }
 
         return createElement(target, propsForElement, children)
       }
