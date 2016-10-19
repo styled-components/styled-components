@@ -69,12 +69,6 @@ if github.pr_body.length < 5
 end
 
 
-# Enforce rebases to remove "Merge master into bla" commits
-if git.commits.any? { |c| c.message =~ /^Merge branch/ }
-  fail("Please rebase to get rid of the merge commits in this PR")
-end
-
-
 # Enforce CHANGELOG.md entries for each PR that touches .js files (include src/vendor/**)
 if !git.modified_files.include?("CHANGELOG.md") && has_app_changes
   fail("Please include a CHANGELOG entry. \nYou can find it at [CHANGELOG.md](https://github.com/styled-components/styled-components/blob/master/CHANGELOG.md).")
