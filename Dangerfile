@@ -9,7 +9,7 @@ BIG_PR_THRESHOLD = 500
 ##
 # REGEX for /**/*.js
 #
-JS_REGEX = /^.*\.js$/ # tolerant regex
+SRC_REGEX = /^(src\/.*|native)\.js$/ # tolerant regex
 # JS_REGEX = /^\/?(?:[0-9a-zA-Z\_\-]+\/?)+\S*\.js$/ # strict regex (http://www.rubular.com/r/5c2Va5xlV3)
 
 ##
@@ -23,7 +23,7 @@ JS_TEST_REGEX = /^.*\.test.js$/ # tolerant regex
 #
 VENDOR_DIR_REGEX = /^\/?src\/vendor\/.*$/
 
-js_modified_files = git.modified_files.grep(JS_REGEX)
+js_modified_files = git.modified_files.grep(SRC_REGEX)
 vendor_modified_files = git.modified_files.grep(VENDOR_DIR_REGEX)
 
 # `modified_files` include also `deleted_files` and `added_files`
