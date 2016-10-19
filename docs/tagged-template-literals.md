@@ -45,7 +45,7 @@ It's a little annoying to work with but it means that we can turn
 ```js
 styled.div`
   color: tomato;
-  ${ props => props.background || 'white' }
+  ${ props => props.background}
 `
 ```
 into an object and re-evaluate it whenever a StyledComponent's componentWillReceiveProps lifecycle method is called. Neat hey!
