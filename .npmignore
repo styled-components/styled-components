@@ -6,3 +6,4 @@ rollup.config.js
 .eslintrc
 .eslintignore
 .babelrc
+example/

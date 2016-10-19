@@ -122,10 +122,6 @@ export class StyleSheet {
       if(this.isSpeedy && this.sheet.insertRule) {
         this._insert(rule)
       }
-      // more browser weirdness. I don't even know
-      else if(this.tags.length > 0 && last(this.tags).styleSheet) {
-        last(this.tags).styleSheet.cssText+= rule
-      }
       else{
         const textNode = document.createTextNode(rule)
         last(this.tags).appendChild(textNode)
