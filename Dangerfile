@@ -9,7 +9,7 @@ BIG_PR_THRESHOLD = 500
 ##
 # REGEX for /**/*.js
 #
-SRC_REGEX = ^(src\/.*|native)\.js$ # tolerant regex
+SRC_REGEX = /^(src\/.*|native)\.js$/ # tolerant regex
 # JS_REGEX = /^\/?(?:[0-9a-zA-Z\_\-]+\/?)+\S*\.js$/ # strict regex (http://www.rubular.com/r/5c2Va5xlV3)
 
 ##
