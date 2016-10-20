@@ -2,7 +2,7 @@ import React from 'react'
 import expect from 'expect'
 import { shallow, render } from 'enzyme'
 
-import { StyleSheet } from '../vendor/glamor/sheet'
+import styleSheet from '../models/StyleSheet'
 import { resetStyled, expectCSSMatches } from './utils'
 
 let styled
@@ -22,7 +22,7 @@ describe('basic', () => {
   it('should inject a stylesheet when a component is created', () => {
     const Comp = styled.div``
     shallow(<Comp />)
-    expect(StyleSheet.instance.injected).toBe(true)
+    expect(styleSheet.injected).toBe(true)
   })
 
   it('should not generate any styles by default', () => {

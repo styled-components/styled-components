@@ -5,7 +5,7 @@
 import expect from 'expect'
 
 import _styled from '../constructors/styled'
-import { StyleSheet } from '../vendor/glamor/sheet'
+import styleSheet from '../models/StyleSheet'
 import _styledComponent from '../models/StyledComponent'
 import _ComponentStyle from '../models/ComponentStyle'
 
@@ -14,14 +14,14 @@ let index = 0
 const classNames = () => String.fromCodePoint(97 + index++)
 
 export const resetStyled = () => {
-  if (StyleSheet.instance && StyleSheet.instance.sheet) StyleSheet.instance.flush()
+  if (styleSheet.sheet) styleSheet.flush()
   index = 0
   return _styled(_styledComponent(_ComponentStyle(classNames)))
 }
 
 const stripWhitespace = str => str.trim().replace(/\s+/g, ' ')
 export const expectCSSMatches = (expectation, opts = { ignoreWhitespace: true }) => {
-  const css = StyleSheet.instance.rules().map(rule => rule.cssText).join('\n')
+  const css = styleSheet.rules().map(rule => rule.cssText).join('\n')
   if (opts.ignoreWhitespace) {
     expect(stripWhitespace(css)).toEqual(stripWhitespace(expectation))
   } else {

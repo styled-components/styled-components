@@ -1,18 +1,17 @@
 import expect from 'expect'
-import { StyleSheet } from '../../vendor/glamor/sheet'
 
 import _keyframes from '../keyframes'
+import { expectCSSMatches, resetStyled } from '../../test/utils'
 
 /**
  * Setup
  */
 let index = 0
 const keyframes = _keyframes(() => `keyframe_${index++}`)
-const getInjectedCSS = () => StyleSheet.instance.rules().map(rule => rule.cssText).join(' ')
 
 describe('keyframes', () => {
   beforeEach(() => {
-    if (StyleSheet.instance && StyleSheet.instance.sheet) StyleSheet.instance.flush()
+    resetStyled()
     index = 0
   })
 
@@ -38,7 +37,7 @@ describe('keyframes', () => {
     `
 
     const name = keyframes`${rules}`
-    expect(getInjectedCSS().replace(/\s+/g, ' ')).toEqual(`
+    expectCSSMatches(`
       @keyframes keyframe_0 {
         0% {
           opacity: 0;
@@ -47,6 +46,6 @@ describe('keyframes', () => {
           opacity: 1;
         }
       }
-    `.trim().replace(/\s+/g, ' '))
+    `)
   })
 })
