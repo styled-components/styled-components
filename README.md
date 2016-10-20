@@ -265,31 +265,6 @@ This will now rotate it's children over and over again, for example our logo:
   </a>
 </div>
 
-### Refs to DOM nodes
-
-Passing `ref` to styled component will give a ref to the `StyledComponent`
-wrapper, not to DOM node. So it's not possible to call DOM methods, like focus
-on that wrapper. To get a `ref` to wrapped DOM node, pass `innerRef` prop. Note
-that this only supports callback-based refs, not string-based ones.
-
-```JSX
-const StyledInput = styled.input`
-  color: red;
-`;
-
-class Form extends Component {
-  componentDidMount() {
-    this.input.focus()
-  }
-
-  render() {
-    return (
-      <StyledInput ref={(comp) => { this.input = comp }} />
-    )
-  }
-}
-```
-
 ### React Native
 
 `styled-components` has a ReactNative mode that works _exactly_ the same, except you import the things from `styled-components/native`:

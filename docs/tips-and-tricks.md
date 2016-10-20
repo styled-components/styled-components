@@ -134,3 +134,29 @@ const Box = styled.div`
 And voila! 💅
 
 *Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals](./tagged-template-literals.md)*
+
+### Refs to DOM nodes
+
+Passing `ref` to styled component will give a ref to the `StyledComponent`
+wrapper, not to DOM node. So it's not possible to call DOM methods, like focus
+on that wrapper. To get a `ref` to wrapped DOM node, pass `innerRef` prop.
+
+> **Note:** `innerRef` only supports callback refs (i.e. `ref={comp => this.bla = comp}`), string refs (i.e. `ref="bla"`) won't work. Since string based refs will be deprecated in the future anyway, don't worry about it too much and just use the callback pattern.
+
+```JSX
+const StyledInput = styled.input`
+  color: paleviolet;
+`;
+
+class Form extends Component {
+  componentDidMount() {
+    this.input.focus()
+  }
+
+  render() {
+    return (
+      <StyledInput ref={(comp) => { this.input = comp }} />
+    )
+  }
+}
+```
