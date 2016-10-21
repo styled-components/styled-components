@@ -66,7 +66,7 @@ export default {
   entry: 'src/index.js',
   moduleName: 'styled',
   external: ['react'],
-  exports: 'named',
+  exports: 'default',
   targets,
   plugins,
   globals: { react: 'React' },
