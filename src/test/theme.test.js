@@ -3,6 +3,7 @@ import { render } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 import ThemeProvider from '../models/ThemeProvider'
+import adaptTheme from '../constructors/adaptTheme'
 
 let styled
 
@@ -110,14 +111,14 @@ describe('theming', () => {
     const Comp = styled.div`
       color: ${props => props.theme.fgColor};
     `
-    Comp.themeAdapter = theme => ({
+    const AdaptedComp = adaptTheme(theme => ({
       fgColor: theme.color
-    })
+    }), Comp)
     const theme = { color: 'black' }
     const renderComp = () => {
       render(
         <ThemeProvider theme={theme}>
-          <Comp />
+          <AdaptedComp />
         </ThemeProvider>
       )
     }
@@ -125,44 +126,23 @@ describe('theming', () => {
     expectCSSMatches(`.a { color: black; }`)
   })
 
-  it('should override the themeAdapter using a prop of the same name', () => {
-    const Comp = styled.div`
-      background: ${props => props.theme.bgColor};
-    `
-    const theme = { color: 'red' }
-    Comp.themeAdapter = theme => ({
-      fgColor: theme.color
-    })
-    const renderComp = () => {
-      render(
-        <ThemeProvider theme={theme}>
-          <Comp themeAdapter={theme => ({
-            bgColor: theme.color
-          })}/>
-        </ThemeProvider>
-      )
-    }
-    renderComp()
-    expectCSSMatches(`.a { background: red; }`)
-  })
-
   it('should let the theme be passed on and manipulated', () => {
-    const Fg = styled.div`
+    const BaseFg = styled.div`
       color: ${props => props.theme.fgColor};
       background: none;
       content: '${props => props.label}';
     `
-    const Bg = styled.div`
+    const BaseBg = styled.div`
       color: transparent;
       background: ${props => props.theme.bgColor};
       content: '${props => props.label}';
     `
     const theme = { color: 'red', alt: 'blue' }
     const invert = theme => ({ color: theme.alt, alt: theme.color })
-    Fg.themeAdapter = Bg.themeAdapter = theme => ({
+    const { BaseBg: Bg, BaseFg: Fg } = adaptTheme(theme => ({
       fgColor: theme.color,
       bgColor: theme.alt
-    })
+    }), { BaseBg, BaseFg })
     const renderComp = () => {
       render(
         <ThemeProvider theme={theme}>

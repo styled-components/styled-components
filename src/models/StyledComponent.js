@@ -39,6 +39,11 @@ export default (ComponentStyle: any) => {
         }
       }
 
+      /* Noop. This gets overridden in the ThemeAdapter */
+      getTheme(themeData: Object): Object {
+        return themeData
+      }
+
       componentWillMount() {
         // If there is a theme in the context, subscribe to the event emitter. This
         // is necessary due to pure components blocking context updates, this circumvents
@@ -61,9 +66,8 @@ export default (ComponentStyle: any) => {
       /* eslint-disable react/prop-types */
       render() {
         const { className, children } = this.props
-        const theme = Object.assign({}, this.state.theme)
-        const themeAdapter = (this.props.themeAdapter || StyledComponent.themeAdapter || (x => x))
-        const executionContext = Object.assign({}, this.props, { theme: themeAdapter(theme) })
+        const theme = this.getTheme(Object.assign({}, this.state.theme))
+        const executionContext = Object.assign({}, this.props, { theme })
 
         const generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
         const propsForElement = {}
