@@ -14,7 +14,30 @@ All notable changes to this project will be documented in this file. If a contri
 
 - N/A
 
-## [v1.0.6] - 2016-10-16
+## [v1.0.8] - 2016-10-18
+
+### Added
+
+- IE10 support, thanks to [@didierfranc](https://github.com/didierfranc)! (see [#119](https://github.com/styled-components/styled-components/pull/119))
+
+### Changed
+
+- Fixed `<ThemeProvider>` component hot reloading
+
+## [v1.0.7] – 2016-10-18
+
+### Added
+
+- Documentation about integrating with an existing CSS codebase
+- Support for CSS custom variables
+
+### Changed
+
+- Move react from dependencies to `peer–` & `devDependencies`, thanks to [@sheepsteak](https://github.com/sheepsteak)! (see [#93](https://github.com/styled-components/styled-components/pull/93))
+- Fix cyclical dependency deadlock in `.es.js` bundle that forced us to revert v1.0.6, thanks to [@Rich-Harris](https://github.com/Rich-Harris)! (see [#100](https://github.com/styled-components/styled-components/pull/100))
+- Refactored and added to e2e test suite
+
+## [v1.0.6] - 2016-10-16 REVERTED
 
 ### Added
 
@@ -39,7 +62,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.6...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.8...master
+[v1.0.8]: https://github.com/styled-components/styled-components/compare/v1.0.7...v1.0.8
+[v1.0.7]: https://github.com/styled-components/styled-components/compare/v1.0.6...v1.0.7
 [v1.0.6]: https://github.com/styled-components/styled-components/compare/v1.0.5...v1.0.6
 [v1.0.5]: https://github.com/styled-components/styled-components/compare/v1.0.4...v1.0.5
 [v1.0.4]: https://github.com/styled-components/styled-components/compare/v1.0.3...v1.0.4

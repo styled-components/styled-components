@@ -4,10 +4,19 @@ dist: trusty
 node_js:
   - "4.0"
   - "6.0"
+before_install:
+  - 'echo ''gem: --no-ri --no-rdoc'' > ~/.gemrc'
 install:
   - npm i -g npm
   - npm install
-script: npm run lint && npm run test && npm run flow
+  - rvm install 2.3.1
+  - rvm use 2.3.1
+  - gem install danger --version '~> 3.0'
+before_script:
+  - ruby -v
+script:
+  - danger
+  - npm run lint && npm run test
 notifications:
   email:
     on_failure: change

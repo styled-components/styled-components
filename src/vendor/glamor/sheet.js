@@ -62,7 +62,6 @@ export class StyleSheet {
     speedy = !isDev && !isTest,
     maxLength = (isBrowser && oldIE) ? 4000 : 65000
   } = {}) {
-    StyleSheet.instance = this // for testing TODO: something better
     this.isSpeedy = speedy // the big drawback here is that the css won't be editable in devtools
     this.sheet = undefined
     this.tags = []
@@ -121,10 +120,6 @@ export class StyleSheet {
       // this is the ultrafast version, works across browsers
       if(this.isSpeedy && this.sheet.insertRule) {
         this._insert(rule)
-      }
-      // more browser weirdness. I don't even know
-      else if(this.tags.length > 0 && last(this.tags).styleSheet) {
-        last(this.tags).styleSheet.cssText+= rule
       }
       else{
         const textNode = document.createTextNode(rule)
