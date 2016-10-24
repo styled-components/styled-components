@@ -402,6 +402,14 @@ See [the documentation](./docs) for more information about using `styled-compone
 - [What CSS we support](./docs/css-we-support.md): What parts & extensions of CSS can you use within a component? *(Spoiler: all of CSS plus even more)*
 - [Theming](./docs/theming.md): How to work with themes
 
+## Linting
+
+There is (currently experimental) support for `stylelint` – meaning you can take advantage of 150 rules to make sure your `styled-components` CSS is solid!
+
+![Recording of stylelint correctly reporting errors in a styled components' CSS](http://imgur.com/br9zdHb.gif)
+
+See the [`stylelint-processor-styled-components`](https://github.com/styled-components/stylelint-processor-styled-components) repository for installation instructions.
+
 ## Syntax highlighting
 
 The one thing you lose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom, and soon Sublime Text.
