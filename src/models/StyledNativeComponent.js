@@ -32,7 +32,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     constructor() {
       super()
       this.state = {
-        theme: this.props.theme || null,
+        theme: null,
       }
     }
 
