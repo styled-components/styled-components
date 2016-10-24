@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- N/A
+- Added ability to get ref to the inner (DOM) node of the styled component via `innerRef` prop, thanks to [@freiksenet][https://github.com/freiksenet]. (see [#122](https://github.com/styled-components/styled-components/pull/122))
 
 ### Changed
 
