@@ -1,0 +1,29 @@
+{
+  "version": "0.0.0",
+  "name": "babel-plugin-styled-components-named",
+  "description": "Add display names to styled components",
+  "repository": "vdanchenkov/babel-plugin-styled-components-named",
+  "author": "Vladimir Danchenkov <vladimir.danchenkov@gmail.com>",
+  "main": "lib/index.js",
+  "devDependencies": {
+    "babel-cli": "^6.4.5",
+    "babel-preset-es2015": "^6.3.13",
+    "babel-preset-stage-0": "^6.3.13",
+    "mocha": "^2.2.5"
+  },
+  "scripts": {
+    "clean": "rm -rf lib",
+    "build": "babel src -d lib",
+    "test": "mocha --compilers js:babel-register",
+    "test:watch": "npm run test -- --watch",
+    "prepublish": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "styled-components",
+    "css-in-js",
+    "babel-plugin"
+  ],
+  "dependencies": {
+    "babel-template": "^6.16.0"
+  }
+}
