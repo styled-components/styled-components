@@ -34,6 +34,10 @@ app.get('/with-perf.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'with-perf.html'))
 })
 
+app.get('/with-perf.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'with-perf.html'))
+})
+
 app.get('/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'))
 })

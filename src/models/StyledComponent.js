@@ -25,6 +25,11 @@ export default (ComponentStyle: Function) => {
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
+      state: {
+        theme: any,
+        generatedClassName: string
+      }
+      unsubscribe: Function
 
       constructor() {
         super()
@@ -75,6 +80,11 @@ export default (ComponentStyle: Function) => {
         }
       }
 
+      componentWillReceiveProps() {
+        this.generateAndInjectStyles()
+      }
+
+      /* eslint-disable react/prop-types */
       render() {
         const { className, children, innerRef } = this.props
         const { generatedClassName } = this.state
