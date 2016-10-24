@@ -25,6 +25,10 @@ const port = 3000
 
 app.use(Express.static('dist'))
 
+app.get('/withStats.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'withStats.html'))
+})
+
 app.get('/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'))
 })
