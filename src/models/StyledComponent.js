@@ -24,21 +24,31 @@ export default (ComponentStyle: Function) => {
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
+      state: {
+        theme: any,
+        generatedClassName: string
+      }
+      unsubscribe: Function
 
       constructor() {
         super()
         this.state = {
-          theme: {},
+          theme: null,
           generatedClassName: '',
         }
       }
 
-      generateAndInjectStyles(theme: any, props: any) {
-        const executionContext = Object.assign({}, props, { theme })
-        return componentStyle.generateAndInjectStyles(executionContext)
+      generateAndInjectStyles() {
+        const theme = this.state.theme || {}
+        const executionContext = Object.assign({}, this.props, { theme })
+        const generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
+        this.setState({
+          generatedClassName,
+        })
       }
 
       componentWillMount() {
+        this.generateAndInjectStyles()
         // If there is a theme in the context, subscribe to the event emitter. This
         // is necessary due to pure components blocking context updates, this circumvents
         // that by updating when an event is emitted
@@ -66,14 +76,10 @@ export default (ComponentStyle: Function) => {
         }
       }
 
+      /* eslint-disable react/prop-types */
       render() {
         const { className, children, innerRef } = this.props
-<<<<<<< 4427759b8e422069b9807ef21b03578908940873
-        const theme = this.state.theme || this.props.theme || {}
-        const executionContext = Object.assign({}, this.props, { theme })
-=======
         const { generatedClassName } = this.state
->>>>>>> Created an example page with perf stats
 
         const propsForElement = {}
         /* Don't pass through non HTML tags through to HTML elements */
