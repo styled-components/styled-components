@@ -32,7 +32,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     constructor() {
       super()
       this.state = {
-        theme: null,
+        theme: this.props.theme || null,
       }
     }
 
@@ -55,14 +55,19 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       }
     }
 
+    generateStyleProps(style: any, theme: any) {
+      if (!theme) return [style]
+
+      const generatedStyles = inlineStyle.generateStyleObject({ theme })
+      return [generatedStyles, style]
+    }
+
     /* eslint-disable react/prop-types */
     render() {
       const { style, children } = this.props
       const theme = this.state.theme
-
-      const generatedStyles = inlineStyle.generateStyleObject({ theme })
       const propsForElement = Object.assign({}, this.props)
-      propsForElement.style = [generatedStyles, style]
+      propsForElement.style = this.generateStyleProps(style, theme)
 
       return createElement(target, propsForElement, children)
     }
