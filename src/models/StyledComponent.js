@@ -58,16 +58,11 @@ export default (ComponentStyle: any) => {
         }
       }
 
-      determineExecutionContext(props: any, theme: any) {
-        if (!theme) return Object.assign({}, this.props)
-        return Object.assign({}, this.props, { theme })
-      }
-
       /* eslint-disable react/prop-types */
       render() {
         const { className, children } = this.props
-        const theme = this.state.theme
-        const executionContext = this.determineExecutionContext(this.props, theme)
+        const theme = this.state.theme || this.props.theme || {}
+        const executionContext = Object.assign({}, this.props, { theme })
 
         const generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
         const propsForElement = {}
