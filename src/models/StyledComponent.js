@@ -29,6 +29,7 @@ export default (ComponentStyle: any) => {
       static target: Target
       state: {
         theme: any,
+        generatedClassName: string
       }
       unsubscribe: Function
 
@@ -36,10 +37,21 @@ export default (ComponentStyle: any) => {
         super()
         this.state = {
           theme: null,
+          generatedClassName: '',
         }
       }
 
+      generateAndInjectStyles() {
+        const theme = this.state.theme || {}
+        const executionContext = Object.assign({}, this.props, { theme })
+        const generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
+        this.setState({
+          generatedClassName,
+        })
+      }
+
       componentWillMount() {
+        this.generateAndInjectStyles()
         // If there is a theme in the context, subscribe to the event emitter. This
         // is necessary due to pure components blocking context updates, this circumvents
         // that by updating when an event is emitted
@@ -58,13 +70,15 @@ export default (ComponentStyle: any) => {
         }
       }
 
+      componentWillReceiveProps() {
+        this.generateAndInjectStyles()
+      }
+
       /* eslint-disable react/prop-types */
       render() {
         const { className, children, innerRef } = this.props
-        const theme = this.state.theme || {}
-        const executionContext = Object.assign({}, this.props, { theme })
+        const { generatedClassName } = this.state
 
-        const generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
         const propsForElement = {}
         /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)
