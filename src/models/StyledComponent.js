@@ -58,7 +58,10 @@ export default (ComponentStyle: any) => {
             this.setState({ theme, generatedClassName })
           })
         } else {
-          const generatedClassName = this.generateAndInjectStyles({}, this.props)
+          const generatedClassName = this.generateAndInjectStyles(
+            this.props.theme || {},
+            this.props
+          )
           this.setState({ generatedClassName })
         }
       }
@@ -70,7 +73,10 @@ export default (ComponentStyle: any) => {
       }
 
       componentWillReceiveProps(nextProps: any) {
-        const generatedClassName = this.generateAndInjectStyles(this.state.theme, nextProps)
+        const generatedClassName = this.generateAndInjectStyles(
+          this.state.theme || this.props.theme,
+          nextProps
+        )
         this.setState({ generatedClassName })
       }
 
