@@ -36,22 +36,17 @@ export default (ComponentStyle: any) => {
       constructor() {
         super()
         this.state = {
-          theme: null,
+          theme: {},
           generatedClassName: '',
         }
       }
 
-      generateAndInjectStyles() {
-        const theme = this.state.theme || {}
-        const executionContext = Object.assign({}, this.props, { theme })
-        const generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
-        this.setState({
-          generatedClassName,
-        })
+      generateAndInjectStyles(theme: any, props: any) {
+        const executionContext = Object.assign({}, props, { theme })
+        return componentStyle.generateAndInjectStyles(executionContext)
       }
 
       componentWillMount() {
-        this.generateAndInjectStyles()
         // If there is a theme in the context, subscribe to the event emitter. This
         // is necessary due to pure components blocking context updates, this circumvents
         // that by updating when an event is emitted
@@ -59,8 +54,12 @@ export default (ComponentStyle: any) => {
           const subscribe = this.context[CHANNEL]
           this.unsubscribe = subscribe(theme => {
             // This will be called once immediately
-            this.setState({ theme })
+            const generatedClassName = this.generateAndInjectStyles(theme, this.props)
+            this.setState({ theme, generatedClassName })
           })
+        } else {
+          const generatedClassName = this.generateAndInjectStyles({}, this.props)
+          this.setState({ generatedClassName })
         }
       }
 
@@ -70,8 +69,9 @@ export default (ComponentStyle: any) => {
         }
       }
 
-      componentWillReceiveProps() {
-        this.generateAndInjectStyles()
+      componentWillReceiveProps(nextProps: any) {
+        const generatedClassName = this.generateAndInjectStyles(this.state.theme, nextProps)
+        this.setState({ generatedClassName })
       }
 
       /* eslint-disable react/prop-types */
