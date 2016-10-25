@@ -61,7 +61,7 @@ export default (ComponentStyle: any) => {
       /* eslint-disable react/prop-types */
       render() {
         const { className, children, innerRef } = this.props
-        const theme = this.state.theme || {}
+        const theme = this.state.theme || this.props.theme || {}
         const executionContext = Object.assign({}, this.props, { theme })
 
         const generatedClassName = componentStyle.generateAndInjectStyles(executionContext)

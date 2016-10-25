@@ -41,6 +41,36 @@ describe('theming', () => {
     expectCSSMatches(`.a { color: ${theme.color}; }`)
   })
 
+  it('should properly allow a component to fallback to its default props when a theme is not provided', () => {
+    const Comp1 = styled.div`
+      color: ${props => props.theme.color};
+    `
+
+    Comp1.defaultProps = {
+      theme: {
+        color: "purple"
+      }
+    }
+    render(
+      <div>
+        <Comp1 />
+      </div>
+    )
+    expectCSSMatches(`.a { color: purple; }`)
+  })
+
+    it('should properly set the theme with an empty object when no teme is provided and no defaults are set', () => {
+    const Comp1 = styled.div`
+      color: ${props => props.theme.color};
+    `
+    render(
+      <div>
+        <Comp1 />
+      </div>
+    )
+    expectCSSMatches(`.a { color: ; }`)
+  })
+
   it('should only inject props.theme into styled components within its child component tree', () => {
     const Comp1 = styled.div`
       color: ${props => props.theme.color};
@@ -48,6 +78,7 @@ describe('theming', () => {
     const Comp2 = styled.div`
       background: ${props => props.theme.color};
     `
+
     const theme = { color: 'black' }
     render(
       <div>
