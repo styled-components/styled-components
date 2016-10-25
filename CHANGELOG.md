@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
-- N/A
+- Fixed `theme` prop in `styledComponent` and `styledNativeComponent` so that it will properly inherit values for `theme` when `defaultProps` are set.
 
 ## [v1.0.8] - 2016-10-18
 
