@@ -14,6 +14,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 - N/A
 
+### Changed
+Performance enhancer: Modified the `StyleComponent.js` so that `generateAndInjectStyles` is called outside of `render`.
+
 ## [v1.0.8] - 2016-10-18
 
 ### Added
