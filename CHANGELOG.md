@@ -8,7 +8,18 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
+- N/A
+
+### Changed
+
+- N/A
+
+## [v1.0.9] - 2016-10-26
+
+### Added
+
 - Added ability to get ref to the inner (DOM) node of the styled component via `innerRef` prop, thanks to [@freiksenet][https://github.com/freiksenet]. (see [#122](https://github.com/styled-components/styled-components/pull/122))
+- Section in docs about the new `stylelint` support with [`stylelint-processor-styled-components`](https://github.com/styled-components/stylelint-processor-styled-components)
 
 ### Changed
 
@@ -65,7 +76,8 @@ Performance enhancer: Modified the `StyleComponent.js` so that `generateAndInjec
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.8...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.9...master
+[v1.0.9]: https://github.com/styled-components/styled-components/compare/v1.0.8...v1.0.9
 [v1.0.8]: https://github.com/styled-components/styled-components/compare/v1.0.7...v1.0.8
 [v1.0.7]: https://github.com/styled-components/styled-components/compare/v1.0.6...v1.0.7
 [v1.0.6]: https://github.com/styled-components/styled-components/compare/v1.0.5...v1.0.6
