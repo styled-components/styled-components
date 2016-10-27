@@ -107,6 +107,27 @@ describe('theming', () => {
     expectCSSMatches(`${initialCSS}.b { color: ${newTheme.color}; }`)
   })
 
+  it('should inject new CSS when part of the theme changes', () => {
+    const Comp = styled.div`
+      color: ${props => props.theme.color};
+    `
+    const originalTheme = { color: 'black' }
+    // Force render the component
+    const renderComp = () => {
+      render(
+        <ThemeProvider theme={originalTheme}>
+          <Comp />
+        </ThemeProvider>
+      )
+    }
+    renderComp()
+    const initialCSS = expectCSSMatches(`.a { color: black; }`)
+    // Change the theme
+    originalTheme.color = 'red'
+    renderComp()
+    expectCSSMatches(`${initialCSS}.b { color: red; }`)
+  })
+
   it('should translate the theme naming convention', () => {
     const Comp = styled.div`
       color: ${props => props.theme.fgColor};
