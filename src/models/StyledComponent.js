@@ -80,11 +80,6 @@ export default (ComponentStyle: Function) => {
         }
       }
 
-      componentWillReceiveProps() {
-        this.generateAndInjectStyles()
-      }
-
-      /* eslint-disable react/prop-types */
       render() {
         const { className, children, innerRef } = this.props
         const { generatedClassName } = this.state
