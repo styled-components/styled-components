@@ -1,29 +1,25 @@
 // @flow
-import { Component, createElement, PropTypes } from 'react'
+import { createElement } from 'react'
 
 import validAttr from '../utils/validAttr'
-import { CHANNEL } from './ThemeProvider'
-
+import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
 
-/* eslint-disable react/prefer-stateless-function */
-class AbstractStyledComponent extends Component {
-  static isPrototypeOf: Function
-  state: any
-}
+import AbstractStyledComponent from './AbstractStyledComponent'
+import { CHANNEL } from './ThemeProvider'
 
-export default (ComponentStyle: any) => {
+export default (ComponentStyle: Function) => {
   const createStyledComponent = (target: Target, rules: RuleSet, parent?: Target) => {
     /* Handle styled(OtherStyledComponent) differently */
     const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
-    if (isStyledComponent) {
+    if (!isTag(target) && isStyledComponent) {
       return createStyledComponent(target.target, target.rules.concat(rules), target)
     }
 
-    const isTag = typeof target === 'string'
     const componentStyle = new ComponentStyle(rules)
-    const ParentComponent = parent || AbstractStyledComponent
+    const ParentComponent = isTag(target) ? parent : AbstractStyledComponent
 
+    // $FlowIssue need to convince flow that ParentComponent can't be string here
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
@@ -66,12 +62,6 @@ export default (ComponentStyle: any) => {
         }
       }
 
-      componentWillUnmount() {
-        if (this.unsubscribe) {
-          this.unsubscribe()
-        }
-      }
-
       componentWillReceiveProps(nextProps: any) {
         const generatedClassName = this.generateAndInjectStyles(
           this.state.theme || this.props.theme,
@@ -80,7 +70,6 @@ export default (ComponentStyle: any) => {
         this.setState({ generatedClassName })
       }
 
-      /* eslint-disable react/prop-types */
       render() {
         const { className, children, innerRef } = this.props
         const { generatedClassName } = this.state
@@ -88,7 +77,7 @@ export default (ComponentStyle: any) => {
         const propsForElement = {}
         /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)
-          .filter(propName => !isTag || validAttr(propName))
+          .filter(propName => !isTag(target) || validAttr(propName))
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
@@ -101,14 +90,11 @@ export default (ComponentStyle: any) => {
       }
     }
 
-    /* Used for inheritance */
-    StyledComponent.rules = rules
     StyledComponent.target = target
+    StyledComponent.rules = rules
 
-    StyledComponent.displayName = isTag ? `styled.${target}` : `Styled(${target.displayName})`
-    StyledComponent.contextTypes = {
-      [CHANNEL]: PropTypes.func,
-    }
+    StyledComponent.displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`
+
     return StyledComponent
   }
 
