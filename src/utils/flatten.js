@@ -1,27 +1,30 @@
 // @flow
 import hyphenate from 'fbjs/lib/hyphenateStyleName'
-import isPlainObject from 'lodash/isPlainObject'
+import { isPlainObject } from 'lodash'
 
 import type { RuleSet, Interpolation } from '../types'
 
 export const objToCss = (obj: Object): string => (
-  Object.keys(obj).map(k => `${hyphenate(k)}: ${obj[k]};`).join(' ')
+  Object.keys(obj).map(key => `${hyphenate(key)}: ${obj[key]};`).join(' ')
 )
 
-const flatten = (chunks: RuleSet, executionContext: ?Object) : RuleSet => (
-  chunks.reduce((array, chunk: Interpolation) => {
+type Chunk = Interpolation | Array<Interpolation>
+
+const flatten = (chunks: RuleSet, executionContext: ?Object): RuleSet => (
+  chunks.reduce((ruleSet: Array<?Chunk>, chunk: ?Chunk) => {
     /* Remove falsey values */
-    if (chunk === undefined || chunk === null || chunk === false || chunk === '') return array
-    /* Flatten arrays */
-    if (Array.isArray(chunk)) return array.concat(...flatten(chunk, executionContext))
+    if (chunk === undefined || chunk === null || chunk === false || chunk === '') return ruleSet
+    /* Flatten ruleSet */
+    if (Array.isArray(chunk)) return [...ruleSet, ...flatten(chunk, executionContext)]
     /* Either execute or defer the function */
     if (typeof chunk === 'function') {
       return executionContext
-        ? array.concat(...flatten([chunk(executionContext)], executionContext))
-        : array.concat(chunk)
+        ? ruleSet.concat(...flatten([chunk(executionContext)], executionContext))
+        : ruleSet.concat(chunk)
     }
     /* Handle objects */
-    return array.concat(isPlainObject(chunk) ? objToCss(chunk) : chunk.toString())
+    // $FlowIssue have to add %checks somehow to isPlainObject
+    return ruleSet.concat(isPlainObject(chunk) ? objToCss(chunk) : chunk.toString())
   }, [])
 )
 
