@@ -1,16 +1,29 @@
+// @flow
 import React, { PropTypes, Component } from 'react'
-import isFunction from 'lodash/isFunction'
-import isPlainObject from 'lodash/isPlainObject'
+import { isFunction, isPlainObject } from 'lodash'
 import createBroadcast from '../utils/create-broadcast'
+import type { Broadcast } from '../utils/create-broadcast'
 
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
 export const CHANNEL = '__styled-components__'
+
+type Theme = {[key: string]: mixed};
+type ThemeProviderProps = {|
+  children: any,
+  theme: (outherTheme: Theme) => void | Theme,
+|};
 
 /**
  * Provide a theme to an entire react component tree via context and event listeners (have to do
  * both context and event emitter as pure components block context updates)
  */
 class ThemeProvider extends Component {
+  getTheme: (theme?: (outherTheme: Theme) => void | Theme) => Theme
+  outerTheme: Theme
+  unsubscribeToOuter: () => void
+  props: ThemeProviderProps
+  broadcast: Broadcast
+
   constructor() {
     super()
     this.getTheme = this.getTheme.bind(this)
@@ -32,7 +45,7 @@ class ThemeProvider extends Component {
     return Object.assign({}, this.context, { [CHANNEL]: this.broadcast.subscribe })
   }
 
-  componentWillReceiveProps(nextProps) {
+  componentWillReceiveProps(nextProps: ThemeProviderProps) {
     if (this.props.theme !== nextProps.theme) this.broadcast.publish(this.getTheme(nextProps.theme))
   }
 
@@ -43,7 +56,7 @@ class ThemeProvider extends Component {
   }
 
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
-  getTheme(passedTheme) {
+  getTheme(passedTheme: (outherTheme: Theme) => void | Theme) {
     const theme = passedTheme || this.props.theme
     if (isFunction(theme)) {
       const mergedTheme = theme(this.outerTheme)
@@ -55,7 +68,7 @@ class ThemeProvider extends Component {
     if (!isPlainObject(theme)) {
       throw new Error('[ThemeProvider] Please make your theme prop a plain object')
     }
-    return Object.assign({}, this.outerTheme, theme)
+    return Object.assign({}, this.outerTheme, (theme: Object))
   }
 
   render() {
@@ -66,13 +79,6 @@ class ThemeProvider extends Component {
   }
 }
 
-ThemeProvider.propTypes = {
-  children: PropTypes.node,
-  theme: PropTypes.oneOfType([
-    PropTypes.func,
-    PropTypes.object,
-  ]),
-}
 ThemeProvider.childContextTypes = {
   [CHANNEL]: PropTypes.func.isRequired,
 }
