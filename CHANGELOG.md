@@ -25,6 +25,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed `theme` prop in `styledComponent` and `styledNativeComponent` so that it will properly inherit values for `theme` when `defaultProps` are set, thanks to [@bhough](https://github.com/bhough). (see [#136](https://github.com/styled-components/styled-components/pull/136))
 
+### Changed
+Performance enhancer: Modified the `StyleComponent.js` so that `generateAndInjectStyles` is called outside of `render`.
+
 ## [v1.0.8] - 2016-10-18
 
 ### Added

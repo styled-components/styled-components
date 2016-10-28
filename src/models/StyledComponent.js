@@ -29,14 +29,21 @@ export default (ComponentStyle: any) => {
       static target: Target
       state: {
         theme: any,
+        generatedClassName: string
       }
       unsubscribe: Function
 
       constructor() {
         super()
         this.state = {
-          theme: null,
+          theme: {},
+          generatedClassName: '',
         }
+      }
+
+      generateAndInjectStyles(theme: any, props: any) {
+        const executionContext = Object.assign({}, props, { theme })
+        return componentStyle.generateAndInjectStyles(executionContext)
       }
 
       componentWillMount() {
@@ -47,8 +54,15 @@ export default (ComponentStyle: any) => {
           const subscribe = this.context[CHANNEL]
           this.unsubscribe = subscribe(theme => {
             // This will be called once immediately
-            this.setState({ theme })
+            const generatedClassName = this.generateAndInjectStyles(theme, this.props)
+            this.setState({ theme, generatedClassName })
           })
+        } else {
+          const generatedClassName = this.generateAndInjectStyles(
+            this.props.theme || {},
+            this.props
+          )
+          this.setState({ generatedClassName })
         }
       }
 
@@ -58,13 +72,19 @@ export default (ComponentStyle: any) => {
         }
       }
 
+      componentWillReceiveProps(nextProps: any) {
+        const generatedClassName = this.generateAndInjectStyles(
+          this.state.theme || this.props.theme,
+          nextProps
+        )
+        this.setState({ generatedClassName })
+      }
+
       /* eslint-disable react/prop-types */
       render() {
         const { className, children, innerRef } = this.props
-        const theme = this.state.theme || this.props.theme || {}
-        const executionContext = Object.assign({}, this.props, { theme })
+        const { generatedClassName } = this.state
 
-        const generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
         const propsForElement = {}
         /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)
