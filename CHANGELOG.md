@@ -14,6 +14,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 - N/A
 
+## [v1.0.10] - 2016-10-28
+
+### Changed
+
+- Huge performance improvement by injecting styles outside of `render`, thanks to [@JamieDixon][https://github.com/JamieDixon]. (see [#137](https://github.com/styled-components/styled-components/pull/137))
+
 ## [v1.0.9] - 2016-10-26
 
 ### Added
@@ -24,9 +30,6 @@ All notable changes to this project will be documented in this file. If a contri
 ### Changed
 
 - Fixed `theme` prop in `styledComponent` and `styledNativeComponent` so that it will properly inherit values for `theme` when `defaultProps` are set, thanks to [@bhough](https://github.com/bhough). (see [#136](https://github.com/styled-components/styled-components/pull/136))
-
-### Changed
-Performance enhancer: Modified the `StyleComponent.js` so that `generateAndInjectStyles` is called outside of `render`.
 
 ## [v1.0.8] - 2016-10-18
 
@@ -76,7 +79,8 @@ Performance enhancer: Modified the `StyleComponent.js` so that `generateAndInjec
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.9...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.10...master
+[v1.0.10]: https://github.com/styled-components/styled-components/compare/v1.0.9...v1.0.10
 [v1.0.9]: https://github.com/styled-components/styled-components/compare/v1.0.8...v1.0.9
 [v1.0.8]: https://github.com/styled-components/styled-components/compare/v1.0.7...v1.0.8
 [v1.0.7]: https://github.com/styled-components/styled-components/compare/v1.0.6...v1.0.7
