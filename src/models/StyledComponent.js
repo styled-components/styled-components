@@ -19,8 +19,9 @@ export default (ComponentStyle: Function) => {
     }
 
     const componentStyle = new ComponentStyle(rules)
-    const ParentComponent = parent || AbstractStyledComponent
+    const ParentComponent = isTag(target) ? parent : AbstractStyledComponent
 
+    // $FlowIssue need to convince flow that ParentComponent can't be string here
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
@@ -66,17 +67,13 @@ export default (ComponentStyle: Function) => {
       }
 
       componentWillReceiveProps(nextProps: any) {
-        const generatedClassName = this.generateAndInjectStyles(this.state.theme, nextProps)
+        const generatedClassName = this.generateAndInjectStyles(
+          this.state.theme || this.props.theme,
+          nextProps
+        )
         this.setState({ generatedClassName })
       }
 
-      componentWillUnmount() {
-        if (this.unsubscribe) {
-          this.unsubscribe()
-        }
-      }
-
-      /* eslint-disable react/prop-types */
       render() {
         const { className, children, innerRef } = this.props
         const { generatedClassName } = this.state
