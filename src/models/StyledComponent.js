@@ -1,4 +1,5 @@
 // @flow
+
 import { createElement } from 'react'
 
 import validAttr from '../utils/validAttr'
@@ -9,7 +10,8 @@ import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
 
 export default (ComponentStyle: Function) => {
-  const createStyledComponent = (target: Target, rules: RuleSet, parent?: Target) => {
+  // eslint-disable-next-line no-undef
+  const createStyledComponent = (target: Target, rules: RuleSet, parent?: ReactClass<*>) => {
     /* Handle styled(OtherStyledComponent) differently */
     const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
     if (!isTag(target) && isStyledComponent) {
@@ -17,9 +19,8 @@ export default (ComponentStyle: Function) => {
     }
 
     const componentStyle = new ComponentStyle(rules)
-    const ParentComponent = isTag(target) ? parent : AbstractStyledComponent
+    const ParentComponent = parent || AbstractStyledComponent
 
-    // $FlowIssue need to convince flow that ParentComponent can't be string here
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
