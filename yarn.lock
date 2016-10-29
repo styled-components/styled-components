@@ -1725,6 +1725,10 @@ flow-bin@^0.33.0:
   version "0.33.0"
   resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.33.0.tgz#ef011eace7a6100f1ae08b852db78279032b8750"
 
+flow-bin@^0.34.0:
+  version "0.34.0"
+  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.34.0.tgz#093ed36981e8fafc39d16f0b0878d0968aa80fad"
+
 flow-remove-types@^1.0.0:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/flow-remove-types/-/flow-remove-types-1.0.4.tgz#74afc6a73e06df07fea93637fb6144b819ce79c1"
