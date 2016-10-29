@@ -1,6 +1,7 @@
 // @flow
 import React, { PropTypes, Component } from 'react'
-import { isFunction, isPlainObject } from 'lodash'
+import isFunction from 'lodash/isFunction'
+import isPlainObject from 'lodash/isPlainObject'
 import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
 
