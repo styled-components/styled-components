@@ -13,7 +13,6 @@ export default function({types: t }) {
               return
             }
             let id = undefined;
-            console.log(path.node)
             path.find((path) => {
               if (path.isAssignmentExpression()) {
                 id = path.node.left;
