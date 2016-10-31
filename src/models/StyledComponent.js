@@ -42,12 +42,17 @@ export default (ComponentStyle: any) => {
       }
 
       generateAndInjectStyles(theme: any, props: any) {
-        const executionContext = Object.assign({},
-          props,
-          {
-            theme,
-            displayName: StyledComponent.displayName,
-          })
+        const next = {
+          theme,
+          displayName: '',
+        }
+
+        if (process.env.NODE_ENV === 'development') {
+          next.displayName = StyledComponent.displayName
+        }
+
+        const executionContext = Object.assign({}, props, next)
+
         return componentStyle.generateAndInjectStyles(executionContext)
       }
 
