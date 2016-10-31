@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
-- add file `src/models/StyledWebComponents.js` to create web components
+- Added stricter type annotations
 
 ## [v1.0.10] - 2016-10-28
 
