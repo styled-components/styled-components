@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "babel-plugin-styled-components-named",
   "description": "Add display names to styled components",
   "repository": "vdanchenkov/babel-plugin-styled-components-named",
