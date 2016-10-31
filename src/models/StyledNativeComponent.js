@@ -8,7 +8,6 @@ import { CHANNEL } from './ThemeProvider'
 import InlineStyle from './InlineStyle'
 import AbstractStyledComponent from './AbstractStyledComponent'
 
-
 const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Target) => {
   /* Handle styled(OtherStyledNativeComponent) differently */
   const isStyledNativeComponent = AbstractStyledComponent.isPrototypeOf(target)
@@ -24,6 +23,13 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     static rules: RuleSet
     static target: Target
 
+    constructor() {
+      super()
+      this.state = {
+        theme: {},
+      }
+    }
+
     componentWillMount() {
       // If there is a theme in the context, subscribe to the event emitter. This
       // is necessary due to pure components blocking context updates, this circumvents
@@ -34,6 +40,12 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
           // This will be called once immediately
           this.setState({ theme })
         })
+      }
+    }
+
+    componentWillUnmount() {
+      if (this.unsubscribe) {
+        this.unsubscribe()
       }
     }
 
