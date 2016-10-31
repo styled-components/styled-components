@@ -14,7 +14,8 @@
     "react/sort-comp": 0,
     "react/jsx-filename-extension": 0,
     "flowtype-errors/show-errors": 2,
-    "no-prototype-builtins": 0
+    "no-prototype-builtins": 0,
+    "no-duplicate-imports": 0
   },
   "env": {
     "mocha": true,
