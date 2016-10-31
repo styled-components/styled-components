@@ -9,10 +9,9 @@ import autoprefix from '../utils/autoprefix'
 import styleSheet from './StyleSheet'
 
 function safeDisplayName(displayName: String) {
-  // Replace all possible CSS selectors
   const newDisplayName = displayName
-    .replace(/[\[\]\.#*><+~=|^:()]/g, '-')
-    .replace(/--+/g, '-')
+    .replace(/[\[\]\.#*$><+~=|^:(),"'`]/g, '-') // Replace all possible CSS selectors
+    .replace(/--+/g, '-') // Replace multiple -- with single -
 
   return `-${newDisplayName}`
 }
