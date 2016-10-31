@@ -10,7 +10,7 @@ import styleSheet from './StyleSheet'
 
 function safeDisplayName(displayName: String) {
   const newDisplayName = displayName
-    .replace(/[\[\]\.#*$><+~=|^:(),"'`]/g, '-') // Replace all possible CSS selectors
+    .replace(/[[\].#*$><+~=|^:(),"'`]/g, '-') // Replace all possible CSS selectors
     .replace(/--+/g, '-') // Replace multiple -- with single -
 
   return `-${newDisplayName}`
