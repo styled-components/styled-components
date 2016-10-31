@@ -25,11 +25,6 @@ export default (ComponentStyle: Function) => {
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
-      state: {
-        theme: any,
-        generatedClassName: string
-      }
-      unsubscribe: Function
 
       constructor() {
         super()
@@ -72,6 +67,12 @@ export default (ComponentStyle: Function) => {
           nextProps
         )
         this.setState({ generatedClassName })
+      }
+
+      componentWillUnmount() {
+        if (this.unsubscribe) {
+          this.unsubscribe()
+        }
       }
 
       render() {

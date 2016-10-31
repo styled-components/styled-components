@@ -43,6 +43,12 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       }
     }
 
+    componentWillUnmount() {
+      if (this.unsubscribe) {
+        this.unsubscribe()
+      }
+    }
+
     /* eslint-disable react/prop-types */
     render() {
       const { style, children, innerRef } = this.props
