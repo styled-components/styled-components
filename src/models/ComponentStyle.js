@@ -34,7 +34,6 @@ export default (nameGenerator: NameGenerator) => {
     generateAndInjectStyles(executionContext: Object) {
       const flatCSS = flatten(this.rules, executionContext).join('')
         .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
-
       const hash = hashStr(flatCSS)
       if (!inserted[hash]) {
         const selector = nameGenerator(hash)

@@ -38,19 +38,11 @@ export default (ComponentStyle: Function) => {
         this.state = {
           theme: {},
           generatedClassName: '',
-          displayName: '',
         }
       }
 
       generateAndInjectStyles(theme: any, props: any) {
-        if (process.env.NODE_ENV === 'development') {
-          this.setState({
-            displayName: safeDisplayName(`💅${StyledComponent.displayName}💅`),
-          })
-        }
-
         const executionContext = Object.assign({}, props, { theme })
-
         return componentStyle.generateAndInjectStyles(executionContext)
       }
 
@@ -90,7 +82,7 @@ export default (ComponentStyle: Function) => {
 
       render() {
         const { className, children, innerRef } = this.props
-        const { generatedClassName, displayName } = this.state
+        const { generatedClassName } = this.state
 
         const propsForElement = {}
         /* Don't pass through non HTML tags through to HTML elements */
@@ -99,7 +91,13 @@ export default (ComponentStyle: Function) => {
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
-        propsForElement.className = [className, generatedClassName, displayName].filter(x => x).join(' ')
+        propsForElement.className = [
+          className,
+          generatedClassName,
+          process.env.NODE_ENV === 'development'
+            ? safeDisplayName(`💅${StyledComponent.displayName}💅`)
+            : null,
+        ].filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
         }
