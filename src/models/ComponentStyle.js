@@ -37,7 +37,7 @@ export default (nameGenerator: NameGenerator) => {
 
       const hash = hashStr(flatCSS)
       if (!inserted[hash]) {
-        const selector = `${nameGenerator(hash)}`
+        const selector = nameGenerator(hash)
         inserted[hash] = selector
         const root = parse(`.${selector} { ${flatCSS} }`)
         postcssNested(root)
