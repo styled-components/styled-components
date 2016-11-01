@@ -92,17 +92,14 @@ export default (ComponentStyle: Function) => {
             propsForElement[propName] = this.props[propName]
           })
 
-        let displayName = ''
-
-        if (process.env.NODE_ENV === 'development') {
-          displayName = safeDisplayName(`💅${StyledComponent.displayName}💅`)
-        }
-
         propsForElement.className = [
           className,
           generatedClassName,
-          displayName,
-        ].filter(x => x).join(' ')
+          process.env.NODE_ENV !== 'production'
+           ? `\uD83D\uDC85${safeDisplayName(StyledComponent.displayName)}\uD83D\uDC85`
+           : '',
+        ]
+         .filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
         }
