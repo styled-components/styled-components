@@ -1,11 +1,10 @@
 [ignore]
+.*/node_modules/flow-remove-types/.*
+.*/node_modules/rollup-plugin-flow/.*
 
 [include]
 
 [libs]
-./src/decls
-./node_modules/fbjs/node_modules/promise
-./node_modules/fbjs/flow/lib
 
 [options]
-suppress_type=$FlowIssue
+suppress_comment=.*\\$FlowIssue

@@ -1,45 +1,39 @@
 // @flow
-import { Component, createElement, PropTypes } from 'react'
+import { createElement } from 'react'
 
-import InlineStyle from './InlineStyle'
+import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
-import { CHANNEL } from './ThemeProvider'
 
-/* eslint-disable react/prefer-stateless-function */
-class AbstractStyledNativeComponent extends Component {
-  static isPrototypeOf: Function
-  state: any
-}
+import { CHANNEL } from './ThemeProvider'
+import InlineStyle from './InlineStyle'
+import AbstractStyledComponent from './AbstractStyledComponent'
 
 const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Target) => {
   /* Handle styled(OtherStyledNativeComponent) differently */
-  const isStyledNativeComponent = AbstractStyledNativeComponent.isPrototypeOf(target)
-  if (isStyledNativeComponent) {
+  const isStyledNativeComponent = AbstractStyledComponent.isPrototypeOf(target)
+  if (isStyledNativeComponent && !isTag(target)) {
     return createStyledNativeComponent(target.target, target.rules.concat(rules), target)
   }
 
   const inlineStyle = new InlineStyle(rules)
-  const ParentComponent = parent || AbstractStyledNativeComponent
+  const ParentComponent = parent || AbstractStyledComponent
 
+  // $FlowIssue need to convince flow that ParentComponent can't be string here
   class StyledNativeComponent extends ParentComponent {
     static rules: RuleSet
     static target: Target
-    unsubscribe: Function
-    state: {
-      theme: any
-    }
 
     constructor() {
       super()
       this.state = {
-        theme: null,
+        theme: {},
       }
     }
 
     componentWillMount() {
-      // If there is a theme in the context, subscribe to the event emitter. This is necessary
-      // due to pure components blocking context updates, this circumvents that by updating when an
-      // event is emitted
+      // If there is a theme in the context, subscribe to the event emitter. This
+      // is necessary due to pure components blocking context updates, this circumvents
+      // that by updating when an event is emitted
       if (this.context[CHANNEL]) {
         const subscribe = this.context[CHANNEL]
         this.unsubscribe = subscribe(theme => {
@@ -75,11 +69,8 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
   /* Used for inheritance */
   StyledNativeComponent.rules = rules
   StyledNativeComponent.target = target
+  StyledNativeComponent.displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`
 
-  StyledNativeComponent.displayName = target.displayName ? `Styled(${target.displayName})` : `styled.${target}`
-  StyledNativeComponent.contextTypes = {
-    [CHANNEL]: PropTypes.object,
-  }
   return StyledNativeComponent
 }
 
