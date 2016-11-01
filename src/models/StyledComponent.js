@@ -91,12 +91,17 @@ export default (ComponentStyle: Function) => {
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
+
+        let displayName = ''
+
+        if (process.env.NODE_ENV === 'development') {
+          displayName = safeDisplayName(`💅${StyledComponent.displayName}💅`)
+        }
+
         propsForElement.className = [
           className,
           generatedClassName,
-          process.env.NODE_ENV === 'development'
-            ? safeDisplayName(`💅${StyledComponent.displayName}💅`)
-            : null,
+          displayName,
         ].filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
