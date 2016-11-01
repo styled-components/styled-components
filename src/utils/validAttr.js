@@ -1,3 +1,4 @@
+// @flow
 /* Trying to avoid the unknown-prop errors on styled components
  by filtering by React's attribute whitelist.
  */
@@ -587,8 +588,8 @@ const isCustomAttribute = RegExp.prototype.test.bind(
   new RegExp(`^(data|aria)-[${ATTRIBUTE_NAME_CHAR}]*$`)
 )
 
-const hasOwnProperty = {}.hasOwnProperty
-export default name => (
+const hasOwnProperty: (name: string) => boolean = {}.hasOwnProperty
+export default (name: string) => (
   hasOwnProperty.call(htmlProps, name) ||
   hasOwnProperty.call(svgProps, name) ||
   isCustomAttribute(name.toLowerCase()) ||

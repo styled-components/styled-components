@@ -8,13 +8,6 @@ import postcssNested from '../vendor/postcss-nested'
 import autoprefix from '../utils/autoprefix'
 import styleSheet from './StyleSheet'
 
-function safeDisplayName(displayName: String) {
-  const newDisplayName = displayName
-    .replace(/[[\].#*$><+~=|^:(),"'`]/g, '-') // Replace all possible CSS selectors
-    .replace(/--+/g, '-') // Replace multiple -- with single -
-
-  return `-${newDisplayName}`
-}
 /*
  ComponentStyle is all the CSS-specific stuff, not
  the React-specific stuff.
@@ -42,13 +35,9 @@ export default (nameGenerator: NameGenerator) => {
       const flatCSS = flatten(this.rules, executionContext).join('')
         .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
 
-      const suffix = process.env.NODE_ENV === 'development'
-        ? safeDisplayName(executionContext.displayName)
-        : ''
-
       const hash = hashStr(flatCSS)
       if (!inserted[hash]) {
-        const selector = `${nameGenerator(hash)}${suffix}`
+        const selector = `${nameGenerator(hash)}`
         inserted[hash] = selector
         const root = parse(`.${selector} { ${flatCSS} }`)
         postcssNested(root)

@@ -1,57 +1,55 @@
 // @flow
-import { Component, createElement, PropTypes } from 'react'
+
+import { createElement } from 'react'
 
 import validAttr from '../utils/validAttr'
-import { CHANNEL } from './ThemeProvider'
-
+import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
 
-/* eslint-disable react/prefer-stateless-function */
-class AbstractStyledComponent extends Component {
-  static isPrototypeOf: Function
-  state: any
+import AbstractStyledComponent from './AbstractStyledComponent'
+import { CHANNEL } from './ThemeProvider'
+
+function safeDisplayName(displayName: string) {
+  const newDisplayName = displayName
+    .replace(/[[\].#*$><+~=|^:(),"'`]/g, '-') // Replace all possible CSS selectors
+    .replace(/--+/g, '-') // Replace multiple -- with single -
+
+  return newDisplayName
 }
 
-export default (ComponentStyle: any) => {
-  const createStyledComponent = (target: Target, rules: RuleSet, parent?: Target) => {
+export default (ComponentStyle: Function) => {
+  // eslint-disable-next-line no-undef
+  const createStyledComponent = (target: Target, rules: RuleSet, parent?: ReactClass<*>) => {
     /* Handle styled(OtherStyledComponent) differently */
     const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
-    if (isStyledComponent) {
+    if (!isTag(target) && isStyledComponent) {
       return createStyledComponent(target.target, target.rules.concat(rules), target)
     }
 
-    const isTag = typeof target === 'string'
     const componentStyle = new ComponentStyle(rules)
     const ParentComponent = parent || AbstractStyledComponent
 
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
-      state: {
-        theme: any,
-        generatedClassName: string
-      }
-      unsubscribe: Function
 
       constructor() {
         super()
         this.state = {
           theme: {},
           generatedClassName: '',
+          displayName: '',
         }
       }
 
       generateAndInjectStyles(theme: any, props: any) {
-        const next = {
-          theme,
-          displayName: '',
-        }
-
         if (process.env.NODE_ENV === 'development') {
-          next.displayName = StyledComponent.displayName
+          this.setState({
+            displayName: safeDisplayName(`💅${StyledComponent.displayName}💅`),
+          })
         }
 
-        const executionContext = Object.assign({}, props, next)
+        const executionContext = Object.assign({}, props, { theme })
 
         return componentStyle.generateAndInjectStyles(executionContext)
       }
@@ -76,12 +74,6 @@ export default (ComponentStyle: any) => {
         }
       }
 
-      componentWillUnmount() {
-        if (this.unsubscribe) {
-          this.unsubscribe()
-        }
-      }
-
       componentWillReceiveProps(nextProps: any) {
         const generatedClassName = this.generateAndInjectStyles(
           this.state.theme || this.props.theme,
@@ -90,19 +82,24 @@ export default (ComponentStyle: any) => {
         this.setState({ generatedClassName })
       }
 
-      /* eslint-disable react/prop-types */
+      componentWillUnmount() {
+        if (this.unsubscribe) {
+          this.unsubscribe()
+        }
+      }
+
       render() {
         const { className, children, innerRef } = this.props
-        const { generatedClassName } = this.state
+        const { generatedClassName, displayName } = this.state
 
         const propsForElement = {}
         /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)
-          .filter(propName => !isTag || validAttr(propName))
+          .filter(propName => !isTag(target) || validAttr(propName))
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
-        propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
+        propsForElement.className = [className, generatedClassName, displayName].filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
         }
@@ -111,14 +108,11 @@ export default (ComponentStyle: any) => {
       }
     }
 
-    /* Used for inheritance */
-    StyledComponent.rules = rules
     StyledComponent.target = target
+    StyledComponent.rules = rules
 
-    StyledComponent.displayName = isTag ? `styled.${target}` : `Styled(${target.displayName})`
-    StyledComponent.contextTypes = {
-      [CHANNEL]: PropTypes.func,
-    }
+    StyledComponent.displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`
+
     return StyledComponent
   }
 
