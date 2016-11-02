@@ -3,7 +3,7 @@
 import * as React from 'react';
 
 import styled from 'styled-components';
-import { css } from 'styled-components';
+import { css, keyframes } from 'styled-components';
 
 // Create a <Title> react component that renders an <h1> which is
 // centered, palevioletred and sized at 1.5em
@@ -71,6 +71,15 @@ const example = css`
   font-size: 1.5em;
   text-align: center;
   color: palevioletred;
+`;
+
+const fadeIn = keyframes`
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
 `;
 
 

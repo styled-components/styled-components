@@ -151,5 +151,7 @@ declare module 'styled-components' {
     var styled: StyledInterface;
 
     export const css: StyledFunction<(string | Function)[]>;
+    export const keyframes: StyledFunction<string>;
+
     export default styled;
 }
