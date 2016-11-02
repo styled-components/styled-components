@@ -145,9 +145,11 @@ declare module 'styled-components' {
         svg: StyledFunction<React.SVGFactory>,
         text: StyledFunction<React.SVGFactory>,
         tspan: StyledFunction<React.SVGFactory>,
+
     }
 
     var styled: StyledInterface;
 
+    export const css: StyledFunction<(string | Function)[]>;
     export default styled;
 }
