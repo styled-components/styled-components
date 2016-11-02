@@ -9,6 +9,14 @@ import type { RuleSet, Target } from '../types'
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
 
+function safeDisplayName(displayName: string) {
+  const newDisplayName = displayName
+    .replace(/[[\].#*$><+~=|^:(),"'`]/g, '-') // Replace all possible CSS selectors
+    .replace(/--+/g, '-') // Replace multiple -- with single -
+
+  return newDisplayName
+}
+
 export default (ComponentStyle: Function) => {
   // eslint-disable-next-line no-undef
   const createStyledComponent = (target: Target, rules: RuleSet, parent?: ReactClass<*>) => {
@@ -83,7 +91,15 @@ export default (ComponentStyle: Function) => {
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
-        propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
+
+        propsForElement.className = [
+          className,
+          generatedClassName,
+          process.env.NODE_ENV !== 'production'
+           ? `\uD83D\uDC85${safeDisplayName(StyledComponent.displayName)}\uD83D\uDC85`
+           : '',
+        ]
+         .filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
         }
