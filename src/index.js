@@ -14,10 +14,14 @@ import _ComponentStyle from './models/ComponentStyle'
 /* Import components */
 import ThemeProvider from './models/ThemeProvider'
 
+// web components api
+import _styledWebComponent from './models/StyledWebComponent'
+
 /* Instantiate singletons */
 const keyframes = _keyframes(generateAlphabeticName)
 const styled = _styled(_styledComponent(_ComponentStyle(generateAlphabeticName)))
+const styledWeb = _styled(_styledWebComponent(_ComponentStyle(generateAlphabeticName)))
 
 /* Export everything */
 export default styled
-export { css, keyframes, injectGlobal, ThemeProvider }
+export { css, keyframes, injectGlobal, ThemeProvider, styledWeb }
