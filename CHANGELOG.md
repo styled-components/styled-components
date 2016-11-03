@@ -8,8 +8,6 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- add some features for web components in #128
-
 ### Changed
 
 - Added stricter type annotations
