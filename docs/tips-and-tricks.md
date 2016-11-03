@@ -155,7 +155,7 @@ class Form extends Component {
 
   render() {
     return (
-      <StyledInput ref={(comp) => { this.input = comp }} />
+      <StyledInput innerRef={(comp) => { this.input = comp }} />
     )
   }
 }
