@@ -402,6 +402,7 @@ See [the documentation](./docs) for more information about using `styled-compone
 - [Using `styled-components` with existing CSS](./docs/existing-css.md): Some edge cases you should be aware of when using `styled-components` with an existing CSS codebase
 - [What CSS we support](./docs/css-we-support.md): What parts & extensions of CSS can you use within a component? *(Spoiler: all of CSS plus even more)*
 - [Theming](./docs/theming.md): How to work with themes
+- [FAQ](./docs/faq.md): Frequently Asked Questions
 
 ## Linting
 
