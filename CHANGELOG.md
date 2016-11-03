@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- Add some features for web components in #128
+- Add some features for web components
 
 ### Changed
 
