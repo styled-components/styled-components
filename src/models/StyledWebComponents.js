@@ -12,6 +12,9 @@ export default (ComponentStyle: any) => {
     if (isTag) {
       element = document.createElement(target)
       element.className = generatedClassName
+    } else if (typeof target === 'object') {
+      element = document.createElement(target.tagName)
+      element.className = `${target.tagName} ${generatedClassName}`
     }
     return element
   }
