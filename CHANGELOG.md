@@ -20,12 +20,6 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Huge performance improvement by injecting styles outside of `render`, thanks to [@JamieDixon][https://github.com/JamieDixon]. (see [#137](https://github.com/styled-components/styled-components/pull/137))
 
-## [v1.0.10] - 2016-10-28
-
-### Changed
-
-- Huge performance improvement by injecting styles outside of `render`, thanks to [@JamieDixon][https://github.com/JamieDixon]. (see [#137](https://github.com/styled-components/styled-components/pull/137))
-
 ## [v1.0.9] - 2016-10-26
 
 ### Added

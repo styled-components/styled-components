@@ -29,18 +29,14 @@ export default (ComponentStyle: Function) => {
       constructor() {
         super()
         this.state = {
-          theme: null,
+          theme: {},
           generatedClassName: '',
         }
       }
 
-      generateAndInjectStyles() {
-        const theme = this.state.theme || {}
-        const executionContext = Object.assign({}, this.props, { theme })
-        const generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
-        this.setState({
-          generatedClassName,
-        })
+      generateAndInjectStyles(theme: any, props: any) {
+        const executionContext = Object.assign({}, props, { theme })
+        return componentStyle.generateAndInjectStyles(executionContext)
       }
 
       componentWillMount() {
@@ -56,7 +52,10 @@ export default (ComponentStyle: Function) => {
             this.setState({ theme, generatedClassName })
           })
         } else {
-          const generatedClassName = this.generateAndInjectStyles({}, this.props)
+          const generatedClassName = this.generateAndInjectStyles(
+            this.props.theme || {},
+            this.props
+          )
           this.setState({ generatedClassName })
         }
       }
