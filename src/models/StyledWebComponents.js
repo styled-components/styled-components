@@ -1,15 +1,14 @@
 // @flow
 
-import type { RuleSet, Target } from '../types'
+import type { RuleSet, WebTarget } from '../types'
 
 export default (ComponentStyle: any) => {
-  const createStyledComponent = (target: Target, rules: RuleSet) => {
+  const createStyledComponent = (target: WebTarget, rules: RuleSet) => {
     /* Handle styled(OtherStyledComponent) differently */
-    const isTag = typeof target === 'string'
     let element
     const componentStyle = new ComponentStyle(rules)
     const generatedClassName = componentStyle.generateAndInjectStyles({})
-    if (isTag) {
+    if (typeof target === 'string') {
       element = document.createElement(target)
       element.className = generatedClassName
     } else if (typeof target === 'object') {

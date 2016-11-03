@@ -6,4 +6,6 @@ export type RuleSet = Array<Interpolation>
 /* eslint-disable no-undef */
 export type Target = string | ReactClass<*>
 
+export type WebTarget = string | Object
+
 export type NameGenerator = (hash: number) => string
