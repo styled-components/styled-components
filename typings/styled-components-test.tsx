@@ -3,7 +3,7 @@
 import * as React from 'react';
 
 import styled from 'styled-components';
-import { css, keyframes } from 'styled-components';
+import { css, keyframes, ThemeProvider } from 'styled-components';
 
 // Create a <Title> react component that renders an <h1> which is
 // centered, palevioletred and sized at 1.5em
@@ -82,14 +82,19 @@ const fadeIn = keyframes`
 	}
 `;
 
+const theme = {
+  main: 'mediumseagreen',
+};
 
 class Example extends React.Component<{}, {}> {
   render() {
-    return <Wrapper>
-      <Title>Hello World, this is my first styled component!</Title>
+    return <ThemeProvider theme={theme}>
+      <Wrapper>
+        <Title>Hello World, this is my first styled component!</Title>
 
-      <Input placeholder="@mxstbr" type="text" />
-      <TomatoButton name="demo" />
-    </Wrapper>;
+        <Input placeholder="@mxstbr" type="text" />
+        <TomatoButton name="demo" />
+      </Wrapper>;
+    </ThemeProvider>;
   }
 }

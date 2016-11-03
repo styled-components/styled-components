@@ -2,6 +2,7 @@
 
 declare module 'styled-components' {
     import * as React from "react";
+    import { StatelessComponent } from "react";
 
     interface StyledFunction<T> {
       (values: TemplateStringsArray): T,
@@ -152,6 +153,12 @@ declare module 'styled-components' {
 
     export const css: StyledFunction<(string | Function)[]>;
     export const keyframes: StyledFunction<string>;
+
+    interface ThemeProps {
+      theme: Object,
+    }
+
+    export const ThemeProvider: StatelessComponent<ThemeProps>;
 
     export default styled;
 }
