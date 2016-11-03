@@ -9,7 +9,8 @@ Visual primitives for the component age. Use the best bits of ES6 and CSS to sty
 npm install --save styled-components
 ```
 
-[![Travis Build Status](https://travis-ci.org/styled-components/styled-components.svg?branch=master)](https://travis-ci.org/styled-components/styled-components) [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/gruntjs/grunt?branch=master&svg=true)](https://ci.appveyor.com/project/mxstbr/styled-components) [![Supported by Thinkmill](https://thinkmill.github.io/badge/heart.svg)](http://thinkmill.com.au/?utm_source=github&utm_medium=badge&utm_campaign=styled-components)
+[![npm](https://img.shields.io/npm/v/styled-components.svg)](https://www.npmjs.com/package/styled-components) [![Travis Build Status](https://travis-ci.org/styled-components/styled-components.svg?branch=master)](https://travis-ci.org/styled-components/styled-components) [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/gruntjs/grunt?branch=master&svg=true)](https://ci.appveyor.com/project/mxstbr/styled-components) [![Supported by Thinkmill](https://thinkmill.github.io/badge/heart.svg)](http://thinkmill.com.au/?utm_source=github&utm_medium=badge&utm_campaign=styled-components)
+[![gitter](https://camo.githubusercontent.com/54dc79dc7da6b76b17bc8013342da9b4266d993c/68747470733a2f2f6261646765732e6769747465722e696d2f6d78737462722f72656163742d626f696c6572706c6174652e737667)](https://gitter.im/styled-components/styled-components)
 
 Utilising [tagged template literals](./docs/tagged-template-literals.md) (a recent addition to JavaScript) and the [power of CSS](./docs/css-we-support.md), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
@@ -402,6 +403,14 @@ See [the documentation](./docs) for more information about using `styled-compone
 - [What CSS we support](./docs/css-we-support.md): What parts & extensions of CSS can you use within a component? *(Spoiler: all of CSS plus even more)*
 - [Theming](./docs/theming.md): How to work with themes
 
+## Linting
+
+There is (currently experimental) support for `stylelint` – meaning you can take advantage of 150 rules to make sure your `styled-components` CSS is solid!
+
+![Recording of stylelint correctly reporting errors in a styled components' CSS](http://imgur.com/br9zdHb.gif)
+
+See the [`stylelint-processor-styled-components`](https://github.com/styled-components/stylelint-processor-styled-components) repository for installation instructions.
+
 ## Syntax highlighting
 
 The one thing you lose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom, and soon Sublime Text.
@@ -430,6 +439,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 
 - [`grid-styled`](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
 - [ARc](https://github.com/diegohaz/arc): Atomic React App boilerplate with styled components ([demo](https://diegohaz.github.io/arc))
+- [`react-aria-tooltip`](https://github.com/egoens/react-aria-tooltip): Simple & accessible ReactJS tooltip component
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
