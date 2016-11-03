@@ -8,11 +8,11 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- N/A
+- add some features for web components in #128
 
 ### Changed
 
-- N/A
+- add file `src/models/StyledWebComponents.js` to create web components
 
 ## [v1.0.9] - 2016-10-26
 
