@@ -19,8 +19,9 @@ export default (ComponentStyle: Function) => {
     }
 
     const componentStyle = new ComponentStyle(rules)
-    const ParentComponent = parent || AbstractStyledComponent
+    const ParentComponent = isTag(target) ? parent : AbstractStyledComponent
 
+    // $FlowIssue need to convince flow that ParentComponent can't be string here
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
@@ -39,6 +40,7 @@ export default (ComponentStyle: Function) => {
       }
 
       componentWillMount() {
+        this.generateAndInjectStyles()
         // If there is a theme in the context, subscribe to the event emitter. This
         // is necessary due to pure components blocking context updates, this circumvents
         // that by updating when an event is emitted
