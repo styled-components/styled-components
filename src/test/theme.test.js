@@ -42,6 +42,57 @@ describe('theming', () => {
     expectCSSMatches(`.a { color: ${theme.color}; }`)
   })
 
+  it('object themes should be merged', () => {
+    const Comp = styled.div`
+      color: ${props => props.theme.color};
+      background: ${props => props.theme.bg};
+    `
+    render(
+      <ThemeProvider theme={{ color: 'black' }}>
+        <ThemeProvider theme={{ bg: 'white' }}>
+          <div>
+            <Comp />
+          </div>
+        </ThemeProvider>
+      </ThemeProvider>
+    )
+    expectCSSMatches(`.a { color: black; background: white; }`)
+  })
+
+  it('function themes should replace the existing', () => {
+    const Comp = styled.div`
+      color: ${props => props.theme.color};
+      background: ${props => props.theme.bg};
+    `
+    render(
+      <ThemeProvider theme={{ color: 'black' }}>
+        <ThemeProvider theme={() => ({ bg: 'white' })}>
+          <div>
+            <Comp />
+          </div>
+        </ThemeProvider>
+      </ThemeProvider>
+    )
+    expectCSSMatches(`.a { color: ; background: white; }`)
+  })
+
+  it('function themes should be passed the existing', () => {
+    const Comp = styled.div`
+      color: ${props => props.theme.fg};
+      background: ${props => props.theme.bg};
+    `
+    render(
+      <ThemeProvider theme={{ fg: 'black', bg: 'white' }}>
+        <ThemeProvider theme={outer => ({ fg: outer.bg, bg: outer.fg })}>
+          <div>
+            <Comp />
+          </div>
+        </ThemeProvider>
+      </ThemeProvider>
+    )
+    expectCSSMatches(`.a { color: white; background: black; }`)
+  })
+
   it('should properly allow a component to fallback to its default props when a theme is not provided', () => {
     const Comp1 = styled.div`
       color: ${props => props.theme.color};
@@ -222,23 +273,20 @@ describe('theming', () => {
       fgColor: theme.color,
       bgColor: theme.alt
     }), { BaseBg, BaseFg })
-    const renderComp = () => {
-      render(
-        <ThemeProvider theme={theme}>
-          <Bg label="outer bg">
-            <Fg label="outer fg">
-              <ThemeProvider theme={invert}>
-                <Bg label="inner bg">
-                  <Fg label="inner fg">
-                  </Fg>
-                </Bg>
-              </ThemeProvider>
-            </Fg>
-          </Bg>
-        </ThemeProvider>
-      )
-    }
-    renderComp()
+    render(
+      <ThemeProvider theme={theme}>
+        <Bg label="outer bg">
+          <Fg label="outer fg">
+            <ThemeProvider theme={invert}>
+              <Bg label="inner bg">
+                <Fg label="inner fg">
+                </Fg>
+              </Bg>
+            </ThemeProvider>
+          </Fg>
+        </Bg>
+      </ThemeProvider>
+    )
     expectCSSMatches(`
       .b {
         color: red;
@@ -262,4 +310,52 @@ describe('theming', () => {
       }
     `)
   })
+
+  it('should inherit theme adapters for a set of components', () => {
+    const Inner = styled.div`
+      color: ${props => props.theme.fgColor};
+    `
+    const Outer = styled.div`
+      background: ${props => props.theme.bgColor};
+    `
+    const MaterialComponent = ({ children }) => (
+      <Outer>
+        <Inner>
+          { children }
+        </Inner>
+      </Outer>
+    )
+    const theme = { color: 'red', alt: 'blue' }
+    const AdaptedMaterialComponent = adaptTheme(theme => ({
+      fgColor: theme.color,
+      bgColor: theme.alt
+    }), MaterialComponent)
+
+    const MyComponent = styled.div`
+      border-color: ${ props => props.theme.color };
+      outline-color: ${ props => props.theme.alt };
+    `
+
+    render(
+      <ThemeProvider theme={theme}>
+        <AdaptedMaterialComponent>
+          <MyComponent/>
+        </AdaptedMaterialComponent>
+      </ThemeProvider>
+    )
+
+    expectCSSMatches(`
+      .b {
+        color: red;
+      }
+      .a {
+        background: blue;
+      }
+      .c {
+        border-color: red;
+        outline-color: blue;
+      }
+    `)
+  })
+
 })
