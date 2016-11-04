@@ -10,12 +10,12 @@ export default (styledComponent: Function) => {
   const proxy = new Proxy(styled, {
     get(target: Function, name: string) {
       if (name in target) {
-        return target[name];
+        return target[name]
       }
 
-      return styled(name);
-    }
-  });
+      return styled(name)
+    },
+  })
 
-  return proxy;
+  return proxy
 }
