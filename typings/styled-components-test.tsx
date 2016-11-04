@@ -1,9 +1,9 @@
 /// <reference path="styled-components.d.ts" />
 
-import * as React from 'react';
+import * as React from "react";
 
-import styled from 'styled-components';
-import { css, keyframes, ThemeProvider } from 'styled-components';
+import styled from "styled-components";
+import { css, keyframes, ThemeProvider } from "styled-components";
 
 // Create a <Title> react component that renders an <h1> which is
 // centered, palevioletred and sized at 1.5em
@@ -38,8 +38,8 @@ const Input = styled.input`
 
 const Button = styled.button`
   /* Adapt the colors based on primary prop */
-  background: ${props => props.primary ? 'palevioletred' : 'white'};
-  color: ${props => props.primary ? 'white' : 'palevioletred'};
+  background: ${props => props.primary ? "palevioletred" : "white"};
+  color: ${props => props.primary ? "white" : "palevioletred"};
 
   font-size: 1em;
   margin: 1em;
@@ -49,7 +49,7 @@ const Button = styled.button`
 `;
 
 interface ButtonProps {
-  name: string
+  name: string;
 }
 
 class MyButton extends React.Component<ButtonProps, {}> {
@@ -74,16 +74,16 @@ const example = css`
 `;
 
 const fadeIn = keyframes`
-	0% {
-		opacity: 0;
-	}
-	100% {
-		opacity: 1;
-	}
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 `;
 
 const theme = {
-  main: 'mediumseagreen',
+  main: "mediumseagreen",
 };
 
 class Example extends React.Component<{}, {}> {

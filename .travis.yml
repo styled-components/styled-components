@@ -5,8 +5,8 @@ node_js:
   - "7"
 script:
   - yarn run danger run -- --verbose
-  - yarn run flow
-  - yarn run lint && npm run test
+  - npm run flow
+  - npm run lint && npm run tslint && npm run test
 notifications:
   email:
     on_failure: change
