@@ -5,6 +5,7 @@
   ],
   "plugins": [
     "add-module-exports",
+    "proxy",
     "transform-flow-strip-types"
   ]
 }
