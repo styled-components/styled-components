@@ -2,8 +2,6 @@
 
 import { danger, warn, fail } from 'danger'
 
-warn('Failing this to ensure everything works.')
-
 const jsModifiedFiles = danger.git.modified_files.filter(path => path.startsWith('src') && path.endsWith('js'))
 const vendorModifiedFiles = danger.git.modified_files.filter(path => path.startsWith('src/vendor') && path.startsWith('js'))
 
