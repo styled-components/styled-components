@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file. If a contri
 ### Changed
 
 - Added stricter type annotations
+- Converted to DangerJS - orta
 
 ## [v1.0.10] - 2016-10-28
 
