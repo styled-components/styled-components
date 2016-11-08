@@ -311,7 +311,7 @@ describe('theming', () => {
     `)
   })
 
-  it('should inherit theme adapters for a set of components', () => {
+  it("shouldn't prevent a component from taking multiple children of any kind", () => {
     const Inner = styled.div`
       color: ${props => props.theme.fgColor};
     `
@@ -335,11 +335,15 @@ describe('theming', () => {
       border-color: ${ props => props.theme.color };
       outline-color: ${ props => props.theme.alt };
     `
+    const StatelessWrapper = ({children}) => <div>{ children }</div>
 
     render(
       <ThemeProvider theme={theme}>
         <AdaptedMaterialComponent>
-          <MyComponent/>
+          <StatelessWrapper>
+            <MyComponent/>
+          </StatelessWrapper>
+          Naked Text Here { 1 + 2 }
         </AdaptedMaterialComponent>
       </ThemeProvider>
     )

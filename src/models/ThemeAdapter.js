@@ -12,9 +12,10 @@ export default (adapter, Component) => {
   return props => (
     <ThemeProvider theme={applyAdaptation}>
       <Component {...props}>
-        { props.children && <ThemeProvider theme={restoreOriginal}>
-          { props.children }
-        </ThemeProvider> }
+        { React.Children.map(props.children, child => React.isValidElement(child)
+          ? <ThemeProvider theme={restoreOriginal}>{ child }</ThemeProvider>
+          : child
+        )}
       </Component>
     </ThemeProvider>
   )
