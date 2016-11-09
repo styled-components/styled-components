@@ -44,7 +44,7 @@ export default (nameGenerator: NameGenerator) => {
       const flatCSS = flatten(this.rules, executionContext).join('')
         .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
 
-      const classSuffix = process.env.NODE_ENV !== 'production'
+      const classSuffix = process.env.NODE_ENV === 'development'
        ? `-${safeDisplayName(executionContext.displayName)}`
        : ''
 
