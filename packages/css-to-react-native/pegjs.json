@@ -1,0 +1,9 @@
+{
+  "optimize": "size",
+  "allowedStartRules": [
+    "FontWeight",
+    "FontVariant",
+    "ShadowOffset",
+    "Transform"
+  ]
+}

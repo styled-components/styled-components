@@ -1,0 +1,36 @@
+{
+  "name": "css-to-react-native",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "nearleyc ./grammar.ne -o ./grammar.js",
+    "test": "npm run build; jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/styled-components/css-to-react-native.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/styled-components/css-to-react-native/issues"
+  },
+  "homepage": "https://github.com/styled-components/css-to-react-native#readme",
+  "devDependencies": {
+    "babel-cli": "^6.18.0",
+    "babel-preset-es2015": "^6.18.0",
+    "eslint": "^3.9.1",
+    "eslint-config-airbnb-base": "^10.0.1",
+    "eslint-plugin-import": "^2.2.0",
+    "jest": "^17.0.0",
+    "nearley": "^2.7.7",
+    "pegjs": "^0.10.0"
+  },
+  "dependencies": {
+    "fbjs": "^0.8.5",
+    "nearley": "^2.7.7",
+    "postcss": "^5.2.5"
+  }
+}
