@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+- Modify `StyleNativeComponent.js` so that `generateAndInjectStyles` is called outside of `render`, thanks to [@sheepsteak](https://github.com/sheepsteak). (see [#171](https://github.com/styled-components/styled-components/pull/171))
+
 ## [v1.1.1]
 
 ### Changed
