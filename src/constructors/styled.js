@@ -9,7 +9,7 @@ export default (styledComponent: Function) => {
 
   const proxy = new Proxy(styled, {
     get(target: Function, name: string) {
-      if (name in target) {
+      if (target.hasOwnProperty(name)) {
         return target[name]
       }
 
