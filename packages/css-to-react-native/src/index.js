@@ -42,7 +42,7 @@ export const getStylesForProperty = (propName, inputValue) => {
 
 export const getPropertyName = camelizeStyleName;
 
-export const getStylesForDecl = decl =>
+const getStylesForDecl = decl =>
   getStylesForProperty(getPropertyName(decl.prop), decl.value);
 
 export default (css) => {

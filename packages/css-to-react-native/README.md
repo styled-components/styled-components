@@ -86,16 +86,8 @@ transform(`
 For implementors, there is also,
 
 ```js
-import {
-  getPropertyName,
-  getStylesForProperty,
-  getStylesForDecl,
-} from 'css-to-react-native';
+import { getPropertyName, getStylesForProperty } from 'css-to-react-native';
 
 getPropertyName('border-width'); // => 'borderWidth'
 getStylesForProperty('borderWidth', '1 0 2 0'); // => { borderTopWidth: 1, ... }
-getStylesForDecl(postcss.decl({
-  name: 'border-width',
-  value: '1 0 2 0'
-})); // => { borderTopWidth: 1, ... }
 ```
