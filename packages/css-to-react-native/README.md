@@ -12,7 +12,7 @@ color: red;
 {
   fontSize: 18,
   lineHeight: 24,
-  color: red,
+  color: 'red',
 }
 ```
 
