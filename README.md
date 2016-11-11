@@ -443,6 +443,8 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [`react-aria-tooltip`](https://github.com/egoens/react-aria-tooltip): Simple & accessible ReactJS tooltip component
 - [`react-boilerplate`](https://github.com/mxstbr/react-boilerplate): A highly scalable, offline-first foundation with the best developer experience and a focus on performance and best practices
 - [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
+- [Hedron](http://github.com/jsbros/hedron): A no-frills flex-box grid system.
+- [uiGradients](http://jsbros.github.io/uigradients): Generate beautful background gradients from the [uigradients.com](http://uigradients.com) database.
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
