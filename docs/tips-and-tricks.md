@@ -135,6 +135,43 @@ And voila! 💅
 
 *Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals](./tagged-template-literals.md)*
 
+### Media Templates
+
+Due to the functional nature of javascript, you can easily define your own tagged template literal to wrap styles in media queries. For example:
+
+```js
+// these sizes are arbitrary and you can set them to whatever you wish
+const sizes = {
+  giant: 1170,
+  desktop: 992,
+  tablet: 768,
+  phone: 376
+}
+
+// iterate through the sizes and create a media template
+export const media = Object.keys(sizes).reduce((accumulator, label) => {
+  accumulator[label] = (...args) => css`
+    @media (max-width: ${sizes[label]}px) {
+      ${css(...args)}
+    }
+  `
+  return accumulator
+}, {})
+```
+
+Great! Now that you've defined your media templates, you can use them like this:
+
+```js
+const Container = styled.div`
+  color: #333;
+  ${media.desktop`padding: 0 20px;`}
+  ${media.tablet`padding: 0 10px;`}
+  ${media.phone`padding: 0 5px;`}
+`
+```
+
+Pretty easy, huh?
+
 ### Refs to DOM nodes
 
 Passing `ref` to styled component will give a ref to the `StyledComponent`
