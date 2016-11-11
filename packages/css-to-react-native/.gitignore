@@ -1,2 +1,3 @@
 /node_modules
-grammar.js
+/src/grammar.js
+/dist
