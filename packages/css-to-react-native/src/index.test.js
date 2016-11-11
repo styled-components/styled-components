@@ -1,5 +1,5 @@
 /* global jest it, expect */
-const transformCss = require('.');
+import transformCss from '.';
 
 const runTest = (inputCss, expectedStyles) => {
   const actualStyles = transformCss(inputCss);

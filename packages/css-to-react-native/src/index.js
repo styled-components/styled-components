@@ -28,7 +28,7 @@ const transformRawValue = input => (
     : input
 );
 
-const getStylesForProperty = (propName, inputValue) => {
+export const getStylesForProperty = (propName, inputValue) => {
   const value = inputValue.trim();
 
   const propValue = (transforms.indexOf(propName) !== -1)
@@ -40,11 +40,12 @@ const getStylesForProperty = (propName, inputValue) => {
     : { [propName]: propValue };
 };
 
-const getPropertyName = camelizeStyleName;
+export const getPropertyName = camelizeStyleName;
 
-const getStylesForDecl = decl => getStylesForProperty(getPropertyName(decl.prop), decl.value);
+export const getStylesForDecl = decl =>
+  getStylesForProperty(getPropertyName(decl.prop), decl.value);
 
-module.exports = (css) => {
+export default (css) => {
   const root = postcss.parse(css);
 
   const decls = [];

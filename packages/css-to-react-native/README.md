@@ -68,3 +68,34 @@ Shorthands will only accept values that are supported in React, so `background` 
 `border{Top,Right,Bottom,Left}` shorthands are not supported, because `borderStyle` cannot be applied to individual border sides.
 
 `flex` does not support putting `flexBasis` before `flexGrow`. The supported syntax is `flex: <flex-grow> <flex-shrink> <flex-basis>`.
+
+# API
+
+The API is mostly for implementors. However, the main API may be useful for non-impmentors. The main API is,
+
+```js
+import transform from 'css-to-react-native';
+// or const transform = require('css-to-react-native').default;
+
+transform(`
+  font: bold 14/16 "Helvetica";
+  margin: 5 7 2;
+`); // => { fontFamily: 'Helvetica', ... }
+```
+
+For implementors, there is also,
+
+```js
+import {
+  getPropertyName,
+  getStylesForProperty,
+  getStylesForDecl,
+} from 'css-to-react-native';
+
+getPropertyName('border-width'); // => 'borderWidth'
+getStylesForProperty('borderWidth', '1 0 2 0'); // => { borderTopWidth: 1, ... }
+getStylesForDecl(postcss.decl({
+  name: 'border-width',
+  value: '1 0 2 0'
+})); // => { borderTopWidth: 1, ... }
+```
