@@ -2,7 +2,7 @@
   "name": "css-to-react-native",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "build-grammar": "nearleyc src/grammar.ne -o src/grammar.js",
     "build": "npm run build-grammar; babel src --out-dir dist",
