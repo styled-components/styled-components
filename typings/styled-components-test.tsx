@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import styled from "styled-components";
-import { css, keyframes, ThemeProvider } from "styled-components";
+import { css, keyframes, ThemeProvider, injectGlobal} from "styled-components";
 
 // Create a <Title> react component that renders an <h1> which is
 // centered, palevioletred and sized at 1.5em
@@ -85,6 +85,17 @@ const fadeIn = keyframes`
 const theme = {
   main: "mediumseagreen",
 };
+
+injectGlobal`
+  @font-face {
+      font-family: 'Operator Mono';
+      src: url('../fonts/Operator-Mono.ttf');
+    }
+
+    body {
+        margin: 0;
+    }
+`;
 
 class Example extends React.Component<{}, {}> {
   render() {

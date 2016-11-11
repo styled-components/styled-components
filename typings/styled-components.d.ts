@@ -152,6 +152,7 @@ declare module "styled-components" {
 
     export const css: StyledFunction<(string | Function)[]>;
     export const keyframes: StyledFunction<string>;
+    export const injectGlobal: StyledFunction<undefined>;
 
     interface ThemeProps {
       theme: Object;
