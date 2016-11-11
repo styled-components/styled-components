@@ -33,6 +33,18 @@ it('converts to camel-case', () => runTest(`
   background-color: red;
 `, { backgroundColor: 'red' }));
 
+it('transforms background to backgroundColor', () => runTest(`
+  background: #f00;
+`, { backgroundColor: '#f00' }));
+
+it('transforms background to backgroundColor with rgb', () => runTest(`
+  background: rgb(255, 0, 0);
+`, { backgroundColor: 'rgb(255, 0, 0)' }));
+
+it('transforms background to backgroundColor with named colour', () => runTest(`
+  background: red;
+`, { backgroundColor: 'red' }));
+
 it('transforms font weights as strings', () => runTest(`
   font-weight: 400;
 `, { fontWeight: '400' }));
@@ -44,6 +56,10 @@ it('transforms font variant as an array', () => runTest(`
 it('transforms shadow offsets', () => runTest(`
   shadow-offset: 10 5;
 `, { shadowOffset: { width: 10, height: 5 } }));
+
+it('transforms text shadow offsets', () => runTest(`
+  text-shadow-offset: 10 5;
+`, { textShadowOffset: { width: 10, height: 5 } }));
 
 it('transforms a single transform value with number', () => runTest(`
   transform: scaleX(5);
@@ -85,6 +101,10 @@ it('transforms border shorthand', () => runTest(`
   border: 2 dashed #f00;
 `, { borderWidth: 2, borderColor: '#f00', borderStyle: 'dashed' }));
 
+it('transforms border shorthand in other order', () => runTest(`
+  border: #f00 2 dashed;
+`, { borderWidth: 2, borderColor: '#f00', borderStyle: 'dashed' }));
+
 it('transforms border shorthand missing color', () => runTest(`
   border: 2 dashed;
 `, { borderWidth: 2, borderColor: 'black', borderStyle: 'dashed' }));
@@ -96,6 +116,18 @@ it('transforms border shorthand missing style', () => runTest(`
 it('transforms border shorthand missing width', () => runTest(`
   border: #f00 dashed;
 `, { borderWidth: 1, borderColor: '#f00', borderStyle: 'dashed' }));
+
+it('transforms border shorthand missing color & width', () => runTest(`
+  border: dashed;
+`, { borderWidth: 1, borderColor: 'black', borderStyle: 'dashed' }));
+
+it('transforms border shorthand missing style & width', () => runTest(`
+  border: #f00;
+`, { borderWidth: 1, borderColor: '#f00', borderStyle: 'solid' }));
+
+it('transforms border shorthand missing color & style', () => runTest(`
+  border: 2;
+`, { borderWidth: 2, borderColor: 'black', borderStyle: 'solid' }));
 
 it('transforms margin shorthands using 4 values', () => runTest(`
   margin: 1 2 3 4;
@@ -117,3 +149,114 @@ it('shorthand with 1 value should override previous values', () => runTest(`
   margin-top: 2;
   margin: 1;
 `, { marginTop: 1, marginRight: 1, marginBottom: 1, marginLeft: 1 }));
+
+it('transforms flex shorthand with 3 values', () => runTest(`
+  flex: 1 2 3;
+`, { flexGrow: 1, flexShrink: 2, flexBasis: 3 }));
+
+it('transforms flex shorthand with 2 values', () => runTest(`
+  flex: 1 2;
+`, { flexGrow: 1, flexShrink: 2, flexBasis: 0 }));
+
+it('transforms flex shorthand with 1 values', () => runTest(`
+  flex: 1;
+`, { flexGrow: 1, flexShrink: 1, flexBasis: 0 }));
+
+it('transforms flexFlow shorthand with two values', () => runTest(`
+  flex-flow: column wrap;
+`, { flexDirection: 'column', flexWrap: 'wrap' }));
+
+it('transforms flexFlow shorthand missing flexDirection', () => runTest(`
+  flex-flow: wrap;
+`, { flexDirection: 'row', flexWrap: 'wrap' }));
+
+it('transforms flexFlow shorthand missing flexWrap', () => runTest(`
+  flex-flow: column;
+`, { flexDirection: 'column', flexWrap: 'nowrap' }));
+
+it('transforms font', () => runTest(`
+  font: bold italic small-caps 16/18 "Helvetica";
+`, {
+  fontFamily: 'Helvetica',
+  fontSize: 16,
+  fontWeight: 'bold',
+  fontStyle: 'italic',
+  fontVariant: ['small-caps'],
+  lineHeight: 18,
+}));
+
+it('transforms font missing font-variant', () => runTest(`
+  font: bold italic 16/18 "Helvetica";
+`, {
+  fontFamily: 'Helvetica',
+  fontSize: 16,
+  fontWeight: 'bold',
+  fontStyle: 'italic',
+  fontVariant: [],
+  lineHeight: 18,
+}));
+
+it('transforms font missing font-style', () => runTest(`
+  font: bold small-caps 16/18 "Helvetica";
+`, {
+  fontFamily: 'Helvetica',
+  fontSize: 16,
+  fontWeight: 'bold',
+  fontStyle: 'normal',
+  fontVariant: ['small-caps'],
+  lineHeight: 18,
+}));
+
+it('transforms font missing font-weight', () => runTest(`
+  font: italic small-caps 16/18 "Helvetica";
+`, {
+  fontFamily: 'Helvetica',
+  fontSize: 16,
+  fontWeight: 'normal',
+  fontStyle: 'italic',
+  fontVariant: ['small-caps'],
+  lineHeight: 18,
+}));
+
+it('transforms font with font-weight normal', () => runTest(`
+  font: normal 16/18 "Helvetica";
+`, {
+  fontFamily: 'Helvetica',
+  fontSize: 16,
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  fontVariant: [],
+  lineHeight: 18,
+}));
+
+it('transforms font with font-weight and font-style normal', () => runTest(`
+  font: normal normal 16/18 "Helvetica";
+`, {
+  fontFamily: 'Helvetica',
+  fontSize: 16,
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  fontVariant: [],
+  lineHeight: 18,
+}));
+
+it('transforms font with no font-weight, font-style, and font-variant', () => runTest(`
+  font: 16/18 "Helvetica";
+`, {
+  fontFamily: 'Helvetica',
+  fontSize: 16,
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  fontVariant: [],
+  lineHeight: 18,
+}));
+
+it('omits line height if not specified', () => runTest(`
+  font: 16 "Helvetica";
+`, {
+  fontFamily: 'Helvetica',
+  fontSize: 16,
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  fontVariant: [],
+}));

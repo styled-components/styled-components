@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "nearleyc ./grammar.ne -o ./grammar.js",
-    "test": "npm run build; jest"
+    "build-grammar": "nearleyc src/grammar.ne -o src/grammar.js",
+    "build": "npm run build-grammar; babel src --out-dir dist",
+    "test": "npm run build-grammar; jest"
   },
   "repository": {
     "type": "git",
@@ -29,6 +30,7 @@
     "pegjs": "^0.10.0"
   },
   "dependencies": {
+    "css-color-list": "0.0.1",
     "fbjs": "^0.8.5",
     "nearley": "^2.7.7",
     "postcss": "^5.2.5"
