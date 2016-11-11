@@ -1,5 +1,4 @@
 /* eslint-disable no-param-reassign */
-const postcss = require('postcss');
 const nearley = require('nearley');
 const camelizeStyleName = require('fbjs/lib/camelizeStyleName');
 const grammar = require('./grammar');
@@ -42,16 +41,9 @@ export const getStylesForProperty = (propName, inputValue) => {
 
 export const getPropertyName = camelizeStyleName;
 
-const getStylesForDecl = decl =>
-  getStylesForProperty(getPropertyName(decl.prop), decl.value);
-
-export default (css) => {
-  const root = postcss.parse(css);
-
-  const decls = [];
-  root.walkDecls((decl) => { decls.push(decl); });
-
-  const style = decls.reduce((accum, decl) => Object.assign(accum, getStylesForDecl(decl)), {});
-
-  return style;
-};
+export default rules => rules.reduce((accum, rule) => (
+  Object.assign(accum, getStylesForProperty(
+    getPropertyName(rule[0]),
+    rule[1],
+  ))
+), {});

@@ -77,10 +77,11 @@ The API is mostly for implementors. However, the main API may be useful for non-
 import transform from 'css-to-react-native';
 // or const transform = require('css-to-react-native').default;
 
-transform(`
-  font: bold 14/16 "Helvetica";
-  margin: 5 7 2;
-`); // => { fontFamily: 'Helvetica', ... }
+transform([
+  ['font', 'bold 14/16 "Helvetica"'],
+  ['margin', '5 7 2'],
+  ['border-left-width', '5'],
+]); // => { fontFamily: 'Helvetica', ... }
 ```
 
 For implementors, there is also,
