@@ -445,6 +445,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
 - [Hedron](http://github.com/jsbros/hedron): A no-frills flex-box grid system.
 - [uiGradients](http://jsbros.github.io/uigradients): Generate beautful background gradients from the [uigradients.com](http://uigradients.com) database.
+- [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
