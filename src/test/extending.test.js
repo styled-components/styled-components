@@ -53,6 +53,18 @@ describe('extending', () => {
     expectCSSMatches('.a { color: blue;color: red; }')
   })
 
+  it('should add the child class before the parent', () => {
+    const pure = (BaseComponent) => (props) => <BaseComponent {...props} />
+    const Div = styled.div`color: green;`
+    const Parent = pure(styled(Div)`color: blue;`)
+    const Child = styled(Parent)`color: red;`
+
+    const wrapper = shallow(<Child />)
+    wrapper.shallow().shallow()
+
+    expectCSSMatches('.b { color: green;color: blue; } .a { color: red; }')
+  })
+
   it('should generate different classes for both parent and child', () => {
     const Parent = styled.div`color: blue;`
     const Child = styled(Parent)`color: red;`
