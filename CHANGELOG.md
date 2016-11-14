@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- N/A
+- Fixed props that are passed to interpolations in `StyledNativeComponent`. Now, they get `theme` and component props, thanks to [@haikyuu][https://github.com/haikyuu]. (see [#190](https://github.com/styled-components/styled-components/pull/190))
 
 ### Changed
 
