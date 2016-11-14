@@ -54,7 +54,8 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       const { style, children, innerRef } = this.props
       const theme = this.state.theme || this.props.theme || {}
 
-      const generatedStyles = inlineStyle.generateStyleObject({ theme, ...this.props })
+      const executionContext = Object.assign({}, this.props, { theme })
+      const generatedStyles = inlineStyle.generateStyleObject(executionContext)
 
       const propsForElement = Object.assign({}, this.props)
       propsForElement.style = [generatedStyles, style]
