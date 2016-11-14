@@ -43,7 +43,7 @@ class ThemeProvider extends Component {
   }
 
   getChildContext() {
-    return Object.assign({}, this.context, { [CHANNEL]: this.broadcast.subscribe })
+    return { ...this.context, ...{ [CHANNEL]: this.broadcast.subscribe } }
   }
 
   componentWillReceiveProps(nextProps: ThemeProviderProps) {
@@ -69,7 +69,7 @@ class ThemeProvider extends Component {
     if (!isPlainObject(theme)) {
       throw new Error('[ThemeProvider] Please make your theme prop a plain object')
     }
-    return Object.assign({}, this.outerTheme, (theme: Object))
+    return { ...this.outerTheme, ...(theme: Object) }
   }
 
   render() {

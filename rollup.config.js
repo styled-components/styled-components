@@ -55,6 +55,7 @@ const plugins = [
     plugins: [
       'transform-flow-strip-types',
       'external-helpers',
+      'transform-object-rest-spread',
     ],
   }),
   json(),

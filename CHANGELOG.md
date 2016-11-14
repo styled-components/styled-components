@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
-- N/A
+- Converted Object.assign to spread operator, thanks to [@thisguychris][https://github.com/hisguychris]. (see [#196](https://github.com/styled-components/styled-components/pull/201))
 
 ## [v1.0.11] - 2016-11-14
 

@@ -34,7 +34,7 @@ export default (ComponentStyle: Function) => {
       }
 
       generateAndInjectStyles(theme: any, props: any) {
-        const executionContext = Object.assign({}, props, { theme })
+        const executionContext = { ...props, ...{ theme } }
         return componentStyle.generateAndInjectStyles(executionContext)
       }
 
