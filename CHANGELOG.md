@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Test coverage for `injectGlobal`, thanks to [@b_hough](https://github.com/bhough). (see [#36](https://github.com/styled-components/styled-components/issues/36))
 - Added stricter type annotations
+- Use Proxy for short-handed elements
 
 ## [v1.0.10] - 2016-10-28
 
