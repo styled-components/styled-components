@@ -2,7 +2,7 @@
 
 ### Using styled-components with webpack 2
 
-If you're using `styled-components` with webpack 2 and you use the babel-loader you need to turn of `babel-plugin-transform-es2015-modules-commonjs`. You can do this with a configuration object passed to the es2015 or latest preset.
+If you're using `styled-components` with webpack 2 and you use the babel-loader you need to turn off `babel-plugin-transform-es2015-modules-commonjs`. You can do this with a configuration object passed to the es2015 or latest preset.
 
 For `babel-preset-es2015`:
 ```JS
@@ -24,7 +24,7 @@ For `babel-preset-latest`:
   ]
 ```
 
-If you can't do this for whatever reason you have to hint webpack to load the commonjs bundle of `style-components`. You can do this by adding this to you webpack configuration:
+If you can't do this for whatever reason you have to hint webpack to load the commonjs bundle of `style-components`. You can do this by adding this to your webpack configuration:
 
 ```JS
 alias: {
