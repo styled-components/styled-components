@@ -448,8 +448,9 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [`react-boilerplate`](https://github.com/mxstbr/react-boilerplate): A highly scalable, offline-first foundation with the best developer experience and a focus on performance and best practices
 - [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
 - [Hedron](http://github.com/jsbros/hedron): A no-frills flex-box grid system.
-- [uiGradients](http://jsbros.github.io/uigradients): Generate beautful background gradients from the [uigradients.com](http://uigradients.com) database.
+- [uiGradients](http://jsbros.github.io/uigradients): Generate beautiful background gradients from the [uigradients.com](http://uigradients.com) database.
 - [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
+- [react-enhanced-form](https://github.com/xeonys/react-enhanced-form) : The best react form component, on earth 🌍. It makes form inputs easy, finally !
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
