@@ -8,12 +8,22 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- Fixed props that are passed to interpolations in `StyledNativeComponent`. Now, they get `theme` and component props, thanks to [@haikyuu][https://github.com/haikyuu]. (see [#190](https://github.com/styled-components/styled-components/pull/190))
+- N/A
+
+### Changed
+
+- N/A
+
+## [v1.0.11] - 2016-11-14
+
+### Added
+
+- Pass props to interpolated functions in ReactNatvie, thanks to [@haikyuu][https://github.com/haikyuu]. (see [#190](https://github.com/styled-components/styled-components/pull/190))
 
 ### Changed
 
 - Test coverage for `injectGlobal`, thanks to [@b_hough](https://github.com/bhough). (see [#36](https://github.com/styled-components/styled-components/issues/36))
-- Added stricter type annotations
+- Added stricter flow type annotations, thanks to [@relekang](https://github.com/relekang) and [@ryyppy](https://github.com/ryyppy). (see [#148](https://github.com/styled-components/styled-components/pull/148))
 
 ## [v1.0.10] - 2016-10-28
 
@@ -80,7 +90,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.10...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.11...master
+[v1.0.11]: https://github.com/styled-components/styled-components/compare/v1.0.10...v1.0.11
 [v1.0.10]: https://github.com/styled-components/styled-components/compare/v1.0.9...v1.0.10
 [v1.0.9]: https://github.com/styled-components/styled-components/compare/v1.0.8...v1.0.9
 [v1.0.8]: https://github.com/styled-components/styled-components/compare/v1.0.7...v1.0.8
