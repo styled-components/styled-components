@@ -1,14 +1,21 @@
+// @flow
 /**
  * Creates a broadcast that can be listened to, i.e. simple event emitter
  *
  * @see https://github.com/ReactTraining/react-broadcast
  */
-const createBroadcast = (initialValue) => {
+
+export type Broadcast = {
+  publish: (value: mixed) => void,
+  subscribe: (listener: () => void) => () => void
+}
+
+const createBroadcast = (initialValue: mixed): Broadcast => {
   let listeners = []
   let currentValue = initialValue
 
   return {
-    publish(value) {
+    publish(value: mixed) {
       currentValue = value
       listeners.forEach(listener => listener(currentValue))
     },
@@ -18,9 +25,9 @@ const createBroadcast = (initialValue) => {
       // Publish to this subscriber once immediately.
       listener(currentValue)
 
-      // eslint-disable-next-line no-return-assign
-      return () =>
+      return () => {
         listeners = listeners.filter(item => item !== listener)
+      }
     },
   }
 }

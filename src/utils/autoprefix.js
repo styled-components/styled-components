@@ -1,8 +1,13 @@
+// @flow
 import camelizeStyleName from 'fbjs/lib/camelizeStyleName'
 import hyphenateStyleName from 'fbjs/lib/hyphenateStyleName'
-import { autoprefix } from 'glamor/lib/autoprefix'
 
-export default root => {
+// eslint-disable-next-line import/no-duplicates
+import { autoprefix } from 'glamor/lib/autoprefix'
+// eslint-disable-next-line import/no-duplicates
+import typeof { Container } from 'glamor/lib/autoprefix'
+
+export default (root: Container) => {
   root.walkDecls(decl => {
     /* No point even checking custom props */
     if (decl.prop.startsWith('--')) return

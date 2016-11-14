@@ -1,42 +1,41 @@
 // @flow
-import { Component, createElement, PropTypes } from 'react'
+
+import { createElement } from 'react'
 
 import validAttr from '../utils/validAttr'
-import { CHANNEL } from './ThemeProvider'
-
+import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
 
-/* eslint-disable react/prefer-stateless-function */
-class AbstractStyledComponent extends Component {
-  static isPrototypeOf: Function
-  state: any
-}
+import AbstractStyledComponent from './AbstractStyledComponent'
+import { CHANNEL } from './ThemeProvider'
 
-export default (ComponentStyle: any) => {
-  const createStyledComponent = (target: Target, rules: RuleSet, parent?: Target) => {
+export default (ComponentStyle: Function) => {
+  // eslint-disable-next-line no-undef
+  const createStyledComponent = (target: Target, rules: RuleSet, parent?: ReactClass<*>) => {
     /* Handle styled(OtherStyledComponent) differently */
     const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
-    if (isStyledComponent) {
+    if (!isTag(target) && isStyledComponent) {
       return createStyledComponent(target.target, target.rules.concat(rules), target)
     }
 
-    const isTag = typeof target === 'string'
     const componentStyle = new ComponentStyle(rules)
     const ParentComponent = parent || AbstractStyledComponent
 
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
-      state: {
-        theme: any,
-      }
-      unsubscribe: Function
 
       constructor() {
         super()
         this.state = {
-          theme: null,
+          theme: {},
+          generatedClassName: '',
         }
+      }
+
+      generateAndInjectStyles(theme: any, props: any) {
+        const executionContext = Object.assign({}, props, { theme })
+        return componentStyle.generateAndInjectStyles(executionContext)
       }
 
       componentWillMount() {
@@ -47,9 +46,24 @@ export default (ComponentStyle: any) => {
           const subscribe = this.context[CHANNEL]
           this.unsubscribe = subscribe(theme => {
             // This will be called once immediately
-            this.setState({ theme })
+            const generatedClassName = this.generateAndInjectStyles(theme, this.props)
+            this.setState({ theme, generatedClassName })
           })
+        } else {
+          const generatedClassName = this.generateAndInjectStyles(
+            this.props.theme || {},
+            this.props
+          )
+          this.setState({ generatedClassName })
         }
+      }
+
+      componentWillReceiveProps(nextProps: any) {
+        const generatedClassName = this.generateAndInjectStyles(
+          this.state.theme || this.props.theme,
+          nextProps
+        )
+        this.setState({ generatedClassName })
       }
 
       componentWillUnmount() {
@@ -58,17 +72,14 @@ export default (ComponentStyle: any) => {
         }
       }
 
-      /* eslint-disable react/prop-types */
       render() {
         const { className, children, innerRef } = this.props
-        const theme = this.state.theme || this.props.theme || {}
-        const executionContext = Object.assign({}, this.props, { theme })
+        const { generatedClassName } = this.state
 
-        const generatedClassName = componentStyle.generateAndInjectStyles(executionContext)
         const propsForElement = {}
         /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)
-          .filter(propName => !isTag || validAttr(propName))
+          .filter(propName => !isTag(target) || validAttr(propName))
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
@@ -81,14 +92,11 @@ export default (ComponentStyle: any) => {
       }
     }
 
-    /* Used for inheritance */
-    StyledComponent.rules = rules
     StyledComponent.target = target
+    StyledComponent.rules = rules
 
-    StyledComponent.displayName = isTag ? `styled.${target}` : `Styled(${target.displayName})`
-    StyledComponent.contextTypes = {
-      [CHANNEL]: PropTypes.func,
-    }
+    StyledComponent.displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`
+
     return StyledComponent
   }
 

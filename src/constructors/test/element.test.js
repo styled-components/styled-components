@@ -1,3 +1,4 @@
+// @flow
 // import proxyquire from 'proxyquire'
 // import expect from 'expect'
 //

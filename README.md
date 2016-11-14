@@ -10,6 +10,7 @@ npm install --save styled-components
 ```
 
 [![npm](https://img.shields.io/npm/v/styled-components.svg)](https://www.npmjs.com/package/styled-components) [![Travis Build Status](https://travis-ci.org/styled-components/styled-components.svg?branch=master)](https://travis-ci.org/styled-components/styled-components) [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/gruntjs/grunt?branch=master&svg=true)](https://ci.appveyor.com/project/mxstbr/styled-components) [![Supported by Thinkmill](https://thinkmill.github.io/badge/heart.svg)](http://thinkmill.com.au/?utm_source=github&utm_medium=badge&utm_campaign=styled-components)
+[![gitter](https://camo.githubusercontent.com/54dc79dc7da6b76b17bc8013342da9b4266d993c/68747470733a2f2f6261646765732e6769747465722e696d2f6d78737462722f72656163742d626f696c6572706c6174652e737667)](https://gitter.im/styled-components/styled-components)
 
 Utilising [tagged template literals](./docs/tagged-template-literals.md) (a recent addition to JavaScript) and the [power of CSS](./docs/css-we-support.md), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
@@ -401,6 +402,7 @@ See [the documentation](./docs) for more information about using `styled-compone
 - [Using `styled-components` with existing CSS](./docs/existing-css.md): Some edge cases you should be aware of when using `styled-components` with an existing CSS codebase
 - [What CSS we support](./docs/css-we-support.md): What parts & extensions of CSS can you use within a component? *(Spoiler: all of CSS plus even more)*
 - [Theming](./docs/theming.md): How to work with themes
+- [FAQ](./docs/faq.md): Frequently Asked Questions
 
 ## Linting
 
@@ -438,6 +440,12 @@ We could use your help to get syntax highlighting support to other editors! If y
 
 - [`grid-styled`](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
 - [ARc](https://github.com/diegohaz/arc): Atomic React App boilerplate with styled components ([demo](https://diegohaz.github.io/arc))
+- [`react-aria-tooltip`](https://github.com/egoens/react-aria-tooltip): Simple & accessible ReactJS tooltip component
+- [`react-boilerplate`](https://github.com/mxstbr/react-boilerplate): A highly scalable, offline-first foundation with the best developer experience and a focus on performance and best practices
+- [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
+- [Hedron](http://github.com/jsbros/hedron): A no-frills flex-box grid system.
+- [uiGradients](http://jsbros.github.io/uigradients): Generate beautful background gradients from the [uigradients.com](http://uigradients.com) database.
+- [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
