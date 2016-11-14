@@ -49,13 +49,16 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       }
     }
 
+    generateAndInjectStyles(theme: any, props: any) {
+      const executionContext = Object.assign({}, props, { theme })
+      return inlineStyle.generateStyleObject(executionContext)
+    }
     /* eslint-disable react/prop-types */
     render() {
       const { style, children, innerRef } = this.props
       const theme = this.state.theme || this.props.theme || {}
 
-      const executionContext = Object.assign({}, this.props, { theme })
-      const generatedStyles = inlineStyle.generateStyleObject(executionContext)
+      const generatedStyles = this.generateAndInjectStyles(theme, this.props)
 
       const propsForElement = Object.assign({}, this.props)
       propsForElement.style = [generatedStyles, style]
