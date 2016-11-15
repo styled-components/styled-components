@@ -50,7 +50,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     }
 
     generateAndInjectStyles(theme: any, props: any) {
-      const executionContext = { ...props, ...{ theme } }
+      const executionContext = { ...props, theme }
       return inlineStyle.generateStyleObject(executionContext)
     }
     /* eslint-disable react/prop-types */
