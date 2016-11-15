@@ -451,6 +451,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [uiGradients](http://jsbros.github.io/uigradients): Generate beautiful background gradients from the [uigradients.com](http://uigradients.com) database.
 - [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
 - [react-enhanced-form](https://github.com/xeonys/react-enhanced-form) : The best react form component, on earth 🌍. It makes form inputs easy, finally !
+- [react-teleportation](https://github.com/xeonys/react-teleportation) : Teleport your components to the foreground.
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
