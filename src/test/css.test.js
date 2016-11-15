@@ -25,4 +25,21 @@ describe('css features', () => {
     shallow(<Comp />)
     expectCSSMatches('.a-styled-div { --custom-prop: some-val; }')
   })
+
+  it('should add custom displayName as className suffix', () => {
+    const Comp = styled.div``
+    Comp.displayName = 'Comp'
+    shallow(<Comp />)
+    expectCSSMatches('.a-Comp { }')
+   })
+
+   it('should not add custom displayName as className suffix in production', () => {
+     const previousNodeEnv = process.env.NODE_ENV
+     process.env.NODE_ENV = 'production'
+     const Comp = styled.div``
+     Comp.displayName = 'Comp'
+     shallow(<Comp />)
+     expectCSSMatches('.a { }')
+     process.env.NODE_ENV = previousNodeEnv
+    })
 })
