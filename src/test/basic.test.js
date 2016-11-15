@@ -34,21 +34,21 @@ describe('basic', () => {
   it('should generate an empty tag once rendered', () => {
     const Comp = styled.div``
     shallow(<Comp />)
-    expectCSSMatches('.a {  }')
+    expectCSSMatches('.a-styled-div {  }')
   })
 
   /* TODO: we should probably pretty-format the output so this test might have to change */
   it('should pass through all whitespace', () => {
     const Comp = styled.div`   \n   `
     shallow(<Comp />)
-    expectCSSMatches('.a {    \n    }', { skipWhitespace: false })
+    expectCSSMatches('.a-styled-div {    \n    }', { skipWhitespace: false })
   })
 
   it('should inject only once for a styled component, no matter how often it\'s mounted', () => {
     const Comp = styled.div``
     shallow(<Comp />)
     shallow(<Comp />)
-    expectCSSMatches('.a {  }')
+    expectCSSMatches('.a-styled-div {  }')
   })
 
   describe('jsdom tests', () => {

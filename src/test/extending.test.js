@@ -21,7 +21,7 @@ describe('extending', () => {
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.a { }')
+    expectCSSMatches('.a-styled-div { }')
   })
 
   it('should generate a single class if only parent has styles', () => {
@@ -31,7 +31,7 @@ describe('extending', () => {
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.a { color: blue; }')
+    expectCSSMatches('.a-styled-div { color: blue; }')
   })
 
   it('should generate a single class if only child has styles', () => {
@@ -41,7 +41,7 @@ describe('extending', () => {
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.a { color: blue; }')
+    expectCSSMatches('.a-styled-div { color: blue; }')
   })
 
   it('should generate a class for the child with the rules of the parent', () => {
@@ -50,7 +50,7 @@ describe('extending', () => {
 
     shallow(<Child />)
 
-    expectCSSMatches('.a { color: blue;color: red; }')
+    expectCSSMatches('.a-styled-div { color: blue;color: red; }')
   })
 
   it('should generate different classes for both parent and child', () => {
@@ -60,7 +60,7 @@ describe('extending', () => {
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.a { color: blue; } .b { color: blue;color: red; }')
+    expectCSSMatches('.a-styled-div { color: blue; } .b-styled-div { color: blue;color: red; }')
   })
 
   it('should copy nested rules to the child', () => {
@@ -74,10 +74,10 @@ describe('extending', () => {
     shallow(<Child />)
 
     expectCSSMatches(`
-      .a { color: blue; }
-      .a > h1 { font-size: 4rem; }
-      .b { color: blue; color: red; }
-      .b > h1 { font-size: 4rem; }
+      .a-styled-div { color: blue; }
+      .a-styled-div > h1 { font-size: 4rem; }
+      .b-styled-div { color: blue; color: red; }
+      .b-styled-div > h1 { font-size: 4rem; }
     `)
   })
 
@@ -95,8 +95,8 @@ describe('extending', () => {
     shallow(<Child />)
 
     expectCSSMatches(`
-      .a { color: red; }
-      .b { color: red; background-color: green; }
+      .a-styled-div { color: red; }
+      .b-styled-div { color: red; background-color: green; }
     `)
   })
 

@@ -15,7 +15,7 @@ describe('css features', () => {
       transition: opacity 0.3s;
     `
     shallow(<Comp />)
-    expectCSSMatches('.a { -ms-transition: opacity 0.3s; -moz-transition: opacity 0.3s; -webkit-transition: opacity 0.3s; transition: opacity 0.3s; }')
+    expectCSSMatches('.a-styled-div { -ms-transition: opacity 0.3s; -moz-transition: opacity 0.3s; -webkit-transition: opacity 0.3s; transition: opacity 0.3s; }')
   })
 
   it('should pass through custom properties', () => {
@@ -23,6 +23,6 @@ describe('css features', () => {
       --custom-prop: some-val;
     `
     shallow(<Comp />)
-    expectCSSMatches('.a { --custom-prop: some-val; }')
+    expectCSSMatches('.a-styled-div { --custom-prop: some-val; }')
   })
 })
