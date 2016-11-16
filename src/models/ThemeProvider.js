@@ -43,7 +43,7 @@ class ThemeProvider extends Component {
   }
 
   getChildContext() {
-    return { ...this.context, ...{ [CHANNEL]: this.broadcast.subscribe } }
+    return { ...this.context, [CHANNEL]: this.broadcast.subscribe }
   }
 
   componentWillReceiveProps(nextProps: ThemeProviderProps) {
