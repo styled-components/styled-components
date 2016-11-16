@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- N/A
+- Added 💅displayName💅 to HTML class property when in development mode to make debugging in the browser easier.
 
 ### Changed
 

@@ -60,7 +60,7 @@ describe('injectGlobal', () => {
     `
 
     expectCSSMatches(`
-      .a {
+      .a-styled-div {
         ${rule3}
       }
       html {

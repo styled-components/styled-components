@@ -34,7 +34,11 @@ export default (ComponentStyle: Function) => {
       }
 
       generateAndInjectStyles(theme: any, props: any) {
-        const executionContext = Object.assign({}, props, { theme })
+        const executionContext = Object.assign(
+          {},
+          props,
+          { theme, displayName: StyledComponent.displayName }
+        )
         return componentStyle.generateAndInjectStyles(executionContext)
       }
 
@@ -83,7 +87,12 @@ export default (ComponentStyle: Function) => {
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
-        propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
+
+        propsForElement.className = [
+          className,
+          generatedClassName,
+        ]
+         .filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
         }

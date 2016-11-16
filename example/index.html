@@ -20,21 +20,34 @@
       color: palevioletred;
     `;
 
+    const SubTitle = styled.default.h1`
+      font-size: 1.5em;
+      text-align: center;
+      color: palevioletred;
+    `;
+
+    Title.displayName = 'Title';
+    SubTitle.displayName = 'SubTitle';
+
     // Create a <Wrapper> react component that renders a <section> with
     // some padding and a papayawhip background
     const Wrapper = styled.default.section`
       padding: 4em;
       background: papayawhip;
     `;
+
       class Example extends React.Component {
         render() {
           return (
             <Wrapper>
               <Title>Hello World, this is my first styled component!</Title>
+              <SubTitle>Styled components rocks!</SubTitle>
             </Wrapper>
           )
         }
       }
+
+      Wrapper.displayName = '#>*|~StyledWrapper,*+'
 
       ReactDOM.render(
         <Example />,
