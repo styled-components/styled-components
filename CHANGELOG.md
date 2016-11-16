@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
-- N/A
+- Switched to using [inline-style-prefixer](https://github.com/rofrischmann/inline-style-prefixer) for our autoprefixing needs.
 
 ## [v1.0.11] - 2016-11-14
 
