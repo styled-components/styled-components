@@ -5,7 +5,7 @@ import { resetStyled, expectCSSMatches } from './utils'
 
 let styled
 
-describe.only('css features', () => {
+describe('css features', () => {
   beforeEach(() => {
     styled = resetStyled()
   })
@@ -15,7 +15,34 @@ describe.only('css features', () => {
       transition: opacity 0.3s;
     `
     shallow(<Comp />)
-    expectCSSMatches('.a { -ms-transition: opacity 0.3s; -moz-transition: opacity 0.3s; -webkit-transition: opacity 0.3s; transition: opacity 0.3s; }')
+    expectCSSMatches('.a { -webkit-transition: opacity 0.3s; transition: opacity 0.3s; }')
+  })
+
+  it('should add vendor prefixes for display', () => {
+    const Comp = styled.div`
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    `
+    shallow(<Comp />)
+    expectCSSMatches(`
+      .a {
+        display: -webkit-box;
+        display: -moz-box;
+        display: -ms-flexbox;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-direction: normal;
+        -webkit-box-orient: vertical;
+        -ms-flex-direction: column;
+        -webkit-flex-direction: column;
+        flex-direction: column;
+        -webkit-box-align: center;
+        -ms-flex-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+      }
+    `)
   })
 
   it('should handle CSS calc()', () => {
@@ -24,10 +51,10 @@ describe.only('css features', () => {
     `
     shallow(<Comp />)
     expectCSSMatches(`
-      .a { 
+      .a {
+        margin-bottom: -webkit-calc(15px - 0.5rem) !important;
+        margin-bottom: -moz-calc(15px - 0.5rem) !important;
         margin-bottom: calc(15px - 0.5rem) !important;
-        marginBottom:-webkit-calc(15px - 0.5rem) !important;
-        marginBottom:-moz-calc(15px - 0.5rem) !important;
       }
     `)
   })
