@@ -402,6 +402,7 @@ See [the documentation](./docs) for more information about using `styled-compone
 - [Using `styled-components` with existing CSS](./docs/existing-css.md): Some edge cases you should be aware of when using `styled-components` with an existing CSS codebase
 - [What CSS we support](./docs/css-we-support.md): What parts & extensions of CSS can you use within a component? *(Spoiler: all of CSS plus even more)*
 - [Theming](./docs/theming.md): How to work with themes
+- [FAQ](./docs/faq.md): Frequently Asked Questions
 
 ## Linting
 
@@ -413,7 +414,7 @@ See the [`stylelint-processor-styled-components`](https://github.com/styled-comp
 
 ## Syntax highlighting
 
-The one thing you lose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom, and soon Sublime Text.
+The one thing you lose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom, Visual Studio Code, and soon Sublime Text.
 
 This is what it looks like when properly highlighted:
 
@@ -431,6 +432,10 @@ There is an [open PR](https://github.com/babel/babel-sublime/pull/289) by [@gare
 
 As soon as that PR is merged and a new version released, all you'll have to do is install and use `babel-sublime` to highlight your JavaScript files!
 
+### Visual Studio Code
+
+The [vscode-styled-components](https://github.com/styled-components/vscode-styled-components) extension provides syntax highlighting inside your Javascript files. You can install it as usual from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=jpoissonnier.vscode-styled-components).
+
 ### Other Editors
 
 We could use your help to get syntax highlighting support to other editors! If you want to start working on syntax highlighting for your editor, open an issue to let us know.
@@ -440,6 +445,12 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [`grid-styled`](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
 - [ARc](https://github.com/diegohaz/arc): Atomic React App boilerplate with styled components ([demo](https://diegohaz.github.io/arc))
 - [`react-aria-tooltip`](https://github.com/egoens/react-aria-tooltip): Simple & accessible ReactJS tooltip component
+- [`react-boilerplate`](https://github.com/mxstbr/react-boilerplate): A highly scalable, offline-first foundation with the best developer experience and a focus on performance and best practices
+- [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
+- [Hedron](http://github.com/jsbros/hedron): A no-frills flex-box grid system.
+- [uiGradients](http://jsbros.github.io/uigradients): Generate beautiful background gradients from the [uigradients.com](http://uigradients.com) database.
+- [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
+- [react-enhanced-form](https://github.com/xeonys/react-enhanced-form) : The best react form component, on earth 🌍. It makes form inputs easy, finally !
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
