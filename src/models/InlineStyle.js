@@ -13,6 +13,7 @@ const generated = {}
 /* Whitelist of properties that need string values even when they're numbers */
 const propNeedsStrings = {
   'font-weight': true,
+  fontWeight: true,
 }
 
 /*
