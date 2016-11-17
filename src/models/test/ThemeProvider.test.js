@@ -31,7 +31,7 @@ describe('ThemeProvider', () => {
     class Child extends React.Component {
       componentWillMount() {
         this.context[CHANNEL](theme => {
-          expect(theme).toEqual(Object.assign({}, outerTheme, innerTheme))
+          expect(theme).toEqual({ ...outerTheme, ...innerTheme })
           done()
         })
       }
@@ -58,7 +58,7 @@ describe('ThemeProvider', () => {
     class Child extends React.Component {
       componentWillMount() {
         this.context[CHANNEL](theme => {
-          expect(theme).toEqual(Object.assign({}, outerestTheme, outerTheme, innerTheme))
+          expect(theme).toEqual({ ...outerestTheme, ...outerTheme, ...innerTheme })
           done()
         })
       }

@@ -5,6 +5,7 @@
   ],
   "plugins": [
     "add-module-exports",
-    "transform-flow-strip-types"
+    "transform-flow-strip-types",
+    "transform-object-rest-spread"
   ]
 }

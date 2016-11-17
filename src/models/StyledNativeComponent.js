@@ -50,7 +50,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     }
 
     generateAndInjectStyles(theme: any, props: any) {
-      const executionContext = Object.assign({}, props, { theme })
+      const executionContext = { ...props, theme }
       return inlineStyle.generateStyleObject(executionContext)
     }
     /* eslint-disable react/prop-types */
@@ -60,7 +60,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
 
       const generatedStyles = this.generateAndInjectStyles(theme, this.props)
 
-      const propsForElement = Object.assign({}, this.props)
+      const propsForElement = { ...this.props }
       propsForElement.style = [generatedStyles, style]
       if (innerRef) {
         propsForElement.ref = innerRef
