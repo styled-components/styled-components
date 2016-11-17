@@ -12,14 +12,14 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
-- Converted Object.assign to spread operator, thanks to [@thisguychris][https://github.com/hisguychris]. (see [#196](https://github.com/styled-components/styled-components/pull/201))
+- Converted Object.assign to spread operator, thanks to [@thisguychris](https://github.com/thisguychris). (see [#201](https://github.com/styled-components/styled-components/pull/201), fixes [#196](https://github.com/styled-components/styled-components/issues/196))
 - Switched to using [inline-style-prefixer](https://github.com/rofrischmann/inline-style-prefixer) for our autoprefixing needs.
 
 ## [v1.0.11] - 2016-11-14
 
 ### Added
 
-- Pass props to interpolated functions in ReactNatvie, thanks to [@haikyuu][https://github.com/haikyuu]. (see [#190](https://github.com/styled-components/styled-components/pull/190))
+- Pass props to interpolated functions in ReactNatvie, thanks to [@haikyuu](https://github.com/haikyuu). (see [#190](https://github.com/styled-components/styled-components/pull/190))
 
 ### Changed
 
