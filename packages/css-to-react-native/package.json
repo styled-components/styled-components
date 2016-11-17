@@ -6,7 +6,8 @@
   "scripts": {
     "build-grammar": "nearleyc src/grammar.ne -o src/grammar.js",
     "build": "npm run build-grammar; babel src --ignore test.js --out-dir dist",
-    "test": "npm run build-grammar; jest"
+    "test": "npm run build-grammar; jest",
+    "prepublish": "npm run build"
   },
   "repository": {
     "type": "git",
