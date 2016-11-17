@@ -40,6 +40,7 @@
     "buffer": "^5.0.0",
     "fbjs": "^0.8.4",
     "glamor": "^2.15.5",
+    "inline-style-prefixer": "^2.0.4",
     "lodash": "^4.15.0",
     "supports-color": "^3.1.2"
   },
