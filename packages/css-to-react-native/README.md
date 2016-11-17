@@ -92,3 +92,9 @@ import { getPropertyName, getStylesForProperty } from 'css-to-react-native';
 getPropertyName('border-width'); // => 'borderWidth'
 getStylesForProperty('borderWidth', '1 0 2 0'); // => { borderTopWidth: 1, ... }
 ```
+
+## License
+
+Licensed under the MIT License, Copyright © 2016 Jacob Parker and Maximilian Stoiber.
+
+See [LICENSE.md](./LICENSE.md) for more information.
