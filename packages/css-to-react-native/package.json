@@ -25,9 +25,7 @@
     "eslint": "^3.9.1",
     "eslint-config-airbnb-base": "^10.0.1",
     "eslint-plugin-import": "^2.2.0",
-    "jest": "^17.0.0",
-    "nearley": "^2.7.7",
-    "pegjs": "^0.10.0"
+    "jest": "^17.0.0"
   },
   "dependencies": {
     "css-color-list": "0.0.1",
