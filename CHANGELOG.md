@@ -66,9 +66,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
+- Expose API for Server Side rendering: `styleSheet.reset()` and `styleSheet.getCSS()`, thanks to [@thisguychris](https://github.com/thisguychris), (see [#214](https://github.com/styled-components/styled-components/pull/214)) fixes [#124](https://github.com/styled-components/styled-components/issues/124)
 - Added support for deeply nested styles in ReactNative (e.g. `transform`), thanks [@jacobp100](https://github.com/jacobp100). (see [#139](https://github.com/styled-components/styled-components/pull/139))
 - Added support for camelized style properties in ReactNative (e.g. `fontWeight`), thanks [@jacobp100](https://github.com/jacobp100). (see [#145](https://github.com/styled-components/styled-components/pull/145))
 - Properly expose `flow` typings by adding a `flow:build` step and `flow` support docs, thanks to [@ryyppy](https://github.com/ryyppy). (see [#219](https://github.com/styled-components/styled-components/pull/219))
+- Added support for deeply nested styles in ReactNative (e.g. `transform`), thanks [@jacobp100][https://github.com/jacobp100]. (see [#139](https://github.com/styled-components/styled-components/pull/139))
+- Added support for camelized style properties in ReactNative (e.g. `fontWeight`), thanks [@jacobp100][https://github.com/jacobp100]. (see [#145](https://github.com/styled-components/styled-components/pull/145))
 
 ### Changed
 

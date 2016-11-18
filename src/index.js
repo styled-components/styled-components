@@ -4,6 +4,7 @@
 import generateAlphabeticName from './utils/generateAlphabeticName'
 import css from './constructors/css'
 import injectGlobal from './constructors/injectGlobal'
+import styleSheet from './models/StyleSheet'
 
 /* Import singleton constructors */
 import _styledComponent from './models/StyledComponent'
@@ -23,4 +24,4 @@ const styled = _styled(_styledComponent(_ComponentStyle(generateAlphabeticName))
 
 /* Export everything */
 export default styled
-export { css, keyframes, injectGlobal, ThemeProvider, withTheme }
+export { css, keyframes, injectGlobal, ThemeProvider, withTheme, styleSheet }

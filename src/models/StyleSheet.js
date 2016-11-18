@@ -5,4 +5,13 @@
 
 import { StyleSheet } from '../vendor/glamor/sheet'
 
-export default new StyleSheet({ speedy: false, maxLength: 40 })
+class StyleSheetExtended extends StyleSheet {
+  reset() {
+    return super.flush()
+  }
+  getCSS() {
+    return super.rules().map(rule => rule.cssText).join('\n')
+  }
+}
+
+export default new StyleSheetExtended({ speedy: false, maxLength: 40 })
