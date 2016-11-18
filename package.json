@@ -42,6 +42,7 @@
     "glamor": "^2.15.5",
     "inline-style-prefixer": "^2.0.4",
     "lodash": "^4.15.0",
+    "postcss-transform-animations": "^1.0.1",
     "supports-color": "^3.1.2"
   },
   "devDependencies": {

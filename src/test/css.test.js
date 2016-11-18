@@ -66,4 +66,27 @@ describe('css features', () => {
     shallow(<Comp />)
     expectCSSMatches('.a { --custom-prop: some-val; }')
   })
+
+  it('should scope keyframes', () => {
+    const Comp = styled.div`
+      animation: 1s fade-in-out infinite;
+
+      @keyframes fade-in-out {
+        0%, 100% { opacity: 0; }
+        50% { opacity: 1; }
+      }
+    `
+    shallow(<Comp />)
+    expectCSSMatches(`
+      .a {
+        -webkit-animation: 1s a-fade-in-out infinite;
+        animation: 1s a-fade-in-out infinite
+      }
+
+      @keyframes a-fade-in-out {
+        0%, 100% { opacity: 0 }
+        50% { opacity: 1 }
+      }
+    `)
+  })
 })

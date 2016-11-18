@@ -1,12 +1,20 @@
 // @flow
 import hashStr from 'glamor/lib/hash'
 
+import { transformAnimationNames } from 'postcss-transform-animations'
 import type { RuleSet, NameGenerator } from '../types'
 import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
 import postcssNested from '../vendor/postcss-nested'
 import autoprefix from '../utils/autoprefix'
 import styleSheet from './StyleSheet'
+
+const unnestKeyframes = root => root.first.each(node => {
+  if (node.type === 'atrule' && /keyframes$/.test(node.name)) {
+    root.append(node)
+    node.remove()
+  }
+})
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
@@ -39,6 +47,10 @@ export default (nameGenerator: NameGenerator) => {
         const selector = nameGenerator(hash)
         inserted[hash] = selector
         const root = parse(`.${selector} { ${flatCSS} }`)
+        unnestKeyframes(root)
+        transformAnimationNames({
+          transform: value => `${selector}-${value}`,
+        }, root)
         postcssNested(root)
         autoprefix(root)
         this.insertedRule.appendRule(root.toResult().css)
