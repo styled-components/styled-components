@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- N/A
+- Properly expose `flow` typings by adding a `flow:build` step and `flow` support docs, thanks to @ryyppy. (see #219, fixes #177 & #151)
 
 ### Changed
 
