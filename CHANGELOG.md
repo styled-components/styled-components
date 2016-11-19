@@ -20,7 +20,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- Pass props to interpolated functions in ReactNatvie, thanks to [@haikyuu](https://github.com/haikyuu). (see [#190](https://github.com/styled-components/styled-components/pull/190))
+- Pass props to interpolated functions in React Native, thanks to [@haikyuu](https://github.com/haikyuu). (see [#190](https://github.com/styled-components/styled-components/pull/190))
 
 ### Changed
 
