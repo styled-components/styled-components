@@ -397,6 +397,7 @@ See [the documentation](./docs) for more information about using `styled-compone
 ### Table of Contents
 
 - [API Reference](./docs/api.md)
+- [Flow Support](./docs/flow-support.md)
 - [Tips and Tricks](./docs/tips-and-tricks.md)
 - [Tagged Template Literals](./docs/tagged-template-literals.md): How do they work?
 - [Using `styled-components` with existing CSS](./docs/existing-css.md): Some edge cases you should be aware of when using `styled-components` with an existing CSS codebase

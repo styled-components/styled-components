@@ -6,9 +6,10 @@
   "jsnext:main": "dist/styled-components.es.js",
   "module": "dist/styled-components.es.js",
   "scripts": {
-    "build": "npm run build:lib && npm run build:dist",
+    "build": "npm run build:lib && npm run build:dist && npm run build:flow",
     "prebuild:lib": "rm -rf lib/*",
     "build:lib": "babel --out-dir lib src",
+    "build:flow": "find ./src -name '*.js' -not -path '*/test*' | while read filepath; do cp $filepath `echo $filepath | sed 's/\\/src\\//\\/lib\\//g'`.flow; done",
     "prebuild:umd": "rm -rf dist/*",
     "prebuild:dist": "rm -rf dist/*",
     "build:dist": "rollup -c && rollup -c --environment PRODUCTION",

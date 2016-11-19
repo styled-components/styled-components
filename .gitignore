@@ -1,5 +1,5 @@
 node_modules
 lib
-npm-debug.log
+npm-debug.log.*
 dist
 .DS_Store

@@ -1,10 +1,13 @@
 [ignore]
 .*/node_modules/flow-remove-types/.*
 .*/node_modules/rollup-plugin-flow/.*
+.*/dist/.*
+.*/lib/.*
 
 [include]
 
 [libs]
+flow-typed
 
 [options]
 suppress_comment=.*\\$FlowIssue
