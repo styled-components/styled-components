@@ -57,12 +57,14 @@ describe('basic', () => {
     it('should pass ref to the component', () => {
       const Comp = styled.div``
       const WrapperComp = class extends Component {
+        testRef: any;
         render() {
           return <Comp innerRef={(comp) => { this.testRef = comp }} />
         }
       }
 
       const wrapper = mount(<WrapperComp />)
+      // $FlowIssue
       expect(wrapper.node.testRef).toExist()
     })
   })

@@ -8,7 +8,7 @@ import ThemeProvider, { CHANNEL } from '../ThemeProvider'
 describe('ThemeProvider', () => {
   it('should not throw an error when no children are passed', () => {
     const result = shallow(<ThemeProvider theme={{}} />)
-    expect(result.node).toEqual(null)
+    expect(result.html()).toEqual(null)
   })
 
   it('should accept a theme prop that\'s a plain object', () => {
