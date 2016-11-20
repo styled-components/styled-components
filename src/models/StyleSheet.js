@@ -3,15 +3,27 @@
 /* Wraps glamor's stylesheet and exports a singleton for the rest
 *  of the app to use. */
 
-import { StyleSheet } from '../vendor/glamor/sheet'
+import { StyleSheet as GlamorStyle } from '../vendor/glamor/sheet'
 
-class StyleSheetExtended extends StyleSheet {
-  reset() {
-    return super.flush()
+class StyleSheet {
+  constructor() {
+    this.styleSheet = new GlamorStyle({ speedy: false, maxLength: 40 })
   }
-  getCSS({ min = true }) {
-    return super.rules().map(rule => rule.cssText).join(min ? '' : '\n')
+  get injected() {
+    return this.styleSheet.injected
+  }
+  inject() {
+    return this.styleSheet.inject()
+  }
+  insert(css) {
+    return this.styleSheet.insert(css)
+  }
+  reset() {
+    if (this.styleSheet.sheet) this.styleSheet.flush()
+  }
+  getCSS({ min = true } = {}) {
+    return this.styleSheet.rules().map(rule => rule.cssText).join(min ? '' : '\n')
   }
 }
 
-export default new StyleSheetExtended({ speedy: false, maxLength: 40 })
+export default new StyleSheet()
