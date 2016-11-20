@@ -290,6 +290,17 @@ class MyReactNativeComponent extends React.Component {
 }
 ```
 
+We also support more complex styles (like `transform`), which would normally be an array, and shorthands (e.g. for `margin`) thanks to [`css-to-react-native`](https://github.com/styled-components/css-to-react-native)! Imagine how you'd write the property in ReactNative, guess how you'd transfer it to CSS and you're probably right:
+
+```JS
+const RotatedBox = styled.View`
+  transform: rotate(90deg);
+  text-shadow-offset: 10 5;
+  font-variant: small-caps;
+  margin: 5 7 2;
+`
+```
+
 > You cannot use the `keyframes` and `injectGlobal` helpers since ReactNative doesn't support keyframes or global styles. We will also log a warning if you use media queries or nesting in your CSS.
 
 ### Theming
