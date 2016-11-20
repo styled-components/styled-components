@@ -8,11 +8,18 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- Properly expose `flow` typings by adding a `flow:build` step and `flow` support docs, thanks to @ryyppy. (see #219, fixes #177 & #151)
+- Added support for deeply nested styles in ReactNative (e.g. `transform`), thanks [@jacobp100][https://github.com/jacobp100]. (see [#139](https://github.com/styled-components/styled-components/pull/139))
+- Added support for camelized style properties in ReactNative (e.g. `fontWeight`), thanks [@jacobp100][https://github.com/jacobp100]. (see [#145](https://github.com/styled-components/styled-components/pull/145))
 
 ### Changed
 
-- Converted Object.assign to spread operator, thanks to [@thisguychris](https://github.com/thisguychris). (see [#201](https://github.com/styled-components/styled-components/pull/201), fixes [#196](https://github.com/styled-components/styled-components/issues/196))
+- Converted Object.assign to spread operator, thanks to [@thisguychris][https://github.comt/thisguychris]. (see [#201](https://github.com/styled-components/styled-components/pull/201))
+- Properly expose `flow` typings by adding a `flow:build` step and `flow` support docs, thanks to [@ryyppy](https://github.com/ryyppy). (see [#219](https://github.com/styled-components/styled-components/pull/219))
+
+### Changed
+
+- Converted Object.assign to spread operator, thanks to [@thisguychris](https://github.com/thisguychris). (see [#201](https://github.com/styled-components/styled-components/pull/201))
+>>>>>>> master
 - Switched to using [inline-style-prefixer](https://github.com/rofrischmann/inline-style-prefixer) for our autoprefixing needs.
 - Switched to using regex instead of startsWith for IE10 compat, thanks to [@thisguychris](https://github.com/thisguychris). (see [#217](https://github.com/styled-components/styled-components/pull/217), fixes [#212](https://github.com/styled-components/styled-components/issues/212)
 
