@@ -2,8 +2,9 @@ language: node_js
 sudo: true
 dist: trusty
 node_js:
-  - "4.0"
-  - "6.0"
+  - "4"
+  - "6"
+  - "7"
 before_install:
   - 'echo ''gem: --no-ri --no-rdoc'' > ~/.gemrc'
 install:
@@ -20,3 +21,7 @@ script:
 notifications:
   email:
     on_failure: change
+cache:
+  bundler: true
+  directories:
+    - node_modules
