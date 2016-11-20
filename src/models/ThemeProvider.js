@@ -9,8 +9,10 @@ import type { Broadcast } from '../utils/create-broadcast'
 export const CHANNEL = '__styled-components__'
 
 type Theme = {[key: string]: mixed};
+// $FlowIssue
 type ThemeProviderProps = {|
   children: any,
+  // $FlowIssue
   theme: (outherTheme: Theme) => void | Theme,
 |};
 
