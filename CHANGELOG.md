@@ -14,13 +14,20 @@ All notable changes to this project will be documented in this file. If a contri
 ### Changed
 
 - Converted Object.assign to spread operator, thanks to [@thisguychris][https://github.comt/thisguychris]. (see [#201](https://github.com/styled-components/styled-components/pull/201))
+- Properly expose `flow` typings by adding a `flow:build` step and `flow` support docs, thanks to [@ryyppy](https://github.com/ryyppy). (see [#219](https://github.com/styled-components/styled-components/pull/219))
+
+### Changed
+
+- Converted Object.assign to spread operator, thanks to [@thisguychris](https://github.com/thisguychris). (see [#201](https://github.com/styled-components/styled-components/pull/201))
+>>>>>>> master
 - Switched to using [inline-style-prefixer](https://github.com/rofrischmann/inline-style-prefixer) for our autoprefixing needs.
+- Switched to using regex instead of startsWith for IE10 compat, thanks to [@thisguychris](https://github.com/thisguychris). (see [#217](https://github.com/styled-components/styled-components/pull/217), fixes [#212](https://github.com/styled-components/styled-components/issues/212)
 
 ## [v1.0.11] - 2016-11-14
 
 ### Added
 
-- Pass props to interpolated functions in ReactNatvie, thanks to [@haikyuu][https://github.com/haikyuu]. (see [#190](https://github.com/styled-components/styled-components/pull/190))
+- Pass props to interpolated functions in React Native, thanks to [@haikyuu](https://github.com/haikyuu). (see [#190](https://github.com/styled-components/styled-components/pull/190))
 
 ### Changed
 
