@@ -10,9 +10,7 @@ skip_tags: true
 environment:
   matrix:
     # Node versions to run
-    - nodejs_version: "4"
     - nodejs_version: "6"
-    - nodejs_version: "7"
 
 # Fix line endings in Windows. (runs before repo cloning)
 init:
