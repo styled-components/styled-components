@@ -9,8 +9,8 @@ class StyleSheetExtended extends StyleSheet {
   reset() {
     return super.flush()
   }
-  getCSS() {
-    return super.rules().map(rule => rule.cssText).join('\n')
+  getCSS({ min = true }) {
+    return super.rules().map(rule => rule.cssText).join(min ? '' : '\n')
   }
 }
 
