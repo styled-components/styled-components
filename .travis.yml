@@ -20,3 +20,8 @@ script:
 notifications:
   email:
     on_failure: change
+cache:
+  bundler: true
+  directories:
+    - node_modules
+  
