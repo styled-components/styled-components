@@ -44,7 +44,7 @@ describe('styleSheet', () => {
 
     it('should list all css in all Components', () => {
       createStyledComponents();
-      const css = styleSheet.getCSS({});
+      const css = styleSheet.getCSS();
       expect(stripWhitespace(css)).toEqual('.a { width: 100%; }.b { text-decoration: none; }')
     })
 
@@ -55,7 +55,7 @@ describe('styleSheet', () => {
           ${rule3}
         }
       `
-      const css = styleSheet.getCSS({});
+      const css = styleSheet.getCSS();
       expect(stripWhitespace(css)).toEqual('.a { width: 100%; }.b { text-decoration: none; } html { color: blue; }')
     })
 
