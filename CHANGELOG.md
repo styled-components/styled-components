@@ -8,15 +8,15 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- Added support for deeply nested styles in ReactNative (e.g. `transform`), thanks [@jacobp100][https://github.com/jacobp100]. (see [#139](https://github.com/styled-components/styled-components/pull/139))
-- Added support for camelized style properties in ReactNative (e.g. `fontWeight`), thanks [@jacobp100][https://github.com/jacobp100]. (see [#145](https://github.com/styled-components/styled-components/pull/145))
+- Added support for deeply nested styles in ReactNative (e.g. `transform`), thanks [@jacobp100](https://github.com/jacobp100). (see [#139](https://github.com/styled-components/styled-components/pull/139))
+- Added support for camelized style properties in ReactNative (e.g. `fontWeight`), thanks [@jacobp100](https://github.com/jacobp100). (see [#145](https://github.com/styled-components/styled-components/pull/145))
+- Properly expose `flow` typings by adding a `flow:build` step and `flow` support docs, thanks to [@ryyppy](https://github.com/ryyppy). (see [#219](https://github.com/styled-components/styled-components/pull/219))
 
 ### Changed
 
-- Converted Object.assign to spread operator, thanks to [@thisguychris][https://github.com/thisguychris]. (see [#201](https://github.com/styled-components/styled-components/pull/201))
+- Converted Object.assign to spread operator, thanks to [@thisguychris](https://github.com/thisguychris). (see [#201](https://github.com/styled-components/styled-components/pull/201))
 - Switched to using [inline-style-prefixer](https://github.com/rofrischmann/inline-style-prefixer) for our autoprefixing needs.
 - Fixed IE10 compatibility, thanks to [@thisguychris](https://github.com/thisguychris). (see [#217](https://github.com/styled-components/styled-components/pull/217))
-- Properly expose `flow` typings by adding a `flow:build` step and `flow` support docs, thanks to [@ryyppy](https://github.com/ryyppy). (see [#219](https://github.com/styled-components/styled-components/pull/219))
 
 ## [v1.0.11] - 2016-11-14
 
@@ -33,13 +33,13 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
-- Huge performance improvement by injecting styles outside of `render`, thanks to [@JamieDixon][https://github.com/JamieDixon]. (see [#137](https://github.com/styled-components/styled-components/pull/137))
+- Huge performance improvement by injecting styles outside of `render`, thanks to [@JamieDixon](https://github.com/JamieDixon). (see [#137](https://github.com/styled-components/styled-components/pull/137))
 
 ## [v1.0.9] - 2016-10-26
 
 ### Added
 
-- Added ability to get ref to the inner (DOM) node of the styled component via `innerRef` prop, thanks to [@freiksenet][https://github.com/freiksenet]. (see [#122](https://github.com/styled-components/styled-components/pull/122))
+- Added ability to get ref to the inner (DOM) node of the styled component via `innerRef` prop, thanks to [@freiksenet](https://github.com/freiksenet). (see [#122](https://github.com/styled-components/styled-components/pull/122))
 - Section in docs about the new `stylelint` support with [`stylelint-processor-styled-components`](https://github.com/styled-components/stylelint-processor-styled-components)
 
 ### Changed
