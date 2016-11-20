@@ -1,3 +1,4 @@
+// @flow
 import React, { Component } from 'react'
 import expect from 'expect'
 import { shallow, mount } from 'enzyme'
