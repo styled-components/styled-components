@@ -1,5 +1,4 @@
 language: node_js
-sudo: true
 dist: trusty
 node_js:
   - "4"
