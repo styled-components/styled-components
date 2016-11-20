@@ -8,11 +8,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- N/A
+- Added support for deeply nested styles in ReactNative (e.g. `transform`), thanks [@jacobp100][https://github.com/jacobp100]. (see [#139](https://github.com/styled-components/styled-components/pull/139))
+- Added support for camelized style properties in ReactNative (e.g. `fontWeight`), thanks [@jacobp100][https://github.com/jacobp100]. (see [#145](https://github.com/styled-components/styled-components/pull/145))
 
 ### Changed
 
-- Converted Object.assign to spread operator, thanks to [@thisguychris][https://github.com/hisguychris]. (see [#196](https://github.com/styled-components/styled-components/pull/201))
+- Converted Object.assign to spread operator, thanks to [@thisguychris][https://github.comt/thisguychris]. (see [#201](https://github.com/styled-components/styled-components/pull/201))
 - Switched to using [inline-style-prefixer](https://github.com/rofrischmann/inline-style-prefixer) for our autoprefixing needs.
 
 ## [v1.0.11] - 2016-11-14
