@@ -6,12 +6,14 @@ describe('flatten', () => {
     expect(flatten(['foo', 'bar', 'baz'])).toEqual(['foo', 'bar', 'baz'])
   })
   it('drops nulls', () => {
+    // $FlowInvalidInputTest
     expect(flatten(['foo', false, 'bar', undefined, 'baz', null])).toEqual(['foo', 'bar', 'baz'])
   })
   it('doesnt drop any numbers', () => {
     expect(flatten(['foo', 0, 'bar', NaN, 'baz', -1])).toEqual(['foo', '0', 'bar', 'NaN', 'baz', '-1'])
   })
   it('toStrings everything', () => {
+    // $FlowInvalidInputTest
     expect(flatten([1, true])).toEqual(['1', 'true'])
   })
   it('hypenates objects', () => {
