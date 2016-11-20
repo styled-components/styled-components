@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. If a contri
 ## [Unreleased]
 
 ### Added
+- Add `// @flow` to files missing them and fix ThemeProvider types, [@relekang](https://github.com/relekang). (see [#225](https://github.com/styled-components/styled-components/pull/225)
 
 ### Changed
 
