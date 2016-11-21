@@ -102,12 +102,13 @@ export default (ComponentStyle: Function) => {
     }
 
     let displayName = isTag ? `styled.${target}` : `Styled(${target.displayName})`
-    const generateIdentifierFromDisplayName = () => {
+    const generateIdentifierFromDisplayName = (hashOnly: boolean) => {
       const nr = (identifiers[displayName] || 0) + 1
       identifiers[displayName] = nr
-      StyledComponent.identifier = safeDisplayName(`${displayName}-${nr}`)
+      const hash = componentStyle.generateName(displayName + nr)
+      StyledComponent.identifier = hashOnly ? hash : safeDisplayName(`${displayName}-${hash}`)
     }
-    generateIdentifierFromDisplayName()
+    generateIdentifierFromDisplayName(true)
 
     Object.defineProperty(StyledComponent, 'displayName', {
       get() {
@@ -116,7 +117,7 @@ export default (ComponentStyle: Function) => {
       set(newName) {
         console.log('SETTING DISPLAY NAME')
         displayName = newName
-        generateIdentifierFromDisplayName()
+        generateIdentifierFromDisplayName(false)
       },
       enumerable: true,
     })

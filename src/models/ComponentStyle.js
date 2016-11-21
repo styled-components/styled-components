@@ -25,6 +25,10 @@ export default (nameGenerator: NameGenerator) => {
       this.insertedRule = styleSheet.insert('')
     }
 
+    generateName(str: string) {
+      return nameGenerator(hashStr(str))
+    }
+
     /*
      * Flattens a rule set into valid CSS
      * Hashes it, wraps the whole chunk in a ._hashName {}
