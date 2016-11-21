@@ -1162,9 +1162,9 @@ css-select@~1.2.0:
     domutils "1.5.1"
     nth-check "~1.0.1"
 
-css-to-react-native@^1.0.0:
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/css-to-react-native/-/css-to-react-native-1.0.2.tgz#0e3d63fa4965895d5fa96c641cb16eb60ed23ab3"
+css-to-react-native@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/css-to-react-native/-/css-to-react-native-1.0.3.tgz#17bd12d334e76023bf3d52fdc093549179f03bee"
   dependencies:
     css-color-list "0.0.1"
     fbjs "^0.8.5"
