@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+## [v1.1.1]
+
+### Changed
+
+- Bumped `css-to-react-native` to `v1.0.3` to avoid floating points number bug.
+
 ## [v1.1.0]
 
 ### Added
@@ -100,7 +106,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.1.0...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.1.1...master
+[v1.1.1]: https://github.com/styled-components/styled-components/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/styled-components/styled-components/compare/v1.0.11...v1.1.0
 [v1.0.11]: https://github.com/styled-components/styled-components/compare/v1.0.10...v1.0.11
 [v1.0.10]: https://github.com/styled-components/styled-components/compare/v1.0.9...v1.0.10
