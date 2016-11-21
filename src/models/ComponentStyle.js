@@ -22,7 +22,6 @@ export default (nameGenerator: NameGenerator) => {
     constructor(rules: RuleSet) {
       this.rules = rules
       if (!styleSheet.injected) styleSheet.inject()
-      this.insertedRule = styleSheet.insert('')
     }
 
     generateName(str: string) {
@@ -36,6 +35,7 @@ export default (nameGenerator: NameGenerator) => {
      * Returns the hash to be injected on render()
      * */
     generateAndInjectStyles(executionContext: Object, identifier: string) {
+      if (!this.insertedRule) this.insertedRule = styleSheet.insert(`.${identifier} {}`)
       const flatCSS = flatten(this.rules, executionContext).join('')
         .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
       const hash = hashStr(identifier + flatCSS)
