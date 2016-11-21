@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "main": "lib/index.js",
   "jsnext:main": "dist/styled-components.es.js",
@@ -39,7 +39,7 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "buffer": "^5.0.0",
-    "css-to-react-native": "^1.0.0",
+    "css-to-react-native": "^1.0.3",
     "fbjs": "^0.8.4",
     "glamor": "^2.15.5",
     "inline-style-prefixer": "^2.0.4",
