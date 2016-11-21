@@ -8,6 +8,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
+### Changed
+
+## [v1.1.0]
+
+### Added
+
 - Added support for deeply nested styles in ReactNative (e.g. `transform`), thanks [@jacobp100](https://github.com/jacobp100). (see [#139](https://github.com/styled-components/styled-components/pull/139))
 - Added support for camelized style properties in ReactNative (e.g. `fontWeight`), thanks [@jacobp100](https://github.com/jacobp100). (see [#145](https://github.com/styled-components/styled-components/pull/145))
 - Properly expose `flow` typings by adding a `flow:build` step and `flow` support docs, thanks to [@ryyppy](https://github.com/ryyppy). (see [#219](https://github.com/styled-components/styled-components/pull/219))
@@ -94,7 +100,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.11...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.1.0...master
+[v1.1.0]: https://github.com/styled-components/styled-components/compare/v1.0.11...v1.1.0
 [v1.0.11]: https://github.com/styled-components/styled-components/compare/v1.0.10...v1.0.11
 [v1.0.10]: https://github.com/styled-components/styled-components/compare/v1.0.9...v1.0.10
 [v1.0.9]: https://github.com/styled-components/styled-components/compare/v1.0.8...v1.0.9
