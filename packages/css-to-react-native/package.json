@@ -1,6 +1,6 @@
 {
   "name": "css-to-react-native",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Convert CSS text to a React Native stylesheet object",
   "main": "dist/index.js",
   "scripts": {
@@ -13,7 +13,13 @@
     "type": "git",
     "url": "git+https://github.com/styled-components/css-to-react-native.git"
   },
-  "keywords": ["styled-components", "React", "ReactNative", "styles", "CSS"],
+  "keywords": [
+    "styled-components",
+    "React",
+    "ReactNative",
+    "styles",
+    "CSS"
+  ],
   "author": "Jacob Parker",
   "license": "MIT",
   "bugs": {
