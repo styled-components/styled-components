@@ -31,10 +31,10 @@ export default (nameGenerator: NameGenerator) => {
      * Parses that with PostCSS then runs PostCSS-Nested on it
      * Returns the hash to be injected on render()
      * */
-    generateAndInjectStyles(executionContext: Object) {
+    generateAndInjectStyles(executionContext: Object, identifier: string) {
       const flatCSS = flatten(this.rules, executionContext).join('')
         .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
-      const hash = hashStr(flatCSS)
+      const hash = hashStr(identifier + flatCSS)
       if (!inserted[hash]) {
         const selector = nameGenerator(hash)
         inserted[hash] = selector

@@ -9,6 +9,14 @@ import type { RuleSet, Target } from '../types'
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
 
+/* We depend on components having unique IDs */
+const identifiers = {}
+const safeDisplayName = (displayName: string) => (
+  displayName
+    .replace(/[[\].#*$><+~=|^:(),"'`]/g, '-') // Replace all possible CSS selectors
+    .replace(/--+/g, '-') // Replace multiple -- with single -
+)
+
 export default (ComponentStyle: Function) => {
   // eslint-disable-next-line no-undef
   const createStyledComponent = (target: Target, rules: RuleSet, parent?: ReactClass<*>) => {
@@ -24,6 +32,7 @@ export default (ComponentStyle: Function) => {
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
+      static identifier: string
 
       constructor() {
         super()
@@ -35,7 +44,7 @@ export default (ComponentStyle: Function) => {
 
       generateAndInjectStyles(theme: any, props: any) {
         const executionContext = { ...props, theme }
-        return componentStyle.generateAndInjectStyles(executionContext)
+        return componentStyle.generateAndInjectStyles(executionContext, StyledComponent.identifier)
       }
 
       componentWillMount() {
@@ -83,7 +92,7 @@ export default (ComponentStyle: Function) => {
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
-        propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
+        propsForElement.className = [className, StyledComponent.identifier, generatedClassName].filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
         }
@@ -92,10 +101,27 @@ export default (ComponentStyle: Function) => {
       }
     }
 
+    let displayName = isTag ? `styled.${target}` : `Styled(${target.displayName})`
+    const generateIdentifierFromDisplayName = () => {
+      const nr = (identifiers[displayName] || 0) + 1
+      identifiers[displayName] = nr
+      StyledComponent.identifier = safeDisplayName(`${displayName}-${nr}`)
+    }
+    generateIdentifierFromDisplayName()
+
+    Object.defineProperty(StyledComponent, 'displayName', {
+      get() {
+        return displayName
+      },
+      set(newName) {
+        console.log('SETTING DISPLAY NAME')
+        displayName = newName
+        generateIdentifierFromDisplayName()
+      },
+      enumerable: true,
+    })
     StyledComponent.target = target
     StyledComponent.rules = rules
-
-    StyledComponent.displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`
 
     return StyledComponent
   }
