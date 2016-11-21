@@ -26,6 +26,15 @@ it('allows decimal values in transformed values', () => runTest([
   borderBottomLeftRadius: 1.5,
 }));
 
+it('allows negative values in transformed values', () => runTest([
+  ['border-radius', '-1.5'],
+], {
+  borderTopLeftRadius: -1.5,
+  borderTopRightRadius: -1.5,
+  borderBottomRightRadius: -1.5,
+  borderBottomLeftRadius: -1.5,
+}));
+
 it('transforms strings', () => runTest([
   ['color', 'red'],
 ], { color: 'red' }));

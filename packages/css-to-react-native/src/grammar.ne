@@ -50,9 +50,7 @@
 %}
 
 number
-  -> ([0-9]:? "." [0-9]:+) {% d => Number(text(d)) %}
-   | ([1-9] [0-9]:*) {% d => Number(text(d)) %}
-   | "0" {% d => Number(text(d)) %}
+  -> "-":? ([0-9]:? "." [0-9]:+ | [1-9] [0-9]:* | "0") {% d => Number(text(d)) %}
 
 angle -> number ("deg" | "rad") {% text %}
 
