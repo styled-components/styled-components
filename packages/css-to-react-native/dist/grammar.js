@@ -93,9 +93,15 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
     return [_defineProperty({}, fn + 'X', arg1[0]), _defineProperty({}, fn + 'Y', arg2[0])];
   };
   var grammar = {
-    ParserRules: [{ "name": "number$subexpression$1$ebnf$1", "symbols": [/[0-9]/] }, { "name": "number$subexpression$1$ebnf$1", "symbols": [/[0-9]/, "number$subexpression$1$ebnf$1"], "postprocess": function arrconcat(d) {
+    ParserRules: [{ "name": "number$ebnf$1", "symbols": [{ "literal": "-" }], "postprocess": id }, { "name": "number$ebnf$1", "symbols": [], "postprocess": function postprocess(d) {
+        return null;
+      } }, { "name": "number$subexpression$1$ebnf$1", "symbols": [/[0-9]/], "postprocess": id }, { "name": "number$subexpression$1$ebnf$1", "symbols": [], "postprocess": function postprocess(d) {
+        return null;
+      } }, { "name": "number$subexpression$1$ebnf$2", "symbols": [/[0-9]/] }, { "name": "number$subexpression$1$ebnf$2", "symbols": [/[0-9]/, "number$subexpression$1$ebnf$2"], "postprocess": function arrconcat(d) {
         return [d[0]].concat(d[1]);
-      } }, { "name": "number$subexpression$1", "symbols": ["number$subexpression$1$ebnf$1"] }, { "name": "number", "symbols": ["number$subexpression$1"], "postprocess": function postprocess(d) {
+      } }, { "name": "number$subexpression$1", "symbols": ["number$subexpression$1$ebnf$1", { "literal": "." }, "number$subexpression$1$ebnf$2"] }, { "name": "number$subexpression$1$ebnf$3", "symbols": [] }, { "name": "number$subexpression$1$ebnf$3", "symbols": [/[0-9]/, "number$subexpression$1$ebnf$3"], "postprocess": function arrconcat(d) {
+        return [d[0]].concat(d[1]);
+      } }, { "name": "number$subexpression$1", "symbols": [/[1-9]/, "number$subexpression$1$ebnf$3"] }, { "name": "number$subexpression$1", "symbols": [{ "literal": "0" }] }, { "name": "number", "symbols": ["number$ebnf$1", "number$subexpression$1"], "postprocess": function postprocess(d) {
         return Number(text(d));
       } }, { "name": "angle$subexpression$1$string$1", "symbols": [{ "literal": "d" }, { "literal": "e" }, { "literal": "g" }], "postprocess": function joiner(d) {
         return d.join('');
