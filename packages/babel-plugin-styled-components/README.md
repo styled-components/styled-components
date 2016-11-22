@@ -1,39 +1,28 @@
-# babel-plugin-styled-components-named
+# `babel-plugin-styled-components`
 
-Add display names to styled-components
+Babel plugin for `styled-components`. This is **not necessary at all to use `styled-components`**, it just adds some nice features to enhance the experience:
 
-```jsx
-const Button = styled.button` width: 100px; `
-```
-By default looks like `<styled.button/>` in react dev tools. This plugin names it `<Button/>`.
-
-Supported cases for now:
-
-```jsx
-const A = styled.div` color: red; `
-
-let B = styled(OtherComponent).div` color: red; `
-
-let C
-C = styled.div` color: red; `
-
-const styles = { D: styled.div` color: red; ` }
-```
-
-## Installation
-
-```sh
-npm install -D babel-plugin-styled-components-named
-```
+- Add `displayNames` to your components in development for easier debugging
+- Add server-side rendering support
 
 ## Usage
 
-### Via `.babelrc`
+**THIS ISN'T PUBLISHED YET, WIP**
 
-**.babelrc**
+```
+npm install --save-dev babel-plugin-styled-components
+```
 
-```json
+Then in your babel configuration (probably `.babelrc`):
+
+```JSON
 {
-  "plugins": ["styled-components-named"]
+  "plugins": ["styled-components"]
 }
 ```
+
+## License
+
+Licensed under the MIT License, Copyright © 2016 Vladimir Danchenkov and Maximilian Stoiber.
+
+See [LICENSE.md](./LICENSE.md) for more information.

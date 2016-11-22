@@ -1,27 +1,33 @@
 {
-  "version": "0.1.1",
-  "name": "babel-plugin-styled-components-named",
-  "description": "Add display names to styled components",
-  "repository": "vdanchenkov/babel-plugin-styled-components-named",
-  "author": "Vladimir Danchenkov <vladimir.danchenkov@gmail.com>",
+  "version": "0.0.1",
+  "name": "babel-plugin-styled-components",
+  "description": "Improve the debugging experience and add server-side rendering support to styled-components",
+  "repository": "styled-components/babel-plugin-styled-components",
+  "contributors": [
+    "Vladimir Danchenkov <vladimir.danchenkov@gmail.com>",
+    "Max Stoiber <contact@mxstbr.com>"
+  ],
   "main": "lib/index.js",
   "devDependencies": {
     "babel-cli": "^6.4.5",
     "babel-preset-es2015": "^6.3.13",
     "babel-preset-stage-0": "^6.3.13",
-    "mocha": "^2.2.5"
+    "jest": "^17.0.3"
   },
   "scripts": {
     "clean": "rm -rf lib",
     "build": "babel src -d lib",
-    "test": "mocha --compilers js:babel-register",
+    "test": "jest",
     "test:watch": "npm run test -- --watch",
     "prepublish": "npm run clean && npm run build"
   },
   "keywords": [
     "styled-components",
     "css-in-js",
-    "babel-plugin"
+    "babel-plugin",
+    "server-side rendering",
+    "ssr",
+    "displayName"
   ],
   "dependencies": {
     "babel-template": "^6.16.0"
