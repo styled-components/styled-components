@@ -1,5 +1,6 @@
 import template from 'babel-template'
 
+const buildNodeWithDisplayNameAndIdentifier = template(`(function() { var c = VALUE;  c.identifier = IDENTIFIER;  c.displayName = DISPLAYNAME; return c })()`)
 const buildNodeWithDisplayName = template(`(function() { var c = VALUE;  c.displayName = DISPLAYNAME; return c })()`)
 const buildNodeWithIdentifier = template(`(function() { var c = VALUE;  c.identifier = IDENTIFIER; return c })()`)
 
@@ -7,7 +8,7 @@ const isStyled = (tag) => (tag.object && tag.object.name == 'styled') || (tag.ca
 
 let id = 0
 
-export default function({types: t }) {
+export default function({ types: t }) {
   return {
     visitor: {
       TaggedTemplateExpression: {
@@ -57,7 +58,14 @@ export default function({types: t }) {
           }
 
           let newNode
-          if (addDisplayName) {
+          if (addDisplayName && addIdentifier) {
+            id++
+            newNode = buildNodeWithDisplayNameAndIdentifier({
+              VALUE: path.node,
+              DISPLAYNAME: t.stringLiteral(displayName),
+              IDENTIFIER: t.numericLiteral(id),
+            })
+          } else if (addDisplayName) {
             newNode = buildNodeWithDisplayName({
               VALUE: path.node,
               DISPLAYNAME: t.stringLiteral(displayName),
@@ -69,8 +77,8 @@ export default function({types: t }) {
               IDENTIFIER: t.numericLiteral(id),
             })
           }
-
           path.node._styledComponentsSeen = true
+
           if (!newNode) return
           path.replaceWith(newNode)
         }
