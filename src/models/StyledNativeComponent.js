@@ -38,9 +38,24 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
         const subscribe = this.context[CHANNEL]
         this.unsubscribe = subscribe(theme => {
           // This will be called once immediately
-          this.setState({ theme })
+          const generatedStyles = this.generateAndInjectStyles(theme, this.props)
+          this.setState({ generatedStyles, theme })
         })
+      } else {
+        const generatedStyles = this.generateAndInjectStyles(
+          this.props.theme || {},
+          this.props
+        )
+        this.setState({ generatedStyles })
       }
+    }
+
+    componentWillReceiveProps(nextProps: any) {
+      const generatedStyles = this.generateAndInjectStyles(
+        this.state.theme || this.props.theme,
+        nextProps
+      )
+      this.setState({ generatedStyles })
     }
 
     componentWillUnmount() {
@@ -56,9 +71,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     /* eslint-disable react/prop-types */
     render() {
       const { style, children, innerRef } = this.props
-      const theme = this.state.theme || this.props.theme || {}
-
-      const generatedStyles = this.generateAndInjectStyles(theme, this.props)
+      const { generatedStyles } = this.state
 
       const propsForElement = { ...this.props }
       propsForElement.style = [generatedStyles, style]
