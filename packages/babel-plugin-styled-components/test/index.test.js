@@ -12,14 +12,14 @@ describe('babel-plugin-styled-components', () => {
   fs.readdirSync(fixturesDir).map((caseName) => {
     it(`should ${caseName.split('-').join(' ')}`, () => {
       const fixtureDir = path.join(fixturesDir, caseName)
-      const actualPath = path.join(fixtureDir, 'actual.js');
-      const actual = transformFileSync(actualPath).code
+      const beforePath = path.join(fixtureDir, 'before.js');
+      const before = transformFileSync(beforePath).code
 
-      const expected = fs.readFileSync(
-          path.join(fixtureDir, 'expected.js')
+      const after = fs.readFileSync(
+          path.join(fixtureDir, 'after.js')
       ).toString()
 
-      expect(trim(actual)).toEqual(trim(expected))
+      expect(trim(before)).toEqual(trim(after))
     })
   })
 })
