@@ -1,9 +1,6 @@
 # `babel-plugin-styled-components`
 
-Babel plugin for `styled-components`. This is **not necessary at all to use `styled-components`**, it just adds some nice features to enhance the experience:
-
-- Add `displayNames` to your components in development for easier debugging
-- Add server-side rendering support
+Babel plugin for `styled-components`. This is **not necessary at all to use `styled-components`**, it just adds some nice features to enhance the experience.
 
 ## Usage
 
@@ -18,6 +15,50 @@ Then in your babel configuration (probably `.babelrc`):
 ```JSON
 {
   "plugins": ["styled-components"]
+}
+```
+
+## Features
+
+### Add `displayNames` to your components
+
+By showing your components' real name in the React DevTools it's much easier to debug your applications.
+
+We take the name of the variable you assign your `styled-components` to and add it as the `displayName` to the resulting React component.
+
+```JS
+const MyBtn = styled.button``;
+// Plugin does this for you:
+MyBtn.displayName = 'MyBtn';
+```
+
+When rendering this button, the React DevTools will normally just show `<styled.button>`. By enabling this plugin, the DevTools show `<MyBtn />`.
+
+If you don't need this feature, you can disable it with the `displayName` option:
+
+```JSON
+{
+  "plugins": [
+    ["styled-components", {
+      "displayName": false
+    }]
+  ]
+}
+```
+
+### Add server-side rendering support
+
+By adding a unique identifier to every styled component this plugin avoids checksum mismatches due to different class generation on the client and on the server. If you do not use this plugin and try to server-side render `styled-components` React will complain.
+
+If you don't need server-side rendering, you can disable it with the `ssr` option:
+
+```JSON
+{
+  "plugins": [
+    ["styled-components", {
+      "ssr": false
+    }]
+  ]
 }
 ```
 
