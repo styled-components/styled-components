@@ -1,16 +1,19 @@
 import template from 'babel-template'
 
 const buildNodeWithDisplayName = template(`(function() { var c = VALUE;  c.displayName = DISPLAYNAME; return c })()`)
+const buildNodeWithIdentifier = template(`(function() { var c = VALUE;  c.identifier = IDENTIFIER; return c })()`)
 
 const isStyled = (tag) => (tag.object && tag.object.name == 'styled') || (tag.callee && tag.callee.name == 'styled')
+
+let id = 0
 
 export default function({types: t }) {
   return {
     visitor: {
       TaggedTemplateExpression: {
-        enter(path, state) {
-          const addDisplayName = state.opts.displayName || true
-					const addIdentifier = state.opts.ssr || true
+        enter(path, { opts }) {
+          const addDisplayName = (opts.displayName === undefined || opts.displayName === null) ? true : opts.displayName
+					const addIdentifier = (opts.ssr === undefined || opts.ssr === null) ? true : opts.ssr
           const tag = path.node.tag
 
           if (!isStyled(tag)) return
@@ -54,12 +57,19 @@ export default function({types: t }) {
           }
 
           let newNode
-          if (displayName) {
+          if (addDisplayName) {
             newNode = buildNodeWithDisplayName({
               VALUE: path.node,
               DISPLAYNAME: t.stringLiteral(displayName),
             })
+          } else if (addIdentifier) {
+            id++
+            newNode = buildNodeWithIdentifier({
+              VALUE: path.node,
+              IDENTIFIER: t.numericLiteral(id),
+            })
           }
+
           path.node._styledComponentsSeen = true
           if (!newNode) return
           path.replaceWith(newNode)
