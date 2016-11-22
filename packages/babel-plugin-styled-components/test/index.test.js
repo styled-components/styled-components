@@ -19,7 +19,7 @@ describe('babel-plugin-styled-components', () => {
           path.join(fixtureDir, 'expected.js')
       ).toString()
 
-      expect(trim(actual)).toEqual( trim(expected))
+      expect(trim(actual)).toEqual(trim(expected))
     })
   })
 })

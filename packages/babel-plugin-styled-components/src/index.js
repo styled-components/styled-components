@@ -1,49 +1,68 @@
 import template from 'babel-template'
 
-const buildWrapper = template(`(function() { var c = VALUE;  c.displayName = NAME; return c })()`)
+const buildNodeWithDisplayName = template(`(function() { var c = VALUE;  c.displayName = DISPLAYNAME; return c })()`)
+
+const isStyled = (tag) => (tag.object && tag.object.name == 'styled') || (tag.callee && tag.callee.name == 'styled')
 
 export default function({types: t }) {
   return {
     visitor: {
       TaggedTemplateExpression: {
-        enter(path) {
+        enter(path, state) {
+          const addDisplayName = state.opts.displayName || true
+					const addIdentifier = state.opts.ssr || true
           const tag = path.node.tag
-          if ((tag.object && tag.object.name == 'styled') || (tag.callee && tag.callee.name == 'styled')) {
-            if (path.node._styledComponentsSeen) {
-              return
-            }
-            let id = undefined;
+
+          if (!isStyled(tag)) return
+          if (path.node._styledComponentsSeen) {
+            return
+          }
+
+          let displayName
+
+          if (addDisplayName) {
             path.find((path) => {
               if (path.isAssignmentExpression()) {
-                id = path.node.left;
+                displayName = path.node.left
               } else if (path.isObjectProperty()) {
-                id = path.node.key;
+                displayName = path.node.key
               } else if (path.isVariableDeclarator()) {
-                id = path.node.id;
+                displayName = path.node.id
               } else if (path.isStatement()) {
                 // we've hit a statement, we should stop crawling up
-                return true;
+                return true
               }
 
-              // we've got an id! no need to continue
-              if (id) return true;
-            });
+              // we've got an displayName! no need to continue
+              if (displayName) return true
+            })
 
-            // ensure that we have an identifier we can inherit from
-            if (!id) return;
+            // ensure that we have an displayName we can inherit from
+            if (!displayName) return
 
             // foo.bar -> bar
-            if (t.isMemberExpression(id)) {
-              id = id.property;
+            if (t.isMemberExpression(displayName)) {
+              displayName = displayName.property
             }
 
             // identifiers are the only thing we can reliably get a name from
-            if (t.isIdentifier(id)) {
-              const wrapper = buildWrapper({ VALUE: path.node, NAME: t.stringLiteral(id.name) })
-              path.node._styledComponentsSeen = true
-              path.replaceWith(wrapper)
+            if (!t.isIdentifier(displayName)) {
+              displayName = undefined
+            } else {
+              displayName = displayName.name
             }
           }
+
+          let newNode
+          if (displayName) {
+            newNode = buildNodeWithDisplayName({
+              VALUE: path.node,
+              DISPLAYNAME: t.stringLiteral(displayName),
+            })
+          }
+          path.node._styledComponentsSeen = true
+          if (!newNode) return
+          path.replaceWith(newNode)
         }
       }
     }
