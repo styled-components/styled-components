@@ -3,6 +3,7 @@
 .*/node_modules/rollup-plugin-flow/.*
 .*/dist/.*
 .*/lib/.*
+.*/node_modules/babel-plugin-flow-react-proptypes/src/__test__/.*
 
 [include]
 

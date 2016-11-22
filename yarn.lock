@@ -402,6 +402,14 @@ babel-plugin-external-helpers@^6.8.0:
   dependencies:
     babel-runtime "^6.0.0"
 
+babel-plugin-flow-react-proptypes@^0.17.2:
+  version "0.17.2"
+  resolved "https://registry.yarnpkg.com/babel-plugin-flow-react-proptypes/-/babel-plugin-flow-react-proptypes-0.17.2.tgz#f74303d5cb482c33cfc644753049c9b8f7f79d29"
+  dependencies:
+    babel-template "^6.16.0"
+    babel-traverse "^6.18.0"
+    babel-types "^6.18.0"
+
 babel-plugin-syntax-async-functions@^6.8.0:
   version "6.13.0"
   resolved "https://registry.yarnpkg.com/babel-plugin-syntax-async-functions/-/babel-plugin-syntax-async-functions-6.13.0.tgz#cad9cad1191b5ad634bf30ae0872391e0647be95"
@@ -788,9 +796,32 @@ babel-traverse@^6.0.20, babel-traverse@^6.14.0, babel-traverse@^6.15.0, babel-tr
     invariant "^2.2.0"
     lodash "^4.2.0"
 
+babel-traverse@^6.18.0:
+  version "6.19.0"
+  resolved "https://registry.yarnpkg.com/babel-traverse/-/babel-traverse-6.19.0.tgz#68363fb821e26247d52a519a84b2ceab8df4f55a"
+  dependencies:
+    babel-code-frame "^6.16.0"
+    babel-messages "^6.8.0"
+    babel-runtime "^6.9.0"
+    babel-types "^6.19.0"
+    babylon "^6.11.0"
+    debug "^2.2.0"
+    globals "^9.0.0"
+    invariant "^2.2.0"
+    lodash "^4.2.0"
+
 babel-types@^6.0.19, babel-types@^6.14.0, babel-types@^6.15.0, babel-types@^6.16.0, babel-types@^6.8.0, babel-types@^6.9.0:
   version "6.16.0"
   resolved "https://registry.yarnpkg.com/babel-types/-/babel-types-6.16.0.tgz#71cca1dbe5337766225c5c193071e8ebcbcffcfe"
+  dependencies:
+    babel-runtime "^6.9.1"
+    esutils "^2.0.2"
+    lodash "^4.2.0"
+    to-fast-properties "^1.0.1"
+
+babel-types@^6.18.0, babel-types@^6.19.0:
+  version "6.19.0"
+  resolved "https://registry.yarnpkg.com/babel-types/-/babel-types-6.19.0.tgz#8db2972dbed01f1192a8b602ba1e1e4c516240b9"
   dependencies:
     babel-runtime "^6.9.1"
     esutils "^2.0.2"
@@ -2022,7 +2053,7 @@ globals@^8.3.0:
   version "8.18.0"
   resolved "https://registry.yarnpkg.com/globals/-/globals-8.18.0.tgz#93d4a62bdcac38cfafafc47d6b034768cb0ffcb4"
 
-globals@^9.2.0:
+globals@^9.0.0, globals@^9.2.0:
   version "9.12.0"
   resolved "https://registry.yarnpkg.com/globals/-/globals-9.12.0.tgz#992ce90828c3a55fa8f16fada177adb64664cf9d"
 
