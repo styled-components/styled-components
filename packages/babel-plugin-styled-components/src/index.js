@@ -1,10 +1,13 @@
 import template from 'babel-template'
 
+import hash from './utils/hash'
+
 const buildNodeWithDisplayNameAndIdentifier = template(`(function() { var c = VALUE;  c.identifier = IDENTIFIER;  c.displayName = DISPLAYNAME; return c })()`)
 const buildNodeWithDisplayName = template(`(function() { var c = VALUE;  c.displayName = DISPLAYNAME; return c })()`)
 const buildNodeWithIdentifier = template(`(function() { var c = VALUE;  c.identifier = IDENTIFIER; return c })()`)
 
 const isStyled = (tag) => (tag.object && tag.object.name == 'styled') || (tag.callee && tag.callee.name == 'styled')
+
 
 let id = 0
 
@@ -58,23 +61,26 @@ export default function({ types: t }) {
           }
 
           let newNode
-          if (addDisplayName && addIdentifier) {
+          if (addIdentifier) {
             id++
-            newNode = buildNodeWithDisplayNameAndIdentifier({
-              VALUE: path.node,
-              DISPLAYNAME: t.stringLiteral(displayName),
-              IDENTIFIER: t.numericLiteral(id),
-            })
+            // Prefix the identifier with a character if no displayName exists because CSS classes cannot start with a number
+            const identifier = `${displayName || 's'}-${hash(`${id}${displayName}`)}`
+            if (!addDisplayName) {
+              newNode = buildNodeWithIdentifier({
+                VALUE: path.node,
+                IDENTIFIER: t.stringLiteral(identifier),
+              })
+            } else {
+              newNode = buildNodeWithDisplayNameAndIdentifier({
+                VALUE: path.node,
+                DISPLAYNAME: t.stringLiteral(displayName),
+                IDENTIFIER: t.stringLiteral(identifier),
+              })
+            }
           } else if (addDisplayName) {
             newNode = buildNodeWithDisplayName({
               VALUE: path.node,
               DISPLAYNAME: t.stringLiteral(displayName),
-            })
-          } else if (addIdentifier) {
-            id++
-            newNode = buildNodeWithIdentifier({
-              VALUE: path.node,
-              IDENTIFIER: t.numericLiteral(id),
             })
           }
           path.node._styledComponentsSeen = true
