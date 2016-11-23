@@ -11,7 +11,7 @@ install:
   - npm install
   - rvm install 2.3.1
   - rvm use 2.3.1
-  - gem install danger --version '~> 3.0'
+  - gem install danger --version '~> 4.0'
 before_script:
   - ruby -v
 script:

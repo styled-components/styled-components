@@ -7,6 +7,21 @@ All notable changes to this project will be documented in this file. If a contri
 ## [Unreleased]
 
 ### Added
+- Add `// @flow` to files missing them and fix ThemeProvider types, [@relekang](https://github.com/relekang). (see [#225](https://github.com/styled-components/styled-components/pull/225)
+
+### Changed
+
+- Modify `StyleNativeComponent.js` so that `generateAndInjectStyles` is called outside of `render`, thanks to [@sheepsteak](https://github.com/sheepsteak). (see [#171](https://github.com/styled-components/styled-components/pull/171))
+
+## [v1.1.1]
+
+### Changed
+
+- Bumped `css-to-react-native` to `v1.0.3` to avoid floating points number bug.
+
+## [v1.1.0]
+
+### Added
 
 - Added support for deeply nested styles in ReactNative (e.g. `transform`), thanks [@jacobp100](https://github.com/jacobp100). (see [#139](https://github.com/styled-components/styled-components/pull/139))
 - Added support for camelized style properties in ReactNative (e.g. `fontWeight`), thanks [@jacobp100](https://github.com/jacobp100). (see [#145](https://github.com/styled-components/styled-components/pull/145))
@@ -94,7 +109,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.11...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.1.1...master
+[v1.1.1]: https://github.com/styled-components/styled-components/compare/v1.1.0...v1.1.1
+[v1.1.0]: https://github.com/styled-components/styled-components/compare/v1.0.11...v1.1.0
 [v1.0.11]: https://github.com/styled-components/styled-components/compare/v1.0.10...v1.0.11
 [v1.0.10]: https://github.com/styled-components/styled-components/compare/v1.0.9...v1.0.10
 [v1.0.9]: https://github.com/styled-components/styled-components/compare/v1.0.8...v1.0.9

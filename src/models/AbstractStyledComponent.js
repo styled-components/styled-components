@@ -7,7 +7,8 @@ export default class AbstractStyledComponent extends Component {
   static isPrototypeOf: Function
   state: {
     theme: any,
-    generatedClassName?: string
+    generatedClassName?: string,
+    generatedStyles?: any
   }
   unsubscribe: () => void
 }
