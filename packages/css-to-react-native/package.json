@@ -1,6 +1,6 @@
 {
   "name": "css-to-react-native",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Convert CSS text to a React Native stylesheet object",
   "main": "dist/index.js",
   "scripts": {
