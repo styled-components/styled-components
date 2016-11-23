@@ -45,7 +45,7 @@ export default (nameGenerator: NameGenerator) => {
         const root = parse(`.${selector} { ${flatCSS} }`)
         postcssNested(root)
         autoprefix(root)
-        this.insertedRule.appendRule(root.toResult().css)
+        this.insertedRule.appendRule(`\n${root.toResult().css}`)
       }
       return inserted[hash]
     }
