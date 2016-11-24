@@ -22,7 +22,7 @@ describe('theming', () => {
         <Comp />
       </ThemeProvider>
     )
-    expectCSSMatches(`.a { color: ${theme.color}; }`)
+    expectCSSMatches(`.b { color: ${theme.color}; }`)
   })
 
   it('should inject props.theme into a styled component multiple levels deep', () => {
@@ -39,7 +39,7 @@ describe('theming', () => {
         </div>
       </ThemeProvider>
     )
-    expectCSSMatches(`.a { color: ${theme.color}; }`)
+    expectCSSMatches(`.b { color: ${theme.color}; }`)
   })
 
   it('should properly allow a component to fallback to its default props when a theme is not provided', () => {
@@ -57,7 +57,7 @@ describe('theming', () => {
         <Comp1 />
       </div>
     )
-    expectCSSMatches(`.a { color: purple; }`)
+    expectCSSMatches(`.b { color: purple; }`)
   })
 
     it('should properly set the theme with an empty object when no teme is provided and no defaults are set', () => {
@@ -69,7 +69,7 @@ describe('theming', () => {
         <Comp1 />
       </div>
     )
-    expectCSSMatches(`.a { color: ; }`)
+    expectCSSMatches(`.b { color: ; }`)
   })
 
   it('should only inject props.theme into styled components within its child component tree', () => {
@@ -91,7 +91,7 @@ describe('theming', () => {
         <Comp2 />
       </div>
     )
-    expectCSSMatches(`.a { color: ${theme.color}; } .b { background: ; }`)
+    expectCSSMatches(`.c { color: ${theme.color}; } .d { background: ; }`)
   })
 
   it('should inject props.theme into all styled components within the child component tree', () => {
@@ -112,7 +112,7 @@ describe('theming', () => {
         </div>
       </ThemeProvider>
     )
-    expectCSSMatches(`.a { color: ${theme.color}; } .b { background: ${theme.color}; }`)
+    expectCSSMatches(`.c { color: ${theme.color}; } .d { background: ${theme.color}; }`)
   })
 
   it('should inject new CSS when the theme changes', () => {
@@ -131,10 +131,10 @@ describe('theming', () => {
       )
     }
     renderComp()
-    const initialCSS = expectCSSMatches(`.a { color: ${theme.color}; }`)
+    const initialCSS = expectCSSMatches(`.b { color: ${theme.color}; }`)
     // Change the theme
     theme = newTheme
     renderComp()
-    expectCSSMatches(`${initialCSS}.b { color: ${newTheme.color}; }`)
+    expectCSSMatches(`${initialCSS}.c { color: ${newTheme.color}; }`)
   })
 })

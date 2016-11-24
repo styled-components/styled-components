@@ -20,7 +20,7 @@ describe('with styles', () => {
         ${rule}
       `
     shallow(<Comp />)
-    expectCSSMatches('.a { color: blue; }')
+    expectCSSMatches('.b { color: blue; }')
   })
 
   it('should append multiple styles', () => {
@@ -31,7 +31,7 @@ describe('with styles', () => {
         ${rule2}
       `
     shallow(<Comp />)
-    expectCSSMatches('.a { color: blue; background: red; }')
+    expectCSSMatches('.b { color: blue; background: red; }')
   })
 
   it('should handle inline style objects', () => {
@@ -42,7 +42,7 @@ describe('with styles', () => {
         ${rule1}
       `
     shallow(<Comp />)
-    expectCSSMatches('.a { background-color: blue; }')
+    expectCSSMatches('.b { background-color: blue; }')
   })
 
   it('should inject styles of multiple components', () => {
@@ -58,7 +58,7 @@ describe('with styles', () => {
     shallow(<FirstComp />)
     shallow(<SecondComp />)
 
-    expectCSSMatches('.a { background: blue; } .b { background: red; }')
+    expectCSSMatches('.c { background: blue; } .d { background: red; }')
   })
 
   it('should inject styles of multiple components based on creation, not rendering order', () => {
@@ -77,8 +77,8 @@ describe('with styles', () => {
 
     // Classes _do_ get generated in the order of rendering but that's ok
     expectCSSMatches(`
-        .b { content: "first rule"; }
-        .a { content: "second rule"; }
+        .d { content: "first rule"; }
+        .c { content: "second rule"; }
       `)
   })
 
@@ -91,7 +91,7 @@ describe('with styles', () => {
       `
     shallow(<Comp />)
     expectCSSMatches(`
-        .a {
+        .b {
           color: blue;
         }
       `)
