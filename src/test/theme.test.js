@@ -142,7 +142,7 @@ describe('theming', () => {
   })
 })
 
-describe('jsdom', () => {
+describe('theming (jsdom)', () => {
   jsdom()
 
   beforeEach(() => {
