@@ -1,6 +1,8 @@
 // @flow
 import { createElement } from 'react'
 
+import type { Theme } from './ThemeProvider'
+
 import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
 
@@ -51,7 +53,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       }
     }
 
-    componentWillReceiveProps({ theme }: { theme: ?{ [key: string]: mixed } }) {
+    componentWillReceiveProps({ theme }: { theme: ?Theme }) {
       if (!theme) {
         return
       }

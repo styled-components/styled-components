@@ -2,6 +2,8 @@
 
 import { createElement } from 'react'
 
+import type { Theme } from './ThemeProvider'
+
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
@@ -59,7 +61,7 @@ export default (ComponentStyle: Function) => {
         }
       }
 
-      componentWillReceiveProps({ theme }: { theme: ?{ [key: string]: mixed } }) {
+      componentWillReceiveProps({ theme }: { theme: ?Theme }) {
         if (!theme) {
           return
         }
