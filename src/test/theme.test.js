@@ -1,7 +1,7 @@
 // @flow
 import jsdom from 'mocha-jsdom';
 import React from 'react'
-import { mount as render } from 'enzyme'
+import { mount } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 import ThemeProvider from '../models/ThemeProvider'
@@ -19,7 +19,7 @@ describe('theming', () => {
       color: ${props => props.theme.color};
     `
     const theme = { color: 'black' }
-    render(
+    mount(
       <ThemeProvider theme={theme}>
         <Comp />
       </ThemeProvider>
@@ -32,7 +32,7 @@ describe('theming', () => {
       color: ${props => props.theme.color};
     `
     const theme = { color: 'black' }
-    render(
+    mount(
       <ThemeProvider theme={theme}>
         <div>
           <div>
@@ -56,7 +56,7 @@ describe('theming', () => {
         }
       }
     }
-    render(
+    mount(
       <div>
         <Comp1 />
       </div>
@@ -74,7 +74,7 @@ describe('theming', () => {
         color: "purple"
       }
     }
-    const wrapper = render(
+    const wrapper = mount(
       <Comp1 />
     )
     expectCSSMatches(`.a { color: purple; }`)
@@ -93,7 +93,7 @@ describe('theming', () => {
         color: "purple"
       }
     }
-    const wrapper = render(
+    const wrapper = mount(
       <Comp1 />
     )
     expectCSSMatches(`.a { color: purple; }`)
@@ -106,7 +106,7 @@ describe('theming', () => {
     const Comp1 = styled.div`
       color: ${props => props.theme.color};
     `
-    render(
+    mount(
       <div>
         <Comp1 />
       </div>
@@ -123,7 +123,7 @@ describe('theming', () => {
     `
 
     const theme = { color: 'black' }
-    render(
+    mount(
       <div>
         <ThemeProvider theme={theme}>
           <div>
@@ -144,7 +144,7 @@ describe('theming', () => {
       background: ${props => props.theme.color};
     `
     const theme = { color: 'black' }
-    render(
+    mount(
       <ThemeProvider theme={theme}>
         <div>
           <div>
@@ -166,7 +166,7 @@ describe('theming', () => {
     let theme = originalTheme
     // Force render the component
     const renderComp = () => {
-      render(
+      mount(
         <ThemeProvider theme={theme}>
           <Comp />
         </ThemeProvider>

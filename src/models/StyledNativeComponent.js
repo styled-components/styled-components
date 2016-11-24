@@ -51,22 +51,17 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       }
     }
 
-    componentWillReceiveProps(nextProps: any) {
-      if (!nextProps.theme) {
+    componentWillReceiveProps({ theme }: { theme: ?{ [key: string]: mixed } }) {
+      if (!theme) {
         return
       }
 
       // compare if there is any change
-      if (JSON.stringify(nextProps.theme) === JSON.stringify(this.state.theme)) {
+      if (JSON.stringify(theme) === JSON.stringify(this.state.theme)) {
         return
       }
 
-      const { theme } = nextProps
-
-      const generatedStyles = this.generateAndInjectStyles(
-        theme,
-        nextProps
-      )
+      const generatedStyles = this.generateAndInjectStyles(theme)
       this.setState({ generatedStyles, theme })
     }
 

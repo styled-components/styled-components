@@ -59,22 +59,17 @@ export default (ComponentStyle: Function) => {
         }
       }
 
-      componentWillReceiveProps(nextProps: any) {
-        if (!nextProps.theme) {
+      componentWillReceiveProps({ theme }: { theme: ?{ [key: string]: mixed } }) {
+        if (!theme) {
           return
         }
 
         // compare if there is any change
-        if (JSON.stringify(nextProps.theme) === JSON.stringify(this.state.theme)) {
+        if (JSON.stringify(theme) === JSON.stringify(this.state.theme)) {
           return
         }
 
-        const { theme } = nextProps
-
-        const generatedClassName = this.generateAndInjectStyles(
-          theme,
-          nextProps
-        )
+        const generatedClassName = this.generateAndInjectStyles(theme)
         this.setState({ theme, generatedClassName })
       }
 
