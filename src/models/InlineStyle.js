@@ -30,6 +30,10 @@ export default class InlineStyle {
       root.each(node => {
         if (node.type === 'decl') {
           if (/border-?radius/i.test(node.prop)) {
+            // RN currently does not support differing values for the corner radii of Image
+            // components (but does for View). It is almost impossible to tell whether we'll have
+            // support, so we'll just disable multiple values here.
+            // https://github.com/styled-components/css-to-react-native/issues/11
             workaroundValues.borderRadius = Number(node.value)
           } else {
             declPairs.push([node.prop, node.value])
