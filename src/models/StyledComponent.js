@@ -61,7 +61,7 @@ export default (ComponentStyle: Function) => {
         }
       }
 
-      componentWillReceiveProps({ theme }: { theme: ?Theme }) {
+      componentWillReceiveProps({ theme }: { theme?: Theme }) {
         if (!theme) {
           return
         }

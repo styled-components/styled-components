@@ -53,7 +53,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       }
     }
 
-    componentWillReceiveProps({ theme }: { theme: ?Theme }) {
+    componentWillReceiveProps({ theme }: { theme?: Theme }) {
       if (!theme) {
         return
       }
