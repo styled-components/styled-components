@@ -26,15 +26,24 @@ export default class InlineStyle {
     if (!generated[hash]) {
       const root = parse(flatCSS)
       const declPairs = []
+      const workaroundValues = {}
       root.each(node => {
         if (node.type === 'decl') {
-          declPairs.push([node.prop, node.value])
+          if (/border-?radius/i.test(node.prop)) {
+            // RN currently does not support differing values for the corner radii of Image
+            // components (but does for View). It is almost impossible to tell whether we'll have
+            // support, so we'll just disable multiple values here.
+            // https://github.com/styled-components/css-to-react-native/issues/11
+            workaroundValues.borderRadius = Number(node.value)
+          } else {
+            declPairs.push([node.prop, node.value])
+          }
         } else {
           /* eslint-disable no-console */
           console.warn(`Node of type ${node.type} not supported as an inline style`)
         }
       })
-      const styleObject = transformDeclPairs(declPairs)
+      const styleObject = Object.assign(transformDeclPairs(declPairs), workaroundValues)
       const styles = StyleSheet.create({
         generated: styleObject,
       })
