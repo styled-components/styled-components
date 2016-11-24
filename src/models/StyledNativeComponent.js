@@ -42,20 +42,32 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
           this.setState({ generatedStyles, theme })
         })
       } else {
+        const theme = this.props.theme || {}
         const generatedStyles = this.generateAndInjectStyles(
-          this.props.theme || {},
+          theme,
           this.props
         )
-        this.setState({ generatedStyles })
+        this.setState({ generatedStyles, theme })
       }
     }
 
     componentWillReceiveProps(nextProps: any) {
+      if (!nextProps.theme) {
+        return
+      }
+
+      // compare if there is any change
+      if (JSON.stringify(nextProps.theme) === JSON.stringify(this.state.theme)) {
+        return
+      }
+
+      const { theme } = nextProps
+
       const generatedStyles = this.generateAndInjectStyles(
-        this.state.theme || this.props.theme,
+        theme,
         nextProps
       )
-      this.setState({ generatedStyles })
+      this.setState({ generatedStyles, theme })
     }
 
     componentWillUnmount() {
