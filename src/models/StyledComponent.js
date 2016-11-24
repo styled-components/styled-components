@@ -28,7 +28,7 @@ export default (ComponentStyle: Function) => {
       constructor() {
         super()
         this.state = {
-          theme: {},
+          theme: null,
           generatedClassName: '',
         }
       }
@@ -50,20 +50,32 @@ export default (ComponentStyle: Function) => {
             this.setState({ theme, generatedClassName })
           })
         } else {
+          const theme = this.props.theme || {}
           const generatedClassName = this.generateAndInjectStyles(
-            this.props.theme || {},
+            theme,
             this.props
           )
-          this.setState({ generatedClassName })
+          this.setState({ theme, generatedClassName })
         }
       }
 
       componentWillReceiveProps(nextProps: any) {
+        if (!nextProps.theme) {
+          return
+        }
+
+        // compare if there is any change
+        if (JSON.stringify(nextProps.theme) === JSON.stringify(this.state.theme)) {
+          return
+        }
+
+        const { theme } = nextProps
+
         const generatedClassName = this.generateAndInjectStyles(
-          this.state.theme || this.props.theme,
+          theme,
           nextProps
         )
-        this.setState({ generatedClassName })
+        this.setState({ theme, generatedClassName })
       }
 
       componentWillUnmount() {
