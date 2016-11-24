@@ -1,6 +1,7 @@
 // @flow
+import jsdom from 'mocha-jsdom';
 import React from 'react'
-import { render } from 'enzyme'
+import { mount as render } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 import ThemeProvider from '../models/ThemeProvider'
@@ -8,6 +9,7 @@ import ThemeProvider from '../models/ThemeProvider'
 let styled
 
 describe('theming', () => {
+  jsdom();
   beforeEach(() => {
     styled = resetStyled()
   })
@@ -44,12 +46,14 @@ describe('theming', () => {
 
   it('should properly allow a component to fallback to its default props when a theme is not provided', () => {
     const Comp1 = styled.div`
-      color: ${props => props.theme.color};
+      color: ${props => props.theme.test.color};
     `
 
     Comp1.defaultProps = {
       theme: {
-        color: "purple"
+        test: {
+          color: "purple"
+        }
       }
     }
     render(
@@ -60,7 +64,45 @@ describe('theming', () => {
     expectCSSMatches(`.a { color: purple; }`)
   })
 
-    it('should properly set the theme with an empty object when no teme is provided and no defaults are set', () => {
+  it('should properly render with the same theme from default props on re-render', () => {
+    const Comp1 = styled.div`
+      color: ${props => props.theme.color};
+    `
+
+    Comp1.defaultProps = {
+      theme: {
+        color: "purple"
+      }
+    }
+    const wrapper = render(
+      <Comp1 />
+    )
+    expectCSSMatches(`.a { color: purple; }`)
+
+    wrapper.update();
+    expectCSSMatches(`.a { color: purple; }`)
+  })
+
+  it('should properly update style if theme is changed', () => {
+    const Comp1 = styled.div`
+      color: ${props => props.theme.color};
+    `
+
+    Comp1.defaultProps = {
+      theme: {
+        color: "purple"
+      }
+    }
+    const wrapper = render(
+      <Comp1 />
+    )
+    expectCSSMatches(`.a { color: purple; }`)
+
+    wrapper.setProps({ theme: { color: 'pink' } })
+    expectCSSMatches(`.a { color: purple; }.b { color: pink; }`)
+  });
+
+  it('should properly set the theme with an empty object when no teme is provided and no defaults are set', () => {
     const Comp1 = styled.div`
       color: ${props => props.theme.color};
     `
