@@ -148,20 +148,20 @@ it('transforms border shorthand missing color & style', () => runTest([
 ], { borderWidth: 2, borderColor: 'black', borderStyle: 'solid' }));
 
 it('transforms margin shorthands using 4 values', () => runTest([
-  ['margin', '1 2 3 4'],
-], { marginTop: 1, marginRight: 2, marginBottom: 3, marginLeft: 4 }));
+  ['margin', '10 20 30 40'],
+], { marginTop: 10, marginRight: 20, marginBottom: 30, marginLeft: 40 }));
 
 it('transforms margin shorthands using 3 values', () => runTest([
-  ['margin', '1 2 3'],
-], { marginTop: 1, marginRight: 2, marginBottom: 3, marginLeft: 2 }));
+  ['margin', '10 20 30'],
+], { marginTop: 10, marginRight: 20, marginBottom: 30, marginLeft: 20 }));
 
 it('transforms margin shorthands using 2 values', () => runTest([
-  ['margin', '1 2'],
-], { marginTop: 1, marginRight: 2, marginBottom: 1, marginLeft: 2 }));
+  ['margin', '10 20'],
+], { marginTop: 10, marginRight: 20, marginBottom: 10, marginLeft: 20 }));
 
 it('transforms margin shorthands using 1 value', () => runTest([
-  ['margin', '1'],
-], { marginTop: 1, marginRight: 1, marginBottom: 1, marginLeft: 1 }));
+  ['margin', '10'],
+], { marginTop: 10, marginRight: 10, marginBottom: 10, marginLeft: 10 }));
 
 it('shorthand with 1 value should override previous values', () => runTest([
   ['margin-top', '2'],
