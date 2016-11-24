@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+- Fixed re-rendering of component with theme in `defaultProps` when repeated render won't use theme again. Also fixed re-rendering of component with theme in `props` when change in `theme` has been ignored. [@michalkvasnicak](https://github.com/michalkvasnicak). (see [#253](https://github.com/styled-components/styled-components/pull/253))
 - Modify `StyleNativeComponent.js` so that `generateAndInjectStyles` is called outside of `render`, thanks to [@sheepsteak](https://github.com/sheepsteak). (see [#171](https://github.com/styled-components/styled-components/pull/171))
 
 ## [v1.1.1]
