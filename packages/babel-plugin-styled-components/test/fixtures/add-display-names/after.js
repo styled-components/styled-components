@@ -1,30 +1,35 @@
-const Test = function () {
-  var c = styled.div` width: 100%;`;
-  c.displayName = "Test";
-  return c;
-}();
-const Test2 = true ? function () {
-  var c = styled.div``;
-  c.displayName = "Test2";
-  return c;
-}() : function () {
-  var c = styled.div``;
-  c.displayName = "Test2";
-  return c;
-}();
-const styles = { One: function () {
-    var c = styled.div``;
-    c.displayName = "One";
-    return c;
-  }() };
+const Test = styled({
+  target: 'div',
+  displayName: 'Test',
+  identifier: undefined
+})` width: 100%;`;
+const Test2 = styled({
+  target: 'div',
+  displayName: 'Test2',
+  identifier: undefined
+})``;
+const Test3 = true ? styled({
+  target: 'div',
+  displayName: 'Test3',
+  identifier: undefined
+})`` : styled({
+  target: 'div',
+  displayName: 'Test3',
+  identifier: undefined
+})``;
+const styles = { One: styled({
+    target: 'div',
+    displayName: 'One',
+    identifier: undefined
+  })`` };
 let Component;
-Component = function () {
-  var c = styled.div``;
-  c.displayName = "Component";
-  return c;
-}();
-const WrappedComponent = function () {
-  var c = styled(Inner)``;
-  c.displayName = "WrappedComponent";
-  return c;
-}();
+Component = styled({
+  target: 'div',
+  displayName: 'Component',
+  identifier: undefined
+})``;
+const WrappedComponent = styled({
+  target: Inner,
+  displayName: 'WrappedComponent',
+  identifier: undefined
+})``;
