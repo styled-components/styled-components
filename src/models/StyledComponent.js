@@ -65,9 +65,11 @@ export default (ComponentStyle: Function) => {
         }
 
         // compare if there is any change
-        if (JSON.stringify(theme) === JSON.stringify(this.state.theme)) {
+        /* eslint-disable max-len */
+        if (theme === this.state.theme || JSON.stringify(theme) === JSON.stringify(this.state.theme)) {
           return
         }
+        /* eslint-enable max-len */
 
         const generatedClassName = this.generateAndInjectStyles(theme)
         this.setState({ theme, generatedClassName })

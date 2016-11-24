@@ -57,9 +57,11 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       }
 
       // compare if there is any change
-      if (JSON.stringify(theme) === JSON.stringify(this.state.theme)) {
+      /* eslint-disable max-len */
+      if (theme === this.state.theme || JSON.stringify(theme) === JSON.stringify(this.state.theme)) {
         return
       }
+      /* eslint-enable max-len */
 
       const generatedStyles = this.generateAndInjectStyles(theme)
       this.setState({ generatedStyles, theme })
