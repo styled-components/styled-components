@@ -8,14 +8,14 @@ import * as t from 'babel-types'
  * @return {String}   The target
  */
 const getTarget = (node) => {
-	// styled.div`` => "div"
-	if (t.isMemberExpression(node)) {
-		return t.stringLiteral(node.property.name)
-	}
-	// styled(Bla) => Bla
-	if (t.isCallExpression(node)) {
-		return node.arguments[0]
-	}
+  // styled.div`` => "div"
+  if (t.isMemberExpression(node)) {
+    return t.stringLiteral(node.property.name)
+  }
+  // styled(Bla) => Bla
+  if (t.isCallExpression(node)) {
+    return node.arguments[0]
+  }
 }
 
 export default getTarget
