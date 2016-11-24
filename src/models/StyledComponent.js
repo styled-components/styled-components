@@ -19,7 +19,10 @@ const safeDisplayName = (displayName: string) => (
 
 export default (ComponentStyle: Function) => {
   // eslint-disable-next-line no-undef
-  const createStyledComponent = (target: Target, rules: RuleSet, parent?: ReactClass<*>) => {
+  const createStyledComponent = (input: Target, rules: RuleSet, parent?: ReactClass<*>) => {
+    const target = input.target || input
+    const { identifier, passedDisplayName } = input
+
     /* Handle styled(OtherStyledComponent) differently */
     const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
     if (!isTag(target) && isStyledComponent) {
@@ -101,8 +104,12 @@ export default (ComponentStyle: Function) => {
       }
     }
 
-    let displayName = isTag ? `styled.${target}` : `Styled(${target.displayName})`
+    let displayName = passedDisplayName || isTag ? `styled.${target}` : `Styled(${target.displayName})`
     const generateIdentifierFromDisplayName = (hashOnly: boolean) => {
+      if (identifier) {
+        StyledComponent.identifier = identifier
+        return
+      }
       const nr = (identifiers[displayName] || 0) + 1
       identifiers[displayName] = nr
       const hash = componentStyle.generateName(displayName + nr)
@@ -115,7 +122,6 @@ export default (ComponentStyle: Function) => {
         return displayName
       },
       set(newName) {
-        console.log('SETTING DISPLAY NAME')
         displayName = newName
         generateIdentifierFromDisplayName(false)
       },

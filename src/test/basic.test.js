@@ -52,6 +52,21 @@ describe('basic', () => {
     expectCSSMatches('.b {  }')
   })
 
+  describe('private API', () => {
+    it('should accept the private, internal API notation', () => {
+      const Comp = styled({ target: 'div', identifier: 'Comp-a123bf', displayName: 'Comp' })``
+      shallow(<Comp />)
+      expectCSSMatches('.a { }')
+    })
+
+    it('should add the passed identifier as a class', () => {
+      const identifier = 'Comp-a123bf'
+      const Comp = styled({ target: 'div', identifier: identifier, displayName: 'Comp' })``
+      const renderedComp = shallow(<Comp />)
+      expect(renderedComp.hasClass(identifier)).toBe(true)
+    })
+  })
+
   describe('jsdom tests', () => {
     jsdom()
     it('should pass ref to the component', () => {
