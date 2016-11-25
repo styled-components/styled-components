@@ -61,19 +61,10 @@ export default (ComponentStyle: Function) => {
         }
       }
 
-      componentWillReceiveProps({ theme }: { theme?: Theme }) {
-        if (!theme) {
-          return
-        }
+      componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
+        const theme = nextProps.theme || this.state.theme
 
-        // compare if there is any change
-        /* eslint-disable max-len */
-        if (theme === this.state.theme || JSON.stringify(theme) === JSON.stringify(this.state.theme)) {
-          return
-        }
-        /* eslint-enable max-len */
-
-        const generatedClassName = this.generateAndInjectStyles(theme)
+        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
         this.setState({ theme, generatedClassName })
       }
 

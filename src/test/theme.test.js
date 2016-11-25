@@ -186,4 +186,30 @@ describe('theming (jsdom)', () => {
     wrapper.setProps({ theme: { color: 'pink' } })
     expectCSSMatches(`.a { color: purple; }.b { color: pink; }`)
   })
+
+  it('should properly update style if props used in styles is changed', () => {
+    const Comp1 = styled.div`
+      color: ${props => props.theme.color};
+      z-index: ${props => props.zIndex}px;
+    `
+
+    Comp1.defaultProps = {
+      theme: {
+        color: "purple"
+      },
+      zIndex: 0
+    }
+    const wrapper = mount(
+      <Comp1 />
+    )
+    let expectedStyles = `.a { color: purple; z-index: 0px; }`
+    expectCSSMatches(expectedStyles)
+
+    wrapper.setProps({ theme: { color: 'pink' } })
+    expectedStyles = `${expectedStyles}.b { color: pink; z-index: 0px; }`
+    expectCSSMatches(expectedStyles)
+
+    wrapper.setProps({ zIndex: 1 });
+    expectCSSMatches(`${expectedStyles}.c { color: pink; z-index: 1px; }`)
+  });
 })
