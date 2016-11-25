@@ -278,3 +278,8 @@ it('omits line height if not specified', () => runTest([
   fontStyle: 'normal',
   fontVariant: [],
 }));
+
+it('allows blacklisting shorthands', () => {
+  const actualStyles = transformCss([['border-radius', '50']], ['borderRadius']);
+  expect(actualStyles).toEqual({ borderRadius: 50 });
+});

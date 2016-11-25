@@ -93,6 +93,13 @@ getPropertyName('border-width'); // => 'borderWidth'
 getStylesForProperty('borderWidth', '1 0 2 0'); // => { borderTopWidth: 1, ... }
 ```
 
+Should you wish to opt-out of transforming certain shorthands, an array of property names in camelCase can be passed as a second argument to `transform`.
+
+```js
+transform([['border-radius', '50']], ['borderRadius']);
+// { borderRadius: 50 } rather than { borderTopLeft: ... }
+```
+
 ## License
 
 Licensed under the MIT License, Copyright © 2016 Jacob Parker and Maximilian Stoiber.

@@ -27,10 +27,10 @@ const transformRawValue = input => (
     : input
 );
 
-export const getStylesForProperty = (propName, inputValue) => {
+export const getStylesForProperty = (propName, inputValue, allowShorthand) => {
   const value = inputValue.trim();
 
-  const propValue = (transforms.indexOf(propName) !== -1)
+  const propValue = (allowShorthand && transforms.indexOf(propName) !== -1)
     ? (new nearley.Parser(grammar.ParserRules, propName).feed(value).results[0])
     : transformRawValue(value);
 
@@ -41,9 +41,9 @@ export const getStylesForProperty = (propName, inputValue) => {
 
 export const getPropertyName = camelizeStyleName;
 
-export default rules => rules.reduce((accum, rule) => (
-  Object.assign(accum, getStylesForProperty(
-    getPropertyName(rule[0]),
-    rule[1],
-  ))
-), {});
+export default (rules, shorthandBlacklist = []) => rules.reduce((accum, rule) => {
+  const propertyName = getPropertyName(rule[0]);
+  const value = rule[1];
+  const allowShorthand = shorthandBlacklist.indexOf(propertyName) === -1;
+  return Object.assign(accum, getStylesForProperty(propertyName, value, allowShorthand));
+}, {});
