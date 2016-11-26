@@ -3,6 +3,12 @@ import template from 'babel-template'
 import hash from './utils/hash'
 import getTarget from './utils/get-target'
 
+const buildStyledCall = template(`STYLED({
+  target: TARGET,
+  displayName: DISPLAYNAME,
+  identifier: IDENTIFIER
+})`)
+
 // Default imported variable name to "styled", adjust based on import below
 let importedVariableName = 'styled'
 
@@ -74,13 +80,8 @@ export default function({ types: t }) {
           // Prefix the identifier with a character if no displayName exists because CSS classes cannot start with a number
           const identifier = `${displayName || 's'}-${hash(`${id}${displayName}`)}`
           // Put together the final code again
-          const buildStyledCall = template(`${importedVariableName}({
-					  target: TARGET,
-					  displayName: DISPLAYNAME,
-					  identifier: IDENTIFIER
-					})`)
-					// Create the styled({ }) call
           const call = buildStyledCall({
+            STYLED: t.identifier(importedVariableName),
             TARGET: target,
             DISPLAYNAME: (addDisplayName && t.stringLiteral(displayName)) || t.identifier('undefined'),
             IDENTIFIER: (addIdentifier && t.stringLiteral(identifier)) || t.identifier('undefined')
