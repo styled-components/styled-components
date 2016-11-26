@@ -1,5 +1,7 @@
 {
   "presets": [
+    "latest",
+    "react",
     "react-native"
   ],
   "plugins": [
