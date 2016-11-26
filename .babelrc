@@ -1,7 +1,6 @@
 {
   "presets": [
-    "latest",
-    "react"
+    "react-native"
   ],
   "plugins": [
     "add-module-exports",

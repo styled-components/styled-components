@@ -75,7 +75,7 @@
     "mocha-jsdom": "^1.1.0",
     "node-watch": "^0.4.1",
     "pre-commit": "^1.1.3",
-    "react": "^15.3.2",
+    "react": "15.3.2",
     "react-addons-test-utils": "^15.3.2",
     "react-dom": "^15.3.2",
     "react-native": "^0.37.0",
