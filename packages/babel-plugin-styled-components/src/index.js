@@ -3,19 +3,29 @@ import template from 'babel-template'
 import hash from './utils/hash'
 import getTarget from './utils/get-target'
 
-const buildStyledCall = template(`styled({
-  target: TARGET,
-  displayName: DISPLAYNAME,
-  identifier: IDENTIFIER
-})`)
+// Default imported variable name to "styled", adjust based on import below
+let importedVariableName = 'styled'
 
-const isStyled = (tag) => (tag.object && tag.object.name == 'styled') || (tag.callee && tag.callee.name == 'styled')
+const isStyled = (tag) => (tag.object && tag.object.name === importedVariableName) || (tag.callee && tag.callee.name === importedVariableName)
 
 let id = 0
 
 export default function({ types: t }) {
   return {
     visitor: {
+			ImportDeclaration: {
+				enter(path) {
+					// Is the styled-components import!
+					if (path.node.source.value === 'styled-components') {
+						// If the default is imported it's at defaultImport[0], otherwise defaultImport is empty
+						const defaultImport = path.node.specifiers.filter((specifier) => t.isImportDefaultSpecifier(specifier))
+						if (defaultImport.length > 0) {
+							// Save the imported name
+							importedVariableName = defaultImport[0].local.name
+						}
+					}
+				}
+			},
       TaggedTemplateExpression: {
         enter(path, { opts }) {
           const addDisplayName = (opts.displayName === undefined || opts.displayName === null) ? true : opts.displayName
@@ -64,7 +74,12 @@ export default function({ types: t }) {
           // Prefix the identifier with a character if no displayName exists because CSS classes cannot start with a number
           const identifier = `${displayName || 's'}-${hash(`${id}${displayName}`)}`
           // Put together the final code again
-          // Create the styled({ }) call
+          const buildStyledCall = template(`${importedVariableName}({
+					  target: TARGET,
+					  displayName: DISPLAYNAME,
+					  identifier: IDENTIFIER
+					})`)
+					// Create the styled({ }) call
           const call = buildStyledCall({
             TARGET: target,
             DISPLAYNAME: (addDisplayName && t.stringLiteral(displayName)) || t.identifier('undefined'),
