@@ -21,6 +21,7 @@ notifications:
   email:
     on_failure: change
 cache:
+  yarn: true
   bundler: true
   directories:
     - node_modules
