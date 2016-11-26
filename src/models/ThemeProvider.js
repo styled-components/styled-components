@@ -9,7 +9,7 @@ import type { Broadcast } from '../utils/create-broadcast'
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
 export const CHANNEL = '__styled-components__'
 
-type Theme = {[key: string]: mixed};
+export type Theme = {[key: string]: mixed};
 type ThemeProviderProps = {|
   children?: React$Element<any>,
   theme: Theme | (outherTheme: Theme) => void,

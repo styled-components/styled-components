@@ -1,6 +1,7 @@
 // @flow
+import jsdom from 'mocha-jsdom';
 import React from 'react'
-import { render } from 'enzyme'
+import { mount, render } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 import ThemeProvider from '../models/ThemeProvider'
@@ -44,12 +45,14 @@ describe('theming', () => {
 
   it('should properly allow a component to fallback to its default props when a theme is not provided', () => {
     const Comp1 = styled.div`
-      color: ${props => props.theme.color};
+      color: ${props => props.theme.test.color};
     `
 
     Comp1.defaultProps = {
       theme: {
-        color: "purple"
+        test: {
+          color: "purple"
+        }
       }
     }
     render(
@@ -60,7 +63,7 @@ describe('theming', () => {
     expectCSSMatches(`.a { color: purple; }`)
   })
 
-    it('should properly set the theme with an empty object when no teme is provided and no defaults are set', () => {
+  it('should properly set the theme with an empty object when no teme is provided and no defaults are set', () => {
     const Comp1 = styled.div`
       color: ${props => props.theme.color};
     `
@@ -137,4 +140,76 @@ describe('theming', () => {
     renderComp()
     expectCSSMatches(`${initialCSS}.b { color: ${newTheme.color}; }`)
   })
+})
+
+describe('theming (jsdom)', () => {
+  jsdom()
+
+  beforeEach(() => {
+    styled = resetStyled()
+  })
+
+  it('should properly render with the same theme from default props on re-render', () => {
+    const Comp1 = styled.div`
+      color: ${props => props.theme.color};
+    `
+
+    Comp1.defaultProps = {
+      theme: {
+        color: "purple"
+      }
+    }
+    const wrapper = mount(
+      <Comp1 />
+    )
+    expectCSSMatches(`.a { color: purple; }`)
+
+    wrapper.update();
+    expectCSSMatches(`.a { color: purple; }`)
+  })
+
+  it('should properly update style if theme is changed', () => {
+    const Comp1 = styled.div`
+      color: ${props => props.theme.color};
+    `
+
+    Comp1.defaultProps = {
+      theme: {
+        color: "purple"
+      }
+    }
+    const wrapper = mount(
+      <Comp1 />
+    )
+    expectCSSMatches(`.a { color: purple; }`)
+
+    wrapper.setProps({ theme: { color: 'pink' } })
+    expectCSSMatches(`.a { color: purple; }.b { color: pink; }`)
+  })
+
+  it('should properly update style if props used in styles is changed', () => {
+    const Comp1 = styled.div`
+      color: ${props => props.theme.color};
+      z-index: ${props => props.zIndex}px;
+    `
+
+    Comp1.defaultProps = {
+      theme: {
+        color: "purple"
+      },
+      zIndex: 0
+    }
+    const wrapper = mount(
+      <Comp1 />
+    )
+    let expectedStyles = `.a { color: purple; z-index: 0px; }`
+    expectCSSMatches(expectedStyles)
+
+    wrapper.setProps({ theme: { color: 'pink' } })
+    expectedStyles = `${expectedStyles}.b { color: pink; z-index: 0px; }`
+    expectCSSMatches(expectedStyles)
+
+    wrapper.setProps({ zIndex: 1 });
+    expectCSSMatches(`${expectedStyles}.c { color: pink; z-index: 1px; }`)
+  });
 })
