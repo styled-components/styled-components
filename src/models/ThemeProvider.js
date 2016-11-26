@@ -1,4 +1,5 @@
 // @flow
+/* globals React$Element */
 import React, { PropTypes, Component } from 'react'
 import isFunction from 'lodash/isFunction'
 import isPlainObject from 'lodash/isPlainObject'
@@ -8,10 +9,10 @@ import type { Broadcast } from '../utils/create-broadcast'
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
 export const CHANNEL = '__styled-components__'
 
-type Theme = {[key: string]: mixed};
+export type Theme = {[key: string]: mixed};
 type ThemeProviderProps = {|
-  children: any,
-  theme: (outherTheme: Theme) => void | Theme,
+  children?: React$Element<any>,
+  theme: Theme | (outherTheme: Theme) => void,
 |};
 
 /**
@@ -19,7 +20,7 @@ type ThemeProviderProps = {|
  * both context and event emitter as pure components block context updates)
  */
 class ThemeProvider extends Component {
-  getTheme: (theme?: (outherTheme: Theme) => void | Theme) => Theme
+  getTheme: (theme?: Theme | (outherTheme: Theme) => void) => Theme
   outerTheme: Theme
   unsubscribeToOuter: () => void
   props: ThemeProviderProps
