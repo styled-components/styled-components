@@ -5,8 +5,7 @@ declare module "styled-components/native" {
     import { StatelessComponent } from "react";
 
     interface StyledFunction<T> {
-      (values: TemplateStringsArray): T;
-      (...values: any[]): T;
+      (strs: TemplateStringsArray, ...fns: Array<(props: any) => string>): T;
     }
 
     interface StyledInterface {
