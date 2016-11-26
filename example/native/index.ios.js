@@ -1,53 +1,36 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
- * @flow
+ * Sample ReactNative app written with styled-components
+ *
+ * This directly requires the source, so whichever changes you make in styled-components will
+ * immediately be reflected here
  */
 
-import React, { Component } from 'react';
+import React from 'react'
 import {
   AppRegistry,
-  StyleSheet,
-  Text,
-  View
-} from 'react-native';
+} from 'react-native'
+import styled from '../../src/native'
 
-export default class example extends Component {
-  render() {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.welcome}>
-          Welcome to React Native!
-        </Text>
-        <Text style={styles.instructions}>
-          To get started, edit index.ios.js
-        </Text>
-        <Text style={styles.instructions}>
-          Press Cmd+R to reload,{'\n'}
-          Cmd+D or shake for dev menu
-        </Text>
-      </View>
-    );
-  }
-}
+const Container = styled.View`
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  background: ${props => props.bg};
+`
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5FCFF',
-  },
-  welcome: {
-    fontSize: 20,
-    textAlign: 'center',
-    margin: 10,
-  },
-  instructions: {
-    textAlign: 'center',
-    color: '#333333',
-    marginBottom: 5,
-  },
-});
+const Welcome = styled.Text`
+  font-size: 20;
+  text-align: center;
+  margin: 10;
+  color: ${props => props.color};
+`
 
-AppRegistry.registerComponent('example', () => example);
+const Example = () => (
+  <Container bg="papayawhip">
+    <Welcome color="palevioletred">
+      styled-components, running on ReactNative
+    </Welcome>
+  </Container>
+)
+
+AppRegistry.registerComponent('example', () => Example)
