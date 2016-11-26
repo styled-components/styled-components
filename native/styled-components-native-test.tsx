@@ -1,4 +1,4 @@
-/// <reference path="styled-components-native.d.ts" />
+/// <reference path="index.d.ts" />
 
 import * as React from "react-native";
 import styled from "styled-components/native";

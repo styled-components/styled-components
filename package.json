@@ -19,7 +19,7 @@
     "test:watch": "npm run test -- --watch",
     "flow": "flow check",
     "lint": "eslint src",
-    "tslint": "tslint typings/*",
+    "tslint": "tslint typings/*.ts native/*.ts",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
     "dev": "node example/devServer.js"
