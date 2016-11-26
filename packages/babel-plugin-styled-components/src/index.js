@@ -23,9 +23,6 @@ export default function({ types: t }) {
           const tag = path.node.tag
 
           if (!isStyled(tag)) return
-          if (path._styledComponentsSeen) {
-            return
-          }
 
           let displayName
 
@@ -75,13 +72,7 @@ export default function({ types: t }) {
           })
           // Put together the styled call with the template literal
           // to get the finished styled({ })`` form! 🎉
-          const styledCall = t.taggedTemplateExpression(
-            call.expression,
-            path.node.quasi
-          )
-          path._styledComponentsSeen = true
-
-          path.replaceWith(styledCall)
+        	path.node.tag = call.expression
         }
       }
     }
