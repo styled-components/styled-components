@@ -27,28 +27,25 @@ export default function({ types: t }) {
             return
           }
 
-          let displayName, target
+          let displayName
 
           path.find((path) => {
             // const X = styled
             if (path.isAssignmentExpression()) {
-              target = getTarget(path.node.right.tag)
               displayName = path.node.left
             // const X = { Y: styled }
             } else if (path.isObjectProperty()) {
-              target = getTarget(path.node.value.tag)
               displayName = path.node.key
             // let X; X = styled
             } else if (path.isVariableDeclarator()) {
-              target = getTarget(path.node.init.tag)
               displayName = path.node.id
             } else if (path.isStatement()) {
               // we've hit a statement, we should stop crawling up
               return true
             }
 
-            // we've got an displayName (if we need it) and a target! no need to continue
-            if ((!addDisplayName || displayName) && target) return true
+            // we've got an displayName (if we need it) no need to continue
+            if (displayName) return true
           })
 
           // foo.bar -> bar
@@ -56,10 +53,8 @@ export default function({ types: t }) {
             displayName = displayName.property
           }
 
-          // styled call without variable
-          if (!target) {
-            target = getTarget(path.node.tag)
-          }
+          // Get target
+          const target = getTarget(path.node.tag)
 
           // identifiers are the only thing we can reliably get a name from
           if (!t.isIdentifier(displayName)) {
