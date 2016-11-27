@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+- Fixed theme changes using `<ThemeProvider />` when changes has not been propagated to components (still using the first known theme). [@michalkvasnicak](https://github.com/michalkvasnicak) (see [#262](https://github.com/styled-components/styled-components/pull/262))
+
 ## [v1.1.2]
 
 ### Added
