@@ -33,47 +33,57 @@ export default function({ types: t }) {
 				}
 			},
       TaggedTemplateExpression: {
-        enter(path, { opts }) {
+        enter(path, { opts, file }) {
           const addDisplayName = (opts.displayName === undefined || opts.displayName === null) ? true : opts.displayName
           const addIdentifier = (opts.ssr === undefined || opts.ssr === null) ? true : opts.ssr
+          const useFilename = (opts.filename === undefined || opts.filename === null) ? true : opts.fileName
+
           const tag = path.node.tag
 
           if (!isStyled(tag)) return
 
-          let displayName
+          let namedNode
 
           path.find((path) => {
             // const X = styled
             if (path.isAssignmentExpression()) {
-              displayName = path.node.left
+              namedNode = path.node.left
             // const X = { Y: styled }
             } else if (path.isObjectProperty()) {
-              displayName = path.node.key
+              namedNode = path.node.key
             // let X; X = styled
             } else if (path.isVariableDeclarator()) {
-              displayName = path.node.id
+              namedNode = path.node.id
             } else if (path.isStatement()) {
               // we've hit a statement, we should stop crawling up
               return true
             }
 
             // we've got an displayName (if we need it) no need to continue
-            if (displayName) return true
+            if (namedNode) return true
           })
 
           // foo.bar -> bar
-          if (t.isMemberExpression(displayName)) {
-            displayName = displayName.property
+          if (t.isMemberExpression(namedNode)) {
+            namedNode = namedNode.property
           }
 
           // Get target
           const target = getTarget(path.node.tag)
 
           // identifiers are the only thing we can reliably get a name from
-          if (!t.isIdentifier(displayName)) {
-            displayName = undefined
+          const componentName = t.isIdentifier(namedNode) ? namedNode.name : undefined
+
+          let displayName
+
+          if (!useFilename) {
+            displayName = componentName
           } else {
-            displayName = displayName.name
+            let blockName = file.opts.basename
+            if (blockName === 'index') {
+              blockName = path.basename(path.dirname(file.opts.filename))
+            }
+            displayName = componentName ? `${blockName}__${namedNode.name}` : blockName
           }
 
           id++

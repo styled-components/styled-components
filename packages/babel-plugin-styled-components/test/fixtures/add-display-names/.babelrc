@@ -1,7 +1,8 @@
 {
   "plugins": [
     ["../../../src", {
-      "ssr": false
+      "ssr": false,
+      "filename": false
     }]
   ]
 }

@@ -1,3 +1,7 @@
 {
-  "plugins": ["../../../src"]
+  "plugins": [
+    ["../../../src", {
+      "filename": false
+    }]
+  ]
 }
