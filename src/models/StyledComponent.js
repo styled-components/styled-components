@@ -62,10 +62,10 @@ export default (ComponentStyle: Function) => {
       }
 
       componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-        const theme = nextProps.theme || this.state.theme
-
-        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
-        this.setState({ theme, generatedClassName })
+        // set theme only if we are not using ThemeProvider
+        if (this.props.theme) {
+          this.setState({ theme: nextProps.theme })
+        }
       }
 
       componentWillUnmount() {
@@ -76,7 +76,7 @@ export default (ComponentStyle: Function) => {
 
       render() {
         const { className, children, innerRef } = this.props
-        const { generatedClassName } = this.state
+        const generatedClassName = this.generateAndInjectStyles(this.state.theme, this.props)
 
         const propsForElement = {}
         /* Don't pass through non HTML tags through to HTML elements */

@@ -54,10 +54,10 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     }
 
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-      const theme = nextProps.theme || this.state.theme
-
-      const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
-      this.setState({ generatedStyles, theme })
+      // set theme only if we are not using ThemeProvider
+      if (this.props.theme) {
+        this.setState({ theme: nextProps.theme })
+      }
     }
 
     componentWillUnmount() {
@@ -73,7 +73,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     /* eslint-disable react/prop-types */
     render() {
       const { style, children, innerRef } = this.props
-      const { generatedStyles } = this.state
+      const generatedStyles = this.generateAndInjectStyles(this.state.theme, this.props)
 
       const propsForElement = { ...this.props }
       propsForElement.style = [generatedStyles, style]
