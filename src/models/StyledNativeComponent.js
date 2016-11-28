@@ -40,7 +40,6 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
         const subscribe = this.context[CHANNEL]
         this.unsubscribe = subscribe(theme => {
           // This will be called once immediately
-          this.theme = theme
           const generatedStyles = this.generateAndInjectStyles(theme, this.props)
           this.setState({ generatedStyles, theme })
         })
@@ -55,10 +54,12 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     }
 
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-      const theme = nextProps.theme || this.theme
+      this.setState((oldState) => {
+        const theme = nextProps.theme || oldState.theme
+        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
 
-      const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
-      this.setState({ generatedStyles, theme })
+        return { theme, generatedClassName }
+      })
     }
 
     componentWillUnmount() {
