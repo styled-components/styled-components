@@ -32,7 +32,7 @@ describe('extending', () => {
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.c { color: blue; } .d { }')
+    expectCSSMatches('.b { color: blue; } .c { }')
   })
 
   it('should generate two classes if only child has styles', () => {
@@ -42,7 +42,7 @@ describe('extending', () => {
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.c { color: blue; } .d { }')
+    expectCSSMatches('.b { color: blue; } .c { }')
   })
 
   it('should generate a class for the child with the rules of the parent', () => {
