@@ -21,18 +21,16 @@ export default function({ types: t }) {
         const isStyled = (tag) => (tag.object && tag.object.name === importedVariableName) || (tag.callee && tag.callee.name === importedVariableName)
 
         path.traverse({
-          ImportDeclaration: {
-            enter(path) {
-              // Is the styled-components import!
-              if (path.node.source.value === 'styled-components') {
-                // If the default is imported it's at defaultImport[0], otherwise defaultImport is empty
-                const defaultImport = path.get('specifiers').find((specifier) => {
-                  return specifier.isImportDefaultSpecifier() || specifier.isImportSpecifier() && specifier.node.imported.name === 'default'
-                })
-                if (defaultImport) {
-                  // Save the imported name
-                  importedVariableName = defaultImport.node.local.name
-                }
+          ImportDeclaration(path) {
+            // Is the styled-components import!
+            if (path.node.source.value === 'styled-components') {
+              // If the default is imported it's at defaultImport[0], otherwise defaultImport is empty
+              const defaultImport = path.get('specifiers').find((specifier) => {
+                return specifier.isImportDefaultSpecifier() || specifier.isImportSpecifier() && specifier.node.imported.name === 'default'
+              })
+              if (defaultImport) {
+                // Save the imported name
+                importedVariableName = defaultImport.node.local.name
               }
             }
           }
