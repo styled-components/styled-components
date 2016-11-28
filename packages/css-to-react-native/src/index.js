@@ -27,11 +27,14 @@ const transformRawValue = input => (
     : input
 );
 
+export const parseProp = (propName, value) =>
+  new nearley.Parser(grammar.ParserRules, propName).feed(value).results[0];
+
 export const getStylesForProperty = (propName, inputValue, allowShorthand) => {
   const value = inputValue.trim();
 
-  const propValue = (allowShorthand && transforms.indexOf(propName) !== -1)
-    ? (new nearley.Parser(grammar.ParserRules, propName).feed(value).results[0])
+  const propValue = (transforms.indexOf(propName) !== -1)
+    ? parseProp(propName, value)
     : transformRawValue(value);
 
   return (propValue && propValue.$merge)

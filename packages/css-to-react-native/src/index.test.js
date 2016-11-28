@@ -1,5 +1,5 @@
 /* global jest it, expect */
-import transformCss from '.';
+import transformCss, { parseProp } from '.';
 
 const runTest = (inputCss, expectedStyles) => {
   const actualStyles = transformCss(inputCss);
@@ -13,9 +13,16 @@ it('transforms numbers', () => runTest([
   ['bottom', '0'],
 ], { top: 0, left: 0, right: 0, bottom: 0 }));
 
-it('allows decimal values', () => runTest([
-  ['top', '1.5'],
-], { top: 1.5 }));
+it('allows decimal values', () => {
+  expect(parseProp('number', '0.5')).toBe(0.5);
+  expect(parseProp('number', '1.5')).toBe(1.5);
+  expect(parseProp('number', '10.5')).toBe(10.5);
+  expect(parseProp('number', '100.5')).toBe(100.5);
+  expect(parseProp('number', '-0.5')).toBe(-0.5);
+  expect(parseProp('number', '-1.5')).toBe(-1.5);
+  expect(parseProp('number', '-10.5')).toBe(-10.5);
+  expect(parseProp('number', '-100.5')).toBe(-100.5);
+});
 
 it('allows decimal values in transformed values', () => runTest([
   ['border-radius', '1.5'],
