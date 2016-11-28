@@ -83,8 +83,8 @@ export default function({ types: t }) {
           const call = buildStyledCall({
             STYLED: t.identifier(importedVariableName),
             TARGET: target,
-            DISPLAYNAME: (addDisplayName && t.stringLiteral(displayName)) || t.identifier('undefined'),
-            IDENTIFIER: (addIdentifier && t.stringLiteral(identifier)) || t.identifier('undefined')
+            DISPLAYNAME: (addDisplayName && displayName && t.stringLiteral(displayName)) || t.identifier('undefined'),
+            IDENTIFIER: (addIdentifier && identifier && t.stringLiteral(identifier)) || t.identifier('undefined')
           })
           // Put together the styled call with the template literal
           // to get the finished styled({ })`` form! 🎉
