@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+- Fixed theme changes using `<ThemeProvider />` where classNames didn't changed at the component [@k15a](https://github.com/k15a)
+
 ## [v1.1.2]
 
 ### Added

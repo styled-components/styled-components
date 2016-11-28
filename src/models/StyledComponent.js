@@ -62,10 +62,12 @@ export default (ComponentStyle: Function) => {
       }
 
       componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-        const theme = nextProps.theme || this.state.theme
+        this.setState((oldState) => {
+          const theme = nextProps.theme || oldState.theme
+          const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
 
-        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
-        this.setState({ theme, generatedClassName })
+          return { theme, generatedClassName }
+        })
       }
 
       componentWillUnmount() {

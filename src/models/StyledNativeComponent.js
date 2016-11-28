@@ -54,10 +54,12 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     }
 
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-      const theme = nextProps.theme || this.state.theme
+      this.setState((oldState) => {
+        const theme = nextProps.theme || oldState.theme
+        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
 
-      const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
-      this.setState({ generatedStyles, theme })
+        return { theme, generatedClassName }
+      })
     }
 
     componentWillUnmount() {
