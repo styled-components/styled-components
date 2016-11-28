@@ -2,7 +2,7 @@
   "plugins": [
     ["../../../src", {
       "ssr": false,
-      "filename": false
+      "fileName": false
     }]
   ]
 }

@@ -36,7 +36,7 @@ export default function({ types: t }) {
         enter(path, { opts, file }) {
           const addDisplayName = (opts.displayName === undefined || opts.displayName === null) ? true : opts.displayName
           const addIdentifier = (opts.ssr === undefined || opts.ssr === null) ? true : opts.ssr
-          const useFilename = (opts.filename === undefined || opts.filename === null) ? true : opts.fileName
+          const useFileName = (opts.fileName === undefined || opts.fileName === null) ? true : opts.fileName
 
           const tag = path.node.tag
 
@@ -76,7 +76,7 @@ export default function({ types: t }) {
 
           let displayName
 
-          if (!useFilename) {
+          if (!useFileName) {
             displayName = componentName
           } else {
             let blockName = file.opts.basename
