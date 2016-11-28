@@ -22,6 +22,8 @@ it('allows decimal values', () => {
   expect(parseProp('number', '-1.5')).toBe(-1.5);
   expect(parseProp('number', '-10.5')).toBe(-10.5);
   expect(parseProp('number', '-100.5')).toBe(-100.5);
+  expect(parseProp('number', '.5')).toBe(0.5);
+  expect(parseProp('number', '-.5')).toBe(-0.5);
 });
 
 it('allows decimal values in transformed values', () => runTest([

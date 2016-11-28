@@ -49,8 +49,14 @@
   };
 %}
 
+int
+  -> "0" | [1-9] [0-9]:*
+
+decimal
+  -> "." [0-9]:+
+
 number
-  -> "-":? ([0-9]:? "." [0-9]:+ | [1-9] [0-9]:* ("." [0-9]:+):? | "0") {% d => Number(text(d)) %}
+  -> "-":? (int decimal | int | decimal) {% d => Number(text(d)) %}
 
 angle -> number ("deg" | "rad") {% text %}
 
