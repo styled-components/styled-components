@@ -48,6 +48,7 @@ export default (ComponentStyle: Function) => {
           const subscribe = this.context[CHANNEL]
           this.unsubscribe = subscribe(theme => {
             // This will be called once immediately
+            this.theme = theme
             const generatedClassName = this.generateAndInjectStyles(theme, this.props)
             this.setState({ theme, generatedClassName })
           })
@@ -62,7 +63,7 @@ export default (ComponentStyle: Function) => {
       }
 
       componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-        const theme = nextProps.theme || this.state.theme
+        const theme = nextProps.theme || this.theme
 
         const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
         this.setState({ theme, generatedClassName })
