@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file. If a contri
 ### Changed
 
 - Fixed theme changes using `<ThemeProvider />` where classNames didn't changed at the component [@k15a](https://github.com/k15a)
+- Added missing `setNativeProps` to `StyledNativeComponent`. Fixes problem when styled component is used in `TouchableHighlight` component. [@michalkvasnicak](https://github.com/michalkvasnicak)
 
 ## [v1.1.2]
 
