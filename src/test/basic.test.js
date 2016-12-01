@@ -1,3 +1,4 @@
+// @flow
 import React, { Component } from 'react'
 import expect from 'expect'
 import { shallow, mount } from 'enzyme'
@@ -41,7 +42,7 @@ describe('basic', () => {
   it('should pass through all whitespace', () => {
     const Comp = styled.div`   \n   `
     shallow(<Comp />)
-    expectCSSMatches('.a {    \n    }', { skipWhitespace: false })
+    expectCSSMatches('.a {    \n    }', { ignoreWhitespace: false })
   })
 
   it('should inject only once for a styled component, no matter how often it\'s mounted', () => {
@@ -56,12 +57,14 @@ describe('basic', () => {
     it('should pass ref to the component', () => {
       const Comp = styled.div``
       const WrapperComp = class extends Component {
+        testRef: any;
         render() {
           return <Comp innerRef={(comp) => { this.testRef = comp }} />
         }
       }
 
       const wrapper = mount(<WrapperComp />)
+      // $FlowIssue
       expect(wrapper.node.testRef).toExist()
     })
   })

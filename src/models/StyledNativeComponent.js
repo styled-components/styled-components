@@ -1,6 +1,8 @@
 // @flow
 import { createElement } from 'react'
 
+import type { Theme } from './ThemeProvider'
+
 import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
 
@@ -38,9 +40,26 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
         const subscribe = this.context[CHANNEL]
         this.unsubscribe = subscribe(theme => {
           // This will be called once immediately
-          this.setState({ theme })
+          const generatedStyles = this.generateAndInjectStyles(theme, this.props)
+          this.setState({ generatedStyles, theme })
         })
+      } else {
+        const theme = this.props.theme || {}
+        const generatedStyles = this.generateAndInjectStyles(
+          theme,
+          this.props
+        )
+        this.setState({ generatedStyles, theme })
       }
+    }
+
+    componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
+      this.setState((oldState) => {
+        const theme = nextProps.theme || oldState.theme
+        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
+
+        return { theme, generatedClassName }
+      })
     }
 
     componentWillUnmount() {
@@ -56,9 +75,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     /* eslint-disable react/prop-types */
     render() {
       const { style, children, innerRef } = this.props
-      const theme = this.state.theme || this.props.theme || {}
-
-      const generatedStyles = this.generateAndInjectStyles(theme, this.props)
+      const { generatedStyles } = this.state
 
       const propsForElement = { ...this.props }
       propsForElement.style = [generatedStyles, style]

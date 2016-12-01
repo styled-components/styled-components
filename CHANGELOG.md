@@ -8,18 +8,46 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- N/A
+### Changed
+
+- Fixed theme changes using `<ThemeProvider />` where classNames didn't changed at the component [@k15a](https://github.com/k15a)
+
+## [v1.1.2]
+
+### Added
+
+- Add `// @flow` to files missing them and fix ThemeProvider types, thanks to [@relekang](https://github.com/relekang). (see [#225](https://github.com/styled-components/styled-components/pull/225))
 
 ### Changed
 
-- Converted Object.assign to spread operator, thanks to [@thisguychris](https://github.com/thisguychris). (see [#201](https://github.com/styled-components/styled-components/pull/201), fixes [#196](https://github.com/styled-components/styled-components/issues/196))
+- Fixed setting the default theme via `defaultProps` and theme changes not re-rendering components with new styles, thanks to [@michalkvasnicak](https://github.com/michalkvasnicak). (see [#253](https://github.com/styled-components/styled-components/pull/253))
+- Improve ReactNative style generation performance, thanks to [@sheepsteak](https://github.com/sheepsteak). (see [#171](https://github.com/styled-components/styled-components/pull/171))
+
+## [v1.1.1]
+
+### Changed
+
+- Bumped `css-to-react-native` to `v1.0.3` to avoid floating points number bug.
+
+## [v1.1.0]
+
+### Added
+
+- Added support for deeply nested styles in ReactNative (e.g. `transform`), thanks [@jacobp100](https://github.com/jacobp100). (see [#139](https://github.com/styled-components/styled-components/pull/139))
+- Added support for camelized style properties in ReactNative (e.g. `fontWeight`), thanks [@jacobp100](https://github.com/jacobp100). (see [#145](https://github.com/styled-components/styled-components/pull/145))
+- Properly expose `flow` typings by adding a `flow:build` step and `flow` support docs, thanks to [@ryyppy](https://github.com/ryyppy). (see [#219](https://github.com/styled-components/styled-components/pull/219))
+
+### Changed
+
+- Converted Object.assign to spread operator, thanks to [@thisguychris](https://github.com/thisguychris). (see [#201](https://github.com/styled-components/styled-components/pull/201))
 - Switched to using [inline-style-prefixer](https://github.com/rofrischmann/inline-style-prefixer) for our autoprefixing needs.
+- Fixed IE10 compatibility, thanks to [@thisguychris](https://github.com/thisguychris). (see [#217](https://github.com/styled-components/styled-components/pull/217))
 
 ## [v1.0.11] - 2016-11-14
 
 ### Added
 
-- Pass props to interpolated functions in ReactNatvie, thanks to [@haikyuu](https://github.com/haikyuu). (see [#190](https://github.com/styled-components/styled-components/pull/190))
+- Pass props to interpolated functions in React Native, thanks to [@haikyuu](https://github.com/haikyuu). (see [#190](https://github.com/styled-components/styled-components/pull/190))
 
 ### Changed
 
@@ -30,13 +58,13 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
-- Huge performance improvement by injecting styles outside of `render`, thanks to [@JamieDixon][https://github.com/JamieDixon]. (see [#137](https://github.com/styled-components/styled-components/pull/137))
+- Huge performance improvement by injecting styles outside of `render`, thanks to [@JamieDixon](https://github.com/JamieDixon). (see [#137](https://github.com/styled-components/styled-components/pull/137))
 
 ## [v1.0.9] - 2016-10-26
 
 ### Added
 
-- Added ability to get ref to the inner (DOM) node of the styled component via `innerRef` prop, thanks to [@freiksenet][https://github.com/freiksenet]. (see [#122](https://github.com/styled-components/styled-components/pull/122))
+- Added ability to get ref to the inner (DOM) node of the styled component via `innerRef` prop, thanks to [@freiksenet](https://github.com/freiksenet). (see [#122](https://github.com/styled-components/styled-components/pull/122))
 - Section in docs about the new `stylelint` support with [`stylelint-processor-styled-components`](https://github.com/styled-components/stylelint-processor-styled-components)
 
 ### Changed
@@ -91,7 +119,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.11...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.1.2...master
+[v1.1.2]: https://github.com/styled-components/styled-components/compare/v1.1.1...v1.1.2
+[v1.1.1]: https://github.com/styled-components/styled-components/compare/v1.1.0...v1.1.1
+[v1.1.0]: https://github.com/styled-components/styled-components/compare/v1.0.11...v1.1.0
 [v1.0.11]: https://github.com/styled-components/styled-components/compare/v1.0.10...v1.0.11
 [v1.0.10]: https://github.com/styled-components/styled-components/compare/v1.0.9...v1.0.10
 [v1.0.9]: https://github.com/styled-components/styled-components/compare/v1.0.8...v1.0.9

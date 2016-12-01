@@ -1,10 +1,15 @@
 [ignore]
 .*/node_modules/flow-remove-types/.*
 .*/node_modules/rollup-plugin-flow/.*
+.*/dist/.*
+.*/lib/.*
+.*/node_modules/babel-plugin-flow-react-proptypes/src/__test__/.*
 
 [include]
 
 [libs]
+flow-typed
 
 [options]
 suppress_comment=.*\\$FlowIssue
+suppress_comment=.*\\$FlowInvalidInputTest

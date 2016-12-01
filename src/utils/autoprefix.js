@@ -9,7 +9,7 @@ import type Container from '../vendor/postcss/container'
 export default (root: Container) => {
   root.walkDecls(decl => {
     /* No point even checking custom props */
-    if (decl.prop.startsWith('--')) return
+    if (/^--/.test(decl.prop)) return
 
     const objStyle = { [camelizeStyleName(decl.prop)]: decl.value }
     const prefixed = prefixAll(objStyle)

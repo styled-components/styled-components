@@ -53,6 +53,7 @@ const plugins = [
       'react',
     ],
     plugins: [
+      'flow-react-proptypes',
       'transform-flow-strip-types',
       'external-helpers',
       'transform-object-rest-spread',
