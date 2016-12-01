@@ -2,6 +2,8 @@
 
 import { createElement } from 'react'
 
+import type { Theme } from './ThemeProvider'
+
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
@@ -40,7 +42,7 @@ export default (ComponentStyle: Function) => {
       constructor() {
         super()
         this.state = {
-          theme: {},
+          theme: null,
           generatedClassName: '',
         }
       }
@@ -62,20 +64,22 @@ export default (ComponentStyle: Function) => {
             this.setState({ theme, generatedClassName })
           })
         } else {
+          const theme = this.props.theme || {}
           const generatedClassName = this.generateAndInjectStyles(
-            this.props.theme || {},
+            theme,
             this.props
           )
-          this.setState({ generatedClassName })
+          this.setState({ theme, generatedClassName })
         }
       }
 
-      componentWillReceiveProps(nextProps: any) {
-        const generatedClassName = this.generateAndInjectStyles(
-          this.state.theme || this.props.theme,
-          nextProps
-        )
-        this.setState({ generatedClassName })
+      componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
+        this.setState((oldState) => {
+          const theme = nextProps.theme || oldState.theme
+          const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
+
+          return { theme, generatedClassName }
+        })
       }
 
       componentWillUnmount() {

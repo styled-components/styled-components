@@ -7,11 +7,21 @@ All notable changes to this project will be documented in this file. If a contri
 ## [Unreleased]
 
 ### Added
-- Add `// @flow` to files missing them and fix ThemeProvider types, [@relekang](https://github.com/relekang). (see [#225](https://github.com/styled-components/styled-components/pull/225)
 
 ### Changed
 
-- Modify `StyleNativeComponent.js` so that `generateAndInjectStyles` is called outside of `render`, thanks to [@sheepsteak](https://github.com/sheepsteak). (see [#171](https://github.com/styled-components/styled-components/pull/171))
+- Fixed theme changes using `<ThemeProvider />` where classNames didn't changed at the component [@k15a](https://github.com/k15a)
+
+## [v1.1.2]
+
+### Added
+
+- Add `// @flow` to files missing them and fix ThemeProvider types, thanks to [@relekang](https://github.com/relekang). (see [#225](https://github.com/styled-components/styled-components/pull/225))
+
+### Changed
+
+- Fixed setting the default theme via `defaultProps` and theme changes not re-rendering components with new styles, thanks to [@michalkvasnicak](https://github.com/michalkvasnicak). (see [#253](https://github.com/styled-components/styled-components/pull/253))
+- Improve ReactNative style generation performance, thanks to [@sheepsteak](https://github.com/sheepsteak). (see [#171](https://github.com/styled-components/styled-components/pull/171))
 
 ## [v1.1.1]
 
@@ -109,7 +119,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.1.1...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.1.2...master
+[v1.1.2]: https://github.com/styled-components/styled-components/compare/v1.1.1...v1.1.2
 [v1.1.1]: https://github.com/styled-components/styled-components/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/styled-components/styled-components/compare/v1.0.11...v1.1.0
 [v1.0.11]: https://github.com/styled-components/styled-components/compare/v1.0.10...v1.0.11

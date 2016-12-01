@@ -1,6 +1,8 @@
 // @flow
 import { createElement } from 'react'
 
+import type { Theme } from './ThemeProvider'
+
 import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
 
@@ -42,20 +44,22 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
           this.setState({ generatedStyles, theme })
         })
       } else {
+        const theme = this.props.theme || {}
         const generatedStyles = this.generateAndInjectStyles(
-          this.props.theme || {},
+          theme,
           this.props
         )
-        this.setState({ generatedStyles })
+        this.setState({ generatedStyles, theme })
       }
     }
 
-    componentWillReceiveProps(nextProps: any) {
-      const generatedStyles = this.generateAndInjectStyles(
-        this.state.theme || this.props.theme,
-        nextProps
-      )
-      this.setState({ generatedStyles })
+    componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
+      this.setState((oldState) => {
+        const theme = nextProps.theme || oldState.theme
+        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
+
+        return { theme, generatedClassName }
+      })
     }
 
     componentWillUnmount() {
