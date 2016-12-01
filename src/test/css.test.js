@@ -16,7 +16,7 @@ describe('css features', () => {
       transition: opacity 0.3s;
     `
     shallow(<Comp />)
-    expectCSSMatches('.a { -webkit-transition: opacity 0.3s; transition: opacity 0.3s; }')
+    expectCSSMatches('.a { transition: opacity 0.3s; -webkit-transition: opacity 0.3s; }')
   })
 
   it('should add vendor prefixes for display', () => {
@@ -33,15 +33,15 @@ describe('css features', () => {
         display: -ms-flexbox;
         display: -webkit-flex;
         display: flex;
+        flex-direction: column;
         -webkit-box-direction: normal;
         -webkit-box-orient: vertical;
         -ms-flex-direction: column;
         -webkit-flex-direction: column;
-        flex-direction: column;
+        align-items: center;
         -webkit-box-align: center;
         -ms-flex-align: center;
         -webkit-align-items: center;
-        align-items: center;
       }
     `)
   })
