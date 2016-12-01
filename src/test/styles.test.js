@@ -6,7 +6,7 @@ import { resetStyled, expectCSSMatches } from './utils'
 
 let styled
 
-describe.only('with styles', () => {
+describe('with styles', () => {
   /**
    * Make sure the setup is the same for every test
    */
