@@ -28,6 +28,22 @@ describe('flatten', () => {
     // $FlowIssue
     expect(flatten(['some:thing;', obj, 'something: else;'])).toEqual(['some:thing;', css, 'something: else;'])
   })
+  it('handles nested objects', () => {
+    const obj = {
+      fontSize: '14px',
+      '@media screen and (min-width: 250px)': {
+        fontSize: '16px',
+      },
+      '&:hover': {
+        fontWeight: 'bold',
+      },
+    }
+    const css = 'font-size: 14px; @media screen and (min-width: 250px) {\n  font-size: 16px;\n} &:hover {\n  font-weight: bold;\n}'
+    // $FlowIssue
+    expect(flatten([obj])).toEqual([css])
+    // $FlowIssue
+    expect(flatten(['some:thing;', obj, 'something: else;'])).toEqual(['some:thing;', css, 'something: else;'])
+  })
   it('toStrings class instances', () => {
     class SomeClass {
       toString() {
