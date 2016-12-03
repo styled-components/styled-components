@@ -1,7 +1,5 @@
-/// <reference path="index.d.ts" />
-
 import * as React from "react-native";
-import styled from "styled-components/native";
+import styled from "../native";
 
 const StyledView = styled.View`
   background-color: papayawhip;

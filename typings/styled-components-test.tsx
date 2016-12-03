@@ -1,9 +1,7 @@
-/// <reference path="styled-components.d.ts" />
-
 import * as React from "react";
 
-import styled from "styled-components";
-import { css, keyframes, ThemeProvider, injectGlobal} from "styled-components";
+import styled from "../lib";
+import { css, keyframes, ThemeProvider, injectGlobal} from "../lib";
 
 // Create a <Title> react component that renders an <h1> which is
 // centered, palevioletred and sized at 1.5em
