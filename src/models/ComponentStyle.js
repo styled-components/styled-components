@@ -1,11 +1,9 @@
 // @flow
 import hashStr from 'glamor/lib/hash'
+import stylis from 'stylis'
 
 import type { RuleSet, NameGenerator } from '../types'
 import flatten from '../utils/flatten'
-import parse from '../vendor/postcss-safe-parser/parse'
-import postcssNested from '../vendor/postcss-nested'
-import autoprefix from '../utils/autoprefix'
 import styleSheet from './StyleSheet'
 
 /*
@@ -38,10 +36,8 @@ export default (nameGenerator: NameGenerator) => {
       if (!inserted[hash]) {
         const selector = nameGenerator(hash)
         inserted[hash] = selector
-        const root = parse(`.${selector} { ${flatCSS} }`)
-        postcssNested(root)
-        autoprefix(root)
-        this.insertedRule.appendRule(root.toResult().css)
+        const css = stylis('', `@root { .${selector} { ${flatCSS} } }`)
+        this.insertedRule.appendRule(css)
       }
       return inserted[hash]
     }

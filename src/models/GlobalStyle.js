@@ -1,6 +1,5 @@
 // @flow
-import parse from '../vendor/postcss-safe-parser/parse'
-import postcssNested from '../vendor/postcss-nested'
+import stylis from 'stylis'
 
 import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
@@ -17,12 +16,8 @@ export default class ComponentStyle {
 
   generateAndInject() {
     if (!styleSheet.injected) styleSheet.inject()
-    let flatCSS = flatten(this.rules).join('')
-    if (this.selector) {
-      flatCSS = `${this.selector} {${flatCSS}\n}`
-    }
-    const root = parse(flatCSS)
-    postcssNested(root)
-    styleSheet.insert(root.toResult().css)
+    const flatCSS = flatten(this.rules).join('')
+    const css = stylis('', `${this.selector || '@root'} { ${flatCSS} }`)
+    styleSheet.insert(css)
   }
 }
