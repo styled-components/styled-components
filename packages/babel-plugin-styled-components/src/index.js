@@ -1,13 +1,16 @@
-import template from 'babel-template'
-
 import hash from './utils/hash'
 import getTarget from './utils/get-target'
+import getName from './utils/get-name'
 
-const buildStyledCall = template(`STYLED({
-  target: TARGET,
-  displayName: DISPLAYNAME,
-  identifier: IDENTIFIER
-})`)
+const blockName = (file) => {
+  return file.opts.basename !== 'index' ?
+    file.opts.basename :
+    path.basename(path.dirname(file.opts.filename))
+}
+
+const getOption = (opts, name, defaultValue = true) => {
+  return opts[name] === undefined || opts[name] === null ? defaultValue : opts[name]
+}
 
 let id = 0
 
@@ -36,73 +39,55 @@ export default function({ types: t }) {
           }
         })
 
-        path.traverse({
-          TaggedTemplateExpression(path, { opts, file }) {
-            const addDisplayName = (opts.displayName === undefined || opts.displayName === null) ? true : opts.displayName
-            const addIdentifier = (opts.ssr === undefined || opts.ssr === null) ? true : opts.ssr
-            const useFileName = (opts.fileName === undefined || opts.fileName === null) ? true : opts.fileName
+        const options = {
+          displayName: getOption(state.opts, 'displayName'),
+          ssr: getOption(state.opts, 'ssr'),
+          fileName: getOption(state.opts, 'fileName'),
+        }
 
+        if (!options.ssr && !options.displayName) {
+          return
+        }
+
+        path.traverse({
+          TaggedTemplateExpression(path, { file }) {
             const tag = path.node.tag
 
             if (!isStyled(tag)) return
 
-            let namedNode
-
-            path.find((path) => {
-              // const X = styled
-              if (path.isAssignmentExpression()) {
-                namedNode = path.node.left
-              // const X = { Y: styled }
-              } else if (path.isObjectProperty()) {
-                namedNode = path.node.key
-              // let X; X = styled
-              } else if (path.isVariableDeclarator()) {
-                namedNode = path.node.id
-              } else if (path.isStatement()) {
-                // we've hit a statement, we should stop crawling up
-                return true
-              }
-
-              // we've got an displayName (if we need it) no need to continue
-              if (namedNode) return true
-            })
-
-            // foo.bar -> bar
-            if (t.isMemberExpression(namedNode)) {
-              namedNode = namedNode.property
-            }
-
             // Get target
             const target = getTarget(path.node.tag)
 
-            // identifiers are the only thing we can reliably get a name from
-            const componentName = t.isIdentifier(namedNode) ? namedNode.name : undefined
+            const componentName = getName(path)
 
             let displayName
-
-            if (!useFileName) {
-              displayName = componentName
+            if (options.fileName) {
+              displayName = componentName ? `${blockName(file)}__${componentName}` : blockName(file)
             } else {
-              let blockName = file.opts.basename
-              if (blockName === 'index') {
-                blockName = path.basename(path.dirname(file.opts.filename))
-              }
-              displayName = componentName ? `${blockName}__${namedNode.name}` : blockName
+              displayName = componentName
             }
 
             id++
             // Prefix the identifier with a character if no displayName exists because CSS classes cannot start with a number
             const identifier = `${displayName || 's'}-${hash(`${id}${displayName}`)}`
+
             // Put together the final code again
-            const call = buildStyledCall({
-              STYLED: t.identifier(importedVariableName),
-              TARGET: target,
-              DISPLAYNAME: (addDisplayName && displayName && t.stringLiteral(displayName)) || t.identifier('undefined'),
-              IDENTIFIER: (addIdentifier && identifier && t.stringLiteral(identifier)) || t.identifier('undefined')
-            })
+            const styledCallProps = [ t.objectProperty(t.identifier('target'), target) ]
+            if (options.displayName && displayName) {
+              styledCallProps.push(t.objectProperty(t.identifier('displayName'), t.stringLiteral(displayName)))
+            }
+            if (options.ssr && identifier) {
+              styledCallProps.push(t.objectProperty(t.identifier('identifier'), t.stringLiteral(identifier)))
+            }
+
+            const call = t.callExpression(
+              t.identifier(importedVariableName),
+              [ t.objectExpression(styledCallProps) ]
+            )
+
             // Put together the styled call with the template literal
             // to get the finished styled({ })`` form! 🎉
-            path.node.tag = call.expression
+            path.node.tag = call
           }
         }, state)
       }

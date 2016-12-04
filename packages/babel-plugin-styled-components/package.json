@@ -28,8 +28,5 @@
     "server-side rendering",
     "ssr",
     "displayName"
-  ],
-  "dependencies": {
-    "babel-template": "^6.16.0"
-  }
+  ]
 }

@@ -1,35 +1,28 @@
 const Test = styled({
   target: 'div',
-  displayName: 'Test',
-  identifier: undefined
+  displayName: 'Test'
 })` width: 100%;`;
 const Test2 = styled({
   target: 'div',
-  displayName: 'Test2',
-  identifier: undefined
+  displayName: 'Test2'
 })``;
 const Test3 = true ? styled({
   target: 'div',
-  displayName: 'Test3',
-  identifier: undefined
+  displayName: 'Test3'
 })`` : styled({
   target: 'div',
-  displayName: 'Test3',
-  identifier: undefined
+  displayName: 'Test3'
 })``;
 const styles = { One: styled({
     target: 'div',
-    displayName: 'One',
-    identifier: undefined
+    displayName: 'One'
   })`` };
 let Component;
 Component = styled({
   target: 'div',
-  displayName: 'Component',
-  identifier: undefined
+  displayName: 'Component'
 })``;
 const WrappedComponent = styled({
   target: Inner,
-  displayName: 'WrappedComponent',
-  identifier: undefined
+  displayName: 'WrappedComponent'
 })``;
