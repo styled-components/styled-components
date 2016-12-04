@@ -88,7 +88,8 @@
     "rollup-plugin-json": "^2.0.2",
     "rollup-plugin-node-resolve": "^2.0.0",
     "rollup-plugin-replace": "^1.1.1",
-    "rollup-plugin-uglify": "^1.0.1"
+    "rollup-plugin-uglify": "^1.0.1",
+    "rollup-plugin-visualizer": "^0.1.5"
   },
   "peerDependencies": {
     "react": "^0.14.0 || ^15.0.0-0"
