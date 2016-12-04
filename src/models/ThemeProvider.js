@@ -1,8 +1,8 @@
 // @flow
 /* globals React$Element */
 import React, { PropTypes, Component } from 'react'
-import isFunction from 'lodash/isFunction'
-import isPlainObject from 'lodash/isPlainObject'
+import isFunction from 'is-function'
+import isPlainObject from 'is-plain-object'
 import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
 

@@ -43,7 +43,8 @@
     "fbjs": "^0.8.4",
     "glamor": "^2.15.5",
     "inline-style-prefixer": "^2.0.4",
-    "lodash": "^4.15.0",
+    "is-function": "^1.0.1",
+    "is-plain-object": "^2.0.1",
     "supports-color": "^3.1.2"
   },
   "devDependencies": {
