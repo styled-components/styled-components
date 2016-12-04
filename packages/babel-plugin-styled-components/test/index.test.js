@@ -9,8 +9,8 @@ function trim(str) {
 
 describe('babel-plugin-styled-components', () => {
   const fixturesDir = path.join(__dirname, 'fixtures')
-  fs.readdirSync(fixturesDir).map((caseName) => {
-    it(`should ${caseName.split('-').join(' ')}`, () => {
+  fs.readdirSync(fixturesDir).sort().map((caseName) => {
+    it(`should ${caseName.replace(/^\d*-/, '').split('-').join(' ')}`, () => {
       const fixtureDir = path.join(fixturesDir, caseName)
       const beforePath = path.join(fixtureDir, 'before.js');
       const before = transformFileSync(beforePath).code
