@@ -36,7 +36,7 @@ export default (nameGenerator: NameGenerator) => {
       if (!inserted[hash]) {
         const selector = nameGenerator(hash)
         inserted[hash] = selector
-        const css = stylis.compiler('', '', `@root { .${selector} { ${flatCSS} } }`, false, false, false)
+        const css = stylis('', `@root { .${selector} { ${flatCSS} } }`, false, false)
         this.insertedRule.appendRule(css)
       }
       return inserted[hash]

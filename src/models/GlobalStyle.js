@@ -17,7 +17,7 @@ export default class ComponentStyle {
   generateAndInject() {
     if (!styleSheet.injected) styleSheet.inject()
     const flatCSS = flatten(this.rules).join('')
-    const css = stylis.compiler('', '', `${this.selector || '@root'} { ${flatCSS} }`, false, false, false)
+    const css = stylis('', `${this.selector || '@root'} { ${flatCSS} }`, false, false)
     styleSheet.insert(css)
   }
 }
