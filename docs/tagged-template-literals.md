@@ -55,7 +55,7 @@ into an object and re-evaluate it whenever a StyledComponent's componentWillRece
 Whenever you call ``styled.xyz` ... ` ``, underneath we call `css` with the CSS code. You can use `css` yourself if you ever need a chunk of CSS to work like a styled component: (kind of like a mixin!)
 
 ```js
-import styled, { css } from 'styled-component'
+import styled, { css } from 'styled-components'
 
 const chunk = css`
   color: red;
