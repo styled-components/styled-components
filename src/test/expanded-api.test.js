@@ -20,8 +20,15 @@ describe.only('expanded api', () => {
     it('should attach a single class', () => {
       const Comp = styled.div.classes('foo')``
       const rendered = shallow(<Comp />)
-      expectCSSMatches('.b { }')
+      expectCSSMatches('.sc-a { } .b { }')
       expect(rendered.html()).toBe('<div class="sc-a foo b"></div>')
+    })
+
+    it('should attach multiple classes', () => {
+      const Comp = styled.div.classes('foo bar baz')``
+      const rendered = shallow(<Comp />)
+      expectCSSMatches('.sc-a { } .b { }')
+      expect(rendered.html()).toBe('<div class="sc-a foo bar baz b"></div>')
     })
   })
 })

@@ -24,6 +24,7 @@ export default (nameGenerator: NameGenerator) => {
       this.rules = rules
       this.componentId = componentId
       if (!styleSheet.injected) styleSheet.inject()
+      this.insertedRule = styleSheet.insert(`.${componentId} { }`)
     }
 
     static generateName(str: string) {
@@ -37,8 +38,6 @@ export default (nameGenerator: NameGenerator) => {
      * Returns the hash to be injected on render()
      * */
     generateAndInjectStyles(executionContext: Object) {
-      // TODO: this is good. Restore it. --------------------------------------v
-      if (!this.insertedRule) this.insertedRule = styleSheet.insert(''/* `.${componentId} {}`*/)
       const flatCSS = flatten(this.rules, executionContext).join('')
         .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
       const hash = hashStr(this.componentId + flatCSS)
@@ -48,7 +47,7 @@ export default (nameGenerator: NameGenerator) => {
         const root = parse(`.${selector} { ${flatCSS} }`)
         postcssNested(root)
         autoprefix(root)
-        this.insertedRule.appendRule(/* \n*/`${root.toResult().css}`)
+        this.insertedRule.appendRule(`\n${root.toResult().css}`)
       }
       return inserted[hash]
     }
