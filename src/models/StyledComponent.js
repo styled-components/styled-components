@@ -4,8 +4,6 @@ import { createElement } from 'react'
 
 import type { Theme } from './ThemeProvider'
 
-import type { Theme } from './ThemeProvider'
-
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
