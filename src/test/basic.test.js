@@ -35,36 +35,21 @@ describe('basic', () => {
   it('should generate an empty tag once rendered', () => {
     const Comp = styled.div``
     shallow(<Comp />)
-    expectCSSMatches('.b {  }')
+    expectCSSMatches('.a {  }')
   })
 
   /* TODO: we should probably pretty-format the output so this test might have to change */
   it('should pass through all whitespace', () => {
     const Comp = styled.div`   \n   `
     shallow(<Comp />)
-    expectCSSMatches('.b {    \n    }', { ignoreWhitespace: false })
+    expectCSSMatches('.a {    \n    }', { ignoreWhitespace: false })
   })
 
   it('should inject only once for a styled component, no matter how often it\'s mounted', () => {
     const Comp = styled.div``
     shallow(<Comp />)
     shallow(<Comp />)
-    expectCSSMatches('.b {  }')
-  })
-
-  describe('private API', () => {
-    it('should accept the private, internal API notation', () => {
-      const Comp = styled({ target: 'div', identifier: 'Comp-a123bf', displayName: 'Comp' })``
-      shallow(<Comp />)
-      expectCSSMatches('.a { }')
-    })
-
-    it('should add the passed identifier as a class', () => {
-      const identifier = 'Comp-a123bf'
-      const Comp = styled({ target: 'div', identifier: identifier, displayName: 'Comp' })``
-      const renderedComp = shallow(<Comp />)
-      expect(renderedComp.hasClass(identifier)).toBe(true)
-    })
+    expectCSSMatches('.a {  }')
   })
 
   describe('jsdom tests', () => {

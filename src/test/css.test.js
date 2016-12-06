@@ -16,7 +16,7 @@ describe('css features', () => {
       transition: opacity 0.3s;
     `
     shallow(<Comp />)
-    expectCSSMatches('.b { transition: opacity 0.3s; -webkit-transition: opacity 0.3s; }')
+    expectCSSMatches('.a { transition: opacity 0.3s; -webkit-transition: opacity 0.3s; }')
   })
 
   it('should add vendor prefixes for display', () => {
@@ -27,7 +27,7 @@ describe('css features', () => {
     `
     shallow(<Comp />)
     expectCSSMatches(`
-      .b {
+      .a {
         display: -webkit-box;
         display: -moz-box;
         display: -ms-flexbox;
@@ -52,7 +52,7 @@ describe('css features', () => {
     `
     shallow(<Comp />)
     expectCSSMatches(`
-      .b {
+      .a {
         margin-bottom: -webkit-calc(15px - 0.5rem) !important;
         margin-bottom: -moz-calc(15px - 0.5rem) !important;
         margin-bottom: calc(15px - 0.5rem) !important;
@@ -65,6 +65,6 @@ describe('css features', () => {
       --custom-prop: some-val;
     `
     shallow(<Comp />)
-    expectCSSMatches('.b { --custom-prop: some-val; }')
+    expectCSSMatches('.a { --custom-prop: some-val; }')
   })
 })

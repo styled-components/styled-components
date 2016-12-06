@@ -15,34 +15,34 @@ describe('extending', () => {
     styled = resetStyled()
   })
 
-  it('should generate two classes with no styles', () => {
+  it('should generate a single class with no styles', () => {
     const Parent = styled.div``
     const Child = styled(Parent)``
 
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.c { } .d { }')
+    expectCSSMatches('.a { }')
   })
 
-  it('should generate two classes if only parent has styles', () => {
+  it('should generate a single class if only parent has styles', () => {
     const Parent = styled.div`color: blue;`
     const Child = styled(Parent)``
 
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.b { color: blue; } .c { }')
+    expectCSSMatches('.a { color: blue; }')
   })
 
-  it('should generate two classes if only child has styles', () => {
+  it('should generate a single class if only child has styles', () => {
     const Parent = styled.div`color: blue;`
     const Child = styled(Parent)``
 
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.b { color: blue; } .c { }')
+    expectCSSMatches('.a { color: blue; }')
   })
 
   it('should generate a class for the child with the rules of the parent', () => {

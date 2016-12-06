@@ -16,13 +16,13 @@ describe('props', () => {
       color: ${props => props.fg || 'black'};
     `
     shallow(<Comp />)
-    expectCSSMatches('.b { color: black; }')
+    expectCSSMatches('.a { color: black; }')
   })
   it('should execute interpolations and inject props', () => {
     const Comp = styled.div`
       color: ${props => props.fg || 'black'};
     `
     shallow(<Comp fg="red"/>)
-    expectCSSMatches('.b { color: red; }')
+    expectCSSMatches('.a { color: red; }')
   })
 })
