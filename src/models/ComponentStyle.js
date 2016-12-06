@@ -35,7 +35,8 @@ export default (nameGenerator: NameGenerator) => {
      * Returns the hash to be injected on render()
      * */
     generateAndInjectStyles(executionContext: Object, identifier: string) {
-      if (!this.insertedRule) this.insertedRule = styleSheet.insert(`.${identifier} {}`)
+      // TODO: this is good. Restore it. --------------------------------------v
+      if (!this.insertedRule) this.insertedRule = styleSheet.insert(''/* `.${identifier} {}`*/)
       const flatCSS = flatten(this.rules, executionContext).join('')
         .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
       const hash = hashStr(identifier + flatCSS)
@@ -45,7 +46,7 @@ export default (nameGenerator: NameGenerator) => {
         const root = parse(`.${selector} { ${flatCSS} }`)
         postcssNested(root)
         autoprefix(root)
-        this.insertedRule.appendRule(`\n${root.toResult().css}`)
+        this.insertedRule.appendRule(/* \n*/`${root.toResult().css}`)
       }
       return inserted[hash]
     }
