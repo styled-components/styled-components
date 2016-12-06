@@ -2,10 +2,20 @@
 import css from './css'
 import type { Interpolation, Target } from '../types'
 
+
 export default (styledComponent: Function) => {
-  const styled = (tag: Target) =>
-    (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
-      styledComponent(tag, css(strings, ...interpolations))
+  const expandedApi = (tag, options: Object = {}) => {
+    const templateFunction =
+      (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
+        styledComponent(tag, options, css(strings, ...interpolations))
+    templateFunction.classes = classes => expandedApi(tag, { ...options, classes })
+    templateFunction.componentId = componentId => expandedApi(tag, { ...options, componentId })
+    templateFunction.displayName = displayName => expandedApi(tag, { ...options, displayName })
+    return templateFunction
+  }
+
+  const styled = (tag: Target) => expandedApi(tag)
+
 
   /* Shorthands for all valid HTML Elements */
 // Thanks to ReactDOMFactories for this handy list!

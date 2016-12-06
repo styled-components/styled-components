@@ -15,7 +15,7 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
     /* Flatten ruleSet */
     if (Array.isArray(chunk)) return [...ruleSet, ...flatten(chunk, executionContext)]
 
-    if (chunk.identifier !== undefined) return [...ruleSet, `.${chunk.identifier}`]
+    if (chunk.styledComponentId !== undefined) return [...ruleSet, `.${chunk.styledComponentId}`]
 
     /* Either execute or defer the function */
     if (typeof chunk === 'function') {

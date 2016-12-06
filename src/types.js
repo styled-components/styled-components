@@ -4,9 +4,6 @@ export type Interpolation = ((executionContext: Object) => string) | string | nu
 export type RuleSet = Array<Interpolation>
 
 /* eslint-disable no-undef */
-type Tag = string | ReactClass<*>
-type Input = { tag: Tag, identifier?: string, displayName?: string }
-
-export type Target = Tag | Input
+export type Target = string | ReactClass<*>
 
 export type NameGenerator = (hash: number) => string
