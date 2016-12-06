@@ -1,3 +1,4 @@
+// @flow
 import React from 'react'
 import { shallow } from 'enzyme'
 
@@ -15,7 +16,7 @@ describe('css features', () => {
       transition: opacity 0.3s;
     `
     shallow(<Comp />)
-    expectCSSMatches('.a { -webkit-transition: opacity 0.3s; transition: opacity 0.3s; }')
+    expectCSSMatches('.b { transition: opacity 0.3s; -webkit-transition: opacity 0.3s; }')
   })
 
   it('should add vendor prefixes for display', () => {
@@ -26,21 +27,21 @@ describe('css features', () => {
     `
     shallow(<Comp />)
     expectCSSMatches(`
-      .a {
+      .b {
         display: -webkit-box;
         display: -moz-box;
         display: -ms-flexbox;
         display: -webkit-flex;
         display: flex;
+        flex-direction: column;
         -webkit-box-direction: normal;
         -webkit-box-orient: vertical;
         -ms-flex-direction: column;
         -webkit-flex-direction: column;
-        flex-direction: column;
+        align-items: center;
         -webkit-box-align: center;
         -ms-flex-align: center;
         -webkit-align-items: center;
-        align-items: center;
       }
     `)
   })
@@ -51,7 +52,7 @@ describe('css features', () => {
     `
     shallow(<Comp />)
     expectCSSMatches(`
-      .a {
+      .b {
         margin-bottom: -webkit-calc(15px - 0.5rem) !important;
         margin-bottom: -moz-calc(15px - 0.5rem) !important;
         margin-bottom: calc(15px - 0.5rem) !important;
@@ -64,6 +65,6 @@ describe('css features', () => {
       --custom-prop: some-val;
     `
     shallow(<Comp />)
-    expectCSSMatches('.a { --custom-prop: some-val; }')
+    expectCSSMatches('.b { --custom-prop: some-val; }')
   })
 })

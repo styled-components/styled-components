@@ -1,3 +1,4 @@
+// @flow
 import React from 'react'
 import { shallow } from 'enzyme'
 
@@ -15,13 +16,13 @@ describe('props', () => {
       color: ${props => props.fg || 'black'};
     `
     shallow(<Comp />)
-    expectCSSMatches('.a { color: black; }')
+    expectCSSMatches('.b { color: black; }')
   })
   it('should execute interpolations and inject props', () => {
     const Comp = styled.div`
       color: ${props => props.fg || 'black'};
     `
     shallow(<Comp fg="red"/>)
-    expectCSSMatches('.a { color: red; }')
+    expectCSSMatches('.b { color: red; }')
   })
 })

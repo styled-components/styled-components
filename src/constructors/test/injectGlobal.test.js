@@ -1,3 +1,4 @@
+// @flow
 import React, { Component } from 'react'
 import expect from 'expect'
 import { shallow } from 'enzyme'
@@ -60,7 +61,7 @@ describe('injectGlobal', () => {
     `
 
     expectCSSMatches(`
-      .a {
+      .b {
         ${rule3}
       }
       html {
