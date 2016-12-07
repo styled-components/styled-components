@@ -39,10 +39,10 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "buffer": "^5.0.0",
-    "css-to-react-native": "^1.0.3",
+    "css-to-react-native": "^1.0.6",
     "fbjs": "^0.8.4",
     "glamor": "^2.15.5",
-    "inline-style-prefixer": "^2.0.4",
+    "inline-style-prefixer": "^2.0.5",
     "is-function": "^1.0.1",
     "is-plain-object": "^2.0.1",
     "supports-color": "^3.1.2"
