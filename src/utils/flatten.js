@@ -15,7 +15,9 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
     /* Flatten ruleSet */
     if (Array.isArray(chunk)) return [...ruleSet, ...flatten(chunk, executionContext)]
 
-    if (chunk.styledComponentId !== undefined) return [...ruleSet, `.${chunk.styledComponentId}`]
+    /* Handle other components */
+    // $FlowIssue not sure how to make this pass
+    if (chunk.hasOwnProperty('styledComponentId')) return [...ruleSet, `.${chunk.styledComponentId}`]
 
     /* Either execute or defer the function */
     if (typeof chunk === 'function') {
