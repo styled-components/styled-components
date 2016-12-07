@@ -11,6 +11,7 @@ export default (styledComponent: Function) => {
     templateFunction.classes = classes => expandedApi(tag, { ...options, classes })
     templateFunction.componentId = componentId => expandedApi(tag, { ...options, componentId })
     templateFunction.displayName = displayName => expandedApi(tag, { ...options, displayName })
+    templateFunction.css = templateFunction // pure sugar
     return templateFunction
   }
 
