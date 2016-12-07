@@ -47,7 +47,7 @@ here is our current recommendation:
 [include]
 
 [libs]
-# This is were your own flow-typed libdefs go
+# This is where your own flow-typed libdefs go
 flow-typed
 
 # These declarations are super explicit...

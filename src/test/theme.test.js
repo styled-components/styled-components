@@ -1,5 +1,6 @@
 // @flow
-import jsdom from 'mocha-jsdom';
+import expect from 'expect'
+import jsdom from 'mocha-jsdom'
 import React from 'react'
 import { mount, render } from 'enzyme'
 
@@ -61,6 +62,25 @@ describe('theming', () => {
       </div>
     )
     expectCSSMatches(`.a { color: purple; }`)
+  })
+
+  it('should properly allow a component to override the theme with a prop', () => {
+    const Comp = styled.div`
+      color: ${props => props.theme.color};
+    `
+
+    const theme = {
+      color: 'purple',
+    }
+
+    render(
+      <div>
+        <ThemeProvider theme={theme}>
+          <Comp theme={{ color: 'red' }}/>
+        </ThemeProvider>
+      </div>
+    )
+    expectCSSMatches(`.a { color: red; }`)
   })
 
   it('should properly set the theme with an empty object when no teme is provided and no defaults are set', () => {
@@ -211,5 +231,34 @@ describe('theming (jsdom)', () => {
 
     wrapper.setProps({ zIndex: 1 });
     expectCSSMatches(`${expectedStyles}.c { color: pink; z-index: 1px; }`)
-  });
+  })
+
+  it('should change the classnames when the theme changes', () => {
+    const Comp = styled.div`
+      color: ${props => props.theme.color};
+    `
+
+    const originalTheme = { color: 'black' }
+    const newTheme = { color: 'blue' }
+
+    const Theme = ({ theme }) => (
+      <ThemeProvider theme={theme}>
+        <Comp someProps={theme} />
+      </ThemeProvider>
+    )
+
+    const wrapper = mount(
+      <Theme theme={originalTheme} />
+    )
+
+
+    expectCSSMatches(`.a { color: ${originalTheme.color}; }`)
+    expect(wrapper.find('div').prop('className')).toBe('a')
+
+    // Change theme
+    wrapper.setProps({ theme: newTheme })
+
+    expectCSSMatches(`.a { color: ${originalTheme.color}; }.b { color: ${newTheme.color}; }`)
+    expect(wrapper.find('div').prop('className')).toBe('b')
+  })
 })

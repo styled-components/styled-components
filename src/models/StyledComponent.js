@@ -46,8 +46,9 @@ export default (ComponentStyle: Function) => {
         // that by updating when an event is emitted
         if (this.context[CHANNEL]) {
           const subscribe = this.context[CHANNEL]
-          this.unsubscribe = subscribe(theme => {
+          this.unsubscribe = subscribe(nextTheme => {
             // This will be called once immediately
+            const theme = this.props.theme || nextTheme
             const generatedClassName = this.generateAndInjectStyles(theme, this.props)
             this.setState({ theme, generatedClassName })
           })
@@ -62,10 +63,12 @@ export default (ComponentStyle: Function) => {
       }
 
       componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-        const theme = nextProps.theme || this.state.theme
+        this.setState((oldState) => {
+          const theme = nextProps.theme || oldState.theme
+          const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
 
-        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
-        this.setState({ theme, generatedClassName })
+          return { theme, generatedClassName }
+        })
       }
 
       componentWillUnmount() {
