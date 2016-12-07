@@ -39,11 +39,12 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "buffer": "^5.0.0",
-    "css-to-react-native": "^1.0.3",
+    "css-to-react-native": "^1.0.6",
     "fbjs": "^0.8.4",
     "glamor": "^2.15.5",
-    "inline-style-prefixer": "^2.0.4",
-    "lodash": "^4.15.0",
+    "inline-style-prefixer": "^2.0.5",
+    "is-function": "^1.0.1",
+    "is-plain-object": "^2.0.1",
     "stylis": "^0.6.1",
     "supports-color": "^3.1.2"
   },
@@ -88,7 +89,8 @@
     "rollup-plugin-json": "^2.0.2",
     "rollup-plugin-node-resolve": "^2.0.0",
     "rollup-plugin-replace": "^1.1.1",
-    "rollup-plugin-uglify": "^1.0.1"
+    "rollup-plugin-uglify": "^1.0.1",
+    "rollup-plugin-visualizer": "^0.1.5"
   },
   "peerDependencies": {
     "react": "^0.14.0 || ^15.0.0-0"
