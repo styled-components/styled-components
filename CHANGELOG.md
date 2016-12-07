@@ -8,6 +8,11 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
+- Added per-component class names (see [#227](https://github.com/styled-components/styled-components/pull/227)).
+- Added chained `classes` and `displayName` constructor functions.
+- Added the ability to override one component's styles from another.
+- Injecting an empty class for each instance of a component.
+
 ### Changed
 
 - Fixed theme changes using `<ThemeProvider />` where classNames didn't changed at the component [@k15a](https://github.com/k15a)
