@@ -64,6 +64,25 @@ describe('theming', () => {
     expectCSSMatches(`.sc-a {} .b { color: purple; }`)
   })
 
+  it('should properly allow a component to override the theme with a prop', () => {
+    const Comp = styled.div`
+      color: ${props => props.theme.color};
+    `
+
+    const theme = {
+      color: 'purple',
+    }
+
+    render(
+      <div>
+        <ThemeProvider theme={theme}>
+          <Comp theme={{ color: 'red' }}/>
+        </ThemeProvider>
+      </div>
+    )
+    expectCSSMatches(`.a { color: red; }`)
+  })
+
   it('should properly set the theme with an empty object when no teme is provided and no defaults are set', () => {
     const Comp1 = styled.div`
       color: ${props => props.theme.color};
