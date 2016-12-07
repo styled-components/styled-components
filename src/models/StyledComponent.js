@@ -46,8 +46,9 @@ export default (ComponentStyle: Function) => {
         // that by updating when an event is emitted
         if (this.context[CHANNEL]) {
           const subscribe = this.context[CHANNEL]
-          this.unsubscribe = subscribe(theme => {
+          this.unsubscribe = subscribe(nextTheme => {
             // This will be called once immediately
+            const theme = this.props.theme || nextTheme
             const generatedClassName = this.generateAndInjectStyles(theme, this.props)
             this.setState({ theme, generatedClassName })
           })
