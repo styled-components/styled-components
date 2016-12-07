@@ -12,7 +12,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
-- Fixed theme changes using `<ThemeProvider />` where classNames didn't changed at the component [@k15a](https://github.com/k15a)
+- Fixed theme changes using `<ThemeProvider />` where classNames didn't changed at the component, thanks [@k15a](https://github.com/k15a)
+- Removed `lodash` dependency in favor of small utility packages to knock down bundle size by ~0.5kB
+- Fixed overriding theme through props, thanks [@k15a](https://github.com/k15a)
 
 ## [v1.1.2]
 

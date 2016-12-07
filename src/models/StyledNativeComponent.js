@@ -38,8 +38,9 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       // that by updating when an event is emitted
       if (this.context[CHANNEL]) {
         const subscribe = this.context[CHANNEL]
-        this.unsubscribe = subscribe(theme => {
+        this.unsubscribe = subscribe(nextTheme => {
           // This will be called once immediately
+          const theme = this.props.theme || nextTheme
           const generatedStyles = this.generateAndInjectStyles(theme, this.props)
           this.setState({ generatedStyles, theme })
         })

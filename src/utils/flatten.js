@@ -1,6 +1,6 @@
 // @flow
 import hyphenate from 'fbjs/lib/hyphenateStyleName'
-import isPlainObject from 'lodash/isPlainObject'
+import isPlainObject from 'is-plain-object'
 
 import type { Interpolation } from '../types'
 
