@@ -24,7 +24,7 @@ export default (nameGenerator: NameGenerator) => {
       this.rules = rules
       this.componentId = componentId
       if (!styleSheet.injected) styleSheet.inject()
-      this.insertedRule = styleSheet.insert(`.${componentId} { }`)
+      this.insertedRule = styleSheet.insert(`.${componentId} {}`)
     }
 
     static generateName(str: string) {

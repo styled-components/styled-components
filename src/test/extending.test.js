@@ -15,34 +15,34 @@ describe('extending', () => {
     styled = resetStyled()
   })
 
-  it('should generate a single class with no styles', () => {
+  it('should generate empty classes with no styles', () => {
     const Parent = styled.div``
     const Child = styled(Parent)``
 
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.a { }')
+    expectCSSMatches('.sc-a {} .c { } .sc-b {} .d { }')
   })
 
-  it('should generate a single class if only parent has styles', () => {
+  it('should attach styles to both classes if only parent has styles', () => {
     const Parent = styled.div`color: blue;`
     const Child = styled(Parent)``
 
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.a { color: blue; }')
+    expectCSSMatches('.sc-a {} .c { color: blue; } .sc-b {} .d { color: blue; }')
   })
 
-  it('should generate a single class if only child has styles', () => {
-    const Parent = styled.div`color: blue;`
-    const Child = styled(Parent)``
+  it('should attach styles to child class if only child has styles', () => {
+    const Parent = styled.div``
+    const Child = styled(Parent)`color: blue;`
 
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.a { color: blue; }')
+    expectCSSMatches('.sc-a {} .c { } .sc-b {} .d { color: blue; }')
   })
 
   it('should generate a class for the child with the rules of the parent', () => {
@@ -51,7 +51,7 @@ describe('extending', () => {
 
     shallow(<Child />)
 
-    expectCSSMatches('.a { color: blue;color: red; }')
+    expectCSSMatches('.sc-a {} .sc-b {} .c { color: blue;color: red; }')
   })
 
   it('should generate different classes for both parent and child', () => {
@@ -61,7 +61,7 @@ describe('extending', () => {
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.a { color: blue; } .b { color: blue;color: red; }')
+    expectCSSMatches('.sc-a {} .c { color: blue; } .sc-b {} .d { color: blue;color: red; }')
   })
 
   it('should copy nested rules to the child', () => {
@@ -75,10 +75,12 @@ describe('extending', () => {
     shallow(<Child />)
 
     expectCSSMatches(`
-      .a { color: blue; }
-      .a > h1 { font-size: 4rem; }
-      .b { color: blue; color: red; }
-      .b > h1 { font-size: 4rem; }
+      .sc-a {}
+      .c { color: blue; }
+      .c > h1 { font-size: 4rem; }
+      .sc-b {}
+      .d { color: blue; color: red; }
+      .d > h1 { font-size: 4rem; }
     `)
   })
 
@@ -96,8 +98,8 @@ describe('extending', () => {
     shallow(<Child />)
 
     expectCSSMatches(`
-      .a { color: red; }
-      .b { color: red; background-color: green; }
+      .sc-a {} .c { color: red; }
+      .sc-b {} .d { color: red; background-color: green; }
     `)
   })
 

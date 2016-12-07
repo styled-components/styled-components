@@ -27,29 +27,29 @@ describe('basic', () => {
     expect(styleSheet.injected).toBe(true)
   })
 
-  it('should not generate any styles by default', () => {
+  it('should generate only component class by default', () => {
     styled.div``
-    expectCSSMatches('')
+    expectCSSMatches('.sc-a {}')
   })
 
-  it('should generate an empty tag once rendered', () => {
+  it('should add an empty class once rendered', () => {
     const Comp = styled.div``
     shallow(<Comp />)
-    expectCSSMatches('.a {  }')
+    expectCSSMatches('.sc-a {} .b {  }')
   })
 
   /* TODO: we should probably pretty-format the output so this test might have to change */
   it('should pass through all whitespace', () => {
     const Comp = styled.div`   \n   `
     shallow(<Comp />)
-    expectCSSMatches('.a {    \n    }', { ignoreWhitespace: false })
+    expectCSSMatches('.sc-a {}\n.b {    \n    }', { ignoreWhitespace: false })
   })
 
   it('should inject only once for a styled component, no matter how often it\'s mounted', () => {
     const Comp = styled.div``
     shallow(<Comp />)
     shallow(<Comp />)
-    expectCSSMatches('.a {  }')
+    expectCSSMatches('.sc-a {} .b {  }')
   })
 
   describe('jsdom tests', () => {
