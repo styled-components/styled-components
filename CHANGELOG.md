@@ -10,9 +10,13 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
-- Fixed theme changes using `<ThemeProvider />` where classNames didn't changed at the component, thanks [@k15a](https://github.com/k15a)
+## [v1.1.3]
+
+### Changed
+
+- Fixed theme changes in `ThemeProvider`s not re-rendering correctly, thanks [@k15a](https://github.com/k15a). (see [#264](https://github.com/styled-components/styled-components/pull/264))
+- Fixed overriding theme through props, thanks [@k15a](https://github.com/k15a). (see [#295](https://github.com/styled-components/styled-components/pull/295))
 - Removed `lodash` dependency in favor of small utility packages to knock down bundle size by ~0.5kB
-- Fixed overriding theme through props, thanks [@k15a](https://github.com/k15a)
 
 ## [v1.1.2]
 
@@ -121,7 +125,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.1.2...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.1.3...master
+[v1.1.3]: https://github.com/styled-components/styled-components/compare/v1.1.2...v1.1.3
 [v1.1.2]: https://github.com/styled-components/styled-components/compare/v1.1.1...v1.1.2
 [v1.1.1]: https://github.com/styled-components/styled-components/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/styled-components/styled-components/compare/v1.0.11...v1.1.0
