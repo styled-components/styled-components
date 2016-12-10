@@ -8,4 +8,7 @@ export type Target = string | ReactClass<*>
 
 export type NameGenerator = (hash: number) => string
 
-export type PassProps = boolean | { [key: string]: boolean }
+export type Options = {
+  className: string,
+  passProps: boolean | { [key: string]: boolean }
+}

@@ -6,7 +6,7 @@ import type { Theme } from './ThemeProvider'
 
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
-import type { RuleSet, Target, PassProps } from '../types'
+import type { RuleSet, Target, Options } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
@@ -15,10 +15,9 @@ export default (ComponentStyle: Function) => {
   const createStyledComponent = (
     target: Target,
     rules: RuleSet,
-    optionPassProps: PassProps,
-    optionClassName: string,
+    options: Options,
     // eslint-disable-next-line no-undef
-    parent?: ReactClass<*>
+    parent?: ReactClass<*>,
   ) => {
     /* Handle styled(OtherStyledComponent) differently */
     const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
@@ -26,8 +25,7 @@ export default (ComponentStyle: Function) => {
       return createStyledComponent(
         target.target,
         target.rules.concat(rules),
-        optionPassProps,
-        optionClassName,
+        options,
         target,
       )
     }
@@ -98,10 +96,10 @@ export default (ComponentStyle: Function) => {
         Object.keys(this.props)
           .filter(propName => !isTag(target) || validAttr(propName))
           .filter(propName => {
-            if (optionPassProps === false) {
+            if (options.passProps === false) {
               return false
             }
-            if (typeof optionPassProps === 'object' && optionPassProps[propName] === false) {
+            if (typeof options.passProps === 'object' && options.passProps[propName] === false) {
               return false
             }
             return true
@@ -109,7 +107,7 @@ export default (ComponentStyle: Function) => {
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
-        propsForElement.className = [className, generatedClassName, optionClassName]
+        propsForElement.className = [className, generatedClassName, options.className]
           .filter(x => x)
           .join(' ')
 

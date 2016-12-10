@@ -1,14 +1,14 @@
 // @flow
 import css from './css'
-import type { Interpolation, Target, PassProps } from '../types'
+import type { Interpolation, Target, Options } from '../types'
 
 export default (styledComponent: Function) => {
-  const styled = (tag: Target, passProps: PassProps = true, classNames: string = '') => {
+  const styled = (tag: Target, options?: Options) => {
     const innerStyled = (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
-      styledComponent(tag, css(strings, ...interpolations), passProps, classNames)
+      styledComponent(tag, css(strings, ...interpolations), options)
 
-    innerStyled.passProps = (optionPassProps) => styled(tag, optionPassProps, classNames)
-    innerStyled.className = (optionClassName) => styled(tag, passProps, optionClassName)
+    innerStyled.passProps = (passProps) => styled(tag, { ...options, passProps })
+    innerStyled.className = (className) => styled(tag, { ...options, className })
 
     // Alias the the styled with css to support styled.h1.passProps(false).css` /* CSS */ `
     innerStyled.css = innerStyled
