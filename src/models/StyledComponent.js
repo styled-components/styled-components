@@ -6,18 +6,23 @@ import type { Theme } from './ThemeProvider'
 
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
-import type { RuleSet, Target } from '../types'
+import type { RuleSet, Target, PassProps } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
 
 export default (ComponentStyle: Function) => {
-  // eslint-disable-next-line no-undef
-  const createStyledComponent = (target: Target, rules: RuleSet, parent?: ReactClass<*>) => {
+  const createStyledComponent = (
+    target: Target,
+    rules: RuleSet,
+    passProps: PassProps,
+    // eslint-disable-next-line no-undef
+    parent?: ReactClass<*>
+  ) => {
     /* Handle styled(OtherStyledComponent) differently */
     const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
     if (!isTag(target) && isStyledComponent) {
-      return createStyledComponent(target.target, target.rules.concat(rules), target)
+      return createStyledComponent(target.target, target.rules.concat(rules), passProps, target)
     }
 
     const componentStyle = new ComponentStyle(rules)
@@ -85,6 +90,15 @@ export default (ComponentStyle: Function) => {
         /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)
           .filter(propName => !isTag(target) || validAttr(propName))
+          .filter(propName => {
+            if (passProps === false) {
+              return false
+            }
+            if (typeof passProps === 'object' && passProps[propName] === false) {
+              return false
+            }
+            return true
+          })
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
