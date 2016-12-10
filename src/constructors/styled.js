@@ -3,11 +3,12 @@ import css from './css'
 import type { Interpolation, Target, PassProps } from '../types'
 
 export default (styledComponent: Function) => {
-  const styled = (tag: Target, passProps: PassProps = true) => {
+  const styled = (tag: Target, passProps: PassProps = true, classNames: string = '') => {
     const innerStyled = (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
-      styledComponent(tag, css(strings, ...interpolations), passProps)
+      styledComponent(tag, css(strings, ...interpolations), passProps, classNames)
 
-    innerStyled.passProps = (innerPassProps) => styled(tag, innerPassProps)
+    innerStyled.passProps = (optionPassProps) => styled(tag, optionPassProps, classNames)
+    innerStyled.className = (optionClassName) => styled(tag, passProps, optionClassName)
 
     // Alias the the styled with css to support styled.h1.passProps(false).css` /* CSS */ `
     innerStyled.css = innerStyled

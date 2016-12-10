@@ -15,14 +15,21 @@ export default (ComponentStyle: Function) => {
   const createStyledComponent = (
     target: Target,
     rules: RuleSet,
-    passProps: PassProps,
+    optionPassProps: PassProps,
+    optionClassName: string,
     // eslint-disable-next-line no-undef
     parent?: ReactClass<*>
   ) => {
     /* Handle styled(OtherStyledComponent) differently */
     const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
     if (!isTag(target) && isStyledComponent) {
-      return createStyledComponent(target.target, target.rules.concat(rules), passProps, target)
+      return createStyledComponent(
+        target.target,
+        target.rules.concat(rules),
+        optionPassProps,
+        optionClassName,
+        target,
+      )
     }
 
     const componentStyle = new ComponentStyle(rules)
@@ -91,10 +98,10 @@ export default (ComponentStyle: Function) => {
         Object.keys(this.props)
           .filter(propName => !isTag(target) || validAttr(propName))
           .filter(propName => {
-            if (passProps === false) {
+            if (optionPassProps === false) {
               return false
             }
-            if (typeof passProps === 'object' && passProps[propName] === false) {
+            if (typeof optionPassProps === 'object' && optionPassProps[propName] === false) {
               return false
             }
             return true
@@ -102,7 +109,10 @@ export default (ComponentStyle: Function) => {
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
-        propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
+        propsForElement.className = [className, generatedClassName, optionClassName]
+          .filter(x => x)
+          .join(' ')
+
         if (innerRef) {
           propsForElement.ref = innerRef
         }
