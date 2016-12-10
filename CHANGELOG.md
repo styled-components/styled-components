@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. If a contri
 ## [Unreleased]
 
 ### Added
+- Added passProps and className option to the styled component [@k15a](https://github.com/k15a).
 
 ### Changed
 
