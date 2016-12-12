@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
+- Fixed prop changes not updating style on react native; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#311](https://github.com/styled-components/styled-components/pull/311))
+
 ### Changed
 
 ## [v1.1.3]
