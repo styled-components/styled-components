@@ -66,11 +66,11 @@ const plugins = [
 if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
 
 export default {
+  targets,
+  plugins,
   entry: 'src/index.js',
   moduleName: 'styled',
   external: ['react'],
-  exports: 'named',
-  targets,
-  plugins,
+  exports: 'default',
   globals: { react: 'React' },
 }
