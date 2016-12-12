@@ -84,13 +84,14 @@ export default (ComponentStyle: Function) => {
         const propsForElement = {}
         /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)
-          .filter(propName => propName !== 'innerRef' && (!isTag(target) || validAttr(propName)))
+          .filter(propName => !isTag(target) || validAttr(propName))
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
         propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
+          delete propsForElement.innerRef
         }
 
         return createElement(target, propsForElement, children)
