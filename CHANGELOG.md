@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+- Do not pass innerRef to the component, thanks [@mkhazov](https://github.com/mkhazov). (see [#310](https://github.com/styled-components/styled-components/pull/310))
+
 ## [v1.1.3]
 
 ### Changed
