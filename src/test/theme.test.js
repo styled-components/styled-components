@@ -6,6 +6,7 @@ import { mount, render } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 import ThemeProvider from '../models/ThemeProvider'
+import withTheme from '../hoc/withTheme'
 
 let styled
 
@@ -83,7 +84,7 @@ describe('theming', () => {
     expectCSSMatches(`.a { color: red; }`)
   })
 
-  it('should properly set the theme with an empty object when no teme is provided and no defaults are set', () => {
+  it('should properly set the theme with an empty object when no theme is provided and no defaults are set', () => {
     const Comp1 = styled.div`
       color: ${props => props.theme.color};
     `
@@ -260,5 +261,45 @@ describe('theming (jsdom)', () => {
 
     expectCSSMatches(`.a { color: ${originalTheme.color}; }.b { color: ${newTheme.color}; }`)
     expect(wrapper.find('div').prop('className')).toBe('b')
+  })
+
+  it('should inject props.theme into a component that uses withTheme hoc', () => {
+    const originalTheme = { color: 'black' }
+
+    const MyDiv = ({ theme }) => <div>{theme.color}</div>
+    const MyDivWithTheme = withTheme(MyDiv);
+
+    const wrapper = mount(
+      <ThemeProvider theme={originalTheme}>
+        <MyDivWithTheme />
+      </ThemeProvider>
+    )
+
+    expect(wrapper.find('div').text()).toBe('black')
+  })
+
+  it('should properly update theme prop on hoc component when theme is changed', () => {
+    const MyDiv = ({ theme }) => <div>{theme.color}</div>
+    const MyDivWithTheme = withTheme(MyDiv);
+
+    const originalTheme = { color: 'black' }
+    const newTheme = { color: 'blue' }
+
+    const Theme = ({ theme }) => (
+      <ThemeProvider theme={theme}>
+        <MyDivWithTheme />
+      </ThemeProvider>
+    )
+
+    const wrapper = mount(
+      <Theme theme={originalTheme} />
+    )
+
+    expect(wrapper.find('div').text()).toBe('black')
+
+    // Change theme
+    wrapper.setProps({ theme: newTheme })
+
+    expect(wrapper.find('div').text()).toBe('blue')
   })
 })
