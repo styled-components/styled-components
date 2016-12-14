@@ -1,11 +1,20 @@
 // @flow
 import css from './css'
-import type { Interpolation, Target } from '../types'
+import type { Interpolation, Target, Options } from '../types'
 
 export default (styledComponent: Function) => {
-  const styled = (tag: Target) =>
-    (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
-      styledComponent(tag, css(strings, ...interpolations))
+  const styled = (tag: Target, options?: Options) => {
+    const innerStyled = (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
+      styledComponent(tag, css(strings, ...interpolations), options)
+
+    innerStyled.passProps = (passProps) => styled(tag, { ...options, passProps })
+    innerStyled.className = (className) => styled(tag, { ...options, className })
+
+    // Alias the the styled with css to support styled.h1.passProps(false).css` /* CSS */ `
+    innerStyled.css = innerStyled
+
+    return innerStyled
+  }
 
   /* Shorthands for all valid HTML Elements */
 // Thanks to ReactDOMFactories for this handy list!

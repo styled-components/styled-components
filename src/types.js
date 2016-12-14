@@ -7,3 +7,8 @@ export type RuleSet = Array<Interpolation>
 export type Target = string | ReactClass<*>
 
 export type NameGenerator = (hash: number) => string
+
+export type Options = {
+  className: string,
+  passProps: boolean | { [key: string]: boolean }
+}

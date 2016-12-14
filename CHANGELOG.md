@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. If a contri
 ## [Unreleased]
 
 ### Added
+- Added passProps and className option to the styled component [@k15a](https://github.com/k15a).
 
 - Added [`withTheme`](docs/api.md#withtheme) higher order component; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#312] (https://github.com/styled-components/styled-components/pull/312))
 - Fixed prop changes not updating style on react native; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#311](https://github.com/styled-components/styled-components/pull/311))

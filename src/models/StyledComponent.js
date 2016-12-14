@@ -6,18 +6,28 @@ import type { Theme } from './ThemeProvider'
 
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
-import type { RuleSet, Target } from '../types'
+import type { RuleSet, Target, Options } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
 
 export default (ComponentStyle: Function) => {
-  // eslint-disable-next-line no-undef
-  const createStyledComponent = (target: Target, rules: RuleSet, parent?: ReactClass<*>) => {
+  const createStyledComponent = (
+    target: Target,
+    rules: RuleSet,
+    options: Options,
+    // eslint-disable-next-line no-undef
+    parent?: ReactClass<*>,
+  ) => {
     /* Handle styled(OtherStyledComponent) differently */
     const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
     if (!isTag(target) && isStyledComponent) {
-      return createStyledComponent(target.target, target.rules.concat(rules), target)
+      return createStyledComponent(
+        target.target,
+        target.rules.concat(rules),
+        options,
+        target,
+      )
     }
 
     const componentStyle = new ComponentStyle(rules)
@@ -85,10 +95,22 @@ export default (ComponentStyle: Function) => {
         /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)
           .filter(propName => !isTag(target) || validAttr(propName))
+          .filter(propName => {
+            if (options.passProps === false) {
+              return false
+            }
+            if (typeof options.passProps === 'object' && options.passProps[propName] === false) {
+              return false
+            }
+            return true
+          })
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
-        propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
+        propsForElement.className = [className, generatedClassName, options.className]
+          .filter(x => x)
+          .join(' ')
+
         if (innerRef) {
           propsForElement.ref = innerRef
           delete propsForElement.innerRef
