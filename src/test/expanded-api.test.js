@@ -18,14 +18,14 @@ describe('expanded api', () => {
 
   describe('classnames', () => {
     it('should attach a single class', () => {
-      const Comp = styled.div.classes('foo')``
+      const Comp = styled.div.withConfig({ classes: 'foo' })``
       const rendered = shallow(<Comp />)
       expectCSSMatches('.sc-a {} .b { }')
       expect(rendered.prop('className')).toBe('sc-a foo b')
     })
 
     it('should attach multiple classes', () => {
-      const Comp = styled.div.classes('foo bar baz')``
+      const Comp = styled.div.withConfig({ classes: 'foo bar baz' })``
       const rendered = shallow(<Comp />)
       expectCSSMatches('.sc-a {} .b { }')
       expect(rendered.prop('className')).toBe('sc-a foo bar baz b')
@@ -39,7 +39,7 @@ describe('expanded api', () => {
     })
 
     it('should be attached if supplied', () => {
-      const Comp = styled.div.displayName('Comp')``
+      const Comp = styled.div.withConfig({ displayName: 'Comp' })``
       expect(Comp.displayName).toBe('Comp')
     })
   })
@@ -55,8 +55,8 @@ describe('expanded api', () => {
     })
 
     it('should be generated from displayName + hash', () => {
-      const Comp = styled.div.displayName('Comp')``
-      const Comp2 = styled.div.displayName('Comp2')``
+      const Comp = styled.div.withConfig({ displayName: 'Comp' })``
+      const Comp2 = styled.div.withConfig({ displayName: 'Comp2' })``
       expect(Comp.styledComponentId).toBe('Comp-a')
       expect(shallow(<Comp />).prop('className')).toInclude('Comp-a')
       expect(Comp2.styledComponentId).toBe('Comp2-b')
@@ -64,8 +64,8 @@ describe('expanded api', () => {
     })
 
     it('should be attached if passed in', () => {
-      const Comp = styled.div.displayName('Comp').componentId('LOLOMG')``
-      const Comp2 = styled.div.displayName('Comp2').componentId('OMGLOL')``
+      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })``
+      const Comp2 = styled.div.withConfig({ displayName: 'Comp2', componentId: 'OMGLOL' })``
       expect(Comp.styledComponentId).toBe('LOLOMG')
       expect(shallow(<Comp />).prop('className')).toInclude('LOLOMG')
       expect(Comp2.styledComponentId).toBe('OMGLOL')
@@ -73,29 +73,12 @@ describe('expanded api', () => {
     })
   })
 
-  describe('css', () => {
-    it('should allow a css alias at the end of a chain', () => {
-      const Comp = styled.div.css``
-      shallow(<Comp />)
-      const Comp2 = styled.div.classes('foo').css``
-      shallow(<Comp2 />)
-      const Comp3 = styled.div.classes('foo').displayName('bar').css``
-      shallow(<Comp3 />)
-      const Comp4 = styled.div.classes('foo').displayName('bar').componentId('baz').css``
-      shallow(<Comp4 />)
-    })
-  })
-
   describe('chaining', () => {
     it('should only take the last value', () => {
       const Comp = styled.div
-        .classes('cls-1')
-        .displayName('dn-2')
-        .componentId('id-3')
-        .componentId('id-4')
-        .displayName('dn-5')
-        .classes('cls-6')
-        .css``
+        .withConfig({ classes: 'cls-1', displayName: 'dn-2', componentId: 'id-3' })
+        .withConfig({ classes: 'cls-6', displayName: 'dn-5', componentId: 'id-4' })
+        ``
       expect(shallow(<Comp />).prop('className')).toBe('id-4 cls-6 a')
     })
   })
