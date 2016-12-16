@@ -16,22 +16,6 @@ describe('expanded api', () => {
     styled = resetStyled()
   })
 
-  describe('classnames', () => {
-    it('should attach a single class', () => {
-      const Comp = styled.div.withConfig({ classes: 'foo' })``
-      const rendered = shallow(<Comp />)
-      expectCSSMatches('.sc-a {} .b { }')
-      expect(rendered.prop('className')).toBe('sc-a foo b')
-    })
-
-    it('should attach multiple classes', () => {
-      const Comp = styled.div.withConfig({ classes: 'foo bar baz' })``
-      const rendered = shallow(<Comp />)
-      expectCSSMatches('.sc-a {} .b { }')
-      expect(rendered.prop('className')).toBe('sc-a foo bar baz b')
-    })
-  })
-
   describe('displayName', () => {
     it('should be auto-generated if none passed', () => {
       const Comp = styled.div``
@@ -76,10 +60,10 @@ describe('expanded api', () => {
   describe('chaining', () => {
     it('should only take the last value', () => {
       const Comp = styled.div
-        .withConfig({ classes: 'cls-1', displayName: 'dn-2', componentId: 'id-3' })
-        .withConfig({ classes: 'cls-6', displayName: 'dn-5', componentId: 'id-4' })
+        .withConfig({ displayName: 'dn-2', componentId: 'id-3' })
+        .withConfig({ displayName: 'dn-5', componentId: 'id-4' })
         ``
-      expect(shallow(<Comp />).prop('className')).toBe('id-4 cls-6 a')
+      expect(shallow(<Comp />).prop('className')).toBe('id-4 a')
     })
   })
 })

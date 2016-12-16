@@ -38,7 +38,6 @@ export default (ComponentStyle: Function) => {
     const {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
       componentId = generateId(options.displayName || 'sc'),
-      classes,
     } = options
     const componentStyle = new ComponentStyle(rules, componentId)
     const ParentComponent = parent || AbstractStyledComponent
@@ -109,7 +108,7 @@ export default (ComponentStyle: Function) => {
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
-        propsForElement.className = [className, componentId, classes, generatedClassName].filter(x => x).join(' ')
+        propsForElement.className = [className, componentId, generatedClassName].filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
           delete propsForElement.innerRef
