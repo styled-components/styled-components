@@ -81,7 +81,7 @@ describe('theming', () => {
         </ThemeProvider>
       </div>
     )
-    expectCSSMatches(`.a { color: red; }`)
+    expectCSSMatches(`.sc-a {} .b { color: red; }`)
   })
 
   it('should properly set the theme with an empty object when no theme is provided and no defaults are set', () => {
