@@ -34,21 +34,10 @@ const Input = styled.input`
 `;
 
 
-const Button = styled.button`
-  /* Adapt the colors based on primary prop */
-  background: ${props => props.primary ? "palevioletred" : "white"};
-  color: ${props => props.primary ? "white" : "palevioletred"};
-
-  font-size: 1em;
-  margin: 1em;
-  padding: 0.25em 1em;
-  border: 2px solid palevioletred;
-  border-radius: 3px;
-`;
 
 interface ButtonProps {
   name: string;
-  color: string;
+  primary?: boolean;
 }
 
 class MyButton extends React.Component<ButtonProps, {}> {
@@ -63,8 +52,17 @@ const TomatoButton = styled(MyButton)`
 `;
 
 const CustomizableButton = styled(MyButton)`
-  color: ${props => props.color};
+  /* Adapt the colors based on primary prop */
+  background: ${props => props.primary ? "palevioletred" : "white"};
+  color: ${props => props.primary ? "white" : "palevioletred"};
+
+  font-size: 1em;
+  margin: 1em;
+  padding: 0.25em 1em;
+  border: 2px solid palevioletred;
+  border-radius: 3px;
 `;
+
 
 const example = css`
   font-size: 1.5em;
