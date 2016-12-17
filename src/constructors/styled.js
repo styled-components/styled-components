@@ -1,17 +1,9 @@
 // @flow
-import css from './css'
-import type { Interpolation, Target } from '../types'
+import constructWithOptions from './constructWithOptions'
+import type { Target } from '../types'
 
 export default (styledComponent: Function) => {
-  const expandedApi = (tag, options: Object = {}) => {
-    const templateFunction =
-      (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
-        styledComponent(tag, options, css(strings, ...interpolations))
-    templateFunction.withConfig = config => expandedApi(tag, { ...options, ...config })
-    return templateFunction
-  }
-
-  const styled = (tag: Target) => expandedApi(tag)
+  const styled = (tag: Target) => constructWithOptions(styledComponent, tag)
 
   /* Shorthands for all valid HTML Elements */
 // Thanks to ReactDOMFactories for this handy list!

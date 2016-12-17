@@ -58,11 +58,21 @@ describe('expanded api', () => {
   })
 
   describe('chaining', () => {
-    it('should only take the last value', () => {
+    it('should merge the options strings', () => {
+      const Comp = styled.div
+        .withConfig({ componentId: 'id-1' })
+        .withConfig({ displayName: 'dn-2' })
+        ``
+      expect(Comp.displayName).toBe('dn-2')
+      expect(shallow(<Comp />).prop('className')).toBe('id-1 a')
+    })
+
+    it('should keep the last value passed in when merging', () => {
       const Comp = styled.div
         .withConfig({ displayName: 'dn-2', componentId: 'id-3' })
         .withConfig({ displayName: 'dn-5', componentId: 'id-4' })
         ``
+      expect(Comp.displayName).toBe('dn-5')
       expect(shallow(<Comp />).prop('className')).toBe('id-4 a')
     })
   })
