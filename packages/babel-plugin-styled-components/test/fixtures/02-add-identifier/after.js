@@ -1,7 +1,7 @@
 const Test = styled({
   target: "div",
   identifier: "Test-137hlza"
-})` width: 100%;`;
+})`width: 100%;`;
 const Test2 = true ? styled({
   target: "div",
   identifier: "Test2-bjbly"

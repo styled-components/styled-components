@@ -4,7 +4,7 @@ const Test = s({
   target: "div",
   displayName: "Test",
   identifier: "Test-62sgar"
-})` width: 100%;`;
+})`width: 100%;`;
 const Test2 = true ? s({
   target: "div",
   displayName: "Test2",

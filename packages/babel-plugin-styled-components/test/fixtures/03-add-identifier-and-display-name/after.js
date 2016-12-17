@@ -2,7 +2,7 @@ const Test = styled({
   target: "div",
   displayName: "Test",
   identifier: "Test-18z24ew"
-})` width: 100%;`;
+})`width: 100%;`;
 const Test2 = true ? styled({
   target: "div",
   displayName: "Test2",

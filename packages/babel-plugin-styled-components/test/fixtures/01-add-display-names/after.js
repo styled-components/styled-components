@@ -1,7 +1,7 @@
 const Test = styled({
   target: 'div',
   displayName: 'Test'
-})` width: 100%;`;
+})`width: 100%;`;
 const Test2 = styled({
   target: 'div',
   displayName: 'Test2'

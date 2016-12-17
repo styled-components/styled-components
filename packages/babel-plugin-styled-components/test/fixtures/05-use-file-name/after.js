@@ -4,7 +4,7 @@ const Test = styled({
   target: "div",
   displayName: "before__Test",
   identifier: "before__Test-102oti6"
-})` color: red;`;
+})`color: red;`;
 styled({
   target: "div",
   displayName: "before",

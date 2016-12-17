@@ -1,6 +1,7 @@
 import hash from './utils/hash'
 import getTarget from './utils/get-target'
 import getName from './utils/get-name'
+import minify from './utils/minify'
 
 const blockName = (file) => {
   return file.opts.basename !== 'index' ?
@@ -45,15 +46,15 @@ export default function({ types: t }) {
           fileName: getOption(state.opts, 'fileName'),
         }
 
-        if (!options.ssr && !options.displayName) {
-          return
-        }
-
         path.traverse({
           TaggedTemplateExpression(path, { file }) {
             const tag = path.node.tag
 
-            if (!isStyled(tag)) return
+            if (isStyled(tag)) {
+              minify(path.node.quasi)
+            }
+
+            if (!(isStyled(tag) && (options.ssr || options.displayName))) return
 
             // Get target
             const target = getTarget(path.node.tag)

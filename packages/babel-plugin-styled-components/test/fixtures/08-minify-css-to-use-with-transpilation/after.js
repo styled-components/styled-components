@@ -1,0 +1,23 @@
+'use strict';
+
+var _templateObject = _taggedTemplateLiteral(['width: 100%;'], ['width: 100%;']),
+    _templateObject2 = _taggedTemplateLiteral(['content: "  ', '  ";'], ['content: "  ', '  ";']),
+    _templateObject3 = _taggedTemplateLiteral(['content: "  ', '  ";color: red;'], ['content: "  ', '  ";color: red;']);
+
+var _styledComponents = require('styled-components');
+
+var _styledComponents2 = _interopRequireDefault(_styledComponents);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _taggedTemplateLiteral(strings, raw) { return Object.freeze(Object.defineProperties(strings, { raw: { value: Object.freeze(raw) } })); }
+
+var Simple = _styledComponents2.default.div(_templateObject);
+
+var Interpolation = _styledComponents2.default.div(_templateObject2, function (props) {
+  return props.text;
+});
+
+var SpecialCharacters = _styledComponents2.default.div(_templateObject3, function (props) {
+  return props.text;
+});
