@@ -8,13 +8,19 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- Added support for media queries, pseudo selectors and nesting in styles-as-objects. (see [#280](https://github.com/styled-components/styled-components/pull/280))
+### Changed
+
+## [v1.2.0]
+
+### Added
+
 - Added [`withTheme`](docs/api.md#withtheme) higher order component; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#312] (https://github.com/styled-components/styled-components/pull/312))
-- Fixed prop changes not updating style on react native; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#311](https://github.com/styled-components/styled-components/pull/311))
+- Added support for media queries, pseudo selectors and nesting in styles-as-objects. (see [#280](https://github.com/styled-components/styled-components/pull/280))
 
 ### Changed
 
 - Do not pass innerRef to the component, thanks [@mkhazov](https://github.com/mkhazov). (see [#310](https://github.com/styled-components/styled-components/pull/310))
+- Fixed prop changes not updating style on react native; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#311](https://github.com/styled-components/styled-components/pull/311))
 - Extract DOM shorthands, thanks [@philpl](https://github.com/philpl). (see [#172](https://github.com/styled-components/styled-components/pull/172))
 
 ## [v1.1.3]
@@ -132,7 +138,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.1.3...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.2.0...master
+[v1.2.0]: https://github.com/styled-components/styled-components/compare/v1.1.3...v1.2.0
 [v1.1.3]: https://github.com/styled-components/styled-components/compare/v1.1.2...v1.1.3
 [v1.1.2]: https://github.com/styled-components/styled-components/compare/v1.1.1...v1.1.2
 [v1.1.1]: https://github.com/styled-components/styled-components/compare/v1.1.0...v1.1.1
