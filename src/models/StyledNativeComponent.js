@@ -57,9 +57,9 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
       this.setState((oldState) => {
         const theme = nextProps.theme || oldState.theme
-        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
+        const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
 
-        return { theme, generatedClassName }
+        return { theme, generatedStyles }
       })
     }
 
@@ -82,6 +82,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       propsForElement.style = [generatedStyles, style]
       if (innerRef) {
         propsForElement.ref = innerRef
+        delete propsForElement.innerRef
       }
 
       return createElement(target, propsForElement, children)
