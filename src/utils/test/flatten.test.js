@@ -58,6 +58,49 @@ describe('flatten', () => {
     // $FlowIssue
     expect(flatten(['some:thing;', obj, 'something: else;'])).toEqual(['some:thing;', css, 'something: else;'])
   })
+  it('handles numbers in objects that should\'t get anything appended', () => {
+    const obj = {
+      'animation-iteration-count': 10,
+      'border-image-outset': 10,
+      'border-image-slice': 10,
+      'border-image-width': 10,
+      'box-flex': 10,
+      'box-flex-group': 10,
+      'box-ordinal-group': 10,
+      'column-count': 10,
+      flex: 10,
+      'flex-grow': 10,
+      'flex-positive': 10,
+      'flex-shrink': 10,
+      'flex-negative': 10,
+      'flex-order': 10,
+      'grid-row': 10,
+      'grid-column': 10,
+      'font-weight': 10,
+      'line-clamp': 10,
+      'line-height': 10,
+      opacity: 10,
+      order: 10,
+      orphans: 10,
+      'tab-size': 10,
+      widows: 10,
+      'z-index': 10,
+      zoom: 10,
+      'fill-opacity': 10,
+      'flood-opacity': 10,
+      'stop-opacity': 10,
+      'stroke-dasharray': 10,
+      'stroke-dashoffset': 10,
+      'stroke-miterlimit': 10,
+      'stroke-opacity': 10,
+      'stroke-width': 10,
+    }
+    const css = 'animation-iteration-count: 10; border-image-outset: 10; border-image-slice: 10; border-image-width: 10; box-flex: 10; box-flex-group: 10; box-ordinal-group: 10; column-count: 10; flex: 10; flex-grow: 10; flex-positive: 10; flex-shrink: 10; flex-negative: 10; flex-order: 10; grid-row: 10; grid-column: 10; font-weight: 10; line-clamp: 10; line-height: 10; opacity: 10; order: 10; orphans: 10; tab-size: 10; widows: 10; z-index: 10; zoom: 10; fill-opacity: 10; flood-opacity: 10; stop-opacity: 10; stroke-dasharray: 10; stroke-dashoffset: 10; stroke-miterlimit: 10; stroke-opacity: 10; stroke-width: 10;'
+    // $FlowIssue
+    expect(flatten([obj])).toEqual([css])
+    // $FlowIssue
+    expect(flatten(['some:thing;', obj, 'something: else;'])).toEqual(['some:thing;', css, 'something: else;'])
+  })
   it('handles nested objects', () => {
     const obj = {
       fontSize: '14px',
