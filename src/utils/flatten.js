@@ -4,10 +4,30 @@ import isPlainObject from 'is-plain-object'
 
 import type { Interpolation } from '../types'
 
+// A list of properties that need a unit other than px appended
+// Thanks to jss-default-unit for this list
+// https://github.com/cssinjs/jss-default-unit
+const nonPixelProperties = {
+  'animation-delay': 'ms',
+  'animation-duration': 'ms',
+  'perspective-origin-x': '%',
+  'perspective-origin-y': '%',
+  'transform-origin': '%',
+  'transform-origin-x': '%',
+  'transform-origin-y': '%',
+  'transform-origin-z': '%',
+  'transition-delay': 'ms',
+  'transition-duration': 'ms',
+}
+
+const getUnit = (prop: string): string => nonPixelProperties[hyphenate(prop)] || 'px'
+
 export const objToCss = (obj: Object, prevKey?: string): string => {
-  const css = Object.keys(obj).map(key => {
-    if (isPlainObject(obj[key])) return objToCss(obj[key], key)
-    return `${hyphenate(key)}: ${obj[key]};`
+  const css = Object.keys(obj).map(prop => {
+    let value = obj[prop]
+    if (isPlainObject(value)) return objToCss(value, prop)
+    if (typeof value === 'number') value = `${value}${getUnit(prop)}`
+    return `${hyphenate(prop)}: ${value};`
   }).join(' ')
   return prevKey ? `${prevKey} {
   ${css}

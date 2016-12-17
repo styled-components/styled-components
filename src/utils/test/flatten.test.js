@@ -28,6 +28,36 @@ describe('flatten', () => {
     // $FlowIssue
     expect(flatten(['some:thing;', obj, 'something: else;'])).toEqual(['some:thing;', css, 'something: else;'])
   })
+  it('adds px to numbers in objects', () => {
+    const obj = {
+      fontSize: 14,
+      height: 100,
+    }
+    const css = 'font-size: 14px; height: 100px;'
+    // $FlowIssue
+    expect(flatten([obj])).toEqual([css])
+    // $FlowIssue
+    expect(flatten(['some:thing;', obj, 'something: else;'])).toEqual(['some:thing;', css, 'something: else;'])
+  })
+  it('handles numbers in objects that shouldn\'t get px appended', () => {
+    const obj = {
+      'animation-delay': 10,
+      'animation-duration': 10,
+      'perspective-origin-x': 10,
+      'perspective-origin-y': 10,
+      'transform-origin': 10,
+      'transform-origin-x': 10,
+      'transform-origin-y': 10,
+      'transform-origin-z': 10,
+      'transition-delay': 10,
+      'transition-duration': 10,
+    }
+    const css = 'animation-delay: 10ms; animation-duration: 10ms; perspective-origin-x: 10%; perspective-origin-y: 10%; transform-origin: 10%; transform-origin-x: 10%; transform-origin-y: 10%; transform-origin-z: 10%; transition-delay: 10ms; transition-duration: 10ms;'
+    // $FlowIssue
+    expect(flatten([obj])).toEqual([css])
+    // $FlowIssue
+    expect(flatten(['some:thing;', obj, 'something: else;'])).toEqual(['some:thing;', css, 'something: else;'])
+  })
   it('handles nested objects', () => {
     const obj = {
       fontSize: '14px',
