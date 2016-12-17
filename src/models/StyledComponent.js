@@ -2,6 +2,8 @@
 
 import { createElement } from 'react'
 
+import type { Theme } from './ThemeProvider'
+
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
@@ -28,13 +30,13 @@ export default (ComponentStyle: Function) => {
       constructor() {
         super()
         this.state = {
-          theme: {},
+          theme: null,
           generatedClassName: '',
         }
       }
 
       generateAndInjectStyles(theme: any, props: any) {
-        const executionContext = Object.assign({}, props, { theme })
+        const executionContext = { ...props, theme }
         return componentStyle.generateAndInjectStyles(executionContext)
       }
 
@@ -44,26 +46,29 @@ export default (ComponentStyle: Function) => {
         // that by updating when an event is emitted
         if (this.context[CHANNEL]) {
           const subscribe = this.context[CHANNEL]
-          this.unsubscribe = subscribe(theme => {
+          this.unsubscribe = subscribe(nextTheme => {
             // This will be called once immediately
+            const theme = this.props.theme || nextTheme
             const generatedClassName = this.generateAndInjectStyles(theme, this.props)
             this.setState({ theme, generatedClassName })
           })
         } else {
+          const theme = this.props.theme || {}
           const generatedClassName = this.generateAndInjectStyles(
-            this.props.theme || {},
+            theme,
             this.props
           )
-          this.setState({ generatedClassName })
+          this.setState({ theme, generatedClassName })
         }
       }
 
-      componentWillReceiveProps(nextProps: any) {
-        const generatedClassName = this.generateAndInjectStyles(
-          this.state.theme || this.props.theme,
-          nextProps
-        )
-        this.setState({ generatedClassName })
+      componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
+        this.setState((oldState) => {
+          const theme = nextProps.theme || oldState.theme
+          const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
+
+          return { theme, generatedClassName }
+        })
       }
 
       componentWillUnmount() {
@@ -86,6 +91,7 @@ export default (ComponentStyle: Function) => {
         propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
+          delete propsForElement.innerRef
         }
 
         return createElement(target, propsForElement, children)

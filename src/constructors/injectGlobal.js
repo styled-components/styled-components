@@ -1,3 +1,4 @@
+// @flow
 import css from './css'
 import GlobalStyle from '../models/GlobalStyle'
 import type { Interpolation } from '../types'

@@ -66,7 +66,7 @@ This can take any combination of
 
 > **Note**: You can also pass an Object as an interpolation, and we will treat it like inline styles. This is highly discouraged, as the CSS syntax has support for media queries, nesting, etc., which the object syntax doesn't.
 
-The properties that are passed into an interpolated function get attached a special property, `theme`, which is injected by a higher level [`ThemeProvider`](#theme-provider) component.
+The properties that are passed into an interpolated function get attached a special property, `theme`, which is injected by a higher level [`ThemeProvider`](#themeprovider) component.
 
 #### Examples
 
@@ -258,3 +258,38 @@ injectGlobal`
 	}
 `;
 ```
+
+### `withTheme`
+
+`web`, `native`.
+
+This is a `higher order component` to get the current theme from [`ThemeProvider`](#themeprovider) and pass it to another component as a `theme` prop.
+
+#### Arguments
+
+1. `component` _(Function|class)_: Any valid react component that can handle a `theme` prop.
+
+#### Returns
+
+(`component`): The passed component inside a wrapper. The passed component will receive a `theme` prop with the current theme object.
+
+#### Example
+
+```JS
+import { withTheme } from 'styled-components'
+
+class MyComponent extends React.Component {
+  render() {
+    const { theme } = this.props
+
+    console.log('Current theme: ', theme);
+    // ...
+  }
+}
+
+export default withTheme(MyComponent)
+```
+
+#### Tips
+
+- Only use this if you need to get the theme as a prop. If you just need to set a valid stylesheet property, you can use normal [theming](./theming.md) for this.

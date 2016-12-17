@@ -6,6 +6,7 @@ import babel from 'rollup-plugin-babel'
 import json from 'rollup-plugin-json'
 import flow from 'rollup-plugin-flow'
 import uglify from 'rollup-plugin-uglify'
+import visualizer from 'rollup-plugin-visualizer'
 
 const processShim = '\0process-shim'
 
@@ -53,14 +54,17 @@ const plugins = [
       'react',
     ],
     plugins: [
+      'flow-react-proptypes',
       'transform-flow-strip-types',
       'external-helpers',
+      'transform-object-rest-spread',
+      'transform-class-properties',
     ],
   }),
   json(),
 ]
 
-if (prod) plugins.push(uglify())
+if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
 
 export default {
   entry: 'src/index.js',

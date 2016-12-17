@@ -1,3 +1,4 @@
+// @flow
 /* eslint-disable react/no-multi-comp */
 import React from 'react'
 import expect from 'expect'
@@ -7,7 +8,7 @@ import ThemeProvider, { CHANNEL } from '../ThemeProvider'
 describe('ThemeProvider', () => {
   it('should not throw an error when no children are passed', () => {
     const result = shallow(<ThemeProvider theme={{}} />)
-    expect(result.node).toEqual(null)
+    expect(result.html()).toEqual(null)
   })
 
   it('should accept a theme prop that\'s a plain object', () => {
@@ -31,7 +32,7 @@ describe('ThemeProvider', () => {
     class Child extends React.Component {
       componentWillMount() {
         this.context[CHANNEL](theme => {
-          expect(theme).toEqual(Object.assign({}, outerTheme, innerTheme))
+          expect(theme).toEqual({ ...outerTheme, ...innerTheme })
           done()
         })
       }
@@ -58,7 +59,7 @@ describe('ThemeProvider', () => {
     class Child extends React.Component {
       componentWillMount() {
         this.context[CHANNEL](theme => {
-          expect(theme).toEqual(Object.assign({}, outerestTheme, outerTheme, innerTheme))
+          expect(theme).toEqual({ ...outerestTheme, ...outerTheme, ...innerTheme })
           done()
         })
       }

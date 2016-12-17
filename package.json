@@ -1,14 +1,15 @@
 {
   "name": "styled-components",
-  "version": "1.0.10",
+  "version": "1.1.3",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "main": "lib/index.js",
   "jsnext:main": "dist/styled-components.es.js",
   "module": "dist/styled-components.es.js",
   "scripts": {
-    "build": "npm run build:lib && npm run build:dist",
+    "build": "npm run build:lib && npm run build:dist && npm run build:flow",
     "prebuild:lib": "rm -rf lib/*",
     "build:lib": "babel --out-dir lib src",
+    "build:flow": "flow-copy-source -v -i '{**/test/*.js,**/*.test.js}' src lib",
     "prebuild:umd": "rm -rf dist/*",
     "prebuild:dist": "rm -rf dist/*",
     "build:dist": "rollup -c && rollup -c --environment PRODUCTION",
@@ -38,9 +39,12 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "buffer": "^5.0.0",
+    "css-to-react-native": "^1.0.6",
     "fbjs": "^0.8.4",
     "glamor": "^2.15.5",
-    "lodash": "^4.15.0",
+    "inline-style-prefixer": "^2.0.5",
+    "is-function": "^1.0.1",
+    "is-plain-object": "^2.0.1",
     "supports-color": "^3.1.2"
   },
   "devDependencies": {
@@ -50,7 +54,10 @@
     "babel-loader": "^6.2.5",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-plugin-external-helpers": "^6.8.0",
+    "babel-plugin-flow-react-proptypes": "^0.17.2",
+    "babel-plugin-transform-class-properties": "^6.19.0",
     "babel-plugin-transform-flow-strip-types": "^6.14.0",
+    "babel-plugin-transform-object-rest-spread": "^6.16.0",
     "babel-preset-latest": "^6.14.0",
     "babel-preset-react": "^6.11.1",
     "chokidar": "^1.6.0",
@@ -63,7 +70,8 @@
     "eslint-plugin-react": "^6.2.1",
     "expect": "^1.20.2",
     "express": "^4.14.0",
-    "flow-bin": "^0.34.0",
+    "flow-bin": "^0.35.0",
+    "flow-copy-source": "^1.1.0",
     "jsdom": "^9.8.0",
     "lint-staged": "^3.0.3",
     "mocha": "^3.0.2",
@@ -81,7 +89,8 @@
     "rollup-plugin-json": "^2.0.2",
     "rollup-plugin-node-resolve": "^2.0.0",
     "rollup-plugin-replace": "^1.1.1",
-    "rollup-plugin-uglify": "^1.0.1"
+    "rollup-plugin-uglify": "^1.0.1",
+    "rollup-plugin-visualizer": "^0.1.5"
   },
   "peerDependencies": {
     "react": "^0.14.0 || ^15.0.0-0"
