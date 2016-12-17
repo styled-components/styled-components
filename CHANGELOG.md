@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- Added support for media queries, pseudo selectors and nesting in styles-as-objects. (see [#280](https://github.com/styled-components/styled-components/pull/280))
+- Added support for media queries, pseudo selectors, numbers and nesting in styles-as-objects. (see [#280](https://github.com/styled-components/styled-components/pull/280) and [#317](https://github.com/styled-components/styled-components/pull/317))
 - Added [`withTheme`](docs/api.md#withtheme) higher order component; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#312] (https://github.com/styled-components/styled-components/pull/312))
 - Fixed prop changes not updating style on react native; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#311](https://github.com/styled-components/styled-components/pull/311))
 
