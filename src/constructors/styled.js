@@ -9,9 +9,9 @@ export default (styledComponent: Function) => {
       styledComponent(tag, css(strings, ...interpolations))
 
   // Shorthands for all valid HTML Elements
-  for (const domElement of domElements) {
+  domElements.forEach(domElement => {
     styled[domElement] = styled(domElement)
-  }
+  })
 
   return styled
 }

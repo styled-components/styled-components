@@ -5,8 +5,8 @@ import domElements from '../../utils/domElements'
 
 describe('styled', () => {
   it('should have all valid HTML5 elements defined as properties', () => {
-    for (const domElement of domElements) {
+    domElements.forEach(domElement => {
       expect(styled[domElement]).toExist()
-    }
+    })
   })
 })
