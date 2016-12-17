@@ -1,7 +1,8 @@
 {
   "presets": [
     "latest",
-    "react"
+    "react",
+    "react-native"
   ],
   "plugins": [
     "flow-react-proptypes",
