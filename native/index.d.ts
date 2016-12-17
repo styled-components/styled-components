@@ -2,7 +2,7 @@ import * as ReactNative from "react-native";
 import { StatelessComponent } from "react";
 
 type GeneralComponent<P> = React.ComponentClass<P> | React.StatelessComponent<P>;
-type ConstrainedProps<C, P> = C & ({ defaultProps?: P } | { new(props?: P, context?: any): C});
+type ConstrainedProps<C, P> = C & ({ defaultProps?: P } | { new(props?: P, context?: any): any });
 
 interface StyledFunction<T, P> {
   (strs: TemplateStringsArray, ...fns: Array<(props: P) => string>): T;
