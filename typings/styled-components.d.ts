@@ -1,12 +1,15 @@
 import * as React from "react";
 import { StatelessComponent } from "react";
 
+type GeneralComponent<P> = React.ComponentClass<P> | React.StatelessComponent<P>;
+type ConstrainedProps<C, P> = C & ({ defaultProps?: P } | { new(props?: P, context?: any): C});
+
 interface StyledFunction<T, P> {
-    (strs: TemplateStringsArray, ...fns: Array<(props: P) => string>): T;
+  (strs: TemplateStringsArray, ...fns: Array<(props: P) => string>): T;
 }
 
 interface StyledInterface {
-  <T extends React.ReactType, P extends React.ReactPropTypes>(component: T): StyledFunction<T, P>;
+  <C extends GeneralComponent<P>, P>(component: ConstrainedProps<C, P>): StyledFunction<C, P>;
 
   a: StyledFunction<React.HTMLFactory<HTMLAnchorElement>, React.HTMLAttributes<HTMLAnchorElement>>;
   abbr: StyledFunction<React.HTMLFactory<HTMLElement>, React.HTMLAttributes<HTMLElement>>;

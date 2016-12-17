@@ -1,7 +1,7 @@
 import * as React from "react";
 
-import styled from "../lib";
-import { css, keyframes, ThemeProvider, injectGlobal} from "../lib";
+import styled from "..";
+import { css, keyframes, ThemeProvider, injectGlobal } from "..";
 
 // Create a <Title> react component that renders an <h1> which is
 // centered, palevioletred and sized at 1.5em
@@ -48,6 +48,7 @@ const Button = styled.button`
 
 interface ButtonProps {
   name: string;
+  color: string;
 }
 
 class MyButton extends React.Component<ButtonProps, {}> {

@@ -1,12 +1,15 @@
 import * as ReactNative from "react-native";
 import { StatelessComponent } from "react";
 
+type GeneralComponent<P> = React.ComponentClass<P> | React.StatelessComponent<P>;
+type ConstrainedProps<C, P> = C & ({ defaultProps?: P } | { new(props?: P, context?: any): C});
+
 interface StyledFunction<T, P> {
   (strs: TemplateStringsArray, ...fns: Array<(props: P) => string>): T;
 }
 
 interface StyledInterface {
-  <T extends ReactNative.ReactType, P extends ReactNative.ReactPropTypes>(component: T): StyledFunction<T, P>;
+  <C extends GeneralComponent<P>, P>(component: ConstrainedProps<C, P>): StyledFunction<C, P>;
 
   ActivityIndicator: StyledFunction<ReactNative.ActivityIndicator, ReactNative.ActivityIndicatorProperties>;
   ActivityIndicatorIOS: StyledFunction<ReactNative.ActivityIndicatorIOS, ReactNative.ActivityIndicatorProperties>;
