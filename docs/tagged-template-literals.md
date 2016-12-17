@@ -5,7 +5,7 @@ Tagged Template Literals are a new feature in ES6 that lets you define _custom s
 If you have no interpolations, they're the same. This:
 
 ```js
-myFunction` some string here `
+myFunction`some string here`
 ```
 
 is equivalent to this:
