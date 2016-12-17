@@ -3,16 +3,15 @@
 /* eslint-disable import/no-unresolved */
 import reactNative from 'react-native'
 
+import constructWithOptions from '../constructors/constructWithOptions'
 import css from '../constructors/css'
 
 import styledNativeComponent from '../models/StyledNativeComponent'
 import ThemeProvider from '../models/ThemeProvider'
 import withTheme from '../hoc/withTheme'
-import type { Interpolation, Target } from '../types'
+import type { Target } from '../types'
 
-const styled = (tag: Target) =>
-  (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
-    styledNativeComponent(tag, css(strings, ...interpolations))
+const styled = (tag: Target) => constructWithOptions(styledNativeComponent, tag)
 
 /* React native lazy-requires each of these modules for some reason, so let's
 *  assume it's for a good reason and not eagerly load them all */

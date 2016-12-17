@@ -10,13 +10,19 @@ import { CHANNEL } from './ThemeProvider'
 import InlineStyle from './InlineStyle'
 import AbstractStyledComponent from './AbstractStyledComponent'
 
-const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Target) => {
+const createStyledNativeComponent = (target: Target,
+                                     options: Object,
+                                     rules: RuleSet,
+                                     parent?: Target) => {
   /* Handle styled(OtherStyledNativeComponent) differently */
   const isStyledNativeComponent = AbstractStyledComponent.isPrototypeOf(target)
   if (isStyledNativeComponent && !isTag(target)) {
-    return createStyledNativeComponent(target.target, target.rules.concat(rules), target)
+    return createStyledNativeComponent(target.target, options, target.rules.concat(rules), target)
   }
 
+  const {
+    displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
+  } = options
   const inlineStyle = new InlineStyle(rules)
   const ParentComponent = parent || AbstractStyledComponent
 
@@ -92,7 +98,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
   /* Used for inheritance */
   StyledNativeComponent.rules = rules
   StyledNativeComponent.target = target
-  StyledNativeComponent.displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`
+  StyledNativeComponent.displayName = displayName
 
   return StyledNativeComponent
 }
