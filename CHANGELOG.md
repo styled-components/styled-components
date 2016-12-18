@@ -9,7 +9,12 @@ All notable changes to this project will be documented in this file. If a contri
 ### Added
 
 ### Changed
-- Fix flowtype errors that have made it to master and add flow check to CI. (see [#319] (https://github.com/styled-components/styled-components/pull/319))
+
+## [v1.2.1]
+
+### Changed
+
+- Fixed flowtype errors and added flow check to CI, thanks to [@relekang](https://github.com/relekang). (see [#319](https://github.com/styled-components/styled-components/pull/319))
 
 ## [v1.2.0]
 
@@ -139,7 +144,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.2.0...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.2.1...master
+[v1.2.1]: https://github.com/styled-components/styled-components/compare/v1.2.0...v1.2.1
 [v1.2.0]: https://github.com/styled-components/styled-components/compare/v1.1.3...v1.2.0
 [v1.1.3]: https://github.com/styled-components/styled-components/compare/v1.1.2...v1.1.3
 [v1.1.2]: https://github.com/styled-components/styled-components/compare/v1.1.1...v1.1.2
