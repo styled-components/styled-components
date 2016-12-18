@@ -374,6 +374,8 @@ Now, when we render the `Button` inside a `GreenSection`, it'll be green!
 
 See the [theming doc](./docs/theming.md) for more detailed instructions.
 
+> **Note:** Please make sure you sanitize user input if you accept custom themes from users! See the [security doc](./docs/security.md) for more information.
+
 #### Defaults
 
 The problem with the above code is that if the button is rendered outside a `ThemeProvider`, it won't have any background or border!

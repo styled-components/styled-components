@@ -42,6 +42,8 @@ const MyApp = () => {
 }
 ```
 
+Please make sure you sanitize user input if you accept custom themes from users! See the [security doc](./security.md) for more information.
+
 ## Function themes
 
 You can also pass a `theme` that is a function from `outerTheme => newValues`. This can be useful to make themes that are themselves contextual.
