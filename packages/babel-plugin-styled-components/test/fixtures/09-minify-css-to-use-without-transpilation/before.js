@@ -11,3 +11,10 @@ const Interpolation = styled.div`
 const SpecialCharacters = styled.div`
   content: "  ${props => props.text}  ";\n color: red;
 `;
+
+const Parens = styled.div`
+  &:hover {
+    color: blue;
+  }
+  color: red;
+`;
