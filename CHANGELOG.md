@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file. If a contri
 ### Added
 
 ### Changed
+- Fix flowtype errors that have made it to master and add flow check to CI. (see [#319] (https://github.com/styled-components/styled-components/pull/319))
 
 ## [v1.2.0]
 
