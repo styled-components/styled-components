@@ -60,12 +60,13 @@ export default function({ types: t }) {
           displayName: getOption(state.opts, 'displayName'),
           ssr: getOption(state.opts, 'ssr'),
           fileName: getOption(state.opts, 'fileName'),
+          minify: getOption(state.opts, 'minify')
         }
 
         path.traverse({
           TaggedTemplateExpression(path, { file }) {
             const tag = path.node.tag
-            if (isStyled(tag) || isHelper(tag)) {
+            if (options.minify && (isStyled(tag) || isHelper(tag))) {
               minify(path.node.quasi)
             }
 

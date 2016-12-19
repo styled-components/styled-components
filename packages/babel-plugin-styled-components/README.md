@@ -62,6 +62,22 @@ If you don't need server-side rendering, you can disable it with the `ssr` optio
 }
 ```
 
+### Minify styles
+
+By default, plugin minifies styles in template literals. This operation may potentially break your styles in some rare cases, so we recommend to keep this option enabled in development if it's enabled in the production build. You will not see the effect of minification in generated style tags, it solely affects the presentation of styles inside js code.
+
+You can disable minification if you don't need it with minify option:
+
+```JSON
+{
+  "plugins": [
+    ["styled-components", {
+      "minify": false
+    }]
+  ]
+}
+```
+
 ## License
 
 Licensed under the MIT License, Copyright © 2016 Vladimir Danchenkov and Maximilian Stoiber.
