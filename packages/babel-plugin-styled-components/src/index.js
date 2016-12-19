@@ -19,23 +19,39 @@ export default function({ types: t }) {
   return {
     visitor: {
       Program(path, state) {
-        // Default imported variable name to "styled", adjust based on import below
-        let importedVariableName = 'styled'
+        const importedVariableNames = {
+          default: 'styled',
+          css: 'css',
+          keyframes: 'keyframes'
+        }
 
-        const isStyled = (tag) => (tag.object && tag.object.name === importedVariableName) || (tag.callee && tag.callee.name === importedVariableName)
+        const isStyled = (tag) => (
+          (t.isMemberExpression(tag) && tag.object.name === importedVariableNames.default) ||
+          (t.isCallExpression(tag) && tag.callee.name === importedVariableNames.default)
+        )
+
+        const isHelper = (tag) => (
+          t.isIdentifier(tag) && (
+            tag.name === importedVariableNames.css ||
+            tag.name === importedVariableNames.keyframes
+          )
+        )
 
         path.traverse({
           ImportDeclaration(path) {
             // Is the styled-components import!
             if (path.node.source.value === 'styled-components') {
-              // If the default is imported it's at defaultImport[0], otherwise defaultImport is empty
-              const defaultImport = path.get('specifiers').find((specifier) => {
-                return specifier.isImportDefaultSpecifier() || specifier.isImportSpecifier() && specifier.node.imported.name === 'default'
+              path.get('specifiers').forEach((specifier) => {
+                let importedName
+                if (specifier.isImportDefaultSpecifier()) {
+                  importedName = 'default'
+                } else if (specifier.isImportSpecifier()) {
+                  importedName = specifier.node.imported.name
+                }
+                if (importedVariableNames.hasOwnProperty(importedName)) {
+                  importedVariableNames[importedName] = specifier.node.local.name
+                }
               })
-              if (defaultImport) {
-                // Save the imported name
-                importedVariableName = defaultImport.node.local.name
-              }
             }
           }
         })
@@ -49,8 +65,7 @@ export default function({ types: t }) {
         path.traverse({
           TaggedTemplateExpression(path, { file }) {
             const tag = path.node.tag
-
-            if (isStyled(tag)) {
+            if (isStyled(tag) || isHelper(tag)) {
               minify(path.node.quasi)
             }
 
@@ -82,7 +97,7 @@ export default function({ types: t }) {
             }
 
             const call = t.callExpression(
-              t.identifier(importedVariableName),
+              t.identifier(importedVariableNames.default),
               [ t.objectExpression(styledCallProps) ]
             )
 
