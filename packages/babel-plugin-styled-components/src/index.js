@@ -1,5 +1,4 @@
 import hash from './utils/hash'
-import getTarget from './utils/get-target'
 import getName from './utils/get-name'
 import minify from './utils/minify'
 
@@ -72,9 +71,6 @@ export default function({ types: t }) {
 
             if (!(isStyled(tag) && (options.ssr || options.displayName))) return
 
-            // Get target
-            const target = getTarget(path.node.tag)
-
             const componentName = getName(path)
 
             let displayName
@@ -89,22 +85,19 @@ export default function({ types: t }) {
             const identifier = `${displayName || 's'}-${hash(`${id}${displayName}`)}`
 
             // Put together the final code again
-            const styledCallProps = [ t.objectProperty(t.identifier('target'), target) ]
+            const withConfigProps = []
             if (options.displayName && displayName) {
-              styledCallProps.push(t.objectProperty(t.identifier('displayName'), t.stringLiteral(displayName)))
+              withConfigProps.push(t.objectProperty(t.identifier('displayName'), t.stringLiteral(displayName)))
             }
             if (options.ssr && identifier) {
-              styledCallProps.push(t.objectProperty(t.identifier('identifier'), t.stringLiteral(identifier)))
+              withConfigProps.push(t.objectProperty(t.identifier('identifier'), t.stringLiteral(identifier)))
             }
 
-            const call = t.callExpression(
-              t.identifier(importedVariableNames.default),
-              [ t.objectExpression(styledCallProps) ]
+            // Replace x`...` with x.withConfig({ })`...`
+            path.node.tag = t.callExpression(
+              t.memberExpression(tag, t.identifier('withConfig')),
+              [ t.objectExpression(withConfigProps) ]
             )
-
-            // Put together the styled call with the template literal
-            // to get the finished styled({ })`` form! 🎉
-            path.node.tag = call
           }
         }, state)
       }

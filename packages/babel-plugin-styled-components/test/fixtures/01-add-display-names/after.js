@@ -1,28 +1,21 @@
-const Test = styled({
-  target: 'div',
+const Test = styled.div.withConfig({
   displayName: 'Test'
 })`width: 100%;`;
-const Test2 = styled({
-  target: 'div',
+const Test2 = styled('div').withConfig({
   displayName: 'Test2'
 })``;
-const Test3 = true ? styled({
-  target: 'div',
+const Test3 = true ? styled.div.withConfig({
   displayName: 'Test3'
-})`` : styled({
-  target: 'div',
+})`` : styled.div.withConfig({
   displayName: 'Test3'
 })``;
-const styles = { One: styled({
-    target: 'div',
+const styles = { One: styled.div.withConfig({
     displayName: 'One'
   })`` };
 let Component;
-Component = styled({
-  target: 'div',
+Component = styled.div.withConfig({
   displayName: 'Component'
 })``;
-const WrappedComponent = styled({
-  target: Inner,
+const WrappedComponent = styled(Inner).withConfig({
   displayName: 'WrappedComponent'
 })``;
