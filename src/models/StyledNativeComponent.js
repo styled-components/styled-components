@@ -48,7 +48,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
         const theme = this.props.theme || {}
         const generatedStyles = this.generateAndInjectStyles(
           theme,
-          this.props
+          this.props,
         )
         this.setState({ generatedStyles, theme })
       }

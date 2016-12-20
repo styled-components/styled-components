@@ -56,7 +56,7 @@ export default (ComponentStyle: Function) => {
           const theme = this.props.theme || {}
           const generatedClassName = this.generateAndInjectStyles(
             theme,
-            this.props
+            this.props,
           )
           this.setState({ theme, generatedClassName })
         }
