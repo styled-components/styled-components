@@ -1,6 +1,7 @@
 import hash from './utils/hash'
 import getName from './utils/get-name'
 import minify from './utils/minify'
+import path from 'path'
 
 const blockName = (file) => {
   return file.opts.basename !== 'index' ?
@@ -90,7 +91,7 @@ export default function({ types: t }) {
               withConfigProps.push(t.objectProperty(t.identifier('displayName'), t.stringLiteral(displayName)))
             }
             if (options.ssr && identifier) {
-              withConfigProps.push(t.objectProperty(t.identifier('identifier'), t.stringLiteral(identifier)))
+              withConfigProps.push(t.objectProperty(t.identifier('componentId'), t.stringLiteral(identifier)))
             }
 
             // Replace x`...` with x.withConfig({ })`...`
