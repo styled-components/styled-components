@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
+- Added the alias of `styled.Button` for react native. (see [#322](https://github.com/styled-components/styled-components/pull/322))
+
 ### Changed
 
 - Updated all dependencies to latest semver, thanks [@amilajack](https://github.com/amilajack). (see [#324](https://github.com/styled-components/styled-components/pull/324))
