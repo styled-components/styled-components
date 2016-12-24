@@ -1,19 +1,5 @@
-import hash from './utils/hash'
-import getName from './utils/get-name'
-import minify from './utils/minify'
-import path from 'path'
-
-const blockName = (file) => {
-  return file.opts.basename !== 'index' ?
-    file.opts.basename :
-    path.basename(path.dirname(file.opts.filename))
-}
-
-const getOption = (opts, name, defaultValue = true) => {
-  return opts[name] === undefined || opts[name] === null ? defaultValue : opts[name]
-}
-
-let id = 0
+import minify from './visitors/minify'
+import displayNameAndId from './visitors/displayNameAndId'
 
 export default function({ types: t }) {
   return {
@@ -24,18 +10,6 @@ export default function({ types: t }) {
           css: 'css',
           keyframes: 'keyframes'
         }
-
-        const isStyled = (tag) => (
-          (t.isMemberExpression(tag) && tag.object.name === importedVariableNames.default) ||
-          (t.isCallExpression(tag) && tag.callee.name === importedVariableNames.default)
-        )
-
-        const isHelper = (tag) => (
-          t.isIdentifier(tag) && (
-            tag.name === importedVariableNames.css ||
-            tag.name === importedVariableNames.keyframes
-          )
-        )
 
         path.traverse({
           ImportDeclaration(path) {
@@ -56,49 +30,25 @@ export default function({ types: t }) {
           }
         })
 
-        const options = {
-          displayName: getOption(state.opts, 'displayName'),
-          ssr: getOption(state.opts, 'ssr'),
-          fileName: getOption(state.opts, 'fileName'),
-          minify: getOption(state.opts, 'minify')
+        const detector = {
+          isStyled({ tag }) {
+            return (
+              (t.isMemberExpression(tag) && tag.object.name === importedVariableNames.default) ||
+              (t.isCallExpression(tag) && tag.callee.name === importedVariableNames.default)
+            )
+          },
+          isHelper({ tag }) {
+            return t.isIdentifier(tag) && (
+              tag.name === importedVariableNames.css ||
+              tag.name === importedVariableNames.keyframes
+            )
+          }
         }
 
         path.traverse({
-          TaggedTemplateExpression(path, { file }) {
-            const tag = path.node.tag
-            if (options.minify && (isStyled(tag) || isHelper(tag))) {
-              minify(path.node.quasi)
-            }
-
-            if (!(isStyled(tag) && (options.ssr || options.displayName))) return
-
-            const componentName = getName(path)
-
-            let displayName
-            if (options.fileName) {
-              displayName = componentName ? `${blockName(file)}__${componentName}` : blockName(file)
-            } else {
-              displayName = componentName
-            }
-
-            id++
-            // Prefix the identifier with a character if no displayName exists because CSS classes cannot start with a number
-            const identifier = `${displayName || 's'}-${hash(`${id}${displayName}`)}`
-
-            // Put together the final code again
-            const withConfigProps = []
-            if (options.displayName && displayName) {
-              withConfigProps.push(t.objectProperty(t.identifier('displayName'), t.stringLiteral(displayName)))
-            }
-            if (options.ssr && identifier) {
-              withConfigProps.push(t.objectProperty(t.identifier('componentId'), t.stringLiteral(identifier)))
-            }
-
-            // Replace x`...` with x.withConfig({ })`...`
-            path.node.tag = t.callExpression(
-              t.memberExpression(tag, t.identifier('withConfig')),
-              [ t.objectExpression(withConfigProps) ]
-            )
+          TaggedTemplateExpression(path, state) {
+            minify(path, state, detector)
+            displayNameAndId(path, state, detector)
           }
         }, state)
       }
