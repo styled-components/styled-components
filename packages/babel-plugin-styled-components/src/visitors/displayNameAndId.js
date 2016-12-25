@@ -3,6 +3,7 @@ import { useFileName, useDisplayName, useSSR } from '../utils/options'
 import getName from '../utils/getName'
 import path from 'path'
 import hash from '../utils/hash'
+import { isStyled } from '../utils/detectors'
 
 const blockName = (file) => {
   return file.opts.basename !== 'index' ?
@@ -47,7 +48,7 @@ const getComponentId = (displayName) => {
 }
 
 export default (path, state, detector) => {
-  if (detector.isStyled(path.node)) {
+  if (isStyled(path.node, state)) {
     const displayName = getDisplayName(path, useFileName(state) && state.file)
     id++
     addConfig(
