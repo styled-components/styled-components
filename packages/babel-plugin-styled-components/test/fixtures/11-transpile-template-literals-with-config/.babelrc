@@ -1,0 +1,12 @@
+{
+  "presets": [
+    "es2015"
+  ],
+  "plugins": [
+    ["../../../src", {
+      "ssr": false,
+      "displayName": true,
+      "transpileTemplateLiterals": true
+    }]
+  ]
+}

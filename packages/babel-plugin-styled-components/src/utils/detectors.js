@@ -13,18 +13,25 @@ const importLocalName = (name, state) => {
   return name === 'default' ? 'styled' : name
 }
 
-export const isStyled = (node, state) => {
-  const { tag } = node
+export const isStyled = (tag, state) => {
   return (
     (t.isMemberExpression(tag) && tag.object.name === importLocalName('default', state)) ||
     (t.isCallExpression(tag) && tag.callee.name === importLocalName('default', state))
   )
 }
 
-export const isHelper = (node, state) => {
-  const { tag } = node
+export const isHelper = (tag, state) => {
   return t.isIdentifier(tag) && (
     tag.name === importLocalName('css', state) ||
     tag.name === importLocalName('keyframes', state)
+  )
+}
+
+export const isConfiguredStyled = (tag, state) => {
+  return (
+    t.isCallExpression(tag) &&
+    t.isMemberExpression(tag.callee) &&
+    tag.callee.property.name === 'withConfig' &&
+    isStyled(tag.callee.object, state)
   )
 }

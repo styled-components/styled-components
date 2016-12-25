@@ -47,8 +47,8 @@ const getComponentId = (displayName) => {
   return `${displayName || 's'}-${hash(`${id}${displayName}`)}`
 }
 
-export default (path, state, detector) => {
-  if (isStyled(path.node, state)) {
+export default (path, state) => {
+  if (isStyled(path.node.tag, state)) {
     const displayName = getDisplayName(path, useFileName(state) && state.file)
     id++
     addConfig(
