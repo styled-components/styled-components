@@ -1,7 +1,8 @@
 {
   "plugins": [
     ["../../../src", {
-      "fileName": false
+      "fileName": false,
+      "transpileTemplateLiterals": false
     }]
   ]
 }
