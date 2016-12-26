@@ -80,9 +80,7 @@ You can disable minification if you don't need it with minify option:
 
 ### Transpile template literals
 
-This feature is disabled by default. Enable it if you care about both: bundle size AND older browsers.
-
-Template literals are not supported yet by some browsers. You'll probably transpile your code with babel to make it work in older browsers, but there is one small caveat. Output code of babel-plugin-transform-es2015-template-literals is quite wordy. It's done this way to meet specification requirements.
+Template literals are not supported yet by some browsers. You'll probably transpile your code with `babel-plugin-transform-es2015-template-literals` to make it work in older browsers, but there is one tiny caveat. Output of that plugin is quite wordy. It's done this way to meet specification requirements.
 
 ```JS
 // processed with babel-preset-latest
@@ -92,7 +90,7 @@ function _taggedTemplateLiteral(strings, raw) { return Object.freeze(Object.defi
 var Simple = _styledComponents2.default.div(_templateObject);
 ```   
 
-Thing is styled-components do not require full spec compatibility. So, if you care, this plugin can step-in and transpile template literals used with styled-components to something with smaller footprint. It will save you a few bytes.
+Styled-components do not require full spec compatibility. So, if you are going to support older browsers and at the same time care about bundle size, this plugin can step in and transpile template literals attached to styled-component to something with smaller footprint. It will save you a few bytes. Take a note that it will keep other template literals as is.
 
 ```JS
 // processed with babel-preset-latest
@@ -101,7 +99,7 @@ Thing is styled-components do not require full spec compatibility. So, if you ca
 var Simple = _styledComponents2.default.div(['width: 100%;']);
 ```
 
-To enable:
+This feature is disable by default. You can enable it with `transpileTemplateLiterals` option:
 
 ```JSON
 {
