@@ -1,5 +1,6 @@
 [ignore]
 .*/node_modules/flow-remove-types/.*
+.*/node_modules/react-native/.*
 .*/node_modules/rollup-plugin-flow/.*
 .*/dist/.*
 .*/lib/.*
