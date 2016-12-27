@@ -464,6 +464,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
 - [react-enhanced-form](https://github.com/xeonys/react-enhanced-form) : The best react form component, on earth 🌍. It makes form inputs easy, finally !
 - [react-teleportation](https://github.com/xeonys/react-teleportation) : Teleport your components to the foreground.
+- [space-exp](https://github.com/caspg/space-exp) : Brings you each day a stunning picture of our universe, Astronomy Picture of the Day (APOD). Website: [spaceexperience.club](https://spaceexperience.club/)
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
