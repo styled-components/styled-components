@@ -1,7 +1,6 @@
 import * as ReactNative from "react-native";
-import { StatelessComponent } from "react";
+import React from "react";
 
-type GeneralComponent<P> = React.ComponentClass<P> | React.StatelessComponent<P>;
 type ConstrainedProps<C, P> = C & ({ defaultProps?: P } | { new(props?: P, context?: any): any });
 type StyledProps<P> = P & { theme: any };
 
@@ -10,7 +9,8 @@ interface StyledFunction<T, P> {
 }
 
 interface StyledInterface {
-  <C extends GeneralComponent<P>, P>(component: ConstrainedProps<C, P>): StyledFunction<C, P>;
+  <C extends React.ComponentClass<P>, P, ThemeInterface>(component: ConstrainedProps<C, StyledProps<P>>): StyledFunction<C, P>;
+  <C extends React.StatelessComponent<P>, P, ThemeInterface>(component: ConstrainedProps<C, P>): StyledFunction<C, P>;
 
   ActivityIndicator: StyledFunction<ReactNative.ActivityIndicator, StyledProps<ReactNative.ActivityIndicatorProperties>>;
   ActivityIndicatorIOS: StyledFunction<ReactNative.ActivityIndicatorIOS, StyledProps<ReactNative.ActivityIndicatorProperties>>;

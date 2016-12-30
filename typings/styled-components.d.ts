@@ -1,7 +1,6 @@
 import * as React from "react";
 import { StatelessComponent } from "react";
 
-type GeneralComponent<P> = React.ComponentClass<P> | React.StatelessComponent<P>;
 type ConstrainedProps<C, P> = C & ({ defaultProps?: P } | { new(props?: P, context?: any): any });
 type StyledProps<P> = P & { theme: any };
 
@@ -10,7 +9,8 @@ interface StyledFunction<T, P> {
 }
 
 interface StyledInterface {
-  <C extends GeneralComponent<P>, P>(component: ConstrainedProps<C, StyledProps<P>>): StyledFunction<C, P>;
+  <C extends React.ComponentClass<P>, P, ThemeInterface>(component: ConstrainedProps<C, StyledProps<P>>): StyledFunction<C, P>;
+  <C extends React.StatelessComponent<P>, P, ThemeInterface>(component: ConstrainedProps<C, P>): StyledFunction<C, P>;
 
   a: StyledFunction<React.HTMLFactory<HTMLAnchorElement>, StyledProps<React.HTMLAttributes<HTMLAnchorElement>>>;
   abbr: StyledFunction<React.HTMLFactory<HTMLElement>, StyledProps<React.HTMLAttributes<HTMLElement>>>;
