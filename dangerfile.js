@@ -1,6 +1,7 @@
 // @flow
 
-import { danger, warn, fail } from 'danger'
+import { danger, warn, fail, message } from 'danger'
+import fs from 'fs'
 
 const jsModifiedFiles = danger.git.modified_files.filter(path => path.startsWith('src') && path.endsWith('js'))
 const vendorModifiedFiles = danger.git.modified_files.filter(path => path.startsWith('src/vendor') && path.startsWith('js'))
@@ -9,16 +10,17 @@ const hasAppChanges = jsModifiedFiles.length > 0
 const jsTestChanges = jsModifiedFiles.filter(filepath => filepath.endsWith('test.js'))
 const hasTestChanges = jsTestChanges.length > 0
 
-//  Looks like this isn't ready in Danger JS yet
-// // Congrats, version bump up!
-// const isVersionBump = danger.git.modified_files.includes("package.json")
-// message(":tada: Version BUMP UP!") if isVersionBump':exclamation: Big PR'
+// Congrats, version bump up!
+const isVersionBump = danger.git.modified_files.includes('package.json')
+const packageDiff = danger.git.diffForFile('package.json')
 
-// // Warn when there is a big PR
-// const bigPRThreshold = 500
-// if (danger.git.linesOfCode > bigPRThreshold) {
-//   warn(':exclamation: Big PR')
-// }
+if (isVersionBump && packageDiff && packageDiff.includes('version')) { message(':tada: Version BUMP UP!') }
+
+// Warn when there is a big PR
+const bigPRThreshold = 500
+if (danger.github.pr.additions + danger.github.pr.deletions > bigPRThreshold) {
+  warn(':exclamation: Big PR')
+}
 
 // Fail if there are app changes without a CHANGELOG
 if (!danger.git.modified_files.includes('CHANGELOG.md') && hasAppChanges) {
@@ -29,7 +31,7 @@ if (!danger.git.modified_files.includes('CHANGELOG.md') && hasAppChanges) {
 // Warn if there are library changes, but not tests (excluding vendor)
 const libraryOnlyFiles = jsModifiedFiles.filter(file => !vendorModifiedFiles.includes(file))
 if (libraryOnlyFiles.length > 0 && hasTestChanges) {
-  warn("There're library changes, but not tests. That's OK as long as you're refactoring existing code")
+  warn("There are library changes, but not tests. That's OK as long as you're refactoring existing code")
 }
 
 // Warn if StyledComponent.js was edited but not StyledNativeComponent.js or viceversa
@@ -47,12 +49,8 @@ semverBumpFiles.forEach(file => {
   }
 })
 
-// const fs = require("fs")
-
-// // Be careful of leaving testing shortcuts in the codebase
-// jsTestChanges.forEach(file => {
-//   const content = fs.readFileSync(file)
-//   if content.match(/^\s*fit[(].*$/) { fail("`fit` left in tests (#{file})") }
-//   if content.match(/^\s*fdescribe[(].*$/) { fail("`fdescribe` left in tests (#{file})") }
-//   if content.match(/^\s*(it|describe)[.]only[(].*$/) { fail("`only` left in tests (#{file})") }
-// })
+// Be careful of leaving testing shortcuts in the codebase
+jsTestChanges.forEach(file => {
+  const content = fs.readFileSync(file).toString()
+  if (content.includes('it.only') || content.includes('describe.only')) { fail(`an \`only\` was left in tests (${file})`) }
+})

@@ -1,25 +1,26 @@
 // @flow
+/* globals React$Element */
 import React, { PropTypes, Component } from 'react'
-import isFunction from 'lodash/isFunction'
-import isPlainObject from 'lodash/isPlainObject'
+import isFunction from 'is-function'
+import isPlainObject from 'is-plain-object'
 import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
 
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
 export const CHANNEL = '__styled-components__'
 
-type Theme = {[key: string]: mixed};
+export type Theme = {[key: string]: mixed}
 type ThemeProviderProps = {|
-  children: any,
-  theme: (outherTheme: Theme) => void | Theme,
-|};
+  children?: React$Element<any>,
+  theme: Theme | (outherTheme: Theme) => void,
+|}
 
 /**
  * Provide a theme to an entire react component tree via context and event listeners (have to do
  * both context and event emitter as pure components block context updates)
  */
 class ThemeProvider extends Component {
-  getTheme: (theme?: (outherTheme: Theme) => void | Theme) => Theme
+  getTheme: (theme?: Theme | (outherTheme: Theme) => void) => Theme
   outerTheme: Theme
   unsubscribeToOuter: () => void
   props: ThemeProviderProps
@@ -43,7 +44,7 @@ class ThemeProvider extends Component {
   }
 
   getChildContext() {
-    return Object.assign({}, this.context, { [CHANNEL]: this.broadcast.subscribe })
+    return { ...this.context, [CHANNEL]: this.broadcast.subscribe }
   }
 
   componentWillReceiveProps(nextProps: ThemeProviderProps) {
@@ -69,7 +70,7 @@ class ThemeProvider extends Component {
     if (!isPlainObject(theme)) {
       throw new Error('[ThemeProvider] Please make your theme prop a plain object')
     }
-    return Object.assign({}, this.outerTheme, (theme: Object))
+    return { ...this.outerTheme, ...(theme: Object) }
   }
 
   render() {

@@ -1,5 +1,4 @@
-// flow-typed signature: 996888ed1cc6501f9fb97890b6ffddad
-// flow-typed version: 3a7b4935ef/lodash_v4.x.x/flow_>=v0.28.x
+// Manually modified version of flow-typed/lodash
 
 declare module 'lodash' {
   declare type TemplateSettings = {
@@ -489,4 +488,12 @@ declare module 'lodash' {
   }
 
   declare var exports: Lodash;
+}
+
+declare module 'lodash/isPlainObject' {
+  declare module.exports: (value: any) => bool;
+}
+
+declare module 'lodash/isFunction' {
+    declare module.exports: (value: Function) => boolean;
 }

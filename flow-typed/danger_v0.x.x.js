@@ -29,7 +29,9 @@ interface GitDSL {
   /**
    * Removed filepaths relative to the git root
    */
-  deleted_files: string[]
+  deleted_files: string[],
+  /** Offers the diff for a specific file */
+  diffForFile(filename: string): ?string
 }
 interface GitHubDSL {
   /**
@@ -108,53 +110,110 @@ interface GitHubMergeRef {
 interface GitHubPRDSL {
   /**
    * The UUID for the PR
+   * @type {number}
    */
   number: number,
   /**
    * The state for the PR
+   * @type {string}
    */
   state: "closed" | "open" | "locked" | "merged",
   /**
    * Has the PR been locked to contributors only?
+   * @type {boolean}
    */
   locked: boolean,
   /**
    * The title of the PR
+   * @type {string}
    */
   title: string,
   /**
    * The markdown body message of the PR
+   * @type {string}
    */
   body: string,
   /**
    * ISO6801 Date string for when PR was created
+   * @type {string}
    */
   created_at: string,
   /**
    * ISO6801 Date string for when PR was updated
+   * @type {string}
    */
   updated_at: string,
   /**
    * optional ISO6801 Date string for when PR was closed
+   * @type {string}
    */
   closed_at: ?string,
   /**
    * Optional ISO6801 Date string for when PR was merged.
    * Danger probably shouldn't be running in this state.
+   * @type {string}
    */
   merged_at: ?string,
   /**
    * Merge reference for the _other_ repo.
+   * @type {GitHubMergeRef}
    */
   head: GitHubMergeRef,
   /**
    * Merge reference for _this_ repo.
+   * @type {GitHubMergeRef}
    */
   base: GitHubMergeRef,
   /**
    * The User who submitted the PR
+   * @type {GitHubUser}
    */
-  user: GitHubUser
+  user: GitHubUser,
+  /**
+   * The User who is assigned the PR
+   * @type {GitHubUser}
+   */
+  assignee: GitHubUser,
+  /**
+   * The Users who are assigned to the PR
+   * @type {GitHubUser}
+   */
+  assignees: GitHubUser[],
+  /**
+   * Has the PR been merged yet
+   * @type {boolean}
+   */
+  merged: boolean,
+   /**
+   * The nuber of comments on the PR
+   * @type {number}
+   */
+  comments: number,
+  /**
+   * The nuber of review-specific comments on the PR
+   * @type {number}
+   */
+  review_comments: number,
+  /**
+   * The number of commits in the PR
+   * @type {number}
+   */
+  commits: number,
+  /**
+   * The number of additional lines in the PR
+   * @type {number}
+   */
+  additions: number,
+  /**
+   * The number of deleted lines in the PR
+   * @type {number}
+   */
+  deletions: number,
+  /**
+   * The number of changed files in the PR
+   * @type {number}
+   */
+  changed_files: number,
 }
 declare module 'danger' {
   /**

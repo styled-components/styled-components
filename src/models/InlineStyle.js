@@ -1,19 +1,14 @@
 // @flow
 import hashStr from 'glamor/lib/hash'
-import camelizeStyleName from 'fbjs/lib/camelizeStyleName'
 /* eslint-disable import/no-unresolved */
 import { StyleSheet } from 'react-native'
+import transformDeclPairs from 'css-to-react-native'
 
 import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
 
 const generated = {}
-
-/* Whitelist of properties that need string values even when they're numbers */
-const propNeedsStrings = {
-  'font-weight': true,
-}
 
 /*
  InlineStyle takes arbitrary CSS and generates a flat object
@@ -30,18 +25,25 @@ export default class InlineStyle {
     const hash = hashStr(flatCSS)
     if (!generated[hash]) {
       const root = parse(flatCSS)
-      const styleObject = {}
+      const declPairs = []
       root.each(node => {
         if (node.type === 'decl') {
-          const { value } = node
-          const isNumber = value !== '' && !isNaN(value)
-          const typedVal = isNumber && !propNeedsStrings[node.prop] ? parseFloat(value) : value
-          styleObject[camelizeStyleName(node.prop)] = typedVal
+          declPairs.push([node.prop, node.value])
         } else {
           /* eslint-disable no-console */
           console.warn(`Node of type ${node.type} not supported as an inline style`)
         }
       })
+      // RN currently does not support differing values for the corner radii of Image
+      // components (but does for View). It is almost impossible to tell whether we'll have
+      // support, so we'll just disable multiple values here.
+      // https://github.com/styled-components/css-to-react-native/issues/11
+      const styleObject = transformDeclPairs(declPairs, [
+        'borderRadius',
+        'borderWidth',
+        'borderColor',
+        'borderStyle',
+      ])
       const styles = StyleSheet.create({
         generated: styleObject,
       })

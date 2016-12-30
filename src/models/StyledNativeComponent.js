@@ -1,6 +1,8 @@
 // @flow
 import { createElement } from 'react'
 
+import type { Theme } from './ThemeProvider'
+
 import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
 
@@ -36,11 +38,29 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       // that by updating when an event is emitted
       if (this.context[CHANNEL]) {
         const subscribe = this.context[CHANNEL]
-        this.unsubscribe = subscribe(theme => {
+        this.unsubscribe = subscribe(nextTheme => {
           // This will be called once immediately
-          this.setState({ theme })
+          const theme = this.props.theme || nextTheme
+          const generatedStyles = this.generateAndInjectStyles(theme, this.props)
+          this.setState({ generatedStyles, theme })
         })
+      } else {
+        const theme = this.props.theme || {}
+        const generatedStyles = this.generateAndInjectStyles(
+          theme,
+          this.props,
+        )
+        this.setState({ generatedStyles, theme })
       }
+    }
+
+    componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
+      this.setState((oldState) => {
+        const theme = nextProps.theme || oldState.theme
+        const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
+
+        return { theme, generatedStyles }
+      })
     }
 
     componentWillUnmount() {
@@ -49,17 +69,20 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       }
     }
 
+    generateAndInjectStyles(theme: any, props: any) {
+      const executionContext = { ...props, theme }
+      return inlineStyle.generateStyleObject(executionContext)
+    }
     /* eslint-disable react/prop-types */
     render() {
       const { style, children, innerRef } = this.props
-      const theme = this.state.theme || this.props.theme || {}
+      const { generatedStyles } = this.state
 
-      const generatedStyles = inlineStyle.generateStyleObject({ theme })
-
-      const propsForElement = Object.assign({}, this.props)
+      const propsForElement = { ...this.props }
       propsForElement.style = [generatedStyles, style]
       if (innerRef) {
         propsForElement.ref = innerRef
+        delete propsForElement.innerRef
       }
 
       return createElement(target, propsForElement, children)

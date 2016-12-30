@@ -1,15 +1,17 @@
 language: node_js
-sudo: true
 dist: trusty
 node_js:
-  - "4.0"
-  - "6.0"
-install:
-  - npm i -g npm
-  - npm install
+  - "6"
+  - "7"
 script:
-  - npm run danger
-  - npm run lint && npm run test
+  - yarn run danger run -- --verbose
+  - yarn run flow
+  - yarn run lint && npm run test
 notifications:
   email:
     on_failure: change
+cache:
+  yarn: true
+  bundler: true
+  directories:
+    - node_modules

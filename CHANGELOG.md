@@ -8,24 +8,93 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- N/A
+- Added the alias of `styled.Button` for react native. (see [#322](https://github.com/styled-components/styled-components/pull/322))
 
 ### Changed
 
-- Added stricter type annotations
-- Converted to DangerJS - orta
+- Converted to DangerJS - [@orta](https://github.com/orta)
+- Updated all dependencies to latest semver, thanks [@amilajack](https://github.com/amilajack). (see [#324](https://github.com/styled-components/styled-components/pull/324))
+
+## [v1.2.1]
+
+### Changed
+
+- Fixed flowtype errors and added flow check to CI, thanks to [@relekang](https://github.com/relekang). (see [#319](https://github.com/styled-components/styled-components/pull/319))
+
+## [v1.2.0]
+
+### Added
+
+- Added [`withTheme`](docs/api.md#withtheme) higher order component; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#312] (https://github.com/styled-components/styled-components/pull/312))
+- Added support for media queries, pseudo selectors and nesting in styles-as-objects. (see [#280](https://github.com/styled-components/styled-components/pull/280))
+
+### Changed
+
+- Do not pass innerRef to the component, thanks [@mkhazov](https://github.com/mkhazov). (see [#310](https://github.com/styled-components/styled-components/pull/310))
+- Fixed prop changes not updating style on react native; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#311](https://github.com/styled-components/styled-components/pull/311))
+- Extract DOM shorthands, thanks [@philpl](https://github.com/philpl). (see [#172](https://github.com/styled-components/styled-components/pull/172))
+
+## [v1.1.3]
+
+### Changed
+
+- Fixed theme changes in `ThemeProvider`s not re-rendering correctly, thanks [@k15a](https://github.com/k15a). (see [#264](https://github.com/styled-components/styled-components/pull/264))
+- Fixed overriding theme through props, thanks [@k15a](https://github.com/k15a). (see [#295](https://github.com/styled-components/styled-components/pull/295))
+- Removed `lodash` dependency in favor of small utility packages to knock down bundle size by ~0.5kB
+
+## [v1.1.2]
+
+### Added
+
+- Add `// @flow` to files missing them and fix ThemeProvider types, thanks to [@relekang](https://github.com/relekang). (see [#225](https://github.com/styled-components/styled-components/pull/225))
+
+### Changed
+
+- Fixed setting the default theme via `defaultProps` and theme changes not re-rendering components with new styles, thanks to [@michalkvasnicak](https://github.com/michalkvasnicak). (see [#253](https://github.com/styled-components/styled-components/pull/253))
+- Improve ReactNative style generation performance, thanks to [@sheepsteak](https://github.com/sheepsteak). (see [#171](https://github.com/styled-components/styled-components/pull/171))
+
+## [v1.1.1]
+
+### Changed
+
+- Bumped `css-to-react-native` to `v1.0.3` to avoid floating points number bug.
+
+## [v1.1.0]
+
+### Added
+
+- Added support for deeply nested styles in ReactNative (e.g. `transform`), thanks [@jacobp100](https://github.com/jacobp100). (see [#139](https://github.com/styled-components/styled-components/pull/139))
+- Added support for camelized style properties in ReactNative (e.g. `fontWeight`), thanks [@jacobp100](https://github.com/jacobp100). (see [#145](https://github.com/styled-components/styled-components/pull/145))
+- Properly expose `flow` typings by adding a `flow:build` step and `flow` support docs, thanks to [@ryyppy](https://github.com/ryyppy). (see [#219](https://github.com/styled-components/styled-components/pull/219))
+
+### Changed
+
+- Converted Object.assign to spread operator, thanks to [@thisguychris](https://github.com/thisguychris). (see [#201](https://github.com/styled-components/styled-components/pull/201))
+- Switched to using [inline-style-prefixer](https://github.com/rofrischmann/inline-style-prefixer) for our autoprefixing needs.
+- Fixed IE10 compatibility, thanks to [@thisguychris](https://github.com/thisguychris). (see [#217](https://github.com/styled-components/styled-components/pull/217))
+
+## [v1.0.11] - 2016-11-14
+
+### Added
+
+- Pass props to interpolated functions in React Native, thanks to [@haikyuu](https://github.com/haikyuu). (see [#190](https://github.com/styled-components/styled-components/pull/190))
+
+### Changed
+
+- Test coverage for `injectGlobal`, thanks to [@b_hough](https://github.com/bhough). (see [#36](https://github.com/styled-components/styled-components/issues/36))
+- Added stricter flow type annotations, thanks to [@relekang](https://github.com/relekang) and [@ryyppy](https://github.com/ryyppy). (see [#148](https://github.com/styled-components/styled-components/pull/148))
 
 ## [v1.0.10] - 2016-10-28
 
 ### Changed
 
-- Huge performance improvement by injecting styles outside of `render`, thanks to [@JamieDixon][https://github.com/JamieDixon]. (see [#137](https://github.com/styled-components/styled-components/pull/137))
+- Huge performance improvement by injecting styles outside of `render`, thanks to [@JamieDixon](https://github.com/JamieDixon). (see [#137](https://github.com/styled-components/styled-components/pull/137))
 
 ## [v1.0.9] - 2016-10-26
 
 ### Added
 
-- Added ability to get ref to the inner (DOM) node of the styled component via `innerRef` prop, thanks to [@freiksenet][https://github.com/freiksenet]. (see [#122](https://github.com/styled-components/styled-components/pull/122))
+- Added ability to get ref to the inner (DOM) node of the styled component via `innerRef` prop, thanks to [@freiksenet](https://github.com/freiksenet). (see [#122](https://github.com/styled-components/styled-components/pull/122))
 - Section in docs about the new `stylelint` support with [`stylelint-processor-styled-components`](https://github.com/styled-components/stylelint-processor-styled-components)
 
 ### Changed
@@ -80,7 +149,14 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.0.10...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.2.1...master
+[v1.2.1]: https://github.com/styled-components/styled-components/compare/v1.2.0...v1.2.1
+[v1.2.0]: https://github.com/styled-components/styled-components/compare/v1.1.3...v1.2.0
+[v1.1.3]: https://github.com/styled-components/styled-components/compare/v1.1.2...v1.1.3
+[v1.1.2]: https://github.com/styled-components/styled-components/compare/v1.1.1...v1.1.2
+[v1.1.1]: https://github.com/styled-components/styled-components/compare/v1.1.0...v1.1.1
+[v1.1.0]: https://github.com/styled-components/styled-components/compare/v1.0.11...v1.1.0
+[v1.0.11]: https://github.com/styled-components/styled-components/compare/v1.0.10...v1.0.11
 [v1.0.10]: https://github.com/styled-components/styled-components/compare/v1.0.9...v1.0.10
 [v1.0.9]: https://github.com/styled-components/styled-components/compare/v1.0.8...v1.0.9
 [v1.0.8]: https://github.com/styled-components/styled-components/compare/v1.0.7...v1.0.8

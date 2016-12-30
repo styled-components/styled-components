@@ -1,3 +1,4 @@
+// @flow
 import React from 'react'
 import { shallow } from 'enzyme'
 
@@ -42,6 +43,76 @@ describe('with styles', () => {
       `
     shallow(<Comp />)
     expectCSSMatches('.a { background-color: blue; }')
+  })
+
+  it('should handle inline style objects with media queries', () => {
+    const rule1 = {
+      backgroundColor: 'blue',
+      '@media screen and (min-width: 250px)': {
+        backgroundColor: 'red',
+      },
+    }
+    const Comp = styled.div`
+        ${rule1}
+      `
+    shallow(<Comp />)
+    expectCSSMatches('.a { background-color: blue; } @media screen and (min-width: 250px) { .a { background-color: red; } }')
+  })
+
+  it('should handle inline style objects with pseudo selectors', () => {
+    const rule1 = {
+      backgroundColor: 'blue',
+      '&:hover': {
+        textDecoration: 'underline',
+      },
+    }
+    const Comp = styled.div`
+      ${rule1}
+    `
+    shallow(<Comp />)
+    expectCSSMatches('.a { background-color: blue; } .a:hover { text-decoration: underline; }')
+  })
+
+  it('should handle inline style objects with pseudo selectors', () => {
+    const rule1 = {
+      backgroundColor: 'blue',
+      '&:hover': {
+        textDecoration: 'underline',
+      },
+    }
+    const Comp = styled.div`
+      ${rule1}
+    `
+    shallow(<Comp />)
+    expectCSSMatches('.a { background-color: blue; } .a:hover { text-decoration: underline; }')
+  })
+
+  it('should handle inline style objects with nesting', () => {
+    const rule1 = {
+      backgroundColor: 'blue',
+      '> h1': {
+        color: 'white',
+      },
+    }
+    const Comp = styled.div`
+      ${rule1}
+    `
+    shallow(<Comp />)
+    expectCSSMatches('.a { background-color: blue; } .a > h1 { color: white; }')
+  })
+
+  it('should handle inline style objects with contextual selectors', () => {
+    const rule1 = {
+      backgroundColor: 'blue',
+      'html.something &': {
+        color: 'white',
+      },
+    }
+    const Comp = styled.div`
+      ${rule1}
+    `
+    shallow(<Comp />)
+    expectCSSMatches('.a { background-color: blue; } html.something .a { color: white; }')
   })
 
   it('should inject styles of multiple components', () => {
