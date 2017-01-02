@@ -34,3 +34,44 @@ alias: {
 ```
 
 In a future version of webpack this bug should be fixed. See [issue#115](https://github.com/styled-components/styled-components/issues/115), [issue#157](https://github.com/styled-components/styled-components/issues/157) and [webpack-issue#3168](https://github.com/webpack/webpack/issues/3168) for further information.
+
+### My styles are being repeated multiple times
+
+You should be aware that generating styles based on dynamic props will result in repeated CSS declarations. In other words, in the following example:
+
+```js
+const Button = styled.button`
+  /* If it's a small button use less padding */
+  padding: ${props => props.small ? '0.25em 1em' : '0.5em 2em'};
+
+  /* …more styles here… */
+`;
+```
+
+You would ultimately end up with two classes, both of which contain the same "more styles here" lines:
+
+```css
+.foo{
+  padding: 0.25em 1em;
+  /* …more styles here… */
+}
+.bar{
+  padding: 0.5em 2em;
+  /* …more styles here… */
+}
+```
+
+You may decided that this is an acceptable drawback since increasing the size of a CSS file rarely has any noticeable impact on performance compared to adding a single image to a site, but if this is a concern you can use the `css` helper to factor our the common styles into their own declaration:
+
+```js
+const moreStyles = css`
+  /* …more styles here… */
+`
+
+const Button = styled.button`
+  /* If it's a small button use less padding */
+  padding: ${props => props.small ? '0.25em 1em' : '0.5em 2em'};
+  
+  ${moreStyles}
+`;
+```
