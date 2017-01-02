@@ -88,6 +88,28 @@ describe('theming', () => {
     expectCSSMatches(`.a { color: green; }`)
   })
 
+  it('should properly allow a component to override the theme with a prop even if it is equal to defaultProps theme', () => {
+    const Comp1 = styled.div`
+      color: ${props => props.theme.test.color};
+    `
+
+    Comp1.defaultProps = {
+      theme: {
+        test: {
+          color: "purple"
+        }
+      }
+    }
+    const theme = { test: { color: 'green' } }
+
+    render(
+      <ThemeProvider theme={theme}>
+        <Comp1 theme={{ test: { color: 'purple' } }} />
+      </ThemeProvider>
+    )
+    expectCSSMatches(`.a { color: purple; }`)
+  })
+
   it('should properly allow a component to override the theme with a prop', () => {
     const Comp = styled.div`
       color: ${props => props.theme.color};
