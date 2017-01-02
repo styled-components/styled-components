@@ -40,7 +40,10 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
         const subscribe = this.context[CHANNEL]
         this.unsubscribe = subscribe(nextTheme => {
           // This will be called once immediately
-          const theme = this.props.theme || nextTheme
+          const { defaultProps } = this.constructor
+          const defaultTheme = defaultProps && defaultProps.theme
+          const isDefaultTheme = defaultTheme && this.props.theme === defaultTheme
+          const theme = !isDefaultTheme && this.props.theme ? this.props.theme : nextTheme
           const generatedStyles = this.generateAndInjectStyles(theme, this.props)
           this.setState({ generatedStyles, theme })
         })
