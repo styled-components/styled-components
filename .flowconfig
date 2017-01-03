@@ -5,6 +5,7 @@
 .*/dist/.*
 .*/lib/.*
 .*/node_modules/babel-plugin-flow-react-proptypes/src/__test__/.*
+.*/dangerfile.js
 
 [include]
 

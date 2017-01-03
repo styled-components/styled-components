@@ -61,6 +61,7 @@
     "babel-preset-latest": "^6.16.0",
     "babel-preset-react": "^6.16.0",
     "chokidar": "^1.6.1",
+    "danger": "^0.7.5",
     "enzyme": "^2.6.0",
     "eslint": "^3.12.2",
     "eslint-config-airbnb": "^13.0.0",
