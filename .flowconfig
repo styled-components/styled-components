@@ -1,5 +1,6 @@
 [ignore]
 .*/node_modules/flow-remove-types/.*
+.*/node_modules/react-native/.*
 .*/node_modules/rollup-plugin-flow/.*
 .*/dist/.*
 .*/lib/.*
@@ -12,5 +13,5 @@
 flow-typed
 
 [options]
-suppress_comment=.*\\$FlowIssue
+suppress_comment=.*\\$FlowFixMe
 suppress_comment=.*\\$FlowInvalidInputTest
