@@ -20,7 +20,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
   const inlineStyle = new InlineStyle(rules)
   const ParentComponent = parent || AbstractStyledComponent
 
-  // $FlowIssue need to convince flow that ParentComponent can't be string here
+  // $FlowFixMe need to convince flow that ParentComponent can't be string here
   class StyledNativeComponent extends ParentComponent {
     static rules: RuleSet
     static target: Target
