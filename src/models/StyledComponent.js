@@ -49,9 +49,10 @@ export default (ComponentStyle: Function) => {
           this.unsubscribe = subscribe(nextTheme => {
             // This will be called once immediately
             const { defaultProps } = this.constructor
-            const defaultTheme = defaultProps && defaultProps.theme
-            const isDefaultTheme = defaultTheme && this.props.theme === defaultTheme
-            const theme = !isDefaultTheme && this.props.theme ? this.props.theme : nextTheme
+            // Props should take precedence over ThemeProvider, which should take precedence over
+            // defaultProps, but React automatically puts defaultProps on props.
+            const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
+            const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
             const generatedClassName = this.generateAndInjectStyles(theme, this.props)
             this.setState({ theme, generatedClassName })
           })
