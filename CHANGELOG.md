@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file. If a contri
 ### Changed
 
 - Updated all dependencies to latest semver, thanks [@amilajack](https://github.com/amilajack). (see [#324](https://github.com/styled-components/styled-components/pull/324))
+- Removed custom flowtype supressor in favour of default $FlowFixMe [@relekang](https://github.com/relekang). (see [#335](https://github.com/styled-components/styled-components/pull/335))
 
 ## [v1.2.1]
 
