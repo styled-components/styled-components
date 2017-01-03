@@ -37,7 +37,7 @@ In a future version of webpack this bug should be fixed. See [issue#115](https:/
 
 ### My styles are being repeated multiple times
 
-You should be aware that generating styles based on dynamic props will result in repeated CSS declarations. In other words, in the following example:
+You might notice that generating styles based on dynamic props will result in repeated CSS declarations. In other words, in the following example:
 
 ```js
 const Button = styled.button`
@@ -48,7 +48,7 @@ const Button = styled.button`
 `;
 ```
 
-You would ultimately end up with two classes, both of which contain the same "more styles here" lines:
+You will ultimately end up with two classes, both of which contain the same "more styles here" lines:
 
 ```css
 .foo{
@@ -61,17 +61,7 @@ You would ultimately end up with two classes, both of which contain the same "mo
 }
 ```
 
-You may decided that this is an acceptable drawback since increasing the size of a CSS file rarely has any noticeable impact on performance compared to adding a single image to a site, but if this is a concern you can use the `css` helper to factor our the common styles into their own declaration:
+While this isn't how you would normsally write CSS, it's not actually a big issue:
 
-```js
-const moreStyles = css`
-  /* …more styles here… */
-`
-
-const Button = styled.button`
-  /* If it's a small button use less padding */
-  padding: ${props => props.small ? '0.25em 1em' : '0.5em 2em'};
-  
-  ${moreStyles}
-`;
-```
+- On the server, you can gzip your CSS to take care of any duplication.
+- On the client, this only increases the amount of *generated* CSS (and not the size of the bundle sent by the server), which doesn't have any noticeable performance impact. 
