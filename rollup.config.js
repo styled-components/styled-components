@@ -1,13 +1,13 @@
 /* eslint-disable flowtype/require-valid-file-annotation, no-console */
-import nodeResolve from 'rollup-plugin-node-resolve'
-import replace from 'rollup-plugin-replace'
-import commonjs from 'rollup-plugin-commonjs'
-import inject from 'rollup-plugin-inject'
-import babel from 'rollup-plugin-babel'
-import json from 'rollup-plugin-json'
-import flow from 'rollup-plugin-flow'
-import uglify from 'rollup-plugin-uglify'
-import visualizer from 'rollup-plugin-visualizer'
+const nodeResolve = require('rollup-plugin-node-resolve')
+const replace = require('rollup-plugin-replace')
+const commonjs = require('rollup-plugin-commonjs')
+const inject = require('rollup-plugin-inject')
+const babel = require('rollup-plugin-babel')
+const json = require('rollup-plugin-json')
+const flow = require('rollup-plugin-flow')
+const uglify = require('rollup-plugin-uglify')
+const visualizer = require('rollup-plugin-visualizer')
 
 const processShim = '\0process-shim'
 
@@ -40,7 +40,9 @@ const plugins = [
     },
   },
   flow(),
-  nodeResolve(),
+  nodeResolve({
+    preferBuiltins: true,
+  }),
   commonjs(),
   replace({
     'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
@@ -61,13 +63,17 @@ const plugins = [
       'transform-object-rest-spread',
       'transform-class-properties',
     ],
+    exclude: [
+      'node_modules/**',
+      '*.json',
+    ],
   }),
   json(),
 ]
 
 if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
 
-export default {
+module.exports = {
   entry: 'src/index.js',
   moduleName: 'styled',
   external: ['react'],

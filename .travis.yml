@@ -15,3 +15,8 @@ cache:
   bundler: true
   directories:
     - node_modules
+addons:
+  sauce_connect:
+    username: "SAUCELABS_USERNAME"
+  jwt:
+    secure: "SAUCELABS_ACCESS_KEY_ENCRYPTED_WITH_TRAVIS_COMMANDLINE"
