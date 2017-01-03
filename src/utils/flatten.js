@@ -28,7 +28,7 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
     }
 
     /* Handle objects */
-    // $FlowIssue have to add %checks somehow to isPlainObject
+    // $FlowFixMe have to add %checks somehow to isPlainObject
     return ruleSet.concat(isPlainObject(chunk) ? objToCss(chunk) : chunk.toString())
   }, [])
 )
