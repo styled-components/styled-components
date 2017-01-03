@@ -1,12 +1,12 @@
 # Typescript Support
 
-Styled-components has typescript definitions to allow the library to be
+`styled-components` has typescript definitions to allow the library to be
 used in any Typescript project.
 
 To use the library you can import it as you normally do with any TS dependency.
 
 ```
-import styled from "styled-components";
+import styled from 'styled-components'
 ```
 
 ## Example
