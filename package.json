@@ -48,9 +48,13 @@
     "is-function": "^1.0.1",
     "is-plain-object": "^2.0.1",
     "lodash": "^4.15.0",
-    "supports-color": "^3.1.2"
+    "supports-color": "^3.1.2",
+    "tslint": "^3.15.1",
+    "typescript": "^2.0.7"
   },
   "devDependencies": {
+    "@types/react": "^0.14.55",
+    "@types/react-native": "^0.37.5",
     "babel-cli": "^6.18.0",
     "babel-core": "^6.21.0",
     "babel-eslint": "^7.1.1",
@@ -98,9 +102,7 @@
     "rollup-plugin-uglify": "^1.0.1",
     "rollup-plugin-visualizer": "^0.1.5",
     "tslint": "^3.15.1",
-    "typescript": "^2.0.7",
-    "@types/react": "^0.14.55",
-    "@types/react-native": "^0.37.1"
+    "typescript": "^2.0.7"
   },
   "peerDependencies": {
     "react": "^0.14.0 || ^15.0.0-0"
