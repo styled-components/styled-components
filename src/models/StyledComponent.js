@@ -3,6 +3,7 @@
 import { createElement } from 'react'
 
 import type { Theme } from './ThemeProvider'
+import warnTooManyClasses from '../utils/warnTooManyClasses'
 
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
@@ -98,6 +99,9 @@ export default (ComponentStyle: Function) => {
           delete propsForElement.innerRef
         }
 
+        if (process.env.NODE_ENV === 'development') {
+          warnTooManyClasses(StyledComponent, generatedClassName)
+        }
         return createElement(target, propsForElement, children)
       }
     }
