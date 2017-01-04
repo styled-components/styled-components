@@ -16,6 +16,7 @@ interface StyledInterface {
   ActivityIndicatorIOS: StyledFunction<ReactNative.ActivityIndicatorIOS, StyledProps<ReactNative.ActivityIndicatorProperties>>;
 
   // ART: StyledFunction<ReactNative.ART>;
+  Button: StyledFunction<ReactNative.Button, StyledProps<ReactNative.ButtonProperties>>;
   DatePickerIOS: StyledFunction<ReactNative.DatePickerIOS, StyledProps<ReactNative.DatePickerIOSProperties>>;
   DrawerLayoutAndroid: StyledFunction<ReactNative.DrawerLayoutAndroid, StyledProps<ReactNative.DrawerLayoutAndroidProperties>>;
   Image: StyledFunction<ReactNative.Image, StyledProps<ReactNative.ImageProperties>>;
@@ -35,12 +36,11 @@ interface StyledInterface {
   Slider: StyledFunction<ReactNative.Slider, StyledProps<ReactNative.SliderProperties>>;
   SliderIOS: StyledFunction<ReactNative.SliderIOS, StyledProps<ReactNative.SliderPropertiesIOS>>;
   SnapshotViewIOS: StyledFunction<ReactNative.SnapshotViewIOS, StyledProps<ReactNative.SnapshotViewIOSProperties>>;
-  Switch: StyledFunction<ReactNative.Switch, StyledProps<ReactNative.SwitchProperties>>;
   RecyclerViewBackedScrollView: StyledFunction<ReactNative.RecyclerViewBackedScrollView, StyledProps<ReactNative.RecyclerViewBackedScrollViewProperties>>;
   RefreshControl: StyledFunction<ReactNative.RefreshControl, StyledProps<ReactNative.RefreshControlProperties>>;
   StatusBar: StyledFunction<ReactNative.StatusBar, StyledProps<ReactNative.StatusBarProperties>>;
   SwipeableListView: StyledFunction<ReactNative.SwipeableListView, StyledProps<ReactNative.SwipeableListViewProps>>;
-  // SwitchAndroid: StyledFunction<ReactNative.SwitchAndroid>;
+  Switch: StyledFunction<ReactNative.Switch, StyledProps<ReactNative.SwitchProperties>>;
   SwitchIOS: StyledFunction<ReactNative.SwitchIOS, StyledProps<ReactNative.SwitchIOSProperties>>;
   Text: StyledFunction<ReactNative.Text, StyledProps<ReactNative.TextProperties>>;
   TextInput: StyledFunction<ReactNative.TextInput, StyledProps<ReactNative.TextInputProperties>>;
