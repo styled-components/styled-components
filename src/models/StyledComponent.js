@@ -3,7 +3,7 @@
 import { createElement } from 'react'
 
 import type { Theme } from './ThemeProvider'
-import warnTooManyClasses from '../utils/warnTooManyClasses'
+import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
@@ -11,6 +11,8 @@ import type { RuleSet, Target } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
+
+const NODE_ENV = typeof process !== 'undefined' ? process.env.NODE_ENV : 'development'
 
 export default (ComponentStyle: Function) => {
   // eslint-disable-next-line no-undef
@@ -23,6 +25,11 @@ export default (ComponentStyle: Function) => {
 
     const componentStyle = new ComponentStyle(rules)
     const ParentComponent = parent || AbstractStyledComponent
+
+    let warnTooManyClasses
+    if (NODE_ENV !== 'production') {
+      warnTooManyClasses = createWarnTooManyClasses()
+    }
 
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
@@ -99,8 +106,8 @@ export default (ComponentStyle: Function) => {
           delete propsForElement.innerRef
         }
 
-        if (process.env.NODE_ENV === 'development') {
-          warnTooManyClasses(StyledComponent, generatedClassName)
+        if (warnTooManyClasses && generatedClassName) {
+          warnTooManyClasses(generatedClassName, StyledComponent.displayName)
         }
         return createElement(target, propsForElement, children)
       }
