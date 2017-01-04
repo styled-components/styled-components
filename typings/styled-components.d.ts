@@ -127,25 +127,25 @@ interface StyledInterface {
   wbr: StyledFunction<React.ComponentClass<React.HTMLProps<HTMLElement>>, StyledProps<React.HTMLAttributes<HTMLElement>>>;
 
   // SVG
-  circle: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGCircleElement>>;
-  clipPath: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGClipPathElement>>;
-  defs: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGDefsElement>>;
-  ellipse: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGEllipseElement>>;
-  g: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGGElement>>;
-  image: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGImageElement>>;
-  line: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGLineElement>>;
-  linearGradient: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGLinearGradientElement>>;
-  mask: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGMaskElement>>;
-  path: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGPathElement>>;
-  pattern: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGPatternElement>>;
-  polygon: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGPolygonElement>>;
-  polyline: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGPolylineElement>>;
-  radialGradient: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGRadialGradientElement>>;
-  rect: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGRect>>;
-  stop: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGStopElement>>;
-  svg: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGSVGElement>>;
-  text: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGTextElement>>;
-  tspan: StyledFunction<React.ComponentClass<StyledProps<React.SVGProps>>, React.SVGAttributes<SVGTSpanElement>>;
+  circle: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGCircleElement>>;
+  clipPath: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGClipPathElement>>;
+  defs: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGDefsElement>>;
+  ellipse: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGEllipseElement>>;
+  g: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGGElement>>;
+  image: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGImageElement>>;
+  line: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGLineElement>>;
+  linearGradient: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGLinearGradientElement>>;
+  mask: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGMaskElement>>;
+  path: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGPathElement>>;
+  pattern: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGPatternElement>>;
+  polygon: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGPolygonElement>>;
+  polyline: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGPolylineElement>>;
+  radialGradient: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGRadialGradientElement>>;
+  rect: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGRect>>;
+  stop: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGStopElement>>;
+  svg: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGSVGElement>>;
+  text: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGTextElement>>;
+  tspan: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGTSpanElement>>;
 }
 
 interface ThemeProps {
