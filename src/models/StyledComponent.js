@@ -12,8 +12,6 @@ import type { RuleSet, Target } from '../types'
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
 
-const NODE_ENV = typeof process !== 'undefined' ? process.env.NODE_ENV : 'development'
-
 export default (ComponentStyle: Function) => {
   // eslint-disable-next-line no-undef
   const createStyledComponent = (target: Target, rules: RuleSet, parent?: ReactClass<*>) => {
@@ -27,7 +25,7 @@ export default (ComponentStyle: Function) => {
     const ParentComponent = parent || AbstractStyledComponent
 
     let warnTooManyClasses
-    if (NODE_ENV !== 'production') {
+    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
       warnTooManyClasses = createWarnTooManyClasses()
     }
 
@@ -106,7 +104,7 @@ export default (ComponentStyle: Function) => {
           delete propsForElement.innerRef
         }
 
-        if (warnTooManyClasses && generatedClassName) {
+        if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production' && generatedClassName) {
           warnTooManyClasses(generatedClassName, StyledComponent.displayName)
         }
         return createElement(target, propsForElement, children)
