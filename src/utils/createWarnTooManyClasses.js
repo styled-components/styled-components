@@ -17,7 +17,9 @@ export default () => {
         /* eslint-disable no-console, prefer-template */
         console.warn(`Over ${LIMIT} classes were generated for component ${displayName}. ` +
            'Consider using style property for frequently changed styles.\n' +
-           'Example: const MyStyledComponent = styled(props => <div className={props.className} style={{color: props.color}}>{props.children}</div>)`width: 100px; height: 100px;`' +
+           'Example:\n' +
+           '  const StyledComp = styled.div`width: 100%;`\n' +
+           '  <StyledComp style={{ background: background }} />' +
            (latestRule ? `\nLatest generated class: ${latestRule.cssText}` : ''))
         warningSeen = true
         generatedClasses = {}
