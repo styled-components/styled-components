@@ -467,6 +467,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [reshake](https://github.com/elrumordelaluz/reshake) : CSShake as a React Functional Component ([demo](https://elrumordelaluz.github.io/reshake/))
 - [space-exp](https://github.com/caspg/space-exp) : Brings you each day a stunning picture of our universe, Astronomy Picture of the Day (APOD). Website: [spaceexperience.club](https://spaceexperience.club/)
 - [sachagreif.com](http://sachagreif.com): personal homepage built with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/SachaG/sg2017)).
+- [last-draft](https://github.com/vacenz/last-draft): A Draft.js Editor ([demo](http://lastdraft.vace.nz))
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
