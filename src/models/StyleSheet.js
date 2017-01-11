@@ -10,7 +10,7 @@ class StyleSheet {
   constructor() {
     this.styleSheet = new GlamorStyle({ speedy: false, maxLength: 40 })
   }
-  get injected(): any {
+  get injected(): boolean {
     return this.styleSheet.injected
   }
   inject() {
