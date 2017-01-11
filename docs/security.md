@@ -1,6 +1,6 @@
 # Security
 
-**Please do not forget to sanitise and validate input!**
+**Please do not forget to sanitize and validate input!**
 
 `styled-components` allows you to interpolate all kinds of things into your CSS. Some of these interpolations can consist of more than one declaration:
 
@@ -55,7 +55,7 @@ Somewhere within this long string of CSS you let your users provide, the poster 
 
 **⚠ OH NO ⚠** suddenly, every user that finds this random theme on Google and copy and pastes it to your app interface withdraws all their funds!
 
-### Constain user input
+### Constrain user input
 
 If you let users input or configure themes, please make sure to constrain the inputs. The most important thing to keep in mind is to never let users provide more than simple values. As soon as you allow arbitrary CSS declarations, exploits like the one above become possible. For example, let users provide just six hex colors to configure the general skin of your app!
 
