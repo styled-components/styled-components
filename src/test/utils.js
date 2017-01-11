@@ -15,17 +15,14 @@ let index = 0
 const classNames = () => String.fromCodePoint(97 + index++)
 
 export const resetStyled = () => {
-  if (styleSheet.sheet) styleSheet.flush()
+  styleSheet.reset()
   index = 0
   return _styled(_styledComponent(_ComponentStyle(classNames)))
 }
 
 const stripWhitespace = str => str.trim().replace(/\s+/g, ' ')
-export const expectCSSMatches = (
-  expectation: string,
-  opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }
-) => {
-  const css = styleSheet.rules().map(rule => rule.cssText).join('\n')
+export const expectCSSMatches = (expectation: string, opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }) => {
+  const css = styleSheet.getCSS({min: false})
   if (opts.ignoreWhitespace) {
     expect(stripWhitespace(css)).toEqual(stripWhitespace(expectation))
   } else {
