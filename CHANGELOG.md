@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 *The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).*
 
+## [Upcoming Major Release]
+
+- Added per-component class names (see [#227](https://github.com/styled-components/styled-components/pull/227)).
+- Added the ability to override one component's styles from another.
+- Injecting an empty class for each instance of a component.
+
 ## [Unreleased]
 
 ### Added

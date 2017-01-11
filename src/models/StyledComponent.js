@@ -12,20 +12,40 @@ import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
 
 export default (ComponentStyle: Function) => {
-  // eslint-disable-next-line no-undef
-  const createStyledComponent = (target: Target, rules: RuleSet, parent?: ReactClass<*>) => {
+  /* We depend on components having unique IDs */
+  const identifiers = {}
+  const generateId = (_displayName: string) => {
+    const displayName = _displayName
+      .replace(/[[\].#*$><+~=|^:(),"'`]/g, '-') // Replace all possible CSS selectors
+      .replace(/--+/g, '-') // Replace multiple -- with single -
+    const nr = (identifiers[displayName] || 0) + 1
+    identifiers[displayName] = nr
+    const hash = ComponentStyle.generateName(displayName + nr)
+    return `${displayName}-${hash}`
+  }
+
+  const createStyledComponent = (target: Target,
+                                 options: Object,
+                                 rules: RuleSet,
+                                 // eslint-disable-next-line no-undef
+                                 parent?: ReactClass<*>) => {
     /* Handle styled(OtherStyledComponent) differently */
     const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
     if (!isTag(target) && isStyledComponent) {
-      return createStyledComponent(target.target, target.rules.concat(rules), target)
+      return createStyledComponent(target.target, options, target.rules.concat(rules), target)
     }
 
-    const componentStyle = new ComponentStyle(rules)
+    const {
+      displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
+      componentId = generateId(options.displayName || 'sc'),
+    } = options
+    const componentStyle = new ComponentStyle(rules, componentId)
     const ParentComponent = parent || AbstractStyledComponent
 
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
+      static styledComponentId: string
 
       constructor() {
         super()
@@ -92,7 +112,7 @@ export default (ComponentStyle: Function) => {
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
-        propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
+        propsForElement.className = [className, componentId, generatedClassName].filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
           delete propsForElement.innerRef
@@ -102,10 +122,10 @@ export default (ComponentStyle: Function) => {
       }
     }
 
+    StyledComponent.displayName = displayName
+    StyledComponent.styledComponentId = componentId
     StyledComponent.target = target
     StyledComponent.rules = rules
-
-    StyledComponent.displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`
 
     return StyledComponent
   }

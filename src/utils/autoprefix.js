@@ -13,7 +13,7 @@ export default (root: Container) => {
 
     const objStyle = { [camelizeStyleName(decl.prop)]: decl.value }
     const prefixed = prefixAll(objStyle)
-    Object.keys(prefixed).reverse().forEach(newProp => {
+    Object.keys(prefixed).forEach(newProp => {
       const newVals = prefixed[newProp]
       const newValArray = Array.isArray(newVals) ? newVals : [newVals]
       newValArray.forEach(newVal => {
