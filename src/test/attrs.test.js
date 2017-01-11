@@ -31,7 +31,7 @@ describe('attrs', () => {
     expect(shallow(<Comp />).html()).toEqual('<button type="button" class="sc-a b"></button>')
   })
 
-  it('pass an attr function the props', () => {
+  it('pass props to the attr function', () => {
     const Comp = styled.button.attrs({
       type: props => props.submit ? 'submit' : 'button'
     })``
@@ -74,6 +74,30 @@ describe('attrs', () => {
     expect(shallow(<Comp purr />).html()).toEqual(
       '<div class="sc-a meow purr b"></div>'
     )
+  })
+
+  it('should work with data and aria attributes', () => {
+    const Comp = styled.div.attrs({
+      'data-foo': 'bar',
+      'aria-label': 'A simple FooBar'
+    })``
+    expect(shallow(<Comp />).html()).toEqual('<div data-foo="bar" aria-label="A simple FooBar" class="sc-a b"></div>')
+  })
+
+
+  it('pass attrs to style block', () => {
+    /* Would be a React Router Link in IRL */
+    const Comp = styled.a.attrs({
+      href: '#',
+      activeClassName: '--is-active'
+    })`
+      color: blue;
+      &.${props => props.activeClassName} {
+        color: red;
+      }
+    `
+    expect(shallow(<Comp />).html()).toEqual('<a href="#" class="sc-a b"></a>')
+    expectCSSMatches('.sc-a {} .b { color: blue; } .b.--is-active { color: red; }')
   })
 
 })
