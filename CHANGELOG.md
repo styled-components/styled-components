@@ -17,6 +17,8 @@ All notable changes to this project will be documented in this file. If a contri
 - Fixed defaultProps theme overriding ThemeProvider theme, thanks to [@diegohaz](https://github.com/diegohaz). (see [#345](https://github.com/styled-components/styled-components/pull/345))
 - Removed custom flowtype supressor in favour of default $FlowFixMe [@relekang](https://github.com/relekang). (see [#335](https://github.com/styled-components/styled-components/pull/335))
 - Updated all demos to link to latest version [@relekang](https://github.com/relekang)
+- Only delete innerRef if it is being passed down to native / html elements.
+
 
 ## [v1.2.1]
 
