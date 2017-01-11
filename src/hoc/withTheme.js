@@ -1,17 +1,16 @@
 // @flow
+/* globals ReactClass */
 
 import React from 'react'
 import { CHANNEL } from '../models/ThemeProvider'
 
-export default Component => class extends React.Component {
+export default (Component: ReactClass<mixed>) => class extends React.Component {
   static contextTypes = {
     [CHANNEL]: React.PropTypes.func,
   };
 
-  state = ({
-  }: {
-    theme?: ?Object,
-  });
+  state: { theme?: ?Object } = {};
+  unsubscribe: () => void;
 
   componentWillMount() {
     if (!this.context[CHANNEL]) {

@@ -4,19 +4,44 @@ All notable changes to this project will be documented in this file. If a contri
 
 *The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).*
 
-## [Unreleased]
-
-### Added
+## [Upcoming Major Release]
 
 - Added per-component class names (see [#227](https://github.com/styled-components/styled-components/pull/227)).
 - Added the ability to override one component's styles from another.
 - Injecting an empty class for each instance of a component.
+
+## [Unreleased]
+
+### Added
+
+- Added the alias of `styled.Button` for react native. (see [#322](https://github.com/styled-components/styled-components/pull/322))
+
+### Changed
+
+- Converted to DangerJS - [@orta](https://github.com/orta)
+- Updated all dependencies to latest semver, thanks [@amilajack](https://github.com/amilajack). (see [#324](https://github.com/styled-components/styled-components/pull/324))
+- Fixed defaultProps theme overriding ThemeProvider theme, thanks to [@diegohaz](https://github.com/diegohaz). (see [#345](https://github.com/styled-components/styled-components/pull/345))
+- Removed custom flowtype supressor in favour of default $FlowFixMe [@relekang](https://github.com/relekang). (see [#335](https://github.com/styled-components/styled-components/pull/335))
+- Updated all demos to link to latest version [@relekang](https://github.com/relekang)
+
+## [v1.2.1]
+
+### Changed
+
+- Fixed flowtype errors and added flow check to CI, thanks to [@relekang](https://github.com/relekang). (see [#319](https://github.com/styled-components/styled-components/pull/319))
+
+## [v1.2.0]
+
+### Added
+
 - Added [`withTheme`](docs/api.md#withtheme) higher order component; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#312] (https://github.com/styled-components/styled-components/pull/312))
-- Fixed prop changes not updating style on react native; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#311](https://github.com/styled-components/styled-components/pull/311))
+- Added support for media queries, pseudo selectors and nesting in styles-as-objects. (see [#280](https://github.com/styled-components/styled-components/pull/280))
 
 ### Changed
 
 - Do not pass innerRef to the component, thanks [@mkhazov](https://github.com/mkhazov). (see [#310](https://github.com/styled-components/styled-components/pull/310))
+- Fixed prop changes not updating style on react native; thanks [@brunolemos](https://twitter.com/brunolemos). (see [#311](https://github.com/styled-components/styled-components/pull/311))
+- Extract DOM shorthands, thanks [@philpl](https://github.com/philpl). (see [#172](https://github.com/styled-components/styled-components/pull/172))
 
 ## [v1.1.3]
 
@@ -133,7 +158,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.1.3...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.2.1...master
+[v1.2.1]: https://github.com/styled-components/styled-components/compare/v1.2.0...v1.2.1
+[v1.2.0]: https://github.com/styled-components/styled-components/compare/v1.1.3...v1.2.0
 [v1.1.3]: https://github.com/styled-components/styled-components/compare/v1.1.2...v1.1.3
 [v1.1.2]: https://github.com/styled-components/styled-components/compare/v1.1.1...v1.1.2
 [v1.1.1]: https://github.com/styled-components/styled-components/compare/v1.1.0...v1.1.1

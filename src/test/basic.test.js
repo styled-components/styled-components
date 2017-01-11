@@ -72,12 +72,12 @@ describe('basic', () => {
     })
 
     it('should pass ref to the component', () => {
-      // $FlowIssue
+      // $FlowFixMe
       expect(wrapper.node.testRef).toExist()
     })
 
     it('should not pass innerRef to the component', () => {
-      // $FlowIssue
+      // $FlowFixMe
       expect(wrapper.node.ref).toNotExist()
     })
   })

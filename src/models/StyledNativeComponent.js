@@ -26,7 +26,7 @@ const createStyledNativeComponent = (target: Target,
   const inlineStyle = new InlineStyle(rules)
   const ParentComponent = parent || AbstractStyledComponent
 
-  // $FlowIssue need to convince flow that ParentComponent can't be string here
+  // $FlowFixMe need to convince flow that ParentComponent can't be string here
   class StyledNativeComponent extends ParentComponent {
     static rules: RuleSet
     static target: Target
@@ -46,7 +46,11 @@ const createStyledNativeComponent = (target: Target,
         const subscribe = this.context[CHANNEL]
         this.unsubscribe = subscribe(nextTheme => {
           // This will be called once immediately
-          const theme = this.props.theme || nextTheme
+          const { defaultProps } = this.constructor
+          // Props should take precedence over ThemeProvider, which should take precedence over
+          // defaultProps, but React automatically puts defaultProps on props.
+          const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
+          const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
           const generatedStyles = this.generateAndInjectStyles(theme, this.props)
           this.setState({ generatedStyles, theme })
         })
@@ -54,7 +58,7 @@ const createStyledNativeComponent = (target: Target,
         const theme = this.props.theme || {}
         const generatedStyles = this.generateAndInjectStyles(
           theme,
-          this.props
+          this.props,
         )
         this.setState({ generatedStyles, theme })
       }
