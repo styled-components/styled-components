@@ -54,18 +54,31 @@ describe('basic', () => {
 
   describe('jsdom tests', () => {
     jsdom()
-    it('should pass ref to the component', () => {
-      const Comp = styled.div``
-      const WrapperComp = class extends Component {
+
+    let Comp
+    let WrapperComp
+    let wrapper
+
+    beforeEach(() => {
+      Comp = styled.div``
+      WrapperComp = class extends Component {
         testRef: any;
         render() {
           return <Comp innerRef={(comp) => { this.testRef = comp }} />
         }
       }
 
-      const wrapper = mount(<WrapperComp />)
-      // $FlowIssue
+      wrapper = mount(<WrapperComp />)
+    })
+
+    it('should pass ref to the component', () => {
+      // $FlowFixMe
       expect(wrapper.node.testRef).toExist()
+    })
+
+    it('should not pass innerRef to the component', () => {
+      // $FlowFixMe
+      expect(wrapper.node.ref).toNotExist()
     })
   })
 })

@@ -14,7 +14,7 @@ npm install --save styled-components
 
 Utilising [tagged template literals](./docs/tagged-template-literals.md) (a recent addition to JavaScript) and the [power of CSS](./docs/css-we-support.md), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
-`styled-components` is compatible with both React (for web) and ReactNative – meaning it's the perfect choice even for truly universal apps! See the [ReactNative section](#react-native) for more information
+`styled-components` is compatible with both React (for web) and ReactNative – meaning it's the perfect choice even for truly universal apps! See the [ReactNative section](#react-native) for more information
 
 > **Note:** If you're not using `npm` as your package manager, aren't using a module bundler or aren't sure about either of those jump to [Alternative Installation Methods](#alternative-installation-methods).
 
@@ -59,7 +59,7 @@ You render them like so:
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/VkbO4mdR-">
+  <a href="http://www.webpackbin.com/4kejp0ESz">
     <img alt="Screenshot of the above code ran in a browser" src="http://i.imgur.com/wUJpcjY.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -99,7 +99,7 @@ You can just pass a `placeholder` prop into the `styled-component`. It will pass
 Here is one input without any content showing the placeholder, and one with some content:
 
 <div align="center">
-  <a href="http://www.webpackbin.com/VJSbrmOA-">
+  <a href="http://www.webpackbin.com/4k47p0VHG">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/QoQiSui.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -133,7 +133,7 @@ export default Button;
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/VkFaQgtA-">
+  <a href="http://www.webpackbin.com/Eyod0ANSM">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/4qlEdsx.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -182,7 +182,7 @@ export default TomatoButton;
 This is what our `TomatoButton` looks like, even though we have only specified the `color` and the `border-color`. Instead of copy and pasting or factoring out the styles into a separate function we've now reused them.
 
 <div align="center">
-  <a href="http://www.webpackbin.com/4yOENXOCZ">
+  <a href="http://www.webpackbin.com/4y-sCCVrM">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/LZZ3h5i.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -218,7 +218,7 @@ const StyledLink = styled(Link)`
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/NyCcBm_C-">
+  <a href="http://www.webpackbin.com/NJFAAC4SM">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/JJw4MdX.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -260,7 +260,7 @@ This will now rotate it's children over and over again, for example our logo:
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/EJjD8QdCZ">
+  <a href="http://www.webpackbin.com/4k4WyJrSM">
     <img alt="Animated GIF of the above code ran in a browser" height="100px" src="http://imgur.com/I7Sobjv.gif" />
     <div><em>Live demo</em></div>
   </a>
@@ -366,7 +366,7 @@ Now, when we render the `Button` inside a `GreenSection`, it'll be green!
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/4ypo8QORb">
+  <a href="http://www.webpackbin.com/EJPNk1SSz">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/XfkzxqV.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -450,6 +450,11 @@ As soon as that PR is merged and a new version released, all you'll have to do i
 
 The [vscode-styled-components](https://github.com/styled-components/vscode-styled-components) extension provides syntax highlighting inside your Javascript files. You can install it as usual from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=jpoissonnier.vscode-styled-components).
 
+### VIM / NeoVim
+The [`vim-styled-components`](https://github.com/fleischie/vim-styled-components) plugin gives you syntax highlighting inside your Javascript files. Install it with your usual plugin manager like [Plug](https://github.com/junegunn/vim-plug), [Vundle](https://github.com/VundleVim/Vundle.vim), [Pathogen](https://github.com/tpope/vim-pathogen), etc.
+
+Also if you're looking for an awesome javascript syntax package you can never go wrong with [YAJS.vim](https://github.com/othree/yajs.vim).
+
 ### Other Editors
 
 We could use your help to get syntax highlighting support to other editors! If you want to start working on syntax highlighting for your editor, open an issue to let us know.
@@ -466,6 +471,10 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
 - [react-enhanced-form](https://github.com/xeonys/react-enhanced-form) : The best react form component, on earth 🌍. It makes form inputs easy, finally !
 - [react-teleportation](https://github.com/xeonys/react-teleportation) : Teleport your components to the foreground.
+- [reshake](https://github.com/elrumordelaluz/reshake) : CSShake as a React Functional Component ([demo](https://elrumordelaluz.github.io/reshake/))
+- [space-exp](https://github.com/caspg/space-exp) : Brings you each day a stunning picture of our universe, Astronomy Picture of the Day (APOD). Website: [spaceexperience.club](https://spaceexperience.club/)
+- [sachagreif.com](http://sachagreif.com): personal homepage built with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/SachaG/sg2017)).
+- [`Dirtyredz.com`](https://github.com/dirtyredz/dirtyredz.com): David McClain | Dirtyredz - About me, Latest projects and Contact ([Website](http://dirtyredz.com))
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 

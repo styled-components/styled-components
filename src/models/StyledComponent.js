@@ -46,8 +46,13 @@ export default (ComponentStyle: Function) => {
         // that by updating when an event is emitted
         if (this.context[CHANNEL]) {
           const subscribe = this.context[CHANNEL]
-          this.unsubscribe = subscribe(theme => {
+          this.unsubscribe = subscribe(nextTheme => {
             // This will be called once immediately
+            const { defaultProps } = this.constructor
+            // Props should take precedence over ThemeProvider, which should take precedence over
+            // defaultProps, but React automatically puts defaultProps on props.
+            const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
+            const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
             const generatedClassName = this.generateAndInjectStyles(theme, this.props)
             this.setState({ theme, generatedClassName })
           })
@@ -55,7 +60,7 @@ export default (ComponentStyle: Function) => {
           const theme = this.props.theme || {}
           const generatedClassName = this.generateAndInjectStyles(
             theme,
-            this.props
+            this.props,
           )
           this.setState({ theme, generatedClassName })
         }
@@ -90,6 +95,7 @@ export default (ComponentStyle: Function) => {
         propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
+          delete propsForElement.innerRef
         }
 
         return createElement(target, propsForElement, children)

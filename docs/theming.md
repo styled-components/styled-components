@@ -57,3 +57,22 @@ const InvertColors = ({children}) => (
   </ThemeProvider>
 )
 ```
+
+## Getting the theme outside styled components
+
+If you ever need to get the current `theme` outside styled components (e.g. inside big components), you can use the `withTheme` Higher Order Component:
+
+```JS
+import { withTheme } from 'styled-components'
+
+class MyComponent extends React.Component {
+  render() {
+    const { theme } = this.props
+
+    console.log('Current theme: ', theme);
+    // ...
+  }
+}
+
+export default withTheme(MyComponent)
+```

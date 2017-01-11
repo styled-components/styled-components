@@ -47,7 +47,7 @@ here is our current recommendation:
 [include]
 
 [libs]
-# This is were your own flow-typed libdefs go
+# This is where your own flow-typed libdefs go
 flow-typed
 
 # These declarations are super explicit...
@@ -67,8 +67,4 @@ node_modules/styled-components/flow-typed/lodash_v4.x.x.js
 node_modules/styled-components/flow-typed/inline-style-prefixer_vx.x.x.js
 
 [options]
-
-# Yeah, we use this to ignore errors...
-# Just add it, if you have a different suppress_comment notation
-suppress_comment=.*\\$FlowIssue
 ```

@@ -1,19 +1,19 @@
 // @flow
 /* globals React$Element */
 import React, { PropTypes, Component } from 'react'
-import isFunction from 'lodash/isFunction'
-import isPlainObject from 'lodash/isPlainObject'
+import isFunction from 'is-function'
+import isPlainObject from 'is-plain-object'
 import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
 
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
 export const CHANNEL = '__styled-components__'
 
-export type Theme = {[key: string]: mixed};
+export type Theme = {[key: string]: mixed}
 type ThemeProviderProps = {|
   children?: React$Element<any>,
   theme: Theme | (outherTheme: Theme) => void,
-|};
+|}
 
 /**
  * Provide a theme to an entire react component tree via context and event listeners (have to do
