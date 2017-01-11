@@ -7,7 +7,7 @@ import { resetStyled, expectCSSMatches } from './utils'
 
 let styled
 
-describe.only('attrs', () => {
+describe('attrs', () => {
   beforeEach(() => {
     styled = resetStyled()
   })
