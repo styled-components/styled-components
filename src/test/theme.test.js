@@ -85,7 +85,7 @@ describe('theming', () => {
         <Comp1 />
       </ThemeProvider>
     )
-    expectCSSMatches(`.a { color: green; }`)
+    expectCSSMatches(`.sc-a {} .b { color: green; }`)
   })
 
   it('should properly allow a component to override the theme with a prop even if it is equal to defaultProps theme', () => {
@@ -107,7 +107,7 @@ describe('theming', () => {
         <Comp1 theme={{ test: { color: 'purple' } }} />
       </ThemeProvider>
     )
-    expectCSSMatches(`.a { color: purple; }`)
+    expectCSSMatches(`.sc-a {} .b { color: purple; }`)
   })
 
   it('should properly allow a component to override the theme with a prop', () => {
