@@ -55,4 +55,25 @@ describe.only('attrs', () => {
     )
   })
 
+  it('should merge className', () => {
+    const Comp = styled.div.attrs({
+      className: 'meow nya',
+    })``
+    expect(shallow(<Comp />).html()).toEqual(
+      '<div class="sc-a meow nya b"></div>'
+    )
+  })
+
+  it('should merge className even if its a function', () => {
+    const Comp = styled.div.attrs({
+      className: props => `meow ${ props.purr ? 'purr' : 'nya' }`,
+    })``
+    expect(shallow(<Comp />).html()).toEqual(
+      '<div class="sc-a meow nya b"></div>'
+    )
+    expect(shallow(<Comp purr />).html()).toEqual(
+      '<div class="sc-a meow purr b"></div>'
+    )
+  })
+
 })

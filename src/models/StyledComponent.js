@@ -123,7 +123,7 @@ export default (ComponentStyle: Function) => {
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
-        propsForElement.className = [className, componentId, generatedClassName].filter(x => x).join(' ')
+        propsForElement.className = [className, componentId, this.attrs.className, generatedClassName].filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
           delete propsForElement.innerRef
