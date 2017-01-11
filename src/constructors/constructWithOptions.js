@@ -10,9 +10,11 @@ const constructWithOptions = (componentConstructor: Function,
     (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
       componentConstructor(tag, options, css(strings, ...interpolations))
 
-  /* If withConfig is called, wrap up a new template function and merge options */
+  /* If config methods are called, wrap up a new template function and merge options */
   templateFunction.withConfig = config =>
     constructWithOptions(componentConstructor, tag, { ...options, ...config })
+  templateFunction.attrs = attrs =>
+    constructWithOptions(componentConstructor, tag, { ...options, attrs })
 
   return templateFunction
 }

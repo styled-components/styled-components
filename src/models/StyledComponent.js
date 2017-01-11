@@ -38,6 +38,7 @@ export default (ComponentStyle: Function) => {
     const {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
       componentId = generateId(options.displayName || 'sc'),
+      attrs = {}
     } = options
     const componentStyle = new ComponentStyle(rules, componentId)
     const ParentComponent = parent || AbstractStyledComponent
@@ -46,6 +47,8 @@ export default (ComponentStyle: Function) => {
       static rules: RuleSet
       static target: Target
       static styledComponentId: string
+      static attrs: Object
+      attrs = {}
 
       constructor() {
         super()
@@ -55,8 +58,16 @@ export default (ComponentStyle: Function) => {
         }
       }
 
+      buildExecutionContext(theme: any, props: any) {
+        const context = { ...props, theme }
+        this.attrs = Object.keys(attrs).reduce((accum, key) => (
+          { ...accum, [key]: attrs[key] }
+        ), {})
+        return { ...context, ...this.attrs }
+      }
+
       generateAndInjectStyles(theme: any, props: any) {
-        const executionContext = { ...props, theme }
+        const executionContext = this.buildExecutionContext(theme, props)
         return componentStyle.generateAndInjectStyles(executionContext)
       }
 
@@ -105,7 +116,7 @@ export default (ComponentStyle: Function) => {
         const { className, children, innerRef } = this.props
         const { generatedClassName } = this.state
 
-        const propsForElement = {}
+        const propsForElement = {...this.attrs}
         /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)
           .filter(propName => !isTag(target) || validAttr(propName))
