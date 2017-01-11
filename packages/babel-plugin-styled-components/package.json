@@ -8,10 +8,13 @@
     "Max Stoiber <contact@mxstbr.com>"
   ],
   "main": "lib/index.js",
+  "files": [
+    "lib"
+  ],
+  "license": "MIT",
   "devDependencies": {
     "babel-cli": "^6.4.5",
-    "babel-preset-es2015": "^6.3.13",
-    "babel-preset-stage-0": "^6.3.13",
+    "babel-preset-env": "^1.1.8",
     "jest": "^17.0.3"
   },
   "scripts": {
