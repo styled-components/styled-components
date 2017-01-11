@@ -14,24 +14,20 @@ const importLocalName = (name, state) => {
 }
 
 export const isStyled = (tag, state) => {
-  return (
-    (t.isMemberExpression(tag) && tag.object.name === importLocalName('default', state)) ||
-    (t.isCallExpression(tag) && tag.callee.name === importLocalName('default', state))
-  )
+  if (t.isCallExpression(tag) && t.isMemberExpression(tag.callee)) {
+    // styled.something()
+    return isStyled(tag.callee.object, state)
+  } else {
+    return (
+      (t.isMemberExpression(tag) && tag.object.name === importLocalName('default', state)) ||
+      (t.isCallExpression(tag) && tag.callee.name === importLocalName('default', state))
+    )
+  }
 }
 
 export const isHelper = (tag, state) => {
   return t.isIdentifier(tag) && (
     tag.name === importLocalName('css', state) ||
     tag.name === importLocalName('keyframes', state)
-  )
-}
-
-export const isConfiguredStyled = (tag, state) => {
-  return (
-    t.isCallExpression(tag) &&
-    t.isMemberExpression(tag.callee) &&
-    tag.callee.property.name === 'withConfig' &&
-    isStyled(tag.callee.object, state)
   )
 }
