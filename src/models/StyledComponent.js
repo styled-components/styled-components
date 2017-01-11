@@ -61,7 +61,7 @@ export default (ComponentStyle: Function) => {
       buildExecutionContext(theme: any, props: any) {
         const context = { ...props, theme }
         this.attrs = Object.keys(attrs).reduce((accum, key) => (
-          { ...accum, [key]: attrs[key] }
+          { ...accum, [key]: typeof attrs[key] === 'function' ? attrs[key](context) : attrs[key] }
         ), {})
         return { ...context, ...this.attrs }
       }
