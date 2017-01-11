@@ -6,7 +6,7 @@
 import { StyleSheet as GlamorStyle } from '../vendor/glamor/sheet'
 
 class StyleSheet {
-  styleSheet: any
+  styleSheet: GlamorStyle
   constructor() {
     this.styleSheet = new GlamorStyle({ speedy: false, maxLength: 40 })
   }
