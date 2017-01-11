@@ -1,25 +1,7 @@
 /* eslint-disable no-param-reassign */
-const nearley = require('nearley');
+const parser = require('postcss-values-parser/lib/index');
 const camelizeStyleName = require('fbjs/lib/camelizeStyleName');
-const grammar = require('./grammar');
-
-const transforms = [
-  'background',
-  'border',
-  'borderColor',
-  'borderRadius',
-  'borderWidth',
-  'flex',
-  'flexFlow',
-  'font',
-  'fontVariant',
-  'fontWeight',
-  'margin',
-  'padding',
-  'shadowOffset',
-  'textShadowOffset',
-  'transform',
-];
+const transforms = require('./transforms');
 
 const transformRawValue = input => (
   (input !== '' && !isNaN(input))
@@ -27,13 +9,15 @@ const transformRawValue = input => (
     : input
 );
 
-export const parseProp = (propName, value) =>
-  new nearley.Parser(grammar.ParserRules, propName).feed(value).results[0];
+export const parseProp = (propName, value) => {
+  const ast = parser(value).parse();
+  return transforms[propName](ast);
+};
 
 export const getStylesForProperty = (propName, inputValue, allowShorthand) => {
   const value = inputValue.trim();
 
-  const propValue = (transforms.indexOf(propName) !== -1)
+  const propValue = (allowShorthand && (propName in transforms))
     ? parseProp(propName, value)
     : transformRawValue(value);
 

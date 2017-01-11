@@ -14,16 +14,16 @@ it('transforms numbers', () => runTest([
 ], { top: 0, left: 0, right: 0, bottom: 0 }));
 
 it('allows decimal values', () => {
-  expect(parseProp('number', '0.5')).toBe(0.5);
-  expect(parseProp('number', '1.5')).toBe(1.5);
-  expect(parseProp('number', '10.5')).toBe(10.5);
-  expect(parseProp('number', '100.5')).toBe(100.5);
-  expect(parseProp('number', '-0.5')).toBe(-0.5);
-  expect(parseProp('number', '-1.5')).toBe(-1.5);
-  expect(parseProp('number', '-10.5')).toBe(-10.5);
-  expect(parseProp('number', '-100.5')).toBe(-100.5);
-  expect(parseProp('number', '.5')).toBe(0.5);
-  expect(parseProp('number', '-.5')).toBe(-0.5);
+  expect(parseProp('margin', '0.5').$merge.marginTop).toBe(0.5);
+  expect(parseProp('margin', '1.5').$merge.marginTop).toBe(1.5);
+  expect(parseProp('margin', '10.5').$merge.marginTop).toBe(10.5);
+  expect(parseProp('margin', '100.5').$merge.marginTop).toBe(100.5);
+  expect(parseProp('margin', '-0.5').$merge.marginTop).toBe(-0.5);
+  expect(parseProp('margin', '-1.5').$merge.marginTop).toBe(-1.5);
+  expect(parseProp('margin', '-10.5').$merge.marginTop).toBe(-10.5);
+  expect(parseProp('margin', '-100.5').$merge.marginTop).toBe(-100.5);
+  expect(parseProp('margin', '.5').$merge.marginTop).toBe(0.5);
+  expect(parseProp('margin', '-.5').$merge.marginTop).toBe(-0.5);
 });
 
 it('allows decimal values in transformed values', () => runTest([
