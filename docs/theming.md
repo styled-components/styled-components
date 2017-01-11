@@ -42,6 +42,8 @@ const MyApp = () => {
 }
 ```
 
+Please make sure you sanitize user input if you accept custom themes from users! See the [security doc](./security.md) for more information.
+
 ## Function themes
 
 You can also pass a `theme` that is a function from `outerTheme => newValues`. This can be useful to make themes that are themselves contextual.
@@ -54,4 +56,23 @@ const InvertColors = ({children}) => (
     { children }
   </ThemeProvider>
 )
+```
+
+## Getting the theme outside styled components
+
+If you ever need to get the current `theme` outside styled components (e.g. inside big components), you can use the `withTheme` Higher Order Component:
+
+```JS
+import { withTheme } from 'styled-components'
+
+class MyComponent extends React.Component {
+  render() {
+    const { theme } = this.props
+
+    console.log('Current theme: ', theme);
+    // ...
+  }
+}
+
+export default withTheme(MyComponent)
 ```

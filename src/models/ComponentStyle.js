@@ -15,12 +15,18 @@ export default (nameGenerator: NameGenerator) => {
 
   class ComponentStyle {
     rules: RuleSet
+    componentId: string
     insertedRule: Object
 
-    constructor(rules: RuleSet) {
+    constructor(rules: RuleSet, componentId: string) {
       this.rules = rules
+      this.componentId = componentId
       if (!styleSheet.injected) styleSheet.inject()
-      this.insertedRule = styleSheet.insert('')
+      this.insertedRule = styleSheet.insert(`.${componentId} {}`)
+    }
+
+    static generateName(str: string) {
+      return nameGenerator(hashStr(str))
     }
 
     /*
@@ -32,7 +38,7 @@ export default (nameGenerator: NameGenerator) => {
     generateAndInjectStyles(executionContext: Object) {
       const flatCSS = flatten(this.rules, executionContext).join('')
         .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
-      const hash = hashStr(flatCSS)
+      const hash = hashStr(this.componentId + flatCSS)
       if (!inserted[hash]) {
         const selector = nameGenerator(hash)
         inserted[hash] = selector

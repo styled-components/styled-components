@@ -10,17 +10,23 @@ import { CHANNEL } from './ThemeProvider'
 import InlineStyle from './InlineStyle'
 import AbstractStyledComponent from './AbstractStyledComponent'
 
-const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Target) => {
+const createStyledNativeComponent = (target: Target,
+                                     options: Object,
+                                     rules: RuleSet,
+                                     parent?: Target) => {
   /* Handle styled(OtherStyledNativeComponent) differently */
   const isStyledNativeComponent = AbstractStyledComponent.isPrototypeOf(target)
   if (isStyledNativeComponent && !isTag(target)) {
-    return createStyledNativeComponent(target.target, target.rules.concat(rules), target)
+    return createStyledNativeComponent(target.target, options, target.rules.concat(rules), target)
   }
 
+  const {
+    displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
+  } = options
   const inlineStyle = new InlineStyle(rules)
   const ParentComponent = parent || AbstractStyledComponent
 
-  // $FlowIssue need to convince flow that ParentComponent can't be string here
+  // $FlowFixMe need to convince flow that ParentComponent can't be string here
   class StyledNativeComponent extends ParentComponent {
     static rules: RuleSet
     static target: Target
@@ -40,7 +46,11 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
         const subscribe = this.context[CHANNEL]
         this.unsubscribe = subscribe(nextTheme => {
           // This will be called once immediately
-          const theme = this.props.theme || nextTheme
+          const { defaultProps } = this.constructor
+          // Props should take precedence over ThemeProvider, which should take precedence over
+          // defaultProps, but React automatically puts defaultProps on props.
+          const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
+          const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
           const generatedStyles = this.generateAndInjectStyles(theme, this.props)
           this.setState({ generatedStyles, theme })
         })
@@ -48,7 +58,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
         const theme = this.props.theme || {}
         const generatedStyles = this.generateAndInjectStyles(
           theme,
-          this.props
+          this.props,
         )
         this.setState({ generatedStyles, theme })
       }
@@ -57,9 +67,9 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
       this.setState((oldState) => {
         const theme = nextProps.theme || oldState.theme
-        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
+        const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
 
-        return { theme, generatedClassName }
+        return { theme, generatedStyles }
       })
     }
 
@@ -82,6 +92,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       propsForElement.style = [generatedStyles, style]
       if (innerRef) {
         propsForElement.ref = innerRef
+        delete propsForElement.innerRef
       }
 
       return createElement(target, propsForElement, children)
@@ -91,7 +102,7 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
   /* Used for inheritance */
   StyledNativeComponent.rules = rules
   StyledNativeComponent.target = target
-  StyledNativeComponent.displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`
+  StyledNativeComponent.displayName = displayName
 
   return StyledNativeComponent
 }

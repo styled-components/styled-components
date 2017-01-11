@@ -61,7 +61,8 @@ describe('injectGlobal', () => {
     `
 
     expectCSSMatches(`
-      .a {
+      .sc-a {}
+      .b {
         ${rule3}
       }
       html {

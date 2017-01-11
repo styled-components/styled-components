@@ -4,9 +4,15 @@ import isPlainObject from 'is-plain-object'
 
 import type { Interpolation } from '../types'
 
-export const objToCss = (obj: Object): string => (
-  Object.keys(obj).map(key => `${hyphenate(key)}: ${obj[key]};`).join(' ')
-)
+export const objToCss = (obj: Object, prevKey?: string): string => {
+  const css = Object.keys(obj).map(key => {
+    if (isPlainObject(obj[key])) return objToCss(obj[key], key)
+    return `${hyphenate(key)}: ${obj[key]};`
+  }).join(' ')
+  return prevKey ? `${prevKey} {
+  ${css}
+}` : css
+}
 
 const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array<Interpolation> => (
   chunks.reduce((ruleSet: Array<Interpolation>, chunk: ?Interpolation) => {
@@ -14,6 +20,11 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
     if (chunk === undefined || chunk === null || chunk === false || chunk === '') return ruleSet
     /* Flatten ruleSet */
     if (Array.isArray(chunk)) return [...ruleSet, ...flatten(chunk, executionContext)]
+
+    /* Handle other components */
+    // $FlowFixMe not sure how to make this pass
+    if (chunk.hasOwnProperty('styledComponentId')) return [...ruleSet, `.${chunk.styledComponentId}`]
+
     /* Either execute or defer the function */
     if (typeof chunk === 'function') {
       return executionContext
@@ -22,7 +33,7 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
     }
 
     /* Handle objects */
-    // $FlowIssue have to add %checks somehow to isPlainObject
+    // $FlowFixMe have to add %checks somehow to isPlainObject
     return ruleSet.concat(isPlainObject(chunk) ? objToCss(chunk) : chunk.toString())
   }, [])
 )
