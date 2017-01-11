@@ -22,7 +22,7 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
     if (Array.isArray(chunk)) return [...ruleSet, ...flatten(chunk, executionContext)]
 
     /* Handle other components */
-    // $FlowIssue not sure how to make this pass
+    // $FlowFixMe not sure how to make this pass
     if (chunk.hasOwnProperty('styledComponentId')) return [...ruleSet, `.${chunk.styledComponentId}`]
 
     /* Either execute or defer the function */
