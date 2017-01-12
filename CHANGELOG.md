@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Removed custom flowtype supressor in favour of default $FlowFixMe [@relekang](https://github.com/relekang). (see [#335](https://github.com/styled-components/styled-components/pull/335))
 - Updated all demos to link to latest version [@relekang](https://github.com/relekang)
 - Added missing `setNativeProps` to `StyledNativeComponent`. Fixes problem when styled component is used in `TouchableHighlight` component. [@michalkvasnicak](https://github.com/michalkvasnicak)
+- Only delete innerRef if it is being passed down to native / html elements.
 
 ## [v1.2.1]
 

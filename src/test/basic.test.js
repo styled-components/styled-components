@@ -52,31 +52,47 @@ describe('basic', () => {
     expectCSSMatches('.a {  }')
   })
 
-  describe('jsdom tests', () => {
+  describe('innerRef', () => {
     jsdom()
 
-    let Comp
-    let WrapperComp
-    let wrapper
-
-    beforeEach(() => {
-      Comp = styled.div``
-      WrapperComp = class extends Component {
+    it('should handle styled-components correctly', () => {
+      const Comp = styled.div`
+        ${props => expect(props.innerRef).toExist()}
+      `
+      const WrapperComp = class extends Component {
         testRef: any;
         render() {
           return <Comp innerRef={(comp) => { this.testRef = comp }} />
         }
       }
+      const wrapper = mount(<WrapperComp />)
 
-      wrapper = mount(<WrapperComp />)
-    })
-
-    it('should pass ref to the component', () => {
       // $FlowFixMe
       expect(wrapper.node.testRef).toExist()
+      // $FlowFixMe
+      expect(wrapper.node.ref).toNotExist()
     })
 
-    it('should not pass innerRef to the component', () => {
+    it('should handle inherited components correctly', () => {
+      const StyledComp = styled.div``
+      class WrappedStyledComp extends React.Component {
+        render() {
+          return (
+            <StyledComp {...this.props} />
+          )
+        }
+      }
+      const ChildComp = styled(WrappedStyledComp)``
+      const WrapperComp = class extends Component {
+        testRef: any;
+        render() {
+          return <ChildComp innerRef={(comp) => { this.testRef = comp }} />
+        }
+      }
+      const wrapper = mount(<WrapperComp />)
+
+      // $FlowFixMe
+      expect(wrapper.node.testRef).toExist()
       // $FlowFixMe
       expect(wrapper.node.ref).toNotExist()
     })
