@@ -10,6 +10,7 @@ function trim(str) {
 describe('babel-plugin-styled-components', () => {
   const fixturesDir = path.join(__dirname, 'fixtures')
   fs.readdirSync(fixturesDir).sort().map((caseName) => {
+    if (caseName === '.DS_Store') return
     it(`should ${caseName.replace(/^\d*-/, '').split('-').join(' ')}`, () => {
       const fixtureDir = path.join(fixturesDir, caseName)
       const beforePath = path.join(fixtureDir, 'before.js');
