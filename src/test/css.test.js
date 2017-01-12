@@ -47,21 +47,6 @@ describe('css features', () => {
     `)
   })
 
-  it('should handle CSS calc()', () => {
-    const Comp = styled.div`
-      margin-bottom: calc(15px - 0.5rem) !important;
-    `
-    shallow(<Comp />)
-    expectCSSMatches(`
-      .sc-a {}
-      .b {
-        margin-bottom: -webkit-calc(15px - 0.5rem) !important;
-        margin-bottom: -moz-calc(15px - 0.5rem) !important;
-        margin-bottom: calc(15px - 0.5rem) !important;
-      }
-    `)
-  })
-
   it('should pass through custom properties', () => {
     const Comp = styled.div`
       --custom-prop: some-val;
