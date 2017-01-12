@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Fixed defaultProps theme overriding ThemeProvider theme, thanks to [@diegohaz](https://github.com/diegohaz). (see [#345](https://github.com/styled-components/styled-components/pull/345))
 - Removed custom flowtype supressor in favour of default $FlowFixMe [@relekang](https://github.com/relekang). (see [#335](https://github.com/styled-components/styled-components/pull/335))
 - Updated all demos to link to latest version [@relekang](https://github.com/relekang)
+- Removed custom flowtype supressor in favour of default $FlowFixMe [@relekang](https://github.com/relekang). (see [#335](https://github.com/styled-components/styled-components/pull/335))
 
 ## [v1.2.1]
 
@@ -41,6 +42,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+<<<<<<< HEAD
 - Fixed theme changes in `ThemeProvider`s not re-rendering correctly, thanks [@k15a](https://github.com/k15a). (see [#264](https://github.com/styled-components/styled-components/pull/264))
 - Fixed overriding theme through props, thanks [@k15a](https://github.com/k15a). (see [#295](https://github.com/styled-components/styled-components/pull/295))
 - Removed `lodash` dependency in favor of small utility packages to knock down bundle size by ~0.5kB
