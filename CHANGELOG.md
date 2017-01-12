@@ -8,6 +8,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
+### Changed
+
+## [v1.3.0]
+
+### Added
+
 - Added `styled.Button` alias for ReactNative, thanks to [@Ginhing](https://github.com/Ginhing). (see [#322](https://github.com/styled-components/styled-components/pull/322))
 
 ### Changed
@@ -154,7 +160,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.2.1...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.3.0...master
+[v1.3.0]: https://github.com/styled-components/styled-components/compare/v1.2.1...v1.3.0
 [v1.2.1]: https://github.com/styled-components/styled-components/compare/v1.2.0...v1.2.1
 [v1.2.0]: https://github.com/styled-components/styled-components/compare/v1.1.3...v1.2.0
 [v1.1.3]: https://github.com/styled-components/styled-components/compare/v1.1.2...v1.1.3
