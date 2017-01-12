@@ -36,7 +36,7 @@ describe('attrs', () => {
       type: props => props.submit ? 'submit' : 'button'
     })``
     expect(shallow(<Comp />).html()).toEqual('<button type="button" class="sc-a b"></button>')
-    expect(shallow(<Comp submit />).html()).toEqual('<button type="submit" class="sc-a b"></button>')
+    expect(shallow(<Comp submit/>).html()).toEqual('<button type="submit" class="sc-a b"></button>')
   })
 
   it('should replace attrs with props', () => {
@@ -47,10 +47,10 @@ describe('attrs', () => {
     expect(shallow(<Comp />).html()).toEqual(
       '<button type="button" tabindex="0" class="sc-a b"></button>'
     )
-    expect(shallow(<Comp type="reset" />).html()).toEqual(
+    expect(shallow(<Comp type="reset"/>).html()).toEqual(
       '<button type="reset" tabindex="0" class="sc-a b"></button>'
     )
-    expect(shallow(<Comp type="reset" tabIndex="-1" />).html()).toEqual(
+    expect(shallow(<Comp type="reset" tabIndex="-1"/>).html()).toEqual(
       '<button type="reset" tabindex="-1" class="sc-a b"></button>'
     )
   })
@@ -71,7 +71,7 @@ describe('attrs', () => {
     expect(shallow(<Comp />).html()).toEqual(
       '<div class="sc-a meow nya b"></div>'
     )
-    expect(shallow(<Comp purr />).html()).toEqual(
+    expect(shallow(<Comp purr/>).html()).toEqual(
       '<div class="sc-a meow purr b"></div>'
     )
   })
@@ -99,5 +99,4 @@ describe('attrs', () => {
     expect(shallow(<Comp />).html()).toEqual('<a href="#" class="sc-a b"></a>')
     expectCSSMatches('.sc-a {} .b { color: blue; } .b.--is-active { color: red; }')
   })
-
 })
