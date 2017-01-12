@@ -10,7 +10,7 @@ const rule1 = 'width: 100%;'
 const rule2 = 'text-decoration: none;'
 const rule3 = 'color: blue;'
 
-describe.only('styleSheet', () => {
+describe('styleSheet', () => {
 
   beforeEach(() => {
     styled = resetStyled()
