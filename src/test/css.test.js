@@ -30,16 +30,12 @@ describe('css features', () => {
       .sc-a {}
       .b {
         display: -webkit-box;
-        display: -moz-box;
         display: -ms-flexbox;
-        display: -webkit-flex;
         display: flex;
-        -webkit-flex-direction: column;
         -ms-flex-direction: column;
         -webkit-box-orient: vertical;
         -webkit-box-direction: normal;
         flex-direction: column;
-        -webkit-align-items: center;
         -ms-flex-align: center;
         -webkit-box-align: center;
         align-items: center;

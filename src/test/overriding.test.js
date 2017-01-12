@@ -33,7 +33,7 @@ describe('extending', () => {
       .c { color: blue; font-weight: light; }
       .sc-b {}
       .d { padding: 1rem; }
-      .d > .sc-a { font-weight: bold; }
+      .d > .sc-a{ font-weight: bold; }
     `)
   })
 })

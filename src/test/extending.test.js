@@ -77,10 +77,10 @@ describe('extending', () => {
     expectCSSMatches(`
       .sc-a {}
       .c { color: blue; }
-      .c > h1 { font-size: 4rem; }
+      .c > h1{ font-size: 4rem; }
       .sc-b {}
       .d { color: blue; color: red; }
-      .d > h1 { font-size: 4rem; }
+      .d > h1{ font-size: 4rem; }
     `)
   })
 
