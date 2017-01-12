@@ -38,13 +38,6 @@ describe('basic', () => {
     expectCSSMatches('.sc-a {} .b {  }')
   })
 
-  /* TODO: we should probably pretty-format the output so this test might have to change */
-  it('should pass through all whitespace', () => {
-    const Comp = styled.div`   \n   `
-    shallow(<Comp />)
-    expectCSSMatches('.sc-a {}\n.b {    \n    }', { ignoreWhitespace: false })
-  })
-
   it('should inject only once for a styled component, no matter how often it\'s mounted', () => {
     const Comp = styled.div``
     shallow(<Comp />)
