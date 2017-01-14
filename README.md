@@ -476,6 +476,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [sachagreif.com](http://sachagreif.com): personal homepage built with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/SachaG/sg2017)).
 - [last-draft](https://github.com/vacenz/last-draft): A Draft.js Editor ([demo](http://lastdraft.vace.nz))
 - [`Dirtyredz.com`](https://github.com/dirtyredz/dirtyredz.com): David McClain | Dirtyredz - About me, Latest projects and Contact ([Website](http://dirtyredz.com))
+- [react-adminlte-dash](https://github.com/zksailor534/react-adminlte-dash): AdminLTE dashboard components in React ([demo](http://zksailor534.github.io/react-adminlte-dash))
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
