@@ -61,7 +61,7 @@ You will ultimately end up with two classes, both of which contain the same "mor
 }
 ```
 
-While this isn't how you would normsally write CSS, it's not actually a big issue:
+While this isn't how you would normally write CSS, it's not actually a big issue:
 
 - On the server, you can gzip your CSS to take care of any duplication.
 - On the client, this only increases the amount of *generated* CSS (and not the size of the bundle sent by the server), which doesn't have any noticeable performance impact. 
