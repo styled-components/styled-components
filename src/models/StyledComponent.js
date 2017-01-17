@@ -26,6 +26,7 @@ export default (ComponentStyle: Function) => {
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
       static target: Target
+      static contextTypes = ParentComponent.contextTypes
 
       constructor() {
         super()
