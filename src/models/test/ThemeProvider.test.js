@@ -20,7 +20,7 @@ describe('ThemeProvider', () => {
     const renderedComp = shallow(
       <ThemeProvider theme={{ main: 'black' }}>
         { child }
-      </ThemeProvider>
+      </ThemeProvider>,
     )
     expect(renderedComp.contains(child)).toEqual(true)
   })
@@ -47,7 +47,7 @@ describe('ThemeProvider', () => {
         <ThemeProvider theme={innerTheme}>
           <Child />
         </ThemeProvider>
-      </ThemeProvider>
+      </ThemeProvider>,
     )
   })
 
@@ -76,7 +76,7 @@ describe('ThemeProvider', () => {
             <Child />
           </ThemeProvider>
         </ThemeProvider>
-      </ThemeProvider>
+      </ThemeProvider>,
     )
   })
 
@@ -112,7 +112,7 @@ describe('ThemeProvider', () => {
         <ThemeProvider theme={themes.two}>
           <Child shouldHaveTheme="two" />
         </ThemeProvider>
-      </div>
+      </div>,
     )
   })
 })

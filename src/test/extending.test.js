@@ -87,7 +87,7 @@ describe('extending', () => {
       color: ${(props) => props.color};
     `
     Parent.defaultProps = {
-      color: 'red'
+      color: 'red',
     }
 
     const Child = styled(Parent)`background-color: green;`
@@ -106,7 +106,7 @@ describe('extending', () => {
       color: ${(props) => props.color};
     `
     Parent.propTypes = {
-      color: React.PropTypes.string
+      color: React.PropTypes.string,
     }
 
     const Child = styled(Parent)`background-color: green;`

@@ -11,7 +11,7 @@ export const CHANNEL = '__styled-components__'
 
 export type Theme = {[key: string]: mixed}
 type ThemeProviderProps = {|
-  children?: React$Element<any>,
+  children: React$Element<any>,
   theme: Theme | (outerTheme: Theme) => void,
 |}
 

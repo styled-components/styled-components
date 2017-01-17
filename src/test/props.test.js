@@ -22,7 +22,7 @@ describe('props', () => {
     const Comp = styled.div`
       color: ${props => props.fg || 'black'};
     `
-    shallow(<Comp fg="red"/>)
+    shallow(<Comp fg="red" />)
     expectCSSMatches('.a { color: red; }')
   })
 })
