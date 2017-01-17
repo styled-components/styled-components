@@ -29,15 +29,15 @@ describe('css features', () => {
     expectCSSMatches(`
       .sc-a {}
       .b {
-        display: -webkit-box;
-        display: -ms-flexbox;
-        display: flex;
+        display:-webkit-box;
+        display:-webkit-flex;
+        -ms-flexbox;
+        display:flex;
+        -webkit-flex-direction: column;
         -ms-flex-direction: column;
-        -webkit-box-orient: vertical;
-        -webkit-box-direction: normal;
         flex-direction: column;
-        -ms-flex-align: center;
         -webkit-box-align: center;
+        -ms-flex-align: center;
         align-items: center;
       }
     `)

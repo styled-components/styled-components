@@ -56,7 +56,7 @@ describe('styleSheet', () => {
         }
       `
       const css = styleSheet.getCSS();
-      expect(stripWhitespace(css)).toEqual('.sc-a {}.c {width: 100%;}.sc-b {}.d {text-decoration: none;} html {color: blue;}')
+      expect(stripWhitespace(css)).toEqual('.sc-a {}.c {width: 100%;}.sc-b {}.d {text-decoration: none;}html {color: blue;}')
     })
 
     it('should list all css Components with min: false', () => {
