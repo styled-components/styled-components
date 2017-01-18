@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file. If a contri
 ### Changed
 
 - Fix themes support in IE <= 10, thanks to [@saschagehlich](https://github.com/saschagehlich). (see [#379](https://github.com/styled-components/styled-components/pull/379))
+- Fixed Touchable not recognising styled components as ReactNative components, thanks to [@michalkvasnicak](https://github.com/michalkvasnicak). (see [#372](https://github.com/styled-components/styled-components/pull/372))
 
 ## [v1.3.0]
 
@@ -26,7 +27,6 @@ All notable changes to this project will be documented in this file. If a contri
 - Updated all dependencies to latest semver, thanks to [@amilajack](https://github.com/amilajack). (see [#324](https://github.com/styled-components/styled-components/pull/324))
 - Updated all demos to link to latest version, thanks to [@relekang](https://github.com/relekang). (see [#350](https://github.com/styled-components/styled-components/pull/350))
 - Converted to DangerJS, thanks to [@orta](https://github.com/orta). (see [#169](https://github.com/styled-components/styled-components/pull/169))
-
 
 ## [v1.2.1]
 
