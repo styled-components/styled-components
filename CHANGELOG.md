@@ -10,7 +10,11 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
-- Fix `<Styled(undefined)>` in React Developer Tools. (see [#383](https://github.com/styled-components/styled-components/pull/383))
+## [v1.3.1] - 2017-01-18
+
+### Changed
+
+- Fix `<Styled(undefined)>` in React Developer Tools, thanks to [@iamssen](https://github.com/iamssen). (see [#383](https://github.com/styled-components/styled-components/pull/383))
 - Fix themes support in IE <= 10, thanks to [@saschagehlich](https://github.com/saschagehlich). (see [#379](https://github.com/styled-components/styled-components/pull/379))
 - Fixed Touchable not recognising styled components as ReactNative components, thanks to [@michalkvasnicak](https://github.com/michalkvasnicak). (see [#372](https://github.com/styled-components/styled-components/pull/372))
 
@@ -163,7 +167,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.3.0...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.3.1...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.3.0...v1.3.1
 [v1.3.0]: https://github.com/styled-components/styled-components/compare/v1.2.1...v1.3.0
 [v1.2.1]: https://github.com/styled-components/styled-components/compare/v1.2.0...v1.2.1
 [v1.2.0]: https://github.com/styled-components/styled-components/compare/v1.1.3...v1.2.0
