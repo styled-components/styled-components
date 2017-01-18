@@ -110,10 +110,8 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
       const propsForElement = { ...this.props }
       propsForElement.style = [generatedStyles, style]
 
-      if (innerRef) {
-        propsForElement.ref = this.generateRef()
-        if (isTag(target)) delete propsForElement.innerRef
-      }
+      propsForElement.ref = this.generateRef()
+      if (isTag(target)) delete propsForElement.innerRef
 
       return createElement(target, propsForElement, children)
     }
