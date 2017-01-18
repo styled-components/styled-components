@@ -8,17 +8,25 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Added
 
-- Added the alias of `styled.Button` for react native. (see [#322](https://github.com/styled-components/styled-components/pull/322))
+### Changed
+
+- Fix themes support in IE <= 10, thanks to [@saschagehlich](https://github.com/saschagehlich). (see [#379](https://github.com/styled-components/styled-components/pull/379))
+- Fixed Touchable not recognising styled components as ReactNative components, thanks to [@michalkvasnicak](https://github.com/michalkvasnicak). (see [#372](https://github.com/styled-components/styled-components/pull/372))
+
+## [v1.3.0]
+
+### Added
+
+- Added `styled.Button` alias for ReactNative, thanks to [@Ginhing](https://github.com/Ginhing). (see [#322](https://github.com/styled-components/styled-components/pull/322))
 
 ### Changed
 
-- Converted to DangerJS - [@orta](https://github.com/orta)
-- Updated all dependencies to latest semver, thanks [@amilajack](https://github.com/amilajack). (see [#324](https://github.com/styled-components/styled-components/pull/324))
+- Fix regression from previous release and only delete `innerRef` if it is being passed down to native elements, thanks to [@IljaDaderko](https://github.com/IljaDaderko). (see [#368](https://github.com/styled-components/styled-components/pull/368))
 - Fixed defaultProps theme overriding ThemeProvider theme, thanks to [@diegohaz](https://github.com/diegohaz). (see [#345](https://github.com/styled-components/styled-components/pull/345))
-- Removed custom flowtype supressor in favour of default $FlowFixMe [@relekang](https://github.com/relekang). (see [#335](https://github.com/styled-components/styled-components/pull/335))
-- Updated all demos to link to latest version [@relekang](https://github.com/relekang)
-- Added missing `setNativeProps` to `StyledNativeComponent`. Fixes problem when styled component is used in `TouchableHighlight` component. [@michalkvasnicak](https://github.com/michalkvasnicak)
-- Only delete innerRef if it is being passed down to native / html elements.
+- Removed custom flowtype supressor in favour of default `$FlowFixMe` [@relekang](https://github.com/relekang). (see [#335](https://github.com/styled-components/styled-components/pull/335))
+- Updated all dependencies to latest semver, thanks to [@amilajack](https://github.com/amilajack). (see [#324](https://github.com/styled-components/styled-components/pull/324))
+- Updated all demos to link to latest version, thanks to [@relekang](https://github.com/relekang). (see [#350](https://github.com/styled-components/styled-components/pull/350))
+- Converted to DangerJS, thanks to [@orta](https://github.com/orta). (see [#169](https://github.com/styled-components/styled-components/pull/169))
 
 ## [v1.2.1]
 
@@ -154,7 +162,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.2.1...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.3.0...master
+[v1.3.0]: https://github.com/styled-components/styled-components/compare/v1.2.1...v1.3.0
 [v1.2.1]: https://github.com/styled-components/styled-components/compare/v1.2.0...v1.2.1
 [v1.2.0]: https://github.com/styled-components/styled-components/compare/v1.1.3...v1.2.0
 [v1.1.3]: https://github.com/styled-components/styled-components/compare/v1.1.2...v1.1.3
