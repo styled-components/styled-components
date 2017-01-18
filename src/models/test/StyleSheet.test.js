@@ -45,7 +45,7 @@ describe('styleSheet', () => {
     it('should list all css in all Components', () => {
       createStyledComponents();
       const css = styleSheet.getCSS();
-      expect(stripWhitespace(css)).toEqual('.sc-a {} .c { width: 100%; }.sc-b {} .d { text-decoration: none; }')
+      expect(stripWhitespace(css)).toEqual('.sc-a {}.c {width: 100%;}.sc-b {}.d {text-decoration: none;}')
     })
 
     it('should list all css all Components including globally injected styles', () => {
@@ -56,14 +56,14 @@ describe('styleSheet', () => {
         }
       `
       const css = styleSheet.getCSS();
-      expect(stripWhitespace(css)).toEqual('.sc-a {} .c { width: 100%; }.sc-b {} .d { text-decoration: none; } html { color: blue; }')
+      expect(stripWhitespace(css)).toEqual('.sc-a {}.c {width: 100%;}.sc-b {}.d {text-decoration: none;}html {color: blue;}')
     })
 
     it('should list all css Components with min: false', () => {
       createStyledComponents();
 
       const css = styleSheet.getCSS({ min: false });
-      expect(stripWhitespaceExceptNewline(css)).toEqual('.sc-a {}\n.c { \n width: 100%;\n }\n.sc-b {}\n.d { \n text-decoration: none;\n }')
+      expect(stripWhitespaceExceptNewline(css)).toEqual('.sc-a {}.c {width: 100%;}\n.sc-b {}.d {text-decoration: none;}')
     })
   })
 
