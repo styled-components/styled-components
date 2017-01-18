@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+- Fix `<Styled(undefined)>` in React Developer Tools. (see [#383](https://github.com/styled-components/styled-components/pull/383))
 - Fix themes support in IE <= 10, thanks to [@saschagehlich](https://github.com/saschagehlich). (see [#379](https://github.com/styled-components/styled-components/pull/379))
 - Fixed Touchable not recognising styled components as ReactNative components, thanks to [@michalkvasnicak](https://github.com/michalkvasnicak). (see [#372](https://github.com/styled-components/styled-components/pull/372))
 

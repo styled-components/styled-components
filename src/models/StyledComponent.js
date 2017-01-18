@@ -106,7 +106,7 @@ export default (ComponentStyle: Function) => {
     StyledComponent.target = target
     StyledComponent.rules = rules
 
-    StyledComponent.displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`
+    StyledComponent.displayName = isTag(target) ? `styled.${target}` : `Styled(${(target.displayName || target.name)})`
 
     return StyledComponent
   }
