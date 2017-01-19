@@ -1,8 +1,12 @@
 import * as React from "react";
 import { StatelessComponent } from "react";
 
+interface ThemeProps {
+  theme: Object;
+}
+
 type ConstrainedProps<C, P> = C & ({ defaultProps?: P } | { new(props?: P, context?: any): any });
-type StyledProps<P> = P & { theme: any };
+type StyledProps<P> = P & ThemeProps;
 type Interpolation<P> = ((executionContext: StyledProps<P>) => string) | string | number
 
 interface StyledFunction<T, P> {
@@ -147,10 +151,6 @@ interface StyledInterface {
   svg: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGSVGElement>>;
   text: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGTextElement>>;
   tspan: StyledFunction<React.ComponentClass<React.SVGProps>, React.SVGAttributes<SVGTSpanElement>>;
-}
-
-interface ThemeProps {
-  theme: Object;
 }
 
 declare const styled: StyledInterface;

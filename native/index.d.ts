@@ -1,8 +1,12 @@
 import * as ReactNative from "react-native";
 import React from "react";
 
+interface ThemeProps {
+  theme: Object;
+}
+
 type ConstrainedProps<C, P> = C & ({ defaultProps?: P } | { new(props?: P, context?: any): any });
-type StyledProps<P> = P & { theme: any };
+type StyledProps<P> = P & ThemeProps;
 type Interpolation<P> = ((executionContext: StyledProps<P>) => string) | string | number
 
 interface StyledFunction<T, P> {
@@ -57,11 +61,6 @@ interface StyledInterface {
 declare const styled: StyledInterface;
 
 export const css: StyledFunction<(string | Function)[], any>;
-
-interface ThemeProps {
-  theme: Object;
-}
-
 export const ThemeProvider: React.StatelessComponent<ThemeProps>;
 
 export default styled;
