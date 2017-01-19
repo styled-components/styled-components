@@ -33,12 +33,14 @@ const Input = styled.input`
   }
 `;
 
-
+interface MyTheme {
+  primary: string;
+}
 
 interface ButtonProps {
   name: string;
   primary?: boolean;
-  theme?: any;
+  theme?: MyTheme;
 }
 
 class MyButton extends React.Component<ButtonProps, {}> {
