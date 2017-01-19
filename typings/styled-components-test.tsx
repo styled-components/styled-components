@@ -68,8 +68,8 @@ const CustomizableButton = styled(MyButton)`
 const example = css`
   font-size: 1.5em;
   text-align: center;
-  color: palevioletred;
   color: ${props => props.theme.primary};
+  border-color: ${"red"};
 `;
 
 const fadeIn = keyframes`

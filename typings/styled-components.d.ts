@@ -3,9 +3,10 @@ import { StatelessComponent } from "react";
 
 type ConstrainedProps<C, P> = C & ({ defaultProps?: P } | { new(props?: P, context?: any): any });
 type StyledProps<P> = P & { theme: any };
+type Interpolation<P> = ((executionContext: StyledProps<P>) => string) | string | number
 
 interface StyledFunction<T, P> {
-  (strs: TemplateStringsArray, ...fns: Array<(props: P) => string>): T;
+  (strs: TemplateStringsArray, ...fns: Array<Interpolation<P>>): T;
 }
 
 interface StyledInterface {
