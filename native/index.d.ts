@@ -10,7 +10,7 @@ type StyledProps<P> = P & ThemeProps;
 type Interpolation<P> = ((executionContext: StyledProps<P>) => string) | string | number
 
 interface StyledFunction<T, P> {
-  (strs: TemplateStringsArray, ...fns: Array<Interpolation<P>>): T;
+  (strs: TemplateStringsArray, ...fns: Array<Interpolation<P>>): T & { props: StyledProps<P> };
 }
 
 interface StyledInterface {
