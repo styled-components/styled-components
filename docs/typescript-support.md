@@ -20,7 +20,7 @@ A very basic example can be found [here](https://github.com/patrick91/Styled-Com
 When defining a component you'd need to have `className` marked as optional
 in the propTypes interface:
 
-```
+```ts
 interface LogoProps {
     className?: string;
 }
@@ -49,7 +49,7 @@ This is because typescript won't understand that `LogoStyled` has already a `cla
 To use stateless components and have typechecking for the props you'd need to
 define the component alongside with its type, like this:
 
-```
+```ts
 interface BoxProps {
     theme?: ThemeInterface;
     borders?: boolean;
