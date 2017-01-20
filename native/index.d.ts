@@ -1,66 +1,79 @@
 import * as ReactNative from "react-native";
 import * as React from "react";
+import { StatelessComponent, ComponentClass } from "react";
 
-interface ThemeProps {
-  theme: Object;
+export interface ThemeProps {
+  theme: any;
 }
 
-type ConstrainedProps<C, P> = C & ({ defaultProps?: P } | { new (props?: P, context?: any): any });
+type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 type StyledProps<P> = P & ThemeProps;
-type Interpolation<P> = ((executionContext: StyledProps<P>) => string) | string | number
+export interface InterpolationFunction<P> {
+  (props: StyledProps<P>): InterpolationValue<P> | ReadonlyArray<Interpolation<P>>;
+}
+type InterpolationValue<P> = string | number;
+export type Interpolation<P> = InterpolationFunction<P> | InterpolationValue<P> | ReadonlyArray<InterpolationValue<P> | InterpolationFunction<P>>;
 
-interface StyledFunction<T, P> {
-  (strs: TemplateStringsArray, ...fns: Array<Interpolation<P>>): T & { props: StyledProps<P> };
+export type OuterStyledProps<P> = P & {
+  theme?: Object;
+  innerRef?: (instance: any) => void;
+};
+
+export interface StyledFunction<P> {
+  (strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P>>[]): ComponentClass<OuterStyledProps<P>>;
+  <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P & U>>[]): ComponentClass<OuterStyledProps<P & U>>;
 }
 
-interface StyledInterface {
-  <C extends React.ComponentClass<P>, P, ThemeInterface>(component: ConstrainedProps<C, StyledProps<P>>): StyledFunction<C, P>;
-  <C extends React.StatelessComponent<P>, P, ThemeInterface>(component: ConstrainedProps<C, StyledProps<P>>): StyledFunction<C, P>;
+export type ReactNativeStyledFunction<P> = StyledFunction<P>;
 
-  ActivityIndicator: StyledFunction<ReactNative.ActivityIndicator, ReactNative.ActivityIndicatorProperties>;
-  ActivityIndicatorIOS: StyledFunction<ReactNative.ActivityIndicatorIOS, ReactNative.ActivityIndicatorProperties>;
+export interface StyledInterface {
+  <P>(component: Component<P>): StyledFunction<P>;
+
+  ActivityIndicator: ReactNativeStyledFunction<ReactNative.ActivityIndicatorProperties>;
+  ActivityIndicatorIOS: ReactNativeStyledFunction<ReactNative.ActivityIndicatorProperties>;
 
   // ART: StyledFunction<ReactNative.ART>;
-  Button: StyledFunction<ReactNative.Button, ReactNative.ButtonProperties>;
-  DatePickerIOS: StyledFunction<ReactNative.DatePickerIOS, ReactNative.DatePickerIOSProperties>;
-  DrawerLayoutAndroid: StyledFunction<ReactNative.DrawerLayoutAndroid, ReactNative.DrawerLayoutAndroidProperties>;
-  Image: StyledFunction<ReactNative.Image, ReactNative.ImageProperties>;
+  Button: ReactNativeStyledFunction<ReactNative.ButtonProperties>;
+  DatePickerIOS: ReactNativeStyledFunction<ReactNative.DatePickerIOSProperties>;
+  DrawerLayoutAndroid: ReactNativeStyledFunction<ReactNative.DrawerLayoutAndroidProperties>;
+  Image: ReactNativeStyledFunction<ReactNative.ImageProperties>;
 
-  KeyboardAvoidingView: StyledFunction<ReactNative.KeyboardAvoidingView, ReactNative.KeyboardAvoidingViewProps>;
-  ListView: StyledFunction<ReactNative.ListView, ReactNative.ListViewProperties>;
-  MapView: StyledFunction<ReactNative.MapView, ReactNative.MapViewProperties>;
-  Modal: StyledFunction<ReactNative.Modal, ReactNative.ModalProperties>;
-  Navigator: StyledFunction<ReactNative.Navigator, ReactNative.NavigatorProperties>;
-  NavigatorIOS: StyledFunction<ReactNative.NavigatorIOS, ReactNative.NavigatorIOSProperties>;
-  Picker: StyledFunction<ReactNative.Picker, ReactNative.PickerProperties>;
-  PickerIOS: StyledFunction<ReactNative.PickerIOS, ReactNative.PickerIOSProperties>;
-  ProgressBarAndroid: StyledFunction<ReactNative.ProgressBarAndroid, ReactNative.ProgressBarAndroidProperties>;
-  ProgressViewIOS: StyledFunction<ReactNative.ProgressViewIOS, ReactNative.ProgressViewIOSProperties>;
-  ScrollView: StyledFunction<ReactNative.ScrollView, ReactNative.ScrollViewProps>;
-  SegmentedControlIOS: StyledFunction<ReactNative.SegmentedControlIOS, ReactNative.SegmentedControlIOSProperties>;
-  Slider: StyledFunction<ReactNative.Slider, ReactNative.SliderProperties>;
-  SliderIOS: StyledFunction<ReactNative.SliderIOS, ReactNative.SliderPropertiesIOS>;
-  SnapshotViewIOS: StyledFunction<ReactNative.SnapshotViewIOS, ReactNative.SnapshotViewIOSProperties>;
-  RecyclerViewBackedScrollView: StyledFunction<ReactNative.RecyclerViewBackedScrollView, ReactNative.RecyclerViewBackedScrollViewProperties>;
-  RefreshControl: StyledFunction<ReactNative.RefreshControl, ReactNative.RefreshControlProperties>;
-  StatusBar: StyledFunction<ReactNative.StatusBar, ReactNative.StatusBarProperties>;
-  SwipeableListView: StyledFunction<ReactNative.SwipeableListView, ReactNative.SwipeableListViewProps>;
-  Switch: StyledFunction<ReactNative.Switch, ReactNative.SwitchProperties>;
-  SwitchIOS: StyledFunction<ReactNative.SwitchIOS, ReactNative.SwitchIOSProperties>;
-  Text: StyledFunction<ReactNative.Text, ReactNative.TextProperties>;
-  TextInput: StyledFunction<ReactNative.TextInput, ReactNative.TextInputProperties>;
-  TouchableHighlight: StyledFunction<ReactNative.TouchableHighlight, ReactNative.TouchableHighlightProperties>;
-  TouchableNativeFeedback: StyledFunction<ReactNative.TouchableNativeFeedback, ReactNative.TouchableNativeFeedbackProperties>;
-  TouchableOpacity: StyledFunction<ReactNative.TouchableOpacity, ReactNative.TouchableOpacityProperties>;
-  TouchableWithoutFeedback: StyledFunction<ReactNative.TouchableWithoutFeedback, ReactNative.TouchableWithoutFeedbackProps>;
-  View: StyledFunction<ReactNative.View, ReactNative.ViewProperties>;
-  ViewPagerAndroid: StyledFunction<ReactNative.ViewPagerAndroid, ReactNative.ViewPagerAndroidProperties>;
-  WebView: StyledFunction<ReactNative.WebView, ReactNative.WebViewProperties>;
+  KeyboardAvoidingView: ReactNativeStyledFunction<ReactNative.KeyboardAvoidingViewProps>;
+  ListView: ReactNativeStyledFunction<ReactNative.ListViewProperties>;
+  MapView: ReactNativeStyledFunction<ReactNative.MapViewProperties>;
+  Modal: ReactNativeStyledFunction<ReactNative.ModalProperties>;
+  Navigator: ReactNativeStyledFunction<ReactNative.NavigatorProperties>;
+  NavigatorIOS: ReactNativeStyledFunction<ReactNative.NavigatorIOSProperties>;
+  Picker: ReactNativeStyledFunction<ReactNative.PickerProperties>;
+  PickerIOS: ReactNativeStyledFunction<ReactNative.PickerIOSProperties>;
+  ProgressBarAndroid: ReactNativeStyledFunction<ReactNative.ProgressBarAndroidProperties>;
+  ProgressViewIOS: ReactNativeStyledFunction<ReactNative.ProgressViewIOSProperties>;
+  ScrollView: ReactNativeStyledFunction<ReactNative.ScrollViewProps>;
+  SegmentedControlIOS: ReactNativeStyledFunction<ReactNative.SegmentedControlIOSProperties>;
+  Slider: ReactNativeStyledFunction<ReactNative.SliderProperties>;
+  SliderIOS: ReactNativeStyledFunction<ReactNative.SliderPropertiesIOS>;
+  SnapshotViewIOS: ReactNativeStyledFunction<ReactNative.SnapshotViewIOSProperties>;
+  RecyclerViewBackedScrollView: ReactNativeStyledFunction<ReactNative.RecyclerViewBackedScrollViewProperties>;
+  RefreshControl: ReactNativeStyledFunction<ReactNative.RefreshControlProperties>;
+  StatusBar: ReactNativeStyledFunction<ReactNative.StatusBarProperties>;
+  SwipeableListView: ReactNativeStyledFunction<ReactNative.SwipeableListViewProps>;
+  Switch: ReactNativeStyledFunction<ReactNative.SwitchProperties>;
+  SwitchIOS: ReactNativeStyledFunction<ReactNative.SwitchIOSProperties>;
+  Text: ReactNativeStyledFunction<ReactNative.TextProperties>;
+  TextInput: ReactNativeStyledFunction<ReactNative.TextInputProperties>;
+  TouchableHighlight: ReactNativeStyledFunction<ReactNative.TouchableHighlightProperties>;
+  TouchableNativeFeedback: ReactNativeStyledFunction<ReactNative.TouchableNativeFeedbackProperties>;
+  TouchableOpacity: ReactNativeStyledFunction<ReactNative.TouchableOpacityProperties>;
+  TouchableWithoutFeedback: ReactNativeStyledFunction<ReactNative.TouchableWithoutFeedbackProps>;
+  View: ReactNativeStyledFunction<ReactNative.ViewProperties>;
+  ViewPagerAndroid: ReactNativeStyledFunction<ReactNative.ViewPagerAndroidProperties>;
+  WebView: ReactNativeStyledFunction<ReactNative.WebViewProperties>;
 }
 
 declare const styled: StyledInterface;
 
-export const css: StyledFunction<(string | Function)[], any>;
-export const ThemeProvider: React.StatelessComponent<ThemeProps>;
+export function css<P>(strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P>>[]): Interpolation<StyledProps<P>>[];
+
+export const ThemeProvider: React.ComponentClass<ThemeProps>;
 
 export default styled;
