@@ -5,7 +5,7 @@ interface ThemeProps {
   theme: any;
 }
 
-type Component<P> = ComponentClass<P> |  StatelessComponent<P>;
+type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 type StyledProps<P> = P & ThemeProps;
 interface InterpolationFunction<P> {
   (props: StyledProps<P>): InterpolationValue<P> | ReadonlyArray<Interpolation<P>>;
@@ -18,16 +18,16 @@ type OuterStyledProps<P> = P & {
   innerRef?: (instance: any) => void;
 };
 
-interface StyledFunction2<P> {
+interface StyledFunction<P> {
   (strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P>>[]): ComponentClass<OuterStyledProps<P>>;
   <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P & U>>[]): ComponentClass<OuterStyledProps<P & U>>;
 }
 
-type HtmlStyledFunction<E> = StyledFunction2<React.HTMLProps<E>>;
-type SvgStyledFunction<E extends SVGElement> = StyledFunction2<React.SVGAttributes<E>>;
+type HtmlStyledFunction<E> = StyledFunction<React.HTMLProps<E>>;
+type SvgStyledFunction<E extends SVGElement> = StyledFunction<React.SVGAttributes<E>>;
 
-interface StyledInterface2 {
-  <P>(component: Component<P>): StyledFunction2<P>;
+interface StyledInterface {
+  <P>(component: Component<P>): StyledFunction<P>;
 
   a: HtmlStyledFunction<HTMLAnchorElement>;
   abbr: HtmlStyledFunction<HTMLElement>;
@@ -164,12 +164,13 @@ interface StyledInterface2 {
   text: SvgStyledFunction<SVGTextElement>;
   tspan: SvgStyledFunction<SVGTSpanElement>;
 }
-declare const styled: StyledInterface2;
+
+declare const styled: StyledInterface;
 
 export function css<P>(strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P>>[]): Interpolation<StyledProps<P>>[];
-
 export function keyframes(strings: TemplateStringsArray, ...interpolations: (string | number)[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: (string | number)[]): void;
+
 export const ThemeProvider: StatelessComponent<ThemeProps>;
 
 export default styled;
