@@ -170,7 +170,7 @@ export interface StyledInterface extends BaseStyledInterface {
 
 declare const styled: StyledInterface;
 
-export function css<P>(strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P>>[]): Interpolation<StyledProps<P>>[];
+export function css<P>(strings: TemplateStringsArray, ...interpolations: Interpolation<P>[]): Interpolation<P>[];
 export function keyframes(strings: TemplateStringsArray, ...interpolations: (string | number)[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: (string | number)[]): void;
 
