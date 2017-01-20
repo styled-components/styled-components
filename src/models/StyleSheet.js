@@ -25,7 +25,7 @@ class StyleSheet {
   getCSS({ min = true }: { min: boolean } = {}) {
     return this.styleSheet.sheet ?
       this.styleSheet.rules().map(rule => rule.cssText).join(min ? '' : '\n')
-      : '';
+      : ''
   }
 }
 
