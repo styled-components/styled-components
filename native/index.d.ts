@@ -6,6 +6,7 @@ export {
   ThemeProps,
   ThemeProvider,
   Interpolation,
+  InterpolationValue,
   InterpolationFunction,
   OuterStyledProps,
   StyledFunction,

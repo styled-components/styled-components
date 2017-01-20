@@ -1,22 +1,23 @@
 import * as React from "react";
 import { StatelessComponent, ComponentClass } from "react";
 
+type Component<P> = ComponentClass<P> | StatelessComponent<P>;
+
 export interface ThemeProps {
   theme: any;
 }
 
-type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 export type StyledProps<P> = P & ThemeProps;
-export interface InterpolationFunction<P> {
-  (props: StyledProps<P>): InterpolationValue<P> | ReadonlyArray<Interpolation<P>>;
-}
-type InterpolationValue<P> = string | number;
-export type Interpolation<P> = InterpolationFunction<P> | InterpolationValue<P> | ReadonlyArray<InterpolationValue<P> | InterpolationFunction<P>>;
-
 export type OuterStyledProps<P> = P & {
   theme?: Object;
   innerRef?: (instance: any) => void;
 };
+
+export type Interpolation<P> = InterpolationValue | InterpolationFunction<P> | ReadonlyArray<InterpolationValue | InterpolationFunction<P>>;
+export type InterpolationValue = string | number;
+export interface InterpolationFunction<P> {
+  (props: StyledProps<P>): InterpolationValue | ReadonlyArray<Interpolation<P>>;
+}
 
 export interface StyledFunction<P> {
   (strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P>>[]): ComponentClass<OuterStyledProps<P>>;
