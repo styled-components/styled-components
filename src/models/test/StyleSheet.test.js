@@ -65,6 +65,10 @@ describe('styleSheet', () => {
       const css = styleSheet.getCSS({ min: false });
       expect(stripWhitespaceExceptNewline(css)).toEqual('.sc-a {}.c {width: 100%;}\n.sc-b {}.d {text-decoration: none;}')
     })
+
+    it('should not throw an error if no styled-components are rendered', () => {
+      const css = styleSheet.getCSS();
+    })
   })
 
 })
