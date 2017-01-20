@@ -1,32 +1,32 @@
 import * as React from "react";
 import { StatelessComponent, ComponentClass } from "react";
 
-interface ThemeProps {
+export interface ThemeProps {
   theme: any;
 }
 
 type Component<P> = ComponentClass<P> | StatelessComponent<P>;
-type StyledProps<P> = P & ThemeProps;
-interface InterpolationFunction<P> {
+export type StyledProps<P> = P & ThemeProps;
+export interface InterpolationFunction<P> {
   (props: StyledProps<P>): InterpolationValue<P> | ReadonlyArray<Interpolation<P>>;
 }
 type InterpolationValue<P> = string | number;
-type Interpolation<P> = InterpolationFunction<P> | InterpolationValue<P> | ReadonlyArray<InterpolationValue<P> | InterpolationFunction<P>>;
+export type Interpolation<P> = InterpolationFunction<P> | InterpolationValue<P> | ReadonlyArray<InterpolationValue<P> | InterpolationFunction<P>>;
 
-type OuterStyledProps<P> = P & {
+export type OuterStyledProps<P> = P & {
   theme?: Object;
   innerRef?: (instance: any) => void;
 };
 
-interface StyledFunction<P> {
+export interface StyledFunction<P> {
   (strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P>>[]): ComponentClass<OuterStyledProps<P>>;
   <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P & U>>[]): ComponentClass<OuterStyledProps<P & U>>;
 }
 
-type HtmlStyledFunction<E> = StyledFunction<React.HTMLProps<E>>;
-type SvgStyledFunction<E extends SVGElement> = StyledFunction<React.SVGAttributes<E>>;
+export type HtmlStyledFunction<E> = StyledFunction<React.HTMLProps<E>>;
+export type SvgStyledFunction<E extends SVGElement> = StyledFunction<React.SVGAttributes<E>>;
 
-interface StyledInterface {
+export interface StyledInterface {
   <P>(component: Component<P>): StyledFunction<P>;
 
   a: HtmlStyledFunction<HTMLAnchorElement>;
@@ -171,6 +171,6 @@ export function css<P>(strings: TemplateStringsArray, ...interpolations: Interpo
 export function keyframes(strings: TemplateStringsArray, ...interpolations: (string | number)[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: (string | number)[]): void;
 
-export const ThemeProvider: StatelessComponent<ThemeProps>;
+export const ThemeProvider: ComponentClass<ThemeProps>;
 
 export default styled;
