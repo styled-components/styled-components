@@ -100,7 +100,7 @@
     "rollup-plugin-uglify": "^1.0.1",
     "rollup-plugin-visualizer": "^0.1.5",
     "supports-color": "^3.1.2",
-    "tslint": "^3.15.1",
+    "tslint": "^4.3.1",
     "typescript": "^2.1.5"
   },
   "peerDependencies": {
