@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file. If a contri
 ### Added
 
 ### Changed
+- Fix SSR when no `styled-components` are rendered, mentioned in [#124](https://github.com/styled-components/styled-components/issues/124). - [@kristojorg](https://github.com/kristojorg)
 
 ## [v1.3.1] - 2017-01-18
 
