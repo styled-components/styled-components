@@ -20,8 +20,8 @@ export interface InterpolationFunction<P> {
 }
 
 export interface StyledFunction<P> {
-  (strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P>>[]): ComponentClass<OuterStyledProps<P>>;
-  <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P & U>>[]): ComponentClass<OuterStyledProps<P & U>>;
+  (strings: TemplateStringsArray, ...interpolations: Interpolation<P>[]): ComponentClass<OuterStyledProps<P>>;
+  <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<P & U>[]): ComponentClass<OuterStyledProps<P & U>>;
 }
 
 export type HtmlStyledFunction<E> = StyledFunction<React.HTMLProps<E>>;
