@@ -26,9 +26,11 @@ export interface StyledFunction<P> {
 export type HtmlStyledFunction<E> = StyledFunction<React.HTMLProps<E>>;
 export type SvgStyledFunction<E extends SVGElement> = StyledFunction<React.SVGAttributes<E>>;
 
-export interface StyledInterface {
+export interface BaseStyledInterface {
   <P>(component: Component<P>): StyledFunction<P>;
+}
 
+export interface StyledInterface extends BaseStyledInterface {
   a: HtmlStyledFunction<HTMLAnchorElement>;
   abbr: HtmlStyledFunction<HTMLElement>;
   address: HtmlStyledFunction<HTMLElement>;

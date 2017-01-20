@@ -2,33 +2,24 @@ import * as ReactNative from "react-native";
 import * as React from "react";
 import { StatelessComponent, ComponentClass } from "react";
 
-export interface ThemeProps {
-  theme: any;
-}
+export {
+  ThemeProps,
+  ThemeProvider,
+  Interpolation,
+  InterpolationFunction,
+  OuterStyledProps,
+  StyledFunction,
+  BaseStyledInterface,
+  css
+} from "..";
+
+import { StyledFunction, BaseStyledInterface } from "..";
 
 type Component<P> = ComponentClass<P> | StatelessComponent<P>;
-type StyledProps<P> = P & ThemeProps;
-export interface InterpolationFunction<P> {
-  (props: StyledProps<P>): InterpolationValue<P> | ReadonlyArray<Interpolation<P>>;
-}
-type InterpolationValue<P> = string | number;
-export type Interpolation<P> = InterpolationFunction<P> | InterpolationValue<P> | ReadonlyArray<InterpolationValue<P> | InterpolationFunction<P>>;
-
-export type OuterStyledProps<P> = P & {
-  theme?: Object;
-  innerRef?: (instance: any) => void;
-};
-
-export interface StyledFunction<P> {
-  (strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P>>[]): ComponentClass<OuterStyledProps<P>>;
-  <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P & U>>[]): ComponentClass<OuterStyledProps<P & U>>;
-}
 
 export type ReactNativeStyledFunction<P> = StyledFunction<P>;
 
-export interface StyledInterface {
-  <P>(component: Component<P>): StyledFunction<P>;
-
+export interface StyledInterface extends BaseStyledInterface {
   ActivityIndicator: ReactNativeStyledFunction<ReactNative.ActivityIndicatorProperties>;
   ActivityIndicatorIOS: ReactNativeStyledFunction<ReactNative.ActivityIndicatorProperties>;
 
@@ -71,9 +62,5 @@ export interface StyledInterface {
 }
 
 declare const styled: StyledInterface;
-
-export function css<P>(strings: TemplateStringsArray, ...interpolations: Interpolation<StyledProps<P>>[]): Interpolation<StyledProps<P>>[];
-
-export const ThemeProvider: React.ComponentClass<ThemeProps>;
 
 export default styled;
