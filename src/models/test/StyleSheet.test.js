@@ -67,7 +67,7 @@ describe('styleSheet', () => {
     })
 
     it('should not throw an error if no styled-components are rendered', () => {
-      const css = styleSheet.getCSS();
+      expect(() => styleSheet.getCSS()).toNotThrow();
     })
   })
 
