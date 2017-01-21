@@ -7,7 +7,7 @@ import injectGlobal from '../injectGlobal'
 import styleSheet from '../../models/StyleSheet'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
 
-let styled = resetStyled()
+const styled = resetStyled()
 const rule1 = 'width: 100%;'
 const rule2 = 'text-decoration: none;'
 const rule3 = 'color: blue;'
@@ -17,7 +17,7 @@ describe('injectGlobal', () => {
     resetStyled()
   })
 
-  it(`should inject rules into the head`, () => {
+  it('should inject rules into the head', () => {
     injectGlobal`
       html {
         ${rule1}
@@ -26,7 +26,7 @@ describe('injectGlobal', () => {
     expect(styleSheet.injected).toBe(true)
   })
 
-  it(`should non-destructively inject styles when called repeatedly`, () => {
+  it('should non-destructively inject styles when called repeatedly', () => {
     injectGlobal`
       html {
         ${rule1}
@@ -48,7 +48,7 @@ describe('injectGlobal', () => {
     `)
   })
 
-  it(`should non-destructively inject styles when called after a component`, () => {
+  it('should non-destructively inject styles when called after a component', () => {
     const Comp = styled.div`
       ${rule3}
     `
@@ -69,4 +69,4 @@ describe('injectGlobal', () => {
       }
     `)
   })
-});
+})

@@ -23,7 +23,7 @@ export const resetStyled = () => {
 const stripWhitespace = str => str.trim().replace(/\s+/g, ' ')
 export const expectCSSMatches = (
   expectation: string,
-  opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }
+  opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true },
 ) => {
   const css = styleSheet.rules().map(rule => rule.cssText).join('\n')
   if (opts.ignoreWhitespace) {
