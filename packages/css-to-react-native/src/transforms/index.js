@@ -1,10 +1,11 @@
 const { regExpToken, tokens } = require('../tokenTypes');
 const flex = require('./flex');
 const font = require('./font');
+const fontFamily = require('./fontFamily');
 const transform = require('./transform');
 const { directionFactory, anyOrderFactory, shadowOffsetFactory } = require('./util');
 
-const { WORD, COLOR } = tokens;
+const { IDENT, WORD, COLOR } = tokens;
 
 const background = tokenStream => ({ $merge: { backgroundColor: tokenStream.match(COLOR) } });
 const border = anyOrderFactory({
@@ -40,8 +41,8 @@ const flexFlow = anyOrderFactory({
     default: 'row',
   },
 });
-const fontVariant = tokenStream => [tokenStream.match(WORD)];
-const fontWeight = tokenStream => tokenStream.match(WORD);
+const fontVariant = tokenStream => [tokenStream.match(IDENT)];
+const fontWeight = tokenStream => tokenStream.match(WORD); // Also match numbers as strings
 const shadowOffset = shadowOffsetFactory();
 const textShadowOffset = shadowOffsetFactory();
 
@@ -54,6 +55,7 @@ module.exports = {
   flex,
   flexFlow,
   font,
+  fontFamily,
   fontVariant,
   fontWeight,
   margin,

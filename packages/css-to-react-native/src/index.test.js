@@ -320,6 +320,57 @@ it('allows line height as multiple', () => runTest([
   lineHeight: 24,
 }));
 
+it('transforms font without quotes', () => runTest([
+  ['font', 'bold italic small-caps 16px/18px Helvetica Neue'],
+], {
+  fontFamily: 'Helvetica Neue',
+  fontSize: 16,
+  fontWeight: 'bold',
+  fontStyle: 'italic',
+  fontVariant: ['small-caps'],
+  lineHeight: 18,
+}));
+
+it('transforms font-family with double quotes', () => runTest([
+  ['font-family', '"Helvetica Neue"'],
+], {
+  fontFamily: 'Helvetica Neue',
+}));
+
+it('transforms font-family with single quotes', () => runTest([
+  ['font-family', '\'Helvetica Neue\''],
+], {
+  fontFamily: 'Helvetica Neue',
+}));
+
+it('transforms font-family without quotes', () => runTest([
+  ['font-family', 'Helvetica Neue'],
+], {
+  fontFamily: 'Helvetica Neue',
+}));
+
+it('transforms font-family with quotes with otherwise invalid values', () => runTest([
+  ['font-family', '"Goudy Bookletter 1911"'],
+], {
+  fontFamily: 'Goudy Bookletter 1911',
+}));
+
+it('transforms font-family with quotes with escaped values', () => runTest([
+  ['font-family', '"test\\A test"'],
+], {
+  fontFamily: 'test\ntest',
+}));
+
+it('transforms font-family with quotes with escaped quote', () => runTest([
+  ['font-family', '"test\\"test"'],
+], {
+  fontFamily: 'test"test',
+}));
+
+it('does not transform invalid unquoted font-family', () => {
+  expect(() => transformCss([['font-family', 'Goudy Bookletter 1911']])).toThrow();
+});
+
 it('allows blacklisting shorthands', () => {
   const actualStyles = transformCss([['border-radius', '50']], ['borderRadius']);
   expect(actualStyles).toEqual({ borderRadius: 50 });

@@ -1,6 +1,7 @@
+const parseFontFamily = require('./fontFamily');
 const { regExpToken, tokens } = require('../tokenTypes');
 
-const { SPACE, LENGTH, NUMBER, SLASH, WORD, STRING } = tokens;
+const { SPACE, LENGTH, NUMBER, SLASH } = tokens;
 const NORMAL = regExpToken(/^(normal)$/);
 const STYLE = regExpToken(/^(italic)$/);
 const WEIGHT = regExpToken(/^([1-9]00|bold)$/);
@@ -16,7 +17,7 @@ module.exports = (tokenStream) => {
   let fontVariant;
   // let fontSize;
   let lineHeight;
-  let fontFamily;
+  // let fontFamily;
 
   let numStyleWeightVariantMatched = 0;
   while (numStyleWeightVariantMatched < 3 && tokenStream.hasTokens()) {
@@ -48,17 +49,7 @@ module.exports = (tokenStream) => {
 
   tokenStream.expect(SPACE);
 
-  if (tokenStream.match(STRING)) {
-    fontFamily = tokenStream.lastValue;
-  } else {
-    fontFamily = tokenStream.expect(WORD);
-    while (tokenStream.hasTokens()) {
-      const nextWord = tokenStream.expect(WORD);
-      fontFamily += ` ${nextWord}`;
-    }
-  }
-
-  tokenStream.expectEmpty();
+  const fontFamily = parseFontFamily(tokenStream);
 
   if (fontStyle === undefined) fontStyle = defaultFontStyle;
   if (fontWeight === undefined) fontWeight = defaultFontWeight;
