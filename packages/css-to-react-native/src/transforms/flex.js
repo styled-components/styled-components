@@ -29,6 +29,8 @@ module.exports = (tokenStream) => {
       }
     } else if (flexBasis === undefined && tokenStream.match(LENGTH)) {
       flexBasis = tokenStream.lastValue;
+    } else {
+      tokenStream.throw();
     }
 
     partsParsed += 1;

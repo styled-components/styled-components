@@ -1,20 +1,20 @@
 const { tokens } = require('../tokenTypes');
 
-const { LENGTH, SPACE } = tokens;
+const { LENGTH, PERCENT, SPACE } = tokens;
 
 module.exports.directionFactory = ({
-  types = [LENGTH],
   directions = ['Top', 'Right', 'Bottom', 'Left'],
   prefix = '',
   suffix = '',
 }) => (tokenStream) => {
   const values = [];
 
-  values.push(tokenStream.expect(...types));
+  // borderWidth doesn't currently allow a percent value, but may do in the future
+  values.push(tokenStream.expect(LENGTH, PERCENT));
 
   while (values.length < 4 && tokenStream.hasTokens()) {
     tokenStream.expect(SPACE);
-    values.push(tokenStream.expect(...types));
+    values.push(tokenStream.expect(LENGTH, PERCENT));
   }
 
   tokenStream.expectEmpty();
@@ -31,6 +31,40 @@ module.exports.directionFactory = ({
   };
 
   return { $merge: output };
+};
+
+module.exports.anyOrderFactory = (properties, delim = SPACE) => (tokenStream) => {
+  const propertyNames = Object.keys(properties);
+  const values = propertyNames.reduce((accum, propertyName) => {
+    accum[propertyName] === undefined; // eslint-disable-line
+    return accum;
+  }, {});
+
+  let numParsed = 0;
+  while (numParsed < propertyNames.length && tokenStream.hasTokens()) {
+    if (numParsed) tokenStream.expect(delim);
+
+    let didMatch = false;
+    for (const propertyName of propertyNames) { // eslint-disable-line
+      if (values[propertyName] === undefined && tokenStream.match(properties[propertyName].token)) {
+        values[propertyName] = tokenStream.lastValue;
+        didMatch = true;
+        break;
+      }
+    }
+
+    if (!didMatch) tokenStream.throw();
+
+    numParsed += 1;
+  }
+
+  tokenStream.expectEmpty();
+
+  propertyNames.forEach((propertyName) => {
+    if (values[propertyName] === undefined) values[propertyName] = properties[propertyName].default;
+  });
+
+  return { $merge: values };
 };
 
 module.exports.shadowOffsetFactory = () => (tokenStream) => {

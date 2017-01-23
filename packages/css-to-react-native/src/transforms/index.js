@@ -1,14 +1,26 @@
-const { tokens } = require('../tokenTypes');
-const border = require('./border');
+const { regExpToken, tokens } = require('../tokenTypes');
 const flex = require('./flex');
-const flexFlow = require('./flexFlow');
 const font = require('./font');
 const transform = require('./transform');
-const { directionFactory, shadowOffsetFactory } = require('./util');
+const { directionFactory, anyOrderFactory, shadowOffsetFactory } = require('./util');
 
 const { WORD, COLOR } = tokens;
 
 const background = tokenStream => ({ $merge: { backgroundColor: tokenStream.match(COLOR) } });
+const border = anyOrderFactory({
+  borderWidth: {
+    token: tokens.LENGTH,
+    default: 1,
+  },
+  borderColor: {
+    token: COLOR,
+    default: 'black',
+  },
+  borderStyle: {
+    token: regExpToken(/^(solid|dashed|dotted)$/),
+    default: 'solid',
+  },
+});
 const borderColor = directionFactory({ type: 'word', prefix: 'border', suffix: 'Color' });
 const borderRadius = directionFactory({
   directions: ['TopRight', 'BottomRight', 'BottomLeft', 'TopLeft'],
@@ -18,6 +30,16 @@ const borderRadius = directionFactory({
 const borderWidth = directionFactory({ prefix: 'border', suffix: 'Width' });
 const margin = directionFactory({ prefix: 'margin' });
 const padding = directionFactory({ prefix: 'padding' });
+const flexFlow = anyOrderFactory({
+  flexWrap: {
+    token: regExpToken(/(nowrap|wrap|wrap-reverse)/),
+    default: 'nowrap',
+  },
+  flexDirection: {
+    token: regExpToken(/(row|row-reverse|column|column-reverse)/),
+    default: 'row',
+  },
+});
 const fontVariant = tokenStream => [tokenStream.match(WORD)];
 const fontWeight = tokenStream => tokenStream.match(WORD);
 const shadowOffset = shadowOffsetFactory();

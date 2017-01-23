@@ -52,6 +52,15 @@ it('allows negative values in transformed values', () => runTest([
   borderBottomLeftRadius: -1.5,
 }));
 
+it('allows percent values in transformed values', () => runTest([
+  ['margin', '10%'],
+], {
+  marginTop: '10%',
+  marginRight: '10%',
+  marginBottom: '10%',
+  marginLeft: '10%',
+}));
+
 it('transforms strings', () => runTest([
   ['color', 'red'],
 ], { color: 'red' }));
