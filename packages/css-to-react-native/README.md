@@ -98,6 +98,8 @@ transform([['border-radius', '50px']], ['borderRadius']);
 // { borderRadius: 50 } rather than { borderTopLeft: ... }
 ```
 
+This can also be done by passing a third argument, `false` to `getStylesForProperty`.
+
 ## License
 
 Licensed under the MIT License, Copyright © 2016 Jacob Parker and Maximilian Stoiber.
