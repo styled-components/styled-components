@@ -1,5 +1,5 @@
 /* global jest it, expect */
-import transformCss, { parseProp } from '.';
+import transformCss, { getStylesForProperty } from '.';
 
 const runTest = (inputCss, expectedStyles) => {
   const actualStyles = transformCss(inputCss);
@@ -13,17 +13,25 @@ it('transforms numbers', () => runTest([
   ['bottom', '0'],
 ], { top: 0, left: 0, right: 0, bottom: 0 }));
 
+it('allows pixels in unspecialized transform', () => runTest([
+  ['top', '0px'],
+], { top: 0 }));
+
+it('allows percent in unspecialized transform', () => runTest([
+  ['top', '0%'],
+], { top: '0%' }));
+
 it('allows decimal values', () => {
-  expect(parseProp('margin', '0.5px').$merge.marginTop).toBe(0.5);
-  expect(parseProp('margin', '1.5px').$merge.marginTop).toBe(1.5);
-  expect(parseProp('margin', '10.5px').$merge.marginTop).toBe(10.5);
-  expect(parseProp('margin', '100.5px').$merge.marginTop).toBe(100.5);
-  expect(parseProp('margin', '-0.5px').$merge.marginTop).toBe(-0.5);
-  expect(parseProp('margin', '-1.5px').$merge.marginTop).toBe(-1.5);
-  expect(parseProp('margin', '-10.5px').$merge.marginTop).toBe(-10.5);
-  expect(parseProp('margin', '-100.5px').$merge.marginTop).toBe(-100.5);
-  expect(parseProp('margin', '.5px').$merge.marginTop).toBe(0.5);
-  expect(parseProp('margin', '-.5px').$merge.marginTop).toBe(-0.5);
+  expect(getStylesForProperty('margin', '0.5px').marginTop).toBe(0.5);
+  expect(getStylesForProperty('margin', '1.5px').marginTop).toBe(1.5);
+  expect(getStylesForProperty('margin', '10.5px').marginTop).toBe(10.5);
+  expect(getStylesForProperty('margin', '100.5px').marginTop).toBe(100.5);
+  expect(getStylesForProperty('margin', '-0.5px').marginTop).toBe(-0.5);
+  expect(getStylesForProperty('margin', '-1.5px').marginTop).toBe(-1.5);
+  expect(getStylesForProperty('margin', '-10.5px').marginTop).toBe(-10.5);
+  expect(getStylesForProperty('margin', '-100.5px').marginTop).toBe(-100.5);
+  expect(getStylesForProperty('margin', '.5px').marginTop).toBe(0.5);
+  expect(getStylesForProperty('margin', '-.5px').marginTop).toBe(-0.5);
 });
 
 it('allows decimal values in transformed values', () => runTest([

@@ -3,8 +3,8 @@
 Converts CSS text to a React Native stylesheet object.
 
 ```css
-font-size: 18;
-line-height: 24;
+font-size: 18px;
+line-height: 24px;
 color: red;
 ```
 
@@ -21,9 +21,9 @@ Converts all number-like values to numbers, and string-like to strings.
 Automatically converts indirect values to their React Native equivalents.
 
 ```css
-text-shadow-offset: 10 5;
+text-shadow-offset: 10px 5px;
 font-variant: small-caps;
-transform: translate(10, 5) scale(5);
+transform: translate(10px, 5px) scale(5);
 ```
 
 ```js
@@ -42,8 +42,8 @@ transform: translate(10, 5) scale(5);
 Also allows shorthand values.
 
 ```css
-font: bold 14/16 "Helvetica";
-margin: 5 7 2;
+font: bold 14px/16px "Helvetica";
+margin: 5px 7px 2px;
 ```
 
 ```js
@@ -67,8 +67,6 @@ Shorthands will only accept values that are supported in React, so `background` 
 
 `border{Top,Right,Bottom,Left}` shorthands are not supported, because `borderStyle` cannot be applied to individual border sides.
 
-`flex` does not support putting `flexBasis` before `flexGrow`. The supported syntax is `flex: <flex-grow> <flex-shrink> <flex-basis>`.
-
 # API
 
 The API is mostly for implementors. However, the main API may be useful for non-impmentors. The main API is,
@@ -78,9 +76,9 @@ import transform from 'css-to-react-native';
 // or const transform = require('css-to-react-native').default;
 
 transform([
-  ['font', 'bold 14/16 "Helvetica"'],
-  ['margin', '5 7 2'],
-  ['border-left-width', '5'],
+  ['font', 'bold 14px/16px "Helvetica"'],
+  ['margin', '5px 7px 2px'],
+  ['border-left-width', '5px'],
 ]); // => { fontFamily: 'Helvetica', ... }
 ```
 
@@ -90,13 +88,13 @@ For implementors, there is also,
 import { getPropertyName, getStylesForProperty } from 'css-to-react-native';
 
 getPropertyName('border-width'); // => 'borderWidth'
-getStylesForProperty('borderWidth', '1 0 2 0'); // => { borderTopWidth: 1, ... }
+getStylesForProperty('borderWidth', '1px 0px 2px 0px'); // => { borderTopWidth: 1, ... }
 ```
 
 Should you wish to opt-out of transforming certain shorthands, an array of property names in camelCase can be passed as a second argument to `transform`.
 
 ```js
-transform([['border-radius', '50']], ['borderRadius']);
+transform([['border-radius', '50px']], ['borderRadius']);
 // { borderRadius: 50 } rather than { borderTopLeft: ... }
 ```
 

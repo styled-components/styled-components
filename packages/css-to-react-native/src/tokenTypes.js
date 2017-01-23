@@ -14,6 +14,7 @@ const matchColor = (node) => {
 };
 
 const noneRe = /^(none)$/;
+// Note if these are wrong, you'll need to change index.js too
 const numberRe = /^([+-]?(?:\d*\.)?\d+(?:[Ee][+-]?\d+)?)$/;
 const lengthRe = /^([+-]?(?:\d*\.)?\d+(?:[Ee][+-]?\d+)?)px$/;
 const angleRe = /^([+-]?(?:\d*\.)?\d+(?:[Ee][+-]?\d+)?(?:deg|rad))$/;

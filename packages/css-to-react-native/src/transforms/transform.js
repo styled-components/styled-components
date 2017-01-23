@@ -16,9 +16,7 @@ const xyTransformFactory = tokenType => (key, valueIfOmitted) => (functionStream
 
   let y;
   if (functionStream.hasTokens()) {
-    functionStream.match(SPACE); // optional space
     functionStream.expect(COMMA);
-    functionStream.match(SPACE); // optional space
     y = functionStream.expect(tokenType);
   } else if (valueIfOmitted !== undefined) {
     y = valueIfOmitted;

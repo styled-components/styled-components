@@ -4,24 +4,28 @@ const camelizeStyleName = require('fbjs/lib/camelizeStyleName');
 const transforms = require('./transforms');
 const TokenStream = require('./TokenStream');
 
-const transformRawValue = input => (
-  (input !== '' && !isNaN(input))
-    ? Number(input)
-    : input
-);
+// Note if this is wrong, you'll need to change tokenTypes.js too
+const numberOrLengthRe = /^([+-]?(?:\d*\.)?\d+(?:[Ee][+-]?\d+)?)(?:px)?$/;
 
-export const parseProp = (propName, value) => {
-  const ast = parse(value).nodes;
-  const tokenStream = new TokenStream(ast);
-  return transforms[propName](tokenStream);
+// Undocumented export
+export const transformRawValue = (input) => {
+  const value = input.trim().match(numberOrLengthRe);
+  return value ? Number(value[1]) : input;
 };
 
 export const getStylesForProperty = (propName, inputValue, allowShorthand) => {
-  const value = inputValue.trim();
+  // Undocumented: allow ast to be passed in
+  let propValue;
 
-  const propValue = (allowShorthand && (propName in transforms))
-    ? parseProp(propName, value)
-    : transformRawValue(value);
+  const isRawValue = (allowShorthand === false) || !(propName in transforms);
+  if (isRawValue) {
+    const value = typeof inputValue === 'string' ? inputValue : parse.stringify(inputValue);
+    propValue = transformRawValue(value);
+  } else {
+    const ast = typeof inputValue === 'string' ? parse(inputValue.trim()) : inputValue;
+    const tokenStream = new TokenStream(ast.nodes);
+    propValue = transforms[propName](tokenStream);
+  }
 
   return (propValue && propValue.$merge)
     ? propValue.$merge
