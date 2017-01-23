@@ -1,34 +1,40 @@
+const { regExpToken, tokens } = require('../tokenTypes');
+
+const { SPACE, COLOR, LENGTH } = tokens;
+const BORDER_STYLE = regExpToken(/^(solid|dashed|dotted)$/);
+
 /* eslint-disable no-param-reassign */
 const defaultWidth = 1;
 const defaultStyle = 'solid';
 const defaultColor = 'black';
 
-const styles = ['solid', 'dotted', 'dashed'];
+module.exports = (tokenStream) => {
+  let borderWidth;
+  let borderColor;
+  let borderStyle;
 
-module.exports = (root) => {
-  const { nodes } = root.first;
-  const values = nodes.reduce((accum, node) => {
-    if (accum.width === undefined && node.type === 'number') {
-      accum.width = Number(node.value);
-    } else if (accum.style === undefined && node.type === 'word' && styles.indexOf(node.value) !== -1) {
-      accum.style = node.value;
-    } else if (accum.color === undefined && node.type === 'word' && node.isColor) {
-      accum.color = node.value;
+  let numParsed = 0;
+  while (numParsed < 3 && tokenStream.hasTokens()) {
+    if (numParsed) tokenStream.expect(SPACE);
+
+    if (borderWidth === undefined && tokenStream.match(LENGTH)) {
+      borderWidth = tokenStream.lastValue;
+    } else if (borderColor === undefined && tokenStream.match(COLOR)) {
+      borderColor = tokenStream.lastValue;
+    } else if (borderStyle === undefined && tokenStream.match(BORDER_STYLE)) {
+      borderStyle = tokenStream.lastValue;
     } else {
-      throw new Error(`Unexpected value: ${node}`);
+      tokenStream.throw();
     }
-    return accum;
-  }, {
-    width: undefined,
-    style: undefined,
-    color: undefined,
-  });
 
-  const {
-    width: borderWidth = defaultWidth,
-    style: borderStyle = defaultStyle,
-    color: borderColor = defaultColor,
-  } = values;
+    numParsed += 1;
+  }
+
+  tokenStream.expectEmpty();
+
+  if (borderWidth === undefined) borderWidth = defaultWidth;
+  if (borderColor === undefined) borderColor = defaultColor;
+  if (borderStyle === undefined) borderStyle = defaultStyle;
 
   return { $merge: { borderWidth, borderStyle, borderColor } };
 };

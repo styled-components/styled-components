@@ -1,34 +1,34 @@
 /* eslint-disable no-param-reassign */
-const { assertUptoNValuesOfType } = require('./util');
+const { tokens, regExpToken } = require('../tokenTypes');
 
-const defaultWrap = 'nowrap';
-const defaultDirection = 'row';
+const { SPACE } = tokens;
+const WRAP = regExpToken(/(nowrap|wrap|wrap-reverse)/);
+const DIRECTION = regExpToken(/(row|row-reverse|column|column-reverse)/);
 
-const wraps = ['nowrap', 'wrap', 'wrap-reverse'];
-const directions = ['row', 'row-reverse', 'column', 'column-reverse'];
+const defaultFlexWrap = 'nowrap';
+const defaultFlexDirection = 'row';
 
-module.exports = (root) => {
-  const { nodes } = root.first;
-  assertUptoNValuesOfType(2, 'word', nodes);
+module.exports = (tokenStream) => {
+  let flexWrap;
+  let flexDirection;
 
-  const values = nodes.reduce((accum, node) => {
-    if (accum.wrap === undefined && wraps.indexOf(node.value) !== -1) {
-      accum.wrap = node.value;
-    } else if (accum.direction === undefined && directions.indexOf(node.value) !== -1) {
-      accum.direction = node.value;
-    } else {
-      throw new Error(`Unexpected value: ${node}`);
+  let numParsed = 0;
+  while (numParsed < 2 && tokenStream.hasTokens()) {
+    if (numParsed) tokenStream.expect(SPACE);
+
+    if (flexWrap === undefined && tokenStream.match(WRAP)) {
+      flexWrap = tokenStream.lastValue;
+    } else if (flexDirection === undefined && tokenStream.match(DIRECTION)) {
+      flexDirection = tokenStream.lastValue;
     }
-    return accum;
-  }, {
-    wrap: undefined,
-    direction: undefined,
-  });
 
-  const {
-    wrap: flexWrap = defaultWrap,
-    direction: flexDirection = defaultDirection,
-  } = values;
+    numParsed += 1;
+  }
+
+  tokenStream.expectEmpty();
+
+  if (flexWrap === undefined) flexWrap = defaultFlexWrap;
+  if (flexDirection === undefined) flexDirection = defaultFlexDirection;
 
   return { $merge: { flexWrap, flexDirection } };
 };

@@ -1,106 +1,71 @@
-/* eslint-disable no-param-reassign */
-const PARSE_STYLE_WEIGHT_VARIANT = 0;
-const PARSE_SIZE = 1;
-const PARSE_MAYBE_LINE_HEIGHT = 2;
-const PARSE_LINE_HEIGHT = 3;
-const PARSE_FONT_FAMILY = 4;
-const PARSE_FINISHED = 5;
+const { regExpToken, tokens } = require('../tokenTypes');
 
-const styles = ['italic'];
-const weights = ['bold'];
-const numericWeights = [100, 200, 300, 400, 500, 600, 700, 800, 900];
-const variants = ['small-caps'];
+const { SPACE, LENGTH, NUMBER, SLASH, WORD, STRING } = tokens;
+const NORMAL = regExpToken(/^(normal)$/);
+const STYLE = regExpToken(/^(italic)$/);
+const WEIGHT = regExpToken(/^([1-9]00|bold)$/);
+const VARIANT = regExpToken(/^(small-caps)$/);
 
-module.exports = (root) => {
-  const { nodes } = root.first;
+const defaultFontStyle = 'normal';
+const defaultFontWeight = 'normal';
+const defaultFontVariant = [];
 
-  const values = nodes.reduce((accum, node) => {
-    if (accum.parseMode === PARSE_STYLE_WEIGHT_VARIANT) {
-      let didMatchStyleWeightVariant = true;
-      const { type, value } = node;
+module.exports = (tokenStream) => {
+  let fontStyle;
+  let fontWeight;
+  let fontVariant;
+  // let fontSize;
+  let lineHeight;
+  let fontFamily;
 
-      if (type === 'word' && value === 'normal') {
-        /* pass */
-      } else if (accum.style === undefined && type === 'word' && styles.indexOf(value) !== -1) {
-        accum.style = value;
-      } else if (accum.weight === undefined && type === 'number' && numericWeights.indexOf(Number(value)) !== -1) {
-        accum.weight = String(value);
-      } else if (accum.weight === undefined && type === 'word' && weights.indexOf(value) !== -1) {
-        accum.weight = value;
-      } else if (accum.variant === undefined && type === 'word' && variants.indexOf(value) !== -1) {
-        accum.variant = [value];
-      } else {
-        didMatchStyleWeightVariant = false;
-      }
-
-      if (didMatchStyleWeightVariant) {
-        accum.numStyleWeightVariantMatched += 1;
-        if (accum.numStyleWeightVariantMatched === 3) accum.parseMode = PARSE_SIZE;
-        return accum;
-      }
-
-      accum.parseMode = PARSE_SIZE; // fallthrough
+  let numStyleWeightVariantMatched = 0;
+  while (numStyleWeightVariantMatched < 3 && tokenStream.hasTokens()) {
+    if (tokenStream.match(NORMAL)) {
+      /* pass */
+    } else if (fontStyle === undefined && tokenStream.match(STYLE)) {
+      fontStyle = tokenStream.lastValue;
+    } else if (fontWeight === undefined && tokenStream.match(WEIGHT)) {
+      fontWeight = tokenStream.lastValue;
+    } else if (fontVariant === undefined && tokenStream.match(VARIANT)) {
+      fontVariant = [tokenStream.lastValue];
+    } else {
+      break;
     }
 
-    if (accum.parseMode === PARSE_SIZE) {
-      if (accum.size === undefined && node.type === 'number') {
-        accum.size = Number(node.value);
-        accum.parseMode = PARSE_MAYBE_LINE_HEIGHT;
-        return accum;
-      }
+    tokenStream.expect(SPACE);
+    numStyleWeightVariantMatched += 1;
+  }
+
+  const fontSize = tokenStream.expect(LENGTH);
+
+  if (tokenStream.match(SLASH)) {
+    if (tokenStream.match(NUMBER)) {
+      lineHeight = fontSize * tokenStream.lastValue;
+    } else {
+      lineHeight = tokenStream.expect(LENGTH);
     }
+  }
 
-    if (accum.parseMode === PARSE_MAYBE_LINE_HEIGHT) {
-      if (node.type === 'operator' && node.value === '/') {
-        accum.parseMode = PARSE_LINE_HEIGHT;
-        return accum;
-      }
-      accum.parseMode = PARSE_FONT_FAMILY; // fallthrough
+  tokenStream.expect(SPACE);
+
+  if (tokenStream.match(STRING)) {
+    fontFamily = tokenStream.lastValue;
+  } else {
+    fontFamily = tokenStream.expect(WORD);
+    while (tokenStream.hasTokens()) {
+      const nextWord = tokenStream.expect(WORD);
+      fontFamily += ` ${nextWord}`;
     }
+  }
 
-    if (accum.parseMode === PARSE_LINE_HEIGHT) {
-      if (accum.lineHeight === undefined && node.type === 'number') {
-        accum.lineHeight = Number(node.value);
-        accum.parseMode = PARSE_FONT_FAMILY;
-        return accum;
-      }
-    }
+  tokenStream.expectEmpty();
 
-    if (accum.parseMode === PARSE_FONT_FAMILY) {
-      if (accum.family === undefined && node.type === 'string') {
-        accum.family = node.value;
-        accum.parseMode = PARSE_FINISHED;
-        return accum;
-      } else if (node.type === 'word') {
-        accum.family = `${(accum.family || '')} ${node.value}`;
-        return accum;
-      }
-    }
-
-    throw new Error(`Unexpected value: ${node}`);
-  }, {
-    numStyleWeightVariantMatched: 0,
-    parseMode: PARSE_STYLE_WEIGHT_VARIANT,
-    style: undefined,
-    weight: undefined,
-    variant: undefined,
-    size: undefined,
-    lineHeight: undefined,
-    family: undefined,
-  });
-
-  const {
-    style: fontStyle = 'normal',
-    weight: fontWeight = 'normal',
-    variant: fontVariant = [],
-    size: fontSize,
-    family: fontFamily,
-  } = values;
-
-  if (fontSize === undefined || fontFamily === undefined) throw new Error('Unexpected error');
+  if (fontStyle === undefined) fontStyle = defaultFontStyle;
+  if (fontWeight === undefined) fontWeight = defaultFontWeight;
+  if (fontVariant === undefined) fontVariant = defaultFontVariant;
 
   const out = { fontStyle, fontWeight, fontVariant, fontSize, fontFamily };
-  if (values.lineHeight !== undefined) out.lineHeight = values.lineHeight;
+  if (lineHeight !== undefined) out.lineHeight = lineHeight;
 
   return { $merge: out };
 };

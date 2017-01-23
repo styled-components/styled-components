@@ -1,7 +1,8 @@
 /* eslint-disable no-param-reassign */
-const parser = require('postcss-values-parser/lib/index');
+const parse = require('postcss-value-parser');
 const camelizeStyleName = require('fbjs/lib/camelizeStyleName');
 const transforms = require('./transforms');
+const TokenStream = require('./TokenStream');
 
 const transformRawValue = input => (
   (input !== '' && !isNaN(input))
@@ -10,8 +11,9 @@ const transformRawValue = input => (
 );
 
 export const parseProp = (propName, value) => {
-  const ast = parser(value).parse();
-  return transforms[propName](ast);
+  const ast = parse(value).nodes;
+  const tokenStream = new TokenStream(ast);
+  return transforms[propName](tokenStream);
 };
 
 export const getStylesForProperty = (propName, inputValue, allowShorthand) => {

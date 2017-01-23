@@ -14,20 +14,20 @@ it('transforms numbers', () => runTest([
 ], { top: 0, left: 0, right: 0, bottom: 0 }));
 
 it('allows decimal values', () => {
-  expect(parseProp('margin', '0.5').$merge.marginTop).toBe(0.5);
-  expect(parseProp('margin', '1.5').$merge.marginTop).toBe(1.5);
-  expect(parseProp('margin', '10.5').$merge.marginTop).toBe(10.5);
-  expect(parseProp('margin', '100.5').$merge.marginTop).toBe(100.5);
-  expect(parseProp('margin', '-0.5').$merge.marginTop).toBe(-0.5);
-  expect(parseProp('margin', '-1.5').$merge.marginTop).toBe(-1.5);
-  expect(parseProp('margin', '-10.5').$merge.marginTop).toBe(-10.5);
-  expect(parseProp('margin', '-100.5').$merge.marginTop).toBe(-100.5);
-  expect(parseProp('margin', '.5').$merge.marginTop).toBe(0.5);
-  expect(parseProp('margin', '-.5').$merge.marginTop).toBe(-0.5);
+  expect(parseProp('margin', '0.5px').$merge.marginTop).toBe(0.5);
+  expect(parseProp('margin', '1.5px').$merge.marginTop).toBe(1.5);
+  expect(parseProp('margin', '10.5px').$merge.marginTop).toBe(10.5);
+  expect(parseProp('margin', '100.5px').$merge.marginTop).toBe(100.5);
+  expect(parseProp('margin', '-0.5px').$merge.marginTop).toBe(-0.5);
+  expect(parseProp('margin', '-1.5px').$merge.marginTop).toBe(-1.5);
+  expect(parseProp('margin', '-10.5px').$merge.marginTop).toBe(-10.5);
+  expect(parseProp('margin', '-100.5px').$merge.marginTop).toBe(-100.5);
+  expect(parseProp('margin', '.5px').$merge.marginTop).toBe(0.5);
+  expect(parseProp('margin', '-.5px').$merge.marginTop).toBe(-0.5);
 });
 
 it('allows decimal values in transformed values', () => runTest([
-  ['border-radius', '1.5'],
+  ['border-radius', '1.5px'],
 ], {
   borderTopLeftRadius: 1.5,
   borderTopRightRadius: 1.5,
@@ -36,7 +36,7 @@ it('allows decimal values in transformed values', () => runTest([
 }));
 
 it('allows negative values in transformed values', () => runTest([
-  ['border-radius', '-1.5'],
+  ['border-radius', '-1.5px'],
 ], {
   borderTopLeftRadius: -1.5,
   borderTopRightRadius: -1.5,
@@ -81,11 +81,11 @@ it('transforms font variant as an array', () => runTest([
 ], { fontVariant: ['tabular-nums'] }));
 
 it('transforms shadow offsets', () => runTest([
-  ['shadow-offset', ' 10 5'],
+  ['shadow-offset', '10px 5px'],
 ], { shadowOffset: { width: 10, height: 5 } }));
 
 it('transforms text shadow offsets', () => runTest([
-  ['text-shadow-offset', '10 5'],
+  ['text-shadow-offset', '10px 5px'],
 ], { textShadowOffset: { width: 10, height: 5 } }));
 
 it('transforms a single transform value with number', () => runTest([
@@ -108,12 +108,12 @@ it('transforms scale(number) to scale', () => runTest([
   ['transform', 'scale(5)'],
 ], { transform: [{ scale: 5 }] }));
 
-it('transforms translate(number, number) to translateX and translateY', () => runTest([
-  ['transform', 'translate(2, 3)'],
+it('transforms translate(length, length) to translateX and translateY', () => runTest([
+  ['transform', 'translate(2px, 3px)'],
 ], { transform: [{ translateY: 3 }, { translateX: 2 }] }));
 
-it('transforms translate(number) to translateX and translateY', () => runTest([
-  ['transform', 'translate(5)'],
+it('transforms translate(length) to translateX and translateY', () => runTest([
+  ['transform', 'translate(5px)'],
 ], { transform: [{ translateY: 0 }, { translateX: 5 }] }));
 
 it('transforms skew(angle, angle) to skewX and skewY', () => runTest([
@@ -125,19 +125,19 @@ it('transforms skew(angle) to skewX and skewY', () => runTest([
 ], { transform: [{ skewY: '0deg' }, { skewX: '5deg' }] }));
 
 it('transforms border shorthand', () => runTest([
-  ['border', '2 dashed #f00'],
+  ['border', '2px dashed #f00'],
 ], { borderWidth: 2, borderColor: '#f00', borderStyle: 'dashed' }));
 
 it('transforms border shorthand in other order', () => runTest([
-  ['border', '#f00 2 dashed'],
+  ['border', '#f00 2px dashed'],
 ], { borderWidth: 2, borderColor: '#f00', borderStyle: 'dashed' }));
 
 it('transforms border shorthand missing color', () => runTest([
-  ['border', '2 dashed'],
+  ['border', '2px dashed'],
 ], { borderWidth: 2, borderColor: 'black', borderStyle: 'dashed' }));
 
 it('transforms border shorthand missing style', () => runTest([
-  ['border', '2 #f00'],
+  ['border', '2px #f00'],
 ], { borderWidth: 2, borderColor: '#f00', borderStyle: 'solid' }));
 
 it('transforms border shorthand missing width', () => runTest([
@@ -153,32 +153,36 @@ it('transforms border shorthand missing style & width', () => runTest([
 ], { borderWidth: 1, borderColor: '#f00', borderStyle: 'solid' }));
 
 it('transforms border shorthand missing color & style', () => runTest([
-  ['border', '2'],
+  ['border', '2px'],
 ], { borderWidth: 2, borderColor: 'black', borderStyle: 'solid' }));
 
 it('transforms margin shorthands using 4 values', () => runTest([
-  ['margin', '10 20 30 40'],
+  ['margin', '10px 20px 30px 40px'],
 ], { marginTop: 10, marginRight: 20, marginBottom: 30, marginLeft: 40 }));
 
 it('transforms margin shorthands using 3 values', () => runTest([
-  ['margin', '10 20 30'],
+  ['margin', '10px 20px 30px'],
 ], { marginTop: 10, marginRight: 20, marginBottom: 30, marginLeft: 20 }));
 
 it('transforms margin shorthands using 2 values', () => runTest([
-  ['margin', '10 20'],
+  ['margin', '10px 20px'],
 ], { marginTop: 10, marginRight: 20, marginBottom: 10, marginLeft: 20 }));
 
 it('transforms margin shorthands using 1 value', () => runTest([
-  ['margin', '10'],
+  ['margin', '10px'],
 ], { marginTop: 10, marginRight: 10, marginBottom: 10, marginLeft: 10 }));
 
 it('shorthand with 1 value should override previous values', () => runTest([
-  ['margin-top', '2'],
-  ['margin', '1'],
+  ['margin-top', '2px'],
+  ['margin', '1px'],
 ], { marginTop: 1, marginRight: 1, marginBottom: 1, marginLeft: 1 }));
 
 it('transforms flex shorthand with 3 values', () => runTest([
-  ['flex', '1 2 3'],
+  ['flex', '1 2 3px'],
+], { flexGrow: 1, flexShrink: 2, flexBasis: 3 }));
+
+it('transforms flex shorthand with 3 values in reverse order', () => runTest([
+  ['flex', '3px 1 2'],
 ], { flexGrow: 1, flexShrink: 2, flexBasis: 3 }));
 
 it('transforms flex shorthand with 2 values', () => runTest([
@@ -202,7 +206,7 @@ it('transforms flexFlow shorthand missing flexWrap', () => runTest([
 ], { flexDirection: 'column', flexWrap: 'nowrap' }));
 
 it('transforms font', () => runTest([
-  ['font', 'bold italic small-caps 16/18 "Helvetica"'],
+  ['font', 'bold italic small-caps 16px/18px "Helvetica"'],
 ], {
   fontFamily: 'Helvetica',
   fontSize: 16,
@@ -213,7 +217,7 @@ it('transforms font', () => runTest([
 }));
 
 it('transforms font missing font-variant', () => runTest([
-  ['font', 'bold italic 16/18 "Helvetica"'],
+  ['font', 'bold italic 16px/18px "Helvetica"'],
 ], {
   fontFamily: 'Helvetica',
   fontSize: 16,
@@ -224,7 +228,7 @@ it('transforms font missing font-variant', () => runTest([
 }));
 
 it('transforms font missing font-style', () => runTest([
-  ['font', 'bold small-caps 16/18 "Helvetica"'],
+  ['font', 'bold small-caps 16px/18px "Helvetica"'],
 ], {
   fontFamily: 'Helvetica',
   fontSize: 16,
@@ -235,7 +239,7 @@ it('transforms font missing font-style', () => runTest([
 }));
 
 it('transforms font missing font-weight', () => runTest([
-  ['font', 'italic small-caps 16/18 "Helvetica"'],
+  ['font', 'italic small-caps 16px/18px "Helvetica"'],
 ], {
   fontFamily: 'Helvetica',
   fontSize: 16,
@@ -246,7 +250,7 @@ it('transforms font missing font-weight', () => runTest([
 }));
 
 it('transforms font with font-weight normal', () => runTest([
-  ['font', 'normal 16/18 "Helvetica"'],
+  ['font', 'normal 16px/18px "Helvetica"'],
 ], {
   fontFamily: 'Helvetica',
   fontSize: 16,
@@ -257,7 +261,7 @@ it('transforms font with font-weight normal', () => runTest([
 }));
 
 it('transforms font with font-weight and font-style normal', () => runTest([
-  ['font', 'normal normal 16/18 "Helvetica"'],
+  ['font', 'normal normal 16px/18px "Helvetica"'],
 ], {
   fontFamily: 'Helvetica',
   fontSize: 16,
@@ -268,7 +272,7 @@ it('transforms font with font-weight and font-style normal', () => runTest([
 }));
 
 it('transforms font with no font-weight, font-style, and font-variant', () => runTest([
-  ['font', '16/18 "Helvetica"'],
+  ['font', '16px/18px "Helvetica"'],
 ], {
   fontFamily: 'Helvetica',
   fontSize: 16,
@@ -279,13 +283,24 @@ it('transforms font with no font-weight, font-style, and font-variant', () => ru
 }));
 
 it('omits line height if not specified', () => runTest([
-  ['font', '16 "Helvetica"'],
+  ['font', '16px "Helvetica"'],
 ], {
   fontFamily: 'Helvetica',
   fontSize: 16,
   fontWeight: 'normal',
   fontStyle: 'normal',
   fontVariant: [],
+}));
+
+it('allows line height as multiple', () => runTest([
+  ['font', '16px/1.5 "Helvetica"'],
+], {
+  fontFamily: 'Helvetica',
+  fontSize: 16,
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  fontVariant: [],
+  lineHeight: 24,
 }));
 
 it('allows blacklisting shorthands', () => {

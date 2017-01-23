@@ -1,22 +1,24 @@
-const assertUptoNValuesOfType = (n, type, nodes) => {
-  nodes.forEach((value) => {
-    if (value.type !== type) throw new Error(`Expected all values to be of type ${type}`);
-  });
-  if (nodes.length > 4) throw new Error('Expected no more than four values');
-  if (nodes.length === 0) throw new Error('Expected some values');
-};
-module.exports.assertUptoNValuesOfType = assertUptoNValuesOfType;
+const { tokens } = require('../tokenTypes');
+
+const { LENGTH, SPACE } = tokens;
 
 module.exports.directionFactory = ({
-  type = 'number',
+  types = [LENGTH],
   directions = ['Top', 'Right', 'Bottom', 'Left'],
   prefix = '',
   suffix = '',
-}) => (root) => {
-  const { nodes } = root.first;
-  assertUptoNValuesOfType(4, type, nodes);
-  let values = nodes.map(node => node.value);
-  if (type === 'number') values = values.map(Number);
+}) => (tokenStream) => {
+  const values = [];
+
+  values.push(tokenStream.expect(...types));
+
+  while (values.length < 4 && tokenStream.hasTokens()) {
+    tokenStream.expect(SPACE);
+    values.push(tokenStream.expect(...types));
+  }
+
+  tokenStream.expectEmpty();
+
   const [top, right = top, bottom = top, left = right] = values;
 
   const keyFor = n => `${prefix}${directions[n]}${suffix}`;
@@ -31,9 +33,11 @@ module.exports.directionFactory = ({
   return { $merge: output };
 };
 
-module.exports.shadowOffsetFactory = () => (root) => {
-  const { nodes } = root.first;
-  assertUptoNValuesOfType(2, 'number', nodes);
-  const [width, height = width] = nodes.map(node => Number(node.value));
+module.exports.shadowOffsetFactory = () => (tokenStream) => {
+  const width = tokenStream.expect(LENGTH);
+  const height = tokenStream.match(SPACE)
+    ? tokenStream.expect(LENGTH)
+    : width;
+  tokenStream.expectEmpty();
   return { width, height };
 };

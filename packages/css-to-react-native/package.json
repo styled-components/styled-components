@@ -4,9 +4,9 @@
   "description": "Convert CSS text to a React Native stylesheet object",
   "main": "dist/index.js",
   "scripts": {
-    "build-grammar": "nearleyc src/grammar.ne -o src/grammar.js",
-    "build": "npm run build-grammar; babel src --ignore test.js --out-dir dist",
-    "test": "npm run build-grammar; jest",
+    "build": "babel src --ignore test.js --out-dir dist",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "prepublish": "npm run build"
   },
   "repository": {
@@ -35,9 +35,11 @@
     "jest": "^17.0.0"
   },
   "dependencies": {
+    "css-color-keywords": "^1.0.0",
     "css-color-list": "0.0.1",
     "fbjs": "^0.8.5",
     "nearley": "^2.7.7",
+    "postcss-value-parser": "^3.3.0",
     "postcss-values-parser": "^1.0.1"
   }
 }

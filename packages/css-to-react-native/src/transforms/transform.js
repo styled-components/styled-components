@@ -1,37 +1,49 @@
-const { assertUptoNValuesOfType } = require('./util');
+const { tokens } = require('../tokenTypes');
 
-const singleNumber = nodes => Number(nodes[1].value);
-const singleAngle = nodes => String(nodes[1]);
-const xyTransformFactory = transform => (key, valueIfOmitted) => (nodes) => {
-  const [
-    /* paren */,
-    xValue,
-    /* comma */,
-    yValue,
-  ] = nodes;
+const { SPACE, COMMA, LENGTH, NUMBER, ANGLE } = tokens;
 
-  if (xValue.type !== 'number' || (yValue && yValue.type !== 'number')) {
-    throw new Error('Expected values to be numbers');
+const oneOfType = tokenType => (functionStream) => {
+  const value = functionStream.expect(tokenType);
+  functionStream.expectEmpty();
+  return value;
+};
+
+const singleNumber = oneOfType(NUMBER);
+const singleLength = oneOfType(LENGTH);
+const singleAngle = oneOfType(ANGLE);
+const xyTransformFactory = tokenType => (key, valueIfOmitted) => (functionStream) => {
+  const x = functionStream.expect(tokenType);
+
+  let y;
+  if (functionStream.hasTokens()) {
+    functionStream.match(SPACE); // optional space
+    functionStream.expect(COMMA);
+    functionStream.match(SPACE); // optional space
+    y = functionStream.expect(tokenType);
+  } else if (valueIfOmitted !== undefined) {
+    y = valueIfOmitted;
+  } else {
+    // Assumption, if x === y, then we can omit XY
+    // I.e. scale(5) => [{ scale: 5 }] rather than [{ scaleX: 5 }, { scaleY: 5 }]
+    return x;
   }
 
-  const x = transform(xValue);
+  functionStream.expectEmpty();
 
-  if (valueIfOmitted === undefined && yValue === undefined) return x;
-
-  const y = yValue !== undefined ? transform(yValue) : valueIfOmitted;
   return [{ [`${key}Y`]: y }, { [`${key}X`]: x }];
 };
-const xyNumber = xyTransformFactory(node => Number(node.value));
-const xyAngle = xyTransformFactory(node => String(node).trim());
+const xyNumber = xyTransformFactory(NUMBER);
+const xyLength = xyTransformFactory(LENGTH);
+const xyAngle = xyTransformFactory(ANGLE);
 
 const partTransforms = {
   perspective: singleNumber,
   scale: xyNumber('scale'),
   scaleX: singleNumber,
   scaleY: singleNumber,
-  translate: xyNumber('translate', 0),
-  translateX: singleNumber,
-  translateY: singleNumber,
+  translate: xyLength('translate', 0),
+  translateX: singleLength,
+  translateY: singleLength,
   rotate: singleAngle,
   rotateX: singleAngle,
   rotateY: singleAngle,
@@ -41,20 +53,23 @@ const partTransforms = {
   skew: xyAngle('skew', '0deg'),
 };
 
-module.exports = (root) => {
-  const { nodes } = root.first;
-  assertUptoNValuesOfType(Infinity, 'func', nodes);
+module.exports = (tokenStream) => {
+  let transforms = [];
 
-  const transforms = nodes.reduce((accum, node) => {
-    if (!(node.value in partTransforms)) throw new Error(`Unrecognised transform: ${node.value}`);
+  let didParseFirst = false;
+  while (tokenStream.hasTokens()) {
+    if (didParseFirst) tokenStream.expect(SPACE);
 
-    let transformedValues = partTransforms[node.value](node.nodes);
+    const functionStream = tokenStream.expectFunction();
+    const transformName = functionStream.parent.value;
+    let transformedValues = partTransforms[transformName](functionStream);
     if (!Array.isArray(transformedValues)) {
-      transformedValues = [{ [node.value]: transformedValues }];
+      transformedValues = [{ [transformName]: transformedValues }];
     }
+    transforms = transformedValues.concat(transforms);
 
-    return transformedValues.concat(accum);
-  }, []);
+    didParseFirst = true;
+  }
 
   return transforms;
 };
