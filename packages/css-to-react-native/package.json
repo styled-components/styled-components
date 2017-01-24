@@ -36,10 +36,7 @@
   },
   "dependencies": {
     "css-color-keywords": "^1.0.0",
-    "css-color-list": "0.0.1",
     "fbjs": "^0.8.5",
-    "nearley": "^2.7.7",
-    "postcss-value-parser": "^3.3.0",
-    "postcss-values-parser": "^1.0.1"
+    "postcss-value-parser": "^3.3.0"
   }
 }
