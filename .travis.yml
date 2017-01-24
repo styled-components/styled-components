@@ -8,7 +8,7 @@ script:
   - yarn --version
   - yarn run danger run -- --verbose
   - yarn run flow
-  - yarn run lint && npm run test
+  - yarn run lint && yarn run typescript && yarn run tslint && yarn run test
 notifications:
   email:
     on_failure: change
