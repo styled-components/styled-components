@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+## [v1.4.0] - 2017-01-25
+
+### Added
+
+- TypeScript support, thanks to [@patrick91](https://github.com/patrick91). (see [#152](https://github.com/styled-components/styled-components/pull/152))
+
 ## [v1.3.1] - 2017-01-18
 
 ### Changed
@@ -167,8 +173,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.3.1...master
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.3.0...v1.3.1
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.0...master
+[v1.4.0]: https://github.com/styled-components/styled-components/compare/v1.3.1...v1.4.0
+[v1.3.1]: https://github.com/styled-components/styled-components/compare/v1.3.0...v1.3.1
 [v1.3.0]: https://github.com/styled-components/styled-components/compare/v1.2.1...v1.3.0
 [v1.2.1]: https://github.com/styled-components/styled-components/compare/v1.2.0...v1.2.1
 [v1.2.0]: https://github.com/styled-components/styled-components/compare/v1.1.3...v1.2.0
