@@ -20,7 +20,8 @@
     "lint": "eslint src",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
-    "dev": "node example/devServer.js"
+    "dev": "node example/devServer.js",
+    "example:ssr": "babel-node example/ssr"
   },
   "repository": {
     "type": "git",
