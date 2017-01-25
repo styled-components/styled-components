@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file. If a contri
 ### Added
 
 ### Changed
+- Fix breaking native require in 1.4.0
 
 ## [v1.4.0] - 2017-01-25
 
