@@ -61,6 +61,24 @@ it('allows percent values in transformed values', () => runTest([
   marginLeft: '10%',
 }));
 
+it('allows color values in transformed border-color values', () => runTest([
+  ['border-color', 'red'],
+], {
+  borderTopColor: 'red',
+  borderRightColor: 'red',
+  borderBottomColor: 'red',
+  borderLeftColor: 'red',
+}));
+
+it('allows omitting units for 0', () => runTest([
+  ['margin', '10px 0'],
+], {
+  marginTop: 10,
+  marginRight: 0,
+  marginBottom: 10,
+  marginLeft: 0,
+}));
+
 it('transforms strings', () => runTest([
   ['color', 'red'],
 ], { color: 'red' }));

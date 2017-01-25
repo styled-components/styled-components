@@ -22,7 +22,11 @@ const border = anyOrderFactory({
     default: 'solid',
   },
 });
-const borderColor = directionFactory({ type: 'word', prefix: 'border', suffix: 'Color' });
+const borderColor = directionFactory({
+  types: [WORD],
+  prefix: 'border',
+  suffix: 'Color',
+});
 const borderRadius = directionFactory({
   directions: ['TopRight', 'BottomRight', 'BottomLeft', 'TopLeft'],
   prefix: 'border',
