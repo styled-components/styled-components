@@ -39,7 +39,7 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "buffer": "^5.0.2",
-    "css-to-react-native": "^1.0.6",
+    "css-to-react-native": "^2.0.1",
     "fbjs": "^0.8.7",
     "glamor": "^2.20.12",
     "inline-style-prefixer": "^2.0.5",
