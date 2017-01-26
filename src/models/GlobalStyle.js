@@ -4,7 +4,8 @@ import postcssNested from '../vendor/postcss-nested'
 
 import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
-import styleSheet from './StyleSheet'
+
+import styleSheet from './GlobalStyleSheet'
 
 export default class ComponentStyle {
   rules: RuleSet;
