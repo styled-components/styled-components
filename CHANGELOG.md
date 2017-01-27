@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+## [v1.4.1] - 2017-01-27
+
+### Changed
+
+- Fix ReactNative throwing an error, thanks to [@lukehedger](https://github.com/lukehedger). (see [#414](https://github.com/styled-components/styled-components/pull/414))
+
 ## [v1.4.0] - 2017-01-25
 
 ### Added
@@ -173,7 +179,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.0...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.1...master
+[v1.4.1]: https://github.com/styled-components/styled-components/compare/v1.4.0...v1.4.1
 [v1.4.0]: https://github.com/styled-components/styled-components/compare/v1.3.1...v1.4.0
 [v1.3.1]: https://github.com/styled-components/styled-components/compare/v1.3.0...v1.3.1
 [v1.3.0]: https://github.com/styled-components/styled-components/compare/v1.2.1...v1.3.0
