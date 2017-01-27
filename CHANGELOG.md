@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+- Global styles (keyframes and injectGlobal) are now injected into a separate stylesheet, thanks to [xcoderzach](https://github.com/xcoderzach). (see [#415](https://github.com/styled-components/styled-components/pull/415))
+
 ## [v1.4.0] - 2017-01-25
 
 ### Added
