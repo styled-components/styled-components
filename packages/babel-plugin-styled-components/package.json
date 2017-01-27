@@ -31,5 +31,8 @@
     "server-side rendering",
     "ssr",
     "displayName"
-  ]
+  ],
+  "dependencies": {
+    "stylis": "^1.0.0"
+  }
 }
