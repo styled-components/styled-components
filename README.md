@@ -478,6 +478,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [`Dirtyredz.com`](https://github.com/dirtyredz/dirtyredz.com): David McClain | Dirtyredz - About me, Latest projects and Contact ([Website](http://dirtyredz.com))
 - [react-adminlte-dash](https://github.com/zksailor534/react-adminlte-dash): AdminLTE dashboard components in React ([demo](http://zksailor534.github.io/react-adminlte-dash))
 - [Reactiflux](https://www.reactiflux.com): Reactiflux community home build with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/reactiflux/reactiflux.com)).
+- [react-styled-flexboxgrid](https://github.com/LoicMahieu/react-styled-flexboxgrid): Grid system based on Flexbox ([demo](https://loicmahieu.github.io/react-styled-flexboxgrid/demo/index.html))
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
