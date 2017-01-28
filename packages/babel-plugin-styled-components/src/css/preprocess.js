@@ -57,7 +57,7 @@ export const cssWithPlaceholdersToArr = (css, interpolationNodes) => {
 // Convert CSS strings back to babel string literals
 // and turn arrays back into babel array expressions
 export const convertOutputToBabelTypes = arrOfCSSArr => t.arrayExpression(
-  result.map(cssArr => t.arrayExpression(
+  arrOfCSSArr.map(cssArr => t.arrayExpression(
     cssArr.map(x => {
       typeof x === 'string' ? t.stringLiteral(x) : x
     })
@@ -72,7 +72,7 @@ export const convertOutputToBabelTypes = arrOfCSSArr => t.arrayExpression(
  *   [ ':hover { color: blue; background:', props => props.background, '; }' ]
  * ]
  */
-const preprocess = (cssArr, ...interpolationNodes) => {
+export const preprocessRaw = (cssArr, interpolationNodes) => {
   // Test whether the input is using reserved strings
   if (
     cssArr.some(x => (
@@ -99,4 +99,8 @@ const preprocess = (cssArr, ...interpolationNodes) => {
   return convertOutputToBabelTypes(classnameSplit)
 }
 
-export default preprocess
+export default (cssArr, interpolationNodes) => (
+  convertOutputToBabelTypes(
+    preprocessRaw(cssArr, interpolationNodes)
+  )
+)
