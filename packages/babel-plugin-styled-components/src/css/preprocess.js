@@ -15,8 +15,26 @@ const temporaryClassname = '__TEMPORARY_CLASSNAME__'
 // Checks whether the CSS already contains something that matches our placeholders
 const containsPlaceholders = css => !!css.match(placeholderRegex)
 
+// Assembles CSS partials and replaces interpolations with placeholders
+export const assembleAndInterleavePlaceholders = cssArr => {
+  let css = cssArr[0]
+
+  for (let i = 1; i < cssArr.length; i++) {
+    const interpolationIndex = i - 1
+    const placeholder = makePlaceholder(interpolationIndex)
+    const cssPartial = cssArr[i]
+
+    // Append a semicolon to all interpolations except the onces that are for selectors
+    const suffix = !startsWithCurlyBrace(cssPartial) ? ';' : ''
+
+    css += placeholder + suffix + cssPartial
+  }
+
+  return css
+}
+
 // Splits the css into an array with interleaved interpolation nodes
-const cssWithPlaceholdersToArr = (css, interpolationNodes) => {
+export const cssWithPlaceholdersToArr = (css, interpolationNodes) => {
   const placeholderSplit = css.trim().split(placeholderRegex)
   const res = []
 
@@ -44,11 +62,10 @@ const cssWithPlaceholdersToArr = (css, interpolationNodes) => {
  * ]
  */
 const preprocess = (cssArr, ...interpolationNodes) => {
-  let css = cssArr[0]
 
   // Test whether the input is using reserved strings
   if (
-    css.some(x => (
+    cssArr.some(x => (
       containsPlaceholders(x) ||
       x.includes(temporaryClassname)
     ))
@@ -58,17 +75,7 @@ const preprocess = (cssArr, ...interpolationNodes) => {
     )
   }
 
-  // Assemble CSS partials and replace interpolations with placeholders
-  for (let i = 1; i < cssArr.length) {
-    const interpolationIndex = i - 1
-    const placeholder = makePlaceholder(interpolationIndex)
-    const cssPartial = cssArr[i]
-
-    // Append a semicolon to all interpolations except the onces that are for selectors
-    const suffix = !startsWithCurlyBrace(cssPartial) ? ';' : ''
-
-    css += placeholder + suffix + cssPartial
-  }
+  const css = assembleAndInterleavePlaceholders(cssArr)
 
   // Flatten CSS using stylis and split it by our temporary classname
   const processedCSS = stylis(temporaryClassname, css)
