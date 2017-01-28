@@ -2,7 +2,7 @@ import * as t from 'babel-types'
 import stylis from 'stylis'
 
 // Matches strings that contain an opening curly brace on the same line
-const startsWithCurlyBrace = str => /^([^\n\r]+?)?\{/.test(str)
+const startsWithCurlyBrace = str => /^([^\n\r\}:;]+?)?\{/.test(str)
 
 // Generates a placeholder from an index
 const makePlaceholder = index => `__PLACEHOLDER_${index}__`
