@@ -35,7 +35,7 @@ export const assembleAndInterleavePlaceholders = cssArr => {
 
 // Splits the css into an array with interleaved interpolation nodes
 export const cssWithPlaceholdersToArr = (css, interpolationNodes) => {
-  const placeholderSplit = css.trim().split(placeholderRegex)
+  const placeholderSplit = css.split(placeholderRegex)
   const res = []
 
   for (let i = 0; i < placeholderSplit.length; i++) {
@@ -82,6 +82,7 @@ const preprocess = (cssArr, ...interpolationNodes) => {
 
   const classnameSplit = processedCSS
     .split(temporaryClassname)
+    .map(x => x.trim())
     .filter(Boolean)
     .map(str => cssWithPlaceholdersToArr(css, interpolationNodes))
 
