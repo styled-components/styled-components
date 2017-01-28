@@ -2,6 +2,7 @@
 import expect from 'expect'
 
 import _keyframes from '../keyframes'
+import styleSheet from '../../models/GlobalStyleSheet'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
 
 /**
@@ -12,7 +13,7 @@ const keyframes = _keyframes(() => `keyframe_${index++}`)
 
 describe('keyframes', () => {
   beforeEach(() => {
-    resetStyled()
+    resetStyled(styleSheet)
     index = 0
   })
 
@@ -47,6 +48,6 @@ describe('keyframes', () => {
           opacity: 1;
         }
       }
-    `)
+    `, { styleSheet })
   })
 })

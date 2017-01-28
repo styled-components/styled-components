@@ -1,7 +1,7 @@
 // @flow
 
-/* Wraps glamor's stylesheet and exports a singleton for the rest
-*  of the app to use. */
+/* Wraps glamor's stylesheet and exports a singleton for styled components
+to use. */
 
 import { StyleSheet } from '../vendor/glamor/sheet'
 
