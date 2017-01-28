@@ -1,3 +1,4 @@
+import * as t from 'babel-types'
 import stylis from 'stylis'
 
 // Matches strings that contain an opening curly brace on the same line
@@ -53,6 +54,16 @@ export const cssWithPlaceholdersToArr = (css, interpolationNodes) => {
   return res
 }
 
+// Convert CSS strings back to babel string literals
+// and turn arrays back into babel array expressions
+export const convertOutputToBabelTypes = arrOfCSSArr => t.arrayExpression(
+  result.map(cssArr => t.arrayExpression(
+    cssArr.map(x => {
+      typeof x === 'string' ? t.stringLiteral(x) : x
+    })
+  ))
+)
+
 /*
  * Flattens and splits CSS into an array where classname should be injected, and maps these
  * partials to an array with interleaves interpolation nodes.
@@ -62,7 +73,6 @@ export const cssWithPlaceholdersToArr = (css, interpolationNodes) => {
  * ]
  */
 const preprocess = (cssArr, ...interpolationNodes) => {
-
   // Test whether the input is using reserved strings
   if (
     cssArr.some(x => (
@@ -86,7 +96,7 @@ const preprocess = (cssArr, ...interpolationNodes) => {
     .filter(Boolean)
     .map(str => cssWithPlaceholdersToArr(css, interpolationNodes))
 
-  return classnameSplit
+  return convertOutputToBabelTypes(classnameSplit)
 }
 
 export default preprocess
