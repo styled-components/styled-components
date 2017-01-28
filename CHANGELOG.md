@@ -1,4 +1,4 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. If a contribution does not have a mention next to it, [@geelen](https://github.com/geelen) or [@mxstbr](https://github.com/mxstbr) did it.
 
@@ -10,7 +10,11 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
-- Global styles (keyframes and injectGlobal) are now injected into a separate stylesheet, thanks to [xcoderzach](https://github.com/xcoderzach). (see [#415](https://github.com/styled-components/styled-components/pull/415))
+## [v1.4.2] - 2017-01-28
+
+### Changed
+
+- Fix performance issue when using `@font-face` by creating a separate `style` tag for global styles, thanks to [@xcoderzach](https://github.com/xcoderzach). (see [#415](https://github.com/styled-components/styled-components/pull/415))
 
 ## [v1.4.1] - 2017-01-27
 
@@ -181,7 +185,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.1...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.2...master
+[v1.4.2]: https://github.com/styled-components/styled-components/compare/v1.4.1...v1.4.2
 [v1.4.1]: https://github.com/styled-components/styled-components/compare/v1.4.0...v1.4.1
 [v1.4.0]: https://github.com/styled-components/styled-components/compare/v1.3.1...v1.4.0
 [v1.3.1]: https://github.com/styled-components/styled-components/compare/v1.3.0...v1.3.1
