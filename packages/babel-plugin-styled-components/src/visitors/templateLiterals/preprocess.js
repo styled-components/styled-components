@@ -1,6 +1,6 @@
 import * as t from 'babel-types'
-import { isStyled, isHelper } from '../utils/detectors'
-import preprocess from '../css/preprocess'
+import { isStyled, isHelper } from '../../utils/detectors'
+import preprocess from '../../css/preprocess'
 
 export default (path, state) => {
   if (isStyled(path.node.tag, state)) {

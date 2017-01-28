@@ -1,5 +1,5 @@
 import * as t from 'babel-types'
-import { isStyled, isHelper } from '../utils/detectors'
+import { isStyled, isHelper } from '../../utils/detectors'
 
 export default (path, state) => {
   if (
