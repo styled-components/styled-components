@@ -6,7 +6,8 @@
     ["../../../src", {
       "ssr": false,
       "displayName": false,
-      "transpileTemplateLiterals": true
+      "transpileTemplateLiterals": true,
+      "preprocess": false
     }]
   ]
 }

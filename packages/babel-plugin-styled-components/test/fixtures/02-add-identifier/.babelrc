@@ -3,7 +3,8 @@
     ["../../../src", {
       "displayName": false,
       "fileName": false,
-      "transpileTemplateLiterals": false
+      "transpileTemplateLiterals": false,
+      "preprocess": false
     }]
   ]
 }
