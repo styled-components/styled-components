@@ -1,5 +1,8 @@
 import * as t from 'babel-types'
-import { useMinify } from '../utils/options'
+import {
+  useMinify,
+  useCSSPreprocessor
+} from '../utils/options'
 import { isStyled, isHelper } from '../utils/detectors'
 
 const minify = (linebreak) => {
@@ -13,7 +16,14 @@ const minifyRaw = minify('(?:\\\\r|\\\\n|\\r|\\n)')
 const minifyCooked = minify('[\\r\\n]')
 
 export default (path, state) => {
-  if (useMinify(state) && (isStyled(path.node.tag, state) || isHelper(path.node.tag, state))) {
+  if (
+    useMinify(state) &&
+    !useCSSPreprocessor(state) &&
+    (
+      isStyled(path.node.tag, state) ||
+      isHelper(path.node.tag, state)
+    )
+  ) {
     const templateLiteral = path.node.quasi
     for (let element of templateLiteral.quasis) {
       element.value.raw = minifyRaw(element.value.raw)
