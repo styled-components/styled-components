@@ -96,7 +96,7 @@ export const preprocessRaw = (cssArr, interpolationNodes) => {
     .filter(Boolean)
     .map(str => cssWithPlaceholdersToArr(css, interpolationNodes))
 
-  return convertOutputToBabelTypes(classnameSplit)
+  return classnameSplit
 }
 
 export default (cssArr, interpolationNodes) => (
