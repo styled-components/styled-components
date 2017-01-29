@@ -1,7 +1,7 @@
 import {
   assembleAndInterleavePlaceholders,
   cssWithPlaceholdersToArr
-} from '../../src/css/preprocess'
+} from '../../src/css/preprocessUtils'
 
 describe('css preprocessing', () => {
   describe('assembleAndInterleavePlaceholders', () => {

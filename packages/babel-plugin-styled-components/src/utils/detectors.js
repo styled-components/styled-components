@@ -25,9 +25,18 @@ export const isStyled = (tag, state) => {
   }
 }
 
-export const isHelper = (tag, state) => {
-  return t.isIdentifier(tag) && (
-    tag.name === importLocalName('css', state) ||
-    tag.name === importLocalName('keyframes', state)
-  )
-}
+export const isCSSHelper = (tag, state) => (
+  t.isIdentifier(tag) &&
+  tag.name === importLocalName('css', state)
+)
+
+export const isKeyframesHelper = (tag, state) => (
+  t.isIdentifier(tag) &&
+  tag.name === importLocalName('keyframes', state)
+)
+
+export const isHelper = (tag, state) => (
+  isCSSHelper(tag, state) ||
+  isKeyframesHelper(tag, state)
+)
+

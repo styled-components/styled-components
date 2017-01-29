@@ -12,8 +12,8 @@ export default (cssArr, interpolationNodes) => (
     preprocessHelper(
       cssArr,
       interpolationNodes,
-      x => x,
-      temporaryClassname
+      x => `@keyframes ${temporaryClassname} { ${x} }`,
+      '' // no namespace
     )
   )
 )
