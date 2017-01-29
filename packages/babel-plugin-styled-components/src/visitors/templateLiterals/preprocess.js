@@ -8,6 +8,6 @@ export default (path, state) => {
     const values = quasis.map(quasi => quasi.value.cooked)
     const result = preprocess(values, expressions)
 
-    path.replaceWith(t.callExpression(callee, result))
+    path.replaceWith(t.callExpression(callee, [ result ]))
   }
 }

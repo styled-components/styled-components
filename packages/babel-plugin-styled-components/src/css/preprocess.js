@@ -58,9 +58,11 @@ export const cssWithPlaceholdersToArr = (css, interpolationNodes) => {
 // and turn arrays back into babel array expressions
 export const convertOutputToBabelTypes = arrOfCSSArr => t.arrayExpression(
   arrOfCSSArr.map(cssArr => t.arrayExpression(
-    cssArr.map(x => {
-      typeof x === 'string' ? t.stringLiteral(x) : x
-    })
+    cssArr.map(x => (
+      typeof x === 'string' ?
+        t.stringLiteral(x) :
+        x
+    ))
   ))
 )
 
@@ -94,7 +96,7 @@ export const preprocessRaw = (cssArr, interpolationNodes) => {
     .split(temporaryClassname)
     .map(x => x.trim())
     .filter(Boolean)
-    .map(str => cssWithPlaceholdersToArr(css, interpolationNodes))
+    .map(str => cssWithPlaceholdersToArr(str, interpolationNodes))
 
   return classnameSplit
 }
