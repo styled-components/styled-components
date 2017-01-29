@@ -7,7 +7,7 @@ function trim(str) {
   return str.replace(/^\s+|\s+$/, '');
 }
 
-describe('babel-plugin-styled-components', () => {
+describe('fixtures', () => {
   const fixturesDir = path.join(__dirname, 'fixtures')
   fs.readdirSync(fixturesDir).sort().map((caseName) => {
     if (caseName === '.DS_Store') return
