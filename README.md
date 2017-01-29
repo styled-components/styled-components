@@ -283,9 +283,11 @@ const StyledText = styled.Text`
 
 class MyReactNativeComponent extends React.Component {
   render() {
-    <StyledView>
-      <StyledText>Hello World!</StyledText>
-    </StyledView>
+    return (
+      <StyledView>
+        <StyledText>Hello World!</StyledText>
+      </StyledView>
+    )
   }
 }
 ```
