@@ -3,180 +3,205 @@ import { StatelessComponent, ComponentClass } from "react";
 
 type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 
-export interface ThemeProps {
-  theme: any;
+export interface ThemeProps<T> {
+  theme: T;
 }
 
-export type StyledProps<P> = P & ThemeProps;
-export type OuterStyledProps<P> = P & {
-  theme?: Object;
+export type ThemedStyledProps<P, T> = P & ThemeProps<T>;
+export type StyledProps<P> = ThemedStyledProps<P, any>;
+
+export type ThemedOuterStyledProps<P, T> = P & {
+  theme?: T;
   innerRef?: (instance: any) => void;
 };
+export type OuterStyledProps<P> = ThemedOuterStyledProps<P, any>;
 
 export type Interpolation<P> = FlattenInterpolation<P> | ReadonlyArray<FlattenInterpolation<P> | ReadonlyArray<FlattenInterpolation<P>>>;
 export type FlattenInterpolation<P> = InterpolationValue | InterpolationFunction<P>;
 export type InterpolationValue = string | number;
 export type SimpleInterpolation = InterpolationValue | ReadonlyArray<InterpolationValue | ReadonlyArray<InterpolationValue>>;
 export interface InterpolationFunction<P> {
-  (props: StyledProps<P>): Interpolation<P>;
+  (props: P): Interpolation<P>;
 }
 
-export interface StyledFunction<P> {
-  (strings: TemplateStringsArray, ...interpolations: Interpolation<P>[]): ComponentClass<OuterStyledProps<P>>;
-  <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<P & U>[]): ComponentClass<OuterStyledProps<P & U>>;
+export interface ThemedStyledFunction<P, T> {
+  (strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): ComponentClass<ThemedOuterStyledProps<P, T>>;
+  <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): ComponentClass<ThemedOuterStyledProps<P & U, T>>;
 }
+export type StyledFunction<P> = ThemedStyledFunction<P, any>;
 
-export type HtmlStyledFunction<E> = StyledFunction<React.HTMLProps<E>>;
-export type SvgStyledFunction<E extends SVGElement> = StyledFunction<React.SVGAttributes<E>>;
+export type ThemedHtmlStyledFunction<E, T> = ThemedStyledFunction<React.HTMLProps<E>, T>;
+export type HtmlStyledFunction<E> = ThemedHtmlStyledFunction<E, any>;
 
-export interface BaseStyledInterface {
-  <P>(component: Component<P>): StyledFunction<P>;
+export type ThemedSvgStyledFunction<E extends SVGElement, T> = ThemedStyledFunction<React.SVGAttributes<E>, T>;
+export type SvgStyledFunction<E extends SVGElement> = ThemedSvgStyledFunction<E, any>;
+
+export interface ThemedBaseStyledInterface<T> {
+  <P>(component: Component<P>): ThemedStyledFunction<P, T>;
 }
+export type BaseStyledInterface = ThemedBaseStyledInterface<any>;
 
-export interface StyledInterface extends BaseStyledInterface {
-  a: HtmlStyledFunction<HTMLAnchorElement>;
-  abbr: HtmlStyledFunction<HTMLElement>;
-  address: HtmlStyledFunction<HTMLElement>;
-  area: HtmlStyledFunction<HTMLAreaElement>;
-  article: HtmlStyledFunction<HTMLElement>;
-  aside: HtmlStyledFunction<HTMLElement>;
-  audio: HtmlStyledFunction<HTMLAudioElement>;
-  b: HtmlStyledFunction<HTMLElement>;
-  base: HtmlStyledFunction<HTMLBaseElement>;
-  bdi: HtmlStyledFunction<HTMLElement>;
-  bdo: HtmlStyledFunction<HTMLElement>;
-  big: HtmlStyledFunction<HTMLElement>;
-  blockquote: HtmlStyledFunction<HTMLElement>;
-  body: HtmlStyledFunction<HTMLBodyElement>;
-  br: HtmlStyledFunction<HTMLBRElement>;
-  button: HtmlStyledFunction<HTMLButtonElement>;
-  canvas: HtmlStyledFunction<HTMLCanvasElement>;
-  caption: HtmlStyledFunction<HTMLElement>;
-  cite: HtmlStyledFunction<HTMLElement>;
-  code: HtmlStyledFunction<HTMLElement>;
-  col: HtmlStyledFunction<HTMLTableColElement>;
-  colgroup: HtmlStyledFunction<HTMLTableColElement>;
-  data: HtmlStyledFunction<HTMLElement>;
-  datalist: HtmlStyledFunction<HTMLDataListElement>;
-  dd: HtmlStyledFunction<HTMLElement>;
-  del: HtmlStyledFunction<HTMLElement>;
-  details: HtmlStyledFunction<HTMLElement>;
-  dfn: HtmlStyledFunction<HTMLElement>;
-  dialog: HtmlStyledFunction<HTMLElement>;
-  div: HtmlStyledFunction<HTMLDivElement>;
-  dl: HtmlStyledFunction<HTMLDListElement>;
-  dt: HtmlStyledFunction<HTMLElement>;
-  em: HtmlStyledFunction<HTMLElement>;
-  embed: HtmlStyledFunction<HTMLEmbedElement>;
-  fieldset: HtmlStyledFunction<HTMLFieldSetElement>;
-  figcaption: HtmlStyledFunction<HTMLElement>;
-  figure: HtmlStyledFunction<HTMLElement>;
-  footer: HtmlStyledFunction<HTMLElement>;
-  form: HtmlStyledFunction<HTMLFormElement>;
-  h1: HtmlStyledFunction<HTMLHeadingElement>;
-  h2: HtmlStyledFunction<HTMLHeadingElement>;
-  h3: HtmlStyledFunction<HTMLHeadingElement>;
-  h4: HtmlStyledFunction<HTMLHeadingElement>;
-  h5: HtmlStyledFunction<HTMLHeadingElement>;
-  h6: HtmlStyledFunction<HTMLHeadingElement>;
-  head: HtmlStyledFunction<HTMLHeadElement>;
-  header: HtmlStyledFunction<HTMLElement>;
-  hgroup: HtmlStyledFunction<HTMLElement>;
-  hr: HtmlStyledFunction<HTMLHRElement>;
-  html: HtmlStyledFunction<HTMLHtmlElement>;
-  i: HtmlStyledFunction<HTMLElement>;
-  iframe: HtmlStyledFunction<HTMLIFrameElement>;
-  img: HtmlStyledFunction<HTMLImageElement>;
-  input: HtmlStyledFunction<HTMLInputElement>;
-  ins: HtmlStyledFunction<HTMLModElement>;
-  kbd: HtmlStyledFunction<HTMLElement>;
-  keygen: HtmlStyledFunction<HTMLElement>;
-  label: HtmlStyledFunction<HTMLLabelElement>;
-  legend: HtmlStyledFunction<HTMLLegendElement>;
-  li: HtmlStyledFunction<HTMLLIElement>;
-  link: HtmlStyledFunction<HTMLLinkElement>;
-  main: HtmlStyledFunction<HTMLElement>;
-  map: HtmlStyledFunction<HTMLMapElement>;
-  mark: HtmlStyledFunction<HTMLElement>;
-  menu: HtmlStyledFunction<HTMLElement>;
-  menuitem: HtmlStyledFunction<HTMLElement>;
-  meta: HtmlStyledFunction<HTMLMetaElement>;
-  meter: HtmlStyledFunction<HTMLElement>;
-  nav: HtmlStyledFunction<HTMLElement>;
-  noscript: HtmlStyledFunction<HTMLElement>;
-  object: HtmlStyledFunction<HTMLObjectElement>;
-  ol: HtmlStyledFunction<HTMLOListElement>;
-  optgroup: HtmlStyledFunction<HTMLOptGroupElement>;
-  option: HtmlStyledFunction<HTMLOptionElement>;
-  output: HtmlStyledFunction<HTMLElement>;
-  p: HtmlStyledFunction<HTMLParagraphElement>;
-  param: HtmlStyledFunction<HTMLParamElement>;
-  picture: HtmlStyledFunction<HTMLElement>;
-  pre: HtmlStyledFunction<HTMLPreElement>;
-  progress: HtmlStyledFunction<HTMLProgressElement>;
-  q: HtmlStyledFunction<HTMLQuoteElement>;
-  rp: HtmlStyledFunction<HTMLElement>;
-  rt: HtmlStyledFunction<HTMLElement>;
-  ruby: HtmlStyledFunction<HTMLElement>;
-  s: HtmlStyledFunction<HTMLElement>;
-  samp: HtmlStyledFunction<HTMLElement>;
-  script: HtmlStyledFunction<HTMLElement>;
-  section: HtmlStyledFunction<HTMLElement>;
-  select: HtmlStyledFunction<HTMLSelectElement>;
-  small: HtmlStyledFunction<HTMLElement>;
-  source: HtmlStyledFunction<HTMLSourceElement>;
-  span: HtmlStyledFunction<HTMLSpanElement>;
-  strong: HtmlStyledFunction<HTMLElement>;
-  style: HtmlStyledFunction<HTMLStyleElement>;
-  sub: HtmlStyledFunction<HTMLElement>;
-  summary: HtmlStyledFunction<HTMLElement>;
-  sup: HtmlStyledFunction<HTMLElement>;
-  table: HtmlStyledFunction<HTMLTableElement>;
-  tbody: HtmlStyledFunction<HTMLTableSectionElement>;
-  td: HtmlStyledFunction<HTMLTableDataCellElement>;
-  textarea: HtmlStyledFunction<HTMLTextAreaElement>;
-  tfoot: HtmlStyledFunction<HTMLTableSectionElement>;
-  th: HtmlStyledFunction<HTMLTableHeaderCellElement>;
-  thead: HtmlStyledFunction<HTMLTableSectionElement>;
-  time: HtmlStyledFunction<HTMLElement>;
-  title: HtmlStyledFunction<HTMLTitleElement>;
-  tr: HtmlStyledFunction<HTMLTableRowElement>;
-  track: HtmlStyledFunction<HTMLTrackElement>;
-  u: HtmlStyledFunction<HTMLElement>;
-  ul: HtmlStyledFunction<HTMLUListElement>;
-  "var": HtmlStyledFunction<HTMLElement>;
-  video: HtmlStyledFunction<HTMLVideoElement>;
-  wbr: HtmlStyledFunction<HTMLElement>;
+export type StyledInterface = ThemedStyledInterface<any>;
+export interface ThemedStyledInterface<T> extends BaseStyledInterface {
+  a: ThemedHtmlStyledFunction<HTMLAnchorElement, T>;
+  abbr: ThemedHtmlStyledFunction<HTMLElement, T>;
+  address: ThemedHtmlStyledFunction<HTMLElement, T>;
+  area: ThemedHtmlStyledFunction<HTMLAreaElement, T>;
+  article: ThemedHtmlStyledFunction<HTMLElement, T>;
+  aside: ThemedHtmlStyledFunction<HTMLElement, T>;
+  audio: ThemedHtmlStyledFunction<HTMLAudioElement, T>;
+  b: ThemedHtmlStyledFunction<HTMLElement, T>;
+  base: ThemedHtmlStyledFunction<HTMLBaseElement, T>;
+  bdi: ThemedHtmlStyledFunction<HTMLElement, T>;
+  bdo: ThemedHtmlStyledFunction<HTMLElement, T>;
+  big: ThemedHtmlStyledFunction<HTMLElement, T>;
+  blockquote: ThemedHtmlStyledFunction<HTMLElement, T>;
+  body: ThemedHtmlStyledFunction<HTMLBodyElement, T>;
+  br: ThemedHtmlStyledFunction<HTMLBRElement, T>;
+  button: ThemedHtmlStyledFunction<HTMLButtonElement, T>;
+  canvas: ThemedHtmlStyledFunction<HTMLCanvasElement, T>;
+  caption: ThemedHtmlStyledFunction<HTMLElement, T>;
+  cite: ThemedHtmlStyledFunction<HTMLElement, T>;
+  code: ThemedHtmlStyledFunction<HTMLElement, T>;
+  col: ThemedHtmlStyledFunction<HTMLTableColElement, T>;
+  colgroup: ThemedHtmlStyledFunction<HTMLTableColElement, T>;
+  data: ThemedHtmlStyledFunction<HTMLElement, T>;
+  datalist: ThemedHtmlStyledFunction<HTMLDataListElement, T>;
+  dd: ThemedHtmlStyledFunction<HTMLElement, T>;
+  del: ThemedHtmlStyledFunction<HTMLElement, T>;
+  details: ThemedHtmlStyledFunction<HTMLElement, T>;
+  dfn: ThemedHtmlStyledFunction<HTMLElement, T>;
+  dialog: ThemedHtmlStyledFunction<HTMLElement, T>;
+  div: ThemedHtmlStyledFunction<HTMLDivElement, T>;
+  dl: ThemedHtmlStyledFunction<HTMLDListElement, T>;
+  dt: ThemedHtmlStyledFunction<HTMLElement, T>;
+  em: ThemedHtmlStyledFunction<HTMLElement, T>;
+  embed: ThemedHtmlStyledFunction<HTMLEmbedElement, T>;
+  fieldset: ThemedHtmlStyledFunction<HTMLFieldSetElement, T>;
+  figcaption: ThemedHtmlStyledFunction<HTMLElement, T>;
+  figure: ThemedHtmlStyledFunction<HTMLElement, T>;
+  footer: ThemedHtmlStyledFunction<HTMLElement, T>;
+  form: ThemedHtmlStyledFunction<HTMLFormElement, T>;
+  h1: ThemedHtmlStyledFunction<HTMLHeadingElement, T>;
+  h2: ThemedHtmlStyledFunction<HTMLHeadingElement, T>;
+  h3: ThemedHtmlStyledFunction<HTMLHeadingElement, T>;
+  h4: ThemedHtmlStyledFunction<HTMLHeadingElement, T>;
+  h5: ThemedHtmlStyledFunction<HTMLHeadingElement, T>;
+  h6: ThemedHtmlStyledFunction<HTMLHeadingElement, T>;
+  head: ThemedHtmlStyledFunction<HTMLHeadElement, T>;
+  header: ThemedHtmlStyledFunction<HTMLElement, T>;
+  hgroup: ThemedHtmlStyledFunction<HTMLElement, T>;
+  hr: ThemedHtmlStyledFunction<HTMLHRElement, T>;
+  html: ThemedHtmlStyledFunction<HTMLHtmlElement, T>;
+  i: ThemedHtmlStyledFunction<HTMLElement, T>;
+  iframe: ThemedHtmlStyledFunction<HTMLIFrameElement, T>;
+  img: ThemedHtmlStyledFunction<HTMLImageElement, T>;
+  input: ThemedHtmlStyledFunction<HTMLInputElement, T>;
+  ins: ThemedHtmlStyledFunction<HTMLModElement, T>;
+  kbd: ThemedHtmlStyledFunction<HTMLElement, T>;
+  keygen: ThemedHtmlStyledFunction<HTMLElement, T>;
+  label: ThemedHtmlStyledFunction<HTMLLabelElement, T>;
+  legend: ThemedHtmlStyledFunction<HTMLLegendElement, T>;
+  li: ThemedHtmlStyledFunction<HTMLLIElement, T>;
+  link: ThemedHtmlStyledFunction<HTMLLinkElement, T>;
+  main: ThemedHtmlStyledFunction<HTMLElement, T>;
+  map: ThemedHtmlStyledFunction<HTMLMapElement, T>;
+  mark: ThemedHtmlStyledFunction<HTMLElement, T>;
+  menu: ThemedHtmlStyledFunction<HTMLElement, T>;
+  menuitem: ThemedHtmlStyledFunction<HTMLElement, T>;
+  meta: ThemedHtmlStyledFunction<HTMLMetaElement, T>;
+  meter: ThemedHtmlStyledFunction<HTMLElement, T>;
+  nav: ThemedHtmlStyledFunction<HTMLElement, T>;
+  noscript: ThemedHtmlStyledFunction<HTMLElement, T>;
+  object: ThemedHtmlStyledFunction<HTMLObjectElement, T>;
+  ol: ThemedHtmlStyledFunction<HTMLOListElement, T>;
+  optgroup: ThemedHtmlStyledFunction<HTMLOptGroupElement, T>;
+  option: ThemedHtmlStyledFunction<HTMLOptionElement, T>;
+  output: ThemedHtmlStyledFunction<HTMLElement, T>;
+  p: ThemedHtmlStyledFunction<HTMLParagraphElement, T>;
+  param: ThemedHtmlStyledFunction<HTMLParamElement, T>;
+  picture: ThemedHtmlStyledFunction<HTMLElement, T>;
+  pre: ThemedHtmlStyledFunction<HTMLPreElement, T>;
+  progress: ThemedHtmlStyledFunction<HTMLProgressElement, T>;
+  q: ThemedHtmlStyledFunction<HTMLQuoteElement, T>;
+  rp: ThemedHtmlStyledFunction<HTMLElement, T>;
+  rt: ThemedHtmlStyledFunction<HTMLElement, T>;
+  ruby: ThemedHtmlStyledFunction<HTMLElement, T>;
+  s: ThemedHtmlStyledFunction<HTMLElement, T>;
+  samp: ThemedHtmlStyledFunction<HTMLElement, T>;
+  script: ThemedHtmlStyledFunction<HTMLElement, T>;
+  section: ThemedHtmlStyledFunction<HTMLElement, T>;
+  select: ThemedHtmlStyledFunction<HTMLSelectElement, T>;
+  small: ThemedHtmlStyledFunction<HTMLElement, T>;
+  source: ThemedHtmlStyledFunction<HTMLSourceElement, T>;
+  span: ThemedHtmlStyledFunction<HTMLSpanElement, T>;
+  strong: ThemedHtmlStyledFunction<HTMLElement, T>;
+  style: ThemedHtmlStyledFunction<HTMLStyleElement, T>;
+  sub: ThemedHtmlStyledFunction<HTMLElement, T>;
+  summary: ThemedHtmlStyledFunction<HTMLElement, T>;
+  sup: ThemedHtmlStyledFunction<HTMLElement, T>;
+  table: ThemedHtmlStyledFunction<HTMLTableElement, T>;
+  tbody: ThemedHtmlStyledFunction<HTMLTableSectionElement, T>;
+  td: ThemedHtmlStyledFunction<HTMLTableDataCellElement, T>;
+  textarea: ThemedHtmlStyledFunction<HTMLTextAreaElement, T>;
+  tfoot: ThemedHtmlStyledFunction<HTMLTableSectionElement, T>;
+  th: ThemedHtmlStyledFunction<HTMLTableHeaderCellElement, T>;
+  thead: ThemedHtmlStyledFunction<HTMLTableSectionElement, T>;
+  time: ThemedHtmlStyledFunction<HTMLElement, T>;
+  title: ThemedHtmlStyledFunction<HTMLTitleElement, T>;
+  tr: ThemedHtmlStyledFunction<HTMLTableRowElement, T>;
+  track: ThemedHtmlStyledFunction<HTMLTrackElement, T>;
+  u: ThemedHtmlStyledFunction<HTMLElement, T>;
+  ul: ThemedHtmlStyledFunction<HTMLUListElement, T>;
+  "var": ThemedHtmlStyledFunction<HTMLElement, T>;
+  video: ThemedHtmlStyledFunction<HTMLVideoElement, T>;
+  wbr: ThemedHtmlStyledFunction<HTMLElement, T>;
 
   // SVG
-  circle: SvgStyledFunction<SVGCircleElement>;
-  clipPath: SvgStyledFunction<SVGClipPathElement>;
-  defs: SvgStyledFunction<SVGDefsElement>;
-  ellipse: SvgStyledFunction<SVGEllipseElement>;
-  g: SvgStyledFunction<SVGGElement>;
-  image: SvgStyledFunction<SVGImageElement>;
-  line: SvgStyledFunction<SVGLineElement>;
-  linearGradient: SvgStyledFunction<SVGLinearGradientElement>;
-  mask: SvgStyledFunction<SVGMaskElement>;
-  path: SvgStyledFunction<SVGPathElement>;
-  pattern: SvgStyledFunction<SVGPatternElement>;
-  polygon: SvgStyledFunction<SVGPolygonElement>;
-  polyline: SvgStyledFunction<SVGPolylineElement>;
-  radialGradient: SvgStyledFunction<SVGRadialGradientElement>;
-  rect: SvgStyledFunction<SVGRectElement>;
-  stop: SvgStyledFunction<SVGStopElement>;
-  svg: SvgStyledFunction<SVGSVGElement>;
-  text: SvgStyledFunction<SVGTextElement>;
-  tspan: SvgStyledFunction<SVGTSpanElement>;
+  circle: ThemedSvgStyledFunction<SVGCircleElement, T>;
+  clipPath: ThemedSvgStyledFunction<SVGClipPathElement, T>;
+  defs: ThemedSvgStyledFunction<SVGDefsElement, T>;
+  ellipse: ThemedSvgStyledFunction<SVGEllipseElement, T>;
+  g: ThemedSvgStyledFunction<SVGGElement, T>;
+  image: ThemedSvgStyledFunction<SVGImageElement, T>;
+  line: ThemedSvgStyledFunction<SVGLineElement, T>;
+  linearGradient: ThemedSvgStyledFunction<SVGLinearGradientElement, T>;
+  mask: ThemedSvgStyledFunction<SVGMaskElement, T>;
+  path: ThemedSvgStyledFunction<SVGPathElement, T>;
+  pattern: ThemedSvgStyledFunction<SVGPatternElement, T>;
+  polygon: ThemedSvgStyledFunction<SVGPolygonElement, T>;
+  polyline: ThemedSvgStyledFunction<SVGPolylineElement, T>;
+  radialGradient: ThemedSvgStyledFunction<SVGRadialGradientElement, T>;
+  rect: ThemedSvgStyledFunction<SVGRectElement, T>;
+  stop: ThemedSvgStyledFunction<SVGStopElement, T>;
+  svg: ThemedSvgStyledFunction<SVGSVGElement, T>;
+  text: ThemedSvgStyledFunction<SVGTextElement, T>;
+  tspan: ThemedSvgStyledFunction<SVGTSpanElement, T>;
+}
+
+export type ThemeProviderComponent<T> = ComponentClass<ThemeProps<T>>;
+
+export interface ThemedCssFunction<T> {
+  (strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): InterpolationValue[];
+  <P>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): FlattenInterpolation<ThemedStyledProps<P, T>>[];
+}
+
+export interface ThemedStyledComponentsModule<T> {
+  default: ThemedStyledInterface<T>;
+
+  css: ThemedCssFunction<T>;
+  keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
+  injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
+
+  ThemeProvider: ThemeProviderComponent<T>;
 }
 
 declare const styled: StyledInterface;
 
-export function css(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): InterpolationValue[];
-export function css<P>(strings: TemplateStringsArray, ...interpolations: Interpolation<P>[]): FlattenInterpolation<P>[];
+export const css: ThemedCssFunction<any>;
 export function keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
 
-export const ThemeProvider: ComponentClass<ThemeProps>;
+export const ThemeProvider: ThemeProviderComponent<any>;
 
 export default styled;
