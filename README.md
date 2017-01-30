@@ -18,6 +18,8 @@ Utilising [tagged template literals](./docs/tagged-template-literals.md) (a rece
 
 > **Note:** If you're not using `npm` as your package manager, aren't using a module bundler or aren't sure about either of those jump to [Alternative Installation Methods](#alternative-installation-methods).
 
+> **Version 2:** If you would like to try out the v2 branch, you can use `npm install styled-components@next babel-plugin-styled-components` and add the plugin to your Babel configuration like a regular Babel plugin. The plugin is optional, it provides consistent naming for Server-Side Rendering as well as some pre-processing.
+
 *Made by [Glen Maddern](https://twitter.com/glenmaddern) and [Max Stoiber](https://twitter.com/mxstbr), supported by [Front End Center](https://frontend.center) and [Thinkmill](http://thinkmill.com.au/). Thank you for making this project possible!*
 
 ## Usage
