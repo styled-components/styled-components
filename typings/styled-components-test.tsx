@@ -110,3 +110,42 @@ class Example extends React.Component<{}, {}> {
     </ThemeProvider>;
   }
 }
+
+// css which only uses simple interpolations without functions
+const cssWithValues1 = css`
+  font-size: ${14}${'pt'};
+`;
+// css which uses other simple interpolations without functions
+const cssWithValues2 = css`
+  ${cssWithValues1}
+  ${[cssWithValues1, cssWithValues1]}
+  font-weight: ${'bold'};
+`;
+// injectGlobal accepts simple interpolations if they're not using functions
+injectGlobal`
+  ${'font-size'}: ${10}pt;
+  ${cssWithValues1}
+  ${[cssWithValues1, cssWithValues2]}
+`;
+
+// css which uses function interpolations with common props
+const cssWithFunc1 = css`
+  font-size: ${(props) => props.theme.fontSizePt}pt;
+`;
+const cssWithFunc2 = css`
+  ${cssWithFunc1}
+  ${props => cssWithFunc2}
+  ${[cssWithFunc1, cssWithValues1]}
+`;
+// such css can be used in styled components
+const styledButton = styled.button`
+  ${cssWithValues1} ${[cssWithValues1, cssWithValues2]}
+  ${cssWithFunc1} ${[cssWithFunc1, cssWithFunc2]}
+  ${() => [cssWithFunc1, cssWithFunc2]}
+`;
+// css with function interpolations cannot be used in injectGlobal
+/*
+injectGlobal`
+  ${cssWithFunc1}
+`;
+*/

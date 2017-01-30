@@ -13,10 +13,12 @@ export type OuterStyledProps<P> = P & {
   innerRef?: (instance: any) => void;
 };
 
-export type Interpolation<P> = InterpolationValue | InterpolationFunction<P> | ReadonlyArray<InterpolationValue | InterpolationFunction<P>>;
+export type Interpolation<P> = FlattenInterpolation<P> | ReadonlyArray<FlattenInterpolation<P> | ReadonlyArray<FlattenInterpolation<P>>>;
+export type FlattenInterpolation<P> = InterpolationValue | InterpolationFunction<P>;
 export type InterpolationValue = string | number;
+export type SimpleInterpolation = InterpolationValue | ReadonlyArray<InterpolationValue | ReadonlyArray<InterpolationValue>>;
 export interface InterpolationFunction<P> {
-  (props: StyledProps<P>): InterpolationValue | ReadonlyArray<Interpolation<P>>;
+  (props: StyledProps<P>): Interpolation<P>;
 }
 
 export interface StyledFunction<P> {
@@ -170,9 +172,10 @@ export interface StyledInterface extends BaseStyledInterface {
 
 declare const styled: StyledInterface;
 
-export function css<P>(strings: TemplateStringsArray, ...interpolations: Interpolation<P>[]): Interpolation<P>[];
-export function keyframes(strings: TemplateStringsArray, ...interpolations: (string | number)[]): string;
-export function injectGlobal(strings: TemplateStringsArray, ...interpolations: (string | number)[]): void;
+export function css(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): InterpolationValue[];
+export function css<P>(strings: TemplateStringsArray, ...interpolations: Interpolation<P>[]): FlattenInterpolation<P>[];
+export function keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
+export function injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
 
 export const ThemeProvider: ComponentClass<ThemeProps>;
 
