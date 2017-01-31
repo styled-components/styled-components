@@ -3,7 +3,7 @@
 /* Wraps glamor's stylesheet and exports a singleton for styled components
 to use. */
 import { StyleSheet as GlamorSheet } from '../vendor/glamor/sheet'
-import type { GlamorRule } from '../types'
+import type { GlamorRule, GlamorInsertedRule } from '../types'
 
 
 class StyleSheet {
@@ -26,7 +26,7 @@ class StyleSheet {
     if (this.globalStyleSheet.sheet) this.globalStyleSheet.flush()
     if (this.componentStyleSheet.sheet) this.componentStyleSheet.flush()
   }
-  insert(rule: string, opts: { global: boolean } = { global: false }): number {
+  insert(rule: string, opts: { global: boolean } = { global: false }): GlamorInsertedRule {
     const sheet = opts.global ? this.globalStyleSheet : this.componentStyleSheet
     return sheet.insert(rule)
   }

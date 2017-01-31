@@ -9,3 +9,7 @@ export type Target = string | ReactClass<*>
 export type NameGenerator = (hash: number) => string
 
 export type GlamorRule = { cssText: string }
+
+export interface GlamorInsertedRule {
+  appendRule(css: string): void
+}

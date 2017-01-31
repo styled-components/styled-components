@@ -1,7 +1,7 @@
 // @flow
 import hashStr from 'glamor/lib/hash'
 
-import type { RuleSet, NameGenerator } from '../types'
+import type { RuleSet, NameGenerator, GlamorInsertedRule } from '../types'
 import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
 import postcssNested from '../vendor/postcss-nested'
@@ -17,7 +17,7 @@ export default (nameGenerator: NameGenerator) => {
 
   class ComponentStyle {
     rules: RuleSet
-    insertedRule: Object
+    insertedRule: GlamorInsertedRule
 
     constructor(rules: RuleSet) {
       this.rules = rules
