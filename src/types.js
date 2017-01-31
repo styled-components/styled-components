@@ -7,3 +7,5 @@ export type RuleSet = Array<Interpolation>
 export type Target = string | ReactClass<*>
 
 export type NameGenerator = (hash: number) => string
+
+export type GlamorRule = { cssText: string }

@@ -4,7 +4,7 @@ import expect from 'expect'
 import { shallow } from 'enzyme'
 
 import injectGlobal from '../injectGlobal'
-import styleSheet from '../../models/GlobalStyleSheet'
+import styleSheet from '../../models/StyleSheet'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
 
 let styled = resetStyled()
@@ -14,7 +14,7 @@ const rule3 = 'color: blue;'
 
 describe('injectGlobal', () => {
   beforeEach(() => {
-    resetStyled(styleSheet)
+    resetStyled()
   })
 
   it(`should inject rules into the head`, () => {
@@ -64,12 +64,12 @@ describe('injectGlobal', () => {
       .a {
         ${rule3}
       }
-    `)
+    `, { styleSheet: styleSheet.componentStyleSheet })
     // Test the global sheet
     expectCSSMatches(`
       html {
         ${rule1}
       }
-    `, { styleSheet })
+    `, { styleSheet: styleSheet.globalStyleSheet })
   })
 });

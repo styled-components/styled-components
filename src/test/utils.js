@@ -6,7 +6,7 @@
 import expect from 'expect'
 
 import _styled from '../constructors/styled'
-import componentStyleSheet from '../models/StyleSheet'
+import mainStyleSheet from '../models/StyleSheet'
 import _styledComponent from '../models/StyledComponent'
 import _ComponentStyle from '../models/ComponentStyle'
 
@@ -14,8 +14,8 @@ import _ComponentStyle from '../models/ComponentStyle'
 let index = 0
 const classNames = () => String.fromCodePoint(97 + index++)
 
-export const resetStyled = (styleSheet: Object = componentStyleSheet) => {
-  if (styleSheet.sheet) styleSheet.flush()
+export const resetStyled = () => {
+  mainStyleSheet.flush()
   index = 0
   return _styled(_styledComponent(_ComponentStyle(classNames)))
 }
@@ -25,7 +25,7 @@ export const expectCSSMatches = (
   expectation: string,
   opts: { ignoreWhitespace?: boolean, styleSheet?: Object } = {}
 ) => {
-  const { ignoreWhitespace = true, styleSheet = componentStyleSheet } = opts
+  const { ignoreWhitespace = true, styleSheet = mainStyleSheet } = opts
   const css = styleSheet.rules().map(rule => rule.cssText).join('\n')
   if (ignoreWhitespace) {
     expect(stripWhitespace(css)).toEqual(stripWhitespace(expectation))
