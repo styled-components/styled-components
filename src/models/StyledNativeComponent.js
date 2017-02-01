@@ -21,7 +21,7 @@ const createStyledNativeComponent = (target: Target,
   }
 
   const {
-    displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
+    displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName || target.name})`,
   } = options
   const inlineStyle = new InlineStyle(rules)
   const ParentComponent = parent || AbstractStyledComponent

@@ -36,7 +36,7 @@ export default (ComponentStyle: Function) => {
     }
 
     const {
-      displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
+      displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName || target.name})`,
       componentId = generateId(options.displayName || 'sc'),
     } = options
     const componentStyle = new ComponentStyle(rules, componentId)
