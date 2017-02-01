@@ -40,3 +40,8 @@ const RulesetInerpolation = styled.div`
     color: papayawhip;
   }
 `;
+
+const Prefixes = styled.div`
+  display: flex;
+  align-items: center;
+`;

@@ -27,3 +27,9 @@ const RulesetInerpolation = styled.div.withConfig({
   displayName: "before__RulesetInerpolation",
   componentId: "before__RulesetInerpolation-11wer1a"
 })([[" {width: ", props => props.width, ";;", props => props.ruleset, ";}"], [":hover {color: papayawhip;}"]]);
+
+const Prefixes = styled.div.withConfig({
+  displayName: "before__Prefixes",
+  componentId: "before__Prefixes-1vitzne"
+})([[" {display:-webkit-box;display:-webkit-flex;-ms-flexbox;display:flex;-webkit-box-align: center;-ms-flex-align: center;align-items: center;}"]]);
+
