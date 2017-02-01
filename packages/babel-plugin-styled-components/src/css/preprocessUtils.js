@@ -94,8 +94,7 @@ export const preprocessHelper = (
 
   const classnameSplit = flattenedCSS
     .split(temporaryClassname)
-    .map(x => x.trim())
-    .filter(Boolean)
+    .filter(x => x !== '')
     .map(str => cssWithPlaceholdersToArr(str, interpolationNodes))
 
   return classnameSplit
