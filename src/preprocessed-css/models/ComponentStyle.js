@@ -3,7 +3,7 @@
 
 import hashStr from 'glamor/lib/hash'
 
-import type { FlatPreprocessed, NameGenerator } from '../types'
+import type { Preprocessed, NameGenerator } from '../types'
 import flatten from '../utils/flatten'
 import prefixPreprocessedSelectors from '../utils/prefixPreprocessedSelectors'
 import styleSheet from '../../models/StyleSheet'
@@ -12,11 +12,11 @@ export default (nameGenerator: NameGenerator) => {
   const inserted = {}
 
   class ComponentStyle {
-    rules: FlatPreprocessed
+    rules: Preprocessed
     componentId: string
     insertedRule: Object
 
-    constructor(rules: FlatPreprocessed, componentId: string) {
+    constructor(rules: Preprocessed, componentId: string) {
       this.rules = rules
       this.componentId = componentId
       if (!styleSheet.injected) styleSheet.inject()

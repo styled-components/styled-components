@@ -1,7 +1,7 @@
 // @flow
-import type { Preprocessed, FlatPreprocessed } from '../types'
+import type { Preprocessed } from '../types'
 import flatten from '../utils/flatten'
 
-export default (chunks: Preprocessed): FlatPreprocessed => (
+export default (chunks: Preprocessed): Preprocessed => (
   flatten(chunks)
 )

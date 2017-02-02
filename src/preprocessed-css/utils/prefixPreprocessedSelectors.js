@@ -1,5 +1,5 @@
 // @flow
-import type { FlatRuleSet } from '../types'
+import type { RuleSet } from '../types'
 
 const trimStart = (str: string): string => {
   let index = 0
@@ -14,7 +14,7 @@ const trimStart = (str: string): string => {
   return str.slice(index)
 }
 
-const prefixPreprocessedSelectors = (prefix: string, css: FlatRuleSet): FlatRuleSet => {
+const prefixPreprocessedSelectors = (prefix: string, css: RuleSet): RuleSet => {
   const first = css[0]
   if (typeof first !== 'string') {
     throw new TypeError('Expected css array to start with a string')

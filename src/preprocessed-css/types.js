@@ -9,14 +9,12 @@ export type NameGenerator = _NameGenerator
 
 /* eslint-disable no-use-before-define */
 export type Interpolation = (
-  ((executionContext: Object) => string | FlatPreprocessed) |
+  ((executionContext: Object) => string | Preprocessed) |
+  Preprocessed |
   string |
   number
 )
 
-export type RuleSet = Array<Interpolation | Preprocessed>
-export type FlatRuleSet = Array<Interpolation>
-
-export type FlatPreprocessed = Array<FlatRuleSet>
+export type RuleSet = Array<Interpolation>
 export type Preprocessed = Array<RuleSet>
 

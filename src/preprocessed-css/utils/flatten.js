@@ -1,5 +1,5 @@
 // @flow
-import type { Preprocessed, FlatPreprocessed, RuleSet } from '../types'
+import type { Preprocessed, RuleSet } from '../types'
 
 // Detects whether an input is a processed CSS array
 const isProcessedCSS = (obj: any): boolean => (
@@ -37,7 +37,7 @@ const parseSelector = (cssSet: RuleSet): RuleSet => {
   return result
 }
 
-const flatten = (processedCSS: Preprocessed, executionContext: ?Object): FlatPreprocessed => {
+const flatten = (processedCSS: Preprocessed, executionContext: ?Object): Preprocessed => {
   let subProcessedRules = []
 
   const filteredRules = processedCSS.reduce((filtered, cssSet) => {
@@ -60,7 +60,6 @@ const flatten = (processedCSS: Preprocessed, executionContext: ?Object): FlatPre
         item !== false &&
         item !== ''
       ) {
-        // $FlowFixMe
         acc.push(item)
       }
 

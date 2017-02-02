@@ -1,13 +1,13 @@
 // @flow
-import type { FlatPreprocessed } from '../types'
+import type { Preprocessed } from '../types'
 import prefixPreprocessedSelectors from '../utils/prefixPreprocessedSelectors'
 import styleSheet from '../../models/StyleSheet'
 
 export default class ComponentStyle {
-  rules: FlatPreprocessed;
+  rules: Preprocessed;
   selector: ?string;
 
-  constructor(rules: FlatPreprocessed, selector: ?string) {
+  constructor(rules: Preprocessed, selector: ?string) {
     this.rules = rules
     this.selector = selector
   }
