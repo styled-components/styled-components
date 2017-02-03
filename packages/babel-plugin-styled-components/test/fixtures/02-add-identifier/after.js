@@ -1,18 +1,18 @@
 const Test = styled.div.withConfig({
-  componentId: "Test-137hlza"
+  componentId: "f15zqz-0"
 })`width: 100%;`;
 const Test2 = true ? styled.div.withConfig({
-  componentId: "Test2-bjbly"
+  componentId: "f15zqz-1"
 })`` : styled.div.withConfig({
-  componentId: "Test2-3rtkrg"
+  componentId: "f15zqz-2"
 })``;
 const styles = { One: styled.div.withConfig({
-    componentId: "One-1sf086v"
+    componentId: "f15zqz-3"
   })`` };
 let Component;
 Component = styled.div.withConfig({
-  componentId: "Component-1uo0y5n"
+  componentId: "f15zqz-4"
 })``;
 const WrappedComponent = styled(Inner).withConfig({
-  componentId: "WrappedComponent-1hk71jk"
+  componentId: "f15zqz-5"
 })``;

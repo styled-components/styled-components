@@ -2,25 +2,25 @@ import s from "styled-components";
 
 const Test = s.div.withConfig({
   displayName: "Test",
-  componentId: "Test-62sgar"
+  componentId: "syqrfc-0"
 })`width: 100%;`;
 const Test2 = true ? s.div.withConfig({
   displayName: "Test2",
-  componentId: "Test2-1rmo90j"
+  componentId: "syqrfc-1"
 })`` : s.div.withConfig({
   displayName: "Test2",
-  componentId: "Test2-1e44ey5"
+  componentId: "syqrfc-2"
 })``;
 const styles = { One: s.div.withConfig({
     displayName: "One",
-    componentId: "One-amesrd"
+    componentId: "syqrfc-3"
   })`` };
 let Component;
 Component = s.div.withConfig({
   displayName: "Component",
-  componentId: "Component-ohabty"
+  componentId: "syqrfc-4"
 })``;
 const WrappedComponent = s(Inner).withConfig({
   displayName: "WrappedComponent",
-  componentId: "WrappedComponent-1f8r9pi"
+  componentId: "syqrfc-5"
 })``;
