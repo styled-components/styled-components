@@ -283,9 +283,11 @@ const StyledText = styled.Text`
 
 class MyReactNativeComponent extends React.Component {
   render() {
-    <StyledView>
-      <StyledText>Hello World!</StyledText>
-    </StyledView>
+    return (
+      <StyledView>
+        <StyledText>Hello World!</StyledText>
+      </StyledView>
+    )
   }
 }
 ```
@@ -469,16 +471,18 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [Hedron](http://github.com/jsbros/hedron): A no-frills flex-box grid system.
 - [uiGradients](http://jsbros.github.io/uigradients): Generate beautiful background gradients from the [uigradients.com](http://uigradients.com) database.
 - [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
-- [react-enhanced-form](https://github.com/xeonys/react-enhanced-form) : The best react form component, on earth 🌍. It makes form inputs easy, finally !
-- [react-teleportation](https://github.com/xeonys/react-teleportation) : Teleport your components to the foreground.
-- [reshake](https://github.com/elrumordelaluz/reshake) : CSShake as a React Functional Component ([demo](https://elrumordelaluz.github.io/reshake/))
-- [space-exp](https://github.com/caspg/space-exp) : Brings you each day a stunning picture of our universe, Astronomy Picture of the Day (APOD). Website: [spaceexperience.club](https://spaceexperience.club/)
+- [react-enhanced-form](https://github.com/xeonys/react-enhanced-form): The best react form component, on earth 🌍. It makes form inputs easy, finally !
+- [react-teleportation](https://github.com/xeonys/react-teleportation): Teleport your components to the foreground.
+- [reshake](https://github.com/elrumordelaluz/reshake): CSShake as a React Functional Component ([demo](https://elrumordelaluz.github.io/reshake/))
+- [space-exp](https://github.com/caspg/space-exp): Brings you each day a stunning picture of our universe, Astronomy Picture of the Day (APOD). Website: [spaceexperience.club](https://spaceexperience.club/)
 - [sachagreif.com](http://sachagreif.com): personal homepage built with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/SachaG/sg2017)).
 - [last-draft](https://github.com/vacenz/last-draft): A Draft.js Editor ([demo](http://lastdraft.vace.nz))
 - [`Dirtyredz.com`](https://github.com/dirtyredz/dirtyredz.com): David McClain | Dirtyredz - About me, Latest projects and Contact ([Website](http://dirtyredz.com))
 - [react-adminlte-dash](https://github.com/zksailor534/react-adminlte-dash): AdminLTE dashboard components in React ([demo](http://zksailor534.github.io/react-adminlte-dash))
 - [Reactiflux](https://www.reactiflux.com): Reactiflux community home build with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/reactiflux/reactiflux.com)).
 - [react-styled-flexboxgrid](https://github.com/LoicMahieu/react-styled-flexboxgrid): Grid system based on Flexbox ([demo](https://loicmahieu.github.io/react-styled-flexboxgrid/demo/index.html))
+- [styled-props](https://github.com/RafalFilipek/styled-props): Simple lib that allows you to set styled props in your styled-components without stress ([demo](http://www.webpackbin.com/N1EKUqgvG))
+- [colors-show](https://github.com/RafalFilipek/colors-show): Present your application colors with style. ([demo](https://colors-show.now.sh/))
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
