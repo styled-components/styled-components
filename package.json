@@ -20,7 +20,7 @@
     "flow": "flow check",
     "lint": "eslint src",
     "tslint": "tslint typings/*.ts native/*.ts",
-    "typescript": "tsc ./typings/styled-components-test.tsx ./typings/styled-components-native-test.tsx --noEmit --jsx react --target es6 --module es2015 --moduleResolution node",
+    "typescript": "tsc ./typings/styled-components-test.tsx ./typings/styled-components-native-test.tsx ./typings/themed-tests/mytheme-styled-components-test.tsx --noEmit --jsx react --target es6 --module es2015 --moduleResolution node",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
     "dev": "node example/devServer.js"
