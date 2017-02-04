@@ -9,9 +9,14 @@ All notable changes to this project will be documented in this file. If a contri
 ### Added
 
 ### Changed
-Fix for global styles not being returned by `StyleSheet.rules()` introduced in v1.4.2, thanks to [@xcoderzach](https://github.com/xcoderzach). (see [#440](https://github.com/styled-components/styled-components/pull/440))
 
-- Fix defaultProps used instead of ThemeProvider on first render [@k15a](https://github.com/k15a). (see [#445](https://github.com/styled-components/styled-components/issues/445) and [#450](https://github.com/styled-components/styled-components/pull/450))
+## [v1.4.3] - 2017-02-04
+
+### Changed
+
+- Improve TypeScript typings, thanks to [@igorbek](https://github.com/igorbek). (see [#428](https://github.com/styled-components/styled-components/pull/428) and [#432](https://github.com/styled-components/styled-components/pull/432))
+- Fix SSR bug introduced in v1.4.2, thanks to [@xcoderzach](https://github.com/xcoderzach). (see [#440](https://github.com/styled-components/styled-components/pull/440))
+- Fix defaultProps used instead of ThemeProvider on first render [@k15a](https://github.com/k15a). ([#450](https://github.com/styled-components/styled-components/pull/450))
 
 ## [v1.4.2] - 2017-01-28
 
@@ -188,7 +193,8 @@ Fix for global styles not being returned by `StyleSheet.rules()` introduced in v
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.2...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.3...master
+[v1.4.3]: https://github.com/styled-components/styled-components/compare/v1.4.2...v1.4.3
 [v1.4.2]: https://github.com/styled-components/styled-components/compare/v1.4.1...v1.4.2
 [v1.4.1]: https://github.com/styled-components/styled-components/compare/v1.4.0...v1.4.1
 [v1.4.0]: https://github.com/styled-components/styled-components/compare/v1.3.1...v1.4.0
