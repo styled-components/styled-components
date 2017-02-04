@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file. If a contri
 ### Added
 
 ### Changed
+Fix for global styles not being returned by `StyleSheet.rules()` introduced in v1.4.2, thanks to [@xcoderzach](https://github.com/xcoderzach). (see [#440](https://github.com/styled-components/styled-components/pull/440))
 
 ## [v1.4.2] - 2017-01-28
 

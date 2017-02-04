@@ -5,7 +5,7 @@ import postcssNested from '../vendor/postcss-nested'
 import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
 
-import styleSheet from './GlobalStyleSheet'
+import styleSheet from './StyleSheet'
 
 export default class ComponentStyle {
   rules: RuleSet;
@@ -24,6 +24,6 @@ export default class ComponentStyle {
     }
     const root = parse(flatCSS)
     postcssNested(root)
-    styleSheet.insert(root.toResult().css)
+    styleSheet.insert(root.toResult().css, { global: true })
   }
 }
