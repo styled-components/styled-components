@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file. If a contri
 ### Changed
 Fix for global styles not being returned by `StyleSheet.rules()` introduced in v1.4.2, thanks to [@xcoderzach](https://github.com/xcoderzach). (see [#440](https://github.com/styled-components/styled-components/pull/440))
 
+- Fix defaultProps used instead of ThemeProvider on first render [@k15a](https://github.com/k15a). (see [#445](https://github.com/styled-components/styled-components/issues/445) and [#450](https://github.com/styled-components/styled-components/pull/450))
+
 ## [v1.4.2] - 2017-01-28
 
 ### Changed
