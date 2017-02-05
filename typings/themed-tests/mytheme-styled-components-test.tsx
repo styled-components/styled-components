@@ -33,7 +33,6 @@ const Input = styled.input`
 interface ButtonProps {
   name: string;
   primary?: boolean;
-  theme?: MyTheme;
 }
 
 class MyButton extends React.Component<ButtonProps, {}> {
@@ -55,7 +54,7 @@ const CustomizableButton = styled(MyButton)`
   font-size: 1em;
   margin: 1em;
   padding: 0.25em 1em;
-  border: 2px solid ${props => props.theme.primary};
+  border: 2px solid ${props => props.theme.primaryColor};
   border-radius: 3px;
 `;
 

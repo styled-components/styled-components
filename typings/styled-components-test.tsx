@@ -113,17 +113,17 @@ class Example extends React.Component<{}, {}> {
 
 // css which only uses simple interpolations without functions
 const cssWithValues1 = css`
-  font-size: ${14}${'pt'};
+  font-size: ${14}${"pt"};
 `;
 // css which uses other simple interpolations without functions
 const cssWithValues2 = css`
   ${cssWithValues1}
   ${[cssWithValues1, cssWithValues1]}
-  font-weight: ${'bold'};
+  font-weight: ${"bold"};
 `;
 // injectGlobal accepts simple interpolations if they're not using functions
 injectGlobal`
-  ${'font-size'}: ${10}pt;
+  ${"font-size"}: ${10}pt;
   ${cssWithValues1}
   ${[cssWithValues1, cssWithValues2]}
 `;
