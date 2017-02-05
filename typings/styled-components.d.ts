@@ -42,7 +42,7 @@ export interface ThemedBaseStyledInterface<T> {
 export type BaseStyledInterface = ThemedBaseStyledInterface<any>;
 
 export type StyledInterface = ThemedStyledInterface<any>;
-export interface ThemedStyledInterface<T> extends BaseStyledInterface {
+export interface ThemedStyledInterface<T> extends ThemedBaseStyledInterface<T> {
   a: ThemedHtmlStyledFunction<HTMLAnchorElement, T>;
   abbr: ThemedHtmlStyledFunction<HTMLElement, T>;
   address: ThemedHtmlStyledFunction<HTMLElement, T>;
