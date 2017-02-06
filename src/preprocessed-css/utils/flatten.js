@@ -1,13 +1,6 @@
 // @flow
 import type { Preprocessed, RuleSet } from '../types'
 
-// Detects whether an input is a processed CSS array
-const isProcessedCSS = (obj: any): boolean => (
-  Array.isArray(obj) &&
-  obj.length &&
-  Array.isArray(obj[0])
-)
-
 // Slices the part of the css-set that contains the selector
 // Also slices the substrings as necessary
 const parseSelector = (cssSet: RuleSet): RuleSet => {
@@ -48,11 +41,13 @@ const flatten = (processedCSS: Preprocessed, executionContext: ?Object): Preproc
         raw(executionContext) :
         raw
 
-      if (isProcessedCSS(item)) {
-        const subProcessedCSS = flatten(processedCSS, executionContext)
-          .map(subset => selectorSet.concat(subset))
+      if (Array.isArray(item) && item.every(Array.isArray)) {
+        const subProcessedCSS = flatten(
+          item.map(subset => selectorSet.concat(subset)),
+          executionContext,
+        )
 
-        subProcessedRules = subProcessedCSS.concat(subProcessedRules)
+        subProcessedRules = subProcessedRules.concat(subProcessedCSS)
       } else if (
         // Remove falsey values
         item !== undefined &&
