@@ -13,6 +13,74 @@ import styled from 'styled-components'
 
 A very basic example can be found [here](https://github.com/patrick91/Styled-Components-Typescript-Example).
 
+## Define a Theme Interface
+
+By default every styled component will have the theme prop set to `any`.
+When building complex apps it would be better to have autocomplete and 
+error checks everywhere.
+
+To have autocomplete and checks around the theme prop we should first define
+the theme interface we would like to use throught our app:
+
+```ts
+// theme.ts
+export default interface ThemeInterface {
+    primaryColor: string;
+    primaryColorInverted: string;
+}
+```
+
+then we can re-export the styled function with our custom theme interface:
+
+```ts
+// my-styled-components.ts
+import * as styledComponents from "styled-components";
+import { ThemedStyledComponentsModule } from "styled-components";
+
+import ThemeInterface from "./theme";
+
+const {
+    default: styled,
+    css,
+    injectGlobal,
+    keyframes,
+    ThemeProvider
+} = styledComponents as ThemedStyledComponentsModule<ThemeInterface>;
+
+export default styled;
+export { css, injectGlobal, keyframes, ThemeProvider };
+```
+
+Finally, instead of importing the styled functions from the `styled-components` module, 
+we import it from our custom module.
+
+```ts
+import * as React from "react";
+
+// same for css, etc
+import styled from "themed-components";
+
+
+const Link = styled.a`
+    font-family: 'Cabin';
+    font-weight: bold;
+    font-size: 1.2rem;
+    letter-spacing: 0.05em;
+    color: {props => props.theme.primaryColor};
+    display: block;
+    cursor: pointer;
+
+    transition: 0.3s background ease-out;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+`;
+
+
+export default Link;
+```
+
 ## Caveats
 
 ### Class Name
