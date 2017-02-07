@@ -110,7 +110,17 @@ describe('attrs', () => {
           color: blue;
         `
       })``
-      expect(shallow(<Comp />).html()).toEqual('<div style="color: blue;" class="sc-a b"></div>')
+      expect(shallow(<Comp />).html()).toEqual('<div style="color:blue;" class="sc-a b"></div>')
+    })
+
+    it('should support param-case rules', () => {
+      /* Would be a React Router Link in IRL */
+      const Comp = styled.div.attrs({
+        style: css`
+          border-width: 1px;
+        `
+      })``
+      expect(shallow(<Comp />).html()).toEqual('<div style="border-width:1px;" class="sc-a b"></div>')
     })
 
     it('should call interpolations as well', () => {
@@ -120,8 +130,8 @@ describe('attrs', () => {
           color: ${props => props.primary ? 'red' : 'blue'};
         `
       })``
-      expect(shallow(<Comp />).html()).toEqual('<div style="color: blue;" class="sc-a b"></div>')
-      expect(shallow(<Comp primary/>).html()).toEqual('<div style="color: red;" class="sc-a b"></div>')
+      expect(shallow(<Comp />).html()).toEqual('<div style="color:blue;" class="sc-a b"></div>')
+      expect(shallow(<Comp primary/>).html()).toEqual('<div style="color:red;" class="sc-a b"></div>')
     })
 
     it('should work the same if inside an attr function', () => {
@@ -131,8 +141,8 @@ describe('attrs', () => {
           color: ${props.primary ? 'red' : 'blue'};
         `
       })``
-      expect(shallow(<Comp />).html()).toEqual('<div style="color: blue;" class="sc-a b"></div>')
-      expect(shallow(<Comp primary/>).html()).toEqual('<div style="color: red;" class="sc-a b"></div>')
+      expect(shallow(<Comp />).html()).toEqual('<div style="color:blue;" class="sc-a b"></div>')
+      expect(shallow(<Comp primary/>).html()).toEqual('<div style="color:red;" class="sc-a b"></div>')
     })
 
     it('should still call interpolations if inside an attr function', () => {
@@ -144,8 +154,8 @@ describe('attrs', () => {
       })``
       expect(shallow(<Comp />).html()).toEqual('<div class="sc-a b"></div>')
       expect(shallow(<Comp primary/>).html()).toEqual('<div class="sc-a b"></div>')
-      expect(shallow(<Comp inline/>).html()).toEqual('<div style="color: blue;" class="sc-a b"></div>')
-      expect(shallow(<Comp inline primary/>).html()).toEqual('<div style="color: red;" class="sc-a b"></div>')
+      expect(shallow(<Comp inline/>).html()).toEqual('<div style="color:blue;" class="sc-a b"></div>')
+      expect(shallow(<Comp inline primary/>).html()).toEqual('<div style="color:red;" class="sc-a b"></div>')
     })
   })
 })

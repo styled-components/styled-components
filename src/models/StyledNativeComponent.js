@@ -7,7 +7,7 @@ import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
 
 import { CHANNEL } from './ThemeProvider'
-import InlineStyle from './InlineStyle'
+import InlineStyle from './InlineNativeStyle'
 import AbstractStyledComponent from './AbstractStyledComponent'
 
 const createStyledNativeComponent = (target: Target,
