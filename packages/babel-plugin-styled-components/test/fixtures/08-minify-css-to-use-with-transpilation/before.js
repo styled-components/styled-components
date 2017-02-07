@@ -12,6 +12,11 @@ const SpecialCharacters = styled.div`
   content: "  ${props => props.text}  ";\n color: red;
 `;
 
+const Comment = styled.div`
+  // comment
+  color: red;
+`
+
 const Parens = styled.div`
   &:hover {
     color: blue;
