@@ -464,6 +464,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 ## Built with `styled-components`
 
 - [`styled-components-breakpoint`](https://github.com/jameslnewell/styled-components-breakpoint): Utility function for using breakpoints with `styled-components`.
+- [`styled-components-grid`](https://github.com/jameslnewell/styled-components-grid): Responsive grid components for `styled-components`.
 - [`grid-styled`](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
 - [ARc](https://github.com/diegohaz/arc): Atomic React App boilerplate with styled components ([demo](https://diegohaz.github.io/arc))
 - [`react-aria-tooltip`](https://github.com/egoens/react-aria-tooltip): Simple & accessible ReactJS tooltip component
