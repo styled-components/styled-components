@@ -17,6 +17,7 @@
     "build:watch": "npm run build:lib -- --watch",
     "test": "mocha \"./src/**/*.test.js\" --require babel-core/register --timeout 5000",
     "test:watch": "npm run test -- --watch",
+    "benchmark": "jest",
     "flow": "flow check",
     "lint": "eslint src",
     "tslint": "tslint typings/*.ts native/*.ts",
@@ -48,6 +49,7 @@
     "inline-style-prefixer": "^2.0.5",
     "is-function": "^1.0.1",
     "is-plain-object": "^2.0.1",
+    "react-test-renderer": "^15.4.2",
     "supports-color": "^3.1.2"
   },
   "devDependencies": {
@@ -79,6 +81,7 @@
     "express": "^4.14.0",
     "flow-bin": "^0.37.1",
     "flow-copy-source": "^1.1.0",
+    "jest": "^18.1.0",
     "jsdom": "^9.9.1",
     "lint-staged": "^3.2.4",
     "lodash": "^4.15.0",
@@ -112,5 +115,10 @@
       "git add"
     ]
   },
-  "pre-commit": "lint-staged"
+  "pre-commit": "lint-staged",
+  "jest": {
+    "testPathDirs": [
+      "src/benchmark"
+    ]
+  }
 }
