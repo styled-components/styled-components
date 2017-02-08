@@ -2,7 +2,7 @@ const { tokens } = require('../tokenTypes');
 
 const { NONE, NUMBER, LENGTH, SPACE } = tokens;
 
-const defaultFlexGrow = 0;
+const defaultFlexGrow = 1;
 const defaultFlexShrink = 1;
 const defaultFlexBasis = 0;
 
