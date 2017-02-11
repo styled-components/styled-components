@@ -352,10 +352,10 @@ Now, when we render the `Button` inside a `GreenSection`, it'll be green!
 
 ```JSX
 <GreenSection>
-  {/* Notice how there's no code changes for the button, it just
-      adapts to the theme passed from GreenSection! */}
-  <Button>Green Button!</Button>
   <div>
+    {/* Notice how there's no code changes for the button, it just
+        adapts to the theme passed from GreenSection! */}
+    <Button>Green Button!</Button>
     <div>
       <div>
         {/* This works unlimited levels deep within the component
