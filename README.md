@@ -483,6 +483,8 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [react-styled-flexboxgrid](https://github.com/LoicMahieu/react-styled-flexboxgrid): Grid system based on Flexbox ([demo](https://loicmahieu.github.io/react-styled-flexboxgrid/demo/index.html))
 - [styled-props](https://github.com/RafalFilipek/styled-props): Simple lib that allows you to set styled props in your styled-components without stress ([demo](http://www.webpackbin.com/N1EKUqgvG))
 - [colors-show](https://github.com/RafalFilipek/colors-show): Present your application colors with style. ([demo](https://colors-show.now.sh/))
+- [`styled-components-breakpoint`](https://github.com/jameslnewell/styled-components-breakpoint): Utility function for using breakpoints with `styled-components`.
+- [`styled-components-grid`](https://github.com/jameslnewell/styled-components-grid): Responsive grid components for `styled-components`.
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
