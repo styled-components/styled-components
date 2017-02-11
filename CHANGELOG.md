@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Improve TypeScript typings, thanks to [@igorbek](https://github.com/igorbek). (see [#428](https://github.com/styled-components/styled-components/pull/428) and [#432](https://github.com/styled-components/styled-components/pull/432))
 - Fix SSR bug introduced in v1.4.2, thanks to [@xcoderzach](https://github.com/xcoderzach). (see [#440](https://github.com/styled-components/styled-components/pull/440))
 - Fix defaultProps used instead of ThemeProvider on first render [@k15a](https://github.com/k15a). ([#450](https://github.com/styled-components/styled-components/pull/450))
+- displayName will now default to `Styled(Component)` [@k15a](https://github.com/k15a)
 
 ## [v1.4.2] - 2017-01-28
 
