@@ -22,7 +22,7 @@ describe('extending', () => {
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.sc-a {} .c { } .sc-b {} .d { }')
+    expectCSSMatches('.sc-a {} .sc-b {}')
   })
 
   it('should attach styles to both classes if only parent has styles', () => {
@@ -42,7 +42,7 @@ describe('extending', () => {
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.sc-a {} .c { } .sc-b {} .d { color: blue; }')
+    expectCSSMatches('.sc-a {} .sc-b {} .d { color: blue; }')
   })
 
   it('should generate a class for the child with the rules of the parent', () => {
@@ -79,8 +79,9 @@ describe('extending', () => {
       .c { color: blue; }
       .c > h1 { font-size: 4rem; }
       .sc-b {}
-      .d { color: blue; color: red; }
+      .d { color: blue; }
       .d > h1 { font-size: 4rem; }
+      .d { color: red; }
     `)
   })
 

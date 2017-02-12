@@ -29,35 +29,16 @@ describe('css features', () => {
     expectCSSMatches(`
       .sc-a {}
       .b {
-        display: -webkit-box;
-        display: -moz-box;
-        display: -ms-flexbox;
-        display: -webkit-flex;
-        display: flex;
+        display:-webkit-box;
+        display:-webkit-flex;
+        -ms-flexbox;
+        display:flex;
         -webkit-flex-direction: column;
         -ms-flex-direction: column;
-        -webkit-box-orient: vertical;
-        -webkit-box-direction: normal;
         flex-direction: column;
-        -webkit-align-items: center;
-        -ms-flex-align: center;
         -webkit-box-align: center;
+        -ms-flex-align: center;
         align-items: center;
-      }
-    `)
-  })
-
-  it('should handle CSS calc()', () => {
-    const Comp = styled.div`
-      margin-bottom: calc(15px - 0.5rem) !important;
-    `
-    shallow(<Comp />)
-    expectCSSMatches(`
-      .sc-a {}
-      .b {
-        margin-bottom: -webkit-calc(15px - 0.5rem) !important;
-        margin-bottom: -moz-calc(15px - 0.5rem) !important;
-        margin-bottom: calc(15px - 0.5rem) !important;
       }
     `)
   })
