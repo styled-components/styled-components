@@ -14,7 +14,7 @@ const constructWithOptions = (componentConstructor: Function,
   templateFunction.withConfig = config =>
     constructWithOptions(componentConstructor, tag, { ...options, ...config })
   templateFunction.attrs = attrs =>
-    constructWithOptions(componentConstructor, tag, { ...options, attrs })
+    constructWithOptions(componentConstructor, tag, { ...options, attrs: { ...options.attrs || {}, ...attrs } })
 
   return templateFunction
 }

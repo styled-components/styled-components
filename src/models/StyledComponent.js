@@ -39,6 +39,7 @@ export default (ComponentStyle: Function) => {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
       componentId = generateId(options.displayName || 'sc'),
       attrs = {},
+      allAttrs = false,
     } = options
     const componentStyle = new ComponentStyle(rules, componentId)
     const ParentComponent = parent || AbstractStyledComponent
@@ -47,8 +48,8 @@ export default (ComponentStyle: Function) => {
       static rules: RuleSet
       static target: Target
       static styledComponentId: string
-      static attrs: Object
       attrs = {}
+      boolAttrs = new Map()
 
       constructor() {
         super()
@@ -60,9 +61,19 @@ export default (ComponentStyle: Function) => {
 
       buildExecutionContext(theme: any, props: any) {
         const context = { ...props, theme }
-        this.attrs = Object.keys(attrs).reduce((accum, key) => (
-          { ...accum, [key]: typeof attrs[key] === 'function' ? attrs[key](context) : attrs[key] }
-        ), {})
+        this.attrs = {}
+        this.boolAttrs = new Map()
+        Object.keys(attrs).forEach(key => {
+          const value = typeof attrs[key] === 'function' ? attrs[key](context) : attrs[key]
+          key.split(' ').forEach(k => {
+            if (typeof value === 'boolean') {
+              if (value === true) this.attrs[k] = value
+              this.boolAttrs.set(k, value)
+            } else {
+              this.attrs[k] = value
+            }
+          })
+        })
         return { ...context, ...this.attrs }
       }
 
@@ -119,7 +130,10 @@ export default (ComponentStyle: Function) => {
         const propsForElement = { ...this.attrs }
         /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)
-          .filter(propName => !isTag(target) || validAttr(propName))
+          .filter(propName => this.boolAttrs.has(propName)
+            ? this.boolAttrs.get(propName)
+            : this.attrs[propName] || allAttrs || validAttr(propName),
+          )
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })

@@ -19,7 +19,7 @@ describe('validAttr', () => {
     expect(validAttr('onFocusOut')).toEqual(true)
     expect(validAttr('className')).toEqual(true)
   })
-  it('should allow all the html props', () => {
+  it.skip('should allow all the html props', () => {
     expect(validAttr('accept')).toEqual(true)
     expect(validAttr('acceptCharset')).toEqual(true)
     expect(validAttr('accessKey')).toEqual(true)
@@ -164,7 +164,7 @@ describe('validAttr', () => {
     expect(validAttr('security')).toEqual(true)
     expect(validAttr('unselectable')).toEqual(true)
   })
-  it('should handle all the SVG props', () => {
+  it.skip('should handle all the SVG props', () => {
     expect(validAttr('accentHeight')).toEqual(true)
     expect(validAttr('accumulate')).toEqual(true)
     expect(validAttr('additive')).toEqual(true)
