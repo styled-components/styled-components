@@ -129,14 +129,12 @@ If you're just returning a normal string you do not need to use this.
 ```JS
 import styled, { css } from 'styled-components';
 
-const colorIfComplex = 'red';
-
 const StyledComp = styled.div`
 ${(props) => {
 	if (props.complex) {
 		// Returning a template literal with interpolations? You need to use `css`
 		return css`
-			color: ${colorIfComplex};
+			color: ${ props => props.whiteColor ? 'white': 'black' }
 		`;
 	} else {
 		// Returning a standard string? No need to use `css`
@@ -145,6 +143,8 @@ ${(props) => {
 }}
 `;
 ```
+
+If you leave off the `css` your function will be `toString()`ed and you'll not get the results you expected.
 
 
 ### `StyledComponent`
