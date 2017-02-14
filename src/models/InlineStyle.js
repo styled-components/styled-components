@@ -8,7 +8,11 @@ import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
 
-const generated = {}
+let generated = {}
+
+export const resetStyleCache = () => {
+  generated = {}
+}
 
 /*
  InlineStyle takes arbitrary CSS and generates a flat object
