@@ -29,10 +29,10 @@ describe('css features', () => {
     expectCSSMatches(`
       .sc-a {}
       .b {
-        display:-webkit-box;
-        display:-webkit-flex;
-        -ms-flexbox;
-        display:flex;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display:  -ms-flexbox;
+        display: flex;
         -webkit-flex-direction: column;
         -ms-flex-direction: column;
         flex-direction: column;
