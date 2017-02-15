@@ -1,14 +1,12 @@
 // @flow
 import hashStr from 'glamor/lib/hash'
 /* eslint-disable import/no-unresolved */
-import StyleSheet from 'react-native-extended-stylesheet'
+import { StyleSheet } from 'react-native'
 import transformDeclPairs from 'css-to-react-native'
 
 import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
-
-StyleSheet.build()
 
 const generated = {}
 
@@ -18,6 +16,14 @@ const excludeShorthands = [
   'borderColor',
   'borderStyle',
 ]
+
+type StyleSheetImplementation = (styles: Object) => Object
+let currentStyleSheetImplementation: StyleSheetImplementation = styles =>
+  StyleSheet.create(styles)
+
+export const setStyleSheetPlugin = (styleSheetImplementation: StyleSheetImplementation) => {
+  currentStyleSheetImplementation = styleSheetImplementation
+}
 
 /*
  InlineStyle takes arbitrary CSS and generates a flat object
@@ -52,7 +58,7 @@ export default class InlineStyle {
       // support, so we'll just disable multiple values here.
       // https://github.com/styled-components/css-to-react-native/issues/11
       const styleObject = transformDeclPairs(declPairs, excludeShorthands)
-      const styles = StyleSheet.create({
+      const styles = currentStyleSheetImplementation({
         generated: {
           ...styleObject,
           ...mediaObject,
