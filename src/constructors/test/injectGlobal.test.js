@@ -11,10 +11,6 @@ let styled = resetStyled()
 const rule1 = 'width: 100%;'
 const rule2 = 'text-decoration: none;'
 const rule3 = 'color: blue;'
-const rule4 = `@font-face {
-  font-family: 'some font';
-  src: url('fontFile.ttf') format('truetype');
-}`
 
 describe('injectGlobal', () => {
   beforeEach(() => {
@@ -23,7 +19,6 @@ describe('injectGlobal', () => {
 
   it(`should inject rules into the head`, () => {
     injectGlobal`
-      ${rule4}
       html {
         ${rule1}
       }
@@ -33,7 +28,6 @@ describe('injectGlobal', () => {
 
   it(`should non-destructively inject styles when called repeatedly`, () => {
     injectGlobal`
-      ${rule4}
       html {
         ${rule1}
       }
@@ -45,7 +39,6 @@ describe('injectGlobal', () => {
       }
     `
     expectCSSMatches(`
-      ${rule4}
       html {
         ${rule1}
       }
@@ -62,7 +55,6 @@ describe('injectGlobal', () => {
     shallow(<Comp />)
 
     injectGlobal`
-      ${rule4}
       html {
         ${rule1}
       }
@@ -73,7 +65,6 @@ describe('injectGlobal', () => {
       .b {
         ${rule3}
       }
-      ${rule4}
       html {
         ${rule1}
       }
