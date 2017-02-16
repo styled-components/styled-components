@@ -1,4 +1,4 @@
-// @flow
+/* eslint-disable flowtype/require-valid-file-annotation */
 const { join } = require('path')
 const webpack = require('webpack')
 
