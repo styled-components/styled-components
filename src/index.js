@@ -11,6 +11,7 @@ import _styledComponent from './models/StyledComponent'
 import _styled from './constructors/styled'
 import _keyframes from './constructors/keyframes'
 import _ComponentStyle from './models/ComponentStyle'
+import _InlineStyle from './models/InlineStyle'
 
 /* Import components */
 import ThemeProvider from './models/ThemeProvider'
@@ -20,7 +21,10 @@ import withTheme from './hoc/withTheme'
 
 /* Instantiate singletons */
 const keyframes = _keyframes(generateAlphabeticName)
-const styled = _styled(_styledComponent(_ComponentStyle(generateAlphabeticName)))
+const styled = _styled(_styledComponent(
+  _ComponentStyle(generateAlphabeticName),
+  _InlineStyle(generateAlphabeticName),
+))
 
 /* Export everything */
 export default styled
