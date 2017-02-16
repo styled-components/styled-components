@@ -487,6 +487,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [`styled-components-grid`](https://github.com/jameslnewell/styled-components-grid): Responsive grid components for `styled-components`.
 - [Scalable React Boilerplate](https://github.com/RyanCCollins/scalable-react-boilerplate/pull/74)
 - [Scalable React TypeScript Boilerplate](https://github.com/RyanCCollins/scalable-react-ts-boilerplate)
+- [styled-theme](https://github.com/diegohaz/styled-theme): Extensible theming system for styled-components.
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
