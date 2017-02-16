@@ -485,6 +485,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [colors-show](https://github.com/RafalFilipek/colors-show): Present your application colors with style. ([demo](https://colors-show.now.sh/))
 - [`styled-components-breakpoint`](https://github.com/jameslnewell/styled-components-breakpoint): Utility function for using breakpoints with `styled-components`.
 - [`styled-components-grid`](https://github.com/jameslnewell/styled-components-grid): Responsive grid components for `styled-components`.
+- [styled-theme](https://github.com/diegohaz/styled-theme): Extensible theming system for styled-components.
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
