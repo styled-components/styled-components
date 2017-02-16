@@ -1,4 +1,4 @@
-// @flow
+/* eslint-disable flowtype/require-valid-file-annotation */
 import React from 'react'
 import { create as render } from 'react-test-renderer'
 import styled from '../../src'
