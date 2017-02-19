@@ -35,7 +35,7 @@ export default (ComponentStyle: Function) => {
       rules: extendingRules = [],
       ParentComponent = AbstractStyledComponent,
     } = options
-    const componentStyle = new ComponentStyle(extendingRules.concat(rules), componentId)
+    const componentStyle = new ComponentStyle([...extendingRules, ...rules], componentId)
 
     class StyledComponent extends ParentComponent {
       static styledComponentId: string

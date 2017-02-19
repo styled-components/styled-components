@@ -9,27 +9,21 @@ import type { RuleSet, Target } from '../types'
 import { CHANNEL } from './ThemeProvider'
 import InlineStyle from './InlineStyle'
 import AbstractStyledComponent from './AbstractStyledComponent'
+import constructWithOptions from '../constructors/constructWithOptions'
 
 const createStyledNativeComponent = (target: Target,
                                      options: Object,
-                                     rules: RuleSet,
-                                     parent?: Target) => {
-  /* Handle styled(OtherStyledNativeComponent) differently */
-  const isStyledNativeComponent = AbstractStyledComponent.isPrototypeOf(target)
-  if (isStyledNativeComponent && !isTag(target)) {
-    return createStyledNativeComponent(target.target, options, target.rules.concat(rules), target)
-  }
-
+                                     rules: RuleSet) => {
   const {
     displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
+    rules: extendingRules = [],
+    ParentComponent = AbstractStyledComponent,
   } = options
-  const inlineStyle = new InlineStyle(rules)
-  const ParentComponent = parent || AbstractStyledComponent
+  const inlineStyle = new InlineStyle([...extendingRules, ...rules])
 
-  // $FlowFixMe need to convince flow that ParentComponent can't be string here
   class StyledNativeComponent extends ParentComponent {
-    static rules: RuleSet
-    static target: Target
+    static extend: Function
+    static extendWith: Function
 
     constructor() {
       super()
@@ -97,12 +91,18 @@ const createStyledNativeComponent = (target: Target,
 
       return createElement(target, propsForElement, children)
     }
+
+    static get extend() {
+      return StyledNativeComponent.extendWith(target)
+    }
   }
 
-  /* Used for inheritance */
-  StyledNativeComponent.rules = rules
-  StyledNativeComponent.target = target
   StyledNativeComponent.displayName = displayName
+  StyledNativeComponent.extendWith = tag => {
+    const { displayName: _, ...optionsToCopy } = options
+    return constructWithOptions(createStyledNativeComponent, tag,
+      { ...optionsToCopy, rules, ParentComponent: StyledNativeComponent })
+  }
 
   return StyledNativeComponent
 }
