@@ -40,7 +40,7 @@ export default (ComponentStyle: Function) => {
     class StyledComponent extends ParentComponent {
       static styledComponentId: string
       static extend: Function
-      static extendWithTag: Function
+      static extendWith: Function
       attrs = {}
 
       constructor() {
@@ -126,13 +126,13 @@ export default (ComponentStyle: Function) => {
       }
 
       static get extend() {
-        return StyledComponent.extendWithTag(target)
+        return StyledComponent.extendWith(target)
       }
     }
 
     StyledComponent.displayName = displayName
     StyledComponent.styledComponentId = componentId
-    StyledComponent.extendWithTag = tag =>
+    StyledComponent.extendWith = tag =>
       constructWithOptions(createStyledComponent, tag,
         { ...options, rules, ParentComponent: StyledComponent })
 

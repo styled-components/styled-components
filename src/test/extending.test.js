@@ -139,9 +139,9 @@ describe('extending', () => {
     expect(Child.fetchData()).toEqual(1)
   })
 
-  it('should allow changing tags', () => {
+  it('should allow changing component', () => {
     const Parent = styled.div`color: red;`
-    const Child = Parent.extendWithTag('span')``
+    const Child = Parent.extendWith('span')``
 
     expect(shallow(<Child />).html()).toEqual('<span class="sc-b c"></span>')
   })
