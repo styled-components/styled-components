@@ -16,6 +16,7 @@ const createStyledNativeComponent = (target: Target,
                                      rules: RuleSet) => {
   const {
     displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
+    attrs = {},
     rules: extendingRules = [],
     ParentComponent = AbstractStyledComponent,
   } = options
@@ -24,6 +25,7 @@ const createStyledNativeComponent = (target: Target,
   class StyledNativeComponent extends ParentComponent {
     static extend: Function
     static extendWith: Function
+    attrs = {}
 
     constructor() {
       super()
@@ -73,16 +75,25 @@ const createStyledNativeComponent = (target: Target,
       }
     }
 
+    buildExecutionContext(theme: any, props: any) {
+      const context = { ...props, theme }
+      this.attrs = Object.keys(attrs).reduce((accum, key) => (
+        { ...accum, [key]: typeof attrs[key] === 'function' ? attrs[key](context) : attrs[key] }
+      ), {})
+      return { ...context, ...this.attrs }
+    }
+
     generateAndInjectStyles(theme: any, props: any) {
-      const executionContext = { ...props, theme }
+      const executionContext = this.buildExecutionContext(theme, props)
       return inlineStyle.generateStyleObject(executionContext)
     }
+
     /* eslint-disable react/prop-types */
     render() {
       const { style, children, innerRef } = this.props
       const { generatedStyles } = this.state
 
-      const propsForElement = { ...this.props }
+      const propsForElement = { ...this.attrs, ...this.props }
       propsForElement.style = [generatedStyles, style]
       if (innerRef) {
         propsForElement.ref = innerRef
