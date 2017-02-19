@@ -132,9 +132,11 @@ export default (ComponentStyle: Function) => {
 
     StyledComponent.displayName = displayName
     StyledComponent.styledComponentId = componentId
-    StyledComponent.extendWith = tag =>
-      constructWithOptions(createStyledComponent, tag,
-        { ...options, rules, ParentComponent: StyledComponent })
+    StyledComponent.extendWith = tag => {
+      const { displayName: _, componentId: __, ...optionsToCopy } = options
+      return constructWithOptions(createStyledComponent, tag,
+        { ...optionsToCopy, rules, ParentComponent: StyledComponent })
+    }
 
     return StyledComponent
   }
