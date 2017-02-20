@@ -5,12 +5,20 @@ const transforms = require('./transforms');
 const TokenStream = require('./TokenStream');
 
 // Note if this is wrong, you'll need to change tokenTypes.js too
-const numberOrLengthRe = /^([+-]?(?:\d*\.)?\d+(?:[Ee][+-]?\d+)?)(?:px)?$/;
+const numberOrLengthRe = /^([+-]?(?:\d*\.)?\d+(?:[Ee][+-]?\d+)?)(?:px)?$/i;
+const boolRe = /^true|false$/i;
 
 // Undocumented export
 export const transformRawValue = (input) => {
-  const value = input.trim().match(numberOrLengthRe);
-  return value ? Number(value[1]) : input;
+  const value = input.trim();
+
+  const numberMatch = value.match(numberOrLengthRe);
+  if (numberMatch) return Number(numberMatch[1]);
+
+  const boolMatch = input.match(boolRe);
+  if (boolMatch) return boolMatch[0].toLowerCase() === 'true';
+
+  return value;
 };
 
 export const getStylesForProperty = (propName, inputValue, allowShorthand) => {
