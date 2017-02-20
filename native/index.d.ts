@@ -11,7 +11,8 @@ export {
   OuterStyledProps,
   StyledFunction,
   BaseStyledInterface,
-  css
+  css,
+  withTheme,
 } from "..";
 
 import { StyledFunction, BaseStyledInterface } from "..";

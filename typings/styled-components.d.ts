@@ -1,7 +1,7 @@
 import * as React from "react";
-import { StatelessComponent, ComponentClass } from "react";
+import { StatelessComponent, ComponentClass, PureComponent } from "react";
 
-type Component<P> = ComponentClass<P> | StatelessComponent<P>;
+type Component<P> = ComponentClass<P> | StatelessComponent<P> | PureComponent<P, any>;
 
 export interface ThemeProps<T> {
   theme: T;
@@ -199,6 +199,8 @@ export interface ThemedStyledComponentsModule<T> {
 declare const styled: StyledInterface;
 
 export const css: ThemedCssFunction<any>;
+export function withTheme<C extends Component<any>>(component: C): C;
+
 export function keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
 
