@@ -488,6 +488,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [Scalable React Boilerplate](https://github.com/RyanCCollins/scalable-react-boilerplate)
 - [Scalable React TypeScript Boilerplate](https://github.com/RyanCCollins/scalable-react-ts-boilerplate)
 - [styled-theme](https://github.com/diegohaz/styled-theme): Extensible theming system for styled-components.
+- [styled-tools](https://github.com/diegohaz/styled-tools): Useful interpolated functions for styled-components.
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
