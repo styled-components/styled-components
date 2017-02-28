@@ -192,6 +192,7 @@ export interface ThemedStyledComponentsModule<T> {
   css: ThemedCssFunction<T>;
   keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
   injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
+  withTheme<P extends { theme?: T; }, T>(component: Component<P>): ComponentClass<P>;
 
   ThemeProvider: ThemeProviderComponent<T>;
 }
@@ -199,7 +200,7 @@ export interface ThemedStyledComponentsModule<T> {
 declare const styled: StyledInterface;
 
 export const css: ThemedCssFunction<any>;
-export function withTheme<C extends Component<any>>(component: C): C;
+export function withTheme<P extends { theme?: T; }, T>(component: Component<P>): ComponentClass<P>;
 
 export function keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;

@@ -12,8 +12,9 @@ const {
     css,
     injectGlobal,
     keyframes,
+    withTheme,
     ThemeProvider
 } = styledComponents as ThemedStyledComponentsModule<MyTheme>;
 
 export default styled;
-export { css, injectGlobal, keyframes, ThemeProvider };
+export { css, injectGlobal, keyframes, withTheme, ThemeProvider };
