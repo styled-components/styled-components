@@ -150,9 +150,8 @@ injectGlobal`
 `;
 */
 
-const text = "hey";
+const name = "hey";
 
-const MyThemedComponent = withTheme(MyComponent);
+const ThemedButton = withTheme(MyButton);
 
-<MyThemedComponent text={text} />;
-<MyThemedComponent theme={theme} text={text} />;
+<ThemedButton name={name} />;
