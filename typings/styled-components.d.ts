@@ -1,7 +1,7 @@
 import * as React from "react";
 import { StatelessComponent, ComponentClass, PureComponent } from "react";
 
-type Component<P> = ComponentClass<P> | StatelessComponent<P> | PureComponent<P, any>;
+type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 
 export interface ThemeProps<T> {
   theme: T;
