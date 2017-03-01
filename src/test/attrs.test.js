@@ -12,26 +12,35 @@ describe('attrs', () => {
     styled = resetStyled()
   })
 
-  it('work fine with an empty object', () => {
+  it('should work fine with an empty object', () => {
     const Comp = styled.div.attrs({})``
     expect(shallow(<Comp />).html()).toEqual('<div class="sc-a b"></div>')
   })
 
-  it('pass a simple attr', () => {
+  it('should pass a simple attr', () => {
     const Comp = styled.button.attrs({
       type: 'button'
     })``
     expect(shallow(<Comp />).html()).toEqual('<button type="button" class="sc-a b"></button>')
   })
 
-  it('call an attr function', () => {
+  it('should merge attrs objects', () => {
+    const Comp = styled.button.attrs({
+      type: 'button'
+    }).attrs({
+      disabled: true
+    })``
+    expect(shallow(<Comp />).html()).toEqual('<button type="button" disabled class="sc-a b"></button>')
+  })
+
+  it('should call an attr function', () => {
     const Comp = styled.button.attrs({
       type: () => 'button'
     })``
     expect(shallow(<Comp />).html()).toEqual('<button type="button" class="sc-a b"></button>')
   })
 
-  it('pass props to the attr function', () => {
+  it('should pass props to the attr function', () => {
     const Comp = styled.button.attrs({
       type: props => props.submit ? 'submit' : 'button'
     })``
@@ -84,8 +93,7 @@ describe('attrs', () => {
     expect(shallow(<Comp />).html()).toEqual('<div data-foo="bar" aria-label="A simple FooBar" class="sc-a b"></div>')
   })
 
-
-  it('pass attrs to style block', () => {
+  it('passes attrs to style block', () => {
     /* Would be a React Router Link in IRL */
     const Comp = styled.a.attrs({
       href: '#',
@@ -98,5 +106,43 @@ describe('attrs', () => {
     `
     expect(shallow(<Comp />).html()).toEqual('<a href="#" class="sc-a b"></a>')
     expectCSSMatches('.sc-a {} .b { color: blue; } .b.--is-active { color: red; }')
+  })
+
+  it('should not pass any attrs by default', () => {
+    /* Would be a React Router Link in IRL */
+    const Comp = styled('a')`
+      color: blue;
+    `
+    expect(shallow(<Comp href="#" nonsense/>).html()).toEqual('<a class="sc-a b"></a>')
+  })
+
+  it('should treat true as passthrough', () => {
+    /* Would be a React Router Link in IRL */
+    const Comp = styled('a').attrs({
+      href: true,
+      nonsense: true
+    })`
+      color: blue;
+    `
+    expect(shallow(<Comp href="#" nonsense/>).html()).toEqual('<a href="#" nonsense class="sc-a b"></a>')
+  })
+
+  it('DOM aliases should have attrs pre-included', () => {
+    /* Would be a React Router Link in IRL */
+    const Comp = styled.a`
+      color: blue;
+    `
+    expect(shallow(<Comp href="#" nonsense/>).html()).toEqual('<a href="#" class="sc-a b"></a>')
+  })
+
+  it('should allow overriding of the pre-attached attrs', () => {
+    /* Would be a React Router Link in IRL */
+    const Comp = styled.a.attrs({
+      href: true,
+      nonsense: true
+    })`
+      color: blue;
+    `
+    expect(shallow(<Comp href="#" nonsense/>).html()).toEqual('<a href="#" nonsense class="sc-a b"></a>')
   })
 })
