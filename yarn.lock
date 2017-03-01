@@ -1669,7 +1669,7 @@ css-select@~1.2.0:
     domutils "1.5.1"
     nth-check "~1.0.1"
 
-css-to-react-native@latest:
+css-to-react-native@2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/css-to-react-native/-/css-to-react-native-2.0.1.tgz#179b25cba8cab7798118b1679b81f4d6b3fa0de3"
   dependencies:
