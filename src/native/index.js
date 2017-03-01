@@ -6,6 +6,7 @@ import reactNative from 'react-native'
 import constructWithOptions from '../constructors/constructWithOptions'
 import css from '../constructors/css'
 
+import { resetStyleCache } from '../models/InlineStyle'
 import styledNativeComponent from '../models/StyledNativeComponent'
 import ThemeProvider from '../models/ThemeProvider'
 import withTheme from '../hoc/withTheme'
@@ -33,5 +34,5 @@ aliases.split(/\s+/m).forEach(alias => Object.defineProperty(styled, alias, {
   },
 }))
 
-export { css, ThemeProvider, withTheme }
+export { css, ThemeProvider, withTheme, resetStyleCache }
 export default styled
