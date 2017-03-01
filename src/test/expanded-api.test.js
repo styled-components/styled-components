@@ -1,6 +1,5 @@
 // @flow
 import React, { Component } from 'react'
-import expect from 'expect'
 import { shallow } from 'enzyme'
 
 import { resetStyled } from './utils'
@@ -32,27 +31,27 @@ describe('expanded api', () => {
       const Comp = styled.div``
       const Comp2 = styled.div``
       expect(Comp.styledComponentId).toBe('sc-a')
-      expect(shallow(<Comp />).prop('className')).toInclude('sc-a')
+      expect(shallow(<Comp />).prop('className')).toMatch('sc-a')
       expect(Comp2.styledComponentId).toBe('sc-b')
-      expect(shallow(<Comp2 />).prop('className')).toInclude('sc-b')
+      expect(shallow(<Comp2 />).prop('className')).toMatch('sc-b')
     })
 
     it('should be generated from displayName + hash', () => {
       const Comp = styled.div.withConfig({ displayName: 'Comp' })``
       const Comp2 = styled.div.withConfig({ displayName: 'Comp2' })``
       expect(Comp.styledComponentId).toBe('Comp-a')
-      expect(shallow(<Comp />).prop('className')).toInclude('Comp-a')
+      expect(shallow(<Comp />).prop('className')).toMatch('Comp-a')
       expect(Comp2.styledComponentId).toBe('Comp2-b')
-      expect(shallow(<Comp2 />).prop('className')).toInclude('Comp2-b')
+      expect(shallow(<Comp2 />).prop('className')).toMatch('Comp2-b')
     })
 
     it('should be attached if passed in', () => {
       const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })``
       const Comp2 = styled.div.withConfig({ displayName: 'Comp2', componentId: 'OMGLOL' })``
       expect(Comp.styledComponentId).toBe('LOLOMG')
-      expect(shallow(<Comp />).prop('className')).toInclude('LOLOMG')
+      expect(shallow(<Comp />).prop('className')).toMatch('LOLOMG')
       expect(Comp2.styledComponentId).toBe('OMGLOL')
-      expect(shallow(<Comp2 />).prop('className')).toInclude('OMGLOL')
+      expect(shallow(<Comp2 />).prop('className')).toMatch('OMGLOL')
     })
   })
 

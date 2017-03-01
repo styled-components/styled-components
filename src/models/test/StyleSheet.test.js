@@ -1,5 +1,4 @@
 import React from 'react'
-import expect from 'expect';
 import { shallow } from 'enzyme'
 import { resetStyled, expectCSSMatches } from '../../test/utils'
 import styleSheet from '../StyleSheet';
@@ -67,7 +66,7 @@ describe('styleSheet', () => {
     })
 
     it('should not throw an error if no styled-components are rendered', () => {
-      expect(() => styleSheet.getCSS()).toNotThrow();
+      styleSheet.getCSS();
     })
   })
 

@@ -1,8 +1,6 @@
 // @flow
 import React, { Component } from 'react'
-import expect from 'expect'
 import { shallow, mount } from 'enzyme'
-import jsdom from 'mocha-jsdom'
 
 import styleSheet from '../models/StyleSheet'
 import { resetStyled, expectCSSMatches } from './utils'
@@ -56,8 +54,6 @@ describe('basic', () => {
   })
 
   describe('jsdom tests', () => {
-    jsdom()
-
     let Comp
     let WrapperComp
     let wrapper
@@ -76,12 +72,12 @@ describe('basic', () => {
 
     it('should pass ref to the component', () => {
       // $FlowFixMe
-      expect(wrapper.node.testRef).toExist()
+      expect(wrapper.node.testRef).toBeTruthy()
     })
 
     it('should not pass innerRef to the component', () => {
       // $FlowFixMe
-      expect(wrapper.node.ref).toNotExist()
+      expect(wrapper.node.ref).toBeFalsy()
     })
   })
 })

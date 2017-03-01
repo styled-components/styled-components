@@ -1,7 +1,6 @@
 // @flow
 /* eslint-disable react/no-multi-comp */
 import React from 'react'
-import expect from 'expect'
 import { shallow, render } from 'enzyme'
 import ThemeProvider, { CHANNEL } from '../ThemeProvider'
 

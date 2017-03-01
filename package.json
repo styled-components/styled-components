@@ -14,7 +14,7 @@
     "prebuild:dist": "rm -rf dist/*",
     "build:dist": "rollup -c && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
-    "test": "mocha \"./src/**/*.test.js\" --require babel-core/register --timeout 5000",
+    "test": "jest",
     "test:watch": "npm run test -- --watch",
     "flow": "flow check",
     "lint": "eslint src",
@@ -72,14 +72,12 @@
     "eslint-plugin-import": "^2.2.0",
     "eslint-plugin-jsx-a11y": "^2.0.2",
     "eslint-plugin-react": "^6.8.0",
-    "expect": "^1.20.2",
     "express": "^4.14.1",
     "flow-bin": "^0.37.1",
     "flow-copy-source": "^1.1.0",
+    "jest": "^19.0.2",
     "jsdom": "^9.10.0",
     "lint-staged": "^3.3.0",
-    "mocha": "^3.2.0",
-    "mocha-jsdom": "^1.1.0",
     "node-watch": "^0.4.1",
     "pre-commit": "^1.2.2",
     "react": "^15.4.1",
@@ -99,6 +97,9 @@
   },
   "peerDependencies": {
     "react": "^0.14.0 || ^15.0.0-0"
+  },
+  "jest": {
+    "roots": ["<rootDir>/src/"]
   },
   "lint-staged": {
     "*.js": [

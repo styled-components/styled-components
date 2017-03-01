@@ -3,8 +3,6 @@
  * This sets up our end-to-end test suite, which essentially makes sure
  * our public API works the way we promise/want
  */
-import expect from 'expect'
-
 import _styled from '../constructors/styled'
 import styleSheet from '../models/StyleSheet'
 import _styledComponent from '../models/StyledComponent'
@@ -16,13 +14,20 @@ const classNames = () => String.fromCodePoint(97 + index++)
 
 export const resetStyled = () => {
   styleSheet.reset()
+
+  const existingStyleElement = document.head.childNodes[0]
+  if (existingStyleElement) existingStyleElement.textContent = ''
+
   index = 0
   return _styled(_styledComponent(_ComponentStyle(classNames)))
 }
 
 const stripWhitespace = str => str.trim().replace(/([;\{\}])/g, '$1  ').replace(/\s+/g, ' ')
 export const expectCSSMatches = (expectation: string, opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }) => {
-  const css = styleSheet.getCSS({min: false})
+  // const css = styleSheet.getCSS({min: false})
+  const existingStyleElement = document.head.childNodes[0]
+  const css = existingStyleElement ? existingStyleElement.textContent : ''
+
   if (opts.ignoreWhitespace) {
     expect(stripWhitespace(css)).toEqual(stripWhitespace(expectation))
   } else {

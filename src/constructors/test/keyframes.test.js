@@ -1,6 +1,4 @@
 // @flow
-import expect from 'expect'
-
 import _keyframes from '../keyframes'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
 

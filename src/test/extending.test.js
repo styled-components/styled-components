@@ -1,6 +1,5 @@
 // @flow
 import React from 'react'
-import expect from 'expect'
 import { shallow } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
@@ -124,7 +123,7 @@ describe('extending', () => {
 
     const Child = styled(Parent)`color: green;`
 
-    expect(Child.fetchData).toExist()
+    expect(Child.fetchData).toBeTruthy()
     expect(Child.fetchData()).toEqual(1)
   })
 
@@ -135,7 +134,7 @@ describe('extending', () => {
     const Parent = styled(GrandParent)`color: red;`
     const Child = styled(Parent)`color:red;`
 
-    expect(Child.fetchData).toExist()
+    expect(Child.fetchData).toBeTruthy()
     expect(Child.fetchData()).toEqual(1)
   })
 })

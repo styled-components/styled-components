@@ -1,6 +1,4 @@
 // @flow
-import expect from 'expect'
-import jsdom from 'mocha-jsdom'
 import React from 'react'
 import { mount, render } from 'enzyme'
 
@@ -208,9 +206,7 @@ describe('theming', () => {
   })
 })
 
-describe('theming (jsdom)', () => {
-  jsdom()
-
+describe('theming', () => {
   beforeEach(() => {
     styled = resetStyled()
   })
