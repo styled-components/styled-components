@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## [Upcoming Major Release]
 
+- Update css-to-react-native - you'll now need to add units to your React Native styles (see [css-to-react-native](https://github.com/styled-components/css-to-react-native/issues/20), [code mod](https://github.com/styled-components/styled-components-native-code-mod))
 - Update stylis to latest version (see [#496](https://github.com/styled-components/styled-components/pull/496)).
 - Added per-component class names (see [#227](https://github.com/styled-components/styled-components/pull/227)).
 - Added the ability to override one component's styles from another.

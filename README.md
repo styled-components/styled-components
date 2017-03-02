@@ -295,9 +295,9 @@ We also support more complex styles (like `transform`), which would normally be 
 ```JS
 const RotatedBox = styled.View`
   transform: rotate(90deg);
-  text-shadow-offset: 10 5;
+  text-shadow-offset: 10px 5px;
   font-variant: small-caps;
-  margin: 5 7 2;
+  margin: 5px 7px 2px;
 `
 ```
 
