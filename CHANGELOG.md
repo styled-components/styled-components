@@ -10,6 +10,15 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+## [v1.4.4] — 2017-03-01
+
+### Changed
+
+- Improve theming support in TypeScript, thanks to [@patrick91](https://github.com/patrick91). (see [#460](https://github.com/styled-components/styled-components/pull/460))
+- Add TypeScript definitions for `withTheme`, thanks to [@patrick91](https://github.com/patrick91). (see [#521](https://github.com/styled-components/styled-components/pull/521))
+- Exclude test files from `npm`, thanks to [@Amwam](https://github.com/Amwam). (see [#464](https://github.com/styled-components/styled-components/pull/464))
+- Change the default `displayName` to `styled(Component)`, thanks to [@k15a](https://github.com/k15a). (see [#470](https://github.com/styled-components/styled-components/pull/470))
+
 ## [v1.4.3] - 2017-02-04
 
 ### Changed
@@ -194,7 +203,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.3...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.4...master
+[v1.4.4]: https://github.com/styled-components/styled-components/compare/v1.4.3...v1.4.4
 [v1.4.3]: https://github.com/styled-components/styled-components/compare/v1.4.2...v1.4.3
 [v1.4.2]: https://github.com/styled-components/styled-components/compare/v1.4.1...v1.4.2
 [v1.4.1]: https://github.com/styled-components/styled-components/compare/v1.4.0...v1.4.1

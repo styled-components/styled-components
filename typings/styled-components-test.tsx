@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import styled from "..";
-import { css, keyframes, ThemeProvider, injectGlobal } from "..";
+import { css, keyframes, ThemeProvider, injectGlobal, withTheme } from "..";
 
 // Create a <Title> react component that renders an <h1> which is
 // centered, palevioletred and sized at 1.5em
@@ -149,3 +149,9 @@ injectGlobal`
   ${cssWithFunc1}
 `;
 */
+
+const name = "hey";
+
+const ThemedButton = withTheme(MyButton);
+
+<ThemedButton name={name} />;
