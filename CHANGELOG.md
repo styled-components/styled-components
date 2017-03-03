@@ -12,13 +12,13 @@ All notable changes to this project will be documented in this file. If a contri
 - Added the ability to override one component's styles from another.
 - Injecting an empty class for each instance of a component.
 - Added `attrs` constructor for passing extra attributes to the underlying element
+- Added warnings for components generating a lot of classes, thanks to [@vdanchenkov](https://github.com/vdanchenkov). (see [#268](https://github.com/styled-components/styled-components/pull/268))  
 
 ## [Unreleased]
 
 ### Added
 
 - Added the alias of `styled.Button` for react native. (see [#322](https://github.com/styled-components/styled-components/pull/322))
-- Added warnings for components generating a lot of classes, thanks to [@vdanchenkov](https://github.com/vdanchenkov). (see [#268](https://github.com/styled-components/styled-components/pull/268))  
 
 ### Changed
 
