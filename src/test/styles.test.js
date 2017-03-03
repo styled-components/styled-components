@@ -131,7 +131,7 @@ describe('with styles', () => {
     expectCSSMatches('.a { background: blue; } .b { background: red; }')
   })
 
-  it('should inject styles of multiple components based on creation, not rendering order', () => {
+  it('should inject styles of multiple components based rendering order, not creation', () => {
     const firstRule = 'content: "first rule";'
     const secondRule = 'content: "second rule";'
     const FirstComp = styled.div`
@@ -146,9 +146,9 @@ describe('with styles', () => {
     shallow(<FirstComp />)
 
     // Classes _do_ get generated in the order of rendering but that's ok
-    expectCSSMatches(`
-        .b { content: "first rule"; }
+    expectCSSMatches(`        
         .a { content: "second rule"; }
+        .b { content: "first rule"; }
       `)
   })
 

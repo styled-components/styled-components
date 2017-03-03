@@ -6,23 +6,29 @@ import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
 import postcssNested from '../vendor/postcss-nested'
 import autoprefix from '../utils/autoprefix'
-import styleSheet from './StyleSheet'
+import styleSheet from './AsyncStyleSheet'
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
  the React-specific stuff.
  */
-export default (nameGenerator: NameGenerator) => {
-  const inserted = {}
+const CLEARING_TIMEOUT = 1000
 
+const invisibleStyle = '__styled__invisible'
+
+styleSheet.addStyle(invisibleStyle, `.${invisibleStyle} {visibility:hidden}`)
+styleSheet.forceFlush()
+
+const hashSelector = {}
+
+export default (nameGenerator: NameGenerator) => {
   class ComponentStyle {
     rules: RuleSet
-    insertedRule: GlamorInsertedRule
+
+    static invisible = invisibleStyle;
 
     constructor(rules: RuleSet) {
       this.rules = rules
-      if (!styleSheet.injected) styleSheet.inject()
-      this.insertedRule = styleSheet.insert('')
     }
 
     /*
@@ -31,19 +37,46 @@ export default (nameGenerator: NameGenerator) => {
      * Parses that with PostCSS then runs PostCSS-Nested on it
      * Returns the hash to be injected on render()
      * */
-    generateAndInjectStyles(executionContext: Object) {
+    addStyle(executionContext: Object) {
+      const inserted = styleSheet.inserted
       const flatCSS = flatten(this.rules, executionContext).join('')
         .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
       const hash = hashStr(flatCSS)
-      if (!inserted[hash]) {
-        const selector = nameGenerator(hash)
-        inserted[hash] = selector
+      const selector = hashSelector[hash] || nameGenerator(hash)
+      hashSelector[hash] = selector
+
+      if (!inserted[selector]) {
         const root = parse(`.${selector} { ${flatCSS} }`)
         postcssNested(root)
         autoprefix(root)
-        this.insertedRule.appendRule(root.toResult().css)
+        inserted[selector] = {
+          rule: styleSheet.addStyle(selector, root.toResult().css),
+          useCount: 1,
+        }
+      } else {
+        inserted[selector].useCount++
+        if (inserted[selector].timeOut) {
+          clearTimeout(inserted[selector].timeOut)
+        }
       }
-      return inserted[hash]
+      return inserted[selector].rule.promise.then(() => selector)
+    }
+
+    removeStyle(selector) {
+      const inserted = styleSheet.inserted
+      if (!selector || !inserted[selector]) {
+        return
+      }
+      inserted[selector].useCount--
+      if (!inserted[selector].useCount) {
+        if (inserted[selector].timeOut) {
+          clearTimeout(inserted[selector].timeOut)
+        }
+        inserted[selector].timeOut = setTimeout(() => {
+          inserted[selector].rule.remove()
+          delete inserted[selector]
+        }, CLEARING_TIMEOUT)
+      }
     }
   }
 

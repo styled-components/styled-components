@@ -4,12 +4,13 @@ import expect from 'expect'
 import { shallow, mount } from 'enzyme'
 import jsdom from 'mocha-jsdom'
 
-import styleSheet from '../models/StyleSheet'
+import styleSheet from '../models/AsyncStyleSheet'
 import { resetStyled, expectCSSMatches } from './utils'
 
 let styled
 
 describe('basic', () => {
+  jsdom()
   /**
    * Make sure the setup is the same for every test
    */
@@ -23,8 +24,10 @@ describe('basic', () => {
 
   it('should inject a stylesheet when a component is created', () => {
     const Comp = styled.div``
-    shallow(<Comp />)
-    expect(styleSheet.injected).toBe(true)
+    mount(<Comp />)
+    expect(styleSheet.injected).toBe(false)
+    styleSheet.forceFlush();
+    expect(styleSheet.injected).toBe(true);
   })
 
   it('should not generate any styles by default', () => {
@@ -34,14 +37,14 @@ describe('basic', () => {
 
   it('should generate an empty tag once rendered', () => {
     const Comp = styled.div``
-    shallow(<Comp />)
+    mount(<Comp />)
     expectCSSMatches('.a {  }')
   })
 
   /* TODO: we should probably pretty-format the output so this test might have to change */
   it('should pass through all whitespace', () => {
     const Comp = styled.div`   \n   `
-    shallow(<Comp />)
+    mount(<Comp />)
     expectCSSMatches('.a {    \n    }', { ignoreWhitespace: false })
   })
 
@@ -84,7 +87,6 @@ describe('basic', () => {
   })
 
   describe('innerRef', () => {
-    jsdom()
 
     it('should handle styled-components correctly', () => {
       const Comp = styled.div`

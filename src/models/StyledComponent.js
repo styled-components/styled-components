@@ -33,12 +33,27 @@ export default (ComponentStyle: Function) => {
         this.state = {
           theme: null,
           generatedClassName: '',
+          generatedSequence: 0,
         }
       }
 
       generateAndInjectStyles(theme: any, props: any) {
-        const executionContext = { ...props, theme }
-        return componentStyle.generateAndInjectStyles(executionContext)
+        const executionContext = { ...props, theme: theme || {} }
+        return componentStyle.addStyle(executionContext)
+      }
+
+      applyStyles(theme: any, props: any) {
+        const oldClass = this.state.generatedClassName
+        const generatedSequence = this.state.generatedSequence + 1
+        this.setState({ generatedSequence })
+        this.generateAndInjectStyles(theme, props).then(generatedClassName => {
+          componentStyle.removeStyle(oldClass)
+          if (generatedSequence === this.state.generatedSequence) {
+            this.setState({ theme, generatedClassName })
+          } else {
+            componentStyle.removeStyle(generatedClassName)
+          }
+        })
       }
 
       componentWillMount() {
@@ -55,36 +70,30 @@ export default (ComponentStyle: Function) => {
             const { defaultProps } = this.constructor
             const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
             const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
-            const generatedClassName = this.generateAndInjectStyles(theme, this.props)
-            this.setState({ theme, generatedClassName })
+            this.applyStyles(theme, this.props)
           })
         } else {
-          const theme = this.props.theme || {}
-          const generatedClassName = this.generateAndInjectStyles(
-            theme,
-            this.props,
-          )
-          this.setState({ theme, generatedClassName })
+          const theme = this.props.theme
+          this.applyStyles(theme, this.props)
         }
       }
 
       componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-        this.setState((oldState) => {
-          // Props should take precedence over ThemeProvider, which should take precedence over
-          // defaultProps, but React automatically puts defaultProps on props.
-          const { defaultProps } = this.constructor
-          const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
-          const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : oldState.theme
-          const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
-
-          return { theme, generatedClassName }
-        })
+        // Props should take precedence over ThemeProvider, which should take precedence over
+        // defaultProps, but React automatically puts defaultProps on props.
+        const { defaultProps } = this.constructor
+        const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
+        const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : this.state.theme
+        this.applyStyles(theme, nextProps)
       }
 
       componentWillUnmount() {
         if (this.unsubscribe) {
           this.unsubscribe()
         }
+        // remove current class end prevent new one to be added
+        this.setState({ generatedSequence: this.state.generatedSequence + 1 })
+        componentStyle.removeStyle(this.state.generatedClassName)
       }
 
       render() {
@@ -98,7 +107,8 @@ export default (ComponentStyle: Function) => {
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
-        propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
+        propsForElement.className = [className, generatedClassName || ComponentStyle.invisible]
+          .filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
           if (isTag(target)) delete propsForElement.innerRef
