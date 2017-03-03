@@ -3,6 +3,7 @@
 import { createElement } from 'react'
 
 import type { Theme } from './ThemeProvider'
+import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
@@ -42,6 +43,11 @@ export default (ComponentStyle: Function) => {
     } = options
     const componentStyle = new ComponentStyle(rules, componentId)
     const ParentComponent = parent || AbstractStyledComponent
+
+    let warnTooManyClasses
+    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+      warnTooManyClasses = createWarnTooManyClasses()
+    }
 
     class StyledComponent extends ParentComponent {
       static rules: RuleSet
@@ -129,6 +135,9 @@ export default (ComponentStyle: Function) => {
           delete propsForElement.innerRef
         }
 
+        if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production' && generatedClassName) {
+          warnTooManyClasses(generatedClassName, StyledComponent.displayName)
+        }
         return createElement(target, propsForElement, children)
       }
     }
