@@ -146,6 +146,7 @@ export default (ComponentStyle: Function) => {
     StyledComponent.styledComponentId = componentId
     StyledComponent.target = target
     StyledComponent.rules = rules
+    StyledComponent.attrs = attrs
 
     return StyledComponent
   }
