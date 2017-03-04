@@ -405,3 +405,8 @@ it('allows blacklisting shorthands', () => {
   const actualStyles = transformCss([['border-radius', '50']], ['borderRadius']);
   expect(actualStyles).toEqual({ borderRadius: 50 });
 });
+
+it('throws useful errors', () => {
+  expect(() => transformCss([['margin', '10']]))
+    .toThrow('Failed to parse declaration "margin: 10"');
+});

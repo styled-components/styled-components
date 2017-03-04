@@ -21,19 +21,27 @@ export const transformRawValue = (input) => {
   return value;
 };
 
-export const getStylesForProperty = (propName, inputValue, allowShorthand) => {
-  // Undocumented: allow ast to be passed in
-  let propValue;
+const baseTransformShorthandValue = (propName, inputValue) => {
+  const ast = parse(inputValue.trim());
+  const tokenStream = new TokenStream(ast.nodes);
+  return transforms[propName](tokenStream);
+};
 
+const transformShorthandValue = (process.env.NODE_ENV === 'production')
+  ? baseTransformShorthandValue
+  : (propName, inputValue) => {
+    try {
+      return baseTransformShorthandValue(propName, inputValue);
+    } catch (e) {
+      throw new Error(`Failed to parse declaration "${propName}: ${inputValue}"`);
+    }
+  };
+
+export const getStylesForProperty = (propName, inputValue, allowShorthand) => {
   const isRawValue = (allowShorthand === false) || !(propName in transforms);
-  if (isRawValue) {
-    const value = typeof inputValue === 'string' ? inputValue : parse.stringify(inputValue);
-    propValue = transformRawValue(value);
-  } else {
-    const ast = typeof inputValue === 'string' ? parse(inputValue.trim()) : inputValue;
-    const tokenStream = new TokenStream(ast.nodes);
-    propValue = transforms[propName](tokenStream);
-  }
+  const propValue = isRawValue
+    ? transformRawValue(inputValue)
+    : transformShorthandValue(propName, inputValue.trim());
 
   return (propValue && propValue.$merge)
     ? propValue.$merge
