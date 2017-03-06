@@ -84,6 +84,26 @@ describe('attrs', () => {
     expect(shallow(<Comp />).html()).toEqual('<div data-foo="bar" aria-label="A simple FooBar" class="sc-a b"></div>')
   })
 
+  it('merge attrs', () => {
+    const Comp = styled.button.attrs({
+      type: 'button',
+      tabIndex: 0
+    }).attrs({
+      type: 'submit'
+    })``
+    expect(shallow(<Comp />).html()).toEqual('<button type="submit" tabindex="0" class="sc-a b"></button>')
+  })
+
+  it('merge attrs when inheriting SC', () => {
+    const Parent = styled.button.attrs({
+      type: 'button',
+      tabIndex: 0
+    })``
+    const Child = Parent.extend.attrs({
+      type: 'submit'
+    })``
+    expect(shallow(<Child />).html()).toEqual('<button type="submit" tabindex="0" class="sc-b c"></button>')
+  })
 
   it('pass attrs to style block', () => {
     /* Would be a React Router Link in IRL */

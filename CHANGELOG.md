@@ -12,7 +12,8 @@ All notable changes to this project will be documented in this file. If a contri
 - Added the ability to override one component's styles from another.
 - Injecting an empty class for each instance of a component.
 - Added `attrs` constructor for passing extra attributes to the underlying element
-- Added warnings for components generating a lot of classes, thanks to [@vdanchenkov](https://github.com/vdanchenkov). (see [#268](https://github.com/styled-components/styled-components/pull/268))  
+- Added warnings for components generating a lot of classes, thanks to [@vdanchenkov](https://github.com/vdanchenkov). (see [#268](https://github.com/styled-components/styled-components/pull/268))
+- Standardised `styled(Comp)` to work the same in all cases, rather than a special extension case where `Comp` is another Styled Component. `Comp.extend` now covers that case. (see [#518](https://github.com/styled-components/styled-components/pull/518)).
 
 ## [Unreleased]
 

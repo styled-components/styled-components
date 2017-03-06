@@ -11,6 +11,7 @@ import type { RuleSet, Target } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
+import constructWithOptions from '../constructors/constructWithOptions'
 
 export default (ComponentStyle: Function) => {
   /* We depend on components having unique IDs */
@@ -27,22 +28,15 @@ export default (ComponentStyle: Function) => {
 
   const createStyledComponent = (target: Target,
                                  options: Object,
-                                 rules: RuleSet,
-                                 // eslint-disable-next-line no-undef
-                                 parent?: ReactClass<*>) => {
-    /* Handle styled(OtherStyledComponent) differently */
-    const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
-    if (!isTag(target) && isStyledComponent) {
-      return createStyledComponent(target.target, options, target.rules.concat(rules), target)
-    }
-
+                                 rules: RuleSet) => {
     const {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
       componentId = generateId(options.displayName || 'sc'),
       attrs = {},
+      rules: extendingRules = [],
+      ParentComponent = AbstractStyledComponent,
     } = options
-    const componentStyle = new ComponentStyle(rules, componentId)
-    const ParentComponent = parent || AbstractStyledComponent
+    const componentStyle = new ComponentStyle([...extendingRules, ...rules], componentId)
 
     let warnTooManyClasses
     if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
@@ -50,10 +44,9 @@ export default (ComponentStyle: Function) => {
     }
 
     class StyledComponent extends ParentComponent {
-      static rules: RuleSet
-      static target: Target
       static styledComponentId: string
-      static attrs: Object
+      static extend: Function
+      static extendWith: Function
       attrs = {}
 
       constructor() {
@@ -140,12 +133,19 @@ export default (ComponentStyle: Function) => {
         }
         return createElement(target, propsForElement, children)
       }
+
+      static get extend() {
+        return StyledComponent.extendWith(target)
+      }
     }
 
     StyledComponent.displayName = displayName
     StyledComponent.styledComponentId = componentId
-    StyledComponent.target = target
-    StyledComponent.rules = rules
+    StyledComponent.extendWith = tag => {
+      const { displayName: _, componentId: __, ...optionsToCopy } = options
+      return constructWithOptions(createStyledComponent, tag,
+        { ...optionsToCopy, rules, ParentComponent: StyledComponent })
+    }
 
     return StyledComponent
   }

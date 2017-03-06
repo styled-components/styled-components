@@ -139,62 +139,9 @@ export default Button;
   </a>
 </div>
 
-### Overriding component styles
+#### Styling Components instead of Elements
 
-Taking the `Button` component from above and removing the primary rules, this is what we're left with – just a normal button:
-
-```JSX
-import styled from 'styled-components';
-
-const Button = styled.button`
-  background: white;
-  color: palevioletred;
-  font-size: 1em;
-  margin: 1em;
-  padding: 0.25em 1em;
-  border: 2px solid palevioletred;
-  border-radius: 3px;
-`;
-
-export default Button;
-```
-
-Let's say someplace else you want to use your button component, but just in this one case you want the color and border color to be `tomato` instead of `palevioletred`. Now you _could_ pass in an interpolated function and change them based on some props, but that's quite a lot of effort for overriding the styles once.
-
-To do this in an easier way you can call `styled` as a function and pass in the previous component. You style that like any other styled-component. It overrides duplicate styles from the initial component and keeps the others around:
-
-```JSX
-// Tomatobutton.js
-
-import React from 'react';
-import styled from 'styled-components';
-
-import Button from './Button';
-
-const TomatoButton = styled(Button)`
-  color: tomato;
-  border-color: tomato;
-`;
-
-export default TomatoButton;
-```
-
-This is what our `TomatoButton` looks like, even though we have only specified the `color` and the `border-color`. Instead of copy and pasting or factoring out the styles into a separate function we've now reused them.
-
-<div align="center">
-  <a href="http://www.webpackbin.com/4y-sCCVrM">
-    <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/LZZ3h5i.jpg" />
-    <div><em>Live demo</em></div>
-  </a>
-</div>
-
-<br />
-
-> **Note:** You can also pass tag names into the `styled()` call, like so: `styled('div')`. In fact, the styled.tagname helpers are just aliases of `styled('tagname')`!
-
-#### Third-party components
-
-The above also works perfectly for styling third-party components, like a `react-router` `<Link />`!
+`styled` also works perfectly for styling your own or third-party components, like a `react-router` `<Link />`!
 
 ```JS
 import styled from 'styled-components';
@@ -225,6 +172,59 @@ const StyledLink = styled(Link)`
 </div>
 
 > **Note:** `styled-components` generate a real stylesheet with classes. The class names are then passed to the react component (including third party components) via the `className` prop. For the styles to be applied, third-party components must attach the passed-in `className` prop to a DOM node. See [Using `styled-components` with existing CSS](./docs/existing-css.md) for more information!
+>
+> You can also pass tag names into the `styled()` call, like so: `styled('div')`. In fact, the styled.tagname helpers are just aliases of `styled('tagname')`!
+
+### Extending styles
+
+Taking the `Button` component from above and removing the primary rules, this is what we're left with – just a normal button:
+
+```JSX
+import styled from 'styled-components';
+
+const Button = styled.button`
+  background: white;
+  color: palevioletred;
+  font-size: 1em;
+  margin: 1em;
+  padding: 0.25em 1em;
+  border: 2px solid palevioletred;
+  border-radius: 3px;
+`;
+
+export default Button;
+```
+
+Let's say someplace else you want to use your button component, but just in this one case you want the color and border color to be `tomato` instead of `palevioletred`. Now you _could_ pass in an interpolated function and change them based on some props, but that's quite a lot of effort for overriding the styles once.
+
+To do this in an easier way you can call `extend` on the component to generate another. You style it like any other styled-component. It overrides duplicate styles from the initial component and keeps the others around:
+
+```JSX
+// Tomatobutton.js
+
+import React from 'react';
+import styled from 'styled-components';
+
+import Button from './Button';
+
+const TomatoButton = Button.extend`
+  color: tomato;
+  border-color: tomato;
+`;
+
+export default TomatoButton;
+```
+
+This is what our `TomatoButton` looks like, even though we have only specified the `color` and the `border-color`. Instead of copy and pasting or factoring out the styles into a separate function we've now reused them.
+
+<div align="center">
+  <a href="http://www.webpackbin.com/4y-sCCVrM">
+    <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/LZZ3h5i.jpg" />
+    <div><em>Live demo</em></div>
+  </a>
+</div>
+
+<br />
 
 ### Animations
 
