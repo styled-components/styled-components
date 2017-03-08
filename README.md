@@ -463,34 +463,45 @@ We could use your help to get syntax highlighting support to other editors! If y
 
 ## Built with `styled-components`
 
-- [`grid-styled`](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
-- [ARc](https://github.com/diegohaz/arc): Atomic React App boilerplate with styled components ([demo](https://diegohaz.github.io/arc))
-- [`react-aria-tooltip`](https://github.com/egoens/react-aria-tooltip): Simple & accessible ReactJS tooltip component
-- [`react-boilerplate`](https://github.com/mxstbr/react-boilerplate): A highly scalable, offline-first foundation with the best developer experience and a focus on performance and best practices
-- [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
-- [Hedron](http://github.com/jsbros/hedron): A no-frills flex-box grid system.
+### Libraries
+- [react-aria-tooltip](https://github.com/egoens/react-aria-tooltip): Simple & accessible ReactJS tooltip component
 - [uiGradients](http://jsbros.github.io/uigradients): Generate beautiful background gradients from the [uigradients.com](http://uigradients.com) database.
-- [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
 - [react-enhanced-form](https://github.com/xeonys/react-enhanced-form): The best react form component, on earth 🌍. It makes form inputs easy, finally !
 - [react-teleportation](https://github.com/xeonys/react-teleportation): Teleport your components to the foreground.
 - [reshake](https://github.com/elrumordelaluz/reshake): CSShake as a React Functional Component ([demo](https://elrumordelaluz.github.io/reshake/))
-- [space-exp](https://github.com/caspg/space-exp): Brings you each day a stunning picture of our universe, Astronomy Picture of the Day (APOD). Website: [spaceexperience.club](https://spaceexperience.club/)
-- [sachagreif.com](http://sachagreif.com): personal homepage built with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/SachaG/sg2017)).
 - [last-draft](https://github.com/vacenz/last-draft): A Draft.js Editor ([demo](http://lastdraft.vace.nz))
-- [`Dirtyredz.com`](https://github.com/dirtyredz/dirtyredz.com): David McClain | Dirtyredz - About me, Latest projects and Contact ([Website](http://dirtyredz.com))
-- [react-adminlte-dash](https://github.com/zksailor534/react-adminlte-dash): AdminLTE dashboard components in React ([demo](http://zksailor534.github.io/react-adminlte-dash))
-- [Reactiflux](https://www.reactiflux.com): Reactiflux community home build with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/reactiflux/reactiflux.com)).
-- [react-styled-flexboxgrid](https://github.com/LoicMahieu/react-styled-flexboxgrid): Grid system based on Flexbox ([demo](https://loicmahieu.github.io/react-styled-flexboxgrid/demo/index.html))
+- [styled-components-spacing](https://github.com/jameslnewell/styled-components-spacing): Responsive margin and padding components for `styled-components`.
+
+#### Grid Systems
+- [grid-styled](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
+- [Hedron](http://github.com/jsbros/hedron): A no-frills flex-box grid system.
+- [styled-components-grid](https://github.com/jameslnewell/styled-components-grid): Responsive grid components for `styled-components`.
+
+#### Helpers
 - [styled-props](https://github.com/RafalFilipek/styled-props): Simple lib that allows you to set styled props in your styled-components without stress ([demo](http://www.webpackbin.com/N1EKUqgvG))
-- [colors-show](https://github.com/RafalFilipek/colors-show): Present your application colors with style. ([demo](https://colors-show.now.sh/))
-- [`styled-components-breakpoint`](https://github.com/jameslnewell/styled-components-breakpoint): Utility function for using breakpoints with `styled-components`.
-- [`styled-components-grid`](https://github.com/jameslnewell/styled-components-grid): Responsive grid components for `styled-components`.
-- [Scalable React Boilerplate](https://github.com/RyanCCollins/scalable-react-boilerplate)
-- [Scalable React TypeScript Boilerplate](https://github.com/RyanCCollins/scalable-react-ts-boilerplate)
+- [styled-components-breakpoint](https://github.com/jameslnewell/styled-components-breakpoint): Utility function for using breakpoints with `styled-components`.
 - [styled-theme](https://github.com/diegohaz/styled-theme): Extensible theming system for styled-components.
 - [styled-tools](https://github.com/diegohaz/styled-tools): Useful interpolated functions for styled-components.
-- [`styled-components-spacing`](https://github.com/jameslnewell/styled-components-spacing): Responsive margin and padding components for `styled-components`.
 - [styled-ax](https://github.com/Lokua/styled-ax): Functional theme property accessor(s)
+
+### Boilerplates
+- [ARc](https://github.com/diegohaz/arc): Atomic React App boilerplate with styled components ([demo](https://diegohaz.github.io/arc))
+- [react-boilerplate](https://github.com/mxstbr/react-boilerplate): A highly scalable, offline-first foundation with the best developer experience and a focus on performance and best practices
+- [react-styled-flexboxgrid](https://github.com/LoicMahieu/react-styled-flexboxgrid): Grid system based on Flexbox ([demo](https://loicmahieu.github.io/react-styled-flexboxgrid/demo/index.html))
+- [Scalable React Boilerplate](https://github.com/RyanCCollins/scalable-react-boilerplate)
+- [Scalable React TypeScript Boilerplate](https://github.com/RyanCCollins/scalable-react-ts-boilerplate)
+
+### Websites
+- [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
+- [spaceexperience.club](https://spaceexperience.club/): Brings you each day a stunning picture of our universe, Astronomy Picture of the Day. ([source](https://github.com/caspg/space-exp))
+- [sachagreif.com](http://sachagreif.com): personal homepage built with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/SachaG/sg2017)).
+- [Dirtyredz.com](http://dirtyredz.com): David McClain | Dirtyredz - About me, Latest projects and Contact ([source](https://github.com/dirtyredz/dirtyredz.com))
+- [Reactiflux](https://www.reactiflux.com): Reactiflux community home build with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/reactiflux/reactiflux.com)).
+
+### Other
+- [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
+- [react-adminlte-dash](https://github.com/zksailor534/react-adminlte-dash): AdminLTE dashboard components in React ([demo](http://zksailor534.github.io/react-adminlte-dash))
+- [colors-show](https://github.com/RafalFilipek/colors-show): Present your application colors with style. ([demo](https://colors-show.now.sh/))
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
