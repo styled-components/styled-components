@@ -25,7 +25,8 @@ Remove the template from below and provide thoughtful commentary *and code sampl
 1.0.5
 
 ## Reproduction
-http://www.webpackbin.com/Ek8DrVsRZ
+
+https://www.webpackbin.com/bins/-KeeZCr0xKfutOfOujxN
 
 ## Steps to reproduce
 
