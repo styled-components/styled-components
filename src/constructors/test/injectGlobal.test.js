@@ -3,9 +3,13 @@ import React, { Component } from 'react'
 import expect from 'expect'
 import { shallow } from 'enzyme'
 
-import injectGlobal from '../injectGlobal'
+import _injectGlobal from '../injectGlobal'
 import styleSheet from '../../models/StyleSheet'
+import _GlobalStyle from '../../models/GlobalStyle'
+import flatten from '../../utils/flatten'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
+
+const injectGlobal = _injectGlobal(_GlobalStyle(flatten))
 
 let styled = resetStyled()
 const rule1 = 'width: 100%;'

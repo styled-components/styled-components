@@ -7,6 +7,7 @@ import expect from 'expect'
 
 import _styled from '../constructors/styled'
 import styleSheet from '../models/StyleSheet'
+import flatten from '../utils/flatten'
 import _styledComponent from '../models/StyledComponent'
 import _ComponentStyle from '../models/ComponentStyle'
 
@@ -17,7 +18,7 @@ const classNames = () => String.fromCodePoint(97 + index++)
 export const resetStyled = () => {
   styleSheet.reset()
   index = 0
-  return _styled(_styledComponent(_ComponentStyle(classNames)))
+  return _styled(_styledComponent(_ComponentStyle(classNames, flatten)))
 }
 
 const stripWhitespace = str => str.trim().replace(/([;\{\}])/g, '$1  ').replace(/\s+/g, ' ')

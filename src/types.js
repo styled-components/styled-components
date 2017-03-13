@@ -7,3 +7,7 @@ export type RuleSet = Array<Interpolation>
 export type Target = string | ReactClass<*>
 
 export type NameGenerator = (hash: number) => string
+
+export type Flattener = (chunks: Array<Interpolation>, executionContext: ?Object) => (
+  Array<Interpolation>
+)

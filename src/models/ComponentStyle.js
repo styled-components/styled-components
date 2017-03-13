@@ -2,15 +2,14 @@
 import hashStr from 'glamor/lib/hash'
 import stylis from 'stylis'
 
-import type { RuleSet, NameGenerator } from '../types'
-import flatten from '../utils/flatten'
+import type { RuleSet, NameGenerator, Flattener } from '../types'
 import styleSheet from './StyleSheet'
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
  the React-specific stuff.
  */
-export default (nameGenerator: NameGenerator) => {
+export default (nameGenerator: NameGenerator, flatten: Flattener) => {
   const inserted = {}
 
   class ComponentStyle {
