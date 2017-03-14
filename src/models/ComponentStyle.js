@@ -35,14 +35,16 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
      * */
     generateAndInjectStyles(executionContext: Object) {
       const flatCSS = flatten(this.rules, executionContext).join('')
-        .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
       const hash = hashStr(this.componentId + flatCSS)
+
       if (!inserted[hash]) {
         const selector = nameGenerator(hash)
         inserted[hash] = selector
-        const css = stringifyRules(flatCSS, selector, false)
+
+        const css = stringifyRules(this.rules, selector, false)
         this.insertedRule.appendRule(css)
       }
+
       return inserted[hash]
     }
   }
