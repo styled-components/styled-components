@@ -78,8 +78,7 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
       if (executionContext) {
         const newChunkStr = newChunk.join('')
         if (appendChunks.length) {
-          const appendChunkStr = appendChunks.join('')
-          return [...ruleSet, newChunkStr, appendChunkStr]
+          return [...ruleSet, newChunkStr, ...appendChunks]
         }
 
         return [...ruleSet, newChunkStr]

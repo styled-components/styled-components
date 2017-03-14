@@ -42,6 +42,15 @@ describe('preparsed flatten without executionContext', () => {
     ).toEqual([['a', 'b'], ['c']])
   })
 
+  it('flattens double nested rulesets', () => {
+    // $FlowFixMe
+    expect(
+      flatten([[
+        'a', [[ 'c', [['d']] ]], 'b'
+      ]])
+    ).toEqual([['a', 'b'], ['c'], ['d']])
+  })
+
   it('flattens subarrays', () => {
     // $FlowFixMe
     expect(flatten([[1, 2, [3, 4, 5], 'come:on;', 'lets:ride;']]))
@@ -96,6 +105,15 @@ describe('preparsed flatten with executionContext', () => {
     ).toEqual(['ab', 'c'])
   })
 
+  it('flattens double nested rulesets', () => {
+    // $FlowFixMe
+    expect(
+      flatten([[
+        'a', [[ 'c', 'd', [['e', 'f'], ['g', 'h']] ]], 'b'
+      ]], {})
+    ).toEqual(['ab', 'cd', 'ef', 'gh'])
+  })
+
   it('flattens subarrays', () => {
     // $FlowFixMe
     expect(flatten([[1, 2, [3, 4, 5], 'come:on;', 'lets:ride;']], {}))
@@ -111,5 +129,10 @@ describe('preparsed flatten with executionContext', () => {
   it('resolves rulesets after executing functions', () => {
     const func = () => [['add me to the end']]
     expect(flatten([['foo', func, 'baz']], {})).toEqual(['foobaz', 'add me to the end'])
+  })
+
+  it('resolves double nested rulesets after executing functions', () => {
+    const func = () => [['a', [['b']]]]
+    expect(flatten([['foo', func, 'baz']], {})).toEqual(['foobaz', 'a', 'b'])
   })
 })
