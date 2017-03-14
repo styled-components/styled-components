@@ -4,13 +4,14 @@ import expect from 'expect'
 import _keyframes from '../keyframes'
 import _GlobalStyle from '../../models/GlobalStyle'
 import flatten from '../../utils/flatten'
+import stringifyRules from '../../utils/stringifyRules'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
 
 /**
  * Setup
  */
 let index = 0
-const keyframes = _keyframes(() => `keyframe_${index++}`, _GlobalStyle(flatten))
+const keyframes = _keyframes(() => `keyframe_${index++}`, _GlobalStyle(flatten, stringifyRules))
 
 describe('keyframes', () => {
   beforeEach(() => {

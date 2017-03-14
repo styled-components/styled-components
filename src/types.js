@@ -8,6 +8,13 @@ export type Target = string | ReactClass<*>
 
 export type NameGenerator = (hash: number) => string
 
-export type Flattener = (chunks: Array<Interpolation>, executionContext: ?Object) => (
-  Array<Interpolation>
-)
+export type Flattener = (
+  chunks: Array<Interpolation>,
+  executionContext: ?Object
+) => Array<Interpolation>
+
+export type Stringifier = (
+  rules: Array<Interpolation> | string,
+  selector: ?string,
+  shouldWrap: ?boolean
+) => string

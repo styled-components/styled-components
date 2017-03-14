@@ -1,10 +1,8 @@
 // @flow
-import stylis from 'stylis'
-
-import type { RuleSet, Flattener } from '../types'
+import type { RuleSet, Flattener, Stringifier } from '../types'
 import styleSheet from './StyleSheet'
 
-export default (flatten: Flattener) => {
+export default (flatten: Flattener, stringifyRules: Stringifier) => {
   class GlobalStyle {
     rules: RuleSet;
     selector: ?string;
@@ -16,9 +14,8 @@ export default (flatten: Flattener) => {
 
     generateAndInject() {
       if (!styleSheet.injected) styleSheet.inject()
-      const flatCSS = flatten(this.rules).join('')
-      const cssString = this.selector ? `${this.selector} { ${flatCSS} }` : flatCSS
-      const css = stylis('', cssString, false, false)
+      const flatRules = flatten(this.rules)
+      const css = stringifyRules(flatRules, this.selector)
       styleSheet.insert(css)
     }
   }
