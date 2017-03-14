@@ -1,6 +1,8 @@
 # `babel-plugin-styled-components`
 
-Babel plugin for `styled-components`. This is **only necessary if you're server-side rendering**, you can use `styled-components` perfectly fine without this Babel plugin. (it does give you a nicer debugging experience though)
+This plugin adds support for server-side rendering, for minification of styles and gives you a nicer debugging experience when using `styled-components`.
+
+**⚠️ This plugin is only necessary if you're server-side rendering, you can use `styled-components` perfectly fine without it! ⚠️**
 
 ## Usage
 
@@ -20,9 +22,27 @@ Then in your babel configuration (probably `.babelrc`):
 
 ## Features
 
+- [Server-side rendering](#server-side-rendering)
 - [Better debugging](#better-debugging)
 - [Minification](#minification)
-- [Server-side rendering](#server-side-rendering)
+
+### Server-side rendering
+
+**This option is turned off by default**
+
+By adding a unique identifier to every styled component this plugin avoids checksum mismatches due to different class generation on the client and on the server. If you do not use this plugin and try to server-side render `styled-components` React will complain.
+
+If you want server-side rendering support you can enable it with the `ssr` option:
+
+```JSON
+{
+  "plugins": [
+    ["styled-components", {
+      "ssr": true
+    }]
+  ]
+}
+```
 
 ### Better debugging
 
@@ -85,22 +105,6 @@ You can disable minification with the `minify` option:
 ```
 
 We also transpile `styled-components` tagged template literals down to a smaller representation than what Babel normally does, because `styled-components` template literals don't need to be 100% spec compliant. (see [`minification.md`](minification.md) for more information about that) You can use the `transpileTemplateLiterals` option to turn this feature off.
-
-### Server-side rendering
-
-By adding a unique identifier to every styled component this plugin avoids checksum mismatches due to different class generation on the client and on the server. If you do not use this plugin and try to server-side render `styled-components` React will complain.
-
-If you don't need server-side rendering, you can disable it with the `ssr` option:
-
-```JSON
-{
-  "plugins": [
-    ["styled-components", {
-      "ssr": false
-    }]
-  ]
-}
-```
 
 ## License
 
