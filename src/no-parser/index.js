@@ -3,11 +3,11 @@
 /* Import no-parser singleton variants */
 import flatten from './flatten'
 import stringifyRules from './stringifyRules'
+import css from './css'
 
 /* Import singletons */
 import generateAlphabeticName from '../utils/generateAlphabeticName'
 import styleSheet from '../models/StyleSheet'
-import css from '../constructors/css'
 
 /* Import singleton constructors */
 import _styledComponent from '../models/StyledComponent'
@@ -25,8 +25,8 @@ import withTheme from '../hoc/withTheme'
 
 /* Instantiate singletons */
 const GlobalStyle = _GlobalStyle(flatten, stringifyRules)
-const keyframes = _keyframes(generateAlphabeticName, GlobalStyle)
-const injectGlobal = _injectGlobal(GlobalStyle)
+const keyframes = _keyframes(generateAlphabeticName, GlobalStyle, css)
+const injectGlobal = _injectGlobal(GlobalStyle, css)
 const styled = _styled(_styledComponent(
   _ComponentStyle(generateAlphabeticName, flatten, stringifyRules),
 ))

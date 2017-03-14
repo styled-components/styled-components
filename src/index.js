@@ -23,8 +23,8 @@ import withTheme from './hoc/withTheme'
 
 /* Instantiate singletons */
 const GlobalStyle = _GlobalStyle(flatten, stringifyRules)
-const keyframes = _keyframes(generateAlphabeticName, GlobalStyle)
-const injectGlobal = _injectGlobal(GlobalStyle)
+const keyframes = _keyframes(generateAlphabeticName, GlobalStyle, css)
+const injectGlobal = _injectGlobal(GlobalStyle, css)
 const styled = _styled(_styledComponent(
   _ComponentStyle(generateAlphabeticName, flatten, stringifyRules),
 ))

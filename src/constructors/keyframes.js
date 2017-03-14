@@ -1,11 +1,10 @@
 // @flow
 import hashStr from 'glamor/lib/hash'
-import css from './css'
 import type { Interpolation, NameGenerator } from '../types'
 
 const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '')
 
-export default (nameGenerator: NameGenerator, GlobalStyle: Function) =>
+export default (nameGenerator: NameGenerator, GlobalStyle: Function, css: Function) =>
   (strings: Array<string>, ...interpolations: Array<Interpolation>): string => {
     const rules = css(strings, ...interpolations)
     const hash = hashStr(replaceWhitespace(JSON.stringify(rules)))
