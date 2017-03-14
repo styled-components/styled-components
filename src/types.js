@@ -1,5 +1,9 @@
 // @flow
-export type Interpolation = ((executionContext: Object) => string) | string | number
+export type Interpolation = ((executionContext: Object) => Interpolation) |
+  string |
+  number |
+  Array<Interpolation>
+
 /* todo: I want this to actually be an array of Function | string but that causes errors */
 export type RuleSet = Array<Interpolation>
 
