@@ -2,7 +2,7 @@
   "plugins": [
     ["../../../src", {
       "transpileTemplateLiterals": false,
-      "preprocess": false
+      "ssr": true
     }]
   ]
 }

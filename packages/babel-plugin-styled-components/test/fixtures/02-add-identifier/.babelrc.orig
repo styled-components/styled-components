@@ -1,0 +1,15 @@
+{
+  "plugins": [
+    ["../../../src", {
+      "displayName": false,
+      "fileName": false,
+<<<<<<< HEAD
+      "transpileTemplateLiterals": false,
+      "preprocess": false
+=======
+      "ssr": true,
+      "transpileTemplateLiterals": false
+>>>>>>> Disable the SSR option by default
+    }]
+  ]
+}
