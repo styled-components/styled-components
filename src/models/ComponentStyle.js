@@ -34,14 +34,14 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
      * Returns the hash to be injected on render()
      * */
     generateAndInjectStyles(executionContext: Object) {
-      const flatCSS = flatten(this.rules, executionContext).join('')
-      const hash = hashStr(this.componentId + flatCSS)
+      const flatCSS = flatten(this.rules, executionContext)
+      const hash = hashStr(this.componentId + flatCSS.join(''))
 
       if (!inserted[hash]) {
         const selector = nameGenerator(hash)
         inserted[hash] = selector
 
-        const css = stringifyRules(this.rules, selector, false)
+        const css = stringifyRules(flatCSS, selector, false)
         this.insertedRule.appendRule(css)
       }
 
