@@ -7,9 +7,11 @@ import _injectGlobal from '../injectGlobal'
 import styleSheet from '../../models/StyleSheet'
 import _GlobalStyle from '../../models/GlobalStyle'
 import flatten from '../../utils/flatten'
+import stringifyRules from '../../utils/stringifyRules'
+import css from '../css'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
 
-const injectGlobal = _injectGlobal(_GlobalStyle(flatten))
+const injectGlobal = _injectGlobal(_GlobalStyle(flatten, stringifyRules), css)
 
 let styled = resetStyled()
 const rule1 = 'width: 100%;'

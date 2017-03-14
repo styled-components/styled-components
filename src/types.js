@@ -18,7 +18,7 @@ export type Flattener = (
 ) => Array<Interpolation>
 
 export type Stringifier = (
-  rules: Array<Interpolation> | string,
+  rules: Array<Interpolation>,
   selector: ?string,
   shouldWrap: ?boolean
 ) => string
