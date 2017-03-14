@@ -1,6 +1,6 @@
 # `babel-plugin-styled-components`
 
-Babel plugin for `styled-components`. This is **not necessary at all to use `styled-components`**, it just adds some nice features to enhance the experience.
+Babel plugin for `styled-components`. This is **only necessary if you're server-side rendering**, you can use `styled-components` perfectly fine without this Babel plugin. (it does give you a nicer debugging experience though)
 
 ## Usage
 
@@ -20,19 +20,17 @@ Then in your babel configuration (probably `.babelrc`):
 
 ## Features
 
-### Add `displayNames` to your components
+- [Better debugging](#better-debugging)
+- [Minification](#minification)
+- [Server-side rendering](#server-side-rendering)
 
-By showing your components' real name in the React DevTools it's much easier to debug your applications.
+### Better debugging
 
-We take the name of the variable you assign your `styled-components` to and add it as the `displayName` to the resulting React component.
+This babel plugin adds the components' name to the class name attached to the DOM node. In your browsers DevTools you'll see `<button class="sc-Button-asdf123 asdf123" />` instead of just `<button class="asdf123" />`.
 
-```JS
-const MyBtn = styled.button``;
-// Plugin does this for you:
-MyBtn.displayName = 'MyBtn';
-```
+This also adds support for showing your components' real name in the React DevTools. Tget will normally show `<styled.button>` for all of your components, but with this pluginthey show `<MyButton />`.
 
-When rendering this button, the React DevTools will normally just show `<styled.button>`. By enabling this plugin, the DevTools show `<MyBtn />`.
+This makes it easier to find your components and to figure out where they live in your app.
 
 If you don't need this feature, you can disable it with the `displayName` option:
 
@@ -46,27 +44,13 @@ If you don't need this feature, you can disable it with the `displayName` option
 }
 ```
 
-### Add server-side rendering support
+### Minification
 
-By adding a unique identifier to every styled component this plugin avoids checksum mismatches due to different class generation on the client and on the server. If you do not use this plugin and try to server-side render `styled-components` React will complain.
+This plugin minifies your styles in the tagged template literals, giving you big bundle size savings. (note that you will not see the effect of minification in generated `<style>` tags, it solely affects the style strings inside your JS bundle)
 
-If you don't need server-side rendering, you can disable it with the `ssr` option:
+> This operation may potentially break your styles in some rare cases, so we recommend to keep this option enabled in development if it's enabled in the production build.
 
-```JSON
-{
-  "plugins": [
-    ["styled-components", {
-      "ssr": false
-    }]
-  ]
-}
-```
-
-### Minify styles
-
-By default, plugin minifies styles in template literals. This operation may potentially break your styles in some rare cases, so we recommend to keep this option enabled in development if it's enabled in the production build. You will not see the effect of minification in generated style tags, it solely affects the presentation of styles inside js code.
-
-You can disable minification if you don't need it with minify option:
+You can disable minification with the `minify` option:
 
 ```JSON
 {
@@ -78,50 +62,19 @@ You can disable minification if you don't need it with minify option:
 }
 ```
 
-### Transpile template literals
+We also transpile `styled-components` tagged template literals down to a smaller representation than what Babel normally does, because `styled-components` template literals don't need to be 100% spec compliant. (see [`minification.md`](minification.md) for more information about that) You can use the `transpileTemplateLiterals` option to turn this feature off.
 
-Template literals are not supported yet by some browsers. You'll probably transpile your code with some preset that includes `babel-plugin-transform-es2015-template-literals` to make it work in older browsers, but there is one tiny caveat. Output of that plugin is quite wordy. It's done this way to meet specification requirements.
+### Server-side rendering
 
-```JS
-// processed with babel-preset-latest
+By adding a unique identifier to every styled component this plugin avoids checksum mismatches due to different class generation on the client and on the server. If you do not use this plugin and try to server-side render `styled-components` React will complain.
 
-var _templateObject = _taggedTemplateLiteral(['width: 100%;'], ['width: 100%;']);
-function _taggedTemplateLiteral(strings, raw) { return Object.freeze(Object.defineProperties(strings, { raw: { value: Object.freeze(raw) } })); }
-var Simple = _styledComponents2.default.div(_templateObject);
-```   
-
-Styled-components do not require full spec compatibility. So in order to reduce bundle size this plugin will  transpile template literals attached to styled-component to the form that works in older browsers but have smaller footprint.
-
-```JS
-// processed with babel-preset-latest
-// and babel-plugin-styled-components with { transpileTemplateLiterals: true } option
-
-var Simple = _styledComponents2.default.div(['width: 100%;']);
-```
-
-Take a note that it will keep other template literals not related to styled-components as is.
-
-```JS
-// following will be converted:
-styled.div``
-keyframe``
-css``
-
-// But this will not be converted and will arise syntax error in IE:
-`some text`
-
-// In next example outer template literal will be converted because it's attached to component factory,
-// but inner template literals will not be touched and will generate syntax error in older browsers.
-styled.div`color: ${ light ? `white` : `black`};`
-```
-
-You can disable this feature with `transpileTemplateLiterals` option:
+If you don't need server-side rendering, you can disable it with the `ssr` option:
 
 ```JSON
 {
   "plugins": [
     ["styled-components", {
-      "transpileTemplateLiterals": false
+      "ssr": false
     }]
   ]
 }
