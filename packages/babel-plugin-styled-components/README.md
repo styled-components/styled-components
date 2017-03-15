@@ -44,6 +44,28 @@ If you don't need this feature, you can disable it with the `displayName` option
 }
 ```
 
+### Preprocessing (Experimental ⚠️ )
+
+This plugin preprocesses your styles with stylis and uses the `no-parser.js` entrypoint on styled-components.
+
+This effectively removes stylis from your runtime bundle and should slightly improve runtime performance and shrink your bundle size.
+
+It automatically disables the `minify` option, since stylis already does some minifcation on your CSS.
+
+> This is experimental and we don't yet know of all limitations and bugs! Consider this non-production ready for now.
+
+You can enable preprocessing with the `preprocess` option:
+
+```JSON
+{
+  "plugins": [
+    ["styled-components", {
+      "preprocess": true
+    }]
+  ]
+}
+```
+
 ### Minification
 
 This plugin minifies your styles in the tagged template literals, giving you big bundle size savings. (note that you will not see the effect of minification in generated `<style>` tags, it solely affects the style strings inside your JS bundle)
