@@ -1,8 +1,10 @@
 // @flow
 import React from 'react'
 import { shallow } from 'enzyme'
+import expect from 'expect'
 
 import { resetStyled, expectCSSMatches } from './utils'
+import types from '../constructors/types'
 
 let styled
 
@@ -15,14 +17,32 @@ describe('props', () => {
     const Comp = styled.div`
       color: ${props => props.fg || 'black'};
     `
-    shallow(<Comp />)
+    expect(shallow(<Comp/>).html()).toEqual('<div class="sc-a b"></div>')
     expectCSSMatches('.sc-a {} .b { color: black; }')
   })
+
   it('should execute interpolations and inject props', () => {
     const Comp = styled.div`
-      color: ${props => props.fg || 'black'};
+      color: ${props => props.hidden ? 'transparent' : 'black'};
     `
-    shallow(<Comp fg="red"/>)
-    expectCSSMatches('.sc-a {} .b { color: red; }')
+    expect(shallow(<Comp hidden/>).html()).toEqual('<div hidden="" class="sc-a b"></div>')
+    expectCSSMatches('.sc-a {} .b { color: transparent; }')
+  })
+
+  it('should not pass any props that are defined', () => {
+    const Comp = styled.div.props({
+      hidden: types.any,
+    })``
+    expect(shallow(<Comp hidden/>).html()).toEqual('<div class="sc-a b"></div>')
+  })
+
+  it('should still make props available in style blocks', () => {
+    const Comp = styled.div.props({
+      hidden: types.any,
+    })`
+      color: ${props => props.hidden ? 'transparent' : 'black'};
+    `
+    expect(shallow(<Comp hidden/>).html()).toEqual('<div class="sc-a b"></div>')
+    expectCSSMatches('.sc-a {} .b { color: transparent; }')
   })
 })

@@ -29,10 +29,11 @@ export default (ComponentStyle: Function) => {
   const createStyledComponent = (target: Target,
                                  options: Object,
                                  rules: RuleSet) => {
-    const {
+    let {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
       componentId = generateId(options.displayName || 'sc'),
       attrs = {},
+      props = {},
       rules: extendingRules = [],
       ParentComponent = AbstractStyledComponent,
     } = options
@@ -116,9 +117,8 @@ export default (ComponentStyle: Function) => {
         const { generatedClassName } = this.state
 
         const propsForElement = { ...this.attrs }
-        /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)
-          .filter(propName => !isTag(target) || validAttr(propName))
+          .filter(propName => !props[propName])
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
@@ -129,7 +129,7 @@ export default (ComponentStyle: Function) => {
         }
 
         if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production' && generatedClassName) {
-          warnTooManyClasses(generatedClassName, StyledComponent.displayName)
+          warnTooManyClasses(generatedClassName, displayName)
         }
         return createElement(target, propsForElement, children)
       }
@@ -137,10 +137,35 @@ export default (ComponentStyle: Function) => {
       static get extend() {
         return StyledComponent.extendWith(target)
       }
+
+      static set displayName(newName) {
+        displayName = newName
+      }
+      static get displayName() {
+        return displayName
+      }
+
+      static set styledComponentId(newId) {
+        componentId = newId
+      }
+      static get styledComponentId() {
+        return componentId
+      }
+
+      static set attrs(newAttrs) {
+        attrs = { ...attrs, ...newAttrs }
+      }
+      static get attrs() {
+        return attrs
+      }
+      static set props(newProps) {
+        attrs = { ...props, ...newProps }
+      }
+      static get props() {
+        return props
+      }
     }
 
-    StyledComponent.displayName = displayName
-    StyledComponent.styledComponentId = componentId
     StyledComponent.extendWith = tag => {
       const { displayName: _, componentId: __, ...optionsToCopy } = options
       return constructWithOptions(createStyledComponent, tag,

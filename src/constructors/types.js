@@ -1,0 +1,5 @@
+// @flow
+
+export default {
+  any: {},
+}

@@ -119,4 +119,22 @@ describe('attrs', () => {
     expect(shallow(<Comp />).html()).toEqual('<a href="#" class="sc-a b"></a>')
     expectCSSMatches('.sc-a {} .b { color: blue; } .b.--is-active { color: red; }')
   })
+
+  it('can be changed after creation', () => {
+    const Comp = styled.button``
+    Comp.attrs = { type: 'button' }
+    expect(shallow(<Comp />).html()).toEqual('<button type="button" class="sc-a b"></button>')
+  })
+
+  it('merges attrs after the fact', () => {
+    const Comp = styled.button``
+    Comp.attrs = {
+      type: 'button',
+      tabIndex: 0
+    }
+    Comp.attrs = {
+      type: 'submit'
+    }
+    expect(shallow(<Comp />).html()).toEqual('<button type="submit" tabindex="0" class="sc-a b"></button>')
+  })
 })
