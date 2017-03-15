@@ -9,6 +9,7 @@ import _styled from '../constructors/styled'
 import styleSheet from '../models/StyleSheet'
 import _styledComponent from '../models/StyledComponent'
 import _ComponentStyle from '../models/ComponentStyle'
+import _InlineStyle from '../models/InlineStyle'
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let index = 0
@@ -17,7 +18,10 @@ const classNames = () => String.fromCodePoint(97 + index++)
 export const resetStyled = () => {
   styleSheet.reset()
   index = 0
-  return _styled(_styledComponent(_ComponentStyle(classNames)))
+  return _styled(_styledComponent(
+    _ComponentStyle(classNames),
+    _InlineStyle(classNames),
+  ))
 }
 
 const stripWhitespace = str => str.trim().replace(/([;\{\}])/g, '$1  ').replace(/\s+/g, ' ')

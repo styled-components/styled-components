@@ -1,58 +1,94 @@
 // @flow
 import hashStr from 'glamor/lib/hash'
-/* eslint-disable import/no-unresolved */
-import { StyleSheet } from 'react-native'
-import transformDeclPairs from 'css-to-react-native'
+import stylis from 'stylis'
+import camelCase from 'camel-case'
 
-import type { RuleSet } from '../types'
+import type { RuleSet, NameGenerator } from '../types'
 import flatten from '../utils/flatten'
-import parse from '../vendor/postcss-safe-parser/parse'
-
-let generated = {}
-
-export const resetStyleCache = () => {
-  generated = {}
-}
 
 /*
- InlineStyle takes arbitrary CSS and generates a flat object
+ InlineStyle is all the CSS-specific stuff, not
+ the React-specific stuff.
  */
-export default class InlineStyle {
-  rules: RuleSet
+export default (nameGenerator: NameGenerator) => {
+  const inserted = {}
 
-  constructor(rules: RuleSet) {
-    this.rules = rules
-  }
+  class InlineStyle {
+    rules: RuleSet
+    componentId: string
 
-  generateStyleObject(executionContext: Object) {
-    const flatCSS = flatten(this.rules, executionContext).join('')
-    const hash = hashStr(flatCSS)
-    if (!generated[hash]) {
-      const root = parse(flatCSS)
-      const declPairs = []
-      root.each(node => {
-        if (node.type === 'decl') {
-          declPairs.push([node.prop, node.value])
-        } else {
-          /* eslint-disable no-console */
-          console.warn(`Node of type ${node.type} not supported as an inline style`)
-        }
-      })
-      // RN currently does not support differing values for the corner radii of Image
-      // components (but does for View). It is almost impossible to tell whether we'll have
-      // support, so we'll just disable multiple values here.
-      // https://github.com/styled-components/css-to-react-native/issues/11
-      const styleObject = transformDeclPairs(declPairs, [
-        'borderRadius',
-        'borderWidth',
-        'borderColor',
-        'borderStyle',
-      ])
-      const styles = StyleSheet.create({
-        generated: styleObject,
-      })
-      generated[hash] = styles.generated
+    constructor(rules: RuleSet, componentId: string) {
+      this.rules = rules
+      this.componentId = componentId
     }
-    return generated[hash]
+
+    static generateName(str: string) {
+      return nameGenerator(hashStr(str))
+    }
+
+    middlewareFactory(selector: string) {
+      const regSel = new RegExp(`^\\.${selector}\\s*?\\{`)
+      const regClockEnd = new RegExp('\\}$')
+      const pairs = {}
+
+      const fn = (ctx: number, str: string) => {
+        if (ctx !== 4) {
+          return str
+        }
+
+        if (!regSel.test(str)) {
+          return str
+        }
+
+        const rules = str
+          .replace(regSel, '')
+          .replace(regClockEnd, '')
+          .split(/;/)
+          .filter(Boolean)
+
+        rules.forEach((rule) => {
+          const [key, value] = rule.split(/:/)
+          pairs[camelCase(key)] = value.trim()
+        })
+
+        return str
+      }
+
+      return {
+        pairs,
+        fn,
+      }
+    }
+
+    /*
+     * Flattens a rule set into valid CSS
+     * Hashes it, wraps the whole chunk in a ._hashName {}
+     * Parses that with PostCSS then runs PostCSS-Nested on it
+     * Returns the hash to be injected on render()
+     * */
+    generateStyleObject(executionContext: Object) {
+      if (!Array.isArray(this.rules)) {
+        return null
+      }
+
+      const flatCSS = flatten(this.rules, executionContext)
+        .join('')
+        .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
+
+      const hash = hashStr(this.componentId + flatCSS)
+
+      if (!inserted[hash]) {
+        const selector = nameGenerator(hash)
+        const middleware = this.middlewareFactory(selector)
+
+        stylis(`.${selector}`, flatCSS, false, false, middleware.fn)
+
+        inserted[hash] = middleware.pairs
+      }
+
+      return inserted[hash]
+    }
   }
+
+  return InlineStyle
 }
