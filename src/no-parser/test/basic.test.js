@@ -12,14 +12,12 @@ describe('basic', () => {
   })
 
   it('should correctly assemble preprocessed CSS', () => {
-    // $FlowFixMe
     const Comp = styled.div([[ '{ color: red; }' ]])
     shallow(<Comp />)
     expectCSSMatches('.sc-a {} .b{ color: red; }')
   })
 
   it('should correctly execute passed functions and assemble preprocessed CSS', () => {
-    // $FlowFixMe
     const Comp = styled.div([[ '{ color: ', () => 'red', '; }' ]])
     shallow(<Comp />)
     expectCSSMatches('.sc-a {} .b{ color: red; }')
