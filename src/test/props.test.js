@@ -8,7 +8,7 @@ import types from '../constructors/types'
 
 let styled
 
-describe('props', () => {
+describe.only('props', () => {
   beforeEach(() => {
     styled = resetStyled()
   })
@@ -44,5 +44,21 @@ describe('props', () => {
     `
     expect(shallow(<Comp hidden/>).html()).toEqual('<div class="sc-a b"></div>')
     expectCSSMatches('.sc-a {} .b { color: transparent; }')
+  })
+
+  it('should convert props to proptypes', () => {
+    const Comp = styled.div.props({
+      hidden: types.bool,
+    })``
+    expect(Comp.propTypes).toEqual({
+      hidden: React.PropTypes.bool
+    })
+  })
+
+  it('should pass through props using passed', () => {
+    const Comp = styled.div.props({
+      hidden: types.bool.passed,
+    })``
+    expect(shallow(<Comp hidden/>).html()).toEqual('<div hidden="" class="sc-a b"></div>')
   })
 })

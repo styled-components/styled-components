@@ -118,7 +118,7 @@ export default (ComponentStyle: Function) => {
 
         const propsForElement = { ...this.attrs }
         Object.keys(this.props)
-          .filter(propName => !props[propName])
+          .filter(propName => !props[propName] || props[propName].opts.passed)
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
@@ -159,12 +159,18 @@ export default (ComponentStyle: Function) => {
         return attrs
       }
       static set props(newProps) {
-        attrs = { ...props, ...newProps }
+        props = { ...props, ...newProps }
+        const types = {}
+        Object.keys(props).forEach(propNames => propNames.split(/\s+/).forEach(name => {
+          types[name] = props[propNames].checker
+        }))
+        StyledComponent.propTypes = types
       }
       static get props() {
         return props
       }
     }
+    StyledComponent.props = props
 
     StyledComponent.extendWith = tag => {
       const { displayName: _, componentId: __, ...optionsToCopy } = options
