@@ -2,16 +2,30 @@
 
 import { PropTypes } from 'react'
 
-const type = checker => ({
+const type = (checker, opts = {}) => ({
   checker,
-  opts: {},
+  opts,
   get passed() {
-    this.opts = { ...this.opts, passed: true }
-    return this
+    return type(checker, { ...opts, passed: true })
   },
+
+  get array() { return type(PropTypes.array, opts) },
+  get bool() { return type(PropTypes.bool, opts) },
+  get func() { return type(PropTypes.func, opts) },
+  get number() { return type(PropTypes.number, opts) },
+  get object() { return type(PropTypes.object, opts) },
+  get string() { return type(PropTypes.string, opts) },
+  // $FlowFixMe nfi why it doesn't realise this exists.
+  get symbol() { return type(PropTypes.symbol, opts) },
+  get any() { return type(PropTypes.any, opts) },
+  get element() { return type(PropTypes.element, opts) },
+  get node() { return type(PropTypes.node, opts) },
+  arrayOf(...args: any) { return type(PropTypes.node(...args), opts) },
+  instanceOf(...args: any) { return type(PropTypes.node(...args), opts) },
+  objectOf(...args: any) { return type(PropTypes.node(...args), opts) },
+  oneOf(...args: any) { return type(PropTypes.node(...args), opts) },
+  oneOfType(...args: any) { return type(PropTypes.node(...args), opts) },
+  shape(...args: any) { return type(PropTypes.node(...args), opts) },
 })
 
-export default {
-  any: type(PropTypes.any),
-  bool: type(PropTypes.bool),
-}
+export default type({ checker: PropTypes.any })
