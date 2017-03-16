@@ -8,7 +8,7 @@ import types from '../constructors/types'
 
 let styled
 
-describe.only('props', () => {
+describe('props', () => {
   beforeEach(() => {
     styled = resetStyled()
   })

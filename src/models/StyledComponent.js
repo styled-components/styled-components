@@ -141,6 +141,7 @@ export default (ComponentStyle: Function) => {
       static set displayName(newName) {
         displayName = newName
       }
+
       static get displayName() {
         return displayName
       }
@@ -148,6 +149,7 @@ export default (ComponentStyle: Function) => {
       static set styledComponentId(newId) {
         componentId = newId
       }
+
       static get styledComponentId() {
         return componentId
       }
@@ -155,17 +157,20 @@ export default (ComponentStyle: Function) => {
       static set attrs(newAttrs) {
         attrs = { ...attrs, ...newAttrs }
       }
+
       static get attrs() {
         return attrs
       }
+
       static set props(newProps) {
         props = { ...props, ...newProps }
         const types = {}
         Object.keys(props).forEach(propNames => propNames.split(/\s+/).forEach(name => {
           types[name] = props[propNames].checker
         }))
-        StyledComponent.propTypes = types
+        StyledComponent.propTypes = { ...StyledComponent.propTypes, ...types }
       }
+
       static get props() {
         return props
       }
