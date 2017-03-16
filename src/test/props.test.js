@@ -8,7 +8,7 @@ import types from '../constructors/types'
 
 let styled
 
-describe('props', () => {
+describe.only('props', () => {
   beforeEach(() => {
     styled = resetStyled()
   })
@@ -62,13 +62,14 @@ describe('props', () => {
     expect(shallow(<Comp hidden/>).html()).toEqual('<div hidden="" class="sc-a b"></div>')
   })
 
-  it('should handle complex non-passed props', () => {
+  it.only('should handle complex non-passed props', () => {
     const Comp = styled.div.props({
-      dimensions: types.shape({ width: types.number.checker, height: types.number.checker })
+      dimensions: types.shape({ width: types.number, height: types.number })
     }).attrs({
       style: props => ({width: `${props.dimensions.width}px`, height: `${props.dimensions.height}px`})
     })``
-    expect(shallow(<Comp dimensions={{width: 10, height: 10}}/>).html())
+    console.log(Comp.propTypes)
+    expect(shallow(<Comp dimensions={{width: "10", height: 10}}/>).html())
       .toEqual('<div style="width:10px;height:10px;" class="sc-a b"></div>')
   })
 

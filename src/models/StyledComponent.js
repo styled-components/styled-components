@@ -164,6 +164,7 @@ export default (ComponentStyle: Function) => {
       }
 
       static set props(newProps) {
+        console.log(newProps)
         propTypes = { ...propTypes, ...newProps }
         const types = {}
         Object.keys(propTypes).forEach(propNames => propNames.split(/\s+/).forEach(name => {

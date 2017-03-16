@@ -20,12 +20,12 @@ const type = (checker, opts = {}) => ({
   get any() { return type(PropTypes.any, opts) },
   get element() { return type(PropTypes.element, opts) },
   get node() { return type(PropTypes.node, opts) },
-  arrayOf(...args: any) { return type(PropTypes.node(...args), opts) },
-  instanceOf(...args: any) { return type(PropTypes.node(...args), opts) },
-  objectOf(...args: any) { return type(PropTypes.node(...args), opts) },
-  oneOf(...args: any) { return type(PropTypes.node(...args), opts) },
-  oneOfType(...args: any) { return type(PropTypes.node(...args), opts) },
-  shape(...args: any) { return type(PropTypes.node(...args), opts) },
+  arrayOf(...args: any) { return type(PropTypes.arrayOf(...args), opts) },
+  instanceOf(...args: any) { return type(PropTypes.instanceOf(...args), opts) },
+  objectOf(...args: any) { return type(PropTypes.objectOf(...args), opts) },
+  oneOf(...args: any) { return type(PropTypes.oneOf(...args), opts) },
+  oneOfType(...args: any) { return type(PropTypes.oneOfType(...args), opts) },
+  shape(...args: any) { return type(PropTypes.shape(...args), opts) },
 })
 
 export default type({ checker: PropTypes.any })
