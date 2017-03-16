@@ -5,7 +5,6 @@ import { createElement } from 'react'
 import type { Theme } from './ThemeProvider'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 
-import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
 
@@ -33,7 +32,9 @@ export default (ComponentStyle: Function) => {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
       componentId = generateId(options.displayName || 'sc'),
       attrs = {},
-      props = {},
+      props: propTypes = {},
+    } = options
+    const {
       rules: extendingRules = [],
       ParentComponent = AbstractStyledComponent,
     } = options
@@ -118,7 +119,7 @@ export default (ComponentStyle: Function) => {
 
         const propsForElement = { ...this.attrs }
         Object.keys(this.props)
-          .filter(propName => !props[propName] || props[propName].opts.passed)
+          .filter(propName => !propTypes[propName] || propTypes[propName].opts.passed)
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
@@ -163,19 +164,19 @@ export default (ComponentStyle: Function) => {
       }
 
       static set props(newProps) {
-        props = { ...props, ...newProps }
+        propTypes = { ...propTypes, ...newProps }
         const types = {}
-        Object.keys(props).forEach(propNames => propNames.split(/\s+/).forEach(name => {
-          types[name] = props[propNames].checker
+        Object.keys(propTypes).forEach(propNames => propNames.split(/\s+/).forEach(name => {
+          types[name] = propTypes[propNames].checker
         }))
         StyledComponent.propTypes = { ...StyledComponent.propTypes, ...types }
       }
 
       static get props() {
-        return props
+        return propTypes
       }
     }
-    StyledComponent.props = props
+    StyledComponent.props = propTypes
 
     StyledComponent.extendWith = tag => {
       const { displayName: _, componentId: __, ...optionsToCopy } = options
