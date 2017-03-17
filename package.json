@@ -63,7 +63,7 @@
     "babel-plugin-transform-class-properties": "^6.19.0",
     "babel-plugin-transform-flow-strip-types": "^6.21.0",
     "babel-plugin-transform-object-rest-spread": "^6.20.2",
-    "babel-preset-latest": "^6.16.0",
+    "babel-preset-env": "^1.2.1",
     "babel-preset-react": "^6.16.0",
     "chokidar": "^1.6.1",
     "danger": "^0.7.5",
