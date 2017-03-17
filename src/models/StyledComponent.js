@@ -119,7 +119,7 @@ export default (ComponentStyle: Function) => {
 
         const propsForElement = { ...this.attrs }
         Object.keys(this.props)
-          .filter(propName => !propTypes[propName] || propTypes[propName].opts.passed)
+          .filter(propName => !propTypes[propName] || propTypes[propName].isPassed)
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
@@ -164,11 +164,10 @@ export default (ComponentStyle: Function) => {
       }
 
       static set props(newProps) {
-        console.log(newProps)
         propTypes = { ...propTypes, ...newProps }
         const types = {}
         Object.keys(propTypes).forEach(propNames => propNames.split(/\s+/).forEach(name => {
-          types[name] = propTypes[propNames].checker
+          types[name] = propTypes[propNames]
         }))
         StyledComponent.propTypes = { ...StyledComponent.propTypes, ...types }
       }
