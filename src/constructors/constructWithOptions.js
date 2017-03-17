@@ -2,6 +2,11 @@
 import css from './css'
 import type { Interpolation, Target } from '../types'
 
+const splitKeys = obj => Object.keys(obj).reduce((accum, ks) => {
+  ks.trim().split(/\s+/).forEach(k => accum[k] = obj[ks])
+  return accum
+}, {})
+
 const constructWithOptions = (componentConstructor: Function,
                               tag: Target,
                               options: Object = {}) => {
@@ -15,7 +20,7 @@ const constructWithOptions = (componentConstructor: Function,
     constructWithOptions(componentConstructor, tag, { ...options, ...config })
   templateFunction.attrs = attrs =>
     constructWithOptions(componentConstructor, tag, { ...options,
-      attrs: { ...(options.attrs || {}), ...attrs } })
+      attrs: { ...(options.attrs || {}), ...splitKeys(attrs) } })
 
   return templateFunction
 }

@@ -187,5 +187,14 @@ describe('attrs', () => {
       expect(shallow(<Comp title={{width: 10, height: 10}}/>).html())
         .toEqual('<div title="[object Object]" style="width:10px;height:10px;" class="sc-a b"></div>')
     })
+
+    it('should allow a shorthand for attrs', () => {
+      const Comp = styled('div').attrs({
+        'title style': {width: '100px'},
+        'href target': null
+      })``
+      expect(shallow(<Comp href="#" target="_blank"/>).html())
+        .toEqual('<div title="[object Object]" style="width:100px;" href="#" target="_blank" class="sc-a b"></div>')
+    })
   })
 })

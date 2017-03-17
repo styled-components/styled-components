@@ -47,6 +47,7 @@ export default (ComponentStyle: Function) => {
       static styledComponentId: string
       static extend: Function
       static extendWith: Function
+      static attrs: Object
       attrs = {}
 
       constructor() {
