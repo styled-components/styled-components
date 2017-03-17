@@ -590,8 +590,6 @@ const isCustomAttribute = RegExp.prototype.test.bind(
 
 const hasOwnProperty: (name: string) => boolean = {}.hasOwnProperty
 export default (name: string) => (
-  hasOwnProperty.call(htmlProps, name) ||
-  hasOwnProperty.call(svgProps, name) ||
   isCustomAttribute(name.toLowerCase()) ||
   hasOwnProperty.call(reactProps, name)
 )

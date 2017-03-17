@@ -5,6 +5,7 @@ import { createElement } from 'react'
 import type { Theme } from './ThemeProvider'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 
+import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
 import type { RuleSet, Target } from '../types'
 
@@ -28,13 +29,10 @@ export default (ComponentStyle: Function) => {
   const createStyledComponent = (target: Target,
                                  options: Object,
                                  rules: RuleSet) => {
-    let {
+    const {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
       componentId = generateId(options.displayName || 'sc'),
       attrs = {},
-      props: propTypes = {},
-    } = options
-    const {
       rules: extendingRules = [],
       ParentComponent = AbstractStyledComponent,
     } = options
@@ -114,12 +112,12 @@ export default (ComponentStyle: Function) => {
       }
 
       render() {
-        const { className, children, innerRef } = this.props
+        const { className, children, innerRef, ...props } = this.props
         const { generatedClassName } = this.state
 
         const propsForElement = { ...this.attrs }
-        Object.keys(this.props)
-          .filter(propName => !propTypes[propName] || propTypes[propName].isPassed)
+        Object.keys(props)
+          .filter(propName => validAttr(propName) || typeof this.attrs[propName] !== 'undefined')
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
@@ -130,7 +128,7 @@ export default (ComponentStyle: Function) => {
         }
 
         if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production' && generatedClassName) {
-          warnTooManyClasses(generatedClassName, displayName)
+          warnTooManyClasses(generatedClassName, StyledComponent.displayName)
         }
         return createElement(target, propsForElement, children)
       }
@@ -138,46 +136,11 @@ export default (ComponentStyle: Function) => {
       static get extend() {
         return StyledComponent.extendWith(target)
       }
-
-      static set displayName(newName) {
-        displayName = newName
-      }
-
-      static get displayName() {
-        return displayName
-      }
-
-      static set styledComponentId(newId) {
-        componentId = newId
-      }
-
-      static get styledComponentId() {
-        return componentId
-      }
-
-      static set attrs(newAttrs) {
-        attrs = { ...attrs, ...newAttrs }
-      }
-
-      static get attrs() {
-        return attrs
-      }
-
-      static set props(newProps) {
-        propTypes = { ...propTypes, ...newProps }
-        const types = {}
-        Object.keys(propTypes).forEach(propNames => propNames.split(/\s+/).forEach(name => {
-          types[name] = propTypes[propNames]
-        }))
-        StyledComponent.propTypes = { ...StyledComponent.propTypes, ...types }
-      }
-
-      static get props() {
-        return propTypes
-      }
     }
-    StyledComponent.props = propTypes
 
+    StyledComponent.attrs = attrs
+    StyledComponent.displayName = displayName
+    StyledComponent.styledComponentId = componentId
     StyledComponent.extendWith = tag => {
       const { displayName: _, componentId: __, ...optionsToCopy } = options
       return constructWithOptions(createStyledComponent, tag,
