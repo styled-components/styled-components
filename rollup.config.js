@@ -51,7 +51,7 @@ const plugins = [
   babel({
     babelrc: false,
     presets: [
-      ['latest', { es2015: { modules: false } }],
+      ['env', { modules: false }],
       'react',
     ],
     plugins: [
