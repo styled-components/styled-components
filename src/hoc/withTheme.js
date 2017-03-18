@@ -2,9 +2,11 @@
 /* globals ReactClass */
 
 import React from 'react'
+import hoistNonReactStatic from 'hoist-non-react-statics'
+
 import { CHANNEL } from '../models/ThemeProvider'
 
-export default (Component: ReactClass<mixed>) => class extends React.Component {
+const wrapWithTheme = (Component: ReactClass<any>) => class extends React.Component {
   static contextTypes = {
     [CHANNEL]: React.PropTypes.func,
   };
@@ -33,3 +35,6 @@ export default (Component: ReactClass<mixed>) => class extends React.Component {
     return <Component theme={theme} {...this.props} />
   }
 }
+
+export default (Component: ReactClass<any>) =>
+  hoistNonReactStatic(wrapWithTheme(Component), Component)

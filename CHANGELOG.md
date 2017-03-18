@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+- Hoisting static properties on [`withTheme`](docs/api.md#withtheme); thanks to [@brunolemos](https://twitter.com/brunolemos). (see [#597] (https://github.com/styled-components/styled-components/pull/597))
+
 ## [v1.4.4] — 2017-03-01
 
 ### Changed
