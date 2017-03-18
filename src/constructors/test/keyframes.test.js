@@ -2,7 +2,7 @@
 import expect from 'expect'
 
 import _keyframes from '../keyframes'
-import styleSheet from '../../models/StyleSheet'
+import styleSheet from '../../models/AsyncStyleSheet'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
 
 /**

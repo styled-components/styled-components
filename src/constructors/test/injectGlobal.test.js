@@ -4,7 +4,7 @@ import expect from 'expect'
 import { shallow } from 'enzyme'
 
 import injectGlobal from '../injectGlobal'
-import styleSheet from '../../models/StyleSheet'
+import styleSheet from '../../models/AsyncStyleSheet'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
 
 let styled = resetStyled()
@@ -23,7 +23,9 @@ describe('injectGlobal', () => {
         ${rule1}
       }
     `
-    expect(styleSheet.injected).toBe(true)
+    expect(styleSheet.injected).toBe(false);
+    styleSheet.forceFlush();
+    expect(styleSheet.injected).toBe(true);
   })
 
   it(`should non-destructively inject styles when called repeatedly`, () => {
@@ -46,30 +48,5 @@ describe('injectGlobal', () => {
         ${rule2}
       }
     `, { styleSheet })
-  })
-
-  it(`should inject styles in a separate sheet from a component`, () => {
-    const Comp = styled.div`
-      ${rule3}
-    `
-    shallow(<Comp />)
-
-    injectGlobal`
-      html {
-        ${rule1}
-      }
-    `
-    // Test the component sheet
-    expectCSSMatches(`
-      .a {
-        ${rule3}
-      }
-    `, { styleSheet: styleSheet.componentStyleSheet })
-    // Test the global sheet
-    expectCSSMatches(`
-      html {
-        ${rule1}
-      }
-    `, { styleSheet: styleSheet.globalStyleSheet })
   })
 });
