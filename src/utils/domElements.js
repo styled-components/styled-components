@@ -1,15 +1,21 @@
 // @flow
 // Thanks to https://simon.html5.org/html-elements and MDN for this info!
 
+/* Attribute whitelists are objects of the following form:
+ * { attrname: boolean } (where attrname is lowercased) */
 const toObj = (keys, val) => {
   const obj = {}
-  keys.trim().replace(/s+/).forEach(k => obj[k] = val)
+  keys.trim().replace(/s+/).forEach(k => obj[k.toLowerCase()] = val)
   return obj
 }
 const globalHtmlAttrs = toObj(`
   accesskey class contenteditable contextmenu dir draggable dropzone hidden id
   inert itemid itemprop itemref itemscope itemtype lang role spellcheck style
   tabindex title translate
+` + /* RDFa Properties */ +`
+ about datatype inlist prefix property resource typeof vocab
+` + /* NON STANDARD PROPERTIES */ `
+  autoCapitalize autoCorrect autoSave color results security unselectable
 `, true)
 
 const attrs = globals => str => !str ? globals :
