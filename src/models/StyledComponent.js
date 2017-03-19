@@ -7,6 +7,7 @@ import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
+import defaultInnerProps from '../utils/defaultInnerProps'
 import type { RuleSet, Target } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
@@ -33,6 +34,7 @@ export default (ComponentStyle: Function) => {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
       componentId = generateId(options.displayName || 'sc'),
       attrs = {},
+      innerProps = defaultInnerProps(target),
       rules: extendingRules = [],
       ParentComponent = AbstractStyledComponent,
     } = options
@@ -47,7 +49,6 @@ export default (ComponentStyle: Function) => {
       static styledComponentId: string
       static extend: Function
       static extendWith: Function
-      static attrs: Object
       attrs = {}
 
       constructor() {
@@ -118,7 +119,12 @@ export default (ComponentStyle: Function) => {
 
         const propsForElement = { ...this.attrs }
         Object.keys(props)
-          .filter(propName => validAttr(propName) || typeof this.attrs[propName] !== 'undefined')
+          .filter(propName => {
+            const innerPropMask = innerProps[propName.toLowerCase()]
+            if (innerPropMask === false) return false
+            if (innerPropMask === true || this.attrs[propName] !== undefined) return true
+            return innerProps.default || validAttr(propName)
+          })
           .forEach(propName => {
             propsForElement[propName] = this.props[propName]
           })
@@ -139,7 +145,6 @@ export default (ComponentStyle: Function) => {
       }
     }
 
-    StyledComponent.attrs = attrs
     StyledComponent.displayName = displayName
     StyledComponent.styledComponentId = componentId
     StyledComponent.extendWith = tag => {

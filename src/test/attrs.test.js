@@ -126,14 +126,6 @@ describe('attrs', () => {
       expect(shallow(<Comp title="foo"/>).html()).toEqual('<div class="sc-a b"></div>')
     })
 
-    it('should treat null in attrs as a whitelist', () => {
-      const Comp = styled('div').attrs({
-        title: null
-      })``
-      expect(shallow(<Comp/>).html()).toEqual('<div class="sc-a b"></div>')
-      expect(shallow(<Comp title="foo"/>).html()).toEqual('<div title="foo" class="sc-a b"></div>')
-    })
-
     it('should treat undefined in attrs as a blacklist', () => {
       const Comp = styled('div').attrs({
         title: undefined
@@ -149,13 +141,6 @@ describe('attrs', () => {
       expectCSSMatches('.sc-a {} .b { color: transparent; }')
     })
 
-    it('should pass through boolean props', () => {
-      const Comp = styled.div.attrs({
-        hidden: null,
-      })``
-      expect(shallow(<Comp hidden/>).html()).toEqual('<div hidden="" class="sc-a b"></div>')
-    })
-
     it('should handle complex props', () => {
       const Comp = styled('div').attrs({
         style: props => ({ width: `${props.dimensions.width}px`, height: `${props.dimensions.height}px` })
@@ -168,33 +153,6 @@ describe('attrs', () => {
       }
       expect(shallow(<Comp dimensions={{width: 10, height: 10}}/>).html())
         .toEqual('<div style="width:10px;height:10px;" class="sc-a b"></div>')
-    })
-
-    it('should pass through complex props even if its a bad idea', () => {
-      /* This example uses 'title' because React's whitelist will prevent
-       * "dimensions" being rendered. It does generate a warning but I couldn't
-       * figure out how to test that. */
-      const Comp = styled('div').attrs({
-        title: null,
-        style: props => ({ width: `${props.title.width}px`, height: `${props.title.height}px` })
-      })``
-      Comp.propTypes = {
-        title: React.PropTypes.shape({
-          width: React.PropTypes.number,
-          height: React.PropTypes.number
-        })
-      }
-      expect(shallow(<Comp title={{width: 10, height: 10}}/>).html())
-        .toEqual('<div title="[object Object]" style="width:10px;height:10px;" class="sc-a b"></div>')
-    })
-
-    it('should allow a shorthand for attrs', () => {
-      const Comp = styled('div').attrs({
-        'title style': {width: '100px'},
-        'href target': null
-      })``
-      expect(shallow(<Comp href="#" target="_blank"/>).html())
-        .toEqual('<div title="[object Object]" style="width:100px;" href="#" target="_blank" class="sc-a b"></div>')
     })
   })
 })
