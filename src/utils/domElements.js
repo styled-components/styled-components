@@ -35,6 +35,9 @@ const htmlElements = {
   bdo: `
 
   `,
+  big: `
+
+  `,
   blockquote: `
   cite
   `,
@@ -185,6 +188,9 @@ const htmlElements = {
   link: `
   href rel media hreflang type sizes
   `,
+  main: `
+
+  `,
   map: `
   name
   `,
@@ -193,6 +199,9 @@ const htmlElements = {
   `,
   menu: `
   type label
+  `,
+  menuitem: `
+  checked command default disabled icon label radiogroup type
   `,
   meta: `
   name http-equiv content charset
@@ -225,7 +234,10 @@ const htmlElements = {
 
   `,
   param: `
-  name value
+
+  `,
+  picture: `
+
   `,
   pre: `
 
