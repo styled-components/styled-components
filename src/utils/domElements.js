@@ -3,7 +3,7 @@
 
 const htmlElements = {
   a: `
-
+  href target ping rel media hreflang type
   `,
   abbr: `
 
@@ -12,7 +12,7 @@ const htmlElements = {
 
   `,
   area: `
-
+  alt coords shape href target ping rel media hreflang type
   `,
   article: `
 
@@ -21,13 +21,13 @@ const htmlElements = {
 
   `,
   audio: `
-
+  src crossorigin preload autoplay mediagroup loop muted controls
   `,
   b: `
 
   `,
   base: `
-
+  href target
   `,
   bdi: `
 
@@ -35,23 +35,20 @@ const htmlElements = {
   bdo: `
 
   `,
-  big: `
-
-  `,
   blockquote: `
-
+  cite
   `,
   body: `
-
+  onafterprint onbeforeprint onbeforeunload onblur onerror onfocus onhashchange onload onmessage onoffline ononline onpagehide onpageshow onpopstate onresize onscroll onstorage onunload
   `,
   br: `
 
   `,
   button: `
-
+  autofocus disabled form formaction formenctype formmethod formnovalidate formtarget name type value
   `,
   canvas: `
-
+  width height
   `,
   caption: `
 
@@ -63,31 +60,34 @@ const htmlElements = {
 
   `,
   col: `
-
+  span
   `,
   colgroup: `
-
+  span
+  `,
+  command: `
+  type label icon disabled checked radiogroup command
   `,
   data: `
-
+  value
   `,
   datalist: `
-
+  option
   `,
   dd: `
 
   `,
   del: `
-
+  cite datetime
   `,
   details: `
-
+  open
   `,
   dfn: `
 
   `,
   dialog: `
-
+  open
   `,
   div: `
 
@@ -102,10 +102,10 @@ const htmlElements = {
 
   `,
   embed: `
-
+  src type width height
   `,
   fieldset: `
-
+  disabled form name
   `,
   figcaption: `
 
@@ -117,7 +117,7 @@ const htmlElements = {
 
   `,
   form: `
-
+  accept-charset action autocomplete enctype method name novalidate target
   `,
   h1: `
 
@@ -150,61 +150,55 @@ const htmlElements = {
 
   `,
   html: `
-
+  manifest
   `,
   i: `
 
   `,
   iframe: `
-
+  src srcdoc name sandbox seamless width height
   `,
   img: `
-
+  alt src srcset crossorigin usemap ismap width height
   `,
   input: `
-
+  accept alt autocomplete autofocus checked dirname disabled form formaction formenctype formmethod formnovalidate formtarget height inputmode list max maxlength min multiple name pattern placeholder readonly required size src step type value width
   `,
   ins: `
-
+  cite datetime
   `,
   kbd: `
 
   `,
   keygen: `
-
+  autofocus challenge disabled form keytype name
   `,
   label: `
-
+  form for
   `,
   legend: `
 
   `,
   li: `
-
+  value
   `,
   link: `
-
-  `,
-  main: `
-
+  href rel media hreflang type sizes
   `,
   map: `
-
+  name
   `,
   mark: `
 
   `,
   menu: `
-
-  `,
-  menuitem: `
-
+  type label
   `,
   meta: `
-
+  name http-equiv content charset
   `,
   meter: `
-
+  value min max low high optimum
   `,
   nav: `
 
@@ -213,37 +207,34 @@ const htmlElements = {
 
   `,
   object: `
-
+  data type typemustmatch name usemap form width height
   `,
   ol: `
-
+  reversed start
   `,
   optgroup: `
-
+  disabled label
   `,
   option: `
-
+  disabled label selected value
   `,
   output: `
-
+  for form name
   `,
   p: `
 
   `,
   param: `
-
-  `,
-  picture: `
-
+  name value
   `,
   pre: `
 
   `,
   progress: `
-
+  value max
   `,
   q: `
-
+  cite
   `,
   rp: `
 
@@ -261,19 +252,19 @@ const htmlElements = {
 
   `,
   script: `
-
+  src async defer type charset
   `,
   section: `
 
   `,
   select: `
-
+  autofocus disabled form multiple name required size
   `,
   small: `
 
   `,
   source: `
-
+  src type media
   `,
   span: `
 
@@ -282,7 +273,7 @@ const htmlElements = {
 
   `,
   style: `
-
+  media type scoped
   `,
   sub: `
 
@@ -300,22 +291,22 @@ const htmlElements = {
 
   `,
   td: `
-
+  colspan rowspan headers
   `,
   textarea: `
-
+  autocomplete autofocus cols dirname disabled form inputmode maxlength name placeholder readonly required rows wrap
   `,
   tfoot: `
 
   `,
   th: `
-
+  colspan rowspan headers scope abbr
   `,
   thead: `
 
   `,
   time: `
-
+  datetime pubdate
   `,
   title: `
 
@@ -324,7 +315,7 @@ const htmlElements = {
 
   `,
   track: `
-
+  default kind label src srclang
   `,
   u: `
 
@@ -336,33 +327,33 @@ const htmlElements = {
 
   `,
   video: `
-
+  src crossorigin poster preload autoplay mediagroup loop muted controls width height
   `,
   wbr: `
 
   `,
 }
 
-[
+  [
   // SVG
   'circle',
-  'clipPath',
-  'defs',
-  'ellipse',
-  'g',
-  'image',
-  'line',
-  'linearGradient',
-  'mask',
-  'path',
-  'pattern',
-  'polygon',
-  'polyline',
-  'radialGradient',
-  'rect',
-  'stop',
-  'svg',
-  'text',
-  'tspan',
-]
+    'clipPath',
+    'defs',
+    'ellipse',
+    'g',
+    'image',
+    'line',
+    'linearGradient',
+    'mask',
+    'path',
+    'pattern',
+    'polygon',
+    'polyline',
+    'radialGradient',
+    'rect',
+    'stop',
+    'svg',
+    'text',
+    'tspan',
+  ]
 
