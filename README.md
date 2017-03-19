@@ -1,5 +1,5 @@
 <a href="https://github.com/styled-components/styled-components">
-  <img alt="styled-components" src="./docs/assets/logo.png" height="150px" />
+  <img alt="styled-components" src="https://raw.githubusercontent.com/styled-components/brand/master/styled-components.png" height="150px" />
 </a>
 <br />
 
