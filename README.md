@@ -463,6 +463,8 @@ We could use your help to get syntax highlighting support to other editors! If y
 
 ## Built with `styled-components`
 
+- [Scalable React TS Boilerplate](https://github.com/RyanCCollins/scalable-react-ts-boilerplate) A scalable feature-first React + TypeScript boilerplate.
+- [Scalable React Boilerplate](https://github.com/RyanCCollins/scalable-react-boilerplate) A scalable feature-first React boilerplate.
 - [`grid-styled`](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
 - [ARc](https://github.com/diegohaz/arc): Atomic React App boilerplate with styled components ([demo](https://diegohaz.github.io/arc))
 - [`react-aria-tooltip`](https://github.com/egoens/react-aria-tooltip): Simple & accessible ReactJS tooltip component
