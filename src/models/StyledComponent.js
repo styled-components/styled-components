@@ -28,12 +28,9 @@ export default (ComponentStyle: Function) => {
       static target: Target
       static contextTypes = ParentComponent.contextTypes
 
-      constructor() {
-        super()
-        this.state = {
-          theme: null,
-          generatedClassName: '',
-        }
+      state = {
+        theme: null,
+        generatedClassName: '',
       }
 
       generateAndInjectStyles(theme: any, props: any) {
