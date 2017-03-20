@@ -47,14 +47,11 @@ export default (ComponentStyle: Function) => {
       static styledComponentId: string
       static extend: Function
       static extendWith: Function
-      attrs = {}
 
-      constructor() {
-        super()
-        this.state = {
-          theme: null,
-          generatedClassName: '',
-        }
+      attrs = {}
+      state = {
+        theme: null,
+        generatedClassName: '',
       }
 
       buildExecutionContext(theme: any, props: any) {
