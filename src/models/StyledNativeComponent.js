@@ -25,11 +25,9 @@ const createStyledNativeComponent = (target: Target,
     static extend: Function
     static extendWith: Function
 
-    constructor() {
-      super()
-      this.state = {
-        theme: {},
-      }
+    state = {
+      theme: {},
+      generatedStyles: undefined,
     }
 
     componentWillMount() {
