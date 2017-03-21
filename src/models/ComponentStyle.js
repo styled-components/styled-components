@@ -1,16 +1,14 @@
 // @flow
 import hashStr from 'glamor/lib/hash'
-import stylis from 'stylis'
 
-import type { RuleSet, NameGenerator } from '../types'
-import flatten from '../utils/flatten'
+import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
 import styleSheet from './StyleSheet'
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
  the React-specific stuff.
  */
-export default (nameGenerator: NameGenerator) => {
+export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules: Stringifier) => {
   const inserted = {}
 
   class ComponentStyle {
@@ -36,15 +34,17 @@ export default (nameGenerator: NameGenerator) => {
      * Returns the hash to be injected on render()
      * */
     generateAndInjectStyles(executionContext: Object) {
-      const flatCSS = flatten(this.rules, executionContext).join('')
-        .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
-      const hash = hashStr(this.componentId + flatCSS)
+      const flatCSS = flatten(this.rules, executionContext)
+      const hash = hashStr(this.componentId + flatCSS.join(''))
+
       if (!inserted[hash]) {
         const selector = nameGenerator(hash)
         inserted[hash] = selector
-        const css = stylis(`.${selector}`, flatCSS, false, false)
+
+        const css = stringifyRules(flatCSS, selector, false)
         this.insertedRule.appendRule(css)
       }
+
       return inserted[hash]
     }
   }

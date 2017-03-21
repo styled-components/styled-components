@@ -1,24 +1,24 @@
 // @flow
-import stylis from 'stylis'
-
-import type { RuleSet } from '../types'
-import flatten from '../utils/flatten'
+import type { RuleSet, Flattener, Stringifier } from '../types'
 import styleSheet from './StyleSheet'
 
-export default class ComponentStyle {
-  rules: RuleSet;
-  selector: ?string;
+export default (flatten: Flattener, stringifyRules: Stringifier) => {
+  class GlobalStyle {
+    rules: RuleSet;
+    selector: ?string;
 
-  constructor(rules: RuleSet, selector: ?string) {
-    this.rules = rules
-    this.selector = selector
+    constructor(rules: RuleSet, selector: ?string) {
+      this.rules = rules
+      this.selector = selector
+    }
+
+    generateAndInject() {
+      if (!styleSheet.injected) styleSheet.inject()
+      const flatRules = flatten(this.rules)
+      const css = stringifyRules(flatRules, this.selector, true)
+      styleSheet.insert(css)
+    }
   }
 
-  generateAndInject() {
-    if (!styleSheet.injected) styleSheet.inject()
-    const flatCSS = flatten(this.rules).join('')
-    const cssString = this.selector ? `${this.selector} { ${flatCSS} }` : flatCSS
-    const css = stylis('', cssString, false, false)
-    styleSheet.insert(css)
-  }
+  return GlobalStyle
 }

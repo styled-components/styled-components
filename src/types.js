@@ -1,5 +1,9 @@
 // @flow
-export type Interpolation = ((executionContext: Object) => string) | string | number
+export type Interpolation = ((executionContext: Object) => Interpolation) |
+  string |
+  number |
+  Array<Interpolation>
+
 /* todo: I want this to actually be an array of Function | string but that causes errors */
 export type RuleSet = Array<Interpolation>
 
@@ -7,3 +11,14 @@ export type RuleSet = Array<Interpolation>
 export type Target = string | ReactClass<*>
 
 export type NameGenerator = (hash: number) => string
+
+export type Flattener = (
+  chunks: Array<Interpolation>,
+  executionContext: ?Object
+) => Array<Interpolation>
+
+export type Stringifier = (
+  rules: Array<Interpolation>,
+  selector: ?string,
+  shouldWrap: ?boolean
+) => string
