@@ -31,5 +31,5 @@ const RulesetInerpolation = styled.div.withConfig({
 const Prefixes = styled.div.withConfig({
   displayName: "before__Prefixes",
   componentId: "s1xqhw80-6"
-})([[" {display:-webkit-box;display:-webkit-flex;-ms-flexbox;display:flex;-webkit-box-align: center;-ms-flex-align: center;align-items: center;}"]]);
+})([[" {display: -webkit-box;display: -webkit-flex;display: -ms-flexbox;display: flex;-webkit-box-align: center;-ms-flex-align: center;align-items: center;}"]]);
 
