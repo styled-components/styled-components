@@ -1,5 +1,5 @@
 <a href="https://github.com/styled-components/styled-components">
-  <img alt="styled-components" src="./docs/assets/logo.png" height="150px" />
+  <img alt="styled-components" src="https://raw.githubusercontent.com/styled-components/brand/master/styled-components.png" height="150px" />
 </a>
 <br />
 
@@ -164,7 +164,7 @@ Let's say someplace else you want to use your button component, but just in this
 To do this in an easier way you can call `styled` as a function and pass in the previous component. You style that like any other styled-component. It overrides duplicate styles from the initial component and keeps the others around:
 
 ```JSX
-// Tomatobutton.js
+// TomatoButton.js
 
 import React from 'react';
 import styled from 'styled-components';

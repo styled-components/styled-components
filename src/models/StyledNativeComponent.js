@@ -26,11 +26,9 @@ const createStyledNativeComponent = (target: Target, rules: RuleSet, parent?: Ta
     static target: Target
     root: any
 
-    constructor() {
-      super()
-      this.state = {
-        theme: {},
-      }
+    state = {
+      theme: {},
+      generatedStyles: undefined,
     }
 
     componentWillMount() {
