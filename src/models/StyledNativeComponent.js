@@ -38,9 +38,10 @@ const createStyledNativeComponent = (target: Target,
         const subscribe = this.context[CHANNEL]
         this.unsubscribe = subscribe(nextTheme => {
           // This will be called once immediately
-          const { defaultProps } = this.constructor
+
           // Props should take precedence over ThemeProvider, which should take precedence over
           // defaultProps, but React automatically puts defaultProps on props.
+          const { defaultProps } = this.constructor
           const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
           const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
           const generatedStyles = this.generateAndInjectStyles(theme, this.props)
@@ -58,7 +59,11 @@ const createStyledNativeComponent = (target: Target,
 
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
       this.setState((oldState) => {
-        const theme = nextProps.theme || oldState.theme
+        // Props should take precedence over ThemeProvider, which should take precedence over
+        // defaultProps, but React automatically puts defaultProps on props.
+        const { defaultProps } = this.constructor
+        const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
+        const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : oldState.theme
         const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
 
         return { theme, generatedStyles }
