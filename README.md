@@ -105,6 +105,32 @@ Here is one input without any content showing the placeholder, and one with some
   </a>
 </div>
 
+
+
+When passing `props` to a `styled-component` that is iniside a component, first you must pass the props directly to your `styled-component` so it has access to it.
+Example: 
+```
+
+// Page component
+<Page>
+    <Header 
+      background={'red'} // The prop we are wanting to pass
+      title={'My Title}
+      description={'A description'}
+    /> 
+</Page>
+
+// Header Component
+const HeaderStyles = styled.div`
+    background: ${props => props.background || 'blue'};
+`;
+<HeaderStyles background={this.props.background}> // Passing prop to styled-component
+    <h1>{this.props.title}</h1>
+    <p>{this.props.description}</p>
+</HeaderStyles>
+
+```
+
 ### Adapting based on props
 
 This is a button component that has a `primary` state. By setting `primary` to `true` when rendering it we adjust the background and text color. *(see [tips and tricks](./docs/tips-and-tricks.md#component-adjustments) for more examples of this pattern!)*
