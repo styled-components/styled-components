@@ -16,11 +16,14 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
   /* We depend on components having unique IDs */
   const identifiers = {}
   const generateId = (_displayName: string) => {
-    const displayName = _displayName
-      .replace(/[[\].#*$><+~=|^:(),"'`]/g, '-') // Replace all possible CSS selectors
-      .replace(/--+/g, '-') // Replace multiple -- with single -
+    const displayName = typeof _displayName !== 'string' ?
+      'sc' : _displayName
+        .replace(/[[\].#*$><+~=|^:(),"'`]/g, '-') // Replace all possible CSS selectors
+        .replace(/--+/g, '-') // Replace multiple -- with single -
+
     const nr = (identifiers[displayName] || 0) + 1
     identifiers[displayName] = nr
+
     const hash = ComponentStyle.generateName(displayName + nr)
     return `${displayName}-${hash}`
   }
@@ -156,7 +159,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
   ) => {
     const {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
-      componentId = generateId(options.displayName || 'sc'),
+      componentId = generateId(options.displayName),
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
       attrs,
