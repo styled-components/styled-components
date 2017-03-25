@@ -4,7 +4,7 @@ import stylis from 'stylis'
 import {
   makePlaceholder,
   temporaryClassname,
-  startsWithCurlyBrace,
+  isUnendedMixin,
   containsPlaceholders,
   splitByPlaceholders,
 } from './placeholderUtils'
@@ -18,10 +18,10 @@ export const assembleAndInterleavePlaceholders = cssArr => {
     const placeholder = makePlaceholder(interpolationIndex)
     const cssPartial = cssArr[i]
 
-    // Append a semicolon to all interpolations except the onces that are for selectors
-    const suffix = !startsWithCurlyBrace(cssPartial) ? ';' : ''
+    // Append a semicolon to all mixins (not selectors, not rule)
+    const separator = isUnendedMixin(cssPartial) ? ';' : ''
 
-    css += placeholder + suffix + cssPartial
+    css += placeholder + separator + cssPartial
   }
 
   return css

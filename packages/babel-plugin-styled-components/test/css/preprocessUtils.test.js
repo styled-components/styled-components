@@ -5,17 +5,9 @@ import {
 
 describe('css preprocessing', () => {
   describe('assembleAndInterleavePlaceholders', () => {
-    it('joins the strings with placeholders', () => {
-      const input = ['A', 'B', 'C']
-      const expected = 'A__PLACEHOLDER_0__;B__PLACEHOLDER_1__;C'
-      const actual = assembleAndInterleavePlaceholders(input)
-
-      expect(actual).toBe(expected)
-    })
-
-    it('leaves out the semicolon after placeholders for curly braces in the CSS partial', () => {
-      const input = ['A', ' {', 'C}']
-      const expected = 'A__PLACEHOLDER_0__ {__PLACEHOLDER_1__;C}'
+    it('puts in semicolons after mixins', () => {
+      const input = ['A', ' {', '\nC:D}']
+      const expected = 'A__PLACEHOLDER_0__ {__PLACEHOLDER_1__;\nC:D}'
       const actual = assembleAndInterleavePlaceholders(input)
 
       expect(actual).toBe(expected)

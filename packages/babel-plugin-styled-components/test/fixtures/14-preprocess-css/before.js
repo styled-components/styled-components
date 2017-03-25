@@ -32,7 +32,7 @@ const SelectorInterpolation = styled.div`
   }
 `;
 
-const RulesetInerpolation = styled.div`
+const RulesetInterpolationA = styled.div`
   width: ${props => props.width};
   ${props => props.ruleset}
 
@@ -41,7 +41,21 @@ const RulesetInerpolation = styled.div`
   }
 `;
 
+const RulesetInterpolationB = styled.div`
+  ${props => props.ruleset}
+  width: ${props => props.width};
+
+  &:hover {
+    color: papayawhip;
+  }
+`;
+
+
 const Prefixes = styled.div`
   display: flex;
   align-items: center;
+`;
+
+const DoubleInterpolation = styled.div`
+  margin: ${props => props.vert} ${props => props.hori};
 `;

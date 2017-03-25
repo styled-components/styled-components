@@ -2,7 +2,7 @@
   "plugins": [
     ["../../../src", {
       "preprocess": true,
-      "ssr": true
+      "ssr": false
     }]
   ]
 }
