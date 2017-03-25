@@ -4,11 +4,11 @@ import styleSheet from '../models/StyleSheet'
 
 const LIMIT = 200
 
-export default () => {
+export default (displayName: string) => {
   let generatedClasses = {}
   let warningSeen = false
 
-  return (className: string, displayName: string) => {
+  return (className: string) => {
     if (!warningSeen) {
       generatedClasses[className] = true
       if (Object.keys(generatedClasses).length >= LIMIT) {
