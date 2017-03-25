@@ -135,7 +135,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         .keys(this.props)
         .reduce((acc, propName) => {
           // Don't pass through non HTML tags through to HTML elements
-          if (!isTargetTag || validAttr(propName)) {
+          if (
+            !isTargetTag || (
+              validAttr(propName) &&
+              propName !== 'className'
+            )
+          ) {
             // eslint-disable-next-line no-param-reassign
             acc[propName] = this.props[propName]
           }
