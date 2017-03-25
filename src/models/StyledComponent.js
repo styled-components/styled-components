@@ -42,9 +42,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       const { attrs = {} } = this.constructor
       const context = { ...props, theme }
 
-      this.attrs = Object.keys(attrs).reduce((accum, key) => (
-        { ...accum, [key]: typeof attrs[key] === 'function' ? attrs[key](context) : attrs[key] }
-      ), {})
+      this.attrs = Object.keys(attrs).reduce((acc, key) => {
+        const attr = attrs[key]
+        // eslint-disable-next-line no-param-reassign
+        acc[key] = typeof attr === 'function' ? attr(context) : attr
+        return acc
+      }, {})
 
       return { ...context, ...this.attrs }
     }
@@ -109,22 +112,35 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     render() {
-      const { className, children, innerRef } = this.props
+      const { children, innerRef } = this.props
       const { generatedClassName } = this.state
       const { styledComponentId, target } = this.constructor
 
-      const propsForElement = { ...this.attrs }
-      /* Don't pass through non HTML tags through to HTML elements */
-      Object.keys(this.props)
-        .filter(propName => !isTag(target) || validAttr(propName))
-        .forEach(propName => {
-          propsForElement[propName] = this.props[propName]
+      const isTargetTag = isTag(target)
+
+      const className = [
+        this.props.className,
+        styledComponentId,
+        this.attrs.className,
+        generatedClassName,
+      ].filter(Boolean).join(' ')
+
+      const propsForElement = Object
+        .keys(this.props)
+        .reduce((acc, propName) => {
+          // Don't pass through non HTML tags through to HTML elements
+          if (!isTargetTag || validAttr(propName)) {
+            // eslint-disable-next-line no-param-reassign
+            acc[propName] = this.props[propName]
+          }
+
+          return acc
+        }, {
+          ...this.attrs,
+          className,
+          ref: innerRef,
+          innerRef: undefined,
         })
-      propsForElement.className = [className, styledComponentId, this.attrs.className, generatedClassName].filter(x => x).join(' ')
-      if (innerRef) {
-        propsForElement.ref = innerRef
-        delete propsForElement.innerRef
-      }
 
       return createElement(target, propsForElement, children)
     }
@@ -138,13 +154,16 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     const {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
       componentId = generateId(options.displayName || 'sc'),
-      attrs = {},
-      rules: extendingRules = [],
       ParentComponent = BaseStyledComponent,
+      rules: extendingRules,
+      attrs = {},
     } = options
 
     const warnTooManyClasses = createWarnTooManyClasses(displayName)
-    const componentStyle = new ComponentStyle(extendingRules.concat(rules), componentId)
+    const componentStyle = new ComponentStyle(
+      extendingRules === undefined ? rules : extendingRules.concat(rules),
+      componentId,
+    )
 
     class StyledComponent extends ParentComponent {
       static displayName = displayName
