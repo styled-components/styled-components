@@ -39,8 +39,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     buildExecutionContext(theme: any, props: any) {
-      const { attrs = {} } = this.constructor
+      const { attrs } = this.constructor
       const context = { ...props, theme }
+      if (attrs === undefined) {
+        return context
+      }
 
       this.attrs = Object.keys(attrs).reduce((acc, key) => {
         const attr = attrs[key]
@@ -156,7 +159,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       componentId = generateId(options.displayName || 'sc'),
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
-      attrs = {},
+      attrs,
     } = options
 
     const warnTooManyClasses = createWarnTooManyClasses(displayName)
