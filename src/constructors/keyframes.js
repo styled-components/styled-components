@@ -9,7 +9,7 @@ export default (nameGenerator: NameGenerator, GlobalStyle: Function, css: Functi
     const rules = css(strings, ...interpolations)
     const hash = hashStr(replaceWhitespace(JSON.stringify(rules)))
     const name = nameGenerator(hash)
-    const keyframes = new GlobalStyle(rules, `@keyframes ${name}`)
+    const keyframes = new GlobalStyle(rules, name, '@keyframes')
     keyframes.generateAndInject()
     return name
   }

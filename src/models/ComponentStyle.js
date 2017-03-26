@@ -41,7 +41,7 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
         const selector = nameGenerator(hash)
         inserted[hash] = selector
 
-        const css = stringifyRules(flatCSS, selector, false)
+        const css = stringifyRules(flatCSS, `.${selector}`)
         this.insertedRule.appendRule(css)
       }
 

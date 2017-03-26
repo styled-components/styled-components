@@ -4,15 +4,15 @@ import type { Interpolation } from '../types'
 const stringifyRules = (
   rules: Array<Interpolation>,
   selector: ?string,
-  shouldWrap: ?boolean,
-): string => {
-  const className = (selector && !shouldWrap) ? `.${selector}` : null
-  const flatCSS = rules
-    .reduce((str: string, partial: Interpolation): string => (
-      str + (className || '') + partial.toString()
+  prefix: ?string,
+): string => (
+  rules
+    .reduce((str: string, partial: Interpolation, index: number): string => (
+      str +
+      // NOTE: This is to not prefix keyframes with the animation name
+      ((index > 0 || !prefix) && selector ? selector : '') +
+      partial.toString()
     ), '')
-
-  return (selector && shouldWrap) ? `${selector} { ${flatCSS} }` : flatCSS
-}
+)
 
 export default stringifyRules
