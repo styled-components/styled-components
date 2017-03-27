@@ -1,9 +1,8 @@
 // @flow
-import constructWithOptions from './constructWithOptions'
 import type { Target } from '../types'
 import domElements from '../utils/domElements'
 
-export default (styledComponent: Function) => {
+export default (styledComponent: Function, constructWithOptions: Function) => {
   const styled = (tag: Target) => constructWithOptions(styledComponent, tag)
 
   // Shorthands for all valid HTML Elements

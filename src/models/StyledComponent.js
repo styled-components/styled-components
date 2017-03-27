@@ -12,9 +12,8 @@ import type { RuleSet, Target } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
-import constructWithOptions from '../constructors/constructWithOptions'
 
-export default (ComponentStyle: Function) => {
+export default (ComponentStyle: Function, constructWithOptions: Function) => {
   /* We depend on components having unique IDs */
   const identifiers = {}
   const generateId = (_displayName: string) => {
@@ -49,14 +48,11 @@ export default (ComponentStyle: Function) => {
       static styledComponentId: string
       static extend: Function
       static extendWith: Function
-      attrs = {}
 
-      constructor() {
-        super()
-        this.state = {
-          theme: null,
-          generatedClassName: '',
-        }
+      attrs = {}
+      state = {
+        theme: null,
+        generatedClassName: '',
       }
 
       buildExecutionContext(theme: any, props: any) {
@@ -80,9 +76,10 @@ export default (ComponentStyle: Function) => {
           const subscribe = this.context[CHANNEL]
           this.unsubscribe = subscribe(nextTheme => {
             // This will be called once immediately
-            const { defaultProps } = this.constructor
+
             // Props should take precedence over ThemeProvider, which should take precedence over
             // defaultProps, but React automatically puts defaultProps on props.
+            const { defaultProps } = this.constructor
             const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
             const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
             const generatedClassName = this.generateAndInjectStyles(theme, this.props)
@@ -100,7 +97,11 @@ export default (ComponentStyle: Function) => {
 
       componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
         this.setState((oldState) => {
-          const theme = nextProps.theme || oldState.theme
+          // Props should take precedence over ThemeProvider, which should take precedence over
+          // defaultProps, but React automatically puts defaultProps on props.
+          const { defaultProps } = this.constructor
+          const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
+          const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : oldState.theme
           const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
 
           return { theme, generatedClassName }

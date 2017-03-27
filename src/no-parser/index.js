@@ -1,26 +1,28 @@
 // @flow
 
+/* Import no-parser singleton variants */
+import flatten from './flatten'
+import stringifyRules from './stringifyRules'
+import css from './css'
+
 /* Import singletons */
-import flatten from './utils/flatten'
-import stringifyRules from './utils/stringifyRules'
-import generateAlphabeticName from './utils/generateAlphabeticName'
-import css from './constructors/css'
-import styleSheet from './models/StyleSheet'
+import generateAlphabeticName from '../utils/generateAlphabeticName'
+import styleSheet from '../models/StyleSheet'
 
 /* Import singleton constructors */
-import _StyledComponent from './models/StyledComponent'
-import _ComponentStyle from './models/ComponentStyle'
-import _GlobalStyle from './models/GlobalStyle'
-import _styled from './constructors/styled'
-import _keyframes from './constructors/keyframes'
-import _injectGlobal from './constructors/injectGlobal'
-import _constructWithOptions from './constructors/constructWithOptions'
+import _StyledComponent from '../models/StyledComponent'
+import _ComponentStyle from '../models/ComponentStyle'
+import _GlobalStyle from '../models/GlobalStyle'
+import _styled from '../constructors/styled'
+import _keyframes from '../constructors/keyframes'
+import _injectGlobal from '../constructors/injectGlobal'
+import _constructWithOptions from '../constructors/constructWithOptions'
 
 /* Import components */
-import ThemeProvider from './models/ThemeProvider'
+import ThemeProvider from '../models/ThemeProvider'
 
 /* Import Higher Order Components */
-import withTheme from './hoc/withTheme'
+import withTheme from '../hoc/withTheme'
 
 /* Instantiate singletons */
 const GlobalStyle = _GlobalStyle(flatten, stringifyRules)
