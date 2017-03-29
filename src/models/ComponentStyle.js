@@ -14,17 +14,30 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
   class ComponentStyle {
     rules: RuleSet
     componentId: string
-    insertedRule: Object
+    insertedRule: ?Object
 
     constructor(rules: RuleSet, componentId: string) {
       this.rules = rules
       this.componentId = componentId
+      this.insertedRule = undefined
+
       if (!styleSheet.injected) styleSheet.inject()
-      this.insertedRule = styleSheet.insert(`.${componentId} {}`)
+
+      if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+        this.insertedRule = styleSheet.insert(`.${componentId} {}`)
+      }
     }
 
     static generateName(str: string) {
       return nameGenerator(hashStr(str))
+    }
+
+    insertRule(css: string) {
+      if (!this.insertedRule) {
+        this.insertedRule = styleSheet.insert(`.${this.componentId} {}${css}`)
+      } else {
+        this.insertedRule.appendRule(css)
+      }
     }
 
     /*
@@ -37,12 +50,12 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
       const flatCSS = flatten(this.rules, executionContext)
       const hash = hashStr(this.componentId + flatCSS.join(''))
 
-      if (!inserted[hash]) {
+      if (inserted[hash] === undefined) {
         const selector = nameGenerator(hash)
         inserted[hash] = selector
 
         const css = stringifyRules(flatCSS, `.${selector}`)
-        this.insertedRule.appendRule(css)
+        this.insertRule(css)
       }
 
       return inserted[hash]
