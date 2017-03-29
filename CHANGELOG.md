@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Standardised `styled(Comp)` to work the same in all cases, rather than a special extension case where `Comp` is another Styled Component. `Comp.extend` now covers that case. (see [#518](https://github.com/styled-components/styled-components/pull/518)).
 - Added a separate `no-parser` entrypoint for preprocessed CSS, which doesn't depend on stylis. The preprocessing is part of our babel plugin. (see [babel-plugin-styled-components/#26](https://github.com/styled-components/babel-plugin-styled-components/pull/26))
 - Fix defaultProps used instead of ThemeProvider on first render [@k15a](https://github.com/k15a), restored.
+- Refactor StyledComponent for performance optimization.
 
 ## [Unreleased]
 
