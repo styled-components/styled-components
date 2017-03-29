@@ -138,7 +138,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           if (
             !isTargetTag || (
               validAttr(propName) &&
-              propName !== 'className'
+              propName !== 'className' &&
+              propName !== 'innerRef'
             )
           ) {
             // eslint-disable-next-line no-param-reassign
