@@ -12,14 +12,17 @@ import type { RuleSet, Target } from '../types'
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
 
+const escapeRegex = /[[\].#*$><+~=|^:(),"'`]/g
+const multiDashRegex = /--+/g
+
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
   /* We depend on components having unique IDs */
   const identifiers = {}
   const generateId = (_displayName: string) => {
     const displayName = typeof _displayName !== 'string' ?
       'sc' : _displayName
-        .replace(/[[\].#*$><+~=|^:(),"'`]/g, '-') // Replace all possible CSS selectors
-        .replace(/--+/g, '-') // Replace multiple -- with single -
+        .replace(escapeRegex, '-') // Replace all possible CSS selectors
+        .replace(multiDashRegex, '-') // Replace multiple -- with single -
 
     const nr = (identifiers[displayName] || 0) + 1
     identifiers[displayName] = nr
