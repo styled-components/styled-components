@@ -62,12 +62,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     generateAndInjectStyles(theme: any, props: any) {
-      const { componentStyle } = this.constructor
+      const { componentStyle, warnTooManyClasses } = this.constructor
       const executionContext = this.buildExecutionContext(theme, props)
       const className = componentStyle.generateAndInjectStyles(executionContext)
 
-      if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
-        const { warnTooManyClasses } = this.constructor
+      if (warnTooManyClasses !== undefined) {
         warnTooManyClasses(className)
       }
 
@@ -174,7 +173,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       attrs,
     } = options
 
-    const warnTooManyClasses = createWarnTooManyClasses(displayName)
+    let warnTooManyClasses
+    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+      warnTooManyClasses = createWarnTooManyClasses(displayName)
+    }
+
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),
       componentId,
