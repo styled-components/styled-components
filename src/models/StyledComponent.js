@@ -129,8 +129,8 @@ export default (ComponentStyle: Function, InlineStyle: Function) => {
         const styles = this.generateAndInjectStyles(theme, nextProps)
 
         return { theme, ...styles }
-        })
-      }
+      })
+    }
 
     componentWillUnmount() {
       if (this.unsubscribe) {
