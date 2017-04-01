@@ -83,5 +83,28 @@ describe('basic', () => {
       // $FlowFixMe
       expect(wrapper.node.ref).toNotExist()
     })
+
+    it('should not leak the innerRef prop to the wrapped child', () => {
+      const StyledComp = styled.div``
+      class WrappedStyledComp extends React.Component {
+        render() {
+          return (
+            <StyledComp {...this.props} />
+          )
+        }
+      }
+      const ChildComp = styled(WrappedStyledComp)``
+      const WrapperComp = class extends Component {
+        testRef: any;
+        render() {
+          return <ChildComp innerRef={(comp) => { this.testRef = comp }} />
+        }
+      }
+      const wrapper = mount(<WrapperComp />)
+
+      // $FlowFixMe
+      expect(wrapper.node.testRef).toExist()
+      expect(wrapper.find('WrappedStyledComp').prop('innerRef')).toNotExist()
+    })
   })
 })
