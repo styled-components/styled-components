@@ -3,12 +3,18 @@ import expect from 'expect';
 import { shallow } from 'enzyme'
 import { resetStyled, expectCSSMatches } from '../../test/utils'
 import styleSheet from '../StyleSheet';
-import injectGlobal from '../../constructors/injectGlobal'
+import _GlobalStyle from '../GlobalStyle'
+import _injectGlobal from '../../constructors/injectGlobal'
+import css from '../../constructors/css'
+import flatten from '../../utils/flatten'
+import stringifyRules from '../../utils/stringifyRules'
 
 let styled
 const rule1 = 'width: 100%;'
 const rule2 = 'text-decoration: none;'
 const rule3 = 'color: blue;'
+
+const injectGlobal = _injectGlobal(_GlobalStyle(flatten, stringifyRules), css)
 
 describe('styleSheet', () => {
 

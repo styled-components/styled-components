@@ -1,32 +1,43 @@
 // @flow
 import hashStr from 'glamor/lib/hash'
-import stylis from 'stylis'
 
-import type { RuleSet, NameGenerator } from '../types'
-import flatten from '../utils/flatten'
+import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
 import styleSheet from './StyleSheet'
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
  the React-specific stuff.
  */
-export default (nameGenerator: NameGenerator) => {
+export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules: Stringifier) => {
   const inserted = {}
 
   class ComponentStyle {
     rules: RuleSet
     componentId: string
-    insertedRule: Object
+    insertedRule: ?Object
 
     constructor(rules: RuleSet, componentId: string) {
       this.rules = rules
       this.componentId = componentId
+      this.insertedRule = undefined
+
       if (!styleSheet.injected) styleSheet.inject()
-      this.insertedRule = styleSheet.insert(`.${componentId} {}`)
+
+      if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+        this.insertedRule = styleSheet.insert(`.${componentId} {}`)
+      }
     }
 
     static generateName(str: string) {
       return nameGenerator(hashStr(str))
+    }
+
+    insertRule(css: string) {
+      if (!this.insertedRule) {
+        this.insertedRule = styleSheet.insert(`.${this.componentId} {}${css}`)
+      } else {
+        this.insertedRule.appendRule(css)
+      }
     }
 
     /*
@@ -36,15 +47,17 @@ export default (nameGenerator: NameGenerator) => {
      * Returns the hash to be injected on render()
      * */
     generateAndInjectStyles(executionContext: Object) {
-      const flatCSS = flatten(this.rules, executionContext).join('')
-        .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
-      const hash = hashStr(this.componentId + flatCSS)
-      if (!inserted[hash]) {
+      const flatCSS = flatten(this.rules, executionContext)
+      const hash = hashStr(this.componentId + flatCSS.join(''))
+
+      if (inserted[hash] === undefined) {
         const selector = nameGenerator(hash)
         inserted[hash] = selector
-        const css = stylis(`.${selector}`, flatCSS, false, false)
-        this.insertedRule.appendRule(css)
+
+        const css = stringifyRules(flatCSS, `.${selector}`)
+        this.insertRule(css)
       }
+
       return inserted[hash]
     }
   }

@@ -347,4 +347,33 @@ describe('theming (jsdom)', () => {
 
     expect(wrapper.find('div').text()).toBe('blue')
   })
+
+  // https://github.com/styled-components/styled-components/issues/445
+  it('should use ThemeProvider theme instead of defaultProps theme after initial render', () => {
+    const Text = styled.div`
+      color: ${props => props.theme.color};
+    `
+
+    Text.defaultProps = {
+      theme: {
+        color: 'purple',
+      },
+    }
+
+    const Theme = ({ props }) => (
+      <ThemeProvider theme={{ color: 'green' }}>
+        <Text {...props} />
+      </ThemeProvider>
+    )
+
+    const wrapper = mount(
+      <Theme prop="foo" />
+    )
+
+    expectCSSMatches(`.sc-a { } .b { color: green; } `)
+
+    wrapper.setProps({ prop: 'bar' })
+
+    expectCSSMatches(`.sc-a { } .b { color: green; } `)
+  })
 })
