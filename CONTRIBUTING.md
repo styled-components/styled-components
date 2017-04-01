@@ -2,6 +2,8 @@ Thanks for giving this a read! We're always open to your contributions to styled
 This document will get you started on how to contribute and things you should know.
 So please give it a thorough read.
 
+Please also give the code of conduct a read.
+
 ## How do I contribute code?
 
 1. Find some issue you're interested in, or a feature that you'd like to tackle.
