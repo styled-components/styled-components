@@ -5,6 +5,7 @@ import type { Interpolation, RuleSet } from '../types'
 
 export default (strings: Array<string>, ...interpolations: Array<Interpolation>): RuleSet => {
   const rules = flatten(interleave(strings, interpolations))
+  // $FlowFixMe
   rules.isStyledBlock = true
   return rules
 }
