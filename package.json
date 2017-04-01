@@ -32,7 +32,8 @@
   "keywords": [
     "react",
     "css",
-    "css-in-js"
+    "css-in-js",
+    "styled-components"
   ],
   "author": "Glen Maddern",
   "license": "MIT",
