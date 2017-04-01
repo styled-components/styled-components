@@ -15,7 +15,7 @@ import { CHANNEL } from './ThemeProvider'
 const escapeRegex = /[[\].#*$><+~=|^:(),"'`]/g
 const multiDashRegex = /--+/g
 
-export default (ComponentStyle: Function, InlineStyle: Function) => {
+export default (ComponentStyle: Function, InlineStyle: Function, constructWithOptions: Function) => {
   /* We depend on components having unique IDs */
   const identifiers = {}
   const generateId = (_displayName: string) => {
@@ -63,7 +63,7 @@ export default (ComponentStyle: Function, InlineStyle: Function) => {
     }
 
     generateAndInjectStyles(theme: any, props: any) {
-      const { componentStyle, warnTooManyClasses } = this.constructor
+      const { componentStyle, styledComponentId, warnTooManyClasses } = this.constructor
       const executionContext = this.buildExecutionContext(theme, props)
       const css = componentStyle.generateAndInjectStyles(executionContext)
 
@@ -83,7 +83,7 @@ export default (ComponentStyle: Function, InlineStyle: Function) => {
         return styles.concat(this.attrs[name])
       }, [])
 
-      const componentInlineStyle = new InlineStyle(inlineRules, componentId)
+      const componentInlineStyle = new InlineStyle(inlineRules, styledComponentId)
       const styles = componentInlineStyle.generateStyleObject(executionContext)
 
       return {
@@ -180,11 +180,9 @@ export default (ComponentStyle: Function, InlineStyle: Function) => {
     }
   }
 
-  const createStyledComponent = (
-    target: Target,
-    options: Object,
-    rules: RuleSet,
-  ) => {
+  const createStyledComponent = (target: Target,
+                                 options: Object,
+                                 rules: RuleSet,) => {
     const {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
       componentId = generateId(options.displayName),

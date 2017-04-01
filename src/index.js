@@ -27,15 +27,12 @@ import withTheme from './hoc/withTheme'
 const GlobalStyle = _GlobalStyle(flatten, stringifyRules)
 const ComponentStyle = _ComponentStyle(generateAlphabeticName, flatten, stringifyRules)
 const constructWithOptions = _constructWithOptions(css)
-const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
+const StyledComponent = _StyledComponent(ComponentStyle, _InlineStyle(generateAlphabeticName), constructWithOptions)
 
 /* Instantiate exported singletons */
 const keyframes = _keyframes(generateAlphabeticName, GlobalStyle, css)
 const injectGlobal = _injectGlobal(GlobalStyle, css)
-const styled = _styled(
-  StyledComponent,
-  _InlineStyle(generateAlphabeticName),
-  constructWithOptions)
+const styled = _styled(StyledComponent, constructWithOptions)
 
 /* Export everything */
 export default styled

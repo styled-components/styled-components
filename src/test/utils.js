@@ -29,11 +29,7 @@ export const resetStyled = () => {
 
   const ComponentStyle = _ComponentStyle(classNames, flatten, stringifyRules)
   const constructWithOptions = _constructWithOptions(css)
-  const StyledComponent = _StyledComponent(
-    ComponentStyle,
-    _InlineStyle(classNames),
-    constructWithOptions
-  )
+  const StyledComponent = _StyledComponent(ComponentStyle, _InlineStyle(classNames), constructWithOptions)
 
   return _styled(StyledComponent, constructWithOptions)
 }
@@ -44,7 +40,7 @@ export const resetNoParserStyled = () => {
 
   const ComponentStyle = _ComponentStyle(classNames, noParserFlatten, noParserStringifyRules)
   const constructWithOptions = _constructWithOptions(noParserCss)
-  const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
+  const StyledComponent = _StyledComponent(ComponentStyle, _InlineStyle(classNames), constructWithOptions)
 
   return _styled(StyledComponent, constructWithOptions)
 }
