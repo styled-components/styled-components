@@ -13,7 +13,7 @@ import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
 import constructWithOptions from '../constructors/constructWithOptions'
 
-export default (ComponentStyle: Function) => {
+export default (ComponentStyle: Function, InlineStyle: Function) => {
   /* We depend on components having unique IDs */
   const identifiers = {}
   const generateId = (_displayName: string) => {
@@ -49,9 +49,14 @@ export default (ComponentStyle: Function) => {
       static extendWith: Function
 
       attrs = {}
-      state = {
-        theme: null,
-        generatedClassName: '',
+
+      constructor() {
+        super()
+        this.state = {
+          theme: null,
+          generatedClassName: '',
+          generatedStyles: null,
+        }
       }
 
       buildExecutionContext(theme: any, props: any) {
@@ -64,7 +69,27 @@ export default (ComponentStyle: Function) => {
 
       generateAndInjectStyles(theme: any, props: any) {
         const executionContext = this.buildExecutionContext(theme, props)
-        return componentStyle.generateAndInjectStyles(executionContext)
+        const css = componentStyle.generateAndInjectStyles(executionContext)
+
+        const inlineRules = Object.keys(this.attrs).reduce((styles, name) => {
+          if (!Array.isArray(this.attrs[name])) {
+            return styles
+          }
+
+          if (!this.attrs[name].isStyledBlock) {
+            return styles
+          }
+
+          return styles.concat(this.attrs[name])
+        }, [])
+
+        const componentInlineStyle = new InlineStyle(inlineRules, componentId)
+        const styles = componentInlineStyle.generateStyleObject(executionContext)
+
+        return {
+          generatedClassName: css,
+          generatedStyles: styles,
+        }
       }
 
       componentWillMount() {
@@ -80,25 +105,22 @@ export default (ComponentStyle: Function) => {
             // defaultProps, but React automatically puts defaultProps on props.
             const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
             const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
-            const generatedClassName = this.generateAndInjectStyles(theme, this.props)
-            this.setState({ theme, generatedClassName })
+            const styles = this.generateAndInjectStyles(theme, this.props)
+            this.setState({ theme, ...styles })
           })
         } else {
           const theme = this.props.theme || {}
-          const generatedClassName = this.generateAndInjectStyles(
-            theme,
-            this.props,
-          )
-          this.setState({ theme, generatedClassName })
+          const styles = this.generateAndInjectStyles(theme, this.props)
+          this.setState({ theme, ...styles })
         }
       }
 
       componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
         this.setState((oldState) => {
           const theme = nextProps.theme || oldState.theme
-          const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
+          const styles = this.generateAndInjectStyles(theme, nextProps)
 
-          return { theme, generatedClassName }
+          return { theme, ...styles }
         })
       }
 
@@ -110,9 +132,13 @@ export default (ComponentStyle: Function) => {
 
       render() {
         const { className, children, innerRef } = this.props
-        const { generatedClassName } = this.state
+        const { generatedClassName, generatedStyles } = this.state
 
-        const propsForElement = { ...this.attrs }
+        const propsForElement = {
+          ...this.attrs,
+          style: generatedStyles || this.attrs.style,
+        }
+
         /* Don't pass through non HTML tags through to HTML elements */
         Object.keys(this.props)
           .filter(propName => !isTag(target) || validAttr(propName))
