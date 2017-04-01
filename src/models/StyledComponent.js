@@ -98,7 +98,7 @@ export default (ComponentStyle: Function) => {
         propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
         if (innerRef) {
           propsForElement.ref = innerRef
-          if (isTag(target)) delete propsForElement.innerRef
+          delete propsForElement.innerRef
         }
 
         return createElement(target, propsForElement, children)
