@@ -1,4 +1,4 @@
-/* eslint-disable flowtype/require-valid-file-annotation, no-console */
+/* eslint-disable flowtype/require-valid-file-annotation, no-console, import/extensions */
 import nodeResolve from 'rollup-plugin-node-resolve'
 import replace from 'rollup-plugin-replace'
 import commonjs from 'rollup-plugin-commonjs'
@@ -14,35 +14,18 @@ const processShim = '\0process-shim'
 const prod = process.env.PRODUCTION
 const noParser = process.env.NOPARSER
 const mode = prod ? 'production' : 'development'
-const entryName = noParser ? 'no-parser' : 'main'
+const entryName = noParser ? 'no-parser' : 'styled-components'
 
 console.log(`Creating ${mode} bundle for the ${entryName} entry...`)
 
-const entry = noParser ? 'src/no-parser/index.js' : 'src/index.js'
-
-let targets
-if (prod) {
-  if (noParser) {
-    targets = [
-      { dest: 'dist/no-parser.min.js', format: 'umd' },
-    ]
-  } else {
-    targets = [
-      { dest: 'dist/styled-components.min.js', format: 'umd' },
-    ]
-  }
-} else
-  if (noParser) {
-    targets = [
-      { dest: 'dist/no-parser.js', format: 'umd' },
-      { dest: 'dist/no-parser.es.js', format: 'es' },
-    ]
-  } else {
-    targets = [
-      { dest: 'dist/styled-components.js', format: 'umd' },
-      { dest: 'dist/styled-components.es.js', format: 'es' },
-    ]
-  }
+const targets = prod ?
+[
+  { dest: `dist/${entryName}.min.js`, format: 'umd' },
+] :
+[
+  { dest: `dist/${entryName}.js`, format: 'umd' },
+  { dest: `dist/${entryName}.es.js`, format: 'es' },
+]
 
 const plugins = [
   // Unlike Webpack and Browserify, Rollup doesn't automatically shim Node
@@ -84,12 +67,10 @@ const plugins = [
   json(),
 ]
 
-if (prod) {
-  if (noParser) { plugins.push(uglify(), visualizer({ filename: './bundle-stats-no-parser.html' })) } else { plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' })) }
-}
+if (prod) plugins.push(uglify(), visualizer({ filename: `./bundle-stats-${entryName}.html` }))
 
 export default {
-  entry,
+  entry: noParser ? 'src/no-parser/index.js' : 'src/index.js',
   moduleName: 'styled',
   external: ['react'],
   exports: 'named',
