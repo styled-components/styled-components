@@ -13,6 +13,7 @@ import flatten from '../utils/flatten'
 import stringifyRules from '../utils/stringifyRules'
 import _StyledComponent from '../models/StyledComponent'
 import _ComponentStyle from '../models/ComponentStyle'
+import _InlineStyle from '../models/InlineStyle'
 
 import noParserCss from '../no-parser/css'
 import noParserFlatten from '../no-parser/flatten'
@@ -28,7 +29,7 @@ export const resetStyled = () => {
 
   const ComponentStyle = _ComponentStyle(classNames, flatten, stringifyRules)
   const constructWithOptions = _constructWithOptions(css)
-  const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
+  const StyledComponent = _StyledComponent(ComponentStyle, _InlineStyle(classNames), constructWithOptions)
 
   return _styled(StyledComponent, constructWithOptions)
 }
@@ -39,7 +40,7 @@ export const resetNoParserStyled = () => {
 
   const ComponentStyle = _ComponentStyle(classNames, noParserFlatten, noParserStringifyRules)
   const constructWithOptions = _constructWithOptions(noParserCss)
-  const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
+  const StyledComponent = _StyledComponent(ComponentStyle, _InlineStyle(classNames), constructWithOptions)
 
   return _styled(StyledComponent, constructWithOptions)
 }

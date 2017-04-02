@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Added a separate `no-parser` entrypoint for preprocessed CSS, which doesn't depend on stylis. The preprocessing is part of our babel plugin. (see [babel-plugin-styled-components/#26](https://github.com/styled-components/babel-plugin-styled-components/pull/26))
 - Fix defaultProps used instead of ThemeProvider on first render [@k15a](https://github.com/k15a), restored.
 - Refactor StyledComponent for performance optimization.
+- Allow `attrs.style` to be `css` block - [@ramitos](https://github.com/ramitos). (see [509](https://github.com/styled-components/styled-components/pull/509) and [371](https://github.com/styled-components/styled-components/pull/371))
 
 ## [Unreleased]
 

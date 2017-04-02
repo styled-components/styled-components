@@ -13,6 +13,7 @@ import _ComponentStyle from './models/ComponentStyle'
 import _GlobalStyle from './models/GlobalStyle'
 import _styled from './constructors/styled'
 import _keyframes from './constructors/keyframes'
+import _InlineStyle from './models/InlineStyle'
 import _injectGlobal from './constructors/injectGlobal'
 import _constructWithOptions from './constructors/constructWithOptions'
 
@@ -26,7 +27,7 @@ import withTheme from './hoc/withTheme'
 const GlobalStyle = _GlobalStyle(flatten, stringifyRules)
 const ComponentStyle = _ComponentStyle(generateAlphabeticName, flatten, stringifyRules)
 const constructWithOptions = _constructWithOptions(css)
-const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
+const StyledComponent = _StyledComponent(ComponentStyle, _InlineStyle(generateAlphabeticName), constructWithOptions)
 
 /* Instantiate exported singletons */
 const keyframes = _keyframes(generateAlphabeticName, GlobalStyle, css)
