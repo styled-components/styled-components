@@ -23,8 +23,8 @@ module.exports = class TokenStream {
 
     if (!node) return null;
 
-    /* eslint-disable no-restricted-syntax */
-    for (const tokenDescriptor of tokenDescriptors) {
+    for (let i = 0; i < tokenDescriptors.length; i += 1) {
+      const tokenDescriptor = tokenDescriptors[i];
       const value = tokenDescriptor(node);
 
       if (value !== null) {
@@ -34,7 +34,6 @@ module.exports = class TokenStream {
         return value;
       }
     }
-    /* eslint-enable */
 
     return null;
   }

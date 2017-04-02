@@ -45,16 +45,15 @@ module.exports.anyOrderFactory = (properties, delim = SPACE) => (tokenStream) =>
   while (numParsed < propertyNames.length && tokenStream.hasTokens()) {
     if (numParsed) tokenStream.expect(delim);
 
-    let didMatch = false;
-    for (const propertyName of propertyNames) { // eslint-disable-line
-      if (values[propertyName] === undefined && tokenStream.match(properties[propertyName].token)) {
-        values[propertyName] = tokenStream.lastValue;
-        didMatch = true;
-        break;
-      }
-    }
+    const matchedPropertyName = propertyNames.find(propertyName => (
+      values[propertyName] === undefined && tokenStream.match(properties[propertyName].token)
+    ));
 
-    if (!didMatch) tokenStream.throw();
+    if (!matchedPropertyName) {
+      tokenStream.throw();
+    } else {
+      values[matchedPropertyName] = tokenStream.lastValue;
+    }
 
     numParsed += 1;
   }
