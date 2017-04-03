@@ -58,30 +58,24 @@ describe('basic', () => {
   describe('jsdom tests', () => {
     jsdom()
 
-    let Comp
-    let WrapperComp
-    let wrapper
+    it('should pass the ref to the component', () => {
+      const Comp = styled.div``
 
-    beforeEach(() => {
-      Comp = styled.div``
-      WrapperComp = class extends Component {
+      class Wrapper extends Component {
         testRef: any;
+        innerRef = (comp) => { this.testRef = comp }
+
         render() {
-          return <Comp innerRef={(comp) => { this.testRef = comp }} />
+          return <Comp innerRef={this.innerRef} />
         }
       }
 
-      wrapper = mount(<WrapperComp />)
-    })
+      const wrapper = mount(<Wrapper />)
+      const component = wrapper.find(Comp).first()
 
-    it('should pass ref to the component', () => {
       // $FlowFixMe
-      expect(wrapper.node.testRef).toExist()
-    })
-
-    it('should not pass innerRef to the component', () => {
-      // $FlowFixMe
-      expect(wrapper.node.ref).toNotExist()
+      expect(wrapper.node.testRef).toBe(component.getDOMNode())
+      expect(component.find('div').prop('innerRef')).toNotExist()
     })
 
     class InnerComponent extends Component {
@@ -120,11 +114,12 @@ describe('basic', () => {
 
       const wrapper = mount(<Wrapper />)
       expect(wrapper.find(InnerComponent).prop('className'))
-        .toBe('test sc-c d')
+        .toBe('test sc-a b')
     })
 
     it('should pass the innerRef to the wrapped styled component', () => {
-      const OuterComponent = styled(Comp)``
+      const InnerComponent = styled.div``
+      const OuterComponent = styled(InnerComponent)``
 
       class Wrapper extends Component {
         testRef: any;
@@ -136,7 +131,7 @@ describe('basic', () => {
       }
 
       const wrapper = mount(<Wrapper />)
-      const innerComponent = wrapper.find(Comp).first()
+      const innerComponent = wrapper.find(InnerComponent).first()
       const outerComponent = wrapper.find(OuterComponent).first()
 
       // $FlowFixMe
