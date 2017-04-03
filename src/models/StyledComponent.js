@@ -137,12 +137,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         .keys(this.props)
         .reduce((acc, propName) => {
           // Don't pass through non HTML tags through to HTML elements
+          // always omit innerRef
           if (
-            !isTargetTag || (
-              validAttr(propName) &&
-              propName !== 'className' &&
-              propName !== 'innerRef'
-            )
+            propName !== 'innerRef' &&
+            propName !== 'className' &&
+            (!isTargetTag || validAttr(propName))
           ) {
             // eslint-disable-next-line no-param-reassign
             acc[propName] = this.props[propName]
@@ -153,7 +152,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           ...this.attrs,
           className,
           ref: innerRef,
-          innerRef: undefined,
         })
 
       return createElement(target, propsForElement, children)

@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Added a separate `no-parser` entrypoint for preprocessed CSS, which doesn't depend on stylis. The preprocessing is part of our babel plugin. (see [babel-plugin-styled-components/#26](https://github.com/styled-components/babel-plugin-styled-components/pull/26))
 - Fix defaultProps used instead of ThemeProvider on first render [@k15a](https://github.com/k15a), restored.
 - Refactor StyledComponent for performance optimization.
+- Prevent leakage of the `innerRef` prop to wrapped child; under the hood it is converted into a normal React `ref`. (see [#592](https://github.com/styled-components/styled-components/issues/592))
 
 ## [Unreleased]
 
