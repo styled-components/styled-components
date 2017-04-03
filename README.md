@@ -498,6 +498,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [react-styled-flexboxgrid](https://github.com/LoicMahieu/react-styled-flexboxgrid): Grid system based on Flexbox ([demo](https://loicmahieu.github.io/react-styled-flexboxgrid/demo/index.html))
 - [Scalable React Boilerplate](https://github.com/RyanCCollins/scalable-react-boilerplate)
 - [Scalable React TypeScript Boilerplate](https://github.com/RyanCCollins/scalable-react-ts-boilerplate)
+- [Superstylin'](https://github.com/bntzio/gatsby-starter-superstylin): A Gatsby starter with styled-components 💅 ([demo](https://superstylin.netlify.com/))
 
 ### Websites
 - [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
