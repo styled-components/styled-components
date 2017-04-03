@@ -122,5 +122,28 @@ describe('basic', () => {
       expect(wrapper.find(InnerComponent).prop('className'))
         .toBe('test sc-c d')
     })
+
+    it('should pass the innerRef to the wrapped styled component', () => {
+      const OuterComponent = styled(Comp)``
+
+      class Wrapper extends Component {
+        testRef: any;
+        innerRef = (comp) => { this.testRef = comp }
+
+        render() {
+          return <OuterComponent innerRef={this.innerRef} />
+        }
+      }
+
+      const wrapper = mount(<Wrapper />)
+      const innerComponent = wrapper.find(Comp).first()
+      const outerComponent = wrapper.find(OuterComponent).first()
+
+      // $FlowFixMe
+      expect(wrapper.node.testRef).toBe(innerComponent.getDOMNode())
+
+      // $FlowFixMe
+      expect(innerComponent.prop('innerRef')).toBe(wrapper.node.innerRef)
+    })
   })
 })

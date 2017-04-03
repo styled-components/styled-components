@@ -7,6 +7,7 @@ import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
+import isStyledComponent from '../utils/isStyledComponent'
 import type { RuleSet, Target } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
@@ -133,6 +134,17 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         generatedClassName,
       ].filter(Boolean).join(' ')
 
+      const baseProps = {
+        ...this.attrs,
+        className,
+      }
+
+      if (isStyledComponent(target)) {
+        baseProps.innerRef = innerRef
+      } else {
+        baseProps.ref = innerRef
+      }
+
       const propsForElement = Object
         .keys(this.props)
         .reduce((acc, propName) => {
@@ -148,11 +160,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           }
 
           return acc
-        }, {
-          ...this.attrs,
-          className,
-          ref: innerRef,
-        })
+        }, baseProps)
 
       return createElement(target, propsForElement, children)
     }
