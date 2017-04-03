@@ -85,26 +85,28 @@ describe('basic', () => {
     })
 
     it('should not leak the innerRef prop to the wrapped child', () => {
-      const StyledComp = styled.div``
-      class WrappedStyledComp extends React.Component {
+      class InnerComponent extends Component {
         render() {
-          return (
-            <StyledComp {...this.props} />
-          )
+          return null
         }
       }
-      const ChildComp = styled(WrappedStyledComp)``
-      const WrapperComp = class extends Component {
+
+      const OuterComponent = styled(InnerComponent)``
+
+      class Wrapper extends Component {
         testRef: any;
+
         render() {
-          return <ChildComp innerRef={(comp) => { this.testRef = comp }} />
+          return <OuterComponent innerRef={(comp) => { this.testRef = comp }} />
         }
       }
-      const wrapper = mount(<WrapperComp />)
+
+      const wrapper = mount(<Wrapper />)
+      const innerComponent = wrapper.find(InnerComponent).first()
 
       // $FlowFixMe
-      expect(wrapper.node.testRef).toExist()
-      expect(wrapper.find('WrappedStyledComp').prop('innerRef')).toNotExist()
+      expect(wrapper.node.testRef).toBe(innerComponent.node)
+      expect(innerComponent.prop('innerRef')).toNotExist()
     })
   })
 })
