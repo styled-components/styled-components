@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Fix defaultProps used instead of ThemeProvider on first render [@k15a](https://github.com/k15a), restored.
 - Refactor StyledComponent for performance optimization.
 - Prevent leakage of the `innerRef` prop to wrapped child; under the hood it is converted into a normal React `ref`. (see [#592](https://github.com/styled-components/styled-components/issues/592))
+- Pass `innerRef` through to wrapped Styled Components, so that it refers to the actual DOM node. (see [#629](https://github.com/styled-components/styled-components/issues/629))
 
 ## [Unreleased]
 
