@@ -12,3 +12,5 @@ dangerfile.js
 yarn.lock
 .editorconfig
 .npmignore
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
