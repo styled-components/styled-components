@@ -84,13 +84,13 @@ describe('basic', () => {
       expect(wrapper.node.ref).toNotExist()
     })
 
-    it('should not leak the innerRef prop to the wrapped child', () => {
-      class InnerComponent extends Component {
-        render() {
-          return null
-        }
+    class InnerComponent extends Component {
+      render() {
+        return null
       }
+    }
 
+    it('should not leak the innerRef prop to the wrapped child', () => {
       const OuterComponent = styled(InnerComponent)``
 
       class Wrapper extends Component {
@@ -107,6 +107,20 @@ describe('basic', () => {
       // $FlowFixMe
       expect(wrapper.node.testRef).toBe(innerComponent.node)
       expect(innerComponent.prop('innerRef')).toNotExist()
+    })
+
+    it('should pass the full className to the wrapped child', () => {
+      const OuterComponent = styled(InnerComponent)``
+
+      class Wrapper extends Component {
+        render() {
+          return <OuterComponent className="test"/>
+        }
+      }
+
+      const wrapper = mount(<Wrapper />)
+      expect(wrapper.find(InnerComponent).prop('className'))
+        .toBe('test sc-c d')
     })
   })
 })

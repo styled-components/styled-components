@@ -140,7 +140,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           // always omit innerRef
           if (
             propName !== 'innerRef' &&
-            (!isTargetTag || (validAttr(propName) && propName !== 'className'))
+            propName !== 'className' &&
+            (!isTargetTag || validAttr(propName))
           ) {
             // eslint-disable-next-line no-param-reassign
             acc[propName] = this.props[propName]
