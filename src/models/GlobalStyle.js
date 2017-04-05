@@ -16,8 +16,7 @@ export default (flatten: Flattener, stringifyRules: Stringifier) => {
 
     generateAndInject() {
       if (!styleSheet.injected) styleSheet.inject()
-      const flatRules = flatten(this.rules)
-      const css = stringifyRules(flatRules, this.selector, this.prefix)
+      const css = stringifyRules(this.rules, this.selector, this.prefix)
 
       styleSheet.insert(css)
     }
