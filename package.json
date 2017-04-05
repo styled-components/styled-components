@@ -29,6 +29,8 @@
   "files": [
     "native.js",
     "no-parser.js",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
     "dist",
     "docs",
     "flow-typed",
