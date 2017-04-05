@@ -43,11 +43,9 @@ export const isUnendedMixin = css => {
     closingParensPos
   )
 
-  // If this is followed by an open parens, it should be a selector
-  // If this is followed by a semicolon, then we don't need one
+  // If this is followed by a semicolon or colon, then we don't want to add a semicolon
   return (
     isFinite(minCharPos) &&
-    minCharPos !== openParensPos &&
     minCharPos !== semicolonPos
   )
 }
