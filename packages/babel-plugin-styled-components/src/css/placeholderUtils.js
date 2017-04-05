@@ -63,4 +63,9 @@ export const containsPlaceholders = css => !!css.match(placeholderRegex)
 export const splitByPlaceholders = css => css.split(placeholderRegex)
 
 // Remove curly braces around global placeholders
-export const fixGlobalPlaceholders = css => css.replace(globalRulesetRegex, '$1')
+// We need to replace mixin-semicolons with newlines to not break browser CSS parsing
+export const fixGlobalPlaceholders = css => css.replace(globalRulesetRegex, (_, p1) => (
+  p1 ?
+    p1.replace(';', '\n') :
+    ''
+))
