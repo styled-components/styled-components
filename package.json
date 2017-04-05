@@ -29,6 +29,18 @@
     "type": "git",
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
+  "files": [
+    "native.js",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "dist",
+    "docs",
+    "flow-typed",
+    "lib",
+    "native",
+    "src",
+    "typings"
+  ],
   "keywords": [
     "react",
     "css",
