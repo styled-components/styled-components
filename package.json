@@ -27,6 +27,15 @@
     "type": "git",
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
+  "files": [
+    "native.js",
+    "no-parser.js",
+    "dist",
+    "docs",
+    "flow-typed",
+    "lib",
+    "src"
+  ],
   "keywords": [
     "react",
     "css",
