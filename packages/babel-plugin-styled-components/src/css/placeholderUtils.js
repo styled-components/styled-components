@@ -1,6 +1,9 @@
 // The capture group makes sure that the split contains the interpolation index
 const placeholderRegex = /__PLACEHOLDER_(\d+?)__/
 
+// This matches the global group w/o a selector
+const globalRulesetRegex = /^{([^}]*)}/
+
 const lastInArr = arr => arr[arr.length - 1]
 
 // Return position of needle in string or Infinity
@@ -60,3 +63,6 @@ export const containsPlaceholders = css => !!css.match(placeholderRegex)
 
 // Splits CSS by placeholders
 export const splitByPlaceholders = css => css.split(placeholderRegex)
+
+// Remove curly braces around global placeholders
+export const fixGlobalPlaceholders = css => css.replace(globalRulesetRegex, '$1')

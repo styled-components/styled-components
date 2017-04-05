@@ -28,7 +28,7 @@ const RulesetInterpolationB = styled.div.withConfig({
 
 const Prefixes = styled.div.withConfig({
   displayName: "before__Prefixes"
-})([[" {display: -webkit-box;display: -webkit-flex;display: -ms-flexbox;display: flex;-webkit-box-align: center;-ms-flex-align: center;align-items: center;}"]]);
+})([[" {display: -webkit-box;display: -webkit-flex;display: -ms-flexbox;display: flex;-webkit-align-items: center;-webkit-box-align: center;-ms-flex-align: center;align-items: center;}"]]);
 
 const DoubleInterpolation = styled.div.withConfig({
   displayName: "before__DoubleInterpolation"

@@ -8,8 +8,9 @@ export default (cssArr, interpolationNodes) => (
     preprocessHelper(
       cssArr,
       interpolationNodes,
-      x => x,
-      '' // no namespace
+      x => '{' + x + '}',
+      '', // no namespace
+      true // fix globals
     )
   )
 )

@@ -7,6 +7,7 @@ import {
   isUnendedMixin,
   containsPlaceholders,
   splitByPlaceholders,
+  fixGlobalPlaceholders,
 } from './placeholderUtils'
 
 // Assembles CSS partials and replaces interpolations with placeholders
@@ -71,7 +72,8 @@ export const preprocessHelper = (
   cssArr,
   interpolationNodes,
   transformFlattened = (x => x),
-  stylisNamespace = ''
+  stylisNamespace = '',
+  fixGlobals = false
 ) => {
   // Test whether the input is using reserved strings
   if (
@@ -90,7 +92,11 @@ export const preprocessHelper = (
   )
 
   // Flatten CSS using stylis
-  const flattenedCSS = stylis(stylisNamespace, css)
+  let flattenedCSS = stylis(stylisNamespace, css, false, false).trim()
+
+  if (fixGlobals && flattenedCSS.startsWith('{')) {
+    flattenedCSS = fixGlobalPlaceholders(flattenedCSS)
+  }
 
   const classnameSplit = flattenedCSS
     .split(temporaryClassname)
