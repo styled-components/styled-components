@@ -1,0 +1,54 @@
+{
+  "pages": [
+    {
+      "title": "Basics",
+      "sections": [
+        {
+          "title": "Getting Started"
+        }, {
+          "title": "Passed props"
+        }, {
+          "title": "Adapting based on props"
+        }, {
+          "title": "Overriding component styles"
+        }, {
+          "title": "Third-party components"
+        }, {
+          "title": "Animations"
+        }, {
+          "title": "React Native"
+        }
+      ]
+    }, {
+      "title": "Advanced",
+      "sections": [
+        {
+          "title": "Theming"
+        }, {
+          "title": "Refs"
+        }, {
+          "title": "Security"
+        }, {
+          "title": "Media Templates"
+        }, {
+          "title": "Tagged Template Literals"
+        }
+      ]
+    }, {
+      "title": "API Reference",
+      "sections": [
+        {
+          "title": "Primary"
+        }, {
+          "title": "Helpers"
+        }, {
+          "title": "Supported CSS"
+        }, {
+          "title": "Flow"
+        }, {
+          "title": "TypeScript"
+        }
+      ]
+    }
+  ]
+}
