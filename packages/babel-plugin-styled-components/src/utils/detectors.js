@@ -30,6 +30,11 @@ export const isCSSHelper = (tag, state) => (
   tag.name === importLocalName('css', state)
 )
 
+export const isInjectGlobalHelper = (tag, state) => (
+  t.isIdentifier(tag) &&
+  tag.name === importLocalName('injectGlobal', state)
+)
+
 export const isKeyframesHelper = (tag, state) => (
   t.isIdentifier(tag) &&
   tag.name === importLocalName('keyframes', state)
