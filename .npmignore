@@ -7,3 +7,10 @@ rollup.config.js
 .eslintignore
 .babelrc
 example/
+bundle-stats*
+dangerfile.js
+yarn.lock
+.editorconfig
+.npmignore
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
