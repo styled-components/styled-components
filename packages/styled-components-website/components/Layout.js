@@ -3,7 +3,7 @@ import rem from 'polished/lib/helpers/rem'
 
 export const Title = styled.h1`
   display: block;
-  text-align: right;
+  text-align: left;
   width: 100%;
   color: rgb(243, 182, 97);
   font-size: ${rem(42)};

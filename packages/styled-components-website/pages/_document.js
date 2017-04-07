@@ -23,7 +23,6 @@ injectGlobal`
   .root {
     position: relative;
     overflow: auto;
-    min-height: 100vh;
   }
 `
 

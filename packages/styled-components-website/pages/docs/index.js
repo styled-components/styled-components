@@ -8,14 +8,17 @@ import { pages } from '../docs.json'
 
 const Container = styled.div`
   padding-left: ${rem(300)};
-  min-height: 100vh;
+
+  @media (max-width: 1000px) {
+    padding-left: 0;
+    padding-top: ${rem(70)};
+  }
 `
 
 const Content = styled.div`
   width: ${rem(1024)};
   max-width: 100%;
   margin: 0 auto;
-  min-height: 100vh;
   padding: ${rem(30)} ${rem(25)};
   box-sizing: border-box;
 `
