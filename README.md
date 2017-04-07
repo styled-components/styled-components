@@ -451,9 +451,9 @@ To get proper syntax highlighting, all you have to do is install and use the `la
 
 ### Sublime Text
 
-There is an [open PR](https://github.com/babel/babel-sublime/pull/289) by [@garetmckinley](https://github.com/garetmckinley) to add support for `styled-components` to `babel-sublime`! (if you want the PR to land, feel free to 👍 the initial comment to let the maintainers know there's a need for this!)
+There is `babel-sublime` by [@garetmckinley](https://github.com/garetmckinley) to add support for `styled-components`!
 
-As soon as that PR is merged and a new version released, all you'll have to do is install and use `babel-sublime` to highlight your JavaScript files!
+All you have to do is install and use `babel-sublime` to highlight your JavaScript files!
 
 ### Visual Studio Code
 
