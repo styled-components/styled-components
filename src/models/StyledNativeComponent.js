@@ -9,33 +9,25 @@ import type { RuleSet, Target } from '../types'
 import { CHANNEL } from './ThemeProvider'
 import InlineStyle from './InlineStyle'
 import AbstractStyledComponent from './AbstractStyledComponent'
+import constructWithOptions from '../constructors/constructWithOptions'
 
 const createStyledNativeComponent = (target: Target,
                                      options: Object,
-                                     rules: RuleSet,
-                                     parent?: Target) => {
-  /* Handle styled(OtherStyledNativeComponent) differently */
-  const isStyledNativeComponent = AbstractStyledComponent.isPrototypeOf(target)
-  if (isStyledNativeComponent && !isTag(target)) {
-    return createStyledNativeComponent(target.target, options, target.rules.concat(rules), target)
-  }
-
+                                     rules: RuleSet) => {
   const {
     displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
+    rules: extendingRules = [],
+    ParentComponent = AbstractStyledComponent,
   } = options
-  const inlineStyle = new InlineStyle(rules)
-  const ParentComponent = parent || AbstractStyledComponent
+  const inlineStyle = new InlineStyle([...extendingRules, ...rules])
 
-  // $FlowFixMe need to convince flow that ParentComponent can't be string here
   class StyledNativeComponent extends ParentComponent {
-    static rules: RuleSet
-    static target: Target
+    static extend: Function
+    static extendWith: Function
 
-    constructor() {
-      super()
-      this.state = {
-        theme: {},
-      }
+    state = {
+      theme: {},
+      generatedStyles: undefined,
     }
 
     componentWillMount() {
@@ -46,9 +38,10 @@ const createStyledNativeComponent = (target: Target,
         const subscribe = this.context[CHANNEL]
         this.unsubscribe = subscribe(nextTheme => {
           // This will be called once immediately
-          const { defaultProps } = this.constructor
+
           // Props should take precedence over ThemeProvider, which should take precedence over
           // defaultProps, but React automatically puts defaultProps on props.
+          const { defaultProps } = this.constructor
           const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
           const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
           const generatedStyles = this.generateAndInjectStyles(theme, this.props)
@@ -66,7 +59,11 @@ const createStyledNativeComponent = (target: Target,
 
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
       this.setState((oldState) => {
-        const theme = nextProps.theme || oldState.theme
+        // Props should take precedence over ThemeProvider, which should take precedence over
+        // defaultProps, but React automatically puts defaultProps on props.
+        const { defaultProps } = this.constructor
+        const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
+        const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : oldState.theme
         const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
 
         return { theme, generatedStyles }
@@ -97,12 +94,18 @@ const createStyledNativeComponent = (target: Target,
 
       return createElement(target, propsForElement, children)
     }
+
+    static get extend() {
+      return StyledNativeComponent.extendWith(target)
+    }
   }
 
-  /* Used for inheritance */
-  StyledNativeComponent.rules = rules
-  StyledNativeComponent.target = target
   StyledNativeComponent.displayName = displayName
+  StyledNativeComponent.extendWith = tag => {
+    const { displayName: _, ...optionsToCopy } = options
+    return constructWithOptions(createStyledNativeComponent, tag,
+      { ...optionsToCopy, rules, ParentComponent: StyledNativeComponent })
+  }
 
   return StyledNativeComponent
 }

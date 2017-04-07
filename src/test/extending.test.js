@@ -16,7 +16,7 @@ describe('extending', () => {
 
   it('should generate empty classes with no styles', () => {
     const Parent = styled.div``
-    const Child = styled(Parent)``
+    const Child = Parent.extend``
 
     shallow(<Parent />)
     shallow(<Child />)
@@ -26,7 +26,7 @@ describe('extending', () => {
 
   it('should attach styles to both classes if only parent has styles', () => {
     const Parent = styled.div`color: blue;`
-    const Child = styled(Parent)``
+    const Child = Parent.extend``
 
     shallow(<Parent />)
     shallow(<Child />)
@@ -36,7 +36,7 @@ describe('extending', () => {
 
   it('should attach styles to child class if only child has styles', () => {
     const Parent = styled.div``
-    const Child = styled(Parent)`color: blue;`
+    const Child = Parent.extend`color: blue;`
 
     shallow(<Parent />)
     shallow(<Child />)
@@ -46,7 +46,7 @@ describe('extending', () => {
 
   it('should generate a class for the child with the rules of the parent', () => {
     const Parent = styled.div`color: blue;`
-    const Child = styled(Parent)`color: red;`
+    const Child = Parent.extend`color: red;`
 
     shallow(<Child />)
 
@@ -55,7 +55,7 @@ describe('extending', () => {
 
   it('should generate different classes for both parent and child', () => {
     const Parent = styled.div`color: blue;`
-    const Child = styled(Parent)`color: red;`
+    const Child = Parent.extend`color: red;`
 
     shallow(<Parent />)
     shallow(<Child />)
@@ -68,7 +68,7 @@ describe('extending', () => {
       color: blue;
       > h1 { font-size: 4rem; }
     `
-    const Child = styled(Parent)`color: red;`
+    const Child = Parent.extend`color: red;`
 
     shallow(<Parent />)
     shallow(<Child />)
@@ -92,7 +92,7 @@ describe('extending', () => {
       color: 'red'
     }
 
-    const Child = styled(Parent)`background-color: green;`
+    const Child = Parent.extend`background-color: green;`
 
     shallow(<Parent />)
     shallow(<Child />)
@@ -111,7 +111,7 @@ describe('extending', () => {
       color: React.PropTypes.string
     }
 
-    const Child = styled(Parent)`background-color: green;`
+    const Child = Parent.extend`background-color: green;`
 
     expect(Child.propTypes).toEqual(Parent.propTypes)
   })
@@ -121,7 +121,7 @@ describe('extending', () => {
 
     Parent.fetchData = () => 1
 
-    const Child = styled(Parent)`color: green;`
+    const Child = Parent.extend`color: green;`
 
     expect(Child.fetchData).toBeTruthy()
     expect(Child.fetchData()).toEqual(1)
@@ -131,10 +131,17 @@ describe('extending', () => {
     const GrandParent = styled.div`color: red;`
     GrandParent.fetchData = () => 1
 
-    const Parent = styled(GrandParent)`color: red;`
-    const Child = styled(Parent)`color:red;`
+    const Parent = GrandParent.extend`color: red;`
+    const Child = Parent.extend`color:red;`
 
     expect(Child.fetchData).toBeTruthy()
     expect(Child.fetchData()).toEqual(1)
+  })
+
+  it('should allow changing component', () => {
+    const Parent = styled.div`color: red;`
+    const Child = Parent.extendWith('span')``
+
+    expect(shallow(<Child />).html()).toEqual('<span class="sc-b c"></span>')
   })
 })

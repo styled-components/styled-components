@@ -54,30 +54,89 @@ describe('basic', () => {
   })
 
   describe('jsdom tests', () => {
-    let Comp
-    let WrapperComp
-    let wrapper
+    jsdom()
 
-    beforeEach(() => {
-      Comp = styled.div``
-      WrapperComp = class extends Component {
+    it('should pass the ref to the component', () => {
+      const Comp = styled.div``
+
+      class Wrapper extends Component {
         testRef: any;
+        innerRef = (comp) => { this.testRef = comp }
+
         render() {
-          return <Comp innerRef={(comp) => { this.testRef = comp }} />
+          return <Comp innerRef={this.innerRef} />
         }
       }
 
-      wrapper = mount(<WrapperComp />)
+      const wrapper = mount(<Wrapper />)
+      const component = wrapper.find(Comp).first()
+
+      // $FlowFixMe
+      expect(wrapper.node.testRef).toBe(component.getDOMNode())
+      expect(component.find('div').prop('innerRef')).toNotExist()
     })
 
-    it('should pass ref to the component', () => {
+    class InnerComponent extends Component {
+      render() {
+        return null
+      }
+    }
+
+    it('should not leak the innerRef prop to the wrapped child', () => {
+      const OuterComponent = styled(InnerComponent)``
+
+      class Wrapper extends Component {
+        testRef: any;
+
+        render() {
+          return <OuterComponent innerRef={(comp) => { this.testRef = comp }} />
+        }
+      }
+
+      const wrapper = mount(<Wrapper />)
+      const innerComponent = wrapper.find(InnerComponent).first()
+
       // $FlowFixMe
-      expect(wrapper.node.testRef).toBeTruthy()
+      expect(wrapper.node.testRef).toBe(innerComponent.node)
+      expect(innerComponent.prop('innerRef')).toNotExist()
     })
 
-    it('should not pass innerRef to the component', () => {
+    it('should pass the full className to the wrapped child', () => {
+      const OuterComponent = styled(InnerComponent)``
+
+      class Wrapper extends Component {
+        render() {
+          return <OuterComponent className="test"/>
+        }
+      }
+
+      const wrapper = mount(<Wrapper />)
+      expect(wrapper.find(InnerComponent).prop('className'))
+        .toBe('test sc-a b')
+    })
+
+    it('should pass the innerRef to the wrapped styled component', () => {
+      const InnerComponent = styled.div``
+      const OuterComponent = styled(InnerComponent)``
+
+      class Wrapper extends Component {
+        testRef: any;
+        innerRef = (comp) => { this.testRef = comp }
+
+        render() {
+          return <OuterComponent innerRef={this.innerRef} />
+        }
+      }
+
+      const wrapper = mount(<Wrapper />)
+      const innerComponent = wrapper.find(InnerComponent).first()
+      const outerComponent = wrapper.find(OuterComponent).first()
+
       // $FlowFixMe
-      expect(wrapper.node.ref).toBeFalsy()
+      expect(wrapper.node.testRef).toBe(innerComponent.getDOMNode())
+
+      // $FlowFixMe
+      expect(innerComponent.prop('innerRef')).toBe(wrapper.node.innerRef)
     })
   })
 })

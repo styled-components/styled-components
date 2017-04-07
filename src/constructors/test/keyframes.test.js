@@ -1,12 +1,16 @@
 // @flow
 import _keyframes from '../keyframes'
+import _GlobalStyle from '../../models/GlobalStyle'
+import flatten from '../../utils/flatten'
+import stringifyRules from '../../utils/stringifyRules'
+import css from '../css'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
 
 /**
  * Setup
  */
 let index = 0
-const keyframes = _keyframes(() => `keyframe_${index++}`)
+const keyframes = _keyframes(() => `keyframe_${index++}`, _GlobalStyle(flatten, stringifyRules), css)
 
 describe('keyframes', () => {
   beforeEach(() => {
