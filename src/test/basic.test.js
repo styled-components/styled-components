@@ -54,8 +54,6 @@ describe('basic', () => {
   })
 
   describe('jsdom tests', () => {
-    jsdom()
-
     it('should pass the ref to the component', () => {
       const Comp = styled.div``
 
@@ -73,7 +71,7 @@ describe('basic', () => {
 
       // $FlowFixMe
       expect(wrapper.node.testRef).toBe(component.getDOMNode())
-      expect(component.find('div').prop('innerRef')).toNotExist()
+      expect(component.find('div').prop('innerRef')).toBeFalsy()
     })
 
     class InnerComponent extends Component {
@@ -98,7 +96,7 @@ describe('basic', () => {
 
       // $FlowFixMe
       expect(wrapper.node.testRef).toBe(innerComponent.node)
-      expect(innerComponent.prop('innerRef')).toNotExist()
+      expect(innerComponent.prop('innerRef')).toBeFalsy()
     })
 
     it('should pass the full className to the wrapped child', () => {
