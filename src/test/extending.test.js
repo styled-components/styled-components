@@ -1,5 +1,6 @@
 // @flow
 import React from 'react'
+import PropTypes from 'prop-types'
 import expect from 'expect'
 import { shallow } from 'enzyme'
 
@@ -109,7 +110,7 @@ describe('extending', () => {
       color: ${(props) => props.color};
     `
     Parent.propTypes = {
-      color: React.PropTypes.string
+      color: PropTypes.string
     }
 
     const Child = Parent.extend`background-color: green;`

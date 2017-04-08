@@ -34,6 +34,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Removed custom flowtype supressor in favour of default $FlowFixMe [@relekang](https://github.com/relekang). (see [#335](https://github.com/styled-components/styled-components/pull/335))
 - Updated all demos to link to latest version [@relekang](https://github.com/relekang)
 - Fixed SSR when no `styled-components` are rendered [@kristojorg](https://github.com/kristojorg). (see [#124](https://github.com/styled-components/styled-components/issues/124))
+- Migrate from the decrepated `React.PropTypes` to the `prop-types` package, thanks to [@YasserKaddour](https://github.com/YasserKaddour). (see [#668](https://github.com/styled-components/styled-components/pull/668))
 
 ## [v1.2.1]
 
