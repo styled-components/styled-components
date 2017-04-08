@@ -50,7 +50,7 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "buffer": "^5.0.3",
-    "css-to-react-native": "2.0.1",
+    "css-to-react-native": "^2.0.3",
     "fbjs": "^0.8.9",
     "glamor": "^2.20.22",
     "inline-style-prefixer": "^2.0.5",
