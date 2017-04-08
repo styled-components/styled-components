@@ -5,7 +5,7 @@
   "plugins": [
     ["babel-plugin-styled-components", {
       "displayName": false,
-      "preprocess": true
+      "preprocess": false
     }],
     "babel-plugin-polished"
   ]
