@@ -2,9 +2,11 @@
   "pages": [
     {
       "title": "Basics",
+      "pathname": "basics",
       "sections": [
         {
-          "title": "Getting Started"
+          "title": "Getting Started",
+          "pathname": "getting-started"
         }, {
           "title": "Passed props"
         }, {

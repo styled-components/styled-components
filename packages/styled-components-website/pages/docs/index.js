@@ -2,26 +2,10 @@ import React from 'react'
 import styled from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 
-import Navbar from '../../components/Navbar'
+import DocsLayout from '../../components/DocsLayout'
 import { Title, Header, SubHeader } from '../../components/Layout'
+import Link from '../../components/Link'
 import { pages } from '../docs.json'
-
-const Container = styled.div`
-  padding-left: ${rem(300)};
-
-  @media (max-width: 1000px) {
-    padding-left: 0;
-    padding-top: ${rem(70)};
-  }
-`
-
-const Content = styled.div`
-  width: ${rem(1024)};
-  max-width: 100%;
-  margin: 0 auto;
-  padding: ${rem(30)} ${rem(25)};
-  box-sizing: border-box;
-`
 
 const Row = styled.div`
   display: flex;
@@ -33,6 +17,7 @@ const Column = styled.div`
   width: 33%;
   max-width: 33%;
   flex-basis: 33%;
+  padding-right: ${rem(15)};
 
   @media (max-width: 1000px) {
     width: 50%;
@@ -41,28 +26,32 @@ const Column = styled.div`
   }
 `
 
-const DocsExample = () => (
-  <Container>
-    <Navbar />
+const Documentation = ({ url }) => (
+  <DocsLayout url={url}>
+    <p>
+      Utilising tagged template literals (a recent addition to JavaScript) and the power of CSS, styled-components allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
+    </p>
 
-    <Content>
-      <Title>Documentation</Title>
-      <Row>
-        {
-          pages.map(({ title, sections }) => (
-            <Column key={title}>
-              <Header>{title}</Header>
-              {
-                sections.map(({ title }) => (
-                  <SubHeader key={title}>{title}</SubHeader>
-                ))
-              }
-            </Column>
-          ))
-        }
-      </Row>
-    </Content>
-  </Container>
+    <Row>
+      {
+        pages.map(({ title, pathname, sections }) => (
+          <Column key={title}>
+            <Header>{title}</Header>
+
+            {
+              sections.map(({ title, pathname: subPathname }) => (
+                <SubHeader key={title}>
+                  <Link href={`/docs/${pathname}/${subPathname}`}>
+                    {title}
+                  </Link>
+                </SubHeader>
+              ))
+            }
+          </Column>
+        ))
+      }
+    </Row>
+  </DocsLayout>
 )
 
-export default DocsExample
+export default Documentation
