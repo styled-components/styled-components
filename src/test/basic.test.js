@@ -1,8 +1,6 @@
 // @flow
 import React, { Component } from 'react'
-import expect from 'expect'
 import { shallow, mount } from 'enzyme'
-import jsdom from 'mocha-jsdom'
 
 import styleSheet from '../models/StyleSheet'
 import { resetStyled, expectCSSMatches } from './utils'

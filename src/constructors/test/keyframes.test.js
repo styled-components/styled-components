@@ -1,6 +1,4 @@
 // @flow
-import expect from 'expect'
-
 import _keyframes from '../keyframes'
 import _GlobalStyle from '../../models/GlobalStyle'
 import flatten from '../../utils/flatten'

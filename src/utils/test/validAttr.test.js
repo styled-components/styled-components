@@ -1,5 +1,4 @@
 // @flow
-import expect from 'expect'
 import validAttr from '../validAttr'
 
 describe('validAttr', () => {
