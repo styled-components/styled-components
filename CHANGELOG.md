@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+- Migrate from the decrepated `React.PropTypes` to the `prop-types` package, thanks to [@YasserKaddour](https://github.com/YasserKaddour). (see [#668](https://github.com/styled-components/styled-components/pull/668))
+
 ## [v1.4.4] — 2017-03-01
 
 ### Changed
