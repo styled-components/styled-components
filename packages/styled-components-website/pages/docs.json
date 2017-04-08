@@ -8,7 +8,8 @@
           "title": "Getting Started",
           "pathname": "getting-started"
         }, {
-          "title": "Passed props"
+          "title": "Passed props",
+          "pathname": "passed-props"
         }, {
           "title": "Adapting based on props"
         }, {
