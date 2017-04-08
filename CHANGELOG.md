@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file. If a contri
 ### Changed
 
 - Migrate from the decrepated `React.PropTypes` to the `prop-types` package, thanks to [@YasserKaddour](https://github.com/YasserKaddour). (see [#668](https://github.com/styled-components/styled-components/pull/668))
+- Add FlatList, SectionList & VirtualizedList support, thanks to @Kureev(https://github.com/Kureev). (see [#662](https://github.com/styled-components/styled-components/pull/662))
 
 ## [v1.4.4] — 2017-03-01
 
