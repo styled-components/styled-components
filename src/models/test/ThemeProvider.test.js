@@ -1,6 +1,7 @@
 // @flow
 /* eslint-disable react/no-multi-comp */
 import React from 'react'
+import PropTypes from 'prop-types'
 import expect from 'expect'
 import { shallow, render } from 'enzyme'
 import ThemeProvider, { CHANNEL } from '../ThemeProvider'
@@ -39,7 +40,7 @@ describe('ThemeProvider', () => {
       render() { return null }
     }
     Child.contextTypes = {
-      [CHANNEL]: React.PropTypes.object,
+      [CHANNEL]: PropTypes.object,
     }
 
     render(
@@ -66,7 +67,7 @@ describe('ThemeProvider', () => {
       render() { return null }
     }
     Child.contextTypes = {
-      [CHANNEL]: React.PropTypes.object,
+      [CHANNEL]: PropTypes.object,
     }
 
     render(
@@ -101,7 +102,7 @@ describe('ThemeProvider', () => {
       render() { return null }
     }
     Child.contextTypes = {
-      [CHANNEL]: React.PropTypes.object,
+      [CHANNEL]: PropTypes.object,
     }
 
     render(

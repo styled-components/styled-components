@@ -56,6 +56,7 @@
     "inline-style-prefixer": "^2.0.5",
     "is-function": "^1.0.1",
     "is-plain-object": "^2.0.1",
+    "prop-types": "^15.5.4",
     "stylis": "^2.0.0",
     "supports-color": "^3.2.3"
   },
