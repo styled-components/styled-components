@@ -29,6 +29,11 @@ function last(arr) {
 }
 
 function sheetForTag(tag) {
+  if(tag.sheet) {
+    return tag.sheet
+  }
+
+  // this weirdness brought to you by firefox
   for(let i = 0; i < document.styleSheets.length; i++) {
     if(document.styleSheets[i].ownerNode === tag) {
       return document.styleSheets[i]
@@ -37,7 +42,7 @@ function sheetForTag(tag) {
 }
 
 const isBrowser = typeof document !== 'undefined'
-const isDev = (x => (x === 'development') || !x)(process.env.NODE_ENV)
+const isDev = (process.env.NODE_ENV === 'development') || (!process.env.NODE_ENV) //(x => (x === 'development') || !x)(process.env.NODE_ENV)
 const isTest = process.env.NODE_ENV === 'test'
 
 const oldIE = (() => {
@@ -51,6 +56,7 @@ const oldIE = (() => {
 function makeStyleTag() {
   let tag = document.createElement('style')
   tag.type = 'text/css'
+  tag.setAttribute('data-styled-components', '')
   tag.appendChild(document.createTextNode(''));
   (document.head || document.getElementsByTagName('head')[0]).appendChild(tag)
   return tag
@@ -68,15 +74,15 @@ export class StyleSheet {
     this.maxLength = maxLength
     this.ctr = 0
   }
+  getSheet() {
+    return sheetForTag(last(this.tags))
+  }
   inject() {
     if(this.injected) {
       throw new Error('already injected stylesheet!')
     }
     if(isBrowser) {
-      // this section is just weird alchemy I found online off many sources
       this.tags[0] = makeStyleTag()
-      // this weirdness brought to you by firefox
-      this.sheet = sheetForTag(this.tags[0])
     }
     else {
       // server side 'polyfill'. just enough behavior to be useful.
@@ -85,9 +91,7 @@ export class StyleSheet {
         insertRule: rule => {
           // enough 'spec compliance' to be able to extract the rules later
           // in other words, just the cssText field
-          const serverRule = { cssText: rule }
-          this.sheet.cssRules.push(serverRule)
-          return {serverRule, appendRule: (newCss => serverRule.cssText += newCss)}
+          this.sheet.cssRules.push({ cssText: rule })
         }
       }
     }
@@ -103,7 +107,8 @@ export class StyleSheet {
     // this weirdness for perf, and chrome's weird bug
     // https://stackoverflow.com/questions/20007992/chrome-suddenly-stopped-accepting-insertrule
     try {
-      this.sheet.insertRule(rule, this.sheet.cssRules.length) // todo - correct index here
+      let sheet = this.getSheet()
+      sheet.insertRule(rule, sheet.cssRules.length)
     }
     catch(e) {
       if(isDev) {
@@ -111,14 +116,13 @@ export class StyleSheet {
         console.warn('whoops, illegal rule inserted', rule) //eslint-disable-line no-console
       }
     }
-
   }
   insert(rule) {
     let insertedRule
 
     if(isBrowser) {
       // this is the ultrafast version, works across browsers
-      if(this.isSpeedy && this.sheet.insertRule) {
+      if(this.isSpeedy && this.getSheet().insertRule) {
         this._insert(rule)
       }
       else{
@@ -140,7 +144,6 @@ export class StyleSheet {
     this.ctr++
     if(isBrowser && this.ctr % this.maxLength === 0) {
       this.tags.push(makeStyleTag())
-      this.sheet = sheetForTag(last(this.tags))
     }
     return insertedRule
   }
