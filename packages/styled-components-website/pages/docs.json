@@ -11,7 +11,8 @@
           "title": "Passed props",
           "pathname": "passed-props"
         }, {
-          "title": "Adapting based on props"
+          "title": "Adapting based on props",
+          "pathname": "adapting-based-on-props"
         }, {
           "title": "Overriding component styles"
         }, {
