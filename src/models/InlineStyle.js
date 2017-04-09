@@ -1,5 +1,5 @@
 // @flow
-import hashStr from 'glamor/lib/hash'
+import hashStr from '../vendor/glamor/hash'
 /* eslint-disable import/no-unresolved */
 import { StyleSheet } from 'react-native'
 import transformDeclPairs from 'css-to-react-native'
