@@ -23,7 +23,7 @@ render(
 );
 `).trim()
 
-const PassedProps = ({ url }) => (
+const AdaptingBasedOnProps = ({ url }) => (
   <DocsLayout url={url}>
     <p>
       You can pass a function ("interpolations") to a styled component's template literal
@@ -42,4 +42,4 @@ const PassedProps = ({ url }) => (
   </DocsLayout>
 )
 
-export default PassedProps
+export default AdaptingBasedOnProps

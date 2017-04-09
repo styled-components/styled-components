@@ -14,7 +14,8 @@
           "title": "Adapting based on props",
           "pathname": "adapting-based-on-props"
         }, {
-          "title": "Overriding component styles"
+          "title": "Overriding component styles",
+          "pathname": "overriding-component-styles"
         }, {
           "title": "Third-party components"
         }, {
