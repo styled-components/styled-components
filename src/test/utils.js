@@ -48,9 +48,7 @@ export const resetNoParserStyled = () => {
 
 const stripWhitespace = str => str.trim().replace(/([;\{\}])/g, '$1  ').replace(/\s+/g, ' ')
 export const expectCSSMatches = (expectation: string, opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }) => {
-  // const css = styleSheet.getCSS({min: false})
-  const existingStyleElement = document.head.childNodes[0]
-  const css = existingStyleElement ? existingStyleElement.textContent : ''
+  const css = styleSheet.getCSS({ min: false })
 
   if (opts.ignoreWhitespace) {
     expect(stripWhitespace(css)).toEqual(stripWhitespace(expectation))

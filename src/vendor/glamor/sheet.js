@@ -44,6 +44,7 @@ function sheetForTag(tag) {
 const isBrowser = typeof document !== 'undefined'
 const isDev = (process.env.NODE_ENV === 'development') || (!process.env.NODE_ENV) //(x => (x === 'development') || !x)(process.env.NODE_ENV)
 const isTest = process.env.NODE_ENV === 'test'
+const isJsdom = (typeof navigator !== 'undefined') && !!/node.js/i.exec(navigator.userAgent)
 
 const oldIE = (() => {
   if(isBrowser) {
@@ -127,12 +128,19 @@ export class StyleSheet {
       }
       else{
         const textNode = document.createTextNode(rule)
-        last(this.tags).appendChild(textNode)
-        insertedRule = { textNode, appendRule: newCss => textNode.appendData(newCss)}
+        const tag = last(this.tags)
+        tag.appendChild(textNode)
+        if (isJsdom) sheetForTag(tag).cssRules.push({cssText: rule})
+        insertedRule = { textNode, appendRule: newCss => {
+          console.log(`Inserting ${newCss}`)
+          textNode.appendData(newCss)
+          console.log(textNode.wholeText)
+          if (isJsdom) sheetForTag(tag).cssRules.push({cssText: newCss})
+        }}
 
         if(!this.isSpeedy) {
           // sighhh
-          this.sheet = sheetForTag(last(this.tags))
+          this.sheet = sheetForTag(tag)
         }
       }
     }
@@ -165,10 +173,12 @@ export class StyleSheet {
     if(!isBrowser) {
       return this.sheet.cssRules
     }
-    let arr = []
-    this.tags.forEach(tag => arr.splice(arr.length, 0, ...Array.from(
-        sheetForTag(tag).cssRules
-      )))
-    return arr
+    //console.log({r: sheetForTag(this.tags[0]).cssRules})
+    const resutl = this.tags.reduce((arr, tag) => {
+      console.log(sheetForTag(tag).cssRules)
+      return arr.concat(sheetForTag(tag).cssRules);
+    }, [])
+    console.log(resutl)
+    return resutl
   }
 }

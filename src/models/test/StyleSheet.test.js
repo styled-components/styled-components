@@ -48,13 +48,13 @@ describe('styleSheet', () => {
     }
 
     it('should list all css in all Components', () => {
-      createStyledComponents();
-      const css = styleSheet.getCSS();
+      createStyledComponents()
+      const css = styleSheet.getCSS()
       expect(stripWhitespace(css)).toEqual('.sc-a {}.c {width: 100%;}.sc-b {}.d {text-decoration: none;}')
     })
 
     it('should list all css all Components including globally injected styles', () => {
-      createStyledComponents();
+      createStyledComponents()
       injectGlobal`
         html {
           ${rule3}
@@ -65,14 +65,14 @@ describe('styleSheet', () => {
     })
 
     it('should list all css Components with min: false', () => {
-      createStyledComponents();
+      createStyledComponents()
 
-      const css = styleSheet.getCSS({ min: false });
+      const css = styleSheet.getCSS({ min: false })
       expect(stripWhitespaceExceptNewline(css)).toEqual('.sc-a {}.c {width: 100%;}\n.sc-b {}.d {text-decoration: none;}')
     })
 
     it('should not throw an error if no styled-components are rendered', () => {
-      styleSheet.getCSS();
+      styleSheet.getCSS()
     })
   })
 
