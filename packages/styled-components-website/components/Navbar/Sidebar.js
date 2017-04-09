@@ -4,6 +4,7 @@ import rem from 'polished/lib/helpers/rem'
 const Sidebar = styled.nav`
   position: fixed;
   display: block;
+  z-index: 1;
 
   left: 0;
   top: 0;
