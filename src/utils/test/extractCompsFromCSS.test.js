@@ -17,7 +17,7 @@ describe('extractCompsFromCSS', () => {
 /* sc-component-id: 123 */
 .foo { color: red; }`
     )).toEqual([
-      { componentId: '123', css: '.foo { color: red; }' },
+      { componentId: '123', cssFromDOM: '.foo { color: red; }' },
     ])
   })
 
@@ -27,7 +27,7 @@ describe('extractCompsFromCSS', () => {
 .foo { color: red; }
 .bar { color: blue; }`
     )).toEqual([
-      { componentId: '123', css: '.foo { color: red; }\n.bar { color: blue; }' },
+      { componentId: '123', cssFromDOM: '.foo { color: red; }\n.bar { color: blue; }' },
     ])
   })
 
@@ -38,8 +38,8 @@ describe('extractCompsFromCSS', () => {
 /* sc-component-id: 456 */
 .bar { color: blue; }`
     )).toEqual([
-      { componentId: '123', css: '.foo { color: red; }' },
-      { componentId: '456', css: '.bar { color: blue; }' },
+      { componentId: '123', cssFromDOM: '.foo { color: red; }' },
+      { componentId: '456', cssFromDOM: '.bar { color: blue; }' },
     ])
   })
 
@@ -52,8 +52,8 @@ describe('extractCompsFromCSS', () => {
 .baz { color: green; }
 .boo { color: black; }`
     )).toEqual([
-      { componentId: '123', css: '.foo { color: red; }\n.bar { color: blue; }' },
-      { componentId: '456', css: '.baz { color: green; }\n.boo { color: black; }' }
+      { componentId: '123', cssFromDOM: '.foo { color: red; }\n.bar { color: blue; }' },
+      { componentId: '456', cssFromDOM: '.baz { color: green; }\n.boo { color: black; }' }
     ])
   })
 })

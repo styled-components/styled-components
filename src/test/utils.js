@@ -51,7 +51,7 @@ export const resetNoParserStyled = () => {
 const stripComments = str => str.replace(/\/\*.*?\*\/\n?/g, '')
 const stripWhitespace = str => str.trim().replace(/([;\{\}])/g, '$1  ').replace(/\s+/g, ' ')
 export const expectCSSMatches = (expectation: string, opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }) => {
-  const css = StyleSheet.instance.getCSS({ min: false })
+  const css = Array.from(document.querySelectorAll('style')).map(tag => tag.innerHTML).join("\n")
 
   if (opts.ignoreWhitespace) {
     const stripped = stripWhitespace(stripComments(css))

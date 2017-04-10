@@ -43,8 +43,7 @@ class Tag {
   inject(componentId: string, css: string, hash: ?string, name: ?string) {
     if (!this.ready) this.replaceElement()
     const comp = this.getComponent(componentId)
-    comp.textNode.appendData(css.replace(/\n?$/, '\n'))
-    comp.css += css
+    comp.textNode.appendData(css.replace(/\n*$/, '\n'))
     if (hash && name) {
       const existingHashes = this.el.getAttribute(HASH_ATTR)
       this.el.setAttribute(HASH_ATTR, `${existingHashes ? `${existingHashes} ` : ''}${hash}:${name}`)
@@ -62,7 +61,7 @@ class Tag {
     const newEl = this.el.cloneNode()
     this.components.forEach(comp => {
       // eslint-disable-next-line no-param-reassign
-      comp.textNode = document.createTextNode(comp.css)
+      comp.textNode = document.createTextNode(comp.cssFromDOM)
       newEl.appendChild(comp.textNode)
     })
 
@@ -78,14 +77,10 @@ class Tag {
     if (existingComp) return existingComp
 
     const css = `/* sc-component-id: ${componentId} */\n`
-    const comp = { componentId, css, textNode: document.createTextNode(css) }
+    const comp = { componentId, textNode: document.createTextNode(css) }
     this.el.appendChild(comp.textNode)
     this.components.set(componentId, comp)
     return comp
-  }
-
-  getCSS() {
-    return Array.from(this.components.values()).map(comp => comp.css).join('\n')
   }
 }
 
@@ -152,10 +147,6 @@ export class BrowserStyleSheet {
     const newTag = new Tag(el, isLocal)
     this.tags.push(newTag)
     return newTag
-  }
-
-  getCSS() {
-    return this.tags.map(tag => tag.getCSS()).join('\n')
   }
 }
 
