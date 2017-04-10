@@ -140,5 +140,16 @@ describe('basic', () => {
       // $FlowFixMe
       expect(innerComponent.prop('innerRef')).toBe(wrapper.node.innerRef)
     })
+
+    it('should respect the order of StyledComponent creation for CSS ordering', () => {
+      const FirstComponent = styled.div`color: red;`
+      const SecondComponent = styled.div`color: blue;`
+
+      // NOTE: We're mounting second before first and check if we're breaking their order
+      shallow(<SecondComponent />)
+      shallow(<FirstComponent />)
+
+      expectCSSMatches('.sc-a {} .d { color: red; } .sc-b {} .c { color: blue; }')
+    })
   })
 })
