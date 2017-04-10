@@ -3,6 +3,8 @@ import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 import { lightGrey, red } from '../utils/colors'
 
+import '../utils/prismTemplateString'
+
 import {
   LiveProvider,
   LiveEditor,
