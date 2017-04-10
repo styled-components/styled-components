@@ -31,7 +31,7 @@ const constructWithOptions = _constructWithOptions(css)
 const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
 
 /* Instantiate exported singletons */
-const keyframes = _keyframes(generateAlphabeticName, GlobalStyle, css)
+const keyframes = _keyframes(generateAlphabeticName, stringifyRules, css)
 const injectGlobal = _injectGlobal(GlobalStyle, css)
 const styled = _styled(StyledComponent, constructWithOptions)
 

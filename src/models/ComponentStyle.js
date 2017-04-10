@@ -19,7 +19,7 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
 
       /* Todo: potentially restore this guard. */
       // if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
-      StyleSheet.instance.inject(componentId, `.${componentId} {}`)
+      StyleSheet.instance.inject(componentId, true, `.${componentId} {}`)
     }
 
     /*
@@ -36,7 +36,7 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
 
       const name = nameGenerator(hash)
       const css = stringifyRules(flatCSS, `.${name}`)
-      StyleSheet.instance.inject(this.componentId, css, hash, name)
+      StyleSheet.instance.inject(this.componentId, true, css, hash, name)
       return name
     }
 

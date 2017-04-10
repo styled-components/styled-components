@@ -48,12 +48,13 @@ export const resetNoParserStyled = () => {
   return _styled(StyledComponent, constructWithOptions)
 }
 
+const stripComments = str => str.replace(/\/\*.*?\*\/\n?/g, '')
 const stripWhitespace = str => str.trim().replace(/([;\{\}])/g, '$1  ').replace(/\s+/g, ' ')
 export const expectCSSMatches = (expectation: string, opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }) => {
   const css = StyleSheet.instance.getCSS({ min: false })
 
   if (opts.ignoreWhitespace) {
-    expect(stripWhitespace(css)).toEqual(stripWhitespace(expectation))
+    expect(stripWhitespace(stripComments(css))).toEqual(stripWhitespace(expectation))
   } else {
     expect(css).toEqual(expectation)
   }
