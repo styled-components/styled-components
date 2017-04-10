@@ -85,6 +85,7 @@ export class BrowserStyleSheet {
   constructor() {
     this.initFromDOM()
     this.constructComponentTagMap()
+    console.log(this)
   }
 
   initFromDOM() {
