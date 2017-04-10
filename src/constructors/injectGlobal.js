@@ -11,7 +11,7 @@ export default (stringifyRules: Stringifier, css: Function) => {
     const alreadyInjected = StyleSheet.instance.getName(hash)
     if (alreadyInjected) return
 
-    StyleSheet.instance.inject(`sc-keyframes-${hash}`, false, stringifyRules(rules), hash, hash)
+    StyleSheet.instance.inject(`sc-global-${hash}`, false, stringifyRules(rules), hash, hash)
   }
 
   return injectGlobal
