@@ -29,15 +29,15 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
      * */
     generateAndInjectStyles(executionContext: Object) {
       const flatCSS = flatten(this.rules, executionContext)
-      /* Todo: perf test this. We might want to return to separating hashes and names */
-      const hash = nameGenerator(hashStr(this.componentId + flatCSS.join('')))
+      const hash = hashStr(this.componentId + flatCSS.join(''))
 
-      if (!StyleSheet.instance.hasHash(hash)) {
-        const css = stringifyRules(flatCSS, `.${hash}`)
-        StyleSheet.instance.inject(this.componentId, css, hash)
-      }
+      const existingName = StyleSheet.instance.getName(hash)
+      if (existingName) return existingName
 
-      return hash
+      const name = nameGenerator(hash)
+      const css = stringifyRules(flatCSS, `.${name}`)
+      StyleSheet.instance.inject(this.componentId, css, hash, name)
+      return name
     }
 
     static generateName(str: string) {

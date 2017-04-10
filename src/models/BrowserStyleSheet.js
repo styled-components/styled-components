@@ -2,7 +2,7 @@
 /*
  * Browser Style Sheet with Rehydration
  *
- * <style data-styled-components-hashes="x y z">
+ * <style data-styled-components-hashes="123:x 456:y 789:z">
  *   /· sc-component-id: a ·/
  *   .sc-a { ... }
  *   .x { ... }
@@ -36,19 +36,19 @@ class Tag {
     return this.components.size >= COMPONENTS_PER_TAG
   }
 
-  inject(componentId: string, css: string, hash: ?string) {
+  inject(componentId: string, css: string, hash: ?string, name: ?string) {
     if (!this.ready) this.replaceElement()
     const comp = this.getComponent(componentId)
     comp.textNode.appendData(css)
     comp.css += css
-    if (hash) this.el.setAttribute(CSS_NAME, `${this.el.getAttribute(CSS_NAME) || ''} ${hash}`)
+    if (hash && name) this.el.setAttribute(CSS_NAME, `${this.el.getAttribute(CSS_NAME) || ''} ${hash}:${name}`)
   }
 
   /* Because we care about source order, before we can inject anything we need to
    * create a text node for each component and replace the existing CSS. */
   replaceElement() {
     this.ready = true
-      // We have nothing to inject. Use the current el.
+    // We have nothing to inject. Use the current el.
     if (this.components.size === 0) return
 
     // Build up our replacement style tag
@@ -77,13 +77,13 @@ class Tag {
   }
 
   getCSS() {
-    return Array.from(this.components.values()).map(comp => comp.css).join("\n")
+    return Array.from(this.components.values()).map(comp => comp.css).join('\n')
   }
 }
 
 export class BrowserStyleSheet {
   tags: Array<Tag>
-  hashes: Set<string>
+  hashes: Map<string, string>
   componentTags: Map<string, Tag>
 
   constructor() {
@@ -93,10 +93,11 @@ export class BrowserStyleSheet {
 
   initFromDOM() {
     this.tags = []
-    this.hashes = new Set()
+    this.hashes = new Map()
     Array.from(document.querySelectorAll(`[${CSS_NAME}]`)).forEach(el => {
-      (el.getAttribute(CSS_NAME) || '').trim().split(' ').forEach(hash => {
-        this.hashes.add(hash, true)
+      (el.getAttribute(CSS_NAME) || '').trim().split(/\s+/).forEach(record => {
+        const [hash, name] = record.split(':')
+        this.hashes.set(hash, name)
       })
       this.tags.push(new Tag(el, el.innerHTML))
     })
@@ -109,14 +110,14 @@ export class BrowserStyleSheet {
         this.componentTags.set(comp.componentId, tag)))
   }
 
-  hasHash(hash: string) {
-    return this.hashes.has(hash)
+  getName(hash: string) {
+    return this.hashes.get(hash)
   }
 
-  inject(componentId: string, css: string, hash: ?string) {
-    console.log({componentId,css,hash})
-    this.getTag(componentId).inject(componentId, css, hash)
-    if (hash) this.hashes.add(hash)
+  inject(componentId: string, css: string, hash: ?string, name: ?string) {
+    console.log({ componentId, css, hash, name })
+    this.getTag(componentId).inject(componentId, css, hash, name)
+    if (hash && name) this.hashes.set(hash, name)
   }
 
   getTag(componentId: string) {
@@ -142,7 +143,7 @@ export class BrowserStyleSheet {
   }
 
   getCSS() {
-    return this.tags.map(tag => tag.getCSS()).join("\n")
+    return this.tags.map(tag => tag.getCSS()).join('\n')
   }
 }
 
@@ -153,5 +154,5 @@ export default {
   },
   reset() {
     instance = new BrowserStyleSheet()
-  }
+  },
 }

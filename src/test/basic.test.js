@@ -38,7 +38,7 @@ describe('basic', () => {
     expectCSSMatches('.sc-a { } .b { color: blue; }')
   })
 
-  it.only('should inject only once for a styled component, no matter how often it\'s mounted', () => {
+  it('should inject only once for a styled component, no matter how often it\'s mounted', () => {
     const Comp = styled.div`
       color: blue;
     `
