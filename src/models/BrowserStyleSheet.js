@@ -37,7 +37,7 @@ class Tag {
     return this.components.size >= COMPONENTS_PER_TAG
   }
 
-  inject(componentId: string, css: string, hash: string) {
+  inject(componentId: string, css: string, hash: ?string) {
     if (!this.ready) this.replaceElement()
     const comp = this.getComponent(componentId)
     comp.textNode.appendData(css)
@@ -109,7 +109,7 @@ export class BrowserStyleSheet {
     return this.hashes.has(hash)
   }
 
-  inject(componentId: string, css: string, hash: string) {
+  inject(componentId: string, css: string, hash: ?string) {
     this.getTag(componentId).inject(componentId, css, hash)
     if (hash) this.hashes.add(hash)
   }
