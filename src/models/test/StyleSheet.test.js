@@ -2,10 +2,8 @@ import React from 'react'
 import { shallow } from 'enzyme'
 import { resetStyled, expectCSSMatches } from '../../test/utils'
 import styleSheet from '../StyleSheet';
-import _GlobalStyle from '../GlobalStyle'
 import _injectGlobal from '../../constructors/injectGlobal'
 import css from '../../constructors/css'
-import flatten from '../../utils/flatten'
 import stringifyRules from '../../utils/stringifyRules'
 
 let styled
@@ -13,7 +11,7 @@ const rule1 = 'width: 100%;'
 const rule2 = 'text-decoration: none;'
 const rule3 = 'color: blue;'
 
-const injectGlobal = _injectGlobal(_GlobalStyle(flatten, stringifyRules), css)
+const injectGlobal = _injectGlobal(stringifyRules, css)
 
 describe('styleSheet', () => {
 

@@ -10,7 +10,7 @@ import stringifyRules from '../../utils/stringifyRules'
 import css from '../css'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
 
-const injectGlobal = _injectGlobal(_GlobalStyle(flatten, stringifyRules), css)
+const injectGlobal = _injectGlobal(stringifyRules, css)
 
 let styled = resetStyled()
 const rule1 = 'width: 100%;'
@@ -28,7 +28,11 @@ describe('injectGlobal', () => {
         ${rule1}
       }
     `
-    expect(styleSheet.injected).toBe(true)
+    expectCSSMatches(`
+      html {
+        ${rule1}
+      }
+    `)
   })
 
   it(`should non-destructively inject styles when called repeatedly`, () => {
