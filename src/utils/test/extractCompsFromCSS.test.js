@@ -13,47 +13,78 @@ describe('extractCompsFromCSS', () => {
   })
 
   it('should return a single SC', () => {
-    expect(extractCompsFromCSS(`
+    const css = `
       /* sc-component-id: 123 */
       .foo { color: red; }
-    `)).toEqual([
-      { componentId: '123', cssFromDOM: '.foo { color: red; }' },
+    `
+    expect(extractCompsFromCSS(css)).toEqual([
+      { componentId: '123', cssFromDOM: css.replace(/^\n/,'') },
     ])
   })
 
   it('should return a single SC with multiple lines', () => {
-    expect(extractCompsFromCSS(`
+    const css = `
       /* sc-component-id: 123 */
       .foo { color: red; }
       .bar { color: blue; }
-    `)).toEqual([
-      { componentId: '123', cssFromDOM: '.foo { color: red; }\n      .bar { color: blue; }' },
+    `
+    expect(extractCompsFromCSS(css)).toEqual([
+      { componentId: '123', cssFromDOM: css.replace(/^\n/,'') },
     ])
   })
 
-  it('should return multiple SCs with multiple lines', () => {
-    expect(extractCompsFromCSS(`
+  it('should return multiple SCs with single lines', () => {
+    const a = `
       /* sc-component-id: 123 */
       .foo { color: red; }
+    `
+    const b = `
       /* sc-component-id: 456 */
       .bar { color: blue; }
-    `)).toEqual([
-      { componentId: '123', cssFromDOM: '.foo { color: red; }' },
-      { componentId: '456', cssFromDOM: '.bar { color: blue; }' },
+    `
+    expect(extractCompsFromCSS(a + b)).toEqual([
+      { componentId: '123', cssFromDOM: a.replace(/^\n/,'') + '\n' },
+      { componentId: '456', cssFromDOM: b.replace(/^\n/,'') },
     ])
   })
 
   it('should return multiple SCs with multiple lines', () => {
-    expect(extractCompsFromCSS(`
+    const a = `
       /* sc-component-id: 123 */
       .foo { color: red; }
       .bar { color: blue; }
+    `
+    const b = `
       /* sc-component-id: 456 */
       .baz { color: green; }
       .boo { color: black; }
-    `)).toEqual([
-      { componentId: '123', cssFromDOM: '.foo { color: red; }\n      .bar { color: blue; }' },
-      { componentId: '456', cssFromDOM: '.baz { color: green; }\n      .boo { color: black; }' }
+    `
+    expect(extractCompsFromCSS(a + b)).toEqual([
+      { componentId: '123', cssFromDOM: a.replace(/^\n/,'') + '\n' },
+      { componentId: '456', cssFromDOM: b.replace(/^\n/,'') },
+    ])
+  })
+
+  it('should include whitespace after a component', () => {
+    const a = `
+      /* sc-component-id: 123 */
+      .foo { color: red; }
+      .bar { color: blue; }
+      
+      
+      
+    `
+    const b = `
+      /* sc-component-id: 456 */
+      .baz { color: green; }
+      .boo { color: black; }
+      
+      
+      
+    `
+    expect(extractCompsFromCSS(a + b)).toEqual([
+      { componentId: '123', cssFromDOM: a.replace(/^\n/,'') + '\n' },
+      { componentId: '456', cssFromDOM: b.replace(/^\n/,'') },
     ])
   })
 })

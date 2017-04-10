@@ -1,9 +1,15 @@
 // @flow
 
 export default (css: ?string): Array<Object> => {
-  const [_, ...existingComponents] = (css || '').split(/^\s*\/\* sc-component-id:/m)
-  return (existingComponents || []).map(str => {
-    const [componentId, cssFromDOM] = str.split(/\*\/$/m).map(s => s.trim())
+  const _css = `${css || ''}` // Definitely a string, and a clone
+  const existingComponents = []
+  _css.replace(/^[^\S\n]*?\/\* sc-component-id:\s+(\S+)\s+\*\//mg, (match, componentId, matchIndex) => {
+    existingComponents.push({ componentId, matchIndex })
+    return match
+  })
+  return existingComponents.map(({ componentId, matchIndex }, i) => {
+    const nextComp = existingComponents[i + 1]
+    const cssFromDOM = nextComp ? _css.slice(matchIndex, nextComp.matchIndex) : _css.slice(matchIndex)
     return { componentId, cssFromDOM }
   })
 }
