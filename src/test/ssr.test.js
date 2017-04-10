@@ -56,5 +56,13 @@ describe('ssr', () => {
       shallow(<B />)
       expectCSSMatches('.TWO {} .foo { color: red; } .ONE { } .a { color: blue; }')
     })
+
+    it('should reuse a componentId and inject new classes', () => {
+      const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
+      shallow(<A />)
+      const B = styled.div.withConfig({ componentId: 'TWO' })`color: green;`
+      shallow(<B />)
+      expectCSSMatches('.TWO {} .foo { color: red; } .b { color: green; } .ONE { } .a { color: blue; }')
+    })
   })
 })
