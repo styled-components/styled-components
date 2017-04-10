@@ -45,7 +45,10 @@ class Tag {
     const comp = this.getComponent(componentId)
     comp.textNode.appendData(css.replace(/\n?$/, '\n'))
     comp.css += css
-    if (hash && name) this.el.setAttribute(HASH_ATTR, `${this.el.getAttribute(HASH_ATTR) || ''} ${hash}:${name}`)
+    if (hash && name) {
+      const existingHashes = this.el.getAttribute(HASH_ATTR)
+      this.el.setAttribute(HASH_ATTR, `${existingHashes ? `${existingHashes} ` : ''}${hash}:${name}`)
+    }
   }
 
   /* Because we care about source order, before we can inject anything we need to
