@@ -13,7 +13,7 @@ const rule3 = 'color: blue;'
 
 const injectGlobal = _injectGlobal(stringifyRules, css)
 
-describe('styleSheet', () => {
+describe.skip('styleSheet', () => {
 
   beforeEach(() => {
     styled = resetStyled()
