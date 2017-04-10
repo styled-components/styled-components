@@ -1,12 +1,11 @@
 import 'react-live'
 import 'prismjs/components/prism-css'
 
-delete Prism.languages.javascript['template-string']
-
 // NOTE: This highlights template-strings as strings of CSS
 Prism.languages.insertBefore('jsx', 'string', {
   'template-string': {
-    pattern: /`(?:\\\\|\\?[^\\])*?`/,
+    pattern: /(styled\.\w+(\.\w+(\([^\)]*\))*)*|css|injectGlobal|keyframes)`(?:\\\\|\\?[^\\])*?`/,
+    lookbehind: true,
     greedy: true,
     inside: {
       interpolation: {
