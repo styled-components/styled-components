@@ -16,7 +16,7 @@ describe('ssr', () => {
 
   describe('rehydtration with existing styled components', () => {
     beforeEach(() => {
-      /* Hash is based on name TWO and contents color: red.
+      /* Hash 1323611362 is based on name TWO and contents color: red.
        * Change either and this will break. */
       document.head.innerHTML = `
         <style data-styled-components-hashes='1323611362:foo'
@@ -63,6 +63,32 @@ describe('ssr', () => {
       const B = styled.div.withConfig({ componentId: 'TWO' })`color: green;`
       shallow(<B />)
       expectCSSMatches('.TWO {} .foo { color: red; } .b { color: green; } .ONE { } .a { color: blue; }')
+    })
+  })
+
+  describe('with other rendered styles', () => {
+    beforeEach(() => {
+      /* Same css as before, but without the data attributes we ignore it */
+      document.head.innerHTML = `
+        <style>
+          /* sc-component-id: TWO */
+          .TWO {}
+          .foo { color: red; }
+        </style>
+      `
+      StyleSheet.reset()
+    })
+
+    it('should leave the existing styles there', () => {
+      expectCSSMatches('.TWO {} .foo { color: red; }')
+    })
+
+    it('should generate new classes, even if they have the same name', () => {
+      const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
+      shallow(<A />)
+      const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
+      shallow(<B />)
+      expectCSSMatches('.TWO {} .foo { color: red; } .ONE { } .a { color: blue; } .TWO {} .b { color: red; } ')
     })
   })
 })

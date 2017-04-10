@@ -32,7 +32,6 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
       const hash = hashStr(this.componentId + flatCSS.join(''))
 
       const existingName = StyleSheet.instance.getName(hash)
-      console.log({ hash, existingName })
       if (existingName) return existingName
 
       const name = nameGenerator(hash)
