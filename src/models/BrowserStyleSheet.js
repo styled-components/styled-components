@@ -21,11 +21,11 @@ const OBJ_NAME = 'styledComponentsHashes'
 const COMPONENTS_PER_TAG = 40
 
 class Tag {
-  el: HTMLStyleElement
+  el: HTMLElement
   components: Map<string, Object>
   ready: boolean
 
-  constructor(el: HTMLStyleElement, existingSource: string = '') {
+  constructor(el: HTMLElement, existingSource: string = '') {
     this.el = el
     this.components = new Map(extractCompsFromCSS(existingSource).map(obj =>
       [obj.componentId, obj],
@@ -90,7 +90,7 @@ export class BrowserStyleSheet {
   initFromDOM() {
     this.tags = []
     this.hashes = new Set()
-    window.document.querySelector(`[${CSS_NAME}]`).forEach(el => {
+    Array.from(document.querySelectorAll(`[${CSS_NAME}]`)).forEach(el => {
       el.dataset[OBJ_NAME].trim().split(' ').forEach(hash => {
         this.hashes.add(hash, true)
       })
