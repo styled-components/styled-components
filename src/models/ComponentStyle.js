@@ -14,18 +14,14 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
   class ComponentStyle {
     rules: RuleSet
     componentId: string
-    insertedRule: ?Object
+    insertedRule: Object
 
     constructor(rules: RuleSet, componentId: string) {
-      this.rules = rules
-      this.componentId = componentId
-      this.insertedRule = undefined
-
       if (!styleSheet.injected) styleSheet.inject()
 
-      if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
-        this.insertedRule = styleSheet.insert(`.${componentId} {}`)
-      }
+      this.rules = rules
+      this.componentId = componentId
+      this.insertedRule = styleSheet.insert(`.${componentId} {}`)
     }
 
     static generateName(str: string) {
@@ -33,11 +29,7 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
     }
 
     insertRule(css: string) {
-      if (!this.insertedRule) {
-        this.insertedRule = styleSheet.insert(`.${this.componentId} {}${css}`)
-      } else {
-        this.insertedRule.appendRule(css)
-      }
+      this.insertedRule.appendRule(css)
     }
 
     /*
