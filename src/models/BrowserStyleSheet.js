@@ -124,7 +124,6 @@ export class BrowserStyleSheet {
     css: string,
     hash: ?string,
     name: ?string) {
-    console.log({ componentId, isLocal, css, hash, name })
     this.getTag(componentId, isLocal).inject(componentId, css, hash, name)
     if (hash && name) this.hashes.set(hash, name)
   }

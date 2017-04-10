@@ -54,9 +54,11 @@ export const expectCSSMatches = (expectation: string, opts: { ignoreWhitespace: 
   const css = StyleSheet.instance.getCSS({ min: false })
 
   if (opts.ignoreWhitespace) {
-    expect(stripWhitespace(stripComments(css))).toEqual(stripWhitespace(expectation))
+    const stripped = stripWhitespace(stripComments(css))
+    expect(stripped).toEqual(stripWhitespace(expectation))
+    return stripped
   } else {
     expect(css).toEqual(expectation)
+    return css
   }
-  return css
 }
