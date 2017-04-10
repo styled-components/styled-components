@@ -14,30 +14,30 @@ describe('extractCompsFromCSS', () => {
 
   it('should return a single SC', () => {
     expect(extractCompsFromCSS(`
-/* sc-component-id: 123 */
-.foo { color: red; }`
-    )).toEqual([
+      /* sc-component-id: 123 */
+      .foo { color: red; }
+    `)).toEqual([
       { componentId: '123', cssFromDOM: '.foo { color: red; }' },
     ])
   })
 
   it('should return a single SC with multiple lines', () => {
     expect(extractCompsFromCSS(`
-/* sc-component-id: 123 */
-.foo { color: red; }
-.bar { color: blue; }`
-    )).toEqual([
-      { componentId: '123', cssFromDOM: '.foo { color: red; }\n.bar { color: blue; }' },
+      /* sc-component-id: 123 */
+      .foo { color: red; }
+      .bar { color: blue; }
+    `)).toEqual([
+      { componentId: '123', cssFromDOM: '.foo { color: red; }\n      .bar { color: blue; }' },
     ])
   })
 
   it('should return multiple SCs with multiple lines', () => {
     expect(extractCompsFromCSS(`
-/* sc-component-id: 123 */
-.foo { color: red; }
-/* sc-component-id: 456 */
-.bar { color: blue; }`
-    )).toEqual([
+      /* sc-component-id: 123 */
+      .foo { color: red; }
+      /* sc-component-id: 456 */
+      .bar { color: blue; }
+    `)).toEqual([
       { componentId: '123', cssFromDOM: '.foo { color: red; }' },
       { componentId: '456', cssFromDOM: '.bar { color: blue; }' },
     ])
@@ -45,15 +45,15 @@ describe('extractCompsFromCSS', () => {
 
   it('should return multiple SCs with multiple lines', () => {
     expect(extractCompsFromCSS(`
-/* sc-component-id: 123 */
-.foo { color: red; }
-.bar { color: blue; }
-/* sc-component-id: 456 */
-.baz { color: green; }
-.boo { color: black; }`
-    )).toEqual([
-      { componentId: '123', cssFromDOM: '.foo { color: red; }\n.bar { color: blue; }' },
-      { componentId: '456', cssFromDOM: '.baz { color: green; }\n.boo { color: black; }' }
+      /* sc-component-id: 123 */
+      .foo { color: red; }
+      .bar { color: blue; }
+      /* sc-component-id: 456 */
+      .baz { color: green; }
+      .boo { color: black; }
+    `)).toEqual([
+      { componentId: '123', cssFromDOM: '.foo { color: red; }\n      .bar { color: blue; }' },
+      { componentId: '456', cssFromDOM: '.baz { color: green; }\n      .boo { color: black; }' }
     ])
   })
 })
