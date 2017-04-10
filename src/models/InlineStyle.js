@@ -1,9 +1,9 @@
 // @flow
-import hashStr from 'glamor/lib/hash'
 /* eslint-disable import/no-unresolved */
 import { StyleSheet } from 'react-native'
 import transformDeclPairs from 'css-to-react-native'
 
+import hashStr from '../vendor/glamor/hash'
 import type { RuleSet } from '../types'
 import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
