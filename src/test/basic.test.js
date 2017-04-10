@@ -2,7 +2,6 @@
 import React, { Component } from 'react'
 import { shallow, mount } from 'enzyme'
 
-import styleSheet from '../models/StyleSheet'
 import { resetStyled, expectCSSMatches } from './utils'
 
 let styled

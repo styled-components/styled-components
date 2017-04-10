@@ -59,6 +59,8 @@ class Tag {
 
     // Build up our replacement style tag
     const newEl = this.el.cloneNode()
+    newEl.appendChild(document.createTextNode('\n'))
+
     this.components.forEach(comp => {
       // eslint-disable-next-line no-param-reassign
       comp.textNode = document.createTextNode(comp.cssFromDOM)
@@ -68,7 +70,7 @@ class Tag {
     if (!this.el.parentNode) throw new Error("Trying to replace an element that wasn't mounted!")
 
     // The ol' switcheroo
-    this.el.parentNode.replaceChild(this.el, newEl)
+    this.el.parentNode.replaceChild(newEl, this.el)
     this.el = newEl
   }
 
@@ -102,7 +104,7 @@ export class BrowserStyleSheet {
         const [hash, name] = record.split(':')
         this.hashes.set(hash, name)
       })
-      this.tags.push(new Tag(el, el.getAttribute('') === 'true', el.innerHTML))
+      this.tags.push(new Tag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML))
     })
   }
 
@@ -113,8 +115,12 @@ export class BrowserStyleSheet {
         this.componentTags.set(comp.componentId, tag)))
   }
 
-  getName(hash: string) {
-    return this.hashes.get(hash)
+  getName(hash: any) {
+    return this.hashes.get(hash.toString())
+  }
+
+  hasInjectedComponent(componentId: string) {
+    return !!this.componentTags.get(componentId)
   }
 
   inject(componentId: string,
@@ -123,7 +129,7 @@ export class BrowserStyleSheet {
     hash: ?string,
     name: ?string) {
     this.getTag(componentId, isLocal).inject(componentId, css, hash, name)
-    if (hash && name) this.hashes.set(hash, name)
+    if (hash && name) this.hashes.set(hash.toString(), name)
   }
 
   getTag(componentId: string, isLocal: boolean) {

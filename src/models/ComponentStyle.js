@@ -19,7 +19,7 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
 
       /* Todo: potentially restore this guard. */
       // if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
-      StyleSheet.instance.inject(componentId, true, `.${componentId} {}`)
+      if (!StyleSheet.instance.hasInjectedComponent(componentId)) { StyleSheet.instance.inject(componentId, true, `.${componentId} {}`) }
     }
 
     /*
@@ -32,6 +32,7 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
       const hash = hashStr(this.componentId + flatCSS.join(''))
 
       const existingName = StyleSheet.instance.getName(hash)
+      console.log({ hash, existingName })
       if (existingName) return existingName
 
       const name = nameGenerator(hash)

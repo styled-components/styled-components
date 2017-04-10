@@ -17,7 +17,7 @@ import noParserFlatten from '../no-parser/flatten'
 import noParserStringifyRules from '../no-parser/stringifyRules'
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
-let index = 0
+export let index = 0
 const classNames = () => String.fromCodePoint(97 + index++)
 
 export const resetStyled = () => {
