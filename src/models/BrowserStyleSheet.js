@@ -17,7 +17,6 @@
 import extractCompsFromCSS from '../utils/extractCompsFromCSS'
 
 const CSS_NAME = 'data-styled-components-hashes'
-const OBJ_NAME = 'styledComponentsHashes'
 const COMPONENTS_PER_TAG = 40
 
 class Tag {
@@ -41,7 +40,8 @@ class Tag {
     if (!this.ready) this.replaceElement()
     const comp = this.getComponent(componentId)
     comp.textNode.appendData(css)
-    if (hash) this.el.dataset[OBJ_NAME] = `${this.el.dataset[OBJ_NAME]} ${hash}`
+    comp.css += css
+    if (hash) this.el.setAttribute(CSS_NAME, `${this.el.getAttribute(CSS_NAME) || ''} ${hash}`)
   }
 
   /* Because we care about source order, before we can inject anything we need to
@@ -75,6 +75,10 @@ class Tag {
     this.components.set(componentId, comp)
     return comp
   }
+
+  getCSS() {
+    return Array.from(this.components.values()).map(comp => comp.css).join("\n")
+  }
 }
 
 export class BrowserStyleSheet {
@@ -85,14 +89,13 @@ export class BrowserStyleSheet {
   constructor() {
     this.initFromDOM()
     this.constructComponentTagMap()
-    console.log(this)
   }
 
   initFromDOM() {
     this.tags = []
     this.hashes = new Set()
     Array.from(document.querySelectorAll(`[${CSS_NAME}]`)).forEach(el => {
-      el.dataset[OBJ_NAME].trim().split(' ').forEach(hash => {
+      (el.getAttribute(CSS_NAME) || '').trim().split(' ').forEach(hash => {
         this.hashes.add(hash, true)
       })
       this.tags.push(new Tag(el, el.innerHTML))
@@ -111,6 +114,7 @@ export class BrowserStyleSheet {
   }
 
   inject(componentId: string, css: string, hash: ?string) {
+    console.log({componentId,css,hash})
     this.getTag(componentId).inject(componentId, css, hash)
     if (hash) this.hashes.add(hash)
   }
@@ -136,6 +140,10 @@ export class BrowserStyleSheet {
     this.tags.push(newTag)
     return newTag
   }
+
+  getCSS() {
+    return this.tags.map(tag => tag.getCSS()).join("\n")
+  }
 }
 
 let instance
@@ -143,4 +151,7 @@ export default {
   get instance() {
     return instance || (instance = new BrowserStyleSheet())
   },
+  reset() {
+    instance = new BrowserStyleSheet()
+  }
 }

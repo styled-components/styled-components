@@ -6,7 +6,7 @@
 import _styled from '../constructors/styled'
 import css from '../constructors/css'
 import _constructWithOptions from '../constructors/constructWithOptions'
-import styleSheet from '../models/StyleSheet'
+import StyleSheet from '../models/BrowserStyleSheet'
 import flatten from '../utils/flatten'
 import stringifyRules from '../utils/stringifyRules'
 import _StyledComponent from '../models/StyledComponent'
@@ -21,7 +21,8 @@ let index = 0
 const classNames = () => String.fromCodePoint(97 + index++)
 
 export const resetStyled = () => {
-  styleSheet.reset()
+  document.head.innerHTML = ''
+  StyleSheet.reset()
 
   const existingStyleElement = document.head.childNodes[0]
   if (existingStyleElement) existingStyleElement.textContent = ''
@@ -36,7 +37,8 @@ export const resetStyled = () => {
 }
 
 export const resetNoParserStyled = () => {
-  styleSheet.reset()
+  document.head.innerHTML = ''
+  StyleSheet.reset()
   index = 0
 
   const ComponentStyle = _ComponentStyle(classNames, noParserFlatten, noParserStringifyRules)
@@ -48,7 +50,7 @@ export const resetNoParserStyled = () => {
 
 const stripWhitespace = str => str.trim().replace(/([;\{\}])/g, '$1  ').replace(/\s+/g, ' ')
 export const expectCSSMatches = (expectation: string, opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }) => {
-  const css = styleSheet.getCSS({ min: false })
+  const css = StyleSheet.instance.getCSS({ min: false })
 
   if (opts.ignoreWhitespace) {
     expect(stripWhitespace(css)).toEqual(stripWhitespace(expectation))

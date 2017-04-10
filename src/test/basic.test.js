@@ -19,12 +19,6 @@ describe('basic', () => {
     styled.div``
   })
 
-  it('should inject a stylesheet when a component is created', () => {
-    const Comp = styled.div``
-    shallow(<Comp />)
-    expect(styleSheet.injected).toBe(true)
-  })
-
   it('should generate only component class by default', () => {
     styled.div``
     expectCSSMatches('.sc-a {}')
@@ -44,7 +38,7 @@ describe('basic', () => {
     expectCSSMatches('.sc-a { } .b { color: blue; }')
   })
 
-  it('should inject only once for a styled component, no matter how often it\'s mounted', () => {
+  it.only('should inject only once for a styled component, no matter how often it\'s mounted', () => {
     const Comp = styled.div`
       color: blue;
     `

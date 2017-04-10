@@ -12,7 +12,6 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
   class ComponentStyle {
     rules: RuleSet
     componentId: string
-    insertedRule: ?Object
 
     constructor(rules: RuleSet, componentId: string) {
       this.rules = rules
@@ -20,7 +19,7 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
 
       /* Todo: potentially restore this guard. */
       // if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
-      this.insertedRule = StyleSheet.instance.inject(componentId, `.${componentId} {}`)
+      StyleSheet.instance.inject(componentId, `.${componentId} {}`)
     }
 
     /*
@@ -35,7 +34,7 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
 
       if (!StyleSheet.instance.hasHash(hash)) {
         const css = stringifyRules(flatCSS, `.${hash}`)
-        StyleSheet.instance.inject(this.componentId, `.${this.componentId} {}${css}`, hash)
+        StyleSheet.instance.inject(this.componentId, css, hash)
       }
 
       return hash
