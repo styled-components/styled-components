@@ -14,7 +14,7 @@
     "polished": "^1.0.2",
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
-    "react-live": "^1.4.1",
+    "react-live": "^1.4.3",
     "styled-components": "2.0.0-14"
   }
 }
