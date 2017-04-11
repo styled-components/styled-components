@@ -1,6 +1,7 @@
 import React from 'react'
 import SectionLayout from '../SectionLayout'
 import LiveEdit from '../LiveEdit'
+import Code from '../Code'
 
 const sample = (`
 const Button = styled.button\`
@@ -32,7 +33,7 @@ const AdaptingBasedOnProps = () => (
 
     <p>
       This button component has a primary state, that changes its colour.
-      When setting the primary prop to true, we are swapping out its background and text colour.
+      When setting the <Code>primary</Code> prop to true, we are swapping out its background and text colour.
     </p>
 
     <LiveEdit

@@ -1,6 +1,7 @@
 import React from 'react'
 import SectionLayout from '../SectionLayout'
 import LiveEdit from '../LiveEdit'
+import Code from '../Code'
 
 const sample = (`
 // The Button from the last section without the interpolations
@@ -47,7 +48,7 @@ const OverridingComponentStyles = () => (
     />
 
     <p>
-      We can see that the new TomatoButton still resembles Button, while we have only
+      We can see that the new <Code>TomatoButton</Code> still resembles <Code>Button</Code>, while we have only
       added two new rules.
     </p>
   </SectionLayout>

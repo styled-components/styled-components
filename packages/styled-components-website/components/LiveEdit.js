@@ -1,5 +1,5 @@
 import React from 'react'
-import styled, { css } from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 import { lightGrey, red } from '../utils/colors'
 
@@ -45,6 +45,7 @@ const columnMixin = css`
 const StyledEditor = styled(LiveEditor)`
   background: ${lightGrey};
   font-size: 0.8rem;
+  font-family: monospace;
   height: ${rem(400)};
   overflow: scroll;
 
@@ -77,7 +78,9 @@ const LiveEdit = ({ noInline, code }) => (
     code={code}
     noInline={noInline}
     scope={{
-      styled
+      styled,
+      css,
+      keyframes
     }}
   >
     <Row>

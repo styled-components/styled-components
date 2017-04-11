@@ -3,7 +3,6 @@ import rem from 'polished/lib/helpers/rem'
 import Link from '../Link'
 
 import { pages } from '../../pages/docs.json'
-import { greyText } from '../../utils/colors'
 
 const MenuWrapper = styled.aside`
   display: block;
