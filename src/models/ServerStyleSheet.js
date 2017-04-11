@@ -9,7 +9,6 @@ class ServerTag implements Tag {
   names: Array<string>
 
   constructor(isLocal: boolean) {
-    console.log('SERVER TAG')
     this.isLocal = isLocal
     this.components = new Map()
     this.names = []
@@ -20,7 +19,6 @@ class ServerTag implements Tag {
   }
 
   inject(componentId: string, css: string, name: ?string) {
-    console.log({ componentId, css, name })
     const comp = this.getComponent(componentId)
     comp.css += css.replace(/\n*$/, '\n')
     if (name) this.names.push(name)
@@ -46,19 +44,15 @@ class ServerTag implements Tag {
 }
 
 /* Factory function to separate DOM operations from logical ones*/
-const createServerStyleSheet = () => {
+const createServerStyleSheet = () =>
   /* Factory for making more tags. Very little to do here. */
-  const tagConstructor = isLocal => new ServerTag(isLocal)
-  tagConstructor.type = 'SERVER'
-  return new StyleSheet(tagConstructor)
-}
+   new StyleSheet(isLocal => new ServerTag(isLocal))
 
 export default class ServerStyleSheet {
   instance: StyleSheet
 
   constructor() {
     this.instance = createServerStyleSheet()
-    this.instance.type = 'SERVER'
   }
 
   collectStyles(children: any) {

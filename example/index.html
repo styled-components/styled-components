@@ -48,6 +48,7 @@
 
       ReactDOMServer.renderToString(sheet.collectStyles(<Example />));
       console.log(sheet.css)
+      document.head.insertAdjacentHTML('beforeend', sheet.css)
     </script>
   </body>
 </html>

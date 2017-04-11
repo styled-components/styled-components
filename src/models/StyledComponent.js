@@ -67,7 +67,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       const { componentStyle, warnTooManyClasses } = this.constructor
       const executionContext = this.buildExecutionContext(theme, props)
       const styleSheet = this.context.StyleSheet || StyleSheet.instance
-      console.log({ styleSheet })
       const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
 
       if (warnTooManyClasses !== undefined) {
