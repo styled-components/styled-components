@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+- Migrated from the deprecated `React.PropTypes` to the `prop-types` package, thanks to [@YasserKaddour](https://github.com/YasserKaddour). (see [#668](https://github.com/styled-components/styled-components/pull/668))
+- Removed dependency on `glamor` and migrated remaining references to the internval vendored `glamor` module. (see [#663](https://github.com/styled-components/styled-components/pull/663))
+
 ## [v1.4.4] — 2017-03-01
 
 ### Changed

@@ -1,5 +1,6 @@
 // @flow
-import { Component, PropTypes } from 'react'
+import { Component } from 'react'
+import PropTypes from 'prop-types'
 
 import { CHANNEL } from './ThemeProvider'
 
