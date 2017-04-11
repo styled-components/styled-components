@@ -30,10 +30,10 @@ export interface Tag {
 }
 
 class BrowserTag implements Tag {
-  el: HTMLElement
-  components: Map<string, Object>
-  ready: boolean
   isLocal: boolean
+  components: Map<string, Object>
+  el: HTMLElement
+  ready: boolean
 
   constructor(el: HTMLElement, isLocal: boolean, existingSource: string = '') {
     this.el = el
