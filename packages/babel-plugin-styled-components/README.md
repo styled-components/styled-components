@@ -4,6 +4,8 @@ This plugin adds support for server-side rendering, for minification of styles a
 
 **⚠️ This plugin is only necessary if you're server-side rendering, you can use `styled-components` perfectly fine without it! ⚠️**
 
+**⚠️ This plugin only works with styled-components v2 ⚠️**
+
 ## Usage
 
 **THIS ISN'T PUBLISHED YET, WIP**
