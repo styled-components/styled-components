@@ -33,4 +33,4 @@ const styled = _styled(StyledComponent, constructWithOptions)
 
 /* Export everything */
 export default styled
-export { css, keyframes, injectGlobal, ThemeProvider, withTheme }
+export { css, keyframes, injectGlobal, ThemeProvider, withTheme, ServerStyleSheet }

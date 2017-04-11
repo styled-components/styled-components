@@ -10,9 +10,12 @@
     <div id="container"><!-- SSR:HTML --></div>
     <script src="https://unpkg.com/react@15.3.2/dist/react.min.js"></script>
     <script src="https://unpkg.com/react-dom@15.3.2/dist/react-dom.min.js"></script>
+    <script src="https://unpkg.com/react-dom@15.3.2/dist/react-dom-server.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.24/browser.min.js"></script>
     <script src="/styled-components.js"></script>
     <script type="text/babel">
+      const sheet = new styled.ServerStyleSheet()
+
       styled.injectGlobal`
         body {
           font-family: sans-serif;
@@ -43,10 +46,8 @@
         }
       }
 
-      ReactDOM.render(
-        <Example />,
-        document.getElementById('container')
-      );
+      ReactDOMServer.renderToString(sheet.collectStyles(<Example />));
+      console.log(sheet.css)
     </script>
   </body>
 </html>
