@@ -31,8 +31,7 @@ describe('ssr', () => {
       /* Hash 1323611362 is based on name TWO and contents color: red.
        * Change either and this will break. */
       document.head.innerHTML = `
-        <style ${SC_ATTR}='b'
-               ${LOCAL_ATTR}='true'>
+        <style ${SC_ATTR}='b' ${LOCAL_ATTR}='true'>
           /* sc-component-id: TWO */
           .TWO {}
           .b { color: red; }
@@ -112,13 +111,11 @@ describe('ssr', () => {
        * derived from "body { background: papayawhip; }" so be careful
        * changing it. */
       document.head.innerHTML = `
-        <style ${SC_ATTR}='557410406'
-               ${LOCAL_ATTR}='false'>
+        <style ${SC_ATTR} ${LOCAL_ATTR}='false'>
           /* sc-component-id: sc-global-557410406 */
           body { background: papayawhip; }
         </style>
-        <style ${SC_ATTR}='b'
-               ${LOCAL_ATTR}='true'>
+        <style ${SC_ATTR}='b' ${LOCAL_ATTR}='true'>
           /* sc-component-id: TWO */
           .TWO {}
           .b { color: red; }
@@ -163,20 +160,52 @@ describe('ssr', () => {
 
   describe('with all styles already rendered', () => {
     beforeEach(() => {
-      /* Adding markup for four separate */
       document.head.innerHTML = `
-        <style data-styled-components-hashes='557410406'
-               data-styled-components-is-local='false'>
+        <style ${SC_ATTR} ${LOCAL_ATTR}='false'>
+           /* sc-component-id: sc-global-1455077013 */
+          html { font-size: 16px; }
+           /* sc-component-id: sc-global-557410406 */
           body { background: papayawhip; }
         </style>
-        <style data-styled-components-hashes='1323611362:foo'
-               data-styled-components-is-local='true'>
+        <style ${SC_ATTR}='a b' ${LOCAL_ATTR}='true'>
+          /* sc-component-id: ONE */
+          .ONE {}
+          .a { color: blue; }
           /* sc-component-id: TWO */
           .TWO {}
-          .foo { color: red; }
+          .b { color: red; }
         </style>
       `
       StyleSheet.reset()
+    })
+
+    it('should not touch existing styles', () => {
+      expectCSSMatches(`
+        html { font-size: 16px; }
+        body { background: papayawhip; }
+        .ONE { } .a { color: blue; }
+        .TWO { } .b { color: red; }
+      `)
+    })
+
+    it('should leave styles if rendered in the same order they were created with', () => {
+      injectGlobal`
+        html { font-size: 16px; }
+      `
+      injectGlobal`
+        body { background: papayawhip; }
+      `
+      const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
+      shallow(<A />)
+      const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
+      shallow(<B />)
+
+      expectCSSMatches(`
+        html { font-size: 16px; }
+        body { background: papayawhip; }
+        .ONE { } .a { color: blue; }
+        .TWO { } .b { color: red; }
+      `)
     })
   })
 })

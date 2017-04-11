@@ -8,10 +8,10 @@ export default (stringifyRules: Stringifier, css: Function) => {
     const rules = css(strings, ...interpolations)
     const hash = hashStr(JSON.stringify(rules))
 
-    const alreadyInjected = StyleSheet.instance.getName(hash)
-    if (alreadyInjected) return
+    const componentId = `sc-global-${hash}`
+    if (StyleSheet.instance.hasInjectedComponent(componentId)) return
 
-    StyleSheet.instance.inject(`sc-global-${hash}`, false, stringifyRules(rules), hash, hash)
+    StyleSheet.instance.inject(componentId, false, stringifyRules(rules))
   }
 
   return injectGlobal
