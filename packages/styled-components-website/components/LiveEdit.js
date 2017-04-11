@@ -48,6 +48,7 @@ const StyledEditor = styled(LiveEditor)`
   font-family: monospace;
   height: ${rem(400)};
   overflow: scroll;
+  white-space: pre-wrap;
 
   ${columnMixin}
 `
@@ -77,6 +78,7 @@ const LiveEdit = ({ noInline, code }) => (
   <StyledProvider
     code={code}
     noInline={noInline}
+    mountStylesheet={false}
     scope={{
       styled,
       css,

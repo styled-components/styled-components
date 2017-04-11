@@ -9,6 +9,7 @@ const CodeBlock = styled(Editor)`
   background: ${lightGrey};
   font-size: 0.8rem;
   font-family: monospace;
+  white-space: pre-wrap;
   pointer-events: none;
 
   border-radius: ${rem(3)};
