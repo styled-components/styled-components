@@ -588,10 +588,21 @@ const isCustomAttribute = RegExp.prototype.test.bind(
   new RegExp(`^(data|aria)-[${ATTRIBUTE_NAME_CHAR}]*$`),
 )
 
-const hasOwnProperty: (name: string) => boolean = {}.hasOwnProperty
-export default (name: string) => (
-  hasOwnProperty.call(htmlProps, name) ||
-  hasOwnProperty.call(svgProps, name) ||
-  isCustomAttribute(name.toLowerCase()) ||
-  hasOwnProperty.call(reactProps, name)
-)
+const hasOwnProperty = (obj: Object, name: string): boolean => obj.hasOwnProperty(name)
+
+// eslint-disable-next-line import/no-mutable-exports
+let isValidAttr = () => false
+
+if (
+  typeof process !== 'undefined' &&
+  process.env.NODE_ENV !== 'production'
+) {
+  isValidAttr = (name: string) => (
+    hasOwnProperty(htmlProps, name) ||
+    hasOwnProperty(svgProps, name) ||
+    isCustomAttribute(name.toLowerCase()) ||
+    hasOwnProperty(reactProps, name)
+  )
+}
+
+export default isValidAttr
