@@ -35,6 +35,8 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
       if (existingName) return existingName
 
       const name = nameGenerator(hash)
+      if (StyleSheet.instance.alreadyInjected(hash, name)) return name
+
       const css = stringifyRules(flatCSS, `.${name}`)
       StyleSheet.instance.inject(this.componentId, true, css, hash, name)
       return name

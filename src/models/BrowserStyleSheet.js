@@ -2,7 +2,7 @@
 /*
  * Browser Style Sheet with Rehydration
  *
- * <style data-styled-components-hashes="123:x 456:y 789:z"
+ * <style data-styled-components="x y z"
  *        data-styled-components-is-local="true">
  *   /· sc-component-id: a ·/
  *   .sc-a { ... }
@@ -17,9 +17,9 @@
  * */
 import extractCompsFromCSS from '../utils/extractCompsFromCSS'
 
-const HASH_ATTR = 'data-styled-components-hashes'
-const LOCAL_ATTR = 'data-styled-components-is-local'
-const COMPONENTS_PER_TAG = 40
+export const SC_ATTR = 'data-styled-components'
+export const LOCAL_ATTR = 'data-styled-components-is-local'
+export const COMPONENTS_PER_TAG = 40
 
 class Tag {
   el: HTMLElement
@@ -40,13 +40,13 @@ class Tag {
     return this.components.size >= COMPONENTS_PER_TAG
   }
 
-  inject(componentId: string, css: string, hash: ?string, name: ?string) {
+  inject(componentId: string, css: string, name: ?string) {
     if (!this.ready) this.replaceElement()
     const comp = this.getComponent(componentId)
     comp.textNode.appendData(css.replace(/\n*$/, '\n'))
-    if (hash && name) {
-      const existingHashes = this.el.getAttribute(HASH_ATTR)
-      this.el.setAttribute(HASH_ATTR, `${existingHashes ? `${existingHashes} ` : ''}${hash}:${name}`)
+    if (name) {
+      const existingNames = this.el.getAttribute(SC_ATTR)
+      this.el.setAttribute(SC_ATTR, existingNames ? `${existingNames} ${name}` : name)
     }
   }
 
@@ -89,6 +89,7 @@ class Tag {
 export class BrowserStyleSheet {
   tags: Array<Tag>
   hashes: Map<string, string>
+  names: Set<string>
   componentTags: Map<string, Tag>
 
   constructor() {
@@ -99,10 +100,10 @@ export class BrowserStyleSheet {
   initFromDOM() {
     this.tags = []
     this.hashes = new Map()
-    Array.from(document.querySelectorAll(`[${HASH_ATTR}]`)).forEach(el => {
-      (el.getAttribute(HASH_ATTR) || '').trim().split(/\s+/).forEach(record => {
-        const [hash, name] = record.split(':')
-        this.hashes.set(hash, name)
+    this.names = new Set()
+    Array.from(document.querySelectorAll(`[${SC_ATTR}]`)).forEach(el => {
+      (el.getAttribute(SC_ATTR) || '').trim().split(/\s+/).forEach(name => {
+        this.names.add(name)
       })
       this.tags.push(new Tag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML))
     })
@@ -115,20 +116,27 @@ export class BrowserStyleSheet {
         this.componentTags.set(comp.componentId, tag)))
   }
 
+  /* Best level of caching—get the name from the hash straight away. */
   getName(hash: any) {
     return this.hashes.get(hash.toString())
   }
 
+  /* Second level of caching—if the name is already in the dom, don't
+   * inject anything and record the hash for getName next time. */
+  alreadyInjected(hash: any, name: string) {
+    if (!this.names.has(name)) return false
+
+    this.hashes.set(hash.toString(), name)
+    return true
+  }
+
+  /* Third type of caching—don't inject components' componentId twice. */
   hasInjectedComponent(componentId: string) {
     return !!this.componentTags.get(componentId)
   }
 
-  inject(componentId: string,
-    isLocal: boolean,
-    css: string,
-    hash: ?string,
-    name: ?string) {
-    this.getTag(componentId, isLocal).inject(componentId, css, hash, name)
+  inject(componentId: string, isLocal: boolean, css: string, hash: ?any, name: ?string) {
+    this.getTag(componentId, isLocal).inject(componentId, css, name)
     if (hash && name) this.hashes.set(hash.toString(), name)
   }
 
@@ -147,7 +155,7 @@ export class BrowserStyleSheet {
   createNewTag(isLocal: boolean) {
     const el = document.createElement('style')
     el.type = 'text/css'
-    el.setAttribute(HASH_ATTR, '')
+    el.setAttribute(SC_ATTR, '')
     el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
     document.head.appendChild(el)
     const newTag = new Tag(el, isLocal)
