@@ -5,6 +5,7 @@ import rem from 'polished/lib/helpers/rem'
 import DocsLayout from '../../components/DocsLayout'
 import { Title, Header, SubHeader } from '../../components/Layout'
 import Link from '../../components/Link'
+import titleToDash from '../../utils/titleToDash'
 import { pages } from '../docs.json'
 
 const Row = styled.div`
@@ -45,7 +46,9 @@ const Documentation = ({ url }) => (
             {
               sections.map(({ title }) => (
                 <SubHeader key={title}>
-                  {title}
+                  <Link href={`/docs/${pathname}#${titleToDash(title)}`}>
+                    {title}
+                  </Link>
                 </SubHeader>
               ))
             }

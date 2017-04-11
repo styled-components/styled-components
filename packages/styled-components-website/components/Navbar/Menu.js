@@ -1,6 +1,7 @@
 import styled from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 import Link from '../Link'
+import titleToDash from '../../utils/titleToDash'
 
 import { pages } from '../../pages/docs.json'
 
@@ -47,7 +48,9 @@ const Menu = ({ isFolded }) => (
           {
             sections.map(({ title }) => (
               <SubSection key={title}>
-                {title}
+                <Link href={`/docs/${pathname}#${titleToDash(title)}`}>
+                  {title}
+                </Link>
               </SubSection>
             ))
           }

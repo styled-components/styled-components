@@ -2378,6 +2378,10 @@ object.omit@^2.0.0:
     for-own "^0.1.4"
     is-extendable "^0.1.1"
 
+octicons@^5.0.1:
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/octicons/-/octicons-5.0.1.tgz#0fa0c4fd3680d251266f073736539317cb846e4f"
+
 on-finished@~2.3.0:
   version "2.3.0"
   resolved "https://registry.yarnpkg.com/on-finished/-/on-finished-2.3.0.tgz#20f1336481b083cd75337992a16971aa2d906947"
@@ -2660,6 +2664,12 @@ react-live@^1.4.3:
     dom-iterator "^0.3.0"
     prismjs "^1.6.0"
     unescape "^0.2.0"
+
+react-octicons-svg@^1.1.13:
+  version "1.1.13"
+  resolved "https://registry.yarnpkg.com/react-octicons-svg/-/react-octicons-svg-1.1.13.tgz#3a02b9435eadb3d84a55f65af6a06316bb594910"
+  dependencies:
+    octicons "^5.0.1"
 
 react-proxy@^3.0.0-alpha.0:
   version "3.0.0-alpha.1"
