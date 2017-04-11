@@ -12,6 +12,7 @@ import type { RuleSet, Target } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
+import StyleSheet from './BrowserStyleSheet'
 
 const escapeRegex = /[[\].#*$><+~=|^:(),"'`]/g
 const multiDashRegex = /--+/g
@@ -65,7 +66,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     generateAndInjectStyles(theme: any, props: any) {
       const { componentStyle, warnTooManyClasses } = this.constructor
       const executionContext = this.buildExecutionContext(theme, props)
-      const className = componentStyle.generateAndInjectStyles(executionContext)
+      const styleSheet = this.context.StyleSheet || StyleSheet.instance
+      console.log({ styleSheet })
+      const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
 
       if (warnTooManyClasses !== undefined) {
         warnTooManyClasses(className)

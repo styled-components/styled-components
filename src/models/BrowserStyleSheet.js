@@ -27,6 +27,7 @@ export interface Tag {
 
   isFull(): boolean,
   inject(componentId: string, css: string, name: ?string): void,
+  toHTML(): string,
 }
 
 class BrowserTag implements Tag {
@@ -56,6 +57,10 @@ class BrowserTag implements Tag {
       const existingNames = this.el.getAttribute(SC_ATTR)
       this.el.setAttribute(SC_ATTR, existingNames ? `${existingNames} ${name}` : name)
     }
+  }
+
+  toHTML() {
+    return this.el.outerHTML
   }
 
   /* Because we care about source order, before we can inject anything we need to
@@ -95,6 +100,7 @@ class BrowserTag implements Tag {
 }
 
 export class StyleSheet {
+  type: string
   tagConstructor: (boolean) => Tag
   tags: Array<Tag>
   hashes: Map<string, string>
@@ -104,6 +110,7 @@ export class StyleSheet {
   constructor(tagConstructor: (boolean) => Tag,
     tags: Array<Tag> = [],
     names: Set<string> = new Set()) {
+    console.log(tagConstructor.type)
     this.tagConstructor = tagConstructor
     this.tags = tags
     this.names = names
@@ -138,11 +145,17 @@ export class StyleSheet {
   }
 
   inject(componentId: string, isLocal: boolean, css: string, hash: ?any, name: ?string) {
+    console.log({ componentId, isLocal, css, hash, name })
     this.getTag(componentId, isLocal).inject(componentId, css, name)
     if (hash && name) this.hashes.set(hash.toString(), name)
   }
 
+  toHTML() {
+    this.tags.map(tag => tag.toHTML()).join('')
+  }
+
   getTag(componentId: string, isLocal: boolean) {
+    console.log(`getTag for ${componentId}`)
     const existingTag = this.componentTags.get(componentId)
     if (existingTag) return existingTag
 
@@ -155,6 +168,8 @@ export class StyleSheet {
   }
 
   createNewTag(isLocal: boolean) {
+    console.log('createNewTag')
+    console.log(this.tagConstructor.type)
     const newTag = this.tagConstructor(isLocal)
     this.tags.push(newTag)
     return newTag
@@ -184,6 +199,7 @@ const createBrowserStyleSheet = () => {
     document.head.appendChild(el)
     return new BrowserTag(el, isLocal)
   }
+  tagConstructor.type = 'BROWSER'
 
   return new StyleSheet(tagConstructor, tags, names)
 }

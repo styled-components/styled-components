@@ -18,8 +18,9 @@ describe('ssr', () => {
     const sheet = new ServerStyleSheet()
     const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
     const css = sheet.css
-    expect({html, css}).toEqual({
-      html: 'Hello SSR!',
+    expect({ html, css }).toEqual({
+      html: '<h1 class="sc-a b" data-reactroot="" data-reactid="1"' +
+            ' data-react-checksum="197727696">Hello SSR!</h1>',
       css: 'color: red;',
     })
   })
