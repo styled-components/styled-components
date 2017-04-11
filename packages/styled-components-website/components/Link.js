@@ -1,7 +1,7 @@
 import styled from 'styled-components'
 import UnstyledLink from 'next/link'
 
-const StyledLink = styled.a`
+export const StyledLink = styled.a`
   text-decoration: none;
   color: inherit;
   cursor: pointer;
