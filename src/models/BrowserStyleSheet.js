@@ -145,11 +145,11 @@ export class BrowserStyleSheet {
     if (existingTag) return existingTag
 
     const lastTag = this.tags[this.tags.length - 1]
-    if (!lastTag || lastTag.isFull() || lastTag.isLocal !== isLocal) {
-      return this.createNewTag(isLocal)
-    } else {
-      return lastTag
-    }
+    const componentTag = (!lastTag || lastTag.isFull() || lastTag.isLocal !== isLocal)
+      ? this.createNewTag(isLocal)
+      : lastTag
+    this.componentTags.set(componentId, componentTag)
+    return componentTag
   }
 
   createNewTag(isLocal: boolean) {

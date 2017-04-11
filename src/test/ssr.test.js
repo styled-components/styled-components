@@ -7,6 +7,9 @@ import StyleSheet, { SC_ATTR, LOCAL_ATTR } from '../models/BrowserStyleSheet'
 import _injectGlobal from '../constructors/injectGlobal'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
+import _keyframes from '../constructors/keyframes'
+
+const keyframes = _keyframes(hash => `keyframe_${hash%1000}`, stringifyRules, css)
 const injectGlobal = _injectGlobal(stringifyRules, css)
 
 let styled
@@ -239,7 +242,7 @@ describe('ssr', () => {
       `)
     })
 
-    it('should leave styles if rendered in the same order they were created with', () => {
+    it('should not change styles if rendered in the same order they were created with', () => {
       injectGlobal`
         html { font-size: 16px; }
       `
@@ -256,6 +259,84 @@ describe('ssr', () => {
         body { background: papayawhip; }
         .ONE { } .a { color: blue; }
         .TWO { } .b { color: red; }
+      `)
+    })
+
+    it('should still not change styles if rendered in a different order', () => {
+      const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
+      shallow(<B />)
+      injectGlobal`
+        body { background: papayawhip; }
+      `
+      const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
+      shallow(<A />)
+      injectGlobal`
+        html { font-size: 16px; }
+      `
+
+      expectCSSMatches(`
+        html { font-size: 16px; }
+        body { background: papayawhip; }
+        .ONE { } .a { color: blue; }
+        .TWO { } .b { color: red; }
+      `)
+    })
+  })
+
+  describe('with keyframes', () => {
+    beforeEach(() => {
+      document.head.innerHTML = `
+        <style ${SC_ATTR}='keyframe_880' ${LOCAL_ATTR}='false'>
+          /* sc-component-id: sc-keyframes-keyframe_880 */
+          @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
+        </style>
+      `
+      StyleSheet.reset()
+    })
+
+    it('should not touch existing styles', () => {
+      expectCSSMatches(`
+        @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
+      `)
+    })
+
+    it('should not regenerate keyframes', () => {
+      keyframes`
+        from { opacity: 0; }
+      `
+      expectCSSMatches(`
+        @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
+      `)
+    })
+
+    it('should still inject new keyframes', () => {
+      keyframes`
+        from { opacity: 1; }
+      `
+      expectCSSMatches(`
+        @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
+        @-webkit-keyframes keyframe_144 {from {opacity: 1;}}@keyframes keyframe_144 {from {opacity: 1;}}
+      `)
+    })
+
+    it('should pass the keyframes name along as well', () => {
+      const fadeIn = keyframes`
+        from { opacity: 0; }
+      `
+      const A = styled.div`animation: ${fadeIn} 1s both;`
+      const fadeOut = keyframes`
+        from { opacity: 1; }
+      `
+      const B = styled.div`animation: ${fadeOut} 1s both;`
+      /* Purposely rendering out of order to make sure the output looks right */
+      shallow(<B />)
+      shallow(<A />)
+
+      expectCSSMatches(`
+        @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
+        .sc-a { } .d { -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
+        @-webkit-keyframes keyframe_144 {from {opacity: 1;}}@keyframes keyframe_144 {from {opacity: 1;}}
+        .sc-b { } .c { -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
       `)
     })
   })

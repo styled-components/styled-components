@@ -1,7 +1,5 @@
 // @flow
 import _keyframes from '../keyframes'
-import _GlobalStyle from '../../models/GlobalStyle'
-import flatten from '../../utils/flatten'
 import stringifyRules from '../../utils/stringifyRules'
 import css from '../css'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
