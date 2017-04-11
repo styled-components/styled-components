@@ -2,7 +2,7 @@
 import hashStr from '../vendor/glamor/hash'
 
 import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
-import { StyleSheet } from './BrowserStyleSheet'
+import StyleSheet from './StyleSheet'
 
 /*
  ComponentStyle is all the CSS-specific stuff, not

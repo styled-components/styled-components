@@ -1,6 +1,7 @@
 // @flow
 import React from 'react'
-import { Tag, StyleSheet, SC_ATTR, LOCAL_ATTR } from './BrowserStyleSheet'
+import type { Tag } from './StyleSheet'
+import StyleSheet, { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
 
 class ServerTag implements Tag {
@@ -28,7 +29,7 @@ class ServerTag implements Tag {
     const namesAttr = `${SC_ATTR}="${this.names.join(' ')}"`
     const localAttr = `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`
     return `<style type="text/css" ${namesAttr} ${localAttr}>\n${
-      Array.from(this.components.values()).map(comp => comp.css)
+      Array.from(this.components.values()).map(comp => comp.css).join('')
       }\n</style>`
   }
 
@@ -63,7 +64,7 @@ export default class ServerStyleSheet {
     )
   }
 
-  get css() {
+  get css(): string {
     return this.instance.toHTML()
   }
 }

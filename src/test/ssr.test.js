@@ -11,13 +11,16 @@ describe('ssr', () => {
   })
 
   it('should extract the CSS in a simple case', () => {
-    const Heading = styled.h1`
-      color: red;
-    `
+const Heading = styled.h1`
+  color: red;
+`
+injectGlobal`
+  body { background: papayawhip; }
+`
 
     const sheet = new ServerStyleSheet()
-    const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
-    const css = sheet.css
+const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+const css = sheet.css
 
     expect({ html, css }).toEqual({
       html: '<h1 class="sc-a b" data-reactroot="" data-reactid="1"' +

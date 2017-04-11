@@ -1,10 +1,7 @@
 // @flow
 import React from 'react'
-import { shallow } from 'enzyme'
 
 import _keyframes from '../../constructors/keyframes'
-import _GlobalStyle from '../../models/GlobalStyle'
-import flatten from '../flatten'
 import stringifyRules from '../stringifyRules'
 import css from '../css'
 

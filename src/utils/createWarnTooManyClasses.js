@@ -1,4 +1,5 @@
-// @flow
+/* eslint-disable flowtype/require-valid-file-annotation */
+/* TODO: restore flow on this file */
 
 import styleSheet from '../models/StyleSheet'
 
