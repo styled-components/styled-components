@@ -1,7 +1,10 @@
 import Express from 'express'
 import React from 'react'
-import {renderToString} from  'react-dom/server'
-import styled, {styleSheet} from '../dist/styled-components'
+import { renderToString } from  'react-dom/server'
+import styled, { ServerStyleSheet } from '../dist/styled-components'
+import fs from 'fs'
+
+const HTML = fs.readFileSync(__dirname + '/index.html')
 
 const Heading = styled.h1`
   color: red;
@@ -11,22 +14,15 @@ const app = new Express()
 const port = 8080
 
 app.get('*', (req, res) => {
-  const componentHTML = renderToString(<Heading>Hello SSR!</Heading>)
-  
-  const css = styleSheet.getCSS()
+  const sheet = new ServerStyleSheet()
+  const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+  const css = sheet.css
 
-  res.status(200).send(`
-    <!doctype html>
-    <html>
-      <head>
-        <style>
-          ${css}
-        </style>
-      </head>
-      <body>
-        ${componentHTML}
-      </body>
-  </html>`)
+  res.status(200).send(
+    HTML
+      .replace(/<!-- SSR:HTML -->/, html)
+      .replace(/<!-- SSR:CSS -->/, css)
+  )
 })
 
 app.listen(port, error => {

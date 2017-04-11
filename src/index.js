@@ -5,7 +5,7 @@ import flatten from './utils/flatten'
 import stringifyRules from './utils/stringifyRules'
 import generateAlphabeticName from './utils/generateAlphabeticName'
 import css from './constructors/css'
-import styleSheet from './models/StyleSheet'
+import ServerStyleSheet from './models/ServerStyleSheet'
 
 /* Import singleton constructors */
 import _StyledComponent from './models/StyledComponent'
@@ -33,4 +33,4 @@ const styled = _styled(StyledComponent, constructWithOptions)
 
 /* Export everything */
 export default styled
-export { css, keyframes, injectGlobal, ThemeProvider, withTheme, styleSheet }
+export { css, keyframes, injectGlobal, ThemeProvider, withTheme }

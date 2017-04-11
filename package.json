@@ -83,7 +83,7 @@
     "eslint-plugin-jsx-a11y": "^2.0.2",
     "eslint-plugin-react": "^6.8.0",
     "express": "^4.14.1",
-    "flow-bin": "^0.37.1",
+    "flow-bin": "^0.43.1",
     "flow-copy-source": "^1.1.0",
     "jest": "^19.0.2",
     "jsdom": "^9.10.0",
@@ -109,7 +109,9 @@
     "react": "^0.14.0 || ^15.0.0-0"
   },
   "jest": {
-    "roots": ["<rootDir>/src/"]
+    "roots": [
+      "<rootDir>/src/"
+    ]
   },
   "lint-staged": {
     "*.js": [

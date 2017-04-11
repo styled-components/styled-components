@@ -21,12 +21,9 @@ export let index = 0
 const classNames = () => String.fromCodePoint(97 + index++)
 
 export const resetStyled = () => {
+  if (!document.head) throw new Error("Missing document <head>")
   document.head.innerHTML = ''
   StyleSheet.reset()
-
-  const existingStyleElement = document.head.childNodes[0]
-  if (existingStyleElement) existingStyleElement.textContent = ''
-
   index = 0
 
   const ComponentStyle = _ComponentStyle(classNames, flatten, stringifyRules)
@@ -37,6 +34,7 @@ export const resetStyled = () => {
 }
 
 export const resetNoParserStyled = () => {
+  if (!document.head) throw new Error("Missing document <head>")
   document.head.innerHTML = ''
   StyleSheet.reset()
   index = 0

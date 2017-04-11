@@ -21,7 +21,15 @@ export const SC_ATTR = 'data-styled-components'
 export const LOCAL_ATTR = 'data-styled-components-is-local'
 export const COMPONENTS_PER_TAG = 40
 
-class Tag {
+export interface Tag {
+  isLocal: boolean,
+  components: Map<string, Object>,
+
+  isFull(): boolean,
+  inject(componentId: string, css: string, name: ?string): void,
+}
+
+class BrowserTag implements Tag {
   el: HTMLElement
   components: Map<string, Object>
   ready: boolean
@@ -86,27 +94,21 @@ class Tag {
   }
 }
 
-export class BrowserStyleSheet {
+export class StyleSheet {
+  tagConstructor: (boolean) => Tag
   tags: Array<Tag>
   hashes: Map<string, string>
   names: Set<string>
   componentTags: Map<string, Tag>
 
-  constructor() {
-    this.initFromDOM()
-    this.constructComponentTagMap()
-  }
-
-  initFromDOM() {
-    this.tags = []
+  constructor(tagConstructor: (boolean) => Tag,
+    tags: Array<Tag> = [],
+    names: Set<string> = new Set()) {
+    this.tagConstructor = tagConstructor
+    this.tags = tags
+    this.names = names
     this.hashes = new Map()
-    this.names = new Set()
-    Array.from(document.querySelectorAll(`[${SC_ATTR}]`)).forEach(el => {
-      (el.getAttribute(SC_ATTR) || '').trim().split(/\s+/).forEach(name => {
-        this.names.add(name)
-      })
-      this.tags.push(new Tag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML))
-    })
+    this.constructComponentTagMap()
   }
 
   constructComponentTagMap() {
@@ -153,23 +155,45 @@ export class BrowserStyleSheet {
   }
 
   createNewTag(isLocal: boolean) {
-    const el = document.createElement('style')
-    el.type = 'text/css'
-    el.setAttribute(SC_ATTR, '')
-    el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
-    document.head.appendChild(el)
-    const newTag = new Tag(el, isLocal)
+    const newTag = this.tagConstructor(isLocal)
     this.tags.push(newTag)
     return newTag
   }
 }
 
+/* Factory function to separate DOM operations from logical ones*/
+const createBrowserStyleSheet = () => {
+  const tags = []
+  const names = new Set()
+
+  /* Construct existing state from DOM */
+  Array.from(document.querySelectorAll(`[${SC_ATTR}]`)).forEach(el => {
+    tags.push(new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML))
+    ;(el.getAttribute(SC_ATTR) || '').trim().split(/\s+/).forEach(name => {
+      names.add(name)
+    })
+  })
+
+  /* Factory for making more tags */
+  const tagConstructor = (isLocal: boolean): Tag => {
+    const el = document.createElement('style')
+    el.type = 'text/css'
+    el.setAttribute(SC_ATTR, '')
+    el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
+    if (!document.head) throw new Error('Missing document <head>')
+    document.head.appendChild(el)
+    return new BrowserTag(el, isLocal)
+  }
+
+  return new StyleSheet(tagConstructor, tags, names)
+}
+
 let instance
 export default {
   get instance() {
-    return instance || (instance = new BrowserStyleSheet())
+    return instance || (instance = createBrowserStyleSheet())
   },
   reset() {
-    instance = new BrowserStyleSheet()
+    instance = createBrowserStyleSheet()
   },
 }
