@@ -31,27 +31,27 @@ describe('expanded api', () => {
       const Comp = styled.div``
       const Comp2 = styled.div``
       expect(Comp.styledComponentId).toBe('sc-a')
-      expect(shallow(<Comp />).prop('className')).toMatch('sc-a')
+      expect(shallow(<Comp />).prop('className')).toMatch(/sc-a/)
       expect(Comp2.styledComponentId).toBe('sc-b')
-      expect(shallow(<Comp2 />).prop('className')).toMatch('sc-b')
+      expect(shallow(<Comp2 />).prop('className')).toMatch(/sc-b/)
     })
 
     it('should be generated from displayName + hash', () => {
       const Comp = styled.div.withConfig({ displayName: 'Comp' })``
       const Comp2 = styled.div.withConfig({ displayName: 'Comp2' })``
       expect(Comp.styledComponentId).toBe('Comp-a')
-      expect(shallow(<Comp />).prop('className')).toMatch('Comp-a')
+      expect(shallow(<Comp />).prop('className')).toMatch(/Comp-a/)
       expect(Comp2.styledComponentId).toBe('Comp2-b')
-      expect(shallow(<Comp2 />).prop('className')).toMatch('Comp2-b')
+      expect(shallow(<Comp2 />).prop('className')).toMatch(/Comp2-b/)
     })
 
     it('should be attached if passed in', () => {
       const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })``
       const Comp2 = styled.div.withConfig({ displayName: 'Comp2', componentId: 'OMGLOL' })``
       expect(Comp.styledComponentId).toBe('LOLOMG')
-      expect(shallow(<Comp />).prop('className')).toMatch('LOLOMG')
+      expect(shallow(<Comp />).prop('className')).toMatch(/LOLOMG/)
       expect(Comp2.styledComponentId).toBe('OMGLOL')
-      expect(shallow(<Comp2 />).prop('className')).toMatch('OMGLOL')
+      expect(shallow(<Comp2 />).prop('className')).toMatch(/OMGLOL/)
     })
   })
 
