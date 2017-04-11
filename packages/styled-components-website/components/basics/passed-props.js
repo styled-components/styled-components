@@ -1,6 +1,6 @@
 import React from 'react'
-import DocsLayout from '../../../components/DocsLayout'
-import LiveEdit from '../../../components/LiveEdit'
+import SectionLayout from '../SectionLayout'
+import LiveEdit from '../LiveEdit'
 
 const sample = (`
 // Create an Input component that'll render an <input> tag with some styles
@@ -27,8 +27,8 @@ render(
 );
 `).trim()
 
-const PassedProps = ({ url }) => (
-  <DocsLayout url={url}>
+const PassedProps = () => (
+  <SectionLayout title="Passed props">
     <p>
       Styled Components pass on all their props.
     </p>
@@ -42,7 +42,7 @@ const PassedProps = ({ url }) => (
       code={sample}
       noInline
     />
-  </DocsLayout>
+  </SectionLayout>
 )
 
 export default PassedProps

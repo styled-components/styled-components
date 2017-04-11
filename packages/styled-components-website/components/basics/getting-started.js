@@ -1,6 +1,6 @@
 import React from 'react'
-import DocsLayout from '../../../components/DocsLayout'
-import LiveEdit from '../../../components/LiveEdit'
+import SectionLayout from '../SectionLayout'
+import LiveEdit from '../LiveEdit'
 
 const sample = (`
 // Create a Title component that'll render an <h1> tag with some styles
@@ -26,7 +26,7 @@ render(
 `).trim()
 
 const GettingStarted = ({ url }) => (
-  <DocsLayout url={url}>
+  <SectionLayout title="Getting Started">
     <p>
       Styled Components is utilising tagged template literals to style your components.
     </p>
@@ -49,7 +49,7 @@ const GettingStarted = ({ url }) => (
     <p>
       The CSS rules are automatically vendor prefixed, so you don't have to think about it.
     </p>
-  </DocsLayout>
+  </SectionLayout>
 )
 
 export default GettingStarted

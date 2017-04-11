@@ -1,6 +1,6 @@
 import React from 'react'
-import DocsLayout from '../../../components/DocsLayout'
-import LiveEdit from '../../../components/LiveEdit'
+import SectionLayout from '../SectionLayout'
+import LiveEdit from '../LiveEdit'
 
 const sample = (`
 const Button = styled.button\`
@@ -23,8 +23,8 @@ render(
 );
 `).trim()
 
-const AdaptingBasedOnProps = ({ url }) => (
-  <DocsLayout url={url}>
+const AdaptingBasedOnProps = () => (
+  <SectionLayout title="Adapting based on props">
     <p>
       You can pass a function ("interpolations") to a styled component's template literal
       to adapt it, based on its props.
@@ -39,7 +39,7 @@ const AdaptingBasedOnProps = ({ url }) => (
       code={sample}
       noInline
     />
-  </DocsLayout>
+  </SectionLayout>
 )
 
 export default AdaptingBasedOnProps

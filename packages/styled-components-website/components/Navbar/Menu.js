@@ -26,11 +26,12 @@ const SectionTitle = styled.h4`
   font-weight: normal;
 `
 
-const PageLink = styled(Link)`
+const SubSection = styled.h5`
   display: block;
   margin: ${rem(10)} ${rem(40)} ${rem(10)} ${rem(55)};
   opacity: 0.8;
   font-size: 0.9rem;
+  font-weight: normal;
 `
 
 const Menu = ({ isFolded }) => (
@@ -39,14 +40,16 @@ const Menu = ({ isFolded }) => (
       pages.map(({ title, pathname, sections }) => (
         <Section key={title}>
           <SectionTitle>
-            {title}
+            <Link href={`/docs/${pathname}`}>
+              {title}
+            </Link>
           </SectionTitle>
 
           {
-            sections.map(({ title, pathname: subPathname }) => (
-              <PageLink key={title} href={`/docs/${pathname}/${subPathname}`}>
+            sections.map(({ title }) => (
+              <SubSection key={title}>
                 {title}
-              </PageLink>
+              </SubSection>
             ))
           }
         </Section>

@@ -5,17 +5,13 @@
       "pathname": "basics",
       "sections": [
         {
-          "title": "Getting Started",
-          "pathname": "getting-started"
+          "title": "Getting Started"
         }, {
-          "title": "Passed props",
-          "pathname": "passed-props"
+          "title": "Passed props"
         }, {
-          "title": "Adapting based on props",
-          "pathname": "adapting-based-on-props"
+          "title": "Adapting based on props"
         }, {
-          "title": "Overriding component styles",
-          "pathname": "overriding-component-styles"
+          "title": "Overriding component styles"
         }, {
           "title": "Third-party components"
         }, {

@@ -1,6 +1,6 @@
 import React from 'react'
-import DocsLayout from '../../../components/DocsLayout'
-import LiveEdit from '../../../components/LiveEdit'
+import SectionLayout from '../SectionLayout'
+import LiveEdit from '../LiveEdit'
 
 const sample = (`
 // The Button from the last section without the interpolations
@@ -28,8 +28,8 @@ render(
 );
 `).trim()
 
-const OverridingComponentStyles = ({ url }) => (
-  <DocsLayout url={url}>
+const OverridingComponentStyles = () => (
+  <SectionLayout title="Overriding component styles">
     <p>
       Instead of styling an element, you can override styles of existing styled components
       as well. In this case, the new styles are used along the old ones,
@@ -50,7 +50,7 @@ const OverridingComponentStyles = ({ url }) => (
       We can see that the new TomatoButton still resembles Button, while we have only
       added two new rules.
     </p>
-  </DocsLayout>
+  </SectionLayout>
 )
 
 export default OverridingComponentStyles
