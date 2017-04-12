@@ -92,9 +92,8 @@ export default (ComponentStyle: Function) => {
         const propsForElement = {}
         Object.keys(this.props)
           .forEach(propName => {
-            if (!isTag(target) || validAttr(propName)) {
-              propsForElement[propName] = this.props[propName]
-            }
+            if (isTag(target) || !validAttr(propName)) return
+            propsForElement[propName] = this.props[propName]
           })
         propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
         if (innerRef) {
