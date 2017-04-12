@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+- Exchanged filter-forEach combo in favor of single forEach.
 - Migrated from the deprecated `React.PropTypes` to the `prop-types` package, thanks to [@YasserKaddour](https://github.com/YasserKaddour). (see [#668](https://github.com/styled-components/styled-components/pull/668))
 - Removed dependency on `glamor` and migrated remaining references to the internval vendored `glamor` module. (see [#663](https://github.com/styled-components/styled-components/pull/663))
 
