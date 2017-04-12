@@ -88,12 +88,13 @@ export default (ComponentStyle: Function) => {
         const { className, children, innerRef } = this.props
         const { generatedClassName } = this.state
 
-        const propsForElement = {}
         /* Don't pass through non HTML tags through to HTML elements */
+        const propsForElement = {}
         Object.keys(this.props)
-          .filter(propName => !isTag(target) || validAttr(propName))
           .forEach(propName => {
-            propsForElement[propName] = this.props[propName]
+            if (!isTag(target) || validAttr(propName)) {
+              propsForElement[propName] = this.props[propName]
+            }
           })
         propsForElement.className = [className, generatedClassName].filter(x => x).join(' ')
         if (innerRef) {
