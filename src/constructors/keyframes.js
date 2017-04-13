@@ -1,7 +1,7 @@
 // @flow
 import hashStr from '../vendor/glamor/hash'
 import type { Interpolation, NameGenerator, Stringifier } from '../types'
-import StyleSheet from '../models/BrowserStyleSheet'
+import StyleSheet from '../models/StyleSheet'
 
 const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '')
 

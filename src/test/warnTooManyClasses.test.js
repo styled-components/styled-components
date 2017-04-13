@@ -7,7 +7,7 @@ import styleSheet from '../models/StyleSheet'
 
 let styled
 
-describe('warn too many classes', () => {
+describe.skip('warn too many classes', () => {
   const nativeWarn = console.warn
   let warnCallCount;
   /**

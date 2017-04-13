@@ -12,7 +12,7 @@ import type { RuleSet, Target } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
-import StyleSheet from './BrowserStyleSheet'
+import StyleSheet from './StyleSheet'
 
 const escapeRegex = /[[\].#*$><+~=|^:(),"'`]/g
 const multiDashRegex = /--+/g

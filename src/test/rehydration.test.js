@@ -2,12 +2,12 @@ import React from 'react'
 import { shallow } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
-import StyleSheet, { SC_ATTR, LOCAL_ATTR } from '../models/BrowserStyleSheet'
 
 import _injectGlobal from '../constructors/injectGlobal'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
 import _keyframes from '../constructors/keyframes'
+import StyleSheet, { SC_ATTR, LOCAL_ATTR } from '../models/StyleSheet'
 
 const keyframes = _keyframes(hash => `keyframe_${hash%1000}`, stringifyRules, css)
 const injectGlobal = _injectGlobal(stringifyRules, css)
@@ -55,7 +55,7 @@ describe('rehydration', () => {
       expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color: blue; }')
     })
 
-    it('should reuse a componentId', () => {
+    it.only('should reuse a componentId', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
       shallow(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })``

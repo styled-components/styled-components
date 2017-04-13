@@ -91,38 +91,31 @@ class BrowserTag implements Tag {
 }
 
 /* Factory function to separate DOM operations from logical ones*/
-const createBrowserStyleSheet = () => {
-  const tags = []
-  const names = new Set()
-
-  /* Construct existing state from DOM */
-  Array.from(document.querySelectorAll(`[${SC_ATTR}]`)).forEach(el => {
-    tags.push(new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML))
-    ;(el.getAttribute(SC_ATTR) || '').trim().split(/\s+/).forEach(name => {
-      names.add(name)
-    })
-  })
-
-  /* Factory for making more tags */
-  const tagConstructor = (isLocal: boolean): Tag => {
-    const el = document.createElement('style')
-    el.type = 'text/css'
-    el.setAttribute(SC_ATTR, '')
-    el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
-    if (!document.head) throw new Error('Missing document <head>')
-    document.head.appendChild(el)
-    return new BrowserTag(el, isLocal)
-  }
-
-  return new StyleSheet(tagConstructor, tags, names)
-}
-
-let instance
 export default {
-  get instance() {
-    return instance || (instance = createBrowserStyleSheet())
-  },
-  reset() {
-    instance = createBrowserStyleSheet()
+  create() {
+    const tags = []
+    const names = new Set()
+
+    /* Construct existing state from DOM */
+    Array.from(document.querySelectorAll(`[${SC_ATTR}]`)).forEach(el => {
+      tags.push(new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML))
+      ;
+      (el.getAttribute(SC_ATTR) || '').trim().split(/\s+/).forEach(name => {
+        names.add(name)
+      })
+    })
+
+    /* Factory for making more tags */
+    const tagConstructor = (isLocal: boolean): Tag => {
+      const el = document.createElement('style')
+      el.type = 'text/css'
+      el.setAttribute(SC_ATTR, '')
+      el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
+      if (!document.head) throw new Error('Missing document <head>')
+      document.head.appendChild(el)
+      return new BrowserTag(el, isLocal)
+    }
+
+    return new StyleSheet(tagConstructor, tags, names)
   },
 }

@@ -1,4 +1,7 @@
 // @flow
+import BrowserStyleSheet from './BrowserStyleSheet'
+import ServerStyleSheet from './ServerStyleSheet'
+
 export const SC_ATTR = 'data-styled-components'
 export const LOCAL_ATTR = 'data-styled-components-is-local'
 
@@ -11,6 +14,7 @@ export interface Tag {
   toHTML(): string,
 }
 
+let instance = null
 export default class StyleSheet {
   tagConstructor: (boolean) => Tag
   tags: Array<Tag>
@@ -79,5 +83,17 @@ export default class StyleSheet {
     const newTag = this.tagConstructor(isLocal)
     this.tags.push(newTag)
     return newTag
+  }
+
+  static get instance() {
+    return instance || (instance = StyleSheet.create())
+  }
+
+  static reset(isServer: ?boolean) {
+    instance = StyleSheet.create(isServer)
+  }
+
+  static create(isServer: ?boolean = typeof document === 'undefined') {
+    return (isServer ? ServerStyleSheet : BrowserStyleSheet).create(instance)
   }
 }

@@ -1,6 +1,6 @@
 // @flow
 import hashStr from '../vendor/glamor/hash'
-import StyleSheet from '../models/BrowserStyleSheet'
+import StyleSheet from '../models/StyleSheet'
 import type { Interpolation, Stringifier } from '../types'
 
 export default (stringifyRules: Stringifier, css: Function) => {

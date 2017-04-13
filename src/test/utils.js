@@ -6,7 +6,7 @@
 import _styled from '../constructors/styled'
 import css from '../constructors/css'
 import _constructWithOptions from '../constructors/constructWithOptions'
-import StyleSheet from '../models/BrowserStyleSheet'
+import StyleSheet from '../models/StyleSheet'
 import flatten from '../utils/flatten'
 import stringifyRules from '../utils/stringifyRules'
 import _StyledComponent from '../models/StyledComponent'
@@ -20,10 +20,10 @@ import noParserStringifyRules from '../no-parser/stringifyRules'
 export let index = 0
 const classNames = () => String.fromCodePoint(97 + index++)
 
-export const resetStyled = () => {
+export const resetStyled = (isServer = false) => {
   if (!document.head) throw new Error("Missing document <head>")
   document.head.innerHTML = ''
-  StyleSheet.reset()
+  StyleSheet.reset(isServer)
   index = 0
 
   const ComponentStyle = _ComponentStyle(classNames, flatten, stringifyRules)

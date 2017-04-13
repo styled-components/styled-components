@@ -44,16 +44,11 @@ class ServerTag implements Tag {
   }
 }
 
-/* Factory function to separate DOM operations from logical ones*/
-const createServerStyleSheet = () =>
-  /* Factory for making more tags. Very little to do here. */
-   new StyleSheet(isLocal => new ServerTag(isLocal))
-
 export default class ServerStyleSheet {
   instance: StyleSheet
 
   constructor() {
-    this.instance = createServerStyleSheet()
+    this.instance = ServerStyleSheet.create()
   }
 
   collectStyles(children: any) {
@@ -66,5 +61,9 @@ export default class ServerStyleSheet {
 
   get css(): string {
     return this.instance.toHTML()
+  }
+
+  static create() {
+    return new StyleSheet(isLocal => new ServerTag(isLocal))
   }
 }
