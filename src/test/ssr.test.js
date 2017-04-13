@@ -24,16 +24,25 @@ describe('ssr', () => {
 
     const sheet = new ServerStyleSheet()
     const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
-    const css = sheet.css
+    const css = `
+${sheet.css.replace(/></g,">\n<")}
+`
 
     expect({ html, css }).toEqual({
       html: '<h1 class="sc-a b" data-reactroot="" data-reactid="1" data-react-checksum="197727696">Hello SSR!</h1>',
-      css: `<style type="text/css" data-styled-components="b" data-styled-components-is-local="true">
+      css: `
+<style type="text/css" data-styled-components="" data-styled-components-is-local="false">
+/* sc-component-id: sc-global-2303210225 */
+ body {background: papayawhip;}
+
+</style>
+<style type="text/css" data-styled-components="b" data-styled-components-is-local="true">
 /* sc-component-id: sc-a */
 .sc-a {}
 .b {color: red;}
 
-</style>`,
+</style>
+`,
     })
   })
 })

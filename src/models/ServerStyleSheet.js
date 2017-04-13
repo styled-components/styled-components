@@ -33,6 +33,13 @@ class ServerTag implements Tag {
       }\n</style>`
   }
 
+  clone() {
+    const copy = new ServerTag(this.isLocal)
+    copy.components = new Map([...this.components].map(([k, v]) => [k, Object.assign({}, v)]))
+    copy.names = [].concat(this.names)
+    return copy
+  }
+
   getComponent(componentId: string) {
     const existingComp = this.components.get(componentId)
     if (existingComp) return existingComp
@@ -48,7 +55,7 @@ export default class ServerStyleSheet {
   instance: StyleSheet
 
   constructor() {
-    this.instance = ServerStyleSheet.create()
+    this.instance = StyleSheet.clone(StyleSheet.instance)
   }
 
   collectStyles(children: any) {

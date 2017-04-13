@@ -12,23 +12,25 @@ export interface Tag {
   isFull(): boolean,
   inject(componentId: string, css: string, name: ?string): void,
   toHTML(): string,
+  clone(): Tag,
 }
 
 let instance = null
 export default class StyleSheet {
   tagConstructor: (boolean) => Tag
   tags: Array<Tag>
-  hashes: Map<string, string>
   names: Set<string>
+  hashes: Map<string, string>
   componentTags: Map<string, Tag>
 
   constructor(tagConstructor: (boolean) => Tag,
     tags: Array<Tag> = [],
-    names: Set<string> = new Set()) {
+    names: Set<string> = new Set(),
+    hashes: Map<string, string> = new Map()) {
     this.tagConstructor = tagConstructor
     this.tags = tags
     this.names = names
-    this.hashes = new Map()
+    this.hashes = hashes
     this.constructComponentTagMap()
   }
 
@@ -94,6 +96,16 @@ export default class StyleSheet {
   }
 
   static create(isServer: ?boolean = typeof document === 'undefined') {
-    return (isServer ? ServerStyleSheet : BrowserStyleSheet).create(instance)
+    return (isServer ? ServerStyleSheet : BrowserStyleSheet).create()
+  }
+
+  static clone(oldSheet: StyleSheet) {
+    const newSheet = new StyleSheet(
+      oldSheet.tagConstructor,
+      oldSheet.tags.map(tag => tag.clone()),
+      new Set(oldSheet.names),
+      new Map(oldSheet.hashes),
+    )
+    return newSheet
   }
 }

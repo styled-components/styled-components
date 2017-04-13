@@ -54,6 +54,10 @@ class BrowserTag implements Tag {
     return this.el.outerHTML
   }
 
+  clone() {
+    throw new Error('BrowserTag cannot be cloned!')
+  }
+
   /* Because we care about source order, before we can inject anything we need to
    * create a text node for each component and replace the existing CSS. */
   replaceElement() {
