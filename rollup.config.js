@@ -1,4 +1,4 @@
-/* eslint-disable flowtype/require-valid-file-annotation, no-console */
+/* eslint-disable flowtype/require-valid-file-annotation, no-console, import/extensions */
 import nodeResolve from 'rollup-plugin-node-resolve'
 import replace from 'rollup-plugin-replace'
 import commonjs from 'rollup-plugin-commonjs'
@@ -70,9 +70,9 @@ if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' })
 export default {
   entry: 'src/index.js',
   moduleName: 'styled',
-  external: ['react'],
+  external: ['react', 'prop-types'],
   exports: 'named',
   targets,
   plugins,
-  globals: { react: 'React' },
+  globals: { react: 'React', 'prop-types': 'PropTypes' },
 }
