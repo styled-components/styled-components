@@ -4,7 +4,7 @@ import { renderToString } from  'react-dom/server'
 import styled, { ServerStyleSheet } from '../dist/styled-components'
 import fs from 'fs'
 
-const HTML = fs.readFileSync(__dirname + '/index.html')
+const HTML = fs.readFileSync(__dirname + '/index.html').toString()
 
 const Heading = styled.h1`
   color: red;
@@ -16,7 +16,7 @@ const port = 8080
 app.get('*', (req, res) => {
   const sheet = new ServerStyleSheet()
   const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
-  const css = sheet.css
+  const css = sheet.getStyleTags()
 
   res.status(200).send(
     HTML
