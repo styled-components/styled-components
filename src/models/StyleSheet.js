@@ -17,13 +17,16 @@ export interface Tag {
 }
 
 let instance = null
+// eslint-disable-next-line no-use-before-define
+export const clones: Set<StyleSheet> = new Set()
+
 export default class StyleSheet {
   tagConstructor: (boolean) => Tag
   tags: Array<Tag>
   names: Set<string>
-  hashes: Map<string, string>
+  hashes: Map<string, string> = new Map()
+  deferredInjections: Map<string, string> = new Map()
   componentTags: Map<string, Tag>
-  deferredInjections: Map<string, string>
 
   constructor(tagConstructor: (boolean) => Tag,
     tags: Array<Tag> = [],
@@ -31,8 +34,6 @@ export default class StyleSheet {
     this.tagConstructor = tagConstructor
     this.tags = tags
     this.names = names
-    this.hashes = new Map()
-    this.deferredInjections = new Map()
     this.constructComponentTagMap()
   }
 
@@ -63,11 +64,21 @@ export default class StyleSheet {
   }
 
   deferredInject(componentId: string, isLocal: boolean, css: string) {
+    if (this === instance) {
+      clones.forEach(clone =>
+      clone.deferredInject(componentId, isLocal, css))
+    }
+
     this.getOrCreateTag(componentId, isLocal)
     this.deferredInjections.set(componentId, css)
   }
 
   inject(componentId: string, isLocal: boolean, css: string, hash: ?any, name: ?string) {
+    if (this === instance) {
+      clones.forEach(clone =>
+      clone.inject(componentId, isLocal, css))
+    }
+
     const tag = this.getOrCreateTag(componentId, isLocal)
 
     const deferredInjection = this.deferredInjections.get(componentId)
@@ -125,6 +136,7 @@ export default class StyleSheet {
     )
     newSheet.hashes = new Map(oldSheet.hashes)
     newSheet.deferredInjections = new Map(oldSheet.deferredInjections)
+    clones.add(newSheet)
     return newSheet
   }
 }

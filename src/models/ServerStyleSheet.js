@@ -1,7 +1,7 @@
 // @flow
 import React from 'react'
 import type { Tag } from './StyleSheet'
-import StyleSheet, { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
+import StyleSheet, { SC_ATTR, LOCAL_ATTR, clones } from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
 
 class ServerTag implements Tag {
@@ -51,12 +51,14 @@ class ServerTag implements Tag {
 
 export default class ServerStyleSheet {
   instance: StyleSheet
+  closed: boolean
 
   constructor() {
     this.instance = StyleSheet.clone(StyleSheet.instance)
   }
 
   collectStyles(children: any) {
+    if (this.closed) throw new Error("Can't collect styles once you've called getStyleTags!")
     return (
       <StyleSheetManager sheet={this.instance}>
         {children}
@@ -64,7 +66,9 @@ export default class ServerStyleSheet {
     )
   }
 
-  get css(): string {
+  getStyleTags(): string {
+    clones.delete(this.instance)
+    this.closed = true
     return this.instance.toHTML()
   }
 
