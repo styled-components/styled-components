@@ -111,6 +111,8 @@ export default class StyleSheet {
     instance = StyleSheet.create(isServer)
   }
 
+  /* We can make isServer totally implicit once Jest 20 drops and we
+   * can change environment on a per-test basis. */
   static create(isServer: ?boolean = typeof document === 'undefined') {
     return (isServer ? ServerStyleSheet : BrowserStyleSheet).create()
   }

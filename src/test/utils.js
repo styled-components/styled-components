@@ -20,7 +20,7 @@ import noParserStringifyRules from '../no-parser/stringifyRules'
 export let index = 0
 const classNames = () => String.fromCodePoint(97 + index++)
 
-export const resetStyled = (isServer = false) => {
+export const resetStyled = (isServer: boolean = false) => {
   if (!document.head) throw new Error("Missing document <head>")
   document.head.innerHTML = ''
   StyleSheet.reset(isServer)
