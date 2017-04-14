@@ -1,11 +1,15 @@
 import React from 'react'
 import { renderToString } from  'react-dom/server'
 import ServerStyleSheet from '../models/ServerStyleSheet'
-import { resetStyled, stripWhitespace } from './utils'
+import { resetStyled, stripWhitespace, nameGenerator } from './utils'
 import _injectGlobal from '../constructors/injectGlobal'
+import _keyframes from '../constructors/keyframes'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
 const injectGlobal = _injectGlobal(stringifyRules, css)
+
+let index = 0
+const keyframes = _keyframes(() => `keyframe_${index++}`, stringifyRules, css)
 
 let styled
 
@@ -137,6 +141,36 @@ describe('ssr', () => {
       /* sc-component-id: PageTwo */
       .PageTwo {}
       .b { color: blue; }
+      </style>
+    `))
+  })
+
+  it('should dispatch global styles to each ServerStyleSheet', () => {
+    injectGlobal`
+      body { background: papayawhip; }
+    `
+    const Header = styled.h1.withConfig({ componentId: 'Header' })`
+      animation: ${ props => props.animation } 1s both;
+    `
+
+    const sheet = new ServerStyleSheet()
+    const html = renderToString(sheet.collectStyles(
+      <Header animation={keyframes`0% { opacity: 0; }`}/>
+    ))
+    const css = format(sheet.css)
+
+    expect(html).toEqual('<h1 class="Header a" data-reactroot="" data-reactid="1" data-react-checksum="1829114759"></h1>')
+    expect(css).toEqual(format(`
+      <style type="text/css" data-styled-components="" data-styled-components-is-local="false">
+      /* sc-component-id: sc-global-2303210225 */
+      body { background: papayawhip; }
+      </style>
+      <style type="text/css" data-styled-components="a" data-styled-components-is-local="true">
+      /* sc-component-id: sc-keyframes-keyframe_0 */
+      @-webkit-keyframes keyframe_0 {0% {opacity: 0;}}@keyframes keyframe_0 {0% {opacity: 0;}}
+      /* sc-component-id: Header */
+      .Header {}
+      .a { -webkit-animation:keyframe_0 1s both; animation:keyframe_0 1s both; }
       </style>
     `))
   })

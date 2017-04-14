@@ -17,6 +17,6 @@ export default (nameGenerator: NameGenerator, stringifyRules: Stringifier, css: 
     if (StyleSheet.instance.alreadyInjected(hash, name)) return name
 
     const generatedCSS = stringifyRules(rules, name, '@keyframes')
-    StyleSheet.instance.inject(`sc-keyframes-${name}`, false, generatedCSS, hash, name)
+    StyleSheet.instance.inject(`sc-keyframes-${name}`, true, generatedCSS, hash, name)
     return name
   }

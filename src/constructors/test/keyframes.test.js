@@ -39,7 +39,7 @@ describe('keyframes', () => {
 
     const name = keyframes`${rules}`
     expectCSSMatches(`
-      @-webkit-keyframes keyframe_0 {
+      @-webkit-keyframes ${name} {
         0% {
           opacity: 0;
         }
@@ -48,7 +48,7 @@ describe('keyframes', () => {
         }
       }
 
-      @keyframes keyframe_0 {
+      @keyframes ${name} {
         0% {
           opacity: 0;
         }
