@@ -18,12 +18,12 @@ describe('basic', () => {
     styled.div``
   })
 
-  it('should generate only component class by default', () => {
+  it('should not inject anything by default', () => {
     styled.div``
-    expectCSSMatches('.sc-a {}')
+    expectCSSMatches('')
   })
 
-  it('should generate only component class even if rendered if no styles are passed', () => {
+  it('should inject component class when rendered even if no styles are passed', () => {
     const Comp = styled.div``
     shallow(<Comp />)
     expectCSSMatches('.sc-a {}')

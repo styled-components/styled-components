@@ -51,7 +51,7 @@ describe('extending', () => {
 
     shallow(<Child />)
 
-    expectCSSMatches('.sc-a {} .sc-b {} .c { color: blue;color: red; }')
+    expectCSSMatches('.sc-b {} .c { color: blue;color: red; }')
   })
 
   it('should generate different classes for both parent and child', () => {

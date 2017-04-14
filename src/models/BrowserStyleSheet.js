@@ -41,16 +41,18 @@ class BrowserTag implements Tag {
   }
 
   addComponent(componentId: string) {
+    if (!this.ready) this.replaceElement()
     const comp = { componentId, textNode: document.createTextNode('') }
     this.el.appendChild(comp.textNode)
     this.components.set(componentId, comp)
   }
 
   inject(componentId: string, css: string, name: ?string) {
-    if (!this.ready) this.replaceElement()
     const comp = this.components.get(componentId)
     if (!comp) throw new Error('Must add a new component before you can inject css into it')
-    if (comp.data === '') { comp.textNode.appendData(css.replace(/\n*$/, '\n')) }
+    if (comp.textNode.data === '') comp.textNode.appendData(`\n/* sc-component-id: ${componentId} */\n`)
+
+    comp.textNode.appendData(css)
     if (name) {
       const existingNames = this.el.getAttribute(SC_ATTR)
       this.el.setAttribute(SC_ATTR, existingNames ? `${existingNames} ${name}` : name)

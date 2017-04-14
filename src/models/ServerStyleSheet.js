@@ -28,6 +28,7 @@ class ServerTag implements Tag {
     const comp = this.components.get(componentId)
     if (!comp) throw new Error('Must add a new component before you can inject css into it')
     if (comp.css === '') comp.css = `/* sc-component-id: ${componentId} */\n`
+
     comp.css += css.replace(/\n*$/, '\n')
     if (name) this.names.push(name)
   }
