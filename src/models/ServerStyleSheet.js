@@ -19,8 +19,15 @@ class ServerTag implements Tag {
     return false
   }
 
+  addComponent(componentId: string) {
+    const comp = { componentId, css: '' }
+    this.components.set(componentId, comp)
+  }
+
   inject(componentId: string, css: string, name: ?string) {
-    const comp = this.getComponent(componentId)
+    const comp = this.components.get(componentId)
+    if (!comp) throw new Error('Must add a new component before you can inject css into it')
+    if (comp.css === '') comp.css = `/* sc-component-id: ${componentId} */\n`
     comp.css += css.replace(/\n*$/, '\n')
     if (name) this.names.push(name)
   }
@@ -38,16 +45,6 @@ class ServerTag implements Tag {
     copy.components = new Map([...this.components].map(([k, v]) => [k, Object.assign({}, v)]))
     copy.names = [].concat(this.names)
     return copy
-  }
-
-  getComponent(componentId: string) {
-    const existingComp = this.components.get(componentId)
-    if (existingComp) return existingComp
-
-    const css = `/* sc-component-id: ${componentId} */\n`
-    const comp = { componentId, css }
-    this.components.set(componentId, comp)
-    return comp
   }
 }
 

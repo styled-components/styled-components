@@ -40,10 +40,17 @@ class BrowserTag implements Tag {
     return this.components.size >= COMPONENTS_PER_TAG
   }
 
+  addComponent(componentId: string) {
+    const comp = { componentId, textNode: document.createTextNode('') }
+    this.el.appendChild(comp.textNode)
+    this.components.set(componentId, comp)
+  }
+
   inject(componentId: string, css: string, name: ?string) {
     if (!this.ready) this.replaceElement()
-    const comp = this.getComponent(componentId)
-    comp.textNode.appendData(css.replace(/\n*$/, '\n'))
+    const comp = this.components.get(componentId)
+    if (!comp) throw new Error('Must add a new component before you can inject css into it')
+    if (comp.data === '') { comp.textNode.appendData(css.replace(/\n*$/, '\n')) }
     if (name) {
       const existingNames = this.el.getAttribute(SC_ATTR)
       this.el.setAttribute(SC_ATTR, existingNames ? `${existingNames} ${name}` : name)
@@ -80,17 +87,6 @@ class BrowserTag implements Tag {
     // The ol' switcheroo
     this.el.parentNode.replaceChild(newEl, this.el)
     this.el = newEl
-  }
-
-  getComponent(componentId: string) {
-    const existingComp = this.components.get(componentId)
-    if (existingComp) return existingComp
-
-    const css = `/* sc-component-id: ${componentId} */\n`
-    const comp = { componentId, textNode: document.createTextNode(css) }
-    this.el.appendChild(comp.textNode)
-    this.components.set(componentId, comp)
-    return comp
   }
 }
 

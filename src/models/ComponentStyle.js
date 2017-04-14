@@ -16,9 +16,8 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
     constructor(rules: RuleSet, componentId: string) {
       this.rules = rules
       this.componentId = componentId
-      /* TODO: find a way for order to be taken in to account */
       if (!StyleSheet.instance.hasInjectedComponent(this.componentId)) {
-        StyleSheet.instance.inject(this.componentId, true, `.${this.componentId} {}`)
+        StyleSheet.instance.deferredInject(componentId, true, `.${componentId} {}`)
       }
     }
 

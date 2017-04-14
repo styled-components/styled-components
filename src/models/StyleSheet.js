@@ -10,6 +10,7 @@ export interface Tag {
   components: Map<string, Object>,
 
   isFull(): boolean,
+  addComponent(componentId: string): void,
   inject(componentId: string, css: string, name: ?string): void,
   toHTML(): string,
   clone(): Tag,
@@ -22,15 +23,16 @@ export default class StyleSheet {
   names: Set<string>
   hashes: Map<string, string>
   componentTags: Map<string, Tag>
+  deferredInjections: Map<string, string>
 
   constructor(tagConstructor: (boolean) => Tag,
     tags: Array<Tag> = [],
-    names: Set<string> = new Set(),
-    hashes: Map<string, string> = new Map()) {
+    names: Set<string> = new Set()) {
     this.tagConstructor = tagConstructor
     this.tags = tags
     this.names = names
-    this.hashes = hashes
+    this.hashes = new Map()
+    this.deferredInjections = new Map()
     this.constructComponentTagMap()
   }
 
@@ -60,8 +62,21 @@ export default class StyleSheet {
     return !!this.componentTags.get(componentId)
   }
 
+  deferredInject(componentId: string, isLocal: boolean, css: string) {
+    this.getOrCreateTag(componentId, isLocal)
+    this.deferredInjections.set(componentId, css)
+  }
+
   inject(componentId: string, isLocal: boolean, css: string, hash: ?any, name: ?string) {
-    this.getTag(componentId, isLocal).inject(componentId, css, name)
+    const tag = this.getOrCreateTag(componentId, isLocal)
+
+    const deferredInjection = this.deferredInjections.get(componentId)
+    if (deferredInjection) {
+      tag.inject(componentId, deferredInjection)
+      this.deferredInjections.delete(componentId)
+    }
+
+    tag.inject(componentId, css, name)
     if (hash && name) this.hashes.set(hash.toString(), name)
   }
 
@@ -69,7 +84,7 @@ export default class StyleSheet {
     return this.tags.map(tag => tag.toHTML()).join('')
   }
 
-  getTag(componentId: string, isLocal: boolean) {
+  getOrCreateTag(componentId: string, isLocal: boolean) {
     const existingTag = this.componentTags.get(componentId)
     if (existingTag) return existingTag
 
@@ -78,6 +93,7 @@ export default class StyleSheet {
       ? this.createNewTag(isLocal)
       : lastTag
     this.componentTags.set(componentId, componentTag)
+    componentTag.addComponent(componentId)
     return componentTag
   }
 
@@ -104,8 +120,9 @@ export default class StyleSheet {
       oldSheet.tagConstructor,
       oldSheet.tags.map(tag => tag.clone()),
       new Set(oldSheet.names),
-      new Map(oldSheet.hashes),
     )
+    newSheet.hashes = new Map(oldSheet.hashes)
+    newSheet.deferredInjections = new Map(oldSheet.deferredInjections)
     return newSheet
   }
 }

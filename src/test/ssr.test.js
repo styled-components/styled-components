@@ -124,8 +124,6 @@ describe('ssr', () => {
       /* sc-component-id: PageOne */
       .PageOne {}
       .a { color: red; }
-      /* sc-component-id: PageTwo */
-      .PageTwo {}
       </style>
     `))
 
@@ -136,8 +134,6 @@ describe('ssr', () => {
       body { background: papayawhip; }
       </style>
       <style type="text/css" data-styled-components="b" data-styled-components-is-local="true">
-      /* sc-component-id: PageOne */
-      .PageOne {}
       /* sc-component-id: PageTwo */
       .PageTwo {}
       .b { color: blue; }
