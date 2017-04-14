@@ -20,7 +20,6 @@
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
     "dev": "babel-node example/devServer.js",
-    "example:ssr": "babel-node example/ssr"
   },
   "repository": {
     "type": "git",
