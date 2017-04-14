@@ -9,6 +9,8 @@ class StyleSheetManager extends Component {
   }
 
   render() {
+    // $FlowFixMe
+    // eslint-disable-next-line react/prop-types
     return React.Children.only(this.props.children)
   }
 }
@@ -16,9 +18,9 @@ class StyleSheetManager extends Component {
 StyleSheetManager.childContextTypes = {
   StyleSheet: PropTypes.instanceOf(StyleSheet).isRequired,
 }
+
 StyleSheetManager.propTypes = {
   sheet: PropTypes.instanceOf(StyleSheet).isRequired,
-  children: React.PropTypes.element.isRequired,
 }
 
 export default StyleSheetManager
