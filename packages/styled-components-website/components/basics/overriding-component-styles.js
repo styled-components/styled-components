@@ -6,7 +6,6 @@ import Code from '../Code'
 const sample = (`
 // The Button from the last section without the interpolations
 const Button = styled.button\`
-  background: white;
   color: palevioletred;
   font-size: 1em;
   margin: 1em;

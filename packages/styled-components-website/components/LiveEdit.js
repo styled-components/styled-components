@@ -74,12 +74,13 @@ const StyledError = styled(LiveError)`
   white-space: pre;
 `
 
-const LiveEdit = ({ noInline, code }) => (
+const LiveEdit = ({ noInline, code, scope = {} }) => (
   <StyledProvider
     code={code}
     noInline={noInline}
     mountStylesheet={false}
     scope={{
+      ...scope,
       styled,
       css,
       keyframes

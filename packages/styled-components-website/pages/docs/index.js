@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 
 import DocsLayout from '../../components/DocsLayout'
-import { Title, Header, SubHeader } from '../../components/Layout'
+import { Title, Header } from '../../components/Layout'
 import Link from '../../components/Link'
 import titleToDash from '../../utils/titleToDash'
 import { pages } from '../docs.json'
@@ -25,6 +25,13 @@ const Column = styled.div`
     max-width: 50%;
     flex-basis: 50%;
   }
+`
+
+const SubHeader = styled.h3`
+  display: block;
+  margin: ${rem(8)} 0;
+  font-size: ${rem(18)};
+  font-weight: normal;
 `
 
 const Documentation = ({ url }) => (
