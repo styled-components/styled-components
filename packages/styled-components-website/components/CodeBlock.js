@@ -1,6 +1,6 @@
 import styled from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
-import { lightGrey } from '../utils/colors'
+import { darkGrey } from '../utils/colors'
 
 import '../utils/prismTemplateString'
 import { Editor } from 'react-live'
@@ -8,7 +8,7 @@ import { Editor } from 'react-live'
 const CodeBlock = styled(Editor).attrs({
   contentEditable: false
 })`
-  background: ${lightGrey};
+  background: ${darkGrey};
   font-size: 0.8rem;
   font-family: monospace;
   white-space: pre-wrap;

@@ -1,7 +1,7 @@
 import React from 'react'
 import styled, { css, keyframes } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
-import { lightGrey, red } from '../utils/colors'
+import { darkGrey, red } from '../utils/colors'
 
 import '../utils/prismTemplateString'
 
@@ -43,7 +43,7 @@ const columnMixin = css`
 `
 
 const StyledEditor = styled(LiveEditor)`
-  background: ${lightGrey};
+  background: ${darkGrey};
   font-size: 0.8rem;
   font-family: monospace;
   height: ${rem(400)};

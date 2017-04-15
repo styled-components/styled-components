@@ -7,9 +7,9 @@ import { Editor } from 'react-live'
 
 const Code = styled.span`
   display: inline-block;
-  background: rgba(20, 20, 20, 0.1);
+  background: ${lightGrey};
   font-family: monospace;
-  font-size: 0.9rem;
+  font-size: 90%;
   border-radius: ${rem(3)};
   padding: ${rem(2)} ${rem(5)};
 `

@@ -4,7 +4,7 @@ import 'prismjs/components/prism-css'
 // NOTE: This highlights template-strings as strings of CSS
 Prism.languages.insertBefore('jsx', 'string', {
   'template-string': {
-    pattern: /(styled\.\w+(\.\w+(\([^\)]*\))*)*|css|injectGlobal|keyframes)`(?:\\\\|\\?[^\\])*?`/,
+    pattern: /(styled(\.\w+|\([^\)]*\))(\.\w+(\([^\)]*\))*)*|css|injectGlobal|keyframes)`(?:\\\\|\\?[^\\])*?`/,
     lookbehind: true,
     greedy: true,
     inside: {

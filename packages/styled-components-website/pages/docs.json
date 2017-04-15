@@ -38,6 +38,7 @@
       ]
     }, {
       "title": "API Reference",
+      "pathname": "api",
       "sections": [
         {
           "title": "Primary"

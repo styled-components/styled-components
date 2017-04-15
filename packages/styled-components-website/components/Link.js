@@ -21,6 +21,7 @@ export const InlineLink = styled(StyledLink).attrs({
 })`
   text-decoration: underline;
   color: palevioletred;
+  font-weight: 600;
 `
 
 export default Link
