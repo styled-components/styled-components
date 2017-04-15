@@ -29,9 +29,9 @@ render(
 const Refs = () => (
   <SectionLayout title="Refs">
     <p>
-      Passing a <Code>ref</Code> prop to a styled component will give you a instance of the <Code>StyledComponent</Code>
-      wrapper, not to the underlying DOM node. So it's not possible to call DOM methods, like <Code>focus</Code> on
-      that wrapper.
+      Passing a <Code>ref</Code> prop to a styled component will give you a instance of
+      the <Code>StyledComponent</Code> wrapper, not to the underlying DOM node.
+      So it's not possible to call DOM methods, like <Code>focus</Code> on that wrapper.
     </p>
 
     <p>
