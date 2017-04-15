@@ -6,12 +6,14 @@ import StyleSheetManager from './StyleSheetManager'
 
 class ServerTag implements Tag {
   isLocal: boolean
-  components: Map<string, Object>
+  components: { [string]: Object }
+  size: number
   names: Array<string>
 
   constructor(isLocal: boolean) {
     this.isLocal = isLocal
-    this.components = new Map()
+    this.components = {}
+    this.size = 0
     this.names = []
   }
 
@@ -21,30 +23,41 @@ class ServerTag implements Tag {
 
   addComponent(componentId: string) {
     const comp = { componentId, css: '' }
-    this.components.set(componentId, comp)
+    this.components[componentId] = comp
+    this.size += 1
   }
 
   inject(componentId: string, css: string, name: ?string) {
-    const comp = this.components.get(componentId)
+    const comp = this.components[componentId]
+
     if (!comp) throw new Error('Must add a new component before you can inject css into it')
     if (comp.css === '') comp.css = `/* sc-component-id: ${componentId} */\n`
 
     comp.css += css.replace(/\n*$/, '\n')
+
     if (name) this.names.push(name)
   }
 
   toHTML() {
     const namesAttr = `${SC_ATTR}="${this.names.join(' ')}"`
     const localAttr = `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`
-    return `<style type="text/css" ${namesAttr} ${localAttr}>\n${
-      Array.from(this.components.values()).map(comp => comp.css).join('')
-      }\n</style>`
+    const css = Object.keys(this.components)
+      .map(key => this.components[key].css)
+      .join('')
+
+    return `<style type="text/css" ${namesAttr} ${localAttr}>\n${css}\n</style>`
   }
 
   clone() {
     const copy = new ServerTag(this.isLocal)
-    copy.components = new Map([...this.components].map(([k, v]) => [k, Object.assign({}, v)]))
     copy.names = [].concat(this.names)
+    copy.size = this.size
+    copy.components = Object.keys(this.components)
+      .reduce((acc, key) => {
+        acc[key] = { ...this.components[key] } // eslint-disable-line no-param-reassign
+        return acc
+      }, {})
+
     return copy
   }
 }
@@ -67,8 +80,11 @@ export default class ServerStyleSheet {
   }
 
   getStyleTags(): string {
-    clones.delete(this.instance)
-    this.closed = true
+    if (!this.closed) {
+      clones.splice(clones.indexOf(this.instance), 1)
+      this.closed = true
+    }
+
     return this.instance.toHTML()
   }
 

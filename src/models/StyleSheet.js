@@ -7,7 +7,8 @@ export const LOCAL_ATTR = 'data-styled-components-is-local'
 
 export interface Tag {
   isLocal: boolean,
-  components: Map<string, Object>,
+  components: { [string]: Object },
+  size: number,
 
   isFull(): boolean,
   addComponent(componentId: string): void,
@@ -18,19 +19,20 @@ export interface Tag {
 
 let instance = null
 // eslint-disable-next-line no-use-before-define
-export const clones: Set<StyleSheet> = new Set()
+export const clones: Array<StyleSheet> = []
 
 export default class StyleSheet {
   tagConstructor: (boolean) => Tag
   tags: Array<Tag>
-  names: Set<string>
-  hashes: Map<string, string> = new Map()
-  deferredInjections: Map<string, string> = new Map()
-  componentTags: Map<string, Tag>
+  names: { [string]: boolean }
+  hashes: { [string]: string } = {}
+  deferredInjections: { [string]: string } = {}
+  componentTags: { [string]: Tag }
 
   constructor(tagConstructor: (boolean) => Tag,
     tags: Array<Tag> = [],
-    names: Set<string> = new Set()) {
+    names: { [string]: boolean } = {},
+  ) {
     this.tagConstructor = tagConstructor
     this.tags = tags
     this.names = names
@@ -38,57 +40,65 @@ export default class StyleSheet {
   }
 
   constructComponentTagMap() {
-    this.componentTags = new Map()
-    this.tags.forEach(tag =>
-      tag.components.forEach(comp =>
-        this.componentTags.set(comp.componentId, tag)))
+    this.componentTags = {}
+
+    this.tags.forEach(tag => {
+      Object.keys(tag.components).forEach(componentId => {
+        this.componentTags[componentId] = tag
+      })
+    })
   }
 
   /* Best level of caching—get the name from the hash straight away. */
   getName(hash: any) {
-    return this.hashes.get(hash.toString())
+    return this.hashes[hash.toString()]
   }
 
   /* Second level of caching—if the name is already in the dom, don't
    * inject anything and record the hash for getName next time. */
   alreadyInjected(hash: any, name: string) {
-    if (!this.names.has(name)) return false
+    if (!this.names[name]) return false
 
-    this.hashes.set(hash.toString(), name)
+    this.hashes[hash.toString()] = name
     return true
   }
 
   /* Third type of caching—don't inject components' componentId twice. */
   hasInjectedComponent(componentId: string) {
-    return !!this.componentTags.get(componentId)
+    return !!this.componentTags[componentId]
   }
 
   deferredInject(componentId: string, isLocal: boolean, css: string) {
     if (this === instance) {
-      clones.forEach(clone =>
-      clone.deferredInject(componentId, isLocal, css))
+      clones.forEach(clone => {
+        clone.deferredInject(componentId, isLocal, css)
+      })
     }
 
     this.getOrCreateTag(componentId, isLocal)
-    this.deferredInjections.set(componentId, css)
+    this.deferredInjections[componentId] = css
   }
 
   inject(componentId: string, isLocal: boolean, css: string, hash: ?any, name: ?string) {
     if (this === instance) {
-      clones.forEach(clone =>
-      clone.inject(componentId, isLocal, css))
+      clones.forEach(clone => {
+        clone.inject(componentId, isLocal, css)
+      })
     }
 
     const tag = this.getOrCreateTag(componentId, isLocal)
 
-    const deferredInjection = this.deferredInjections.get(componentId)
+    const deferredInjection = this.deferredInjections[componentId]
     if (deferredInjection) {
       tag.inject(componentId, deferredInjection)
-      this.deferredInjections.delete(componentId)
+      delete this.deferredInjections[componentId]
     }
 
     tag.inject(componentId, css, name)
-    if (hash && name) this.hashes.set(hash.toString(), name)
+
+    if (hash && name) {
+      this.hashes[hash.toString()] = name
+    }
   }
 
   toHTML() {
@@ -96,14 +106,16 @@ export default class StyleSheet {
   }
 
   getOrCreateTag(componentId: string, isLocal: boolean) {
-    const existingTag = this.componentTags.get(componentId)
-    if (existingTag) return existingTag
+    const existingTag = this.componentTags[componentId]
+    if (existingTag) {
+      return existingTag
+    }
 
     const lastTag = this.tags[this.tags.length - 1]
     const componentTag = (!lastTag || lastTag.isFull() || lastTag.isLocal !== isLocal)
       ? this.createNewTag(isLocal)
       : lastTag
-    this.componentTags.set(componentId, componentTag)
+    this.componentTags[componentId] = componentTag
     componentTag.addComponent(componentId)
     return componentTag
   }
@@ -132,11 +144,13 @@ export default class StyleSheet {
     const newSheet = new StyleSheet(
       oldSheet.tagConstructor,
       oldSheet.tags.map(tag => tag.clone()),
-      new Set(oldSheet.names),
+      { ...oldSheet.names },
     )
-    newSheet.hashes = new Map(oldSheet.hashes)
-    newSheet.deferredInjections = new Map(oldSheet.deferredInjections)
-    clones.add(newSheet)
+
+    newSheet.hashes = { ...oldSheet.hashes }
+    newSheet.deferredInjections = { ...oldSheet.deferredInjections }
+    clones.push(newSheet)
+
     return newSheet
   }
 }

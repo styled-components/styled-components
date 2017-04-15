@@ -23,32 +23,45 @@ export const COMPONENTS_PER_TAG = 40
 
 class BrowserTag implements Tag {
   isLocal: boolean
-  components: Map<string, Object>
+  components: { [string]: Object }
+  size: number
   el: HTMLElement
   ready: boolean
 
   constructor(el: HTMLElement, isLocal: boolean, existingSource: string = '') {
     this.el = el
     this.isLocal = isLocal
-    this.components = new Map(extractCompsFromCSS(existingSource).map(obj =>
-      [obj.componentId, obj],
-    ))
     this.ready = false
+
+    const extractedComps = extractCompsFromCSS(existingSource)
+
+    this.size = extractedComps.length
+    this.components = extractedComps.reduce((acc, obj) => {
+      acc[obj.componentId] = obj // eslint-disable-line no-param-reassign
+      return acc
+    }, {})
   }
 
   isFull() {
-    return this.components.size >= COMPONENTS_PER_TAG
+    return this.size >= COMPONENTS_PER_TAG
   }
 
   addComponent(componentId: string) {
     if (!this.ready) this.replaceElement()
+
     const comp = { componentId, textNode: document.createTextNode('') }
     this.el.appendChild(comp.textNode)
-    this.components.set(componentId, comp)
+
+    if (this.components[componentId] === undefined) {
+      this.size += 1
+    }
+
+    this.components[componentId] = comp
   }
 
   inject(componentId: string, css: string, name: ?string) {
-    const comp = this.components.get(componentId)
+    const comp = this.components[componentId]
+
     if (!comp) throw new Error('Must add a new component before you can inject css into it')
     if (comp.textNode.data === '') comp.textNode.appendData(`\n/* sc-component-id: ${componentId} */\n`)
 
@@ -72,13 +85,15 @@ class BrowserTag implements Tag {
   replaceElement() {
     this.ready = true
     // We have nothing to inject. Use the current el.
-    if (this.components.size === 0) return
+    if (this.size === 0) return
 
     // Build up our replacement style tag
     const newEl = this.el.cloneNode()
     newEl.appendChild(document.createTextNode('\n'))
 
-    this.components.forEach(comp => {
+    Object.keys(this.components).forEach(key => {
+      const comp = this.components[key]
+
       // eslint-disable-next-line no-param-reassign
       comp.textNode = document.createTextNode(comp.cssFromDOM)
       newEl.appendChild(comp.textNode)
@@ -96,15 +111,18 @@ class BrowserTag implements Tag {
 export default {
   create() {
     const tags = []
-    const names = new Set()
+    const names = {}
 
     /* Construct existing state from DOM */
     Array.from(document.querySelectorAll(`[${SC_ATTR}]`)).forEach(el => {
-      tags.push(new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML))
-      ;
-      (el.getAttribute(SC_ATTR) || '').trim().split(/\s+/).forEach(name => {
-        names.add(name)
-      })
+      tags.push(new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML));
+
+      (el.getAttribute(SC_ATTR) || '')
+        .trim()
+        .split(/\s+/)
+        .forEach(name => {
+          names[name] = true
+        })
     })
 
     /* Factory for making more tags */
