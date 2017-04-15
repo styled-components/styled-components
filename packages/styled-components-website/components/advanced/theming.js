@@ -136,7 +136,7 @@ const Theming = () => (
     />
 
     <SubHeader>
-      Getting theme without styled components
+      Getting the theme without styled components
     </SubHeader>
 
     <p>

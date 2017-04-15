@@ -18,6 +18,10 @@ const AnchorIcon = styled(LinkIcon).attrs({
   width: ${rem(20)};
   opacity: 0.7;
   margin-top: ${rem(-5)};
+
+  &:hover {
+    opacity: 0.9;
+  }
 `
 
 const AnchorHeader = styled(Header)`
