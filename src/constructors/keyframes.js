@@ -3,11 +3,14 @@ import hashStr from '../vendor/glamor/hash'
 import css from './css'
 import GlobalStyle from '../models/GlobalStyle'
 import type { Interpolation, NameGenerator } from '../types'
+import validate from '../utils/validate-arguments'
 
 const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '')
 
 export default (nameGenerator: NameGenerator) =>
   (strings: Array<string>, ...interpolations: Array<Interpolation>): string => {
+    validate('keyframes')(strings)
+
     const rules = css(strings, ...interpolations)
     const hash = hashStr(replaceWhitespace(JSON.stringify(rules)))
     const name = nameGenerator(hash)

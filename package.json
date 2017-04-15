@@ -112,6 +112,7 @@
     "rollup-plugin-replace": "^1.1.1",
     "rollup-plugin-uglify": "^1.0.1",
     "rollup-plugin-visualizer": "^0.1.5",
+    "sinon": "^2.1.0",
     "tslint": "^4.3.1",
     "typescript": "^2.1.5"
   },
