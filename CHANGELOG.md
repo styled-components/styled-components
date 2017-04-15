@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. If a contri
 ## [Unreleased]
 
 ### Added
+- Add a section in tips and tricks to show how to choose a component based on props. [@k15a](https://github.com/k15a)
 
 ### Changed
 

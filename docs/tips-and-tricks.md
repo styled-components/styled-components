@@ -203,3 +203,50 @@ class Form extends Component {
   }
 }
 ```
+
+### Choosing a component based on props
+
+Sometimes you want to choose the component based on props. Because styled-components takes a component as first parameter you can create a temporary component which returns another component based on props.
+
+For example:
+
+```JS
+const Button = styled(props => props.anchor ? <a {...props} /> : <button {...props} />)`
+  border: 1px solid black;
+  padding: 0.5rem 2rem;
+  background: rebeccapurple;
+`
+
+// Usage
+
+<Button>Click me</Button>
+// would render <button>Click me</button>
+
+<Button anchor>Click me</Button>
+// would render <a>Click me</a>
+```
+
+A more generic version would be:
+
+```JS
+const Button = styled(({ tag, children, ...props}) => e(tag, props, children))`
+  border: 1px solid black;
+  padding: 0.5rem 2rem;
+  background: rebeccapurple;
+`
+
+Button.defaultProps = {
+  tag: 'button'
+}
+
+// Usage
+
+<Button>Click me</Button>
+// would render <button>Click me</button>
+
+<Button tag="a">Click me</Button>
+// would render <a>Click me</a>
+
+<Button tag="input" type="button" value="Click me" />
+// would render <input type="button" value="Click me" />
+```
