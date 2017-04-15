@@ -1,7 +1,6 @@
 // @flow
 import React, { Component } from 'react'
 import expect from 'expect'
-import sinon from 'sinon'
 import { shallow } from 'enzyme'
 
 import injectGlobal from '../injectGlobal'
