@@ -56,10 +56,10 @@
     "buffer": "^5.0.2",
     "css-to-react-native": "^1.0.6",
     "fbjs": "^0.8.7",
-    "glamor": "^2.20.12",
     "inline-style-prefixer": "^2.0.5",
     "is-function": "^1.0.1",
     "is-plain-object": "^2.0.1",
+    "prop-types": "^15.5.4",
     "supports-color": "^3.1.2"
   },
   "devDependencies": {
@@ -71,7 +71,7 @@
     "babel-loader": "^6.2.10",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-plugin-external-helpers": "^6.18.0",
-    "babel-plugin-flow-react-proptypes": "^0.18.2",
+    "babel-plugin-flow-react-proptypes": "^1.2.0",
     "babel-plugin-transform-class-properties": "^6.19.0",
     "babel-plugin-transform-flow-strip-types": "^6.21.0",
     "babel-plugin-transform-object-rest-spread": "^6.20.2",

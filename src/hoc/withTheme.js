@@ -2,11 +2,12 @@
 /* globals ReactClass */
 
 import React from 'react'
+import PropTypes from 'prop-types'
 import { CHANNEL } from '../models/ThemeProvider'
 
 export default (Component: ReactClass<mixed>) => class extends React.Component {
   static contextTypes = {
-    [CHANNEL]: React.PropTypes.func,
+    [CHANNEL]: PropTypes.func,
   };
 
   state: { theme?: ?Object } = {};
