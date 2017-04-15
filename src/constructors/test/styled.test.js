@@ -15,6 +15,7 @@ describe('styled', () => {
   it('should console.error the correct name for html tags when invalid arguments are passed', () => {
     const consoleSpy = sinon.spy(console, 'error')
 
+    // $FlowInvalidInputTest
     styled.div(`
       html {
         color: blue;
@@ -31,6 +32,7 @@ describe('styled', () => {
 
     const component = () => <div />
 
+    // $FlowInvalidInputTest
     styled(component)(`
       html {
         color: blue;
