@@ -1,4 +1,4 @@
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 import UnstyledLink from 'next/link'
 
 export const StyledLink = styled.a`
@@ -7,12 +7,20 @@ export const StyledLink = styled.a`
   cursor: pointer;
 `
 
-const Link = ({ children, className, ...rest }) => (
+const Link = ({ children, className, inline, ...rest }) => (
   <UnstyledLink {...rest}>
-    <StyledLink className={className}>
+    <StyledLink className={className} inline={inline}>
       {children}
     </StyledLink>
   </UnstyledLink>
 )
+
+export const InlineLink = styled(StyledLink).attrs({
+  target: '_blank',
+  rel: 'noopener'
+})`
+  text-decoration: underline;
+  color: palevioletred;
+`
 
 export default Link
