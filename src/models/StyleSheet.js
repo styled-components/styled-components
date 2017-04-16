@@ -4,6 +4,7 @@ import ServerStyleSheet from './ServerStyleSheet'
 
 export const SC_ATTR = 'data-styled-components'
 export const LOCAL_ATTR = 'data-styled-components-is-local'
+export const CONTEXT_KEY = '__styled-components-stylesheet__'
 
 export interface Tag {
   isLocal: boolean,

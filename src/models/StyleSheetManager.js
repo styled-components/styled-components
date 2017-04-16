@@ -1,11 +1,11 @@
 // @flow
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import StyleSheet from './StyleSheet'
+import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
 
 class StyleSheetManager extends Component {
   getChildContext() {
-    return { StyleSheet: this.props.sheet }
+    return { [CONTEXT_KEY]: this.props.sheet }
   }
 
   render() {
@@ -16,7 +16,7 @@ class StyleSheetManager extends Component {
 }
 
 StyleSheetManager.childContextTypes = {
-  StyleSheet: PropTypes.instanceOf(StyleSheet).isRequired,
+  [CONTEXT_KEY]: PropTypes.instanceOf(StyleSheet).isRequired,
 }
 
 StyleSheetManager.propTypes = {
