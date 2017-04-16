@@ -113,7 +113,7 @@ const TypeScript = () => (
     <SectionLayout sub title={[ 'Caveat with ', <Code>className</Code> ]}>
       <p>
         When defining a component you will need to mark <Code>className</Code> as optional
-        in your the Props interface:
+        in your Props interface:
       </p>
 
       <CodeBlock code={propsClassName} />
