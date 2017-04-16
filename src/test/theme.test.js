@@ -182,7 +182,7 @@ describe('theming', () => {
     expectCSSMatches(`.sc-a {} .c { color: ${theme.color}; } .sc-b {} .d { background: ${theme.color}; }`)
   })
 
-  it.only('should inject new CSS when the theme changes', () => {
+  it('should inject new CSS when the theme changes', () => {
     const Comp = styled.div`
       color: ${props => props.theme.color};
     `
