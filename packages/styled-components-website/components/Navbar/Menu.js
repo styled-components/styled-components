@@ -26,6 +26,7 @@ const MenuInner = styled.div`
   ${mobile(css`
     border-top: 2px solid ${lightGrey};
     padding-top: ${rem(10)};
+    padding-bottom: ${rem(60)};
     overflow-y: scroll;
   `)}
 `
