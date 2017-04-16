@@ -1,10 +1,7 @@
 // @flow
 import React, { Component } from 'react'
-import expect from 'expect'
 import { shallow, mount } from 'enzyme'
-import jsdom from 'mocha-jsdom'
 
-import styleSheet from '../models/StyleSheet'
 import { resetStyled, expectCSSMatches } from './utils'
 
 let styled
@@ -21,18 +18,12 @@ describe('basic', () => {
     styled.div``
   })
 
-  it('should inject a stylesheet when a component is created', () => {
-    const Comp = styled.div``
-    shallow(<Comp />)
-    expect(styleSheet.injected).toBe(true)
-  })
-
-  it('should generate only component class by default', () => {
+  it('should not inject anything by default', () => {
     styled.div``
-    expectCSSMatches('.sc-a {}')
+    expectCSSMatches('')
   })
 
-  it('should generate only component class even if rendered if no styles are passed', () => {
+  it('should inject component class when rendered even if no styles are passed', () => {
     const Comp = styled.div``
     shallow(<Comp />)
     expectCSSMatches('.sc-a {}')
@@ -56,8 +47,6 @@ describe('basic', () => {
   })
 
   describe('jsdom tests', () => {
-    jsdom()
-
     it('should pass the ref to the component', () => {
       const Comp = styled.div``
 
@@ -75,7 +64,7 @@ describe('basic', () => {
 
       // $FlowFixMe
       expect(wrapper.node.testRef).toBe(component.getDOMNode())
-      expect(component.find('div').prop('innerRef')).toNotExist()
+      expect(component.find('div').prop('innerRef')).toBeFalsy()
     })
 
     class InnerComponent extends Component {
@@ -100,7 +89,7 @@ describe('basic', () => {
 
       // $FlowFixMe
       expect(wrapper.node.testRef).toBe(innerComponent.node)
-      expect(innerComponent.prop('innerRef')).toNotExist()
+      expect(innerComponent.prop('innerRef')).toBeFalsy()
     })
 
     it('should pass the full className to the wrapped child', () => {

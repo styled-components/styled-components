@@ -1,2 +1,2 @@
-/* eslint-disable flowtype/require-valid-file-annotation */
+/* eslint-disable */
 module.exports = require('./lib/no-parser')

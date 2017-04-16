@@ -2,7 +2,6 @@
 /* eslint-disable react/no-multi-comp */
 import React from 'react'
 import PropTypes from 'prop-types'
-import expect from 'expect'
 import { shallow, render } from 'enzyme'
 import ThemeProvider, { CHANNEL } from '../ThemeProvider'
 
