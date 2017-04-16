@@ -4,7 +4,7 @@ import rem from 'polished/lib/helpers/rem'
 const Text = styled.div`
   display: none;
   margin-left: ${rem(15)};
-  margin-top: ${rem(8)};
+  margin-top: ${rem(5)};
   font-size: ${rem(18)};
 
   @media (max-width: 1000px) {

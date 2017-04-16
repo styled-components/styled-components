@@ -6,7 +6,7 @@ import { lightGrey } from '../../utils/colors'
 
 import { pages } from '../../pages/docs.json'
 
-const MenuWrapper = styled.aside`
+const MenuOuter = styled.aside`
   display: block;
   box-sizing: border-box;
 
@@ -14,6 +14,14 @@ const MenuWrapper = styled.aside`
     height: ${p => p.isFolded ? '0' : `calc(100vh - ${rem(70)})`};
     transition: height .3s ease-in-out;
     overflow-y: scroll;
+  }
+`
+
+const MenuInner = styled.div`
+  display: block;
+  box-sizing: border-box;
+
+  @media (max-width: 1000px) {
     border-top: 2px solid ${lightGrey};
     padding-top: ${rem(10)};
   }
@@ -38,29 +46,31 @@ const SubSection = styled.h5`
 `
 
 const Menu = ({ isFolded }) => (
-  <MenuWrapper isFolded={isFolded}>
-    {
-      pages.map(({ title, pathname, sections }) => (
-        <Section key={title}>
-          <SectionTitle>
-            <Link href={`/docs/${pathname}`}>
-              {title}
-            </Link>
-          </SectionTitle>
+  <MenuOuter isFolded={isFolded}>
+    <MenuInner>
+      {
+        pages.map(({ title, pathname, sections }) => (
+          <Section key={title}>
+            <SectionTitle>
+              <Link href={`/docs/${pathname}`}>
+                {title}
+              </Link>
+            </SectionTitle>
 
-          {
-            sections.map(({ title }) => (
-              <SubSection key={title}>
-                <StyledLink href={`/docs/${pathname}#${titleToDash(title)}`}>
-                  {title}
-                </StyledLink>
-              </SubSection>
-            ))
-          }
-        </Section>
-      ))
-    }
-  </MenuWrapper>
+            {
+              sections.map(({ title }) => (
+                <SubSection key={title}>
+                  <StyledLink href={`/docs/${pathname}#${titleToDash(title)}`}>
+                    {title}
+                  </StyledLink>
+                </SubSection>
+              ))
+            }
+          </Section>
+        ))
+      }
+    </MenuInner>
+  </MenuOuter>
 )
 
 export default Menu
