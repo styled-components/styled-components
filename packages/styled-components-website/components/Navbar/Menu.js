@@ -2,6 +2,7 @@ import styled from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 import Link, { StyledLink } from '../Link'
 import titleToDash from '../../utils/titleToDash'
+import { lightGrey } from '../../utils/colors'
 
 import { pages } from '../../pages/docs.json'
 
@@ -13,6 +14,8 @@ const MenuWrapper = styled.aside`
     height: ${p => p.isFolded ? '0' : `calc(100vh - ${rem(70)})`};
     transition: height .3s ease-in-out;
     overflow-y: scroll;
+    border-top: 2px solid ${lightGrey};
+    padding-top: ${rem(10)};
   }
 `
 

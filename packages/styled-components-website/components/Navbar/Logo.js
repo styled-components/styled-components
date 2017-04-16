@@ -1,20 +1,20 @@
 import styled from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 
-const Logo = styled.img.attrs({
-  alt: 'Styled Components',
-  src: '/static/logo.png'
-})`
-  display: block;
+const Logo = styled.div`
+  display: inline-block;
   width: 100%;
-  height: auto;
-  padding: ${rem(65)} ${rem(85)} ${rem(45)};
+  height: 100%;
+
   box-sizing: border-box;
 
+  background-image: url(/static/logo.png);
+  background-size: contain;
+  background-position: center;
+
   @media (max-width: 1000px) {
-    width: auto;
-    height: 100%;
-    padding: ${rem(5)};
+    background-image: url(/static/icon.png);
+    width: ${rem(70)};
   }
 `
 
