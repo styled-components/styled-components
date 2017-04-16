@@ -2,7 +2,7 @@ import React from 'react'
 
 import SectionLayout from '../SectionLayout'
 import { SubHeader } from '../Layout'
-import Link from '../Link'
+import { InlineLink } from '../Link'
 import CodeBlock from '../CodeBlock'
 import Code from '../Code'
 
@@ -80,9 +80,9 @@ const TypeScript = () => (
       Styled Components has TypeScript definitions to allow the library to be used in any TypeScript project.
       <br />
       {'A basic example can be found '}
-      <Link inline href="https://github.com/patrick91/Styled-Components-Typescript-Example">
+      <InlineLink href="https://github.com/patrick91/Styled-Components-Typescript-Example">
         here
-      </Link>
+      </InlineLink>
       .
     </p>
 

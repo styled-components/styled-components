@@ -2,7 +2,7 @@ import React from 'react'
 
 import SectionLayout from '../SectionLayout'
 import { SubHeader } from '../Layout'
-import Link from '../Link'
+import { InlineLink } from '../Link'
 import { CodeBlockRaw } from '../CodeBlock'
 import Code from '../Code'
 
@@ -39,9 +39,9 @@ const Flow = ({ url }) => (
   <SectionLayout title="Flow">
     <p>
       {'Styled Components has first-class '}
-      <Link inline href="https://flowtype.org">
+      <InlineLink href="https://flowtype.org">
         Flow
-      </Link>
+      </InlineLink>
       {' support to help you find typing errors while using our public API.'}
     </p>
 
