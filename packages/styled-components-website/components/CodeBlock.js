@@ -18,4 +18,8 @@ const CodeBlock = styled(Editor).attrs({
   margin: ${rem(35)} 0;
 `
 
+export const CodeBlockRaw = CodeBlock.extendWith('pre').attrs({
+  className: 'prism-code'
+})``
+
 export default CodeBlock
