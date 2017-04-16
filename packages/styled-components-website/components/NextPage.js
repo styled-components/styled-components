@@ -40,7 +40,7 @@ const Icon = styled(ChevronRightIcon).attrs({
   height: null
 })`
   color: ${lightGrey};
-  height: 100%;
+  width: ${rem(30)};
 `
 
 const NextPage = ({ title, href }) => (
