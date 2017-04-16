@@ -6,6 +6,7 @@ import stringifyRules from './utils/stringifyRules'
 import generateAlphabeticName from './utils/generateAlphabeticName'
 import css from './constructors/css'
 import ServerStyleSheet from './models/ServerStyleSheet'
+import StyleSheetManager from './models/StyleSheetManager'
 
 /* Import singleton constructors */
 import _StyledComponent from './models/StyledComponent'
@@ -33,4 +34,12 @@ const styled = _styled(StyledComponent, constructWithOptions)
 
 /* Export everything */
 export default styled
-export { css, keyframes, injectGlobal, ThemeProvider, withTheme, ServerStyleSheet }
+export {
+  css,
+  keyframes,
+  injectGlobal,
+  ThemeProvider,
+  withTheme,
+  ServerStyleSheet,
+  StyleSheetManager,
+}

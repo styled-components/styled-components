@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Update stylis to latest version (see [#496](https://github.com/styled-components/styled-components/pull/496)).
 - Added per-component class names (see [#227](https://github.com/styled-components/styled-components/pull/227)).
 - Added the ability to override one component's styles from another.
-- Injecting an empty class for each instance of a component.
+- Injecting an empty class for each instance of a component in development.
 - Added `attrs` constructor for passing extra attributes to the underlying element
 - Added warnings for components generating a lot of classes, thanks to [@vdanchenkov](https://github.com/vdanchenkov). (see [#268](https://github.com/styled-components/styled-components/pull/268))
 - Standardised `styled(Comp)` to work the same in all cases, rather than a special extension case where `Comp` is another Styled Component. `Comp.extend` now covers that case. (see [#518](https://github.com/styled-components/styled-components/pull/518)).
@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Refactor StyledComponent for performance optimization.
 - Prevent leakage of the `innerRef` prop to wrapped child; under the hood it is converted into a normal React `ref`. (see [#592](https://github.com/styled-components/styled-components/issues/592))
 - Pass `innerRef` through to wrapped Styled Components, so that it refers to the actual DOM node. (see [#629](https://github.com/styled-components/styled-components/issues/629))
+- Added a dedicated Server-Side-Rendering API, with optimised rehydration on the client.
 
 ## [Unreleased]
 
