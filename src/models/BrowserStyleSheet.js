@@ -48,14 +48,12 @@ class BrowserTag implements Tag {
 
   addComponent(componentId: string) {
     if (!this.ready) this.replaceElement()
+    if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
 
     const comp = { componentId, textNode: document.createTextNode('') }
     this.el.appendChild(comp.textNode)
 
-    if (this.components[componentId] === undefined) {
-      this.size += 1
-    }
-
+    this.size += 1
     this.components[componentId] = comp
   }
 
@@ -115,14 +113,14 @@ export default {
 
     /* Construct existing state from DOM */
     Array.from(document.querySelectorAll(`[${SC_ATTR}]`)).forEach(el => {
-      tags.push(new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML));
+      tags.push(new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML))
 
-      (el.getAttribute(SC_ATTR) || '')
-        .trim()
-        .split(/\s+/)
-        .forEach(name => {
+      const attr = el.getAttribute(SC_ATTR)
+      if (attr) {
+        attr.trim().split(/\s+/).forEach(name => {
           names[name] = true
         })
+      }
     })
 
     /* Factory for making more tags */

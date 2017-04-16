@@ -22,8 +22,8 @@ class ServerTag implements Tag {
   }
 
   addComponent(componentId: string) {
-    const comp = { componentId, css: '' }
-    this.components[componentId] = comp
+    if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
+    this.components[componentId] = { componentId, css: '' }
     this.size += 1
   }
 

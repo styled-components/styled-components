@@ -9,7 +9,6 @@ export const CONTEXT_KEY = '__styled-components-stylesheet__'
 export interface Tag {
   isLocal: boolean,
   components: { [string]: Object },
-  size: number,
 
   isFull(): boolean,
   addComponent(componentId: string): void,
