@@ -3,29 +3,18 @@ import Sidebar from './Sidebar'
 import Head from './Head'
 import Logo from './Logo'
 import Menu from './Menu'
+import Link from '../Link'
 
-class Navbar extends Component {
-  state = {
-    isMenuFolded: true
-  }
+const Navbar = () => (
+  <Sidebar>
+    <Head>
+      <Link href="/docs">
+        <Logo />
+      </Link>
+    </Head>
 
-  toggleMenu = () => {
-    this.setState(s => ({ isMenuFolded: !s.isMenuFolded }))
-  }
-
-  render() {
-    const { isMenuFolded } = this.state
-
-    return (
-      <Sidebar>
-        <Head>
-          <Logo onClick={this.toggleMenu} />
-        </Head>
-
-        <Menu isFolded={isMenuFolded} />
-      </Sidebar>
-    )
-  }
-}
+    <Menu />
+  </Sidebar>
+)
 
 export default Navbar
