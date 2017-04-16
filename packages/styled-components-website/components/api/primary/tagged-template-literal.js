@@ -82,8 +82,6 @@ const TaggedTemplateLiteral = () => (
       {' section.'}
     </p>
 
-
-
     <p>
       The properties that are passed into an interpolated function get attached a special
       property, <Code>theme</Code>, which is injected by a higher level <Code>ThemeProvider</Code> component.

@@ -2,6 +2,7 @@ import React from 'react'
 
 import { SubHeader } from '../../Layout'
 import Table, { Row, Column } from '../../Table'
+import Link from '../../Link'
 import CodeBlock from '../../CodeBlock'
 import Code from '../../Code'
 import Label from '../../Label'
