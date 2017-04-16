@@ -15,8 +15,8 @@ const ArbitraryComponent = styled.div\`
 const Security = () => (
   <SectionLayout title="Security">
     <p>
-      Since Styled Components allows you to use arbitrary input as interpolations, you have to be
-      careful to sanitize it. Using user input as styles can lead to any CSS being evaluated in the user's
+      Since Styled Components allows you to use arbitrary input as interpolations, you must be
+      careful to sanitize that input. Using user input as styles can lead to any CSS being evaluated in the user's
       browser that an attacker can place in your application.
     </p>
 

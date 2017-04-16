@@ -28,11 +28,11 @@ const AdaptingBasedOnProps = () => (
   <SectionLayout title="Adapting based on props">
     <p>
       You can pass a function ("interpolations") to a styled component's template literal
-      to adapt it, based on its props.
+      to adapt it based on its props.
     </p>
 
     <p>
-      This button component has a primary state, that changes its colour.
+      This button component has a primary state that changes its colour.
       When setting the <Code>primary</Code> prop to true, we are swapping out its background and text colour.
     </p>
 
