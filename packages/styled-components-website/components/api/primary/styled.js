@@ -1,12 +1,10 @@
 import React from 'react'
-import { withTheme, ThemeProvider } from 'styled-components'
 
-import SectionLayout from '../SectionLayout'
-import { SubHeader } from '../Layout'
-import Table, { Row, Column } from '../Table'
-import LiveEdit from '../LiveEdit'
-import CodeBlock from '../CodeBlock'
-import Code from '../Code'
+import { SubHeader } from '../../Layout'
+import Table, { Row, Column } from '../../Table'
+import CodeBlock from '../../CodeBlock'
+import Code from '../../Code'
+import Label from '../../Label'
 
 const styledSample = (`
 import styled from 'styled-components';
@@ -23,8 +21,8 @@ const TomatoButton = styled(Button)\`
 \`;
 `).trim()
 
-const Primary = () => (
-  <SectionLayout title="Primary">
+const Styled = () => (
+  <div>
     <SubHeader>
       <Code>
         styled
@@ -32,7 +30,11 @@ const Primary = () => (
     </SubHeader>
 
     <p>
-      Default export. For web and native.<br />
+      <Label>web</Label> <Label>native</Label>
+    </p>
+
+    <p>
+      This is the default export.
       This is a low-level factory we use to create the <Code>styled.tagname</Code> helper methods.
     </p>
 
@@ -60,7 +62,7 @@ const Primary = () => (
       Instead, rely on the <Code>styled.tagname</Code> methods like <Code>styled.button</Code>.
       We define all valid HTML5 and SVG elements. (It's an automatic fat finger check too)
     </p>
-  </SectionLayout>
+  </div>
 )
 
-export default Primary
+export default Styled

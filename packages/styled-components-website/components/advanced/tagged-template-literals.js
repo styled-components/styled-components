@@ -2,7 +2,7 @@ import React from 'react'
 import SectionLayout from '../SectionLayout'
 import CodeBlock from '../CodeBlock'
 import Code from '../Code'
-import { InlineLink } from '../Link'
+import Link from '../Link'
 
 const basicSample = (`
 // These are equivalent:
@@ -46,9 +46,9 @@ const TaggedTemplateLiterals = () => (
     <p>
       If you want to learn more about tagged template literals, check out Max Stoiber's article:
       <br />
-      <InlineLink href="https://mxstbr.blog/2016/11/styled-components-magic-explained/">
+      <Link inline href="https://mxstbr.blog/2016/11/styled-components-magic-explained/">
         The magic behind 💅 styled-components
-      </InlineLink>
+      </Link>
     </p>
   </SectionLayout>
 )

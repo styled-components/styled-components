@@ -7,14 +7,6 @@ export const StyledLink = styled.a`
   cursor: pointer;
 `
 
-const Link = ({ children, className, inline, ...rest }) => (
-  <UnstyledLink {...rest}>
-    <StyledLink className={className} inline={inline}>
-      {children}
-    </StyledLink>
-  </UnstyledLink>
-)
-
 export const InlineLink = styled(StyledLink).attrs({
   target: '_blank',
   rel: 'noopener'
@@ -23,5 +15,21 @@ export const InlineLink = styled(StyledLink).attrs({
   color: palevioletred;
   font-weight: 600;
 `
+
+const Link = ({ children, className, inline, ...rest }) => (
+  <UnstyledLink {...rest}>
+    {
+      !inline ? (
+        <StyledLink className={className}>
+          {children}
+        </StyledLink>
+      ) : (
+        <InlineLink className={className}>
+          {children}
+        </InlineLink>
+      )
+    }
+  </UnstyledLink>
+)
 
 export default Link
