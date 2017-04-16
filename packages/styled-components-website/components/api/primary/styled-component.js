@@ -1,18 +1,12 @@
 import React from 'react'
 
-import { SubHeader } from '../../Layout'
+import SectionLayout from '../../SectionLayout'
 import Link from '../../Link'
 import Code from '../../Code'
 import Label from '../../Label'
 
 const StyledComponent = () => (
-  <div>
-    <SubHeader>
-      <Code>
-        StyledComponent
-      </Code>
-    </SubHeader>
-
+  <SectionLayout sub title={<Code>StyledComponent</Code>}>
     <p>
       <Label>web</Label> <Label>native</Label>
     </p>
@@ -32,7 +26,7 @@ const StyledComponent = () => (
       next to the styles defined by the styled call.
       (e.g. <Code>&lt;MyStyledComp className="bootstrap__btn" /&gt;</Code>)
     </p>
-  </div>
+  </SectionLayout>
 )
 
 export default StyledComponent

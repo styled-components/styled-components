@@ -1,7 +1,6 @@
 import React from 'react'
 
 import SectionLayout from '../SectionLayout'
-import { SubHeader } from '../Layout'
 import { InlineLink } from '../Link'
 import CodeBlock from '../CodeBlock'
 import Code from '../Code'
@@ -86,54 +85,48 @@ const TypeScript = () => (
       .
     </p>
 
-    <SubHeader>
-      Define a theme interface
-    </SubHeader>
+    <SectionLayout sub title="Define a theme interface">
+      <p>
+        By default every styled component will have the <Code>theme</Code> prop set to <Code>any</Code>.
+        When building complex apps it would be better to have autocomplete and error checks everywhere.
+      </p>
 
-    <p>
-      By default every styled component will have the <Code>theme</Code> prop set to <Code>any</Code>.
-      When building complex apps it would be better to have autocomplete and error checks everywhere.
-    </p>
+      <p>
+        To have autocomplete and checks around the <Code>theme</Code> prop we should first define the theme
+        interface we would like to use throught our app:
+      </p>
 
-    <p>
-      To have autocomplete and checks around the <Code>theme</Code> prop we should first define the theme
-      interface we would like to use throught our app:
-    </p>
+      <CodeBlock code={theme} />
 
-    <CodeBlock code={theme} />
+      <p>
+        Then we can re-export the <Code>styled</Code> function with our custom theme interface:
+      </p>
 
-    <p>
-      Then we can re-export the <Code>styled</Code> function with our custom theme interface:
-    </p>
+      <CodeBlock code={styledComponents} />
 
-    <CodeBlock code={styledComponents} />
+      <p>
+        Finally, instead of importing the styled functions from the styled-components module,
+        we import it from our above, custom module.
+      </p>
+    </SectionLayout>
 
-    <p>
-      Finally, instead of importing the styled functions from the styled-components module,
-      we import it from our above, custom module.
-    </p>
+    <SectionLayout sub title={[ 'Caveat with ', <Code>className</Code> ]}>
+      <p>
+        When defining a component you will need to mark <Code>className</Code> as optional
+        in your the Props interface:
+      </p>
 
-    <SubHeader>
-      Caveat with <Code>className</Code>
-    </SubHeader>
+      <CodeBlock code={propsClassName} />
+    </SectionLayout>
 
-    <p>
-      When defining a component you will need to mark <Code>className</Code> as optional
-      in your the Props interface:
-    </p>
+    <SectionLayout sub title="Caveat with Stateless Components">
+      <p>
+        To use stateless components and have typechecking for the props you'll need to define
+        the component alongside with its type, like this:
+      </p>
 
-    <CodeBlock code={propsClassName} />
-
-    <SubHeader>
-      Caveat with Stateless Components
-    </SubHeader>
-
-    <p>
-      To use stateless components and have typechecking for the props you'll need to define
-      the component alongside with its type, like this:
-    </p>
-
-    <CodeBlock code={statelessComponent} />
+      <CodeBlock code={statelessComponent} />
+    </SectionLayout>
   </SectionLayout>
 )
 

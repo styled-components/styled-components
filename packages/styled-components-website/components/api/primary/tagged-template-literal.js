@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { SubHeader } from '../../Layout'
+import SectionLayout from '../../SectionLayout'
 import Table, { Row, Column } from '../../Table'
 import Link from '../../Link'
 import CodeBlock from '../../CodeBlock'
@@ -24,13 +24,7 @@ const Section = styled.section\`
 `).trim()
 
 const TaggedTemplateLiteral = () => (
-  <div>
-    <SubHeader>
-      <Code>
-        TaggedTemplateLiteral
-      </Code>
-    </SubHeader>
-
+  <SectionLayout sub title={<Code>TaggedTemplateLiteral</Code>}>
     <p>
       <Label>web</Label> <Label>native</Label>
     </p>
@@ -102,7 +96,7 @@ const TaggedTemplateLiteral = () => (
       treated as inline styles. However this is highly discouraged, as the CSS syntax has support
       for pseudo selectors, media queries, nesting, etc., which the object syntax doesn't.
     </p>
-  </div>
+  </SectionLayout>
 )
 
 export default TaggedTemplateLiteral

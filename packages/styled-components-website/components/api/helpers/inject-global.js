@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { SubHeader } from '../../Layout'
+import SectionLayout from '../../SectionLayout'
 import Table, { Row, Column } from '../../Table'
 import CodeBlock from '../../CodeBlock'
 import Code from '../../Code'
@@ -22,13 +22,7 @@ injectGlobal\`
 `).trim()
 
 const InjectGlobal = () => (
-  <div>
-    <SubHeader>
-      <Code>
-        injectGlobal
-      </Code>
-    </SubHeader>
-
+  <SectionLayout sub title={<Code>injectGlobal</Code>}>
     <p>
       <Label>web</Label> <Label>native</Label>
     </p>
@@ -56,7 +50,7 @@ const InjectGlobal = () => (
       must, contained in a single file. This is an escape hatch. Only use it for the
       rare <Code>@font-face</Code> definition or body styling.
     </p>
-  </div>
+  </SectionLayout>
 )
 
 export default InjectGlobal

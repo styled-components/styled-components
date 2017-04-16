@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { SubHeader } from '../../Layout'
+import SectionLayout from '../../SectionLayout'
 import Table, { Row, Column } from '../../Table'
 import Link from '../../Link'
 import CodeBlock from '../../CodeBlock'
@@ -21,13 +21,7 @@ export default withTheme(MyComponent)
 `).trim()
 
 const WithTheme = () => (
-  <div>
-    <SubHeader>
-      <Code>
-        withTheme
-      </Code>
-    </SubHeader>
-
+  <SectionLayout sub title={<Code>withTheme</Code>}>
     <p>
       <Label>web</Label> <Label>native</Label>
     </p>
@@ -67,7 +61,7 @@ const WithTheme = () => (
       </Link>
       {' to read more on how to use this.'}
     </p>
-  </div>
+  </SectionLayout>
 )
 
 export default WithTheme

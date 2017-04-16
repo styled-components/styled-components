@@ -1,7 +1,6 @@
 import React from 'react'
 
 import SectionLayout from '../SectionLayout'
-import { SubHeader } from '../Layout'
 import { InlineLink } from '../Link'
 import { CodeBlockRaw } from '../CodeBlock'
 import Code from '../Code'
@@ -51,37 +50,32 @@ const Flow = ({ url }) => (
       your <Code>.flowconfig</Code>, so you can use Styled Components without any hassle.
     </p>
 
-    <SubHeader>
-      Libdef Dependencies
-    </SubHeader>
+    <SectionLayout sub title="Libdef Dependencies">
+      <p>
+        A libdef is a descriptive file for an external untyped 3rd party module used by our library.
+        You can find all our dependencies in the <Code>flow-typed/</Code> directory.
+        All files located in <Code>flow-typed/npm/</Code> are downloaded or auto-stubbed versions via
+        the <Code>flow-typed</Code> binary, while files located in <Code>flow-typed/</Code> are
+        adapted versions of <Code>flow-typed/npm/</Code> files.
+      </p>
 
-    <p>
-      A libdef is a descriptive file for an external untyped 3rd party module used by our library.
-      You can find all our dependencies in the <Code>flow-typed/</Code> directory.
-      All files located in <Code>flow-typed/npm/</Code> are downloaded or auto-stubbed versions via
-      the <Code>flow-typed</Code> binary, while files located in <Code>flow-typed/</Code> are
-      adapted versions of <Code>flow-typed/npm/</Code> files.
-    </p>
+      <p>
+        Those adapted files might collide with your locally used libdefs like lodash.
+        While adapting some libdefs, we made sure not to introduce breaking changes,
+        so you can safely use them instead of the official ones found on flow-typed.
+      </p>
+    </SectionLayout>
 
-    <p>
-      Those adapted files might collide with your locally used libdefs like lodash.
-      While adapting some libdefs, we made sure not to introduce breaking changes,
-      so you can safely use them instead of the official ones found on flow-typed.
-    </p>
+    <SectionLayout sub title={[ 'Example ', <Code>.flowconfig</Code> ]}>
+      <p>
+        It's usually easier to just see some example how to set up the <Code>.flowconfig</Code>,
+        so here is our current recommendation:
+      </p>
 
-    <SubHeader>
-      Example <Code>.flowconfig</Code>
-    </SubHeader>
-
-    <p>
-      It's usually easier to just see some example how to set up the <Code>.flowconfig</Code>,
-      so here is our current recommendation:
-    </p>
-
-    <CodeBlockRaw>
-      {flowconfig}
-    </CodeBlockRaw>
-
+      <CodeBlockRaw>
+        {flowconfig}
+      </CodeBlockRaw>
+    </SectionLayout>
   </SectionLayout>
 )
 

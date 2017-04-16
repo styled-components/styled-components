@@ -2,7 +2,7 @@ import styled from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 
 import { LinkIcon } from 'react-octicons-svg'
-import { Header } from './Layout'
+import { Header, SubHeader } from './Layout'
 
 const Anchor = styled.a`
   display: none;
@@ -34,12 +34,18 @@ const AnchorHeader = styled(Header)`
   }
 `
 
-export default ({ children, href }) => (
-  <AnchorHeader>
-    <Anchor href={href}>
-      <AnchorIcon />
-    </Anchor>
+const AnchorSubHeader = AnchorHeader.extendWith(SubHeader)``
 
-    {children}
-  </AnchorHeader>
-)
+export default ({ children, href, sub }) => {
+  const Child = sub ? AnchorSubHeader : AnchorHeader
+
+  return (
+    <Child>
+      <Anchor href={href}>
+        <AnchorIcon />
+      </Anchor>
+
+      {children}
+    </Child>
+  )
+}

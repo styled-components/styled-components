@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { SubHeader } from '../../Layout'
+import SectionLayout from '../../SectionLayout'
 import Table, { Row, Column } from '../../Table'
 import CodeBlock from '../../CodeBlock'
 import Code from '../../Code'
@@ -20,13 +20,7 @@ const StyledComp = styled.div\`
 `).trim()
 
 const CSS = () => (
-  <div>
-    <SubHeader>
-      <Code>
-        css
-      </Code>
-    </SubHeader>
-
+  <SectionLayout sub title={<Code>css</Code>}>
     <p>
       <Label>web</Label> <Label>native</Label>
     </p>
@@ -60,7 +54,7 @@ const CSS = () => (
       If you leave off the css your function will be <Code>toString()</Code>ed and you'll not get the results
       you expected.
     </p>
-  </div>
+  </SectionLayout>
 )
 
 export default CSS

@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { SubHeader } from '../../Layout'
+import SectionLayout from '../../SectionLayout'
 import Table, { Row, Column } from '../../Table'
 import Link from '../../Link'
 import CodeBlock from '../../CodeBlock'
@@ -23,13 +23,7 @@ const TomatoButton = styled(Button)\`
 `).trim()
 
 const Styled = () => (
-  <div>
-    <SubHeader>
-      <Code>
-        styled
-      </Code>
-    </SubHeader>
-
+  <SectionLayout sub title={<Code>styled</Code>}>
     <p>
       <Label>web</Label> <Label>native</Label>
     </p>
@@ -63,7 +57,7 @@ const Styled = () => (
       Instead, rely on the <Code>styled.tagname</Code> methods like <Code>styled.button</Code>.
       We define all valid HTML5 and SVG elements. (It's an automatic fat finger check too)
     </p>
-  </div>
+  </SectionLayout>
 )
 
 export default Styled

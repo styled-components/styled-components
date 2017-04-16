@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { SubHeader } from '../../Layout'
+import SectionLayout from '../../SectionLayout'
 import Table, { Row, Column } from '../../Table'
 import Link from '../../Link'
 import CodeBlock from '../../CodeBlock'
@@ -20,13 +20,7 @@ const Box = styled.div\`
 `).trim()
 
 const ThemeProvider = () => (
-  <div>
-    <SubHeader>
-      <Code>
-        ThemeProvider
-      </Code>
-    </SubHeader>
-
+  <SectionLayout sub title={<Code>ThemeProvider</Code>}>
     <p>
       <Label>web</Label> <Label>native</Label>
     </p>
@@ -57,7 +51,7 @@ const ThemeProvider = () => (
     </Table>
 
     <CodeBlock code={themingSample} />
-  </div>
+  </SectionLayout>
 )
 
 export default ThemeProvider

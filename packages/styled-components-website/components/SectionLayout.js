@@ -6,15 +6,15 @@ import titleToDash from '../utils/titleToDash'
 import Anchor from './Anchor'
 
 const Wrapper = styled.div`
-  margin-bottom: ${rem(90)};
+  margin-bottom: ${p => p.sub ? rem(50) : rem(90)};
 `
 
-const SectionLayout = ({ children, title }) => {
+const SectionLayout = ({ children, title, sub }) => {
   const hash = titleToDash(title)
 
   return (
-    <Wrapper id={hash}>
-      <Anchor href={`#${hash}`}>
+    <Wrapper id={hash} sub={sub}>
+      <Anchor href={`#${hash}`} sub={sub}>
         {title}
       </Anchor>
 

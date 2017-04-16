@@ -2,7 +2,6 @@ import React from 'react'
 import { withTheme, ThemeProvider } from 'styled-components'
 
 import SectionLayout from '../SectionLayout'
-import { SubHeader } from '../Layout'
 import LiveEdit from '../LiveEdit'
 import CodeBlock from '../CodeBlock'
 import Code from '../Code'
@@ -115,36 +114,32 @@ const Theming = () => (
       noInline
     />
 
-    <SubHeader>
-      Function themes
-    </SubHeader>
+    <SectionLayout sub title="Function themes">
+      <p>
+        You can also pass a function for the theme prop. This function will receive the parent theme, that is from a
+        <Code>&lt;ThemeProvider&gt;</Code> higher up the tree. This way themes themselves can be made contextual.
+      </p>
 
-    <p>
-      You can also pass a function for the theme prop. This function will receive the parent theme, that is from a
-      <Code>&lt;ThemeProvider&gt;</Code> higher up the tree. This way themes themselves can be made contextual.
-    </p>
+      <p>
+        This example renders our themed Button and a second one that uses a ThemeProvider to invert the background and
+        foreground. The function <Code>invertTheme</Code> receives the upper theme and creates a new one.
+      </p>
 
-    <p>
-      This example renders our themed Button and a second one that uses a ThemeProvider to invert the background and
-      foreground. The function <Code>invertTheme</Code> receives the upper theme and creates a new one.
-    </p>
+      <LiveEdit
+        code={functionSample}
+        scope={scope}
+        noInline
+      />
+    </SectionLayout>
 
-    <LiveEdit
-      code={functionSample}
-      scope={scope}
-      noInline
-    />
+    <SectionLayout sub title="Getting the theme without styled components">
+      <p>
+        If you ever need to use the current theme outside styled components (e.g. inside big components), you can use
+        the <Code>withTheme</Code> higher order component.
+      </p>
 
-    <SubHeader>
-      Getting the theme without styled components
-    </SubHeader>
-
-    <p>
-      If you ever need to use the current theme outside styled components (e.g. inside big components), you can use
-      the <Code>withTheme</Code> higher order component.
-    </p>
-
-    <CodeBlock code={withThemeSample} />
+      <CodeBlock code={withThemeSample} />
+    </SectionLayout>
   </SectionLayout>
 )
 

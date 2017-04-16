@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { SubHeader } from '../../Layout'
+import SectionLayout from '../../SectionLayout'
 import Table, { Row, Column } from '../../Table'
 import Link from '../../Link'
 import CodeBlock from '../../CodeBlock'
@@ -25,13 +25,7 @@ const FadeInButton = styled.button\`
 `).trim()
 
 const Keyframes = () => (
-  <div>
-    <SubHeader>
-      <Code>
-        keyframes
-      </Code>
-    </SubHeader>
-
+  <SectionLayout sub title={<Code>keyframes</Code>}>
     <p><Label>web</Label></p>
 
     <p>
@@ -54,7 +48,7 @@ const Keyframes = () => (
     </p>
 
     <CodeBlock code={keyframesSample} />
-  </div>
+  </SectionLayout>
 )
 
 export default Keyframes
