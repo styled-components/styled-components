@@ -45,12 +45,12 @@ const SubSection = styled.h5`
   font-weight: normal;
 `
 
-const Menu = ({ isFolded }) => (
+const Menu = ({ isFolded, onRouteChange }) => (
   <MenuOuter isFolded={isFolded}>
     <MenuInner>
       {
         pages.map(({ title, pathname, sections }) => (
-          <Section key={title}>
+          <Section key={title} onClick={onRouteChange}>
             <SectionTitle>
               <Link href={`/docs/${pathname}`}>
                 {title}

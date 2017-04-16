@@ -18,6 +18,10 @@ class Navbar extends Component {
     })
   }
 
+  onRouteChange = () => {
+    this.setState({ isFolded: true })
+  }
+
   render() {
     const { isFolded } = this.state
 
@@ -25,11 +29,20 @@ class Navbar extends Component {
       <Sidebar>
         <Head>
           <Logo />
-          <Text>Styled Components</Text>
+
+          <Text>
+            <Link href="/docs">
+              Styled Components
+            </Link>
+          </Text>
+
           <MenuButton onClick={this.onFold} />
         </Head>
 
-        <Menu isFolded={isFolded} />
+        <Menu
+          isFolded={isFolded}
+          onRouteChange={this.onRouteChange}
+        />
       </Sidebar>
     )
   }
