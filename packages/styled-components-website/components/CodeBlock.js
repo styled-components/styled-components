@@ -16,6 +16,8 @@ const CodeBlock = styled(Editor).attrs({
   border-radius: ${rem(3)};
   box-shadow: 1px 1px 20px rgba(20, 20, 20, 0.27);
   margin: ${rem(35)} 0;
+
+  overflow-x: hidden;
 `
 
 export const CodeBlockRaw = CodeBlock.extendWith('pre').attrs({

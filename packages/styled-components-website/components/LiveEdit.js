@@ -49,7 +49,9 @@ const StyledEditor = styled(LiveEditor)`
   font-size: 0.8rem;
   font-family: monospace;
   height: ${rem(400)};
-  overflow: scroll;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  cursor: text;
   white-space: pre-wrap;
 
   ${columnMixin}
