@@ -12,7 +12,7 @@ const MenuOuter = styled.aside`
 
   @media (max-width: 1000px) {
     height: ${p => p.isFolded ? '0' : `calc(100vh - ${rem(70)})`};
-    transition: height .3s ease-in-out;
+    transition: height .2s ease-in-out;
     overflow-y: scroll;
   }
 `

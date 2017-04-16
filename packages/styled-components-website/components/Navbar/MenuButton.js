@@ -9,9 +9,16 @@ const MenuButton = styled(StyledLink)`
   margin-left: ${rem(15)};
   padding: ${rem(20)};
   margin-left: auto;
+  color: white;
+  transform-origin: center;
 
   @media (max-width: 1000px) {
     display: block;
+  }
+
+  &:active {
+    opacity: 0.8;
+    transform: scale(0.9);
   }
 `
 
