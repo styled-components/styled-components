@@ -19,7 +19,9 @@ const Wrapper = styled.section\`
 // Use Title and Wrapper like any other React component – except they're styled!
 render(
   <Wrapper>
-    <Title>Hello World, this is my first styled component!</Title>
+    <Title>
+      Hello World, this is my first styled component!
+    </Title>
   </Wrapper>
 );
 `).trim()
