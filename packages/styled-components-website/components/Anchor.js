@@ -1,8 +1,9 @@
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 
 import { LinkIcon } from 'react-octicons-svg'
 import { Header, SubHeader } from './Layout'
+import { mobile } from '../utils/media'
 
 const Anchor = styled.a`
   display: none;
@@ -28,6 +29,15 @@ const AnchorHeader = styled(Header)`
   position: relative;
   margin-left: ${rem(-30)};
   padding-left: ${rem(30)};
+  transition: all 0.3s ease-in-out;
+
+  ${mobile(css`
+    margin-left: 0;
+
+    ${Anchor} {
+      display: inline-block;
+    }
+  `)}
 
   &:hover ${Anchor} {
     display: inline-block;

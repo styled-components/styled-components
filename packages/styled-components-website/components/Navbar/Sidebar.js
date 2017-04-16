@@ -1,5 +1,6 @@
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
+import { mobile } from '../../utils/media'
 
 const Sidebar = styled.nav`
   position: fixed;
@@ -18,13 +19,13 @@ const Sidebar = styled.nav`
   color: white;
   overflow-y: scroll;
 
-  @media (max-width: 1000px) {
+  ${mobile(css`
     bottom: auto;
     right: 0;
     height: auto;
     width: 100%;
     overflow-y: visible;
-  }
+  `)}
 `
 
 export default Sidebar

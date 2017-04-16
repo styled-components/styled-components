@@ -1,5 +1,6 @@
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
+import { mobile } from '../../utils/media'
 
 const Text = styled.div`
   display: none;
@@ -7,9 +8,9 @@ const Text = styled.div`
   margin-top: ${rem(5)};
   font-size: ${rem(18)};
 
-  @media (max-width: 1000px) {
+  ${mobile(css`
     display: block;
-  }
+  `)}
 `
 
 export default Text

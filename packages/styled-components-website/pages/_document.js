@@ -18,8 +18,8 @@ injectGlobal`
     margin: 0;
     color: rgb(46, 68, 78);
 
-    @media (max-width: 1200px) {
-      font-size: 14px;
+    @media (max-width: 1000px) {
+      font-size: 15px;
     }
   }
 

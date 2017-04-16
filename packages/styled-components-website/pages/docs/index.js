@@ -1,5 +1,4 @@
-import React from 'react'
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 
 import DocsLayout from '../../components/DocsLayout'
@@ -7,6 +6,7 @@ import { Title, Header } from '../../components/Layout'
 import Link from '../../components/Link'
 import titleToDash from '../../utils/titleToDash'
 import { pages } from '../docs.json'
+import { mobile, phone } from '../../utils/media'
 
 const Row = styled.div`
   display: flex;
@@ -20,17 +20,17 @@ const Column = styled.div`
   flex-basis: 33%;
   padding-right: ${rem(15)};
 
-  @media (max-width: 1000px) {
+  ${mobile(css`
     width: 50%;
     max-width: 50%;
     flex-basis: 50%;
-  }
+  `)}
 
-  @media (max-width: 650px) {
+  ${phone(css`
     width: 100%;
     max-width: 100%;
     flex-basis: 100%;
-  }
+  `)}
 `
 
 const SubHeader = styled.h3`

@@ -1,13 +1,14 @@
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
+import { mobile } from '../utils/media'
 
 export const Container = styled.div`
   padding-left: ${rem(300)};
 
-  @media (max-width: 1000px) {
+  ${mobile(css`
     padding-left: 0;
     padding-top: ${rem(70)};
-  }
+  `)}
 `
 
 export const Content = styled.div`
@@ -16,6 +17,10 @@ export const Content = styled.div`
   margin: 0 auto;
   padding: ${rem(30)} ${rem(40)};
   box-sizing: border-box;
+
+  ${mobile(css`
+    padding: ${rem(30)} ${rem(20)};
+  `)}
 `
 
 export const Title = styled.h1`

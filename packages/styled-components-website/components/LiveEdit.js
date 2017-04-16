@@ -2,6 +2,7 @@ import React from 'react'
 import styled, { css, keyframes } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 import { darkGrey, red } from '../utils/colors'
+import { phone } from '../utils/media'
 
 import '../utils/prismTemplateString'
 
@@ -14,7 +15,7 @@ import {
 
 const StyledProvider = styled(LiveProvider)`
   border-radius: ${rem(3)};
-  box-shadow: 1px 1px 20px rgba(20, 20, 20, 0.27);
+  box-shadow: ${rem(1)} ${rem(1)} ${rem(20)} rgba(20, 20, 20, 0.27);
   overflow: hidden;
   margin: ${rem(35)} 0;
 `
@@ -25,9 +26,9 @@ const Row = styled.div`
   justify-content: stretch;
   align-items: stretch;
 
-  @media (max-width: 600px) {
+  ${phone(css`
     flex-direction: column;
-  }
+  `)}
 `
 
 const columnMixin = css`
@@ -35,11 +36,12 @@ const columnMixin = css`
   width: 50%;
   max-width: 50%;
 
-  @media (max-width: 600px) {
+  ${phone(css`
     flex-basis: auto;
     width: 100%;
     max-width: 100%;
-  }
+    height: auto;
+  `)}
 `
 
 const StyledEditor = styled(LiveEditor)`

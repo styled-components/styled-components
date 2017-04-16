@@ -1,8 +1,9 @@
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 import Link, { StyledLink } from '../Link'
 import titleToDash from '../../utils/titleToDash'
 import { lightGrey } from '../../utils/colors'
+import { mobile } from '../../utils/media'
 
 import { pages } from '../../pages/docs.json'
 
@@ -10,21 +11,23 @@ const MenuOuter = styled.aside`
   display: block;
   box-sizing: border-box;
 
-  @media (max-width: 1000px) {
+  ${mobile(css`
     height: ${p => p.isFolded ? '0' : `calc(100vh - ${rem(70)})`};
     transition: height .2s ease-in-out;
-    overflow-y: scroll;
-  }
+    overflow: hidden;
+  `)}
 `
 
 const MenuInner = styled.div`
   display: block;
   box-sizing: border-box;
+  height: 100%;
 
-  @media (max-width: 1000px) {
+  ${mobile(css`
     border-top: 2px solid ${lightGrey};
     padding-top: ${rem(10)};
-  }
+    overflow-y: scroll;
+  `)}
 `
 
 const Section = styled.div`
