@@ -1,6 +1,7 @@
 import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 import { mobile } from '../../utils/media'
+import { violetRed, gold } from '../../utils/colors'
 
 const Sidebar = styled.nav`
   position: fixed;
@@ -14,7 +15,7 @@ const Sidebar = styled.nav`
 
   width: ${rem(300)};
   height: 100%;
-  background: linear-gradient(20deg, rgb(219, 112, 147), rgb(243, 182, 97));
+  background: linear-gradient(20deg, ${violetRed}, ${gold});
   box-sizing: border-box;
   color: white;
   overflow-y: scroll;

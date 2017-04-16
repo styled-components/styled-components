@@ -44,7 +44,6 @@ const SectionTitle = styled.h4`
 const SubSection = styled.h5`
   display: block;
   margin: ${rem(10)} ${rem(40)} ${rem(10)} ${rem(55)};
-  opacity: 0.8;
   font-size: 0.9rem;
   font-weight: normal;
 `
