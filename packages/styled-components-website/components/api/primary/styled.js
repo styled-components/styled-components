@@ -6,6 +6,7 @@ import Link from '../../Link'
 import CodeBlock from '../../CodeBlock'
 import Code from '../../Code'
 import Label from '../../Label'
+import Note from '../../Note'
 
 const styledSample = (`
 import styled from 'styled-components';
@@ -52,11 +53,11 @@ const Styled = () => (
 
     <CodeBlock code={styledSample} />
 
-    <p>
+    <Note>
       We encourage you to not use the <Code>styled('tagname')</Code> notation directly.
       Instead, rely on the <Code>styled.tagname</Code> methods like <Code>styled.button</Code>.
       We define all valid HTML5 and SVG elements. (It's an automatic fat finger check too)
-    </p>
+    </Note>
   </SectionLayout>
 )
 

@@ -1,6 +1,7 @@
 import React from 'react'
 import SectionLayout from '../SectionLayout'
 import LiveEdit from '../LiveEdit'
+import Note from '../Note'
 
 const sample = (`
 // Create a Title component that'll render an <h1> tag with some styles
@@ -47,9 +48,9 @@ const GettingStarted = ({ url }) => (
       noInline
     />
 
-    <p>
+    <Note label="Note">
       The CSS rules are automatically vendor prefixed, so you don't have to think about it.
-    </p>
+    </Note>
   </SectionLayout>
 )
 

@@ -45,8 +45,9 @@ const ReactNative = () => (
 
     <p>
       We also support more complex styles (like transform), which would normally be an array,
-      and shorthands (e.g. for margin) thanks to css-to-react-native! Imagine how you'd write the
-      property in ReactNative, guess how you'd transfer it to CSS and you're probably right:
+      and shorthands (e.g. for margin) thanks to <Code>css-to-react-native</Code>!
+      Imagine how you'd write the property in React Native, guess how you'd transfer
+      it to CSS and you're probably right:
     </p>
 
     <CodeBlock code={cssToReactNativeSample} />
