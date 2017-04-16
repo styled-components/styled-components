@@ -1,5 +1,6 @@
 import React from 'react'
 import DocsLayout from '../../components/DocsLayout'
+import NextPage from '../../components/NextPage'
 
 import Theming from '../../components/advanced/theming'
 import Refs from '../../components/advanced/refs'
@@ -14,6 +15,11 @@ const Advanced = () => (
     <Security />
     <MediaTemplates />
     <TaggedTemplateLiterals />
+
+    <NextPage
+      href="/docs/api"
+      title="API Reference"
+    />
   </DocsLayout>
 )
 

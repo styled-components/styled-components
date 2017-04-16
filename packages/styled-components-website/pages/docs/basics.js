@@ -1,5 +1,6 @@
 import React from 'react'
 import DocsLayout from '../../components/DocsLayout'
+import NextPage from '../../components/NextPage'
 
 import GettingStarted from '../../components/basics/getting-started'
 import PassedProps from '../../components/basics/passed-props'
@@ -18,6 +19,11 @@ const Basics = () => (
     <ThirdPartyComponents />
     <Animations />
     <ReactNative />
+
+    <NextPage
+      href="/docs/advanced"
+      title="Advanced"
+    />
   </DocsLayout>
 )
 
