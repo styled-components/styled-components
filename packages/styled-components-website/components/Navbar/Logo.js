@@ -14,8 +14,9 @@ const Logo = styled.div`
 
   @media (max-width: 1000px) {
     background-image: url(/static/icon.png);
-    background-position: 50% 45%;
+    background-position: center;
     width: ${rem(70)};
+    height: ${rem(70)};
   }
 `
 
