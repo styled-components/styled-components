@@ -25,6 +25,12 @@ const Column = styled.div`
     max-width: 50%;
     flex-basis: 50%;
   }
+
+  @media (max-width: 650px) {
+    width: 100%;
+    max-width: 100%;
+    flex-basis: 100%;
+  }
 `
 
 const SubHeader = styled.h3`
