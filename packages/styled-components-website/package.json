@@ -3,19 +3,25 @@
   "version": "1.0.0",
   "license": "MIT",
   "scripts": {
-    "dev": "next",
+    "dev": "node server.js",
     "build": "next build",
-    "start": "next start"
+    "start": "NODE_ENV=production node server.js"
   },
   "dependencies": {
     "babel-plugin-polished": "^1.0.3",
     "babel-plugin-styled-components": "^1.1.4",
+    "express": "^4.15.2",
+    "lru-cache": "^4.0.2",
+    "module-alias": "^2.0.0",
     "next": "^2.1.1",
     "polished": "^1.0.2",
+    "preact": "^8.1.0",
+    "preact-compat": "^3.14.3",
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
     "react-live": "^1.4.3",
     "react-octicons-svg": "^1.1.13",
-    "styled-components": "next"
+    "styled-components": "next",
+    "sw-precache-webpack-plugin": "^0.9.1"
   }
 }

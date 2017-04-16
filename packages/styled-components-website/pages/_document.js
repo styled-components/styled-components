@@ -29,6 +29,8 @@ injectGlobal`
   }
 `
 
+const description = 'Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅'
+
 export default class MyDocument extends Document {
   static async getInitialProps ({ renderPage }) {
     const page = renderPage()
@@ -45,6 +47,7 @@ export default class MyDocument extends Document {
         <Head>
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <link rel="icon" type="image/png" href="/static/favicon.png" />
+          <link rel="manifest" href="/static/manifest.json" />
 
           <title>Styled Components</title>
 
@@ -52,8 +55,33 @@ export default class MyDocument extends Document {
           <meta httpEquiv="X-UA-Compatible" content="IE=edge,chrome=1" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
 
+          <meta name="theme-color" content="#db7093" />
           <meta name="author" content="Styled Components" />
-          <meta name="description" content="Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅" />
+          <meta name="description" content={description} />
+
+          {/* Open Graph */}
+          <link itemprop="url" href="http://styled-components.com/"/>
+          <meta itemprop="name" content="Styled Components" />
+          <meta itemprop="description" content={description} />
+          <meta itemprop="image" content="/static/atom.png" />
+
+          {/* Twitter */}
+          <meta name="twitter:card" content="summary" />
+          <meta name="twitter:creator" content="@mxstbr" />
+          <meta name="twitter:url" content="http://styled-components.com" />
+          <meta name="twitter:title" content="Styled Components" />
+          <meta name="twitter:description" content={description} />
+          <meta name="twitter:image" content="http://styled-components.com/static/atom.png" />
+
+          {/* Facebook */}
+          <meta property="og:url" content="http://styled-components.com" />
+          <meta property="og:type" content="website" />
+          <meta property="og:title" content="Styled Components" />
+          <meta property="og:image" content="http://styled-components.com/static/atom.png" />
+          <meta property="og:image:height" content="652" />
+          <meta property="og:image:width" content="652" />
+          <meta property="og:description" content={description} />
+          <meta property="og:site_name" content="Styled Components" />
 
           <style dangerouslySetInnerHTML={{ __html: `${resetStyles}\n${style}` }} />
        </Head>
