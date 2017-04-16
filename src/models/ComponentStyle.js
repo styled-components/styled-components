@@ -17,7 +17,8 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
       this.rules = rules
       this.componentId = componentId
       if (!StyleSheet.instance.hasInjectedComponent(this.componentId)) {
-        StyleSheet.instance.deferredInject(componentId, true, `.${componentId} {}`)
+        const placeholder = process.env.NODE_ENV !== 'production' ? `.${componentId} {}` : ''
+        StyleSheet.instance.deferredInject(componentId, true, placeholder)
       }
     }
 
