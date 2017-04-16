@@ -10,12 +10,12 @@
   "dependencies": {
     "babel-plugin-polished": "^1.0.3",
     "babel-plugin-styled-components": "^1.1.4",
-    "next": "^2.0.1",
+    "next": "^2.1.1",
     "polished": "^1.0.2",
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
     "react-live": "^1.4.3",
     "react-octicons-svg": "^1.1.13",
-    "styled-components": "2.0.0-14"
+    "styled-components": "next"
   }
 }
