@@ -17,9 +17,11 @@ import noParserFlatten from '../no-parser/flatten'
 import noParserStringifyRules from '../no-parser/stringifyRules'
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
-export let index = 0
-const classNames = () => String.fromCodePoint(97 + index++)
+let index = 0
+let seededClassnames = []
+const classNames = () => seededClassnames.shift() || String.fromCodePoint(97 + index++)
 
+export const seedNextClassnames = (names: Array<string>) => seededClassnames = names
 export const resetStyled = (isServer: boolean = false) => {
   if (!document.head) throw new Error("Missing document <head>")
   document.head.innerHTML = ''

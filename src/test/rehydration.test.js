@@ -1,7 +1,7 @@
 import React from 'react'
 import { shallow } from 'enzyme'
 
-import { resetStyled, expectCSSMatches } from './utils'
+import { resetStyled, expectCSSMatches, seedNextClassnames } from './utils'
 
 import _injectGlobal from '../constructors/injectGlobal'
 import stringifyRules from '../utils/stringifyRules'
@@ -55,7 +55,7 @@ describe('rehydration', () => {
       expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color: blue; }')
     })
 
-    it.only('should reuse a componentId', () => {
+    it('should reuse a componentId', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
       shallow(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })``
@@ -82,7 +82,55 @@ describe('rehydration', () => {
     })
   })
 
-  describe('with other rendered styles', () => {
+  describe('with styled components with props', () => {
+    beforeEach(() => {
+      /* Hash 1323611362 is based on name TWO and contents color: red.
+       * Change either and this will break. */
+      document.head.innerHTML = `
+        <style ${SC_ATTR}='a b' ${LOCAL_ATTR}='true'>
+          /* sc-component-id: ONE */
+          .ONE {}
+          .a { color: blue; }
+          /* sc-component-id: TWO */
+          .TWO {}
+          .b { color: red; }
+        </style>
+      `
+      StyleSheet.reset()
+    })
+
+    it('should preserve the styles', () => {
+      expectCSSMatches(`
+        .ONE { } .a { color: blue; }
+        .TWO { } .b { color: red; }
+      `)
+    })
+
+    it('should not inject new styles for a component already rendered', () => {
+      const Comp = styled.div.withConfig({ componentId: 'ONE' })`
+        color: ${ props => props.color };
+      `
+      shallow(<Comp color="blue"/>)
+      expectCSSMatches(`
+        .ONE { } .a { color: blue; }
+        .TWO { } .b { color: red; }
+      `)
+    })
+
+    it('should inject new styles for a new computed style of a component', () => {
+      seedNextClassnames(['x'])
+      const Comp = styled.div.withConfig({ componentId: 'ONE' })`
+        color: ${ props => props.color };
+      `
+      shallow(<Comp color="green"/>)
+      expectCSSMatches(`
+        .ONE { } .a { color: blue; } .x { color: green; }
+        .TWO { } .b { color: red; }
+      `)
+    })
+  })
+
+  describe('with inline styles that werent rendered by us', () => {
     beforeEach(() => {
       /* Same css as before, but without the data attributes we ignore it */
       document.head.innerHTML = `
@@ -223,7 +271,7 @@ describe('rehydration', () => {
         /* ...the new data attribute for the new classname "c"... */
           .replace(new RegExp(`${SC_ATTR}="a b"`), `${SC_ATTR}="a b c"`)
           /* ...and the new CSS before the closing tag.  */
-          .replace(/(?=<\/style>)/, '/* sc-component-id: THREE */\n.THREE {}\n.c {color: green;}\n')
+          .replace(/(?=<\/style>)/, '\n/* sc-component-id: THREE */\n.THREE {}\n.c {color: green;}')
       )
 
       /* Note: any future additions don't replace the style tag */

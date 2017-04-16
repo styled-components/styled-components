@@ -37,7 +37,7 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
       const name = nameGenerator(hash)
       if (styleSheet.alreadyInjected(hash, name)) return name
 
-      const css = stringifyRules(flatCSS, `.${name}`)
+      const css = stringifyRules(flatCSS, `\n.${name}`)
       styleSheet.inject(this.componentId, true, css, hash, name)
       return name
     }

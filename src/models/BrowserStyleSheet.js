@@ -58,6 +58,7 @@ class BrowserTag implements Tag {
   }
 
   inject(componentId: string, css: string, name: ?string) {
+    if (!this.ready) this.replaceElement()
     const comp = this.components[componentId]
 
     if (!comp) throw new Error('Must add a new component before you can inject css into it')
