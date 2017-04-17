@@ -2,6 +2,7 @@ import React from 'react'
 import DocsLayout from '../../components/DocsLayout'
 import NextPage from '../../components/NextPage'
 
+import Motivation from '../../components/basics/motivation'
 import GettingStarted from '../../components/basics/getting-started'
 import PassedProps from '../../components/basics/passed-props'
 import AdaptingBasedOnProps from '../../components/basics/adapting-based-on-props'
@@ -12,6 +13,7 @@ import ReactNative from '../../components/basics/react-native'
 
 const Basics = () => (
   <DocsLayout title="Basics">
+    <Motivation />
     <GettingStarted />
     <PassedProps />
     <AdaptingBasedOnProps />

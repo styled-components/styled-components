@@ -5,6 +5,8 @@
       "pathname": "basics",
       "sections": [
         {
+          "title": "Motivation"
+        }, {
           "title": "Getting Started"
         }, {
           "title": "Passed props"
