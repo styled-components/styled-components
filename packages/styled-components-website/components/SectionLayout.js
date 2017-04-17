@@ -13,8 +13,8 @@ const SectionLayout = ({ children, title, sub }) => {
   const hash = titleToDash(title)
 
   return (
-    <Wrapper id={hash} sub={sub}>
-      <Anchor href={`#${hash}`} sub={sub}>
+    <Wrapper sub={sub}>
+      <Anchor id={hash} sub={sub}>
         {title}
       </Anchor>
 

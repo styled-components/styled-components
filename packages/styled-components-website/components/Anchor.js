@@ -5,6 +5,21 @@ import { LinkIcon } from 'react-octicons-svg'
 import { Header, SubHeader } from './Layout'
 import { mobile } from '../utils/media'
 
+const InvisibleAnchor = styled.div.attrs({
+  'aria-hidden': true
+})`
+  position: relative;
+  display: block;
+  visibility: hidden;
+  height: 0;
+
+  top: ${rem(-20)};
+
+  ${mobile(css`
+    top: ${rem(-90)};
+  `)}
+`
+
 const Anchor = styled.a`
   display: none;
   position: absolute;
@@ -29,7 +44,6 @@ const AnchorHeader = styled(Header)`
   position: relative;
   margin-left: ${rem(-30)};
   padding-left: ${rem(30)};
-  transition: all 0.3s ease-in-out;
 
   ${mobile(css`
     margin-left: 0;
@@ -46,12 +60,14 @@ const AnchorHeader = styled(Header)`
 
 const AnchorSubHeader = AnchorHeader.extendWith(SubHeader)``
 
-export default ({ children, href, sub }) => {
+export default ({ children, id, sub }) => {
   const Child = sub ? AnchorSubHeader : AnchorHeader
 
   return (
     <Child>
-      <Anchor href={href}>
+      <InvisibleAnchor id={id} />
+
+      <Anchor href={`#${id}`}>
         <AnchorIcon />
       </Anchor>
 
