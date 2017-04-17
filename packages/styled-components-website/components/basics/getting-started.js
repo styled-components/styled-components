@@ -41,7 +41,7 @@ const GettingStarted = ({ url }) => (
     </p>
 
     <p>
-      It removes the mapping between components and styles, which means that when you're defining your styles,
+      It removes the mapping between components and styles. This means that when you're defining your styles,
       you're actually creating a normal React component, that has your styles attached to it.
     </p>
 
@@ -52,7 +52,7 @@ const GettingStarted = ({ url }) => (
 
     <BasicExample />
 
-    <Note label="Note">
+    <Note>
       The CSS rules are automatically vendor prefixed, so you don't have to think about it.
     </Note>
   </SectionLayout>

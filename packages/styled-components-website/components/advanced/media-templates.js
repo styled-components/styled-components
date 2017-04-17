@@ -60,14 +60,19 @@ const MediaTemplates = () => (
     </p>
 
     <p>
-      This is a very simple example that shows a basic component changing its background colour
-      based on the width of the screen.
+      This is a very simple example. It shows a basic component changing its background colour,
+      once the screen's width drops below a threshold of <Code>700px</Code>.
     </p>
 
     <LiveEdit
       code={sample}
       noInline
     />
+
+    <p>
+      Since media queries are long and are often repeated throughout an application, it can be
+      useful to create a template for them.
+    </p>
 
     <p>
       Due to the functional nature of JavaScript, you can easily define your own tagged template

@@ -37,23 +37,26 @@ const RotatedBox = styled.View\`
 const ReactNative = () => (
   <SectionLayout title="React Native">
     <p>
-      styled-components has a ReactNative mode that works exactly the same,
-      except you import the things from <Code>styled-components/native</Code>.
+      Styled Components can be used with React Native in the same way,
+      except you import it from <Code>styled-components/native</Code> instead.
     </p>
 
     <CodeBlock code={sample} />
 
     <p>
-      We also support more complex styles (like transform), which would normally be an array,
-      and shorthands (e.g. for margin) thanks to <Code>css-to-react-native</Code>!
+      We also support more complex styles (like <Code>transform</Code>), which would normally be an array,
+      and shorthands (e.g. for <Code>margin</Code>) thanks to <Code>css-to-react-native</Code>!
+    </p>
+
+    <p>
       Imagine how you'd write the property in React Native, guess how you'd transfer
-      it to CSS and you're probably right:
+      it to CSS, and you're probably right:
     </p>
 
     <CodeBlock code={cssToReactNativeSample} />
 
     <p>
-      Some of the differences to the regular web-version are, that you cannot use
+      Some of the differences to the web-version are, that you cannot use
       the <Code>keyframes</Code> and <Code>injectGlobal</Code> helpers since React Native doesn't
       support keyframes or global styles. We will also warn you if you use media queries or nest your CSS.
     </p>

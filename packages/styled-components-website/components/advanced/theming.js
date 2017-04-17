@@ -98,9 +98,9 @@ const scope = { withTheme, ThemeProvider }
 const Theming = () => (
   <SectionLayout title="Theming">
     <p>
-      Styled Components has full theming support by exporting a wrapper <Code>&lt;ThemeProvider&gt;</Code> component.
+      Styled Components has full theming support by exporting a <Code>&lt;ThemeProvider&gt;</Code> wrapper component.
       This component provides a theme to all React components underneath itself via the context API. In the render
-      tree all Styled Components will have access to the theme, even when they are multiple levels deep.
+      tree all Styled Components will have access to the provided theme, even when they are multiple levels deep.
     </p>
 
     <p>
@@ -116,13 +116,13 @@ const Theming = () => (
 
     <SectionLayout sub title="Function themes">
       <p>
-        You can also pass a function for the theme prop. This function will receive the parent theme, that is from a
-        <Code>&lt;ThemeProvider&gt;</Code> higher up the tree. This way themes themselves can be made contextual.
+        You can also pass a function for the theme prop. This function will receive the parent theme, that is from
+        another <Code>&lt;ThemeProvider&gt;</Code> higher up the tree. This way themes themselves can be made contextual.
       </p>
 
       <p>
-        This example renders our themed Button and a second one that uses a ThemeProvider to invert the background and
-        foreground. The function <Code>invertTheme</Code> receives the upper theme and creates a new one.
+        This example renders our above themed Button and a second one that uses a second ThemeProvider to invert the
+        background and foreground colours. The function <Code>invertTheme</Code> receives the upper theme and creates a new one.
       </p>
 
       <LiveEdit
