@@ -28,12 +28,12 @@ class Navbar extends Component {
     return (
       <Sidebar>
         <Head>
-          <Link href="/docs">
+          <Link unstyled href="/docs">
             <Logo />
           </Link>
 
           <Text>
-            <Link href="/docs">
+            <Link unstyled href="/docs">
               Styled Components
             </Link>
           </Text>
