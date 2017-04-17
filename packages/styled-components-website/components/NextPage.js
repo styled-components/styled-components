@@ -44,7 +44,7 @@ const Icon = styled(ChevronRightIcon).attrs({
 `
 
 const NextPage = ({ title, href }) => (
-  <Wrapper prefetch href={href}>
+  <Wrapper unstyled prefetch href={href}>
     <div>
       <Text>Continue on the next page</Text>
       <PageName>{title}</PageName>
