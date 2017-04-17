@@ -40,6 +40,25 @@ const Links = styled.div`
   margin: ${rem(36)} 0;
 `
 
+const Button = styled.a`
+  display: inline-block;
+  border-radius: ${rem(3)};
+  padding: ${rem(6)} 0;
+  margin: 0 ${rem(16)};
+  text-decoration: none;
+  text-align: center;
+  width: ${rem(175)};
+
+  background: transparent;
+  color: white;
+  border: ${rem(2)} solid white;
+
+  ${p => p.bold && css`
+    background: white;
+    color: palevioletred;
+  `}
+`
+
 const Index = () => (
   <Wrapper>
     <Content>
@@ -55,10 +74,22 @@ const Index = () => (
         </span>
       </Text>
 
-      <BasicExample />
-
       <Links>
+        <Button
+          href="https://github.com/styled-components/styled-components"
+          target="_blank"
+          rel="noopener"
+          bold
+        >
+          GitHub
+        </Button>
+
+        <Button href="/docs">
+          Documentation
+        </Button>
       </Links>
+
+      <BasicExample />
     </Content>
   </Wrapper>
 )
