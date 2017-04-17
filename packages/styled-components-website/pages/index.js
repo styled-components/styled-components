@@ -44,7 +44,7 @@ const Button = styled.a`
   display: inline-block;
   border-radius: ${rem(3)};
   padding: ${rem(6)} 0;
-  margin: 0 ${rem(16)};
+  margin: ${rem(5)} ${rem(16)};
   text-decoration: none;
   text-align: center;
   width: ${rem(175)};
