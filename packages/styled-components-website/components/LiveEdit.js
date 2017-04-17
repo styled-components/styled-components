@@ -18,6 +18,7 @@ const StyledProvider = styled(LiveProvider)`
   box-shadow: ${rem(1)} ${rem(1)} ${rem(20)} rgba(20, 20, 20, 0.27);
   overflow: hidden;
   margin: ${rem(35)} 0;
+  text-align: left;
 `
 
 const Row = styled.div`
