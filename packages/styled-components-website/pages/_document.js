@@ -71,13 +71,13 @@ export default class MyDocument extends Document {
           <meta name="twitter:url" content="http://styled-components.com" />
           <meta name="twitter:title" content="Styled Components" />
           <meta name="twitter:description" content={description} />
-          <meta name="twitter:image" content="http://styled-components.com/static/atom.png" />
+          <meta name="twitter:image" content="/static/atom.png" />
 
           {/* Facebook */}
           <meta property="og:url" content="http://styled-components.com" />
           <meta property="og:type" content="website" />
           <meta property="og:title" content="Styled Components" />
-          <meta property="og:image" content="http://styled-components.com/static/atom.png" />
+          <meta property="og:image" content="/static/atom.png" />
           <meta property="og:image:height" content="652" />
           <meta property="og:image:width" content="652" />
           <meta property="og:description" content={description} />
