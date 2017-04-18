@@ -54,7 +54,8 @@ module.exports = {
 
     config.resolve.alias = {
       'react': 'preact-compat/dist/preact-compat',
-      'react-dom': 'preact-compat/dist/preact-compat'
+      'react-dom': 'preact-compat/dist/preact-compat',
+      'react-live': 'react-live/dist/react-live.min'
     }
 
     return config
