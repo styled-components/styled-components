@@ -1,7 +1,7 @@
 import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 
-import { LinkIcon } from 'react-octicons-svg'
+import LinkIcon from 'react-octicons-svg/dist/LinkIcon'
 import { Header, SubHeader } from './Layout'
 import { mobile } from '../utils/media'
 

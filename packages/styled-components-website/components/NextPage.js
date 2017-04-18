@@ -1,6 +1,6 @@
 import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
-import { ChevronRightIcon } from 'react-octicons-svg'
+import ChevronRightIcon from 'react-octicons-svg/dist/ChevronRightIcon'
 
 import Link from './Link'
 import { lightGrey } from '../utils/colors'

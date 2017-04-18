@@ -22,6 +22,7 @@
     "react-live": "^1.4.3",
     "react-octicons-svg": "^1.1.13",
     "styled-components": "next",
-    "sw-precache-webpack-plugin": "^0.9.1"
+    "sw-precache-webpack-plugin": "^0.9.1",
+    "webpack-bundle-analyzer": "^2.4.0"
   }
 }
