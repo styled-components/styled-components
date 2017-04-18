@@ -3,6 +3,7 @@ import styled, { css, keyframes } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 import { darkGrey, red } from '../utils/colors'
 import { phone } from '../utils/media'
+import captureScroll from './CaptureScroll'
 
 import '../utils/prismTemplateString'
 
@@ -58,6 +59,8 @@ const StyledEditor = styled(LiveEditor)`
   ${columnMixin}
 `
 
+const StyledEditorScrollCaptured = captureScroll(StyledEditor)
+
 const StyledPreview = styled(LivePreview)`
   position: relative;
   padding: 0.5rem;
@@ -92,7 +95,7 @@ const LiveEdit = ({ noInline, code, scope = {} }) => (
     }}
   >
     <Row>
-      <StyledEditor />
+      <StyledEditorScrollCaptured />
       <StyledPreview />
     </Row>
 
