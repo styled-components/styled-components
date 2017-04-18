@@ -27,13 +27,6 @@ render(
 );
 `).trim()
 
-export const BasicExample = () => (
-  <LiveEdit
-    code={sample}
-    noInline
-  />
-)
-
 const GettingStarted = ({ url }) => (
   <SectionLayout title="Getting Started">
     <p>
@@ -50,7 +43,10 @@ const GettingStarted = ({ url }) => (
       You can edit the code and get a feel for how you'd work with Styled Components.
     </p>
 
-    <BasicExample />
+    <LiveEdit
+      code={sample}
+      noInline
+    />
 
     <Note>
       The CSS rules are automatically vendor prefixed, so you don't have to think about it.

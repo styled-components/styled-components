@@ -2,6 +2,7 @@ import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 import { violetRed, gold } from '../utils/colors'
 import { Content } from '../components/Layout'
+import CodeBlock from '../components/CodeBlock'
 import { BasicExample } from '../components/basics/getting-started'
 
 const Wrapper = styled.div`
@@ -59,6 +60,23 @@ const Button = styled.a`
   `}
 `
 
+const sample = (`
+const Button = styled.button\`
+  /* Adapt the colours based on primary prop */
+  background: \${props => props.primary ? 'palevioletred' : 'white'};
+  color: \${props => props.primary ? 'white' : 'palevioletred'};
+
+  font-size: 1em;
+  margin: 1em;
+  padding: 0.25em 1em;
+  border: 2px solid palevioletred;
+  border-radius: 3px;
+\`;
+
+<Button>Normal</Button>
+<Button primary>Primary</Button>
+`).trim()
+
 const Index = () => (
   <Wrapper>
     <Content>
@@ -89,7 +107,7 @@ const Index = () => (
         </Button>
       </Links>
 
-      <BasicExample />
+      <CodeBlock code={sample} />
     </Content>
   </Wrapper>
 )
