@@ -1,11 +1,31 @@
 import React, { Component } from 'react'
 import { findDOMNode } from 'react-dom'
 
+let lastWheelTimestamp
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('wheel', ({ timeStamp }) => {
+    lastWheelTimestamp = timeStamp
+  })
+}
+
 const captureScroll = Component => {
   class CaptureScroll extends Component {
     onScroll = evt => {
-      const { deltaY } = evt
+      // Don't access window wheel listener
+      evt.stopImmediatePropagation()
+
+      const { timeStamp, deltaY } = evt
       const { offsetHeight, scrollHeight, scrollTop } = this.node
+
+      // If the window is being scrolled, don't scroll the captured scroll area
+      if (timeStamp - lastWheelTimestamp <= 400) {
+        lastWheelTimestamp = timeStamp
+
+        evt.preventDefault()
+        window.scrollBy(0, deltaY)
+        return
+      }
 
       const maxScrollTop = scrollHeight - offsetHeight
 
