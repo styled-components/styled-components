@@ -2,6 +2,7 @@ import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 import { mobile } from '../../utils/media'
 import { violetRed, gold } from '../../utils/colors'
+import captureScroll from '../CaptureScroll'
 
 const Sidebar = styled.nav`
   position: fixed;
@@ -29,4 +30,4 @@ const Sidebar = styled.nav`
   `)}
 `
 
-export default Sidebar
+export default captureScroll(Sidebar)
