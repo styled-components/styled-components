@@ -372,4 +372,15 @@ describe('theming', () => {
 
     expectCSSMatches(`.sc-a { } .b { color: green; } `)
   })
+
+  // https://github.com/styled-components/styled-components/issues/596
+  it('should hoist static properties when using withTheme', () => {
+    class MyComponent extends React.Component {
+      static myStaticProperty: boolean = true
+    }
+
+    const MyComponentWithTheme = withTheme(MyComponent)
+
+    expect(MyComponentWithTheme.myStaticProperty).toBe(true)
+  })
 })
