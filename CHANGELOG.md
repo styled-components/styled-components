@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Pass `innerRef` through to wrapped Styled Components, so that it refers to the actual DOM node. (see [#629](https://github.com/styled-components/styled-components/issues/629))
 - Added a dedicated Server-Side-Rendering API, with optimised rehydration on the client.
 - Add hoisting static (non-React) properties for withTheme HOC, thanks to [@brunolemos](https://github.com/brunolemos). (See [#712](https://github.com/styled-components/styled-components/pull/712))
+- Add `innerRef` support to `withTheme` HOC. (see [#710](https://github.com/styled-components/styled-components/pull/710))
 
 ## [Unreleased]
 
