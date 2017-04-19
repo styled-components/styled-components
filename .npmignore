@@ -6,5 +6,6 @@ rollup.config.js
 .eslintrc
 .eslintignore
 .babelrc
+dangerfile.js
 example/
 src/**/*test.js
