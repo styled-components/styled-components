@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. If a contri
 ## [Unreleased]
 
 ### Added
+- Support for jsdom and other browsers that do not implement [ownerNode](https://developer.mozilla.org/en-US/docs/Web/API/StyleSheet/ownerNode), thanks to [@zvictor](https://github.com/zvictor)
 
 ### Changed
 
