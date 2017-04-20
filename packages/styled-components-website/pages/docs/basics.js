@@ -8,6 +8,7 @@ import PassedProps from '../../components/basics/passed-props'
 import AdaptingBasedOnProps from '../../components/basics/adapting-based-on-props'
 import StylingAnyComponents from '../../components/basics/styling-any-components'
 import ExtendingStyles from '../../components/basics/extending-styles'
+import AttachingAdditionalProps from '../../components/basics/attaching-additional-props'
 import Animations from '../../components/basics/animations'
 import ReactNative from '../../components/basics/react-native'
 
@@ -19,6 +20,7 @@ const Basics = () => (
     <AdaptingBasedOnProps />
     <StylingAnyComponents />
     <ExtendingStyles />
+    <AttachingAdditionalProps />
     <Animations />
     <ReactNative />
 

@@ -116,6 +116,16 @@ const Styled = () => (
 
       <CodeBlock code={attrsSample} />
 
+      <p>
+        {'Learn more about this constructor in the '}
+        <Link
+          inline
+          href="/docs/basics#attaching-additional-props"
+        >
+          Attaching Additional Props
+        </Link>
+        {' section.'}
+      </p>
     </SectionLayout>
   </SectionLayout>
 )
