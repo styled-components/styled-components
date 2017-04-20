@@ -18,7 +18,7 @@ import ThemeProvider from './models/ThemeProvider'
 import withTheme from './hoc/withTheme'
 
 /* Emoji cx generator */
-import toEmoji from './toEmoji'
+import toEmoji from './utils/toEmoji'
 
 /* Instantiate singletons */
 const keyframes = _keyframes(toEmoji)
