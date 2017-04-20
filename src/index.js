@@ -17,12 +17,9 @@ import ThemeProvider from './models/ThemeProvider'
 /* Import Higher Order Components */
 import withTheme from './hoc/withTheme'
 
-/* Emoji cx generator */
-import toEmoji from './utils/toEmoji'
-
 /* Instantiate singletons */
-const keyframes = _keyframes(toEmoji)
-const styled = _styled(_styledComponent(_ComponentStyle(toEmoji)))
+const keyframes = _keyframes(generateAlphabeticName)
+const styled = _styled(_styledComponent(_ComponentStyle(generateAlphabeticName)))
 
 /* Export everything */
 export default styled
