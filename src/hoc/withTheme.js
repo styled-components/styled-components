@@ -5,6 +5,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import hoistStatics from 'hoist-non-react-statics'
 import { CHANNEL } from '../models/ThemeProvider'
+import _isStyledComponent from '../utils/isStyledComponent'
 
 const wrapWithTheme = (Component: ReactClass<any>) => {
   const componentName = (
@@ -13,8 +14,13 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
     'Component'
   )
 
+  const isStyledComponent = _isStyledComponent(Component)
+
   class WithTheme extends React.Component {
     static displayName = `WithTheme(${componentName})`
+
+    // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
+    static styledComponentId = 'withTheme'
 
     static contextTypes = {
       [CHANNEL]: PropTypes.func,
@@ -39,9 +45,18 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
     }
 
     render() {
+      // eslint-disable-next-line react/prop-types
+      const { innerRef } = this.props
       const { theme } = this.state
 
-      return <Component theme={theme} {...this.props} />
+      return (
+        <Component
+          theme={theme}
+          {...this.props}
+          innerRef={isStyledComponent ? innerRef : undefined}
+          ref={isStyledComponent ? undefined : innerRef}
+        />
+      )
     }
   }
 
