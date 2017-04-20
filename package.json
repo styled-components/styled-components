@@ -51,6 +51,7 @@
     "buffer": "^5.0.3",
     "css-to-react-native": "^2.0.3",
     "fbjs": "^0.8.9",
+    "hoist-non-react-statics": "^1.2.0",
     "inline-style-prefixer": "^2.0.5",
     "is-function": "^1.0.1",
     "is-plain-object": "^2.0.1",
