@@ -48,6 +48,14 @@ describe('keyframes', () => {
           opacity: 1;
         }
       }
+      @-webkit-keyframes keyframe_0 {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
     `, { styleSheet })
   })
 })
