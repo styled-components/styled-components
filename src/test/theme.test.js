@@ -383,4 +383,45 @@ describe('theming', () => {
 
     expect(MyComponentWithTheme.myStaticProperty).toBe(true)
   })
+
+  it('should accept innerRef and pass it on as ref', () => {
+    class Comp extends React.Component {
+      render() {
+        return <div />
+      }
+    }
+
+    const CompWithTheme = withTheme(Comp)
+    const ref = jest.fn()
+
+    const wrapper = mount(
+      <ThemeProvider theme={{}}>
+        <CompWithTheme innerRef={ref} />
+      </ThemeProvider>
+    )
+
+    const inner = wrapper.find(Comp).first()
+
+    // $FlowFixMe
+    expect(ref).toHaveBeenCalledWith(inner.node)
+    expect(inner.prop('innerRef')).toBe(undefined)
+  })
+
+  it('should accept innerRef and pass it on for styled components', () => {
+    const Comp = styled.div``
+    const CompWithTheme = withTheme(Comp)
+    const ref = jest.fn()
+
+    const wrapper = mount(
+      <ThemeProvider theme={{}}>
+        <CompWithTheme innerRef={ref} />
+      </ThemeProvider>
+    )
+
+    const inner = wrapper.find(Comp).first()
+
+    // $FlowFixMe
+    expect(ref).toHaveBeenCalledWith(inner.getDOMNode())
+    expect(inner.prop('innerRef')).toBe(ref)
+  })
 })
