@@ -39,7 +39,7 @@ export const Header = styled.h2`
 
 export const SubHeader = styled.h3`
   display: block;
-  margin: ${rem(8)} 0;
+  margin: ${rem(12)} 0;
   font-size: ${rem(22)};
   font-weight: normal;
 `
