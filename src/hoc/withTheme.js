@@ -6,7 +6,7 @@ import PropTypes from 'prop-types'
 import hoistStatics from 'hoist-non-react-statics'
 import { CHANNEL } from '../models/ThemeProvider'
 
-const wrapWithTheme = (Component: ReactClass<mixed>) => {
+const wrapWithTheme = (Component: ReactClass<any>) => {
   const componentName = (
     Component.displayName ||
     Component.name ||
