@@ -48,6 +48,17 @@ const Keyframes = () => (
     </p>
 
     <CodeBlock code={keyframesSample} />
+
+    <p>
+      {'You can learn more about Styled Components with Animations in the '}
+      <Link
+        inline
+        href="/docs/basics#animations"
+      >
+        Animations
+      </Link>
+      {' section.'}
+    </p>
   </SectionLayout>
 )
 

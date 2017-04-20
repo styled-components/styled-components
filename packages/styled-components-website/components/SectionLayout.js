@@ -6,7 +6,8 @@ import titleToDash from '../utils/titleToDash'
 import Anchor from './Anchor'
 
 const Wrapper = styled.div`
-  margin-bottom: ${p => p.sub ? rem(50) : rem(90)};
+  margin-bottom: ${p => p.sub ? rem(30) : rem(90)};
+  margin-top: ${p => p.sub ? rem(30) : 0};
 `
 
 const SectionLayout = ({ children, title, sub }) => {

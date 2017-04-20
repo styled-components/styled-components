@@ -50,7 +50,6 @@ const Styled = () => (
     </p>
 
     <Table head={[ 'Arguments', 'Description' ]}>
-
       <Row>
         <Column>
           1. <Code>component</Code> / <Code>tagname</Code>
@@ -59,7 +58,6 @@ const Styled = () => (
           Either a valid react component or a tagname like <Code>'div'</Code>.
         </Column>
       </Row>
-
     </Table>
 
     <p>
@@ -73,6 +71,17 @@ const Styled = () => (
       Instead, rely on the <Code>styled.tagname</Code> methods like <Code>styled.button</Code>.
       We define all valid HTML5 and SVG elements. (It's an automatic fat finger check too)
     </Note>
+
+    <p>
+      {'You can see this method being introduced in the '}
+      <Link
+        inline
+        href="/docs/basics#getting-started"
+      >
+        Getting started
+      </Link>
+      {' section.'}
+    </p>
 
     <SectionLayout sub title=".attrs">
       <p>
