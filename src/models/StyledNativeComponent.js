@@ -106,8 +106,8 @@ export default (constructWithOptions: Function) => {
       }
 
       if (!isStyledComponent(target)) {
-        propsForElement.innerRef = undefined
         propsForElement.ref = innerRef
+        delete propsForElement.innerRef
       }
 
       return createElement(target, propsForElement, children)
