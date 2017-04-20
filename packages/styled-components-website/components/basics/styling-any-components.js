@@ -2,6 +2,7 @@ import React from 'react'
 import SectionLayout from '../SectionLayout'
 import LiveEdit from '../LiveEdit'
 import Code from '../Code'
+import Note from '../Note'
 
 const sample = (`
 // This could be react-router's Link for example
@@ -25,10 +26,10 @@ render(
 );
 `).trim()
 
-const ThirdPartyComponents = () => (
-  <SectionLayout title="Third-Party Components">
+const StylingAnyComponents = () => (
+  <SectionLayout title="Styling any components">
     <p>
-      Overriding component styles, as can be seen above, works perfectly on any third-party
+      The <Code>styled</Code> method works perfectly on all of your own or any third-party
       components as well, as long as they're accepting the <Code>className</Code> prop.
     </p>
 
@@ -42,7 +43,20 @@ const ThirdPartyComponents = () => (
       code={sample}
       noInline
     />
+
+    <p>
+      You can also pass tag names into the <Code>styled()</Code> call, like so: <Code>styled('div')</Code>.
+      <br />
+      In fact, the <Code>styled.tagname</Code> helpers are just aliases.
+    </p>
+
+    <Note>
+      Styled Components always generates a real stylesheet with classes.
+      <br />
+      The classnames are then passed to the React component (including third party components)
+      via the <Code>className</Code> prop.
+    </Note>
   </SectionLayout>
 )
 
-export default ThirdPartyComponents
+export default StylingAnyComponents

@@ -2958,7 +2958,7 @@ promise@^7.1.1:
   dependencies:
     asap "~2.0.3"
 
-prop-types@^15.5.4:
+prop-types@^15.5.4, prop-types@^15.5.8:
   version "15.5.8"
   resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.5.8.tgz#6b7b2e141083be38c8595aa51fc55775c7199394"
   dependencies:
@@ -3060,13 +3060,14 @@ react-hot-loader@3.0.0-beta.6:
     redbox-react "^1.2.5"
     source-map "^0.4.4"
 
-react-live@^1.4.3:
-  version "1.4.3"
-  resolved "https://registry.yarnpkg.com/react-live/-/react-live-1.4.3.tgz#48b80ce972f35a20ed59d4bbeefff002644859cc"
+react-live@^1.4.4:
+  version "1.4.4"
+  resolved "https://registry.yarnpkg.com/react-live/-/react-live-1.4.4.tgz#d4f5b3b6a0bf7f5ff2c5d621b834f9faf2c94989"
   dependencies:
     buble "^0.15.2"
     dom-iterator "^0.3.0"
     prismjs "^1.6.0"
+    prop-types "^15.5.8"
     unescape "^0.2.0"
 
 react-octicons-svg@^1.1.13:
