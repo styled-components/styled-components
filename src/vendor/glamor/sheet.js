@@ -29,6 +29,10 @@ function last(arr) {
 }
 
 function sheetForTag(tag) {
+  if(tag.sheet) {
+    return tag.sheet
+  }
+  
   for(let i = 0; i < document.styleSheets.length; i++) {
     if(document.styleSheets[i].ownerNode === tag) {
       return document.styleSheets[i]

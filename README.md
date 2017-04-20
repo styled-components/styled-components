@@ -478,6 +478,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [reshake](https://github.com/elrumordelaluz/reshake): CSShake as a React Functional Component ([demo](https://elrumordelaluz.github.io/reshake/))
 - [last-draft](https://github.com/vacenz/last-draft): A Draft.js Editor ([demo](http://lastdraft.vace.nz))
 - [styled-components-spacing](https://github.com/jameslnewell/styled-components-spacing): Responsive margin and padding components for `styled-components`.
+- [reactour](https://github.com/elrumordelaluz/reactour): Tourist Guide into your React Components ([demo](https://elrumordelaluz.github.io/reactour/))
 
 #### Grid Systems
 - [grid-styled](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))

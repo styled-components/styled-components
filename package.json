@@ -11,7 +11,6 @@
     "prebuild:lib": "rm -rf lib/*",
     "build:lib": "babel --out-dir lib src",
     "build:flow": "flow-copy-source -v -i '{**/test/*.js,**/*.test.js}' src lib",
-    "prebuild:umd": "rm -rf dist/*",
     "prebuild:dist": "rm -rf dist/*",
     "build:dist": "rollup -c && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
@@ -29,6 +28,18 @@
     "type": "git",
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
+  "files": [
+    "native.js",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "dist",
+    "docs",
+    "flow-typed",
+    "lib",
+    "native",
+    "src",
+    "typings"
+  ],
   "keywords": [
     "react",
     "css",
@@ -60,7 +71,7 @@
     "babel-loader": "^6.2.10",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-plugin-external-helpers": "^6.18.0",
-    "babel-plugin-flow-react-proptypes": "^0.18.2",
+    "babel-plugin-flow-react-proptypes": "^1.2.0",
     "babel-plugin-transform-class-properties": "^6.19.0",
     "babel-plugin-transform-flow-strip-types": "^6.21.0",
     "babel-plugin-transform-object-rest-spread": "^6.20.2",
