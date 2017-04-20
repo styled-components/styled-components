@@ -8,6 +8,7 @@ import Security from '../../components/advanced/security'
 import ExistingCSS from '../../components/advanced/existing-css'
 import MediaTemplates from '../../components/advanced/media-templates'
 import TaggedTemplateLiterals from '../../components/advanced/tagged-template-literals'
+import ServerSideRendering from '../../components/advanced/server-side-rendering'
 
 const Advanced = () => (
   <DocsLayout title="Advanced">
@@ -17,6 +18,7 @@ const Advanced = () => (
     <ExistingCSS />
     <MediaTemplates />
     <TaggedTemplateLiterals />
+    <ServerSideRendering />
 
     <NextPage
       href="/docs/api"

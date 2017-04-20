@@ -38,6 +38,8 @@
           "title": "Media Templates"
         }, {
           "title": "Tagged Template Literals"
+        }, {
+          "title": "Server Side Rendering"
         }
       ]
     }, {
