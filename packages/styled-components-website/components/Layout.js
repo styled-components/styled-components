@@ -15,7 +15,7 @@ export const Content = styled.div`
   width: ${rem(1024)};
   max-width: 100%;
   margin: 0 auto;
-  padding: ${rem(30)} ${rem(40)};
+  padding: ${rem(50)} ${rem(40)} ${rem(30)} ${rem(40)};
   box-sizing: border-box;
 
   ${mobile(css`
