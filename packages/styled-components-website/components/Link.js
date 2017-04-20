@@ -27,6 +27,7 @@ export const InlineLink = styled.a.attrs({
 })`
   color: palevioletred;
   font-weight: 600;
+  cursor: pointer;
 `
 
 const Link = ({ children, className, inline, unstyled, ...rest }) => {
