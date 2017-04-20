@@ -5,33 +5,15 @@ import { InlineLink } from '../Link'
 import { CodeBlockRaw } from '../CodeBlock'
 import Code from '../Code'
 
+const install = (`
+npm i -g flow-typed # if you do not already have flow-typed
+
+flow-typed install styled-components@<version>
+`).trim()
+
 const flowconfig = (`
 [ignore]
-# We vendor our src directory, which is not needed for type-checking
-.*/styled-components/src/.*
-
-[include]
-
-[libs]
-# This is where your own flow-typed libdefs go
-flow-typed
-
-# These declarations are super explicit...
-# We want to show what libdef files we need to make
-# flow understand all external dependencies
-#
-# If you have similar dependencies, you will need to
-# check which libdef files are covered by your flow-typed
-# directory!
-#
-# A more generic approach (please use with caution!):
-# node_modules/styled-components/flow-typed/*.js
-
-node_modules/styled-components/flow-typed/react-native.js
-node_modules/styled-components/flow-typed/lodash_v4.x.x.js
-node_modules/styled-components/flow-typed/inline-style-prefixer_vx.x.x.js
-
-[options]
+.*/node_modules/styled-components/.*
 `).trim()
 
 const Flow = ({ url }) => (
@@ -45,31 +27,21 @@ const Flow = ({ url }) => (
     </p>
 
     <p>
-      Sadly, Flow does not work right out-of-the-box, since there isn't a best practise how to isolate
-      typing dependencies etc. on a module level yet. This document should give you an idea how to setup
-      your <Code>.flowconfig</Code>, so you can use Styled Components without any hassle.
+      To use Flow with the public api of Styled Components we recommend that you use the library definition in <Code>flow-typed</Code>.
+      To install it you can use the <Code>flow-typed</Code> cli or download it manually from the git repository and store it in
+      a <Code>flow-typed/</Code> folder in the same directory with your <Code>flowconfig</Code>.
     </p>
 
-    <SectionLayout sub title="Libdef Dependencies">
-      <p>
-        A libdef is a descriptive file for an external untyped 3rd party module used by our library.
-        You can find all our dependencies in the <Code>flow-typed/</Code> directory.
-        All files located in <Code>flow-typed/npm/</Code> are downloaded or auto-stubbed versions via
-        the <Code>flow-typed</Code> binary, while files located in <Code>flow-typed/</Code> are
-        adapted versions of <Code>flow-typed/npm/</Code> files.
-      </p>
-
-      <p>
-        Those adapted files might collide with your locally used libdefs like lodash.
-        While adapting some libdefs, we made sure not to introduce breaking changes,
-        so you can safely use them instead of the official ones found on flow-typed.
-      </p>
+    <SectionLayout sub title="Installing the definitions">
+      <CodeBlockRaw>
+        {install}
+      </CodeBlockRaw>
     </SectionLayout>
 
-    <SectionLayout sub title={[ 'Example ', <Code>.flowconfig</Code> ]}>
+    <SectionLayout sub title="Ignore Styled Components source">
       <p>
-        It's usually easier to just see some example how to set up the <Code>.flowconfig</Code>,
-        so here is our current recommendation:
+        You should add the following lines to your <Code>.flowconfig</Code>, if you run into Flow errors, coming from the Styled Components
+        package in your <Code>node_modules</Code> directory.
       </p>
 
       <CodeBlockRaw>
