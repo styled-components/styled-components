@@ -542,6 +542,12 @@ To use it from your HTML, add this at the bottom of your `index.html`, and you'l
 <script src="https://unpkg.com/styled-components/dist/styled-components.min.js" type="text/javascript"></script>
 ```
 
+## Other solutions
+
+If `styled-components` isn't quite what you're looking for, maybe something in this list is:
+
+- [`glamorous`](https://github.com/paypal/glamorous) - basically `styled-components` but using JS objects and functions instead of strings.
+
 ## License
 
 Licensed under the MIT License, Copyright © 2016 Glen Maddern and Maximilian Stoiber.
