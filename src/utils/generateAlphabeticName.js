@@ -29,3 +29,5 @@ const generateAlphabeticName = code => {
   const lastDigit = String.fromCodePoint(emojiList[code % emojiList.length])
   return code > emojiList.length ? `${generateAlphabeticName(Math.floor(code / emojiList.length))}${lastDigit}` : lastDigit
 }
+
+export default generateAlphabeticName
