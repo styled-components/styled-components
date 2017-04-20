@@ -29,6 +29,8 @@ Utilising [tagged template literals](./docs/tagged-template-literals.md) (a rece
 
 ## Usage
 
+[![Join the chat at https://gitter.im/styled-components/styled-components](https://badges.gitter.im/styled-components/styled-components.svg)](https://gitter.im/styled-components/styled-components?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 ### Basic
 
 This creates two react components, `<Title>` and `<Wrapper>`:
