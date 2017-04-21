@@ -5,7 +5,7 @@ let isMobile
 let lastWheelTimestamp
 
 if (typeof window !== 'undefined') {
-  isMobile = window.matchMedia(`(max-width: ${1000 / 16})`).matches
+  isMobile = window.matchMedia(`(max-width: ${1000 / 16}em)`).matches
 
   if (!isMobile) {
     window.addEventListener('wheel', ({ timeStamp }) => {
