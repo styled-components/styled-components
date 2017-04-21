@@ -1,7 +1,6 @@
 // @flow
 import React from 'react';
 import expect from 'expect'
-import sinon from 'sinon';
 import styled from '../../index'
 import domElements from '../../utils/domElements'
 
@@ -13,34 +12,26 @@ describe('styled', () => {
   })
 
   it('should console.error the correct name for html tags when invalid arguments are passed', () => {
-    const consoleSpy = sinon.spy(console, 'error')
-
-    // $FlowInvalidInputTest
-    styled.div(`
-      html {
-        color: blue;
-      }
-    `)
-
-    consoleSpy.restore()
-    expect(consoleSpy.callCount).toEqual(1)
-    expect(consoleSpy.getCall(0).args[0]).toInclude('styled.div')
+    expect(() => {
+      // $FlowInvalidInputTest
+      styled.div(`
+        html {
+          color: blue;
+        }
+      `)
+    }).toThrow(/styled\.div/)
   })
 
   it('should console.error the correct name for components when invalid arguments are passed', () => {
-    const consoleSpy = sinon.spy(console, 'error')
-
     const component = () => <div />
 
-    // $FlowInvalidInputTest
-    styled(component)(`
-      html {
-        color: blue;
-      }
-    `)
-
-    consoleSpy.restore()
-    expect(consoleSpy.callCount).toEqual(1)
-    expect(consoleSpy.getCall(0).args[0]).toInclude('styled(Component)')
+    expect(() => {
+      // $FlowInvalidInputTest
+      styled(component)(`
+        html {
+          color: blue;
+        }
+      `)
+    }).toThrow(/Component/)
   })
 })
