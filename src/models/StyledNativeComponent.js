@@ -5,6 +5,7 @@ import type { Theme } from './ThemeProvider'
 
 import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
+import getComponentName from '../utils/getComponentName'
 import type { RuleSet, Target } from '../types'
 
 import { CHANNEL } from './ThemeProvider'
@@ -120,7 +121,7 @@ export default (constructWithOptions: Function) => {
     rules: RuleSet,
   ) => {
     const {
-      displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
+      displayName = isTag(target) ? `styled.${target}` : `Styled(${getComponentName(target)})`,
       ParentComponent = BaseStyledNativeComponent,
       rules: extendingRules,
       attrs,

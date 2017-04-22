@@ -8,6 +8,7 @@ import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
+import getComponentName from '../utils/getComponentName'
 import type { RuleSet, Target } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
@@ -172,7 +173,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     rules: RuleSet,
   ) => {
     const {
-      displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
+      displayName = isTag(target) ? `styled.${target}` : `Styled(${getComponentName(target)})`,
       componentId = generateId(options.displayName),
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
