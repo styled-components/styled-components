@@ -13,7 +13,9 @@
     "prebuild:dist": "rm -rf dist/*",
     "build:dist": "rollup -c && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
-    "test": "jest",
+    "test": "npm run test:web && npm run test:native",
+    "test:web": "jest",
+    "test:native": "jest -c .jest.native.json",
     "test:watch": "npm run test -- --watch",
     "flow": "flow check",
     "lint": "eslint src",
@@ -112,6 +114,9 @@
   "jest": {
     "roots": [
       "<rootDir>/src/"
+    ],
+    "testPathIgnorePatterns": [
+      "<rootDir>/src/native"
     ]
   },
   "lint-staged": {
