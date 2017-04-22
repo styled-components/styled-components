@@ -231,7 +231,7 @@ const StyledLink = styled(Link)`
   </a>
 </div>
 
-> **Note:** `styled-components` generate a real stylesheet with classes. The class names are then passed to the react component (including third party components) via the `className` prop. For the styles to be applied, third-party components must attach the passed-in `className` prop to a DOM node. See [Using `styled-components` with existing CSS](./docs/existing-css.md) for more information!
+> **Note:** `styled-components` generate a real stylesheet with classes. The class names are then passed to the react component (including third party components) via the `className` prop. For the styles to be applied, third-party components must attach the passed-in `className` prop to a DOM node. Likewise, third-party react native components must attach the passed in `style` prop. See [Using `styled-components` with existing CSS](./docs/existing-css.md) for more information!
 
 ### Animations
 
