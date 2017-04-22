@@ -1,7 +1,8 @@
 // @flow
+import domElements from 'react-dom-elements'
+
 import css from './css'
 import type { Interpolation, Target } from '../types'
-import domElements from '../utils/domElements'
 
 export default (styledComponent: Function) => {
   const styled = (tag: Target) =>

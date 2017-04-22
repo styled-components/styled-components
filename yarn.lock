@@ -3198,6 +3198,10 @@ is-property@^1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/is-property/-/is-property-1.0.2.tgz#57fe1c4e48474edd65b09911f26b1cd4095dda84"
 
+is-react-prop@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/is-react-prop/-/is-react-prop-0.1.0.tgz#08204765cdc6ba0feea0ea9d4d1fef5272c1d8ed"
+
 is-redirect@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/is-redirect/-/is-redirect-1.0.0.tgz#1d03dded53bd8db0f30c26e4f95d36fc7c87dc24"
@@ -4635,6 +4639,10 @@ react-clone-referenced-element@^1.0.1:
 react-deep-force-update@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/react-deep-force-update/-/react-deep-force-update-1.0.1.tgz#f911b5be1d2a6fe387507dd6e9a767aa2924b4c7"
+
+react-dom-elements@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/react-dom-elements/-/react-dom-elements-0.1.0.tgz#b5cc76d2d3310fe18c088b6b1ac5580328229f70"
 
 react-dom@^15.4.1:
   version "15.4.1"
