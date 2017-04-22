@@ -1,6 +1,6 @@
 {
   "presets": [
-    "env",
+    ["env", { "loose": true }],
     "react"
   ],
   "plugins": [
