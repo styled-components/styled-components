@@ -113,7 +113,12 @@ export default {
     const names = {}
 
     /* Construct existing state from DOM */
-    Array.from(document.querySelectorAll(`[${SC_ATTR}]`)).forEach(el => {
+    const nodes = document.querySelectorAll(`[${SC_ATTR}]`)
+    const nodesLength = nodes.length
+
+    for (let i = 0; i < nodesLength; i += 1) {
+      const el = nodes[i]
+
       tags.push(new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML))
 
       const attr = el.getAttribute(SC_ATTR)
@@ -122,7 +127,7 @@ export default {
           names[name] = true
         })
       }
-    })
+    }
 
     /* Factory for making more tags */
     const tagConstructor = (isLocal: boolean): Tag => {

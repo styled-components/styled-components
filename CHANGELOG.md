@@ -22,6 +22,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Added a dedicated Server-Side-Rendering API, with optimised rehydration on the client.
 - Add hoisting static (non-React) properties for withTheme HOC, thanks to [@brunolemos](https://github.com/brunolemos). (See [#712](https://github.com/styled-components/styled-components/pull/712))
 - Add `innerRef` support to `withTheme` HOC. (see [#710](https://github.com/styled-components/styled-components/pull/710))
+- Switch to babel-preset-env. (see [#717](https://github.com/styled-components/styled-components/pull/717))
 
 ## [Unreleased]
 

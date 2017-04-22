@@ -1,4 +1,4 @@
-/* eslint-disable flowtype/require-valid-file-annotation, no-console */
+/* eslint-disable flowtype/require-valid-file-annotation, no-console, import/extensions */
 import nodeResolve from 'rollup-plugin-node-resolve'
 import replace from 'rollup-plugin-replace'
 import commonjs from 'rollup-plugin-commonjs'
@@ -51,16 +51,17 @@ const plugins = [
   babel({
     babelrc: false,
     presets: [
-      ['latest', { es2015: { modules: false } }],
+      ['env', { modules: false, loose: true }],
       'react',
     ],
     plugins: [
-      'flow-react-proptypes',
+      !prod && 'flow-react-proptypes',
+      prod && 'transform-react-remove-prop-types',
       'transform-flow-strip-types',
       'external-helpers',
       'transform-object-rest-spread',
       'transform-class-properties',
-    ],
+    ].filter(Boolean),
   }),
   json(),
 ]
