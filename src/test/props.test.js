@@ -1,7 +1,6 @@
 // @flow
 import React from 'react'
 import { shallow } from 'enzyme'
-import expect from 'expect'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
@@ -24,7 +23,7 @@ describe('props', () => {
     const Comp = styled.div`
       color: ${props => props.hidden ? 'transparent' : 'black'};
     `
-    expect(shallow(<Comp hidden/>).html()).toEqual('<div hidden="" class="sc-a b"></div>')
+    expect(shallow(<Comp hidden/>).html()).toEqual('<div class="sc-a b" hidden=""></div>')
     expectCSSMatches('.sc-a {} .b { color: transparent; }')
   })
 
@@ -40,7 +39,7 @@ describe('props', () => {
     it('should default to passing through valid HTML attributes for divs', () => {
       const Comp = styled.div``
       expect(shallow(<Comp title="hihi"/>).html())
-        .toEqual('<div title="hihi" class="sc-a b"></div>')
+        .toEqual('<div class="sc-a b" title="hihi"></div>')
     })
 
     it('should default to passing through nothing for strings', () => {
@@ -53,7 +52,7 @@ describe('props', () => {
         title: true
       })``
       expect(shallow(<Comp/>).html()).toEqual('<div class="sc-a b"></div>')
-      expect(shallow(<Comp title="foo"/>).html()).toEqual('<div title="foo" class="sc-a b"></div>')
+      expect(shallow(<Comp title="foo"/>).html()).toEqual('<div class="sc-a b" title="foo"></div>')
     })
 
     it('s whitelist should be case-insensitive', () => {
@@ -61,14 +60,14 @@ describe('props', () => {
         contenteditable: true
       })``
       expect(shallow(<Comp/>).html()).toEqual('<div class="sc-a b"></div>')
-      expect(shallow(<Comp contentEditable/>).html()).toEqual('<div contenteditable="true" class="sc-a b"></div>')
+      expect(shallow(<Comp contentEditable/>).html()).toEqual('<div class="sc-a b" contenteditable="true"></div>')
     })
 
     it('should pass through boolean props', () => {
       const Comp = styled('div').innerProps({
         hidden: true
       })``
-      expect(shallow(<Comp hidden/>).html()).toEqual('<div hidden="" class="sc-a b"></div>')
+      expect(shallow(<Comp hidden/>).html()).toEqual('<div class="sc-a b" hidden=""></div>')
     })
 
     it('should pass through complex props even if its a bad idea', () => {
@@ -85,7 +84,7 @@ describe('props', () => {
         })
       }
       expect(shallow(<Comp title={{width: 10, height: 10}}/>).html())
-        .toEqual('<div style="width:10px;height:10px;" title="[object Object]" class="sc-a b"></div>')
+        .toEqual('<div style="width:10px;height:10px;" class="sc-a b" title="[object Object]"></div>')
     })
 
     it('should allow a shorthand for both innerProps and attrs', () => {
@@ -95,7 +94,7 @@ describe('props', () => {
         'title style': {width: '100px'},
       })``
       expect(shallow(<Comp href="#" target="_blank"/>).html())
-        .toEqual('<div title="[object Object]" style="width:100px;" href="#" target="_blank" class="sc-a b"></div>')
+        .toEqual('<div title="[object Object]" style="width:100px;" class="sc-a b" href="#" target="_blank"></div>')
     })
   })
 })
