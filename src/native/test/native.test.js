@@ -17,7 +17,7 @@ describe('native', () => {
     const wrapper = shallow(<Comp />)
     const view = wrapper.find('View').first()
 
-    expect(view.prop('style')).toEqual([ {}, undefined ])
+    expect(view.prop('style')).toEqual([{}])
   })
 
   it('should combine inline styles and the style prop', () => {
@@ -41,8 +41,7 @@ describe('native', () => {
       const child = shallow(<Child />)
 
       expect(parent.find('View').prop('style')).toEqual([
-        { opacity: 0.9 },
-        undefined
+        { opacity: 0.9 }
       ])
 
       expect(child.find('View').prop('style')).toEqual([
@@ -52,88 +51,84 @@ describe('native', () => {
           paddingRight: 10,
           paddingBottom: 10,
           paddingLeft: 10
-        }, undefined
+        }
       ])
     })
   })
 
-  describe('attrs', () => {
-    it('works fine with an empty object', () => {
-      const Comp = styled.View.attrs({})``
-      const wrapper = shallow(<Comp />)
-      const view = wrapper.find('View').first()
+  describe('withProps', () => {
+    it('work fine with a function returning an empty object', () => {
+      const Comp = styled.View.withProps(() => ({}))``
+      const view = shallow(<Comp />).find('View').first()
 
       expect(view.props()).toEqual({
-        style: [ {}, undefined ]
+        style: [{}]
       })
     })
 
-    it('passes simple props on', () => {
-      const Comp = styled.View.attrs({
-        test: true
-      })``
+    it('works with returning an object with a simple prop', () => {
+      const Comp = styled.View.withProps(() => ({
+        type: 'button'
+      }))``
 
-      const wrapper = shallow(<Comp />)
-      const view = wrapper.find('View').first()
+      const view = shallow(<Comp />).find('View').first()
 
       expect(view.props()).toEqual({
-        style: [ {}, undefined ],
-        test: true
+        type: 'button',
+        style: [{}]
       })
     })
 
-    it('calls an attr-function with context', () => {
-      const Comp = styled.View.attrs({
-        copy: props => props.test
-      })``
+    it('receives props in the transformer function', () => {
+      const Comp = styled.View.withProps(props => ({
+        type: props.submit ? 'submit' : 'button',
+        submit: undefined
+      }))``
 
-      const test = 'Put that cookie down!'
-      const wrapper = shallow(<Comp test={test} />)
-      const view = wrapper.find('View').first()
+      const view = shallow(<Comp />).find('View').first()
 
       expect(view.props()).toEqual({
-        style: [ {}, undefined ],
-        copy: test,
-        test,
+        type: 'button',
+        style: [{}]
+      })
+
+      const view2 = shallow(<Comp submit/>).find('View').first()
+
+      expect(view2.props()).toEqual({
+        type: 'submit',
+        style: [{}]
       })
     })
 
-    it('merges multiple calls', () => {
-      const Comp = styled.View.attrs({
-        first: 'first',
-        test: '_'
-      }).attrs({
-        second: 'second',
-        test: 'test'
-      })``
+    it('merges the result with existing props', () => {
+      const Comp = styled.View.withProps(props => ({
+        disabled: true
+      }))``
 
-      const wrapper = shallow(<Comp />)
-      const view = wrapper.find('View').first()
+      const view = shallow(<Comp type="text"/>).find('View').first()
 
       expect(view.props()).toEqual({
-        style: [ {}, undefined ],
-        first: 'first',
-        second: 'second',
-        test: 'test',
+        children: undefined,
+        disabled: true,
+        style: [{}],
+        type: 'text'
       })
     })
 
-    it('merges attrs when inheriting SC', () => {
-      const Parent = styled.View.attrs({
-        first: 'first',
-      })``
+    it('composes chained withProps', () => {
+      const Comp = styled.View.withProps(() => ({
+        type: 'button',
+      })).withProps(() => ({
+        tabIndex: 0
+      }))``
 
-      const Child = Parent.extend.attrs({
-        second: 'second'
-      })``
-
-      const wrapper = shallow(<Child />)
-      const view = wrapper.find('View').first()
+      const view = shallow(<Comp />).find('View').first()
 
       expect(view.props()).toEqual({
-        style: [ {}, undefined ],
-        first: 'first',
-        second: 'second',
+        children: undefined,
+        type: 'button',
+        tabIndex: 0,
+        style: [{}]
       })
     })
   })
