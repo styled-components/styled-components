@@ -1,17 +1,14 @@
 // @flow
 import React from 'react'
-import { shallow } from 'enzyme'
 
 import _keyframes from '../../constructors/keyframes'
-import _GlobalStyle from '../../models/GlobalStyle'
-import flatten from '../flatten'
 import stringifyRules from '../stringifyRules'
 import css from '../css'
 
 import { resetNoParserStyled, expectCSSMatches } from '../../test/utils'
 
 let index = 0
-const keyframes = _keyframes(() => `keyframe_${index++}`, _GlobalStyle(flatten, stringifyRules), css)
+const keyframes = _keyframes(() => `keyframe_${index++}`, stringifyRules, css)
 
 describe('keyframes', () => {
   beforeEach(() => {

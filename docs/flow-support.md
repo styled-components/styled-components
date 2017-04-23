@@ -62,7 +62,6 @@ flow-typed
 # node_modules/styled-components/flow-typed/*.js
 
 node_modules/styled-components/flow-typed/react-native.js
-node_modules/styled-components/flow-typed/glamor_vx.x.x.js
 node_modules/styled-components/flow-typed/lodash_v4.x.x.js
 node_modules/styled-components/flow-typed/inline-style-prefixer_vx.x.x.js
 

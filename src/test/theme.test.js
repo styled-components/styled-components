@@ -1,6 +1,4 @@
 // @flow
-import expect from 'expect'
-import jsdom from 'mocha-jsdom'
 import React from 'react'
 import { mount, render } from 'enzyme'
 
@@ -208,9 +206,7 @@ describe('theming', () => {
   })
 })
 
-describe('theming (jsdom)', () => {
-  jsdom()
-
+describe('theming', () => {
   beforeEach(() => {
     styled = resetStyled()
   })
@@ -375,5 +371,57 @@ describe('theming (jsdom)', () => {
     wrapper.setProps({ prop: 'bar' })
 
     expectCSSMatches(`.sc-a { } .b { color: green; } `)
+  })
+
+  // https://github.com/styled-components/styled-components/issues/596
+  it('should hoist static properties when using withTheme', () => {
+    class MyComponent extends React.Component {
+      static myStaticProperty: boolean = true
+    }
+
+    const MyComponentWithTheme = withTheme(MyComponent)
+
+    expect(MyComponentWithTheme.myStaticProperty).toBe(true)
+  })
+
+  it('should accept innerRef and pass it on as ref', () => {
+    class Comp extends React.Component {
+      render() {
+        return <div />
+      }
+    }
+
+    const CompWithTheme = withTheme(Comp)
+    const ref = jest.fn()
+
+    const wrapper = mount(
+      <ThemeProvider theme={{}}>
+        <CompWithTheme innerRef={ref} />
+      </ThemeProvider>
+    )
+
+    const inner = wrapper.find(Comp).first()
+
+    // $FlowFixMe
+    expect(ref).toHaveBeenCalledWith(inner.node)
+    expect(inner.prop('innerRef')).toBe(undefined)
+  })
+
+  it('should accept innerRef and pass it on for styled components', () => {
+    const Comp = styled.div``
+    const CompWithTheme = withTheme(Comp)
+    const ref = jest.fn()
+
+    const wrapper = mount(
+      <ThemeProvider theme={{}}>
+        <CompWithTheme innerRef={ref} />
+      </ThemeProvider>
+    )
+
+    const inner = wrapper.find(Comp).first()
+
+    // $FlowFixMe
+    expect(ref).toHaveBeenCalledWith(inner.getDOMNode())
+    expect(inner.prop('innerRef')).toBe(ref)
   })
 })

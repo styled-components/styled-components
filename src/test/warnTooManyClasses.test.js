@@ -1,7 +1,6 @@
 // @flow
 import React from 'react'
 import { shallow } from 'enzyme'
-import expect from 'expect'
 
 import { resetStyled, expectCSSMatches } from './utils'
 import styleSheet from '../models/StyleSheet'

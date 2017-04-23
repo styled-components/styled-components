@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import expect from 'expect'
+import PropTypes from 'prop-types'
 import { shallow } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
@@ -51,7 +51,7 @@ describe('extending', () => {
 
     shallow(<Child />)
 
-    expectCSSMatches('.sc-a {} .sc-b {} .c { color: blue;color: red; }')
+    expectCSSMatches('.sc-b {} .c { color: blue;color: red; }')
   })
 
   it('should generate different classes for both parent and child', () => {
@@ -109,7 +109,7 @@ describe('extending', () => {
       color: ${(props) => props.color};
     `
     Parent.propTypes = {
-      color: React.PropTypes.string
+      color: PropTypes.string
     }
 
     const Child = Parent.extend`background-color: green;`
@@ -124,7 +124,7 @@ describe('extending', () => {
 
     const Child = Parent.extend`color: green;`
 
-    expect(Child.fetchData).toExist()
+    expect(Child.fetchData).toBeTruthy()
     expect(Child.fetchData()).toEqual(1)
   })
 
@@ -135,7 +135,7 @@ describe('extending', () => {
     const Parent = GrandParent.extend`color: red;`
     const Child = Parent.extend`color:red;`
 
-    expect(Child.fetchData).toExist()
+    expect(Child.fetchData).toBeTruthy()
     expect(Child.fetchData()).toEqual(1)
   })
 

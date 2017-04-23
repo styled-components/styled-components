@@ -4,30 +4,48 @@ import { createElement } from 'react'
 import type { Theme } from './ThemeProvider'
 
 import isTag from '../utils/isTag'
+import isStyledComponent from '../utils/isStyledComponent'
 import type { RuleSet, Target } from '../types'
 
 import { CHANNEL } from './ThemeProvider'
 import InlineStyle from './InlineStyle'
 import AbstractStyledComponent from './AbstractStyledComponent'
-import constructWithOptions from '../constructors/constructWithOptions'
 
-const createStyledNativeComponent = (target: Target,
-                                     options: Object,
-                                     rules: RuleSet) => {
-  const {
-    displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
-    rules: extendingRules = [],
-    ParentComponent = AbstractStyledComponent,
-  } = options
-  const inlineStyle = new InlineStyle([...extendingRules, ...rules])
+export default (constructWithOptions: Function) => {
+  class BaseStyledNativeComponent extends AbstractStyledComponent {
+    static target: Target
+    static styledComponentId: string
+    static attrs: Object
+    static inlineStyle: Object
 
-  class StyledNativeComponent extends ParentComponent {
-    static extend: Function
-    static extendWith: Function
-
+    attrs = {}
     state = {
-      theme: {},
+      theme: null,
       generatedStyles: undefined,
+    }
+
+    buildExecutionContext(theme: any, props: any) {
+      const { attrs } = this.constructor
+      const context = { ...props, theme }
+      if (attrs === undefined) {
+        return context
+      }
+
+      this.attrs = Object.keys(attrs).reduce((acc, key) => {
+        const attr = attrs[key]
+        // eslint-disable-next-line no-param-reassign
+        acc[key] = typeof attr === 'function' ? attr(context) : attr
+        return acc
+      }, {})
+
+      return { ...context, ...this.attrs }
+    }
+
+    generateAndInjectStyles(theme: any, props: any) {
+      const { inlineStyle } = this.constructor
+      const executionContext = this.buildExecutionContext(theme, props)
+
+      return inlineStyle.generateStyleObject(executionContext)
     }
 
     componentWillMount() {
@@ -45,7 +63,7 @@ const createStyledNativeComponent = (target: Target,
           const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
           const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
           const generatedStyles = this.generateAndInjectStyles(theme, this.props)
-          this.setState({ generatedStyles, theme })
+          this.setState({ theme, generatedStyles })
         })
       } else {
         const theme = this.props.theme || {}
@@ -53,7 +71,7 @@ const createStyledNativeComponent = (target: Target,
           theme,
           this.props,
         )
-        this.setState({ generatedStyles, theme })
+        this.setState({ theme, generatedStyles })
       }
     }
 
@@ -76,38 +94,64 @@ const createStyledNativeComponent = (target: Target,
       }
     }
 
-    generateAndInjectStyles(theme: any, props: any) {
-      const executionContext = { ...props, theme }
-      return inlineStyle.generateStyleObject(executionContext)
-    }
-    /* eslint-disable react/prop-types */
     render() {
-      const { style, children, innerRef } = this.props
+      const { children, style, innerRef } = this.props
       const { generatedStyles } = this.state
+      const { target } = this.constructor
 
-      const propsForElement = { ...this.props }
-      propsForElement.style = [generatedStyles, style]
-      if (innerRef) {
+      const propsForElement = {
+        ...this.attrs,
+        ...this.props,
+        style: [generatedStyles, style],
+      }
+
+      if (!isStyledComponent(target)) {
         propsForElement.ref = innerRef
         delete propsForElement.innerRef
       }
 
       return createElement(target, propsForElement, children)
     }
+  }
 
-    static get extend() {
-      return StyledNativeComponent.extendWith(target)
+  const createStyledNativeComponent = (
+    target: Target,
+    options: Object,
+    rules: RuleSet,
+  ) => {
+    const {
+      displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
+      ParentComponent = BaseStyledNativeComponent,
+      rules: extendingRules,
+      attrs,
+    } = options
+
+    const inlineStyle = new InlineStyle(
+      extendingRules === undefined ? rules : extendingRules.concat(rules),
+    )
+
+    class StyledNativeComponent extends ParentComponent {
+      static displayName = displayName
+      static target = target
+      static attrs = attrs
+      static inlineStyle = inlineStyle
+
+      // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
+      static styledComponentId = 'StyledNativeComponent'
+
+      static extendWith(tag) {
+        const { displayName: _, componentId: __, ...optionsToCopy } = options
+        const newOptions = { ...optionsToCopy, rules, ParentComponent: StyledNativeComponent }
+        return constructWithOptions(createStyledNativeComponent, tag, newOptions)
+      }
+
+      static get extend() {
+        return StyledNativeComponent.extendWith(target)
+      }
     }
+
+    return StyledNativeComponent
   }
 
-  StyledNativeComponent.displayName = displayName
-  StyledNativeComponent.extendWith = tag => {
-    const { displayName: _, ...optionsToCopy } = options
-    return constructWithOptions(createStyledNativeComponent, tag,
-      { ...optionsToCopy, rules, ParentComponent: StyledNativeComponent })
-  }
-
-  return StyledNativeComponent
+  return createStyledNativeComponent
 }
-
-export default createStyledNativeComponent

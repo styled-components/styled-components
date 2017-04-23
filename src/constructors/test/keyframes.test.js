@@ -1,9 +1,5 @@
 // @flow
-import expect from 'expect'
-
 import _keyframes from '../keyframes'
-import _GlobalStyle from '../../models/GlobalStyle'
-import flatten from '../../utils/flatten'
 import stringifyRules from '../../utils/stringifyRules'
 import css from '../css'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
@@ -12,7 +8,7 @@ import { expectCSSMatches, resetStyled } from '../../test/utils'
  * Setup
  */
 let index = 0
-const keyframes = _keyframes(() => `keyframe_${index++}`, _GlobalStyle(flatten, stringifyRules), css)
+const keyframes = _keyframes(() => `keyframe_${index++}`, stringifyRules, css)
 
 describe('keyframes', () => {
   beforeEach(() => {
@@ -43,7 +39,7 @@ describe('keyframes', () => {
 
     const name = keyframes`${rules}`
     expectCSSMatches(`
-      @-webkit-keyframes keyframe_0 {
+      @-webkit-keyframes ${name} {
         0% {
           opacity: 0;
         }
@@ -52,7 +48,7 @@ describe('keyframes', () => {
         }
       }
 
-      @keyframes keyframe_0 {
+      @keyframes ${name} {
         0% {
           opacity: 0;
         }
