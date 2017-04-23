@@ -123,14 +123,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     render() {
-      const { className, children, innerRef, ...props } = this.props
+      const { className: classNameFromProps, children, innerRef, ...props } = this.props
       const { generatedClassName } = this.state
       const { styledComponentId, target, innerProps } = this.constructor
 
-      const isTargetTag = isTag(target)
-
       const className = [
-        className,
+        classNameFromProps,
         styledComponentId,
         this.attrs.className,
         generatedClassName,
