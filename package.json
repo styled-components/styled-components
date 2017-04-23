@@ -68,6 +68,8 @@
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
+    "@types/react": "^0.14.55",
+    "@types/react-native": "^0.37.5",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
     "babel-eslint": "^7.1.1",
@@ -99,9 +101,9 @@
     "lint-staged": "^3.3.0",
     "node-watch": "^0.4.1",
     "pre-commit": "^1.2.2",
-    "react": "^15.4.1",
+    "react": "^15.5.4",
     "react-addons-test-utils": "^15.4.1",
-    "react-dom": "^15.4.1",
+    "react-dom": "^15.5.4",
     "react-native": "^0.39.2",
     "rimraf": "^2.6.1",
     "rollup": "^0.37.0",
