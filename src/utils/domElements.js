@@ -8,15 +8,18 @@ const toObj = keys => {
   keys.trim().split(/s+/).forEach(k => { obj[k.toLowerCase()] = true })
   return obj
 }
+
+/* eslint-disable no-useless-concat */
 const globalHtmlAttrs = toObj(`
   accesskey class contenteditable contextmenu dir draggable dropzone hidden id
   inert itemid itemprop itemref itemscope itemtype lang role spellcheck style
   tabindex title translate
-${+`
+` /* RDFa Properties */ + `
  about datatype inlist prefix property resource typeof vocab
-`}
+` /* NON STANDARD PROPERTIES */ + `
   autoCapitalize autoCorrect autoSave color results security unselectable
 `)
+/* eslint-enable no-useless-concat */
 
 const attrs = globals => str => !str ? globals :
   Object.assign(Object.create(globals, {}), toObj(str))
