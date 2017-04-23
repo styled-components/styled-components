@@ -231,7 +231,7 @@ const StyledLink = styled(Link)`
   </a>
 </div>
 
-> **Note:** `styled-components` generate a real stylesheet with classes. The class names are then passed to the react component (including third party components) via the `className` prop. For the styles to be applied, third-party components must attach the passed-in `className` prop to a DOM node. See [Using `styled-components` with existing CSS](./docs/existing-css.md) for more information!
+> **Note:** `styled-components` generate a real stylesheet with classes. The class names are then passed to the react component (including third party components) via the `className` prop. For the styles to be applied, third-party components must attach the passed-in `className` prop to a DOM node. Likewise, third-party react native components must attach the passed in `style` prop. See [Using `styled-components` with existing CSS](./docs/existing-css.md) for more information!
 
 ### Animations
 
@@ -478,6 +478,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [reshake](https://github.com/elrumordelaluz/reshake): CSShake as a React Functional Component ([demo](https://elrumordelaluz.github.io/reshake/))
 - [last-draft](https://github.com/vacenz/last-draft): A Draft.js Editor ([demo](http://lastdraft.vace.nz))
 - [styled-components-spacing](https://github.com/jameslnewell/styled-components-spacing): Responsive margin and padding components for `styled-components`.
+- [reactour](https://github.com/elrumordelaluz/reactour): Tourist Guide into your React Components ([demo](https://elrumordelaluz.github.io/reactour/))
 
 #### Grid Systems
 - [grid-styled](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
@@ -540,6 +541,12 @@ To use it from your HTML, add this at the bottom of your `index.html`, and you'l
 ```HTML
 <script src="https://unpkg.com/styled-components/dist/styled-components.min.js" type="text/javascript"></script>
 ```
+
+## Other solutions
+
+If `styled-components` isn't quite what you're looking for, maybe something in this list is:
+
+- [`glamorous`](https://github.com/paypal/glamorous) - basically `styled-components` but using JS objects and functions instead of strings.
 
 ## License
 

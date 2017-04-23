@@ -1,5 +1,6 @@
 // @flow
 import parse from '../vendor/postcss-safe-parser/parse'
+import autoprefix from '../utils/autoprefix'
 import postcssNested from '../vendor/postcss-nested'
 
 import type { RuleSet } from '../types'
@@ -24,6 +25,7 @@ export default class ComponentStyle {
     }
     const root = parse(flatCSS)
     postcssNested(root)
+    autoprefix(root)
     styleSheet.insert(root.toResult().css, { global: true })
   }
 }
