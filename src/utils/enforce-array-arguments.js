@@ -2,8 +2,7 @@
 import invariant from 'invariant'
 
 const generateInvalidFunctionError = (func) => (
-`Error: ${func} is called as a function.
-It seems like ${func} is called as '${func}(\`css\`)', it is supposed to be called as '${func}\`css\`'`
+`It seems like ${func} is called as '${func}(\`css\`)', it is supposed to be called as '${func}\`css\`'`
 )
 
 export default function validateArguments(func: string) {
