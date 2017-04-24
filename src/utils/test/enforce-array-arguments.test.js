@@ -4,7 +4,7 @@ import expect from 'expect';
 import enforceArray from '../enforce-array-arguments';
 
 describe('enforceArrayArguments', () => {
-  it(`should warn the user for incorrect usage`, () => {
+  it(`should throw an invariant for incorrect usage`, () => {
     expect(() => {
       // $FlowInvalidInputTest
       enforceArray('test')(`
@@ -15,7 +15,7 @@ describe('enforceArrayArguments', () => {
     }).toThrow(/test/);
   })
 
-  it(`should not warn the user for correct usage`, () => {
+  it(`should not throw an invariant for correct usage`, () => {
     expect(() => {
       enforceArray('test')`
         html {

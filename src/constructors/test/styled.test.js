@@ -11,7 +11,7 @@ describe('styled', () => {
     })
   })
 
-  it('should console.error the correct name for html tags when invalid arguments are passed', () => {
+  it('should throw an invariant the correct name for html tags when invalid arguments are passed', () => {
     expect(() => {
       // $FlowInvalidInputTest
       styled.div(`
@@ -22,7 +22,7 @@ describe('styled', () => {
     }).toThrow(/styled\.div/)
   })
 
-  it('should console.error the correct name for components when invalid arguments are passed', () => {
+  it('should throw an invariant the correct name for components when invalid arguments are passed', () => {
     const component = () => <div />
 
     expect(() => {
