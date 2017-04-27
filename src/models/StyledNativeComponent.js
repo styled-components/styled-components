@@ -5,7 +5,7 @@ import type { Theme } from './ThemeProvider'
 
 import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
-import type { RuleSet, Target } from '../types'
+import type { RuleSet, Target, PropsTransformer } from '../types'
 
 import { CHANNEL } from './ThemeProvider'
 import InlineStyle from './InlineStyle'
@@ -15,35 +15,17 @@ export default (constructWithOptions: Function) => {
   class BaseStyledNativeComponent extends AbstractStyledComponent {
     static target: Target
     static styledComponentId: string
-    static attrs: Object
+    static withProps: PropsTransformer
     static inlineStyle: Object
 
-    attrs = {}
     state = {
       theme: null,
       generatedStyles: undefined,
     }
 
-    buildExecutionContext(theme: any, props: any) {
-      const { attrs } = this.constructor
-      const context = { ...props, theme }
-      if (attrs === undefined) {
-        return context
-      }
-
-      this.attrs = Object.keys(attrs).reduce((acc, key) => {
-        const attr = attrs[key]
-        // eslint-disable-next-line no-param-reassign
-        acc[key] = typeof attr === 'function' ? attr(context) : attr
-        return acc
-      }, {})
-
-      return { ...context, ...this.attrs }
-    }
-
     generateAndInjectStyles(theme: any, props: any) {
       const { inlineStyle } = this.constructor
-      const executionContext = this.buildExecutionContext(theme, props)
+      const executionContext = { ...props, theme }
 
       return inlineStyle.generateStyleObject(executionContext)
     }
@@ -97,13 +79,15 @@ export default (constructWithOptions: Function) => {
     render() {
       const { children, style, innerRef } = this.props
       const { generatedStyles } = this.state
-      const { target } = this.constructor
+      const { target, withProps } = this.constructor
 
-      const propsForElement = {
-        ...this.attrs,
-        ...this.props,
-        style: [generatedStyles, style],
-      }
+      const extraProps = withProps(this.props)
+      const propsForElement = { ...this.props, ...extraProps }
+
+      propsForElement.style = [
+        generatedStyles,
+        style,
+      ].filter(Boolean)
 
       if (!isStyledComponent(target)) {
         propsForElement.ref = innerRef
@@ -123,7 +107,7 @@ export default (constructWithOptions: Function) => {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${target.displayName})`,
       ParentComponent = BaseStyledNativeComponent,
       rules: extendingRules,
-      attrs,
+      withProps = () => ({}),
     } = options
 
     const inlineStyle = new InlineStyle(
@@ -133,7 +117,7 @@ export default (constructWithOptions: Function) => {
     class StyledNativeComponent extends ParentComponent {
       static displayName = displayName
       static target = target
-      static attrs = attrs
+      static withProps = withProps
       static inlineStyle = inlineStyle
 
       // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping

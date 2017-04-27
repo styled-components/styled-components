@@ -22,3 +22,5 @@ export type Stringifier = (
   selector: ?string,
   prefix: ?string
 ) => string
+
+export type PropsTransformer = (props: Object) => Object

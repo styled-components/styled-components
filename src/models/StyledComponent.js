@@ -5,10 +5,9 @@ import { createElement } from 'react'
 import type { Theme } from './ThemeProvider'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 
-import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
-import type { RuleSet, Target } from '../types'
+import type { RuleSet, Target, PropsTransformer } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
@@ -36,36 +35,18 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
   class BaseStyledComponent extends AbstractStyledComponent {
     static target: Target
     static styledComponentId: string
-    static attrs: Object
+    static withProps: PropsTransformer
     static componentStyle: Object
     static warnTooManyClasses: Function
 
-    attrs = {}
     state = {
       theme: null,
       generatedClassName: '',
     }
 
-    buildExecutionContext(theme: any, props: any) {
-      const { attrs } = this.constructor
-      const context = { ...props, theme }
-      if (attrs === undefined) {
-        return context
-      }
-
-      this.attrs = Object.keys(attrs).reduce((acc, key) => {
-        const attr = attrs[key]
-        // eslint-disable-next-line no-param-reassign
-        acc[key] = typeof attr === 'function' ? attr(context) : attr
-        return acc
-      }, {})
-
-      return { ...context, ...this.attrs }
-    }
-
     generateAndInjectStyles(theme: any, props: any) {
       const { componentStyle, warnTooManyClasses } = this.constructor
-      const executionContext = this.buildExecutionContext(theme, props)
+      const executionContext = { ...props, theme }
       const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.instance
       const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
 
@@ -121,46 +102,24 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     render() {
-      const { children, innerRef } = this.props
+      const { children, className, innerRef } = this.props
       const { generatedClassName } = this.state
-      const { styledComponentId, target } = this.constructor
+      const { styledComponentId, target, withProps } = this.constructor
 
-      const isTargetTag = isTag(target)
+      const extraProps = withProps(this.props)
+      const propsForElement = { ...this.props, ...extraProps }
 
-      const className = [
-        this.props.className,
+      propsForElement.className = [
+        className,
         styledComponentId,
-        this.attrs.className,
+        (className !== extraProps.className) && extraProps.className,
         generatedClassName,
       ].filter(Boolean).join(' ')
 
-      const baseProps = {
-        ...this.attrs,
-        className,
+      if (!isStyledComponent(target)) {
+        propsForElement.ref = innerRef
+        delete propsForElement.innerRef
       }
-
-      if (isStyledComponent(target)) {
-        baseProps.innerRef = innerRef
-      } else {
-        baseProps.ref = innerRef
-      }
-
-      const propsForElement = Object
-        .keys(this.props)
-        .reduce((acc, propName) => {
-          // Don't pass through non HTML tags through to HTML elements
-          // always omit innerRef
-          if (
-            propName !== 'innerRef' &&
-            propName !== 'className' &&
-            (!isTargetTag || validAttr(propName))
-          ) {
-            // eslint-disable-next-line no-param-reassign
-            acc[propName] = this.props[propName]
-          }
-
-          return acc
-        }, baseProps)
 
       return createElement(target, propsForElement, children)
     }
@@ -176,7 +135,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       componentId = generateId(options.displayName),
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
-      attrs,
+      withProps = () => ({}),
     } = options
 
     let warnTooManyClasses
@@ -192,7 +151,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     class StyledComponent extends ParentComponent {
       static displayName = displayName
       static styledComponentId = componentId
-      static attrs = attrs
+      static withProps = withProps
       static componentStyle = componentStyle
       static warnTooManyClasses = warnTooManyClasses
       static target = target
