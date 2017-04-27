@@ -3,4 +3,5 @@ lib
 npm-debug.log.*
 dist
 .DS_Store
-bundle-stats.html
+bundle-stats-styled-components.html
+bundle-stats-no-parser.html
