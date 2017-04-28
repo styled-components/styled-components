@@ -75,6 +75,10 @@ class BrowserTag implements Tag {
     return this.el.outerHTML
   }
 
+  toReactElement() {
+    throw new Error('BrowserTag doesn\'t implement toReactElement!')
+  }
+
   clone() {
     throw new Error('BrowserTag cannot be cloned!')
   }

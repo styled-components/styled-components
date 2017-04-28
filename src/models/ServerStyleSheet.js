@@ -48,6 +48,18 @@ class ServerTag implements Tag {
     return `<style type="text/css" ${namesAttr} ${localAttr}>\n${css}\n</style>`
   }
 
+  toReactElement() {
+    const attributes = {
+      [SC_ATTR]: this.names.join(' '),
+      [LOCAL_ATTR]: this.isLocal.toString(),
+    }
+    const css = Object.keys(this.components)
+      .map(key => this.components[key].css)
+      .join('')
+
+    return <style key={this.names.join('')} type="text/css" {...attributes} dangerouslySetInnerHTML={{ __html: css }} />
+  }
+
   clone() {
     const copy = new ServerTag(this.isLocal)
     copy.names = [].concat(this.names)
@@ -86,6 +98,15 @@ export default class ServerStyleSheet {
     }
 
     return this.instance.toHTML()
+  }
+
+  getStyleElement() {
+    if (!this.closed) {
+      clones.splice(clones.indexOf(this.instance), 1)
+      this.closed = true
+    }
+
+    return this.instance.toReactElements()
   }
 
   static create() {

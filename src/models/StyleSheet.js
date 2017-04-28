@@ -1,4 +1,5 @@
 // @flow
+import React from 'react'
 import BrowserStyleSheet from './BrowserStyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
 
@@ -14,6 +15,7 @@ export interface Tag {
   addComponent(componentId: string): void,
   inject(componentId: string, css: string, name: ?string): void,
   toHTML(): string,
+  toReactElement(): React.Element<*>,
   clone(): Tag,
 }
 
@@ -103,6 +105,10 @@ export default class StyleSheet {
 
   toHTML() {
     return this.tags.map(tag => tag.toHTML()).join('')
+  }
+
+  toReactElements() {
+    return this.tags.map(tag => tag.toReactElement())
   }
 
   getOrCreateTag(componentId: string, isLocal: boolean) {
