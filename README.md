@@ -492,6 +492,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [styled-theme](https://github.com/diegohaz/styled-theme): Extensible theming system for styled-components.
 - [styled-tools](https://github.com/diegohaz/styled-tools): Useful interpolated functions for styled-components.
 - [styled-ax](https://github.com/Lokua/styled-ax): Functional theme property accessor(s)
+- [react-create-component-from-tag-prop](https://github.com/jameslnewell/react-create-component-from-tag-prop): Create a react component from a tag prop. Lets your users to choose which HTML elements get styled by your 💅 styled-components.
 
 ### Boilerplates
 - [react-redux-styled-hot-universal](https://github.com/krasevych/react-redux-styled-hot-universal) (SSR, Universal Webpack, Redux, React-router, Webpack 2, Babel, Styled Components and more...)
