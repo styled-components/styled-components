@@ -48,7 +48,7 @@ class ServerTag implements Tag {
     return `<style type="text/css" ${namesAttr} ${localAttr}>\n${css}\n</style>`
   }
 
-  toElement() {
+  toReactElement() {
     const attributes = {
       [SC_ATTR]: this.names.join(' '),
       [LOCAL_ATTR]: this.isLocal.toString(),
@@ -106,7 +106,7 @@ export default class ServerStyleSheet {
       this.closed = true
     }
 
-    return this.instance.toElement()
+    return this.instance.toReactElements()
   }
 
   static create() {
