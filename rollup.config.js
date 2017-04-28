@@ -71,9 +71,9 @@ if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' })
 export default {
   entry: 'src/index.js',
   moduleName: 'styled',
-  external: ['react'],
+  external: ['react', 'prop-types'],
   exports: 'named',
   targets,
   plugins,
-  globals: { react: 'React' },
+  globals: { react: 'React', 'prop-types': 'PropTypes' },
 }
