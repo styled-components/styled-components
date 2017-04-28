@@ -1,4 +1,4 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. If a contribution does not have a mention next to it, [@geelen](https://github.com/geelen) or [@mxstbr](https://github.com/mxstbr) did it.
 
@@ -28,18 +28,74 @@ All notable changes to this project will be documented in this file. If a contri
 ## [Unreleased]
 
 ### Added
-
-- Added the alias of `styled.Button` for react native. (see [#322](https://github.com/styled-components/styled-components/pull/322))
+- Support for jsdom and other browsers that do not implement [ownerNode](https://developer.mozilla.org/en-US/docs/Web/API/StyleSheet/ownerNode), thanks to [@zvictor](https://github.com/zvictor)
 
 ### Changed
 
-- Converted to DangerJS - [@orta](https://github.com/orta)
-- Updated all dependencies to latest semver, thanks [@amilajack](https://github.com/amilajack). (see [#324](https://github.com/styled-components/styled-components/pull/324))
+- Migrated from the deprecated `React.PropTypes` to the `prop-types` package, thanks to [@YasserKaddour](https://github.com/YasserKaddour). (see [#668](https://github.com/styled-components/styled-components/pull/668))
+- Add FlatList, SectionList & VirtualizedList support, thanks to @Kureev(https://github.com/Kureev). (see [#662](https://github.com/styled-components/styled-components/pull/662))
+- Removed dependency on `glamor` and migrated remaining references to the internval vendored `glamor` module. (see [#663](https://github.com/styled-components/styled-components/pull/663))
+- Fix missing autoprefixing on GlobalStyle model. (see [#702](https://github.com/styled-components/styled-components/pull/702))
+- Better support for `keyframes` on older iOS/webkit browsers (see [#720](https://github.com/styled-components/styled-components/pull/720))
+
+## [v1.4.4] — 2017-03-01
+
+### Changed
+
+- Improve theming support in TypeScript, thanks to [@patrick91](https://github.com/patrick91). (see [#460](https://github.com/styled-components/styled-components/pull/460))
+- Add TypeScript definitions for `withTheme`, thanks to [@patrick91](https://github.com/patrick91). (see [#521](https://github.com/styled-components/styled-components/pull/521))
+- Exclude test files from `npm`, thanks to [@Amwam](https://github.com/Amwam). (see [#464](https://github.com/styled-components/styled-components/pull/464))
+- Change the default `displayName` to `styled(Component)`, thanks to [@k15a](https://github.com/k15a). (see [#470](https://github.com/styled-components/styled-components/pull/470))
+
+## [v1.4.3] - 2017-02-04
+
+### Changed
+
+- Improve TypeScript typings, thanks to [@igorbek](https://github.com/igorbek). (see [#428](https://github.com/styled-components/styled-components/pull/428) and [#432](https://github.com/styled-components/styled-components/pull/432))
+- Fix SSR bug introduced in v1.4.2, thanks to [@xcoderzach](https://github.com/xcoderzach). (see [#440](https://github.com/styled-components/styled-components/pull/440))
+- Fix defaultProps used instead of ThemeProvider on first render [@k15a](https://github.com/k15a). ([#450](https://github.com/styled-components/styled-components/pull/450))
+- displayName will now default to `Styled(Component)` [@k15a](https://github.com/k15a)
+
+## [v1.4.2] - 2017-01-28
+
+### Changed
+
+- Fix performance issue when using `@font-face` by creating a separate `style` tag for global styles, thanks to [@xcoderzach](https://github.com/xcoderzach). (see [#415](https://github.com/styled-components/styled-components/pull/415))
+
+## [v1.4.1] - 2017-01-27
+
+### Changed
+
+- Fix ReactNative throwing an error, thanks to [@lukehedger](https://github.com/lukehedger). (see [#414](https://github.com/styled-components/styled-components/pull/414))
+
+## [v1.4.0] - 2017-01-25
+
+### Added
+
+- TypeScript support, thanks to [@patrick91](https://github.com/patrick91). (see [#152](https://github.com/styled-components/styled-components/pull/152))
+
+## [v1.3.1] - 2017-01-18
+
+### Changed
+
+- Fix `<Styled(undefined)>` in React Developer Tools, thanks to [@iamssen](https://github.com/iamssen). (see [#383](https://github.com/styled-components/styled-components/pull/383))
+- Fix themes support in IE <= 10, thanks to [@saschagehlich](https://github.com/saschagehlich). (see [#379](https://github.com/styled-components/styled-components/pull/379))
+- Fixed Touchable not recognising styled components as ReactNative components, thanks to [@michalkvasnicak](https://github.com/michalkvasnicak). (see [#372](https://github.com/styled-components/styled-components/pull/372))
+
+## [v1.3.0]
+
+### Added
+
+- Added `styled.Button` alias for ReactNative, thanks to [@Ginhing](https://github.com/Ginhing). (see [#322](https://github.com/styled-components/styled-components/pull/322))
+
+### Changed
+
+- Fix regression from previous release and only delete `innerRef` if it is being passed down to native elements, thanks to [@IljaDaderko](https://github.com/IljaDaderko). (see [#368](https://github.com/styled-components/styled-components/pull/368))
 - Fixed defaultProps theme overriding ThemeProvider theme, thanks to [@diegohaz](https://github.com/diegohaz). (see [#345](https://github.com/styled-components/styled-components/pull/345))
-- Removed custom flowtype supressor in favour of default $FlowFixMe [@relekang](https://github.com/relekang). (see [#335](https://github.com/styled-components/styled-components/pull/335))
-- Updated all demos to link to latest version [@relekang](https://github.com/relekang)
-- Fixed SSR when no `styled-components` are rendered [@kristojorg](https://github.com/kristojorg). (see [#124](https://github.com/styled-components/styled-components/issues/124))
-- Migrated from the deprecated `React.PropTypes` to the `prop-types` package, thanks to [@YasserKaddour](https://github.com/YasserKaddour). (see [#670](https://github.com/styled-components/styled-components/pull/670))
+- Removed custom flowtype supressor in favour of default `$FlowFixMe` [@relekang](https://github.com/relekang). (see [#335](https://github.com/styled-components/styled-components/pull/335))
+- Updated all dependencies to latest semver, thanks to [@amilajack](https://github.com/amilajack). (see [#324](https://github.com/styled-components/styled-components/pull/324))
+- Updated all demos to link to latest version, thanks to [@relekang](https://github.com/relekang). (see [#350](https://github.com/styled-components/styled-components/pull/350))
+- Converted to DangerJS, thanks to [@orta](https://github.com/orta). (see [#169](https://github.com/styled-components/styled-components/pull/169))
 
 ## [v1.2.1]
 
@@ -176,7 +232,14 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.2.1...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.4...master
+[v1.4.4]: https://github.com/styled-components/styled-components/compare/v1.4.3...v1.4.4
+[v1.4.3]: https://github.com/styled-components/styled-components/compare/v1.4.2...v1.4.3
+[v1.4.2]: https://github.com/styled-components/styled-components/compare/v1.4.1...v1.4.2
+[v1.4.1]: https://github.com/styled-components/styled-components/compare/v1.4.0...v1.4.1
+[v1.4.0]: https://github.com/styled-components/styled-components/compare/v1.3.1...v1.4.0
+[v1.3.1]: https://github.com/styled-components/styled-components/compare/v1.3.0...v1.3.1
+[v1.3.0]: https://github.com/styled-components/styled-components/compare/v1.2.1...v1.3.0
 [v1.2.1]: https://github.com/styled-components/styled-components/compare/v1.2.0...v1.2.1
 [v1.2.0]: https://github.com/styled-components/styled-components/compare/v1.1.3...v1.2.0
 [v1.1.3]: https://github.com/styled-components/styled-components/compare/v1.1.2...v1.1.3

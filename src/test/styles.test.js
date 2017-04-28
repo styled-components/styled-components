@@ -70,7 +70,7 @@ describe('with styles', () => {
       ${rule1}
     `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color: blue; } .b:hover { text-decoration: underline; }')
+    expectCSSMatches('.sc-a {} .b { background-color: blue; } .b:hover { -webkit-text-decoration: underline; text-decoration: underline; }')
   })
 
   it('should handle inline style objects with pseudo selectors', () => {
@@ -84,7 +84,7 @@ describe('with styles', () => {
       ${rule1}
     `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color: blue; } .b:hover { text-decoration: underline; }')
+    expectCSSMatches('.sc-a {} .b { background-color: blue; } .b:hover { -webkit-text-decoration: underline; text-decoration: underline; }')
   })
 
   it('should handle inline style objects with nesting', () => {

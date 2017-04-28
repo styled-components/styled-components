@@ -1,8 +1,10 @@
 # ES6 Tagged Template Literals
 
+**For an alternate explanation see @mxstbr's blog post: [The magic behind :nail_care: styled-components](http://mxstbr.blog/2016/11/styled-components-magic-explained/)**
+
 Tagged Template Literals are a new feature in ES6 that lets you define _custom string interpolation_ rules, which is how we're able to create styled components.
 
-If you have no interpolations, they're the same. This:
+If you have no interpolations, they're very similar. This:
 
 ```js
 myFunction`some string here`
@@ -11,7 +13,7 @@ myFunction`some string here`
 is equivalent to this:
 
 ```js
-myFunction('some string here')
+myFunction(['some string here'])
 ```
 
 When you use interpolations, a normal template string simply calls toString() on each interpolation and joins the string together:

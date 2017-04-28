@@ -1,40 +1,24 @@
-# http://www.appveyor.com/docs/appveyor-yml
-
-# Set build version format here instead of in the admin panel
 version: "{build}"
-
-# Do not build on gh tags
 skip_tags: true
-
-# Test against these versions of Node.js
+build: off
+clone_depth: 1
+shallow_clone: true
+matrix:
+  fast_finish: true
 environment:
   matrix:
-    # Node versions to run
-    - nodejs_version: "6"
-
-# Fix line endings in Windows. (runs before repo cloning)
+    - nodejs_version: 7
+    - nodejs_version: 6
 init:
   - git config --global core.autocrlf input
-
-# Install scripts--runs after repo cloning
 install:
-  # Install the latest stable version of Node
-  - ps: Install-Product node $env:nodejs_version
-  - npm -g install npm
-  - set PATH=%APPDATA%\npm;%PATH%
-  - npm install
-
-# Disable automatic builds
-build: off
-
-# Only run on 64 bit machines, see https://github.com/styled-components/styled-components/pull/42#issuecomment-251980845
-platform:
-  - x64
-
-# Post-install test scripts
+  - ps: Install-Product node $env:nodejs_version x64
+  - set CI=true
+  - yarn
+cache:
+  - '%LOCALAPPDATA%/Yarn'
 test_script:
-  # Output debugging info
   - node --version
-  - npm --version
-  # run build and run tests
-  - npm run lint && npm run test
+  - yarn --version
+  - yarn run flow
+  - yarn run lint && npm run test

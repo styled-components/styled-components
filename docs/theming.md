@@ -1,6 +1,6 @@
 # Theming
 
-Theming is a first-class citizen in `styled-components`. We want to make it as easy as possible use a reusable and sharable component library.
+Theming is a first-class citizen in `styled-components`. We want to make it as easy as possible to use a reusable and sharable component library.
 
 ## Using theming
 

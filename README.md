@@ -1,5 +1,5 @@
 <a href="https://github.com/styled-components/styled-components">
-  <img alt="styled-components" src="./docs/assets/logo.png" height="150px" />
+  <img alt="styled-components" src="https://raw.githubusercontent.com/styled-components/brand/master/styled-components.png" height="150px" />
 </a>
 <br />
 
@@ -15,8 +15,8 @@ npm install --save styled-components
 [![Supported by Thinkmill](https://thinkmill.github.io/badge/heart.svg)](http://thinkmill.com.au/?utm_source=github&utm_medium=badge&utm_campaign=styled-components)
 [![gitter](https://camo.githubusercontent.com/54dc79dc7da6b76b17bc8013342da9b4266d993c/68747470733a2f2f6261646765732e6769747465722e696d2f6d78737462722f72656163742d626f696c6572706c6174652e737667)](https://gitter.im/styled-components/styled-components)
 
-![gzip size](http://img.badgesize.io/https://unpkg.com/styled-components@next/dist/styled-components.min.js?compression=gzip&label=gzip%20size)
-![size](http://img.badgesize.io/https://unpkg.com/styled-components@next/dist/styled-components.min.js?label=size)
+![gzip size](http://img.badgesize.io/https://unpkg.com/styled-components/dist/styled-components.min.js?compression=gzip&label=gzip%20size)
+![size](http://img.badgesize.io/https://unpkg.com/styled-components/dist/styled-components.min.js?label=size)
 ![module formats: umd, cjs, esm](https://img.shields.io/badge/module%20formats-umd%2C%20cjs%2C%20esm-green.svg)
 
 Utilising [tagged template literals](./docs/tagged-template-literals.md) (a recent addition to JavaScript) and the [power of CSS](./docs/css-we-support.md), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
@@ -66,7 +66,7 @@ You render them like so:
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/4kejp0ESz">
+  <a href="https://www.webpackbin.com/bins/-KeeZCr0xKfutOfOujxN">
     <img alt="Screenshot of the above code ran in a browser" src="http://i.imgur.com/wUJpcjY.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -106,7 +106,7 @@ You can just pass a `placeholder` prop into the `styled-component`. It will pass
 Here is one input without any content showing the placeholder, and one with some content:
 
 <div align="center">
-  <a href="http://www.webpackbin.com/4k47p0VHG">
+  <a href="https://www.webpackbin.com/bins/-Kee_EvBIQAeG2pySjbH">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/QoQiSui.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -140,7 +140,7 @@ export default Button;
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/Eyod0ANSM">
+  <a href="https://www.webpackbin.com/bins/-Kee_eVVRWzr06JHcCcQ">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/4qlEdsx.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -207,7 +207,7 @@ Let's say someplace else you want to use your button component, but just in this
 To do this in an easier way you can call `extend` on the component to generate another. You style it like any other styled-component. It overrides duplicate styles from the initial component and keeps the others around:
 
 ```JSX
-// Tomatobutton.js
+// TomatoButton.js
 
 import React from 'react';
 import styled from 'styled-components';
@@ -225,7 +225,7 @@ export default TomatoButton;
 This is what our `TomatoButton` looks like, even though we have only specified the `color` and the `border-color`. Instead of copy and pasting or factoring out the styles into a separate function we've now reused them.
 
 <div align="center">
-  <a href="http://www.webpackbin.com/4y-sCCVrM">
+  <a href="https://www.webpackbin.com/bins/-Keea0VX4gjY70V4Bzc7">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/LZZ3h5i.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -267,7 +267,7 @@ This will now rotate it's children over and over again, for example our logo:
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/4k4WyJrSM">
+  <a href="https://www.webpackbin.com/bins/-Keeb-w-w4oiPbowcT5k">
     <img alt="Animated GIF of the above code ran in a browser" height="100px" src="http://imgur.com/I7Sobjv.gif" />
     <div><em>Live demo</em></div>
   </a>
@@ -290,9 +290,11 @@ const StyledText = styled.Text`
 
 class MyReactNativeComponent extends React.Component {
   render() {
-    <StyledView>
-      <StyledText>Hello World!</StyledText>
-    </StyledView>
+    return (
+      <StyledView>
+        <StyledText>Hello World!</StyledText>
+      </StyledView>
+    )
   }
 }
 ```
@@ -357,10 +359,10 @@ Now, when we render the `Button` inside a `GreenSection`, it'll be green!
 
 ```JSX
 <GreenSection>
-  {/* Notice how there's no code changes for the button, it just
-      adapts to the theme passed from GreenSection! */}
-  <Button>Green Button!</Button>
   <div>
+    {/* Notice how there's no code changes for the button, it just
+        adapts to the theme passed from GreenSection! */}
+    <Button>Green Button!</Button>
     <div>
       <div>
         {/* This works unlimited levels deep within the component
@@ -373,7 +375,7 @@ Now, when we render the `Button` inside a `GreenSection`, it'll be green!
 ```
 
 <div align="center">
-  <a href="http://www.webpackbin.com/EJPNk1SSz">
+  <a href="https://www.webpackbin.com/bins/-KeebSIKWWUhvBDQOG_7">
     <img alt="Screenshot of the above code ran in a browser" src="http://imgur.com/XfkzxqV.jpg" />
     <div><em>Live demo</em></div>
   </a>
@@ -468,20 +470,48 @@ We could use your help to get syntax highlighting support to other editors! If y
 
 ## Built with `styled-components`
 
-- [`grid-styled`](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
-- [ARc](https://github.com/diegohaz/arc): Atomic React App boilerplate with styled components ([demo](https://diegohaz.github.io/arc))
-- [`react-aria-tooltip`](https://github.com/egoens/react-aria-tooltip): Simple & accessible ReactJS tooltip component
-- [`react-boilerplate`](https://github.com/mxstbr/react-boilerplate): A highly scalable, offline-first foundation with the best developer experience and a focus on performance and best practices
-- [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
-- [Hedron](http://github.com/jsbros/hedron): A no-frills flex-box grid system.
+### Libraries
+- [react-aria-tooltip](https://github.com/egoens/react-aria-tooltip): Simple & accessible ReactJS tooltip component
 - [uiGradients](http://jsbros.github.io/uigradients): Generate beautiful background gradients from the [uigradients.com](http://uigradients.com) database.
-- [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
-- [react-enhanced-form](https://github.com/xeonys/react-enhanced-form) : The best react form component, on earth 🌍. It makes form inputs easy, finally !
-- [react-teleportation](https://github.com/xeonys/react-teleportation) : Teleport your components to the foreground.
-- [reshake](https://github.com/elrumordelaluz/reshake) : CSShake as a React Functional Component ([demo](https://elrumordelaluz.github.io/reshake/))
-- [space-exp](https://github.com/caspg/space-exp) : Brings you each day a stunning picture of our universe, Astronomy Picture of the Day (APOD). Website: [spaceexperience.club](https://spaceexperience.club/)
+- [react-enhanced-form](https://github.com/xeonys/react-enhanced-form): The best react form component, on earth 🌍. It makes form inputs easy, finally !
+- [react-teleportation](https://github.com/xeonys/react-teleportation): Teleport your components to the foreground.
+- [reshake](https://github.com/elrumordelaluz/reshake): CSShake as a React Functional Component ([demo](https://elrumordelaluz.github.io/reshake/))
+- [last-draft](https://github.com/vacenz/last-draft): A Draft.js Editor ([demo](http://lastdraft.vace.nz))
+- [styled-components-spacing](https://github.com/jameslnewell/styled-components-spacing): Responsive margin and padding components for `styled-components`.
+- [reactour](https://github.com/elrumordelaluz/reactour): Tourist Guide into your React Components ([demo](https://elrumordelaluz.github.io/reactour/))
+
+#### Grid Systems
+- [grid-styled](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
+- [Hedron](http://github.com/jsbros/hedron): A no-frills flex-box grid system.
+- [styled-components-grid](https://github.com/jameslnewell/styled-components-grid): Responsive grid components for `styled-components`.
+
+#### Helpers
+- [styled-props](https://github.com/RafalFilipek/styled-props): Simple lib that allows you to set styled props in your styled-components without stress ([demo](http://www.webpackbin.com/N1EKUqgvG))
+- [styled-components-breakpoint](https://github.com/jameslnewell/styled-components-breakpoint): Utility function for using breakpoints with `styled-components`.
+- [styled-theme](https://github.com/diegohaz/styled-theme): Extensible theming system for styled-components.
+- [styled-tools](https://github.com/diegohaz/styled-tools): Useful interpolated functions for styled-components.
+- [styled-ax](https://github.com/Lokua/styled-ax): Functional theme property accessor(s)
+
+### Boilerplates
+- [react-redux-styled-hot-universal](https://github.com/krasevych/react-redux-styled-hot-universal) (SSR, Universal Webpack, Redux, React-router, Webpack 2, Babel, Styled Components and more...)
+- [ARc](https://github.com/diegohaz/arc): Atomic React App boilerplate with styled components ([demo](https://diegohaz.github.io/arc))
+- [react-boilerplate](https://github.com/mxstbr/react-boilerplate): A highly scalable, offline-first foundation with the best developer experience and a focus on performance and best practices
+- [react-styled-flexboxgrid](https://github.com/LoicMahieu/react-styled-flexboxgrid): Grid system based on Flexbox ([demo](https://loicmahieu.github.io/react-styled-flexboxgrid/demo/index.html))
+- [Scalable React Boilerplate](https://github.com/RyanCCollins/scalable-react-boilerplate)
+- [Scalable React TypeScript Boilerplate](https://github.com/RyanCCollins/scalable-react-ts-boilerplate)
+- [Superstylin'](https://github.com/bntzio/gatsby-starter-superstylin): A Gatsby starter with styled-components 💅 ([demo](https://superstylin.netlify.com/))
+
+### Websites
+- [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
+- [spaceexperience.club](https://spaceexperience.club/): Brings you each day a stunning picture of our universe, Astronomy Picture of the Day. ([source](https://github.com/caspg/space-exp))
 - [sachagreif.com](http://sachagreif.com): personal homepage built with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/SachaG/sg2017)).
-- [`Dirtyredz.com`](https://github.com/dirtyredz/dirtyredz.com): David McClain | Dirtyredz - About me, Latest projects and Contact ([Website](http://dirtyredz.com))
+- [Dirtyredz.com](http://dirtyredz.com): David McClain | Dirtyredz - About me, Latest projects and Contact ([source](https://github.com/dirtyredz/dirtyredz.com))
+- [Reactiflux](https://www.reactiflux.com): Reactiflux community home build with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/reactiflux/reactiflux.com)).
+
+### Other
+- [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
+- [react-adminlte-dash](https://github.com/zksailor534/react-adminlte-dash): AdminLTE dashboard components in React ([demo](http://zksailor534.github.io/react-adminlte-dash))
+- [colors-show](https://github.com/RafalFilipek/colors-show): Present your application colors with style. ([demo](https://colors-show.now.sh/))
 
 *Built something with `styled-components`? Submit a PR and add it to this list!*
 
@@ -511,6 +541,12 @@ To use it from your HTML, add this at the bottom of your `index.html`, and you'l
 ```HTML
 <script src="https://unpkg.com/styled-components/dist/styled-components.min.js" type="text/javascript"></script>
 ```
+
+## Other solutions
+
+If `styled-components` isn't quite what you're looking for, maybe something in this list is:
+
+- [`glamorous`](https://github.com/paypal/glamorous) - basically `styled-components` but using JS objects and functions instead of strings.
 
 ## License
 

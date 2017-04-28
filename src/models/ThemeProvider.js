@@ -13,7 +13,7 @@ export const CHANNEL = '__styled-components__'
 export type Theme = {[key: string]: mixed}
 type ThemeProviderProps = {|
   children?: React$Element<any>,
-  theme: Theme | (outherTheme: Theme) => void,
+  theme: Theme | (outerTheme: Theme) => void,
 |}
 
 /**
@@ -21,7 +21,7 @@ type ThemeProviderProps = {|
  * both context and event emitter as pure components block context updates)
  */
 class ThemeProvider extends Component {
-  getTheme: (theme?: Theme | (outherTheme: Theme) => void) => Theme
+  getTheme: (theme?: Theme | (outerTheme: Theme) => void) => Theme
   outerTheme: Theme
   unsubscribeToOuter: () => void
   props: ThemeProviderProps
@@ -59,7 +59,7 @@ class ThemeProvider extends Component {
   }
 
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
-  getTheme(passedTheme: (outherTheme: Theme) => void | Theme) {
+  getTheme(passedTheme: (outerTheme: Theme) => void | Theme) {
     const theme = passedTheme || this.props.theme
     if (isFunction(theme)) {
       const mergedTheme = theme(this.outerTheme)

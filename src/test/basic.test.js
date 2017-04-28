@@ -46,6 +46,33 @@ describe('basic', () => {
     expectCSSMatches('.sc-a {} .b { color: blue; }')
   })
 
+  it('Should have the correct styled(component) displayName', () => {
+    const CompWithoutName = () => () => <div />
+
+    const StyledTag = styled.div``
+    expect(StyledTag.displayName).toBe('styled.div')
+
+    const CompWithName = () => <div />
+    CompWithName.displayName = null
+    const StyledCompWithName = styled(CompWithName)``
+    expect(StyledCompWithName.displayName).toBe('Styled(CompWithName)')
+
+    const CompWithDisplayName = CompWithoutName()
+    CompWithDisplayName.displayName = 'displayName'
+    const StyledCompWithDisplayName = styled(CompWithDisplayName)``
+    expect(StyledCompWithDisplayName.displayName).toBe('Styled(displayName)')
+
+    const CompWithBoth = () => <div />
+    CompWithBoth.displayName = 'displayName'
+    const StyledCompWithBoth = styled(CompWithBoth)``
+    expect(StyledCompWithBoth.displayName).toBe('Styled(displayName)')
+
+    const CompWithNothing = CompWithoutName()
+    CompWithNothing.displayName = null
+    const StyledCompWithNothing = styled(CompWithNothing)``
+    expect(StyledCompWithNothing.displayName).toBe('Styled(Component)')
+  })
+
   describe('jsdom tests', () => {
     it('should pass the ref to the component', () => {
       const Comp = styled.div``
