@@ -51,7 +51,7 @@ class ServerTag implements Tag {
   toElement() {
     const attributes = {
       [SC_ATTR]: this.names.join(' '),
-      [LOCAL_ATTR]: this.isLocal,
+      [LOCAL_ATTR]: this.isLocal.toString(),
     }
     const css = Object.keys(this.components)
       .map(key => this.components[key].css)
