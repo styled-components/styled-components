@@ -13,7 +13,7 @@
     "express": "^4.15.2",
     "lru-cache": "^4.0.2",
     "module-alias": "^2.0.0",
-    "next": "^2.2.0",
+    "next": "^2.3.0-alpha1",
     "polished": "^1.0.2",
     "preact": "^8.1.0",
     "preact-compat": "^3.14.3",
@@ -21,7 +21,7 @@
     "react-dom": "^15.4.2",
     "react-live": "^1.4.4",
     "react-octicons-svg": "^1.1.13",
-    "styled-components": "next",
+    "styled-components": "rc",
     "sw-precache-webpack-plugin": "^0.9.1",
     "webpack-bundle-analyzer": "^2.4.0"
   }
