@@ -28,6 +28,37 @@ const html = renderToString(
 const css = sheet.getStyleTags() // or sheet.getStyleElement()
 `).trim()
 
+const nextSample = (`
+import Document, { Head, Main, NextScript } from 'next/document'
+import { ServerStyleSheet } from 'styled-components'
+
+export default class MyDocument extends Document {
+  render() {
+    const sheet = new ServerStyleSheet()
+    const main = sheet.collectStyles(<Main />)
+    const styleTags = sheet.getStyleElement()
+
+    return (
+      <html>
+        <Head>
+          {/* ... */}
+
+          {styleTags}
+        </Head>
+
+        <body>
+          <div className="root">
+            {main}
+          </div>
+
+          <NextScript />
+        </body>
+      </html>
+    )
+  }
+}
+`).trim()
+
 const ServerSideRendering = () => (
   <SectionLayout title="Server Side Rendering">
     <p>
@@ -45,11 +76,6 @@ const ServerSideRendering = () => (
       This doesn't interfere with global styles, such as <Code>keyframes</Code> or <Code>injectGlobal</Code> and
       allows you to use Styled Components with React DOM's SSR, or even Rapscallion.
     </p>
-
-    <Note>
-      Support for next.js is currently possible with a couple of workarounds, but not seamless. We're
-      working on an example.
-    </Note>
 
     <p>
       The basic API goes as follows:
@@ -69,6 +95,30 @@ const ServerSideRendering = () => (
       The <Code>sheet.getStyleTags()</Code> returns a string of multiple <Code>&lt;style&gt;</Code> tags.
       You need to take this into account when adding the CSS string to your HTML output.
     </p>
+
+    <p>
+      Alternatively the <Code>ServerStyleSheet</Code> instance also has a <Code>getStyleElement()</Code> method
+      that returns an array of React elements.
+    </p>
+
+    <SectionLayout sub title="Next.js">
+      <p>
+        In Next.js, you will need to structure your <Code>_document.js</Code> file differently, than
+        the provided example in their repository for v1.
+      </p>
+
+      <CodeBlock code={nextSample} />
+
+      <p>
+        Here we're wrapping the <Code>Main</Code> component, which contains the Next.js app, and are using this
+        to extract the styles on the server side.
+      </p>
+
+      <Note>
+        This is unfortunately only a workaround! It will accumulate rules over time, so you will need
+        to cache the SSR response to mitigate this for now.
+      </Note>
+    </SectionLayout>
   </SectionLayout>
 )
 
