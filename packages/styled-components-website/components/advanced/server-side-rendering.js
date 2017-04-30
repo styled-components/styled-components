@@ -11,7 +11,7 @@ import { ServerStyleSheet } from 'styled-components'
 
 const sheet = new ServerStyleSheet()
 const html = renderToString(sheet.collectStyles(<YourApp />))
-const css = sheet.getStyleTags()
+const css = sheet.getStyleTags() // or sheet.getStyleElement()
 `).trim()
 
 const managerSample = (`
@@ -25,7 +25,7 @@ const html = renderToString(
   </StyleSheetManager>
 )
 
-const css = sheet.getStyleTags()
+const css = sheet.getStyleTags() // or sheet.getStyleElement()
 `).trim()
 
 const ServerSideRendering = () => (
