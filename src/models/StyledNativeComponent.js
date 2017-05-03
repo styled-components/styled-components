@@ -95,6 +95,11 @@ export default (constructWithOptions: Function) => {
       }
     }
 
+    setNativeProps(nativeProps: Object) {
+      const { innerRef } = this.props
+      innerRef.setNativeProps(nativeProps)
+    }
+
     render() {
       const { children, style, innerRef } = this.props
       const { generatedStyles } = this.state
