@@ -25,6 +25,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Switch to babel-preset-env. (see [#717](https://github.com/styled-components/styled-components/pull/717))
 - Update StyledNativeComponent to match StyledComponent implementation.
 - Fix Theme context for StyledComponent for IE <10. (see [#807](https://github.com/styled-components/styled-components/pull/807))
+- Restore `setNativeProps` in StyledNativeComponent, thanks to [@MatthieuLemoine](https://github.com/MatthieuLemoine). (see [#764](https://github.com/styled-components/styled-components/pull/764))
 
 ## [v1.4.6] - 2017-05-02
 
