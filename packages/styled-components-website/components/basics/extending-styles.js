@@ -73,7 +73,7 @@ const ExtendingStyles = () => (
 
     <p>
       Here we use the button from the last section and create a special one, extending it
-      eith some colour-related styling.
+      with some colour-related styling.
     </p>
 
     <LiveEdit
