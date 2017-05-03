@@ -1,5 +1,4 @@
 import React from 'react'
-
 import SectionLayout from '../SectionLayout'
 import { InlineLink } from '../Link'
 import CodeBlock from '../CodeBlock'
@@ -93,7 +92,7 @@ const TypeScript = () => (
 
       <p>
         To have autocomplete and checks around the <Code>theme</Code> prop we should first define the theme
-        interface we would like to use throught our app:
+        interface we would like to use throughout our app:
       </p>
 
       <CodeBlock code={theme} />
