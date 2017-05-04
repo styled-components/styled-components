@@ -24,6 +24,7 @@ export default (constructWithOptions: Function) => {
       theme: null,
       generatedStyles: undefined,
     }
+    root: Object
 
     buildExecutionContext(theme: any, props: any) {
       const { attrs } = this.constructor
@@ -96,12 +97,22 @@ export default (constructWithOptions: Function) => {
     }
 
     setNativeProps(nativeProps: Object) {
+      this.root.setNativeProps(nativeProps)
+    }
+
+    generateRef() {
       const { innerRef } = this.props
-      innerRef.setNativeProps(nativeProps)
+      return (component: any) => {
+        this.root = component
+
+        if (innerRef) {
+          innerRef(component)
+        }
+      }
     }
 
     render() {
-      const { children, style, innerRef } = this.props
+      const { children, style } = this.props
       const { generatedStyles } = this.state
       const { target } = this.constructor
 
@@ -112,7 +123,7 @@ export default (constructWithOptions: Function) => {
       }
 
       if (!isStyledComponent(target)) {
-        propsForElement.ref = innerRef
+        propsForElement.ref = this.generateRef()
         delete propsForElement.innerRef
       }
 
