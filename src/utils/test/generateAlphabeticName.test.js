@@ -8,4 +8,7 @@ describe('generateAlphabeticName', () => {
     expect(generateAlphabeticName(1000000000)).toEqual('cGNYzm');
     expect(generateAlphabeticName(2000000000)).toEqual('fnBWYy');
   });
+  it('should return the exact class name', () => {
+    expect(generateAlphabeticName(2000000000, 'class_name')).toEqual('class_name');
+  });
 });

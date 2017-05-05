@@ -12,15 +12,20 @@ import AbstractStyledComponent from './AbstractStyledComponent'
 import { CHANNEL } from './ThemeProvider'
 
 export default (ComponentStyle: Function) => {
-  // eslint-disable-next-line no-undef
-  const createStyledComponent = (target: Target, rules: RuleSet, parent?: ReactClass<*>) => {
+  const createStyledComponent = (
+    target: Target,
+    rules: RuleSet,
+    // eslint-disable-next-line no-undef
+    parent?: ReactClass<*>,
+    name?: string,
+  ) => {
     /* Handle styled(OtherStyledComponent) differently */
     const isStyledComponent = AbstractStyledComponent.isPrototypeOf(target)
     if (!isTag(target) && isStyledComponent) {
       return createStyledComponent(target.target, target.rules.concat(rules), target)
     }
 
-    const componentStyle = new ComponentStyle(rules)
+    const componentStyle = new ComponentStyle(rules, name)
     const ParentComponent = parent || AbstractStyledComponent
 
     class StyledComponent extends ParentComponent {

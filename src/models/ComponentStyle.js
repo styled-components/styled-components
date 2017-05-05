@@ -17,10 +17,12 @@ export default (nameGenerator: NameGenerator) => {
 
   class ComponentStyle {
     rules: RuleSet
+    name: ?string
     insertedRule: GlamorInsertedRule
 
-    constructor(rules: RuleSet) {
+    constructor(rules: RuleSet, name?: string) {
       this.rules = rules
+      this.name = name
       if (!styleSheet.injected) styleSheet.inject()
       this.insertedRule = styleSheet.insert('')
     }
@@ -32,11 +34,14 @@ export default (nameGenerator: NameGenerator) => {
      * Returns the hash to be injected on render()
      * */
     generateAndInjectStyles(executionContext: Object) {
-      const flatCSS = flatten(this.rules, executionContext).join('')
+      const notFlatCSS = flatten(this.rules, executionContext).join('')
+      const flatCSS = notFlatCSS
+        .replace(/~parent\('(.*?)'\)\s*?{([\s\S]+?)}/g, '')
         .replace(/^\s*\/\/.*$/gm, '') // replace JS comments
+
       const hash = hashStr(flatCSS)
       if (!inserted[hash]) {
-        const selector = nameGenerator(hash)
+        const selector = nameGenerator(hash, this.name)
         inserted[hash] = selector
         const root = parse(`.${selector} { ${flatCSS} }`)
         postcssNested(root)
