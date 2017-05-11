@@ -69,7 +69,7 @@ class AnimateOpacity extends Component {
   render() {
     const { opacity } = this.state;
     // Pass in your animated values here!
-    return <StyledView style={{ opacity }} />
+    return <AnimatedStyledView style={{ opacity }} />
   }
 }
 ```
