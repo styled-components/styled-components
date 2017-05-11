@@ -40,14 +40,15 @@ const RotatedBox = styled.View`
 
 ## Animations
 
-To get React Native animations working, you'll want to define all your non-changing styles in the usual way, and then pass your `Animated.Value`s in as style props.
+To get React Native animations working, you'll want to define all your non-changing styles in the usual way, and then bind animation with `createAnimatedComponent` and pass your `Animated.Value`s in as style props.
 
 ```js
-const BaseStyles = styled.View`
+const StyledView = styled.View`
   height: 100;
   width: 100;
   background-color: red;
 `
+const AnimatedStyledView = Animated.createAnimatedComponent(StyledView)
 
 class AnimateOpacity extends Component {
   constructor() {
@@ -68,7 +69,7 @@ class AnimateOpacity extends Component {
   render() {
     const { opacity } = this.state;
     // Pass in your animated values here!
-    return <BaseStyles style={{ opacity }} />
+    return <StyledView style={{ opacity }} />
   }
 }
 ```
