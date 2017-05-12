@@ -6,6 +6,7 @@ import captureScroll from '../CaptureScroll'
 
 const Sidebar = styled.nav`
   position: fixed;
+  transform: translateZ(0);
   display: block;
   z-index: 1;
 
