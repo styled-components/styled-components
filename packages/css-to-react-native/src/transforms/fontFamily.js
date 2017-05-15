@@ -5,7 +5,7 @@ const { SPACE, IDENT, STRING } = tokens;
 module.exports = (tokenStream) => {
   let fontFamily;
 
-  if (tokenStream.match(STRING)) {
+  if (tokenStream.matches(STRING)) {
     fontFamily = tokenStream.lastValue;
   } else {
     fontFamily = tokenStream.expect(IDENT);

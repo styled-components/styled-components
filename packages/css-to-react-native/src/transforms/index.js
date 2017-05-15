@@ -7,7 +7,7 @@ const { directionFactory, anyOrderFactory, shadowOffsetFactory } = require('./ut
 
 const { IDENT, WORD, COLOR } = tokens;
 
-const background = tokenStream => ({ $merge: { backgroundColor: tokenStream.match(COLOR) } });
+const background = tokenStream => ({ $merge: { backgroundColor: tokenStream.expect(COLOR) } });
 const border = anyOrderFactory({
   borderWidth: {
     token: tokens.LENGTH,
@@ -45,8 +45,8 @@ const flexFlow = anyOrderFactory({
     default: 'row',
   },
 });
-const fontVariant = tokenStream => [tokenStream.match(IDENT)];
-const fontWeight = tokenStream => tokenStream.match(WORD); // Also match numbers as strings
+const fontVariant = tokenStream => [tokenStream.expect(IDENT)];
+const fontWeight = tokenStream => tokenStream.expect(WORD); // Also match numbers as strings
 const shadowOffset = shadowOffsetFactory();
 const textShadowOffset = shadowOffsetFactory();
 

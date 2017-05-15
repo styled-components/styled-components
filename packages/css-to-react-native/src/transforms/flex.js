@@ -1,6 +1,6 @@
 const { tokens } = require('../tokenTypes');
 
-const { NONE, NUMBER, LENGTH, SPACE } = tokens;
+const { NONE, AUTO, NUMBER, LENGTH, SPACE } = tokens;
 
 const defaultFlexGrow = 1;
 const defaultFlexShrink = 1;
@@ -11,23 +11,26 @@ module.exports = (tokenStream) => {
   let flexShrink;
   let flexBasis;
 
-  if (tokenStream.match(NONE)) {
+  if (tokenStream.matches(NONE)) {
     tokenStream.expectEmpty();
     return { $merge: { flexGrow: 0, flexShrink: 0 } };
+  } else if (tokenStream.matches(AUTO)) {
+    tokenStream.expectEmpty();
+    return { $merge: { flexGrow: 1, flexShrink: 1 } };
   }
 
   let partsParsed = 0;
   while (partsParsed < 2 && tokenStream.hasTokens()) {
-    if (partsParsed) tokenStream.expect(SPACE);
+    if (partsParsed !== 0) tokenStream.expect(SPACE);
 
-    if (flexGrow === undefined && tokenStream.match(NUMBER)) {
+    if (flexGrow === undefined && tokenStream.matches(NUMBER)) {
       flexGrow = tokenStream.lastValue;
 
-      if (tokenStream.lookahead().match(NUMBER)) {
+      if (tokenStream.lookahead().matches(NUMBER)) {
         tokenStream.expect(SPACE);
-        flexShrink = tokenStream.match(NUMBER);
+        flexShrink = tokenStream.expect(NUMBER);
       }
-    } else if (flexBasis === undefined && tokenStream.match(LENGTH)) {
+    } else if (flexBasis === undefined && tokenStream.matches(LENGTH)) {
       flexBasis = tokenStream.lastValue;
     } else {
       tokenStream.throw();

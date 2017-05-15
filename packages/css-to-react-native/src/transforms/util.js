@@ -46,7 +46,7 @@ module.exports.anyOrderFactory = (properties, delim = SPACE) => (tokenStream) =>
     if (numParsed) tokenStream.expect(delim);
 
     const matchedPropertyName = propertyNames.find(propertyName => (
-      values[propertyName] === undefined && tokenStream.match(properties[propertyName].token)
+      values[propertyName] === undefined && tokenStream.matches(properties[propertyName].token)
     ));
 
     if (!matchedPropertyName) {
@@ -69,7 +69,7 @@ module.exports.anyOrderFactory = (properties, delim = SPACE) => (tokenStream) =>
 
 module.exports.shadowOffsetFactory = () => (tokenStream) => {
   const width = tokenStream.expect(LENGTH);
-  const height = tokenStream.match(SPACE)
+  const height = tokenStream.matches(SPACE)
     ? tokenStream.expect(LENGTH)
     : width;
   tokenStream.expectEmpty();

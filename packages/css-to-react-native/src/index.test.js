@@ -240,6 +240,15 @@ it('transforms flex shorthand with 1 values', () => runTest([
   ['flex', '1'],
 ], { flexGrow: 1, flexShrink: 1, flexBasis: 0 }));
 
+/*
+A unitless zero that is not already preceded by two flex factors must be interpreted as a flex
+factor. To avoid misinterpretation or invalid declarations, authors must specify a zero
+<‘flex-basis’> component with a unit or precede it by two flex factors.
+*/
+it('transforms flex shorthand with flex-grow/shrink taking priority over basis', () => runTest([
+  ['flex', '0 1 0'],
+], { flexGrow: 0, flexShrink: 1, flexBasis: 0 }));
+
 it('transforms flexFlow shorthand with two values', () => runTest([
   ['flex-flow', 'column wrap'],
 ], { flexDirection: 'column', flexWrap: 'wrap' }));

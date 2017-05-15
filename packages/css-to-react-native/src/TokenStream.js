@@ -1,3 +1,5 @@
+const SYMBOL_MATCH = 'SYMBOL_MATCH';
+
 module.exports = class TokenStream {
   constructor(nodes, parent) {
     this.nodes = nodes;
@@ -18,7 +20,7 @@ module.exports = class TokenStream {
     return new TokenStream(this.nodes.slice(1), this.parent);
   }
 
-  match(...tokenDescriptors) {
+  [SYMBOL_MATCH](...tokenDescriptors) {
     const node = this.node;
 
     if (!node) return null;
@@ -38,8 +40,12 @@ module.exports = class TokenStream {
     return null;
   }
 
+  matches(...tokenDescriptors) {
+    return this[SYMBOL_MATCH](...tokenDescriptors) !== null;
+  }
+
   expect(...tokenDescriptors) {
-    const value = this.match(...tokenDescriptors);
+    const value = this[SYMBOL_MATCH](...tokenDescriptors);
     if (value !== null) return value;
     return this.throw();
   }

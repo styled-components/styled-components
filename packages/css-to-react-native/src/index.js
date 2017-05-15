@@ -13,10 +13,10 @@ export const transformRawValue = (input) => {
   const value = input.trim();
 
   const numberMatch = value.match(numberOrLengthRe);
-  if (numberMatch) return Number(numberMatch[1]);
+  if (numberMatch !== null) return Number(numberMatch[1]);
 
   const boolMatch = input.match(boolRe);
-  if (boolMatch) return boolMatch[0].toLowerCase() === 'true';
+  if (boolMatch !== null) return boolMatch[0].toLowerCase() === 'true';
 
   return value;
 };

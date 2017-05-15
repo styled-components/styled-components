@@ -21,13 +21,13 @@ module.exports = (tokenStream) => {
 
   let numStyleWeightVariantMatched = 0;
   while (numStyleWeightVariantMatched < 3 && tokenStream.hasTokens()) {
-    if (tokenStream.match(NORMAL)) {
+    if (tokenStream.matches(NORMAL)) {
       /* pass */
-    } else if (fontStyle === undefined && tokenStream.match(STYLE)) {
+    } else if (fontStyle === undefined && tokenStream.matches(STYLE)) {
       fontStyle = tokenStream.lastValue;
-    } else if (fontWeight === undefined && tokenStream.match(WEIGHT)) {
+    } else if (fontWeight === undefined && tokenStream.matches(WEIGHT)) {
       fontWeight = tokenStream.lastValue;
-    } else if (fontVariant === undefined && tokenStream.match(VARIANT)) {
+    } else if (fontVariant === undefined && tokenStream.matches(VARIANT)) {
       fontVariant = [tokenStream.lastValue];
     } else {
       break;
@@ -39,8 +39,8 @@ module.exports = (tokenStream) => {
 
   const fontSize = tokenStream.expect(LENGTH);
 
-  if (tokenStream.match(SLASH)) {
-    if (tokenStream.match(NUMBER)) {
+  if (tokenStream.matches(SLASH)) {
+    if (tokenStream.matches(NUMBER)) {
       lineHeight = fontSize * tokenStream.lastValue;
     } else {
       lineHeight = tokenStream.expect(LENGTH);

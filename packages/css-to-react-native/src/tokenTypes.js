@@ -22,7 +22,8 @@ const matchColor = (node) => {
   return null;
 };
 
-const noneRe = /^(none)$/;
+const noneRe = /^(none)$/i;
+const autoRe = /^(auto)$/i;
 const identRe = /(^-?[_a-z][_a-z0-9-]*$)/i;
 // Note if these are wrong, you'll need to change index.js too
 const numberRe = /^([+-]?(?:\d*\.)?\d+(?:[Ee][+-]?\d+)?)$/;
@@ -39,7 +40,7 @@ const regExpToken = (regExp, transform = String) => (node) => {
   if (node.type !== 'word') return null;
 
   const match = node.value.match(regExp);
-  if (!match) return null;
+  if (match === null) return null;
 
   const value = transform(match[1]);
 
@@ -54,6 +55,7 @@ module.exports.tokens = {
   COMMA: noopToken(node => node.type === 'div' && node.value === ','),
   WORD: valueForTypeToken('word'),
   NONE: regExpToken(noneRe),
+  AUTO: regExpToken(autoRe),
   NUMBER: regExpToken(numberRe, Number),
   LENGTH: regExpToken(lengthRe, Number),
   ANGLE: regExpToken(angleRe),
