@@ -118,7 +118,7 @@ If you're just returning a normal string you do not need to use this.
 
 #### Arguments
 
-1. `TaggedTemplateLiteral`: A tagged template literal with your keyframes inside.
+1. `TaggedTemplateLiteral`: A tagged template literal with your rulesets inside.
 
 #### Returns
 
