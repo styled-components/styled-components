@@ -160,6 +160,77 @@ A styled react component. This is returned when you call `styled.tagname` or `st
 
 ## Helpers
 
+### `mediaQuery`
+
+`web`, `native`.
+
+A helper method to manage media queries.
+
+The `mediaQuery` method is a tag function that takes the given media query features in a tagged template literal; it returns a new tag function. This new tag function can be used in styled components to take a CSS rulesets in a tagged template literal and returns the same CSS but wrapped in the pre-defined media query.
+
+#### Arguments
+
+1. `TaggedTemplateLiteral`: A tagged template literal containing the query features of a media query. e.g. `` `(min-width: 48em)` `` or `` `(min-width: 700px), handheld and (orientation: landscape)` ``
+
+#### Returns
+
+A new tag function.
+
+#### Example
+
+```JS
+// mediaQueries.js
+import { mediaQuery } from 'styled-components';
+
+// Define commonly used media queries and use them in all of your components.
+export const media = {
+  mobileOnly: mediaQuery`(max-width: ${767 / 16}em)`,
+  tablet:     mediaQuery`(min-width: ${768 / 16}em)`,
+  print:      mediaQuery`print`,
+};
+```
+
+```JS
+import styled from 'styled-components';
+import { media } from '../mediaQueries';
+
+const Button = styled.button`
+  width: 100%;
+
+  ${media.tablet`
+    width: auto;
+  `}
+
+  ${media.print`
+    color: black;
+  `}
+`;
+```
+
+This will generate CSS like the following:
+```CSS
+.examp {
+  width: 100%;
+}
+
+@media (min-width: 48em) {
+  .examp {
+    width: auto;
+  }
+}
+
+@media print {
+  .examp {
+    color: black;
+  }
+}
+```
+
+#### Tips
+
+- You're writing CSS, but with the power of JavaScript - utilise it! (see [Tips and Tricks](./tips-and-tricks.md) for more ideas)
+
+
 ### `keyframes`
 
 `web` only.

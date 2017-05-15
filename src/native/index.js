@@ -4,6 +4,7 @@
 import reactNative from 'react-native'
 
 import css from '../constructors/css'
+import mediaQuery from '../constructors/mediaQuery'
 
 import styledNativeComponent from '../models/StyledNativeComponent'
 import ThemeProvider from '../models/ThemeProvider'
@@ -34,5 +35,5 @@ aliases.split(/\s+/m).forEach(alias => Object.defineProperty(styled, alias, {
   },
 }))
 
-export { css, ThemeProvider, withTheme }
+export { css, mediaQuery, ThemeProvider, withTheme }
 export default styled

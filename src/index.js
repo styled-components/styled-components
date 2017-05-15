@@ -3,6 +3,7 @@
 /* Import singletons */
 import generateAlphabeticName from './utils/generateAlphabeticName'
 import css from './constructors/css'
+import mediaQuery from './constructors/mediaQuery'
 import injectGlobal from './constructors/injectGlobal'
 
 /* Import singleton constructors */
@@ -23,4 +24,4 @@ const styled = _styled(_styledComponent(_ComponentStyle(generateAlphabeticName))
 
 /* Export everything */
 export default styled
-export { css, keyframes, injectGlobal, ThemeProvider, withTheme }
+export { css, mediaQuery, keyframes, injectGlobal, ThemeProvider, withTheme }

@@ -109,74 +109,64 @@ Now we have javascript, we can do 🌟 _more powerful things_ 🌟
 
 ```js
 // style-utils.js
-import { css } from 'styled-components'
+import { mediaQuery } from 'styled-components'
 
+const sizes = {
+  tablet: 768,
+  desktop: 992,
+  giant: 1170,
+}
+
+// use em in breakpoints to work properly cross-browser and support users
+// changing their browsers font-size: https://zellwk.com/blog/media-query-units/
 export const media = {
-  handheld: (...args) => css`
-    @media (max-width: 420px) {
-      ${ css(...args) }
-    }
-  `
+  handheld:   mediaQuery`(max-width: ${(sizes.tablet - 1) / 16}em)`,
+  tablet:     mediaQuery`(min-width: ${sizes.tablet / 16}em)`,
+  tabletOnly: mediaQuery`(min-width: ${sizes.tablet / 16}em) and (max-width: ${(sizes.desktop - 1) / 16}em)`,
+  desktop:    mediaQuery`(min-width: ${sizes.desktop / 16}em)`,
+  giant:      mediaQuery`(min-width: ${sizes.giant / 16}em)`,
+  minWidth:   (pxValue) => mediaQuery`(min-width: ${pxValue / 16}em)`,
+  print:      mediaQuery`print`,
 }
 ```
 
+Because `media` is a static object you create, you can name it whatever you want (`respondTo`, `atMedia`, etc.) and, best of all, most IDEs will offer auto-complete suggestions when typing that object.
+
+Now that you've defined your media queries, you can use them like this:
+
 ```js
+import styled, { css } from 'styled-components';
 import { media } from '../style-utils';
 
-// Make the text smaller on handheld devices
 const Box = styled.div`
   font-size: 16px;
-  ${ media.handheld`
+
+  /* Make the text smaller on handheld devices */
+  ${media.handheld`
     font-size: 14px;
-  ` }
+  `}
+
+  /* Create a media query with a custom width not needed in other components. */
+  ${media.minWidth(500)`
+    border-width: 2px;
+  `}
+
+  /* tagged functions created with mediaQuery can be nested with other
+     interpolations using styled-component's tagged function, css(). */
+  ${({ wide }) => wide && css`
+    width: 100%;
+
+    ${media.tablet`
+      width: 80%;
+      margin: 0 auto;
+    `}
+  `}
 `;
 ```
 
-And voila! 💅
+And voila! 💅 Pretty easy, huh?
 
 *Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals](./tagged-template-literals.md)*
-
-### Media Templates
-
-Due to the functional nature of javascript, you can easily define your own tagged template literal to wrap styles in media queries. For example:
-
-```js
-// these sizes are arbitrary and you can set them to whatever you wish
-import { css } from 'styled-components'
-
-const sizes = {
-  giant: 1170,
-  desktop: 992,
-  tablet: 768,
-  phone: 376
-}
-
-// iterate through the sizes and create a media template
-export const media = Object.keys(sizes).reduce((accumulator, label) => {
-  // use em in breakpoints to work properly cross-browser and support users
-  // changing their browsers font-size: https://zellwk.com/blog/media-query-units/
-  const emSize = sizes[label] / 16
-  accumulator[label] = (...args) => css`
-    @media (max-width: ${emSize}em) {
-      ${css(...args)}
-    }
-  `
-  return accumulator
-}, {})
-```
-
-Great! Now that you've defined your media templates, you can use them like this:
-
-```js
-const Container = styled.div`
-  color: #333;
-  ${media.desktop`padding: 0 20px;`}
-  ${media.tablet`padding: 0 10px;`}
-  ${media.phone`padding: 0 5px;`}
-`
-```
-
-Pretty easy, huh?
 
 ### Refs to DOM nodes
 
