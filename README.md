@@ -481,6 +481,8 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [reactour](https://github.com/elrumordelaluz/reactour): Tourist Guide into your React Components ([demo](https://elrumordelaluz.github.io/reactour/))
 - [mcs-lite-ui](https://github.com/MCS-Lite/mcs-lite): An on-premises Internet of Things cloud platform, which can be quickly built and get started with. ([demo](http://mcs-lite-ui.netlify.com/))
 - [react-progressive-bg-image](https://github.com/evenchange4/react-progressive-bg-image): 🖼 Medium style progressive background image. ([demo](http://react-progressive-bg-image.netlify.com/))
+- [react-simple-chatbot](https://github.com/LucasBassetti/react-simple-chatbot): Simple chatbot / conversational-ui React component. ([demo](https://lucasbassetti.com.br/react-simple-chatbot/))
+- [react-css-loaders](https://github.com/LucasBassetti/react-css-loaders): A collection of pure CSS React loading components. ([demo](https://lucasbassetti.com.br/react-css-loaders/))
 
 #### Grid Systems
 - [grid-styled](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
