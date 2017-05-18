@@ -50,7 +50,7 @@ If you want server-side rendering support you can enable it with the `ssr` optio
 
 This babel plugin adds the components' name to the class name attached to the DOM node. In your browsers DevTools you'll see `<button class="sc-Button-asdf123 asdf123" />` instead of just `<button class="asdf123" />`.
 
-This also adds support for showing your components' real name in the React DevTools. Tget will normally show `<styled.button>` for all of your components, but with this pluginthey show `<MyButton />`.
+This also adds support for showing your components' real name in the React DevTools. They will normally show `<styled.button>` for all of your components, but with this plugin they show `<MyButton />`.
 
 This makes it easier to find your components and to figure out where they live in your app.
 
