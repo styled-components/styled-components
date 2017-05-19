@@ -513,6 +513,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [ismaywolff.nl](https://ismaywolff.nl): personal portfolio with serverside rendering ([source](https://github.com/ismay/ismaywolff.nl)).
 - [Dirtyredz.com](http://dirtyredz.com): David McClain | Dirtyredz - About me, Latest projects and Contact ([source](https://github.com/dirtyredz/dirtyredz.com))
 - [Reactiflux](https://www.reactiflux.com): Reactiflux community home build with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/reactiflux/reactiflux.com)).
+- [michaelhsu.tw](http://michaelhsu.tw): A simple static homepage built with **CRA pre-renderer** ([source](https://github.com/evenchange4/michaelhsu.tw)).
 
 ### Other
 - [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
