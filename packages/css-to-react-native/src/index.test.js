@@ -232,13 +232,25 @@ it('transforms flex shorthand with 3 values in reverse order', () => runTest([
   ['flex', '3px 1 2'],
 ], { flexGrow: 1, flexShrink: 2, flexBasis: 3 }));
 
-it('transforms flex shorthand with 2 values', () => runTest([
+it('transforms flex shorthand with 2 values of flex-grow and flex-shrink', () => runTest([
   ['flex', '1 2'],
 ], { flexGrow: 1, flexShrink: 2, flexBasis: 0 }));
 
-it('transforms flex shorthand with 1 values', () => runTest([
-  ['flex', '1'],
-], { flexGrow: 1, flexShrink: 1, flexBasis: 0 }));
+it('transforms flex shorthand with 2 values of flex-grow and flex-basis', () => runTest([
+  ['flex', '2 2px'],
+], { flexGrow: 2, flexShrink: 1, flexBasis: 2 }));
+
+it('transforms flex shorthand with 2 values of flex-grow and flex-basis (reversed)', () => runTest([
+  ['flex', '2px 2'],
+], { flexGrow: 2, flexShrink: 1, flexBasis: 2 }));
+
+it('transforms flex shorthand with 1 value of flex-grow', () => runTest([
+  ['flex', '2'],
+], { flexGrow: 2, flexShrink: 1, flexBasis: 0 }));
+
+it('transforms flex shorthand with 1 value of flex-basis', () => runTest([
+  ['flex', '10px'],
+], { flexGrow: 1, flexShrink: 1, flexBasis: 10 }));
 
 /*
 A unitless zero that is not already preceded by two flex factors must be interpreted as a flex
@@ -408,6 +420,10 @@ it('transforms font-family with quotes with escaped quote', () => runTest([
 
 it('does not transform invalid unquoted font-family', () => {
   expect(() => transformCss([['font-family', 'Goudy Bookletter 1911']])).toThrow();
+});
+
+it('does not transform invalid flex', () => {
+  expect(() => transformCss([['flex', '1 2px 3']])).toThrow();
 });
 
 it('allows blacklisting shorthands', () => {
