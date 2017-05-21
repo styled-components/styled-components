@@ -47,7 +47,7 @@ const Keyframes = () => (
       Returns a unique name for these keyframes, to be used in your animation declarations.
     </p>
 
-    <CodeBlock code={keyframesSample} />
+    <CodeBlock code={keyframesSample} language="jsx" />
 
     <p>
       {'You can learn more about Styled Components with Animations in the '}

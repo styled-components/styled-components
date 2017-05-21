@@ -38,7 +38,7 @@ const MyComponent = styled.div\`background-color: green;\`;
 `).trim()
 
 const bumpSpecificitySample = (`
-// my-component.css
+/* my-component.css */
 .red-bg.red-bg {
   background-color: red;
 }
@@ -64,14 +64,14 @@ const ExistingCSS = () => (
         To avoid this issue, make sure your component attaches the passed-in className to a DOM node:
       </p>
 
-      <CodeBlock code={classNameSample} />
+      <CodeBlock code={classNameSample} language="jsx" />
 
       <p>
         If you have pre-existing styles with a class, you can combine the global class with the
         passed-in one:
       </p>
 
-      <CodeBlock code={classNameComboSample} />
+      <CodeBlock code={classNameComboSample} language="jsx" />
     </SectionLayout>
 
     <SectionLayout sub title="Issues with Specificity">
@@ -81,7 +81,7 @@ const ExistingCSS = () => (
         the last one will win.
       </p>
 
-      <CodeBlock code={specifictySample} />
+      <CodeBlock code={specifictySample} language="jsx" />
 
       <p>
         In the above example the styled component class takes precendence over the global class, since
@@ -95,7 +95,7 @@ const ExistingCSS = () => (
         classname:
       </p>
 
-      <CodeBlock code={bumpSpecificitySample} />
+      <CodeBlock code={bumpSpecificitySample} language="css" />
     </SectionLayout>
   </SectionLayout>
 )

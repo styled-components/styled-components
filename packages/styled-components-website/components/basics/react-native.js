@@ -41,7 +41,7 @@ const ReactNative = () => (
       except you import it from <Code>styled-components/native</Code> instead.
     </p>
 
-    <CodeBlock code={sample} />
+    <CodeBlock code={sample} language="jsx" />
 
     <p>
       We also support more complex styles (like <Code>transform</Code>), which would normally be an array,
@@ -53,7 +53,7 @@ const ReactNative = () => (
       it to CSS, and you're probably right:
     </p>
 
-    <CodeBlock code={cssToReactNativeSample} />
+    <CodeBlock code={cssToReactNativeSample} language="jsx" />
 
     <p>
       Some of the differences to the web-version are, that you cannot use

@@ -43,7 +43,7 @@ const InjectGlobal = () => (
       </Row>
     </Table>
 
-    <CodeBlock code={injectGlobalSample} />
+    <CodeBlock code={injectGlobalSample} language="jsx" />
 
     <p>
       We do not encourage the use of this. Try to use it once per app at most, if you

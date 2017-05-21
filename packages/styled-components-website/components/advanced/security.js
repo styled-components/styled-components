@@ -25,7 +25,7 @@ const Security = () => (
       behalf.
     </p>
 
-    <CodeBlock code={sample} />
+    <CodeBlock code={sample} language="jsx" />
 
     <p>
       Be very careful! This is obviously a made-up example, but CSS injection can be unobvious and

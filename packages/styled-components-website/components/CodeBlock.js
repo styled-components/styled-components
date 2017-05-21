@@ -1,12 +1,23 @@
+import React, { Component } from 'react'
 import styled from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
+import { highlight, languages } from 'prismjs/components/prism-core'
+
 import { darkGrey } from '../utils/colors'
-
 import '../utils/prismTemplateString'
-import { Editor } from 'react-live'
+import 'prismjs/components/prism-bash'
+import 'prismjs/components/prism-json'
 
-const CodeBlock = styled(Editor).attrs({
-  contentEditable: false
+const prism = (code, language) => {
+  if (!language || !languages[language]) {
+    return undefined
+  }
+
+  return highlight(code, languages[language])
+}
+
+const Highlight = styled.pre.attrs({
+  className: 'prism-code'
 })`
   background: ${darkGrey};
   font-size: 0.8rem;
@@ -20,8 +31,44 @@ const CodeBlock = styled(Editor).attrs({
   overflow-x: hidden;
 `
 
-export const CodeBlockRaw = CodeBlock.extendWith('pre').attrs({
-  className: 'prism-code'
-})``
+class CodeBlock extends Component {
+  state = {
+    __html: prism(this.props.code, this.props.language)
+  }
+
+  componentWillReceiveProps({ code, language }) {
+    if (code !== this.props.code || language !== this.props.language) {
+      this.setState({
+        __html: prism(code, language)
+      })
+    }
+  }
+
+  render() {
+    const { code } = this.props
+    const { __html } = this.state
+
+    if (!__html) {
+      return (
+        <Highlight
+          {...this.props}
+          code={undefined}
+          language={undefined}
+        >
+          {code}
+        </Highlight>
+      )
+    }
+
+    return (
+      <Highlight
+        dangerouslySetInnerHTML={{ __html }}
+        {...this.props}
+        code={undefined}
+        language={undefined}
+      />
+    )
+  }
+}
 
 export default CodeBlock

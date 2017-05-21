@@ -64,7 +64,7 @@ const Styled = () => (
       Returns a function that accepts a tagged template literal and turns it into a <Code>Styled Component</Code>.
     </p>
 
-    <CodeBlock code={styledSample} />
+    <CodeBlock code={styledSample} language="jsx" />
 
     <Note>
       We encourage you to not use the <Code>styled('tagname')</Code> notation directly.

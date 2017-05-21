@@ -138,7 +138,7 @@ const Theming = () => (
         the <Code>withTheme</Code> higher order component.
       </p>
 
-      <CodeBlock code={withThemeSample} />
+      <CodeBlock code={withThemeSample} language="jsx" />
     </SectionLayout>
   </SectionLayout>
 )

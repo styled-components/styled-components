@@ -48,7 +48,7 @@ const CSS = () => (
       itself.
     </p>
 
-    <CodeBlock code={cssSample} />
+    <CodeBlock code={cssSample} language="jsx" />
 
     <p>
       If you leave off the css your function will be <Code>toString()</Code>ed and you'll not get the results

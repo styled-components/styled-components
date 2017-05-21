@@ -47,7 +47,7 @@ const WithTheme = () => (
       The passed component will receive a <Code>theme</Code> prop with the current theme object.
     </p>
 
-    <CodeBlock code={withThemeSample} />
+    <CodeBlock code={withThemeSample} language="jsx" />
 
     <p>
       Only use this if you need to get the theme as a prop.

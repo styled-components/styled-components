@@ -1,7 +1,7 @@
 import styled, { css } from 'styled-components'
 import rem from 'polished/lib/helpers/rem'
 import { violetRed, gold } from '../utils/colors'
-import { Content } from '../components/Layout'
+import { Content, Title } from '../components/Layout'
 import CodeBlock from '../components/CodeBlock'
 import { BasicExample } from '../components/basics/getting-started'
 
@@ -14,6 +14,7 @@ const Wrapper = styled.div`
   color: white;
 
   background: linear-gradient(20deg, ${violetRed}, ${gold});
+  box-shadow: 0px 2px 20px rgba(0, 0, 0, 0.17);
   box-sizing: border-box;
   min-height: 100vh;
 `
@@ -78,38 +79,44 @@ const Button = styled.button\`
 `).trim()
 
 const Index = () => (
-  <Wrapper>
+  <div>
+    <Wrapper>
+      <Content>
+        <Logo />
+
+        <Text>
+          <Tagline>
+            Visual primitives for the component age.
+          </Tagline>
+
+          <span>
+            Use the best bits of ES6 and CSS to style your apps without stress 💅
+          </span>
+        </Text>
+
+        <Links>
+          <Button
+            href="https://github.com/styled-components/styled-components"
+            target="_blank"
+            rel="noopener"
+            bold
+          >
+            GitHub
+          </Button>
+
+          <Button href="/docs">
+            Documentation
+          </Button>
+        </Links>
+
+        <CodeBlock language="jsx" code={sample} />
+      </Content>
+    </Wrapper>
+
     <Content>
-      <Logo />
-
-      <Text>
-        <Tagline>
-          Visual primitives for the component age.
-        </Tagline>
-
-        <span>
-          Use the best bits of ES6 and CSS to style your apps without stress 💅
-        </span>
-      </Text>
-
-      <Links>
-        <Button
-          href="https://github.com/styled-components/styled-components"
-          target="_blank"
-          rel="noopener"
-          bold
-        >
-          GitHub
-        </Button>
-
-        <Button href="/docs">
-          Documentation
-        </Button>
-      </Links>
-
-      <CodeBlock code={sample} />
+      <Title>Getting started</Title>
     </Content>
-  </Wrapper>
+  </div>
 )
 
 export default Index

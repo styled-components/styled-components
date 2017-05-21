@@ -2,7 +2,7 @@ import React from 'react'
 
 import SectionLayout from '../SectionLayout'
 import { InlineLink } from '../Link'
-import { CodeBlockRaw } from '../CodeBlock'
+import CodeBlock from '../CodeBlock'
 import Code from '../Code'
 
 const install = (`
@@ -33,9 +33,7 @@ const Flow = ({ url }) => (
     </p>
 
     <SectionLayout sub title="Installing the definitions">
-      <CodeBlockRaw>
-        {install}
-      </CodeBlockRaw>
+      <CodeBlock code={install} />
     </SectionLayout>
 
     <SectionLayout sub title="Ignore Styled Components source">
@@ -44,9 +42,7 @@ const Flow = ({ url }) => (
         package in your <Code>node_modules</Code> directory.
       </p>
 
-      <CodeBlockRaw>
-        {flowconfig}
-      </CodeBlockRaw>
+      <CodeBlock code={flowconfig} />
     </SectionLayout>
   </SectionLayout>
 )

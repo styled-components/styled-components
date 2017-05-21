@@ -4,6 +4,7 @@ import shade from 'polished/lib/color/shade'
 
 export const lightGrey = 'rgba(20, 20, 20, 0.1)'
 export const darkGrey = darken(0.05, '#282a36')
+export const grey = '#282a36'
 
 export const red = '#ff5555'
 export const violetRed = 'rgb(219, 112, 147)'

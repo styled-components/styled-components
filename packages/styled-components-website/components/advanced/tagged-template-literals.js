@@ -29,14 +29,14 @@ const TaggedTemplateLiterals = () => (
       If you pass no interpolations, the first argument your function receives is an array with a string in it.
     </p>
 
-    <CodeBlock code={basicSample} />
+    <CodeBlock code={basicSample} language="jsx" />
 
     <p>
       Once you pass interpolations, the array contains the passed string, split at the positions of the interpolations.
       The rest of the arguments will be the interpolations, in order.
     </p>
 
-    <CodeBlock code={interpolationsSample} />
+    <CodeBlock code={interpolationsSample} language="jsx" />
 
     <p>
       This is a bit cumbersome to work with, but it means that we can receive variables, functions, or mixins
