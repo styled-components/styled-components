@@ -1199,7 +1199,7 @@ core-js@^1.0.0:
   version "1.2.7"
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-1.2.7.tgz#652294c14651db28fa93bd2d5ff2983a4f08c636"
 
-core-js@^2.4.0:
+core-js@^2.4.0, core-js@^2.4.1:
   version "2.4.1"
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-2.4.1.tgz#4de911e667b0eae9124e34254b53aea6fc618d3e"
 
@@ -3113,11 +3113,12 @@ react-hot-loader@3.0.0-beta.6:
     redbox-react "^1.2.5"
     source-map "^0.4.4"
 
-react-live@^1.4.8:
-  version "1.4.8"
-  resolved "https://registry.yarnpkg.com/react-live/-/react-live-1.4.8.tgz#069c1107b889954e1959876ccff2632a050d16fb"
+react-live@^1.5.1:
+  version "1.5.1"
+  resolved "https://registry.yarnpkg.com/react-live/-/react-live-1.5.1.tgz#83f33d47b1f0c4a4024f036eea90932e964ae944"
   dependencies:
     buble "^0.15.2"
+    core-js "^2.4.1"
     dom-iterator "^0.3.0"
     prismjs "^1.6.0"
     prop-types "^15.5.8"
@@ -3581,7 +3582,7 @@ strip-json-comments@~2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/strip-json-comments/-/strip-json-comments-2.0.1.tgz#3c531942e908c2697c0ec344858c286c7ca0a60a"
 
-styled-components@rc:
+styled-components@^2.0.0-17:
   version "2.0.0-17"
   resolved "https://registry.yarnpkg.com/styled-components/-/styled-components-2.0.0-17.tgz#9d49e5b351f2c3e13698ee00d189a3c951735088"
   dependencies:
