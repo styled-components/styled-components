@@ -17,7 +17,14 @@ export const objToCss = (obj: Object, prevKey?: string): string => {
 const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array<Interpolation> => (
   chunks.reduce((ruleSet: Array<Interpolation>, chunk: ?Interpolation) => {
     /* Remove falsey values */
-    if (chunk === undefined || chunk === null || chunk === false || chunk === '') return ruleSet
+    if (
+      chunk === undefined ||
+      chunk === null ||
+      chunk === false ||
+      chunk === '' ||
+      chunk === 0 ||
+      chunk === -0
+    ) return ruleSet
     /* Flatten ruleSet */
     if (Array.isArray(chunk)) return [...ruleSet, ...flatten(chunk, executionContext)]
     /* Either execute or defer the function */
