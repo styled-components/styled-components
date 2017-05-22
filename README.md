@@ -479,6 +479,10 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [last-draft](https://github.com/vacenz/last-draft): A Draft.js Editor ([demo](http://lastdraft.vace.nz))
 - [styled-components-spacing](https://github.com/jameslnewell/styled-components-spacing): Responsive margin and padding components for `styled-components`.
 - [reactour](https://github.com/elrumordelaluz/reactour): Tourist Guide into your React Components ([demo](https://elrumordelaluz.github.io/reactour/))
+- [mcs-lite-ui](https://github.com/MCS-Lite/mcs-lite): An on-premises Internet of Things cloud platform, which can be quickly built and get started with. ([demo](http://mcs-lite-ui.netlify.com/))
+- [react-progressive-bg-image](https://github.com/evenchange4/react-progressive-bg-image): 🖼 Medium style progressive background image. ([demo](http://react-progressive-bg-image.netlify.com/))
+- [react-simple-chatbot](https://github.com/LucasBassetti/react-simple-chatbot): Simple chatbot / conversational-ui React component. ([demo](https://lucasbassetti.com.br/react-simple-chatbot/))
+- [react-css-loaders](https://github.com/LucasBassetti/react-css-loaders): A collection of pure CSS React loading components. ([demo](https://lucasbassetti.com.br/react-css-loaders/))
 
 #### Grid Systems
 - [grid-styled](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
@@ -491,6 +495,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [styled-theme](https://github.com/diegohaz/styled-theme): Extensible theming system for styled-components.
 - [styled-tools](https://github.com/diegohaz/styled-tools): Useful interpolated functions for styled-components.
 - [styled-ax](https://github.com/Lokua/styled-ax): Functional theme property accessor(s)
+- [react-create-component-from-tag-prop](https://github.com/jameslnewell/react-create-component-from-tag-prop): Create a react component from a tag prop. Lets your users to choose which HTML elements get styled by your 💅 styled-components.
 
 ### Boilerplates
 - [react-redux-styled-hot-universal](https://github.com/krasevych/react-redux-styled-hot-universal) (SSR, Universal Webpack, Redux, React-router, Webpack 2, Babel, Styled Components and more...)
@@ -505,8 +510,10 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
 - [spaceexperience.club](https://spaceexperience.club/): Brings you each day a stunning picture of our universe, Astronomy Picture of the Day. ([source](https://github.com/caspg/space-exp))
 - [sachagreif.com](http://sachagreif.com): personal homepage built with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/SachaG/sg2017)).
+- [ismaywolff.nl](https://ismaywolff.nl): personal portfolio with serverside rendering ([source](https://github.com/ismay/ismaywolff.nl)).
 - [Dirtyredz.com](http://dirtyredz.com): David McClain | Dirtyredz - About me, Latest projects and Contact ([source](https://github.com/dirtyredz/dirtyredz.com))
 - [Reactiflux](https://www.reactiflux.com): Reactiflux community home build with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/reactiflux/reactiflux.com)).
+- [michaelhsu.tw](http://michaelhsu.tw): A simple static homepage built with CRA pre-renderer ([source](https://github.com/evenchange4/michaelhsu.tw)).
 
 ### Other
 - [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.

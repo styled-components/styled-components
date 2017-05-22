@@ -33,6 +33,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 ### Changed
 
+## [v.1.4.5] - 2017-04-14
+
+### Changed
+
 - Migrated from the deprecated `React.PropTypes` to the `prop-types` package, thanks to [@YasserKaddour](https://github.com/YasserKaddour). (see [#668](https://github.com/styled-components/styled-components/pull/668))
 - Add FlatList, SectionList & VirtualizedList support, thanks to @Kureev(https://github.com/Kureev). (see [#662](https://github.com/styled-components/styled-components/pull/662))
 - Removed dependency on `glamor` and migrated remaining references to the internval vendored `glamor` module. (see [#663](https://github.com/styled-components/styled-components/pull/663))
@@ -233,7 +237,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.4...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.5...master
+[v1.4.5]: https://github.com/styled-components/styled-components/compare/v1.4.4...v1.4.5
 [v1.4.4]: https://github.com/styled-components/styled-components/compare/v1.4.3...v1.4.4
 [v1.4.3]: https://github.com/styled-components/styled-components/compare/v1.4.2...v1.4.3
 [v1.4.2]: https://github.com/styled-components/styled-components/compare/v1.4.1...v1.4.2

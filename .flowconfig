@@ -10,7 +10,6 @@
 [include]
 
 [libs]
-flow-typed
 
 [options]
 suppress_comment=.*\\$FlowFixMe
