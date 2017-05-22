@@ -1,6 +1,7 @@
 // @flow
 
 import { createElement } from 'react'
+import PropTypes from 'prop-types'
 
 import type { Theme } from './ThemeProvider'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
@@ -191,6 +192,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     )
 
     class StyledComponent extends ParentComponent {
+      static contextTypes = {
+        [CHANNEL]: PropTypes.func,
+        [CONTEXT_KEY]: PropTypes.instanceOf(StyleSheet),
+      }
+
       static displayName = displayName
       static styledComponentId = componentId
       static attrs = attrs
