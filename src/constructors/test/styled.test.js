@@ -1,7 +1,7 @@
 // @flow
 import expect from 'expect'
 import styled from '../../index'
-import domElements from '../../utils/domElements'
+import domElements from 'react-dom-elements'
 
 describe('styled', () => {
   it('should have all valid HTML5 elements defined as properties', () => {

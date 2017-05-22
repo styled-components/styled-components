@@ -1,6 +1,6 @@
 // @flow
 import expect from 'expect'
-import validAttr from '../validAttr'
+import validAttr from 'is-react-prop'
 
 describe('validAttr', () => {
   it('should allow all the reactProps', () => {
