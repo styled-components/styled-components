@@ -109,10 +109,6 @@ export default (constructWithOptions: Function) => {
       }
     }
 
-    onStyledRef(node: any) {
-      this.root = node
-    }
-
     render() {
       const { children, style } = this.props
       const { generatedStyles } = this.state
@@ -125,10 +121,10 @@ export default (constructWithOptions: Function) => {
       }
 
       if (!isStyledComponent(target)) {
-        propsForElement.ref = this.onRef
+        propsForElement.ref = this.onRef.bind(this)
         delete propsForElement.innerRef
       } else {
-        propsForElement.ref = this.onStyledRef
+        propsForElement.innerRef = this.onRef.bind(this)
       }
 
       return createElement(target, propsForElement, children)
