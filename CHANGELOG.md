@@ -26,14 +26,17 @@ All notable changes to this project will be documented in this file. If a contri
 - Update StyledNativeComponent to match StyledComponent implementation.
 - Fix Theme context for StyledComponent for IE <10. (see [#807](https://github.com/styled-components/styled-components/pull/807))
 
-## [Unreleased]
+## [v1.4.6] - 2017-05-02
 
 ### Added
+
 - Support for jsdom and other browsers that do not implement [ownerNode](https://developer.mozilla.org/en-US/docs/Web/API/StyleSheet/ownerNode), thanks to [@zvictor](https://github.com/zvictor)
 
 ### Changed
 
-## [v.1.4.5] - 2017-04-14
+- Upgrade `babel-plugin-flow-react-proptypes` to version 2.1.3, fixing prop-types warnings; thanks to [@EnoahNetzach](https://github.com/EnoahNetzach)
+
+## [v1.4.5] - 2017-04-14
 
 ### Changed
 
@@ -237,7 +240,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.5...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.6...master
+[v1.4.6]: https://github.com/styled-components/styled-components/compare/v1.4.5...v1.4.6
 [v1.4.5]: https://github.com/styled-components/styled-components/compare/v1.4.4...v1.4.5
 [v1.4.4]: https://github.com/styled-components/styled-components/compare/v1.4.3...v1.4.4
 [v1.4.3]: https://github.com/styled-components/styled-components/compare/v1.4.2...v1.4.3
