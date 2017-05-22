@@ -1,5 +1,4 @@
 // @flow
-import expect from 'expect'
 import flatten from '../flatten'
 
 describe('flatten', () => {
@@ -54,12 +53,10 @@ describe('flatten', () => {
     expect(flatten([new SomeClass()])).toEqual(['some: thing;'])
   })
   it('flattens subarrays', () => {
-    // $FlowFixMe
     expect(flatten([1, 2, [3, 4, 5], 'come:on;', 'lets:ride;'])).toEqual(['1', '2', '3', '4', '5', 'come:on;', 'lets:ride;'])
   })
   it('defers functions', () => {
     const func = () => 'bar'
-    // $FlowFixMe
     const funcWFunc = () => ['static', subfunc => subfunc ? 'bar' : 'baz']
     expect(flatten(['foo', func, 'baz'])).toEqual(['foo', func, 'baz'])
     expect(flatten(['foo', funcWFunc, 'baz'])).toEqual(['foo', funcWFunc, 'baz'])
@@ -74,7 +71,6 @@ describe('flatten', () => {
     expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'baz'])
   })
   it('recursively calls functions', () => {
-    // $FlowFixMe
     const func = () => ['static', ({ bool }) => bool ? 'bar' : 'baz']
     expect(flatten(['foo', func], { bool: true })).toEqual(['foo', 'static', 'bar'])
     expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'static', 'baz'])

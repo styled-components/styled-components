@@ -20,6 +20,11 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
     if (chunk === undefined || chunk === null || chunk === false || chunk === '') return ruleSet
     /* Flatten ruleSet */
     if (Array.isArray(chunk)) return [...ruleSet, ...flatten(chunk, executionContext)]
+
+    /* Handle other components */
+    // $FlowFixMe not sure how to make this pass
+    if (chunk.hasOwnProperty('styledComponentId')) return [...ruleSet, `.${chunk.styledComponentId}`]
+
     /* Either execute or defer the function */
     if (typeof chunk === 'function') {
       return executionContext

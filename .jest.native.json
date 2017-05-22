@@ -1,0 +1,9 @@
+{
+  "rootDir": ".",
+  "globals": {
+    "__DEV__": true
+  },
+  "testRegex": "./src/native/test/.*.js$",
+  "preset": "react-native",
+  "testEnvironment": "jsdom"
+}

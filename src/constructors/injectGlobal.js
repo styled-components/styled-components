@@ -1,11 +1,18 @@
 // @flow
-import css from './css'
-import GlobalStyle from '../models/GlobalStyle'
-import type { Interpolation } from '../types'
+import hashStr from '../vendor/glamor/hash'
+import StyleSheet from '../models/StyleSheet'
+import type { Interpolation, Stringifier } from '../types'
 
-const injectGlobal = (strings: Array<string>, ...interpolations: Array<Interpolation>) => {
-  const globalStyle = new GlobalStyle(css(strings, ...interpolations))
-  globalStyle.generateAndInject()
+export default (stringifyRules: Stringifier, css: Function) => {
+  const injectGlobal = (strings: Array<string>, ...interpolations: Array<Interpolation>) => {
+    const rules = css(strings, ...interpolations)
+    const hash = hashStr(JSON.stringify(rules))
+
+    const componentId = `sc-global-${hash}`
+    if (StyleSheet.instance.hasInjectedComponent(componentId)) return
+
+    StyleSheet.instance.inject(componentId, false, stringifyRules(rules))
+  }
+
+  return injectGlobal
 }
-
-export default injectGlobal

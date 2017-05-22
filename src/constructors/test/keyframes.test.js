@@ -1,15 +1,14 @@
 // @flow
-import expect from 'expect'
-
 import _keyframes from '../keyframes'
-import styleSheet from '../../models/StyleSheet'
+import stringifyRules from '../../utils/stringifyRules'
+import css from '../css'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
 
 /**
  * Setup
  */
 let index = 0
-const keyframes = _keyframes(() => `keyframe_${index++}`)
+const keyframes = _keyframes(() => `keyframe_${index++}`, stringifyRules, css)
 
 describe('keyframes', () => {
   beforeEach(() => {
@@ -40,7 +39,7 @@ describe('keyframes', () => {
 
     const name = keyframes`${rules}`
     expectCSSMatches(`
-      @keyframes keyframe_0 {
+      @-webkit-keyframes ${name} {
         0% {
           opacity: 0;
         }
@@ -48,7 +47,8 @@ describe('keyframes', () => {
           opacity: 1;
         }
       }
-      @-webkit-keyframes keyframe_0 {
+
+      @keyframes ${name} {
         0% {
           opacity: 0;
         }
@@ -56,6 +56,6 @@ describe('keyframes', () => {
           opacity: 1;
         }
       }
-    `, { styleSheet })
+    `)
   })
 })

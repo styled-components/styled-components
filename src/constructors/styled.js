@@ -1,12 +1,9 @@
 // @flow
-import css from './css'
-import type { Interpolation, Target } from '../types'
+import type { Target } from '../types'
 import domElements from '../utils/domElements'
 
-export default (styledComponent: Function) => {
-  const styled = (tag: Target) =>
-    (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
-      styledComponent(tag, css(strings, ...interpolations))
+export default (styledComponent: Function, constructWithOptions: Function) => {
+  const styled = (tag: Target) => constructWithOptions(styledComponent, tag)
 
   // Shorthands for all valid HTML Elements
   domElements.forEach(domElement => {

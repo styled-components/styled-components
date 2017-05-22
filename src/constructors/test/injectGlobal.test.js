@@ -1,15 +1,17 @@
 // @flow
 import React, { Component } from 'react'
-import expect from 'expect'
 import { shallow } from 'enzyme'
 
-import injectGlobal from '../injectGlobal'
-import styleSheet from '../../models/StyleSheet'
+import _injectGlobal from '../injectGlobal'
+import stringifyRules from '../../utils/stringifyRules'
+import css from '../css'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
+
+const injectGlobal = _injectGlobal(stringifyRules, css)
 
 let styled = resetStyled()
 const rule1 = 'width: 100%;'
-const rule2 = 'text-decoration: none;'
+const rule2 = 'padding: 10px;'
 const rule3 = 'color: blue;'
 
 describe('injectGlobal', () => {
@@ -23,7 +25,11 @@ describe('injectGlobal', () => {
         ${rule1}
       }
     `
-    expect(styleSheet.injected).toBe(true)
+    expectCSSMatches(`
+      html {
+        ${rule1}
+      }
+    `)
   })
 
   it(`should non-destructively inject styles when called repeatedly`, () => {
@@ -45,10 +51,10 @@ describe('injectGlobal', () => {
       a {
         ${rule2}
       }
-    `, { styleSheet })
+    `)
   })
 
-  it(`should inject styles in a separate sheet from a component`, () => {
+  it(`should non-destructively inject styles when called after a component`, () => {
     const Comp = styled.div`
       ${rule3}
     `
@@ -59,17 +65,15 @@ describe('injectGlobal', () => {
         ${rule1}
       }
     `
-    // Test the component sheet
+
     expectCSSMatches(`
-      .a {
+      .sc-a {}
+      .b {
         ${rule3}
       }
-    `, { styleSheet: styleSheet.componentStyleSheet })
-    // Test the global sheet
-    expectCSSMatches(`
       html {
         ${rule1}
       }
-    `, { styleSheet: styleSheet.globalStyleSheet })
+    `)
   })
 });
