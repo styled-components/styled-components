@@ -8,6 +8,7 @@ import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 
 import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
+import defaultInnerProps from '../utils/defaultInnerProps'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 import type { RuleSet, Target } from '../types'
@@ -41,6 +42,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     static attrs: Object
     static componentStyle: Object
     static warnTooManyClasses: Function
+    static innerProps: Object
 
     attrs = {}
     state = {
@@ -123,14 +125,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     render() {
-      const { children, innerRef } = this.props
+      const { className: classNameFromProps, children, innerRef, ...props } = this.props
       const { generatedClassName } = this.state
-      const { styledComponentId, target } = this.constructor
-
-      const isTargetTag = isTag(target)
+      const { styledComponentId, target, innerProps } = this.constructor
 
       const className = [
-        this.props.className,
+        classNameFromProps,
         styledComponentId,
         this.attrs.className,
         generatedClassName,
@@ -148,19 +148,16 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
 
       const propsForElement = Object
-        .keys(this.props)
+        .keys(props)
+        .filter(propName => {
+          const innerPropMask = innerProps[propName.toLowerCase()]
+          if (innerPropMask === false) return false
+          if (innerPropMask === true || this.attrs[propName] !== undefined) return true
+          return innerProps.default || validAttr(propName)
+        })
         .reduce((acc, propName) => {
-          // Don't pass through non HTML tags through to HTML elements
-          // always omit innerRef
-          if (
-            propName !== 'innerRef' &&
-            propName !== 'className' &&
-            (!isTargetTag || validAttr(propName))
-          ) {
-            // eslint-disable-next-line no-param-reassign
-            acc[propName] = this.props[propName]
-          }
-
+          // eslint-disable-next-line no-param-reassign
+          acc[propName] = this.props[propName]
           return acc
         }, baseProps)
 
@@ -177,6 +174,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${getComponentName(target)})`,
       componentId = generateId(options.displayName),
       ParentComponent = BaseStyledComponent,
+      innerProps = defaultInnerProps(target),
       rules: extendingRules,
       attrs,
     } = options
@@ -203,6 +201,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       static componentStyle = componentStyle
       static warnTooManyClasses = warnTooManyClasses
       static target = target
+      static innerProps = innerProps
 
       static extendWith(tag) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options

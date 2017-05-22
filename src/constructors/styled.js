@@ -6,8 +6,8 @@ export default (styledComponent: Function, constructWithOptions: Function) => {
   const styled = (tag: Target) => constructWithOptions(styledComponent, tag)
 
   // Shorthands for all valid HTML Elements
-  domElements.forEach(domElement => {
-    styled[domElement] = styled(domElement)
+  Object.keys(domElements).forEach(tagName => {
+    styled[tagName] = styled(tagName).innerProps(domElements[tagName])
   })
 
   return styled

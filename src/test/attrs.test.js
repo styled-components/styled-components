@@ -118,4 +118,40 @@ describe('attrs', () => {
     expect(shallow(<Comp />).html()).toEqual('<a href="#" class="sc-a b"></a>')
     expectCSSMatches('.sc-a {} .b { color: blue; } .b.--is-active { color: red; }')
   })
+
+  describe('whitelist', () => {
+    it('should not pass through any props by default', () => {
+      const Comp = styled('div')``
+      expect(shallow(<Comp title="foo"/>).html()).toEqual('<div class="sc-a b"></div>')
+    })
+
+    it('should treat undefined in attrs as a blacklist', () => {
+      const Comp = styled('div').attrs({
+        title: undefined
+      })``
+      expect(shallow(<Comp title="foo"/>).html()).toEqual('<div class="sc-a b"></div>')
+    })
+
+    it('should still make props available in style blocks', () => {
+      const Comp = styled('div')`
+        color: ${props => props.hidden ? 'transparent' : 'black'};
+      `
+      expect(shallow(<Comp hidden/>).html()).toEqual('<div class="sc-a b"></div>')
+      expectCSSMatches('.sc-a {} .b { color: transparent; }')
+    })
+
+    it('should handle complex props', () => {
+      const Comp = styled('div').attrs({
+        style: props => ({ width: `${props.dimensions.width}px`, height: `${props.dimensions.height}px` })
+      })``
+      Comp.propTypes = {
+        dimensions: React.PropTypes.shape({
+          width: React.PropTypes.number,
+          height: React.PropTypes.number
+        })
+      }
+      expect(shallow(<Comp dimensions={{width: 10, height: 10}}/>).html())
+        .toEqual('<div style="width:10px;height:10px;" class="sc-a b"></div>')
+    })
+  })
 })

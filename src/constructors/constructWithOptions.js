@@ -1,6 +1,14 @@
 // @flow
 import type { Interpolation, Target } from '../types'
 
+const splitKeys = obj => {
+  const result = {}
+  Object.keys(obj).forEach(ks => ks.trim().split(/\s+/).forEach(k => {
+    result[k] = obj[ks]
+  }))
+  return result
+}
+
 export default (css: Function) => {
   const constructWithOptions = (componentConstructor: Function,
                                 tag: Target,
@@ -15,7 +23,10 @@ export default (css: Function) => {
       constructWithOptions(componentConstructor, tag, { ...options, ...config })
     templateFunction.attrs = attrs =>
       constructWithOptions(componentConstructor, tag, { ...options,
-        attrs: { ...(options.attrs || {}), ...attrs } })
+        attrs: { ...(options.attrs || {}), ...splitKeys(attrs) } })
+    templateFunction.innerProps = innerProps =>
+      constructWithOptions(componentConstructor, tag, { ...options,
+        innerProps: { ...(options.innerProps || {}), ...splitKeys(innerProps) } })
 
     return templateFunction
   }
