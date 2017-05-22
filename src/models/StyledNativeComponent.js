@@ -18,6 +18,7 @@ export default (constructWithOptions: Function) => {
     static styledComponentId: string
     static attrs: Object
     static inlineStyle: Object
+    root: Object
 
     attrs = {}
     state = {
@@ -95,8 +96,21 @@ export default (constructWithOptions: Function) => {
       }
     }
 
+    setNativeProps(nativeProps: Object) {
+      this.root.setNativeProps(nativeProps)
+    }
+
+    onRef = (node: any) => {
+      const { innerRef } = this.props
+      this.root = node
+
+      if (typeof innerRef === 'function') {
+        innerRef(node)
+      }
+    }
+
     render() {
-      const { children, style, innerRef } = this.props
+      const { children, style } = this.props
       const { generatedStyles } = this.state
       const { target } = this.constructor
 
@@ -107,8 +121,10 @@ export default (constructWithOptions: Function) => {
       }
 
       if (!isStyledComponent(target)) {
-        propsForElement.ref = innerRef
+        propsForElement.ref = this.onRef
         delete propsForElement.innerRef
+      } else {
+        propsForElement.innerRef = this.onRef
       }
 
       return createElement(target, propsForElement, children)
