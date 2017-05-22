@@ -15,7 +15,7 @@ export interface Tag {
   addComponent(componentId: string): void,
   inject(componentId: string, css: string, name: ?string): void,
   toHTML(): string,
-  toReactElement(): React.Element<*>,
+  toReactElement(key: string): React.Element<*>,
   clone(): Tag,
 }
 
@@ -108,7 +108,7 @@ export default class StyleSheet {
   }
 
   toReactElements() {
-    return this.tags.map(tag => tag.toReactElement())
+    return this.tags.map((tag, i) => tag.toReactElement(`sc-${i}`))
   }
 
   getOrCreateTag(componentId: string, isLocal: boolean) {

@@ -48,16 +48,21 @@ class ServerTag implements Tag {
     return `<style type="text/css" ${namesAttr} ${localAttr}>\n${css}\n</style>`
   }
 
-  toReactElement() {
+  toReactElement(key: string) {
     const attributes = {
       [SC_ATTR]: this.names.join(' '),
       [LOCAL_ATTR]: this.isLocal.toString(),
     }
     const css = Object.keys(this.components)
-      .map(key => this.components[key].css)
+      .map(k => this.components[k].css)
       .join('')
 
-    return <style key={this.names.join('')} type="text/css" {...attributes} dangerouslySetInnerHTML={{ __html: css }} />
+    return (
+      <style
+        key={key} type="text/css" {...attributes}
+        dangerouslySetInnerHTML={{ __html: css }}
+      />
+    )
   }
 
   clone() {
