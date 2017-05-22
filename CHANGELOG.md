@@ -23,6 +23,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Removed dependency on `glamor` and migrated remaining references to the internval vendored `glamor` module. (see [#663](https://github.com/styled-components/styled-components/pull/663))
 - Fix missing autoprefixing on GlobalStyle model. (see [#702](https://github.com/styled-components/styled-components/pull/702))
 - Better support for `keyframes` on older iOS/webkit browsers (see [#720](https://github.com/styled-components/styled-components/pull/720))
+- Throw an invariant when a tagged template literal isn't provided. (see [#698](https://github.com/styled-components/styled-components/pull/698))
 
 ## [v1.4.4] — 2017-03-01
 
