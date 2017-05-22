@@ -24,6 +24,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Add `innerRef` support to `withTheme` HOC. (see [#710](https://github.com/styled-components/styled-components/pull/710))
 - Switch to babel-preset-env. (see [#717](https://github.com/styled-components/styled-components/pull/717))
 - Update StyledNativeComponent to match StyledComponent implementation.
+- Fix Theme context for StyledComponent for IE <10. (see [#807](https://github.com/styled-components/styled-components/pull/807))
 
 ## [Unreleased]
 
