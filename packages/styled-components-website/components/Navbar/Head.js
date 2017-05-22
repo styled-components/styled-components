@@ -1,5 +1,6 @@
 import styled, { css } from 'styled-components'
-import rem from 'polished/lib/helpers/rem'
+
+import rem from '../../utils/rem'
 import { mobile } from '../../utils/media'
 
 const Head = styled.div`

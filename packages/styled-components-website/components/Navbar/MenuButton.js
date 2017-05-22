@@ -1,7 +1,8 @@
 import styled, { css } from 'styled-components'
-import rem from 'polished/lib/helpers/rem'
-import { StyledLink } from '../Link'
 import ThreeBarsIcon from 'react-octicons-svg/dist/ThreeBarsIcon'
+
+import rem from '../../utils/rem'
+import { StyledLink } from '../Link'
 import { mobile } from '../../utils/media'
 
 const MenuButton = styled(StyledLink)`

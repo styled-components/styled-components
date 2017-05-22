@@ -1,8 +1,9 @@
 import React from 'react'
 import styled, { css, keyframes } from 'styled-components'
-import rem from 'polished/lib/helpers/rem'
+import rem from '../utils/rem'
 import { darkGrey, red } from '../utils/colors'
 import { phone } from '../utils/media'
+import { sansSerif, monospace } from '../utils/fonts'
 import captureScroll from './CaptureScroll'
 
 import '../utils/prismTemplateString'
@@ -49,7 +50,7 @@ const columnMixin = css`
 const StyledEditor = styled(LiveEditor)`
   background: ${darkGrey};
   font-size: 0.8rem;
-  font-family: monospace;
+  font-family: ${monospace};
   height: ${rem(400)};
   overflow-y: scroll;
   overflow-x: hidden;
@@ -79,6 +80,7 @@ const StyledError = styled(LiveError)`
   background: ${red};
   color: white;
   font-size: 0.8rem;
+  font-family: ${sansSerif};
   white-space: pre;
 `
 

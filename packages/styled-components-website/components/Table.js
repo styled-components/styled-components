@@ -1,6 +1,6 @@
 import styled from 'styled-components'
-import rem from 'polished/lib/helpers/rem'
 
+import rem from '../utils/rem'
 import { lightGrey } from '../utils/colors'
 
 export const TableWrapper = styled.table`

@@ -1,9 +1,10 @@
 import React, { Component } from 'react'
 import styled from 'styled-components'
-import rem from 'polished/lib/helpers/rem'
+import rem from '../utils/rem'
 import { highlight, languages } from 'prismjs/components/prism-core'
 
 import { darkGrey } from '../utils/colors'
+import { monospace } from '../utils/fonts'
 import '../utils/prismTemplateString'
 import 'prismjs/components/prism-bash'
 import 'prismjs/components/prism-json'
@@ -21,7 +22,7 @@ const Highlight = styled.pre.attrs({
 })`
   background: ${darkGrey};
   font-size: 0.8rem;
-  font-family: monospace;
+  font-family: ${monospace};
   white-space: pre-wrap;
 
   border-radius: ${rem(3)};

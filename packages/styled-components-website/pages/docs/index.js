@@ -1,12 +1,13 @@
 import styled, { css } from 'styled-components'
-import rem from 'polished/lib/helpers/rem'
 
+import rem from '../../utils/rem'
 import DocsLayout from '../../components/DocsLayout'
 import { Title, Header } from '../../components/Layout'
 import Link from '../../components/Link'
 import titleToDash from '../../utils/titleToDash'
 import { pages } from '../docs.json'
 import { mobile, phone } from '../../utils/media'
+import { sansSerif } from '../../utils/fonts'
 
 const Row = styled.div`
   display: flex;
@@ -38,6 +39,7 @@ const SubHeader = styled.h3`
   margin: ${rem(8)} 0;
   font-size: ${rem(18)};
   font-weight: normal;
+  font-family: ${sansSerif};
 `
 
 const Documentation = () => (

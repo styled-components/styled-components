@@ -1,7 +1,7 @@
 import styled, { css } from 'styled-components'
 import UnstyledLink from 'next/link'
-import rem from 'polished/lib/helpers/rem'
 
+import rem from '../utils/rem'
 import { lightGrey } from '../utils/colors'
 
 export const StyledLink = styled.a`

@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
-import rem from 'polished/lib/helpers/rem'
 
+import rem from '../utils/rem'
 import titleToDash from '../utils/titleToDash'
 import Anchor from './Anchor'
 
