@@ -18,13 +18,13 @@ export default (constructWithOptions: Function) => {
     static styledComponentId: string
     static attrs: Object
     static inlineStyle: Object
+    root: Object
 
     attrs = {}
     state = {
       theme: null,
       generatedStyles: undefined,
     }
-    root: Object
 
     buildExecutionContext(theme: any, props: any) {
       const { attrs } = this.constructor
