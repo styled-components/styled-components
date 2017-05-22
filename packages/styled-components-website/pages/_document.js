@@ -157,12 +157,11 @@ export default class MyDocument extends Document {
           <meta itemprop="image" content="/static/atom.png" />
 
           {/* Twitter */}
-          <meta name="twitter:card" content="summary" />
+          <meta name="twitter:card" content="summary_large_image" />
           <meta name="twitter:creator" content="@mxstbr" />
-          <meta name="twitter:url" content="http://styled-components.com" />
           <meta name="twitter:title" content="Styled Components" />
           <meta name="twitter:description" content={description} />
-          <meta name="twitter:image" content="/static/atom.png" />
+          <meta name="twitter:image" content="/static/meta.png" />
 
           {/* Facebook */}
           <meta property="og:url" content="http://styled-components.com" />

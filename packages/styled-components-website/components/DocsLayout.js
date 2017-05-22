@@ -7,6 +7,7 @@ const DocsLayout = ({ children, title }) => (
   <Container>
     <Head>
       <title>Styled Components: {title}</title>
+      <meta name="twitter:title" content={`Styled Components: ${title}`} />
     </Head>
 
     <Navbar />
