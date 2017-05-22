@@ -100,7 +100,7 @@ export default (constructWithOptions: Function) => {
       this.root.setNativeProps(nativeProps)
     }
 
-    onRef(node: any) {
+    onRef = (node: any) => {
       const { innerRef } = this.props
       this.root = node
 
@@ -121,10 +121,10 @@ export default (constructWithOptions: Function) => {
       }
 
       if (!isStyledComponent(target)) {
-        propsForElement.ref = this.onRef.bind(this)
+        propsForElement.ref = this.onRef
         delete propsForElement.innerRef
       } else {
-        propsForElement.innerRef = this.onRef.bind(this)
+        propsForElement.innerRef = this.onRef
       }
 
       return createElement(target, propsForElement, children)

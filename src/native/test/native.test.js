@@ -199,7 +199,6 @@ describe('native', () => {
 
       // $FlowFixMe
       expect(ref).toHaveBeenCalledWith(view.node)
-      expect(innerComponent.prop('innerRef')).toBe(ref)
     })
   })
 })
