@@ -3009,13 +3009,13 @@ promise@^7.1.1:
   dependencies:
     asap "~2.0.3"
 
-prop-types@15.5.7:
+prop-types@15.5.7, prop-types@^15.5.4:
   version "15.5.7"
   resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.5.7.tgz#231c4f29cdd82e355011d4889386ca9059544dd1"
   dependencies:
     fbjs "^0.8.9"
 
-prop-types@^15.5.4, prop-types@^15.5.8:
+prop-types@^15.5.8:
   version "15.5.8"
   resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.5.8.tgz#6b7b2e141083be38c8595aa51fc55775c7199394"
   dependencies:
@@ -3117,9 +3117,9 @@ react-hot-loader@3.0.0-beta.6:
     redbox-react "^1.2.5"
     source-map "^0.4.4"
 
-react-live@^1.5.1:
-  version "1.5.1"
-  resolved "https://registry.yarnpkg.com/react-live/-/react-live-1.5.1.tgz#83f33d47b1f0c4a4024f036eea90932e964ae944"
+react-live@^1.5.2:
+  version "1.5.2"
+  resolved "https://registry.yarnpkg.com/react-live/-/react-live-1.5.2.tgz#8ccf3c4e0633dfc3be218b544ed495eeb1239055"
   dependencies:
     buble "^0.15.2"
     core-js "^2.4.1"
