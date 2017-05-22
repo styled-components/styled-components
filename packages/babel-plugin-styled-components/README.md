@@ -8,8 +8,6 @@ This plugin adds support for server-side rendering, for minification of styles a
 
 ## Usage
 
-**THIS ISN'T PUBLISHED YET, WIP**
-
 ```
 npm install --save-dev babel-plugin-styled-components
 ```
