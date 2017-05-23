@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "2.0.0-18",
+  "version": "2.0.0-19",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "main": "lib/index.js",
   "typings": "typings/styled-components.d.ts",
