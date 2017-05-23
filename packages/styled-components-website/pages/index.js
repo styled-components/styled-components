@@ -117,7 +117,7 @@ const Index = () => (
           code={headerCode}
           noInline
           mountStylesheet={false}
-          scope={{ styled, css, rem, headerFont }}>
+          scope={{ styled, css, rem }}>
 
           <LivePreview />
 

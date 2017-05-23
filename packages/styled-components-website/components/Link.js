@@ -41,7 +41,7 @@ const Link = ({ children, className, inline, unstyled, ...rest }) => {
 
   return (
     <UnstyledLink {...rest}>
-      <Child className={className}>
+      <Child href={rest.href} className={className}>
         {children}
       </Child>
     </UnstyledLink>
