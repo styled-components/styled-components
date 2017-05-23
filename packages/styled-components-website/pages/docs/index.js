@@ -7,7 +7,7 @@ import Link from '../../components/Link'
 import titleToDash from '../../utils/titleToDash'
 import { pages } from '../docs.json'
 import { mobile, phone } from '../../utils/media'
-import { sansSerif } from '../../utils/fonts'
+import { headerFont } from '../../utils/fonts'
 
 const Row = styled.div`
   display: flex;
@@ -39,7 +39,7 @@ const SubHeader = styled.h3`
   margin: ${rem(8)} 0;
   font-size: ${rem(18)};
   font-weight: normal;
-  font-family: ${sansSerif};
+  font-family: ${headerFont};
 `
 
 const Documentation = () => (

@@ -2,7 +2,7 @@ import styled from 'styled-components'
 
 import rem from '../utils/rem'
 import { lightGrey } from '../utils/colors'
-import { sansSerif } from '../utils/fonts'
+import { headerFont } from '../utils/fonts'
 
 export const TableWrapper = styled.table`
   width: 100%;
@@ -12,7 +12,7 @@ export const TableWrapper = styled.table`
 
 const TableHead = styled.thead`
   border-bottom: 2px solid ${lightGrey};
-  font-family: ${sansSerif};
+  font-family: ${headerFont};
 `
 
 export const Row = styled.tr`

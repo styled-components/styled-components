@@ -1,7 +1,7 @@
 import styled, { css } from 'styled-components'
 
 import rem from '../utils/rem'
-import { sansSerif } from '../utils/fonts'
+import { headerFont } from '../utils/fonts'
 import { violetRed, gold } from '../utils/colors'
 import { Content, Title, Header } from '../components/Layout'
 import CodeBlock from '../components/CodeBlock'
@@ -41,12 +41,12 @@ const Text = styled.h1`
 const Tagline = styled.span`
   display: block;
   font-weight: 600;
-  font-family: ${sansSerif};
+  font-family: ${headerFont};
   font-size: ${rem(24)};
 `
 
 const SubTagline = styled.span`
-  font-family: ${sansSerif};
+  font-family: ${headerFont};
   font-size: ${rem(20)};
 `
 
@@ -62,7 +62,7 @@ const Button = styled.a`
   text-decoration: none;
   text-align: center;
   width: ${rem(175)};
-  font-family: ${sansSerif};
+  font-family: ${headerFont};
 
   background: transparent;
   color: white;

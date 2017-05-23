@@ -3,7 +3,7 @@ import styled, { css, keyframes } from 'styled-components'
 import rem from '../utils/rem'
 import { darkGrey, red } from '../utils/colors'
 import { phone } from '../utils/media'
-import { sansSerif, monospace } from '../utils/fonts'
+import { headerFont, monospace } from '../utils/fonts'
 import captureScroll from './CaptureScroll'
 
 import '../utils/prismTemplateString'
@@ -81,7 +81,7 @@ const StyledError = styled(LiveError)`
   background: ${red};
   color: white;
   font-size: 0.8rem;
-  font-family: ${sansSerif};
+  font-family: ${headerFont};
   white-space: pre;
 `
 

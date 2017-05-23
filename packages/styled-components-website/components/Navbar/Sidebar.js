@@ -3,7 +3,7 @@ import styled, { css } from 'styled-components'
 import rem from '../../utils/rem'
 import { mobile } from '../../utils/media'
 import { violetRed, gold } from '../../utils/colors'
-import { sansSerif } from '../../utils/fonts'
+import { headerFont } from '../../utils/fonts'
 import captureScroll from '../CaptureScroll'
 
 const Sidebar = styled.nav`
@@ -11,7 +11,7 @@ const Sidebar = styled.nav`
   transform: translateZ(0);
   display: block;
   z-index: 1;
-  font-family: ${sansSerif};
+  font-family: ${headerFont};
 
   left: 0;
   top: 0;
