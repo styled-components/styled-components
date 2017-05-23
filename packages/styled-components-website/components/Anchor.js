@@ -58,7 +58,7 @@ const AnchorHeader = styled(Header)`
   }
 `
 
-const AnchorSubHeader = AnchorHeader.extendWith(SubHeader)``
+const AnchorSubHeader = AnchorHeader.withComponent(SubHeader)
 
 export default ({ children, id, sub }) => {
   const Child = sub ? AnchorSubHeader : AnchorHeader
