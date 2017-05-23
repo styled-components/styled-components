@@ -1,15 +1,58 @@
 import React from 'react'
 import styled, { css } from 'styled-components'
+import { LiveProvider, LivePreview, LiveEditor } from 'react-live'
 
 import rem from '../utils/rem'
 import { headerFont } from '../utils/fonts'
 import { violetRed, gold } from '../utils/colors'
-import CodeBlock from '../components/CodeBlock'
-import LiveEdit from '../components/LiveEdit'
+import { editorMixin, StyledError } from '../components/LiveEdit'
 import Code from '../components/Code'
 import Link from '../components/Link'
 import { Content } from '../components/Layout'
 import HomepageGettingStarted from '../components/homepage-getting-started'
+import captureScroll from '../components/CaptureScroll'
+
+const headerCode = (`
+const Logo = styled.img.attrs({
+  alt: 'Styled Components Logo',
+  src: '/static/logo.png'
+})\`
+  width: \${rem(125)};
+  height: \${rem(125)};
+\`
+
+const Text = styled.h1\`
+  font-size: \${rem(18)};
+  font-weight: normal;
+  margin: \${rem(36)} 0;
+\`
+
+const Tagline = styled.span\`
+  display: block;
+  font-weight: 600;
+  font-size: \${rem(24)};
+\`
+
+const SubTagline = styled.span\`
+  font-size: \${rem(20)};
+\`
+
+render(
+  <div>
+    <Logo />
+
+    <Text>
+      <Tagline>
+        Visual primitives for the component age.
+      </Tagline>
+
+      <SubTagline>
+        Use the best bits of ES6 and CSS to style your apps without stress 💅
+      </SubTagline>
+    </Text>
+  </div>
+)
+`).trim()
 
 const Wrapper = styled.div`
   display: flex;
@@ -25,31 +68,20 @@ const Wrapper = styled.div`
   min-height: 100vh;
 `
 
-const Logo = styled.img.attrs({
-  alt: 'Styled Components Logo',
-  src: '/static/logo.png'
-})`
-  width: ${rem(125)};
-  height: ${rem(125)};
-`
-
-const Text = styled.h1`
-  font-size: ${rem(18)};
-  font-weight: normal;
-  margin: ${rem(36)} 0;
-`
-
-const Tagline = styled.span`
-  display: block;
-  font-weight: 600;
+const HeroContent = Content.extend`
   font-family: ${headerFont};
-  font-size: ${rem(24)};
 `
 
-const SubTagline = styled.span`
-  font-family: ${headerFont};
-  font-size: ${rem(20)};
+const EditorContainer = styled.div`
+  display: inline-block;
+  box-shadow: ${rem(1)} ${rem(1)} ${rem(20)} rgba(20, 20, 20, 0.27);
+  margin: ${rem(35)} 0;
+  text-align: left;
 `
+
+const Editor = captureScroll(styled(LiveEditor)`
+  ${editorMixin}
+`)
 
 const Links = styled.div`
   margin: ${rem(36)} 0;
@@ -77,56 +109,39 @@ const Button = styled.a`
 
 const InternalButton = Button.withComponent(Link);
 
-const sample = (`
-const Button = styled.button\`
-  /* Adapt the colours based on primary prop */
-  background: \${props => props.primary ? 'palevioletred' : 'white'};
-  color: \${props => props.primary ? 'white' : 'palevioletred'};
-
-  font-size: 1em;
-  margin: 1em;
-  padding: 0.25em 1em;
-  border: 2px solid palevioletred;
-  border-radius: 3px;
-\`;
-
-<Button>Normal</Button>
-<Button primary>Primary</Button>
-`).trim()
-
 const Index = () => (
   <div>
     <Wrapper>
-      <Content>
-        <Logo />
+      <HeroContent>
+        <LiveProvider
+          code={headerCode}
+          noInline
+          mountStylesheet={false}
+          scope={{ styled, css, rem, headerFont }}>
 
-        <Text>
-          <Tagline>
-            Visual primitives for the component age.
-          </Tagline>
+          <LivePreview />
 
-          <SubTagline>
-            Use the best bits of ES6 and CSS to style your apps without stress 💅
-          </SubTagline>
-        </Text>
+          <Links>
+            <Button
+              href="https://github.com/styled-components/styled-components"
+              target="_blank"
+              rel="noopener"
+              primary
+            >
+              GitHub
+            </Button>
 
-        <Links>
-          <Button
-            href="https://github.com/styled-components/styled-components"
-            target="_blank"
-            rel="noopener"
-            primary
-          >
-            GitHub
-          </Button>
+            <InternalButton href="/docs" prefetch>
+              Documentation
+            </InternalButton>
+          </Links>
 
-          <InternalButton href="/docs" prefetch>
-            Documentation
-          </InternalButton>
-        </Links>
-
-        <CodeBlock language="jsx" code={sample} />
-      </Content>
+          <EditorContainer>
+            <Editor />
+            <StyledError />
+          </EditorContainer>
+        </LiveProvider>
+      </HeroContent>
     </Wrapper>
 
     <HomepageGettingStarted />
