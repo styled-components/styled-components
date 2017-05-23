@@ -43,8 +43,8 @@ export const Header = styled.h2`
 
 export const SubHeader = styled.h3`
   display: block;
-  margin: ${rem(20)} 0 ${rem(12)} 0;
-  font-size: ${rem(22)};
+  margin: ${rem(35)} 0 ${rem(22)} 0;
+  font-size: ${rem(24)};
   font-weight: 500;
   font-family: ${sansSerif};
 `

@@ -26,6 +26,7 @@ export const InlineLink = styled.a.attrs({
   rel: 'noopener'
 })`
   color: palevioletred;
+  text-decoration: underline;
   font-weight: 600;
   cursor: pointer;
 `

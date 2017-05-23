@@ -2,19 +2,22 @@ import styled from 'styled-components'
 
 import rem from '../utils/rem'
 import { lightGrey } from '../utils/colors'
+import { sansSerif } from '../utils/fonts'
 
 export const TableWrapper = styled.table`
   width: 100%;
   text-align: left;
-  margin: ${rem(35)} 0;
+  margin: ${rem(40)} 0;
 `
 
 const TableHead = styled.thead`
   border-bottom: 2px solid ${lightGrey};
+  font-family: ${sansSerif};
 `
 
 export const Row = styled.tr`
-  padding: 0 ${rem(10)};
+  padding: 0 ${rem(20)};
+  padding-left: 0;
 
   &:not(:last-child) {
     border-bottom: 1px solid ${lightGrey};
@@ -23,7 +26,8 @@ export const Row = styled.tr`
 
 export const Column = styled.th`
   font-weight: normal;
-  padding: ${rem(6)} ${rem(10)};
+  padding: ${rem(10)} ${rem(12)};
+  padding-left: 0;
 `
 
 const TableHeadColumn = styled(Column)`

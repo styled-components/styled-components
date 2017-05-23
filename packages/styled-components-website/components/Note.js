@@ -9,7 +9,7 @@ const Note = styled.div`
   background: ${lightVioletRed};
   padding: ${rem(7)} ${rem(10)} ${rem(10)} ${rem(14)};
   border-left: ${rem(4)} solid ${violetRed};
-  margin: ${rem(20)} 0;
+  margin: ${rem(45)} 0;
   border-radius: ${rem(3)}
 `
 
