@@ -12,18 +12,19 @@ import visualizer from 'rollup-plugin-visualizer'
 const processShim = '\0process-shim'
 
 const prod = process.env.PRODUCTION
-const mode = prod ? 'production' : 'development'
+const esbundle = process.env.ESBUNDLE
 
-console.log(`Creating ${mode} bundle...`)
-
-const targets = prod ?
-[
-  { dest: 'dist/styled-components.min.js', format: 'umd' },
-] :
-[
-  { dest: 'dist/styled-components.js', format: 'umd' },
-  { dest: 'dist/styled-components.es.js', format: 'es' },
-]
+let targets
+if (prod) {
+  console.log('Creating production UMD bundle...')
+  targets = [{ dest: 'dist/styled-components.min.js', format: 'umd' }]
+} else if (esbundle) {
+  console.log('Creating ES modules bundle...')
+  targets = [{ dest: 'dist/styled-components.es.js', format: 'es' }]
+} else {
+  console.log('Creating development UMD bundle')
+  targets = [{ dest: 'dist/styled-components.js', format: 'umd' }]
+}
 
 const plugins = [
   // Unlike Webpack and Browserify, Rollup doesn't automatically shim Node
@@ -71,7 +72,7 @@ if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' })
 export default {
   entry: 'src/index.js',
   moduleName: 'styled',
-  external: ['react'],
+  external: ['react'].concat(esbundle ? ['stylis'] : []),
   exports: 'named',
   targets,
   plugins,
