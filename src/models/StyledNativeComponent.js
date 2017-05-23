@@ -156,14 +156,16 @@ export default (constructWithOptions: Function) => {
       // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
       static styledComponentId = 'StyledNativeComponent'
 
-      static extendWith(tag) {
+      static withComponent(tag) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options
-        const newOptions = { ...optionsToCopy, rules, ParentComponent: StyledNativeComponent }
-        return constructWithOptions(createStyledNativeComponent, tag, newOptions)
+        const newOptions = { ...optionsToCopy, ParentComponent: StyledNativeComponent }
+        return createStyledNativeComponent(tag, newOptions, rules)
       }
 
       static get extend() {
-        return StyledNativeComponent.extendWith(target)
+        const { displayName: _, componentId: __, ...optionsToCopy } = options
+        const newOptions = { ...optionsToCopy, rules, ParentComponent: StyledNativeComponent }
+        return constructWithOptions(createStyledNativeComponent, target, newOptions)
       }
     }
 

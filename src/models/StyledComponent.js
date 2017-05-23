@@ -204,14 +204,16 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       static warnTooManyClasses = warnTooManyClasses
       static target = target
 
-      static extendWith(tag) {
+      static withComponent(tag) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options
-        const newOptions = { ...optionsToCopy, rules, ParentComponent: StyledComponent }
-        return constructWithOptions(createStyledComponent, tag, newOptions)
+        const newOptions = { ...optionsToCopy, ParentComponent: StyledComponent }
+        return createStyledComponent(tag, newOptions, rules)
       }
 
       static get extend() {
-        return StyledComponent.extendWith(target)
+        const { displayName: _, componentId: __, ...optionsToCopy } = options
+        const newOptions = { ...optionsToCopy, rules, ParentComponent: StyledComponent }
+        return constructWithOptions(createStyledComponent, target, newOptions)
       }
     }
 
