@@ -51,6 +51,7 @@ const StyledEditor = styled(LiveEditor)`
   background: ${darkGrey};
   font-size: 0.8rem;
   font-family: ${monospace};
+  font-weight: 300;
   height: ${rem(400)};
   overflow-y: scroll;
   overflow-x: hidden;

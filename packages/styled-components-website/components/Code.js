@@ -8,6 +8,7 @@ import { Editor } from 'react-live'
 
 const Code = styled.span`
   font-family: ${monospace};
+  font-weight: 500;
 `
 
 export default Code

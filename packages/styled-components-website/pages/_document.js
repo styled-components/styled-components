@@ -34,6 +34,9 @@ const resetStyles = `
   .token.cdata {
     color: hsl(30, 20%, 50%);
   }
+  .token.comment {
+    font-style: italic;
+  }
   .token.punctuation {
     opacity: .7;
   }
@@ -149,6 +152,9 @@ export default class MyDocument extends Document {
           <meta name="theme-color" content="#db7093" />
           <meta name="author" content="Styled Components" />
           <meta name="description" content={description} />
+
+          {/* cloud.typography */}
+          <link rel="stylesheet" type="text/css" href="https://cloud.typography.com/7039052/7606172/css/fonts.css" />
 
           {/* Open Graph */}
           <link itemprop="url" href="http://styled-components.com/"/>

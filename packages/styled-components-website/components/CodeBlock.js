@@ -23,6 +23,7 @@ const Highlight = styled.pre.attrs({
   background: ${darkGrey};
   font-size: 0.8rem;
   font-family: ${monospace};
+  font-weight: 300;
   white-space: pre-wrap;
 
   border-radius: ${rem(3)};
