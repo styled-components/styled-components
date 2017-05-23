@@ -61,12 +61,10 @@ const StyledComponent = () => (
       </p>
     </SectionLayout>
 
-    <SectionLayout sub title=".extendWith">
+    <SectionLayout sub title=".withComponent">
       <p>
-        This is a method that creates a new <Code>StyledComponent</Code>, extends its rules,
-        and changes the tag that is being used.<br />
-        It works similarly <Code>.extend</Code>, but allows you to change the tag or component
-        that the styled component renders.
+        This is a method that creates a new <Code>StyledComponent</Code> with a different tag or component
+        applied to it, but all the same rules of the one it's called on.
       </p>
 
       <Table head={[ 'Arguments', 'Description' ]}>
@@ -81,8 +79,7 @@ const StyledComponent = () => (
       </Table>
 
       <p>
-        Returns a function that accepts a tagged template literal and returns a new <Code>StyledComponent</Code> with
-        the new tag, and the new rules merged into the ones of the component this method was called on.
+        Returns a new <Code>StyledComponent</Code> with the new tag / component being applied when it's used.
       </p>
 
       <p>

@@ -30,8 +30,9 @@ render(
 );
 `).trim()
 
-const extendWithSample = (`
+const withComponentSample = (`
 const Button = styled.button\`
+  display: inline-block;
   color: palevioletred;
   font-size: 1em;
   margin: 1em;
@@ -40,8 +41,11 @@ const Button = styled.button\`
   border-radius: 3px;
 \`;
 
-// We're extending Button with some extra styles, but we're now using an <a> tag
-const TomatoLink = Button.extendWith('a')\`
+// We're replacing the <button> tag with an <a> tag, but reuse all the same styles
+const Link = Button.withComponent('a')
+
+// Use .withComponent together with .extend to both change the tag and use additional styles
+const TomatoLink = Link.extend\`
   color: tomato;
   border-color: tomato;
 \`;
@@ -49,6 +53,7 @@ const TomatoLink = Button.extendWith('a')\`
 render(
   <div>
     <Button>Normal Button</Button>
+    <Link>Normal Link</Link>
     <TomatoLink>Tomato Link</TomatoLink>
   </div>
 );
@@ -94,13 +99,13 @@ const ExtendingStyles = () => (
     </Note>
 
     <p>
-      In really rare cases you might want to extend a component with a different tagname, or third-party component.
-      For this case, we have an escape hatch. You can call <Code>extendWith</Code> on the component
-      to extend the styles and use a different tag altogether.
+      In really rare cases you might want to change which tag or component a styled component renders.
+      For this case, we have an escape hatch. You can use the <Code>withComponent</Code> to extend
+      the styles and use a different tag altogether.
     </p>
 
     <LiveEdit
-      code={extendWithSample}
+      code={withComponentSample}
       noInline
     />
   </SectionLayout>
