@@ -17,7 +17,7 @@
     "polished": "^1.0.2",
     "preact": "^8.1.0",
     "preact-compat": "^3.14.3",
-    "prism-js": "^1.0.0",
+    "prismjs": "^1.6.0",
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
     "react-live": "^1.5.2",

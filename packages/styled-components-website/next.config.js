@@ -25,6 +25,9 @@ module.exports = {
         return entry
       })
 
+    config.resolve.alias = config.resolve.alias || {}
+    config.resolve.alias['react-live'] = 'react-live/lib/index.js'
+
     if (dev) {
       return config
     }
@@ -52,11 +55,8 @@ module.exports = {
       })
     );
 
-    config.resolve.alias = {
-      'react': 'preact-compat/dist/preact-compat',
-      'react-dom': 'preact-compat/dist/preact-compat',
-      'react-live': 'react-live/dist/react-live.min'
-    }
+    config.resolve.alias['react'] = 'preact-compat/dist/preact-compat'
+    config.resolve.alias['react-dom'] = 'preact-compat/dist/preact-compat'
 
     return config
   }

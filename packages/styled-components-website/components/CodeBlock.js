@@ -1,13 +1,11 @@
 import React, { Component } from 'react'
 import styled from 'styled-components'
 import rem from '../utils/rem'
-import { highlight, languages } from 'prismjs/components/prism-core'
 
+import '../utils/prismTemplateString'
+import { highlight, languages } from 'prismjs/components/prism-core'
 import { darkGrey } from '../utils/colors'
 import { monospace } from '../utils/fonts'
-import '../utils/prismTemplateString'
-import 'prismjs/components/prism-bash'
-import 'prismjs/components/prism-json'
 
 const prism = (code, language) => {
   if (!language || !languages[language]) {

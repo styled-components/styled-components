@@ -2977,10 +2977,6 @@ pretty-format@^3.5.1:
   version "3.8.0"
   resolved "https://registry.yarnpkg.com/pretty-format/-/pretty-format-3.8.0.tgz#bfbed56d5e9a776645f4b1ff7aa1a3ac4fa3c385"
 
-prism-js@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/prism-js/-/prism-js-1.0.0.tgz#8b6079d583ec751854cdce3e8fec18ef6d8ca15f"
-
 prismjs@^1.6.0:
   version "1.6.0"
   resolved "https://registry.yarnpkg.com/prismjs/-/prismjs-1.6.0.tgz#118d95fb7a66dba2272e343b345f5236659db365"
