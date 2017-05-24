@@ -141,8 +141,22 @@ describe('extending', () => {
 
   it('should allow changing component', () => {
     const Parent = styled.div`color: red;`
-    const Child = Parent.extendWith('span')``
+    const Child = Parent.withComponent('span')
 
     expect(shallow(<Child />).html()).toEqual('<span class="sc-b c"></span>')
+  })
+
+  it('should allow changing component and extending', () => {
+    const Parent = styled.div`
+      color: red;
+    `
+    const Child = Parent.withComponent('span').extend`
+      color: green;
+    `
+
+    expect(shallow(<Child />).html()).toEqual('<span class="sc-c d"></span>')
+    expectCSSMatches(`
+      .sc-c {} .d { color: red; color: green; }
+    `)
   })
 })
