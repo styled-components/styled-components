@@ -122,6 +122,10 @@ const resetStyles = `
     }
   }
 
+  body.sticky {
+    overflow: hidden;
+  }
+
   .root {
     position: relative;
     overflow: auto;

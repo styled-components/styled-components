@@ -13,8 +13,14 @@ class Navbar extends Component {
   }
 
   onFold = () => {
+    let isFolded = !this.state.isFolded
+    if(!isFolded) {
+      document.body.classList.add('sticky')
+    } else {
+      document.body.classList.remove('sticky')
+    }
     this.setState({
-      isFolded: !this.state.isFolded
+      isFolded: isFolded
     })
   }
 

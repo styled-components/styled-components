@@ -61,13 +61,24 @@ const captureScroll = Component => {
       }
     }
 
+    onResize = evt => {
+      isMobile = window.matchMedia(`(max-width: ${1000 / 16}em)`).matches
+      if(isMobile) {
+        this.node.removeEventListener('wheel', this.onScroll)
+      } else {
+        this.node.addEventListener('wheel', this.onScroll)
+      }
+    }
+
     componentDidMount() {
       this.node = findDOMNode(this.ref)
       this.node.addEventListener('wheel', this.onScroll)
+      window.addEventListener('resize', this.onResize)
     }
 
     componentWillUnmount() {
       this.node.removeEventListener('wheel', this.onScroll)
+      window.removeEventListener('resize', this.onResize)
     }
 
     render() {
