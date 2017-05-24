@@ -37,7 +37,7 @@ const RotatedBox = styled.View\`
 const ReactNative = () => (
   <SectionLayout title="React Native">
     <p>
-      Styled Components can be used with React Native in the same way,
+      styled-components can be used with React Native in the same way,
       except you import it from <Code>styled-components/native</Code> instead.
     </p>
 

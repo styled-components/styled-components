@@ -6,8 +6,8 @@ import { Container, Content, Title } from './Layout'
 const DocsLayout = ({ children, title }) => (
   <Container>
     <Head>
-      <title>Styled Components: {title}</title>
-      <meta name="twitter:title" content={`Styled Components: ${title}`} />
+      <title>styled-components: {title}</title>
+      <meta name="twitter:title" content={`styled-components: ${title}`} />
     </Head>
 
     <Navbar />

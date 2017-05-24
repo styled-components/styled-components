@@ -25,7 +25,7 @@ render(
 const PassedProps = () => (
   <SectionLayout title="Passed props">
     <p>
-      Styled Components pass on all their props.
+      styled-components pass on all their props.
     </p>
 
     <p>

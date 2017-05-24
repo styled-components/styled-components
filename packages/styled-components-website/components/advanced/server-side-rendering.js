@@ -97,7 +97,7 @@ const ServerSideRendering = () => (
     </p>
 
     <p>
-      Styled Components supports concurrent server side rendering, with stylesheet rehydration.
+      styled-components supports concurrent server side rendering, with stylesheet rehydration.
       The basic idea is that everytime you render your app on the server, you can create
       a <Code>ServerStyleSheet</Code> and add a provider to your React tree, that accepts styles
       via a context API.
@@ -105,7 +105,7 @@ const ServerSideRendering = () => (
 
     <p>
       This doesn't interfere with global styles, such as <Code>keyframes</Code> or <Code>injectGlobal</Code> and
-      allows you to use Styled Components with React DOM's SSR, or even Rapscallion.
+      allows you to use styled-components with React DOM's SSR, or even Rapscallion.
     </p>
 
     <p>

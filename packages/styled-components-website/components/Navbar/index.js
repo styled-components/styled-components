@@ -34,7 +34,7 @@ class Navbar extends Component {
 
           <Text>
             <Link unstyled href="/docs">
-              Styled Components
+              styled-components
             </Link>
           </Text>
 

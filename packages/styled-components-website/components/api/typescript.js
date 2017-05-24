@@ -75,7 +75,7 @@ const StyledBox = styled(Box)\`
 const TypeScript = () => (
   <SectionLayout title="TypeScript">
     <p>
-      Styled Components has TypeScript definitions to allow the library to be used in any TypeScript project.
+      styled-components has TypeScript definitions to allow the library to be used in any TypeScript project.
       <br />
       {'A basic example can be found '}
       <InlineLink href="https://github.com/patrick91/Styled-Components-Typescript-Example">

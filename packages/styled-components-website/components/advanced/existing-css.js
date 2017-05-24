@@ -48,11 +48,11 @@ const ExistingCSS = () => (
   <SectionLayout title="Existing CSS">
     <p>
       There are a couple of implementation details that you should be aware of, if you choose to use
-      Styled Components together with existing CSS.
+      styled-components together with existing CSS.
     </p>
 
     <p>
-      Styled Components generates an actual stylesheet with classes, and attaches those classes to
+      styled-components generates an actual stylesheet with classes, and attaches those classes to
       the DOM nodes of styled components via the <Code>className</Code> prop.
       It injects the generated stylesheet at the end of the head of the document during runtime.
     </p>
@@ -85,7 +85,7 @@ const ExistingCSS = () => (
 
       <p>
         In the above example the styled component class takes precendence over the global class, since
-        Styled Components injects its styles during runtime into the DOM at the end of the head.
+        styled-components injects its styles during runtime into the DOM at the end of the head.
         Thus its styles win over the other ones.
       </p>
 

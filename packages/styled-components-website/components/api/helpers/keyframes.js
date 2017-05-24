@@ -50,7 +50,7 @@ const Keyframes = () => (
     <CodeBlock code={keyframesSample} language="jsx" />
 
     <p>
-      {'You can learn more about Styled Components with Animations in the '}
+      {'You can learn more about styled-components with Animations in the '}
       <Link
         inline
         href="/docs/basics#animations"

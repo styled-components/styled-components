@@ -51,7 +51,7 @@ const StylingAnyComponents = () => (
     </p>
 
     <Note>
-      Styled Components always generates a real stylesheet with classes.
+      styled-components always generates a real stylesheet with classes.
       <br />
       The classnames are then passed to the React component (including third party components)
       via the <Code>className</Code> prop.

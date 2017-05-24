@@ -30,7 +30,7 @@ render(
 const GettingStarted = ({ url }) => (
   <SectionLayout title="Getting Started">
     <p>
-      Styled Components utilises tagged template literals to style your components.
+      styled-components utilises tagged template literals to style your components.
     </p>
 
     <p>
@@ -40,7 +40,7 @@ const GettingStarted = ({ url }) => (
 
     <p>
       This example creates two simple components, a wrapper and a title, with some styles attached to it.
-      You can edit the code and get a feel for how you'd work with Styled Components.
+      You can edit the code and get a feel for how you'd work with styled-components.
     </p>
 
     <LiveEdit

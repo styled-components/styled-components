@@ -17,7 +17,7 @@ import captureScroll from '../components/CaptureScroll'
 
 const headerCode = (`
 const Logo = styled.img.attrs({
-  alt: 'Styled Components Logo',
+  alt: 'styled-components Logo',
   src: '/static/logo.png'
 })\`
   width: \${rem(125)};

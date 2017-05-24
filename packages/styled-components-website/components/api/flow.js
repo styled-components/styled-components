@@ -19,7 +19,7 @@ const flowconfig = (`
 const Flow = ({ url }) => (
   <SectionLayout title="Flow">
     <p>
-      {'Styled Components has first-class '}
+      {'styled-components has first-class '}
       <InlineLink href="https://flowtype.org">
         Flow
       </InlineLink>
@@ -27,7 +27,7 @@ const Flow = ({ url }) => (
     </p>
 
     <p>
-      To use Flow with the public api of Styled Components we recommend that you use the library definition in <Code>flow-typed</Code>.
+      To use Flow with the public api of styled-components we recommend that you use the library definition in <Code>flow-typed</Code>.
       To install it you can use the <Code>flow-typed</Code> cli or download it manually from the git repository and store it in
       a <Code>flow-typed/</Code> folder in the same directory with your <Code>flowconfig</Code>.
     </p>
@@ -36,9 +36,9 @@ const Flow = ({ url }) => (
       <CodeBlock code={install} />
     </SectionLayout>
 
-    <SectionLayout sub title="Ignore Styled Components source">
+    <SectionLayout sub title="Ignore styled-components source">
       <p>
-        You should add the following lines to your <Code>.flowconfig</Code>, if you run into Flow errors, coming from the Styled Components
+        You should add the following lines to your <Code>.flowconfig</Code>, if you run into Flow errors, coming from the styled-components
         package in your <Code>node_modules</Code> directory.
       </p>
 

@@ -98,9 +98,9 @@ const scope = { withTheme, ThemeProvider }
 const Theming = () => (
   <SectionLayout title="Theming">
     <p>
-      Styled Components has full theming support by exporting a <Code>&lt;ThemeProvider&gt;</Code> wrapper component.
+      styled-components has full theming support by exporting a <Code>&lt;ThemeProvider&gt;</Code> wrapper component.
       This component provides a theme to all React components underneath itself via the context API. In the render
-      tree all Styled Components will have access to the provided theme, even when they are multiple levels deep.
+      tree all styled-components will have access to the provided theme, even when they are multiple levels deep.
     </p>
 
     <p>
