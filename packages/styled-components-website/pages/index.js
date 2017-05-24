@@ -16,33 +16,33 @@ import HomepageGettingStarted from '../components/homepage-getting-started'
 import captureScroll from '../components/CaptureScroll'
 
 const headerCode = (`
-const Text = styled.h1\`
-  font-size: 1rem;
-  font-weight: normal;
-  margin: 2rem 0;
-\`
-
-const Tagline = styled.span\`
-  display: block;
+const Tagline = styled.h1\`
   font-weight: 600;
   font-size: 1.3rem;
 \`
 
-const SubTagline = styled.span\`
+const SupportingTagline = styled.h2\`
   font-size: 1.1rem;
+  font-weight: 400;
 \`
 
 render(
-  <Text>
-    <Tagline>
-      Visual primitives for the component age.
-    </Tagline>
-
-    <SubTagline>
+  <div>
+    <Tagline>Visual primitives for the component age.</Tagline>
+    <SupportingTagline>
       Use the best bits of ES6 and CSS to style your apps without stress 💅
-    </SubTagline>
-  </Text>
+    </SupportingTagline>
+  </div>
 )`).trim()
+
+const Title = styled.div`
+  margin: 2rem 0;
+
+  h1,
+  h2 {
+    margin: 0;
+  }
+`
 
 const Logo = styled.img.attrs({
   alt: 'styled-components Logo',
@@ -79,6 +79,7 @@ const EditorContainer = styled.div`
 
 const Editor = captureScroll(styled(LiveEditor)`
   ${editorMixin}
+  height: 24rem;
 `)
 
 const Links = styled.div`
@@ -154,7 +155,9 @@ class Index extends Component {
 
               <Logo />
 
-              <LivePreview />
+              <Title>
+                <LivePreview />
+              </Title>
 
               <Links>
                 <Button
