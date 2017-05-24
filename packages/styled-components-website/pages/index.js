@@ -141,15 +141,7 @@ const Heart = styled(HeartIcon).attrs({
 `
 
 class Index extends Component {
-  static async getInitialProps() {
-    const res = await fetch('https://api.github.com/repos/styled-components/styled-components')
-    const json = await res.json()
-    return { stars: json.stargazers_count }
-  }
-
   render() {
-    const { stars } = this.props
-
     return (
       <div>
         <Wrapper>
@@ -171,8 +163,7 @@ class Index extends Component {
                   rel="noopener"
                   primary
                 >
-                  {`GitHub ${stars} `}
-                  <Star />
+                  GitHub
                 </Button>
 
                 <InternalButton href="/docs" prefetch>

@@ -11,6 +11,14 @@ const AlignCenter = styled.div`
   text-align: center;
 `
 
+const Badge = styled.img`
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+  margin-top: 0em;
+  margin-bottom: 3em;
+  height: 1.5em;
+`
+
 const ExampleButton = styled.button`
   border-radius: 3px;
   padding: 0.25em 1em;
@@ -93,6 +101,16 @@ const Button = styled.button\`
 
 const HomepageGettingStarted = () => (
   <Content>
+    <AlignCenter>
+      <a href="https://github.com/styled-components/styled-components">
+        <Badge src="https://img.shields.io/github/stars/styled-components/styled-components.svg?style=social&label=Star&maxAge=3600" alt="Stars on GitHub" />
+      </a>
+      <a href="https://www.npmjs.com/package/styled-components">
+      	<Badge src="https://img.shields.io/npm/v/styled-components.svg" alt="Current version" />
+      </a>
+      <Badge src="https://img.shields.io/npm/dm/styled-components.svg?maxAge=3600" alt="Monthly downloads" />
+      <Badge src="http://img.badgesize.io/https://unpkg.com/styled-components/dist/styled-components.min.js?compression=gzip&label=gzip%20size" alt="Gzipped size" />
+    </AlignCenter>
     <Title>Getting started</Title>
     <Header>Installation</Header>
     <p>To download styled-components run <Code>npm install --save styled-components</Code>. That's all you need to do, you are now ready to use it in your app! (yep, no build step needed 👌)</p>
