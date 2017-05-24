@@ -181,6 +181,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       attrs,
     } = options
 
+    const styledComponentId = (options.displayName && options.componentId) ?
+      `${options.displayName}-${options.componentId}` : componentId
+
     let warnTooManyClasses
     if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
       warnTooManyClasses = createWarnTooManyClasses(displayName)
@@ -188,7 +191,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),
-      componentId,
+      styledComponentId,
     )
 
     class StyledComponent extends ParentComponent {
@@ -198,7 +201,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
 
       static displayName = displayName
-      static styledComponentId = componentId
+      static styledComponentId = styledComponentId
       static attrs = attrs
       static componentStyle = componentStyle
       static warnTooManyClasses = warnTooManyClasses
