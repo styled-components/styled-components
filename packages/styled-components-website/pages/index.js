@@ -81,6 +81,7 @@ const Wrapper = styled.div`
 
 const HeroContent = Content.extend`
   font-family: ${headerFont};
+  width: 75rem;
 `
 
 const EditorContainer = styled.div`
@@ -197,6 +198,7 @@ class Index extends Component {
             <CompanyLogo src="/static/reddit-logo.svg" />
             <CompanyLogo src="/static/target-logo.svg" />
             <CompanyLogo height="3rem" src="/static/eurovision-logo.svg" />
+            <CompanyLogo height="2.25rem" src="/static/artsy-logo.svg" />
             <CompanyLogo height="1.5rem" src="/static/ideo-logo.svg" />
           </HeroContent>
         </Wrapper>
