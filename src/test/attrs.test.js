@@ -118,4 +118,25 @@ describe('attrs', () => {
     expect(shallow(<Comp />).html()).toEqual('<a href="#" class="sc-a b"></a>')
     expectCSSMatches('.sc-a {} .b { color: blue; } .b.--is-active { color: red; }')
   })
+
+  it('should pass through children as a normal prop', () => {
+    const Comp = styled.div.attrs({
+      children: 'Probably a bad idea'
+    })``
+    expect(shallow(<Comp />).html()).toEqual('<div class="sc-a b">Probably a bad idea</div>')
+  })
+
+  it('should pass through complex children as well', () => {
+    const Comp = styled.div.attrs({
+      children: <span>Probably a bad idea</span>
+    })``
+    expect(shallow(<Comp />).html()).toEqual('<div class="sc-a b"><span>Probably a bad idea</span></div>')
+  })
+
+  it('should override children of course', () => {
+    const Comp = styled.div.attrs({
+      children: <span>Amazing</span>
+    })``
+    expect(shallow(<Comp>Something else</Comp>).html()).toEqual('<div class="sc-a b">Something else</div>')
+  })
 })
