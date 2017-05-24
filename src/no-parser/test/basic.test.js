@@ -11,6 +11,18 @@ describe('basic', () => {
     styled = resetNoParserStyled()
   })
 
+  it('should throw a meaningful error when called with null', () => {
+    const invalidComps = [undefined, null, 123, []]
+    invalidComps.forEach(comp => {
+      expect(() => {
+        // $FlowInvalidInputTest
+        const Comp = styled(comp)
+        shallow(<Comp />)
+        // $FlowInvalidInputTest
+      }).toThrow(`Cannot create styled-component for component: ${comp}`)
+    })
+  })
+
   it('should correctly assemble preprocessed CSS', () => {
     const Comp = styled.div([[ '{ color: red; }' ]])
     shallow(<Comp />)
