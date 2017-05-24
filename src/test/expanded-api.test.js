@@ -46,12 +46,21 @@ describe('expanded api', () => {
     })
 
     it('should be attached if passed in', () => {
-      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })``
-      const Comp2 = styled.div.withConfig({ displayName: 'Comp2', componentId: 'OMGLOL' })``
+      const Comp = styled.div.withConfig({ componentId: 'LOLOMG' })``
+      const Comp2 = styled.div.withConfig({ componentId: 'OMGLOL' })``
       expect(Comp.styledComponentId).toBe('LOLOMG')
       expect(shallow(<Comp />).prop('className')).toMatch(/LOLOMG/)
       expect(Comp2.styledComponentId).toBe('OMGLOL')
       expect(shallow(<Comp2 />).prop('className')).toMatch(/OMGLOL/)
+    })
+
+    it('should be combined with displayName if both passed in', () => {
+      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })``
+      const Comp2 = styled.div.withConfig({ displayName: 'Comp2', componentId: 'OMGLOL' })``
+      expect(Comp.styledComponentId).toBe('Comp-LOLOMG')
+      expect(shallow(<Comp />).prop('className')).toMatch(/Comp-LOLOMG/)
+      expect(Comp2.styledComponentId).toBe('Comp2-OMGLOL')
+      expect(shallow(<Comp2 />).prop('className')).toMatch(/Comp2-OMGLOL/)
     })
   })
 
@@ -62,7 +71,7 @@ describe('expanded api', () => {
         .withConfig({ displayName: 'dn-2' })
         ``
       expect(Comp.displayName).toBe('dn-2')
-      expect(shallow(<Comp />).prop('className')).toBe('id-1 a')
+      expect(shallow(<Comp />).prop('className')).toBe('dn-2-id-1 a')
     })
 
     it('should keep the last value passed in when merging', () => {
@@ -71,7 +80,7 @@ describe('expanded api', () => {
         .withConfig({ displayName: 'dn-5', componentId: 'id-4' })
         ``
       expect(Comp.displayName).toBe('dn-5')
-      expect(shallow(<Comp />).prop('className')).toBe('id-4 a')
+      expect(shallow(<Comp />).prop('className')).toBe('dn-5-id-4 a')
     })
   })
 })
