@@ -18,6 +18,18 @@ describe('basic', () => {
     styled.div``
   })
 
+  it('should throw a meaningful error when called with null', () => {
+    const invalidComps = [undefined, null, 123, []]
+    invalidComps.forEach(comp => {
+      expect(() => {
+        // $FlowInvalidInputTest
+        const Comp = styled(comp)
+        shallow(<Comp />)
+        // $FlowInvalidInputTest
+      }).toThrow(`Cannot create styled-component for component: ${comp}`)
+    })
+  })
+
   it('should not inject anything by default', () => {
     styled.div``
     expectCSSMatches('')

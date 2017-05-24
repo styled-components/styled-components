@@ -5,6 +5,11 @@ export default (css: Function) => {
   const constructWithOptions = (componentConstructor: Function,
                                 tag: Target,
                                 options: Object = {}) => {
+    if (typeof tag !== 'string' && typeof tag !== 'function') {
+      // $FlowInvalidInputTest
+      throw new Error(`Cannot create styled-component for component: ${tag}`)
+    }
+
     /* This is callable directly as a template function */
     const templateFunction =
       (strings: Array<string>, ...interpolations: Array<Interpolation>) =>

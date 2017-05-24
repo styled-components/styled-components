@@ -123,7 +123,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     render() {
-      const { children, innerRef } = this.props
+      const { innerRef } = this.props
       const { generatedClassName } = this.state
       const { styledComponentId, target } = this.constructor
 
@@ -164,7 +164,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           return acc
         }, baseProps)
 
-      return createElement(target, propsForElement, children)
+      return createElement(target, propsForElement)
     }
   }
 
