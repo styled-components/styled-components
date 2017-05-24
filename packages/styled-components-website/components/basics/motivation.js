@@ -1,49 +1,33 @@
 import React from 'react'
+import styled from 'styled-components'
+
 import SectionLayout from '../SectionLayout'
 import Note from '../Note'
+import rem from '../../utils/rem'
+
+const videoHtml = (`
+<iframe width="560" height="315" src="https://www.youtube.com/embed/bIK2NwoK9xk?start=89" frameborder="0" allowfullscreen></iframe>
+`).trim()
+
+const Video = styled.div.attrs({
+  dangerouslySetInnerHTML: {
+    __html: videoHtml
+  }
+})`
+  display: inline-block;
+  box-shadow: ${rem(1)} ${rem(1)} ${rem(20)} rgba(20, 20, 20, 0.27);
+  margin: ${rem(35)} 0;
+`
 
 const Motivation = () => (
   <SectionLayout title="Motivation">
     <p>
-      Styling has become an increasingly complex problem to solve for modern single-page applications.
-      Numerous libraries and frameworks have been created to make CSS fit into the component-centric
-      world of React apps.
+      This talk by Max Stoiber is a really thorough introduction to styled-components
+      and goes through what the motivations behind its creation were, along with some
+      other information to get started with.
     </p>
 
-    <p>
-      The problem with plain CSS is that it was built in an era where the web consisted of documents.
-      In 1993 the web was created to exchange mostly scientific documents, and CSS was introduced as
-      a solution to style those documents. Nowadays however, we are building rich, interactive,
-      user-facing applications, and CSS just isn't built for this use-case.
-    </p>
-
-    <p>
-      To solve this problem, the main motivation behind Styled Components was: How can we make CSS
-      better? And one of the first things that other notable React styling libraries choose to do
-      is colocating and isolating styles. This benefits our component-based systems, since the
-      styling of one component should never affect another. This isolates a component's styles,
-      just like we are isolating its logic and markup.
-    </p>
-
-    <p>
-      Styled Components takes this concept a step further by completely removing the mapping between
-      styles and components. Since a piece of styling will always be associated with a certain DOM
-      node in our components via a class, there is no point in having this mapping at all.
-      In Styled Components we choose to write components that have some styles attached to them
-      directly.
-    </p>
-
-    <p>
-      This reduces a lot of friction when writing styled applications, and puts a lot more attention
-      on the Developer Experience when writing CSS. This attention on your experience when working
-      with Styled Components is also the reason behind some other design decisions. Namely, writing
-      actual CSS code with ES6 tagged template strings, or built in theming support.
-    </p>
-
-    <p>
-      The main motivation behind Styled Components is to create a library that fits the mental model
-      of writing React applications.
-    </p>
+    <Video />
   </SectionLayout>
 )
 
