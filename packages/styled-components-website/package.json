@@ -11,6 +11,7 @@
     "babel-plugin-polished": "^1.0.3",
     "babel-plugin-styled-components": "^1.1.4",
     "express": "^4.15.2",
+    "isomorphic-fetch": "^2.2.1",
     "lru-cache": "^4.0.2",
     "module-alias": "^2.0.0",
     "next": "^2.3.0-alpha1",

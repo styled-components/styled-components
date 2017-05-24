@@ -1,6 +1,8 @@
-import React from 'react'
+import React, { Component } from 'react'
 import styled, { css } from 'styled-components'
 import { LiveProvider, LivePreview, LiveEditor } from 'react-live'
+import fetch from 'isomorphic-fetch'
+import StarIcon from 'react-octicons-svg/dist/StarIcon'
 
 import rem from '../utils/rem'
 import { headerFont } from '../utils/fonts'
@@ -109,43 +111,67 @@ const Button = styled.a`
 
 const InternalButton = Button.withComponent(Link);
 
-const Index = () => (
-  <div>
-    <Wrapper>
-      <HeroContent>
-        <LiveProvider
-          code={headerCode}
-          noInline
-          mountStylesheet={false}
-          scope={{ styled, css, rem }}>
+const Star = styled(StarIcon).attrs({
+  width: null,
+  height: null
+})`
+  position: relative;
+  display: inline-block;
+  width: ${rem(15)};
+  color: ${violetRed};
+  bottom: ${rem(2)};
+`
 
-          <LivePreview />
+class Index extends Component {
+  static async getInitialProps() {
+    const res = await fetch('https://api.github.com/repos/styled-components/styled-components')
+    const json = await res.json()
+    return { stars: json.stargazers_count }
+  }
 
-          <Links>
-            <Button
-              href="https://github.com/styled-components/styled-components"
-              target="_blank"
-              rel="noopener"
-              primary
-            >
-              GitHub
-            </Button>
+  render() {
+    const { stars } = this.props
 
-            <InternalButton href="/docs" prefetch>
-              Documentation
-            </InternalButton>
-          </Links>
+    return (
+      <div>
+        <Wrapper>
+          <HeroContent>
+            <LiveProvider
+              code={headerCode}
+              noInline
+              mountStylesheet={false}
+              scope={{ styled, css, rem }}>
 
-          <EditorContainer>
-            <Editor />
-            <StyledError />
-          </EditorContainer>
-        </LiveProvider>
-      </HeroContent>
-    </Wrapper>
+              <LivePreview />
 
-    <HomepageGettingStarted />
-  </div>
-)
+              <Links>
+                <Button
+                  href="https://github.com/styled-components/styled-components"
+                  target="_blank"
+                  rel="noopener"
+                  primary
+                >
+                  {`GitHub ${stars} `}
+                  <Star />
+                </Button>
+
+                <InternalButton href="/docs" prefetch>
+                  Documentation
+                </InternalButton>
+              </Links>
+
+              <EditorContainer>
+                <Editor />
+                <StyledError />
+              </EditorContainer>
+            </LiveProvider>
+          </HeroContent>
+        </Wrapper>
+
+        <HomepageGettingStarted />
+      </div>
+    )
+  }
+}
 
 export default Index
