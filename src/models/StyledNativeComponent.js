@@ -18,7 +18,7 @@ export default (constructWithOptions: Function) => {
     static styledComponentId: string
     static attrs: Object
     static inlineStyle: Object
-    root: Object
+    root: ?Object
 
     attrs = {}
     state = {
@@ -97,7 +97,19 @@ export default (constructWithOptions: Function) => {
     }
 
     setNativeProps(nativeProps: Object) {
-      this.root.setNativeProps(nativeProps)
+      if (this.root !== undefined) {
+        // $FlowFixMe
+        this.root.setNativeProps(nativeProps)
+      } else {
+        const { displayName } = this.constructor
+
+        // eslint-disable-next-line no-console
+        console.warn(
+          'setNativeProps was called on a Styled Component wrapping a stateless functional component. ' +
+          'In this case no ref will be stored, and instead an innerRef prop will be passed on.\n' +
+          `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName}.`,
+        )
+      }
     }
 
     onRef = (node: any) => {
@@ -120,7 +132,14 @@ export default (constructWithOptions: Function) => {
         style: [generatedStyles, style],
       }
 
-      if (!isStyledComponent(target)) {
+      if (
+        !isStyledComponent(target) &&
+        (
+          // NOTE: We can't pass a ref to a stateless functional component
+          typeof target !== 'function' ||
+          (target.prototype && 'isReactComponent' in target.prototype)
+        )
+      ) {
         propsForElement.ref = this.onRef
         delete propsForElement.innerRef
       } else {

@@ -164,10 +164,12 @@ describe('native', () => {
 
       const wrapper = mount(<Comp innerRef={ref} />)
       const view = wrapper.find('View').first()
+      const comp = wrapper.find(Comp).first()
 
       // $FlowFixMe
       expect(ref).toHaveBeenCalledWith(view.node)
       expect(view.prop('innerRef')).toBeFalsy()
+      expect(comp.node.root).toBeTruthy()
     })
 
     class InnerComponent extends React.Component {
@@ -182,10 +184,12 @@ describe('native', () => {
 
       const wrapper = mount(<OuterComponent innerRef={ref} />)
       const innerComponent = wrapper.find(InnerComponent).first()
+      const outerComponent = wrapper.find(OuterComponent).first()
 
       // $FlowFixMe
       expect(ref).toHaveBeenCalledWith(innerComponent.node)
       expect(innerComponent.prop('innerRef')).toBeFalsy()
+      expect(outerComponent.node.root).toBeTruthy()
     })
 
     it('should pass the innerRef to the wrapped styled component', () => {
@@ -196,9 +200,25 @@ describe('native', () => {
       const wrapper = mount(<OuterComponent innerRef={ref} />)
       const view = wrapper.find('View').first()
       const innerComponent = wrapper.find(InnerComponent).first()
+      const outerComponent = wrapper.find(OuterComponent).first()
 
       // $FlowFixMe
       expect(ref).toHaveBeenCalledWith(view.node)
+      expect(outerComponent.node.root).toBeTruthy()
+    })
+
+    it('should pass innerRef instead of ref to a wrapped stateless functional component', () => {
+      const InnerComponent = () => null
+      const OuterComponent = styled(InnerComponent)``
+      // NOTE: A ref should always be passed, so we don't need to (setNativeProps feature)
+
+      const wrapper = mount(<OuterComponent />)
+      const outerComponent = wrapper.find(OuterComponent).first()
+      const innerComponent = wrapper.find(InnerComponent).first()
+
+      expect(innerComponent.prop('ref')).toBeFalsy()
+      expect(innerComponent.prop('innerRef')).toBeTruthy()
+      expect(outerComponent.node.root).toBeFalsy()
     })
   })
 })
