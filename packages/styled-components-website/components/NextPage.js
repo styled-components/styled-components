@@ -5,7 +5,7 @@ import rem from '../utils/rem'
 import Link from './Link'
 import { lightGrey } from '../utils/colors'
 import { mobile } from '../utils/media'
-import { bodyFont } from '../utils/fonts'
+import { headerFont } from '../utils/fonts'
 
 const Wrapper = styled(Link)`
   display: flex;
@@ -16,7 +16,7 @@ const Wrapper = styled(Link)`
   width: 100%;
   padding: ${rem(40)} ${rem(20)};
   text-align: right;
-  font-family: ${bodyFont};
+  font-family: ${headerFont};
 
   ${mobile(css`
     text-align: left;
