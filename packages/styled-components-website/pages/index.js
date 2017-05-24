@@ -16,46 +16,41 @@ import HomepageGettingStarted from '../components/homepage-getting-started'
 import captureScroll from '../components/CaptureScroll'
 
 const headerCode = (`
-const Logo = styled.img.attrs({
-  alt: 'styled-components Logo',
-  src: '/static/logo.png'
-})\`
-  width: \${rem(125)};
-  height: \${rem(125)};
-\`
-
 const Text = styled.h1\`
-  font-size: \${rem(18)};
+  font-size: 1rem;
   font-weight: normal;
-  margin: \${rem(36)} 0;
+  margin: 2rem 0;
 \`
 
 const Tagline = styled.span\`
   display: block;
   font-weight: 600;
-  font-size: \${rem(24)};
+  font-size: 1.3rem;
 \`
 
 const SubTagline = styled.span\`
-  font-size: \${rem(20)};
+  font-size: 1.1rem;
 \`
 
 render(
-  <div>
-    <Logo />
+  <Text>
+    <Tagline>
+      Visual primitives for the component age.
+    </Tagline>
 
-    <Text>
-      <Tagline>
-        Visual primitives for the component age.
-      </Tagline>
+    <SubTagline>
+      Use the best bits of ES6 and CSS to style your apps without stress 💅
+    </SubTagline>
+  </Text>
+)`).trim()
 
-      <SubTagline>
-        Use the best bits of ES6 and CSS to style your apps without stress 💅
-      </SubTagline>
-    </Text>
-  </div>
-)
-`).trim()
+const Logo = styled.img.attrs({
+  alt: 'styled-components Logo',
+  src: '/static/logo.png'
+})`
+  width: ${rem(125)};
+  height: ${rem(125)};
+`;
 
 const Wrapper = styled.div`
   display: flex;
@@ -164,6 +159,8 @@ class Index extends Component {
               noInline
               mountStylesheet={false}
               scope={{ styled, css, rem }}>
+
+              <Logo />
 
               <LivePreview />
 
