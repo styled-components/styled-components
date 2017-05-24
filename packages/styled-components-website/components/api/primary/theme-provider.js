@@ -45,7 +45,7 @@ const ThemeProvider = () => (
       </Row>
     </Table>
 
-    <CodeBlock code={themingSample} />
+    <CodeBlock code={themingSample} language="jsx" />
   </SectionLayout>
 )
 

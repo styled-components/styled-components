@@ -84,7 +84,7 @@ const TaggedTemplateLiteral = () => (
       {' for more information on this.'}
     </p>
 
-    <CodeBlock code={taggedTemplateLiteralSample} />
+    <CodeBlock code={taggedTemplateLiteralSample} language="jsx" />
 
     <p>
       You can also return objects from interpolations or input objects directly, and they'll be

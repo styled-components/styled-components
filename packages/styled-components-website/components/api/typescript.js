@@ -95,13 +95,13 @@ const TypeScript = () => (
         interface we would like to use throughout our app:
       </p>
 
-      <CodeBlock code={theme} />
+      <CodeBlock code={theme} language="jsx" />
 
       <p>
         Then we can re-export the <Code>styled</Code> function with our custom theme interface:
       </p>
 
-      <CodeBlock code={styledComponents} />
+      <CodeBlock code={styledComponents} language="jsx" />
 
       <p>
         Finally, instead of importing the styled functions from the styled-components module,
@@ -115,7 +115,7 @@ const TypeScript = () => (
         in your Props interface:
       </p>
 
-      <CodeBlock code={propsClassName} />
+      <CodeBlock code={propsClassName} language="jsx" />
     </SectionLayout>
 
     <SectionLayout sub title="Caveat with Stateless Components">
@@ -124,7 +124,7 @@ const TypeScript = () => (
         the component alongside with its type, like this:
       </p>
 
-      <CodeBlock code={statelessComponent} />
+      <CodeBlock code={statelessComponent} language="jsx" />
     </SectionLayout>
   </SectionLayout>
 )

@@ -109,7 +109,7 @@ const Styled = () => (
 
       Returns another <Code>Styled Component</Code>.
 
-      <CodeBlock code={attrsSample} />
+      <CodeBlock code={attrsSample} language="jsx" />
 
       <p>
         {'Learn more about this constructor in the '}
