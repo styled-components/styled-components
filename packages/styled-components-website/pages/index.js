@@ -74,6 +74,11 @@ const CompanyLogo = styled.img`
   height: ${p => p.height || '2rem'};
   margin: 0.5rem;
   bottom: ${p => p.bottom || 0};
+  opacity: 0.6;
+
+  &:hover {
+    opacity: 1;
+  }
 `
 
 const Wrapper = styled.div`
