@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Update StyledNativeComponent to match StyledComponent implementation.
 - Fix Theme context for StyledComponent for IE <10. (see [#807](https://github.com/styled-components/styled-components/pull/807))
 - Restore `setNativeProps` in StyledNativeComponent, thanks to [@MatthieuLemoine](https://github.com/MatthieuLemoine). (see [#764](https://github.com/styled-components/styled-components/pull/764))
+- Fix flow type for Broadcast.subscribe, thanks to [@jameskraus](https://github.com/jameskraus). (see [#818](https://github.com/styled-components/styled-components/pull/818))
 
 ## [v1.4.6] - 2017-05-02
 
