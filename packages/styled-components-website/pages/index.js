@@ -196,8 +196,10 @@ class Index extends Component {
             <Heart />
             {' by '}
             <Link inline white href="https://twitter.com/glenmaddern">@glenmaddern</Link>
-            {' and '}
+            {', '}
             <Link inline white href="https://twitter.com/mxstbr">@mxstbr</Link>
+            {' & '}
+            <Link inline white href="https://twitter.com/_philpl‬">@_philpl‬</Link>
           </HeroContent>
         </Footer>
       </div>
