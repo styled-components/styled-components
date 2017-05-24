@@ -3582,7 +3582,7 @@ strip-json-comments@~2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/strip-json-comments/-/strip-json-comments-2.0.1.tgz#3c531942e908c2697c0ec344858c286c7ca0a60a"
 
-styled-components@rc:
+styled-components@^2.0.0-19:
   version "2.0.0-19"
   resolved "https://registry.yarnpkg.com/styled-components/-/styled-components-2.0.0-19.tgz#76f666dd40dd7c4194b76e176fd916b9aac96c94"
   dependencies:

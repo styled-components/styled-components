@@ -161,7 +161,7 @@ export default class MyDocument extends Document {
           <link rel="stylesheet" type="text/css" href="https://cloud.typography.com/7039052/7606172/css/fonts.css" />
 
           {/* Open Graph */}
-          <link itemprop="url" href="http://styled-components.com/"/>
+          <link itemprop="url" href="https://styled-components.com/"/>
           <meta itemprop="name" content="styled-components" />
           <meta itemprop="description" content={description} />
           <meta itemprop="image" content="/static/atom.png" />
@@ -171,10 +171,10 @@ export default class MyDocument extends Document {
           <meta name="twitter:creator" content="@mxstbr" />
           <meta name="twitter:title" content="styled-components" />
           <meta name="twitter:description" content={description} />
-          <meta name="twitter:image" content="/static/meta.png" />
+          <meta name="twitter:image:src" content="https://styled-components.com/static/meta.png" />
 
           {/* Facebook */}
-          <meta property="og:url" content="http://styled-components.com" />
+          <meta property="og:url" content="https://styled-components.com" />
           <meta property="og:type" content="website" />
           <meta property="og:title" content="styled-components" />
           <meta property="og:image" content="/static/atom.png" />
