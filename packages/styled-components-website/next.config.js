@@ -18,15 +18,11 @@ module.exports = {
 
     config.entry = () => oldEntry()
       .then(entry => {
-        entry['main.js'].push(
-          path.resolve('./utils/offline.js')
-        )
-
+        entry['main.js'].push(path.resolve('./utils/offline.js'))
         return entry
       })
 
-    config.resolve.alias = config.resolve.alias || {}
-    config.resolve.alias['react-live'] = 'react-live/lib/index.js'
+    config.resolve.alias = config.resolve.alias || []
 
     if (dev) {
       return config

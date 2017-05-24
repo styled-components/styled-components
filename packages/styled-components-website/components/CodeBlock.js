@@ -3,16 +3,15 @@ import styled from 'styled-components'
 import rem from '../utils/rem'
 
 import '../utils/prismTemplateString'
-import { highlight, languages } from 'prismjs/components/prism-core'
 import { darkGrey } from '../utils/colors'
 import { monospace } from '../utils/fonts'
 
 const prism = (code, language) => {
-  if (!language || !languages[language]) {
+  if (!language || !Prism.languages[language]) {
     return undefined
   }
 
-  return highlight(code, languages[language])
+  return Prism.highlight(code, Prism.languages[language])
 }
 
 const Highlight = styled.pre.attrs({

@@ -7,8 +7,6 @@ if (!dev) {
   moduleAlias.addAlias('react-dom', 'preact-compat')
 }
 
-moduleAlias.addAlias('react-live', 'react-live/lib/index.js')
-
 const { parse } = require('url')
 const express = require('express')
 const LRUCache = require('lru-cache')
