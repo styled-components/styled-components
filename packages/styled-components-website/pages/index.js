@@ -3,6 +3,7 @@ import styled, { css } from 'styled-components'
 import { LiveProvider, LivePreview, LiveEditor } from 'react-live'
 import fetch from 'isomorphic-fetch'
 import StarIcon from 'react-octicons-svg/dist/StarIcon'
+import HeartIcon from 'react-octicons-svg/dist/HeartIcon'
 
 import rem from '../utils/rem'
 import { headerFont } from '../utils/fonts'
@@ -122,6 +123,28 @@ const Star = styled(StarIcon).attrs({
   bottom: ${rem(2)};
 `
 
+const Footer = styled.footer`
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: white;
+
+  background: ${violetRed};
+  box-shadow: 0px -2px 20px rgba(0, 0, 0, 0.17);
+  box-sizing: border-box;
+  margin-top: ${rem(50)};
+`
+
+const Heart = styled(HeartIcon).attrs({
+  width: null,
+  height: null
+})`
+  display: inline-block;
+  width: ${rem(17)};
+`
+
 class Index extends Component {
   static async getInitialProps() {
     const res = await fetch('https://api.github.com/repos/styled-components/styled-components')
@@ -169,6 +192,17 @@ class Index extends Component {
         </Wrapper>
 
         <HomepageGettingStarted />
+
+        <Footer>
+          <HeroContent>
+            {'Made with '}
+            <Heart />
+            {' by '}
+            <Link inline white href="https://twitter.com/glenmaddern">@glenmaddern</Link>
+            {' and '}
+            <Link inline white href="https://twitter.com/mxstbr">@mxstbr</Link>
+          </HeroContent>
+        </Footer>
       </div>
     )
   }

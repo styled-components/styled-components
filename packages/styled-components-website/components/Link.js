@@ -2,7 +2,7 @@ import styled, { css } from 'styled-components'
 import UnstyledLink from 'next/link'
 
 import rem from '../utils/rem'
-import { lightGrey } from '../utils/colors'
+import { violetRed, lightGrey } from '../utils/colors'
 
 export const StyledLink = styled.a`
   display: inline-block;
@@ -25,13 +25,13 @@ export const InlineLink = styled.a.attrs({
   target: '_blank',
   rel: 'noopener'
 })`
-  color: palevioletred;
+  color: ${p => p.white ? 'white' : violetRed};
   text-decoration: underline;
   font-weight: 600;
   cursor: pointer;
 `
 
-const Link = ({ children, className, inline, unstyled, ...rest }) => {
+const Link = ({ children, className, inline, unstyled, white, ...rest }) => {
   let Child = StyledLink
   if (inline) {
     Child = InlineLink
@@ -41,7 +41,7 @@ const Link = ({ children, className, inline, unstyled, ...rest }) => {
 
   return (
     <UnstyledLink {...rest}>
-      <Child href={rest.href} className={className}>
+      <Child href={rest.href} white={white} className={className}>
         {children}
       </Child>
     </UnstyledLink>
