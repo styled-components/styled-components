@@ -4,14 +4,9 @@ import SectionLayout from '../../SectionLayout'
 import Table, { Row, Column } from '../../Table'
 import Link from '../../Link'
 import Code from '../../Code'
-import Label from '../../Label'
 
 const StyledComponent = () => (
-  <SectionLayout sub title={<Code>StyledComponent</Code>}>
-    <p>
-      <Label>web</Label> <Label>native</Label>
-    </p>
-
+  <SectionLayout sub title={<Code>StyledComponent</Code>} labels={[ 'web', 'native' ]}>
     <p>
       A styled React component. This is returned when you
       call <Code>styled.tagname</Code> or <Code>styled(Component)</Code> with styles.

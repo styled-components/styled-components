@@ -5,7 +5,6 @@ import Table, { Row, Column } from '../../Table'
 import Link from '../../Link'
 import CodeBlock from '../../CodeBlock'
 import Code from '../../Code'
-import Label from '../../Label'
 
 const withThemeSample = (`
 import { withTheme } from 'styled-components'
@@ -21,11 +20,7 @@ export default withTheme(MyComponent)
 `).trim()
 
 const WithTheme = () => (
-  <SectionLayout sub title={<Code>withTheme</Code>}>
-    <p>
-      <Label>web</Label> <Label>native</Label>
-    </p>
-
+  <SectionLayout sub title={<Code>withTheme</Code>} labels={[ 'web', 'native' ]}>
     <p>
       This is a higher order component factory to get the current theme from a <Code>ThemeProvider</Code> and
       pass it to your component as a <Code>theme</Code> prop.

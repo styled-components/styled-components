@@ -3,7 +3,6 @@ import SectionLayout from '../SectionLayout'
 import LiveEdit from '../LiveEdit'
 import Code from '../Code'
 import Note from '../Note'
-import Label from '../Label'
 
 const sample = (`
 const Input = styled.input.attrs({
@@ -34,9 +33,7 @@ render(
 `).trim()
 
 const AttachingAdditionalProps = () => (
-  <SectionLayout title="Attaching additional props">
-    <p><Label>v2</Label></p>
-
+  <SectionLayout title="Attaching additional props" labels={[ 'v2' ]}>
     <p>
       To avoid unnecessary wrappers that just pass on some props to the rendered component,
       or element, you can use the <Code>.attrs</Code> constructor. It allows you to attach

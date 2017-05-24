@@ -4,7 +4,6 @@ import SectionLayout from '../../SectionLayout'
 import Table, { Row, Column } from '../../Table'
 import CodeBlock from '../../CodeBlock'
 import Code from '../../Code'
-import Label from '../../Label'
 
 const injectGlobalSample = (`
 import { injectGlobal } from 'styled-components';
@@ -22,11 +21,7 @@ injectGlobal\`
 `).trim()
 
 const InjectGlobal = () => (
-  <SectionLayout sub title={<Code>injectGlobal</Code>}>
-    <p>
-      <Label>web</Label> <Label>native</Label>
-    </p>
-
+  <SectionLayout sub title={<Code>injectGlobal</Code>} labels={[ 'web', 'native' ]}>
     <p>
       A helper method to write global CSS. It does not return a component, but adds the styles to
       the stylesheet directly.

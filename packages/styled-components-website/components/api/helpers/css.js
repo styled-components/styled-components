@@ -4,7 +4,6 @@ import SectionLayout from '../../SectionLayout'
 import Table, { Row, Column } from '../../Table'
 import CodeBlock from '../../CodeBlock'
 import Code from '../../Code'
-import Label from '../../Label'
 
 const cssSample = (`
 import styled, { css } from 'styled-components';
@@ -20,11 +19,7 @@ const StyledComp = styled.div\`
 `).trim()
 
 const CSS = () => (
-  <SectionLayout sub title={<Code>css</Code>}>
-    <p>
-      <Label>web</Label> <Label>native</Label>
-    </p>
-
+  <SectionLayout sub title={<Code>css</Code>} labels={['web', 'native']}>
     <p>
       A helper function to generate CSS from a template literal with interpolations. You need to use this if you return a
       template literal with interpolations inside an interpolation. (This is due to how tagged template literals work)

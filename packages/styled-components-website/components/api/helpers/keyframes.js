@@ -5,7 +5,6 @@ import Table, { Row, Column } from '../../Table'
 import Link from '../../Link'
 import CodeBlock from '../../CodeBlock'
 import Code from '../../Code'
-import Label from '../../Label'
 
 const keyframesSample = (`
 import styled, { keyframes } from 'styled-components';
@@ -25,9 +24,7 @@ const FadeInButton = styled.button\`
 `).trim()
 
 const Keyframes = () => (
-  <SectionLayout sub title={<Code>keyframes</Code>}>
-    <p><Label>web</Label></p>
-
+  <SectionLayout sub title={<Code>keyframes</Code>} labels={[ 'web' ]}>
     <p>
       A helper method to create keyframes for animations.
     </p>

@@ -5,7 +5,6 @@ import Table, { Row, Column } from '../../Table'
 import Link from '../../Link'
 import CodeBlock from '../../CodeBlock'
 import Code from '../../Code'
-import Label from '../../Label'
 
 const themingSample = (`
 import styled, { ThemeProvider } from 'styled-components';
@@ -20,11 +19,7 @@ const Box = styled.div\`
 `).trim()
 
 const ThemeProvider = () => (
-  <SectionLayout sub title={<Code>ThemeProvider</Code>}>
-    <p>
-      <Label>web</Label> <Label>native</Label>
-    </p>
-
+  <SectionLayout sub title={<Code>ThemeProvider</Code>} labels={[ 'web', 'native' ]}>
     <p>
       A helper component for theming. Injects the theme into all styled components anywhere
       beneath it in the component tree, via the context API.

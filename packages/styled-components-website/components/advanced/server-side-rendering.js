@@ -3,7 +3,6 @@ import SectionLayout from '../SectionLayout'
 import CodeBlock from '../CodeBlock'
 import Code from '../Code'
 import Note from '../Note'
-import Label from '../Label'
 
 const sample = (`
 import { renderToString } from 'react-dom/server'
@@ -91,11 +90,7 @@ export default class MyDocument extends Document {
 `).trim()
 
 const ServerSideRendering = () => (
-  <SectionLayout title="Server Side Rendering">
-    <p>
-      <Label>v2</Label>
-    </p>
-
+  <SectionLayout title="Server Side Rendering" labels={['v2']}>
     <p>
       styled-components supports concurrent server side rendering, with stylesheet rehydration.
       The basic idea is that everytime you render your app on the server, you can create

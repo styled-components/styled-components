@@ -5,7 +5,6 @@ import Table, { Row, Column } from '../../Table'
 import Link from '../../Link'
 import CodeBlock from '../../CodeBlock'
 import Code from '../../Code'
-import Label from '../../Label'
 
 const taggedTemplateLiteralSample = (`
 import styled from 'styled-components';
@@ -24,11 +23,7 @@ const Section = styled.section\`
 `).trim()
 
 const TaggedTemplateLiteral = () => (
-  <SectionLayout sub title={<Code>TaggedTemplateLiteral</Code>}>
-    <p>
-      <Label>web</Label> <Label>native</Label>
-    </p>
-
+  <SectionLayout sub title={<Code>TaggedTemplateLiteral</Code>} labels={[ 'web', 'native' ]}>
     <p>
       {'This is what you pass into your styled calls – a tagged template literal.'}
       {'This is an ES6 language feature. You can learn more about them in the '}

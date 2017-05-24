@@ -5,7 +5,6 @@ import Table, { Row, Column } from '../../Table'
 import Link from '../../Link'
 import CodeBlock from '../../CodeBlock'
 import Code from '../../Code'
-import Label from '../../Label'
 import Note from '../../Note'
 
 const styledSample = (`
@@ -39,11 +38,7 @@ const Input = styled.input.attrs({
 `).trim()
 
 const Styled = () => (
-  <SectionLayout sub title={<Code>styled</Code>}>
-    <p>
-      <Label>web</Label> <Label>native</Label>
-    </p>
-
+  <SectionLayout sub title={<Code>styled</Code>} labels={[ 'web', 'native' ]}>
     <p>
       This is the default export.
       This is a low-level factory we use to create the <Code>styled.tagname</Code> helper methods.

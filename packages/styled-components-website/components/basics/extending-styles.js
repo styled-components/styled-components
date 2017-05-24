@@ -3,7 +3,6 @@ import SectionLayout from '../SectionLayout'
 import LiveEdit from '../LiveEdit'
 import Code from '../Code'
 import Note from '../Note'
-import Label from '../Label'
 
 const sample = (`
 // The Button from the last section without the interpolations
@@ -60,9 +59,7 @@ render(
 `).trim()
 
 const ExtendingStyles = () => (
-  <SectionLayout title="Extending Styles">
-    <p><Label>v2</Label></p>
-
+  <SectionLayout title="Extending Styles" labels={['v2']}>
     <p>
       Quite frequently you might want to use a component, but change it slightly for
       a single case. Now you could pass in an interpolated function and change them
