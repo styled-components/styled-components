@@ -125,7 +125,7 @@ const HomepageGettingStarted = () => (
       noInline
     />
     <p>Nice 😍 That's a live updating editor too, so play around with it a bit to get a feel for what it's like to work with styled-components!</p>
-    <p>Once you're done take a look at the <Link href="/docs" inline prefetch>documentation</Link>, specifically the <Link href="/docs/basics" inline prefetch>Getting started</Link> section! Enjoy ✨</p>
+    <p>Once you're done take a look at the <Link href="/docs" inline prefetch>documentation</Link>, specifically the <Link href="/docs/basics#getting-started" inline prefetch>Getting started</Link> section! Enjoy ✨</p>
   </Content>
 )
 
