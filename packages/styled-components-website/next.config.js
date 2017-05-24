@@ -19,6 +19,7 @@ module.exports = {
     config.entry = () => oldEntry()
       .then(entry => {
         entry['main.js'].push(path.resolve('./utils/offline.js'))
+        entry.commons = ['./utils/prismTemplateString.js']
         return entry
       })
 
