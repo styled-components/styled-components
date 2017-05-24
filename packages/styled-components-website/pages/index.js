@@ -117,7 +117,7 @@ const Star = styled(StarIcon).attrs({
   height: null
 })`
   position: relative;
-  display: inline-block;
+  display: inline;
   width: ${rem(15)};
   color: ${violetRed};
   bottom: ${rem(2)};
