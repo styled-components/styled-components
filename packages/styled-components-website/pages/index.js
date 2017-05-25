@@ -63,10 +63,11 @@ const UsersWrapper = styled.section`
 
 const UsersHeading = styled.p`
   text-transform: uppercase;
-  color: #000;
+  color: #fff;
   font-size: 0.8rem;
   font-weight: 600;
   margin: 2.5rem 0 0.5rem;
+  opacity: 0.8;
 `
 
 const CompanyLogo = styled.img`
@@ -74,7 +75,9 @@ const CompanyLogo = styled.img`
   height: ${p => p.height || '2rem'};
   margin: 0.5rem;
   bottom: ${p => p.bottom || 0};
-  opacity: 0.6;
+  opacity: 0.8;
+  filter: brightness(0) invert(1);
+  transition: opacity 125ms ease-in-out;
 
   &:hover {
     opacity: 1;
