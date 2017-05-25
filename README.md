@@ -29,7 +29,7 @@ Utilising [tagged template literals](https://www.styled-components.com/docs/adva
 
 ## Docs
 
-**See the documentation at [styled-components.com/docs](https://www.styled-components/docs)** for more information about using `styled-components`!
+**See the documentation at [styled-components.com/docs](https://www.styled-components.com/docs)** for more information about using `styled-components`!
 
 ### Quicklinks
 
