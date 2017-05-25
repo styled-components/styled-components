@@ -15,25 +15,63 @@ import { Content } from '../components/Layout'
 import HomepageGettingStarted from '../components/homepage-getting-started'
 import captureScroll from '../components/CaptureScroll'
 
-const headerCode = (`
-const Tagline = styled.h1\`
+const Tagline = styled.h1`
   font-weight: 600;
   font-size: 1.3rem;
-\`
+`
 
-const SupportingTagline = styled.h2\`
+const SupportingTagline = styled.h2`
   font-size: 1.1rem;
   font-weight: 400;
-\`
+`
 
-render(
-  <div>
-    <Tagline>Visual primitives for the component age.</Tagline>
-    <SupportingTagline>
-      Use the best bits of ES6 and CSS to style your apps without stress 💅
-    </SupportingTagline>
-  </div>
-)`).trim()
+const headerCode = (`
+const Button = styled.a\`
+  /* This renders the buttons above... Edit me! */
+  display: inline-block;
+  border-radius: 3px;
+  padding: 0.5rem 0;
+  margin: 0.5rem 1rem;
+  width: 11rem;
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+
+  /* The GitHub button is a primary button
+   * edit this to target it specifically! */
+  \${props => props.primary && css\`
+    background: white;
+    color: palevioletred;
+  \`}
+\`
+`).trim()
+
+import { LiveContextTypes } from 'react-live/lib/components/Live/LiveProvider'
+
+const HomepageLivePreview = ({ className, ...rest }, { live: { element: Button }, live }) => {
+  const InternalButton = Button.withComponent(Link);
+  return (
+    <div
+      {...rest}
+      className={`react-live-preview ${className}`}
+    >
+      <Button
+        href="https://github.com/styled-components/styled-components"
+        target="_blank"
+        rel="noopener"
+        primary
+      >
+        GitHub
+      </Button>
+
+      <InternalButton href="/docs" prefetch>
+        Documentation
+      </InternalButton>
+    </div>
+  )
+}
+
+HomepageLivePreview.contextTypes = LiveContextTypes
 
 const Title = styled.div`
   margin: 2rem 0;
@@ -113,33 +151,12 @@ const EditorContainer = styled.div`
 const Editor = captureScroll(styled(LiveEditor)`
   ${editorMixin}
   height: 24rem;
+  white-space: pre;
 `)
 
 const Links = styled.div`
   margin: ${rem(36)} 0;
 `
-
-const Button = styled.a`
-  display: inline-block;
-  border-radius: ${rem(3)};
-  padding: ${rem(6)} 0;
-  margin: ${rem(5)} ${rem(16)};
-  text-decoration: none;
-  text-align: center;
-  width: ${rem(175)};
-  font-family: ${headerFont};
-
-  background: transparent;
-  color: white;
-  border: ${rem(2)} solid white;
-
-  ${p => p.primary && css`
-    background: white;
-    color: palevioletred;
-  `}
-`
-
-const InternalButton = Button.withComponent(Link);
 
 const Star = styled(StarIcon).attrs({
   width: null,
@@ -182,29 +199,20 @@ class Index extends Component {
           <HeroContent>
             <LiveProvider
               code={headerCode}
-              noInline
               mountStylesheet={false}
-              scope={{ styled, css, rem }}>
+              scope={{ styled, css, rem, Link }}>
 
               <Logo />
 
               <Title>
-                <LivePreview />
+                <Tagline>Visual primitives for the component age.</Tagline>
+                <SupportingTagline>
+                  Use the best bits of ES6 and CSS to style your apps without stress 💅
+                </SupportingTagline>
               </Title>
 
               <Links>
-                <Button
-                  href="https://github.com/styled-components/styled-components"
-                  target="_blank"
-                  rel="noopener"
-                  primary
-                >
-                  GitHub
-                </Button>
-
-                <InternalButton href="/docs" prefetch>
-                  Documentation
-                </InternalButton>
+                <HomepageLivePreview />
               </Links>
 
               <EditorContainer>
