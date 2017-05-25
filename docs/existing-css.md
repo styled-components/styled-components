@@ -33,6 +33,20 @@ class MyNormalComponent extends React.Component {
 }
 ```
 
+An example using a stateless functional component:
+```JSX
+const Button = styled(({href, children, className}) => {
+  return (
+    <a href={href} className={`some-global-class ${className}`}>
+      {children}
+    </a>
+  )
+})`
+  width: 200px;
+`
+```
+
+
 ## Global class always overridden
 
 You can apply a global CSS class to a styled component by adding a `className` prop. This will work, but if a specific CSS property (e.g. `background-color`) is defined in both the global CSS _and_ the styled component the results may not be what your expecting!
