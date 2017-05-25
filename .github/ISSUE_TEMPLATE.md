@@ -5,7 +5,7 @@ Have a usage question?
 ======================
 The issue tracker isn't the best place for usage questions. This format is not well-suited for Q&A, and questions here don't have as much visibility as they do elsewhere. Before you ask a question, here are some resources to get help first:
 
-- Read the docs: https://github.com/styled-components/styled-components/blob/master/docs
+- Read the docs: https://www.styled-components.com/docs
 - Look for/ask questions on stack overflow: https://stackoverflow.com/questions/ask?tags=styled-components
 - Ask in chat: https://gitter.im/styled-components/styled-components
 
