@@ -27,7 +27,7 @@ import styled from 'styled-components';
 
 const Input = styled.input.attrs({
   type: 'text',
-  size: props => props.small ? '3px' : '8px'
+  size: props => props.small ? 3 : 8
 })\`
   background: palevioletred;
   border-radius: 3px;
