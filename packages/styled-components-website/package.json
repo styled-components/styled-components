@@ -23,7 +23,7 @@
     "react-dom": "^15.4.2",
     "react-live": "^1.5.2",
     "react-octicons-svg": "^1.1.13",
-    "styled-components": "^2.0.0-19",
+    "styled-components": "^2.0.0",
     "sw-precache-webpack-plugin": "^0.9.1",
     "webpack-bundle-analyzer": "^2.4.0"
   }
