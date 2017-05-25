@@ -35,7 +35,7 @@ Utilising [tagged template literals](https://www.styled-components.com/docs/adva
 
 Quicklinks to some of the most-visited pages:
 
-- [**Gettings started**](https://www.styled-components.com/docs/basics)
+- [**Getting started**](https://www.styled-components.com/docs/basics)
 - [API Reference](https://styled-components.com/docs/api)
 - [Theming](https://www.styled-components.com/docs/advanced#theming)
 - [Server-side rendering](https://www.styled-components.com/docs/advanced#server-side-rendering)
