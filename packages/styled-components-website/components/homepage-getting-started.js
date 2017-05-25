@@ -133,7 +133,7 @@ const HomepageGettingStarted = () => (
     <AlignCenter>
       <SecondButton>I'm a styled &lt;Button /&gt;</SecondButton>
     </AlignCenter>
-    <p>As you can see, styled-components let's you write actual CSS in your JavaScript. This means you can use all the features of CSS you use and love, including (but by far not limited to) media queries, all pseudo-selectors, nesting, etc. It also binds styles to components, which has some interesting properties. (learn more about <Link inline href="/docs/basics#motivation">the ideas behind styled-components here</Link>)</p>
+    <p>As you can see, styled-components lets you write actual CSS in your JavaScript. This means you can use all the features of CSS you use and love, including (but by far not limited to) media queries, all pseudo-selectors, nesting, etc. It also binds styles to components, which has some interesting properties. (learn more about <Link inline href="/docs/basics#motivation">the ideas behind styled-components here</Link>)</p>
     <p>The last step is that we need to define what a primary button looks like. To do that we interpolate a function into our template literal, which gets passed the props of our component:</p>
     <CodeBlock language="jsx" code={finishedStyling} />
     <p>All we're saying here is that when the <Code>primary</Code> property is set we want to add some more <Code>css</Code> to our component, in this case change the background and color.</p>
