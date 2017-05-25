@@ -146,13 +146,15 @@ const EditorContainer = styled.div`
   box-shadow: ${rem(1)} ${rem(1)} ${rem(20)} rgba(20, 20, 20, 0.27);
   margin: ${rem(35)} 0;
   text-align: left;
+  width: 100%;
+  max-width: 34rem;
 `
 
 const Editor = captureScroll(styled(LiveEditor)`
   ${editorMixin}
   height: 24rem;
   white-space: pre;
-  width: 34rem;
+  width: 100%;
 `)
 
 const Links = styled.div`
