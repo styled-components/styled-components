@@ -152,6 +152,7 @@ const Editor = captureScroll(styled(LiveEditor)`
   ${editorMixin}
   height: 24rem;
   white-space: pre;
+  width: 34rem;
 `)
 
 const Links = styled.div`
