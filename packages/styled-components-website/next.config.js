@@ -18,7 +18,11 @@ module.exports = {
 
     config.entry = () => oldEntry()
       .then(entry => {
-        entry['main.js'].push(path.resolve('./utils/offline.js'))
+        entry['main.js'].push(
+          path.resolve('./utils/offline.js'),
+          path.resolve('./utils/track.js')
+        )
+
         entry.commons = ['./utils/prismTemplateString.js']
         return entry
       })
@@ -33,7 +37,10 @@ module.exports = {
       new SWPrecacheWebpackPlugin({
         filename: 'sw.js',
         minify: true,
-        staticFileGlobsIgnorePatterns: [/\.next\//],
+        staticFileGlobsIgnorePatterns: [
+          /\.next\//,
+          /sc-micro-analytics\.now\.sh/
+        ],
         staticFileGlobs: [
           'static/**/*' // Precache all static files by default
         ],
