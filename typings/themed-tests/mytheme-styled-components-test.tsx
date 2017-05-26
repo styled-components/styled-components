@@ -10,6 +10,11 @@ const Title = styled.h1`
   color: ${p => p.theme.primaryColor};
 `;
 
+const RedTitle = Title.extend`
+  color: red;
+  border-color: ${p => p.theme.primaryColor};
+`;
+
 // Create a <Wrapper> react component that renders a <section> with
 // some padding and a papayawhip background
 const Wrapper = styled.section`

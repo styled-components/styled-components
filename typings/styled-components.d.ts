@@ -24,9 +24,13 @@ export interface InterpolationFunction<P> {
   (props: P): Interpolation<P>;
 }
 
+export interface StyledComponentClass<P, T> extends ComponentClass<P> {
+  extend: ThemedStyledFunction<P, T>;
+}
+
 export interface ThemedStyledFunction<P, T> {
-  (strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): ComponentClass<ThemedOuterStyledProps<P, T>>;
-  <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): ComponentClass<ThemedOuterStyledProps<P & U, T>>;
+  (strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): StyledComponentClass<ThemedOuterStyledProps<P, T>, T>;
+  <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<ThemedOuterStyledProps<P & U, T>, T>;
 }
 export type StyledFunction<P> = ThemedStyledFunction<P, any>;
 
