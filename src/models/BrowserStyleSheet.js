@@ -21,46 +21,17 @@ import StyleSheet, { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
 
 export const COMPONENTS_PER_TAG = 40
 
-class FlushableStyleElement {
-  el: HTMLElement
-  queue: Array<[string, Array<any>]>
-  static queued_instructions = ['appendChild', 'setAttribute']
-
-  constructor() {
-    this.el = undefined
-    this.queue = []
-
-    this.constructor.queued_instructions.forEach(instruction => {
-      this[instruction] = (...args) => queue.push(['appendChild', args])
-    })
-  }
-
-  flush() {
-    let [method, args]
-    while ([method, args] = queue.shift()) {
-      this.el[method](...args)
-    }
-  }
-
-  toHTML() {
-    this.flush()
-    return this.el.outerHTML
-  }
-}
-
 class BrowserTag implements Tag {
   isLocal: boolean
   components: { [string]: Object }
   size: number
-  flushable_el: FlushableStyleElement
+  el: HTMLElement
   ready: boolean
-  names: Array<string>
 
-  constructor(isLocal: boolean, existingSource: string = '', ) {
-    this.flushable_el = new FlushableStyleElement()
+  constructor(el: HTMLElement, isLocal: boolean, existingSource: string = '') {
+    this.el = el
     this.isLocal = isLocal
     this.ready = false
-    this.names = []
 
     const extractedComps = extractCompsFromCSS(existingSource)
 
@@ -80,7 +51,7 @@ class BrowserTag implements Tag {
     if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
 
     const comp = { componentId, textNode: document.createTextNode('') }
-    this.flushable_el.appendChild(comp.textNode)
+    this.el.appendChild(comp.textNode)
 
     this.size += 1
     this.components[componentId] = comp
@@ -94,16 +65,14 @@ class BrowserTag implements Tag {
     if (comp.textNode.data === '') comp.textNode.appendData(`\n/* sc-component-id: ${componentId} */\n`)
 
     comp.textNode.appendData(css)
-    if (name) this.names.push(name)
-  }
-
-  flush() {
-    this.flushable_el.setAttribute(SC_ATTR, names.join(' '))
-    this.flushable_el.flush()
+    if (name) {
+      const existingNames = this.el.getAttribute(SC_ATTR)
+      this.el.setAttribute(SC_ATTR, existingNames ? `${existingNames} ${name}` : name)
+    }
   }
 
   toHTML() {
-    return this.flushable_el.toHTML()
+    return this.el.outerHTML
   }
 
   toReactElement() {
@@ -122,7 +91,7 @@ class BrowserTag implements Tag {
     if (this.size === 0) return
 
     // Build up our replacement style tag
-    const newEl = this.flushable_el.cloneNode()
+    const newEl = this.el.cloneNode()
     newEl.appendChild(document.createTextNode('\n'))
 
     Object.keys(this.components).forEach(key => {
@@ -133,11 +102,11 @@ class BrowserTag implements Tag {
       newEl.appendChild(comp.textNode)
     })
 
-    if (!this.flushable_el.parentNode) throw new Error("Trying to replace an element that wasn't mounted!")
+    if (!this.el.parentNode) throw new Error("Trying to replace an element that wasn't mounted!")
 
     // The ol' switcheroo
-    this.flushable_el.parentNode.replaceChild(newEl, this.flushable_el)
-    this.flushable_el = newEl
+    this.el.parentNode.replaceChild(newEl, this.el)
+    this.el = newEl
   }
 }
 
@@ -154,7 +123,7 @@ export default {
     for (let i = 0; i < nodesLength; i += 1) {
       const el = nodes[i]
 
-      tags.push(new BrowserTag(el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML, el))
+      tags.push(new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML))
 
       const attr = el.getAttribute(SC_ATTR)
       if (attr) {
@@ -165,8 +134,16 @@ export default {
     }
 
     /* Factory for making more tags */
-    const tagConstructor = (isLocal: boolean): Tag => new BrowserTag(el, isLocal)
+    const tagConstructor = (isLocal: boolean): Tag => {
+      const el = document.createElement('style')
+      el.type = 'text/css'
+      el.setAttribute(SC_ATTR, '')
+      el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
+      if (!document.head) throw new Error('Missing document <head>')
+      document.head.appendChild(el)
+      return new BrowserTag(el, isLocal)
+    }
 
-    return new StyleSheet(tagConstructor, tags, names)
+    return new StyleSheet(true, [], tags, names)
   },
 }

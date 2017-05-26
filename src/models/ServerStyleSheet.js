@@ -4,7 +4,7 @@ import type { Tag } from './StyleSheet'
 import StyleSheet, { SC_ATTR, LOCAL_ATTR, clones } from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
 
-class ServerTag implements Tag {
+export class ServerTag implements Tag {
   isLocal: boolean
   components: { [string]: Object }
   size: number
@@ -115,6 +115,6 @@ export default class ServerStyleSheet {
   }
 
   static create() {
-    return new StyleSheet(isLocal => new ServerTag(isLocal))
+    return new StyleSheet(false)
   }
 }

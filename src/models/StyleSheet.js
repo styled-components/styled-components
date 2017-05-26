@@ -1,7 +1,7 @@
 // @flow
 import React from 'react'
 import BrowserStyleSheet from './BrowserStyleSheet'
-import ServerStyleSheet from './ServerStyleSheet'
+import ServerStyleSheet, { ServerTag } from './ServerStyleSheet'
 
 export const SC_ATTR = 'data-styled-components'
 export const LOCAL_ATTR = 'data-styled-components-is-local'
@@ -14,7 +14,6 @@ export interface Tag {
   isFull(): boolean,
   addComponent(componentId: string): void,
   inject(componentId: string, css: string, name: ?string): void,
-  flush(): void,
   toHTML(): string,
   toReactElement(key: string): React.Element<*>,
   clone(): Tag,
@@ -25,19 +24,22 @@ let instance = null
 export const clones: Array<StyleSheet> = []
 
 export default class StyleSheet {
-  tagConstructor: (boolean) => Tag
-  tags: Array<Tag>
+  onBrowser: boolean
+  memoryTags: Array<Tag>
+  browserTags: Array<Tag>
   names: { [string]: boolean }
   hashes: { [string]: string } = {}
   deferredInjections: { [string]: string } = {}
   componentTags: { [string]: Tag }
 
-  constructor(tagConstructor: (boolean) => Tag,
-    tags: Array<Tag> = [],
+  constructor(onBrowser: boolean,
+    memoryTags: Array<Tag> = [],
+    browserTags: Array<Tag> = [],
     names: { [string]: boolean } = {},
   ) {
-    this.tagConstructor = tagConstructor
-    this.tags = tags
+    this.onBrowser = onBrowser
+    this.memoryTags = memoryTags
+    this.browserTags = browserTags
     this.names = names
     this.constructComponentTagMap()
   }
@@ -45,7 +47,7 @@ export default class StyleSheet {
   constructComponentTagMap() {
     this.componentTags = {}
 
-    this.tags.forEach(tag => {
+    this.memoryTags.forEach(tag => {
       Object.keys(tag.components).forEach(componentId => {
         this.componentTags[componentId] = tag
       })
@@ -104,16 +106,12 @@ export default class StyleSheet {
     }
   }
 
-  flush() {
-    this.tags.forEach(tag => tag.flush())
-  }
-
   toHTML() {
-    return this.tags.map(tag => tag.toHTML()).join('')
+    return this.memoryTags.map(tag => tag.toHTML()).join('')
   }
 
   toReactElements() {
-    return this.tags.map((tag, i) => tag.toReactElement(`sc-${i}`))
+    return this.memoryTags.map((tag, i) => tag.toReactElement(`sc-${i}`))
   }
 
   getOrCreateTag(componentId: string, isLocal: boolean) {
@@ -122,7 +120,7 @@ export default class StyleSheet {
       return existingTag
     }
 
-    const lastTag = this.tags[this.tags.length - 1]
+    const lastTag = this.memoryTags[this.memoryTags.length - 1]
     const componentTag = (!lastTag || lastTag.isFull() || lastTag.isLocal !== isLocal)
       ? this.createNewTag(isLocal)
       : lastTag
@@ -132,8 +130,8 @@ export default class StyleSheet {
   }
 
   createNewTag(isLocal: boolean) {
-    const newTag = this.tagConstructor(isLocal)
-    this.tags.push(newTag)
+    const newTag = new ServerTag(isLocal)
+    this.memoryTags.push(newTag)
     return newTag
   }
 
@@ -153,8 +151,9 @@ export default class StyleSheet {
 
   static clone(oldSheet: StyleSheet) {
     const newSheet = new StyleSheet(
-      oldSheet.tagConstructor,
-      oldSheet.tags.map(tag => tag.clone()),
+      oldSheet.onBrowser,
+      oldSheet.memoryTags.map(tag => tag.clone()),
+      [],
       { ...oldSheet.names },
     )
 
