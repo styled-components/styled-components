@@ -71,6 +71,7 @@ All notable changes to this project will be documented in this file. If a contri
 ## [v1.4.2] - 2017-01-28
 
 ### Changed
+- Fix breaking native require in 1.4.0
 
 - Fix performance issue when using `@font-face` by creating a separate `style` tag for global styles, thanks to [@xcoderzach](https://github.com/xcoderzach). (see [#415](https://github.com/styled-components/styled-components/pull/415))
 
