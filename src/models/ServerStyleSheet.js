@@ -3,6 +3,7 @@ import React from 'react'
 import type { Tag } from './StyleSheet'
 import StyleSheet, { SC_ATTR, LOCAL_ATTR, clones } from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
+import { BrowserTag } from './BrowserStyleSheet'
 
 export class ServerTag implements Tag {
   onBrowser: boolean
@@ -10,9 +11,9 @@ export class ServerTag implements Tag {
   components: { [string]: Object }
   size: number
   names: Array<string>
-  browserTag: Tag
+  browserTag: BrowserTag
 
-  constructor(onBrowser: boolean, isLocal: boolean, browserTag: ?Tag) {
+  constructor(onBrowser: boolean, isLocal: boolean, browserTag: ?BrowserTag) {
     this.onBrowser = onBrowser
     this.isLocal = isLocal
     this.components = {}
@@ -22,7 +23,7 @@ export class ServerTag implements Tag {
   }
 
   isFull() {
-    return false
+    return this.browserTag ? this.browserTag.isFull() : false
   }
 
   addComponent(componentId: string) {
@@ -40,6 +41,22 @@ export class ServerTag implements Tag {
     comp.css += css.replace(/\n*$/, '\n')
 
     if (name) this.names.push(name)
+  }
+
+  flush() {
+    if (!this.onBrowser) return
+
+    if (!this.browserTag) {
+      const el = document.createElement('style')
+      el.type = 'text/css'
+      el.setAttribute(SC_ATTR, '')
+      el.setAttribute(LOCAL_ATTR, this.isLocal ? 'true' : 'false')
+      if (!document.head) throw new Error('Missing document <head>')
+      document.head.appendChild(el)
+      this.browserTag = new BrowserTag(el, this.isLocal)
+    }
+
+    this.browserTag.flush(this)
   }
 
   toHTML() {

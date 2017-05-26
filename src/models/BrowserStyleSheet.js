@@ -22,7 +22,7 @@ import { ServerTag } from './ServerStyleSheet'
 
 export const COMPONENTS_PER_TAG = 40
 
-class BrowserTag implements Tag {
+export class BrowserTag implements Tag {
   isLocal: boolean
   components: { [string]: Object }
   size: number
@@ -47,6 +47,30 @@ class BrowserTag implements Tag {
     return this.size >= COMPONENTS_PER_TAG
   }
 
+  flush(memoryTag: ServerTag) {
+    const lol = `    ServerTag {
+          onBrowser: true,
+          isLocal: true,
+          components:
+           { 'sc-a':
+              { componentId: 'sc-a',
+                css: '/* sc-component-id: sc-a */\n.sc-a {}\n\n' } },
+          size: 1,
+          names: [ 'b' ],
+          browserTag:
+           BrowserTag {
+             el: HTMLStyleElement {},
+             isLocal: true,
+             ready: false,
+             size: 0,
+             components: {} } }`
+    console.log(memoryTag)
+    Object.keys(memoryTag.components).forEach(componentId => {
+      if (!this.components[componentId]) this.addComponent(componentId)
+      this.inject(componentId, memoryTag.components[componentId].css)
+    })
+  }
+
   addComponent(componentId: string) {
     if (!this.ready) this.replaceElement()
     if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
@@ -61,6 +85,7 @@ class BrowserTag implements Tag {
   inject(componentId: string, css: string, name: ?string) {
     if (!this.ready) this.replaceElement()
     const comp = this.components[componentId]
+    console.log({componentId, css})
 
     if (!comp) throw new Error('Must add a new component before you can inject css into it')
     if (comp.textNode.data === '') comp.textNode.appendData(`\n/* sc-component-id: ${componentId} */\n`)
@@ -124,7 +149,8 @@ export default {
     for (let i = 0; i < nodesLength; i += 1) {
       const el = nodes[i]
 
-      tags.push(new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML))
+      const isLocal = el.getAttribute(LOCAL_ATTR) === 'true'
+      tags.push(new ServerTag(true, isLocal, new BrowserTag(el, isLocal, el.innerHTML)))
 
       const attr = el.getAttribute(SC_ATTR)
       if (attr) {
@@ -132,17 +158,6 @@ export default {
           names[name] = true
         })
       }
-    }
-
-    /* Factory for making more tags */
-    const tagConstructor = (isLocal: boolean): Tag => {
-      const el = document.createElement('style')
-      el.type = 'text/css'
-      el.setAttribute(SC_ATTR, '')
-      el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
-      if (!document.head) throw new Error('Missing document <head>')
-      document.head.appendChild(el)
-      return new ServerTag(true, isLocal, new BrowserTag(el, isLocal))
     }
 
     return new StyleSheet(true, tags, names)

@@ -17,6 +17,7 @@ export interface Tag {
   toHTML(): string,
   toReactElement(key: string): React.Element<*>,
   clone(): Tag,
+  flush(): void
 }
 
 let instance = null
@@ -101,6 +102,10 @@ export default class StyleSheet {
     if (hash && name) {
       this.hashes[hash.toString()] = name
     }
+  }
+
+  flush() {
+    this.tags.forEach(tag => tag.flush())
   }
 
   toHTML() {

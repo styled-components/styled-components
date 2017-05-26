@@ -65,11 +65,14 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       return { ...context, ...this.attrs }
     }
 
+    getStyleSheetInstance() {
+      return this.context[CONTEXT_KEY] || StyleSheet.instance
+    }
+
     generateAndInjectStyles(theme: any, props: any) {
       const { componentStyle, warnTooManyClasses } = this.constructor
       const executionContext = this.buildExecutionContext(theme, props)
-      const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.instance
-      const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
+      const className = componentStyle.generateAndInjectStyles(executionContext, this.getStyleSheetInstance())
 
       if (warnTooManyClasses !== undefined) warnTooManyClasses(className)
 
@@ -120,6 +123,13 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       if (this.unsubscribe) {
         this.unsubscribe()
       }
+    }
+
+    componentDidMount() {
+      this.getStyleSheetInstance().flush()
+    }
+    componentDidUpdate() {
+      this.getStyleSheetInstance().flush()
     }
 
     render() {

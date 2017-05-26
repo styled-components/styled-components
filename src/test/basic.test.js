@@ -1,11 +1,10 @@
 // @flow
 import React, { Component } from 'react'
-import { shallow, mount } from 'enzyme'
+import { mount } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
 let styled
-
 describe('basic', () => {
   /**
    * Make sure the setup is the same for every test
@@ -24,7 +23,7 @@ describe('basic', () => {
       expect(() => {
         // $FlowInvalidInputTest
         const Comp = styled(comp)
-        shallow(<Comp />)
+        mount(<Comp />)
         // $FlowInvalidInputTest
       }).toThrow(`Cannot create styled-component for component: ${comp}`)
     })
@@ -37,7 +36,7 @@ describe('basic', () => {
 
   it('should inject component class when rendered even if no styles are passed', () => {
     const Comp = styled.div``
-    shallow(<Comp />)
+    mount(<Comp />)
     expectCSSMatches('.sc-a {}')
   })
 
@@ -45,7 +44,7 @@ describe('basic', () => {
     const Comp = styled.div`
       color: blue;
     `
-    shallow(<Comp />)
+    mount(<Comp />)
     expectCSSMatches('.sc-a { } .b { color: blue; }')
   })
 
@@ -53,8 +52,8 @@ describe('basic', () => {
     const Comp = styled.div`
       color: blue;
     `
-    shallow(<Comp />)
-    shallow(<Comp />)
+    mount(<Comp />)
+    mount(<Comp />)
     expectCSSMatches('.sc-a {} .b { color: blue; }')
   })
 
@@ -174,8 +173,8 @@ describe('basic', () => {
       const SecondComponent = styled.div`color: blue;`
 
       // NOTE: We're mounting second before first and check if we're breaking their order
-      shallow(<SecondComponent />)
-      shallow(<FirstComponent />)
+      mount(<SecondComponent />)
+      mount(<FirstComponent />)
 
       expectCSSMatches('.sc-a {} .d { color: red; } .sc-b {} .c { color: blue; }')
     })
