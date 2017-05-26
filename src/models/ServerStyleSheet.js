@@ -5,16 +5,20 @@ import StyleSheet, { SC_ATTR, LOCAL_ATTR, clones } from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
 
 export class ServerTag implements Tag {
+  onBrowser: boolean
   isLocal: boolean
   components: { [string]: Object }
   size: number
   names: Array<string>
+  browserTag: Tag
 
-  constructor(isLocal: boolean) {
+  constructor(onBrowser: boolean, isLocal: boolean, browserTag: ?Tag) {
+    this.onBrowser = onBrowser
     this.isLocal = isLocal
     this.components = {}
     this.size = 0
     this.names = []
+    this.browserTag = browserTag
   }
 
   isFull() {
@@ -66,7 +70,7 @@ export class ServerTag implements Tag {
   }
 
   clone() {
-    const copy = new ServerTag(this.isLocal)
+    const copy = new ServerTag(this.onBrowser, this.isLocal, this.browserTag)
     copy.names = [].concat(this.names)
     copy.size = this.size
     copy.components = Object.keys(this.components)

@@ -25,21 +25,18 @@ export const clones: Array<StyleSheet> = []
 
 export default class StyleSheet {
   onBrowser: boolean
-  memoryTags: Array<Tag>
-  browserTags: Array<Tag>
+  tags: Array<Tag>
   names: { [string]: boolean }
   hashes: { [string]: string } = {}
   deferredInjections: { [string]: string } = {}
   componentTags: { [string]: Tag }
 
   constructor(onBrowser: boolean,
-    memoryTags: Array<Tag> = [],
-    browserTags: Array<Tag> = [],
+    tags: Array<Tag> = [],
     names: { [string]: boolean } = {},
   ) {
     this.onBrowser = onBrowser
-    this.memoryTags = memoryTags
-    this.browserTags = browserTags
+    this.tags = tags
     this.names = names
     this.constructComponentTagMap()
   }
@@ -47,7 +44,7 @@ export default class StyleSheet {
   constructComponentTagMap() {
     this.componentTags = {}
 
-    this.memoryTags.forEach(tag => {
+    this.tags.forEach(tag => {
       Object.keys(tag.components).forEach(componentId => {
         this.componentTags[componentId] = tag
       })
@@ -107,11 +104,11 @@ export default class StyleSheet {
   }
 
   toHTML() {
-    return this.memoryTags.map(tag => tag.toHTML()).join('')
+    return this.tags.map(tag => tag.toHTML()).join('')
   }
 
   toReactElements() {
-    return this.memoryTags.map((tag, i) => tag.toReactElement(`sc-${i}`))
+    return this.tags.map((tag, i) => tag.toReactElement(`sc-${i}`))
   }
 
   getOrCreateTag(componentId: string, isLocal: boolean) {
@@ -120,7 +117,7 @@ export default class StyleSheet {
       return existingTag
     }
 
-    const lastTag = this.memoryTags[this.memoryTags.length - 1]
+    const lastTag = this.tags[this.tags.length - 1]
     const componentTag = (!lastTag || lastTag.isFull() || lastTag.isLocal !== isLocal)
       ? this.createNewTag(isLocal)
       : lastTag
@@ -130,8 +127,8 @@ export default class StyleSheet {
   }
 
   createNewTag(isLocal: boolean) {
-    const newTag = new ServerTag(isLocal)
-    this.memoryTags.push(newTag)
+    const newTag = new ServerTag(this.onBrowser, isLocal)
+    this.tags.push(newTag)
     return newTag
   }
 
@@ -152,8 +149,7 @@ export default class StyleSheet {
   static clone(oldSheet: StyleSheet) {
     const newSheet = new StyleSheet(
       oldSheet.onBrowser,
-      oldSheet.memoryTags.map(tag => tag.clone()),
-      [],
+      oldSheet.tags.map(tag => tag.clone()),
       { ...oldSheet.names },
     )
 

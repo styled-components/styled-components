@@ -18,6 +18,7 @@
 import extractCompsFromCSS from '../utils/extractCompsFromCSS'
 import type { Tag } from './StyleSheet'
 import StyleSheet, { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
+import { ServerTag } from './ServerStyleSheet'
 
 export const COMPONENTS_PER_TAG = 40
 
@@ -141,9 +142,9 @@ export default {
       el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
       if (!document.head) throw new Error('Missing document <head>')
       document.head.appendChild(el)
-      return new BrowserTag(el, isLocal)
+      return new ServerTag(true, isLocal, new BrowserTag(el, isLocal))
     }
 
-    return new StyleSheet(true, [], tags, names)
+    return new StyleSheet(true, tags, names)
   },
 }
