@@ -207,4 +207,11 @@ export function injectGlobal(strings: TemplateStringsArray, ...interpolations: S
 
 export const ThemeProvider: ThemeProviderComponent<any>;
 
+export interface StyleSheetManager extends ComponentClass<{sheet: any}> {}
+
+export class ServerStyleSheet {
+  collectStyles(tree: any): StyleSheetManager;
+  getStyleTags(): string;
+}
+
 export default styled;
