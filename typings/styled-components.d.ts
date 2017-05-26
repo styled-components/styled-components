@@ -1,5 +1,5 @@
 import * as React from "react";
-import { StatelessComponent, ComponentClass, PureComponent } from "react";
+import { StatelessComponent, ComponentClass, PureComponent, ReactElement } from "react";
 
 type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 
@@ -206,5 +206,12 @@ export function keyframes(strings: TemplateStringsArray, ...interpolations: Simp
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
 
 export const ThemeProvider: ThemeProviderComponent<any>;
+
+export class ServerStyleSheet {
+  collectStyles(children: ReactElement<any>): ReactElement<any>
+  getStyleTags(): string
+  getStyleElement(): ReactElement<any>
+  static create(): StyleSheet
+}
 
 export default styled;
