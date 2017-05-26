@@ -228,6 +228,7 @@ class Index extends Component {
 
             <UsersWrapper>
               <CompanyLogo bottom="-0.2rem" height="1.75rem" src="/static/bloomberg-logo.svg" />
+              <CompanyLogo height="1.75rem" src="/static/atlassian-logo.svg" />
               <CompanyLogo src="/static/reddit-logo.svg" />
               <CompanyLogo src="/static/target-logo.svg" />
               <CompanyLogo bottom="0.625rem" height="3rem" src="/static/eurovision-logo.svg" />
