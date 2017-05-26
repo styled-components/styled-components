@@ -207,11 +207,12 @@ export function injectGlobal(strings: TemplateStringsArray, ...interpolations: S
 
 export const ThemeProvider: ThemeProviderComponent<any>;
 
-export interface StyleSheetManager extends ComponentClass<{sheet: any}> {}
+export class StyleSheetManager extends React.Component<{sheet: ServerStyleSheet}, any> {}
 
 export class ServerStyleSheet {
   collectStyles(tree: any): StyleSheetManager;
   getStyleTags(): string;
+  getStyleElement(): Component<any>;
 }
 
 export default styled;
