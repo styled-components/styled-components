@@ -28,7 +28,7 @@ export class ServerTag implements Tag {
 
   addComponent(componentId: string) {
     if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
-    this.components[componentId] = { componentId, css: '' }
+    this.components[componentId] = { componentId, css: [] }
     this.size += 1
   }
 
@@ -36,9 +36,9 @@ export class ServerTag implements Tag {
     const comp = this.components[componentId]
 
     if (!comp) throw new Error('Must add a new component before you can inject css into it')
-    if (comp.css === '') comp.css = `/* sc-component-id: ${componentId} */\n`
+    if (comp.css.length === 0) comp.css.push(`/* sc-component-id: ${componentId} */\n`)
 
-    comp.css += css.replace(/\n*$/, '\n')
+    comp.css.push(css.replace(/\n*$/, '\n'))
 
     if (name) this.names.push(name)
   }
@@ -63,7 +63,7 @@ export class ServerTag implements Tag {
     const namesAttr = `${SC_ATTR}="${this.names.join(' ')}"`
     const localAttr = `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`
     const css = Object.keys(this.components)
-      .map(key => this.components[key].css)
+      .map(key => this.components[key].css.join(''))
       .join('')
 
     return `<style type="text/css" ${namesAttr} ${localAttr}>\n${css}\n</style>`

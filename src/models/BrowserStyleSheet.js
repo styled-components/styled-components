@@ -48,22 +48,6 @@ export class BrowserTag implements Tag {
   }
 
   flush(memoryTag: ServerTag) {
-    const lol = `    ServerTag {
-          onBrowser: true,
-          isLocal: true,
-          components:
-           { 'sc-a':
-              { componentId: 'sc-a',
-                css: '/* sc-component-id: sc-a */\n.sc-a {}\n\n' } },
-          size: 1,
-          names: [ 'b' ],
-          browserTag:
-           BrowserTag {
-             el: HTMLStyleElement {},
-             isLocal: true,
-             ready: false,
-             size: 0,
-             components: {} } }`
     console.log(memoryTag)
     Object.keys(memoryTag.components).forEach(componentId => {
       if (!this.components[componentId]) this.addComponent(componentId)
@@ -75,22 +59,21 @@ export class BrowserTag implements Tag {
     if (!this.ready) this.replaceElement()
     if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
 
-    const comp = { componentId, textNode: document.createTextNode('') }
+    const comp = { componentId, textNode: document.createTextNode(''), index: 0 }
     this.el.appendChild(comp.textNode)
 
     this.size += 1
     this.components[componentId] = comp
   }
 
-  inject(componentId: string, css: string, name: ?string) {
+  inject(componentId: string, css: Array<string>, name: ?string) {
     if (!this.ready) this.replaceElement()
     const comp = this.components[componentId]
-    console.log({componentId, css})
 
     if (!comp) throw new Error('Must add a new component before you can inject css into it')
-    if (comp.textNode.data === '') comp.textNode.appendData(`\n/* sc-component-id: ${componentId} */\n`)
 
-    comp.textNode.appendData(css)
+    comp.textNode.appendData(css.slice(comp.index).join(''))
+    comp.index = css.length
     if (name) {
       const existingNames = this.el.getAttribute(SC_ATTR)
       this.el.setAttribute(SC_ATTR, existingNames ? `${existingNames} ${name}` : name)
