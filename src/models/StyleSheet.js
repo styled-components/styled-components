@@ -14,6 +14,7 @@ export interface Tag {
   isFull(): boolean,
   addComponent(componentId: string): void,
   inject(componentId: string, css: string, name: ?string): void,
+  flush(): void,
   toHTML(): string,
   toReactElement(key: string): React.Element<*>,
   clone(): Tag,
@@ -101,6 +102,10 @@ export default class StyleSheet {
     if (hash && name) {
       this.hashes[hash.toString()] = name
     }
+  }
+
+  flush() {
+    this.tags.forEach(tag => tag.flush())
   }
 
   toHTML() {

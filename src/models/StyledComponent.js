@@ -122,7 +122,16 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
     }
 
+    componentDidMount() {
+      console.log(`MOUNT: ${this.constructor.styledComponentId}`)
+    }
+
+    componentDidUpdate() {
+      console.log(`UPDATE: ${this.constructor.styledComponentId}`)
+    }
+
     render() {
+      console.log(`RENDER: ${this.constructor.styledComponentId}`)
       const { innerRef } = this.props
       const { generatedClassName } = this.state
       const { styledComponentId, target } = this.constructor
