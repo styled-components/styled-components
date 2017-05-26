@@ -1,7 +1,9 @@
 import React from 'react'
 import SectionLayout from '../SectionLayout'
 import CodeBlock from '../CodeBlock'
-import Code from '../Code'
+import Code from '../Code';
+import Note from '../Note';
+import Link from '../Link';
 
 const sample = (`
 import styled from 'styled-components/native';
@@ -28,9 +30,9 @@ class MyReactNativeComponent extends React.Component {
 const cssToReactNativeSample = (`
 const RotatedBox = styled.View\`
   transform: rotate(90deg);
-  text-shadow-offset: 10 5;
+  text-shadow-offset: 10px 5px;
   font-variant: small-caps;
-  margin: 5 7 2;
+  margin: 5px 7px 2px;
 \`;
 `).trim()
 
@@ -60,6 +62,11 @@ const ReactNative = () => (
       the <Code>keyframes</Code> and <Code>injectGlobal</Code> helpers since React Native doesn't
       support keyframes or global styles. We will also warn you if you use media queries or nest your CSS.
     </p>
+
+    <Note>
+      In v2 we support percentages. To make this possible we need to enforce units for all shorthands. If you're migrating to v2, <Link href="https://github.com/styled-components/styled-components-native-code-mod" inline>a codemod is available</Link>.
+    </Note>
+
   </SectionLayout>
 )
 
