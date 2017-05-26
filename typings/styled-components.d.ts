@@ -210,7 +210,7 @@ export const ThemeProvider: ThemeProviderComponent<any>;
 export class ServerStyleSheet {
   collectStyles(children: ReactElement<any>): ReactElement<any>
   getStyleTags(): string
-  getStyleElement(): ReactElement<any>
+  getStyleElement(): ReactElement<any>[]
   static create(): StyleSheet
 }
 
