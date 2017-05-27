@@ -2,6 +2,15 @@
 import stylis from 'stylis'
 import type { Interpolation } from '../types'
 
+stylis.set({
+  global: false,
+  cascade: true,
+  keyframe: false,
+  prefix: true,
+  compress: false,
+  semicolon: true,
+})
+
 const stringifyRules = (
   rules: Array<Interpolation>,
   selector: ?string,
@@ -15,14 +24,7 @@ const stringifyRules = (
     `${prefix} ${selector} { ${flatCSS} }` :
     flatCSS
 
-  const css = stylis(
-    prefix || !selector ? '' : selector,
-    cssStr,
-    false,
-    false,
-  )
-
-  return css
+  return stylis(prefix || !selector ? '' : selector, cssStr)
 }
 
 export default stringifyRules
