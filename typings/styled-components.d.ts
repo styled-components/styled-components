@@ -26,6 +26,93 @@ export interface InterpolationFunction<P> {
 
 export interface StyledComponentClass<P, T> extends ComponentClass<P> {
   extend: ThemedStyledFunction<P, T>;
+
+  withComponent(
+    tag: "abbr" | "address" | "article" | "aside" | "b" | "bdi" | "bdo" |
+         "big" | "blockquote" | "caption" | "cite" | "code" | "data" | "dd" |
+         "del" | "details" | "dfn" | "dialog" | "dt" | "em" | "figcaption" |
+         "figure" | "footer" | "header" | "hgroup" | "l" | "i" | "kbd" |
+         "keygen" | "main" | "mark" | "menu" | "menuitem" | "meter" | "nav" |
+         "noscript" | "output" | "picture" | "rp" | "rt" | "ruby" | "s" |
+         "samp" | "script" | "section" | "small" | "strong" | "sub" |
+         "summary" | "sup" | "time" | "u" | "var" | "wbr"
+  ): StyledComponentClass<ThemedOuterStyledProps<HTMLElement, T>, T>;
+  withComponent(tag: "a"): StyledComponentClass<ThemedOuterStyledProps<HTMLAnchorElement, T>, T>;
+  withComponent(tag: "area"): StyledComponentClass<ThemedOuterStyledProps<HTMLAreaElement, T>, T>;
+  withComponent(tag: "audio"): StyledComponentClass<ThemedOuterStyledProps<HTMLAudioElement, T>, T>;
+  withComponent(tag: "base"): StyledComponentClass<ThemedOuterStyledProps<HTMLBaseElement, T>, T>;
+  withComponent(tag: "body"): StyledComponentClass<ThemedOuterStyledProps<HTMLBodyElement, T>, T>;
+  withComponent(tag: "br"): StyledComponentClass<ThemedOuterStyledProps<HTMLBRElement, T>, T>;
+  withComponent(tag: "button"): StyledComponentClass<ThemedOuterStyledProps<HTMLButtonElement, T>, T>;
+  withComponent(tag: "canvas"): StyledComponentClass<ThemedOuterStyledProps<HTMLCanvasElement, T>, T>;
+  withComponent(tag: "col" | "colgroup"): StyledComponentClass<ThemedOuterStyledProps<HTMLTableColElement, T>, T>;
+  withComponent(tag: "datalist"): StyledComponentClass<ThemedOuterStyledProps<HTMLDataListElement, T>, T>;
+  withComponent(tag: "div"): StyledComponentClass<ThemedOuterStyledProps<HTMLDivElement, T>, T>;
+  withComponent(tag: "dl"): StyledComponentClass<ThemedOuterStyledProps<HTMLDListElement, T>, T>;
+  withComponent(tag: "embed"): StyledComponentClass<ThemedOuterStyledProps<HTMLEmbedElement, T>, T>;
+  withComponent(tag: "fieldset"): StyledComponentClass<ThemedOuterStyledProps<HTMLFieldSetElement, T>, T>;
+  withComponent(tag: "form"): StyledComponentClass<ThemedOuterStyledProps<HTMLFormElement, T>, T>;
+  withComponent(tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6"): StyledComponentClass<ThemedOuterStyledProps<HTMLHeadingElement, T>, T>;
+  withComponent(tag: "head"): StyledComponentClass<ThemedOuterStyledProps<HTMLHeadElement, T>, T>;
+  withComponent(tag: "hr"): StyledComponentClass<ThemedOuterStyledProps<HTMLHRElement, T>, T>;
+  withComponent(tag: "iframe"): StyledComponentClass<ThemedOuterStyledProps<HTMLIFrameElement, T>, T>;
+  withComponent(tag: "img"): StyledComponentClass<ThemedOuterStyledProps<HTMLImageElement, T>, T>;
+  withComponent(tag: "input"): StyledComponentClass<ThemedOuterStyledProps<HTMLInputElement, T>, T>;
+  withComponent(tag: "ins"): StyledComponentClass<ThemedOuterStyledProps<HTMLModElement, T>, T>;
+  withComponent(tag: "label"): StyledComponentClass<ThemedOuterStyledProps<HTMLLabelElement, T>, T>;
+  withComponent(tag: "legend"): StyledComponentClass<ThemedOuterStyledProps<HTMLLegendElement, T>, T>;
+  withComponent(tag: "li"): StyledComponentClass<ThemedOuterStyledProps<HTMLLIElement, T>, T>;
+  withComponent(tag: "link"): StyledComponentClass<ThemedOuterStyledProps<HTMLLinkElement, T>, T>;
+  withComponent(tag: "map"): StyledComponentClass<ThemedOuterStyledProps<HTMLMapElement, T>, T>;
+  withComponent(tag: "meta"): StyledComponentClass<ThemedOuterStyledProps<HTMLMetaElement, T>, T>;
+  withComponent(tag: "object"): StyledComponentClass<ThemedOuterStyledProps<HTMLObjectElement, T>, T>;
+  withComponent(tag: "ol"): StyledComponentClass<ThemedOuterStyledProps<HTMLOListElement, T>, T>;
+  withComponent(tag: "optgroup"): StyledComponentClass<ThemedOuterStyledProps<HTMLOptGroupElement, T>, T>;
+  withComponent(tag: "option"): StyledComponentClass<ThemedOuterStyledProps<HTMLOptionElement, T>, T>;
+  withComponent(tag: "p"): StyledComponentClass<ThemedOuterStyledProps<HTMLParagraphElement, T>, T>;
+  withComponent(tag: "param"): StyledComponentClass<ThemedOuterStyledProps<HTMLParamElement, T>, T>;
+  withComponent(tag: "pre"): StyledComponentClass<ThemedOuterStyledProps<HTMLPreElement, T>, T>;
+  withComponent(tag: "progress"): StyledComponentClass<ThemedOuterStyledProps<HTMLProgressElement, T>, T>;
+  withComponent(tag: "q"): StyledComponentClass<ThemedOuterStyledProps<HTMLQuoteElement, T>, T>;
+  withComponent(tag: "select"): StyledComponentClass<ThemedOuterStyledProps<HTMLSelectElement, T>, T>;
+  withComponent(tag: "source"): StyledComponentClass<ThemedOuterStyledProps<HTMLSourceElement, T>, T>;
+  withComponent(tag: "span"): StyledComponentClass<ThemedOuterStyledProps<HTMLSpanElement, T>, T>;
+  withComponent(tag: "style"): StyledComponentClass<ThemedOuterStyledProps<HTMLStyleElement, T>, T>;
+  withComponent(tag: "table"): StyledComponentClass<ThemedOuterStyledProps<HTMLTableElement, T>, T>;
+  withComponent(tag: "tbody"): StyledComponentClass<ThemedOuterStyledProps<HTMLTableSectionElement, T>, T>;
+  withComponent(tag: "td"): StyledComponentClass<ThemedOuterStyledProps<HTMLTableDataCellElement, T>, T>;
+  withComponent(tag: "textarea"): StyledComponentClass<ThemedOuterStyledProps<HTMLTextAreaElement, T>, T>;
+  withComponent(tag: "tfoot"): StyledComponentClass<ThemedOuterStyledProps<HTMLTableSectionElement, T>, T>;
+  withComponent(tag: "th"): StyledComponentClass<ThemedOuterStyledProps<HTMLTableHeaderCellElement, T>, T>;
+  withComponent(tag: "thead"): StyledComponentClass<ThemedOuterStyledProps<HTMLTableSectionElement, T>, T>;
+  withComponent(tag: "title"): StyledComponentClass<ThemedOuterStyledProps<HTMLTitleElement, T>, T>;
+  withComponent(tag: "tr"): StyledComponentClass<ThemedOuterStyledProps<HTMLTableRowElement, T>, T>;
+  withComponent(tag: "track"): StyledComponentClass<ThemedOuterStyledProps<HTMLTrackElement, T>, T>;
+  withComponent(tag: "ul"): StyledComponentClass<ThemedOuterStyledProps<HTMLUListElement, T>, T>;
+  withComponent(tag: "video"): StyledComponentClass<ThemedOuterStyledProps<HTMLVideoElement, T>, T>;
+
+  // SVG
+  withComponent(tag: "circle"): StyledComponentClass<ThemedOuterStyledProps<SVGCircleElement, T>, T>;
+  withComponent(tag: "clipPath"): StyledComponentClass<ThemedOuterStyledProps<SVGClipPathElement, T>, T>;
+  withComponent(tag: "defs"): StyledComponentClass<ThemedOuterStyledProps<SVGDefsElement, T>, T>;
+  withComponent(tag: "ellipse"): StyledComponentClass<ThemedOuterStyledProps<SVGEllipseElement, T>, T>;
+  withComponent(tag: "g"): StyledComponentClass<ThemedOuterStyledProps<SVGGElement, T>, T>;
+  withComponent(tag: "image"): StyledComponentClass<ThemedOuterStyledProps<SVGImageElement, T>, T>;
+  withComponent(tag: "line"): StyledComponentClass<ThemedOuterStyledProps<SVGLineElement, T>, T>;
+  withComponent(tag: "linearGradient"): StyledComponentClass<ThemedOuterStyledProps<SVGLinearGradientElement, T>, T>;
+  withComponent(tag: "mask"): StyledComponentClass<ThemedOuterStyledProps<SVGMaskElement, T>, T>;
+  withComponent(tag: "path"): StyledComponentClass<ThemedOuterStyledProps<SVGPathElement, T>, T>;
+  withComponent(tag: "pattern"): StyledComponentClass<ThemedOuterStyledProps<SVGPatternElement, T>, T>;
+  withComponent(tag: "polygon"): StyledComponentClass<ThemedOuterStyledProps<SVGPolygonElement, T>, T>;
+  withComponent(tag: "polyline"): StyledComponentClass<ThemedOuterStyledProps<SVGPolylineElement, T>, T>;
+  withComponent(tag: "radialGradient"): StyledComponentClass<ThemedOuterStyledProps<SVGRadialGradientElement, T>, T>;
+  withComponent(tag: "rect"): StyledComponentClass<ThemedOuterStyledProps<SVGRectElement, T>, T>;
+  withComponent(tag: "stop"): StyledComponentClass<ThemedOuterStyledProps<SVGStopElement, T>, T>;
+  withComponent(tag: "svg"): StyledComponentClass<ThemedOuterStyledProps<SVGSVGElement, T>, T>;
+  withComponent(tag: "text"): StyledComponentClass<ThemedOuterStyledProps<SVGTextElement, T>, T>;
+  withComponent(tag: "tspan"): StyledComponentClass<ThemedOuterStyledProps<SVGTSpanElement, T>, T>;
+
+  withComponent(element: ComponentClass<P>): StyledComponentClass<ThemedOuterStyledProps<ComponentClass<P>, T>, T>;
 }
 
 export interface ThemedStyledFunction<P, T> {
@@ -211,7 +298,7 @@ export function injectGlobal(strings: TemplateStringsArray, ...interpolations: S
 
 export const ThemeProvider: ThemeProviderComponent<any>;
 
-export class StyleSheetManager extends React.Component<{sheet: ServerStyleSheet}, any> {}
+export class StyleSheetManager extends React.Component<{ sheet: ServerStyleSheet }, any> { }
 
 export class ServerStyleSheet {
   collectStyles(children: ReactElement<any>): StyleSheetManager
