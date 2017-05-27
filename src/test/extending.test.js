@@ -76,8 +76,8 @@ describe('extending', () => {
 
     expectCSSMatches(`
       .sc-a {}
-      .c { color: blue; }
-      .c > h1 { font-size: 4rem; }
+      .c{ color: blue; }
+      .c > h1{ font-size: 4rem; }
       .sc-b {}
       .d { color: blue; }
       .d > h1 { font-size: 4rem; }
