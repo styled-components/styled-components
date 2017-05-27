@@ -79,9 +79,8 @@ describe('extending', () => {
       .c{ color: blue; }
       .c > h1{ font-size: 4rem; }
       .sc-b {}
-      .d { color: blue; }
+      .d { color: blue; color: red; }
       .d > h1 { font-size: 4rem; }
-      .d { color: red; }
     `)
   })
 
