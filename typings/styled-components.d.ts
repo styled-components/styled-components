@@ -1,5 +1,5 @@
 import * as React from "react";
-import { StatelessComponent, ComponentClass, PureComponent } from "react";
+import { StatelessComponent, ComponentClass, PureComponent, ReactElement } from "react";
 
 type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 
@@ -214,9 +214,11 @@ export const ThemeProvider: ThemeProviderComponent<any>;
 export class StyleSheetManager extends React.Component<{sheet: ServerStyleSheet}, any> {}
 
 export class ServerStyleSheet {
+  collectStyles(children: ReactElement<any>): StyleSheetManager
   collectStyles(tree: any): StyleSheetManager;
   getStyleTags(): string;
-  getStyleElement(): Component<any>;
+  getStyleElement(): ReactElement<any>[]
+  static create(): StyleSheet
 }
 
 export default styled;

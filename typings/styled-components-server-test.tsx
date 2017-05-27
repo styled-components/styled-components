@@ -10,6 +10,8 @@ const Title = styled.h1`
 const sheet = new ServerStyleSheet();
 const html = renderToString(sheet.collectStyles(<Title>Hello world</Title>));
 const css = sheet.getStyleTags();
+const styleElement = sheet.getStyleElement();
+ServerStyleSheet.create();
 
 const sheet2 = new ServerStyleSheet()
 const html2 = renderToString(
