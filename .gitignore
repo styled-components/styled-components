@@ -1,6 +1,6 @@
+# Node
 node_modules
-lib
-npm-debug.log.*
-dist
+*.log
+
+# Mac
 .DS_Store
-bundle-stats.html
