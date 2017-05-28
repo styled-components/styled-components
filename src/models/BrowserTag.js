@@ -28,6 +28,7 @@ export default class BrowserTag {
   }
 
   flush(memoryTag: InMemoryTag) {
+    console.log("BT flush")
     Object.keys(memoryTag.components).forEach(componentId => {
       if (!this.components[componentId]) this.addComponent(componentId)
       this.inject(componentId, memoryTag.components[componentId].css)

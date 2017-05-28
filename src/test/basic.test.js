@@ -1,6 +1,6 @@
 // @flow
 import React, { Component } from 'react'
-import { shallow } from 'enzyme'
+import { shallow, mount } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
@@ -97,7 +97,7 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = shallow(<Wrapper />)
+      const wrapper = mount(<Wrapper />)
       const component = wrapper.find(Comp).first()
 
       // $FlowFixMe
@@ -122,7 +122,7 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = shallow(<Wrapper />)
+      const wrapper = mount(<Wrapper />)
       const innerComponent = wrapper.find(InnerComponent).first()
 
       // $FlowFixMe
@@ -139,7 +139,7 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = shallow(<Wrapper />)
+      const wrapper = mount(<Wrapper />)
       expect(wrapper.find(InnerComponent).prop('className'))
         .toBe('test sc-a b')
     })
@@ -157,7 +157,7 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = shallow(<Wrapper />)
+      const wrapper = mount(<Wrapper />)
       const innerComponent = wrapper.find(InnerComponent).first()
       const outerComponent = wrapper.find(OuterComponent).first()
 

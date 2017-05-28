@@ -45,6 +45,7 @@ export default class InMemoryTag {
   }
 
   flush() {
+    console.log("IMT flush")
     if (!this.onBrowser) return
 
     if (!this.browserTag) {
@@ -94,7 +95,8 @@ export default class InMemoryTag {
     copy.size = this.size
     copy.components = Object.keys(this.components)
       .reduce((acc, key) => {
-        acc[key] = { ...this.components[key] } // eslint-disable-line no-param-reassign
+        const { componentId, css } = this.components[key]
+        acc[key] = { componentId, css: [...css] } // eslint-disable-line no-param-reassign
         return acc
       }, {})
 

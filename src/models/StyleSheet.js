@@ -12,6 +12,8 @@ let instance = null
 // eslint-disable-next-line no-use-before-define
 export const clones: Array<StyleSheet> = []
 
+let count = 0
+
 export default class StyleSheet {
   onBrowser: boolean
   tags: Array<InMemoryTag>
@@ -28,6 +30,7 @@ export default class StyleSheet {
     this.tags = tags
     this.names = names
     this.constructComponentTagMap()
+    this.count = count++
   }
 
   constructComponentTagMap() {
@@ -71,6 +74,7 @@ export default class StyleSheet {
   }
 
   inject(componentId: string, isLocal: boolean, css: string, hash: ?any, name: ?string) {
+    console.log(`${this.count} inject ${css}`)
     if (this === instance) {
       clones.forEach(clone => {
         clone.inject(componentId, isLocal, css)
@@ -93,6 +97,7 @@ export default class StyleSheet {
   }
 
   flush() {
+    console.log("SS flush")
     this.tags.forEach(tag => tag.flush())
   }
 
