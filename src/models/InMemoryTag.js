@@ -36,7 +36,6 @@ export default class InMemoryTag {
 
   inject(componentId: string, css: string, name: ?string) {
     const comp = this.components[componentId]
-    console.log(`IMT inject ${css}`)
 
     if (!comp) throw new Error('Must add a new component before you can inject css into it')
     if (comp.css.length === 0) comp.css.push(`\n/* sc-component-id: ${componentId} */\n`)
@@ -47,7 +46,6 @@ export default class InMemoryTag {
   }
 
   flush() {
-    console.log("IMT flush")
     if (!this.onBrowser) return
 
     if (!this.browserTag) {

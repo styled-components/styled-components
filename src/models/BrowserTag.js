@@ -29,7 +29,6 @@ export default class BrowserTag {
   }
 
   flush(memoryTag: InMemoryTag) {
-    console.log("BT flush")
     Object.keys(memoryTag.components).forEach(componentId => {
       if (!this.components[componentId]) this.addComponent(componentId)
       const css = memoryTag.components[componentId].css
@@ -40,7 +39,6 @@ export default class BrowserTag {
   }
 
   addComponent(componentId: string) {
-    console.log(`ADD component ${componentId}`)
     if (!this.ready) this.replaceElement()
     if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
 
@@ -52,7 +50,6 @@ export default class BrowserTag {
   }
 
   inject(componentId: string, css: string, names: Array<string>) {
-    console.log(`INJECT css ${css}`)
     if (!css) return
     if (!this.ready) this.replaceElement()
     const comp = this.components[componentId]
@@ -80,7 +77,6 @@ export default class BrowserTag {
   /* Because we care about source order, before we can inject anything we need to
    * create a text node for each component and replace the existing CSS. */
   replaceElement() {
-    console.log("REPLACING")
     this.ready = true
     // We have nothing to inject. Use the current el.
     if (this.size === 0) return

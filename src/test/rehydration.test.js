@@ -274,7 +274,6 @@ describe('rehydration', () => {
       /* The local tag has been replaced */
       expect(styleTagsAfterAddition[1]).not.toBe(styleTags[1])
       /* But it is identical, except for... */
-      console.log(styleTagsAfterAddition[1].outerHTML)
       expect(styleTagsAfterAddition[1].outerHTML).toEqual(
         styleTags[1].outerHTML
         /* ...the new data attribute for the new classname "c"... */
