@@ -1,5 +1,6 @@
 import extractCompsFromCSS from '../utils/extractCompsFromCSS'
 import type InMemoryTag from './InMemoryTag'
+import { SC_ATTR } from './StyleSheet'
 export const COMPONENTS_PER_TAG = 40
 
 export default class BrowserTag {
@@ -31,11 +32,12 @@ export default class BrowserTag {
     console.log("BT flush")
     Object.keys(memoryTag.components).forEach(componentId => {
       if (!this.components[componentId]) this.addComponent(componentId)
-      this.inject(componentId, memoryTag.components[componentId].css)
+      this.inject(componentId, memoryTag.components[componentId].css.slice(this.components[componentId].index).join(''), memoryTag.names)
     })
   }
 
   addComponent(componentId: string) {
+    console.log(`ADD component ${componentId}`)
     if (!this.ready) this.replaceElement()
     if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
 
@@ -46,17 +48,18 @@ export default class BrowserTag {
     this.components[componentId] = comp
   }
 
-  inject(componentId: string, css: Array<string>, name: ?string) {
+  inject(componentId: string, css: string, names: Array<string>) {
+    if (!css) return
     if (!this.ready) this.replaceElement()
     const comp = this.components[componentId]
+    console.log(`INJECT css ${css}`)
 
     if (!comp) throw new Error('Must add a new component before you can inject css into it')
 
-    comp.textNode.appendData(css.slice(comp.index).join(''))
+    comp.textNode.appendData(css)
     comp.index = css.length
-    if (name) {
-      const existingNames = this.el.getAttribute(SC_ATTR)
-      this.el.setAttribute(SC_ATTR, existingNames ? `${existingNames} ${name}` : name)
+    if (names.length > 0) {
+      this.el.setAttribute(SC_ATTR, names.join(' '))
     }
   }
 
@@ -75,6 +78,7 @@ export default class BrowserTag {
   /* Because we care about source order, before we can inject anything we need to
    * create a text node for each component and replace the existing CSS. */
   replaceElement() {
+    console.log("REPLACING")
     this.ready = true
     // We have nothing to inject. Use the current el.
     if (this.size === 0) return

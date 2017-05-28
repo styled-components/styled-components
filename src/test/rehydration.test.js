@@ -242,6 +242,7 @@ describe('rehydration', () => {
     })
 
     it('should replace stylesheets on-demand', () => {
+
       const tagsAfterReset = Array.from(document.querySelectorAll('style'))
       expect(tagsAfterReset[0]).toBe(styleTags[0])
       expect(tagsAfterReset[1]).toBe(styleTags[1])
@@ -259,28 +260,33 @@ describe('rehydration', () => {
        * generates a new hash) does the style tag get replaced. */
       const C = styled.div.withConfig({ componentId: 'THREE' })`color: green;`
       shallow(<C />)
-      const styleTagsAfterAddition = Array.from(document.querySelectorAll('style'))
+      expectCSSMatches(`
+        html { font-size: 16px; }
+        body { background: papayawhip; }
+        .ONE { } .a { color: blue; }
+        .TWO { } .b { color: red; }
+        .THREE { } .c { color: green; }
+      `)
 
+      const styleTagsAfterAddition = Array.from(document.querySelectorAll('style'))
       /* The first tag is unchanged */
       expect(styleTagsAfterAddition[0]).toBe(styleTags[0])
       /* The local tag has been replaced */
       expect(styleTagsAfterAddition[1]).not.toBe(styleTags[1])
       /* But it is identical, except for... */
+      console.log(styleTagsAfterAddition[1].outerHTML)
       expect(styleTagsAfterAddition[1].outerHTML).toEqual(
         styleTags[1].outerHTML
         /* ...the new data attribute for the new classname "c"... */
           .replace(new RegExp(`${SC_ATTR}="a b"`), `${SC_ATTR}="a b c"`)
           /* ...and the new CSS before the closing tag.  */
-          .replace(/(?=<\/style>)/, '\n/* sc-component-id: THREE */\n.THREE {}\n.c {color: green;}')
+          .replace(/(?=<\/style>)/, '\n/* sc-component-id: THREE */\n.THREE {}\n.c {color: green;}\n')
       )
 
-      /* Note: any future additions don't replace the style tag */
       const D = styled.div.withConfig({ componentId: 'TWO' })`color: tomato;`
       shallow(<D />)
 
-      expect(Array.from(document.querySelectorAll('style'))[1]).toBe(styleTagsAfterAddition[1])
-
-      /* The point being, now we have a style tag we can inject new styles in the middle! */
+      /* Now we have a style tag we can inject new styles in the middle! */
       expectCSSMatches(`
         html { font-size: 16px; }
         body { background: papayawhip; }
@@ -288,6 +294,9 @@ describe('rehydration', () => {
         .TWO { } .b { color: red; } .d { color: tomato; }
         .THREE { } .c { color: green; }
       `)
+
+      /* Without replace the style tag! */
+      expect(Array.from(document.querySelectorAll('style'))[1]).toBe(styleTagsAfterAddition[1])
     })
 
     it('should not change styles if rendered in the same order they were created with', () => {

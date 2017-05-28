@@ -12,9 +12,10 @@ export default class InMemoryTag {
   constructor(onBrowser: boolean, isLocal: boolean, browserTag: ?BrowserTag) {
     this.onBrowser = onBrowser
     this.isLocal = isLocal
-    this.names = []
     this.browserTag = browserTag
     this.size = !browserTag ? 0 : browserTag.size
+    this.names = !browserTag || !browserTag.el ? [] : browserTag.el.getAttribute(SC_ATTR).split(' ')
+
     this.components = !browserTag ? {} :
       Object.keys(browserTag.components).reduce((accum, componentId) => {
         const browserTagComp = browserTag.components[componentId]
@@ -37,9 +38,9 @@ export default class InMemoryTag {
     const comp = this.components[componentId]
 
     if (!comp) throw new Error('Must add a new component before you can inject css into it')
-    if (comp.css.length === 0) comp.css.push(`/* sc-component-id: ${componentId} */\n`)
+    if (comp.css.length === 0) comp.css.push(`\n/* sc-component-id: ${componentId} */\n`)
 
-    comp.css.push(css.replace(/\n*$/, '\n'))
+    comp.css.push(css.trim().replace(/\n*$/, '\n'))
 
     if (name) this.names.push(name)
   }
