@@ -1,4 +1,5 @@
-import type BrowserTag from './BrowserTag'
+import BrowserTag from './BrowserTag'
+import { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
 
 export default class InMemoryTag {
   onBrowser: boolean
@@ -88,7 +89,7 @@ export default class InMemoryTag {
 
   clone() {
     if (this.browserTag) throw new Error('BrowserTag cannot be cloned!')
-    const copy = new ServerTag(this.onBrowser, this.isLocal)
+    const copy = new InMemoryTag(this.onBrowser, this.isLocal)
     copy.names = [].concat(this.names)
     copy.size = this.size
     copy.components = Object.keys(this.components)

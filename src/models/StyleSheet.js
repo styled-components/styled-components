@@ -1,7 +1,8 @@
 // @flow
 import React from 'react'
 import BrowserStyleSheet from './BrowserStyleSheet'
-import ServerStyleSheet, { ServerTag } from './ServerStyleSheet'
+import ServerStyleSheet from './ServerStyleSheet'
+import InMemoryTag from './InMemoryTag'
 
 export const SC_ATTR = 'data-styled-components'
 export const LOCAL_ATTR = 'data-styled-components-is-local'
@@ -13,14 +14,14 @@ export const clones: Array<StyleSheet> = []
 
 export default class StyleSheet {
   onBrowser: boolean
-  tags: Array<Tag>
+  tags: Array<InMemoryTag>
   names: { [string]: boolean }
   hashes: { [string]: string } = {}
   deferredInjections: { [string]: string } = {}
-  componentTags: { [string]: Tag }
+  componentTags: { [string]: InMemoryTag }
 
   constructor(onBrowser: boolean,
-    tags: Array<Tag> = [],
+    tags: Array<InMemoryTag> = [],
     names: { [string]: boolean } = {},
   ) {
     this.onBrowser = onBrowser
@@ -119,7 +120,7 @@ export default class StyleSheet {
   }
 
   createNewTag(isLocal: boolean) {
-    const newTag = new ServerTag(this.onBrowser, isLocal)
+    const newTag = new InMemoryTag(this.onBrowser, isLocal)
     this.tags.push(newTag)
     return newTag
   }
