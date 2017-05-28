@@ -59,8 +59,8 @@ const AttachingAdditionalProps = () => (
     />
 
     <p>
-      As you can see, we get access to our newly created props in the interpolations, and the <Code>type</Code>
-      attribute is passed down to the element.
+      As you can see, we get access to our newly created props in the interpolations, and
+      the <Code>type</Code> attribute is passed down to the element.
     </p>
 
 
