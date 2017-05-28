@@ -1,6 +1,3 @@
-node_modules
 lib
-npm-debug.log.*
 dist
-.DS_Store
 bundle-stats.html
