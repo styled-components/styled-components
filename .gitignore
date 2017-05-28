@@ -2,5 +2,8 @@
 node_modules
 *.log
 
+# Lerna
+/.changelog
+
 # Mac
 .DS_Store

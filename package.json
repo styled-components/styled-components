@@ -1,8 +1,10 @@
 {
   "scripts": {
-    "postinstall": "lerna bootstrap"
+    "postinstall": "lerna bootstrap",
+    "changelog": "lerna-changelog"
   },
   "devDependencies": {
-    "lerna": "^2.0.0-rc.5"
+    "lerna": "^2.0.0-rc.5",
+    "lerna-changelog": "0.4.0"
   }
 }
