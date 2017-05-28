@@ -19,7 +19,7 @@ import { ServerStyleSheet, StyleSheetManager } from 'styled-components'
 
 const sheet = new ServerStyleSheet()
 const html = renderToString(
-  <StyleSheetManager sheet={sheet}>
+  <StyleSheetManager sheet={sheet.instance}>
     <YourApp />
   </StyleSheetManager>
 )
