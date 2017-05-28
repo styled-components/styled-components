@@ -1,6 +1,6 @@
 // @flow
 import React, { Component } from 'react'
-import { mount } from 'enzyme'
+import { shallow } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
@@ -23,7 +23,7 @@ describe('basic', () => {
       expect(() => {
         // $FlowInvalidInputTest
         const Comp = styled(comp)
-        mount(<Comp />)
+        shallow(<Comp />)
         // $FlowInvalidInputTest
       }).toThrow(`Cannot create styled-component for component: ${comp}`)
     })
@@ -36,7 +36,7 @@ describe('basic', () => {
 
   it('should inject component class when rendered even if no styles are passed', () => {
     const Comp = styled.div``
-    mount(<Comp />)
+    shallow(<Comp />)
     expectCSSMatches('.sc-a {}')
   })
 
@@ -44,7 +44,7 @@ describe('basic', () => {
     const Comp = styled.div`
       color: blue;
     `
-    mount(<Comp />)
+    shallow(<Comp />)
     expectCSSMatches('.sc-a { } .b { color: blue; }')
   })
 
@@ -52,8 +52,8 @@ describe('basic', () => {
     const Comp = styled.div`
       color: blue;
     `
-    mount(<Comp />)
-    mount(<Comp />)
+    shallow(<Comp />)
+    shallow(<Comp />)
     expectCSSMatches('.sc-a {} .b { color: blue; }')
   })
 
@@ -97,7 +97,7 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = mount(<Wrapper />)
+      const wrapper = shallow(<Wrapper />)
       const component = wrapper.find(Comp).first()
 
       // $FlowFixMe
@@ -122,7 +122,7 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = mount(<Wrapper />)
+      const wrapper = shallow(<Wrapper />)
       const innerComponent = wrapper.find(InnerComponent).first()
 
       // $FlowFixMe
@@ -139,7 +139,7 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = mount(<Wrapper />)
+      const wrapper = shallow(<Wrapper />)
       expect(wrapper.find(InnerComponent).prop('className'))
         .toBe('test sc-a b')
     })
@@ -157,7 +157,7 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = mount(<Wrapper />)
+      const wrapper = shallow(<Wrapper />)
       const innerComponent = wrapper.find(InnerComponent).first()
       const outerComponent = wrapper.find(OuterComponent).first()
 
@@ -173,8 +173,8 @@ describe('basic', () => {
       const SecondComponent = styled.div`color: blue;`
 
       // NOTE: We're mounting second before first and check if we're breaking their order
-      mount(<SecondComponent />)
-      mount(<FirstComponent />)
+      shallow(<SecondComponent />)
+      shallow(<FirstComponent />)
 
       expectCSSMatches('.sc-a {} .d { color: red; } .sc-b {} .c { color: blue; }')
     })

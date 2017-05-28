@@ -55,6 +55,7 @@ export const stripWhitespace = (str: string) =>
   str.trim().replace(/([;\{\}])/g, '$1  ').replace(/\s+/g, ' ')
 
 export const expectCSSMatches = (expectation: string, opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }) => {
+  StyleSheet.instance.flush()
   const css = Array.from(document.querySelectorAll('style')).map(tag => tag.innerHTML).join("\n")
 
   if (opts.ignoreWhitespace) {
