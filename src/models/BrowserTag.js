@@ -32,7 +32,10 @@ export default class BrowserTag {
     console.log("BT flush")
     Object.keys(memoryTag.components).forEach(componentId => {
       if (!this.components[componentId]) this.addComponent(componentId)
-      this.inject(componentId, memoryTag.components[componentId].css.slice(this.components[componentId].index).join(''), memoryTag.names)
+      const css = memoryTag.components[componentId].css
+      const comp = this.components[componentId]
+      this.inject(componentId, css.slice(comp.index).join(''), memoryTag.names)
+      comp.index = css.length
     })
   }
 
@@ -49,15 +52,14 @@ export default class BrowserTag {
   }
 
   inject(componentId: string, css: string, names: Array<string>) {
+    console.log(`INJECT css ${css}`)
     if (!css) return
     if (!this.ready) this.replaceElement()
     const comp = this.components[componentId]
-    console.log(`INJECT css ${css}`)
 
     if (!comp) throw new Error('Must add a new component before you can inject css into it')
 
     comp.textNode.appendData(css)
-    comp.index = css.length
     if (names.length > 0) {
       this.el.setAttribute(SC_ATTR, names.join(' '))
     }

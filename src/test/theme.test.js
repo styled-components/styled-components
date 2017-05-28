@@ -5,6 +5,7 @@ import { mount, render } from 'enzyme'
 import { resetStyled, expectCSSMatches } from './utils'
 import ThemeProvider from '../models/ThemeProvider'
 import withTheme from '../hoc/withTheme'
+import StyleSheet from '../models/StyleSheet'
 
 let styled
 

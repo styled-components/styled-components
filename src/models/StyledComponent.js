@@ -126,13 +126,16 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     componentDidMount() {
+      console.log("CDM")
       this.getStyleSheetInstance().flush()
     }
     componentDidUpdate() {
+      console.log("CDU")
       this.getStyleSheetInstance().flush()
     }
 
     render() {
+      console.log("RENDER")
       const { innerRef } = this.props
       const { generatedClassName } = this.state
       const { styledComponentId, target } = this.constructor
