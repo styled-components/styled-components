@@ -3,6 +3,7 @@
   "version": "independent",
   "packages": [
     "packages/styled-components",
-    "packages/babel-plugin-styled-components"
+    "packages/babel-plugin-styled-components",
+    "packages/css-to-react-native"
   ]
 }
