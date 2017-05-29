@@ -1,3 +1,4 @@
+// @flow
 import BrowserTag from './BrowserTag'
 import { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
 

@@ -1,8 +1,7 @@
 // @flow
 import React from 'react'
-import StyleSheet, { SC_ATTR, LOCAL_ATTR, clones } from './StyleSheet'
+import StyleSheet, { clones } from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
-import { BrowserTag } from './BrowserStyleSheet'
 
 export default class ServerStyleSheet {
   instance: StyleSheet

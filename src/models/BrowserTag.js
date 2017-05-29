@@ -1,3 +1,4 @@
+// @flow
 import extractCompsFromCSS from '../utils/extractCompsFromCSS'
 import type InMemoryTag from './InMemoryTag'
 import { SC_ATTR } from './StyleSheet'
