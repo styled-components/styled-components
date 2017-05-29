@@ -1,0 +1,20 @@
+language: node_js
+dist: trusty
+node_js:
+  - 7
+  - 6
+script:
+  - node --version
+  - yarn --version
+  - cd /packages/styled-components && yarn run danger run -- --verbose
+  - cd /packages/styled-components && yarn run flow
+  - cd /packages/styled-components && yarn run lint && yarn run typescript && yarn run tslint && yarn run test
+  - cd /packages/babel-plugin-styled-components && yarn run test
+notifications:
+  email:
+    on_failure: change
+cache:
+  yarn: true
+  bundler: true
+  directories:
+    - node_modules
