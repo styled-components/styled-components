@@ -1,6 +1,8 @@
 import * as React from "react";
 import { StatelessComponent, ComponentClass, PureComponent, ReactElement } from "react";
 
+import { HTMLTags, SVGTags } from "./tags";
+
 type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 
 export interface ThemeProps<T> {
@@ -24,145 +26,6 @@ export interface InterpolationFunction<P> {
   (props: P): Interpolation<P>;
 }
 
-
-interface HtmlTags {
-  a: HTMLAnchorElement;
-  abbr: HTMLElement;
-  address: HTMLElement;
-  area: HTMLAreaElement;
-  article: HTMLElement;
-  aside: HTMLElement;
-  audio: HTMLAudioElement;
-  b: HTMLElement;
-  base: HTMLBaseElement;
-  bdi: HTMLElement;
-  bdo: HTMLElement;
-  big: HTMLElement;
-  blockquote: HTMLElement;
-  body: HTMLBodyElement;
-  br: HTMLBRElement;
-  button: HTMLButtonElement;
-  canvas: HTMLCanvasElement;
-  caption: HTMLElement;
-  cite: HTMLElement;
-  code: HTMLElement;
-  col: HTMLTableColElement;
-  colgroup: HTMLTableColElement;
-  data: HTMLElement;
-  datalist: HTMLDataListElement;
-  dd: HTMLElement;
-  del: HTMLElement;
-  details: HTMLElement;
-  dfn: HTMLElement;
-  dialog: HTMLElement;
-  div: HTMLDivElement;
-  dl: HTMLDListElement;
-  dt: HTMLElement;
-  em: HTMLElement;
-  embed: HTMLEmbedElement;
-  fieldset: HTMLFieldSetElement;
-  figcaption: HTMLElement;
-  figure: HTMLElement;
-  footer: HTMLElement;
-  form: HTMLFormElement;
-  h1: HTMLHeadingElement;
-  h2: HTMLHeadingElement;
-  h3: HTMLHeadingElement;
-  h4: HTMLHeadingElement;
-  h5: HTMLHeadingElement;
-  h6: HTMLHeadingElement;
-  head: HTMLHeadElement;
-  header: HTMLElement;
-  hgroup: HTMLElement;
-  hr: HTMLHRElement;
-  html: HTMLHtmlElement;
-  i: HTMLElement;
-  iframe: HTMLIFrameElement;
-  img: HTMLImageElement;
-  input: HTMLInputElement;
-  ins: HTMLModElement;
-  kbd: HTMLElement;
-  keygen: HTMLElement;
-  label: HTMLLabelElement;
-  legend: HTMLLegendElement;
-  li: HTMLLIElement;
-  link: HTMLLinkElement;
-  main: HTMLElement;
-  map: HTMLMapElement;
-  mark: HTMLElement;
-  menu: HTMLElement;
-  menuitem: HTMLElement;
-  meta: HTMLMetaElement;
-  meter: HTMLElement;
-  nav: HTMLElement;
-  noscript: HTMLElement;
-  object: HTMLObjectElement;
-  ol: HTMLOListElement;
-  optgroup: HTMLOptGroupElement;
-  option: HTMLOptionElement;
-  output: HTMLElement;
-  p: HTMLParagraphElement;
-  param: HTMLParamElement;
-  picture: HTMLElement;
-  pre: HTMLPreElement;
-  progress: HTMLProgressElement;
-  q: HTMLQuoteElement;
-  rp: HTMLElement;
-  rt: HTMLElement;
-  ruby: HTMLElement;
-  s: HTMLElement;
-  samp: HTMLElement;
-  script: HTMLElement;
-  section: HTMLElement;
-  select: HTMLSelectElement;
-  small: HTMLElement;
-  source: HTMLSourceElement;
-  span: HTMLSpanElement;
-  strong: HTMLElement;
-  style: HTMLStyleElement;
-  sub: HTMLElement;
-  summary: HTMLElement;
-  sup: HTMLElement;
-  table: HTMLTableElement;
-  tbody: HTMLTableSectionElement;
-  td: HTMLTableDataCellElement;
-  textarea: HTMLTextAreaElement;
-  tfoot: HTMLTableSectionElement;
-  th: HTMLTableHeaderCellElement;
-  thead: HTMLTableSectionElement;
-  time: HTMLElement;
-  title: HTMLTitleElement;
-  tr: HTMLTableRowElement;
-  track: HTMLTrackElement;
-  u: HTMLElement;
-  ul: HTMLUListElement;
-  "var": HTMLElement;
-  video: HTMLVideoElement;
-  wbr: HTMLElement;
-}
-
-interface SVGTags {
-  circle: SVGCircleElement;
-  clipPath: SVGClipPathElement;
-  defs: SVGDefsElement;
-  ellipse: SVGEllipseElement;
-  g: SVGGElement;
-  image: SVGImageElement;
-  line: SVGLineElement;
-  linearGradient: SVGLinearGradientElement;
-  mask: SVGMaskElement;
-  path: SVGPathElement;
-  pattern: SVGPatternElement;
-  polygon: SVGPolygonElement;
-  polyline: SVGPolylineElement;
-  radialGradient: SVGRadialGradientElement;
-  rect: SVGRectElement;
-  stop: SVGStopElement;
-  svg: SVGSVGElement;
-  text: SVGTextElement;
-  tspan: SVGTSpanElement;
-}
-
 type WithComponentOverloads<Tags, T> = {
   [K in keyof Tags]: StyledComponentClass<Tags[K], T>;
 };
@@ -170,7 +33,7 @@ type WithComponentOverloads<Tags, T> = {
 export interface StyledComponentClass<P, T> extends ComponentClass<ThemedOuterStyledProps<P, T>> {
   extend: ThemedStyledFunction<P, T>;
 
-  withComponent<K extends keyof HtmlTags>(tag: K): WithComponentOverloads<HtmlTags, T>[K];
+  withComponent<K extends keyof HTMLTags>(tag: K): WithComponentOverloads<HTMLTags, T>[K];
   withComponent<K extends keyof SVGTags>(tag: K): WithComponentOverloads<SVGTags, T>[K];
   withComponent(element: ComponentClass<P>): StyledComponentClass<ComponentClass<P>, T>;
 }
