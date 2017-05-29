@@ -24,94 +24,154 @@ export interface InterpolationFunction<P> {
   (props: P): Interpolation<P>;
 }
 
+
+interface HtmlTags {
+  a: HTMLAnchorElement;
+  abbr: HTMLElement;
+  address: HTMLElement;
+  area: HTMLAreaElement;
+  article: HTMLElement;
+  aside: HTMLElement;
+  audio: HTMLAudioElement;
+  b: HTMLElement;
+  base: HTMLBaseElement;
+  bdi: HTMLElement;
+  bdo: HTMLElement;
+  big: HTMLElement;
+  blockquote: HTMLElement;
+  body: HTMLBodyElement;
+  br: HTMLBRElement;
+  button: HTMLButtonElement;
+  canvas: HTMLCanvasElement;
+  caption: HTMLElement;
+  cite: HTMLElement;
+  code: HTMLElement;
+  col: HTMLTableColElement;
+  colgroup: HTMLTableColElement;
+  data: HTMLElement;
+  datalist: HTMLDataListElement;
+  dd: HTMLElement;
+  del: HTMLElement;
+  details: HTMLElement;
+  dfn: HTMLElement;
+  dialog: HTMLElement;
+  div: HTMLDivElement;
+  dl: HTMLDListElement;
+  dt: HTMLElement;
+  em: HTMLElement;
+  embed: HTMLEmbedElement;
+  fieldset: HTMLFieldSetElement;
+  figcaption: HTMLElement;
+  figure: HTMLElement;
+  footer: HTMLElement;
+  form: HTMLFormElement;
+  h1: HTMLHeadingElement;
+  h2: HTMLHeadingElement;
+  h3: HTMLHeadingElement;
+  h4: HTMLHeadingElement;
+  h5: HTMLHeadingElement;
+  h6: HTMLHeadingElement;
+  head: HTMLHeadElement;
+  header: HTMLElement;
+  hgroup: HTMLElement;
+  hr: HTMLHRElement;
+  html: HTMLHtmlElement;
+  i: HTMLElement;
+  iframe: HTMLIFrameElement;
+  img: HTMLImageElement;
+  input: HTMLInputElement;
+  ins: HTMLModElement;
+  kbd: HTMLElement;
+  keygen: HTMLElement;
+  label: HTMLLabelElement;
+  legend: HTMLLegendElement;
+  li: HTMLLIElement;
+  link: HTMLLinkElement;
+  main: HTMLElement;
+  map: HTMLMapElement;
+  mark: HTMLElement;
+  menu: HTMLElement;
+  menuitem: HTMLElement;
+  meta: HTMLMetaElement;
+  meter: HTMLElement;
+  nav: HTMLElement;
+  noscript: HTMLElement;
+  object: HTMLObjectElement;
+  ol: HTMLOListElement;
+  optgroup: HTMLOptGroupElement;
+  option: HTMLOptionElement;
+  output: HTMLElement;
+  p: HTMLParagraphElement;
+  param: HTMLParamElement;
+  picture: HTMLElement;
+  pre: HTMLPreElement;
+  progress: HTMLProgressElement;
+  q: HTMLQuoteElement;
+  rp: HTMLElement;
+  rt: HTMLElement;
+  ruby: HTMLElement;
+  s: HTMLElement;
+  samp: HTMLElement;
+  script: HTMLElement;
+  section: HTMLElement;
+  select: HTMLSelectElement;
+  small: HTMLElement;
+  source: HTMLSourceElement;
+  span: HTMLSpanElement;
+  strong: HTMLElement;
+  style: HTMLStyleElement;
+  sub: HTMLElement;
+  summary: HTMLElement;
+  sup: HTMLElement;
+  table: HTMLTableElement;
+  tbody: HTMLTableSectionElement;
+  td: HTMLTableDataCellElement;
+  textarea: HTMLTextAreaElement;
+  tfoot: HTMLTableSectionElement;
+  th: HTMLTableHeaderCellElement;
+  thead: HTMLTableSectionElement;
+  time: HTMLElement;
+  title: HTMLTitleElement;
+  tr: HTMLTableRowElement;
+  track: HTMLTrackElement;
+  u: HTMLElement;
+  ul: HTMLUListElement;
+  "var": HTMLElement;
+  video: HTMLVideoElement;
+  wbr: HTMLElement;
+}
+
+interface SVGTags {
+  circle: SVGCircleElement;
+  clipPath: SVGClipPathElement;
+  defs: SVGDefsElement;
+  ellipse: SVGEllipseElement;
+  g: SVGGElement;
+  image: SVGImageElement;
+  line: SVGLineElement;
+  linearGradient: SVGLinearGradientElement;
+  mask: SVGMaskElement;
+  path: SVGPathElement;
+  pattern: SVGPatternElement;
+  polygon: SVGPolygonElement;
+  polyline: SVGPolylineElement;
+  radialGradient: SVGRadialGradientElement;
+  rect: SVGRectElement;
+  stop: SVGStopElement;
+  svg: SVGSVGElement;
+  text: SVGTextElement;
+  tspan: SVGTSpanElement;
+}
+
+type WithComponentOverloads<Tags, T> = {
+  [K in keyof Tags]: StyledComponentClass<Tags[K], T>;
+};
+
 export interface StyledComponentClass<P, T> extends ComponentClass<ThemedOuterStyledProps<P, T>> {
   extend: ThemedStyledFunction<P, T>;
 
-  withComponent(
-    tag: "abbr" | "address" | "article" | "aside" | "b" | "bdi" | "bdo" |
-         "big" | "blockquote" | "caption" | "cite" | "code" | "data" | "dd" |
-         "del" | "details" | "dfn" | "dialog" | "dt" | "em" | "figcaption" |
-         "figure" | "footer" | "header" | "hgroup" | "l" | "i" | "kbd" |
-         "keygen" | "main" | "mark" | "menu" | "menuitem" | "meter" | "nav" |
-         "noscript" | "output" | "picture" | "rp" | "rt" | "ruby" | "s" |
-         "samp" | "script" | "section" | "small" | "strong" | "sub" |
-         "summary" | "sup" | "time" | "u" | "var" | "wbr"
-  ): StyledComponentClass<HTMLElement, T>;
-  withComponent(tag: "a"): StyledComponentClass<HTMLAnchorElement, T>;
-  withComponent(tag: "area"): StyledComponentClass<HTMLAreaElement, T>;
-  withComponent(tag: "audio"): StyledComponentClass<HTMLAudioElement, T>;
-  withComponent(tag: "base"): StyledComponentClass<HTMLBaseElement, T>;
-  withComponent(tag: "body"): StyledComponentClass<HTMLBodyElement, T>;
-  withComponent(tag: "br"): StyledComponentClass<HTMLBRElement, T>;
-  withComponent(tag: "button"): StyledComponentClass<HTMLButtonElement, T>;
-  withComponent(tag: "canvas"): StyledComponentClass<HTMLCanvasElement, T>;
-  withComponent(tag: "col" | "colgroup"): StyledComponentClass<HTMLTableColElement, T>;
-  withComponent(tag: "datalist"): StyledComponentClass<HTMLDataListElement, T>;
-  withComponent(tag: "div"): StyledComponentClass<HTMLDivElement, T>;
-  withComponent(tag: "dl"): StyledComponentClass<HTMLDListElement, T>;
-  withComponent(tag: "embed"): StyledComponentClass<HTMLEmbedElement, T>;
-  withComponent(tag: "fieldset"): StyledComponentClass<HTMLFieldSetElement, T>;
-  withComponent(tag: "form"): StyledComponentClass<HTMLFormElement, T>;
-  withComponent(tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6"): StyledComponentClass<HTMLHeadingElement, T>;
-  withComponent(tag: "head"): StyledComponentClass<HTMLHeadElement, T>;
-  withComponent(tag: "hr"): StyledComponentClass<HTMLHRElement, T>;
-  withComponent(tag: "iframe"): StyledComponentClass<HTMLIFrameElement, T>;
-  withComponent(tag: "img"): StyledComponentClass<HTMLImageElement, T>;
-  withComponent(tag: "input"): StyledComponentClass<HTMLInputElement, T>;
-  withComponent(tag: "ins"): StyledComponentClass<HTMLModElement, T>;
-  withComponent(tag: "label"): StyledComponentClass<HTMLLabelElement, T>;
-  withComponent(tag: "legend"): StyledComponentClass<HTMLLegendElement, T>;
-  withComponent(tag: "li"): StyledComponentClass<HTMLLIElement, T>;
-  withComponent(tag: "link"): StyledComponentClass<HTMLLinkElement, T>;
-  withComponent(tag: "map"): StyledComponentClass<HTMLMapElement, T>;
-  withComponent(tag: "meta"): StyledComponentClass<HTMLMetaElement, T>;
-  withComponent(tag: "object"): StyledComponentClass<HTMLObjectElement, T>;
-  withComponent(tag: "ol"): StyledComponentClass<HTMLOListElement, T>;
-  withComponent(tag: "optgroup"): StyledComponentClass<HTMLOptGroupElement, T>;
-  withComponent(tag: "option"): StyledComponentClass<HTMLOptionElement, T>;
-  withComponent(tag: "p"): StyledComponentClass<HTMLParagraphElement, T>;
-  withComponent(tag: "param"): StyledComponentClass<HTMLParamElement, T>;
-  withComponent(tag: "pre"): StyledComponentClass<HTMLPreElement, T>;
-  withComponent(tag: "progress"): StyledComponentClass<HTMLProgressElement, T>;
-  withComponent(tag: "q"): StyledComponentClass<HTMLQuoteElement, T>;
-  withComponent(tag: "select"): StyledComponentClass<HTMLSelectElement, T>;
-  withComponent(tag: "source"): StyledComponentClass<HTMLSourceElement, T>;
-  withComponent(tag: "span"): StyledComponentClass<HTMLSpanElement, T>;
-  withComponent(tag: "style"): StyledComponentClass<HTMLStyleElement, T>;
-  withComponent(tag: "table"): StyledComponentClass<HTMLTableElement, T>;
-  withComponent(tag: "tbody"): StyledComponentClass<HTMLTableSectionElement, T>;
-  withComponent(tag: "td"): StyledComponentClass<HTMLTableDataCellElement, T>;
-  withComponent(tag: "textarea"): StyledComponentClass<HTMLTextAreaElement, T>;
-  withComponent(tag: "tfoot"): StyledComponentClass<HTMLTableSectionElement, T>;
-  withComponent(tag: "th"): StyledComponentClass<HTMLTableHeaderCellElement, T>;
-  withComponent(tag: "thead"): StyledComponentClass<HTMLTableSectionElement, T>;
-  withComponent(tag: "title"): StyledComponentClass<HTMLTitleElement, T>;
-  withComponent(tag: "tr"): StyledComponentClass<HTMLTableRowElement, T>;
-  withComponent(tag: "track"): StyledComponentClass<HTMLTrackElement, T>;
-  withComponent(tag: "ul"): StyledComponentClass<HTMLUListElement, T>;
-  withComponent(tag: "video"): StyledComponentClass<HTMLVideoElement, T>;
-
-  // SVG
-  withComponent(tag: "circle"): StyledComponentClass<SVGCircleElement, T>;
-  withComponent(tag: "clipPath"): StyledComponentClass<SVGClipPathElement, T>;
-  withComponent(tag: "defs"): StyledComponentClass<SVGDefsElement, T>;
-  withComponent(tag: "ellipse"): StyledComponentClass<SVGEllipseElement, T>;
-  withComponent(tag: "g"): StyledComponentClass<SVGGElement, T>;
-  withComponent(tag: "image"): StyledComponentClass<SVGImageElement, T>;
-  withComponent(tag: "line"): StyledComponentClass<SVGLineElement, T>;
-  withComponent(tag: "linearGradient"): StyledComponentClass<SVGLinearGradientElement, T>;
-  withComponent(tag: "mask"): StyledComponentClass<SVGMaskElement, T>;
-  withComponent(tag: "path"): StyledComponentClass<SVGPathElement, T>;
-  withComponent(tag: "pattern"): StyledComponentClass<SVGPatternElement, T>;
-  withComponent(tag: "polygon"): StyledComponentClass<SVGPolygonElement, T>;
-  withComponent(tag: "polyline"): StyledComponentClass<SVGPolylineElement, T>;
-  withComponent(tag: "radialGradient"): StyledComponentClass<SVGRadialGradientElement, T>;
-  withComponent(tag: "rect"): StyledComponentClass<SVGRectElement, T>;
-  withComponent(tag: "stop"): StyledComponentClass<SVGStopElement, T>;
-  withComponent(tag: "svg"): StyledComponentClass<SVGSVGElement, T>;
-  withComponent(tag: "text"): StyledComponentClass<SVGTextElement, T>;
-  withComponent(tag: "tspan"): StyledComponentClass<SVGTSpanElement, T>;
-
+  withComponent<K extends keyof HtmlTags>(tag: K): WithComponentOverloads<HtmlTags, T>[K];
+  withComponent<K extends keyof SVGTags>(tag: K): WithComponentOverloads<SVGTags, T>[K];
   withComponent(element: ComponentClass<P>): StyledComponentClass<ComponentClass<P>, T>;
 }
 

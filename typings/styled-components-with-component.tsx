@@ -34,7 +34,8 @@ class Random extends React.Component<any, any> {
   }
 }
 
-// We're extending Button with some extra styles
 const H2 = H1.withComponent("h2");
+const a = H1.withComponent("a");
+const abbr = H1.withComponent("abbr");
 
 const RandomHeading = H1.withComponent(Random);
