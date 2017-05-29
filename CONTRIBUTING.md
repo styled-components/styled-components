@@ -10,7 +10,7 @@ Please also give the code of conduct a read.
   Also make sure that no one else is already working on it. We don't want you to be
   disappointed.
 
-2. Fork, then clone: `git clone httpsL://github.com/YOUR_USERNAME/styled-components.git`
+2. Fork, then clone: `git clone https://github.com/YOUR_USERNAME/styled-components.git`
 
 3. Create a branch with a meaningful name for the issue: `git checkout -b fix-something`
 
@@ -35,4 +35,3 @@ Run `npm install` and edit code in the `src/` folder. It's luckily very simple! 
 When you commit our pre-commit hook will run, which executes `lint-staged`. It will run
 the linter automatically and warn you, if the code you've written doesn't comply with our
 code style.
-
