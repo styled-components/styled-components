@@ -1,0 +1,13 @@
+{
+  "presets": [
+    "env"
+  ],
+  "plugins": [
+    ["../../../src", {
+      "ssr": false,
+      "displayName": true,
+      "transpileTemplateLiterals": true,
+      "preprocess": false
+    }]
+  ]
+}

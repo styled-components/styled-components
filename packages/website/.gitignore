@@ -1,0 +1,9 @@
+# Node
+.env
+lib/
+es/
+dist/
+_book/
+
+# Mac
+.*/

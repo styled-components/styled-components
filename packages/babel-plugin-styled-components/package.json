@@ -1,0 +1,38 @@
+{
+  "version": "1.1.4",
+  "name": "babel-plugin-styled-components",
+  "description": "Improve the debugging experience and add server-side rendering support to styled-components",
+  "repository": "styled-components/babel-plugin-styled-components",
+  "contributors": [
+    "Vladimir Danchenkov <vladimir.danchenkov@gmail.com>",
+    "Max Stoiber <contact@mxstbr.com>"
+  ],
+  "main": "lib/index.js",
+  "files": [
+    "lib"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "babel-cli": "^6.24.0",
+    "babel-preset-env": "^1.2.2",
+    "jest": "^17.0.3"
+  },
+  "scripts": {
+    "clean": "rm -rf lib",
+    "build": "babel src -d lib",
+    "test": "jest",
+    "test:watch": "npm run test -- --watch",
+    "prepublish": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "styled-components",
+    "css-in-js",
+    "babel-plugin",
+    "server-side rendering",
+    "ssr",
+    "displayName"
+  ],
+  "dependencies": {
+    "stylis": "2.0.0"
+  }
+}

@@ -6,9 +6,12 @@ node_js:
 script:
   - node --version
   - yarn --version
+  - cd packages/styled-components
   - yarn run danger run -- --verbose
   - yarn run flow
   - yarn run lint && yarn run typescript && yarn run tslint && yarn run test
+  - cd ../babel-plugin-styled-components
+  - yarn run test
 notifications:
   email:
     on_failure: change
