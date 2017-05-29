@@ -20,5 +20,5 @@ cache:
 test_script:
   - node --version
   - yarn --version
-  - yarn run flow
-  - yarn run lint && npm run test
+  - cd /packages/styled-components && yarn run flow
+  - cd /packages/styled-components && yarn run lint && npm run test
