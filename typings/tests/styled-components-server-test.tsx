@@ -1,5 +1,5 @@
 import { renderToString } from "react-dom/server";
-import styled, { ServerStyleSheet, StyleSheetManager } from "..";
+import styled, { ServerStyleSheet, StyleSheetManager } from "../..";
 
 const Title = styled.h1`
   font-size: 1.5em;

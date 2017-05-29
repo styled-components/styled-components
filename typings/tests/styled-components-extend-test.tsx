@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import styled from "..";
+import styled from "../..";
 
 const Button = styled.button`
   color: palevioletred;

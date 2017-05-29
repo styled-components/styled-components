@@ -1,7 +1,7 @@
 import * as React from "react";
 
-import styled from "..";
-import { css, keyframes, ThemeProvider, injectGlobal, withTheme, ThemeProps } from "..";
+import styled from "../..";
+import { css, keyframes, ThemeProvider, injectGlobal, withTheme, ThemeProps } from "../..";
 
 
 class MyComponent extends React.Component<ThemeProps<{}>, {}> {
