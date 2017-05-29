@@ -48,6 +48,15 @@ describe('basic', () => {
     expectCSSMatches('.sc-a { } .b { color: blue; }')
   })
 
+  it('should inject styles but only after a flush', () => {
+    const Comp = styled.div`
+      color: blue;
+    `
+    shallow(<Comp />)
+    expectCSSMatches('', { flush: false })
+    expectCSSMatches('.sc-a { } .b { color: blue; }', { flush: true })
+  })
+
   it('should inject only once for a styled component, no matter how often it\'s mounted', () => {
     const Comp = styled.div`
       color: blue;

@@ -54,11 +54,15 @@ const stripComments = (str: string) =>
 export const stripWhitespace = (str: string) =>
   str.trim().replace(/([;\{\}])/g, '$1  ').replace(/\s+/g, ' ')
 
-export const expectCSSMatches = (expectation: string, opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }) => {
-  StyleSheet.instance.flush()
+export const expectCSSMatches = (
+  expectation: string,
+  opts: ?Object,
+) => {
+  const { ignoreWhitespace = true, flush = true } = opts || {}
+  if (flush) StyleSheet.instance.flush()
   const css = Array.from(document.querySelectorAll('style')).map(tag => tag.innerHTML).join("\n")
 
-  if (opts.ignoreWhitespace) {
+  if (ignoreWhitespace) {
     const stripped = stripWhitespace(stripComments(css))
     expect(stripped).toEqual(stripWhitespace(expectation))
     return stripped
