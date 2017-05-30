@@ -50,11 +50,17 @@ export type HtmlStyledFunction<E> = ThemedHtmlStyledFunction<E, any>;
 export type ThemedSvgStyledFunction<E extends SVGElement, T> = ThemedStyledFunction<React.SVGAttributes<E>, T>;
 export type SvgStyledFunction<E extends SVGElement> = ThemedSvgStyledFunction<E, any>;
 
-type Base<T> = {
+type ThemedStyledComponentFactoriesHTML<T> = {
     [K in keyof HTMLTags]: ThemedHtmlStyledFunction<HTMLTags[K], T>;
 }
 
-export interface ThemedBaseStyledInterface<T> extends Base<T> {
+type ThemedStyledComponentFactoriesSVG<T> = {
+    [K in keyof SVGTags]: ThemedSvgStyledFunction<SVGTags[K], T>;
+}
+
+type ThemedStyledComponentFactories<T> = ThemedStyledComponentFactoriesHTML<T> & ThemedStyledComponentFactoriesHTML<T>;
+
+export interface ThemedBaseStyledInterface<T> extends ThemedStyledComponentFactories<T> {
   <P>(component: Component<P>): ThemedStyledFunction<P, T>;
 }
 export type BaseStyledInterface = ThemedBaseStyledInterface<any>;
