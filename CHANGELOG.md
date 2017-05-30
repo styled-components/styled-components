@@ -4,7 +4,11 @@ All notable changes to this project will be documented in this file. If a contri
 
 *The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).*
 
-## [Upcoming Major Release]
+## [Unreleased]
+
+- Upgrade stylis to v3.0.4. (see [#829](https://github.com/styled-components/styled-components/pull/829))
+
+## [v2.0.0] - 2017-05-25
 
 - Update css-to-react-native - you'll now need to add units to your React Native styles (see [css-to-react-native](https://github.com/styled-components/css-to-react-native/issues/20), [code mod](https://github.com/styled-components/styled-components-native-code-mod))
 - Update stylis to latest version (see [#496](https://github.com/styled-components/styled-components/pull/496)).
@@ -245,7 +249,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v1.4.6...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.0.0...master
+[v2.0.0]: https://github.com/styled-components/styled-components/compare/v1.4.6...v2.0.0
 [v1.4.6]: https://github.com/styled-components/styled-components/compare/v1.4.5...v1.4.6
 [v1.4.5]: https://github.com/styled-components/styled-components/compare/v1.4.4...v1.4.5
 [v1.4.4]: https://github.com/styled-components/styled-components/compare/v1.4.3...v1.4.4

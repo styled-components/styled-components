@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import styled from "..";
-import { css, keyframes, ThemeProvider, injectGlobal, withTheme } from "..";
+import { css, keyframes, ThemeProvider, injectGlobal, withTheme, ServerStyleSheet } from "..";
 
 // Create a <Title> react component that renders an <h1> which is
 // centered, palevioletred and sized at 1.5em
@@ -155,3 +155,10 @@ const name = "hey";
 const ThemedButton = withTheme(MyButton);
 
 <ThemedButton name={name} />;
+
+// server-side rendering styles
+const sheet = new ServerStyleSheet();
+sheet.collectStyles(<ThemedButton name={name} />)
+const styleString = sheet.getStyleTags();
+const styleElement = sheet.getStyleElement();
+ServerStyleSheet.create();
