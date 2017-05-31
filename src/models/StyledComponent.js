@@ -206,7 +206,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
       static extendWith(tag) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options
-        const newOptions = { ...optionsToCopy, rules, ParentComponent: StyledComponent }
+        const newOptions = {
+          ...optionsToCopy,
+          rules: StyledComponent.componentStyle.rules,
+          ParentComponent: StyledComponent,
+        }
         return constructWithOptions(createStyledComponent, tag, newOptions)
       }
 
