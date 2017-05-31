@@ -145,4 +145,17 @@ describe('extending', () => {
 
     expect(shallow(<Child />).html()).toEqual('<span class="sc-b c"></span>')
   })
+
+  it('should copy nested rules to multiple child', () => {
+    const Parent = styled.div`color: red;`
+    const Child = Parent.extendWith('span')`font-size: 10px;`
+    const ChildChild = Child.extendWith('span')`background-color: pink;`
+    const ChildChildChild = ChildChild.extendWith('span')`background-color: yellow;`
+
+    shallow(<ChildChildChild />)
+
+    expectCSSMatches(`
+      .sc-d {} .e { color: red; font-size: 10px; background-color: pink; background-color: yellow; }
+    `)
+  })
 })
