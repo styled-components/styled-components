@@ -30,18 +30,25 @@ type WithComponentOverloads<Tags, T> = {
   [K in keyof Tags]: StyledComponentClass<Tags[K], T>;
 };
 
+type PropsToFunctions<P, T> = {
+  // [K in keyof P]: (props: ThemedOuterStyledProps<P, T>) => any;
+}
+
 export interface StyledComponentClass<P, T> extends ComponentClass<ThemedOuterStyledProps<P, T>> {
   extend: ThemedStyledFunction<P, T>;
 
   withComponent<K extends keyof HTMLTags>(tag: K): WithComponentOverloads<HTMLTags, T>[K];
   withComponent<K extends keyof SVGTags>(tag: K): WithComponentOverloads<SVGTags, T>[K];
   withComponent(element: ComponentClass<P>): StyledComponentClass<P, T>;
+  attrs(attrs: P | PropsToFunctions<ThemedOuterStyledProps<P, T>, T>): ThemedStyledFunction<P, T>;
 }
 
 export interface ThemedStyledFunction<P, T> {
   (strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): StyledComponentClass<P, T>;
   <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P, T>;
+  attrs(attrs: P | PropsToFunctions<ThemedOuterStyledProps<P, T>, T>): ThemedStyledFunction<P, T>;
 }
+
 export type StyledFunction<P> = ThemedStyledFunction<P, any>;
 
 export type ThemedHtmlStyledFunction<E, T> = ThemedStyledFunction<React.HTMLProps<E>, T>;
