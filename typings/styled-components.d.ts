@@ -35,7 +35,7 @@ export interface StyledComponentClass<P, T> extends ComponentClass<ThemedOuterSt
 
   withComponent<K extends keyof HTMLTags>(tag: K): WithComponentOverloads<HTMLTags, T>[K];
   withComponent<K extends keyof SVGTags>(tag: K): WithComponentOverloads<SVGTags, T>[K];
-  withComponent(element: ComponentClass<P>): StyledComponentClass<ComponentClass<P>, T>;
+  withComponent(element: ComponentClass<P>): StyledComponentClass<P, T>;
 }
 
 export interface ThemedStyledFunction<P, T> {
