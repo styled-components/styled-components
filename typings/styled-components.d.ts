@@ -43,13 +43,13 @@ export interface StyledComponentClass<P, T, O = P> extends ComponentClass<Themed
   withComponent<K extends keyof HTMLTags>(tag: K): WithComponentOverloads<HTMLTags, T>[K];
   withComponent<K extends keyof SVGTags>(tag: K): WithComponentOverloads<SVGTags, T>[K];
   withComponent(element: ComponentClass<P>): StyledComponentClass<P, T>;
-  attrs<U, A  extends Partial<P> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<P & A & U, T, O & U>;
+  attrs<U, A  extends Partial<P> = {}>(attrs: Attrs<P | U, A, T>): ThemedStyledFunction<P & A & U, T, O & U>;
 }
 
 export interface ThemedStyledFunction<P, T, O = P> {
   (strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): StyledComponentClass<P, T>;
   <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P, T>;
-  attrs<U, A extends Partial<P> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<P & A & U, T, O & U>;
+  attrs<U, A extends Partial<P> = {}>(attrs: Attrs<P | U, A, T>): ThemedStyledFunction<P & A & U, T, O & U>;
 }
 
 export type StyledFunction<P> = ThemedStyledFunction<P, any>;
