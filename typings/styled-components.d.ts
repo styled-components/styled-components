@@ -5,8 +5,11 @@ import { HTMLTags, SVGTags } from "./tags";
 
 type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 
+type ThemeFunction<T> = (theme: any | T) => any | T;
+type Theme<T> = any | ThemeFunction<T>;
+
 export interface ThemeProps<T> {
-  theme: T;
+  theme: Theme<T>;
 }
 
 export type ThemedStyledProps<P, T> = P & ThemeProps<T>;
