@@ -30,9 +30,9 @@ type WithComponentOverloads<Tags, T> = {
   [K in keyof Tags]: StyledComponentClass<Tags[K], T>;
 };
 
-type PropsToFunctions<P, T> = {
-  // [K in keyof P]: (props: ThemedOuterStyledProps<P, T>) => any;
-}
+type Attrs<P, A extends Partial<P>, T> = {
+  [K in keyof A]: ((props: ThemedStyledProps<P, T>) => A[K]) | A[K];
+};
 
 export interface StyledComponentClass<P, T> extends ComponentClass<ThemedOuterStyledProps<P, T>> {
   extend: ThemedStyledFunction<P, T>;
@@ -40,13 +40,13 @@ export interface StyledComponentClass<P, T> extends ComponentClass<ThemedOuterSt
   withComponent<K extends keyof HTMLTags>(tag: K): WithComponentOverloads<HTMLTags, T>[K];
   withComponent<K extends keyof SVGTags>(tag: K): WithComponentOverloads<SVGTags, T>[K];
   withComponent(element: ComponentClass<P>): StyledComponentClass<P, T>;
-  attrs(attrs: P | PropsToFunctions<ThemedOuterStyledProps<P, T>, T>): ThemedStyledFunction<P, T>;
+  attrs<U, A  extends Partial<P> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<P & A & U, T, O & U>;
 }
 
-export interface ThemedStyledFunction<P, T> {
+export interface ThemedStyledFunction<P, T, O = P> {
   (strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): StyledComponentClass<P, T>;
   <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P, T>;
-  attrs(attrs: P | PropsToFunctions<ThemedOuterStyledProps<P, T>, T>): ThemedStyledFunction<P, T>;
+  attrs<U, A  extends Partial<P> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<P & A & U, T, O & U>;
 }
 
 export type StyledFunction<P> = ThemedStyledFunction<P, any>;
