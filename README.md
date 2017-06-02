@@ -106,6 +106,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 #### Helpers
 - [styled-props](https://github.com/RafalFilipek/styled-props): Simple lib that allows you to set styled props in your styled-components without stress ([demo](http://www.webpackbin.com/N1EKUqgvG))
 - [styled-components-breakpoint](https://github.com/jameslnewell/styled-components-breakpoint): Utility function for using breakpoints with `styled-components`.
+- [styled-components-theme](https://github.com/erikras/styled-components-theme): A library for refering to theme colors and modifying them inline. e.g. `color: ${primary.lighten(0.3)};`
 - [styled-theme](https://github.com/diegohaz/styled-theme): Extensible theming system for styled-components.
 - [styled-tools](https://github.com/diegohaz/styled-tools): Useful interpolated functions for styled-components.
 - [styled-ax](https://github.com/Lokua/styled-ax): Functional theme property accessor(s)
