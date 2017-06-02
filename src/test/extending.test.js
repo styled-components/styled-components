@@ -163,10 +163,10 @@ describe('extending', () => {
     const Parent = styled.button`
       color: red;
     `
-    const Child = Parent.withComponent('a').attrs({
+    const Child = Parent.withComponent('a').extend.attrs({
       href: '/test'
     })``
 
-    expect(shallow(<Child />).html()).toEqual('<a class="sc-b c" href="/test"></a>')
+    expect(shallow(<Child />).html()).toEqual('<a href="/test" class="sc-c d"></a>')
   })
 })
