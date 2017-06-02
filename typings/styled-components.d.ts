@@ -96,11 +96,17 @@ export function injectGlobal(strings: TemplateStringsArray, ...interpolations: S
 
 export const ThemeProvider: ThemeProviderComponent<any>;
 
-export class StyleSheetManager extends React.Component<{ sheet: ServerStyleSheet }, any> { }
+interface StylesheetComponentProps {
+  sheet: ServerStyleSheet;
+}
+
+export class StyleSheetManager extends React.Component<StylesheetComponentProps, any> { }
 
 export class ServerStyleSheet {
   collectStyles(children: ReactElement<any>): StyleSheetManager
-  collectStyles(tree: any): StyleSheetManager;
+  collectStyles(tree: React.ReactNode): StyleSheetManager;
+  collectStyles(tree: React.ReactNode): ReactElement<{ sheet: ServerStyleSheet; }>;
+
   getStyleTags(): string;
   getStyleElement(): ReactElement<any>[]
   static create(): StyleSheet
