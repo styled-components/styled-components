@@ -158,4 +158,15 @@ describe('extending', () => {
       .sc-c {} .d { color: red; color: green; }
     `)
   })
+
+  it('should allow changing component and adding attributes', () => {
+    const Parent = styled.button`
+      color: red;
+    `
+    const Child = Parent.withComponent('a').extend.attrs({
+      href: '/test'
+    })``
+
+    expect(shallow(<Child />).html()).toEqual('<a href="/test" class="sc-c d"></a>')
+  })
 })

@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## [Unreleased]
 
+- Added a test for `withComponent` followed by `attrs`, thanks to [@btmills](https://github.com/btmills). (see [#851](https://github.com/styled-components/styled-components/pull/851))
 - Upgrade stylis to v3.0.4. (see [#829](https://github.com/styled-components/styled-components/pull/829))
 
 ## [v2.0.0] - 2017-05-25
