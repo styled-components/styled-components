@@ -29,10 +29,6 @@ export interface InterpolationFunction<P> {
   (props: P): Interpolation<P>;
 }
 
-type WithComponentOverloads<Tags, T> = {
-  [K in keyof Tags]: StyledComponentClass<Tags[K], T>;
-};
-
 type Attrs<P, A extends Partial<P>, T> = {
   [K in keyof A]: ((props: ThemedStyledProps<P, T>) => A[K]) | A[K];
 };
@@ -40,8 +36,8 @@ type Attrs<P, A extends Partial<P>, T> = {
 export interface StyledComponentClass<P, T, O = P> extends ComponentClass<ThemedOuterStyledProps<P, T>> {
   extend: ThemedStyledFunction<P, T>;
 
-  withComponent<K extends keyof HTMLTags>(tag: K): WithComponentOverloads<HTMLTags, T>[K];
-  withComponent<K extends keyof SVGTags>(tag: K): WithComponentOverloads<SVGTags, T>[K];
+  withComponent<K extends keyof HTMLTags>(tag: K): StyledComponentClass<HTMLTags[K], T>;
+  withComponent<K extends keyof SVGTags>(tag: K): StyledComponentClass<SVGTags[K], T>;
   withComponent(element: ComponentClass<P>): StyledComponentClass<P, T>;
   attrs<U, A  extends Partial<P> = {}>(attrs: Attrs<P | U, A, T>): ThemedStyledFunction<P & A & U, T, O & U>;
 }
