@@ -39,7 +39,6 @@ export interface StyledComponentClass<P, T, O = P> extends ComponentClass<Themed
   withComponent<K extends keyof HTMLTags>(tag: K): StyledComponentClass<HTMLTags[K], T>;
   withComponent<K extends keyof SVGTags>(tag: K): StyledComponentClass<SVGTags[K], T>;
   withComponent(element: ComponentClass<P>): StyledComponentClass<P, T>;
-  attrs<U, A  extends Partial<P> = {}>(attrs: Attrs<P | U, A, T>): ThemedStyledFunction<P & A & U, T, O & U>;
 }
 
 export interface ThemedStyledFunction<P, T, O = P> {
