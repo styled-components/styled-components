@@ -1,4 +1,4 @@
-import * as React from "react-native";
+import * as React from "react";
 import styled from "../../native";
 
 const StyledView = styled.View`
