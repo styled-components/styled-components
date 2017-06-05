@@ -13,7 +13,7 @@ export type ThemedStyledProps<P, T> = P & ThemeProps<T>;
 export type StyledProps<P> = ThemedStyledProps<P, any>;
 
 export type ThemedOuterStyledProps<P, T> = P & {
-  theme?: T | ((theme: T) => T);
+  theme?: T;
   innerRef?: (instance: any) => void;
 };
 export type OuterStyledProps<P> = ThemedOuterStyledProps<P, any>;
@@ -70,7 +70,10 @@ export type BaseStyledInterface = ThemedBaseStyledInterface<any>;
 export type ThemedStyledInterface<T> = ThemedBaseStyledInterface<T>;
 export type StyledInterface = ThemedStyledInterface<any>;
 
-export type ThemeProviderComponent<T> = ComponentClass<ThemeProps<T>>;
+export interface ThemeProviderProps<T> {
+  theme?: T | ((theme: T) => T);
+}
+export type ThemeProviderComponent<T> = ComponentClass<ThemeProviderProps<T>>;
 
 export interface ThemedCssFunction<T> {
   (strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): InterpolationValue[];
