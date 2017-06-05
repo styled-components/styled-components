@@ -1,13 +1,13 @@
 import * as React from "react";
 
-import styled from "..";
+import styled from "../..";
 
 const H1 = styled.h1`
   color: palevioletred;
   font-size: 1em;
 `;
 
-function getRandomInt(min, max) {
+function getRandomInt(min: number, max: number) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min)) + min;
@@ -30,6 +30,8 @@ class Random extends React.Component<any, any> {
         return <h5>Hello World</h5>;
       case 6:
         return <h6>Hello World</h6>;
+      default:
+        return null;
     }
   }
 }
