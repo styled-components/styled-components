@@ -55,6 +55,55 @@ describe('native', () => {
         }, undefined
       ])
     })
+
+    it('should combine styles of extending components in >= 3 inheritances', () => {
+      const GrandGrandParent = styled.View`background-color: red;`
+      const GrandParent = GrandGrandParent.extend`borderWidth: 10;`
+      const Parent = GrandParent.extend`opacity: 0.9;`
+      const Child = Parent.extend`padding: 10px;`
+
+      const grandGrandParent = shallow(<GrandGrandParent />)
+      const grandParent = shallow(<GrandParent />)
+      const parent = shallow(<Parent />)
+      const child = shallow(<Child />)
+
+      expect(grandGrandParent.find('View').prop('style')).toEqual([
+        {
+          backgroundColor: 'red',
+        },
+        undefined,
+      ])
+
+      expect(grandParent.find('View').prop('style')).toEqual([
+        {
+          backgroundColor: 'red',
+          borderWidth: 10,
+        },
+        undefined,
+      ])
+
+      expect(parent.find('View').prop('style')).toEqual([
+        {
+          backgroundColor: 'red',
+          borderWidth: 10,
+          opacity: 0.9,
+        },
+        undefined,
+      ])
+
+      expect(child.find('View').prop('style')).toEqual([
+        {
+          backgroundColor: 'red',
+          borderWidth: 10,
+          opacity: 0.9,
+          paddingTop: 10,
+          paddingRight: 10,
+          paddingBottom: 10,
+          paddingLeft: 10,
+        },
+        undefined,
+      ])
+    })
   })
 
   describe('attrs', () => {
