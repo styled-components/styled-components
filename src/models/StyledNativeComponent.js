@@ -147,7 +147,6 @@ export default (constructWithOptions: Function) => {
     // $FlowFixMe
     BaseStyledNativeComponent.prototype[methodKey] = function nativeProxy(...args) {
       if (this.root !== undefined) {
-        // $FlowFixMe
         this.root[methodKey](...args)
       } else {
         const { displayName } = this.constructor
