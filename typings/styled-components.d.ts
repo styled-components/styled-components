@@ -5,11 +5,8 @@ import { HTMLTags, SVGTags } from "./tags";
 
 type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 
-type ThemeFunction<T> = (theme: any | T) => any | T;
-type Theme<T> = any | ThemeFunction<T>;
-
 export interface ThemeProps<T> {
-  theme: Theme<T>;
+  theme: T;
 }
 
 export type ThemedStyledProps<P, T> = P & ThemeProps<T>;
@@ -33,18 +30,18 @@ type Attrs<P, A extends Partial<P>, T> = {
   [K in keyof A]: ((props: ThemedStyledProps<P, T>) => A[K]) | A[K];
 };
 
-export interface StyledComponentClass<P, T, O = P> extends ComponentClass<ThemedOuterStyledProps<P, T>> {
-  extend: ThemedStyledFunction<P, T>;
+export interface StyledComponentClass<P, T, O = P> extends ComponentClass<ThemedOuterStyledProps<O, T>> {
+  extend: ThemedStyledFunction<P, T, O>;
 
-  withComponent<K extends keyof HTMLTags>(tag: K): StyledComponentClass<HTMLTags[K], T>;
-  withComponent<K extends keyof SVGTags>(tag: K): StyledComponentClass<SVGTags[K], T>;
-  withComponent(element: ComponentClass<P>): StyledComponentClass<P, T>;
+  withComponent<K extends keyof HTMLTags>(tag: K): StyledComponentClass<React.HTMLProps<HTMLTags[K]>, T, O>;
+  withComponent<K extends keyof SVGTags>(tag: K): StyledComponentClass<React.SVGAttributes<SVGTags[K]>, T, O>;
+  withComponent(element: ComponentClass<P>): StyledComponentClass<P, T, O>;
 }
 
 export interface ThemedStyledFunction<P, T, O = P> {
-  (strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): StyledComponentClass<P, T>;
-  <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P, T>;
-  attrs<U, A extends Partial<P> = {}>(attrs: Attrs<P | U, A, T>): ThemedStyledFunction<P & A & U, T, O & U>;
+  (strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): StyledComponentClass<P, T, O>;
+  <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P & U, T, O & U>;
+  attrs<U, A extends Partial<P & U> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<P & A & U, T, O & U>;
 }
 
 export type StyledFunction<P> = ThemedStyledFunction<P, any>;
@@ -73,7 +70,10 @@ export type BaseStyledInterface = ThemedBaseStyledInterface<any>;
 export type ThemedStyledInterface<T> = ThemedBaseStyledInterface<T>;
 export type StyledInterface = ThemedStyledInterface<any>;
 
-export type ThemeProviderComponent<T> = ComponentClass<ThemeProps<T>>;
+export interface ThemeProviderProps<T> {
+  theme?: T | ((theme: T) => T);
+}
+export type ThemeProviderComponent<T> = ComponentClass<ThemeProviderProps<T>>;
 
 export interface ThemedCssFunction<T> {
   (strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): InterpolationValue[];
@@ -108,13 +108,10 @@ interface StylesheetComponentProps {
 export class StyleSheetManager extends React.Component<StylesheetComponentProps, any> { }
 
 export class ServerStyleSheet {
-  collectStyles(children: ReactElement<any>): StyleSheetManager
-  collectStyles(tree: React.ReactNode): StyleSheetManager;
-  collectStyles(tree: React.ReactNode): ReactElement<{ sheet: ServerStyleSheet; }>;
+  collectStyles(tree: React.ReactNode): ReactElement<StylesheetComponentProps>;
 
   getStyleTags(): string;
-  getStyleElement(): ReactElement<any>[]
-  static create(): StyleSheet
+  getStyleElement(): ReactElement<any>[];
 }
 
 export default styled;

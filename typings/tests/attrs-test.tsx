@@ -5,8 +5,8 @@ const Input = styled.input.attrs({
   type: "password",
 
   // or we can define dynamic ones
-  margin: props => props.size || "1em",
-  padding: props => props.size || "1em"
+  margin: (props: any) => props.size as string || "1em",
+  padding: (props: any) => props.size as string || "1em"
 })`
 	color: palevioletred;
 	font-size: 1em;

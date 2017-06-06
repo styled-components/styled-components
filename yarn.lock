@@ -2,6 +2,12 @@
 # yarn lockfile v1
 
 
+"@types/react-dom@^15.5.0":
+  version "15.5.0"
+  resolved "https://registry.yarnpkg.com/@types/react-dom/-/react-dom-15.5.0.tgz#7f4fb9613d4051141773242f7b6b5f1a46b34bd9"
+  dependencies:
+    "@types/react" "*"
+
 "@types/react-native@^0.44.4":
   version "0.44.4"
   resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.44.4.tgz#91ff838293f87f5b27827164fc1efe5e528b6f5a"

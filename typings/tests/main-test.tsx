@@ -134,7 +134,7 @@ const cssWithFunc1 = css`
 `;
 const cssWithFunc2 = css`
   ${cssWithFunc1}
-  ${props => cssWithFunc2}
+  ${props => cssWithFunc1}
   ${[cssWithFunc1, cssWithValues1]}
 `;
 // such css can be used in styled components
