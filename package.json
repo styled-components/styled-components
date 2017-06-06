@@ -7,10 +7,9 @@
   "jsnext:main": "dist/styled-components.es.js",
   "module": "dist/styled-components.es.js",
   "scripts": {
-    "build": "npm run build:lib && npm run build:dist && npm run build:flow",
+    "build": "npm run build:lib && npm run build:dist",
     "prebuild:lib": "rimraf lib/*",
     "build:lib": "babel --out-dir lib src",
-    "build:flow": "flow-copy-source -v -i '{**/test/*.js,**/*.test.js}' src lib",
     "prebuild:dist": "rimraf dist/*",
     "build:dist": "rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",

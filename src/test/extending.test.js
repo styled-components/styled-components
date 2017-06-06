@@ -138,6 +138,40 @@ describe('extending', () => {
     expect(Child.fetchData()).toEqual(1)
   })
 
+  it('should keep styles in >= 3 inheritances', () => {
+    const GrandGrandParent = styled.div`
+      background-color: red;
+    `
+
+    const GrandParent = GrandGrandParent.extend`
+      color: blue;
+    `
+
+    const Parent = GrandParent.extend`
+      border: 2px solid black;
+    `
+
+    const Child = Parent.extend`
+      border-width: 10;
+    `
+
+    shallow(<GrandGrandParent />)
+    shallow(<GrandParent />)
+    shallow(<Parent />)
+    shallow(<Child />)
+
+    expectCSSMatches(`
+      .sc-a { }
+      .e { background-color: red; }
+      .sc-b { }
+      .f { background-color: red; color: blue; }
+      .sc-c { }
+      .g { background-color: red; color: blue; border: 2px solid black; }
+      .sc-d { }
+      .h { background-color: red; color: blue; border: 2px solid black; border-width: 10; }
+    `)
+  })
+
   it('should allow changing component', () => {
     const Parent = styled.div`color: red;`
     const Child = Parent.withComponent('span')
@@ -157,5 +191,16 @@ describe('extending', () => {
     expectCSSMatches(`
       .sc-c {} .d { color: red; color: green; }
     `)
+  })
+
+  it('should allow changing component and adding attributes', () => {
+    const Parent = styled.button`
+      color: red;
+    `
+    const Child = Parent.withComponent('a').extend.attrs({
+      href: '/test'
+    })``
+
+    expect(shallow(<Child />).html()).toEqual('<a href="/test" class="sc-c d"></a>')
   })
 })
