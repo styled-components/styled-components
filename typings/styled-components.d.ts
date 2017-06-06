@@ -54,11 +54,11 @@ export type SvgStyledFunction<E extends SVGElement> = ThemedSvgStyledFunction<E,
 
 type ThemedStyledComponentFactoriesHTML<T> = {
     [K in keyof HTMLTags]: ThemedHtmlStyledFunction<HTMLTags[K], T>;
-}
+};
 
 type ThemedStyledComponentFactoriesSVG<T> = {
     [K in keyof SVGTags]: ThemedSvgStyledFunction<SVGTags[K], T>;
-}
+};
 
 type ThemedStyledComponentFactories<T> = ThemedStyledComponentFactoriesHTML<T> & ThemedStyledComponentFactoriesHTML<T>;
 
