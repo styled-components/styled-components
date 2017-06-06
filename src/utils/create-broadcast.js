@@ -7,7 +7,7 @@
 
 export type Broadcast = {
   publish: (value: mixed) => void,
-  subscribe: (listener: () => void) => () => void
+  subscribe: (listener: (currentValue: mixed) => void) => () => void
 }
 
 const createBroadcast = (initialValue: mixed): Broadcast => {
