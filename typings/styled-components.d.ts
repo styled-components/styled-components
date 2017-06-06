@@ -99,7 +99,7 @@ export function withTheme<P extends { theme?: T; }, T>(component: Component<P>):
 export function keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
 
-export const ThemeProvider: ThemeProviderComponent<any>;
+export const ThemeProvider: ThemeProviderComponent<object>;
 
 interface StylesheetComponentProps {
   sheet: ServerStyleSheet;
