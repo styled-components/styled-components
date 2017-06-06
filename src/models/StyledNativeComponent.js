@@ -12,6 +12,15 @@ import { CHANNEL } from './ThemeProvider'
 import InlineStyle from './InlineStyle'
 import AbstractStyledComponent from './AbstractStyledComponent'
 
+const nativeMethodKeys = [
+  'setNativeProps',
+  'measure',
+  'measureInWindow',
+  'measureLayout',
+  'focus',
+  'blur',
+]
+
 export default (constructWithOptions: Function) => {
   class BaseStyledNativeComponent extends AbstractStyledComponent {
     static target: Target
@@ -96,22 +105,6 @@ export default (constructWithOptions: Function) => {
       }
     }
 
-    setNativeProps(nativeProps: Object) {
-      if (this.root !== undefined) {
-        // $FlowFixMe
-        this.root.setNativeProps(nativeProps)
-      } else {
-        const { displayName } = this.constructor
-
-        // eslint-disable-next-line no-console
-        console.warn(
-          'setNativeProps was called on a Styled Component wrapping a stateless functional component. ' +
-          'In this case no ref will be stored, and instead an innerRef prop will be passed on.\n' +
-          `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName}.`,
-        )
-      }
-    }
-
     onRef = (node: any) => {
       const { innerRef } = this.props
       this.root = node
@@ -149,6 +142,25 @@ export default (constructWithOptions: Function) => {
       return createElement(target, propsForElement, children)
     }
   }
+
+  nativeMethodKeys.forEach(methodKey => {
+    // $FlowFixMe
+    BaseStyledNativeComponent.prototype[methodKey] = function nativeProxy(...args) {
+      if (this.root !== undefined) {
+        // $FlowFixMe
+        this.root[methodKey](...args)
+      } else {
+        const { displayName } = this.constructor
+
+        // eslint-disable-next-line no-console
+        console.warn(
+          `${methodKey} was called on a Styled Component wrapping a stateless functional component. ` +
+          'In this case no ref will be stored, and instead an innerRef prop will be passed on.\n' +
+          `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName}.`,
+        )
+      }
+    }
+  })
 
   const createStyledNativeComponent = (
     target: Target,
