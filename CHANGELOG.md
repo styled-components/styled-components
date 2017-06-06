@@ -8,8 +8,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed `extend` not working with 3 or more inheritances, thanks to [@brunolemos](https://twitter.com/brunolemos). (see [#871](https://github.com/styled-components/styled-components/pull/871))
 - Added a test for `withComponent` followed by `attrs`, thanks to [@btmills](https://github.com/btmills). (see [#851](https://github.com/styled-components/styled-components/pull/851))
-- Upgrade stylis to v3.0.4. (see [#829](https://github.com/styled-components/styled-components/pull/829))
-- Fix Flow type signatures for compatibility with Flow v0.47.0 (see [#840](https://github.com/styled-components/styled-components/pull/840))
+- Upgraded stylis to v3.0. (see [#829](https://github.com/styled-components/styled-components/pull/829) and [#876](https://github.com/styled-components/styled-components/pull/876))
 
 ## [v2.0.0] - 2017-05-25
 
