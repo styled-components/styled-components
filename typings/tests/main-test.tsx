@@ -1,25 +1,28 @@
 import * as React from "react";
 
-import styled, { css, keyframes, ThemeProvider, injectGlobal, MyTheme } from "./mytheme-styled-components";
+import styled from "../..";
+import { css, keyframes, ThemeProvider, injectGlobal, withTheme, ServerStyleSheet } from "../..";
 
 // Create a <Title> react component that renders an <h1> which is
 // centered, palevioletred and sized at 1.5em
 const Title = styled.h1`
   font-size: 1.5em;
   text-align: center;
-  color: ${p => p.theme.primaryColor};
+  color: palevioletred;
 `;
 
 // Create a <Wrapper> react component that renders a <section> with
 // some padding and a papayawhip background
 const Wrapper = styled.section`
-  background: ${p => p.theme.backgroundColor};
+  padding: 4em;
+  background: papayawhip;
 `;
+
 
 const Input = styled.input`
   font-size: 1.25em;
   padding: 0.5em;
-  margin: ${p => p.theme.defaultMargin}em;
+  margin: 0.5em;
   color: palevioletred;
   background: papayawhip;
   border: none;
@@ -30,9 +33,14 @@ const Input = styled.input`
   }
 `;
 
+interface MyTheme {
+  primary: string;
+}
+
 interface ButtonProps {
   name: string;
   primary?: boolean;
+  theme?: MyTheme;
 }
 
 class MyButton extends React.Component<ButtonProps, {}> {
@@ -54,7 +62,7 @@ const CustomizableButton = styled(MyButton)`
   font-size: 1em;
   margin: 1em;
   padding: 0.25em 1em;
-  border: 2px solid ${props => props.theme.primaryColor};
+  border: 2px solid ${props => props.theme.primary};
   border-radius: 3px;
 `;
 
@@ -62,7 +70,7 @@ const CustomizableButton = styled(MyButton)`
 const example = css`
   font-size: 1.5em;
   text-align: center;
-  color: ${props => props.theme.primaryColor};
+  color: ${props => props.theme.primary};
   border-color: ${"red"};
 `;
 
@@ -75,10 +83,8 @@ const fadeIn = keyframes`
   }
 `;
 
-const theme: MyTheme = {
-  primaryColor: "mediumseagreen",
-  backgroundColor: "yellow",
-  defaultMargin: .5
+const theme = {
+  main: "mediumseagreen",
 };
 
 injectGlobal`
@@ -104,3 +110,48 @@ class Example extends React.Component<{}, {}> {
     </ThemeProvider>;
   }
 }
+
+// css which only uses simple interpolations without functions
+const cssWithValues1 = css`
+  font-size: ${14}${"pt"};
+`;
+// css which uses other simple interpolations without functions
+const cssWithValues2 = css`
+  ${cssWithValues1}
+  ${[cssWithValues1, cssWithValues1]}
+  font-weight: ${"bold"};
+`;
+// injectGlobal accepts simple interpolations if they're not using functions
+injectGlobal`
+  ${"font-size"}: ${10}pt;
+  ${cssWithValues1}
+  ${[cssWithValues1, cssWithValues2]}
+`;
+
+// css which uses function interpolations with common props
+const cssWithFunc1 = css`
+  font-size: ${(props) => props.theme.fontSizePt}pt;
+`;
+const cssWithFunc2 = css`
+  ${cssWithFunc1}
+  ${props => cssWithFunc1}
+  ${[cssWithFunc1, cssWithValues1]}
+`;
+// such css can be used in styled components
+const styledButton = styled.button`
+  ${cssWithValues1} ${[cssWithValues1, cssWithValues2]}
+  ${cssWithFunc1} ${[cssWithFunc1, cssWithFunc2]}
+  ${() => [cssWithFunc1, cssWithFunc2]}
+`;
+// css with function interpolations cannot be used in injectGlobal
+/*
+injectGlobal`
+  ${cssWithFunc1}
+`;
+*/
+
+const name = "hey";
+
+const ThemedButton = withTheme(MyButton);
+
+<ThemedButton name={name} />;

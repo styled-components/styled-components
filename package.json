@@ -22,7 +22,7 @@
     "flow:watch": "flow-watch",
     "lint": "eslint src",
     "tslint": "tslint typings/*.ts native/*.ts",
-    "typescript": "tsc ./typings/styled-components-test.tsx ./typings/styled-components-native-test.tsx ./typings/themed-tests/mytheme-styled-components-test.tsx --noEmit --jsx react --target es6 --module es2015 --moduleResolution node",
+    "typescript": "tsc --project ./typings/tests",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
     "dev": "babel-node example/devServer.js"
@@ -69,8 +69,9 @@
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
-    "@types/react": "^0.14.55",
-    "@types/react-native": "^0.37.5",
+    "@types/react": "^15.0.25",
+    "@types/react-dom": "^15.5.0",
+    "@types/react-native": "^0.44.4",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
     "babel-eslint": "^7.1.1",
@@ -119,7 +120,7 @@
     "rollup-plugin-uglify": "^1.0.1",
     "rollup-plugin-visualizer": "^0.1.5",
     "tslint": "^4.3.1",
-    "typescript": "^2.1.5"
+    "typescript": "^2.3.3"
   },
   "peerDependencies": {
     "react": "^0.14.0 || ^15.0.0-0"
