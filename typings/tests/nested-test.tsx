@@ -1,21 +1,30 @@
 import * as React from "react";
 
-import styled from "../..";
+import styled, { css } from "../..";
 
 const Link = styled.a`
     color: red;
 `;
 
-const OtherLink = styled.a`
+const AlternativeLink = styled.a`
     color: blue;
+`;
+
+const freeStyles = css`
+    background-color: black;
+    color: white;
+    ${Link} {
+        color: blue;
+    }
 `;
 
 const Article = styled.section`
     color: red;
+    ${freeStyles}
     & > ${Link} {
         color: green;
     }
-    ${p => p.alt ? OtherLink : Link} {
+    ${p => p.theme.useAlternativeLink ? AlternativeLink : Link} {
         color: black
     }
 `;
