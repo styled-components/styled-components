@@ -20,7 +20,7 @@ export type OuterStyledProps<P> = ThemedOuterStyledProps<P, any>;
 
 export type Interpolation<P> = FlattenInterpolation<P> | ReadonlyArray<FlattenInterpolation<P> | ReadonlyArray<FlattenInterpolation<P>>>;
 export type FlattenInterpolation<P> = InterpolationValue | InterpolationFunction<P>;
-export type InterpolationValue = string | number;
+export type InterpolationValue = string | number | StyledComponentClass<any, any>;
 export type SimpleInterpolation = InterpolationValue | ReadonlyArray<InterpolationValue | ReadonlyArray<InterpolationValue>>;
 export interface InterpolationFunction<P> {
   (props: P): Interpolation<P>;
@@ -105,13 +105,13 @@ interface StylesheetComponentProps {
   sheet: ServerStyleSheet;
 }
 
-export class StyleSheetManager extends React.Component<StylesheetComponentProps, any> { }
+export class StyleSheetManager extends React.Component<StylesheetComponentProps, {}> { }
 
 export class ServerStyleSheet {
   collectStyles(tree: React.ReactNode): ReactElement<StylesheetComponentProps>;
 
   getStyleTags(): string;
-  getStyleElement(): ReactElement<any>[];
+  getStyleElement(): ReactElement<{}>[];
 }
 
 export default styled;
