@@ -25,4 +25,15 @@ describe('props', () => {
     shallow(<Comp fg="red"/>)
     expectCSSMatches('.sc-a {} .b { color: red; }')
   })
+
+  it('should execute interpolations and inject props for multiple same components', () => {
+    const Comp = styled.div`
+      color: ${props => props.fg || 'black'};
+    `
+
+    shallow(<Comp fg="red"/>)
+    shallow(<Comp fg="green"/>)
+
+    expectCSSMatches('.a { color: red; } .b { color: green; }')
+  })
 })
