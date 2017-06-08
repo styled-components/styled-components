@@ -60,7 +60,7 @@ type ThemedStyledComponentFactoriesSVG<T> = {
     [K in keyof SVGTags]: ThemedSvgStyledFunction<SVGTags[K], T>;
 };
 
-type ThemedStyledComponentFactories<T> = ThemedStyledComponentFactoriesHTML<T> & ThemedStyledComponentFactoriesHTML<T>;
+type ThemedStyledComponentFactories<T> = ThemedStyledComponentFactoriesHTML<T> & ThemedStyledComponentFactoriesSVG<T>;
 
 export interface ThemedBaseStyledInterface<T> extends ThemedStyledComponentFactories<T> {
   <P>(component: Component<P>): ThemedStyledFunction<P, T>;
