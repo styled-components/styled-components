@@ -99,6 +99,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [grid-styled](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
 - [Hedron](http://github.com/jsbros/hedron): A no-frills flex-box grid system.
 - [styled-components-grid](https://github.com/jameslnewell/styled-components-grid): Responsive grid components for `styled-components`.
+- [react-styled-flexboxgrid](https://github.com/LoicMahieu/react-styled-flexboxgrid): Grid system based on Flexbox ([demo](https://loicmahieu.github.io/react-styled-flexboxgrid/demo/index.html))
 
 #### Helpers
 - [styled-props](https://github.com/RafalFilipek/styled-props): Simple lib that allows you to set styled props in your styled-components without stress ([demo](http://www.webpackbin.com/N1EKUqgvG))
@@ -113,7 +114,6 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [react-redux-styled-hot-universal](https://github.com/krasevych/react-redux-styled-hot-universal) (SSR, Universal Webpack, Redux, React-router, Webpack 2, Babel, Styled Components and more...)
 - [ARc](https://github.com/diegohaz/arc): Atomic React App boilerplate with styled components ([demo](https://diegohaz.github.io/arc))
 - [react-boilerplate](https://github.com/mxstbr/react-boilerplate): A highly scalable, offline-first foundation with the best developer experience and a focus on performance and best practices
-- [react-styled-flexboxgrid](https://github.com/LoicMahieu/react-styled-flexboxgrid): Grid system based on Flexbox ([demo](https://loicmahieu.github.io/react-styled-flexboxgrid/demo/index.html))
 - [Scalable React Boilerplate](https://github.com/RyanCCollins/scalable-react-boilerplate)
 - [Scalable React TypeScript Boilerplate](https://github.com/RyanCCollins/scalable-react-ts-boilerplate)
 - [Superstylin'](https://github.com/bntzio/gatsby-starter-superstylin): A Gatsby starter with styled-components 💅 ([demo](https://superstylin.netlify.com/))
