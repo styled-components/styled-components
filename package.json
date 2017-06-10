@@ -33,6 +33,7 @@
   },
   "files": [
     "native.js",
+    "primitives.js",
     "no-parser.js",
     "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md",
@@ -41,7 +42,7 @@
     "flow-typed",
     "lib",
     "native",
-    "sketch",
+    "primitives",
     "src",
     "typings"
   ],
