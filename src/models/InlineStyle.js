@@ -1,6 +1,5 @@
 // @flow
 /* eslint-disable import/no-unresolved */
-import { StyleSheet } from 'react-native'
 import transformDeclPairs from 'css-to-react-native'
 
 import hashStr from '../vendor/glamor/hash'
@@ -19,8 +18,10 @@ export const resetStyleCache = () => {
  */
 export default class InlineStyle {
   rules: RuleSet
+  StyleSheet: { create: Function }
 
-  constructor(rules: RuleSet) {
+  constructor(StyleSheet: { create: Function }, rules: RuleSet) {
+    this.StyleSheet = StyleSheet
     this.rules = rules
   }
 
@@ -48,7 +49,7 @@ export default class InlineStyle {
         'borderColor',
         'borderStyle',
       ])
-      const styles = StyleSheet.create({
+      const styles = this.StyleSheet.create({
         generated: styleObject,
       })
       generated[hash] = styles.generated

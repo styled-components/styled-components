@@ -12,7 +12,9 @@ import { CHANNEL } from './ThemeProvider'
 import InlineStyle from './InlineStyle'
 import AbstractStyledComponent from './AbstractStyledComponent'
 
-export default (constructWithOptions: Function) => {
+export default (constructWithOptions: Function, StyleSheet: {
+      create: Function
+    }) => {
   class BaseStyledNativeComponent extends AbstractStyledComponent {
     static target: Target
     static styledComponentId: string
@@ -163,6 +165,7 @@ export default (constructWithOptions: Function) => {
     } = options
 
     const inlineStyle = new InlineStyle(
+      StyleSheet,
       extendingRules === undefined ? rules : extendingRules.concat(rules),
     )
 
