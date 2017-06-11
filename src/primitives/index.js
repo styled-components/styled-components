@@ -3,6 +3,7 @@
 /* eslint-disable import/no-unresolved */
 import reactPrimitives from 'react-primitives'
 
+import _InlineStyle from '../models/InlineStyle'
 import _StyledNativeComponent from '../models/StyledNativeComponent'
 import _constructWithOptions from '../constructors/constructWithOptions'
 
@@ -13,9 +14,10 @@ import withTheme from '../hoc/withTheme'
 import type { Target } from '../types'
 
 const constructWithOptions = _constructWithOptions(css)
+const InlineStyle = _InlineStyle(reactPrimitives.StyleSheet)
 const StyledNativeComponent = _StyledNativeComponent(
   constructWithOptions,
-  reactPrimitives.StyleSheet,
+  InlineStyle,
 )
 const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag)
 

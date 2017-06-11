@@ -3,6 +3,7 @@
 /* eslint-disable import/no-unresolved */
 import reactNative from 'react-native'
 
+import _InlineStyle from '../models/InlineStyle'
 import _StyledNativeComponent from '../models/StyledNativeComponent'
 import _constructWithOptions from '../constructors/constructWithOptions'
 
@@ -13,7 +14,8 @@ import withTheme from '../hoc/withTheme'
 import type { Target } from '../types'
 
 const constructWithOptions = _constructWithOptions(css)
-const StyledNativeComponent = _StyledNativeComponent(constructWithOptions, reactNative.StyleSheet)
+const InlineStyle = _InlineStyle(reactNative.StyleSheet)
+const StyledNativeComponent = _StyledNativeComponent(constructWithOptions, InlineStyle)
 const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag)
 
 /* React native lazy-requires each of these modules for some reason, so let's
