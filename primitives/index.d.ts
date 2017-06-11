@@ -22,9 +22,10 @@ type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 export type ReactPrimitivesStyledFunction<P> = StyledFunction<P>;
 
 export interface StyledInterface extends BaseStyledInterface {
-  Artboard: ReactPrimitivesStyledFunction<ReactPrimitives.Artboard>;
+  Animated: ReactPrimitivesStyledFunction<ReactPrimitives.Animated>;
   Image: ReactPrimitivesStyledFunction<ReactPrimitives.Image>;
   Text: ReactPrimitivesStyledFunction<ReactPrimitives.Text>;
+  Touchable: ReactPrimitivesStyledFunction<ReactPrimitives.Touchable>;
   View: ReactPrimitivesStyledFunction<ReactPrimitives.View>;
 }
 
