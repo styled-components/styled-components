@@ -21,7 +21,7 @@ const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag)
 
 /* React native lazy-requires each of these modules for some reason, so let's
 *  assume it's for a good reason and not eagerly load them all */
-const aliases = 'Artboard Image Text View'
+const aliases = 'Animated Image Text Touchable View '
 
 /* Define a getter for each alias which simply gets the reactNative component
  * and passes it to styled */

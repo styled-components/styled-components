@@ -6,15 +6,13 @@ import type { Theme } from './ThemeProvider'
 import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
-import type { RuleSet, Target } from '../types'
+import type { RuleSet, Target, TStyleSheet } from '../types'
 
 import { CHANNEL } from './ThemeProvider'
 import InlineStyle from './InlineStyle'
 import AbstractStyledComponent from './AbstractStyledComponent'
 
-export default (constructWithOptions: Function, StyleSheet: {
-      create: Function
-    }) => {
+export default (constructWithOptions: Function, StyleSheet: TStyleSheet) => {
   class BaseStyledNativeComponent extends AbstractStyledComponent {
     static target: Target
     static styledComponentId: string

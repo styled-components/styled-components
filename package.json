@@ -18,6 +18,8 @@
     "test:web:watch": "npm run test:web -- --watch",
     "test:native": "jest -c .jest.native.json",
     "test:native:watch": "npm run test:native -- --watch",
+    "test:primitives": "jest -c .jest.primitives.json",
+    "test:primitives:watch": "npm run test:primitives -- --watch",
     "flow": "flow check",
     "flow:watch": "flow-watch",
     "lint": "eslint src",
@@ -132,7 +134,8 @@
       "<rootDir>/src/"
     ],
     "testPathIgnorePatterns": [
-      "<rootDir>/src/native"
+      "<rootDir>/src/native",
+      "<rootDir>/src/primitives"
     ]
   },
   "lint-staged": {
