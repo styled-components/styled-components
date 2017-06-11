@@ -23,6 +23,6 @@ export type Stringifier = (
   prefix: ?string
 ) => string
 
-export type TStyleSheet = {
+export type StyleSheet = {
   create: Function
 }

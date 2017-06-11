@@ -3,7 +3,7 @@
 import transformDeclPairs from 'css-to-react-native'
 
 import hashStr from '../vendor/glamor/hash'
-import type { RuleSet, TStyleSheet } from '../types'
+import type { RuleSet, StyleSheet } from '../types'
 import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
 
@@ -18,14 +18,12 @@ export const resetStyleCache = () => {
  */
 export default class InlineStyle {
   rules: RuleSet
-  StyleSheet: TStyleSheet
 
-  constructor(StyleSheet: TStyleSheet, rules: RuleSet) {
-    this.StyleSheet = StyleSheet
+  constructor(rules: RuleSet) {
     this.rules = rules
   }
 
-  generateStyleObject(executionContext: Object) {
+  generateStyleObject(executionContext: Object, styleSheet: StyleSheet) {
     const flatCSS = flatten(this.rules, executionContext).join('')
     const hash = hashStr(flatCSS)
     if (!generated[hash]) {
@@ -49,10 +47,9 @@ export default class InlineStyle {
         'borderColor',
         'borderStyle',
       ])
-      const styles = this.StyleSheet.create({
+      const styles = styleSheet.create({
         generated: styleObject,
       })
-      console.log(styles)
       generated[hash] = styles.generated
     }
     return generated[hash]

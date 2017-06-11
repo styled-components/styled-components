@@ -6,13 +6,13 @@ import type { Theme } from './ThemeProvider'
 import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
-import type { RuleSet, Target, TStyleSheet } from '../types'
+import type { RuleSet, Target, StyleSheet } from '../types'
 
 import { CHANNEL } from './ThemeProvider'
 import InlineStyle from './InlineStyle'
 import AbstractStyledComponent from './AbstractStyledComponent'
 
-export default (constructWithOptions: Function, StyleSheet: TStyleSheet) => {
+export default (constructWithOptions: Function, styleSheet: StyleSheet) => {
   class BaseStyledNativeComponent extends AbstractStyledComponent {
     static target: Target
     static styledComponentId: string
@@ -47,7 +47,7 @@ export default (constructWithOptions: Function, StyleSheet: TStyleSheet) => {
       const { inlineStyle } = this.constructor
       const executionContext = this.buildExecutionContext(theme, props)
 
-      return inlineStyle.generateStyleObject(executionContext)
+      return inlineStyle.generateStyleObject(executionContext, styleSheet)
     }
 
     componentWillMount() {
@@ -163,7 +163,6 @@ export default (constructWithOptions: Function, StyleSheet: TStyleSheet) => {
     } = options
 
     const inlineStyle = new InlineStyle(
-      StyleSheet,
       extendingRules === undefined ? rules : extendingRules.concat(rules),
     )
 
