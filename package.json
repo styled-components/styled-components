@@ -34,8 +34,6 @@
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
   "files": [
-    "native.js",
-    "primitives.js",
     "no-parser.js",
     "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md",
