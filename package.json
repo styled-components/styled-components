@@ -18,6 +18,8 @@
     "test:web:watch": "npm run test:web -- --watch",
     "test:native": "jest -c .jest.native.json",
     "test:native:watch": "npm run test:native -- --watch",
+    "test:primitives": "jest -c .jest.primitives.json",
+    "test:primitives:watch": "npm run test:primitives -- --watch",
     "flow": "flow check",
     "flow:watch": "flow-watch",
     "lint": "eslint src",
@@ -32,7 +34,6 @@
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
   "files": [
-    "native.js",
     "no-parser.js",
     "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md",
@@ -41,6 +42,7 @@
     "flow-typed",
     "lib",
     "native",
+    "primitives",
     "src",
     "typings"
   ],
@@ -107,6 +109,7 @@
     "react-addons-test-utils": "^15.4.1",
     "react-dom": "^15.5.4",
     "react-native": "^0.39.2",
+    "react-primitives": "^0.4.2",
     "rimraf": "^2.6.1",
     "rollup": "^0.37.0",
     "rollup-plugin-babel": "^2.7.1",
@@ -129,7 +132,8 @@
       "<rootDir>/src/"
     ],
     "testPathIgnorePatterns": [
-      "<rootDir>/src/native"
+      "<rootDir>/src/native",
+      "<rootDir>/src/primitives"
     ]
   },
   "lint-staged": {
