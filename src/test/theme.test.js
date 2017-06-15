@@ -357,7 +357,7 @@ describe('theming', () => {
       },
     }
 
-    const Theme = ({ props }) => (
+    const Theme = props => (
       <ThemeProvider theme={{ color: 'green' }}>
         <Text {...props} />
       </ThemeProvider>

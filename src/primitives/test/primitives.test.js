@@ -1,13 +1,12 @@
-import 'react-native'
+import 'react-primitives'
 import React from 'react'
 
 import styled from '../index'
 import { shallow, mount } from 'enzyme'
 
-// NOTE: These tests are like the ones for Web but a "light-version" of them
-// This is mostly due to the similar logic
+// NOTE: These tests are copy pasted from ../native/test/native.test.js
 
-describe('native', () => {
+describe('primitives', () => {
   it('should not throw an error when called', () => {
     styled.View``
   })

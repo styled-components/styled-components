@@ -13,7 +13,10 @@ const keyframes = _keyframes(() => `keyframe_${index++}`, stringifyRules, css)
 
 let styled
 
-const format = css => stripWhitespace(css).replace(/(\*\/|[}>])/g, "$1\n").replace(/\n\s+/g, "\n")
+const format = css => stripWhitespace(css)
+  .replace(/ {/g, "{")
+  .replace(/(\*\/|[}>])/g, "$1\n")
+  .replace(/\n\s+/g, "\n")
 
 describe('ssr', () => {
   beforeEach(() => {
@@ -35,7 +38,7 @@ describe('ssr', () => {
       /* sc-component-id: sc-a */
       .sc-a {}
       .b { color: red; }
-      
+
       </style>
     `))
   })
@@ -57,13 +60,13 @@ describe('ssr', () => {
       <style type="text/css" data-styled-components="" data-styled-components-is-local="false">
       /* sc-component-id: sc-global-2303210225 */
       body { background: papayawhip; }
-      
+
       </style>
       <style type="text/css" data-styled-components="b" data-styled-components-is-local="true">
       /* sc-component-id: sc-a */
       .sc-a {}
       .b { color: red; }
-      
+
       </style>
     `))
   })
@@ -94,7 +97,7 @@ describe('ssr', () => {
       /* sc-component-id: TWO */
       .TWO {}
       .a {color: blue;}
-      
+
       </style>
     `))
   })

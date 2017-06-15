@@ -1,5 +1,5 @@
-import * as styledComponents from "../..";
-import { ThemedStyledComponentsModule } from "../..";
+import * as styledComponents from "../../..";
+import { ThemedStyledComponentsModule } from "../../..";
 
 export interface MyTheme {
     primaryColor: string;

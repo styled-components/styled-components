@@ -10,8 +10,10 @@ class StyleSheetManager extends Component {
 
   render() {
     /* eslint-disable react/prop-types */
-    // $FlowFixMe
-    return React.Children.only(this.props.children)
+    // Flow v0.43.1 will report an error accessing the `children` property,
+    // but v0.47.0 will not. It is necessary to use a type cast instead of
+    // a "fixme" comment to satisfy both Flow versions.
+    return React.Children.only((this.props: any).children)
   }
 }
 
