@@ -6,7 +6,13 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## [Unreleased]
 
-- Upgrade stylis to v3.0.4. (see [#829](https://github.com/styled-components/styled-components/pull/829))
+- Fixed `extend` not working with 3 or more inheritances, thanks to [@brunolemos](https://twitter.com/brunolemos). (see [#871](https://github.com/styled-components/styled-components/pull/871))
+- Added a test for `withComponent` followed by `attrs`, thanks to [@btmills](https://github.com/btmills). (see [#851](https://github.com/styled-components/styled-components/pull/851))
+- Fix Flow type signatures for compatibility with Flow v0.47.0 (see [#840](https://github.com/styled-components/styled-components/pull/840))
+- Upgraded stylis to v3.0. (see [#829](https://github.com/styled-components/styled-components/pull/829) and [#876](https://github.com/styled-components/styled-components/pull/876))
+- Remove dead code used previously for auto-prefixing. (see [#881](https://github.com/styled-components/styled-components/pull/881))
+- Added missing v2.0 APIs to TypeScript typings, thanks to [@patrick91](https://github.com/patrick91), [@igorbek](https://github.com/igorbek) (see [#837](https://github.com/styled-components/styled-components/pull/837), [#882](https://github.com/styled-components/styled-components/pull/882))
+- Added [`react-primitives`](https://github.com/lelandrichardson/react-primitives) target, thanks to [@mathieudutour](https://github.com/mathieudutour) (see [#904](https://github.com/styled-components/styled-components/pull/904)
 
 ## [v2.0.0] - 2017-05-25
 

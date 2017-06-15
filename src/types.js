@@ -22,3 +22,7 @@ export type Stringifier = (
   selector: ?string,
   prefix: ?string
 ) => string
+
+export type StyleSheet = {
+  create: Function
+}

@@ -1,5 +1,5 @@
-import * as React from "react-native";
-import styled from "../native";
+import * as React from "react";
+import styled from "../../native";
 
 const StyledView = styled.View`
   background-color: papayawhip;

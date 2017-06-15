@@ -2,15 +2,21 @@
 # yarn lockfile v1
 
 
-"@types/react-native@^0.37.5":
-  version "0.37.13"
-  resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.37.13.tgz#65548f892ed6e55ef87add1ffeec72275b4152b7"
+"@types/react-dom@^15.5.0":
+  version "15.5.0"
+  resolved "https://registry.yarnpkg.com/@types/react-dom/-/react-dom-15.5.0.tgz#7f4fb9613d4051141773242f7b6b5f1a46b34bd9"
   dependencies:
     "@types/react" "*"
 
-"@types/react@*", "@types/react@^0.14.55":
-  version "0.14.57"
-  resolved "https://registry.yarnpkg.com/@types/react/-/react-0.14.57.tgz#1878a8654fafdd1d381b8457292b6433498c5b62"
+"@types/react-native@^0.44.4":
+  version "0.44.4"
+  resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.44.4.tgz#91ff838293f87f5b27827164fc1efe5e528b6f5a"
+  dependencies:
+    "@types/react" "*"
+
+"@types/react@*", "@types/react@^15.0.25":
+  version "15.0.25"
+  resolved "https://registry.yarnpkg.com/@types/react/-/react-15.0.25.tgz#d396949cccc9a90b61755def9781e5aced9b2261"
 
 abab@^1.0.3:
   version "1.0.3"
@@ -1113,10 +1119,6 @@ boom@2.x.x:
   resolved "https://registry.yarnpkg.com/boom/-/boom-2.10.1.tgz#39c8918ceff5799f83f9492a848f625add0c766f"
   dependencies:
     hoek "2.x.x"
-
-bowser@^1.0.0:
-  version "1.6.1"
-  resolved "https://registry.yarnpkg.com/bowser/-/bowser-1.6.1.tgz#9157e9498f456e937173a2918f3b2161e5353eb3"
 
 boxen@^1.0.0:
   version "1.0.0"
@@ -2499,9 +2501,9 @@ flat-cache@^1.2.1:
     graceful-fs "^4.1.2"
     write "^0.2.1"
 
-flow-bin@^0.43.1:
-  version "0.43.1"
-  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.43.1.tgz#0733958b448fb8ad4b1576add7e87c31794c81bc"
+flow-bin@^0.47.0:
+  version "0.47.0"
+  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.47.0.tgz#a2a08ab3e0d1f1cb57d17e27b30b118b62fda367"
 
 flow-copy-source@^1.1.0:
   version "1.1.0"
@@ -2918,10 +2920,6 @@ http-signature@~1.1.0:
     jsprim "^1.2.2"
     sshpk "^1.7.0"
 
-hyphenate-style-name@^1.0.1:
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/hyphenate-style-name/-/hyphenate-style-name-1.0.2.tgz#31160a36930adaf1fc04c6074f7eb41465d4ec4b"
-
 iconv-lite@0.4.11:
   version "0.4.11"
   resolved "https://registry.yarnpkg.com/iconv-lite/-/iconv-lite-0.4.11.tgz#2ecb42fd294744922209a2e7c404dac8793d8ade"
@@ -2982,13 +2980,6 @@ inherits@2, inherits@2.0.3, inherits@^2.0.1, inherits@^2.0.3, inherits@~2.0.0, i
 ini@~1.3.0:
   version "1.3.4"
   resolved "https://registry.yarnpkg.com/ini/-/ini-1.3.4.tgz#0537cb79daf59b59a1a517dff706c86ec039162e"
-
-inline-style-prefixer@^2.0.5:
-  version "2.0.5"
-  resolved "https://registry.yarnpkg.com/inline-style-prefixer/-/inline-style-prefixer-2.0.5.tgz#c153c7e88fd84fef5c602e95a8168b2770671fe7"
-  dependencies:
-    bowser "^1.0.0"
-    hyphenate-style-name "^1.0.1"
 
 inquirer@^0.12.0:
   version "0.12.0"
@@ -5645,9 +5636,9 @@ strip-json-comments@~2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/strip-json-comments/-/strip-json-comments-2.0.1.tgz#3c531942e908c2697c0ec344858c286c7ca0a60a"
 
-stylis@^3.0.4:
-  version "3.0.4"
-  resolved "https://registry.yarnpkg.com/stylis/-/stylis-3.0.4.tgz#fd7a0f6c10c09903704cc362bc23449afda33458"
+stylis@^3.0.19:
+  version "3.0.19"
+  resolved "https://registry.yarnpkg.com/stylis/-/stylis-3.0.19.tgz#36013520bb19c209d374c629e97f190e8797a287"
 
 supports-color@^2.0.0:
   version "2.0.0"
@@ -5840,9 +5831,9 @@ typedarray@^0.0.6:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
 
-typescript@^2.1.5:
-  version "2.3.0"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.3.0.tgz#2e63e09284392bc8158a2444c33e2093795c0418"
+typescript@^2.3.3:
+  version "2.3.3"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.3.3.tgz#9639f3c3b40148e8ca97fe08a51dd1891bb6be22"
 
 ua-parser-js@^0.7.9:
   version "0.7.12"

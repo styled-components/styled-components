@@ -214,8 +214,23 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
 
       static get extend() {
-        const { displayName: _, componentId: __, ...optionsToCopy } = options
-        const newOptions = { ...optionsToCopy, rules, ParentComponent: StyledComponent }
+        const {
+          displayName: _,
+          componentId: __,
+          rules: rulesFromOptions,
+          ...optionsToCopy
+        } = options
+
+        const newRules = rulesFromOptions === undefined
+          ? rules
+          : rulesFromOptions.concat(rules)
+
+        const newOptions = {
+          ...optionsToCopy,
+          rules: newRules,
+          ParentComponent: StyledComponent,
+        }
+
         return constructWithOptions(createStyledComponent, target, newOptions)
       }
     }

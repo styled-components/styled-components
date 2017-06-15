@@ -1,16 +1,15 @@
 {
   "name": "styled-components",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "main": "lib/index.js",
   "typings": "typings/styled-components.d.ts",
   "jsnext:main": "dist/styled-components.es.js",
   "module": "dist/styled-components.es.js",
   "scripts": {
-    "build": "npm run build:lib && npm run build:dist && npm run build:flow",
+    "build": "npm run build:lib && npm run build:dist",
     "prebuild:lib": "rimraf lib/*",
     "build:lib": "babel --out-dir lib src",
-    "build:flow": "flow-copy-source -v -i '{**/test/*.js,**/*.test.js}' src lib",
     "prebuild:dist": "rimraf dist/*",
     "build:dist": "rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
@@ -19,11 +18,13 @@
     "test:web:watch": "npm run test:web -- --watch",
     "test:native": "jest -c .jest.native.json",
     "test:native:watch": "npm run test:native -- --watch",
+    "test:primitives": "jest -c .jest.primitives.json",
+    "test:primitives:watch": "npm run test:primitives -- --watch",
     "flow": "flow check",
     "flow:watch": "flow-watch",
     "lint": "eslint src",
     "tslint": "tslint typings/*.ts native/*.ts",
-    "typescript": "tsc ./typings/styled-components-test.tsx ./typings/styled-components-native-test.tsx ./typings/themed-tests/mytheme-styled-components-test.tsx --noEmit --jsx react --target es6 --module es2015 --moduleResolution node",
+    "typescript": "tsc --project ./typings/tests",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
     "dev": "babel-node example/devServer.js"
@@ -33,7 +34,6 @@
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
   "files": [
-    "native.js",
     "no-parser.js",
     "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md",
@@ -42,6 +42,7 @@
     "flow-typed",
     "lib",
     "native",
+    "primitives",
     "src",
     "typings"
   ],
@@ -62,16 +63,16 @@
     "css-to-react-native": "^2.0.3",
     "fbjs": "^0.8.9",
     "hoist-non-react-statics": "^1.2.0",
-    "inline-style-prefixer": "^2.0.5",
     "is-function": "^1.0.1",
     "is-plain-object": "^2.0.1",
     "prop-types": "^15.5.4",
-    "stylis": "^3.0.4",
+    "stylis": "^3.0.19",
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
-    "@types/react": "^0.14.55",
-    "@types/react-native": "^0.37.5",
+    "@types/react": "^15.0.25",
+    "@types/react-dom": "^15.5.0",
+    "@types/react-native": "^0.44.4",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
     "babel-eslint": "^7.1.1",
@@ -96,7 +97,7 @@
     "eslint-plugin-jsx-a11y": "^2.0.2",
     "eslint-plugin-react": "^6.8.0",
     "express": "^4.14.1",
-    "flow-bin": "^0.43.1",
+    "flow-bin": "^0.47.0",
     "flow-copy-source": "^1.1.0",
     "flow-watch": "^1.1.1",
     "jest": "^19.0.2",
@@ -108,6 +109,7 @@
     "react-addons-test-utils": "^15.4.1",
     "react-dom": "^15.5.4",
     "react-native": "^0.39.2",
+    "react-primitives": "^0.4.2",
     "rimraf": "^2.6.1",
     "rollup": "^0.37.0",
     "rollup-plugin-babel": "^2.7.1",
@@ -120,7 +122,7 @@
     "rollup-plugin-uglify": "^1.0.1",
     "rollup-plugin-visualizer": "^0.1.5",
     "tslint": "^4.3.1",
-    "typescript": "^2.1.5"
+    "typescript": "^2.3.3"
   },
   "peerDependencies": {
     "react": "^0.14.0 || ^15.0.0-0"
@@ -130,7 +132,8 @@
       "<rootDir>/src/"
     ],
     "testPathIgnorePatterns": [
-      "<rootDir>/src/native"
+      "<rootDir>/src/native",
+      "<rootDir>/src/primitives"
     ]
   },
   "lint-staged": {
