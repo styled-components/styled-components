@@ -1,6 +1,7 @@
 // @flow
 import BrowserTag from './BrowserTag'
 import { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
+export const COMPONENTS_PER_TAG = 40
 
 export default class InMemoryTag {
   onBrowser: boolean
@@ -26,7 +27,7 @@ export default class InMemoryTag {
   }
 
   isFull() {
-    return this.browserTag ? this.browserTag.isFull() : false
+    return this.onBrowser && this.size >= COMPONENTS_PER_TAG
   }
 
   addComponent(componentId: string) {

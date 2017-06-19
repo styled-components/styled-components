@@ -19,6 +19,7 @@ export default class StyleSheet {
   hashes: { [string]: string } = {}
   deferredInjections: { [string]: string } = {}
   componentTags: { [string]: InMemoryTag }
+  dirty: boolean
 
   constructor(onBrowser: boolean,
     tags: Array<InMemoryTag> = [],
@@ -28,6 +29,7 @@ export default class StyleSheet {
     this.tags = tags
     this.names = names
     this.constructComponentTagMap()
+    this.dirty = true
   }
 
   constructComponentTagMap() {
@@ -71,6 +73,7 @@ export default class StyleSheet {
   }
 
   inject(componentId: string, isLocal: boolean, css: string, hash: ?any, name: ?string) {
+    this.dirty = true
     if (this === instance) {
       clones.forEach(clone => {
         clone.inject(componentId, isLocal, css)
@@ -93,7 +96,9 @@ export default class StyleSheet {
   }
 
   flush() {
+    if (!this.dirty) return
     this.tags.forEach(tag => tag.flush())
+    this.dirty = false
   }
 
   toHTML() {
@@ -105,6 +110,7 @@ export default class StyleSheet {
   }
 
   getOrCreateTag(componentId: string, isLocal: boolean) {
+    this.dirty = true
     const existingTag = this.componentTags[componentId]
     if (existingTag) {
       return existingTag
@@ -120,6 +126,7 @@ export default class StyleSheet {
   }
 
   createNewTag(isLocal: boolean) {
+    this.dirty = true
     const newTag = new InMemoryTag(this.onBrowser, isLocal)
     this.tags.push(newTag)
     return newTag

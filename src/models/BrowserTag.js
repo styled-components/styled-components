@@ -2,7 +2,6 @@
 import extractCompsFromCSS from '../utils/extractCompsFromCSS'
 import type InMemoryTag from './InMemoryTag'
 import { SC_ATTR } from './StyleSheet'
-export const COMPONENTS_PER_TAG = 40
 
 export default class BrowserTag {
   isLocal: boolean
@@ -23,10 +22,6 @@ export default class BrowserTag {
       acc[obj.componentId] = obj // eslint-disable-line no-param-reassign
       return acc
     }, {})
-  }
-
-  isFull() {
-    return this.size >= COMPONENTS_PER_TAG
   }
 
   flush(memoryTag: InMemoryTag) {
