@@ -13,13 +13,14 @@
     "prebuild:dist": "rimraf dist/*",
     "build:dist": "rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
-    "test": "npm run test:web && npm run test:native",
+    "test": "npm run test:web && npm run test:native && npm run test:size",
     "test:web": "jest",
     "test:web:watch": "npm run test:web -- --watch",
     "test:native": "jest -c .jest.native.json",
     "test:native:watch": "npm run test:native -- --watch",
     "test:primitives": "jest -c .jest.primitives.json",
     "test:primitives:watch": "npm run test:primitives -- --watch",
+    "test:size": "bundlesize",
     "flow": "flow check",
     "flow:watch": "flow-watch",
     "lint": "eslint src",
@@ -60,6 +61,7 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "buffer": "^5.0.3",
+    "bundlesize": "^0.5.5",
     "css-to-react-native": "^2.0.3",
     "fbjs": "^0.8.9",
     "hoist-non-react-statics": "^1.2.0",
@@ -142,5 +144,11 @@
       "git add"
     ]
   },
-  "pre-commit": "lint-staged"
+  "pre-commit": "lint-staged",
+  "bundlesize": [
+    {
+      "path": "./dist/styled-components.min.js",
+      "threshold": "14kB"
+    }
+  ]
 }
