@@ -131,6 +131,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [Reactiflux](https://www.reactiflux.com): Reactiflux community home build with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/reactiflux/reactiflux.com)).
 - [michaelhsu.tw](http://michaelhsu.tw): A simple static homepage built with CRA pre-renderer ([source](https://github.com/evenchange4/michaelhsu.tw)).
 - [joeireland.com](https://joeireland.com): Portfolio of Joseph Ireland ([source](https://github.com/IamJoseph/JoesReactWebsite)).
+- [CodeSandbox](https://codesandbox.io/s/new): An online editor tailored for React development ([source](https://github.com/CompuIves/codesandbox-client)).
 
 ### Other
 - [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
