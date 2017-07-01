@@ -67,7 +67,7 @@
     "is-function": "^1.0.1",
     "is-plain-object": "^2.0.1",
     "prop-types": "^15.5.4",
-    "stylis": "^3.0.19",
+    "stylis": "^3.2.1",
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
