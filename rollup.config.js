@@ -75,7 +75,7 @@ if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' })
 export default {
   entry: 'src/index.js',
   moduleName: 'styled',
-  external: esbundle ? Object.keys(pkg.dependencies) : ['react'],
+  external: ['react'].concat(esbundle ? Object.keys(pkg.dependencies) : []),
   exports: 'named',
   targets,
   plugins,
