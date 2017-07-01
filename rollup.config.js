@@ -8,9 +8,7 @@ import json from 'rollup-plugin-json'
 import flow from 'rollup-plugin-flow'
 import uglify from 'rollup-plugin-uglify'
 import visualizer from 'rollup-plugin-visualizer'
-
-// We need to use require here because import creates a parse error
-const pkg = require('./package.json')
+import pkg from './package.json'
 
 const processShim = '\0process-shim'
 

@@ -113,7 +113,7 @@
     "react-native": "^0.39.2",
     "react-primitives": "^0.4.2",
     "rimraf": "^2.6.1",
-    "rollup": "^0.37.0",
+    "rollup": "0.43.0",
     "rollup-plugin-babel": "^2.7.1",
     "rollup-plugin-commonjs": "^6.0.0",
     "rollup-plugin-flow": "^1.1.1",
