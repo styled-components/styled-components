@@ -9,6 +9,9 @@ import flow from 'rollup-plugin-flow'
 import uglify from 'rollup-plugin-uglify'
 import visualizer from 'rollup-plugin-visualizer'
 
+// We need to use require here because import creates a parse error
+const pkg = require('./package.json')
+
 const processShim = '\0process-shim'
 
 const prod = process.env.PRODUCTION
@@ -72,7 +75,7 @@ if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' })
 export default {
   entry: 'src/index.js',
   moduleName: 'styled',
-  external: ['react'].concat(esbundle ? ['stylis'] : []),
+  external: esbundle ? Object.keys(pkg.dependencies) : ['react'],
   exports: 'named',
   targets,
   plugins,
