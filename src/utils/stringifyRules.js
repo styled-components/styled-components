@@ -1,8 +1,8 @@
 // @flow
-import stylis from 'stylis'
+import Stylis from 'stylis'
 import type { Interpolation } from '../types'
 
-stylis.set({
+const stylis = new Stylis({
   global: false,
   cascade: true,
   keyframe: false,
