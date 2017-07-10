@@ -12,13 +12,34 @@ let instance = null
 // eslint-disable-next-line no-use-before-define
 export const clones: Array<StyleSheet> = []
 
+/* The StyleSheet provides a way of injecting components'
+ * rules into a series of tags. Each tag will contain up
+ * to, say, 40 components' worth of CSS. All tags here are
+ * InMemoryTags but if we're in a browser they will also
+ * create and maintain their own BrowserTag */
 export default class StyleSheet {
+  /* Runtime usage or SSR? */
   onBrowser: boolean
+  /* A list of the current tags. May be provided by the
+   * constructor in the case of rehydration */
   tags: Array<InMemoryTag>
+  /* A record of the classnames that have been injected */
   names: { [string]: boolean }
+  /* A record of the CSS hashes that have been injected.
+   * In the case of rehydration, we know the hashes but
+   * not the names, so we have to store both. */
   hashes: { [string]: string } = {}
+  /* When a component is first constructed, we give it
+   * its place in the set of Tags to preserve order, but
+   * if it's never rendered we don't want to inject anything.
+   * Deferring injections is how we handle that. */
   deferredInjections: { [string]: string } = {}
+  /* A map of previously-seen components to Tags */
   componentTags: { [string]: InMemoryTag }
+  /* When rendering, we flush all updates to the DOM at once,
+   * and set dirty to false. Then, we can short-circuit all
+   * the render calls by other components until more CSS is
+   * added and the dirty flag gets set true. */
   dirty: boolean
 
   constructor(onBrowser: boolean,
