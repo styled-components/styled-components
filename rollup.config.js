@@ -8,6 +8,7 @@ import json from 'rollup-plugin-json'
 import flow from 'rollup-plugin-flow'
 import uglify from 'rollup-plugin-uglify'
 import visualizer from 'rollup-plugin-visualizer'
+import pkg from './package.json'
 
 const processShim = '\0process-shim'
 
@@ -72,7 +73,7 @@ if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' })
 export default {
   entry: 'src/index.js',
   moduleName: 'styled',
-  external: ['react'].concat(esbundle ? ['stylis'] : []),
+  external: ['react'].concat(esbundle ? Object.keys(pkg.dependencies) : []),
   exports: 'named',
   targets,
   plugins,
