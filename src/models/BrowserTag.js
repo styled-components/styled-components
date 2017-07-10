@@ -4,15 +4,13 @@ import type InMemoryTag from './InMemoryTag'
 import { SC_ATTR } from './StyleSheet'
 
 export default class BrowserTag {
-  isLocal: boolean
   components: { [string]: Object }
   size: number
   el: HTMLElement
   ready: boolean
 
-  constructor(el: HTMLElement, isLocal: boolean, existingSource: string = '') {
+  constructor(el: HTMLElement, existingSource: string = '') {
     this.el = el
-    this.isLocal = isLocal
     this.ready = false
 
     const extractedComps = extractCompsFromCSS(existingSource)

@@ -11,23 +11,27 @@ export default class InMemoryTag {
   names: Array<string>
   browserTag: ?BrowserTag
 
-  constructor(onBrowser: boolean, isLocal: boolean, browserTag: ?BrowserTag) {
+  constructor(onBrowser: boolean, isLocal: boolean, names: ?Array<string>, browserTag: ?BrowserTag) {
     this.onBrowser = onBrowser
     this.isLocal = isLocal
     this.browserTag = browserTag
-    this.size = !browserTag ? 0 : browserTag.size
-    this.names = !browserTag || !browserTag.el ? [] : browserTag.el.getAttribute(SC_ATTR).split(' ')
+    this.size = browserTag ? browserTag.size : 0
+    this.names = names || []
 
-    this.components = !browserTag ? {} :
-      Object.keys(browserTag.components).reduce((accum, componentId) => {
-        const browserTagComp = browserTag.components[componentId]
+    if (browserTag) {
+      const existingComps = browserTag.components
+      this.components = Object.keys(existingComps).reduce((accum, componentId) => {
+        const browserTagComp = existingComps[componentId]
         browserTagComp.index = 1
         return { ...accum, [componentId]: { componentId, css: [browserTagComp.cssFromDOM] } }
       }, {})
+    } else {
+      this.components = {}
+    }
   }
 
   isFull() {
-    return this.onBrowser && this.size >= COMPONENTS_PER_TAG
+    return this.size >= COMPONENTS_PER_TAG
   }
 
   addComponent(componentId: string) {
@@ -57,7 +61,7 @@ export default class InMemoryTag {
       el.setAttribute(LOCAL_ATTR, this.isLocal ? 'true' : 'false')
       if (!document.head) throw new Error('Missing document <head>')
       document.head.appendChild(el)
-      this.browserTag = new BrowserTag(el, this.isLocal)
+      this.browserTag = new BrowserTag(el)
     }
 
     this.browserTag.flush(this)
@@ -92,8 +96,7 @@ export default class InMemoryTag {
 
   clone() {
     if (this.browserTag) throw new Error('BrowserTag cannot be cloned!')
-    const copy = new InMemoryTag(this.onBrowser, this.isLocal)
-    copy.names = [].concat(this.names)
+    const copy = new InMemoryTag(this.onBrowser, this.isLocal, [].concat(this.names))
     copy.size = this.size
     copy.components = Object.keys(this.components)
       .reduce((acc, key) => {
