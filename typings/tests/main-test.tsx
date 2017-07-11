@@ -40,7 +40,7 @@ interface MyTheme {
 interface ButtonProps {
   name: string;
   primary?: boolean;
-  theme?: MyTheme;
+  theme: MyTheme;
 }
 
 class MyButton extends React.Component<ButtonProps, {}> {

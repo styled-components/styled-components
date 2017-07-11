@@ -63,6 +63,7 @@ type ThemedStyledComponentFactoriesSVG<T> = {
 type ThemedStyledComponentFactories<T> = ThemedStyledComponentFactoriesHTML<T> & ThemedStyledComponentFactoriesSVG<T>;
 
 export interface ThemedBaseStyledInterface<T> extends ThemedStyledComponentFactories<T> {
+  <P extends { theme?: T; }>(component: Component<P>): ThemedStyledFunction<P, T, WithOptionalTheme<P, T>>;
   <P>(component: Component<P>): ThemedStyledFunction<P, T>;
 }
 export type BaseStyledInterface = ThemedBaseStyledInterface<any>;
@@ -80,13 +81,18 @@ export interface ThemedCssFunction<T> {
   <P>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): FlattenInterpolation<ThemedStyledProps<P, T>>[];
 }
 
+// Helper type operators
+type Diff<T extends string, U extends string> = ({ [P in T]: P } & { [P in U]: never } & { [x: string]: never })[T];
+type Omit<T, K extends keyof T> = Pick<T, Diff<keyof T, K>>;
+type WithOptionalTheme<P extends { theme?: T; }, T> = Omit<P, 'theme'> & { theme?: T; };
+
 export interface ThemedStyledComponentsModule<T> {
   default: ThemedStyledInterface<T>;
 
   css: ThemedCssFunction<T>;
   keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
   injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
-  withTheme<P extends { theme?: T; }, T>(component: Component<P>): ComponentClass<P>;
+  withTheme<P extends { theme?: T; }>(component: Component<P>): ComponentClass<WithOptionalTheme<P, T>>;
 
   ThemeProvider: ThemeProviderComponent<T>;
 }
@@ -94,7 +100,7 @@ export interface ThemedStyledComponentsModule<T> {
 declare const styled: StyledInterface;
 
 export const css: ThemedCssFunction<any>;
-export function withTheme<P extends { theme?: T; }, T>(component: Component<P>): ComponentClass<P>;
+export function withTheme<P extends { theme?: T; }, T>(component: Component<P>): ComponentClass<WithOptionalTheme<P, T>>;
 
 export function keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
