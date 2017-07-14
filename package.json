@@ -100,7 +100,6 @@
     "eslint-plugin-react": "^6.8.0",
     "express": "^4.14.1",
     "flow-bin": "^0.47.0",
-    "flow-copy-source": "^1.1.0",
     "flow-watch": "^1.1.1",
     "jest": "^19.0.2",
     "jsdom": "^9.10.0",
