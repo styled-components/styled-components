@@ -84,6 +84,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 ## Built with `styled-components`
 
 ### Libraries
+- [Rebass](https://github.com/jxnblk/rebass): Functional React UI component library ([demo](http://jxnblk.com/rebass))
 - [react-aria-tooltip](https://github.com/egoens/react-aria-tooltip): Simple & accessible ReactJS tooltip component
 - [uiGradients](http://jsbros.github.io/uigradients): Generate beautiful background gradients from the [uigradients.com](http://uigradients.com) database.
 - [react-enhanced-form](https://github.com/xeonys/react-enhanced-form): The best react form component, on earth 🌍. It makes form inputs easy, finally !
@@ -113,6 +114,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [react-create-component-from-tag-prop](https://github.com/jameslnewell/react-create-component-from-tag-prop): Create a react component from a tag prop. Lets your users to choose which HTML elements get styled by your 💅 styled-components.
 - [styled-components-theme](https://github.com/erikras/styled-components-theme): A library for refering to theme colors and modifying them inline. e.g. `color: ${primary.lighten(0.3)};`
 - [styled-map](https://github.com/scf4/styled-map) - Super simple lib to map props to styles with `styled-components`
+- [styled-system](https://github.com/jxnblk/styled-system) - Design system utilities for styled-components – used in grid-styled and Rebass ([demo](http://jxnblk.com/styled-system/))
 
 ### Boilerplates
 - [react-redux-styled-hot-universal](https://github.com/krasevych/react-redux-styled-hot-universal) (SSR, Universal Webpack, Redux, React-router, Webpack 2, Babel, Styled Components and more...)
