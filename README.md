@@ -151,7 +151,7 @@ These are some great articles and talks about related topics in case you're hung
 - [🎙 The Future of Reusable CSS](https://www.youtube.com/watch?v=XR6eM_5pAb0): How component libraries should be styled, and why they're not yet
 - [📝 Rendering Khan Academy’s Learn Menu Wherever I Please](https://medium.com/@jdan/rendering-khan-academys-learn-menu-wherever-i-please-4b58d4a9432d#.w9nshye05): Documenting the move from the handlebars + less combo to react and inline styles
 - [🖥 Ryan's random thoughts about inline styles](https://www.youtube.com/watch?v=EkPcGS4TzdQ): Explaining some benefits of using styles in js
-- [🖥 Create a style guide using NPM & Styled Components](https://www.youtube.com/watch?v=u6gQ48rSw-E): Jamie fumbles through creating a shareable NPM package.
+- [🖥 Create a style guide using NPM & styled-components](https://www.youtube.com/watch?v=u6gQ48rSw-E): Jamie fumbles through creating a shareable NPM package.
 
 ## Alternative Installation Methods
 
