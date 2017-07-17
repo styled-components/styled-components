@@ -113,8 +113,8 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [styled-ax](https://github.com/Lokua/styled-ax): Functional theme property accessor(s)
 - [react-create-component-from-tag-prop](https://github.com/jameslnewell/react-create-component-from-tag-prop): Create a react component from a tag prop. Lets your users to choose which HTML elements get styled by your 💅 styled-components.
 - [styled-components-theme](https://github.com/erikras/styled-components-theme): A library for refering to theme colors and modifying them inline. e.g. `color: ${primary.lighten(0.3)};`
-- [styled-map](https://github.com/scf4/styled-map) - Super simple lib to map props to styles with `styled-components`
-- [styled-system](https://github.com/jxnblk/styled-system) - Design system utilities for styled-components – used in grid-styled and Rebass ([demo](http://jxnblk.com/styled-system/))
+- [styled-map](https://github.com/scf4/styled-map): Super simple lib to map props to styles with `styled-components`
+- [styled-system](https://github.com/jxnblk/styled-system): Design system utilities for styled-components – used in grid-styled and Rebass ([demo](http://jxnblk.com/styled-system/))
 - [styled-shortcuts](https://github.com/donavon/styled-shortcuts): Use simple string notation to access props. No functions necessary! Example: `font-size: ${'theme.fontSize:px'};` ([demo](https://codesandbox.io/s/jRE0XxR9v))
 
 ### Boilerplates
