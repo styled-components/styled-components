@@ -1,5 +1,4 @@
 // @flow
-import React from 'react'
 import BrowserStyleSheet from './BrowserStyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
 import InMemoryTag from './InMemoryTag'
@@ -26,8 +25,8 @@ export default class StyleSheet {
   /* A record of the classnames that have been injected */
   names: { [string]: boolean }
   /* A record of the CSS hashes that have been injected.
-   * In the case of rehydration, we know the hashes but
-   * not the names, so we have to store both. */
+   * In the case of rehydration, we know the names but
+   * not the hashes, so we have to store both. */
   hashes: { [string]: string } = {}
   /* When a component is first constructed, we give it
    * its place in the set of Tags to preserve order, but

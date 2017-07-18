@@ -1,6 +1,8 @@
 // @flow
+import React from 'react'
 import BrowserTag from './BrowserTag'
 import { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
+
 export const COMPONENTS_PER_TAG = 40
 
 export default class InMemoryTag {
@@ -11,19 +13,26 @@ export default class InMemoryTag {
   names: Array<string>
   browserTag: ?BrowserTag
 
-  constructor(onBrowser: boolean, isLocal: boolean, names: ?Array<string>, browserTag: ?BrowserTag) {
+  constructor(onBrowser: boolean,
+    isLocal: boolean,
+    names: ?Array<string>,
+    browserTag: ?BrowserTag) {
     this.onBrowser = onBrowser
     this.isLocal = isLocal
     this.browserTag = browserTag
-    this.size = browserTag ? browserTag.size : 0
+    this.size = 0
     this.names = names || []
 
+    /* If we're rehydrating from a BrowserTag, build up a simple in-memory component for each
+     * component it contains. Set the existing CSS as a single block and set the flush index
+     * to 1. */
     if (browserTag) {
-      const existingComps = browserTag.components
-      this.components = Object.keys(existingComps).reduce((accum, componentId) => {
-        const browserTagComp = existingComps[componentId]
-        browserTagComp.index = 1
-        return { ...accum, [componentId]: { componentId, css: [browserTagComp.cssFromDOM] } }
+      const browserComps = browserTag.textNodes
+      const componentIds = Object.keys(browserComps)
+      this.size = componentIds.length
+      this.components = componentIds.reduce((accum, componentId) => {
+        const cssFromDOM = browserComps[componentId].wholeText
+        return { ...accum, [componentId]: { componentId, css: [cssFromDOM], index: 1 } }
       }, {})
     } else {
       this.components = {}
@@ -36,7 +45,7 @@ export default class InMemoryTag {
 
   addComponent(componentId: string) {
     if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
-    this.components[componentId] = { componentId, css: [] }
+    this.components[componentId] = { componentId, css: [], index: 0 }
     this.size += 1
   }
 
@@ -64,7 +73,14 @@ export default class InMemoryTag {
       this.browserTag = new BrowserTag(el)
     }
 
-    this.browserTag.flush(this)
+    const browserTag = this.browserTag
+    browserTag.updateNames(this.names)
+    Object.keys(this.components).forEach(componentId => {
+      const comp = this.components[componentId]
+      if (comp.index >= comp.css.length) return
+      browserTag.appendCSS(componentId, comp.css.slice(comp.index).join(''))
+      comp.index = comp.css.length
+    })
   }
 
   toHTML() {

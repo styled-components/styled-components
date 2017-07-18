@@ -1,11 +1,9 @@
 // @flow
 import extractCompsFromCSS from '../utils/extractCompsFromCSS'
-import type InMemoryTag from './InMemoryTag'
 import { SC_ATTR } from './StyleSheet'
 
 export default class BrowserTag {
-  components: { [string]: Object }
-  size: number
+  textNodes: { [string]: Object }
   el: HTMLElement
   ready: boolean
 
@@ -15,76 +13,46 @@ export default class BrowserTag {
 
     const extractedComps = extractCompsFromCSS(existingSource)
 
-    this.size = extractedComps.length
-    this.components = extractedComps.reduce((acc, obj) => {
-      acc[obj.componentId] = obj // eslint-disable-line no-param-reassign
-      return acc
-    }, {})
-  }
-
-  flush(memoryTag: InMemoryTag) {
-    Object.keys(memoryTag.components).forEach(componentId => {
-      if (!this.components[componentId]) this.addComponent(componentId)
-      const css = memoryTag.components[componentId].css
-      const comp = this.components[componentId]
-      this.inject(componentId, css.slice(comp.index).join(''), memoryTag.names)
-      comp.index = css.length
+    this.textNodes = {}
+    extractedComps.forEach(obj => {
+      this.textNodes[obj.componentId] = document.createTextNode(obj.cssFromDOM)
     })
   }
 
-  addComponent(componentId: string) {
+  getComponentNode(componentId: string) {
     if (!this.ready) this.replaceElement()
-    if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
+    const existingTextNode = this.textNodes[componentId]
+    if (existingTextNode) return existingTextNode
 
-    const comp = { componentId, textNode: document.createTextNode(''), index: 0 }
-    this.el.appendChild(comp.textNode)
-
-    this.size += 1
-    this.components[componentId] = comp
+    const textNode = document.createTextNode('')
+    this.el.appendChild(textNode)
+    this.textNodes[componentId] = textNode
+    return textNode
   }
 
-  inject(componentId: string, css: string, names: Array<string>) {
-    if (!css) return
-    if (!this.ready) this.replaceElement()
-    const comp = this.components[componentId]
-
-    if (!comp) throw new Error('Must add a new component before you can inject css into it')
-
-    comp.textNode.appendData(css)
-    if (names.length > 0) {
-      this.el.setAttribute(SC_ATTR, names.join(' '))
-    }
+  appendCSS(componentId: string, css: string) {
+    const textNode = this.getComponentNode(componentId)
+    textNode.appendData(css)
   }
 
-  toHTML() {
-    return this.el.outerHTML
-  }
-
-  toReactElement() {
-    throw new Error('BrowserTag doesn\'t implement toReactElement!')
-  }
-
-  clone() {
-    throw new Error('BrowserTag cannot be cloned!')
+  updateNames(names: Array<string>) {
+    this.el.setAttribute(SC_ATTR, names.join(' '))
   }
 
   /* Because we care about source order, before we can inject anything we need to
    * create a text node for each component and replace the existing CSS. */
   replaceElement() {
-    this.ready = true
+    const componentIds = Object.keys(this.textNodes)
     // We have nothing to inject. Use the current el.
-    if (this.size === 0) return
+    if (componentIds.length === 0) return
 
     // Build up our replacement style tag
     const newEl = this.el.cloneNode()
     newEl.appendChild(document.createTextNode('\n'))
 
-    Object.keys(this.components).forEach(key => {
-      const comp = this.components[key]
-
-      // eslint-disable-next-line no-param-reassign
-      comp.textNode = document.createTextNode(comp.cssFromDOM)
-      newEl.appendChild(comp.textNode)
+    componentIds.forEach(componentId => {
+      const textNode = this.textNodes[componentId]
+      newEl.appendChild(textNode)
     })
 
     if (!this.el.parentNode) throw new Error("Trying to replace an element that wasn't mounted!")
@@ -92,5 +60,6 @@ export default class BrowserTag {
     // The ol' switcheroo
     this.el.parentNode.replaceChild(newEl, this.el)
     this.el = newEl
+    this.ready = true
   }
 }

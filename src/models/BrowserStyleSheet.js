@@ -33,9 +33,11 @@ export default {
       const el = nodes[i]
 
       const isLocal = el.getAttribute(LOCAL_ATTR) === 'true'
-      const tagNames = (el.getAttribute(SC_ATTR) || '').trim().split(/\s+/)
-      tags.push(new InMemoryTag(true, isLocal, tagNames, new BrowserTag(el, el.innerHTML)))
-      tagNames.forEach(name => names[name] = true)
+      const existingNames = (el.getAttribute(SC_ATTR) || '').trim().split(/\s+/)
+      tags.push(new InMemoryTag(true, isLocal, existingNames, new BrowserTag(el, el.innerHTML)))
+      existingNames.forEach(name => {
+        names[name] = true
+      })
     }
 
     return new StyleSheet(true, tags, names)

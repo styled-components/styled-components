@@ -242,7 +242,6 @@ describe('rehydration', () => {
     })
 
     it('should replace stylesheets on-demand', () => {
-
       const tagsAfterReset = Array.from(document.querySelectorAll('style'))
       expect(tagsAfterReset[0]).toBe(styleTags[0])
       expect(tagsAfterReset[1]).toBe(styleTags[1])
@@ -256,7 +255,7 @@ describe('rehydration', () => {
       expect(styleTagsAfterRehydration[0]).toBe(styleTags[0])
       expect(styleTagsAfterRehydration[1]).toBe(styleTags[1])
 
-      /* Only when new components are introduced (or a previous component
+      /* when new components are introduced (or a previous component
        * generates a new hash) does the style tag get replaced. */
       const C = styled.div.withConfig({ componentId: 'THREE' })`color: green;`
       shallow(<C />)
@@ -270,9 +269,9 @@ describe('rehydration', () => {
 
       const styleTagsAfterAddition = Array.from(document.querySelectorAll('style'))
       /* The first tag is unchanged */
-      expect(styleTagsAfterAddition[0]).toBe(styleTags[0])
+      expect(styleTagsAfterAddition[0] === styleTags[0]).toBe(true)
       /* The local tag has been replaced */
-      expect(styleTagsAfterAddition[1]).not.toBe(styleTags[1])
+      expect(styleTagsAfterAddition[1] === styleTags[1]).toBe(false)
       /* But it is identical, except for... */
       expect(styleTagsAfterAddition[1].outerHTML).toEqual(
         styleTags[1].outerHTML
@@ -295,7 +294,8 @@ describe('rehydration', () => {
       `)
 
       /* Without replace the style tag! */
-      expect(Array.from(document.querySelectorAll('style'))[1]).toBe(styleTagsAfterAddition[1])
+      expect(Array.from(document.querySelectorAll('style'))[1] ===
+        styleTagsAfterAddition[1]).toBe(true)
     })
 
     it('should not change styles if rendered in the same order they were created with', () => {
