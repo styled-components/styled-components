@@ -2,21 +2,21 @@
 # yarn lockfile v1
 
 
-"@types/react-dom@^15.5.0":
-  version "15.5.0"
-  resolved "https://registry.yarnpkg.com/@types/react-dom/-/react-dom-15.5.0.tgz#7f4fb9613d4051141773242f7b6b5f1a46b34bd9"
+"@types/react-dom@^15.5.1":
+  version "15.5.1"
+  resolved "https://registry.yarnpkg.com/@types/react-dom/-/react-dom-15.5.1.tgz#f3c3e14c682785923c7d64583537df319442dec1"
   dependencies:
     "@types/react" "*"
 
-"@types/react-native@^0.44.4":
-  version "0.44.4"
-  resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.44.4.tgz#91ff838293f87f5b27827164fc1efe5e528b6f5a"
+"@types/react-native@^0.46.0":
+  version "0.46.0"
+  resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.46.0.tgz#ac2846578c44e59223eb8b3808a5694e1c77ef8f"
   dependencies:
     "@types/react" "*"
 
-"@types/react@*", "@types/react@^15.0.25":
-  version "15.0.25"
-  resolved "https://registry.yarnpkg.com/@types/react/-/react-15.0.25.tgz#d396949cccc9a90b61755def9781e5aced9b2261"
+"@types/react@*", "@types/react@^15.0.37":
+  version "15.0.37"
+  resolved "https://registry.yarnpkg.com/@types/react/-/react-15.0.37.tgz#e6391cdd4ffce7050b8a290b23611a61f2411da5"
 
 abab@^1.0.3:
   version "1.0.3"
@@ -6037,9 +6037,9 @@ typedarray@^0.0.6:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
 
-typescript@^2.3.3:
-  version "2.3.3"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.3.3.tgz#9639f3c3b40148e8ca97fe08a51dd1891bb6be22"
+typescript@^2.4.1:
+  version "2.4.1"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.4.1.tgz#c3ccb16ddaa0b2314de031e7e6fee89e5ba346bc"
 
 ua-parser-js@^0.7.9:
   version "0.7.12"

@@ -22,4 +22,5 @@ const text = "hey";
 
 const MyThemedComponent = withTheme(MyComponent);
 
-<MyThemedComponent text={text} />;
+<MyThemedComponent text={text} />; // ok
+<MyThemedComponent text={text} theme={theme} />; // ok
