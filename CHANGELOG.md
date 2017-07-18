@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. If a contri
 ## Unreleased
 
 - Upgrade stylis to 2.3 and use constructor to fix bugs with multiple libs using stylis simultaneously (see [#962](https://github.com/styled-components/styled-components/pull/962))
+- Replace `$FlowInvalidInputTest` with `$FlowFixMe`.  [#1004](https://github.com/styled-components/styled-components/pull/1004)
 
 ## [v2.1.0] - 2017-06-15
 
