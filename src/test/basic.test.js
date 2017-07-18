@@ -22,10 +22,10 @@ describe('basic', () => {
     const invalidComps = [undefined, null, 123, []]
     invalidComps.forEach(comp => {
       expect(() => {
-        // $FlowInvalidInputTest
+        // $FlowFixMe
         const Comp = styled(comp)
         shallow(<Comp />)
-        // $FlowInvalidInputTest
+        // $FlowFixMe
       }).toThrow(`Cannot create styled-component for component: ${comp}`)
     })
   })
