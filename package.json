@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npm run build:lib && npm run build:dist",
     "prebuild:lib": "rimraf lib/*",
-    "build:lib": "babel --out-dir lib src",
+    "build:lib": "babel --out-dir lib --ignore \"*.test.js\" src",
     "prebuild:dist": "rimraf dist/*",
     "build:dist": "rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
@@ -100,7 +100,6 @@
     "eslint-plugin-react": "^6.8.0",
     "express": "^4.14.1",
     "flow-bin": "^0.47.0",
-    "flow-copy-source": "^1.1.0",
     "flow-watch": "^1.1.1",
     "jest": "^19.0.2",
     "jsdom": "^9.10.0",

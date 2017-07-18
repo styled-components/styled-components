@@ -96,6 +96,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [react-progressive-bg-image](https://github.com/evenchange4/react-progressive-bg-image): 🖼 Medium style progressive background image. ([demo](http://react-progressive-bg-image.netlify.com/))
 - [react-simple-chatbot](https://github.com/LucasBassetti/react-simple-chatbot): Simple chatbot / conversational-ui React component. ([demo](https://lucasbassetti.com.br/react-simple-chatbot/))
 - [react-css-loaders](https://github.com/LucasBassetti/react-css-loaders): A collection of pure CSS React loading components. ([demo](https://lucasbassetti.com.br/react-css-loaders/))
+- [Rebass](https://github.com/jxnblk/rebass): Functional React UI component library ([demo](http://jxnblk.com/rebass))
 
 #### Grid Systems
 - [grid-styled](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
@@ -112,7 +113,9 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [styled-ax](https://github.com/Lokua/styled-ax): Functional theme property accessor(s)
 - [react-create-component-from-tag-prop](https://github.com/jameslnewell/react-create-component-from-tag-prop): Create a react component from a tag prop. Lets your users to choose which HTML elements get styled by your 💅 styled-components.
 - [styled-components-theme](https://github.com/erikras/styled-components-theme): A library for refering to theme colors and modifying them inline. e.g. `color: ${primary.lighten(0.3)};`
-- [styled-map](https://github.com/scf4/styled-map) - Super simple lib to map props to styles with `styled-components`
+- [styled-map](https://github.com/scf4/styled-map): Super simple lib to map props to styles with `styled-components`
+- [styled-system](https://github.com/jxnblk/styled-system): Design system utilities for styled-components – used in grid-styled and Rebass ([demo](http://jxnblk.com/styled-system/))
+- [styled-shortcuts](https://github.com/donavon/styled-shortcuts): Use simple string notation to access props. No functions necessary! Example: `font-size: ${'theme.fontSize:px'};` ([demo](https://codesandbox.io/s/jRE0XxR9v))
 
 ### Boilerplates
 - [react-redux-styled-hot-universal](https://github.com/krasevych/react-redux-styled-hot-universal) (SSR, Universal Webpack, Redux, React-router, Webpack 2, Babel, Styled Components and more...)
@@ -149,6 +152,7 @@ These are some great articles and talks about related topics in case you're hung
 - [🎙 The Future of Reusable CSS](https://www.youtube.com/watch?v=XR6eM_5pAb0): How component libraries should be styled, and why they're not yet
 - [📝 Rendering Khan Academy’s Learn Menu Wherever I Please](https://medium.com/@jdan/rendering-khan-academys-learn-menu-wherever-i-please-4b58d4a9432d#.w9nshye05): Documenting the move from the handlebars + less combo to react and inline styles
 - [🖥 Ryan's random thoughts about inline styles](https://www.youtube.com/watch?v=EkPcGS4TzdQ): Explaining some benefits of using styles in js
+- [🖥 Create a style guide using NPM & styled-components](https://www.youtube.com/watch?v=u6gQ48rSw-E): Jamie fumbles through creating a shareable NPM package.
 
 ## Alternative Installation Methods
 
