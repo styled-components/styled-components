@@ -5,7 +5,7 @@ import type { Interpolation, Stringifier } from '../types'
 
 export default (stringifyRules: Stringifier, css: Function) => {
   const injectGlobal = (strings: Array<string>, ...interpolations: Array<Interpolation>) => {
-    if (typeof strings === 'string') {
+    if (process.env.NODE_ENV !== 'production' && !(Array.isArray(strings))) {
       // eslint-disable-next-line no-console
       console.warn(
           'injectGlobal: Pass template literal strings without parentheses, global styles are not be applied. ',
