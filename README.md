@@ -117,6 +117,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [styled-system](https://github.com/jxnblk/styled-system): Design system utilities for styled-components – used in grid-styled and Rebass ([demo](http://jxnblk.com/styled-system/))
 - [styled-shortcuts](https://github.com/donavon/styled-shortcuts): Use simple string notation to access props. No functions necessary! Example: `font-size: ${'theme.fontSize:px'};` ([demo](https://codesandbox.io/s/jRE0XxR9v))
 - [styled-shortcut-components](https://github.com/donavon/styled-shortcut-components): A convenience package that wraps `styled-components` with `styled-shortcuts`.
+- [styled-media-query](http://github.com/morajabi/styled-media-query): Easily and beautifully use media queries with styled-component with custom breakpoints
 
 ### Boilerplates
 - [react-redux-styled-hot-universal](https://github.com/krasevych/react-redux-styled-hot-universal) (SSR, Universal Webpack, Redux, React-router, Webpack 2, Babel, Styled Components and more...)
