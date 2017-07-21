@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Refactor variable in generateAlphabeticName.js (see [#1040](https://github.com/styled-components/styled-components/pull/1040))
 - Enable the Node environment for SSR tests, switch some output verification to snapshot testing (see [#1023](https://github.com/styled-components/styled-components/pull/1023))
 - Add .extend and .withComponent deterministic ID generation (see [#1044](https://github.com/styled-components/styled-components/pull/1044))
+- Improve component mount and unmount performance with changes to `createBroadcast`. Deprecates usage of `CHANNEL` as a function, will be update to `CHANNEL_NEXT`'s propType in a future version. (see [#1048](https://github.com/styled-components/styled-components/pull/1048))
 
 ## [v2.1.1] - 2017-07-03
 

@@ -4,7 +4,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import hoistStatics from 'hoist-non-react-statics'
-import { CHANNEL } from '../models/ThemeProvider'
+import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from '../models/ThemeProvider'
 import _isStyledComponent from '../utils/isStyledComponent'
 
 const wrapWithTheme = (Component: ReactClass<any>) => {
@@ -24,24 +24,32 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
 
     static contextTypes = {
       [CHANNEL]: PropTypes.func,
+      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
     };
 
     state: { theme?: ?Object } = {};
-    unsubscribe: () => void;
+    unsubscribeId: number = -1
 
     componentWillMount() {
-      if (!this.context[CHANNEL]) {
-        throw new Error('[withTheme] Please use ThemeProvider to be able to use withTheme')
+      const styledContext = this.context[CHANNEL_NEXT]
+      if (!styledContext) {
+        // eslint-disable-next-line no-console
+        console.error('[withTheme] Please use ThemeProvider to be able to use withTheme')
+        return
       }
 
-      const subscribe = this.context[CHANNEL]
-      this.unsubscribe = subscribe(theme => {
+
+      const { subscribe } = styledContext
+      this.unsubscribeId = subscribe(theme => {
         this.setState({ theme })
       })
     }
 
     componentWillUnmount() {
-      if (typeof this.unsubscribe === 'function') this.unsubscribe()
+      const styledContext = this.context[CHANNEL_NEXT]
+      if (styledContext) {
+        styledContext.unsubscribe(this.unsubscribeId)
+      }
     }
 
     render() {

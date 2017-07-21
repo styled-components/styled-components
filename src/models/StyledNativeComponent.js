@@ -8,7 +8,7 @@ import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 import type { RuleSet, Target } from '../types'
 
-import { CHANNEL } from './ThemeProvider'
+import { CHANNEL_NEXT } from './ThemeProvider'
 import AbstractStyledComponent from './AbstractStyledComponent'
 
 export default (constructWithOptions: Function, InlineStyle: Function) => {
@@ -53,9 +53,10 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       // If there is a theme in the context, subscribe to the event emitter. This
       // is necessary due to pure components blocking context updates, this circumvents
       // that by updating when an event is emitted
-      if (this.context[CHANNEL]) {
-        const subscribe = this.context[CHANNEL]
-        this.unsubscribe = subscribe(nextTheme => {
+      const styledContext = this.context[CHANNEL_NEXT]
+      if (styledContext) {
+        const { subscribe } = styledContext
+        this.unsubscribeId = subscribe(nextTheme => {
           // This will be called once immediately
 
           // Props should take precedence over ThemeProvider, which should take precedence over
@@ -90,9 +91,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     }
 
     componentWillUnmount() {
-      if (this.unsubscribe) {
-        this.unsubscribe()
-      }
+      this.unsubscribeFromContext()
     }
 
     setNativeProps(nativeProps: Object) {
