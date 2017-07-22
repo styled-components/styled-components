@@ -12,6 +12,9 @@ describe('with styles', () => {
    */
   beforeEach(() => {
     styled = resetStyled()
+
+    // eslint-disable-next-line no-underscore-dangle
+    window.__webpack_nonce__ = undefined
   })
 
   it('should append a style', () => {
@@ -168,5 +171,24 @@ describe('with styles', () => {
           color: blue;
         }
       `)
+  })
+
+  it('should add a webpack nonce to the style tags if one is available in the global scope', () => {
+    // eslint-disable-next-line no-underscore-dangle
+    window.__webpack_nonce__ = 'foo'
+
+    const rule = 'color: blue;'
+    const Comp = styled.div`
+        ${rule}
+      `
+    shallow(<Comp />)
+    expectCSSMatches(`
+        .sc-a {}
+        .b {
+          color: blue;
+        }
+      `)
+
+    Array.from(document.querySelectorAll('style')).forEach(el => expect(el.getAttribute('nonce')).toBe('foo'))
   })
 })

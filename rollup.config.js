@@ -43,7 +43,9 @@ const plugins = [
   },
   flow(),
   nodeResolve(),
-  commonjs(),
+  commonjs({
+    ignoreGlobal: true,
+  }),
   replace({
     'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
   }),
