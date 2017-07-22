@@ -30,7 +30,7 @@ if (!danger.git.modified_files.includes('CHANGELOG.md') && hasAppChanges) {
 
 // Warn if there are library changes, but not tests (excluding vendor)
 const libraryOnlyFiles = jsModifiedFiles.filter(file => !vendorModifiedFiles.includes(file))
-if (libraryOnlyFiles.length > 0 && hasTestChanges) {
+if (libraryOnlyFiles.length > 0 && !hasTestChanges) {
   warn("There are library changes, but not tests. That's OK as long as you're refactoring existing code")
 }
 
