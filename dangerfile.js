@@ -6,7 +6,7 @@ import fs from 'fs'
 const jsModifiedFiles = danger.git.modified_files.filter(path => path.startsWith('src') && path.endsWith('js'))
 const vendorModifiedFiles = danger.git.modified_files.filter(path => path.startsWith('src/vendor') && path.endsWith('js'))
 
-const hasAppChanges = jsModifiedFiles.length > 0
+const hasAppChanges = jsModifiedFiles.filter(filepath => !filepath.endsWith('test.js')).length > 0
 const jsTestChanges = jsModifiedFiles.filter(filepath => filepath.endsWith('test.js'))
 const hasTestChanges = jsTestChanges.length > 0
 
