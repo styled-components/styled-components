@@ -273,4 +273,43 @@ describe('ssr', () => {
       </style>
     `))
   })
+
+  it('should return a generated React style element', () => {
+    injectGlobal`
+      body { background: papayawhip; }
+    `
+    const Heading = styled.h1`
+      color: red;
+    `
+
+    const sheet = new ServerStyleSheet()
+    const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+    const elements = sheet.getStyleElement()
+
+    expect(elements).toHaveLength(2);
+
+    expect(elements[0].props).toMatchSnapshot()
+    expect(elements[1].props).toMatchSnapshot()
+  })
+
+  it('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
+    injectGlobal`
+      body { background: papayawhip; }
+    `
+    const Heading = styled.h1`
+      color: red;
+    `
+
+    // eslint-disable-next-line no-underscore-dangle
+    global.__webpack_nonce__ = 'foo'
+
+    const sheet = new ServerStyleSheet()
+    const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+    const elements = sheet.getStyleElement()
+
+    expect(elements).toHaveLength(2);
+
+    expect(elements[0].props).toMatchSnapshot()
+    expect(elements[1].props).toMatchSnapshot()
+  })
 })
