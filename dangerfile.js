@@ -6,7 +6,7 @@ import fs from 'fs'
 const jsModifiedFiles = danger.git.modified_files.filter(path => path.startsWith('src') && path.endsWith('js'))
 const vendorModifiedFiles = danger.git.modified_files.filter(path => path.startsWith('src/vendor') && path.endsWith('js'))
 
-const hasAppChanges = jsModifiedFiles.length > 0
+const hasAppChanges = jsModifiedFiles.filter(filepath => !filepath.endsWith('test.js')).length > 0
 const jsTestChanges = jsModifiedFiles.filter(filepath => filepath.endsWith('test.js'))
 const hasTestChanges = jsTestChanges.length > 0
 
@@ -30,7 +30,7 @@ if (!danger.git.modified_files.includes('CHANGELOG.md') && hasAppChanges) {
 
 // Warn if there are library changes, but not tests (excluding vendor)
 const libraryOnlyFiles = jsModifiedFiles.filter(file => !vendorModifiedFiles.includes(file))
-if (libraryOnlyFiles.length > 0 && hasTestChanges) {
+if (libraryOnlyFiles.length > 0 && !hasTestChanges) {
   warn("There are library changes, but not tests. That's OK as long as you're refactoring existing code")
 }
 
