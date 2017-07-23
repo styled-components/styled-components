@@ -308,8 +308,7 @@ describe('ssr', () => {
     const elements = sheet.getStyleElement()
 
     expect(elements).toHaveLength(2);
-
-    expect(elements[0].props).toMatchSnapshot()
-    expect(elements[1].props).toMatchSnapshot()
+    expect(elements[0].props.nonce).toBe('foo');
+    expect(elements[1].props.nonce).toBe('foo');
   })
 })

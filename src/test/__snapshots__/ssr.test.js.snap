@@ -27,33 +27,3 @@ Object {
   "type": "text/css",
 }
 `;
-
-exports[`ssr should return a generated React style element with nonce if webpack nonce is preset in the global scope 1`] = `
-Object {
-  "dangerouslySetInnerHTML": Object {
-    "__html": "/* sc-component-id: sc-global-2303210225 */
-body{background: papayawhip;}
-",
-  },
-  "data-styled-components": "",
-  "data-styled-components-is-local": "false",
-  "nonce": "foo",
-  "type": "text/css",
-}
-`;
-
-exports[`ssr should return a generated React style element with nonce if webpack nonce is preset in the global scope 2`] = `
-Object {
-  "dangerouslySetInnerHTML": Object {
-    "__html": "/* sc-component-id: sc-a */
-.sc-a {}
-
-.b{color: red;}
-",
-  },
-  "data-styled-components": "b",
-  "data-styled-components-is-local": "true",
-  "nonce": "foo",
-  "type": "text/css",
-}
-`;
