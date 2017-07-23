@@ -1,7 +1,7 @@
 import React from 'react'
 import { renderToString } from  'react-dom/server'
 import ServerStyleSheet from '../models/ServerStyleSheet'
-import { resetStyled, stripWhitespace, nameGenerator } from './utils'
+import { resetStyled, stripWhitespace } from './utils'
 import _injectGlobal from '../constructors/injectGlobal'
 import _keyframes from '../constructors/keyframes'
 import stringifyRules from '../utils/stringifyRules'
@@ -21,6 +21,9 @@ const format = css => stripWhitespace(css)
 describe('ssr', () => {
   beforeEach(() => {
     styled = resetStyled(true)
+
+    // eslint-disable-next-line no-underscore-dangle
+    global.__webpack_nonce__ = undefined
   })
 
   it('should extract the CSS in a simple case', () => {
@@ -63,6 +66,37 @@ describe('ssr', () => {
 
       </style>
       <style type="text/css" data-styled-components="b" data-styled-components-is-local="true">
+      /* sc-component-id: sc-a */
+      .sc-a {}
+      .b { color: red; }
+
+      </style>
+    `))
+  })
+
+  it('should add a nonce to the stylesheet if webpack nonce is detected in the global scope', () => {
+    injectGlobal`
+      body { background: papayawhip; }
+    `
+    const Heading = styled.h1`
+      color: red;
+    `
+
+    // eslint-disable-next-line no-underscore-dangle
+    global.__webpack_nonce__ = 'foo'
+
+    const sheet = new ServerStyleSheet()
+    const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+    const css = format(sheet.getStyleTags())
+
+    expect(html).toEqual('<h1 class="sc-a b" data-reactroot="" data-reactid="1" data-react-checksum="197727696">Hello SSR!</h1>')
+    expect(css).toEqual(format(`
+      <style type="text/css" data-styled-components="" data-styled-components-is-local="false" nonce="foo">
+      /* sc-component-id: sc-global-2303210225 */
+      body { background: papayawhip; }
+
+      </style>
+      <style type="text/css" data-styled-components="b" data-styled-components-is-local="true" nonce="foo">
       /* sc-component-id: sc-a */
       .sc-a {}
       .b { color: red; }
@@ -238,5 +272,43 @@ describe('ssr', () => {
       @-webkit-keyframes keyframe_0 {0% {opacity: 0;}}@keyframes keyframe_0 {0% {opacity: 0;}}
       </style>
     `))
+  })
+
+  it('should return a generated React style element', () => {
+    injectGlobal`
+      body { background: papayawhip; }
+    `
+    const Heading = styled.h1`
+      color: red;
+    `
+
+    const sheet = new ServerStyleSheet()
+    const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+    const elements = sheet.getStyleElement()
+
+    expect(elements).toHaveLength(2);
+
+    expect(elements[0].props).toMatchSnapshot()
+    expect(elements[1].props).toMatchSnapshot()
+  })
+
+  it('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
+    injectGlobal`
+      body { background: papayawhip; }
+    `
+    const Heading = styled.h1`
+      color: red;
+    `
+
+    // eslint-disable-next-line no-underscore-dangle
+    global.__webpack_nonce__ = 'foo'
+
+    const sheet = new ServerStyleSheet()
+    const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+    const elements = sheet.getStyleElement()
+
+    expect(elements).toHaveLength(2);
+    expect(elements[0].props.nonce).toBe('foo');
+    expect(elements[1].props.nonce).toBe('foo');
   })
 })
