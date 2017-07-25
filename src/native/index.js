@@ -38,5 +38,6 @@ aliases.split(/\s+/m).forEach(alias => Object.defineProperty(styled, alias, {
   },
 }))
 
+export { resetStyleCache } from '../models/InlineStyle'
 export { css, ThemeProvider, withTheme }
 export default styled
