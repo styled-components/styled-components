@@ -6,7 +6,7 @@ export default (css: Function) => {
                                 tag: Target,
                                 options: Object = {}) => {
     if (typeof tag !== 'string' && typeof tag !== 'function') {
-      // $FlowInvalidInputTest
+      // $FlowFixMe
       throw new Error(`Cannot create styled-component for component: ${tag}`)
     }
 
