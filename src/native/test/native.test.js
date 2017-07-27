@@ -32,6 +32,20 @@ describe('native', () => {
     expect(view.prop('style')).toEqual([ { paddingTop: 10 }, style ])
   })
 
+  it('should not console.warn if a comment is seen', () => {
+    const oldConsoleWarn = console.warn;
+    console.warn = jest.fn();
+    try {
+      styled.View`
+        /* this is a comment */
+      `
+
+      expect(console.warn).not.toHaveBeenCalled();
+    } finally {
+      console.warn = oldConsoleWarn;
+    }
+  })
+
   describe('extending', () => {
     it('should combine styles of extending components', () => {
       const Parent = styled.View`opacity: 0.9;`

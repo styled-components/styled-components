@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Add react-native `ImageBackground` alias (see [#1028](https://github.com/styled-components/styled-components/pull/1028))
 
+- Fixed comments in react-native (see [#1041](https://github.com/styled-components/styled-components/pull/1041))
+
 ## [v2.1.0] - 2017-06-15
 
 - Added missing v2.0 APIs to TypeScript typings, thanks to [@patrick91](https://github.com/patrick91), [@igorbek](https://github.com/igorbek) (see [#837](https://github.com/styled-components/styled-components/pull/837), [#882](https://github.com/styled-components/styled-components/pull/882))
