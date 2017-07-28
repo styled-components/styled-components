@@ -241,10 +241,15 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         }
 
         const createWithHash = (tag, opts, css) => {
-          const newOpts = opts.componentId ? {
-            ...opts,
-            componentId: `${opts.componentId}-${ComponentStyle.generateName(css.join(''))}`,
-          } : opts
+          let newOpts = opts
+          if (opts.componentId) {
+            const cssStr = css.map(rule => typeof rule === 'function' ? 'FUNC' : rule).join('')
+            const hash = ComponentStyle.generateName(cssStr)
+            newOpts = {
+              ...opts,
+              componentId: `${opts.componentId}-${hash}`,
+            }
+          }
 
           return createStyledComponent(tag, newOpts, css)
         }

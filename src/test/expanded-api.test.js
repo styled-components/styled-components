@@ -63,12 +63,12 @@ describe('expanded api', () => {
       expect(shallow(<Comp2 />).prop('className')).toMatch(/Comp2-OMGLOL/)
     })
 
-    it.only('should work with `.extend`', () => {
+    it('should work with `.extend`', () => {
       const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })`
         color: blue;
       `
       const Comp2 = Comp.extend`
-        color: red;
+        color: ${'red'};
         background: ${props => props.bg};
       `
       expect(Comp.styledComponentId).toBe('Comp-LOLOMG')
