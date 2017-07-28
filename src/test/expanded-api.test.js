@@ -63,17 +63,28 @@ describe('expanded api', () => {
       expect(shallow(<Comp2 />).prop('className')).toMatch(/Comp2-OMGLOL/)
     })
 
-    it('should work with `.extend` and `.withComponent`', () => {
+    it.only('should work with `.extend`', () => {
+      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })`
+        color: blue;
+      `
+      const Comp2 = Comp.extend`
+        color: red;
+        background: ${props => props.bg};
+      `
+      expect(Comp.styledComponentId).toBe('Comp-LOLOMG')
+      expect(shallow(<Comp />).prop('className')).toMatch(/Comp-LOLOMG/)
+      expect(Comp2.styledComponentId).toBe('Comp-LOLOMG-a')
+      expect(shallow(<Comp2 bg="red" />).prop('className')).toMatch(/Comp-LOLOMG-a/)
+    })
+
+    it('should work with `.withComponent`', () => {
       const Dummy = () => null
-      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })``.extend``
-      const Comp2 = styled.div.withConfig({ displayName: 'Comp2', componentId: 'OMGLOL' })``.withComponent('h1')
-      const Comp3 = styled.div.withConfig({ displayName: 'Comp3', componentId: 'OMFG' })``.withComponent(Dummy)
-      expect(Comp.styledComponentId).toBe('Comp-LOLOMG-a')
-      expect(shallow(<Comp />).prop('className')).toMatch(/Comp-LOLOMG-a/)
-      expect(Comp2.styledComponentId).toBe('Comp2-OMGLOL-h1')
-      expect(shallow(<Comp2 />).prop('className')).toMatch(/Comp2-OMGLOL-h1/)
-      expect(Comp3.styledComponentId).toBe('Comp3-OMFG-Dummy')
-      expect(shallow(<Comp3 />).prop('className')).toMatch(/Comp3-OMFG-Dummy/)
+      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'OMGLOL' })``.withComponent('h1')
+      const Comp2 = styled.div.withConfig({ displayName: 'Comp2', componentId: 'OMFG' })``.withComponent(Dummy)
+      expect(Comp.styledComponentId).toBe('Comp-OMGLOL-h1')
+      expect(shallow(<Comp />).prop('className')).toMatch(/Comp-OMGLOL-h1/)
+      expect(Comp2.styledComponentId).toBe('Comp2-OMFG-Dummy')
+      expect(shallow(<Comp2 />).prop('className')).toMatch(/Comp2-OMFG-Dummy/)
     })
   })
 

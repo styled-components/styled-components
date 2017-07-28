@@ -225,7 +225,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
       static get extend() {
         const {
-          componentId: previousComponentId,
           rules: rulesFromOptions,
           ...optionsToCopy
         } = options
@@ -235,20 +234,22 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
             ? rules
             : rulesFromOptions.concat(rules)
 
-        const newComponentId =
-          previousComponentId &&
-          `${previousComponentId}-${ComponentStyle.generateName(
-            newRules.join(''),
-          )}`
-
         const newOptions = {
           ...optionsToCopy,
-          componentId: newComponentId,
           rules: newRules,
           ParentComponent: StyledComponent,
         }
 
-        return constructWithOptions(createStyledComponent, target, newOptions)
+        const createWithHash = (tag, opts, css) => {
+          const newOpts = opts.componentId ? {
+            ...opts,
+            componentId: `${opts.componentId}-${ComponentStyle.generateName(css.join(''))}`,
+          } : opts
+
+          return createStyledComponent(tag, newOpts, css)
+        }
+
+        return constructWithOptions(createWithHash, target, newOptions)
       }
     }
 
