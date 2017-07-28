@@ -115,7 +115,7 @@ export class StyleSheetManager extends React.Component<StylesheetComponentProps,
 
 export class ServerStyleSheet {
   collectStyles(tree: React.ReactNode): ReactElement<StylesheetComponentProps>;
-
+  instance: ServerStyleSheet;
   getStyleTags(): string;
   getStyleElement(): ReactElement<{}>[];
 }
