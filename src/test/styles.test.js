@@ -8,6 +8,8 @@ import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
 const injectGlobal = _injectGlobal(stringifyRules, css)
 
+jest.mock('../utils/nonce')
+
 let styled
 
 describe('with styles', () => {
@@ -15,10 +17,9 @@ describe('with styles', () => {
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    styled = resetStyled()
+    require('../utils/nonce').mockReset()
 
-    // eslint-disable-next-line no-underscore-dangle
-    window.__webpack_nonce__ = undefined
+    styled = resetStyled()
   })
 
   it('should append a style', () => {
@@ -178,8 +179,8 @@ describe('with styles', () => {
   })
 
   it('should add a webpack nonce to the style tags if one is available in the global scope', () => {
-    // eslint-disable-next-line no-underscore-dangle
-    window.__webpack_nonce__ = 'foo'
+    // eslint-disable-next-line
+    require('../utils/nonce').mockImplementation(() => 'foo')
 
     const rule = 'color: blue;'
     const Comp = styled.div`

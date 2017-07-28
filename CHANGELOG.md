@@ -9,10 +9,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Fixed nonce missing from global styles (see [#1088](https://github.com/styled-components/styled-components/pull/1088))
 - Improve component mount and unmount performance with changes to `createBroadcast`. Deprecates usage of `CHANNEL` as a function, will be update to `CHANNEL_NEXT`'s propType in a future version. (see [#1048](https://github.com/styled-components/styled-components/pull/1048))
 - Fixed comments in react-native (see [#1041](https://github.com/styled-components/styled-components/pull/1041))
-
-## [v2.1.2] - 2017-08-04
-
-- Add support for the `__webpack_nonce__` CSP attribute (see [#1022](https://github.com/styled-components/styled-components/pull/1022))
+- Add support for the `__webpack_nonce__` CSP attribute (see [#1022](https://github.com/styled-components/styled-components/pull/1022) and [#1043](https://github.com/styled-components/styled-components/pull/1043))
 - Add react-native `ImageBackground` alias (see [#1028](https://github.com/styled-components/styled-components/pull/1028))
 - Refactor variable in generateAlphabeticName.js (see [#1040](https://github.com/styled-components/styled-components/pull/1040))
 - Enable the Node environment for SSR tests, switch some output verification to snapshot testing (see [#1023](https://github.com/styled-components/styled-components/pull/1023))
