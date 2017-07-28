@@ -208,25 +208,42 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       static target = target
 
       static withComponent(tag) {
-        const { displayName: _, componentId: __, ...optionsToCopy } = options
-        const newOptions = { ...optionsToCopy, ParentComponent: StyledComponent }
+        const { componentId: previousComponentId, ...optionsToCopy } = options
+
+        const newComponentId =
+          previousComponentId &&
+          `${previousComponentId}-${isTag(tag) ? tag : getComponentName(tag)}`
+
+        const newOptions = {
+          ...optionsToCopy,
+          componentId: newComponentId,
+          ParentComponent: StyledComponent,
+        }
+
         return createStyledComponent(tag, newOptions, rules)
       }
 
       static get extend() {
         const {
-          displayName: _,
-          componentId: __,
+          componentId: previousComponentId,
           rules: rulesFromOptions,
           ...optionsToCopy
         } = options
 
-        const newRules = rulesFromOptions === undefined
-          ? rules
-          : rulesFromOptions.concat(rules)
+        const newRules =
+          rulesFromOptions === undefined
+            ? rules
+            : rulesFromOptions.concat(rules)
+
+        const newComponentId =
+          previousComponentId &&
+          `${previousComponentId}-${ComponentStyle.generateName(
+            newRules.join(''),
+          )}`
 
         const newOptions = {
           ...optionsToCopy,
+          componentId: newComponentId,
           rules: newRules,
           ParentComponent: StyledComponent,
         }
