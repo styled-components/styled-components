@@ -73,8 +73,8 @@ describe('expanded api', () => {
       `
       expect(Comp.styledComponentId).toBe('Comp-LOLOMG')
       expect(shallow(<Comp />).prop('className')).toMatch(/Comp-LOLOMG/)
-      expect(Comp2.styledComponentId).toBe('Comp-LOLOMG-a')
-      expect(shallow(<Comp2 bg="red" />).prop('className')).toMatch(/Comp-LOLOMG-a/)
+      expect(Comp2.styledComponentId).toBe('LOLOMG-Comp-a')
+      expect(shallow(<Comp2 bg="red" />).prop('className')).toMatch(/LOLOMG-Comp-a/)
     })
 
     it('should work with `.withComponent`', () => {

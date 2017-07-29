@@ -22,7 +22,7 @@ const multiDashRegex = /--+/g
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
   /* We depend on components having unique IDs */
   const identifiers = {}
-  const generateId = (_displayName: string) => {
+  const generateId = (_displayName: string, parentComponentId: string) => {
     const displayName = typeof _displayName !== 'string' ?
       'sc' : _displayName
         .replace(escapeRegex, '-') // Replace all possible CSS selectors
@@ -32,7 +32,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     identifiers[displayName] = nr
 
     const hash = ComponentStyle.generateName(displayName + nr)
-    return `${displayName}-${hash}`
+    const componentId = `${displayName}-${hash}`
+    return parentComponentId ? `${parentComponentId}-${componentId}` : componentId
   }
 
   class BaseStyledComponent extends AbstractStyledComponent {
@@ -175,7 +176,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
   ) => {
     const {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${getComponentName(target)})`,
-      componentId = generateId(options.displayName),
+      componentId = generateId(options.displayName, options.parentComponentId),
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
       attrs,
@@ -226,6 +227,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       static get extend() {
         const {
           rules: rulesFromOptions,
+          componentId: parentComponentId,
           ...optionsToCopy
         } = options
 
@@ -237,24 +239,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         const newOptions = {
           ...optionsToCopy,
           rules: newRules,
+          parentComponentId,
           ParentComponent: StyledComponent,
         }
 
-        const createWithHash = (tag, opts, css) => {
-          let newOpts = opts
-          if (opts.componentId) {
-            const cssStr = css.map(rule => typeof rule === 'function' ? 'FUNC' : rule).join('')
-            const hash = ComponentStyle.generateName(cssStr)
-            newOpts = {
-              ...opts,
-              componentId: `${opts.componentId}-${hash}`,
-            }
-          }
-
-          return createStyledComponent(tag, newOpts, css)
-        }
-
-        return constructWithOptions(createWithHash, target, newOptions)
+        return constructWithOptions(createStyledComponent, target, newOptions)
       }
     }
 
