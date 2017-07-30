@@ -22,7 +22,7 @@ const multiDashRegex = /--+/g
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
   /* We depend on components having unique IDs */
   const identifiers = {}
-  const generateId = (_displayName: string) => {
+  const generateId = (_displayName: string, parentComponentId: string) => {
     const displayName = typeof _displayName !== 'string' ?
       'sc' : _displayName
         .replace(escapeRegex, '-') // Replace all possible CSS selectors
@@ -32,7 +32,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     identifiers[displayName] = nr
 
     const hash = ComponentStyle.generateName(displayName + nr)
-    return `${displayName}-${hash}`
+    const componentId = `${displayName}-${hash}`
+    return parentComponentId !== undefined
+      ? `${parentComponentId}-${componentId}`
+      : componentId
   }
 
   class BaseStyledComponent extends AbstractStyledComponent {
@@ -175,7 +178,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
   ) => {
     const {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${getComponentName(target)})`,
-      componentId = generateId(options.displayName),
+      componentId = generateId(options.displayName, options.parentComponentId),
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
       attrs,
@@ -208,26 +211,37 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       static target = target
 
       static withComponent(tag) {
-        const { displayName: _, componentId: __, ...optionsToCopy } = options
-        const newOptions = { ...optionsToCopy, ParentComponent: StyledComponent }
+        const { componentId: previousComponentId, ...optionsToCopy } = options
+
+        const newComponentId =
+          previousComponentId &&
+          `${previousComponentId}-${isTag(tag) ? tag : getComponentName(tag)}`
+
+        const newOptions = {
+          ...optionsToCopy,
+          componentId: newComponentId,
+          ParentComponent: StyledComponent,
+        }
+
         return createStyledComponent(tag, newOptions, rules)
       }
 
       static get extend() {
         const {
-          displayName: _,
-          componentId: __,
           rules: rulesFromOptions,
+          componentId: parentComponentId,
           ...optionsToCopy
         } = options
 
-        const newRules = rulesFromOptions === undefined
-          ? rules
-          : rulesFromOptions.concat(rules)
+        const newRules =
+          rulesFromOptions === undefined
+            ? rules
+            : rulesFromOptions.concat(rules)
 
         const newOptions = {
           ...optionsToCopy,
           rules: newRules,
+          parentComponentId,
           ParentComponent: StyledComponent,
         }
 
