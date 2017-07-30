@@ -33,7 +33,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     const hash = ComponentStyle.generateName(displayName + nr)
     const componentId = `${displayName}-${hash}`
-    return parentComponentId ? `${parentComponentId}-${componentId}` : componentId
+    return parentComponentId !== undefined
+      ? `${parentComponentId}-${componentId}`
+      : componentId
   }
 
   class BaseStyledComponent extends AbstractStyledComponent {
