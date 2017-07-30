@@ -101,7 +101,7 @@
     "express": "^4.14.1",
     "flow-bin": "^0.47.0",
     "flow-watch": "^1.1.1",
-    "jest": "^19.0.2",
+    "jest": "^20.0.4",
     "jsdom": "^9.10.0",
     "lint-staged": "^3.3.0",
     "node-watch": "^0.4.1",
