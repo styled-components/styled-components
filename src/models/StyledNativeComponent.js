@@ -7,8 +7,8 @@ import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 import type { RuleSet, Target } from '../types'
+import { themeListener, CHANNEL } from '../utils/theming'
 
-import { CHANNEL } from './ThemeProvider'
 import AbstractStyledComponent from './AbstractStyledComponent'
 
 export default (constructWithOptions: Function, InlineStyle: Function) => {
@@ -49,44 +49,34 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       return inlineStyle.generateStyleObject(executionContext)
     }
 
+    themeUpdate(newTheme: Theme, newProps: any) {
+      // Props should take precedence over ThemeProvider, which should take precedence over
+      // defaultProps, but React automatically puts defaultProps on props.
+      const { defaultProps } = this.constructor
+      const isDefaultTheme = defaultProps && newProps.theme === defaultProps.theme
+      const theme = newProps.theme && !isDefaultTheme ? newProps.theme : newTheme
+      const generatedStyles = this.generateAndInjectStyles(theme, this.props)
+      return { theme, generatedStyles }
+    }
+
     componentWillMount() {
       // If there is a theme in the context, subscribe to the event emitter. This
       // is necessary due to pure components blocking context updates, this circumvents
       // that by updating when an event is emitted
       if (this.context[CHANNEL]) {
-        const subscribe = this.context[CHANNEL]
-        this.unsubscribe = subscribe(nextTheme => {
-          // This will be called once immediately
-
-          // Props should take precedence over ThemeProvider, which should take precedence over
-          // defaultProps, but React automatically puts defaultProps on props.
-          const { defaultProps } = this.constructor
-          const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
-          const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
-          const generatedStyles = this.generateAndInjectStyles(theme, this.props)
-          this.setState({ theme, generatedStyles })
+        this.setState(this.themeUpdate(themeListener.initial(this.context), this.props))
+        this.unsubscribe = themeListener.subscribe(this.context, (newTheme) => {
+          this.setState(this.themeUpdate(newTheme, this.props))
         })
       } else {
         const theme = this.props.theme || {}
-        const generatedStyles = this.generateAndInjectStyles(
-          theme,
-          this.props,
-        )
+        const generatedStyles = this.generateAndInjectStyles(theme, this.props)
         this.setState({ theme, generatedStyles })
       }
     }
 
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-      this.setState((oldState) => {
-        // Props should take precedence over ThemeProvider, which should take precedence over
-        // defaultProps, but React automatically puts defaultProps on props.
-        const { defaultProps } = this.constructor
-        const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
-        const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : oldState.theme
-        const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
-
-        return { theme, generatedStyles }
-      })
+      this.setState(({ theme }) => this.themeUpdate(theme, nextProps))
     }
 
     componentWillUnmount() {
