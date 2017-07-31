@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Enable the Node environment for SSR tests, switch some output verification to snapshot testing (see [#1023](https://github.com/styled-components/styled-components/pull/1023))
 
 - Add .extend and .withComponent deterministic ID generation (see [#1044](https://github.com/styled-components/styled-components/pull/1044))
+- Use theming library in place of custom theming implementation (see [#1051](https://github.com/styled-components/styled-components/pull/1051))
 
 ## [v2.1.0] - 2017-06-15
 
