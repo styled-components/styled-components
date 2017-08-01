@@ -7,7 +7,7 @@ import type { Theme } from '../models/ThemeProvider'
 import _isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 
-export default (Component: ReactClass<mixed>) => {
+export default (Component: ReactClass<any>) => {
   const isStyledComponent = _isStyledComponent(Component)
 
   class WithTheme extends React.Component {
