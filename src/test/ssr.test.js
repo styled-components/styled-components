@@ -4,13 +4,17 @@
 
 import React from 'react'
 import { renderToString } from 'react-dom/server'
+import { shallow  } from 'enzyme'
+
 import ServerStyleSheet from '../models/ServerStyleSheet'
 import { resetStyled } from './utils'
 import _injectGlobal from '../constructors/injectGlobal'
 import _keyframes from '../constructors/keyframes'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
+
 const injectGlobal = _injectGlobal(stringifyRules, css)
+
 
 let index = 0
 const keyframes = _keyframes(() => `keyframe_${index++}`, stringifyRules, css)
@@ -203,4 +207,46 @@ describe('ssr', () => {
     expect(elements[0].props.nonce).toBe('foo');
     expect(elements[1].props.nonce).toBe('foo');
   })
+
+  it('should apply styles to non-styled components using the component selector', () => {
+
+    const Text = (props) => (
+      <span className={props.className}>
+        {props.children}
+      </span>
+    )
+
+    const ButtonWithText = (props) => (
+      <button className={props.className}>
+        <Text>{props.children}</Text>
+      </button>
+    );
+
+    const ButtonStyle = css`
+      background: papayawhip;
+    `
+    const StyledButton = styled(ButtonWithText)`
+      ${Text} {
+        color: red;
+      }
+    `
+
+    // This works
+    // const ButtonStyle = css`
+    //   background: papayawhip;
+    //
+    //   ${Text} {
+    //     color: red;
+    //   }
+    // `
+    // const StyledButton = styled(ButtonWithText)`
+    //     ${ButtonStyle}
+    // `;
+
+    expect(() => {
+      shallow(
+        <StyledButton>Foobar</StyledButton>)
+      }
+    ).not.toThrow()
+  });
 })
