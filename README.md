@@ -139,6 +139,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [joeireland.com](https://joeireland.com): Portfolio of Joseph Ireland ([source](https://github.com/IamJoseph/JoesReactWebsite)).
 - [rosesdaycare.center](https://rosesdaycare.center): Marketing website with theme colors that change on refresh ([source](https://github.com/anthony2025/roses-daycare)).
 - [CodeSandbox](https://codesandbox.io/s/new): An online editor tailored for React development ([source](https://github.com/CompuIves/codesandbox-client)).
+- [Grabient.com](https://www.grabient.com): A beautiful and simple UI for generating web gradients. ([source](https://github.com/johnkorzhuk/grabient/)).
 
 ### Other
 - [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
