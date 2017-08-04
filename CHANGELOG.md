@@ -272,7 +272,11 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.0.0...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.1.2...master
+[v2.1.2]: https://github.com/styled-components/styled-components/compare/v2.1.1...v2.1.2
+[v2.1.1]: https://github.com/styled-components/styled-components/compare/v2.1.0...v2.1.1
+[v2.1.0]: https://github.com/styled-components/styled-components/compare/v2.0.1...v2.1.0
+[v2.0.1]: https://github.com/styled-components/styled-components/compare/v2.0.0...v2.0.1
 [v2.0.0]: https://github.com/styled-components/styled-components/compare/v1.4.6...v2.0.0
 [v1.4.6]: https://github.com/styled-components/styled-components/compare/v1.4.5...v1.4.6
 [v1.4.5]: https://github.com/styled-components/styled-components/compare/v1.4.4...v1.4.5
