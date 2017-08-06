@@ -1,66 +1,60 @@
 // @flow
 /* globals ReactClass */
-
 import React from 'react'
-import PropTypes from 'prop-types'
 import hoistStatics from 'hoist-non-react-statics'
-import { CHANNEL } from '../models/ThemeProvider'
+import { themeListener } from '../utils/theming'
+import type { Theme } from '../models/ThemeProvider'
 import _isStyledComponent from '../utils/isStyledComponent'
+import getComponentName from '../utils/getComponentName'
 
-const wrapWithTheme = (Component: ReactClass<any>) => {
-  const componentName = (
-    Component.displayName ||
-    Component.name ||
-    'Component'
-  )
-
+export default (Component: ReactClass<any>) => {
   const isStyledComponent = _isStyledComponent(Component)
 
   class WithTheme extends React.Component {
-    static displayName = `WithTheme(${componentName})`
+    static displayName = `withTheme(${getComponentName(Component)})`
+    static contextTypes = themeListener.contextTypes
 
-    // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
-    static styledComponentId = 'withTheme'
+    state: {
+      theme: Theme
+    }
+    props: any
 
-    static contextTypes = {
-      [CHANNEL]: PropTypes.func,
-    };
+    setTheme: (Theme) => void
+    unsubscribe: () => void
 
-    state: { theme?: ?Object } = {};
-    unsubscribe: () => void;
-
-    componentWillMount() {
-      if (!this.context[CHANNEL]) {
-        throw new Error('[withTheme] Please use ThemeProvider to be able to use withTheme')
+    constructor(props, context) {
+      super(props, context)
+      this.state = {
+        theme: themeListener.initial(context),
       }
+      this.setTheme = this.setTheme.bind(this)
+    }
 
-      const subscribe = this.context[CHANNEL]
-      this.unsubscribe = subscribe(theme => {
-        this.setState({ theme })
-      })
+    setTheme(theme) {
+      this.setState({ theme })
+    }
+
+    componentDidMount() {
+      this.unsubscribe = themeListener.subscribe(this.context, this.setTheme)
     }
 
     componentWillUnmount() {
-      if (typeof this.unsubscribe === 'function') this.unsubscribe()
+      if (typeof this.unsubscribe === 'function') {
+        this.unsubscribe()
+      }
     }
 
     render() {
-      // eslint-disable-next-line react/prop-types
-      const { innerRef } = this.props
       const { theme } = this.state
+      const { innerRef, ...props } = this.props
 
-      return (
-        <Component
-          theme={theme}
-          {...this.props}
-          innerRef={isStyledComponent ? innerRef : undefined}
-          ref={isStyledComponent ? undefined : innerRef}
-        />
-      )
+      return (<Component
+        theme={theme}
+        {...props}
+        ref={isStyledComponent ? undefined : innerRef}
+        innerRef={isStyledComponent ? innerRef : undefined}
+      />)
     }
   }
-
   return hoistStatics(WithTheme, Component)
 }
-
-export default wrapWithTheme

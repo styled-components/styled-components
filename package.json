@@ -68,7 +68,8 @@
     "is-plain-object": "^2.0.1",
     "prop-types": "^15.5.4",
     "stylis": "^3.2.1",
-    "supports-color": "^3.2.3"
+    "supports-color": "^3.2.3",
+    "theming": "^1.1.0"
   },
   "devDependencies": {
     "@types/react": "^15.0.37",
@@ -147,7 +148,7 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "threshold": "14kB"
+      "threshold": "14.2kB"
     }
   ]
 }

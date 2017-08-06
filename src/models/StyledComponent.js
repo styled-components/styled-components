@@ -10,10 +10,10 @@ import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
+import { themeListener, CHANNEL } from '../utils/theming'
 import type { RuleSet, Target } from '../types'
 
 import AbstractStyledComponent from './AbstractStyledComponent'
-import { CHANNEL } from './ThemeProvider'
 import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
 
 const escapeRegex = /[[\].#*$><+~=|^:(),"'`]/g
@@ -79,22 +79,28 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       return className
     }
 
+    themeUpdate(newTheme: Theme, newProps: any) {
+      // Props should take precedence over ThemeProvider, which should take precedence over
+      // defaultProps, but React automatically puts defaultProps on props.
+      const { defaultProps } = this.constructor
+      const isDefaultTheme = defaultProps && newProps.theme === defaultProps.theme
+      const theme = newProps.theme && !isDefaultTheme ? newProps.theme : newTheme
+      const generatedClassName = this.generateAndInjectStyles(theme, newProps)
+      return { theme, generatedClassName }
+    }
+
     componentWillMount() {
       // If there is a theme in the context, subscribe to the event emitter. This
       // is necessary due to pure components blocking context updates, this circumvents
       // that by updating when an event is emitted
+      //
+      // We do this check to ensure we only subscribe to themes when there is a
+      // theme provider in scope, the `theming` lib will throw an error if there
+      // isn't a ThemeProvider, but styled-components doesn't REQUIRE a theme.
       if (this.context[CHANNEL]) {
-        const subscribe = this.context[CHANNEL]
-        this.unsubscribe = subscribe(nextTheme => {
-          // This will be called once immediately
-
-          // Props should take precedence over ThemeProvider, which should take precedence over
-          // defaultProps, but React automatically puts defaultProps on props.
-          const { defaultProps } = this.constructor
-          const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
-          const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
-          const generatedClassName = this.generateAndInjectStyles(theme, this.props)
-          this.setState({ theme, generatedClassName })
+        this.setState(this.themeUpdate(themeListener.initial(this.context), this.props))
+        this.unsubscribe = themeListener.subscribe(this.context, (newTheme) => {
+          this.setState(this.themeUpdate(newTheme, this.props))
         })
       } else {
         const theme = this.props.theme || {}
@@ -107,16 +113,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-      this.setState((oldState) => {
-        // Props should take precedence over ThemeProvider, which should take precedence over
-        // defaultProps, but React automatically puts defaultProps on props.
-        const { defaultProps } = this.constructor
-        const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
-        const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : oldState.theme
-        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
-
-        return { theme, generatedClassName }
-      })
+      this.setState(({ theme }) => this.themeUpdate(theme, nextProps))
     }
 
     componentWillUnmount() {
@@ -199,7 +196,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     class StyledComponent extends ParentComponent {
       static contextTypes = {
-        [CHANNEL]: PropTypes.func,
+        [CHANNEL]: PropTypes.object,
         [CONTEXT_KEY]: PropTypes.instanceOf(StyleSheet),
       }
 

@@ -31,10 +31,9 @@ describe('ThemeProvider', () => {
     // Setup Child
     class Child extends React.Component {
       componentWillMount() {
-        this.context[CHANNEL](theme => {
-          expect(theme).toEqual({ ...outerTheme, ...innerTheme })
-          done()
-        })
+        const theme = this.context[CHANNEL].getState()
+        expect(theme).toEqual({ ...outerTheme, ...innerTheme })
+        done()
       }
       render() { return null }
     }
@@ -58,10 +57,9 @@ describe('ThemeProvider', () => {
     // Setup Child
     class Child extends React.Component {
       componentWillMount() {
-        this.context[CHANNEL](theme => {
-          expect(theme).toEqual({ ...outerestTheme, ...outerTheme, ...innerTheme })
-          done()
-        })
+        const theme = this.context[CHANNEL].getState()
+        expect(theme).toEqual({ ...outerestTheme, ...outerTheme, ...innerTheme })
+        done()
       }
       render() { return null }
     }
@@ -89,14 +87,13 @@ describe('ThemeProvider', () => {
     // Setup Child
     class Child extends React.Component {
       componentWillMount() {
-        this.context[CHANNEL](theme => {
-          // eslint-disable-next-line react/prop-types
-          expect(theme).toEqual(themes[this.props.shouldHaveTheme])
-          childRendered++ // eslint-disable-line no-plusplus
-          if (childRendered === Object.keys(themes).length) {
-            done()
-          }
-        })
+        const theme = this.context[CHANNEL].getState()
+        // eslint-disable-next-line react/prop-types
+        expect(theme).toEqual(themes[this.props.shouldHaveTheme])
+        childRendered++ // eslint-disable-line no-plusplus
+        if (childRendered === Object.keys(themes).length) {
+          done()
+        }
       }
       render() { return null }
     }
