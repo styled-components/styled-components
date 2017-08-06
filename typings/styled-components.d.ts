@@ -65,6 +65,15 @@ type ThemedStyledComponentFactories<T> = ThemedStyledComponentFactoriesHTML<T> &
 export interface ThemedBaseStyledInterface<T> extends ThemedStyledComponentFactories<T> {
   <P extends { theme?: T; }>(component: Component<P>): ThemedStyledFunction<P, T, WithOptionalTheme<P, T>>;
   <P>(component: Component<P>): ThemedStyledFunction<P, T>;
+
+  // Html styled component factories
+  <Props extends { theme?: T; }>(
+    domTag: keyof HTMLTags
+  ): ThemedStyledFunction<Props, T, WithOptionalTheme<Props, T>>;
+  <Props>(
+    domTag: keyof HTMLTags
+  ): ThemedStyledFunction<Props, T>;
+
 }
 export type BaseStyledInterface = ThemedBaseStyledInterface<any>;
 
@@ -84,7 +93,7 @@ export interface ThemedCssFunction<T> {
 // Helper type operators
 type Diff<T extends string, U extends string> = ({ [P in T]: P } & { [P in U]: never } & { [x: string]: never })[T];
 type Omit<T, K extends keyof T> = Pick<T, Diff<keyof T, K>>;
-type WithOptionalTheme<P extends { theme?: T; }, T> = Omit<P, "theme"> & { theme?: T; };
+export type WithOptionalTheme<P extends { theme?: T; }, T> = Omit<P, "theme"> & { theme?: T; };
 
 export interface ThemedStyledComponentsModule<T> {
   default: ThemedStyledInterface<T>;
