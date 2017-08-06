@@ -49,9 +49,9 @@ class ThemeProvider extends Component {
   componentWillMount() {
     // If there is a ThemeProvider wrapper anywhere around this theme provider, merge this theme
     // with the outer theme
-    if (this.context[CHANNEL_NEXT]) {
-      const { subscribe } = this.context[CHANNEL_NEXT]
-      this.unsubscribeToOuterId = subscribe(theme => {
+    const outerContext = this.context[CHANNEL_NEXT]
+    if (outerContext !== undefined) {
+      this.unsubscribeToOuterId = outerContext.subscribe(theme => {
         this.outerTheme = theme
       })
     }
@@ -81,9 +81,8 @@ class ThemeProvider extends Component {
   }
 
   componentWillUnmount() {
-    const styledContext = this.context[CHANNEL_NEXT]
-    if (styledContext) {
-      styledContext.unsubscribe(this.unsubscribeToOuterId)
+    if (this.unsubscribeToOuterId !== -1) {
+      this.context[CHANNEL_NEXT].unsubscribe(this.unsubscribeToOuterId)
     }
   }
 

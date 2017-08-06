@@ -1,5 +1,6 @@
 // @flow
-import { createElement } from 'react'
+import { Component, createElement } from 'react'
+import PropTypes from 'prop-types'
 
 import type { Theme } from './ThemeProvider'
 
@@ -8,22 +9,44 @@ import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 import type { RuleSet, Target } from '../types'
 
-import { CHANNEL_NEXT } from './ThemeProvider'
-import AbstractStyledComponent from './AbstractStyledComponent'
+import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
 export default (constructWithOptions: Function, InlineStyle: Function) => {
-  class BaseStyledNativeComponent extends AbstractStyledComponent {
+  class BaseStyledNativeComponent extends Component {
     static target: Target
     static styledComponentId: string
     static attrs: Object
     static inlineStyle: Object
     root: ?Object
 
+    static contextTypes = {
+      [CHANNEL]: PropTypes.func,
+      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+    }
+
+    static propTypes = {
+      children: PropTypes.element,
+      innerRef: PropTypes.func,
+      // eslint-disable-next-line react/forbid-prop-types
+      style: PropTypes.object,
+      // eslint-disable-next-line react/forbid-prop-types
+      theme: PropTypes.any,
+    }
+
     attrs = {}
     state = {
       theme: null,
       generatedStyles: undefined,
     }
+
+    unsubscribeId: number = -1
+
+    unsubscribeFromContext() {
+      if (this.unsubscribeId !== -1) {
+        this.context[CHANNEL_NEXT].unsubscribe(this.unsubscribeId)
+      }
+    }
+
 
     buildExecutionContext(theme: any, props: any) {
       const { attrs } = this.constructor
@@ -54,7 +77,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       // is necessary due to pure components blocking context updates, this circumvents
       // that by updating when an event is emitted
       const styledContext = this.context[CHANNEL_NEXT]
-      if (styledContext) {
+      if (styledContext !== undefined) {
         const { subscribe } = styledContext
         this.unsubscribeId = subscribe(nextTheme => {
           // This will be called once immediately

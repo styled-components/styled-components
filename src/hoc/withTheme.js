@@ -32,7 +32,7 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
 
     componentWillMount() {
       const styledContext = this.context[CHANNEL_NEXT]
-      if (!styledContext) {
+      if (styledContext === undefined) {
         // eslint-disable-next-line no-console
         console.error('[withTheme] Please use ThemeProvider to be able to use withTheme')
         return
@@ -46,9 +46,8 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
     }
 
     componentWillUnmount() {
-      const styledContext = this.context[CHANNEL_NEXT]
-      if (styledContext) {
-        styledContext.unsubscribe(this.unsubscribeId)
+      if (this.unsubscribeId !== -1) {
+        this.context[CHANNEL_NEXT].unsubscribe(this.unsubscribeId)
       }
     }
 
