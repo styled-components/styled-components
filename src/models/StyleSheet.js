@@ -30,6 +30,14 @@ export default class StyleSheet {
   hashes: { [string]: string } = {}
   deferredInjections: { [string]: string } = {}
   componentTags: { [string]: Tag }
+  // helper for `ComponentStyle` to know when it cache static styles.
+  // staticly styled-component can not safely cache styles on the server
+  // without all `ComponentStyle` instances saving a reference to the
+  // the styleSheet instance they last rendered with,
+  // or listening to creation / reset events. otherwise you might create
+  // a component with one stylesheet and render it another api response
+  // with another, losing styles on from your server-side render.
+  stylesCacheable = typeof document !== 'undefined'
 
   constructor(tagConstructor: (boolean) => Tag,
     tags: Array<Tag> = [],
@@ -145,6 +153,7 @@ export default class StyleSheet {
   static create(isServer: ?boolean = typeof document === 'undefined') {
     return (isServer ? ServerStyleSheet : BrowserStyleSheet).create()
   }
+
 
   static clone(oldSheet: StyleSheet) {
     const newSheet = new StyleSheet(

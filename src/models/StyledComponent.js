@@ -18,6 +18,10 @@ import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
 const escapeRegex = /[[\].#*$><+~=|^:(),"'`]/g
 const multiDashRegex = /--+/g
 
+// HACK for generating all static styles without needing to allocate
+// an empty execution context every single time...
+const STATIC_EXECUTION_CONTEXT = {}
+
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
   /* We depend on components having unique IDs */
   const identifiers = {}
@@ -75,22 +79,39 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     generateAndInjectStyles(theme: any, props: any) {
-      const { componentStyle, warnTooManyClasses } = this.constructor
-      const executionContext = this.buildExecutionContext(theme, props)
+      const { attrs, componentStyle, warnTooManyClasses } = this.constructor
       const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.instance
-      const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
 
-      if (warnTooManyClasses !== undefined) warnTooManyClasses(className)
+      // staticaly styled-components don't need to build an execution context object,
+      // and shouldn't be increasing the number of class names
+      if (componentStyle.isStatic && attrs === undefined) {
+        return componentStyle.generateAndInjectStyles(STATIC_EXECUTION_CONTEXT, styleSheet)
+      } else {
+        const executionContext = this.buildExecutionContext(theme, props)
+        const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
 
-      return className
+        if (warnTooManyClasses !== undefined) warnTooManyClasses(className)
+
+        return className
+      }
     }
 
     componentWillMount() {
+      const { componentStyle } = this.constructor
+      const styledContext = this.context[CHANNEL_NEXT]
+
+      // If this is a staticaly-styled component, we don't need to the theme
+      // to generate or build styles.
+      if (componentStyle.isStatic) {
+        const generatedClassName = this.generateAndInjectStyles(
+          STATIC_EXECUTION_CONTEXT,
+          this.props,
+        )
+        this.setState({ generatedClassName })
       // If there is a theme in the context, subscribe to the event emitter. This
       // is necessary due to pure components blocking context updates, this circumvents
       // that by updating when an event is emitted
-      const styledContext = this.context[CHANNEL_NEXT]
-      if (styledContext !== undefined) {
+      } else if (styledContext !== undefined) {
         const { subscribe } = styledContext
         this.unsubscribeId = subscribe(nextTheme => {
           // This will be called once immediately
@@ -117,6 +138,13 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
+      // If this is a staticaly-styled component, we don't need to listen to
+      // props changes to update styles
+      const { componentStyle } = this.constructor
+      if (componentStyle.isStatic) {
+        return
+      }
+
       this.setState((oldState) => {
         // Props should take precedence over ThemeProvider, which should take precedence over
         // defaultProps, but React automatically puts defaultProps on props.
