@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. If a contri
 ## Unreleased
 
 - Improve component mount and unmount performance with changes to `createBroadcast`. Deprecates usage of `CHANNEL` as a function, will be update to `CHANNEL_NEXT`'s propType in a future version. (see [#1048](https://github.com/styled-components/styled-components/pull/1048))
+- Fixed comments in react-native (see [#1041](https://github.com/styled-components/styled-components/pull/1041))
 
 ## [v2.1.2] - 2017-08-04
 
