@@ -6,15 +6,20 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- Upgrade stylis to 2.3 and use constructor to fix bugs with multiple libs using stylis simultaneously (see [#962](https://github.com/styled-components/styled-components/pull/962))
+- Improve component mount and unmount performance with changes to `createBroadcast`. Deprecates usage of `CHANNEL` as a function, will be update to `CHANNEL_NEXT`'s propType in a future version. (see [#1048](https://github.com/styled-components/styled-components/pull/1048))
+- Fixed comments in react-native (see [#1041](https://github.com/styled-components/styled-components/pull/1041))
+
+## [v2.1.2] - 2017-08-04
+
 - Add support for the `__webpack_nonce__` CSP attribute (see [#1022](https://github.com/styled-components/styled-components/pull/1022))
 - Add react-native `ImageBackground` alias (see [#1028](https://github.com/styled-components/styled-components/pull/1028))
 - Refactor variable in generateAlphabeticName.js (see [#1040](https://github.com/styled-components/styled-components/pull/1040))
 - Enable the Node environment for SSR tests, switch some output verification to snapshot testing (see [#1023](https://github.com/styled-components/styled-components/pull/1023))
-
 - Add .extend and .withComponent deterministic ID generation (see [#1044](https://github.com/styled-components/styled-components/pull/1044))
 
-- Fixed comments in react-native (see [#1041](https://github.com/styled-components/styled-components/pull/1041))
+## [v2.1.1] - 2017-07-03
+
+- Upgrade stylis to 2.3 and use constructor to fix bugs with multiple libs using stylis simultaneously (see [#962](https://github.com/styled-components/styled-components/pull/962))
 
 ## [v2.1.0] - 2017-06-15
 
@@ -270,7 +275,11 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.0.0...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.1.2...master
+[v2.1.2]: https://github.com/styled-components/styled-components/compare/v2.1.1...v2.1.2
+[v2.1.1]: https://github.com/styled-components/styled-components/compare/v2.1.0...v2.1.1
+[v2.1.0]: https://github.com/styled-components/styled-components/compare/v2.0.1...v2.1.0
+[v2.0.1]: https://github.com/styled-components/styled-components/compare/v2.0.0...v2.0.1
 [v2.0.0]: https://github.com/styled-components/styled-components/compare/v1.4.6...v2.0.0
 [v1.4.6]: https://github.com/styled-components/styled-components/compare/v1.4.5...v1.4.6
 [v1.4.5]: https://github.com/styled-components/styled-components/compare/v1.4.4...v1.4.5

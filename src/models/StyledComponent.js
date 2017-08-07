@@ -1,6 +1,6 @@
 // @flow
 
-import { createElement } from 'react'
+import { Component, createElement } from 'react'
 import PropTypes from 'prop-types'
 
 import type { Theme } from './ThemeProvider'
@@ -12,8 +12,7 @@ import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 import type { RuleSet, Target } from '../types'
 
-import AbstractStyledComponent from './AbstractStyledComponent'
-import { CHANNEL } from './ThemeProvider'
+import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
 
 const escapeRegex = /[[\].#*$><+~=|^:(),"'`]/g
@@ -38,7 +37,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       : componentId
   }
 
-  class BaseStyledComponent extends AbstractStyledComponent {
+  class BaseStyledComponent extends Component {
     static target: Target
     static styledComponentId: string
     static attrs: Object
@@ -49,6 +48,13 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     state = {
       theme: null,
       generatedClassName: '',
+    }
+    unsubscribeId: number = -1
+
+    unsubscribeFromContext() {
+      if (this.unsubscribeId !== -1) {
+        this.context[CHANNEL_NEXT].unsubscribe(this.unsubscribeId)
+      }
     }
 
     buildExecutionContext(theme: any, props: any) {
@@ -83,20 +89,24 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       // If there is a theme in the context, subscribe to the event emitter. This
       // is necessary due to pure components blocking context updates, this circumvents
       // that by updating when an event is emitted
-      if (this.context[CHANNEL]) {
-        const subscribe = this.context[CHANNEL]
-        this.unsubscribe = subscribe(nextTheme => {
+      const styledContext = this.context[CHANNEL_NEXT]
+      if (styledContext !== undefined) {
+        const { subscribe } = styledContext
+        this.unsubscribeId = subscribe(nextTheme => {
           // This will be called once immediately
 
           // Props should take precedence over ThemeProvider, which should take precedence over
           // defaultProps, but React automatically puts defaultProps on props.
           const { defaultProps } = this.constructor
+          /* eslint-disable react/prop-types */
           const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
           const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
+          /* eslint-enable */
           const generatedClassName = this.generateAndInjectStyles(theme, this.props)
           this.setState({ theme, generatedClassName })
         })
       } else {
+        // eslint-disable-next-line react/prop-types
         const theme = this.props.theme || {}
         const generatedClassName = this.generateAndInjectStyles(
           theme,
@@ -111,8 +121,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         // Props should take precedence over ThemeProvider, which should take precedence over
         // defaultProps, but React automatically puts defaultProps on props.
         const { defaultProps } = this.constructor
+        /* eslint-disable react/prop-types */
         const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
         const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : oldState.theme
+        /* eslint-enable */
         const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
 
         return { theme, generatedClassName }
@@ -120,12 +132,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     componentWillUnmount() {
-      if (this.unsubscribe) {
-        this.unsubscribe()
-      }
+      this.unsubscribeFromContext()
     }
 
     render() {
+      // eslint-disable-next-line react/prop-types
       const { innerRef } = this.props
       const { generatedClassName } = this.state
       const { styledComponentId, target } = this.constructor
@@ -133,6 +144,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       const isTargetTag = isTag(target)
 
       const className = [
+        // eslint-disable-next-line react/prop-types
         this.props.className,
         styledComponentId,
         this.attrs.className,
@@ -200,6 +212,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     class StyledComponent extends ParentComponent {
       static contextTypes = {
         [CHANNEL]: PropTypes.func,
+        [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
         [CONTEXT_KEY]: PropTypes.instanceOf(StyleSheet),
       }
 

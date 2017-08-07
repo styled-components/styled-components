@@ -1,9 +1,8 @@
 // @flow
 /* eslint-disable react/no-multi-comp */
 import React from 'react'
-import PropTypes from 'prop-types'
 import { shallow, render } from 'enzyme'
-import ThemeProvider, { CHANNEL } from '../ThemeProvider'
+import ThemeProvider, { CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE  } from '../ThemeProvider'
 
 describe('ThemeProvider', () => {
   it('should not throw an error when no children are passed', () => {
@@ -31,7 +30,7 @@ describe('ThemeProvider', () => {
     // Setup Child
     class Child extends React.Component {
       componentWillMount() {
-        this.context[CHANNEL](theme => {
+        this.context[CHANNEL_NEXT].subscribe(theme => {
           expect(theme).toEqual({ ...outerTheme, ...innerTheme })
           done()
         })
@@ -39,7 +38,7 @@ describe('ThemeProvider', () => {
       render() { return null }
     }
     Child.contextTypes = {
-      [CHANNEL]: PropTypes.object,
+      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
     }
 
     render(
@@ -58,7 +57,7 @@ describe('ThemeProvider', () => {
     // Setup Child
     class Child extends React.Component {
       componentWillMount() {
-        this.context[CHANNEL](theme => {
+        this.context[CHANNEL_NEXT].subscribe(theme => {
           expect(theme).toEqual({ ...outerestTheme, ...outerTheme, ...innerTheme })
           done()
         })
@@ -66,7 +65,7 @@ describe('ThemeProvider', () => {
       render() { return null }
     }
     Child.contextTypes = {
-      [CHANNEL]: PropTypes.object,
+      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
     }
 
     render(
@@ -89,7 +88,7 @@ describe('ThemeProvider', () => {
     // Setup Child
     class Child extends React.Component {
       componentWillMount() {
-        this.context[CHANNEL](theme => {
+        this.context[CHANNEL_NEXT].subscribe(theme => {
           // eslint-disable-next-line react/prop-types
           expect(theme).toEqual(themes[this.props.shouldHaveTheme])
           childRendered++ // eslint-disable-line no-plusplus
@@ -101,7 +100,7 @@ describe('ThemeProvider', () => {
       render() { return null }
     }
     Child.contextTypes = {
-      [CHANNEL]: PropTypes.object,
+      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
     }
 
     render(
