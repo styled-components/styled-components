@@ -44,19 +44,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     static componentStyle: Object
     static warnTooManyClasses: Function
 
-    static contextTypes = {
-      [CHANNEL]: PropTypes.func,
-      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-      [CONTEXT_KEY]: PropTypes.instanceOf(StyleSheet),
-    }
-
-    static propTypes = {
-      className: PropTypes.string,
-      innerRef: PropTypes.func,
-      // eslint-disable-next-line react/forbid-prop-types
-      theme: PropTypes.any,
-    }
-
     attrs = {}
     state = {
       theme: null,
@@ -111,12 +98,15 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           // Props should take precedence over ThemeProvider, which should take precedence over
           // defaultProps, but React automatically puts defaultProps on props.
           const { defaultProps } = this.constructor
+          /* eslint-disable react/prop-types */
           const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
           const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
+          /* eslint-enable */
           const generatedClassName = this.generateAndInjectStyles(theme, this.props)
           this.setState({ theme, generatedClassName })
         })
       } else {
+        // eslint-disable-next-line react/prop-types
         const theme = this.props.theme || {}
         const generatedClassName = this.generateAndInjectStyles(
           theme,
@@ -131,8 +121,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         // Props should take precedence over ThemeProvider, which should take precedence over
         // defaultProps, but React automatically puts defaultProps on props.
         const { defaultProps } = this.constructor
+        /* eslint-disable react/prop-types */
         const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
         const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : oldState.theme
+        /* eslint-enable */
         const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
 
         return { theme, generatedClassName }
@@ -144,6 +136,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     render() {
+      // eslint-disable-next-line react/prop-types
       const { innerRef } = this.props
       const { generatedClassName } = this.state
       const { styledComponentId, target } = this.constructor
@@ -151,6 +144,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       const isTargetTag = isTag(target)
 
       const className = [
+        // eslint-disable-next-line react/prop-types
         this.props.className,
         styledComponentId,
         this.attrs.className,

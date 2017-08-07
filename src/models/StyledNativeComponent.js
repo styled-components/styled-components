@@ -19,20 +19,6 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     static inlineStyle: Object
     root: ?Object
 
-    static contextTypes = {
-      [CHANNEL]: PropTypes.func,
-      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-    }
-
-    static propTypes = {
-      children: PropTypes.element,
-      innerRef: PropTypes.func,
-      // eslint-disable-next-line react/forbid-prop-types
-      style: PropTypes.object,
-      // eslint-disable-next-line react/forbid-prop-types
-      theme: PropTypes.any,
-    }
-
     attrs = {}
     state = {
       theme: null,
@@ -85,12 +71,15 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
           // Props should take precedence over ThemeProvider, which should take precedence over
           // defaultProps, but React automatically puts defaultProps on props.
           const { defaultProps } = this.constructor
+          /* eslint-disable react/prop-types */
           const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
           const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
+          /* eslint-enable */
           const generatedStyles = this.generateAndInjectStyles(theme, this.props)
           this.setState({ theme, generatedStyles })
         })
       } else {
+        // eslint-disable-next-line react/prop-types
         const theme = this.props.theme || {}
         const generatedStyles = this.generateAndInjectStyles(
           theme,
@@ -105,8 +94,10 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         // Props should take precedence over ThemeProvider, which should take precedence over
         // defaultProps, but React automatically puts defaultProps on props.
         const { defaultProps } = this.constructor
+        /* eslint-disable react/prop-types */
         const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
         const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : oldState.theme
+        /* eslint-enable */
         const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
 
         return { theme, generatedStyles }
@@ -134,6 +125,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     }
 
     onRef = (node: any) => {
+      // eslint-disable-next-line react/prop-types
       const { innerRef } = this.props
       this.root = node
 
@@ -143,6 +135,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     }
 
     render() {
+      // eslint-disable-next-line react/prop-types
       const { children, style } = this.props
       const { generatedStyles } = this.state
       const { target } = this.constructor
@@ -192,6 +185,11 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       static target = target
       static attrs = attrs
       static inlineStyle = inlineStyle
+
+      static contextTypes = {
+        [CHANNEL]: PropTypes.func,
+        [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+      }
 
       // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
       static styledComponentId = 'StyledNativeComponent'
