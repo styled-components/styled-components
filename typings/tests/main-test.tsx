@@ -3,12 +3,17 @@ import * as React from "react";
 import styled from "../..";
 import { css, keyframes, ThemeProvider, injectGlobal, withTheme, ServerStyleSheet } from "../..";
 
+interface TitleProps {
+  visible: boolean;
+}
+
 // Create a <Title> react component that renders an <h1> which is
 // centered, palevioletred and sized at 1.5em
-const Title = styled.h1`
+const Title = styled<TitleProps>("h1")`
   font-size: 1.5em;
   text-align: center;
   color: palevioletred;
+  display: ${props => props.visible ? "block" : "none" };
 `;
 
 // Create a <Wrapper> react component that renders a <section> with
@@ -102,7 +107,7 @@ class Example extends React.Component<{}, {}> {
   render() {
     return <ThemeProvider theme={theme}>
       <Wrapper>
-        <Title>Hello World, this is my first styled component!</Title>
+        <Title visible>Hello World, this is my first styled component!</Title>
 
         <Input placeholder="@mxstbr" type="text" />
         <TomatoButton name="demo" />
