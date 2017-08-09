@@ -63,8 +63,10 @@ type ThemedStyledComponentFactoriesSVG<T> = {
 type ThemedStyledComponentFactories<T> = ThemedStyledComponentFactoriesHTML<T> & ThemedStyledComponentFactoriesSVG<T>;
 
 export interface ThemedBaseStyledInterface<T> extends ThemedStyledComponentFactories<T> {
-  <P extends { theme?: T; }>(component: Component<P>): ThemedStyledFunction<P, T, WithOptionalTheme<P, T>>;
-  <P>(component: Component<P>): ThemedStyledFunction<P, T>;
+  <P, O>(component: StyledComponentClass<P, T, O>): ThemedStyledFunction<P, T, O>;
+  <P extends { theme: T; }>(component: React.ComponentClass<P>): ThemedStyledFunction<P, T, WithOptionalTheme<P, T>>;
+  <P>(component: React.ComponentClass<P>): ThemedStyledFunction<P, T>;
+  <P extends { [prop: string]: any; theme?: T; }>(component: React.StatelessComponent<P>): ThemedStyledFunction<P, T, WithOptionalTheme<P, T>>;
 }
 export type BaseStyledInterface = ThemedBaseStyledInterface<any>;
 
