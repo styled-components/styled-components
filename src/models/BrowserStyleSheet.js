@@ -145,6 +145,9 @@ export default {
       el.setAttribute(SC_ATTR, '')
       el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
       if (!document.head) throw new Error('Missing document <head>')
+      if (document.head.querySelectorAll(`style[${SC_ATTR}]`).length > 1) {
+        console.warn('You have two instances of styled-components in your app (maybe in two diffrent chunks). Please consider removing one.')
+      }
       document.head.appendChild(el)
       return new BrowserTag(el, isLocal)
     }
