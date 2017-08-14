@@ -3,6 +3,10 @@ import React from 'react'
 import { shallow } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
+import _injectGlobal from '../constructors/injectGlobal'
+import stringifyRules from '../utils/stringifyRules'
+import css from '../constructors/css'
+const injectGlobal = _injectGlobal(stringifyRules, css)
 
 let styled
 
@@ -183,6 +187,31 @@ describe('with styles', () => {
       `
     shallow(<Comp />)
     expectCSSMatches(`
+        .sc-a {}
+        .b {
+          color: blue;
+        }
+      `)
+
+    Array.from(document.querySelectorAll('style')).forEach(el => expect(el.getAttribute('nonce')).toBe('foo'))
+  })
+
+  it('should add a webpack nonce to the global style tags if one is available in the global scope', () => {
+    // eslint-disable-next-line no-underscore-dangle
+    window.__webpack_nonce__ = 'foo'
+
+    injectGlobal`
+        background: red;
+      `
+    const rule = 'color: blue;'
+    const Comp = styled.div`
+        ${rule}
+      `
+    shallow(<Comp />)
+    expectCSSMatches(`
+        {
+          background: red;
+        }
         .sc-a {}
         .b {
           color: blue;
