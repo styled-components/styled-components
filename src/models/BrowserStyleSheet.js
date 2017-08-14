@@ -69,10 +69,10 @@ class BrowserTag implements Tag {
     if (name) {
       const existingNames = this.el.getAttribute(SC_ATTR)
       this.el.setAttribute(SC_ATTR, existingNames ? `${existingNames} ${name}` : name)
+    }
 
-      if (typeof window !== 'undefined' && window.__webpack_nonce__) {
-        this.el.setAttribute('nonce', window.__webpack_nonce__)
-      }
+    if (typeof window !== 'undefined' && window.__webpack_nonce__) {
+      this.el.setAttribute('nonce', window.__webpack_nonce__)
     }
   }
 
