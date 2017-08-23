@@ -118,6 +118,20 @@ class BrowserTag implements Tag {
   }
 }
 
+/* Factory for making more tags */
+export function tagConstructorWithTarget(target?: HTMLElement): Function {
+  return function tagConstructor(isLocal: boolean): Tag {
+    const el = document.createElement('style')
+    el.type = 'text/css'
+    el.setAttribute(SC_ATTR, '')
+    el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
+    const targ = target || document.head
+    if (!targ) throw new Error('Missing document <head>')
+    targ.appendChild(el)
+    return new BrowserTag(el, isLocal)
+  }
+}
+
 /* Factory function to separate DOM operations from logical ones*/
 export default {
   create() {
@@ -141,17 +155,6 @@ export default {
       }
     }
 
-    /* Factory for making more tags */
-    const tagConstructor = (isLocal: boolean): Tag => {
-      const el = document.createElement('style')
-      el.type = 'text/css'
-      el.setAttribute(SC_ATTR, '')
-      el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
-      if (!document.head) throw new Error('Missing document <head>')
-      document.head.appendChild(el)
-      return new BrowserTag(el, isLocal)
-    }
-
-    return new StyleSheet(tagConstructor, tags, names)
+    return new StyleSheet(tagConstructorWithTarget(), tags, names)
   },
 }
