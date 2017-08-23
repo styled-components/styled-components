@@ -7,6 +7,7 @@ import generateAlphabeticName from './utils/generateAlphabeticName'
 import css from './constructors/css'
 import ServerStyleSheet from './models/ServerStyleSheet'
 import StyleSheetManager from './models/StyleSheetManager'
+import StyleSheet from './models/StyleSheet'
 
 /* Import singleton constructors */
 import _StyledComponent from './models/StyledComponent'
@@ -42,4 +43,5 @@ export {
   withTheme,
   ServerStyleSheet,
   StyleSheetManager,
+  StyleSheet,
 }
