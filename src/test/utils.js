@@ -55,7 +55,7 @@ const stripComments = (str: string) =>
   str.replace(/\/\*.*?\*\/\n?/g, '')
 
 export const stripWhitespace = (str: string) =>
-  str.trim().replace(/([;\{\}])/g, '$1  ').replace(/\s+/g, ' ')
+  str.trim().replace(/:(?!:)/g,': ').replace(/([;\{\}])/g, '$1  ').replace(/\s+/g, ' ')
 
 export const expectCSSMatches = (
   _expectation: string, opts: ?Object,
