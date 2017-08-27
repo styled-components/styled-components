@@ -203,4 +203,55 @@ describe('ssr', () => {
     expect(elements[0].props.nonce).toBe('foo');
     expect(elements[1].props.nonce).toBe('foo');
   })
+
+  it('should group nonlocal and local styles into single stylesheets', () => {
+    injectGlobal`
+      body { background: papayawhip; }
+    `
+    const Heading = styled.h1`
+      color: red;
+    `
+
+    injectGlobal`
+      body { color: gainsboro; }
+    `
+
+    const Box = styled.div`
+      background: blue;
+      height: 10px;
+      width: 10px;
+    `
+
+    const sheet = new ServerStyleSheet()
+
+    renderToString(sheet.collectStyles(<Heading>Hello SSR! <Box /></Heading>))
+    const elements = sheet.getStyleElement()
+
+    expect(elements).toHaveLength(2)
+    expect(elements[0].props['data-styled-components-is-local']).toBe('false')
+    expect(elements[1].props['data-styled-components-is-local']).toBe('true')
+  })
+
+  it('should always inject non-local stylesheets first', () => {
+    const Heading = styled.h1`
+      color: red;
+    `
+
+    injectGlobal`
+      body { background: papayawhip; }
+    `
+
+    injectGlobal`
+      body { color: gainsboro; }
+    `
+
+    const sheet = new ServerStyleSheet()
+
+    renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+    const elements = sheet.getStyleElement()
+
+    expect(elements).toHaveLength(2)
+    expect(elements[0].props['data-styled-components-is-local']).toBe('false')
+    expect(elements[1].props['data-styled-components-is-local']).toBe('true')
+  })
 })

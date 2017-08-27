@@ -179,16 +179,15 @@ describe('rehydration', () => {
       expectCSSMatches('body { background: papayawhip; } .TWO {} .b { color: red; }')
     })
 
-    it('should inject new global styles at the end', () => {
+    it('should inject new global styles after the existing ones', () => {
       injectGlobal`
         body { color: tomato; }
       `
-      expectCSSMatches('body { background: papayawhip; } .TWO {} .b { color: red; } body { color: tomato; }')
+      expectCSSMatches('body { background: papayawhip; } body { color: tomato; } .TWO {} .b { color: red; }')
 
       expect(getStyleTags()).toEqual([
-        { isLocal: 'false', css: '/* sc-component-id: sc-global-557410406 */ body { background: papayawhip; }', },
+        { isLocal: 'false', css: '/* sc-component-id: sc-global-557410406 */ body { background: papayawhip; } /* sc-component-id: sc-global-2299393384 */ body{color: tomato;}', },
         { isLocal: 'true', css: '/* sc-component-id: TWO */ .TWO {} .b { color: red; }', },
-        { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body{color: tomato;}', },
       ])
     })
 
@@ -199,12 +198,10 @@ describe('rehydration', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
       shallow(<A />)
 
-      expectCSSMatches('body { background: papayawhip; } .TWO {} .b { color: red; } body { color: tomato; } .ONE { } .a { color: blue; }')
+      expectCSSMatches('body { background: papayawhip; } body { color: tomato; } .TWO {} .b { color: red; } .ONE { } .a { color: blue; }')
       expect(getStyleTags()).toEqual([
-        { isLocal: 'false', css: '/* sc-component-id: sc-global-557410406 */ body { background: papayawhip; }', },
-        { isLocal: 'true', css: '/* sc-component-id: TWO */ .TWO {} .b { color: red; }', },
-        { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body{color: tomato;}', },
-        { isLocal: 'true', css: '/* sc-component-id: ONE */ .ONE {} .a{color: blue;}', },
+        { isLocal: 'false', css: '/* sc-component-id: sc-global-557410406 */ body { background: papayawhip; } /* sc-component-id: sc-global-2299393384 */ body{color: tomato;}', },
+        { isLocal: 'true', css: '/* sc-component-id: TWO */ .TWO {} .b { color: red; } /* sc-component-id: ONE */ .ONE {} .a{color: blue;}', },
       ])
     })
   })

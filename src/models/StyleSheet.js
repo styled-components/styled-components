@@ -117,18 +117,32 @@ export default class StyleSheet {
       return existingTag
     }
 
-    const lastTag = this.tags[this.tags.length - 1]
-    const componentTag = (!lastTag || lastTag.isFull() || lastTag.isLocal !== isLocal)
-      ? this.createNewTag(isLocal)
-      : lastTag
-    this.componentTags[componentId] = componentTag
-    componentTag.addComponent(componentId)
-    return componentTag
+    let tag = this.tags.find(t => t.isLocal === isLocal && !t.isFull())
+    if (!tag) {
+      tag = this.createNewTag(isLocal)
+    }
+
+    this.componentTags[componentId] = tag
+    tag.addComponent(componentId)
+    return tag
   }
 
   createNewTag(isLocal: boolean) {
     const newTag = this.tagConstructor(isLocal)
-    this.tags.push(newTag)
+
+    /**
+     * The first non-local tag should go in position zero.
+     *
+     * Subsequent non-local tags should be appended as normal because
+     * calling this func again means the prior one was "closed" due to a
+     * finished injection.
+     */
+    if (!isLocal && !this.tags.some(t => !t.isLocal)) {
+      this.tags.unshift(newTag)
+    } else {
+      this.tags.push(newTag)
+    }
+
     return newTag
   }
 

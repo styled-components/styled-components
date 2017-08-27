@@ -17,12 +17,12 @@ exports[`ssr should allow global styles to be injected during rendering 1`] = `"
 exports[`ssr should allow global styles to be injected during rendering 2`] = `
 "<style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-737874422 */
 html::before{content: 'Before both renders';}
+/* sc-component-id: sc-global-2914197427 */
+html::before{content: 'During first render';}
 </style><style type=\\"text/css\\" data-styled-components=\\"a\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: PageOne */
 .PageOne {}
 
 .a{color: red;}
-</style><style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-2914197427 */
-html::before{content: 'During first render';}
 </style>"
 `;
 
@@ -31,16 +31,16 @@ exports[`ssr should allow global styles to be injected during rendering 3`] = `"
 exports[`ssr should allow global styles to be injected during rendering 4`] = `
 "<style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-737874422 */
 html::before{content: 'Before both renders';}
-</style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: PageTwo */
-.PageTwo {}
-
-.b{color: blue;}
-</style><style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-2914197427 */
+/* sc-component-id: sc-global-2914197427 */
 html::before{content: 'During first render';}
 /* sc-component-id: sc-global-1207956261 */
 html::before{content: 'Between renders';}
 /* sc-component-id: sc-global-3990873394 */
 html::before{content: 'During second render';}
+</style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: PageTwo */
+.PageTwo {}
+
+.b{color: blue;}
 </style>"
 `;
 
