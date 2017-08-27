@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npm run build:lib && npm run build:dist",
     "prebuild:lib": "rimraf lib/*",
-    "build:lib": "babel --out-dir lib src",
+    "build:lib": "babel --out-dir lib --ignore \"*.test.js\" src",
     "prebuild:dist": "rimraf dist/*",
     "build:dist": "rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
@@ -72,9 +72,9 @@
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
-    "@types/react": "^15.0.25",
-    "@types/react-dom": "^15.5.0",
-    "@types/react-native": "^0.44.4",
+    "@types/react": "^15.0.37",
+    "@types/react-dom": "^15.5.1",
+    "@types/react-native": "^0.46.0",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
     "babel-eslint": "^7.1.1",
@@ -88,7 +88,7 @@
     "babel-plugin-transform-react-remove-prop-types": "^0.4.1",
     "babel-preset-env": "^1.4.0",
     "babel-preset-react": "^6.22.0",
-    "bundlesize": "^0.5.5",
+    "bundlesize": "^0.13.2",
     "chokidar": "^1.6.0",
     "danger": "^0.16.0",
     "enzyme": "^2.8.2",
@@ -101,9 +101,8 @@
     "eslint-plugin-react": "^6.8.0",
     "express": "^4.14.1",
     "flow-bin": "^0.47.0",
-    "flow-copy-source": "^1.1.0",
     "flow-watch": "^1.1.1",
-    "jest": "^19.0.2",
+    "jest": "^20.0.4",
     "jsdom": "^9.10.0",
     "lint-staged": "^3.3.0",
     "node-watch": "^0.4.1",
@@ -125,7 +124,7 @@
     "rollup-plugin-uglify": "^1.0.1",
     "rollup-plugin-visualizer": "^0.1.5",
     "tslint": "^4.3.1",
-    "typescript": "^2.3.3"
+    "typescript": "^2.4.1"
   },
   "peerDependencies": {
     "react": ">= 0.14.0 < 17.0.0-0"

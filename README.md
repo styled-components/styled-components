@@ -96,6 +96,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [react-progressive-bg-image](https://github.com/evenchange4/react-progressive-bg-image): 🖼 Medium style progressive background image. ([demo](http://react-progressive-bg-image.netlify.com/))
 - [react-simple-chatbot](https://github.com/LucasBassetti/react-simple-chatbot): Simple chatbot / conversational-ui React component. ([demo](https://lucasbassetti.com.br/react-simple-chatbot/))
 - [react-css-loaders](https://github.com/LucasBassetti/react-css-loaders): A collection of pure CSS React loading components. ([demo](https://lucasbassetti.com.br/react-css-loaders/))
+- [Rebass](https://github.com/jxnblk/rebass): Functional React UI component library ([demo](http://jxnblk.com/rebass))
 
 #### Grid Systems
 - [grid-styled](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
@@ -103,6 +104,8 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [styled-components-grid](https://github.com/jameslnewell/styled-components-grid): Responsive grid components for `styled-components`.
 - [react-styled-flexboxgrid](https://github.com/LoicMahieu/react-styled-flexboxgrid): Grid system based on Flexbox ([demo](https://loicmahieu.github.io/react-styled-flexboxgrid/demo/index.html))
 - [react-flexa](https://github.com/aaronvanston/react-flexa): React grid system implementing the flexbox CSS API responsively.
+- [griz](https://github.com/josephrexme/griz): The simplest grid system you'd ever see. Using grids with a flexbox fallback.
+- [styled-css-grid](https://styled-css-grid.js.org/): A tiny CSS grid layout for React.
 
 #### Helpers
 - [styled-props](https://github.com/RafalFilipek/styled-props): Simple lib that allows you to set styled props in your styled-components without stress ([demo](http://www.webpackbin.com/N1EKUqgvG))
@@ -112,7 +115,11 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [styled-ax](https://github.com/Lokua/styled-ax): Functional theme property accessor(s)
 - [react-create-component-from-tag-prop](https://github.com/jameslnewell/react-create-component-from-tag-prop): Create a react component from a tag prop. Lets your users to choose which HTML elements get styled by your 💅 styled-components.
 - [styled-components-theme](https://github.com/erikras/styled-components-theme): A library for refering to theme colors and modifying them inline. e.g. `color: ${primary.lighten(0.3)};`
-- [styled-map](https://github.com/scf4/styled-map) - Super simple lib to map props to styles with `styled-components`
+- [styled-map](https://github.com/scf4/styled-map): Super simple lib to map props to styles with `styled-components`
+- [styled-system](https://github.com/jxnblk/styled-system): Design system utilities for styled-components – used in grid-styled and Rebass ([demo](http://jxnblk.com/styled-system/))
+- [styled-shortcuts](https://github.com/donavon/styled-shortcuts): Use simple string notation to access props. No functions necessary! Example: `font-size: ${'theme.fontSize:px'};` ([demo](https://codesandbox.io/s/jRE0XxR9v))
+- [styled-shortcut-components](https://github.com/donavon/styled-shortcut-components): A convenience package that wraps `styled-components` with `styled-shortcuts`.
+- [styled-media-query](http://github.com/morajabi/styled-media-query): Easily and beautifully use media queries with styled-component with custom breakpoints
 
 ### Boilerplates
 - [react-redux-styled-hot-universal](https://github.com/krasevych/react-redux-styled-hot-universal) (SSR, Universal Webpack, Redux, React-router, Webpack 2, Babel, Styled Components and more...)
@@ -121,6 +128,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [Scalable React Boilerplate](https://github.com/RyanCCollins/scalable-react-boilerplate)
 - [Scalable React TypeScript Boilerplate](https://github.com/RyanCCollins/scalable-react-ts-boilerplate)
 - [Superstylin'](https://github.com/bntzio/gatsby-starter-superstylin): A Gatsby starter with styled-components 💅 ([demo](https://superstylin.netlify.com/))
+- [Generator create-redux-app](https://github.com/jonidelv/generator-create-redux-app): Add Redux, styled-components and other useful libraries and tools like auto-generate boilerplate code, on top of the most common React starter create-react-app.
 
 ### Websites
 - [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
@@ -133,6 +141,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [joeireland.com](https://joeireland.com): Portfolio of Joseph Ireland ([source](https://github.com/IamJoseph/JoesReactWebsite)).
 - [rosesdaycare.center](https://rosesdaycare.center): Marketing website with theme colors that change on refresh ([source](https://github.com/anthony2025/roses-daycare)).
 - [CodeSandbox](https://codesandbox.io/s/new): An online editor tailored for React development ([source](https://github.com/CompuIves/codesandbox-client)).
+- [Grabient.com](https://www.grabient.com): A beautiful and simple UI for generating web gradients. ([source](https://github.com/johnkorzhuk/grabient/)).
 
 ### Other
 - [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
@@ -149,6 +158,7 @@ These are some great articles and talks about related topics in case you're hung
 - [🎙 The Future of Reusable CSS](https://www.youtube.com/watch?v=XR6eM_5pAb0): How component libraries should be styled, and why they're not yet
 - [📝 Rendering Khan Academy’s Learn Menu Wherever I Please](https://medium.com/@jdan/rendering-khan-academys-learn-menu-wherever-i-please-4b58d4a9432d#.w9nshye05): Documenting the move from the handlebars + less combo to react and inline styles
 - [🖥 Ryan's random thoughts about inline styles](https://www.youtube.com/watch?v=EkPcGS4TzdQ): Explaining some benefits of using styles in js
+- [🖥 Create a style guide using NPM & styled-components](https://www.youtube.com/watch?v=u6gQ48rSw-E): Jamie fumbles through creating a shareable NPM package.
 
 ## Alternative Installation Methods
 

@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable no-underscore-dangle */
 import React from 'react'
 import BrowserTag from './BrowserTag'
 import { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
@@ -68,6 +69,9 @@ export default class InMemoryTag {
       el.type = 'text/css'
       el.setAttribute(SC_ATTR, '')
       el.setAttribute(LOCAL_ATTR, this.isLocal ? 'true' : 'false')
+      if (typeof window !== 'undefined' && window.__webpack_nonce__) {
+        el.setAttribute('nonce', window.__webpack_nonce__)
+      }
       if (!document.head) throw new Error('Missing document <head>')
       document.head.appendChild(el)
       this.browserTag = new BrowserTag(el)
@@ -83,29 +87,38 @@ export default class InMemoryTag {
     })
   }
 
-  toHTML() {
-    const namesAttr = `${SC_ATTR}="${this.names.join(' ')}"`
-    const localAttr = `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`
-    const css = Object.keys(this.components)
-      .map(key => this.components[key].css.join(''))
-      .join('')
+  concatenateCSS() {
+    return Object.keys(this.components).reduce((styles, k) => (styles + this.components[k].css), '')
+  }
 
-    return `<style type="text/css" ${namesAttr} ${localAttr}>\n${css}\n</style>`
+  toHTML() {
+    const attrs = [
+      'type="text/css"',
+      `${SC_ATTR}="${this.names.join(' ')}"`,
+      `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`,
+    ]
+
+    if (typeof global !== 'undefined' && global.__webpack_nonce__) {
+      attrs.push(`nonce="${global.__webpack_nonce__}"`)
+    }
+
+    return `<style ${attrs.join(' ')}>${this.concatenateCSS()}</style>`
   }
 
   toReactElement(key: string) {
-    const attributes = {
+    const attrs: Object = {
       [SC_ATTR]: this.names.join(' '),
       [LOCAL_ATTR]: this.isLocal.toString(),
     }
-    const css = Object.keys(this.components)
-      .map(k => this.components[k].css)
-      .join('')
+
+    if (typeof global !== 'undefined' && global.__webpack_nonce__) {
+      attrs.nonce = global.__webpack_nonce__
+    }
 
     return (
       <style
-        key={key} type="text/css" {...attributes}
-        dangerouslySetInnerHTML={{ __html: css }}
+        key={key} type="text/css" {...attrs}
+        dangerouslySetInnerHTML={{ __html: this.concatenateCSS() }}
       />
     )
   }

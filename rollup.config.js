@@ -42,8 +42,11 @@ const plugins = [
     },
   },
   flow(),
+  json(),
   nodeResolve(),
-  commonjs(),
+  commonjs({
+    ignoreGlobal: true,
+  }),
   replace({
     'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
   }),
@@ -65,7 +68,6 @@ const plugins = [
       'transform-class-properties',
     ].filter(Boolean),
   }),
-  json(),
 ]
 
 if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))

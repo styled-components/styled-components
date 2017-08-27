@@ -17,7 +17,7 @@ const {
 } = styledComponents as ThemedStyledComponentsModule<MyTheme>;
 
 interface ThemeProps {
-  theme?: MyTheme;
+  theme: MyTheme;
 }
 
 export default styled;
