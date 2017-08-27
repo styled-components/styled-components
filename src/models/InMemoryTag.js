@@ -88,7 +88,7 @@ export default class InMemoryTag {
   }
 
   concatenateCSS() {
-    return Object.keys(this.components).reduce((styles, k) => (styles + this.components[k].css), '')
+    return Object.keys(this.components).reduce((styles, k) => (styles + this.components[k].css.join('')), '')
   }
 
   toHTML() {

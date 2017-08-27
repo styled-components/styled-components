@@ -188,7 +188,7 @@ describe('rehydration', () => {
       expect(getStyleTags()).toEqual([
         { isLocal: 'false', css: '/* sc-component-id: sc-global-557410406 */ body { background: papayawhip; }', },
         { isLocal: 'true', css: '/* sc-component-id: TWO */ .TWO {} .b { color: red; }', },
-        { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body{color: tomato;}', },
+        { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;}', },
       ])
     })
 
@@ -203,8 +203,8 @@ describe('rehydration', () => {
       expect(getStyleTags()).toEqual([
         { isLocal: 'false', css: '/* sc-component-id: sc-global-557410406 */ body { background: papayawhip; }', },
         { isLocal: 'true', css: '/* sc-component-id: TWO */ .TWO {} .b { color: red; }', },
-        { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body{color: tomato;}', },
-        { isLocal: 'true', css: '/* sc-component-id: ONE */ .ONE {} .a{color: blue;}', },
+        { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;}', },
+        { isLocal: 'true', css: '/* sc-component-id: ONE */ .ONE {} .a{color:blue;}', },
       ])
     })
   })
@@ -260,11 +260,11 @@ describe('rehydration', () => {
       const C = styled.div.withConfig({ componentId: 'THREE' })`color: green;`
       shallow(<C />)
       expectCSSMatches(`
-        html { font-size: 16px; }
-        body { background: papayawhip; }
-        .ONE { } .a { color: blue; }
-        .TWO { } .b { color: red; }
-        .THREE { } .c { color: green; }
+        html { font-size:16px; }
+        body { background:papayawhip; }
+        .ONE { } .a { color:blue; }
+        .TWO { } .b { color:red; }
+        .THREE { } .c { color:green; }
       `)
 
       const styleTagsAfterAddition = Array.from(document.querySelectorAll('style'))
@@ -278,7 +278,7 @@ describe('rehydration', () => {
           /* ...the new data attribute for the new classname "c"... */
           .replace(new RegExp(`${SC_ATTR}="a b"`), `${SC_ATTR}="a b c"`)
           /* ...and the new CSS before the closing tag.  */
-          .replace(/(?=<\/style>)/, '\n/* sc-component-id: THREE */\n.THREE {}\n.c{color: green;}\n')
+          .replace(/(?=<\/style>)/, '\n/* sc-component-id: THREE */\n.THREE {}\n.c{color:green;}\n')
       )
 
       const D = styled.div.withConfig({ componentId: 'TWO' })`color: tomato;`
