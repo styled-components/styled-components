@@ -1,8 +1,6 @@
 import * as React from "react";
 import { StatelessComponent, ComponentClass, PureComponent, ReactElement } from "react";
 
-import { HTMLTags, SVGTags } from "./tags";
-
 type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 
 export interface ThemeProps<T> {
@@ -33,8 +31,7 @@ type Attrs<P, A extends Partial<P>, T> = {
 export interface StyledComponentClass<P, T, O = P> extends ComponentClass<ThemedOuterStyledProps<O, T>> {
   extend: ThemedStyledFunction<P, T, O>;
 
-  withComponent<K extends keyof HTMLTags>(tag: K): StyledComponentClass<React.HTMLProps<HTMLTags[K]>, T, O>;
-  withComponent<K extends keyof SVGTags>(tag: K): StyledComponentClass<React.SVGAttributes<SVGTags[K]>, T, O>;
+  withComponent<K extends keyof JSX.IntrinsicElements>(tag: K): StyledComponentClass<JSX.IntrinsicElements[K], T, O>;
   withComponent(element: ComponentClass<P>): StyledComponentClass<P, T, O>;
 }
 
@@ -46,21 +43,9 @@ export interface ThemedStyledFunction<P, T, O = P> {
 
 export type StyledFunction<P> = ThemedStyledFunction<P, any>;
 
-export type ThemedHtmlStyledFunction<E, T> = ThemedStyledFunction<React.HTMLProps<E>, T>;
-export type HtmlStyledFunction<E> = ThemedHtmlStyledFunction<E, any>;
-
-export type ThemedSvgStyledFunction<E extends SVGElement, T> = ThemedStyledFunction<React.SVGAttributes<E>, T>;
-export type SvgStyledFunction<E extends SVGElement> = ThemedSvgStyledFunction<E, any>;
-
-type ThemedStyledComponentFactoriesHTML<T> = {
-    [K in keyof HTMLTags]: ThemedHtmlStyledFunction<HTMLTags[K], T>;
+type ThemedStyledComponentFactories<T> = {
+    [K in keyof JSX.IntrinsicElements]: ThemedStyledFunction<JSX.IntrinsicElements[K], T>;
 };
-
-type ThemedStyledComponentFactoriesSVG<T> = {
-    [K in keyof SVGTags]: ThemedSvgStyledFunction<SVGTags[K], T>;
-};
-
-type ThemedStyledComponentFactories<T> = ThemedStyledComponentFactoriesHTML<T> & ThemedStyledComponentFactoriesSVG<T>;
 
 export interface ThemedBaseStyledInterface<T> extends ThemedStyledComponentFactories<T> {
   <P, O>(component: StyledComponentClass<P, T, O>): ThemedStyledFunction<P, T, O>;

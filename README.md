@@ -129,6 +129,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [Scalable React Boilerplate](https://github.com/RyanCCollins/scalable-react-boilerplate)
 - [Scalable React TypeScript Boilerplate](https://github.com/RyanCCollins/scalable-react-ts-boilerplate)
 - [Superstylin'](https://github.com/bntzio/gatsby-starter-superstylin): A Gatsby starter with styled-components 💅 ([demo](https://superstylin.netlify.com/))
+- [Generator create-redux-app](https://github.com/jonidelv/generator-create-redux-app): Add Redux, styled-components and other useful libraries and tools like auto-generate boilerplate code, on top of the most common React starter create-react-app.
 
 ### Websites
 - [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
