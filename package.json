@@ -106,6 +106,8 @@
     "lint-staged": "^3.3.0",
     "node-watch": "^0.4.1",
     "pre-commit": "^1.2.2",
+    "preact": "^8.2.5",
+    "preact-compat": "^3.17.0",
     "react": "^15.5.4",
     "react-addons-test-utils": "^15.4.1",
     "react-dom": "^15.5.4",
