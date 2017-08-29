@@ -21,7 +21,7 @@
     "test:primitives": "jest -c .jest.primitives.json",
     "test:primitives:watch": "npm run test:primitives -- --watch",
     "test:compat": "jest -c .jest.compat.json",
-    "test:comapt:watch": "npm run test:compat -- --watch",
+    "test:compat:watch": "npm run test:compat -- --watch",
     "test:size": "bundlesize",
     "flow": "flow check",
     "flow:watch": "flow-watch",
