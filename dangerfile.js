@@ -1,6 +1,6 @@
 // @flow
 
-import { danger, warn, fail, message } from 'danger'
+import { danger, warn, fail, message, schedule } from 'danger'
 import fs from 'fs'
 
 const jsModifiedFiles = danger.git.modified_files.filter(path => path.startsWith('src') && path.endsWith('js'))
@@ -12,9 +12,11 @@ const hasTestChanges = jsTestChanges.length > 0
 
 // Congrats, version bump up!
 const isVersionBump = danger.git.modified_files.includes('package.json')
-const packageDiff = danger.git.diffForFile('package.json')
 
-if (isVersionBump && packageDiff && packageDiff.includes('version')) { message(':tada: Version BUMP UP!') }
+schedule(async () => {
+  const packageDiff = await danger.git.diffForFile('package.json')
+  if (isVersionBump && packageDiff && packageDiff.includes('version')) { message(':tada: Version BUMP UP!') }
+})
 
 // Warn when there is a big PR
 const bigPRThreshold = 500

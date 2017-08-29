@@ -235,6 +235,10 @@ declare module 'danger' {
    */
   declare function message(message: MarkdownString): void;
   /**
+   * Schedule an async function to run
+   */
+  declare function schedule(func: any): void;
+  /**
    * Puts a message inside the Danger table
    *
    * @param {MarkdownString} message the String to output
