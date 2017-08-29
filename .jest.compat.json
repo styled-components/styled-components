@@ -1,0 +1,13 @@
+{
+  "rootDir": ".",
+  "globals": {
+    "__DEV__": true
+  },
+  "moduleNameMapper": {
+    "^react$": "preact-compat"
+  },
+  "testRegex": "./src/compat/test/.*.js$",
+  "moduleFileExtensions": ["ios.js", "js"],
+  "preset": "react-native",
+  "testEnvironment": "jsdom"
+}

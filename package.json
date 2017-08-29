@@ -20,6 +20,8 @@
     "test:native:watch": "npm run test:native -- --watch",
     "test:primitives": "jest -c .jest.primitives.json",
     "test:primitives:watch": "npm run test:primitives -- --watch",
+    "test:compat": "jest -c .jest.compat.json",
+    "test:comapt:watch": "npm run test:compat -- --watch",
     "test:size": "bundlesize",
     "flow": "flow check",
     "flow:watch": "flow-watch",
@@ -136,7 +138,8 @@
     ],
     "testPathIgnorePatterns": [
       "<rootDir>/src/native",
-      "<rootDir>/src/primitives"
+      "<rootDir>/src/primitives",
+      "<rootDir>/src/compat"
     ]
   },
   "lint-staged": {
