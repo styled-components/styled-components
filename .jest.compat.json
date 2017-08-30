@@ -2,11 +2,10 @@
   "roots": [
     "<rootDir>/src/"
   ],
-  "moduleNameMapper": {
-    "^react$": "preact-compat"
+  "transform": {
+    "^.+\\.js$": "babel-jest"
   },
   "testPathIgnorePatterns": [
-    "<rootDir>/src/test/ssr.test.js",
     "<rootDir>/src/native",
     "<rootDir>/src/primitives"
   ]
