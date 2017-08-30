@@ -3,7 +3,7 @@
     "<rootDir>/src/"
   ],
   "transform": {
-    "^.+\\.js$": "babel-jest"
+    "^.+\\.js$": "./src/test/aliasTransformer.js"
   },
   "testPathIgnorePatterns": [
     "<rootDir>/src/native",
