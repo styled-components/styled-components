@@ -1,5 +1,5 @@
 // @flow
-import { createTransformer } from 'babel-jest'
+const { createTransformer } = require('babel-jest')
 
 module.exports = createTransformer({
   plugins: [
