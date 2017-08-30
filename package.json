@@ -79,10 +79,12 @@
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
     "babel-eslint": "^7.1.1",
+    "babel-jest": "^20.0.3",
     "babel-loader": "^6.2.10",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-plugin-external-helpers": "^6.22.0",
     "babel-plugin-flow-react-proptypes": "^2.1.3",
+    "babel-plugin-module-alias": "^1.6.0",
     "babel-plugin-transform-class-properties": "^6.22.0",
     "babel-plugin-transform-flow-strip-types": "^6.22.0",
     "babel-plugin-transform-object-rest-spread": "^6.22.0",
@@ -138,8 +140,7 @@
     ],
     "testPathIgnorePatterns": [
       "<rootDir>/src/native",
-      "<rootDir>/src/primitives",
-      "<rootDir>/src/compat"
+      "<rootDir>/src/primitives"
     ]
   },
   "lint-staged": {
