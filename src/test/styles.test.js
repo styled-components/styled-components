@@ -201,7 +201,9 @@ describe('with styles', () => {
     window.__webpack_nonce__ = 'foo'
 
     injectGlobal`
-        background: red;
+        html {
+          background: red;
+        }
       `
     const rule = 'color: blue;'
     const Comp = styled.div`
@@ -209,7 +211,7 @@ describe('with styles', () => {
       `
     shallow(<Comp />)
     expectCSSMatches(`
-        {
+        html {
           background: red;
         }
         .sc-a {}
