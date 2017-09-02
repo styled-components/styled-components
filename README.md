@@ -106,6 +106,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [react-flexa](https://github.com/aaronvanston/react-flexa): React grid system implementing the flexbox CSS API responsively.
 - [griz](https://github.com/josephrexme/griz): The simplest grid system you'd ever see. Using grids with a flexbox fallback.
 - [styled-css-grid](https://styled-css-grid.js.org/): A tiny CSS grid layout for React.
+- [neat-components](https://github.com/magicink/neat-components): A styled-components implementation of ThoughtBot's Neat grid system.
 
 #### Helpers
 - [styled-props](https://github.com/RafalFilipek/styled-props): Simple lib that allows you to set styled props in your styled-components without stress ([demo](http://www.webpackbin.com/N1EKUqgvG))
@@ -120,6 +121,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [styled-shortcuts](https://github.com/donavon/styled-shortcuts): Use simple string notation to access props. No functions necessary! Example: `font-size: ${'theme.fontSize:px'};` ([demo](https://codesandbox.io/s/jRE0XxR9v))
 - [styled-shortcut-components](https://github.com/donavon/styled-shortcut-components): A convenience package that wraps `styled-components` with `styled-shortcuts`.
 - [styled-media-query](http://github.com/morajabi/styled-media-query): Easily and beautifully use media queries with styled-component with custom breakpoints
+- [styled-by](https://github.com/brunobertolini/styled-by): Simple and powerful lib to handle styled props in your components ([demo](https://codesandbox.io/s/ElvL8EKgg))
 
 ### Boilerplates
 - [react-redux-styled-hot-universal](https://github.com/krasevych/react-redux-styled-hot-universal) (SSR, Universal Webpack, Redux, React-router, Webpack 2, Babel, Styled Components and more...)
@@ -128,6 +130,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [Scalable React Boilerplate](https://github.com/RyanCCollins/scalable-react-boilerplate)
 - [Scalable React TypeScript Boilerplate](https://github.com/RyanCCollins/scalable-react-ts-boilerplate)
 - [Superstylin'](https://github.com/bntzio/gatsby-starter-superstylin): A Gatsby starter with styled-components 💅 ([demo](https://superstylin.netlify.com/))
+- [Generator create-redux-app](https://github.com/jonidelv/generator-create-redux-app): Add Redux, styled-components and other useful libraries and tools like auto-generate boilerplate code, on top of the most common React starter create-react-app.
 
 ### Websites
 - [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
