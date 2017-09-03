@@ -1,19 +1,9 @@
-console.log('CONFIG FILE BEING LOADED')
+/* This loads the configuration (possibly after it has been changed)
+ * and exports the current values.
+ *
+ * It needs to be calling 'require' otherwise Rollup would inline it
+ * and the config method wouldn't work.
+ */
+const config = require('../config')
 
-const omg = {
-  hax: false,
-  touched: false,
-}
-
-export const config = () => {
-  console.log('EXEC CONFIG')
-  omg.touched = true
-  return omg
-}
-
-export default () => {
-  if (omg.touched) throw new Error("Can only configure Styled Components before you've used it!")
-  console.log('EXEC HAX')
-  omg.hax = true
-  console.log(omg)
-}
+export default config.getConfiguration()
