@@ -1,4 +1,7 @@
 // @flow
+console.log('SC INDEX LOADING')
+const config = require('../config')
+console.log(config.config())
 
 /* Import singletons */
 import flatten from './utils/flatten'
