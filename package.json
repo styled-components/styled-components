@@ -10,6 +10,9 @@
     "build": "npm run build:lib && npm run build:dist",
     "prebuild:lib": "rimraf lib/*",
     "build:lib": "babel --out-dir lib --ignore \"*.test.js\" src",
+    "prebuild:es6": "rimraf dist/*",
+    "build:es6": "rollup -c --environment ESBUNDLE",
+    "build:es6:watch": "npm run build:es6 -- -w",
     "prebuild:dist": "rimraf dist/*",
     "build:dist": "rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
@@ -122,6 +125,7 @@
     "rollup-plugin-replace": "^1.1.1",
     "rollup-plugin-uglify": "^1.0.1",
     "rollup-plugin-visualizer": "^0.1.5",
+    "rollup-watch": "^4.3.1",
     "tslint": "^4.3.1",
     "typescript": "^2.4.1"
   },

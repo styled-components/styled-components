@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 *The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).*
 
+## Experimental
+
+- Configuration endpoint & ability to disable autoprefixing
+
 ## Unreleased
 
 - Fixed nonce missing from global styles (see [#1088](https://github.com/styled-components/styled-components/pull/1088))

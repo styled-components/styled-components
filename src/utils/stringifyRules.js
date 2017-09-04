@@ -1,12 +1,13 @@
 // @flow
 import Stylis from 'stylis'
 import type { Interpolation } from '../types'
+import config from '../config'
 
 const stylis = new Stylis({
   global: false,
   cascade: true,
   keyframe: false,
-  prefix: true,
+  prefix: config.prefix_css,
   compress: false,
   semicolon: true,
 })
