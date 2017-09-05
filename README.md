@@ -48,7 +48,7 @@ See the [`stylelint-processor-styled-components`](https://github.com/styled-comp
 
 ## Syntax highlighting
 
-The one thing you lose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom, Visual Studio Code, and soon Sublime Text.
+The one thing you lose when writing CSS in template literals is syntax highlighting. We're working hard on making proper syntax highlighting happening in all editors. We currently have support for Atom, Visual Studio Code, WebStorm, and soon Sublime Text.
 
 This is what it looks like when properly highlighted:
 
@@ -76,6 +76,10 @@ If you would like to keep your current JavaScript syntax highlighting, you can u
 The [`vim-styled-components`](https://github.com/fleischie/vim-styled-components) plugin gives you syntax highlighting inside your Javascript files. Install it with your usual plugin manager like [Plug](https://github.com/junegunn/vim-plug), [Vundle](https://github.com/VundleVim/Vundle.vim), [Pathogen](https://github.com/tpope/vim-pathogen), etc.
 
 Also if you're looking for an awesome javascript syntax package you can never go wrong with [YAJS.vim](https://github.com/othree/yajs.vim).
+
+### WebStorm, IntelliJ IDEA, PhpStorm, PyCharm, and RubyMine
+
+The [`webstorm-styled-components`](https://github.com/styled-components/webstorm-styled-components) plugin adds code completion and highlighting for CSS properties and values in the template strings. And it also provides code completion and navigation for JavaScript symbols in the interpolations. You can install it from the IDE: go to `Preferences | Plugins` and search for `Styled Components`.
 
 ### Other Editors
 
@@ -106,6 +110,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [react-flexa](https://github.com/aaronvanston/react-flexa): React grid system implementing the flexbox CSS API responsively.
 - [griz](https://github.com/josephrexme/griz): The simplest grid system you'd ever see. Using grids with a flexbox fallback.
 - [styled-css-grid](https://styled-css-grid.js.org/): A tiny CSS grid layout for React.
+- [neat-components](https://github.com/magicink/neat-components): A styled-components implementation of ThoughtBot's Neat grid system.
 
 #### Helpers
 - [styled-props](https://github.com/RafalFilipek/styled-props): Simple lib that allows you to set styled props in your styled-components without stress ([demo](http://www.webpackbin.com/N1EKUqgvG))
@@ -120,6 +125,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [styled-shortcuts](https://github.com/donavon/styled-shortcuts): Use simple string notation to access props. No functions necessary! Example: `font-size: ${'theme.fontSize:px'};` ([demo](https://codesandbox.io/s/jRE0XxR9v))
 - [styled-shortcut-components](https://github.com/donavon/styled-shortcut-components): A convenience package that wraps `styled-components` with `styled-shortcuts`.
 - [styled-media-query](http://github.com/morajabi/styled-media-query): Easily and beautifully use media queries with styled-component with custom breakpoints
+- [styled-by](https://github.com/brunobertolini/styled-by): Simple and powerful lib to handle styled props in your components ([demo](https://codesandbox.io/s/ElvL8EKgg))
 
 ### Boilerplates
 - [react-redux-styled-hot-universal](https://github.com/krasevych/react-redux-styled-hot-universal) (SSR, Universal Webpack, Redux, React-router, Webpack 2, Babel, Styled Components and more...)
