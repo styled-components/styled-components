@@ -2,10 +2,27 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
+import { tagConstructorWithTarget } from './BrowserStyleSheet'
 
 class StyleSheetManager extends Component {
+  sheetInstance: StyleSheet
+  props: {
+    sheet?: StyleSheet | null,
+    target?: HTMLElement | null
+  }
+
   getChildContext() {
-    return { [CONTEXT_KEY]: this.props.sheet }
+    return { [CONTEXT_KEY]: this.sheetInstance }
+  }
+
+  componentWillMount() {
+    if (this.props.sheet) {
+      this.sheetInstance = this.props.sheet
+    } else if (this.props.target) {
+      this.sheetInstance = new StyleSheet(tagConstructorWithTarget(this.props.target))
+    } else {
+      throw new Error('StyleSheetManager expects either a sheet or target prop')
+    }
   }
 
   render() {
@@ -22,7 +39,10 @@ StyleSheetManager.childContextTypes = {
 }
 
 StyleSheetManager.propTypes = {
-  sheet: PropTypes.instanceOf(StyleSheet).isRequired,
+  sheet: PropTypes.instanceOf(StyleSheet),
+  target: PropTypes.shape({
+    appendChild: PropTypes.func.isRequired,
+  }),
 }
 
 export default StyleSheetManager
