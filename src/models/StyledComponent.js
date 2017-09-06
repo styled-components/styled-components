@@ -200,7 +200,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       `${options.displayName}-${options.componentId}` : componentId
 
     let warnTooManyClasses
-    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production') {
       warnTooManyClasses = createWarnTooManyClasses(displayName)
     }
 
