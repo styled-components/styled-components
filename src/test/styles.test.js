@@ -2,6 +2,7 @@
 import React from 'react'
 import { shallow } from 'enzyme'
 
+import * as nonce from '../utils/nonce';
 import { resetStyled, expectCSSMatches } from './utils'
 import _injectGlobal from '../constructors/injectGlobal'
 import stringifyRules from '../utils/stringifyRules'
@@ -17,8 +18,6 @@ describe('with styles', () => {
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    require('../utils/nonce').mockReset()
-
     styled = resetStyled()
   })
 
@@ -179,8 +178,7 @@ describe('with styles', () => {
   })
 
   it('should add a webpack nonce to the style tags if one is available in the global scope', () => {
-    // eslint-disable-next-line
-    require('../utils/nonce').mockImplementation(() => 'foo')
+    jest.spyOn(nonce, 'default').mockImplementation(() => 'foo')
 
     const rule = 'color: blue;'
     const Comp = styled.div`
