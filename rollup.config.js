@@ -47,10 +47,10 @@ const plugins = [
   commonjs({
     ignoreGlobal: true,
   }),
-  replace({
+  prod && replace({
     'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
   }),
-  inject({
+  prod && inject({
     process: processShim,
   }),
   babel({
@@ -68,7 +68,7 @@ const plugins = [
       'transform-class-properties',
     ].filter(Boolean),
   }),
-]
+].filter(Boolean)
 
 if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
 
