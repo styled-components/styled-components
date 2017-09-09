@@ -113,7 +113,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 - [neat-components](https://github.com/magicink/neat-components): A styled-components implementation of ThoughtBot's Neat grid system.
 
 #### Helpers
-- [styled-props](https://github.com/RafalFilipek/styled-props): Simple lib that allows you to set styled props in your styled-components without stress ([demo](http://www.webpackbin.com/N1EKUqgvG))
+- [styled-props](https://github.com/RafalFilipek/styled-props): Simple lib that allows you to set styled props in your styled-components without stress ([demos](https://github.com/RafalFilipek/styled-props#tldr-examples))
 - [styled-components-breakpoint](https://github.com/jameslnewell/styled-components-breakpoint): Utility function for using breakpoints with `styled-components`.
 - [styled-theme](https://github.com/diegohaz/styled-theme): Extensible theming system for styled-components.
 - [styled-tools](https://github.com/diegohaz/styled-tools): Useful interpolated functions for styled-components.
