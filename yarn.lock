@@ -5266,9 +5266,9 @@ react-native@^0.39.2:
     xmldoc "^0.4.0"
     yargs "^6.4.0"
 
-react-primitives@^0.4.2:
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/react-primitives/-/react-primitives-0.4.2.tgz#cb001c1122734f177559f5bf590aadd5129b0914"
+react-primitives@^0.4.3:
+  version "0.4.3"
+  resolved "https://registry.yarnpkg.com/react-primitives/-/react-primitives-0.4.3.tgz#4970afda5a32dccf5ea180380e3a0e16192e4b83"
   dependencies:
     animated "^0.1.5"
     asap "^2.0.5"
