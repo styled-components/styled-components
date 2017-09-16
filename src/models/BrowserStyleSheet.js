@@ -17,6 +17,7 @@
  * Note: replace · with * in the above snippet.
  * */
 import extractCompsFromCSS from '../utils/extractCompsFromCSS'
+import getNonce from '../utils/nonce'
 import type { Tag } from './StyleSheet'
 import StyleSheet, { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
 
@@ -71,8 +72,10 @@ class BrowserTag implements Tag {
       this.el.setAttribute(SC_ATTR, existingNames ? `${existingNames} ${name}` : name)
     }
 
-    if (typeof window !== 'undefined' && window.__webpack_nonce__) {
-      this.el.setAttribute('nonce', window.__webpack_nonce__)
+    const nonce = getNonce()
+
+    if (nonce) {
+      this.el.setAttribute('nonce', nonce)
     }
   }
 

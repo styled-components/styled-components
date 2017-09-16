@@ -10,6 +10,9 @@ import _injectGlobal from '../constructors/injectGlobal'
 import _keyframes from '../constructors/keyframes'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
+
+jest.mock('../utils/nonce')
+
 const injectGlobal = _injectGlobal(stringifyRules, css)
 
 let index = 0
@@ -19,10 +22,10 @@ let styled
 
 describe('ssr', () => {
   beforeEach(() => {
-    styled = resetStyled(true)
+    // eslint-disable-next-line
+    require('../utils/nonce').mockReset()
 
-    // eslint-disable-next-line no-underscore-dangle
-    global.__webpack_nonce__ = undefined
+    styled = resetStyled(true)
   })
 
   it('should extract the CSS in a simple case', () => {
@@ -55,15 +58,15 @@ describe('ssr', () => {
   })
 
   it('should add a nonce to the stylesheet if webpack nonce is detected in the global scope', () => {
+    // eslint-disable-next-line
+    require('../utils/nonce').mockImplementation(() => 'foo')
+
     injectGlobal`
       body { background: papayawhip; }
     `
     const Heading = styled.h1`
       color: red;
     `
-
-    // eslint-disable-next-line no-underscore-dangle
-    global.__webpack_nonce__ = 'foo'
 
     const sheet = new ServerStyleSheet()
     const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
@@ -185,15 +188,15 @@ describe('ssr', () => {
   })
 
   it('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
+    // eslint-disable-next-line
+    require('../utils/nonce').mockImplementation(() => 'foo')
+
     injectGlobal`
       body { background: papayawhip; }
     `
     const Heading = styled.h1`
       color: red;
     `
-
-    // eslint-disable-next-line no-underscore-dangle
-    global.__webpack_nonce__ = 'foo'
 
     const sheet = new ServerStyleSheet()
     const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))

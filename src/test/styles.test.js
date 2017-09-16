@@ -2,11 +2,14 @@
 import React from 'react'
 import { shallow } from 'enzyme'
 
+import * as nonce from '../utils/nonce';
 import { resetStyled, expectCSSMatches } from './utils'
 import _injectGlobal from '../constructors/injectGlobal'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
 const injectGlobal = _injectGlobal(stringifyRules, css)
+
+jest.mock('../utils/nonce')
 
 let styled
 
@@ -16,9 +19,6 @@ describe('with styles', () => {
    */
   beforeEach(() => {
     styled = resetStyled()
-
-    // eslint-disable-next-line no-underscore-dangle
-    window.__webpack_nonce__ = undefined
   })
 
   it('should append a style', () => {
@@ -178,8 +178,7 @@ describe('with styles', () => {
   })
 
   it('should add a webpack nonce to the style tags if one is available in the global scope', () => {
-    // eslint-disable-next-line no-underscore-dangle
-    window.__webpack_nonce__ = 'foo'
+    jest.spyOn(nonce, 'default').mockImplementation(() => 'foo')
 
     const rule = 'color: blue;'
     const Comp = styled.div`

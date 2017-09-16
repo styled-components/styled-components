@@ -4,6 +4,7 @@ import React from 'react'
 import type { Tag } from './StyleSheet'
 import StyleSheet, { SC_ATTR, LOCAL_ATTR, clones } from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
+import getNonce from '../utils/nonce'
 
 class ServerTag implements Tag {
   isLocal: boolean
@@ -50,8 +51,10 @@ class ServerTag implements Tag {
       `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`,
     ]
 
-    if (typeof global !== 'undefined' && global.__webpack_nonce__) {
-      attrs.push(`nonce="${global.__webpack_nonce__}"`)
+    const nonce = getNonce()
+
+    if (nonce) {
+      attrs.push(`nonce="${nonce}"`)
     }
 
     return `<style ${attrs.join(' ')}>${this.concatenateCSS()}</style>`
@@ -63,8 +66,10 @@ class ServerTag implements Tag {
       [LOCAL_ATTR]: this.isLocal.toString(),
     }
 
-    if (typeof global !== 'undefined' && global.__webpack_nonce__) {
-      attrs.nonce = global.__webpack_nonce__
+    const nonce = getNonce()
+
+    if (nonce) {
+      attrs.nonce = nonce
     }
 
     return (
