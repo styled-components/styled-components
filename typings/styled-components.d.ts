@@ -1,6 +1,8 @@
 import * as React from "react";
 import { StatelessComponent, ComponentClass, PureComponent, ReactElement } from "react";
 
+import { DomTagComponentFactories } from './dom-tag-component-factories'
+
 type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 
 export interface ThemeProps<T> {
@@ -47,7 +49,8 @@ type ThemedStyledComponentFactories<T> = {
     [K in keyof JSX.IntrinsicElements]: ThemedStyledFunction<JSX.IntrinsicElements[K], T>;
 };
 
-export interface ThemedBaseStyledInterface<T> extends ThemedStyledComponentFactories<T> {
+export interface ThemedBaseStyledInterface<T> extends
+  DomTagComponentFactories<T>, ThemedStyledComponentFactories<T> {
   <P, O>(component: StyledComponentClass<P, T, O>): ThemedStyledFunction<P, T, O>;
   <P extends { theme: T; }>(component: React.ComponentClass<P>): ThemedStyledFunction<P, T, WithOptionalTheme<P, T>>;
   <P>(component: React.ComponentClass<P>): ThemedStyledFunction<P, T>;
@@ -71,7 +74,7 @@ export interface ThemedCssFunction<T> {
 // Helper type operators
 type Diff<T extends string, U extends string> = ({ [P in T]: P } & { [P in U]: never } & { [x: string]: never })[T];
 type Omit<T, K extends keyof T> = Pick<T, Diff<keyof T, K>>;
-type WithOptionalTheme<P extends { theme?: T; }, T> = Omit<P, "theme"> & { theme?: T; };
+export type WithOptionalTheme<P extends { theme?: T; }, T> = Omit<P, "theme"> & { theme?: T; };
 
 export interface ThemedStyledComponentsModule<T> {
   default: ThemedStyledInterface<T>;
