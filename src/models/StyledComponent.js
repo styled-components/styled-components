@@ -64,14 +64,22 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         return context
       }
 
-      this.attrs = Object.keys(attrs).reduce((acc, key) => {
+      this.attrs = this.resolveComponentAttrs(attrs, context)
+
+      return { ...context, ...this.attrs }
+    }
+
+    resolveComponentAttrs(attrs: any, context: any) {
+      if (typeof attrs === 'function') {
+        return attrs(context)
+      }
+
+      return Object.keys(attrs).reduce((acc, key) => {
         const attr = attrs[key]
         // eslint-disable-next-line no-param-reassign
         acc[key] = typeof attr === 'function' ? attr(context) : attr
         return acc
       }, {})
-
-      return { ...context, ...this.attrs }
     }
 
     generateAndInjectStyles(theme: any, props: any) {

@@ -18,9 +18,13 @@ export default (css: Function) => {
     /* If config methods are called, wrap up a new template function and merge options */
     templateFunction.withConfig = config =>
       constructWithOptions(componentConstructor, tag, { ...options, ...config })
+
+    /* attrs could be either a plain object or a function (props => ({ attrs })) */
     templateFunction.attrs = attrs =>
       constructWithOptions(componentConstructor, tag, { ...options,
-        attrs: { ...(options.attrs || {}), ...attrs } })
+        attrs: typeof attrs === 'function'
+          ? (context) => ({ ...(options.attrs || {}), ...attrs(context) })
+          : { ...(options.attrs || {}), ...attrs } })
 
     return templateFunction
   }

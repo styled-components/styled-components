@@ -139,4 +139,25 @@ describe('attrs', () => {
     })``
     expect(shallow(<Comp>Something else</Comp>).html()).toEqual('<div class="sc-a b">Something else</div>')
   })
+
+  it('should accept function with props as argument', () => {
+    const Comp = styled.input.attrs(props => ({
+      className: props.example,
+      type: 'password',
+    }))``
+    expect(shallow(<Comp example="test"/>).html())
+      .toEqual('<input type="password" class="sc-a test b"/>')
+  })
+
+  it('should accept function with attrs props when extending', () => {
+    const Comp = styled.input.attrs(props => ({
+      className: props.example,
+      type: 'password',
+    }))``
+    const Test = Comp.extend`
+      color: blue
+    `;
+    expect(shallow(<Test example="test"/>).html())
+      .toEqual('<input type="password" class="sc-b test c"/>')
+  });
 })
