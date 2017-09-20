@@ -44,10 +44,11 @@ export interface ThemedStyledFunction<P, T, O = P> {
 export type StyledFunction<P> = ThemedStyledFunction<P, any>;
 
 type ThemedStyledComponentFactories<T> = {
-    [K in keyof JSX.IntrinsicElements]: ThemedStyledFunction<JSX.IntrinsicElements[K], T>;
+    [TTag in keyof JSX.IntrinsicElements]: ThemedStyledFunction<JSX.IntrinsicElements[TTag], T>;
 };
 
 export interface ThemedBaseStyledInterface<T> extends ThemedStyledComponentFactories<T> {
+  <P, TTag extends keyof JSX.IntrinsicElements>(tag: TTag): ThemedStyledFunction<P, T, P & JSX.IntrinsicElements[TTag]>;
   <P, O>(component: StyledComponentClass<P, T, O>): ThemedStyledFunction<P, T, O>;
   <P extends { theme: T; }>(component: React.ComponentClass<P>): ThemedStyledFunction<P, T, WithOptionalTheme<P, T>>;
   <P>(component: React.ComponentClass<P>): ThemedStyledFunction<P, T>;
