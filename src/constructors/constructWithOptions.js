@@ -10,6 +10,21 @@ export default (css: Function) => {
       throw new Error(`Cannot create styled-component for component: ${tag}`)
     }
 
+    // Creates resolver function which wraps the logic for resolving component attrs.
+    // Currently it supports both ways for defining component attrs:
+    // - plain object -> styled.input.attrs({ example: 'value' })
+    // - factory function -> styled.input.attrs(props => ({ example: props.value })
+    const createAttrsResolver = attrs => context => {
+      const resolve = attrsObjOrFn => typeof attrsObjOrFn === 'function'
+        ? attrsObjOrFn(context)
+        : attrsObjOrFn
+
+      return {
+        ...resolve(options.resolveAttrs || {}),
+        ...resolve(attrs),
+      }
+    }
+
     /* This is callable directly as a template function */
     const templateFunction =
       (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
@@ -22,9 +37,7 @@ export default (css: Function) => {
     /* attrs could be either a plain object or a function (props => ({ attrs })) */
     templateFunction.attrs = attrs =>
       constructWithOptions(componentConstructor, tag, { ...options,
-        attrs: typeof attrs === 'function'
-          ? (context) => ({ ...(options.attrs || {}), ...attrs(context) })
-          : { ...(options.attrs || {}), ...attrs } })
+        resolveAttrs: createAttrsResolver(attrs) })
 
     return templateFunction
   }

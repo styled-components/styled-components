@@ -40,7 +40,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
   class BaseStyledComponent extends Component {
     static target: Target
     static styledComponentId: string
-    static attrs: Object
+    static resolveAttrs: Function
     static componentStyle: Object
     static warnTooManyClasses: Function
 
@@ -58,28 +58,21 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     buildExecutionContext(theme: any, props: any) {
-      const { attrs } = this.constructor
+      const { resolveAttrs } = this.constructor
       const context = { ...props, theme }
-      if (attrs === undefined) {
+      if (resolveAttrs === undefined) {
         return context
       }
 
-      this.attrs = this.resolveComponentAttrs(attrs, context)
-
-      return { ...context, ...this.attrs }
-    }
-
-    resolveComponentAttrs(attrs: any, context: any) {
-      if (typeof attrs === 'function') {
-        return attrs(context)
-      }
-
-      return Object.keys(attrs).reduce((acc, key) => {
+      const attrs = resolveAttrs(context)
+      this.attrs = Object.keys(attrs).reduce((acc, key) => {
         const attr = attrs[key]
         // eslint-disable-next-line no-param-reassign
         acc[key] = typeof attr === 'function' ? attr(context) : attr
         return acc
       }, {})
+
+      return { ...context, ...this.attrs }
     }
 
     generateAndInjectStyles(theme: any, props: any) {
@@ -201,7 +194,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       componentId = generateId(options.displayName, options.parentComponentId),
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
-      attrs,
+      resolveAttrs,
     } = options
 
     const styledComponentId = (options.displayName && options.componentId) ?
@@ -226,7 +219,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
       static displayName = displayName
       static styledComponentId = styledComponentId
-      static attrs = attrs
+      static resolveAttrs = resolveAttrs
       static componentStyle = componentStyle
       static warnTooManyClasses = warnTooManyClasses
       static target = target

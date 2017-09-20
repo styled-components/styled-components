@@ -16,6 +16,12 @@ describe('attrs', () => {
     expect(shallow(<Comp />).html()).toEqual('<div class="sc-a b"></div>')
   })
 
+  it('work fine with null object', () => {
+    const attrs = null;
+    const Comp = styled.div.attrs(attrs)``
+    expect(shallow(<Comp />).html()).toEqual('<div class="sc-a b"></div>')
+  })
+
   it('pass a simple attr', () => {
     const Comp = styled.button.attrs({
       type: 'button'
@@ -160,4 +166,20 @@ describe('attrs', () => {
     expect(shallow(<Test example="test"/>).html())
       .toEqual('<input type="password" class="sc-b test c"/>')
   });
+
+  it('should accept attrs nesting', () => {
+    const WithNestedAttrs = styled.input.attrs({
+      type: 'password'
+    }).attrs({
+      className: 'nested'
+    }).attrs(props => (
+      { id: props.val })
+    ).attrs({
+      disabled: 'disabled',
+      name: props => props.test
+    })``;
+
+    expect(shallow(<WithNestedAttrs val="nested" test="test"/>).html())
+      .toEqual('<input type="password" class="sc-a nested b" id="nested" disabled="" name="test"/>')
+  })
 })

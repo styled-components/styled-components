@@ -15,7 +15,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
   class BaseStyledNativeComponent extends Component {
     static target: Target
     static styledComponentId: string
-    static attrs: Object
+    static resolveAttrs: Function
     static inlineStyle: Object
     root: ?Object
 
@@ -33,14 +33,14 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       }
     }
 
-
     buildExecutionContext(theme: any, props: any) {
-      const { attrs } = this.constructor
+      const { resolveAttrs } = this.constructor
       const context = { ...props, theme }
-      if (attrs === undefined) {
+      if (resolveAttrs === undefined) {
         return context
       }
 
+      const attrs = resolveAttrs(context)
       this.attrs = Object.keys(attrs).reduce((acc, key) => {
         const attr = attrs[key]
         // eslint-disable-next-line no-param-reassign
@@ -173,7 +173,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${getComponentName(target)})`,
       ParentComponent = BaseStyledNativeComponent,
       rules: extendingRules,
-      attrs,
+      resolveAttrs,
     } = options
 
     const inlineStyle = new InlineStyle(
@@ -183,7 +183,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     class StyledNativeComponent extends ParentComponent {
       static displayName = displayName
       static target = target
-      static attrs = attrs
+      static resolveAttrs = resolveAttrs
       static inlineStyle = inlineStyle
 
       static contextTypes = {
