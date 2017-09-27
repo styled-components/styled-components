@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- N/A
+
+## [v2.2.0] - 2017-09-27
+
 - Fixed downstream minification issue with replacing `process` (see [#1150](https://github.com/styled-components/styled-components/pull/1150))
 - Fixed nonce missing from global styles (see [#1088](https://github.com/styled-components/styled-components/pull/1088))
 - Improve component mount and unmount performance with changes to `createBroadcast`. Deprecates usage of `CHANNEL` as a function, will be update to `CHANNEL_NEXT`'s propType in a future version. (see [#1048](https://github.com/styled-components/styled-components/pull/1048))
@@ -276,7 +280,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.1.2...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.2.0...master
+[v2.2.0]: https://github.com/styled-components/styled-components/compare/v2.1.1...v2.2.0
 [v2.1.2]: https://github.com/styled-components/styled-components/compare/v2.1.1...v2.1.2
 [v2.1.1]: https://github.com/styled-components/styled-components/compare/v2.1.0...v2.1.1
 [v2.1.0]: https://github.com/styled-components/styled-components/compare/v2.0.1...v2.1.0
