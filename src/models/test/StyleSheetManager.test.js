@@ -6,6 +6,18 @@ import { shallow, mount } from 'enzyme'
 import styled, { ServerStyleSheet, StyleSheetManager } from '../../index'
 
 describe('StyleSheetManager', () => {
+
+  it('should use given stylesheet instance', () => {
+    const sheet = new ServerStyleSheet()
+    const Title = styled.h1`color: palevioletred;`
+    renderToString(
+      <StyleSheetManager sheet={sheet.instance}>
+        <Title />
+      </StyleSheetManager>
+    )
+    expect(sheet.getStyleTags().includes(`palevioletred`)).toEqual(true)
+  })
+
   it('should render its child', () => {
     const target = document.head
     const Title = styled.h1`color: palevioletred;`
@@ -18,18 +30,7 @@ describe('StyleSheetManager', () => {
     expect(renderedComp.contains(child)).toEqual(true)
   })
 
-  // it('should use given stylesheet instance', (done) => {
-  //   const sheet = new ServerStyleSheet()
-  //   const Title = styled.h1`color: palevioletred;`
-  //   renderToString(
-  //     <StyleSheetManager sheet={sheet}>
-  //       <Title />
-  //     </StyleSheetManager>
-  //   )
-  //   expect(sheet.getStyleTags().includes(`palevioletred`)).toEqual(true)
-  // })
-
-  it('should append style to given target', (done) => {
+  it('should append style to given target', () => {
     const target = document.body
     const Title = styled.h1`color: palevioletred;`
     class Child extends React.Component {
@@ -37,7 +38,6 @@ describe('StyleSheetManager', () => {
         // $FlowFixMe
         const styles = target.querySelector('style').textContent
         expect(styles.includes(`palevioletred`)).toEqual(true)
-        done();
       }
       render() { return <Title /> }
     }
@@ -48,7 +48,7 @@ describe('StyleSheetManager', () => {
     )
   })
 
-  it('should append style to given target in iframe', (done) => {
+  it('should append style to given target in iframe', () => {
     const iframe = document.createElement('iframe')
     const app = document.createElement('div')
     // $FlowFixMe
@@ -62,7 +62,6 @@ describe('StyleSheetManager', () => {
         // $FlowFixMe
         const styles = target.querySelector('style').textContent
         expect(styles.includes(`palevioletred`)).toEqual(true)
-        done();
       }
       render() { return <Title /> }
     }
