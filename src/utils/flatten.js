@@ -5,13 +5,23 @@ import isPlainObject from 'is-plain-object'
 import type { Interpolation } from '../types'
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
-  const css = Object.keys(obj).map(key => {
-    if (isPlainObject(obj[key])) return objToCss(obj[key], key)
-    return `${hyphenate(key)}: ${obj[key]};`
-  }).join(' ')
-  return prevKey ? `${prevKey} {
+  const css = Object.keys(obj)
+    .filter(key => {
+      const chunk = obj[key]
+      return (
+        chunk !== undefined && chunk !== null && chunk !== false && chunk !== ''
+      )
+    })
+    .map(key => {
+      if (isPlainObject(obj[key])) return objToCss(obj[key], key)
+      return `${hyphenate(key)}: ${obj[key]};`
+    })
+    .join(' ')
+  return prevKey
+    ? `${prevKey} {
   ${css}
-}` : css
+}`
+    : css
 }
 
 const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array<Interpolation> => (

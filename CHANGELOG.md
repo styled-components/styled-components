@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- N/A
+- Don't emit empty rules like `color: ;` when using objects for CSS. Note that this still happens with template interpolations (see [#1149](https://github.com/styled-components/styled-components/pull/1149))
 
 ## [v2.2.0] - 2017-09-27
 
