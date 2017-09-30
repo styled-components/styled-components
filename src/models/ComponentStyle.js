@@ -3,6 +3,24 @@ import hashStr from '../vendor/glamor/hash'
 
 import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
 import StyleSheet from './StyleSheet'
+import isStyledComponent from '../utils/isStyledComponent'
+
+const isStaticRules = (rules: RuleSet): boolean => {
+  for (let i = 0; i < rules.length; i += 1) {
+    const rule = rules[i]
+
+    // recursive case
+    if (Array.isArray(rule) && !isStaticRules(rule)) {
+      return false
+    } else if (typeof rule === 'function' && !isStyledComponent(rule)) {
+      // functions are allowed to be static if they're just being
+      // used to get the classname of a nested styled copmonent
+      return false
+    }
+  }
+
+  return true
+}
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
@@ -12,9 +30,13 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
   class ComponentStyle {
     rules: RuleSet
     componentId: string
+    isStatic: boolean
+    lastClassName: ?string
+
 
     constructor(rules: RuleSet, componentId: string) {
       this.rules = rules
+      this.isStatic = isStaticRules(rules)
       this.componentId = componentId
       if (!StyleSheet.instance.hasInjectedComponent(this.componentId)) {
         const placeholder = process.env.NODE_ENV !== 'production' ? `.${componentId} {}` : ''
@@ -28,16 +50,34 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
      * Returns the hash to be injected on render()
      * */
     generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
+      const { isStatic, lastClassName } = this
+      if (isStatic && lastClassName !== undefined) {
+        return lastClassName
+      }
+
       const flatCSS = flatten(this.rules, executionContext)
       const hash = hashStr(this.componentId + flatCSS.join(''))
 
       const existingName = styleSheet.getName(hash)
-      if (existingName) return existingName
+      if (existingName !== undefined) {
+        if (styleSheet.stylesCacheable) {
+          this.lastClassName = existingName
+        }
+        return existingName
+      }
 
       const name = nameGenerator(hash)
-      if (styleSheet.alreadyInjected(hash, name)) return name
+      if (styleSheet.stylesCacheable) {
+        this.lastClassName = existingName
+      }
+      if (styleSheet.alreadyInjected(hash, name)) {
+        return name
+      }
 
       const css = `\n${stringifyRules(flatCSS, `.${name}`)}`
+      // NOTE: this can only be set when we inject the class-name.
+      // For some reason, presumably due to how css is stringifyRules behaves in
+      // differently between client and server, styles break.
       styleSheet.inject(this.componentId, true, css, hash, name)
       return name
     }
