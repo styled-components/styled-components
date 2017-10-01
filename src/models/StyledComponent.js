@@ -70,12 +70,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         return context
       }
 
-      this.attrs = Object.keys(attrs).reduce((acc, key) => {
+      this.attrs = {}
+      // eslint-disable-next-line guard-for-in, no-restricted-syntax
+      for (const key in attrs) {
         const attr = attrs[key]
-        // eslint-disable-next-line no-param-reassign
-        acc[key] = typeof attr === 'function' ? attr(context) : attr
-        return acc
-      }, {})
+        this.attrs[key] = typeof attr === 'function' ? attr(context) : attr
+      }
 
       return { ...context, ...this.attrs }
     }
@@ -153,49 +153,72 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       this.unsubscribeFromContext()
     }
 
+    makeClassName(): string {
+      // I know this is ugly, but this does a bit of loop unrolling,
+      // and avoids boolean casts in order to generate strings up to ~11x faster than
+      // an approach such as [...classes].filter(Boolean).join(' ')
+      // (and uses way less memory from the two array allocations in ^)
+      // and  ~ 36 % faster than always adding a whitespace and then calling .trim at the end
+      // https://jsperf.com/testing-classname-building-performance
+      /* eslint-disable react/prop-types */
+      const { className: propsClassName } = this.props
+      /* eslint-enable */
+      const { className: attrsClassName } = this.attrs
+      const { generatedClassName } = this.state // this will always be present
+      const { styledComponentId } = this.constructor // this will always be present
+
+      let className = propsClassName || ''
+      if (className.length > 0) {
+        className += ' '
+      }
+      className += styledComponentId
+      if (attrsClassName !== undefined) {
+        if (className.length > 0) {
+          className += ' '
+        }
+        className += attrsClassName
+      }
+      if (className.length > 0) {
+        className += ' '
+      }
+      className += generatedClassName
+
+      return className
+    }
+
     render() {
       // eslint-disable-next-line react/prop-types
       const { innerRef } = this.props
-      const { generatedClassName } = this.state
-      const { styledComponentId, target } = this.constructor
+      const { target } = this.constructor
 
       const isTargetTag = isTag(target)
 
-      const className = [
-        // eslint-disable-next-line react/prop-types
-        this.props.className,
-        styledComponentId,
-        this.attrs.className,
-        generatedClassName,
-      ].filter(Boolean).join(' ')
+      const className = this.makeClassName()
 
-      const baseProps = {
+      const propsForElement = {
         ...this.attrs,
         className,
       }
 
       if (isStyledComponent(target)) {
-        baseProps.innerRef = innerRef
+        propsForElement.innerRef = innerRef
       } else {
-        baseProps.ref = innerRef
+        propsForElement.ref = innerRef
       }
 
-      const propsForElement = Object
-        .keys(this.props)
-        .reduce((acc, propName) => {
-          // Don't pass through non HTML tags through to HTML elements
-          // always omit innerRef
-          if (
-            propName !== 'innerRef' &&
-            propName !== 'className' &&
-            (!isTargetTag || validAttr(propName))
-          ) {
-            // eslint-disable-next-line no-param-reassign
-            acc[propName] = this.props[propName]
-          }
-
-          return acc
-        }, baseProps)
+      // eslint-disable-next-line guard-for-in, no-restricted-syntax
+      for (const propName in this.props) {
+        // Don't pass through non HTML tags through to HTML elements
+        // always omit innerRef
+        if (
+          propName !== 'innerRef' &&
+          propName !== 'className' &&
+          (!isTargetTag || validAttr(propName))
+        ) {
+          // eslint-disable-next-line no-param-reassign
+          propsForElement[propName] = this.props[propName]
+        }
+      }
 
       return createElement(target, propsForElement)
     }
