@@ -89,9 +89,11 @@ We could use your help to get syntax highlighting support to other editors! If y
 
 Along with sytnax highlighting, you can install the [TypeScript styled plugin](https://github.com/Microsoft/typescript-styled-plugin) to get error reporting and code completeion for styled components in your editor. The plugin supports styled components in both JavaScript and TypeScript files, and works in Visual Studio Code, Sublime, and Atom.
 
-## Awesome styled-components
+## Built with `styled-components`
 
-Check out and contribute to the official [Awesome styled-components](https://github.com/styled-components/awesome-styled-components) list!
+A lot of hard work goes into community libraries, projects, and guides. A lot of them make it easier to get started or help you with your next project! There’s also a whole lot of interesting apps and sites that people have built using styled-components.
+
+Make sure to head over to [awesome-styled-components](https://github.com/styled-components/awesome-styled-components) to see them all! And please contribute and add your own work to the list so others can find it.
 
 ## Alternative Installation Methods
 
