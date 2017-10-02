@@ -37,7 +37,13 @@ class Random extends React.Component<any, any> {
 }
 
 const H2 = H1.withComponent("h2");
-const a = H1.withComponent("a");
+const AnchorElement = H1.withComponent("a");
 const abbr = H1.withComponent("abbr");
 
 const RandomHeading = H1.withComponent(Random);
+
+class LinkedHeading extends React.Component<any, any> {
+  render() {
+    return <AnchorElement href="https://example.com">Hello World</AnchorElement>;
+  }
+}
