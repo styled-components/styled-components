@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import expect from 'expect'
+import PropTypes from 'prop-types'
 import { shallow } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
@@ -15,53 +15,53 @@ describe('extending', () => {
     styled = resetStyled()
   })
 
-  it('should generate a single class with no styles', () => {
+  it('should generate empty classes with no styles', () => {
     const Parent = styled.div``
-    const Child = styled(Parent)``
+    const Child = Parent.extend``
 
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.a { }')
+    expectCSSMatches('.sc-a {} .sc-b {}')
   })
 
-  it('should generate a single class if only parent has styles', () => {
+  it('should attach styles to both classes if only parent has styles', () => {
     const Parent = styled.div`color: blue;`
-    const Child = styled(Parent)``
+    const Child = Parent.extend``
 
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.a { color: blue; }')
+    expectCSSMatches('.sc-a {} .c { color: blue; } .sc-b {} .d { color: blue; }')
   })
 
-  it('should generate a single class if only child has styles', () => {
-    const Parent = styled.div`color: blue;`
-    const Child = styled(Parent)``
+  it('should attach styles to child class if only child has styles', () => {
+    const Parent = styled.div``
+    const Child = Parent.extend`color: blue;`
 
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.a { color: blue; }')
+    expectCSSMatches('.sc-a {} .sc-b {} .d { color: blue; }')
   })
 
   it('should generate a class for the child with the rules of the parent', () => {
     const Parent = styled.div`color: blue;`
-    const Child = styled(Parent)`color: red;`
+    const Child = Parent.extend`color: red;`
 
     shallow(<Child />)
 
-    expectCSSMatches('.a { color: blue;color: red; }')
+    expectCSSMatches('.sc-b {} .c { color: blue;color: red; }')
   })
 
   it('should generate different classes for both parent and child', () => {
     const Parent = styled.div`color: blue;`
-    const Child = styled(Parent)`color: red;`
+    const Child = Parent.extend`color: red;`
 
     shallow(<Parent />)
     shallow(<Child />)
 
-    expectCSSMatches('.a { color: blue; } .b { color: blue;color: red; }')
+    expectCSSMatches('.sc-a {} .c { color: blue; } .sc-b {} .d { color: blue;color: red; }')
   })
 
   it('should copy nested rules to the child', () => {
@@ -69,16 +69,18 @@ describe('extending', () => {
       color: blue;
       > h1 { font-size: 4rem; }
     `
-    const Child = styled(Parent)`color: red;`
+    const Child = Parent.extend`color: red;`
 
     shallow(<Parent />)
     shallow(<Child />)
 
     expectCSSMatches(`
-      .a { color: blue; }
-      .a > h1 { font-size: 4rem; }
-      .b { color: blue; color: red; }
-      .b > h1 { font-size: 4rem; }
+      .sc-a {}
+      .c{ color: blue; }
+      .c > h1{ font-size: 4rem; }
+      .sc-b {}
+      .d { color: blue; color: red; }
+      .d > h1 { font-size: 4rem; }
     `)
   })
 
@@ -90,14 +92,14 @@ describe('extending', () => {
       color: 'red'
     }
 
-    const Child = styled(Parent)`background-color: green;`
+    const Child = Parent.extend`background-color: green;`
 
     shallow(<Parent />)
     shallow(<Child />)
 
     expectCSSMatches(`
-      .a { color: red; }
-      .b { color: red; background-color: green; }
+      .sc-a {} .c { color: red; }
+      .sc-b {} .d { color: red; background-color: green; }
     `)
   })
 
@@ -106,10 +108,10 @@ describe('extending', () => {
       color: ${(props) => props.color};
     `
     Parent.propTypes = {
-      color: React.PropTypes.string
+      color: PropTypes.string
     }
 
-    const Child = styled(Parent)`background-color: green;`
+    const Child = Parent.extend`background-color: green;`
 
     expect(Child.propTypes).toEqual(Parent.propTypes)
   })
@@ -119,9 +121,9 @@ describe('extending', () => {
 
     Parent.fetchData = () => 1
 
-    const Child = styled(Parent)`color: green;`
+    const Child = Parent.extend`color: green;`
 
-    expect(Child.fetchData).toExist()
+    expect(Child.fetchData).toBeTruthy()
     expect(Child.fetchData()).toEqual(1)
   })
 
@@ -129,10 +131,76 @@ describe('extending', () => {
     const GrandParent = styled.div`color: red;`
     GrandParent.fetchData = () => 1
 
-    const Parent = styled(GrandParent)`color: red;`
-    const Child = styled(Parent)`color:red;`
+    const Parent = GrandParent.extend`color: red;`
+    const Child = Parent.extend`color:red;`
 
-    expect(Child.fetchData).toExist()
+    expect(Child.fetchData).toBeTruthy()
     expect(Child.fetchData()).toEqual(1)
+  })
+
+  it('should keep styles in >= 3 inheritances', () => {
+    const GrandGrandParent = styled.div`
+      background-color: red;
+    `
+
+    const GrandParent = GrandGrandParent.extend`
+      color: blue;
+    `
+
+    const Parent = GrandParent.extend`
+      border: 2px solid black;
+    `
+
+    const Child = Parent.extend`
+      border-width: 10;
+    `
+
+    shallow(<GrandGrandParent />)
+    shallow(<GrandParent />)
+    shallow(<Parent />)
+    shallow(<Child />)
+
+    expectCSSMatches(`
+      .sc-a { }
+      .e { background-color: red; }
+      .sc-b { }
+      .f { background-color: red; color: blue; }
+      .sc-c { }
+      .g { background-color: red; color: blue; border: 2px solid black; }
+      .sc-d { }
+      .h { background-color: red; color: blue; border: 2px solid black; border-width: 10; }
+    `)
+  })
+
+  it('should allow changing component', () => {
+    const Parent = styled.div`color: red;`
+    const Child = Parent.withComponent('span')
+
+    expect(shallow(<Child />).html()).toEqual('<span class="sc-b c"></span>')
+  })
+
+  it('should allow changing component and extending', () => {
+    const Parent = styled.div`
+      color: red;
+    `
+    const Child = Parent.withComponent('span').extend`
+      color: green;
+    `
+
+    expect(shallow(<Child />).html()).toEqual('<span class="sc-c d"></span>')
+    expectCSSMatches(`
+      .sc-c {} .d { color: red; color: green; }
+    `)
+  })
+
+  it('should allow changing component and adding attributes', () => {
+    const Parent = styled.button`
+      color: red;
+    `
+    const Child = Parent.withComponent('a').extend.attrs({
+      href: '/test'
+    })``
+
+    expect(shallow(<Child />).html()).toEqual('<a href="/test" class="sc-c d"></a>')
   })
 })

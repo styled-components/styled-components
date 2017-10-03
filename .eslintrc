@@ -1,7 +1,7 @@
 {
   "parser": "babel-eslint",
   "extends": "airbnb",
-  "plugins": ["flowtype-errors"],
+  "plugins": ["flowtype", "flowtype-errors"],
   "rules": {
     "semi": [2, "never"],
     "arrow-parens": 0,
@@ -15,10 +15,18 @@
     "react/jsx-filename-extension": 0,
     "flowtype-errors/show-errors": 2,
     "no-prototype-builtins": 0,
-    "no-duplicate-imports": 0
+    "no-duplicate-imports": 0,
+    "flowtype/require-valid-file-annotation": [2, "always", {"annotationStyle": "line"}],
+    "flowtype/semi": [2, "never"],
+    "flowtype/boolean-style": [2, "boolean"],
+    "flowtype/no-dupe-keys": 2,
+    "flowtype/space-before-type-colon": [2, "never"],
+    "flowtype/space-after-type-colon": [2, "always"],
+    "flowtype/union-intersection-spacing": [2, "always"],
+    "flowtype/object-type-delimiter": 2
   },
   "env": {
-    "mocha": true,
+    "jest": true,
     "browser": "true"
   },
   "parserOptions": {

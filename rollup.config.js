@@ -1,3 +1,4 @@
+/* eslint-disable flowtype/require-valid-file-annotation, no-console, import/extensions */
 import nodeResolve from 'rollup-plugin-node-resolve'
 import replace from 'rollup-plugin-replace'
 import commonjs from 'rollup-plugin-commonjs'
@@ -7,22 +8,24 @@ import json from 'rollup-plugin-json'
 import flow from 'rollup-plugin-flow'
 import uglify from 'rollup-plugin-uglify'
 import visualizer from 'rollup-plugin-visualizer'
+import pkg from './package.json'
 
 const processShim = '\0process-shim'
 
 const prod = process.env.PRODUCTION
-const mode = prod ? 'production' : 'development'
+const esbundle = process.env.ESBUNDLE
 
-console.log(`Creating ${mode} bundle...`)
-
-const targets = prod ?
-[
-  { dest: 'dist/styled-components.min.js', format: 'umd' },
-] :
-[
-  { dest: 'dist/styled-components.js', format: 'umd' },
-  { dest: 'dist/styled-components.es.js', format: 'es' },
-]
+let targets
+if (prod) {
+  console.log('Creating production UMD bundle...')
+  targets = [{ dest: 'dist/styled-components.min.js', format: 'umd' }]
+} else if (esbundle) {
+  console.log('Creating ES modules bundle...')
+  targets = [{ dest: 'dist/styled-components.es.js', format: 'es' }]
+} else {
+  console.log('Creating development UMD bundle')
+  targets = [{ dest: 'dist/styled-components.js', format: 'umd' }]
+}
 
 const plugins = [
   // Unlike Webpack and Browserify, Rollup doesn't automatically shim Node
@@ -39,36 +42,40 @@ const plugins = [
     },
   },
   flow(),
+  json(),
   nodeResolve(),
-  commonjs(),
-  replace({
+  commonjs({
+    ignoreGlobal: true,
+  }),
+  prod && replace({
     'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
   }),
-  inject({
+  prod && inject({
     process: processShim,
   }),
   babel({
     babelrc: false,
     presets: [
-      ['latest', { es2015: { modules: false } }],
+      ['env', { modules: false, loose: true }],
       'react',
     ],
     plugins: [
-      'flow-react-proptypes',
+      !prod && 'flow-react-proptypes',
+      prod && 'transform-react-remove-prop-types',
       'transform-flow-strip-types',
       'external-helpers',
       'transform-object-rest-spread',
-    ],
+      'transform-class-properties',
+    ].filter(Boolean),
   }),
-  json(),
-]
+].filter(Boolean)
 
 if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
 
 export default {
   entry: 'src/index.js',
   moduleName: 'styled',
-  external: ['react'],
+  external: ['react'].concat(esbundle ? Object.keys(pkg.dependencies) : []),
   exports: 'named',
   targets,
   plugins,

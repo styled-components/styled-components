@@ -1,15 +1,21 @@
 [ignore]
 .*/node_modules/flow-remove-types/.*
+.*/node_modules/react-native/.*
 .*/node_modules/rollup-plugin-flow/.*
+.*/node_modules/animated/.*
+.*/node_modules/react-sketchapp/.*
+.*/node_modules/react-native-web/.*
+.*/node_modules/babel-plugin-transform-react-remove-prop-types/.*
 .*/dist/.*
 .*/lib/.*
 .*/node_modules/babel-plugin-flow-react-proptypes/src/__test__/.*
+.*/dangerfile.js
 
 [include]
 
 [libs]
-flow-typed
 
 [options]
-suppress_comment=.*\\$FlowIssue
+suppress_comment=.*\\$FlowFixMe
 suppress_comment=.*\\$FlowInvalidInputTest
+unsafe.enable_getters_and_setters=true

@@ -1,21 +1,14 @@
 language: node_js
 dist: trusty
 node_js:
-  - "6"
-  - "7"
-before_install:
-  - 'echo ''gem: --no-ri --no-rdoc'' > ~/.gemrc'
-install:
-  - npm i -g npm
-  - npm install
-  - rvm install 2.3.1
-  - rvm use 2.3.1
-  - gem install danger --version '~> 4.0'
-before_script:
-  - ruby -v
+  - 6
+  - 8
 script:
-  - danger
-  - npm run lint && npm run test
+  - node --version
+  - yarn --version
+  - yarn run danger run -- --verbose
+  - yarn run flow
+  - yarn run lint && yarn run typescript && yarn run tslint && yarn run test
 notifications:
   email:
     on_failure: change

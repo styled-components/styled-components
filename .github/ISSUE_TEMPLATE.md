@@ -3,29 +3,38 @@ Thank you for contributing!
 
 Have a usage question?
 ======================
-The issue tracker isn't the best place for usage questions. This format is not well-suited for Q&A, and questions here don't have as much visibility as they do elsewhere. Before you ask a question, here are some resources to get help first:
+Please search for old issues before creating a new one for your question. If it's a simple usage question, be aware that this isn't the best place to ask, and people will have a hard time finding your question as well. Before you ask a question, here are some resources to get help first:
 
-- Read the docs: https://github.com/styled-components/styled-components/blob/master/docs
+- Read the docs: https://www.styled-components.com/docs
 - Look for/ask questions on stack overflow: https://stackoverflow.com/questions/ask?tags=styled-components
+- Start a thread on our Spectrum help channel: https://spectrum.chat/styled-components/help
 - Ask in chat: https://gitter.im/styled-components/styled-components
-
 
 Think you found a bug?
 ======================
-*The best bug report is a failing test in the repository as a pull request.* (otherwise, please use the "BUG REPORT" template below and provide a reproduction.)
-
+The best bug report is a failing test in the repository as a pull request.
+Otherwise, please use the "BUG REPORT" template below and provide a reproduction.
+A reproduction might be a snippet of code, or a webpackbin/codesandbox link, or even a repository.
 
 Have a feature request?
 =======================
-Remove the template from below and provide thoughtful commentary *and code samples* on what this feature means for your product. What will it allow you to do that you can't do today? How will it make current work-arounds straightforward? What potential bugs and edge cases does it help to avoid? etc. Please keep it product-centric.
+Remove the template from below and provide thoughtful commentary *and code samples* on what this feature means for your product.
+What will it allow you to do that you can't do today?
+How will it make current work-arounds straightforward?
+What potential bugs and edge cases does it help to avoid?
+Please keep it product-centric.
 -->
 
 <!-- BUG TEMPLATE -->
 ## Version
-1.0.5
+2.1.0
+<!-- Please add the babel-plugin-styled-components version and options if applicable -->
 
 ## Reproduction
-http://www.webpackbin.com/Ek8DrVsRZ
+
+<!-- If you can't reproduce your bug, make sure to add details on how you've set up your project -->
+https://www.webpackbin.com/bins/-KeeZCr0xKfutOfOujxN
+https://codesandbox.io/s/rkmNRByE4
 
 ## Steps to reproduce
 

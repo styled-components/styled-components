@@ -109,6 +109,7 @@ Now we have javascript, we can do 🌟 _more powerful things_ 🌟
 
 ```js
 // style-utils.js
+import { css } from 'styled-components'
 
 export const media = {
   handheld: (...args) => css`
@@ -133,7 +134,7 @@ const Box = styled.div`
 
 And voila! 💅
 
-*Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals](./tagged-template-literals.md)*
+*Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals](https://www.styled-components.com/docs/advanced#tagged-template-literals)*
 
 ### Media Templates
 
@@ -141,6 +142,8 @@ Due to the functional nature of javascript, you can easily define your own tagge
 
 ```js
 // these sizes are arbitrary and you can set them to whatever you wish
+import { css } from 'styled-components'
+
 const sizes = {
   giant: 1170,
   desktop: 992,

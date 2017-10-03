@@ -1,15 +1,17 @@
 // @flow
 import React, { Component } from 'react'
-import expect from 'expect'
 import { shallow } from 'enzyme'
 
-import injectGlobal from '../injectGlobal'
-import styleSheet from '../../models/StyleSheet'
+import _injectGlobal from '../injectGlobal'
+import stringifyRules from '../../utils/stringifyRules'
+import css from '../css'
 import { expectCSSMatches, resetStyled } from '../../test/utils'
+
+const injectGlobal = _injectGlobal(stringifyRules, css)
 
 let styled = resetStyled()
 const rule1 = 'width: 100%;'
-const rule2 = 'text-decoration: none;'
+const rule2 = 'padding: 10px;'
 const rule3 = 'color: blue;'
 
 describe('injectGlobal', () => {
@@ -23,7 +25,11 @@ describe('injectGlobal', () => {
         ${rule1}
       }
     `
-    expect(styleSheet.injected).toBe(true)
+    expectCSSMatches(`
+      html {
+        ${rule1}
+      }
+    `)
   })
 
   it(`should non-destructively inject styles when called repeatedly`, () => {
@@ -61,7 +67,8 @@ describe('injectGlobal', () => {
     `
 
     expectCSSMatches(`
-      .a {
+      .sc-a {}
+      .b {
         ${rule3}
       }
       html {

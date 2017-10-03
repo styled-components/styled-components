@@ -2,7 +2,14 @@
 import React from 'react'
 import { shallow } from 'enzyme'
 
+import * as nonce from '../utils/nonce';
 import { resetStyled, expectCSSMatches } from './utils'
+import _injectGlobal from '../constructors/injectGlobal'
+import stringifyRules from '../utils/stringifyRules'
+import css from '../constructors/css'
+const injectGlobal = _injectGlobal(stringifyRules, css)
+
+jest.mock('../utils/nonce')
 
 let styled
 
@@ -20,7 +27,7 @@ describe('with styles', () => {
         ${rule}
       `
     shallow(<Comp />)
-    expectCSSMatches('.a { color: blue; }')
+    expectCSSMatches('.sc-a {} .b { color: blue; }')
   })
 
   it('should append multiple styles', () => {
@@ -31,7 +38,7 @@ describe('with styles', () => {
         ${rule2}
       `
     shallow(<Comp />)
-    expectCSSMatches('.a { color: blue; background: red; }')
+    expectCSSMatches('.sc-a {} .b { color: blue; background: red; }')
   })
 
   it('should handle inline style objects', () => {
@@ -42,7 +49,77 @@ describe('with styles', () => {
         ${rule1}
       `
     shallow(<Comp />)
-    expectCSSMatches('.a { background-color: blue; }')
+    expectCSSMatches('.sc-a {} .b { background-color: blue; }')
+  })
+
+  it('should handle inline style objects with media queries', () => {
+    const rule1 = {
+      backgroundColor: 'blue',
+      '@media screen and (min-width: 250px)': {
+        backgroundColor: 'red',
+      },
+    }
+    const Comp = styled.div`
+        ${rule1}
+      `
+    shallow(<Comp />)
+    expectCSSMatches('.sc-a {} .b { background-color: blue; } @media screen and (min-width: 250px) { .b { background-color: red; } }')
+  })
+
+  it('should handle inline style objects with pseudo selectors', () => {
+    const rule1 = {
+      backgroundColor: 'blue',
+      '&:hover': {
+        textDecoration: 'underline',
+      },
+    }
+    const Comp = styled.div`
+      ${rule1}
+    `
+    shallow(<Comp />)
+    expectCSSMatches('.sc-a {} .b { background-color: blue; } .b:hover { -webkit-text-decoration: underline; text-decoration: underline; }')
+  })
+
+  it('should handle inline style objects with pseudo selectors', () => {
+    const rule1 = {
+      backgroundColor: 'blue',
+      '&:hover': {
+        textDecoration: 'underline',
+      },
+    }
+    const Comp = styled.div`
+      ${rule1}
+    `
+    shallow(<Comp />)
+    expectCSSMatches('.sc-a {} .b { background-color: blue; } .b:hover { -webkit-text-decoration: underline; text-decoration: underline; }')
+  })
+
+  it('should handle inline style objects with nesting', () => {
+    const rule1 = {
+      backgroundColor: 'blue',
+      '> h1': {
+        color: 'white',
+      },
+    }
+    const Comp = styled.div`
+      ${rule1}
+    `
+    shallow(<Comp />)
+    expectCSSMatches('.sc-a {} .b { background-color: blue; } .b > h1 { color: white; }')
+  })
+
+  it('should handle inline style objects with contextual selectors', () => {
+    const rule1 = {
+      backgroundColor: 'blue',
+      'html.something &': {
+        color: 'white',
+      },
+    }
+    const Comp = styled.div`
+      ${rule1}
+    `
+    shallow(<Comp />)
+    expectCSSMatches('.sc-a {} .b { background-color: blue; } html.something .b { color: white; }')
   })
 
   it('should inject styles of multiple components', () => {
@@ -58,7 +135,7 @@ describe('with styles', () => {
     shallow(<FirstComp />)
     shallow(<SecondComp />)
 
-    expectCSSMatches('.a { background: blue; } .b { background: red; }')
+    expectCSSMatches('.sc-a {} .c { background: blue; } .sc-b {} .d { background: red; }')
   })
 
   it('should inject styles of multiple components based on creation, not rendering order', () => {
@@ -77,8 +154,10 @@ describe('with styles', () => {
 
     // Classes _do_ get generated in the order of rendering but that's ok
     expectCSSMatches(`
-        .b { content: "first rule"; }
-        .a { content: "second rule"; }
+        .sc-a {}
+        .d { content: "first rule"; }
+        .sc-b {}
+        .c { content: "second rule"; }
       `)
   })
 
@@ -91,9 +170,55 @@ describe('with styles', () => {
       `
     shallow(<Comp />)
     expectCSSMatches(`
-        .a {
+        .sc-a {}
+        .b {
           color: blue;
         }
       `)
+  })
+
+  it('should add a webpack nonce to the style tags if one is available in the global scope', () => {
+    jest.spyOn(nonce, 'default').mockImplementation(() => 'foo')
+
+    const rule = 'color: blue;'
+    const Comp = styled.div`
+        ${rule}
+      `
+    shallow(<Comp />)
+    expectCSSMatches(`
+        .sc-a {}
+        .b {
+          color: blue;
+        }
+      `)
+
+    Array.from(document.querySelectorAll('style')).forEach(el => expect(el.getAttribute('nonce')).toBe('foo'))
+  })
+
+  it('should add a webpack nonce to the global style tags if one is available in the global scope', () => {
+    // eslint-disable-next-line no-underscore-dangle
+    window.__webpack_nonce__ = 'foo'
+
+    injectGlobal`
+        html {
+          background: red;
+        }
+      `
+    const rule = 'color: blue;'
+    const Comp = styled.div`
+        ${rule}
+      `
+    shallow(<Comp />)
+    expectCSSMatches(`
+        html {
+          background: red;
+        }
+        .sc-a {}
+        .b {
+          color: blue;
+        }
+      `)
+
+    Array.from(document.querySelectorAll('style')).forEach(el => expect(el.getAttribute('nonce')).toBe('foo'))
   })
 })
