@@ -7,7 +7,8 @@ All notable changes to this project will be documented in this file. If a contri
 ## Unreleased
 
 - Don't emit empty rules like `color: ;` when using objects for CSS. Note that this still happens with template interpolations (see [#1149](https://github.com/styled-components/styled-components/pull/1149))
-- Cache static classnames in browser environments (see [#1069]https://github.com/styled-components/styled-components/pull/1069))
+- Cache static classnames in browser environments (see [#1069](https://github.com/styled-components/styled-components/pull/1069))
+- Add warning for incorrect using injectGlobal (see: [#1202](https://github.com/styled-components/styled-components/pull/1202))
 
 ## [v2.2.0] - 2017-09-27
 
