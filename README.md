@@ -91,84 +91,9 @@ Along with sytnax highlighting, you can install the [TypeScript styled plugin](h
 
 ## Built with `styled-components`
 
-### Libraries
-- [react-aria-tooltip](https://github.com/egoens/react-aria-tooltip): Simple & accessible ReactJS tooltip component
-- [uiGradients](http://jsbros.github.io/uigradients): Generate beautiful background gradients from the [uigradients.com](http://uigradients.com) database.
-- [react-enhanced-form](https://github.com/xeonys/react-enhanced-form): The best react form component, on earth 🌍. It makes form inputs easy, finally !
-- [react-teleportation](https://github.com/xeonys/react-teleportation): Teleport your components to the foreground.
-- [reshake](https://github.com/elrumordelaluz/reshake): CSShake as a React Functional Component ([demo](https://elrumordelaluz.github.io/reshake/))
-- [last-draft](https://github.com/vacenz/last-draft): A Draft.js Editor ([demo](http://lastdraft.vace.nz))
-- [styled-components-spacing](https://github.com/jameslnewell/styled-components-spacing): Responsive margin and padding components for `styled-components`.
-- [reactour](https://github.com/elrumordelaluz/reactour): Tourist Guide into your React Components ([demo](https://elrumordelaluz.github.io/reactour/))
-- [mcs-lite-ui](https://github.com/MCS-Lite/mcs-lite): An on-premises Internet of Things cloud platform, which can be quickly built and get started with. ([demo](http://mcs-lite-ui.netlify.com/))
-- [react-progressive-bg-image](https://github.com/evenchange4/react-progressive-bg-image): 🖼 Medium style progressive background image. ([demo](http://react-progressive-bg-image.netlify.com/))
-- [react-simple-chatbot](https://github.com/LucasBassetti/react-simple-chatbot): Simple chatbot / conversational-ui React component. ([demo](https://lucasbassetti.com.br/react-simple-chatbot/))
-- [react-css-loaders](https://github.com/LucasBassetti/react-css-loaders): A collection of pure CSS React loading components. ([demo](https://lucasbassetti.com.br/react-css-loaders/))
-- [Rebass](https://github.com/jxnblk/rebass): Functional React UI component library ([demo](http://jxnblk.com/rebass))
+A lot of hard work goes into community libraries, projects, and guides. A lot of them make it easier to get started or help you with your next project! There’s also a whole lot of interesting apps and sites that people have built using styled-components.
 
-#### Grid Systems
-- [grid-styled](https://github.com/jxnblk/grid-styled): Responsive grid system ([demo](http://jxnblk.com/grid-styled/))
-- [Hedron](http://github.com/jsbros/hedron): A no-frills flex-box grid system.
-- [styled-components-grid](https://github.com/jameslnewell/styled-components-grid): Responsive grid components for `styled-components`.
-- [react-styled-flexboxgrid](https://github.com/LoicMahieu/react-styled-flexboxgrid): Grid system based on Flexbox ([demo](https://loicmahieu.github.io/react-styled-flexboxgrid/demo/index.html))
-- [react-flexa](https://github.com/aaronvanston/react-flexa): React grid system implementing the flexbox CSS API responsively.
-- [griz](https://github.com/josephrexme/griz): The simplest grid system you'd ever see. Using grids with a flexbox fallback.
-- [styled-css-grid](https://styled-css-grid.js.org/): A tiny CSS grid layout for React.
-- [neat-components](https://github.com/magicink/neat-components): A styled-components implementation of ThoughtBot's Neat grid system.
-
-#### Helpers
-- [styled-props](https://github.com/RafalFilipek/styled-props): Simple lib that allows you to set styled props in your styled-components without stress ([demos](https://github.com/RafalFilipek/styled-props#tldr-examples))
-- [styled-components-breakpoint](https://github.com/jameslnewell/styled-components-breakpoint): Utility function for using breakpoints with `styled-components`.
-- [styled-theme](https://github.com/diegohaz/styled-theme): Extensible theming system for styled-components.
-- [styled-tools](https://github.com/diegohaz/styled-tools): Useful interpolated functions for styled-components.
-- [styled-ax](https://github.com/Lokua/styled-ax): Functional theme property accessor(s)
-- [react-create-component-from-tag-prop](https://github.com/jameslnewell/react-create-component-from-tag-prop): Create a react component from a tag prop. Lets your users to choose which HTML elements get styled by your 💅 styled-components.
-- [styled-components-theme](https://github.com/erikras/styled-components-theme): A library for refering to theme colors and modifying them inline. e.g. `color: ${primary.lighten(0.3)};`
-- [styled-map](https://github.com/scf4/styled-map): Super simple lib to map props to styles with `styled-components`
-- [styled-system](https://github.com/jxnblk/styled-system): Design system utilities for styled-components – used in grid-styled and Rebass ([demo](http://jxnblk.com/styled-system/))
-- [styled-shortcuts](https://github.com/donavon/styled-shortcuts): Use simple string notation to access props. No functions necessary! Example: `font-size: ${'theme.fontSize:px'};` ([demo](https://codesandbox.io/s/jRE0XxR9v))
-- [styled-shortcut-components](https://github.com/donavon/styled-shortcut-components): A convenience package that wraps `styled-components` with `styled-shortcuts`.
-- [styled-media-query](http://github.com/morajabi/styled-media-query): Easily and beautifully use media queries with styled-component with custom breakpoints
-- [styled-by](https://github.com/brunobertolini/styled-by): Simple and powerful lib to handle styled props in your components ([demo](https://codesandbox.io/s/ElvL8EKgg))
-
-### Boilerplates
-- [react-redux-styled-hot-universal](https://github.com/krasevych/react-redux-styled-hot-universal) (SSR, Universal Webpack, Redux, React-router, Webpack 2, Babel, Styled Components and more...)
-- [ARc](https://github.com/diegohaz/arc): Atomic React App boilerplate with styled components ([demo](https://diegohaz.github.io/arc))
-- [react-boilerplate](https://github.com/mxstbr/react-boilerplate): A highly scalable, offline-first foundation with the best developer experience and a focus on performance and best practices
-- [Scalable React Boilerplate](https://github.com/RyanCCollins/scalable-react-boilerplate)
-- [Scalable React TypeScript Boilerplate](https://github.com/RyanCCollins/scalable-react-ts-boilerplate)
-- [Superstylin'](https://github.com/bntzio/gatsby-starter-superstylin): A Gatsby starter with styled-components 💅 ([demo](https://superstylin.netlify.com/))
-- [Generator create-redux-app](https://github.com/jonidelv/generator-create-redux-app): Add Redux, styled-components and other useful libraries and tools like auto-generate boilerplate code, on top of the most common React starter create-react-app.
-
-### Websites
-- [PostCSS.parts](http://postcss.parts): A searchable catalog of PostCSS plugins
-- [spaceexperience.club](https://spaceexperience.club/): Brings you each day a stunning picture of our universe, Astronomy Picture of the Day. ([source](https://github.com/caspg/space-exp))
-- [sachagreif.com](http://sachagreif.com): personal homepage built with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/SachaG/sg2017)).
-- [ismaywolff.nl](https://ismaywolff.nl): personal portfolio with serverside rendering ([source](https://github.com/ismay/ismaywolff.nl)).
-- [Dirtyredz.com](http://dirtyredz.com): David McClain | Dirtyredz - About me, Latest projects and Contact ([source](https://github.com/dirtyredz/dirtyredz.com))
-- [Reactiflux](https://www.reactiflux.com): Reactiflux community home build with [Gatsby](https://github.com/gatsbyjs/gatsby) ([source](https://github.com/reactiflux/reactiflux.com)).
-- [michaelhsu.tw](http://michaelhsu.tw): A simple static homepage built with CRA pre-renderer ([source](https://github.com/evenchange4/michaelhsu.tw)).
-- [joeireland.com](https://joeireland.com): Portfolio of Joseph Ireland ([source](https://github.com/IamJoseph/JoesReactWebsite)).
-- [rosesdaycare.center](https://rosesdaycare.center): Marketing website with theme colors that change on refresh ([source](https://github.com/anthony2025/roses-daycare)).
-- [CodeSandbox](https://codesandbox.io/s/new): An online editor tailored for React development ([source](https://github.com/CompuIves/codesandbox-client)).
-- [Grabient.com](https://www.grabient.com): A beautiful and simple UI for generating web gradients. ([source](https://github.com/johnkorzhuk/grabient/)).
-
-### Other
-- [react-presents](https://bvaughn.github.io/react-presents/): Highly customizable React slideshow framework with syntaxt highlighting and mobile support.
-- [react-adminlte-dash](https://github.com/zksailor534/react-adminlte-dash): AdminLTE dashboard components in React ([demo](http://zksailor534.github.io/react-adminlte-dash))
-- [colors-show](https://github.com/RafalFilipek/colors-show): Present your application colors with style. ([demo](https://colors-show.now.sh/))
-
-*Built something with `styled-components`? Submit a PR and add it to this list!*
-
-## Further Reading
-
-These are some great articles and talks about related topics in case you're hungry for more:
-
-- [📝 "Scale" FUD and Style Components](https://medium.com/learnreact/scale-fud-and-style-components-c0ce87ec9772#.kzjba8lcg): Using components as low-level styling constructs
-- [🎙 The Future of Reusable CSS](https://www.youtube.com/watch?v=XR6eM_5pAb0): How component libraries should be styled, and why they're not yet
-- [📝 Rendering Khan Academy’s Learn Menu Wherever I Please](https://medium.com/@jdan/rendering-khan-academys-learn-menu-wherever-i-please-4b58d4a9432d#.w9nshye05): Documenting the move from the handlebars + less combo to react and inline styles
-- [🖥 Ryan's random thoughts about inline styles](https://www.youtube.com/watch?v=EkPcGS4TzdQ): Explaining some benefits of using styles in js
-- [🖥 Create a style guide using NPM & styled-components](https://www.youtube.com/watch?v=u6gQ48rSw-E): Jamie fumbles through creating a shareable NPM package.
+Make sure to head over to [awesome-styled-components](https://github.com/styled-components/awesome-styled-components) to see them all! And please contribute and add your own work to the list so others can find it.
 
 ## Alternative Installation Methods
 
