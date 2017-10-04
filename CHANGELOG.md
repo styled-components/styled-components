@@ -6,8 +6,13 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- Don't emit empty rules like `color: ;` when using objects for CSS. Note that this still happens with template interpolations (see [#1149](https://github.com/styled-components/styled-components/pull/1149))
-- Cache static classnames in browser environments (see [#1069]https://github.com/styled-components/styled-components/pull/1069))
+- N/A
+
+## [v2.2.1] - 2017-10-04
+
+- Cache static classnames in browser environments, thanks to [@schwers](https://github.com/schwers) (see [#1069]https://github.com/styled-components/styled-components/pull/1069))
+- Move the list of libraries built with styled-components to [`awesome-styled-components`](https://github.com/styled-components/awesome-styled-components), thanks to [@romellogood](https://github.com/romellogood) (see [#1203](https://github.com/styled-components/styled-components/pull/1203))
+- Don't emit empty rules like from interpolations, thanks to [@wmertens](https://github.com/wmertens) (see [#1149](https://github.com/styled-components/styled-components/pull/1149))
 
 ## [v2.2.0] - 2017-09-27
 
@@ -281,7 +286,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.2.0...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.2.1...master
+[v2.2.1]: https://github.com/styled-components/styled-components/compare/v2.2.0...v2.2.1
 [v2.2.0]: https://github.com/styled-components/styled-components/compare/v2.1.1...v2.2.0
 [v2.1.2]: https://github.com/styled-components/styled-components/compare/v2.1.1...v2.1.2
 [v2.1.1]: https://github.com/styled-components/styled-components/compare/v2.1.0...v2.1.1
