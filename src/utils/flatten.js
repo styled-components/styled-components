@@ -50,18 +50,15 @@ const innerFlatten = (
       innerFlatten(targetChunks, chunk[i], executionContext)
     }
   } else if (chunk.hasOwnProperty('styledComponentId')) {
-    // $FlowFixMe flow thins chunk is a number here
     targetChunks.push(`.${chunk.styledComponentId}`)
   } else if (typeof chunk === 'function') {
     if (executionContext) {
-      // $FlowFixMe flow thinks chunk is a number
       innerFlatten(targetChunks, chunk(executionContext), executionContext)
     } else {
       // defer the execution context, e.g. `css` styles
       targetChunks.push(chunk)
     }
   } else if (isPlainObject(chunk)) {
-    // $FlowFixMe flow thinks chunk is a number, but its an object
     targetChunks.push(objToCss(chunk))
   } else {
     // all else fails, just add it, and to string it
