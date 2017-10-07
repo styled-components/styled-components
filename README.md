@@ -6,7 +6,7 @@
 Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅
 
 ```
-npm install --save styled-components
+npm i styled-components
 ```
 
 [![npm](https://img.shields.io/npm/v/styled-components.svg)](https://www.npmjs.com/package/styled-components)
