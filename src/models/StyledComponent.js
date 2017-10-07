@@ -96,6 +96,19 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
     }
 
+    getThemeAndGeneratedClassName(props: any, fallbackTheme: any) {
+    // Props should take precedence over ThemeProvider, which should take precedence over
+    // defaultProps, but React automatically puts defaultProps on props.
+      const { defaultProps } = this.constructor
+    /* eslint-disable react/prop-types */
+      const isDefaultTheme = defaultProps && props.theme === defaultProps.theme
+      const theme = props.theme && !isDefaultTheme ? props.theme : fallbackTheme
+    /* eslint-enable */
+      const generatedClassName = this.generateAndInjectStyles(theme, props)
+
+      return { theme, generatedClassName }
+    }
+
     componentWillMount() {
       const { componentStyle } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
@@ -116,15 +129,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         this.unsubscribeId = subscribe(nextTheme => {
           // This will be called once immediately
 
-          // Props should take precedence over ThemeProvider, which should take precedence over
-          // defaultProps, but React automatically puts defaultProps on props.
-          const { defaultProps } = this.constructor
-          /* eslint-disable react/prop-types */
-          const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
-          const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
-          /* eslint-enable */
-          const generatedClassName = this.generateAndInjectStyles(theme, this.props)
-          this.setState({ theme, generatedClassName })
+          this.setState(this.getThemeAndGeneratedClassName(this.props, nextTheme))
         })
       } else {
         // eslint-disable-next-line react/prop-types
@@ -145,18 +150,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         return
       }
 
-      this.setState((oldState) => {
-        // Props should take precedence over ThemeProvider, which should take precedence over
-        // defaultProps, but React automatically puts defaultProps on props.
-        const { defaultProps } = this.constructor
-        /* eslint-disable react/prop-types */
-        const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
-        const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : oldState.theme
-        /* eslint-enable */
-        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
-
-        return { theme, generatedClassName }
-      })
+      this.setState((oldState) => this.getThemeAndGeneratedClassName(nextProps, oldState.theme))
     }
 
     componentWillUnmount() {
