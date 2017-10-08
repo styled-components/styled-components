@@ -16,9 +16,9 @@ export default (displayName: string) => {
           'Consider using the attrs method, together with a style object for frequently changed styles.\n' +
           'Example:\n' +
           '  const Component = styled.div.attrs({\n' +
-          '    style: ({ background }) => {\n' +
+          '    style: ({ background }) => ({\n' +
           '      background,\n' +
-          '    },\n' +
+          '    }),\n' +
           '  })`width: 100%;`\n\n' +
 
           '  <Component />')
