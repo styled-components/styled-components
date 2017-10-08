@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. If a contri
 ## Unreleased
 
 - Changed 'too many classes' error to recommend attrs for frequently changed styles (see [#1213](https://github.com/styled-components/styled-components/pull/1213))
+- Refactor out theme logic in StyledComponent's componentWillMount & componentWillReceiveProps (see [#1130](https://github.com/styled-components/styled-components/issues/1130))
 
 ## [v2.2.1] - 2017-10-04
 
