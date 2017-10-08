@@ -1,6 +1,9 @@
 // @flow
+type Props = {
+  theme?: any,
+}
 
-export default (props: any, fallbackTheme: any, defaultProps: any) => {
+export default (props: Props, fallbackTheme: any, defaultProps: any) => {
   // Props should take precedence over ThemeProvider, which should take precedence over
   // defaultProps, but React automatically puts defaultProps on props.
 
