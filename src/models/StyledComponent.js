@@ -10,6 +10,7 @@ import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
+import determineTheme from '../utils/determineTheme'
 import type { RuleSet, Target } from '../types'
 
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
@@ -96,19 +97,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
     }
 
-    getThemeAndGeneratedClassName(props: any, fallbackTheme: any) {
-    // Props should take precedence over ThemeProvider, which should take precedence over
-    // defaultProps, but React automatically puts defaultProps on props.
-      const { defaultProps } = this.constructor
-    /* eslint-disable react/prop-types */
-      const isDefaultTheme = defaultProps && props.theme === defaultProps.theme
-      const theme = props.theme && !isDefaultTheme ? props.theme : fallbackTheme
-    /* eslint-enable */
-      const generatedClassName = this.generateAndInjectStyles(theme, props)
-
-      return { theme, generatedClassName }
-    }
-
     componentWillMount() {
       const { componentStyle } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
@@ -128,8 +116,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         const { subscribe } = styledContext
         this.unsubscribeId = subscribe(nextTheme => {
           // This will be called once immediately
+          const theme = determineTheme(this.props, nextTheme, this.constructor.defaultProps)
+          const generatedClassName = this.generateAndInjectStyles(theme, this.props)
 
-          this.setState(this.getThemeAndGeneratedClassName(this.props, nextTheme))
+          this.setState({ theme, generatedClassName })
         })
       } else {
         // eslint-disable-next-line react/prop-types
@@ -150,7 +140,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         return
       }
 
-      this.setState((oldState) => this.getThemeAndGeneratedClassName(nextProps, oldState.theme))
+      this.setState((oldState) => {
+        const theme = determineTheme(nextProps, oldState.theme, this.constructor.defaultProps)
+        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
+
+        return { theme, generatedClassName }
+      })
     }
 
     componentWillUnmount() {
