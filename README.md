@@ -8,6 +8,9 @@ Visual primitives for the component age. Use the best bits of ES6 and CSS to sty
 ```
 npm i styled-components
 ```
+```
+yarn add styled-components
+```
 
 [![npm](https://img.shields.io/npm/v/styled-components.svg)](https://www.npmjs.com/package/styled-components)
 [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/styled-components)
