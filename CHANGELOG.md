@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. If a contri
 ## Unreleased
 
 - Refactor out theme logic in StyledComponent's componentWillMount & componentWillReceiveProps (see [#1130](https://github.com/styled-components/styled-components/issues/1130))
+- Prevent component styles from being static if `attrs` are dynmaic (see [#1219](https://github.com/styled-components/styled-components/pull/1219))
 
 
 ## [v2.2.1] - 2017-10-04
