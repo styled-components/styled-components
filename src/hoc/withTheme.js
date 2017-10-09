@@ -36,13 +36,16 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
       if (!styledContext && !this.constructor.defaultProps) {
         // eslint-disable-next-line no-console
         console.warn('[withTheme] You are not using a ThemeProvider nor passing a theme in defaultProps')
-      }
-
-      const { subscribe } = styledContext
-      this.unsubscribeId = subscribe(nextTheme => {
-        const theme = determineTheme(this.props, nextTheme, this.constructor.defaultProps)
+      } else if (!styledContext && this.contructor.defaultProps) {
+        const theme = determineTheme(this.props, undefined, this.constructor.defaultProps)
         this.setState({ theme })
-      })
+      } else {
+        const { subscribe } = styledContext
+        this.unsubscribeId = subscribe(nextTheme => {
+          const theme = determineTheme(this.props, nextTheme, this.constructor.defaultProps)
+          this.setState({ theme })
+        })
+      }
     }
 
     componentWillUnmount() {
