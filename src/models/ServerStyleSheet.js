@@ -9,12 +9,14 @@ import getNonce from '../utils/nonce'
 
 class ServerTag implements Tag {
   isLocal: boolean
+  isProduction: boolean
   components: { [string]: Object }
   size: number
   names: Array<string>
 
   constructor(isLocal: boolean) {
     this.isLocal = isLocal
+    this.isProduction = process.env.NODE_ENV === 'production'
     this.components = {}
     this.size = 0
     this.names = []
@@ -51,14 +53,18 @@ class ServerTag implements Tag {
       `${SC_ATTR}="${this.names.join(' ')}"`,
       `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`,
     ]
-    const minifiedCSS = minify(this.concatenateCSS())
     const nonce = getNonce()
+    let outputCSS = this.concatenateCSS()
 
     if (nonce) {
       attrs.push(`nonce="${nonce}"`)
     }
 
-    return `<style ${attrs.join(' ')}>${minifiedCSS}</style>`
+    if (this.isProduction) {
+      outputCSS = minify(outputCSS)
+    }
+
+    return `<style ${attrs.join(' ')}>${outputCSS}</style>`
   }
 
   toReactElement(key: string) {
@@ -66,17 +72,21 @@ class ServerTag implements Tag {
       [SC_ATTR]: this.names.join(' '),
       [LOCAL_ATTR]: this.isLocal.toString(),
     }
-    const minifiedCSS = minify(this.concatenateCSS())
     const nonce = getNonce()
+    let outputCSS = this.concatenateCSS()
 
     if (nonce) {
       attrs.nonce = nonce
     }
 
+    if (this.isProduction) {
+      outputCSS = minify(outputCSS)
+    }
+
     return (
       <style
         key={key} type="text/css" {...attrs}
-        dangerouslySetInnerHTML={{ __html: minifiedCSS }}
+        dangerouslySetInnerHTML={{ __html: outputCSS }}
       />
     )
   }
