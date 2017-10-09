@@ -3,17 +3,7 @@
 </a>
 <br />
 
-<p align="center">
-  Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅
-</p>
-
-<p align="center">
-  <a href="https://www.npmjs.com/package/styled-components"><img alt="npm" src="https://img.shields.io/npm/v/styled-components.svg"></a>
-  <a href="https://travis-ci.org/styled-components/styled-components"><img alt="Travis Build Status" src="https://travis-ci.org/styled-components/styled-components.svg?branch=master"></a>
-  <a href="https://ci.appveyor.com/project/mxstbr/styled-components"><img alt="AppVeyor Build Status" src="https://ci.appveyor.com/api/projects/status/github/gruntjs/grunt?branch=master&svg=true"></a>
-  <a href="http://thinkmill.com.au/?utm_source=github&utm_medium=badge&utm_campaign=styled-components"><img alt="Supported by Thinkmill" src="https://thinkmill.github.io/badge/heart.svg"></a>
-  <a href="https://gitter.im/styled-components/styled-components"><img alt="gitter" src="https://camo.githubusercontent.com/54dc79dc7da6b76b17bc8013342da9b4266d993c/68747470733a2f2f6261646765732e6769747465722e696d2f6d78737462722f72656163742d626f696c6572706c6174652e737667"></a>
-</p>
+Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅
 
 ```
 npm install --save styled-components
