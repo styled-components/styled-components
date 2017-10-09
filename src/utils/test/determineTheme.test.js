@@ -2,16 +2,19 @@
 import determineTheme from '../determineTheme';
 
 const theme = { color: 'red' }
-const fallbackTheme = { color: 'blue' }
+const fallback = { color: 'blue' }
 const props = { theme }
-const defaultProps = props
 
 describe('determineTheme', () => {
+  it('should take precedence over defaultProps', () => {
+    expect(determineTheme(props, undefined, props)).toEqual(theme)
+  })
+
   it('should take precedence over ThemeProvider', () => {
-    expect(determineTheme(props, fallbackTheme, defaultProps)).toEqual(theme)
+    expect(determineTheme(props, fallback, props)).toEqual(fallback)
   })
 
   it('should fallback to default theme', () => {
-    expect(determineTheme({}, fallbackTheme, defaultProps)).toEqual(fallbackTheme)
+    expect(determineTheme({}, fallback, props)).toEqual(fallback)
   })
 })
