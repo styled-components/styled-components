@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Prevent `withTheme` HOC from breaking when passing a theme from `defaultProps`, thanks to [@kutyel](https://github.com/kutyel) (see [#1130](https://github.com/styled-components/styled-components/pull/1130))
 - Refactor out theme logic in StyledComponent's componentWillMount & componentWillReceiveProps (see [#1130](https://github.com/styled-components/styled-components/issues/1130))
 
 
