@@ -34,12 +34,12 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
     componentWillMount() {
       const { defaultProps } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
-      const defaultTheme = determineTheme(this.props, undefined, defaultProps)
-      if (!styledContext && !defaultTheme) {
+      const themeProp = determineTheme(this.props, undefined, defaultProps)
+      if (styledContext === undefined && themeProp === undefined && process.env.NODE_ENV !== 'production') {
         // eslint-disable-next-line no-console
         console.warn('[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps')
-      } else if (!styledContext && defaultProps) {
-        this.setState({ theme: defaultTheme })
+      } else if (styledContext === undefined && themeProp !== undefined) {
+        this.setState({ theme: themeProp })
       } else {
         const { subscribe } = styledContext
         this.unsubscribeId = subscribe(nextTheme => {
@@ -47,6 +47,15 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
           this.setState({ theme })
         })
       }
+    }
+
+    componentWillReceiveProps(nextProps: { theme?: ?Object, [key: string]: any }) {
+      const { defaultProps } = this.constructor
+      this.setState((oldState) => {
+        const theme = determineTheme(nextProps, oldState.theme, defaultProps)
+
+        return { theme }
+      })
     }
 
     componentWillUnmount() {
