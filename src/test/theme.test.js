@@ -429,14 +429,18 @@ describe('theming', () => {
   it('should not break without a ThemeProvier if it has a defaultTheme', () => {
     const MyDiv = ({ theme }) => <div>{theme.color}</div>
     const MyDivWithTheme = withTheme(MyDiv);
-    const defaultTheme = { color: 'red' }
+    const theme = { color: 'red' }
+    const newTheme = { color: 'blue' }
 
-    MyDivWithTheme.defaultProps = {
-      theme: defaultTheme
-    }
+    MyDivWithTheme.defaultProps = { theme }
 
     const wrapper = mount(<MyDivWithTheme />)
 
     expect(wrapper.find('div').text()).toBe('red')
+
+    // Change theme
+    wrapper.setProps({ theme: newTheme })
+
+    expect(wrapper.find('div').text()).toBe('blue')
   })
 })
