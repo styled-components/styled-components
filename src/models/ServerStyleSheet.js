@@ -4,6 +4,7 @@ import React from 'react'
 import type { Tag } from './StyleSheet'
 import StyleSheet, { SC_ATTR, LOCAL_ATTR, clones } from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
+import minify from '../utils/minify'
 import getNonce from '../utils/nonce'
 
 class ServerTag implements Tag {
@@ -45,19 +46,19 @@ class ServerTag implements Tag {
   }
 
   toHTML() {
-    const attrs = [
+    const attrs: Array<string> = [
       'type="text/css"',
       `${SC_ATTR}="${this.names.join(' ')}"`,
       `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`,
     ]
-
+    const minifiedCSS = minify(this.concatenateCSS())
     const nonce = getNonce()
 
     if (nonce) {
       attrs.push(`nonce="${nonce}"`)
     }
 
-    return `<style ${attrs.join(' ')}>${this.concatenateCSS()}</style>`
+    return `<style ${attrs.join(' ')}>${minifiedCSS}</style>`
   }
 
   toReactElement(key: string) {
@@ -65,7 +66,7 @@ class ServerTag implements Tag {
       [SC_ATTR]: this.names.join(' '),
       [LOCAL_ATTR]: this.isLocal.toString(),
     }
-
+    const minifiedCSS = minify(this.concatenateCSS())
     const nonce = getNonce()
 
     if (nonce) {
@@ -75,7 +76,7 @@ class ServerTag implements Tag {
     return (
       <style
         key={key} type="text/css" {...attrs}
-        dangerouslySetInnerHTML={{ __html: this.concatenateCSS() }}
+        dangerouslySetInnerHTML={{ __html: minifiedCSS }}
       />
     )
   }
