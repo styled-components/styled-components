@@ -1,7 +1,8 @@
 {
   "name": "styled-components",
   "version": "2.3.0",
-  "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
+  "description":
+    "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "main": "lib/index.js",
   "typings": "typings/styled-components.d.ts",
   "jsnext:main": "dist/styled-components.es.js",
@@ -11,7 +12,8 @@
     "prebuild:lib": "rimraf lib/*",
     "build:lib": "babel --out-dir lib --ignore \"*.test.js\" src",
     "prebuild:dist": "rimraf dist/*",
-    "build:dist": "rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
+    "build:dist":
+      "rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
     "test": "npm run test:web && npm run test:native && npm run test:size",
     "test:web": "jest",
@@ -47,12 +49,7 @@
     "src",
     "typings"
   ],
-  "keywords": [
-    "react",
-    "css",
-    "css-in-js",
-    "styled-components"
-  ],
+  "keywords": ["react", "css", "css-in-js", "styled-components"],
   "author": "Glen Maddern",
   "license": "MIT",
   "bugs": {
@@ -132,9 +129,7 @@
   },
   "jest": {
     "clearMocks": true,
-    "roots": [
-      "<rootDir>/src/"
-    ],
+    "roots": ["<rootDir>/src/"],
     "testPathIgnorePatterns": [
       "<rootDir>/src/native",
       "<rootDir>/src/primitives"
@@ -142,10 +137,7 @@
     "testResultsProcessor": "jest-json-reporter"
   },
   "lint-staged": {
-    "*.js": [
-      "eslint --fix",
-      "git add"
-    ]
+    "*.js": ["eslint --fix", "git add"]
   },
   "pre-commit": "lint-staged",
   "bundlesize": [
