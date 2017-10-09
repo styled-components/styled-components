@@ -28,6 +28,10 @@ describe('ssr', () => {
     styled = resetStyled(true)
   })
 
+  afterEach(() => {
+    process.env.NODE_ENV = 'test'
+  })
+
   it('should extract the CSS in a simple case', () => {
     const Heading = styled.h1`
       color: red;
@@ -77,18 +81,18 @@ describe('ssr', () => {
   })
 
   it('should render CSS in the order the components were defined, not rendered', () => {
-    const ONE = styled.h1.withConfig({ componentId: 'ONE' })`
+    const ONE = styled.h1.withConfig({ componentId: 'ONE' }) `
       color: red;
     `
-    const TWO = styled.h2.withConfig({ componentId: 'TWO' })`
+    const TWO = styled.h2.withConfig({ componentId: 'TWO' }) `
       color: blue;
     `
 
     const sheet = new ServerStyleSheet()
     const html = renderToString(sheet.collectStyles(
       <div>
-        <TWO/>
-        <ONE/>
+        <TWO />
+        <ONE />
       </div>
     ))
     const css = sheet.getStyleTags()
@@ -101,10 +105,10 @@ describe('ssr', () => {
     injectGlobal`
       body { background: papayawhip; }
     `
-    const PageOne = styled.h1.withConfig({ componentId: 'PageOne' })`
+    const PageOne = styled.h1.withConfig({ componentId: 'PageOne' }) `
       color: red;
     `
-    const PageTwo = styled.h2.withConfig({ componentId: 'PageTwo' })`
+    const PageTwo = styled.h2.withConfig({ componentId: 'PageTwo' }) `
       color: blue;
     `
 
@@ -124,10 +128,10 @@ describe('ssr', () => {
 
   it('should allow global styles to be injected during rendering', () => {
     injectGlobal`html::before { content: 'Before both renders'; }`
-    const PageOne = styled.h1.withConfig({ componentId: 'PageOne' })`
+    const PageOne = styled.h1.withConfig({ componentId: 'PageOne' }) `
       color: red;
     `
-    const PageTwo = styled.h2.withConfig({ componentId: 'PageTwo' })`
+    const PageTwo = styled.h2.withConfig({ componentId: 'PageTwo' }) `
       color: blue;
     `
 
@@ -155,13 +159,13 @@ describe('ssr', () => {
     injectGlobal`
       body { background: papayawhip; }
     `
-    const Header = styled.h1.withConfig({ componentId: 'Header' })`
-      animation: ${ props => props.animation } 1s both;
+    const Header = styled.h1.withConfig({ componentId: 'Header' }) `
+      animation: ${ props => props.animation} 1s both;
     `
 
     const sheet = new ServerStyleSheet()
     const html = renderToString(sheet.collectStyles(
-      <Header animation={keyframes`0% { opacity: 0; }`}/>
+      <Header animation={keyframes`0% { opacity: 0; }`} />
     ))
     const css = sheet.getStyleTags()
 
@@ -205,5 +209,25 @@ describe('ssr', () => {
     expect(elements).toHaveLength(2);
     expect(elements[0].props.nonce).toBe('foo');
     expect(elements[1].props.nonce).toBe('foo');
+  })
+
+  it('should return a generated React style element with minified CSS in production', () => {
+    process.env.NODE_ENV = 'production'
+
+    injectGlobal`
+      body { background: papayawhip; }
+    `
+    const Heading = styled.h1`
+      color: red;
+    `
+
+    const sheet = new ServerStyleSheet()
+    const html = renderToString(sheet.collectStyles(<Heading>Hello Production SSR!</Heading>))
+    const elements = sheet.getStyleElement()
+
+    expect(elements).toHaveLength(2);
+
+    expect(elements[0].props).toMatchSnapshot()
+    expect(elements[1].props).toMatchSnapshot()
   })
 })
