@@ -2,6 +2,9 @@
 
 import { danger, warn, fail, message } from 'danger'
 import fs from 'fs'
+import jest from 'danger-plugin-jest'
+
+jest()
 
 const jsModifiedFiles = danger.git.modified_files.filter(path => path.startsWith('src') && path.endsWith('js'))
 const vendorModifiedFiles = danger.git.modified_files.filter(path => path.startsWith('src/vendor') && path.endsWith('js'))
