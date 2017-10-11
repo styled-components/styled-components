@@ -120,7 +120,7 @@ describe('theming', () => {
     render(
       <div>
         <ThemeProvider theme={theme}>
-          <Comp theme={{ color: 'red' }}/>
+          <Comp theme={{ color: 'red' }} />
         </ThemeProvider>
       </div>
     )
@@ -423,5 +423,24 @@ describe('theming', () => {
     // $FlowFixMe
     expect(ref).toHaveBeenCalledWith(inner.getDOMNode())
     expect(inner.prop('innerRef')).toBe(ref)
+  })
+
+  // https://github.com/styled-components/styled-components/issues/1130
+  it('should not break without a ThemeProvier if it has a defaultTheme', () => {
+    const MyDiv = ({ theme }) => <div>{theme.color}</div>
+    const MyDivWithTheme = withTheme(MyDiv);
+    const theme = { color: 'red' }
+    const newTheme = { color: 'blue' }
+
+    MyDivWithTheme.defaultProps = { theme }
+
+    const wrapper = mount(<MyDivWithTheme />)
+
+    expect(wrapper.find('div').text()).toBe('red')
+
+    // Change theme
+    wrapper.setProps({ theme: newTheme })
+
+    expect(wrapper.find('div').text()).toBe('blue')
   })
 })
