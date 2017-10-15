@@ -90,7 +90,8 @@
     "cross-env": "^5.1.1",
     "danger": "^2.0.0",
     "danger-plugin-jest": "^1.1.0",
-    "enzyme": "^2.8.2",
+    "enzyme": "^3.3.0",
+    "enzyme-adapter-react-15": "^1.0.5",
     "eslint": "^3.15.0",
     "eslint-config-airbnb": "^13.0.0",
     "eslint-config-prettier": "^2.9.0",
@@ -136,6 +137,9 @@
     "clearMocks": true,
     "roots": [
       "<rootDir>/src/"
+    ],
+    "setupFiles": [
+      "<rootDir>/src/test/enzymeSetup.js"
     ],
     "testPathIgnorePatterns": [
       "<rootDir>/src/native",
