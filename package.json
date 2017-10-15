@@ -29,7 +29,8 @@
     "precommit": "lint-staged",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
-    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js"
+    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
+    "postinstall": "node ./_remove_rn_globals"
   },
   "repository": {
     "type": "git",
