@@ -154,14 +154,13 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     componentDidMount() {
-      if (this.element !== null) {
-        // In case elements is being appended to an iframe
-        setTimeout(() => {
+      setTimeout(() => {
+        if (this.element !== null) {
           this.ownerDocument = this.element.ownerDocument
           registerDoc(this.ownerDocument)
           syncViews()
-        }, 50)
-      }
+        }
+      })
     }
     componentDidUpdate() {
       if (this.element !== null) {
