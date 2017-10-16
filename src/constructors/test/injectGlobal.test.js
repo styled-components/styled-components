@@ -10,9 +10,9 @@ import { expectCSSMatches, resetStyled } from '../../test/utils'
 const injectGlobal = _injectGlobal(stringifyRules, css)
 
 let styled = resetStyled()
-const rule1 = 'width: 100%;'
-const rule2 = 'padding: 10px;'
-const rule3 = 'color: blue;'
+const rule1 = 'width:100%;'
+const rule2 = 'padding:10px;'
+const rule3 = 'color:blue;'
 
 describe('injectGlobal', () => {
   beforeEach(() => {
