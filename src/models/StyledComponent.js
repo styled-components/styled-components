@@ -15,6 +15,7 @@ import type { RuleSet, Target } from '../types'
 
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
+import { registerDoc, unregisterDoc, syncViews } from './StyledPortals'
 
 const escapeRegex = /[[\].#*$><+~=|^:(),"'`]/g
 const multiDashRegex = /--+/g
@@ -55,6 +56,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       generatedClassName: '',
     }
     unsubscribeId: number = -1
+    ownerDocument: null
+    element: null
 
     unsubscribeFromContext() {
       if (this.unsubscribeId !== -1) {
@@ -139,16 +142,42 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       if (componentStyle.isStatic) {
         return
       }
-
       this.setState((oldState) => {
         const theme = determineTheme(nextProps, oldState.theme, this.constructor.defaultProps)
         const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
-
+        // Resynchronize styles when new class name are generated
+        if (generatedClassName !== oldState.generatedClassName) {
+          syncViews()
+        }
         return { theme, generatedClassName }
       })
     }
 
+    componentDidMount() {
+      setTimeout(() => {
+        if (this.element !== null) {
+          this.ownerDocument = this.element.ownerDocument
+          registerDoc(this.ownerDocument)
+          syncViews()
+        }
+      })
+    }
+    componentDidUpdate() {
+      if (this.element !== null) {
+        const ownerDocument = this.element.ownerDocument
+        if (ownerDocument !== this.ownerDocument) {
+          unregisterDoc(this.ownerDocument)
+          registerDoc(ownerDocument)
+          this.ownerDocument = ownerDocument
+        }
+      }
+    }
+
     componentWillUnmount() {
+      if (this.ownerDocument) {
+        unregisterDoc(this.ownerDocument)
+      }
+      this.ownerDocument = null
       this.unsubscribeFromContext()
     }
 
@@ -172,11 +201,15 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         ...this.attrs,
         className,
       }
+      const ref = (el) => {
+        if (typeof innerRef === 'function') { innerRef(el) }
+        this.element = el
+      }
 
       if (isStyledComponent(target)) {
-        baseProps.innerRef = innerRef
+        baseProps.innerRef = ref
       } else {
-        baseProps.ref = innerRef
+        baseProps.ref = ref
       }
 
       const propsForElement = Object
