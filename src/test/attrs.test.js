@@ -110,13 +110,13 @@ describe('attrs', () => {
       href: '#',
       activeClassName: '--is-active'
     })`
-      color: blue;
+      color:blue;
       &.${props => props.activeClassName} {
-        color: red;
+        color:red;
       }
     `
     expect(shallow(<Comp />).html()).toEqual('<a href="#" class="sc-a b"></a>')
-    expectCSSMatches('.sc-a {} .b { color: blue; } .b.--is-active { color: red; }')
+    expectCSSMatches('.sc-a {} .b { color:blue; } .b.--is-active { color:red; }')
   })
 
   it('should pass through children as a normal prop', () => {

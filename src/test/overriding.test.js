@@ -29,10 +29,10 @@ describe('extending', () => {
     shallow(<Outer/>)
     expectCSSMatches(`
       .sc-a {}
-      .c { color: blue; font-weight: light; }
+      .c { color:blue; font-weight:light; }
       .sc-b {}
-      .d { padding: 1rem; }
-      .d > .sc-a { font-weight: bold; }
+      .d { padding:1rem; }
+      .d > .sc-a { font-weight:bold; }
     `)
   })
 })
