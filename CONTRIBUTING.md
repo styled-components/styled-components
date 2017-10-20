@@ -30,7 +30,21 @@ Please also give the code of conduct a read.
 
 ## How do I set up the project?
 
-Run `npm install` and edit code in the `src/` folder. It's luckily very simple! :wink:
+To make development process easier, you could use a sandbox provided in this repo.
+
+- First, run `npm install`. This will install all project dependencies.
+
+- Then, run `npm run dev`. This will start `webpack-dev-server` and you will be able to access the sandbox on `localhost:8080`.
+
+In the sandbox `styled-components` is an alias to `./src` folder, so you can edit the source directly and dev-server will handle 
+rebuilding the source and reloading youur sandbox.
+
+You can use an interactive editor, powered by [`react-live`](https://react-live.philpl.com/), to test your changes. But if you want more control,
+you can edit the sandbox itseft. Entry point for the sandbox is located at `./sandbox/index.js`
+
+As this is just a `webpack-dev-server`, you could use its flags to change port or automatically open sandbox 
+in browser on start; e.g. `npm run dev -- --open` will automatically open sandbox in browser. [More info about 
+`webpack-dev-server` flags](https://webpack.js.org/configuration/dev-server/)
 
 When you commit our pre-commit hook will run, which executes `lint-staged`. It will run
 the linter automatically and warn you, if the code you've written doesn't comply with our
