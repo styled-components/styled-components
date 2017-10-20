@@ -1,0 +1,154 @@
+import React, { Component } from 'react';
+
+import { render } from 'react-dom';
+
+import styled, { injectGlobal, css, keyframes } from 'styled-components';
+
+import {
+  LiveProvider as _LiveProvider,
+  LiveEditor as _LiveEditor,
+  LiveError as _LiveError,
+  LivePreview as _LivePreview,
+} from 'react-live';
+
+injectGlobal`
+  body {
+    font-size: 18px;
+    line-height: 1.2;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    font-style: normal;
+    padding: 0;
+    margin: 0;
+    color: rgb(46, 68, 78);
+    -webkit-font-smoothing: subpixel-antialiased;
+  }
+
+  button {
+    font-size: 18px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+`;
+
+const code = `const Button = styled.button\`
+  border-radius: 3px;
+  padding: 0.25em 1em;
+  margin: 0 1em;
+  background: transparent;
+  color: palevioletred;
+  border: 2px solid palevioletred;
+
+  \${props => props.primary && css\`
+    background: palevioletred;
+    color: white;
+  \`}
+\`;
+
+render(
+  <div>
+    <Button>Normal Button</Button>
+    <Button primary>Primary Button</Button>
+  </div>
+);`;
+
+const Body = styled.main`
+  width: 100vw;
+  min-height: 100vh;
+
+  background-image: linear-gradient(20deg, #e6356f, #69e7f7);
+
+  padding: 0 20px;
+`;
+
+const Heading = styled.div`
+  padding-top: 30px;
+  text-align: center;
+`;
+
+const Title = styled.h1``;
+
+const Subtitle = styled.p``;
+
+const Content = styled.div`
+  width: 100%;
+  max-width: 860px;
+
+  margin: 0 auto;
+  margin-top: 60px;
+`;
+
+const Code = styled.span`
+  white-space: pre;
+  vertical-align: middle;
+  font-family: monospace;
+  display: inline-block;
+  background-color: #1e1f27;
+  color: #c5c8c6;
+  padding: 0.1em 0.3em 0.15em;
+  font-size: 0.8em;
+  border-radius: 0.2em;
+`;
+
+const LiveProvider = styled(_LiveProvider)`
+  display: flex;
+  flex-wrap: wrap;
+
+  border-radius: 3px;
+  overflow: hidden;
+
+  box-shadow: 3px 3px 18px rgba(66, 22, 93, 0.3);
+`;
+
+const LiveBlock = styled.div`
+  flex-basis: 50%;
+  width: 50%;
+  max-width: 50%;
+
+  padding: 0.5rem;
+
+  @media (max-width: 40.625em) {
+    flex-basis: auto;
+    width: 100%;
+    max-width: 100%;
+  }
+`;
+
+const LiveEditor = LiveBlock.withComponent(_LiveEditor).extend`
+  overflow: auto;
+`;
+
+const LivePreview = LiveBlock.withComponent(_LivePreview).extend`
+  background-color: white;
+`;
+
+const LiveError = styled(_LiveError)`
+  flex-basis: 100%;
+  background: #ff5555;
+  color: #fff;
+  padding: 0.5rem;
+`;
+
+const App = () => (
+  <Body>
+    <Heading>
+      <Title>
+        Interactive sandbox for <Code>styled-components</Code>
+      </Title>
+      <Subtitle>
+        Make changes to the <Code>./src/**</Code> and see them take effect in
+        realtime!
+      </Subtitle>
+    </Heading>
+    <Content>
+      <LiveProvider code={code} scope={{ styled, css, keyframes }} noInline>
+        <LiveEditor />
+        <LivePreview />
+        <LiveError />
+      </LiveProvider>
+    </Content>
+  </Body>
+);
+
+render(<App />, document.querySelector('#react-root'));
