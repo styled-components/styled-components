@@ -18,9 +18,10 @@ describe('minify', () => {
     expect(minify(componentCSS)).toEqual(minifiedCSS)
   })
 
-  it('removes comments from CSS', () => {
+  it('keeps comments in the CSS', () => {
     const componentCSS = `
     /* sc-component-id: pages__Title-s19khds2-0 */
+
     .bYhtfl {
       color:salmon;
       font-family:
@@ -28,7 +29,7 @@ describe('minify', () => {
       font-size:50px;
     }
     `
-    const minifiedCSS = '.bYhtfl{color:salmon;font-family:Helvetica;font-size:50px;}'
+    const minifiedCSS = '/* sc-component-id:pages__Title-s19khds2-0 */ .bYhtfl{color:salmon;font-family:Helvetica;font-size:50px;}'
 
     expect(minify(componentCSS)).toEqual(minifiedCSS)
   })

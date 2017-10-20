@@ -125,7 +125,7 @@ Object {
 exports[`ssr should return a generated React style element with minified CSS in production 1`] = `
 Object {
   "dangerouslySetInnerHTML": Object {
-    "__html": "body{background:papayawhip;}",
+    "__html": "/* sc-component-id:sc-global-2303210225 */ body{background:papayawhip;}",
   },
   "data-styled-components": "",
   "data-styled-components-is-local": "false",
@@ -136,7 +136,7 @@ Object {
 exports[`ssr should return a generated React style element with minified CSS in production 2`] = `
 Object {
   "dangerouslySetInnerHTML": Object {
-    "__html": ".b{color:red;}",
+    "__html": "/* sc-component-id:sc-a */ .b{color:red;}",
   },
   "data-styled-components": "b",
   "data-styled-components-is-local": "true",
