@@ -67,7 +67,11 @@ const Heading = styled.div`
   text-align: center;
 `;
 
-const Title = styled.h1``;
+const Title = styled.h1`
+  @media (max-width: 40.625em) {
+    font-size: 26px;
+  }
+`;
 
 const Subtitle = styled.p``;
 
