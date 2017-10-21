@@ -1,0 +1,56 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`1. macros 1`] = `
+"
+import styled from '../../macro'
+
+styled.div\`
+  background: papayawhip;
+\`
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import styled from 'styled-components';
+
+
+styled.div.withConfig({
+  displayName: 'macrotest'
+})(['background:papayawhip;']);
+"
+`;
+
+exports[`2. macros 1`] = `
+"
+import React from 'react';
+import macro from '../../macro'
+
+class Test extends React.Component {
+  render() {
+    return React.createElement('div', null, 'Hello World')
+  }
+}
+const StyledTest = macro(Test)\`
+  background: \${props => props.theme.background};
+  color: red;
+\`
+
+export default StyledTest
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import styled from 'styled-components';
+import React from 'react';
+
+
+class Test extends React.Component {
+  render() {
+    return React.createElement('div', null, 'Hello World');
+  }
+}
+const StyledTest = styled(Test).withConfig({
+  displayName: 'macrotest__StyledTest'
+})(['background:', ';color:red;'], props => props.theme.background);
+
+export default StyledTest;
+"
+`;
