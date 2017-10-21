@@ -46,7 +46,7 @@ describe('basic', () => {
       color: blue;
     `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a { } .b { color: blue; }')
+    expectCSSMatches('.sc-a { } .b { color:blue; }')
   })
 
   it('should inject only once for a styled component, no matter how often it\'s mounted', () => {
@@ -55,7 +55,7 @@ describe('basic', () => {
     `
     shallow(<Comp />)
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { color: blue; }')
+    expectCSSMatches('.sc-a {} .b { color:blue; }')
   })
 
   it('Should have the correct styled(component) displayName', () => {
@@ -177,7 +177,7 @@ describe('basic', () => {
       shallow(<SecondComponent />)
       shallow(<FirstComponent />)
 
-      expectCSSMatches('.sc-a {} .d { color: red; } .sc-b {} .c { color: blue; }')
+      expectCSSMatches('.sc-a {} .d { color:red; } .sc-b {} .c { color:blue; }')
     })
   })
 })
