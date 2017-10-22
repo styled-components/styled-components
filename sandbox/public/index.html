@@ -10,13 +10,16 @@
 
   <link rel="icon" type="image/png" href="https://styled-components.com/static/favicon.png">
 
-  <script crossorigin src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
+  <!-- Load livereload script ASAP -->
+  <script src="./livereload.js"></script>
+
+  <!-- SSR:CSS -->
 </head>
 
 <body>
-  <div id="react-root"></div>
-  <script src="./bundle.js"></script>
+  <!-- SSR:HTML -->
+
+  <script src="./browser.js"></script>
 </body>
 
 </html>

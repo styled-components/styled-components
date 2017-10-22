@@ -30,21 +30,30 @@ Please also give the code of conduct a read.
 
 ## How do I set up the project?
 
-To make development process easier, you could use a sandbox provided in this repo.
+To make development process easier, you could use a sandbox provided in this repo. 
+To use the sandbox, follow these steps:
 
-- First, run `npm install`. This will install all project dependencies.
+1. Go to sandbox folder: `cd sandbox`
 
-- Then, run `npm run dev`. This will start `webpack-dev-server` and you will be able to access the sandbox on `localhost:8080`.
+2. Install all the dependencies: `yarn install` or `npm install`
 
-In the sandbox `styled-components` is an alias to `./src` folder, so you can edit the source directly and dev-server will handle 
-rebuilding the source and reloading youur sandbox.
+3. Run `yarn start` or `npm start` to start sandbox server
+
+Now you should have the sandbox running on `localhost:3000`
+
+In the sandbox `styled-components` is an alias to `styled-components/src` folder, so you can edit the source directly and dev-server will handle 
+rebuilding the source and livereloading your sandbox after the build is done.
+
+Sandbox supports client-side and server-side rendering.
 
 You can use an interactive editor, powered by [`react-live`](https://react-live.philpl.com/), to test your changes. But if you want more control,
-you can edit the sandbox itseft. Entry point for the sandbox is located at `./sandbox/index.js`
+you can edit the sandbox itseft:
 
-As this is just a `webpack-dev-server`, you could use its flags to change port or automatically open sandbox 
-in browser on start; e.g. `npm run dev -- --open` will automatically open sandbox in browser. [More info about 
-`webpack-dev-server` flags](https://webpack.js.org/configuration/dev-server/)
+- Root `<App>` componens is located at `styled-components/sandbox/src/App.js` file
+
+- Client-side entry point is at `styled-components/sandbox/src/browser.js`
+
+- Server-size entry point is at `styled-components/sandbox/src/server.js`
 
 When you commit our pre-commit hook will run, which executes `lint-staged`. It will run
 the linter automatically and warn you, if the code you've written doesn't comply with our

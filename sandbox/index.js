@@ -1,158 +1,63 @@
-import React, { Component } from 'react';
+/* eslint-disable flowtype/require-valid-file-annotation */
+const fs = require('fs')
 
-import { render } from 'react-dom';
+const path = require('path')
 
-import styled, { injectGlobal, css, keyframes } from 'styled-components';
+const express = require('express')
 
-import {
-  LiveProvider as _LiveProvider,
-  LiveEditor as _LiveEditor,
-  LiveError as _LiveError,
-  LivePreview as _LivePreview,
-} from 'react-live';
+const webpackDevMiddleware = require('webpack-dev-middleware')
 
-injectGlobal`
-  body {
-    font-size: 18px;
-    line-height: 1.2;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-    font-style: normal;
-    padding: 0;
-    margin: 0;
-    color: rgb(46, 68, 78);
-    -webkit-font-smoothing: subpixel-antialiased;
+const webpack = require('webpack')
+
+const { CONFIG, logger } = require('./util')
+
+const webpackConfig = require('./webpack.config.dev')
+
+const livereloadMiddleware = require('./livereload/middleware')
+
+const compiler = webpack(webpackConfig)
+
+const devMiddleware = webpackDevMiddleware(compiler, webpackConfig.devServer)
+
+const indexHtml = fs.readFileSync(
+  path.resolve(__dirname, './public/index.html'),
+  'utf-8' // eslint-disable-line comma-dangle
+)
+
+const app = express()
+
+const server = require('http').Server(app)
+
+app.use(devMiddleware)
+
+app.use(livereloadMiddleware(compiler, server))
+
+app.get('*', (req, res) => {
+  // We use webpackDevMiddleware in-memory file system to read server script after compilation
+  const serverScript = devMiddleware.fileSystem.readFileSync(
+    path.join(webpackConfig.output.path, 'server.js'),
+    'utf-8' // eslint-disable-line comma-dangle
+  )
+
+  // Then we evaluate this script to get prerendered content
+  const { html, css } = eval(serverScript) // eslint-disable-line no-eval
+
+  // Replace placeholders in index.html template
+  const response = indexHtml
+    .replace(/<!-- SSR:HTML -->/, `<div id="react-root">${html}</div>`)
+    .replace(/<!-- SSR:CSS -->/, css)
+
+  // Done! Send it to the client
+  res.send(response)
+})
+
+server.listen(CONFIG.PORT, CONFIG.HOST, err => {
+  if (err) {
+    logger.err('Failed to start sandbox:')
+    logger.err(err)
+  } else {
+    logger.info(
+      `Listening on port ${CONFIG.PORT}. Open up http://${CONFIG.HOST}:${CONFIG.PORT}/ in your browser.` // eslint-disable-line comma-dangle
+    )
   }
-
-  button {
-    font-size: 18px;
-  }
-
-  * {
-    box-sizing: border-box;
-  }
-`;
-
-const code = `const Button = styled.button\`
-  border-radius: 3px;
-  padding: 0.25em 1em;
-  margin: 0 1em;
-  background: transparent;
-  color: palevioletred;
-  border: 2px solid palevioletred;
-
-  \${props => props.primary && css\`
-    background: palevioletred;
-    color: white;
-  \`}
-\`;
-
-render(
-  <div>
-    <Button>Normal Button</Button>
-    <Button primary>Primary Button</Button>
-  </div>
-);`;
-
-const Body = styled.main`
-  width: 100vw;
-  min-height: 100vh;
-
-  background-image: linear-gradient(20deg, #e6356f, #69e7f7);
-
-  padding: 0 20px;
-`;
-
-const Heading = styled.div`
-  padding-top: 30px;
-  text-align: center;
-`;
-
-const Title = styled.h1`
-  @media (max-width: 40.625em) {
-    font-size: 26px;
-  }
-`;
-
-const Subtitle = styled.p``;
-
-const Content = styled.div`
-  width: 100%;
-  max-width: 860px;
-
-  margin: 0 auto;
-  margin-top: 60px;
-`;
-
-const Code = styled.span`
-  white-space: pre;
-  vertical-align: middle;
-  font-family: monospace;
-  display: inline-block;
-  background-color: #1e1f27;
-  color: #c5c8c6;
-  padding: 0.1em 0.3em 0.15em;
-  font-size: 0.8em;
-  border-radius: 0.2em;
-`;
-
-const LiveProvider = styled(_LiveProvider)`
-  display: flex;
-  flex-wrap: wrap;
-
-  border-radius: 3px;
-  overflow: hidden;
-
-  box-shadow: 3px 3px 18px rgba(66, 22, 93, 0.3);
-`;
-
-const LiveBlock = styled.div`
-  flex-basis: 50%;
-  width: 50%;
-  max-width: 50%;
-
-  padding: 0.5rem;
-
-  @media (max-width: 40.625em) {
-    flex-basis: auto;
-    width: 100%;
-    max-width: 100%;
-  }
-`;
-
-const LiveEditor = LiveBlock.withComponent(_LiveEditor).extend`
-  overflow: auto;
-`;
-
-const LivePreview = LiveBlock.withComponent(_LivePreview).extend`
-  background-color: white;
-`;
-
-const LiveError = styled(_LiveError)`
-  flex-basis: 100%;
-  background: #ff5555;
-  color: #fff;
-  padding: 0.5rem;
-`;
-
-const App = () => (
-  <Body>
-    <Heading>
-      <Title>
-        Interactive sandbox for <Code>styled-components</Code>
-      </Title>
-      <Subtitle>
-        Make changes to the <Code>./src/**</Code> and see them take effect in
-        realtime!
-      </Subtitle>
-    </Heading>
-    <Content>
-      <LiveProvider code={code} scope={{ styled, css, keyframes }} noInline>
-        <LiveEditor />
-        <LivePreview />
-        <LiveError />
-      </LiveProvider>
-    </Content>
-  </Body>
-);
-
-render(<App />, document.querySelector('#react-root'));
+})
