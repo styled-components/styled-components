@@ -1,11 +1,11 @@
 import path from 'path'
 import pluginTester from 'babel-plugin-tester'
 import plugin from 'babel-macros'
+import macro from '../../macro';
 
 pluginTester({
   plugin,
   snapshot: true,
-  fixtures: path.join(__dirname, '__fixtures__'),
   tests: withFilename([{
     code: `
       import styled from '../../macro'
