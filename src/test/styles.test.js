@@ -27,7 +27,7 @@ describe('with styles', () => {
         ${rule}
       `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { color: blue; }')
+    expectCSSMatches('.sc-a {} .b { color:blue; }')
   })
 
   it('should append multiple styles', () => {
@@ -38,7 +38,7 @@ describe('with styles', () => {
         ${rule2}
       `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { color: blue; background: red; }')
+    expectCSSMatches('.sc-a {} .b { color:blue; background:red; }')
   })
 
   it('should handle inline style objects', () => {
@@ -49,7 +49,7 @@ describe('with styles', () => {
         ${rule1}
       `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color: blue; }')
+    expectCSSMatches('.sc-a {} .b { background-color:blue; }')
   })
 
   it('should handle inline style objects with media queries', () => {
@@ -63,7 +63,7 @@ describe('with styles', () => {
         ${rule1}
       `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color: blue; } @media screen and (min-width: 250px) { .b { background-color: red; } }')
+    expectCSSMatches('.sc-a {} .b { background-color:blue; } @media screen and (min-width:250px) { .b { background-color:red; } }')
   })
 
   it('should handle inline style objects with pseudo selectors', () => {
@@ -77,7 +77,7 @@ describe('with styles', () => {
       ${rule1}
     `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color: blue; } .b:hover { -webkit-text-decoration: underline; text-decoration: underline; }')
+    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b:hover { text-decoration:underline; }')
   })
 
   it('should handle inline style objects with pseudo selectors', () => {
@@ -91,7 +91,7 @@ describe('with styles', () => {
       ${rule1}
     `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color: blue; } .b:hover { -webkit-text-decoration: underline; text-decoration: underline; }')
+    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b:hover { text-decoration:underline; }')
   })
 
   it('should handle inline style objects with nesting', () => {
@@ -105,7 +105,7 @@ describe('with styles', () => {
       ${rule1}
     `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color: blue; } .b > h1 { color: white; }')
+    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b > h1 { color:white; }')
   })
 
   it('should handle inline style objects with contextual selectors', () => {
@@ -119,7 +119,7 @@ describe('with styles', () => {
       ${rule1}
     `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color: blue; } html.something .b { color: white; }')
+    expectCSSMatches('.sc-a {} .b { background-color:blue; } html.something .b { color:white; }')
   })
 
   it('should inject styles of multiple components', () => {
@@ -135,7 +135,7 @@ describe('with styles', () => {
     shallow(<FirstComp />)
     shallow(<SecondComp />)
 
-    expectCSSMatches('.sc-a {} .c { background: blue; } .sc-b {} .d { background: red; }')
+    expectCSSMatches('.sc-a {} .c { background:blue; } .sc-b {} .d { background:red; }')
   })
 
   it('should inject styles of multiple components based on creation, not rendering order', () => {
@@ -155,9 +155,9 @@ describe('with styles', () => {
     // Classes _do_ get generated in the order of rendering but that's ok
     expectCSSMatches(`
         .sc-a {}
-        .d { content: "first rule"; }
+        .d { content:"first rule"; }
         .sc-b {}
-        .c { content: "second rule"; }
+        .c { content:"second rule"; }
       `)
   })
 
@@ -172,7 +172,7 @@ describe('with styles', () => {
     expectCSSMatches(`
         .sc-a {}
         .b {
-          color: blue;
+          color:blue;
         }
       `)
   })
@@ -188,7 +188,7 @@ describe('with styles', () => {
     expectCSSMatches(`
         .sc-a {}
         .b {
-          color: blue;
+          color:blue;
         }
       `)
 
@@ -211,11 +211,11 @@ describe('with styles', () => {
     shallow(<Comp />)
     expectCSSMatches(`
         html {
-          background: red;
+          background:red;
         }
         .sc-a {}
         .b {
-          color: blue;
+          color:blue;
         }
       `)
 

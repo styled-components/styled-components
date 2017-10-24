@@ -15,6 +15,7 @@ import type { RuleSet, Target } from '../types'
 
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
+import ServerStyleSheet from './ServerStyleSheet'
 
 const escapeRegex = /[[\].#*$><+~=|^:(),"'`]/g
 const multiDashRegex = /--+/g
@@ -223,6 +224,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),
+      attrs,
       styledComponentId,
     )
 
@@ -230,7 +232,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       static contextTypes = {
         [CHANNEL]: PropTypes.func,
         [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-        [CONTEXT_KEY]: PropTypes.instanceOf(StyleSheet),
+        [CONTEXT_KEY]: PropTypes.oneOfType([
+          PropTypes.instanceOf(StyleSheet),
+          PropTypes.instanceOf(ServerStyleSheet),
+        ]),
       }
 
       static displayName = displayName

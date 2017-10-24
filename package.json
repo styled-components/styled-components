@@ -67,7 +67,7 @@
     "is-function": "^1.0.1",
     "is-plain-object": "^2.0.1",
     "prop-types": "^15.5.4",
-    "stylis": "^3.2.1",
+    "stylis": "3.x",
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
@@ -90,6 +90,7 @@
     "bundlesize": "^0.13.2",
     "chokidar": "^1.6.0",
     "danger": "^0.16.0",
+    "danger-plugin-jest": "^1.0.1",
     "enzyme": "^2.8.2",
     "eslint": "^3.15.0",
     "eslint-config-airbnb": "^13.0.0",
@@ -102,6 +103,7 @@
     "flow-bin": "^0.47.0",
     "flow-watch": "^1.1.1",
     "jest": "^20.0.4",
+    "jest-json-reporter": "^1.2.2",
     "jsdom": "^9.10.0",
     "lint-staged": "^3.3.0",
     "node-watch": "^0.4.1",
@@ -136,7 +138,8 @@
     "testPathIgnorePatterns": [
       "<rootDir>/src/native",
       "<rootDir>/src/primitives"
-    ]
+    ],
+    "testResultsProcessor": "jest-json-reporter"
   },
   "lint-staged": {
     "*.js": [
@@ -148,7 +151,7 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "threshold": "14kB"
+      "threshold": "14.5kB"
     }
   ]
 }
