@@ -74,6 +74,7 @@
     "is-plain-object": "^2.0.1",
     "prop-types": "^15.5.4",
     "stylis": "^3.4.0",
+    "stylis-rule-sheet": "^0.0.6",
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
