@@ -5,7 +5,7 @@ const stringifyRules = (
   rules: Array<Interpolation>,
   selector: ?string,
   prefix: ?string
-): string =>
+): Array<string> => [
   rules.reduce(
     (str: string, partial: Interpolation, index: number): string =>
       str +
@@ -16,5 +16,6 @@ const stringifyRules = (
         : partial.toString()),
     ''
   )
+]
 
 export default stringifyRules

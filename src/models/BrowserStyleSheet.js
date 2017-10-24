@@ -65,7 +65,7 @@ class BrowserTag implements Tag {
     this.components[componentId] = comp
   }
 
-  inject(componentId: string, css: string, name: ?string) {
+  inject(componentId: string, css: Array<string>, name: ?string) {
     if (!this.ready) this.replaceElement()
     const comp = this.components[componentId]
 

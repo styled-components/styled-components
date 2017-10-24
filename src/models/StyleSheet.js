@@ -14,7 +14,7 @@ export interface Tag {
 
   isSealed(): boolean;
   addComponent(componentId: string): void;
-  inject(componentId: string, css: string, name: ?string): void;
+  inject(componentId: string, css: Array<string>, name: ?string): void;
   toHTML(): string;
   toReactElement(key: string): React.Element<*>;
   clone(): Tag;
@@ -30,7 +30,7 @@ export default class StyleSheet {
   tags: Array<Tag>
   names: { [string]: boolean }
   hashes: { [string]: string } = {}
-  deferredInjections: { [string]: string } = {}
+  deferredInjections: { [string]: Array<string> } = {}
   componentTags: { [string]: Tag }
   // helper for `ComponentStyle` to know when it cache static styles.
   // staticly styled-component can not safely cache styles on the server
@@ -81,7 +81,7 @@ export default class StyleSheet {
     return !!this.componentTags[componentId]
   }
 
-  deferredInject(componentId: string, isLocal: boolean, css: string) {
+  deferredInject(componentId: string, isLocal: boolean, css: Array<string>) {
     if (this === instance) {
       clones.forEach(clone => {
         clone.deferredInject(componentId, isLocal, css)
@@ -95,7 +95,7 @@ export default class StyleSheet {
   inject(
     componentId: string,
     isLocal: boolean,
-    css: string,
+    css: Array<string>,
     hash: ?any,
     name: ?string
   ) {

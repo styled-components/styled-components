@@ -50,7 +50,7 @@ class ServerTag implements Tag {
     )
   }
 
-  inject(componentId: string, css: string, name: ?string) {
+  inject(componentId: string, css: Array<string>, name: ?string) {
     const comp = this.components[componentId]
 
     if (!comp) {
@@ -62,7 +62,7 @@ class ServerTag implements Tag {
     }
     if (comp.css === '') comp.css = `/* sc-component-id: ${componentId} */\n`
 
-    comp.css += css.replace(/\n*$/, '\n')
+    comp.css += css.join('\n').replace(/\n*$/, '\n')
 
     if (name) this.names.push(name)
   }
