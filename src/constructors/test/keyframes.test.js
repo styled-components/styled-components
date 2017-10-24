@@ -41,19 +41,19 @@ describe('keyframes', () => {
     expectCSSMatches(`
       @-webkit-keyframes ${name} {
         0% {
-          opacity: 0;
+          opacity:0;
         }
         100% {
-          opacity: 1;
+          opacity:1;
         }
       }
 
       @keyframes ${name} {
         0% {
-          opacity: 0;
+          opacity:0;
         }
         100% {
-          opacity: 1;
+          opacity:1;
         }
       }
     `)
