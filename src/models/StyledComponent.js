@@ -236,6 +236,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),
+      attrs,
       styledComponentId,
     )
 
