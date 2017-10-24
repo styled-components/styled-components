@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Add onReset to valid react props list (see [#1234](https://github.com/styled-components/styled-components/pull/1234))
 - Add support for ServerStyleSheet PropType in both StyleSheetManager and StyledComponent (see [#1245](https://github.com/styled-components/styled-components/pull/1245))
 - Prevent component styles from being static if `attrs` are dynmaic (see [#1219](https://github.com/styled-components/styled-components/pull/1219))
+- Changed 'too many classes' error to recommend attrs for frequently changed styles (see [#1213](https://github.com/styled-components/styled-components/pull/1213))
 
 ## [v2.2.1] - 2017-10-04
 
