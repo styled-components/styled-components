@@ -21,6 +21,16 @@ import getNonce from '../utils/nonce'
 import type { Tag } from './StyleSheet'
 import StyleSheet, { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
 
+declare var __DEV__: ?string
+
+const IS_BROWSER = typeof window !== 'undefined'
+const IS_DEV =
+  // `insertRule` doesn't seem to work properly in jest/enzyme
+ (typeof __DEV__ === 'boolean' && __DEV__) ||
+  process.env.NODE_ENV === 'development' ||
+  !process.env.NODE_ENV
+const USE_SPEEDY = IS_BROWSER && !IS_DEV
+
 export const COMPONENTS_PER_TAG = 40
 
 class BrowserTag implements Tag {
@@ -59,29 +69,52 @@ class BrowserTag implements Tag {
     }
 
     const comp = { componentId, textNode: document.createTextNode('') }
-    this.el.appendChild(comp.textNode)
+    if (!USE_SPEEDY) {
+      this.el.appendChild(comp.textNode)
+    }
 
     this.size += 1
     this.components[componentId] = comp
   }
 
+  speedyInsert(el: HTMLStyleElement, cssRules: Array<string>) {
+    const sheet = el.sheet
+    if (sheet === null || sheet === undefined) {
+      return
+    }
+
+    for (let i = 0; i < cssRules.length; i += 1) {
+      const rule = cssRules[i]
+      if (rule !== undefined && rule.length) {
+        /* eslint-disable */
+        // $FlowFixMe Flow's `StyleSheet` breakdown here https://github.com/facebook/flow/issues/2696
+        sheet.insertRule(rule, rule.indexOf('@import') !== -1 ? 0 : sheet.cssRules.length)
+        /* eslint-enable */
+      }
+    }
+  }
+
+
   inject(componentId: string, css: Array<string>, name: ?string) {
     if (!this.ready) this.replaceElement()
     const comp = this.components[componentId]
 
-    if (!comp) {
-      throw new Error(
-        process.env.NODE_ENV !== 'production'
-          ? 'Must add a new component before you can inject css into it'
-          : ''
-      )
-    }
-    if (comp.textNode.data === '') {
-      comp.textNode.appendData(`\n/* sc-component-id: ${componentId} */\n`)
+    if (process.env.NODE_ENV !== 'production' && !comp) {
+      throw new Error('Must add a new component before you can inject css into it')
     }
 
-    comp.textNode.appendData(css.join(' '))
-    if (name) {
+    if (USE_SPEEDY) {
+      // $FlowFixMe Flow doesn't like casting el to `HtmlStyleElement` saying its incompatible
+      this.speedyInsert((this.el: HTMLStyleElement), css)
+    } else {
+      if (comp.textNode.data === '') {
+        comp.textNode.appendData(`\n/* sc-component-id: ${componentId} */\n`)
+      }
+      comp.textNode.appendData(css.join(' '))
+    }
+
+    if (name !== undefined && name !== null) {
+      /* eslint-disable */
       const existingNames = this.el.getAttribute(SC_ATTR)
       this.el.setAttribute(
         SC_ATTR,
@@ -90,8 +123,7 @@ class BrowserTag implements Tag {
     }
 
     const nonce = getNonce()
-
-    if (nonce) {
+    if (nonce !== null) {
       this.el.setAttribute('nonce', nonce)
     }
   }

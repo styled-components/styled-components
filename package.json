@@ -143,6 +143,9 @@
     "react": ">= 0.14.0 < 17.0.0-0"
   },
   "jest": {
+    "globals": {
+      "__DEV__": true
+    },
     "clearMocks": true,
     "roots": [
       "<rootDir>/src/"
