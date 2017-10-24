@@ -50,7 +50,8 @@ body{background:papayawhip;}
 .Header {}
 .a{-webkit-animation:keyframe_0 1s both;animation:keyframe_0 1s both;}
 /* sc-component-id: sc-keyframes-keyframe_0 */
-@-webkit-keyframes keyframe_0{0%{opacity:0;}}@keyframes keyframe_0{0%{opacity:0;}}
+@-webkit-keyframes keyframe_0{0%{opacity:0;}}
+@keyframes keyframe_0{0%{opacity:0;}}
 </style>"
 `;
 

@@ -80,7 +80,7 @@ class BrowserTag implements Tag {
       comp.textNode.appendData(`\n/* sc-component-id: ${componentId} */\n`)
     }
 
-    comp.textNode.appendData(css)
+    comp.textNode.appendData(css.join(' '))
     if (name) {
       const existingNames = this.el.getAttribute(SC_ATTR)
       this.el.setAttribute(
