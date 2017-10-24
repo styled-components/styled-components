@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- N/A
+
+## [v2.2.2] - 2017-10-24
+
 - Prevent `withTheme` HOC from breaking when passing a theme from `defaultProps`, thanks to [@kutyel](https://github.com/kutyel) (see [#1130](https://github.com/styled-components/styled-components/pull/1130))
 - Refactor out theme logic in StyledComponent's componentWillMount & componentWillReceiveProps (see [#1130](https://github.com/styled-components/styled-components/issues/1130))
 - Add onReset to valid react props list (see [#1234](https://github.com/styled-components/styled-components/pull/1234))
@@ -291,7 +295,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.2.1...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.2.2...master
+[v2.2.2]: https://github.com/styled-components/styled-components/compare/v2.2.1...v2.2.2
 [v2.2.1]: https://github.com/styled-components/styled-components/compare/v2.2.0...v2.2.1
 [v2.2.0]: https://github.com/styled-components/styled-components/compare/v2.1.1...v2.2.0
 [v2.1.2]: https://github.com/styled-components/styled-components/compare/v2.1.1...v2.1.2
