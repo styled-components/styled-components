@@ -53,7 +53,7 @@ you can edit the sandbox itseft:
 
 - Client-side entry point is at `styled-components/sandbox/src/browser.js`
 
-- Server-size entry point is at `styled-components/sandbox/src/server.js`
+- Server-side entry point is at `styled-components/sandbox/src/server.js`
 
 When you commit our pre-commit hook will run, which executes `lint-staged`. It will run
 the linter automatically and warn you, if the code you've written doesn't comply with our
