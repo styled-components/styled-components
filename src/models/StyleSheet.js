@@ -31,7 +31,7 @@ export default class StyleSheet {
   deferredInjections: { [string]: string } = {}
   componentTags: { [string]: Tag }
   // helper for `ComponentStyle` to know when it cache static styles.
-  // staticly styled-component can not safely cache styles on the server
+  // statically styled-component can not safely cache styles on the server
   // without all `ComponentStyle` instances saving a reference to the
   // the styleSheet instance they last rendered with,
   // or listening to creation / reset events. otherwise you might create
