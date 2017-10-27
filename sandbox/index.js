@@ -1,18 +1,12 @@
 /* eslint-disable flowtype/require-valid-file-annotation */
 const fs = require('fs')
-
 const path = require('path')
-
 const express = require('express')
-
 const webpackDevMiddleware = require('webpack-dev-middleware')
-
 const webpack = require('webpack')
 
 const { CONFIG, logger } = require('./util')
-
 const webpackConfig = require('./webpack.config.dev')
-
 const livereloadMiddleware = require('./livereload/middleware')
 
 const compiler = webpack(webpackConfig)
@@ -40,6 +34,7 @@ app.get('*', (req, res) => {
   )
 
   // Then we evaluate this script to get prerendered content
+  // WARN: This is a hacky solution, that should be refactored to somethig better.
   const { html, css } = eval(serverScript) // eslint-disable-line no-eval
 
   // Replace placeholders in index.html template
