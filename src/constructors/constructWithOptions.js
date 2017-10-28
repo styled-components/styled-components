@@ -2,11 +2,9 @@
 import type { Interpolation, Target } from '../types'
 
 export default (css: Function) => {
-  const constructWithOptions = (
-    componentConstructor: Function,
-    tag: Target,
-    options: Object = {},
-  ) => {
+  const constructWithOptions = (componentConstructor: Function,
+                                tag: Target,
+                                options: Object = {}) => {
     if (typeof tag !== 'string' && typeof tag !== 'function') {
       // $FlowInvalidInputTest
       throw new Error(`Cannot create styled-component for component: ${tag}`)
