@@ -34,7 +34,6 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       }
     }
 
-
     buildExecutionContext(theme: any, props: any) {
       const { attrs } = this.constructor
       const context = { ...props, theme }
@@ -87,9 +86,9 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
       this.setState((oldState) => {
         const theme = determineTheme(nextProps, oldState.theme, this.constructor.defaultProps)
-        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
+        const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
 
-        return { theme, generatedClassName }
+        return { theme, generatedStyles }
       })
     }
 
