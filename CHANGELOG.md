@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- n/a
+
+## [v2.2.3] - 2017-10-29
+
 - Fix incorrect StyledNativeComponent#componentWillReceiveProps implementation (see [#1276](https://github.com/styled-components/styled-components/pull/1276))
 
 ## [v2.2.2] - 2017-10-24
@@ -295,7 +299,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.2.2...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.2.3...master
+[v2.2.3]: https://github.com/styled-components/styled-components/compare/v2.2.2...v2.2.3
 [v2.2.2]: https://github.com/styled-components/styled-components/compare/v2.2.1...v2.2.2
 [v2.2.1]: https://github.com/styled-components/styled-components/compare/v2.2.0...v2.2.1
 [v2.2.0]: https://github.com/styled-components/styled-components/compare/v2.1.1...v2.2.0
