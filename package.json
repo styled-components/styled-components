@@ -89,7 +89,7 @@
     "babel-preset-react": "^6.22.0",
     "bundlesize": "^0.13.2",
     "chokidar": "^1.6.0",
-    "danger": "^0.16.0",
+    "danger": "^2.0.0-beta.2",
     "danger-plugin-jest": "^1.0.1",
     "enzyme": "^2.8.2",
     "eslint": "^3.15.0",
