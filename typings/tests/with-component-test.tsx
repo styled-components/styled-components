@@ -24,23 +24,29 @@ class LinkedHeading extends React.Component {
   }
 }
 
-class Random extends React.Component<any, any> {
+type RandomProps = {
+  min: number;
+  max: number;
+  className?: string;
+};
+
+class Random extends React.Component<RandomProps> {
   render() {
-    const i = getRandomInt(1, 6);
+    const i = getRandomInt(this.props.min, this.props.max);
 
     switch (i) {
       case 1:
-        return <h1>Hello World</h1>;
+        return <h1 className={this.props.className}>Hello World</h1>;
       case 2:
-        return <h2>Hello World</h2>;
+        return <h2 className={this.props.className}>Hello World</h2>;
       case 3:
-        return <h3>Hello World</h3>;
+        return <h3 className={this.props.className}>Hello World</h3>;
       case 4:
-        return <h4>Hello World</h4>;
+        return <h4 className={this.props.className}>Hello World</h4>;
       case 5:
-        return <h5>Hello World</h5>;
+        return <h5 className={this.props.className}>Hello World</h5>;
       case 6:
-        return <h6>Hello World</h6>;
+        return <h6 className={this.props.className}>Hello World</h6>;
       default:
         return null;
     }
@@ -48,3 +54,9 @@ class Random extends React.Component<any, any> {
 }
 
 const RandomHeading = H1.withComponent(Random);
+
+const RandomHeadingContainer: React.SFC = () =>
+  <RandomHeading
+    min={1}
+    max={6}
+  />;
