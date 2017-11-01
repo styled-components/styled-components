@@ -13,6 +13,17 @@ function getRandomInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
 
+const H2 = H1.withComponent("h2");
+const abbr = H1.withComponent("abbr");
+
+const AnchorHeading = H1.withComponent("a");
+
+class LinkedHeading extends React.Component {
+  render() {
+    return <AnchorHeading href="https://example.com">Hello World</AnchorHeading>;
+  }
+}
+
 class Random extends React.Component<any, any> {
   render() {
     const i = getRandomInt(1, 6);
@@ -35,9 +46,5 @@ class Random extends React.Component<any, any> {
     }
   }
 }
-
-const H2 = H1.withComponent("h2");
-const a = H1.withComponent("a");
-const abbr = H1.withComponent("abbr");
 
 const RandomHeading = H1.withComponent(Random);
