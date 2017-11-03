@@ -6,7 +6,6 @@ import PropTypes from 'prop-types'
 import type { Theme } from './ThemeProvider'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 
-import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
@@ -57,6 +56,23 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
     unsubscribeId: number = -1
 
+    constructor(props, context) {
+      super(props, context)
+
+      if (this.isStaticallyStyled()) {
+        const generatedClassName = this.generateAndInjectStyles(
+          STATIC_EXECUTION_CONTEXT,
+          this.props,
+        )
+        this.state.generatedClassName = generatedClassName
+      } else {
+        // otherwise, we need to attach lifecycle hooks
+
+        this.componentWillMount = this.protoWillMount
+        this.componentWillUnmount = this.protowillUnmount
+      }
+    }
+
     unsubscribeFromContext() {
       if (this.unsubscribeId !== -1) {
         this.context[CHANNEL_NEXT].unsubscribe(this.unsubscribeId)
@@ -98,22 +114,22 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
     }
 
-    componentWillMount() {
+    isStaticallyStyled() {
+      const { componentStyle } = this.constructor
+      return componentStyle.isStatic
+    }
+
+    // ONly asign component will mount and component will unmount
+    // hook sif the component is not static.
+    // This should reduce the amount of lifecycle hooks that React
+    // has to manage.
+    // We don't have to worry about the unstatic case as a result.
+
+    protoWillMount() {
       const { componentStyle } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
 
-      // If this is a staticaly-styled component, we don't need to the theme
-      // to generate or build styles.
-      if (componentStyle.isStatic) {
-        const generatedClassName = this.generateAndInjectStyles(
-          STATIC_EXECUTION_CONTEXT,
-          this.props,
-        )
-        this.setState({ generatedClassName })
-      // If there is a theme in the context, subscribe to the event emitter. This
-      // is necessary due to pure components blocking context updates, this circumvents
-      // that by updating when an event is emitted
-      } else if (styledContext !== undefined) {
+      if (styledContext !== undefined) {
         const { subscribe } = styledContext
         this.unsubscribeId = subscribe(nextTheme => {
           // This will be called once immediately
@@ -133,6 +149,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
     }
 
+
+    protowillUnmount() {
+      this.unsubscribeFromContext()
+    }
+
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
       // If this is a staticaly-styled component, we don't need to listen to
       // props changes to update styles
@@ -149,9 +170,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       })
     }
 
-    componentWillUnmount() {
-      this.unsubscribeFromContext()
-    }
 
     makeClassName(): string {
       // I know this is ugly, but this does a bit of loop unrolling,
@@ -212,8 +230,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         // always omit innerRef
         if (
           propName !== 'innerRef' &&
-          propName !== 'className' &&
-          (!isTargetTag || validAttr(propName))
+          propName !== 'className'
         ) {
           // eslint-disable-next-line no-param-reassign
           propsForElement[propName] = this.props[propName]
