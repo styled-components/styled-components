@@ -252,7 +252,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       // This will be called once immediately
       const theme = determineTheme(this.props, nextTheme, this.constructor.defaultProps)
       if (theme !== this.state.theme) {
-        this.updateThemeAndClassName(theme, propsClassName)
+        this.updateThemeAndClassName(theme, this.props)
       }
     }
 
@@ -301,9 +301,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       `${options.displayName}-${options.componentId}` : componentId
 
     let warnTooManyClasses
-    if (process.env.NODE_ENV !== 'production') {
-      warnTooManyClasses = createWarnTooManyClasses(displayName)
-    }
+    // if (process.env.NODE_ENV !== 'production') {
+    //   warnTooManyClasses = createWarnTooManyClasses(displayName)
+    // }
 
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),
