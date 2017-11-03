@@ -49,9 +49,9 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
           theme: themeProp,
         }
       } else {
-        const { subscribe, getCurrent } = styledContext
+        const { subscribe, currentTheme } = styledContext
         this.state = {
-          theme: getCurrent(),
+          theme: currentTheme(),
         }
 
         this.unsubscribeId = subscribe(this.updateTheme)
@@ -65,17 +65,12 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
       }
     }
 
-    componentWillReceiveProps(nextProps: { theme?: ?Object, [key: string] }) {
+    componentWillReceiveProps(nextProps: { theme?: Object, [key: string]: any }){
       const { defaultProps } = this.constructor
-      const theme = determineTheme(nextProps, oldState.theme, defaultProps)
+      const theme = determineTheme(nextProps, this.state.theme, defaultProps)
       if (theme !== this.state.theme) {
-        this.setState(this.updateThemeFromOldState)
+        this.setState({ theme })
       }
-    }
-
-    updateThemeFromOldState = oldState => {
-      const theme = determineTheme(nextProps, oldState.theme, defaultProps)
-      return { theme }
     }
 
     componentWillUnmount() {

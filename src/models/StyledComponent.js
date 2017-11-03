@@ -7,6 +7,7 @@ import type { Theme } from './ThemeProvider'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 
 import isTag from '../utils/isTag'
+import validAttr from '../utils/validAttr'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
@@ -89,13 +90,16 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       propsForElement.ref = innerRef
     }
 
+    const isTargetTag = isTag(target)
+
     // eslint-disable-next-line guard-for-in, no-restricted-syntax
     for (const propName in props) {
       // Don't pass through non HTML tags through to HTML elements
       // always omit innerRef
       if (
         propName !== 'innerRef' &&
-        propName !== 'className'
+        propName !== 'className' &&
+        (!isTargetTag || validAttr(propName))
       ) {
         // eslint-disable-next-line no-param-reassign
         propsForElement[propName] = props[propName]
@@ -138,14 +142,19 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     render() {
       const { target } = this.constructor
+      const attrsClassName = (
+        this.constructor.attrs !== undefined
+          ? this.constructor.attrs.className
+          : undefined
+      )
       const className = makeClassName(
         this.constructor.styledComponentId,
         this.state.generatedClassName,
         this.props.className,
-        this.attrs.className,
+        attrsClassName,
       )
 
-      return renderTarget(className, this.props, target, this, this.constructor.attrs)
+      return renderTarget(className, this.props, target, this.constructor.attrs)
     }
   }
 
@@ -155,6 +164,15 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     static attrs: Object
     static componentStyle: Object
     static warnTooManyClasses: Function
+
+    static contextTypes = {
+      [CHANNEL]: PropTypes.func,
+      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+      [CONTEXT_KEY]: PropTypes.oneOfType([
+        PropTypes.instanceOf(StyleSheet),
+        PropTypes.instanceOf(ServerStyleSheet),
+      ]),
+    }
 
     attrs = {}
     state = {
@@ -166,16 +184,15 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     constructor(props, context) {
       super(props, context)
 
-      const { 
-        componentStyle } = this.constructor
+      const { componentStyle } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
       const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.instance
 
-      let theme;
+      let theme
 
       if (styledContext !== undefined) {
-        const { subscribe, getCurrent } = styledContext
-        theme = determineTheme(this.props, getCurrent(), this.constructor.defaultProps)
+        const { subscribe, currentTheme } = styledContext
+        theme = determineTheme(this.props, currentTheme(), this.constructor.defaultProps)
         this.unsubscribeId = subscribe(this.listenToThemeUpdates)
       } else {
         // eslint-disable-next-line react/prop-types
@@ -246,14 +263,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
       const theme = determineTheme(nextProps, this.state.theme, this.constructor.defaultProps)
       if (theme !== this.state.theme) {
-        this.setState(this.updateThemeFromOldState)
+        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
+        this.setState({ theme, generatedClassName })
       }
-    }
-
-    updateThemeFromOldState(oldState) {
-      const theme = determineTheme(nextProps, oldState.theme, this.constructor.defaultProps)
-      const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
-      return { theme, generatedClassName }
     }
 
     render() {
@@ -265,7 +277,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         this.attrs.className,
       )
 
-      return renderTarget(className, this.props, target, this, this.constructor.attrs)
+      return renderTarget(className, this.props, target, this.constructor.attrs)
     }
   }
 
@@ -300,21 +312,14 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     )
 
     if (!_ParentComponent) {
-      if (componentStyle.isStaticallyStyled()) {
-        _ParentComponent = DynamicallyStyledComponent
-      } else {
+      if (componentStyle.isStatic) {
         _ParentComponent = StaticStyledComponent
+      } else {
+        _ParentComponent = DynamicallyStyledComponent
       }
+    }
 
     class StyledComponent extends _ParentComponent {
-      static contextTypes = {
-        [CHANNEL]: PropTypes.func,
-        [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-        [CONTEXT_KEY]: PropTypes.oneOfType([
-          PropTypes.instanceOf(StyleSheet),
-          PropTypes.instanceOf(ServerStyleSheet),
-        ]),
-      }
 
       static displayName = displayName
       static styledComponentId = styledComponentId

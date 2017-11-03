@@ -13,9 +13,10 @@ export const CHANNEL = '__styled-components__'
 export const CHANNEL_NEXT = `${CHANNEL}next__`
 
 export const CONTEXT_CHANNEL_SHAPE = PropTypes.shape({
-  getTheme: PropTypes.func,
+  getTheme: PropTypes.func, // slow, please avoid using
   subscribe: PropTypes.func,
   unsubscribe: PropTypes.func,
+  currentTheme: PropTypes.func,
 })
 
 export type Theme = {[key: string]: mixed}
@@ -65,6 +66,7 @@ class ThemeProvider extends Component {
         getTheme: this.getTheme,
         subscribe: this.broadcast.subscribe,
         unsubscribe: this.broadcast.unsubscribe,
+        currentTheme: this.broadcast.currentState,
       },
       [CHANNEL]: (subscriber) => {
         warnChannelDeprecated()
