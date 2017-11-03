@@ -76,7 +76,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     return className
   }
 
-  const renderTarget = (className: string, props: any, target: any, attrs: any) => {
+  const renderTarget = (isStatic: boolean, className: string, props: any, target: any, attrs: any) => {
     const { innerRef } = props
 
     const propsForElement = {
@@ -84,13 +84,13 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       ...attrs,
     }
 
+    let isTargetTag = isTag(target)
     if (isStyledComponent(target)) {
       propsForElement.innerRef = innerRef
+      isTargetTag = isTag(target.target)
     } else {
       propsForElement.ref = innerRef
     }
-
-    const isTargetTag = isTag(target)
 
     // eslint-disable-next-line guard-for-in, no-restricted-syntax
     for (const propName in props) {
@@ -99,7 +99,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       if (
         propName !== 'innerRef' &&
         propName !== 'className' &&
-        (!isTargetTag || validAttr(propName))
+        (isStatic || !isTargetTag || validAttr(propName))
       ) {
         // eslint-disable-next-line no-param-reassign
         propsForElement[propName] = props[propName]
@@ -147,6 +147,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           ? this.constructor.attrs.className
           : undefined
       )
+
       const className = makeClassName(
         this.constructor.styledComponentId,
         this.state.generatedClassName,
@@ -154,7 +155,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         attrsClassName,
       )
 
-      return renderTarget(className, this.props, target, this.constructor.attrs)
+      return renderTarget(true, className, this.props, target, this.constructor.attrs)
     }
   }
 
@@ -277,7 +278,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         this.attrs.className,
       )
 
-      return renderTarget(className, this.props, target, this.constructor.attrs)
+      return renderTarget(false, className, this.props, target, this.constructor.attrs)
     }
   }
 
