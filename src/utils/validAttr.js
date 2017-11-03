@@ -598,3 +598,5 @@ export default (name: string) => (
   hasAttr(svgProps, name) ||
   isCustomAttribute(name.toLowerCase())
 )
+
+export const isReactAttr = (name: string) => hasAttr(reactProps, name)

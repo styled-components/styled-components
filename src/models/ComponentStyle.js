@@ -42,7 +42,9 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
     componentId: string
     isStatic: boolean
     lastClassName: ?string
-
+    lastProps: ?any // let dynamic components do "magic umbrella caching"
+    // see `StyledComponent.js`
+    lastTheme: ?any // // let dynamic components do "magic umbrella caching"
 
     constructor(rules: RuleSet, attrs?: Object, componentId: string) {
       this.rules = rules

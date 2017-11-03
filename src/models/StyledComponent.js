@@ -7,7 +7,7 @@ import type { Theme } from './ThemeProvider'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 
 import isTag from '../utils/isTag'
-import validAttr from '../utils/validAttr'
+import validAttr, { isReactAttr } from '../utils/validAttr'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
@@ -200,13 +200,77 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         theme = this.props.theme || {}
       }
 
-      const executionContext = this.buildExecutionContext(theme, props)
-      const generatedClassName = componentStyle.generateAndInjectStyles(
-        executionContext,
-        styleSheet,
-      )
+      const reusedClassName = this.possiblyReusedClassname(props, theme)
+      if (reusedClassName !== false) {
+        this.state = {
+          theme,
+          generatedClassName: reusedClassName,
+        }
+      } else {
+        const executionContext = this.buildExecutionContext(theme, props)
+        const generatedClassName = componentStyle.generateAndInjectStyles(
+          executionContext,
+          styleSheet,
+        )
 
-      this.state = { theme, generatedClassName }
+        componentStyle.lastProps = props
+        componentStyle.lastTheme = theme
+
+        this.state = { theme, generatedClassName }
+      }
+    }
+
+    possiblyReusedClassname(props: any, theme: any) {
+      const { componentStyle } = this.constructor
+      const { lastClassName, lastProps, lastTheme } = componentStyle
+      if (lastClassName === undefined || lastProps === undefined || lastTheme !== theme) {
+        // console.log('nothing previous', this.constructor.styledComponentId, props, theme)
+        return false
+      } else if (props === this.props) {
+        // console.log('entirely re-using', this.constructor.styledComponentId)
+        return lastClassName
+      } else {
+        // run shallow equal on the props.
+        // ignore the theme property, as we use `determineTheme` to decide what theme
+        // to acutally use for rendering.
+        // If the attribute is a react attributed, _and_, a function,
+        // we can rely on "do they both have it, or both not have it".
+        const propsKeys = Object.keys(props)
+        const numPropKeys = propsKeys.length
+
+        // we can assume props are plain objects because this is react.
+        // therefore we can skip calling hasOwnProp
+        if (numPropKeys !== Object.keys(lastProps).length) {
+          // console.log('different num keys', this.constructor.styledComponentId, props, lastProps)
+          return false
+        } else {
+          for (let propIndex = 0; propIndex < numPropKeys; propIndex += 1) {
+            const propName = propsKeys[propIndex]
+            const prop = props[propName]
+            const otherProp = lastProps[propName]
+            if (propName === 'theme') {
+              // eslint-disable-next-line no-continue
+              continue
+            } else if (isReactAttr(propName) && typeof prop === 'function') {
+              const haveProp = prop !== undefined || prop !== null
+              const haveOtherProp = otherProp !== undefined || otherProp !== null
+              if (haveProp !== haveOtherProp) {
+                // console.log('falseyness of function react prop breaking truthyness', this.constructor.styledComponentId, propName, prop, otherProp)
+                return false
+              }
+            } else if (prop !== otherProp) {
+              // console.log('skipping umbrellral, change', this.constructor.styledComponentId, propName, prop, otherProp)
+              return false
+            }
+          }
+
+          // we're good to go
+          componentStyle.lastProps = props
+          componentStyle.lastTheme = theme
+          // console.log('re-using!', this.constructor.styledComponentId, props, lastProps)
+          return componentStyle.lastClassName
+        }
+      }
     }
 
     unsubscribeFromContext() {
@@ -233,19 +297,26 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     generateAndInjectStyles(theme: any, props: any) {
-      const { attrs, componentStyle, warnTooManyClasses } = this.constructor
-      const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.instance
+      const reusedClassName = this.possiblyReusedClassname(props, theme)
+      if (reusedClassName !== false) {
+        return reusedClassName
+      } else {
+        const { componentStyle, warnTooManyClasses } = this.constructor
+        const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.instance
 
-      const executionContext = this.buildExecutionContext(theme, props)
-      const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
+        const executionContext = this.buildExecutionContext(theme, props)
+        const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
+        componentStyle.lastProps = props
+        componentStyle.lastTheme = theme
 
-      if (warnTooManyClasses !== undefined) warnTooManyClasses(className)
+        if (warnTooManyClasses !== undefined) warnTooManyClasses(className)
 
-      return className
+        return className
+      }
     }
 
     updateThemeAndClassName(theme: any, props: any) {
-      const generatedClassName = this.generateAndInjectStyles(theme, this.props)
+      const generatedClassName = this.generateAndInjectStyles(theme, props)
       this.setState({ theme, generatedClassName })
     }
 
