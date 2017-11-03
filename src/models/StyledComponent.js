@@ -42,7 +42,114 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       : componentId
   }
 
-  class BaseStyledComponent extends Component {
+
+  // I know this is ugly, but this does a bit of loop unrolling,
+  // and avoids boolean casts in order to generate strings up to ~11x faster than
+  // an approach such as [...classes].filter(Boolean).join(' ')
+  // (and uses way less memory from the two array allocations in ^)
+  // and  ~ 36 % faster than always adding a whitespace and then calling .trim at the end
+  // https://jsperf.com/testing-classname-building-performance
+  /* eslint-disable react/prop-types */
+  const makeClassName = (
+    styledComponentId: string,
+    generatedClassName: string,
+    propsClassName: ?string, // if a classname was passed in
+    attrsClassName: ?string,
+  ): string => {
+    let className = propsClassName || ''
+    if (className.length > 0) {
+      className += ' '
+    }
+    className += styledComponentId
+    if (attrsClassName !== undefined) {
+      if (className.length > 0) {
+        className += ' '
+      }
+      className += attrsClassName
+    }
+    if (className.length > 0) {
+      className += ' '
+    }
+    className += generatedClassName
+
+    return className
+  }
+
+  const renderTarget = (className: string, props: any, target: any, attrs: any) => {
+    const { innerRef } = props
+
+    const propsForElement = {
+      className,
+      ...attrs,
+    }
+
+    if (isStyledComponent(target)) {
+      propsForElement.innerRef = innerRef
+    } else {
+      propsForElement.ref = innerRef
+    }
+
+    // eslint-disable-next-line guard-for-in, no-restricted-syntax
+    for (const propName in props) {
+      // Don't pass through non HTML tags through to HTML elements
+      // always omit innerRef
+      if (
+        propName !== 'innerRef' &&
+        propName !== 'className'
+      ) {
+        // eslint-disable-next-line no-param-reassign
+        propsForElement[propName] = props[propName]
+      }
+    }
+
+    return createElement(target, propsForElement)
+  }
+
+  class StaticStyledComponent extends Component {
+    static target: Target
+    static styledComponentId: string
+    static attrs: Object
+    static componentStyle: Object
+
+    // Only need the style sheet in context
+    static contextTypes = {
+      [CONTEXT_KEY]: PropTypes.oneOfType([
+        PropTypes.instanceOf(StyleSheet),
+        PropTypes.instanceOf(ServerStyleSheet),
+      ]),
+    }
+
+    state = {
+      generatedClassName: '',
+    }
+
+    constructor(props, context) {
+      super(props, context)
+      const styleSheet = context[CONTEXT_KEY] || StyleSheet.instance
+      const { componentStyle } = this.constructor
+
+      this.state = {
+        generatedClassName: componentStyle.generateAndInjectStyles(
+          STATIC_EXECUTION_CONTEXT,
+          styleSheet,
+        ),
+      }
+    }
+
+    render() {
+      const { target } = this.constructor
+      const className = makeClassName(
+        this.constructor.styledComponentId,
+        this.state.generatedClassName,
+        this.props.className,
+        this.attrs.className,
+      )
+
+      return renderTarget(className, this.props, target, this, this.constructor.attrs)
+    }
+  }
+
+  class DynamicallyStyledComponent extends Component {
     static target: Target
     static styledComponentId: string
     static attrs: Object
@@ -59,18 +166,29 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     constructor(props, context) {
       super(props, context)
 
-      if (this.isStaticallyStyled()) {
-        const generatedClassName = this.generateAndInjectStyles(
-          STATIC_EXECUTION_CONTEXT,
-          this.props,
-        )
-        this.state.generatedClassName = generatedClassName
-      } else {
-        // otherwise, we need to attach lifecycle hooks
+      const { 
+        componentStyle } = this.constructor
+      const styledContext = this.context[CHANNEL_NEXT]
+      const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.instance
 
-        this.componentWillMount = this.protoWillMount
-        this.componentWillUnmount = this.protowillUnmount
+      let theme;
+
+      if (styledContext !== undefined) {
+        const { subscribe, getCurrent } = styledContext
+        theme = determineTheme(this.props, getCurrent(), this.constructor.defaultProps)
+        this.unsubscribeId = subscribe(this.listenToThemeUpdates)
+      } else {
+        // eslint-disable-next-line react/prop-types
+        theme = this.props.theme || {}
       }
+
+      const executionContext = this.buildExecutionContext(theme, props)
+      const generatedClassName = componentStyle.generateAndInjectStyles(
+        executionContext,
+        styleSheet,
+      )
+
+      this.state = { theme, generatedClassName }
     }
 
     unsubscribeFromContext() {
@@ -100,144 +218,54 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       const { attrs, componentStyle, warnTooManyClasses } = this.constructor
       const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.instance
 
-      // staticaly styled-components don't need to build an execution context object,
-      // and shouldn't be increasing the number of class names
-      if (componentStyle.isStatic && attrs === undefined) {
-        return componentStyle.generateAndInjectStyles(STATIC_EXECUTION_CONTEXT, styleSheet)
-      } else {
-        const executionContext = this.buildExecutionContext(theme, props)
-        const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
+      const executionContext = this.buildExecutionContext(theme, props)
+      const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
 
-        if (warnTooManyClasses !== undefined) warnTooManyClasses(className)
-
-        return className
-      }
-    }
-
-    isStaticallyStyled() {
-      const { componentStyle } = this.constructor
-      return componentStyle.isStatic
-    }
-
-    // ONly asign component will mount and component will unmount
-    // hook sif the component is not static.
-    // This should reduce the amount of lifecycle hooks that React
-    // has to manage.
-    // We don't have to worry about the unstatic case as a result.
-
-    protoWillMount() {
-      const { componentStyle } = this.constructor
-      const styledContext = this.context[CHANNEL_NEXT]
-
-      if (styledContext !== undefined) {
-        const { subscribe } = styledContext
-        this.unsubscribeId = subscribe(nextTheme => {
-          // This will be called once immediately
-          const theme = determineTheme(this.props, nextTheme, this.constructor.defaultProps)
-          const generatedClassName = this.generateAndInjectStyles(theme, this.props)
-
-          this.setState({ theme, generatedClassName })
-        })
-      } else {
-        // eslint-disable-next-line react/prop-types
-        const theme = this.props.theme || {}
-        const generatedClassName = this.generateAndInjectStyles(
-          theme,
-          this.props,
-        )
-        this.setState({ theme, generatedClassName })
-      }
-    }
-
-
-    protowillUnmount() {
-      this.unsubscribeFromContext()
-    }
-
-    componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-      // If this is a staticaly-styled component, we don't need to listen to
-      // props changes to update styles
-      const { componentStyle } = this.constructor
-      if (componentStyle.isStatic) {
-        return
-      }
-
-      this.setState((oldState) => {
-        const theme = determineTheme(nextProps, oldState.theme, this.constructor.defaultProps)
-        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
-
-        return { theme, generatedClassName }
-      })
-    }
-
-
-    makeClassName(): string {
-      // I know this is ugly, but this does a bit of loop unrolling,
-      // and avoids boolean casts in order to generate strings up to ~11x faster than
-      // an approach such as [...classes].filter(Boolean).join(' ')
-      // (and uses way less memory from the two array allocations in ^)
-      // and  ~ 36 % faster than always adding a whitespace and then calling .trim at the end
-      // https://jsperf.com/testing-classname-building-performance
-      /* eslint-disable react/prop-types */
-      const { className: propsClassName } = this.props
-      /* eslint-enable */
-      const { className: attrsClassName } = this.attrs
-      const { generatedClassName } = this.state // this will always be present
-      const { styledComponentId } = this.constructor // this will always be present
-
-      let className = propsClassName || ''
-      if (className.length > 0) {
-        className += ' '
-      }
-      className += styledComponentId
-      if (attrsClassName !== undefined) {
-        if (className.length > 0) {
-          className += ' '
-        }
-        className += attrsClassName
-      }
-      if (className.length > 0) {
-        className += ' '
-      }
-      className += generatedClassName
+      if (warnTooManyClasses !== undefined) warnTooManyClasses(className)
 
       return className
     }
 
+    updateThemeAndClassName(theme: any, props: any) {
+      const generatedClassName = this.generateAndInjectStyles(theme, this.props)
+      this.setState({ theme, generatedClassName })
+    }
+
+    listenToThemeUpdates = nextTheme => {
+      // This will be called once immediately
+      const theme = determineTheme(this.props, nextTheme, this.constructor.defaultProps)
+      if (theme !== this.state.theme) {
+        this.updateThemeAndClassName(theme, propsClassName)
+      }
+    }
+
+    componentWillUnmount() {
+      this.unsubscribeFromContext()
+    }
+
+    componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
+      const theme = determineTheme(nextProps, this.state.theme, this.constructor.defaultProps)
+      if (theme !== this.state.theme) {
+        this.setState(this.updateThemeFromOldState)
+      }
+    }
+
+    updateThemeFromOldState(oldState) {
+      const theme = determineTheme(nextProps, oldState.theme, this.constructor.defaultProps)
+      const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
+      return { theme, generatedClassName }
+    }
+
     render() {
-      // eslint-disable-next-line react/prop-types
-      const { innerRef } = this.props
       const { target } = this.constructor
+      const className = makeClassName(
+        this.constructor.styledComponentId,
+        this.state.generatedClassName,
+        this.props.className,
+        this.attrs.className,
+      )
 
-      const isTargetTag = isTag(target)
-
-      const className = this.makeClassName()
-
-      const propsForElement = {
-        ...this.attrs,
-        className,
-      }
-
-      if (isStyledComponent(target)) {
-        propsForElement.innerRef = innerRef
-      } else {
-        propsForElement.ref = innerRef
-      }
-
-      // eslint-disable-next-line guard-for-in, no-restricted-syntax
-      for (const propName in this.props) {
-        // Don't pass through non HTML tags through to HTML elements
-        // always omit innerRef
-        if (
-          propName !== 'innerRef' &&
-          propName !== 'className'
-        ) {
-          // eslint-disable-next-line no-param-reassign
-          propsForElement[propName] = this.props[propName]
-        }
-      }
-
-      return createElement(target, propsForElement)
+      return renderTarget(className, this.props, target, this, this.constructor.attrs)
     }
   }
 
@@ -249,9 +277,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     const {
       displayName = isTag(target) ? `styled.${target}` : `Styled(${getComponentName(target)})`,
       componentId = generateId(options.displayName, options.parentComponentId),
-      ParentComponent = BaseStyledComponent,
       rules: extendingRules,
       attrs,
+    } = options
+
+    let {
+      ParentComponent: _ParentComponent,
     } = options
 
     const styledComponentId = (options.displayName && options.componentId) ?
@@ -268,7 +299,14 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       styledComponentId,
     )
 
-    class StyledComponent extends ParentComponent {
+    if (!_ParentComponent) {
+      if (componentStyle.isStaticallyStyled()) {
+        _ParentComponent = DynamicallyStyledComponent
+      } else {
+        _ParentComponent = StaticStyledComponent
+      }
+
+    class StyledComponent extends _ParentComponent {
       static contextTypes = {
         [CHANNEL]: PropTypes.func,
         [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
