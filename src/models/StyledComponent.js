@@ -7,7 +7,7 @@ import type { Theme } from './ThemeProvider'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 
 import isTag from '../utils/isTag'
-import validAttr, { isReactAttr } from '../utils/validAttr'
+import validAttr, { isReactFunction } from '../utils/validAttr'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
@@ -23,6 +23,31 @@ const multiDashRegex = /--+/g
 // HACK for generating all static styles without needing to allocate
 // an empty execution context every single time...
 const STATIC_EXECUTION_CONTEXT = {}
+
+// count the number of dynamic properties that are comparable
+// when doing 'umbrella' caching of style generation across
+// dynamic instances
+const numComparableDynamicProps = (props: any) => {
+  let numProps = 0
+  // eslint-disable-next-line no-restricted-syntax
+  for (const propName in props) {
+    if (
+      propName === 'theme' ||
+      propName === 'ref' ||
+      propName === 'innerRef' ||
+      isReactFunction(propName) // we don't rely on `onClick` handlers affecting
+      // styles, so if it's sometime uses, but sometimes isn't, that's
+      // considered the same style wise
+    ) {
+      // eslint-disable-next-line no-continue
+      continue
+    } else {
+      numProps += 1
+    }
+  }
+
+  return numProps
+}
 
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
   /* We depend on components having unique IDs */
@@ -76,7 +101,13 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     return className
   }
 
-  const renderTarget = (isStatic: boolean, className: string, props: any, target: any, attrs: any) => {
+  const renderTarget = (
+    isStatic: boolean,
+    className: string,
+    props: any,
+    target: any,
+    attrs: any,
+  ) => {
     const { innerRef } = props
 
     const propsForElement = {
@@ -87,7 +118,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     let isTargetTag = isTag(target)
     if (isStyledComponent(target)) {
       propsForElement.innerRef = innerRef
-      isTargetTag = isTag(target.target)
+      isTargetTag = false
     } else {
       propsForElement.ref = innerRef
     }
@@ -159,6 +190,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
   }
 
+  // eslint-disable-next-line react/no-multi-comp
   class DynamicallyStyledComponent extends Component {
     static target: Target
     static styledComponentId: string
@@ -224,42 +256,40 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       const { componentStyle } = this.constructor
       const { lastClassName, lastProps, lastTheme } = componentStyle
       if (lastClassName === undefined || lastProps === undefined || lastTheme !== theme) {
-        // console.log('nothing previous', this.constructor.styledComponentId, props, theme)
+        // if this hasn't been set, bail out
         return false
-      } else if (props === this.props) {
-        // console.log('entirely re-using', this.constructor.styledComponentId)
+      } else if (lastProps === this.props) {
+        // if this is an incremental re-render or update, re-use the last classname
         return lastClassName
       } else {
         // run shallow equal on the props.
         // ignore the theme property, as we use `determineTheme` to decide what theme
-        // to acutally use for rendering.
+        // to actually use for rendering.
         // If the attribute is a react attributed, _and_, a function,
         // we can rely on "do they both have it, or both not have it".
-        const propsKeys = Object.keys(props)
-        const numPropKeys = propsKeys.length
+        const numPropKeys = numComparableDynamicProps(props)
+        const numOtherPropKyes = numComparableDynamicProps(lastProps)
 
         // we can assume props are plain objects because this is react.
         // therefore we can skip calling hasOwnProp
-        if (numPropKeys !== Object.keys(lastProps).length) {
-          // console.log('different num keys', this.constructor.styledComponentId, props, lastProps)
+        if (numPropKeys !== numOtherPropKyes) {
+          // if there are different number of props
           return false
         } else {
-          for (let propIndex = 0; propIndex < numPropKeys; propIndex += 1) {
-            const propName = propsKeys[propIndex]
+          // eslint-disable-next-line no-restricted-syntax, guard-for-in
+          for (const propName in props) {
             const prop = props[propName]
             const otherProp = lastProps[propName]
-            if (propName === 'theme') {
+            if (propName === 'theme' || propName === 'ref' || propName === 'innerRef') {
               // eslint-disable-next-line no-continue
               continue
-            } else if (isReactAttr(propName) && typeof prop === 'function') {
+            } else if (isReactFunction(propName)) {
               const haveProp = prop !== undefined || prop !== null
               const haveOtherProp = otherProp !== undefined || otherProp !== null
               if (haveProp !== haveOtherProp) {
-                // console.log('falseyness of function react prop breaking truthyness', this.constructor.styledComponentId, propName, prop, otherProp)
                 return false
               }
             } else if (prop !== otherProp) {
-              // console.log('skipping umbrellral, change', this.constructor.styledComponentId, propName, prop, otherProp)
               return false
             }
           }
@@ -373,9 +403,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       `${options.displayName}-${options.componentId}` : componentId
 
     let warnTooManyClasses
-    // if (process.env.NODE_ENV !== 'production') {
-    //   warnTooManyClasses = createWarnTooManyClasses(displayName)
-    // }
+    if (process.env.NODE_ENV !== 'production') {
+      warnTooManyClasses = createWarnTooManyClasses(displayName)
+    }
 
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),

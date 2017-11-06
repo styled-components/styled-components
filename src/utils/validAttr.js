@@ -19,7 +19,9 @@ const reactProps = {
   onFocusIn: true,
   onFocusOut: true,
   className: true,
+}
 
+const reactFunctionProps = {
   /* List copied from https://facebook.github.io/react/docs/events.html */
   onCopy: true,
   onCut: true,
@@ -594,9 +596,10 @@ const hasAttr = (map: Object, name: string) => map[name] === true
 
 export default (name: string) => (
   hasAttr(reactProps, name) ||
+  hasAttr(reactFunctionProps, name) ||
   hasAttr(htmlProps, name) ||
   hasAttr(svgProps, name) ||
   isCustomAttribute(name.toLowerCase())
 )
 
-export const isReactAttr = (name: string) => hasAttr(reactProps, name)
+export const isReactFunction = (name: string) => hasAttr(reactFunctionProps, name)
