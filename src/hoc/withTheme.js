@@ -15,7 +15,11 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
     'Component'
   )
 
-  const isStyledComponent = _isStyledComponent(Component)
+  const shouldSetInnerRef = _isStyledComponent(Component) || (
+    // NOTE: We can't pass a ref to a stateless functional component
+    typeof Component === 'function' &&
+    !(Component.prototype && 'isReactComponent' in Component.prototype)
+  )
 
   class WithTheme extends React.Component {
     static displayName = `WithTheme(${componentName})`
@@ -73,8 +77,8 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
         <Component
           theme={theme}
           {...this.props}
-          innerRef={isStyledComponent ? innerRef : undefined}
-          ref={isStyledComponent ? undefined : innerRef}
+          innerRef={shouldSetInnerRef ? innerRef : undefined}
+          ref={shouldSetInnerRef ? undefined : innerRef}
         />
       )
     }
