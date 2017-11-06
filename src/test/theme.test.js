@@ -407,6 +407,23 @@ describe('theming', () => {
     expect(inner.prop('innerRef')).toBe(undefined)
   })
 
+  it('should accept innerRef and pass it on for stateless function components', () => {
+    const Comp = () => <div />
+    const CompWithTheme = withTheme(Comp)
+    const ref = jest.fn()
+
+    const wrapper = mount(
+      <ThemeProvider theme={{}}>
+        <CompWithTheme innerRef={ref} />
+      </ThemeProvider>
+    )
+
+    const inner = wrapper.find(Comp).first()
+
+    expect(ref).toHaveBeenCalledTimes(0)
+    expect(inner.prop('innerRef')).toBe(ref)
+  })
+
   it('should accept innerRef and pass it on for styled components', () => {
     const Comp = styled.div``
     const CompWithTheme = withTheme(Comp)
