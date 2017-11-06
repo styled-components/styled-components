@@ -91,6 +91,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       if (className.length > 0) {
         className += ' '
       }
+      // $FlowFixME
       className += attrsClassName
     }
     if (className.length > 0) {
@@ -364,7 +365,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
       const theme = determineTheme(nextProps, this.state.theme, this.constructor.defaultProps)
-      if (theme !== this.state.theme) {
+      const reusedClassName = this.possiblyReusedClassname(nextProps, theme)
+      if (reusedClassName === false) {
         const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
         this.setState({ theme, generatedClassName })
       }
