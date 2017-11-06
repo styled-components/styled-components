@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Bump minimum `stylis` version to 3.4.0, adjust the semver caret target (see [#1296](https://github.com/styled-components/styled-components/pull/1296))
 
 ## [v2.2.3] - 2017-10-29
 
