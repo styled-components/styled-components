@@ -30,6 +30,7 @@ export interface StyledInterface extends BaseStyledInterface {
   DatePickerIOS: ReactNativeStyledFunction<ReactNative.DatePickerIOSProperties>;
   DrawerLayoutAndroid: ReactNativeStyledFunction<ReactNative.DrawerLayoutAndroidProperties>;
   Image: ReactNativeStyledFunction<ReactNative.ImageProperties>;
+  ImageBackground: ReactNativeStyledFunction<ReactNative.ImageBackgroundProperties>;
 
   KeyboardAvoidingView: ReactNativeStyledFunction<ReactNative.KeyboardAvoidingViewProps>;
   ListView: ReactNativeStyledFunction<ReactNative.ListViewProperties>;
