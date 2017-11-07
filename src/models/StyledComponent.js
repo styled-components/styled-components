@@ -24,6 +24,19 @@ const multiDashRegex = /--+/g
 // an empty execution context every single time...
 const STATIC_EXECUTION_CONTEXT = {}
 
+// When doing cross-instance dymaic style caching, can we ignore this
+// property based on its name?
+// If its a react event handler, or a few specific props, we can!
+// NOTE: this breaks if you rely on react event handlers presecence
+// for styling. This is not a good practice imo, but I would like to
+// add an escape hatch for this.
+const canIgnoreDynamicProp = (propName: string): boolean =>
+  isReactFunction(propName) || // ignore react event handlers
+  propName === 'theme' || // we compare themes based on the `determined` theme
+  propName === 'ref' || // ref and inner ref are outside of scope for sytling
+  propName === 'innerRef' ||
+  propName === 'className' // passedd in classnames from the parent should not matter
+
 // count the number of dynamic properties that are comparable
 // when doing 'umbrella' caching of style generation across
 // dynamic instances
@@ -31,14 +44,7 @@ const numComparableDynamicProps = (props: any) => {
   let numProps = 0
   // eslint-disable-next-line no-restricted-syntax
   for (const propName in props) {
-    if (
-      propName === 'theme' ||
-      propName === 'ref' ||
-      propName === 'innerRef' ||
-      isReactFunction(propName) // we don't rely on `onClick` handlers affecting
-      // styles, so if it's sometime uses, but sometimes isn't, that's
-      // considered the same style wise
-    ) {
+    if (canIgnoreDynamicProp(propName)) {
       // eslint-disable-next-line no-continue
       continue
     } else {
@@ -259,7 +265,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       if (lastClassName === undefined || lastProps === undefined || lastTheme !== theme) {
         // if this hasn't been set, bail out
         return false
-      } else if (lastProps === this.props) {
+      } else if (lastProps === props) {
         // if this is an incremental re-render or update, re-use the last classname
         return lastClassName
       } else {
@@ -281,15 +287,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           for (const propName in props) {
             const prop = props[propName]
             const otherProp = lastProps[propName]
-            if (propName === 'theme' || propName === 'ref' || propName === 'innerRef') {
+            if (canIgnoreDynamicProp(propName)) {
               // eslint-disable-next-line no-continue
               continue
-            } else if (isReactFunction(propName)) {
-              const haveProp = prop !== undefined || prop !== null
-              const haveOtherProp = otherProp !== undefined || otherProp !== null
-              if (haveProp !== haveOtherProp) {
-                return false
-              }
             } else if (prop !== otherProp) {
               return false
             }
