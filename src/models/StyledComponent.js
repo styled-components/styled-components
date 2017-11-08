@@ -35,7 +35,8 @@ const canIgnoreDynamicProp = (propName: string): boolean =>
   propName === 'theme' || // we compare themes based on the `determined` theme
   propName === 'ref' || // ref and inner ref are outside of scope for sytling
   propName === 'innerRef' ||
-  propName === 'className' // passedd in classnames from the parent should not matter
+  propName === 'className' || // passedd in classnames from the parent should not matter
+  propName === 'style' // style overrides should not affect css styles
 
 // count the number of dynamic properties that are comparable
 // when doing 'umbrella' caching of style generation across
