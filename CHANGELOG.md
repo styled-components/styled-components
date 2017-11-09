@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Disable static styles caching when hot module replacement is enabled. 
 - n/a
 
 ## [v2.2.3] - 2017-10-29

@@ -32,6 +32,8 @@ const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
   return true
 }
 
+const isHRMEnabled = typeof module !== 'undefined' && module.hot && process.env.NODE_ENV !== 'production'
+
 /*
  ComponentStyle is all the CSS-specific stuff, not
  the React-specific stuff.
@@ -46,7 +48,7 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
 
     constructor(rules: RuleSet, attrs?: Object, componentId: string) {
       this.rules = rules
-      this.isStatic = isStaticRules(rules, attrs)
+      this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
       if (!StyleSheet.instance.hasInjectedComponent(this.componentId)) {
         const placeholder = process.env.NODE_ENV !== 'production' ? `.${componentId} {}` : ''
