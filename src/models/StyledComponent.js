@@ -32,10 +32,11 @@ const STATIC_EXECUTION_CONTEXT = {}
 // add an escape hatch for this.
 const canIgnoreDynamicProp = (propName: string): boolean =>
   isReactFunction(propName) || // ignore react event handlers
+  propName === 'children' || // ignore children props in favor of explicit props on the component
+  propName === 'className' || // passed in classnames from the parent should not matter
+  propName === 'innerRef' || // ref and inner ref are outside of scope for styling
+  propName === 'ref' ||
   propName === 'theme' || // we compare themes based on the `determined` theme
-  propName === 'ref' || // ref and inner ref are outside of scope for sytling
-  propName === 'innerRef' ||
-  propName === 'className' || // passedd in classnames from the parent should not matter
   propName === 'style' // style overrides should not affect css styles
 
 // count the number of dynamic properties that are comparable
