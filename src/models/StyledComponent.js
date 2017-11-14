@@ -208,7 +208,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     static warnTooManyClasses: Function
 
     static contextTypes = {
-      [CHANNEL]: PropTypes.func,
       [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
       [CONTEXT_KEY]: PropTypes.oneOfType([
         PropTypes.instanceOf(StyleSheet),
@@ -217,8 +216,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     attrs = {}
+    theme: null;
     state = {
-      theme: null,
       generatedClassName: '',
     }
     unsubscribeId: number = -1
@@ -227,8 +226,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       super(props, context)
 
       const { componentStyle } = this.constructor
-      const styledContext = this.context[CHANNEL_NEXT]
-      const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.instance
+      const styledContext = context[CHANNEL_NEXT]
+      const styleSheet = context[CONTEXT_KEY] || StyleSheet.instance
 
       let theme
 
@@ -242,23 +241,22 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
 
       const reusedClassName = this.possiblyReusedClassname(props, theme)
+      let generatedClassName
       if (reusedClassName !== false) {
-        this.state = {
-          theme,
-          generatedClassName: reusedClassName,
-        }
+        generatedClassName = reusedClassName
       } else {
         const executionContext = this.buildExecutionContext(theme, props)
-        const generatedClassName = componentStyle.generateAndInjectStyles(
+        generatedClassName = componentStyle.generateAndInjectStyles(
           executionContext,
           styleSheet,
         )
 
         componentStyle.lastProps = props
         componentStyle.lastTheme = theme
-
-        this.state = { theme, generatedClassName }
       }
+
+      this.theme = theme
+      this.state = { generatedClassName }
     }
 
     possiblyReusedClassname(props: any, theme: any) {
@@ -277,11 +275,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         // If the attribute is a react attributed, _and_, a function,
         // we can rely on "do they both have it, or both not have it".
         const numPropKeys = numComparableDynamicProps(props)
-        const numOtherPropKyes = numComparableDynamicProps(lastProps)
+        const numOtherPropsKeys = numComparableDynamicProps(lastProps)
 
         // we can assume props are plain objects because this is react.
         // therefore we can skip calling hasOwnProp
-        if (numPropKeys !== numOtherPropKyes) {
+        if (numPropKeys !== numOtherPropsKeys) {
           // if there are different number of props
           return false
         } else {
@@ -300,7 +298,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           // we're good to go
           componentStyle.lastProps = props
           componentStyle.lastTheme = theme
-          // console.log('re-using!', this.constructor.styledComponentId, props, lastProps)
           return componentStyle.lastClassName
         }
       }
@@ -339,8 +336,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
         const executionContext = this.buildExecutionContext(theme, props)
         const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
-        componentStyle.lastProps = props
-        componentStyle.lastTheme = theme
 
         if (warnTooManyClasses !== undefined) warnTooManyClasses(className)
 
@@ -350,13 +345,14 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     updateThemeAndClassName(theme: any, props: any) {
       const generatedClassName = this.generateAndInjectStyles(theme, props)
-      this.setState({ theme, generatedClassName })
+      this.theme = theme
+      this.setState({ generatedClassName })
     }
 
     listenToThemeUpdates = nextTheme => {
       // This will be called once immediately
       const theme = determineTheme(this.props, nextTheme, this.constructor.defaultProps)
-      if (theme !== this.state.theme) {
+      if (theme !== this.theme) {
         this.updateThemeAndClassName(theme, this.props)
       }
     }
@@ -366,11 +362,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-      const theme = determineTheme(nextProps, this.state.theme, this.constructor.defaultProps)
+      const theme = determineTheme(nextProps, this.theme, this.constructor.defaultProps)
       const reusedClassName = this.possiblyReusedClassname(nextProps, theme)
       if (reusedClassName === false) {
         const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
-        this.setState({ theme, generatedClassName })
+        this.theme = theme
+        this.setState({ generatedClassName })
       }
     }
 
