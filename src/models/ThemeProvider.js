@@ -42,21 +42,10 @@ class ThemeProvider extends Component {
   broadcast: Broadcast
   unsubscribeToOuterId: number = -1
 
-  constructor() {
-    super()
+  constructor(props) {
+    super(props)
     this.getTheme = this.getTheme.bind(this)
-  }
-
-  componentWillMount() {
-    // If there is a ThemeProvider wrapper anywhere around this theme provider, merge this theme
-    // with the outer theme
-    const outerContext = this.context[CHANNEL_NEXT]
-    if (outerContext !== undefined) {
-      this.unsubscribeToOuterId = outerContext.subscribe(theme => {
-        this.outerTheme = theme
-      })
-    }
-    this.broadcast = createBroadcast(this.getTheme())
+    this.broadcast = createBroadcast(this.getTheme(props.theme))
   }
 
   getChildContext() {
@@ -82,26 +71,10 @@ class ThemeProvider extends Component {
     if (this.props.theme !== nextProps.theme) this.broadcast.publish(this.getTheme(nextProps.theme))
   }
 
-  componentWillUnmount() {
-    if (this.unsubscribeToOuterId !== -1) {
-      this.context[CHANNEL_NEXT].unsubscribe(this.unsubscribeToOuterId)
-    }
-  }
-
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
   getTheme(passedTheme: (outerTheme: Theme) => void | Theme) {
     const theme = passedTheme || this.props.theme
-    if (isFunction(theme)) {
-      const mergedTheme = theme(this.outerTheme)
-      if (!isPlainObject(mergedTheme)) {
-        throw new Error('[ThemeProvider] Please return an object from your theme function, i.e. theme={() => ({})}!')
-      }
-      return mergedTheme
-    }
-    if (!isPlainObject(theme)) {
-      throw new Error('[ThemeProvider] Please make your theme prop a plain object')
-    }
-    return { ...this.outerTheme, ...(theme: Object) }
+    return theme
   }
 
   render() {
@@ -114,9 +87,6 @@ class ThemeProvider extends Component {
 
 ThemeProvider.childContextTypes = {
   [CHANNEL]: PropTypes.func, // legacy
-  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-}
-ThemeProvider.contextTypes = {
   [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
 }
 
