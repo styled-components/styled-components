@@ -2,8 +2,6 @@
 /* globals React$Element */
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import isFunction from 'is-function'
-import isPlainObject from 'is-plain-object'
 import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
 import once from '../utils/once'

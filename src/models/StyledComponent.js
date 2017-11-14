@@ -337,6 +337,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         const executionContext = this.buildExecutionContext(theme, props)
         const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
 
+        componentStyle.lastProps = props
+        componentStyle.lastTheme = theme
+
         if (warnTooManyClasses !== undefined) warnTooManyClasses(className)
 
         return className
@@ -368,6 +371,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
         this.theme = theme
         this.setState({ generatedClassName })
+      } else if (reusedClassName !== this.state.generatedClassName) {
+        this.setState({ generatedClassName: reusedClassName })
       }
     }
 
