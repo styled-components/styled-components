@@ -13,7 +13,7 @@ import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
 import type { RuleSet, Target } from '../types'
 
-import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
+import { CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
 

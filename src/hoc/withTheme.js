@@ -65,7 +65,7 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
       }
     }
 
-    componentWillReceiveProps(nextProps: { theme?: Object, [key: string]: any }){
+    componentWillReceiveProps(nextProps: { theme?: Object, [key: string]: any }) {
       const { defaultProps } = this.constructor
       const theme = determineTheme(nextProps, this.state.theme, defaultProps)
       if (theme !== this.state.theme) {
