@@ -31,31 +31,46 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
     state: { theme?: ?Object } = {};
     unsubscribeId: number = -1
 
-    componentWillMount() {
+    constructor(props, context) {
+      super(props, context)
       const { defaultProps } = this.constructor
-      const styledContext = this.context[CHANNEL_NEXT]
-      const themeProp = determineTheme(this.props, undefined, defaultProps)
-      if (styledContext === undefined && themeProp === undefined && process.env.NODE_ENV !== 'production') {
+      const styledContext = context[CHANNEL_NEXT]
+      const themeProp = determineTheme(props, undefined, defaultProps)
+
+      if (
+          styledContext === undefined &&
+          themeProp === undefined &&
+          process.env.NODE_ENV !== 'production'
+      ) {
         // eslint-disable-next-line no-console
         console.warn('[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps')
       } else if (styledContext === undefined && themeProp !== undefined) {
-        this.setState({ theme: themeProp })
+        this.state = {
+          theme: themeProp,
+        }
       } else {
-        const { subscribe } = styledContext
-        this.unsubscribeId = subscribe(nextTheme => {
-          const theme = determineTheme(this.props, nextTheme, defaultProps)
-          this.setState({ theme })
-        })
+        const { subscribe, currentTheme } = styledContext
+        this.state = {
+          theme: currentTheme(),
+        }
+
+        this.unsubscribeId = subscribe(this.updateTheme)
       }
     }
 
-    componentWillReceiveProps(nextProps: { theme?: ?Object, [key: string]: any }) {
-      const { defaultProps } = this.constructor
-      this.setState((oldState) => {
-        const theme = determineTheme(nextProps, oldState.theme, defaultProps)
+    updateTheme = nextTheme => {
+      const theme = determineTheme(this.props, nextTheme, this.constructor.defaultProps)
+      if (theme !== this.state.theme) {
+        this.setState({ theme })
+      }
+    }
 
-        return { theme }
-      })
+    componentWillReceiveProps(nextProps: { theme?: Object, [key: string]: any }) {
+      const { defaultProps } = this.constructor
+      const theme = determineTheme(nextProps, this.state.theme, defaultProps)
+      if (theme !== this.state.theme) {
+        this.setState({ theme })
+      }
     }
 
     componentWillUnmount() {

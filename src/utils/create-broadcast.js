@@ -9,6 +9,7 @@ export type Broadcast = {
   publish: (value: mixed) => void,
   subscribe: (listener: (currentValue: mixed) => void) => number,
   unsubscribe: (number) => void,
+  currentState: () => mixed
 }
 
 const createBroadcast = (initialState: mixed): Broadcast => {
@@ -35,7 +36,6 @@ const createBroadcast = (initialState: mixed): Broadcast => {
     const currentId = id
     listeners[currentId] = listener
     id += 1
-    listener(state)
     return currentId
   }
 
@@ -43,7 +43,11 @@ const createBroadcast = (initialState: mixed): Broadcast => {
     listeners[unsubID] = undefined
   }
 
-  return { publish, subscribe, unsubscribe }
+  function currentState() {
+    return state
+  }
+
+  return { publish, subscribe, unsubscribe, currentState }
 }
 
 export default createBroadcast
