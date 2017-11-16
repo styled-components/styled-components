@@ -11,14 +11,12 @@ import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
+import escape from '../utils/escape'
 import type { RuleSet, Target } from '../types'
 
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
-
-const escapeRegex = /[[\].#*$><+~=|^:(),"'`]/g
-const multiDashRegex = /--+/g
 
 // HACK for generating all static styles without needing to allocate
 // an empty execution context every single time...
@@ -29,9 +27,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
   const identifiers = {}
   const generateId = (_displayName: string, parentComponentId: string) => {
     const displayName = typeof _displayName !== 'string' ?
-      'sc' : _displayName
-        .replace(escapeRegex, '-') // Replace all possible CSS selectors
-        .replace(multiDashRegex, '-') // Replace multiple -- with single -
+      'sc' : escape(_displayName)
 
     const nr = (identifiers[displayName] || 0) + 1
     identifiers[displayName] = nr
@@ -215,7 +211,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     } = options
 
     const styledComponentId = (options.displayName && options.componentId) ?
-      `${options.displayName}-${options.componentId}` : componentId
+      `${escape(options.displayName)}-${options.componentId}` : componentId
 
     let warnTooManyClasses
     if (process.env.NODE_ENV !== 'production') {
@@ -250,7 +246,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
         const newComponentId =
           previousComponentId &&
-          `${previousComponentId}-${isTag(tag) ? tag : getComponentName(tag)}`
+          `${previousComponentId}-${isTag(tag) ? tag : escape(getComponentName(tag))}`
 
         const newOptions = {
           ...optionsToCopy,

@@ -1,16 +1,28 @@
 // @flow
+import React from 'react'
 import getComponentName from '../getComponentName'
 
 describe('getComponentName', () => {
+  let Test
+  beforeEach(() => {
+    Test = () => <div />
+  })
+
   it('defaults to reusing the component displayName', () => {
-    expect(getComponentName({ displayName: 'Foo' })).toEqual('Foo')
+    Test.displayName = 'Foo'
+
+    expect(getComponentName(Test)).toEqual('Foo')
   })
 
   it('falls back to the class name', () => {
-    expect(getComponentName({ name: 'Bar' })).toEqual('Bar')
+    expect(getComponentName(Test)).toEqual('Test')
   })
 
   it('ultimately falls back to "Component"', () => {
-    expect(getComponentName({})).toEqual('Component')
+    Object.defineProperty(Test, 'name', {
+      value: '',
+    })
+
+    expect(getComponentName(Test)).toEqual('Component')
   })
 })

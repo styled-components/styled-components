@@ -10,7 +10,7 @@ describe('escape', () => {
     expect(escape('foo--bar')).toEqual('foo-bar')
   })
 
-  it('removes an extraneous hyphen at the end of the string', () => {
-    expect(escape('foo--bar-')).toEqual('foo-bar')
+  it('removes extraneous hyphens at the ends of the string', () => {
+    expect(escape('-foo--bar-')).toEqual('foo-bar')
   })
 })
