@@ -33,7 +33,7 @@ export default (styleSheet: StyleSheet) => {
         root.each(node => {
           if (node.type === 'decl') {
             declPairs.push([node.prop, node.value])
-          } else if (node.type !== 'comment') {
+          } else if (node.type !== 'comment' && process.env.NODE_ENV !== 'production') {
             /* eslint-disable no-console */
             console.warn(`Node of type ${node.type} not supported as an inline style`)
           }

@@ -67,7 +67,9 @@ class ThemeProvider extends Component {
         unsubscribe: this.broadcast.unsubscribe,
       },
       [CHANNEL]: (subscriber) => {
-        warnChannelDeprecated()
+        if (process.env.NODE_ENV !== 'production') {
+          warnChannelDeprecated()
+        }
 
         // Patch the old `subscribe` provide via `CHANNEL` for older clients.
         const unsubscribeId = this.broadcast.subscribe(subscriber)
