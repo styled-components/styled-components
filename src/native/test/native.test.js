@@ -46,6 +46,28 @@ describe('native', () => {
     }
   })
 
+  // https://github.com/styled-components/styled-components/issues/1266
+  it('should update when props change', () => {
+    const Comp = styled.View`
+      padding-top: 5px;
+      opacity: ${p => p.opacity || 0};
+    `
+
+    const comp = shallow(<Comp opacity={0.5} />)
+
+    expect(comp.find('View').prop('style')).toEqual([
+      { paddingTop: 5, opacity: 0.5 },
+      undefined
+    ])
+
+    comp.setProps({ opacity: 0.9 });
+
+    expect(comp.find('View').prop('style')).toEqual([
+      { paddingTop: 5, opacity: 0.9 },
+      undefined
+    ])
+  })
+
   describe('extending', () => {
     it('should combine styles of extending components', () => {
       const Parent = styled.View`opacity: 0.9;`
