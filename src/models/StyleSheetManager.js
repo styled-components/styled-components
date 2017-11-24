@@ -46,7 +46,7 @@ StyleSheetManager.propTypes = {
   sheet: PropTypes.oneOfType([
     PropTypes.instanceOf(StyleSheet),
     PropTypes.instanceOf(ServerStyleSheet),
-  ]).isRequired,
+  ]),
   target: PropTypes.shape({
     appendChild: PropTypes.func.isRequired,
   }),
