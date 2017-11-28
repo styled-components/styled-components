@@ -6,6 +6,10 @@ import { shallow, mount } from 'enzyme'
 import styled, { ServerStyleSheet, StyleSheetManager } from '../../index'
 
 describe('StyleSheetManager', () => {
+  beforeEach(() => {
+    // $FlowFixMe
+    document.body.innerHTML = ''
+  })
 
   it('should use given stylesheet instance', () => {
     const sheet = new ServerStyleSheet()
@@ -24,7 +28,7 @@ describe('StyleSheetManager', () => {
     const child = <Title />
     const renderedComp = shallow(
       <StyleSheetManager target={target}>
-        { child }
+        {child}
       </StyleSheetManager>
     )
     expect(renderedComp.contains(child)).toEqual(true)
@@ -70,6 +74,79 @@ describe('StyleSheetManager', () => {
         <Child />
       </StyleSheetManager>,
       { attachTo: app }
+    )
+  })
+
+  it('should append styles to the same target', () => {
+    const target = document.body;
+
+    const RedTitle = styled.h1`color: palevioletred;`
+    const GreenTitle = styled.h1`color: forestgreen;`
+
+    class Child extends React.Component {
+      componentDidMount() {
+        let hasStyles = false;
+        // $FlowFixMe
+        const styles = document.body.querySelectorAll(`style`)
+        styles.forEach(({ textContent }) => textContent.includes(this.props.expected) && (hasStyles = true))
+        expect(styles.length).toEqual(2)
+        expect(hasStyles).toEqual(true)
+      }
+      render() { return React.Children.only(this.props.children) }
+    }
+
+    mount(
+      <div>
+        <StyleSheetManager target={target}>
+          <Child expected={'palevioletred'}>
+            <RedTitle />
+          </Child>
+        </StyleSheetManager>
+        <StyleSheetManager target={target}>
+          <Child expected={'forestgreen'}>
+            <GreenTitle />
+          </Child>
+        </StyleSheetManager>
+      </div>
+    )
+  })
+
+  it('should append styles for nested StyleSheetManagers', () => {
+    const outer = document.createElement('div')
+    outer.id = 'outer'
+    const inner = document.createElement('div')
+    inner.id = 'inner'
+    outer.appendChild(inner)
+    // $FlowFixMe
+    document.body.appendChild(outer)
+
+    const outerTarget = document.querySelector('#outer')
+    const innerTarget = document.querySelector('#inner')
+    const RedTitle = styled.h1`color: palevioletred;`
+    const GreenTitle = styled.h1`color: forestgreen;`
+
+    class Child extends React.Component {
+      componentDidMount() {
+        // $FlowFixMe
+        const styles = document.querySelector(`#${this.props.target.id} > style`).textContent
+        expect(styles.includes(this.props.expected)).toEqual(true)
+      }
+      render() { return React.Children.only(this.props.children) }
+    }
+
+    mount(
+      <StyleSheetManager target={outerTarget}>
+        <div>
+          <Child target={outerTarget} expected={'palevioletred'}>
+            <RedTitle />
+          </Child>
+          <StyleSheetManager target={innerTarget}>
+            <Child target={innerTarget} expected={'forestgreen'}>
+              <GreenTitle />
+            </Child>
+          </StyleSheetManager>
+        </div>
+      </StyleSheetManager>
     )
   })
 })
