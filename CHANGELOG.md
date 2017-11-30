@@ -6,13 +6,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Add `target` prop to `StyleSheetManager` component to enable specifying where style tags should render (see [#1324](https://github.com/styled-components/styled-components/pull/1324))
 
 ## [v2.2.4] - 2017-11-29
 
 - Disable static styles caching when hot module replacement is enabled.
 - Bump minimum `stylis` version to 3.4.0, adjust the semver caret target (see [#1296](https://github.com/styled-components/styled-components/pull/1296))
-- Add `target` prop to `StyleSheetManager` component to enable specifying where style tags should render (see [#1102](https://github.com/styled-components/styled-components/pull/1102))
 
 ## [v2.2.3] - 2017-10-29
 
