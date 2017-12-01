@@ -23,7 +23,7 @@ const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag)
 const aliases = `ActivityIndicator ActivityIndicatorIOS ART Button DatePickerIOS DrawerLayoutAndroid
  Image ImageBackground ImageEditor ImageStore KeyboardAvoidingView ListView MapView Modal Navigator NavigatorIOS
  Picker PickerIOS ProgressBarAndroid ProgressViewIOS ScrollView SegmentedControlIOS Slider
- SliderIOS SnapshotViewIOS Switch RecyclerViewBackedScrollView RefreshControl StatusBar
+ SliderIOS SnapshotViewIOS Switch RecyclerViewBackedScrollView RefreshControl SafeAreaView StatusBar
  SwipeableListView SwitchAndroid SwitchIOS TabBarIOS Text TextInput ToastAndroid ToolbarAndroid
  Touchable TouchableHighlight TouchableNativeFeedback TouchableOpacity TouchableWithoutFeedback
  View ViewPagerAndroid WebView FlatList SectionList VirtualizedList`

@@ -48,6 +48,7 @@ export interface StyledInterface extends BaseStyledInterface {
   SnapshotViewIOS: ReactNativeStyledFunction<ReactNative.SnapshotViewIOSProperties>;
   RecyclerViewBackedScrollView: ReactNativeStyledFunction<ReactNative.RecyclerViewBackedScrollViewProperties>;
   RefreshControl: ReactNativeStyledFunction<ReactNative.RefreshControlProperties>;
+  SafeAreaView: ReactNativeStyledFunction<ReactNative.SafeAreaView>;
   StatusBar: ReactNativeStyledFunction<ReactNative.StatusBarProperties>;
   SwipeableListView: ReactNativeStyledFunction<ReactNative.SwipeableListViewProps>;
   Switch: ReactNativeStyledFunction<ReactNative.SwitchProperties>;
