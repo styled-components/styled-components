@@ -8,9 +8,9 @@
   dependencies:
     "@types/react" "*"
 
-"@types/react-native@^0.46.0":
-  version "0.46.0"
-  resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.46.0.tgz#ac2846578c44e59223eb8b3808a5694e1c77ef8f"
+"@types/react-native@^0.50.7":
+  version "0.50.7"
+  resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.50.7.tgz#4c18bb14aa08f11934f539d2b8dcb2f1a6b88bd8"
   dependencies:
     "@types/react" "*"
 
