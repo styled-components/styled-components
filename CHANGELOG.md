@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- Add support for SafeAreaView when using styled-components in a React Native project
+- Add support for SafeAreaView when using styled-components in a React Native project (see [#1339](https://github.com/styled-components/styled-components/pull/1339))
 
 ## [v2.2.4] - 2017-11-29
 
