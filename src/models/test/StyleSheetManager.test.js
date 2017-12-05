@@ -3,12 +3,19 @@
 import React from 'react'
 import { renderToString } from 'react-dom/server'
 import { shallow, mount } from 'enzyme'
-import styled, { ServerStyleSheet, StyleSheetManager } from '../../index'
+import StyleSheetManager from '../StyleSheetManager'
+import StyleSheet, { SC_ATTR, LOCAL_ATTR } from '../StyleSheet'
+import ServerStyleSheet from '../ServerStyleSheet'
+import { resetStyled, expectCSSMatches } from '../../test/utils'
+
+let styled
 
 describe('StyleSheetManager', () => {
   beforeEach(() => {
+    styled = resetStyled()
     // $FlowFixMe
     document.body.innerHTML = ''
+    StyleSheet.reset()
   })
 
   it('should use given stylesheet instance', () => {
@@ -77,76 +84,70 @@ describe('StyleSheetManager', () => {
     )
   })
 
-  it('should append styles to the same target', () => {
-    const target = document.body;
-
-    const RedTitle = styled.h1`color: palevioletred;`
-    const GreenTitle = styled.h1`color: forestgreen;`
-
-    class Child extends React.Component {
-      componentDidMount() {
-        let hasStyles = false;
-        // $FlowFixMe
-        const styles = document.body.querySelectorAll(`style`)
-        styles.forEach(({ textContent }) => textContent.includes(this.props.expected) && (hasStyles = true))
-        expect(styles.length).toEqual(2)
-        expect(hasStyles).toEqual(true)
-      }
-      render() { return React.Children.only(this.props.children) }
-    }
-
+  it('should apply styles to appropriate targets for nested StyleSheetManagers', () => {
+    const ONE = styled.h1`
+      color: red;
+    `
+    const TWO = styled.h2`
+      color: blue;
+    `
+    const THREE = styled.h3`
+      color: green;
+    `
     mount(
       <div>
-        <StyleSheetManager target={target}>
-          <Child expected={'palevioletred'}>
-            <RedTitle />
-          </Child>
-        </StyleSheetManager>
-        <StyleSheetManager target={target}>
-          <Child expected={'forestgreen'}>
-            <GreenTitle />
-          </Child>
+        <ONE/>
+        <StyleSheetManager target={document.head}>
+          <div>
+            <TWO />
+            <StyleSheetManager target={document.body}>
+              <THREE />
+            </StyleSheetManager>
+          </div>
         </StyleSheetManager>
       </div>
     )
+
+    expect(document.head.innerHTML).toMatchSnapshot()
+    expect(document.body.innerHTML).toMatchSnapshot()
   })
 
-  it('should append styles for nested StyleSheetManagers', () => {
-    const outer = document.createElement('div')
-    outer.id = 'outer'
-    const inner = document.createElement('div')
-    inner.id = 'inner'
-    outer.appendChild(inner)
-    // $FlowFixMe
-    document.body.appendChild(outer)
-
-    const outerTarget = document.querySelector('#outer')
-    const innerTarget = document.querySelector('#inner')
-    const RedTitle = styled.h1`color: palevioletred;`
-    const GreenTitle = styled.h1`color: forestgreen;`
-
-    class Child extends React.Component {
-      componentDidMount() {
-        // $FlowFixMe
-        const styles = document.querySelector(`#${this.props.target.id} > style`).textContent
-        expect(styles.includes(this.props.expected)).toEqual(true)
+  describe('ssr', () => {
+    it('should extract CSS outside the nested StyleSheetManager', () => {
+      const sheet = new ServerStyleSheet()
+      const ONE = styled.h1`
+        color: red;
+      `
+      const TWO = styled.h2`
+        color: blue;
+      `
+      class Wrapper extends React.Component {
+        state = {
+          targetRef: null
+        }
+        render() {
+          return (
+            <div ref={(el) => { this.setState({ targetRef: el }) }}>
+              {this.state.targetRef && <StyleSheetManager target={this.state.targetRef}>
+                <TWO />
+              </StyleSheetManager>}
+            </div>
+          )
+        }
       }
-      render() { return React.Children.only(this.props.children) }
-    }
 
-    mount(
-      <StyleSheetManager target={outerTarget}>
-        <div>
-          <Child target={outerTarget} expected={'palevioletred'}>
-            <RedTitle />
-          </Child>
-          <StyleSheetManager target={innerTarget}>
-            <Child target={innerTarget} expected={'forestgreen'}>
-              <GreenTitle />
-            </Child>
-          </StyleSheetManager>
-        </div>
-      </StyleSheetManager>
-    )
+      const html = renderToString(
+        <StyleSheetManager sheet={sheet.instance}>
+          <div>
+            <ONE />
+            <Wrapper />
+          </div>
+        </StyleSheetManager>
+      )
+      const css = sheet.getStyleTags()
+      
+      expect(html).toMatchSnapshot()
+      expect(css).toMatchSnapshot()
+    })
   })
 })
