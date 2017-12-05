@@ -108,7 +108,9 @@ describe('StyleSheetManager', () => {
       </div>
     )
 
+    // $FlowFixMe
     expect(document.head.innerHTML).toMatchSnapshot()
+    // $FlowFixMe
     expect(document.body.innerHTML).toMatchSnapshot()
   })
 
