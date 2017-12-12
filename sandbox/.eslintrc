@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "import/resolver": {
+      "webpack": {
+        // Uses webpack config aliases for import resolver checks
+        "config": "./webpack.config.dev.js"
+      }
+    }
+  }
+}
