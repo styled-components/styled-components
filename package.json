@@ -20,6 +20,7 @@
     "test:native:watch": "npm run test:native -- --watch",
     "test:primitives": "jest -c .jest.primitives.json",
     "test:primitives:watch": "npm run test:primitives -- --watch",
+    "test:integration": "jest -c .jest.integration.json --forceExit",
     "test:size": "bundlesize",
     "flow": "flow check",
     "flow:watch": "flow-watch",
@@ -28,7 +29,7 @@
     "typescript": "tsc --project ./typings/tests",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
-    "dev": "babel-node example/devServer.js"
+    "dev": "babel-node example/startServer.js"
   },
   "repository": {
     "type": "git",
@@ -104,12 +105,14 @@
     "flow-bin": "^0.47.0",
     "flow-watch": "^1.1.1",
     "jest": "^20.0.4",
+    "jest-image-snapshot": "^2.2.0",
     "jest-json-reporter": "^1.2.2",
     "jsdom": "^9.10.0",
     "lint-staged": "^6.0.0",
     "node-watch": "^0.4.1",
     "pre-commit": "^1.2.2",
     "prettier": "1.9.2",
+    "puppeteer": "^0.13.0",
     "react": "^15.5.4",
     "react-dom": "^15.5.4",
     "react-native": "^0.39.2",
