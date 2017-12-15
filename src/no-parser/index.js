@@ -25,7 +25,11 @@ import ThemeProvider from '../models/ThemeProvider'
 import withTheme from '../hoc/withTheme'
 
 /* Instantiate singletons */
-const ComponentStyle = _ComponentStyle(generateAlphabeticName, flatten, stringifyRules)
+const ComponentStyle = _ComponentStyle(
+  generateAlphabeticName,
+  flatten,
+  stringifyRules,
+)
 const constructWithOptions = _constructWithOptions(css)
 const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
 

@@ -8,7 +8,7 @@
 export type Broadcast = {
   publish: (value: mixed) => void,
   subscribe: (listener: (currentValue: mixed) => void) => number,
-  unsubscribe: (number) => void,
+  unsubscribe: number => void,
 }
 
 const createBroadcast = (initialState: mixed): Broadcast => {
@@ -19,7 +19,7 @@ const createBroadcast = (initialState: mixed): Broadcast => {
   function publish(nextState: mixed) {
     state = nextState
 
-     // eslint-disable-next-line guard-for-in, no-restricted-syntax
+    // eslint-disable-next-line guard-for-in, no-restricted-syntax
     for (const key in listeners) {
       const listener = listeners[key]
       if (listener === undefined) {

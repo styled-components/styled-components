@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- N/A
+- Add Prettier (see [#593](https://github.com/styled-components/styled-components/pull/593))
 
 ## [v2.3.0] - 2017-12-15
 

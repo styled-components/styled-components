@@ -18,23 +18,24 @@ export const CONTEXT_CHANNEL_SHAPE = PropTypes.shape({
   unsubscribe: PropTypes.func,
 })
 
-export type Theme = {[key: string]: mixed}
+export type Theme = { [key: string]: mixed }
 type ThemeProviderProps = {|
   children?: React$Element<any>,
-  theme: Theme | (outerTheme: Theme) => void,
+  theme: Theme | ((outerTheme: Theme) => void),
 |}
-
 
 const warnChannelDeprecated = once(() => {
   // eslint-disable-next-line no-console
-  console.error(`Warning: Usage of \`context.${CHANNEL}\` as a function is deprecated. It will be replaced with the object on \`.context.${CHANNEL_NEXT}\` in a future version.`)
+  console.error(
+    `Warning: Usage of \`context.${CHANNEL}\` as a function is deprecated. It will be replaced with the object on \`.context.${CHANNEL_NEXT}\` in a future version.`,
+  )
 })
 /**
  * Provide a theme to an entire react component tree via context and event listeners (have to do
  * both context and event emitter as pure components block context updates)
  */
 class ThemeProvider extends Component {
-  getTheme: (theme?: Theme | (outerTheme: Theme) => void) => Theme
+  getTheme: (theme?: Theme | ((outerTheme: Theme) => void)) => Theme
   outerTheme: Theme
   unsubscribeToOuterId: string
   props: ThemeProviderProps
@@ -66,7 +67,7 @@ class ThemeProvider extends Component {
         subscribe: this.broadcast.subscribe,
         unsubscribe: this.broadcast.unsubscribe,
       },
-      [CHANNEL]: (subscriber) => {
+      [CHANNEL]: subscriber => {
         if (process.env.NODE_ENV !== 'production') {
           warnChannelDeprecated()
         }
@@ -79,7 +80,9 @@ class ThemeProvider extends Component {
   }
 
   componentWillReceiveProps(nextProps: ThemeProviderProps) {
-    if (this.props.theme !== nextProps.theme) this.broadcast.publish(this.getTheme(nextProps.theme))
+    if (this.props.theme !== nextProps.theme) {
+      this.broadcast.publish(this.getTheme(nextProps.theme))
+    }
   }
 
   componentWillUnmount() {
@@ -94,12 +97,16 @@ class ThemeProvider extends Component {
     if (isFunction(theme)) {
       const mergedTheme = theme(this.outerTheme)
       if (!isPlainObject(mergedTheme)) {
-        throw new Error('[ThemeProvider] Please return an object from your theme function, i.e. theme={() => ({})}!')
+        throw new Error(
+          '[ThemeProvider] Please return an object from your theme function, i.e. theme={() => ({})}!',
+        )
       }
       return mergedTheme
     }
     if (!isPlainObject(theme)) {
-      throw new Error('[ThemeProvider] Please make your theme prop a plain object')
+      throw new Error(
+        '[ThemeProvider] Please make your theme prop a plain object',
+      )
     }
     return { ...this.outerTheme, ...(theme: Object) }
   }

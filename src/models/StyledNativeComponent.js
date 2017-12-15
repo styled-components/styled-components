@@ -67,25 +67,36 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         const { subscribe } = styledContext
         this.unsubscribeId = subscribe(nextTheme => {
           // This will be called once immediately
-          const theme = determineTheme(this.props, nextTheme, this.constructor.defaultProps)
-          const generatedStyles = this.generateAndInjectStyles(theme, this.props)
+          const theme = determineTheme(
+            this.props,
+            nextTheme,
+            this.constructor.defaultProps,
+          )
+          const generatedStyles = this.generateAndInjectStyles(
+            theme,
+            this.props,
+          )
 
           this.setState({ theme, generatedStyles })
         })
       } else {
         // eslint-disable-next-line react/prop-types
         const theme = this.props.theme || {}
-        const generatedStyles = this.generateAndInjectStyles(
-          theme,
-          this.props,
-        )
+        const generatedStyles = this.generateAndInjectStyles(theme, this.props)
         this.setState({ theme, generatedStyles })
       }
     }
 
-    componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-      this.setState((oldState) => {
-        const theme = determineTheme(nextProps, oldState.theme, this.constructor.defaultProps)
+    componentWillReceiveProps(nextProps: {
+      theme?: Theme,
+      [key: string]: any,
+    }) {
+      this.setState(oldState => {
+        const theme = determineTheme(
+          nextProps,
+          oldState.theme,
+          this.constructor.defaultProps,
+        )
         const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
 
         return { theme, generatedStyles }
@@ -106,8 +117,8 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         // eslint-disable-next-line no-console
         console.warn(
           'setNativeProps was called on a Styled Component wrapping a stateless functional component. ' +
-          'In this case no ref will be stored, and instead an innerRef prop will be passed on.\n' +
-          `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName}.`,
+            'In this case no ref will be stored, and instead an innerRef prop will be passed on.\n' +
+            `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName}.`,
         )
       }
     }
@@ -136,11 +147,9 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
 
       if (
         !isStyledComponent(target) &&
-        (
-          // NOTE: We can't pass a ref to a stateless functional component
-          typeof target !== 'function' ||
-          (target.prototype && 'isReactComponent' in target.prototype)
-        )
+        // NOTE: We can't pass a ref to a stateless functional component
+        (typeof target !== 'function' ||
+          (target.prototype && 'isReactComponent' in target.prototype))
       ) {
         propsForElement.ref = this.onRef
         delete propsForElement.innerRef
@@ -158,7 +167,9 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     rules: RuleSet,
   ) => {
     const {
-      displayName = isTag(target) ? `styled.${target}` : `Styled(${getComponentName(target)})`,
+      displayName = isTag(target)
+        ? `styled.${target}`
+        : `Styled(${getComponentName(target)})`,
       ParentComponent = BaseStyledNativeComponent,
       rules: extendingRules,
       attrs,
@@ -184,7 +195,10 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
 
       static withComponent(tag) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options
-        const newOptions = { ...optionsToCopy, ParentComponent: StyledNativeComponent }
+        const newOptions = {
+          ...optionsToCopy,
+          ParentComponent: StyledNativeComponent,
+        }
         return createStyledNativeComponent(tag, newOptions, rules)
       }
 
@@ -196,9 +210,10 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
           ...optionsToCopy
         } = options
 
-        const newRules = rulesFromOptions === undefined
-          ? rules
-          : rulesFromOptions.concat(rules)
+        const newRules =
+          rulesFromOptions === undefined
+            ? rules
+            : rulesFromOptions.concat(rules)
 
         const newOptions = {
           ...optionsToCopy,
