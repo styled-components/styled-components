@@ -6,7 +6,10 @@
 Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅
 
 ```
-npm install --save styled-components
+npm i styled-components
+```
+```
+yarn add styled-components
 ```
 
 [![npm](https://img.shields.io/npm/v/styled-components.svg)](https://www.npmjs.com/package/styled-components)
@@ -87,7 +90,7 @@ We could use your help to get syntax highlighting support to other editors! If y
 
 ## Code completions and error reporting
 
-Along with sytnax highlighting, you can install the [TypeScript styled plugin](https://github.com/Microsoft/typescript-styled-plugin) to get error reporting and code completeion for styled components in your editor. The plugin supports styled components in both JavaScript and TypeScript files, and works in Visual Studio Code, Sublime, and Atom.
+Along with syntax highlighting, you can install the [TypeScript styled plugin](https://github.com/Microsoft/typescript-styled-plugin) to get error reporting and code completion for styled components in your editor. The plugin supports styled components in both JavaScript and TypeScript files, and works in Visual Studio Code, Sublime, and Atom.
 
 ## Built with `styled-components`
 

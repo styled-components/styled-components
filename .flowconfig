@@ -9,11 +9,11 @@
 .*/dist/.*
 .*/lib/.*
 .*/node_modules/babel-plugin-flow-react-proptypes/src/__test__/.*
-.*/dangerfile.js
 
 [include]
 
 [libs]
+.*/node_modules/danger/distribution/danger.js.flow
 
 [options]
 suppress_comment=.*\\$FlowFixMe

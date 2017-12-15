@@ -1,6 +1,7 @@
 // @flow
 
 import { danger, warn, fail, message } from 'danger'
+import semver from 'semver'
 import fs from 'fs'
 import jest from 'danger-plugin-jest'
 
@@ -14,10 +15,15 @@ const jsTestChanges = jsModifiedFiles.filter(filepath => filepath.endsWith('test
 const hasTestChanges = jsTestChanges.length > 0
 
 // Congrats, version bump up!
-const isVersionBump = danger.git.modified_files.includes('package.json')
-const packageDiff = danger.git.diffForFile('package.json')
-
-if (isVersionBump && packageDiff && packageDiff.includes('version')) { message(':tada: Version BUMP UP!') }
+danger.git.diffForFile('package.json').then(packageDiff => {
+  if (
+    packageDiff && packageDiff.version && packageDiff.version.before && packageDiff.version.after
+  ) {
+    if (semver.lt(packageDiff.version.before, packageDiff.version.after)) {
+      message(':tada: Version BUMP UP!')
+    }
+  }
+})
 
 // Warn when there is a big PR
 const bigPRThreshold = 500
