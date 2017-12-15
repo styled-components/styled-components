@@ -32,6 +32,34 @@ Please also give the code of conduct a read.
 
 Run `npm install` and edit code in the `src/` folder. It's luckily very simple! :wink:
 
+## How do I verify and test my changes?
+
+To make development process easier, you could use a sandbox provided in this repo.
+To use the sandbox, follow these steps:
+
+1. Go to sandbox folder: `cd sandbox`
+
+2. Install all the dependencies: `yarn install` or `npm install`
+
+3. Run `yarn start` or `npm start` to start sandbox server
+
+Now you should have the sandbox running on `localhost:3000`
+
+Sandbox supports client-side and server-side rendering.
+
+You can use an interactive editor, powered by [`react-live`](https://react-live.philpl.com/), to
+test your changes. But if you want more control, you can edit the sandbox itseft:
+
+- Root `<App>` componens is located at `styled-components/sandbox/src/App.js` file
+
+- Client-side entry point is at `styled-components/sandbox/src/browser.js`
+
+- Server-side entry point is at `styled-components/sandbox/src/server.js`
+
+In the sandbox source, `styled-components` is an alias to `styled-components/src` folder,
+so you can edit the source directly and dev-server will handle rebuilding the source and
+livereloading your sandbox after the build is done.
+
 When you commit our pre-commit hook will run, which executes `lint-staged`. It will run
 the linter automatically and warn you, if the code you've written doesn't comply with our
 code style.

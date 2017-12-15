@@ -10,10 +10,12 @@ import validAttr from '../utils/validAttr'
 import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
+import determineTheme from '../utils/determineTheme'
 import type { RuleSet, Target } from '../types'
 
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
+import ServerStyleSheet from './ServerStyleSheet'
 
 const escapeRegex = /[[\].#*$><+~=|^:(),"'`]/g
 const multiDashRegex = /--+/g
@@ -115,15 +117,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         const { subscribe } = styledContext
         this.unsubscribeId = subscribe(nextTheme => {
           // This will be called once immediately
-
-          // Props should take precedence over ThemeProvider, which should take precedence over
-          // defaultProps, but React automatically puts defaultProps on props.
-          const { defaultProps } = this.constructor
-          /* eslint-disable react/prop-types */
-          const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
-          const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
-          /* eslint-enable */
+          const theme = determineTheme(this.props, nextTheme, this.constructor.defaultProps)
           const generatedClassName = this.generateAndInjectStyles(theme, this.props)
+
           this.setState({ theme, generatedClassName })
         })
       } else {
@@ -146,13 +142,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
 
       this.setState((oldState) => {
-        // Props should take precedence over ThemeProvider, which should take precedence over
-        // defaultProps, but React automatically puts defaultProps on props.
-        const { defaultProps } = this.constructor
-        /* eslint-disable react/prop-types */
-        const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
-        const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : oldState.theme
-        /* eslint-enable */
+        const theme = determineTheme(nextProps, oldState.theme, this.constructor.defaultProps)
         const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
 
         return { theme, generatedClassName }
@@ -234,6 +224,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),
+      attrs,
       styledComponentId,
     )
 
@@ -241,7 +232,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       static contextTypes = {
         [CHANNEL]: PropTypes.func,
         [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-        [CONTEXT_KEY]: PropTypes.instanceOf(StyleSheet),
+        [CONTEXT_KEY]: PropTypes.oneOfType([
+          PropTypes.instanceOf(StyleSheet),
+          PropTypes.instanceOf(ServerStyleSheet),
+        ]),
       }
 
       static displayName = displayName

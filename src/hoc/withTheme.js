@@ -6,6 +6,7 @@ import PropTypes from 'prop-types'
 import hoistStatics from 'hoist-non-react-statics'
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from '../models/ThemeProvider'
 import _isStyledComponent from '../utils/isStyledComponent'
+import determineTheme from '../utils/determineTheme'
 
 const wrapWithTheme = (Component: ReactClass<any>) => {
   const componentName = (
@@ -35,17 +36,29 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
     unsubscribeId: number = -1
 
     componentWillMount() {
+      const { defaultProps } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
-      if (styledContext === undefined) {
+      const themeProp = determineTheme(this.props, undefined, defaultProps)
+      if (styledContext === undefined && themeProp === undefined && process.env.NODE_ENV !== 'production') {
         // eslint-disable-next-line no-console
-        console.error('[withTheme] Please use ThemeProvider to be able to use withTheme')
-        return
+        console.warn('[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps')
+      } else if (styledContext === undefined && themeProp !== undefined) {
+        this.setState({ theme: themeProp })
+      } else {
+        const { subscribe } = styledContext
+        this.unsubscribeId = subscribe(nextTheme => {
+          const theme = determineTheme(this.props, nextTheme, defaultProps)
+          this.setState({ theme })
+        })
       }
+    }
 
+    componentWillReceiveProps(nextProps: { theme?: ?Object, [key: string]: any }) {
+      const { defaultProps } = this.constructor
+      this.setState((oldState) => {
+        const theme = determineTheme(nextProps, oldState.theme, defaultProps)
 
-      const { subscribe } = styledContext
-      this.unsubscribeId = subscribe(theme => {
-        this.setState({ theme })
+        return { theme }
       })
     }
 

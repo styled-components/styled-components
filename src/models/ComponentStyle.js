@@ -5,7 +5,7 @@ import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
 import StyleSheet from './StyleSheet'
 import isStyledComponent from '../utils/isStyledComponent'
 
-const isStaticRules = (rules: RuleSet): boolean => {
+const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
   for (let i = 0; i < rules.length; i += 1) {
     const rule = rules[i]
 
@@ -19,8 +19,20 @@ const isStaticRules = (rules: RuleSet): boolean => {
     }
   }
 
+  if (attrs !== undefined) {
+    // eslint-disable-next-line guard-for-in, no-restricted-syntax
+    for (const key in attrs) {
+      const value = attrs[key]
+      if (typeof value === 'function') {
+        return false
+      }
+    }
+  }
+
   return true
 }
+
+const isHRMEnabled = typeof module !== 'undefined' && module.hot && process.env.NODE_ENV !== 'production'
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
@@ -34,9 +46,9 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
     lastClassName: ?string
 
 
-    constructor(rules: RuleSet, componentId: string) {
+    constructor(rules: RuleSet, attrs?: Object, componentId: string) {
       this.rules = rules
-      this.isStatic = isStaticRules(rules)
+      this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
       if (!StyleSheet.instance.hasInjectedComponent(this.componentId)) {
         const placeholder = process.env.NODE_ENV !== 'production' ? `.${componentId} {}` : ''
