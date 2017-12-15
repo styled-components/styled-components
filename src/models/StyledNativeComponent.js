@@ -100,7 +100,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       if (this.root !== undefined) {
         // $FlowFixMe
         this.root.setNativeProps(nativeProps)
-      } else {
+      } else if (process.env.NODE_ENV !== 'production') {
         const { displayName } = this.constructor
 
         // eslint-disable-next-line no-console

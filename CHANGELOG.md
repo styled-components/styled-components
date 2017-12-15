@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Add basic support for style objects in the Typescript definitions (see [#1123](https://github.com/styled-components/styled-components/pull/1123))
 - Fix ref warning using withTheme HOC and stateless function components, thanks to [@MatthieuLemoine](https://github.com/MatthieuLemoine) (see [#1205](https://github.com/styled-components/styled-components/pull/1205))
+- Consistently escape displayNames when creating `componentId` (see [#1313](https://github.com/styled-components/styled-components/pull/1313))
 
 ## [v2.2.4] - 2017-11-29
 
