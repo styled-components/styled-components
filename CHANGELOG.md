@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Add basic support for style objects in the Typescript definitions (see [#1123](https://github.com/styled-components/styled-components/pull/1123))
 
 ## [v2.2.4] - 2017-11-29
 
