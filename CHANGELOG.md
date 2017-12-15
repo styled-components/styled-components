@@ -6,9 +6,15 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- Add basic support for style objects in the Typescript definitions (see [#1123](https://github.com/styled-components/styled-components/pull/1123))
+- N/A
+
+## [v2.3.0] - 2017-12-15
+
+- Add development sandbox to repo for easier contributing, thanks to [@gribnoysup](https://github.com/gribnoysup) (see [#1257](https://github.com/styled-components/styled-components/pull/1257))
+- Add basic support for style objects in the Typescript definitions, thanks to [@nbostrom](https://github.com/nbostrom) (see [#1123](https://github.com/styled-components/styled-components/pull/1123))
 - Fix ref warning using withTheme HOC and stateless function components, thanks to [@MatthieuLemoine](https://github.com/MatthieuLemoine) (see [#1205](https://github.com/styled-components/styled-components/pull/1205))
-- Consistently escape displayNames when creating `componentId` (see [#1313](https://github.com/styled-components/styled-components/pull/1313))
+- Consistently escape displayNames when creating `componentId`, thanks to [@evan-scott-zocdoc](https://github.com/evan-scott-zocdoc) (see [#1313](https://github.com/styled-components/styled-components/pull/1313))
+- Better issue template (see [#1342](https://github.com/styled-components/styled-components/pull/1342))
 
 ## [v2.2.4] - 2017-11-29
 
@@ -306,7 +312,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.2.4...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.3.0...master
+[v2.3.0]: https://github.com/styled-components/styled-components/compare/v2.2.4...v2.3.0
 [v2.2.4]: https://github.com/styled-components/styled-components/compare/v2.2.3...v2.2.4
 [v2.2.3]: https://github.com/styled-components/styled-components/compare/v2.2.2...v2.2.3
 [v2.2.2]: https://github.com/styled-components/styled-components/compare/v2.2.1...v2.2.2
