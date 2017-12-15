@@ -1,0 +1,26 @@
+{
+  "name": "sandbox",
+  "version": "0.0.0",
+  "main": "src/index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node ./index.js"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "eslint": "^4.9.0",
+    "eslint-loader": "^1.9.0",
+    "express": "^4.16.2",
+    "react": "^16.0.0",
+    "react-dom": "^16.0.0",
+    "react-live": "^1.7.1",
+    "socket.io": "^2.0.3",
+    "socket.io-client": "^2.0.3",
+    "strip-ansi": "^4.0.0",
+    "webpack": "^3.8.1",
+    "webpack-dev-middleware": "^1.12.0",
+    "webpack-dev-server": "^2.9.3"
+  },
+  "dependencies": {}
+}

@@ -6,9 +6,14 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Add basic support for style objects in the Typescript definitions (see [#1123](https://github.com/styled-components/styled-components/pull/1123))
+- Fix ref warning using withTheme HOC and stateless function components, thanks to [@MatthieuLemoine](https://github.com/MatthieuLemoine) (see [#1205](https://github.com/styled-components/styled-components/pull/1205))
+- Consistently escape displayNames when creating `componentId` (see [#1313](https://github.com/styled-components/styled-components/pull/1313))
+
+## [v2.2.4] - 2017-11-29
+
 - Disable static styles caching when hot module replacement is enabled.
 - Bump minimum `stylis` version to 3.4.0, adjust the semver caret target (see [#1296](https://github.com/styled-components/styled-components/pull/1296))
-- Consistently escape displayNames when creating `componentId` (see [#1313](https://github.com/styled-components/styled-components/pull/1313))
 
 ## [v2.2.3] - 2017-10-29
 
@@ -301,7 +306,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.2.3...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.2.4...master
+[v2.2.4]: https://github.com/styled-components/styled-components/compare/v2.2.3...v2.2.4
 [v2.2.3]: https://github.com/styled-components/styled-components/compare/v2.2.2...v2.2.3
 [v2.2.2]: https://github.com/styled-components/styled-components/compare/v2.2.1...v2.2.2
 [v2.2.1]: https://github.com/styled-components/styled-components/compare/v2.2.0...v2.2.1
