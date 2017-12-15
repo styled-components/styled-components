@@ -47,7 +47,7 @@ const plugins = [
   commonjs({
     ignoreGlobal: true,
   }),
-  prod && replace({
+  !esbundle && replace({
     'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
   }),
   prod && inject({
