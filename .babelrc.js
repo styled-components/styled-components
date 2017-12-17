@@ -15,5 +15,7 @@ module.exports = {
     'transform-flow-strip-types',
     'transform-object-rest-spread',
     'transform-class-properties',
+    // bundles get the same thing from rollup and not from babel
+    test && 'add-module-exports',
   ].filter(Boolean)
 }
