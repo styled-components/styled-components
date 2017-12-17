@@ -27,6 +27,7 @@
     "test:primitives:watch": "npm run test:primitives -- --watch",
     "test:integration": "jest -c .jest.integration.json --forceExit",
     "test:size": "bundlesize",
+    "danger": "cross-env NODE_ENV=test danger run -- --verbose",
     "flow": "flow check",
     "flow:watch": "flow-watch",
     "lint": "eslint src",
