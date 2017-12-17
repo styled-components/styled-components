@@ -14,16 +14,15 @@ Everyone comes in with their own perspective on what a project could/should look
 
 It can be overwhelming to be offered the chance to wipe the source code for a project. Don't worry, we don't let you push to master. All code has to be reviewed by at least two contributors or one core team member, and we have the convention that someone other than the submitter has to merge non-trivial pull requests.
 
-As an organization contributor, you can merge other people's pull requests, or other contributors can merge yours. You likely won't be assigned a pull request, but you're welcome to jump in and take a code review on topics that interest you.
+**As an organization contributor, you can merge other people's pull requests, or other contributors can merge yours.** You likely won't be assigned a pull request, but you're welcome to jump in and take a code review on topics that interest you.
 
-This project is not continuously deployed, there is space for debate after review too. Offering everyone the chance to revert, or make an amending pull request. If it feels right, merge.
+This project is not continuously deployed, there is space for debate after review too. This means there's always a chance to revert, or to make an amending pull request. If it feels right, merge.
 
 ### How can we help you get comfortable contributing?
 
 It's normal for a first pull request to be a potential fix for a problem, and moving on from there to helping the project's direction can be difficult. We try to help contributors cross that barrier by offering good first step issues. These issues can be fixed without feeling like you're stepping on toes. Ideally, these are non-critical issues that are well defined. They will be purposely avoided by mature contributors to the project, to make space for others.
 
-We aim to keep all technical discussions inside GitHub issues, and all other discussions in our [Spectrum community](https://spectrum.chat/styled-components). This is to make sure valuable discussion is accessible via search. If you have questions about a specific PR, want to discuss a new API idea or anything like that GitHub issues are the right tool. If you have questions about how to use the library, or how the project is running - the [Spectrum community](https://spectrum.chat/styled-components) is the place to go.
-
+We aim to keep all technical discussions inside GitHub issues, and all other discussions in our [Spectrum community](https://spectrum.chat/styled-components). This is to make sure valuable discussions are public and discoverable via search engines. If you have questions about a specific PR, want to discuss a new API idea etc GitHub issues are the right place. If you have questions about how to use the library, or how the project is running - the [Spectrum community](https://spectrum.chat/styled-components) is the place to go.
 
 ### Our expectations on you as a contributor
 
