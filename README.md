@@ -122,6 +122,14 @@ If `styled-components` isn't quite what you're looking for, maybe something in t
 
 - [`glamorous`](https://github.com/paypal/glamorous) - basically `styled-components` but using JS objects and functions instead of strings.
 
+## Badge
+
+Let everyone know you're using _styled-components_ → [![style: styled-components](https://img.shields.io/badge/style-styled--components-orange.svg)](https://github.com/styled-components/styled-components)
+
+```md
+[![style: styled-components](https://img.shields.io/badge/style-styled--components-orange.svg)](https://github.com/styled-components/styled-components)
+```
+
 ## License
 
 Licensed under the MIT License, Copyright © 2017 Glen Maddern and Maximilian Stoiber.
