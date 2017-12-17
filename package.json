@@ -14,7 +14,7 @@
     "build:dist": "rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
     "test": "npm run test:web && npm run test:native && npm run test:size",
-    "test:web": "jest",
+    "test:web": "jest --outputFile test-results.json --json",
     "test:web:watch": "npm run test:web -- --watch",
     "test:native": "jest -c .jest.native.json",
     "test:native:watch": "npm run test:native -- --watch",
@@ -106,7 +106,6 @@
     "flow-watch": "^1.1.1",
     "jest": "^20.0.4",
     "jest-image-snapshot": "^2.2.0",
-    "jest-json-reporter": "^1.2.2",
     "jsdom": "^9.10.0",
     "lint-staged": "^6.0.0",
     "node-watch": "^0.4.1",
@@ -143,8 +142,7 @@
     "testPathIgnorePatterns": [
       "<rootDir>/src/native",
       "<rootDir>/src/primitives"
-    ],
-    "testResultsProcessor": "jest-json-reporter"
+    ]
   },
   "lint-staged": {
     "*.js": [
