@@ -12,20 +12,59 @@ import pkg from './package.json'
 
 const processShim = '\0process-shim'
 
-const prod = process.env.PRODUCTION
-const esbundle = process.env.ESBUNDLE
+const {
+  PRODUCTION,
+  UMD,
+  BABEL_ENV,
+  ESBUNDLE,
+  CJSBUNDLE,
+  NATIVEBUNDLE,
+  PRIMITIVESBUNDLE,
+  NOPARSERBUNDLE,
+} = process.env
 
-let targets
-if (prod) {
+let input
+let output
+if (UMD && PRODUCTION) {
   console.log('Creating production UMD bundle...')
-  targets = [{ dest: 'dist/styled-components.min.js', format: 'umd' }]
-} else if (esbundle) {
-  console.log('Creating ES modules bundle...')
-  targets = [{ dest: 'dist/styled-components.es.js', format: 'es' }]
-} else {
+  input = 'src/index.js'
+  output = [
+    { file: 'dist/styled-components.min.js', format: 'umd', name: 'styled' },
+  ]
+} else if (UMD) {
   console.log('Creating development UMD bundle')
-  targets = [{ dest: 'dist/styled-components.js', format: 'umd' }]
+  input = 'src/index.js'
+  output = [
+    { file: 'dist/styled-components.js', format: 'umd', name: 'styled' },
+  ]
+} else if (ESBUNDLE) {
+  console.log('Creating ES modules bundle...')
+  input = 'src/index.js'
+  output = [{ file: 'dist/styled-components.es.js', format: 'es' }]
+} else if (CJSBUNDLE) {
+  console.log('Creating CJS modules bundle...')
+  input = 'src/index.js'
+  output = [{ file: 'dist/styled-components.cjs.js', format: 'cjs' }]
+} else if (NATIVEBUNDLE) {
+  console.log('Creating React Native bundle...')
+  input = 'src/native/index.js'
+  output = [{ file: 'dist/styled-components.native.js', format: 'cjs' }]
+} else if (PRIMITIVESBUNDLE) {
+  console.log('Creating React Primitives bundle...')
+  input = 'src/primitives/index.js'
+  output = [{ file: 'dist/styled-components.primitives.js', format: 'cjs' }]
+} else if (NOPARSERBUNDLE && BABEL_ENV === 'cjs') {
+  console.log('Creating CJS no parser bundle...')
+  input = 'src/no-parser/index.js'
+  output = [{ file: 'dist/styled-components-no-parser.cjs.js', format: 'cjs' }]
+} else if (NOPARSERBUNDLE) {
+  console.log('Creating ES no parser bundle...')
+  input = 'src/no-parser/index.js'
+  output = [{ file: 'dist/styled-components-no-parser.es.js', format: 'es' }]
+} else {
+  throw new Error('Unknown bundle type.')
 }
+output[0].exports = 'named'
 
 const plugins = [
   // Unlike Webpack and Browserify, Rollup doesn't automatically shim Node
@@ -47,37 +86,30 @@ const plugins = [
   commonjs({
     ignoreGlobal: true,
   }),
-  !esbundle && replace({
-    'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
-  }),
-  prod && inject({
-    process: processShim,
-  }),
-  babel({
-    babelrc: false,
-    presets: [
-      ['env', { modules: false, loose: true }],
-      'react',
-    ],
-    plugins: [
-      !prod && 'flow-react-proptypes',
-      prod && 'transform-react-remove-prop-types',
-      'transform-flow-strip-types',
-      'external-helpers',
-      'transform-object-rest-spread',
-      'transform-class-properties',
-    ].filter(Boolean),
-  }),
+  UMD &&
+    replace({
+      'process.env.NODE_ENV': JSON.stringify(
+        PRODUCTION ? 'production' : 'development',
+      ),
+    }),
+  PRODUCTION &&
+    inject({
+      process: processShim,
+    }),
+  babel(),
 ].filter(Boolean)
 
-if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
+if (PRODUCTION) {
+  plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
+}
 
 export default {
-  entry: 'src/index.js',
-  moduleName: 'styled',
-  external: ['react'].concat(esbundle ? Object.keys(pkg.dependencies) : []),
-  exports: 'named',
-  targets,
+  input,
+  external: ['react', 'react-native', 'react-primitives'].concat(
+    !UMD ? Object.keys(pkg.dependencies) : [],
+  ),
+  output,
   plugins,
   globals: { react: 'React' },
+  outro: BABEL_ENV === 'cjs' ? "module.exports = exports['default']" : '',
 }
