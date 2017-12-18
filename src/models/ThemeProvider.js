@@ -2,7 +2,6 @@
 /* globals React$Element */
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import isFunction from 'is-function'
 import isPlainObject from 'is-plain-object'
 import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
@@ -30,6 +29,9 @@ const warnChannelDeprecated = once(() => {
     `Warning: Usage of \`context.${CHANNEL}\` as a function is deprecated. It will be replaced with the object on \`.context.${CHANNEL_NEXT}\` in a future version.`,
   )
 })
+
+const isFunction = test => typeof test === 'function'
+
 /**
  * Provide a theme to an entire react component tree via context and event listeners (have to do
  * both context and event emitter as pure components block context updates)
