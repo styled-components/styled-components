@@ -10,9 +10,9 @@
   <strong>Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅</strong>
   <br />
   <br />
-  <a href="https://www.npmjs.com/package/styled-components"><img src="https://img.shields.io/npm/dm/styled-components.svg" alt="npm"></a>
+  <a href="https://www.npmjs.com/package/styled-components"><img src="https://www.styled-components.com/proxy/downloads.svg" alt="npm"></a>
   <a href="https://spectrum.chat/styled-components"><img src="https://withspectrum.github.io/badge/badge.svg" alt="Join the community on Spectrum"></a>
-  <img src="http://img.badgesize.io/https://unpkg.com/styled-components/dist/styled-components.min.js?compression=gzip&amp;label=gzip%20size" alt="gzip size">
+  <img src="https://www.styled-components.com/proxy/size.svg" alt="gzip size">
   <a href="#alternative-installation-methods"><img src="https://img.shields.io/badge/module%20formats-umd%2C%20cjs%2C%20esm-green.svg" alt="module formats: umd, cjs, esm"></a>
 </div>
 
