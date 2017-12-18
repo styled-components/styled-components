@@ -124,10 +124,10 @@ If `styled-components` isn't quite what you're looking for, maybe something in t
 
 ## Badge
 
-Let everyone know you're using _styled-components_ → [![style: styled-components](https://img.shields.io/badge/style-styled--components-orange.svg)](https://github.com/styled-components/styled-components)
+Let everyone know you're using _styled-components_ → [![style: styled-components](https://img.shields.io/badge/style-%F0%9F%92%85%20styled--components-orange.svg?colorB=daa357&colorA=db748e)](https://github.com/styled-components/styled-components)
 
 ```md
-[![style: styled-components](https://img.shields.io/badge/style-styled--components-orange.svg)](https://github.com/styled-components/styled-components)
+[![style: styled-components](https://img.shields.io/badge/style-%F0%9F%92%85%20styled--components-orange.svg?colorB=daa357&colorA=db748e)](https://github.com/styled-components/styled-components)
 ```
 
 ## License
