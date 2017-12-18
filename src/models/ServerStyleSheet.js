@@ -41,7 +41,7 @@ class ServerTag implements Tag {
   inject(componentId: string, css: string, name: ?string) {
     const comp = this.components[componentId]
 
-    if (!comp) {
+    if (process.env.NODE_ENV !== 'production' && !comp) {
       throw new Error(
         'Must add a new component before you can inject css into it',
       )
