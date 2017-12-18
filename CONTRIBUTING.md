@@ -4,7 +4,7 @@ As the creators and maintainers of this project, we want to ensure that `styled-
 
 ## Ownership
 
-**If you get a merged Pull Request, regardless of content (typos, code, doc fixes), then you're eligible for push access to this organization.** This is checked for on pull request merges and an invite to the organization is sent via GitHub automatically thanks to and [Aeryn instance](https://github.com/Moya/Aeryn/) that @mxstbr runs.
+**If your Pull Request is merged, regardless of content, you're eligible for push access to the organization on GitHub.** This is checked for on pull request merges and an invite is sent automatically. (thanks to an [Aeryn instance](https://github.com/Moya/Aeryn/) that [@mxstbr](https://github.com/mxstbr) runs)
 
 Offhand, it's easy to imagine that this would make code quality suffer, but in reality it offers fresh perspectives to the codebase and encourages ownership from people who are depending on the project. If you are building a project that relies on this codebase, then you probably have the skills to improve it and offer valuable feedback.
 
@@ -34,9 +34,9 @@ We want contributors to provide ideas, keep the ship shipping and to take some o
 
 The fact that you'll have push access will allow you to:
 
-- Avoid having to fork the project if you want to submit other pull requests as you'll be able to create branches directly on the project.
-- Help triage issues, merge pull requests.
-- Pick up the project if other maintainers move their focus elsewhere.
+* Avoid having to fork the project if you want to submit other pull requests as you'll be able to create branches directly on the project.
+* Help triage issues, merge pull requests.
+* Pick up the project if other maintainers move their focus elsewhere.
 
 It's up to you to use those superpowers or not though 😉
 
@@ -46,13 +46,17 @@ If someone submits a pull request that's not perfect, and you are reviewing, it'
 
 [Max Stoiber](https://twitter.com/mxstbr) and [Phil Pluckthun](https://twitter.com/_philpl) (Twitter links) have contactable emails on their GitHub profiles, and are happy to talk about any problems via those or via Twitter DMs.
 
+### Code of Conduct
+
+It's also important to note that all repositories under the `styled-components` banner have a [Code of Conduct](./CODE_OF_CONDUCT.md). It is important that you review and enforce this CoC should any violations happen.
+
 ## Code contributions
 
-Here is a quick guide to doing code contributions to the `styled-components` library itself:
+Here is a quick guide to doing code contributions to the library.
 
 1. Find some issue you're interested in, or a feature that you'd like to tackle.
-  Also make sure that no one else is already working on it. We don't want you to be
-  disappointed.
+   Also make sure that no one else is already working on it. We don't want you to be
+   disappointed.
 
 2. Fork, then clone: `git clone https://github.com/YOUR_USERNAME/styled-components.git`
 
@@ -72,11 +76,11 @@ Here is a quick guide to doing code contributions to the `styled-components` lib
 
 10. Perform a celebratory dance! :dancer:
 
-## How do I set up the project?
+### How do I set up the project?
 
 Run `npm install` and edit code in the `src/` folder. It's luckily very simple! :wink:
 
-## How do I verify and test my changes?
+### How do I verify and test my changes?
 
 To make development process easier we provide a Sandbox React application in this repo which automatically uses your local version of the `styled-components` library. That means when you make any changes in the `src/` folder they'll show up automatically there!
 
@@ -92,17 +96,29 @@ Now you should have the sandbox running on `localhost:3000`. The Sandbox support
 
 You can use an interactive editor, powered by [`react-live`](https://react-live.philpl.com/), to test your changes. But if you want more control, you can edit the sandbox itself too:
 
-- Root `<App>` componens is located at `styled-components/sandbox/src/App.js` file
+* Root `<App>` componens is located at `styled-components/sandbox/src/App.js` file
 
-- Client-side entry point is at `styled-components/sandbox/src/browser.js`
+* Client-side entry point is at `styled-components/sandbox/src/browser.js`
 
-- Server-side entry point is at `styled-components/sandbox/src/server.js`
+* Server-side entry point is at `styled-components/sandbox/src/server.js`
 
 In the sandbox source, `styled-components` is an alias to `styled-components/src` folder, so you can edit the source directly and dev-server will handle rebuilding the source and livereloading your sandbox after the build is done.
 
 When you commit our pre-commit hook will run, which executes `lint-staged`. It will run the linter automatically and warn you, if the code you've written doesn't comply with our code style.
 
+## Release process
+
+[Core team members](./CORE_TEAM.md) have the responsibility of pushing new releases to npm. The release process is as follows:
+
+1. Install `np` by Sindre Sorhus with `npm i -g np`. (note: you only have to do this once) `np` makes sure that everything is correct and runs tests and a build before it releases the new version for you.
+2. Make sure you have the latest changes and are on the master branch: `git checkout master && git pull origin master`
+3. Create a new branch based on the the version number, for example `git checkout -b 3.4.1`
+4. Update the [CHANGELOG.md](./CHANGELOG.md) with the new version number, add a new Unreleased section at the top and edit the links at the bottom so everything is linked correctly
+5. Commit the Changelog changes with `git commit -m 'Update CHANGELOG'`
+6. Push the branch to the repo with `git push -u origin <branchname>`
+7. Run `np --any-branch` and follow its instructions
+8. Congratulations, you just published a new release of `styled-components`! :tada: Let everybody know on Twitter, in our community and all the other places
+
 ## Credits
 
 These contribution guidelines are based on https://github.com/moya/contributors, big thanks to @alloy, @orta et al. for the inspiration and guidance.
-
