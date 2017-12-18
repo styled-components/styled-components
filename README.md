@@ -1,53 +1,78 @@
-<a href="https://www.styled-components.com">
-  <img alt="styled-components" src="https://raw.githubusercontent.com/styled-components/brand/master/styled-components.png" height="150px" />
-</a>
+<div align="center">
+  <a href="https://www.styled-components.com">
+    <img alt="styled-components" src="https://raw.githubusercontent.com/styled-components/brand/master/styled-components.png" height="150px" />
+  </a>
+</div>
+
 <br />
 
-Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅
+<div align="center">
+  <strong>Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅</strong>
+  <br />
+  <br />
+  <a href="https://www.npmjs.com/package/styled-components"><img src="https://img.shields.io/npm/dm/styled-components.svg" alt="npm"></a>
+  <a href="https://spectrum.chat/styled-components"><img src="https://withspectrum.github.io/badge/badge.svg" alt="Join the community on Spectrum"></a>
+  <img src="http://img.badgesize.io/https://unpkg.com/styled-components/dist/styled-components.min.js?compression=gzip&amp;label=gzip%20size" alt="gzip size">
+  <a href="#alternative-installation-methods"><img src="https://img.shields.io/badge/module%20formats-umd%2C%20cjs%2C%20esm-green.svg" alt="module formats: umd, cjs, esm"></a>
+</div>
 
-```
-npm i styled-components
-```
-```
-yarn add styled-components
-```
-
-[![npm](https://img.shields.io/npm/v/styled-components.svg)](https://www.npmjs.com/package/styled-components)
-[![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/styled-components)
-
-![gzip size](http://img.badgesize.io/https://unpkg.com/styled-components/dist/styled-components.min.js?compression=gzip&label=gzip%20size)
-![size](http://img.badgesize.io/https://unpkg.com/styled-components/dist/styled-components.min.js?label=size)
-![module formats: umd, cjs, esm](https://img.shields.io/badge/module%20formats-umd%2C%20cjs%2C%20esm-green.svg)
+<br />
+<br />
 
 Utilising [tagged template literals](https://www.styled-components.com/docs/advanced#tagged-template-literals) (a recent addition to JavaScript) and the [power of CSS](https://www.styled-components.com/docs/api#supported-css), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
 `styled-components` is compatible with both React (for web) and ReactNative – meaning it's the perfect choice even for truly universal apps! See the [documentation about ReactNative](https://www.styled-components.com/docs/basics#react-native) for more information.
 
-> **Note:** If you're not using `npm` as your package manager, aren't using a module bundler or aren't sure about either of those jump to [Alternative Installation Methods](#alternative-installation-methods).
+_Supported by [Front End Center](https://frontend.center). Thank you for making this possible!_
 
-*Made by [Glen Maddern](https://twitter.com/glenmaddern), [Max Stoiber](https://twitter.com/mxstbr) and [Phil Plückthun](https://twitter.com/_philpl), supported by [Front End Center](https://frontend.center) and [Thinkmill](http://thinkmill.com.au/). Thank you for making this project possible!*
-
-## Docs
+## [Docs](https://www.styled-components.com/docs)
 
 **See the documentation at [styled-components.com/docs](https://www.styled-components.com/docs)** for more information about using `styled-components`!
 
-### Quicklinks
-
 Quicklinks to some of the most-visited pages:
 
-- [**Getting started**](https://www.styled-components.com/docs/basics)
-- [API Reference](https://styled-components.com/docs/api)
-- [Theming](https://www.styled-components.com/docs/advanced#theming)
-- [Server-side rendering](https://www.styled-components.com/docs/advanced#server-side-rendering)
-- [Tagged Template Literals explained](https://www.styled-components.com/docs/advanced#tagged-template-literals)
+* [**Getting started**](https://www.styled-components.com/docs/basics)
+* [API Reference](https://styled-components.com/docs/api)
+* [Theming](https://www.styled-components.com/docs/advanced#theming)
+* [Server-side rendering](https://www.styled-components.com/docs/advanced#server-side-rendering)
+* [Tagged Template Literals explained](https://www.styled-components.com/docs/advanced#tagged-template-literals)
 
-## Linting
+## Example
 
-There is (currently experimental) support for `stylelint` – meaning you can take advantage of 150 rules to make sure your `styled-components` CSS is solid!
+<!-- prettier-ignore -->
+```JSX
+import React from 'react';
 
-![Recording of stylelint correctly reporting errors in a styled components' CSS](http://imgur.com/br9zdHb.gif)
+import styled from 'styled-components';
 
-See the [`stylelint-processor-styled-components`](https://github.com/styled-components/stylelint-processor-styled-components) repository for installation instructions.
+// Create a <Title> react component that renders an <h1> which is
+// centered, palevioletred and sized at 1.5em
+const Title = styled.h1`
+  font-size: 1.5em;
+  text-align: center;
+  color: palevioletred;
+`;
+
+// Create a <Wrapper> react component that renders a <section> with
+// some padding and a papayawhip background
+const Wrapper = styled.section`
+  padding: 4em;
+  background: papayawhip;
+`;
+
+// Use them like any other React component – except they're styled!
+<Wrapper>
+  <Title>Hello World, this is my first styled component!</Title>
+</Wrapper>
+```
+
+This is what you'll see in your browser:
+
+<div align="center">
+  <a href="https://styled-components.com">
+    <img alt="Screenshot of the above code ran in a browser" src="http://i.imgur.com/wUJpcjY.jpg" />
+  </a>
+</div>
 
 ## Syntax highlighting
 
@@ -76,6 +101,7 @@ As soon as that PR is merged and a new version released, all you'll have to do i
 If you would like to keep your current JavaScript syntax highlighting, you can use the [vscode-styled-components](https://github.com/styled-components/vscode-styled-components) extension to provide styled-components syntax highlighting inside your Javascript files. You can install it as usual from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=jpoissonnier.vscode-styled-components).
 
 ### VIM / NeoVim
+
 The [`vim-styled-components`](https://github.com/fleischie/vim-styled-components) plugin gives you syntax highlighting inside your Javascript files. Install it with your usual plugin manager like [Plug](https://github.com/junegunn/vim-plug), [Vundle](https://github.com/VundleVim/Vundle.vim), [Pathogen](https://github.com/tpope/vim-pathogen), etc.
 
 Also if you're looking for an awesome javascript syntax package you can never go wrong with [YAJS.vim](https://github.com/othree/yajs.vim).
@@ -116,11 +142,11 @@ To use it from your HTML, add this at the bottom of your `index.html`, and you'l
 <script src="https://unpkg.com/styled-components/dist/styled-components.min.js" type="text/javascript"></script>
 ```
 
-## Other solutions
+## Contributing
 
-If `styled-components` isn't quite what you're looking for, maybe something in this list is:
+If you want to contribute to `styled-components` please see our [contributing and community guidelines](./CONTRIBUTING.md), they'll help you get set up locally and explain the whole process.
 
-- [`glamorous`](https://github.com/paypal/glamorous) - basically `styled-components` but using JS objects and functions instead of strings.
+Please also note that all repositories under the `styled-components` organization follow our [Code of Conduct](./CODE_OF_CONDUCT.md), make sure to review and follow it.
 
 ## License
 
