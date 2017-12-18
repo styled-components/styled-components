@@ -1,6 +1,6 @@
 # Contributing to `styled-components`
 
-As the creators and maintainers of this project, we want to ensure that `styled-components` lives and continues to grow and evolved. The evolution of the library should never be blocked by any single person's time. One of the simplest ways of doing this is by encouraging a larger set of shallow contributors. Through this, we hope to mitigate the problems of a project that needs updates but there's no-one who has the power to do so.
+As the creators and maintainers of this project, we want to ensure that `styled-components` lives and continues to grow and evolve. The evolution of the library should never be blocked by any single person's time. One of the simplest ways of doing this is by encouraging a larger set of shallow contributors. Through this, we hope to mitigate the problems of a project that needs updates but there's no-one who has the power to do so.
 
 ## Ownership
 
@@ -104,7 +104,7 @@ You can use an interactive editor, powered by [`react-live`](https://react-live.
 
 In the sandbox source, `styled-components` is an alias to `styled-components/src` folder, so you can edit the source directly and dev-server will handle rebuilding the source and livereloading your sandbox after the build is done.
 
-When you commit our pre-commit hook will run, which executes `lint-staged`. It will run the linter automatically and warn you, if the code you've written doesn't comply with our code style.
+When you commit our pre-commit hook will run, which executes `lint-staged`. It will run the linter automatically and warn you if the code you've written doesn't comply with our code style guidelines.
 
 ## Release process
 
