@@ -101,7 +101,10 @@ class ThemeProvider extends Component {
     const theme = passedTheme || this.props.theme
     if (isFunction(theme)) {
       const mergedTheme = theme(this.outerTheme)
-      if (!isPlainObject(mergedTheme)) {
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        !isPlainObject(mergedTheme)
+      ) {
         throw new Error(
           '[ThemeProvider] Please return an object from your theme function, i.e. theme={() => ({})}!',
         )

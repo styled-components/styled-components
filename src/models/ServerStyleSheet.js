@@ -24,7 +24,7 @@ class ServerTag implements Tag {
   }
 
   addComponent(componentId: string) {
-    if (this.components[componentId]) {
+    if (process.env.NODE_ENV !== 'production' && this.components[componentId]) {
       throw new Error(`Trying to add Component '${componentId}' twice!`)
     }
     this.components[componentId] = { componentId, css: '' }
