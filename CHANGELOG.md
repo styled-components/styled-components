@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Add Prettier (see [#593](https://github.com/styled-components/styled-components/pull/593))
 - Allow `process.env.NODE_ENV` only in ES build [@maciej-ka](https://github.com/maciej-ka) (see [#1355](https://github.com/styled-components/styled-components/issues/1355))
+- Library size reductions (see [#1365](https://github.com/styled-components/styled-components/pull/1365))
 
 ## [v2.3.0] - 2017-12-15
 
