@@ -10,7 +10,7 @@ The `styled-components` Core Team has the following responsibilities:
 * Being available to review longstanding/forgotten pull requests.
 * Occasionally check `styled-components` issues, offer input, and categorize with GitHub issue labels.
 * Looking out for up-and-coming members of the `styled-components` community who might want to serve as Core Team members.
-* Pushing new releases of the package to npm
+* Pushing new releases of the package to `npm`.
 
 Note that the `styled-components` Core Team – and all `styled-components` contributors – are open source _volunteers_; membership on the Core Team is expressly _not_ an obligation. The Core Team is distinguished as leaders in the community and while they are a good group to turn to when someone needs an answer to a question, they are still volunteering their time, and may not be available to help immediately.
 
