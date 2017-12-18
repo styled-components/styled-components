@@ -148,6 +148,14 @@ If you want to contribute to `styled-components` please see our [contributing an
 
 Please also note that all repositories under the `styled-components` organization follow our [Code of Conduct](./CODE_OF_CONDUCT.md), make sure to review and follow it.
 
+## Badge
+
+Let everyone know you're using _styled-components_ → [![style: styled-components](https://img.shields.io/badge/style-%F0%9F%92%85%20styled--components-orange.svg?colorB=daa357&colorA=db748e)](https://github.com/styled-components/styled-components)
+
+```md
+[![style: styled-components](https://img.shields.io/badge/style-%F0%9F%92%85%20styled--components-orange.svg?colorB=daa357&colorA=db748e)](https://github.com/styled-components/styled-components)
+```
+
 ## License
 
 Licensed under the MIT License, Copyright © 2017 Glen Maddern and Maximilian Stoiber.
