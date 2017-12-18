@@ -23,12 +23,15 @@ type ThemeProviderProps = {|
   theme: Theme | ((outerTheme: Theme) => void),
 |}
 
-const warnChannelDeprecated = once(() => {
-  // eslint-disable-next-line no-console
-  console.error(
-    `Warning: Usage of \`context.${CHANNEL}\` as a function is deprecated. It will be replaced with the object on \`.context.${CHANNEL_NEXT}\` in a future version.`,
-  )
-})
+let warnChannelDeprecated
+if (process.env.NODE_ENV !== 'production') {
+  warnChannelDeprecated = once(() => {
+    // eslint-disable-next-line no-console
+    console.error(
+      `Warning: Usage of \`context.${CHANNEL}\` as a function is deprecated. It will be replaced with the object on \`.context.${CHANNEL_NEXT}\` in a future version.`,
+    )
+  })
+}
 
 const isFunction = test => typeof test === 'function'
 
