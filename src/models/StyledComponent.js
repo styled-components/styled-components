@@ -94,7 +94,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           styleSheet,
         )
 
-        if (warnTooManyClasses !== undefined) warnTooManyClasses(className)
+        if (
+          process.env.NODE_ENV !== 'production' &&
+          warnTooManyClasses !== undefined
+        ) {
+          warnTooManyClasses(className)
+        }
 
         return className
       }
@@ -243,11 +248,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         ? `${escape(options.displayName)}-${options.componentId}`
         : componentId
 
-    let warnTooManyClasses
-    if (process.env.NODE_ENV !== 'production') {
-      warnTooManyClasses = createWarnTooManyClasses(displayName)
-    }
-
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),
       attrs,
@@ -268,7 +268,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       static styledComponentId = styledComponentId
       static attrs = attrs
       static componentStyle = componentStyle
-      static warnTooManyClasses = warnTooManyClasses
       static target = target
 
       static withComponent(tag) {
@@ -310,6 +309,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
         return constructWithOptions(createStyledComponent, target, newOptions)
       }
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
     }
 
     return StyledComponent
