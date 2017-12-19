@@ -1,4 +1,4 @@
-import app from '../example/devServer.js'
+import app from '../example/server.js'
 import { launch } from 'puppeteer'
 import { toMatchImageSnapshot } from 'jest-image-snapshot'
 
