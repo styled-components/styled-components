@@ -1,10 +1,6 @@
 import styled, { css } from '../../../src/index'
 import { bodyFont, headerFont } from '../utils/fonts'
 
-export const Container = styled.div`
-
-`
-
 export const Content = styled.div`
   max-width: 100%;
   width: 400px;
@@ -21,7 +17,7 @@ export const Content = styled.div`
 
 export const Title = styled.h1`
   display: block;
-  text-align: left;
+  text-align: center;
   width: 100%;
   color: rgb(243, 182, 97);
   font-size: 24px;

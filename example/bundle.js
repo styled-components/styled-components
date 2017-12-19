@@ -4621,50 +4621,48 @@ var styled = _styled(StyledComponent, constructWithOptions);
 var bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"';
 var headerFont = '"Avenir Next", ' + bodyFont;
 
-var _templateObject = taggedTemplateLiteralLoose(['\n\n'], ['\n\n']);
-var _templateObject2 = taggedTemplateLiteralLoose(['\n  max-width: 100%;\n  width: 400px;\n  margin: 0 auto;\n  box-sizing: border-box;\n  font-family: ', ';\n  transition: transform 150ms ease-out;\n\n  ', '\n'], ['\n  max-width: 100%;\n  width: 400px;\n  margin: 0 auto;\n  box-sizing: border-box;\n  font-family: ', ';\n  transition: transform 150ms ease-out;\n\n  ', '\n']);
-var _templateObject3 = taggedTemplateLiteralLoose(['\n    font-family: ', ';\n    width: 75rem;\n  '], ['\n    font-family: ', ';\n    width: 75rem;\n  ']);
-var _templateObject4 = taggedTemplateLiteralLoose(['\n  display: block;\n  text-align: left;\n  width: 100%;\n  color: rgb(243, 182, 97);\n  font-size: 24px;\n  font-weight: bold;\n  font-family: ', ';\n'], ['\n  display: block;\n  text-align: left;\n  width: 100%;\n  color: rgb(243, 182, 97);\n  font-size: 24px;\n  font-weight: bold;\n  font-family: ', ';\n']);
+var _templateObject = taggedTemplateLiteralLoose(['\n  max-width: 100%;\n  width: 400px;\n  margin: 0 auto;\n  box-sizing: border-box;\n  font-family: ', ';\n  transition: transform 150ms ease-out;\n\n  ', '\n'], ['\n  max-width: 100%;\n  width: 400px;\n  margin: 0 auto;\n  box-sizing: border-box;\n  font-family: ', ';\n  transition: transform 150ms ease-out;\n\n  ', '\n']);
+var _templateObject2 = taggedTemplateLiteralLoose(['\n    font-family: ', ';\n    width: 75rem;\n  '], ['\n    font-family: ', ';\n    width: 75rem;\n  ']);
+var _templateObject3 = taggedTemplateLiteralLoose(['\n  display: block;\n  text-align: center;\n  width: 100%;\n  color: rgb(243, 182, 97);\n  font-size: 24px;\n  font-weight: bold;\n  font-family: ', ';\n'], ['\n  display: block;\n  text-align: center;\n  width: 100%;\n  color: rgb(243, 182, 97);\n  font-size: 24px;\n  font-weight: bold;\n  font-family: ', ';\n']);
 
-var Container = styled.div(_templateObject);
-
-var Content = styled.div(_templateObject2, bodyFont, function (p) {
-  return p.hero && css(_templateObject3, headerFont);
+var Content = styled.div(_templateObject, bodyFont, function (p) {
+  return p.hero && css(_templateObject2, headerFont);
 });
 
-var Title = styled.h1(_templateObject4, headerFont);
+var Title = styled.h1(_templateObject3, headerFont);
 
-var DocsLayout = function DocsLayout(_ref) {
+var _templateObject$1 = taggedTemplateLiteralLoose(['\n    background: ', ';\n    color: ', ';\n'], ['\n    background: ', ';\n    color: ', ';\n']);
+var _templateObject2$1 = taggedTemplateLiteralLoose(['\n    width: 100%;\n    padding: 100px 0;\n    margin: 5px 0;\n\n    ', '\n'], ['\n    width: 100%;\n    padding: 100px 0;\n    margin: 5px 0;\n\n    ', '\n']);
+
+var cssMixin = css(_templateObject$1, function (props) {
+    return props.inverted ? 'palevioletred' : 'papayawhip';
+}, function (props) {
+    return props.inverted ? 'papayawhip' : 'palevioletred';
+});
+
+var Css = styled.div(_templateObject2$1, function (props) {
+    return props.withCss ? cssMixin : '';
+});
+
+var _templateObject$2 = taggedTemplateLiteralLoose(['\n  margin: 10px auto;\n  text-align: center;\n'], ['\n  margin: 10px auto;\n  text-align: center;\n']);
+
+var ExampleContent = styled.div(_templateObject$2);
+
+var Example = function Example(_ref) {
   var title = _ref.title,
       children = _ref.children;
   return React$1__default.createElement(
-    Container,
+    ExampleContent,
     null,
     React$1__default.createElement(
-      Content,
+      Title,
       null,
-      React$1__default.createElement(
-        Title,
-        null,
-        title
-      ),
-      children
-    )
+      title
+    ),
+    children,
+    React$1__default.createElement('hr', null)
   );
 };
-
-var _templateObject$1 = taggedTemplateLiteralLoose(['\n    background: ', ';\n    color: ', ';\n'], ['\n    background: ', ';\n    color: ', ';\n']);
-var _templateObject2$1 = taggedTemplateLiteralLoose(['\n    /* This is an example of a nested interpolation */\n    ', '\n'], ['\n    /* This is an example of a nested interpolation */\n    ', '\n']);
-
-var complexMixin = css(_templateObject$1, function (props) {
-    return props.blueBackground ? 'blue' : 'white';
-}, function (props) {
-    return props.whiteColor ? 'white' : 'black';
-});
-
-var CssComp = styled.div(_templateObject2$1, function (props) {
-    return props.complex ? complexMixin : 'color: blue;';
-});
 
 var App = function (_Component) {
   inherits(App, _Component);
@@ -4676,12 +4674,31 @@ var App = function (_Component) {
 
   App.prototype.render = function render() {
     return React$1__default.createElement(
-      DocsLayout,
-      { title: 'Integration Tests' },
+      Content,
+      null,
       React$1__default.createElement(
-        CssComp,
-        { complex: true, blueBackground: true, whiteColor: true },
-        'Css'
+        Example,
+        { title: 'css' },
+        React$1__default.createElement(
+          Css,
+          { withCss: true },
+          'With Css Mixin'
+        ),
+        React$1__default.createElement(
+          Css,
+          null,
+          'Without Css Mixin'
+        ),
+        React$1__default.createElement(
+          Css,
+          { withCss: true, inverted: true },
+          'With inverted Css Mixin'
+        )
+      ),
+      React$1__default.createElement(
+        Example,
+        { title: 'Another example (to be added...)' },
+        'Some Content...'
       )
     );
   };

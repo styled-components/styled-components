@@ -7,7 +7,7 @@
   "jsnext:main": "dist/styled-components.es.js",
   "module": "dist/styled-components.es.js",
   "scripts": {
-    "build": "npm run build:lib && npm run build:dist",
+    "build": "npm run build:lib && npm run build:dist && npm run build:example",
     "prebuild:lib": "rimraf lib/*",
     "build:lib": "babel --out-dir lib --ignore \"*.test.js\" src",
     "prebuild:dist": "rimraf dist/*",
@@ -30,7 +30,7 @@
     "typescript": "tsc --project ./typings/tests",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
-    "dev": "babel-node example/startServer.js"
+    "run:example": "babel-node example/startServer.js"
   },
   "repository": {
     "type": "git",
