@@ -10,63 +10,17 @@ import uglify from 'rollup-plugin-uglify'
 import visualizer from 'rollup-plugin-visualizer'
 import pkg from './package.json'
 
+const babelrc = require('./.babelrc.js')
+
 const processShim = '\0process-shim'
 
-const {
-  PRODUCTION,
-  UMD,
-  BABEL_ENV,
-  ESBUNDLE,
-  CJSBUNDLE,
-  NATIVEBUNDLE,
-  PRIMITIVESBUNDLE,
-  NOPARSERBUNDLE,
-} = process.env
-
-let input
-let output
-if (UMD && PRODUCTION) {
-  console.log('Creating production UMD bundle...')
-  input = 'src/index.js'
-  output = [
-    { file: 'dist/styled-components.min.js', format: 'umd', name: 'styled' },
-  ]
-} else if (UMD) {
-  console.log('Creating development UMD bundle')
-  input = 'src/index.js'
-  output = [
-    { file: 'dist/styled-components.js', format: 'umd', name: 'styled' },
-  ]
-} else if (ESBUNDLE) {
-  console.log('Creating ES modules bundle...')
-  input = 'src/index.js'
-  output = [{ file: 'dist/styled-components.es.js', format: 'es' }]
-} else if (CJSBUNDLE) {
-  console.log('Creating CJS modules bundle...')
-  input = 'src/index.js'
-  output = [{ file: 'dist/styled-components.cjs.js', format: 'cjs' }]
-} else if (NATIVEBUNDLE) {
-  console.log('Creating React Native bundle...')
-  input = 'src/native/index.js'
-  output = [{ file: 'dist/styled-components.native.js', format: 'cjs' }]
-} else if (PRIMITIVESBUNDLE) {
-  console.log('Creating React Primitives bundle...')
-  input = 'src/primitives/index.js'
-  output = [{ file: 'dist/styled-components.primitives.js', format: 'cjs' }]
-} else if (NOPARSERBUNDLE && BABEL_ENV === 'cjs') {
-  console.log('Creating CJS no parser bundle...')
-  input = 'src/no-parser/index.js'
-  output = [{ file: 'dist/styled-components-no-parser.cjs.js', format: 'cjs' }]
-} else if (NOPARSERBUNDLE) {
-  console.log('Creating ES no parser bundle...')
-  input = 'src/no-parser/index.js'
-  output = [{ file: 'dist/styled-components-no-parser.es.js', format: 'es' }]
-} else {
-  throw new Error('Unknown bundle type.')
+const cjs = {
+  format: 'cjs',
+  outro: "module.exports = exports['default']",
+  exports: 'named',
 }
-output[0].exports = 'named'
 
-const plugins = [
+const commonPlugins = [
   // Unlike Webpack and Browserify, Rollup doesn't automatically shim Node
   // builtins like `process`. This ad-hoc plugin creates a 'virtual module'
   // which includes a shim containing just the parts the bundle needs.
@@ -86,30 +40,94 @@ const plugins = [
   commonjs({
     ignoreGlobal: true,
   }),
-  UMD &&
+  babel({
+    babelrc: false,
+    ...babelrc,
+    plugins: babelrc.plugins.concat('external-helpers'),
+  }),
+]
+
+const configBase = {
+  input: 'src/index.js',
+  globals: { react: 'React' },
+  external: ['react'].concat(Object.keys(pkg.dependencies)),
+  plugins: commonPlugins,
+}
+
+const umdConfig = {
+  ...configBase,
+  output: {
+    file: 'dist/styled-components.js',
+    format: 'umd',
+    name: 'styled',
+    exports: 'named',
+  },
+  external: ['react'],
+}
+
+const devUmdConfig = {
+  ...umdConfig,
+  plugins: umdConfig.plugins.concat(
     replace({
-      'process.env.NODE_ENV': JSON.stringify(
-        PRODUCTION ? 'production' : 'development',
-      ),
+      'process.env.NODE_ENV': JSON.stringify('development'),
     }),
-  PRODUCTION &&
+  ),
+}
+
+const prodUmdConfig = {
+  ...umdConfig,
+  output: {
+    ...umdConfig.output,
+    file: 'dist/styled-components.min.js',
+  },
+  plugins: umdConfig.plugins.concat(
+    replace({
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    }),
     inject({
       process: processShim,
     }),
-  babel(),
-].filter(Boolean)
-
-if (PRODUCTION) {
-  plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
-}
-
-export default {
-  input,
-  external: ['react', 'react-native', 'react-primitives'].concat(
-    !UMD ? Object.keys(pkg.dependencies) : [],
+    uglify(),
+    visualizer({ filename: './bundle-stats.html' }),
   ),
-  output,
-  plugins,
-  globals: { react: 'React' },
-  outro: BABEL_ENV === 'cjs' ? "module.exports = exports['default']" : '',
 }
+
+const webConfig = {
+  ...configBase,
+  output: [{ file: pkg.module, format: 'es' }, { ...cjs, file: pkg.main }],
+}
+
+const nativeConfig = {
+  ...configBase,
+  input: 'src/native/index.js',
+  output: { ...cjs, file: pkg['react-native'] },
+  external: configBase.external.concat('react-native'),
+}
+
+const primitivesConfig = {
+  ...configBase,
+  input: 'src/primitives/index.js',
+  output: [
+    { file: 'dist/styled-components-primitives.es.js', format: 'es' },
+    { ...cjs, file: 'dist/styled-components-primitives.cjs.js' },
+  ],
+  external: configBase.external.concat('react-primitives'),
+}
+
+const noParserConfig = {
+  ...configBase,
+  input: 'src/no-parser/index.js',
+  output: [
+    { file: 'dist/styled-components-no-parser.es.js', format: 'es' },
+    { ...cjs, file: 'dist/styled-components-no-parser.cjs.js' },
+  ],
+}
+
+export default [
+  devUmdConfig,
+  prodUmdConfig,
+  webConfig,
+  nativeConfig,
+  primitivesConfig,
+  noParserConfig,
+]

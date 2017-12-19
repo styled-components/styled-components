@@ -1,7 +1,5 @@
-const { NODE_ENV, UMD, PRODUCTION } = process.env
-const test = NODE_ENV === 'test'
-const modules = test ? 'commonjs' : false
-const prod = !!PRODUCTION
+const { BABEL_ENV, NODE_ENV } = process.env
+const modules = BABEL_ENV === 'cjs' || NODE_ENV === 'test' ? 'commonjs' : false
 
 const loose = true
 
@@ -11,13 +9,11 @@ module.exports = {
     'react'
   ],
   plugins: [
-    !prod && 'flow-react-proptypes',
-    prod && 'transform-react-remove-prop-types',
-    !test && 'external-helpers',
-    'transform-flow-strip-types',
+    'flow-react-proptypes',
+    ['transform-react-remove-prop-types', { mode: 'unsafe-wrap' }],
     'transform-object-rest-spread',
     ['transform-class-properties', { loose }],
     // bundles get the same thing from rollup and not from babel
-    test && 'add-module-exports',
+    modules === 'commonjs' && 'add-module-exports',
   ].filter(Boolean)
 }
