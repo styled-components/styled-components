@@ -74,33 +74,11 @@ This is what you'll see in your browser:
   </a>
 </div>
 
-## Code completions and error reporting
-
-Along with syntax highlighting, you can install the [TypeScript styled plugin](https://github.com/Microsoft/typescript-styled-plugin) to get error reporting and code completion for styled components in your editor. The plugin supports styled components in both JavaScript and TypeScript files, and works in Visual Studio Code, Sublime, and Atom.
-
 ## Built with `styled-components`
 
 A lot of hard work goes into community libraries, projects, and guides. A lot of them make it easier to get started or help you with your next project! There’s also a whole lot of interesting apps and sites that people have built using styled-components.
 
 Make sure to head over to [awesome-styled-components](https://github.com/styled-components/awesome-styled-components) to see them all! And please contribute and add your own work to the list so others can find it.
-
-## Alternative Installation Methods
-
-If you're not using a module bundler or not using `npm` as your package manager, we also have a global ("UMD") build!
-
-You can use that via the `unpkg` CDN to get `styled-components`, the URL is `https://unpkg.com/styled-components/dist/styled-components.min.js`.
-
-To install `styled-components` with bower you'd do:
-
-```
-bower install styled-components=https://unpkg.com/styled-components/dist/styled-components.min.js
-```
-
-To use it from your HTML, add this at the bottom of your `index.html`, and you'll have access to the global `window.styled` variable:
-
-```HTML
-<script src="https://unpkg.com/styled-components/dist/styled-components.min.js" type="text/javascript"></script>
-```
 
 ## Contributing
 
