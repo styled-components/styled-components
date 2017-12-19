@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 - N/A
 
+## [v2.3.2] - 2017-12-19
+
+- Hotfix a bug in the attr filtering in v2.3.1 (see [#1372](https://github.com/styled-components/styled-components/pull/1371))
+
 ## [v2.3.1] - 2017-12-19
 
 - Create styled-components badge, thanks to [@iRoachie](https://github.com/iRoachie) (see [#1363](https://github.com/styled-components/styled-components/issues/1363))
