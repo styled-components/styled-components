@@ -10,8 +10,6 @@ import uglify from 'rollup-plugin-uglify'
 import visualizer from 'rollup-plugin-visualizer'
 import pkg from './package.json'
 
-const babelrc = require('./.babelrc.js')
-
 const processShim = '\0process-shim'
 
 const cjs = {
@@ -41,9 +39,7 @@ const commonPlugins = [
     ignoreGlobal: true,
   }),
   babel({
-    babelrc: false,
-    ...babelrc,
-    plugins: babelrc.plugins.concat('external-helpers'),
+    plugins: ['external-helpers'],
   }),
 ]
 
