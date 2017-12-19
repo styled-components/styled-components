@@ -7,7 +7,11 @@ export default (css: Function) => {
     tag: Target,
     options: Object = {},
   ) => {
-    if (typeof tag !== 'string' && typeof tag !== 'function') {
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      typeof tag !== 'string' &&
+      typeof tag !== 'function'
+    ) {
       // $FlowInvalidInputTest
       throw new Error(`Cannot create styled-component for component: ${tag}`)
     }
