@@ -11,6 +11,7 @@
     "prebuild:lib": "rimraf lib/*",
     "build:lib": "babel --out-dir lib --ignore \"*.test.js\" src",
     "prebuild:dist": "rimraf dist/*",
+    "prettier": "prettier --write \"./src/**/*.js\"",
     "build:dist": "rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
     "test": "npm run test:web && npm run test:native && npm run test:size",
@@ -24,9 +25,11 @@
     "test:size": "bundlesize",
     "flow": "flow check",
     "flow:watch": "flow-watch",
+    "format": "yarn run prettier && eslint src --fix",
     "lint": "eslint src",
     "tslint": "tslint typings/*.ts native/*.ts",
     "typescript": "tsc --project ./typings/tests",
+    "precommit": "lint-staged",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
     "dev": "babel-node example/startServer.js"
@@ -103,6 +106,7 @@
     "express": "^4.14.1",
     "flow-bin": "^0.47.0",
     "flow-watch": "^1.1.1",
+    "husky": "^0.14.3",
     "jest": "^20.0.4",
     "jest-image-snapshot": "^2.2.0",
     "jsdom": "^9.10.0",
@@ -145,7 +149,7 @@
   },
   "lint-staged": {
     "*.js": [
-      "eslint --fix",
+      "format",
       "git add"
     ]
   },
