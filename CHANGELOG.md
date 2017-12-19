@@ -6,9 +6,15 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- Add Prettier (see [#593](https://github.com/styled-components/styled-components/pull/593))
-- Allow `process.env.NODE_ENV` only in ES build [@maciej-ka](https://github.com/maciej-ka) (see [#1355](https://github.com/styled-components/styled-components/issues/1355))
-- Library size reductions (see [#1365](https://github.com/styled-components/styled-components/pull/1365))
+- N/A
+
+## [v2.3.1] - 2017-12-19
+
+- Create styled-components badge, thanks to [@iRoachie](https://github.com/iRoachie) (see [#1363](https://github.com/styled-components/styled-components/issues/1363))
+- Library size reductions, thanks to [@probablyup](https://github.com/probablyup) (see [#1365](https://github.com/styled-components/styled-components/pull/1365))
+- Add Prettier, thanks to [@existentialism](https://github.com/existentialism) (see [#593](https://github.com/styled-components/styled-components/pull/593))
+- Fix unminified UMD build, thanks to [@maciej-ka](https://github.com/maciej-ka) (see [#1355](https://github.com/styled-components/styled-components/issues/1355))
+- Update the contribution and community guidelines, see the [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ## [v2.3.0] - 2017-12-15
 
@@ -314,7 +320,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.3.0...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.3.1...master
+[v2.3.1]: https://github.com/styled-components/styled-components/compare/v2.3.0...v2.3.1
 [v2.3.0]: https://github.com/styled-components/styled-components/compare/v2.2.4...v2.3.0
 [v2.2.4]: https://github.com/styled-components/styled-components/compare/v2.2.3...v2.2.4
 [v2.2.3]: https://github.com/styled-components/styled-components/compare/v2.2.2...v2.2.3
