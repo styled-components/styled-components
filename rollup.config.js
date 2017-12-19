@@ -14,6 +14,7 @@ const processShim = '\0process-shim'
 
 const prod = process.env.PRODUCTION
 const esbundle = process.env.ESBUNDLE
+const example = process.env.EXAMPLE
 
 let targets
 if (prod) {
@@ -22,6 +23,9 @@ if (prod) {
 } else if (esbundle) {
   console.log('Creating ES modules bundle...')
   targets = [{ dest: 'dist/styled-components.es.js', format: 'es' }]
+} else if (example) {
+  console.log('Creating example bundle...')
+  targets = [{ dest: 'example/bundle.js', format: 'umd' }]
 } else {
   console.log('Creating development UMD bundle')
   targets = [{ dest: 'dist/styled-components.js', format: 'umd' }]
@@ -47,18 +51,19 @@ const plugins = [
   commonjs({
     ignoreGlobal: true,
   }),
-  !esbundle && replace({
-    'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
-  }),
-  prod && inject({
-    process: processShim,
-  }),
+  !esbundle &&
+    replace({
+      'process.env.NODE_ENV': JSON.stringify(
+        prod ? 'production' : 'development',
+      ),
+    }),
+  prod &&
+    inject({
+      process: processShim,
+    }),
   babel({
     babelrc: false,
-    presets: [
-      ['env', { modules: false, loose: true }],
-      'react',
-    ],
+    presets: [['env', { modules: false, loose: true }], 'react'],
     plugins: [
       !prod && 'flow-react-proptypes',
       prod && 'transform-react-remove-prop-types',
@@ -70,10 +75,12 @@ const plugins = [
   }),
 ].filter(Boolean)
 
-if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
+if (prod) {
+  plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
+}
 
 export default {
-  entry: 'src/index.js',
+  entry: example ? 'example/src/index.js' : 'src/index.js',
   moduleName: 'styled',
   external: ['react'].concat(esbundle ? Object.keys(pkg.dependencies) : []),
   exports: 'named',

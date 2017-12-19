@@ -12,6 +12,7 @@
     "build:lib": "babel --out-dir lib --ignore \"*.test.js\" src",
     "prebuild:dist": "rimraf dist/*",
     "build:dist": "rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
+    "build:example": "rollup -c --environment EXAMPLE",
     "build:watch": "npm run build:lib -- --watch",
     "test": "npm run test:web && npm run test:native && npm run test:size",
     "test:web": "jest --outputFile test-results.json --json",
