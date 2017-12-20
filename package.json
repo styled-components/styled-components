@@ -29,7 +29,7 @@
     "typescript": "tsc --project ./typings/tests",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
-    "dev": "babel-node example/startServer.js"
+    "run:example": "babel-node example/startServer.js"
   },
   "repository": {
     "type": "git",

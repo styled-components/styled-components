@@ -1,57 +1,25 @@
-const path = require('path')
-const exec = require('child_process').exec
-const Express = require('express')
-const watch = require('node-watch')
-
 import fs from 'fs'
+import express from 'express'
 import React from 'react'
-import { renderToString } from  'react-dom/server'
-import { ServerStyleSheet } from '../dist/styled-components'
-import getExample from "./example"
+import { renderToStaticMarkup } from  'react-dom/server'
+import StyleSheet from '../src/models/StyleSheet'
+import App from './components/app'
 
 const HTML = fs.readFileSync(__dirname + '/index.html').toString()
 
-const srcPath = __dirname.split('/example')[0] + '/src';
+const app = new express()
 
-const hotBuild = () => exec('npm run build:dist', (err, stdout, stderr) => {
-  if (err) throw err
-  if (stdout) {
-    console.log(`npm run build:dist --- ${stdout}`)
-  }
-  if (stderr) {
-    console.log(`npm run build:dist --- ${stderr}`)
-  }
-})
+app.get('/', (req, res) => {
+  StyleSheet.reset(true)
 
-watch(srcPath, (filename) => {
-  console.log(`${filename} file has changed`)
-  hotBuild()
-})
+  const html = renderToStaticMarkup(<App/>)
+  const css = StyleSheet.instance.toHTML()
 
-const app = new Express()
-
-app.use(Express.static(__dirname))
-app.use(Express.static('dist'))
-
-app.get('/with-perf.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'with-perf.html'))
-})
-
-app.get('/ssr.html', (req, res) => {
-  const Example = getExample()
-
-  const sheet = new ServerStyleSheet()
-  const html = renderToString(sheet.collectStyles(<Example/>))
-  const css = sheet.getStyleTags()
   res.send(
     HTML
       .replace(/<!-- SSR:HTML -->/, html)
       .replace(/<!-- SSR:CSS -->/, css)
   )
-})
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'))
 })
 
 export default app
