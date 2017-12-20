@@ -1,4 +1,4 @@
-import app from './server'
+import app from './devServer'
 
 const port = 3000
 

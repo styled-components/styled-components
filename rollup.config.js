@@ -14,7 +14,6 @@ const processShim = '\0process-shim'
 
 const prod = process.env.PRODUCTION
 const esbundle = process.env.ESBUNDLE
-const example = process.env.EXAMPLE
 
 let targets
 if (prod) {
@@ -23,9 +22,6 @@ if (prod) {
 } else if (esbundle) {
   console.log('Creating ES modules bundle...')
   targets = [{ dest: 'dist/styled-components.es.js', format: 'es' }]
-} else if (example) {
-  console.log('Creating example bundle...')
-  targets = [{ dest: 'example/bundle.js', format: 'umd' }]
 } else {
   console.log('Creating development UMD bundle')
   targets = [{ dest: 'dist/styled-components.js', format: 'umd' }]
@@ -80,7 +76,7 @@ if (prod) {
 }
 
 export default {
-  entry: example ? 'example/src/index.js' : 'src/index.js',
+  entry: 'src/index.js',
   moduleName: 'styled',
   external: ['react'].concat(esbundle ? Object.keys(pkg.dependencies) : []),
   exports: 'named',

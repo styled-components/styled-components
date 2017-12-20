@@ -1,4 +1,5 @@
-import app from '../example/server.js'
+import app from '../example/devServer.js'
+import StyleSheet from '../src/models/StyleSheet'
 import { launch } from 'puppeteer'
 import { toMatchImageSnapshot } from 'jest-image-snapshot'
 
