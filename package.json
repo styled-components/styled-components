@@ -24,7 +24,7 @@
     "test:size": "bundlesize",
     "flow": "flow check",
     "flow:watch": "flow-watch",
-    "format": "eslint src --fix",
+    "format": "eslint ./**/*.js --fix",
     "lint": "eslint src",
     "tslint": "tslint typings/*.ts native/*.ts",
     "typescript": "tsc --project ./typings/tests",
@@ -148,7 +148,7 @@
   },
   "lint-staged": {
     "*.js": [
-      "format",
+      "eslint --fix",
       "git add"
     ]
   },
