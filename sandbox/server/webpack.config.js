@@ -26,7 +26,7 @@ const ifNotExample = filename =>
 const ifExample = filename => /\.example\.js/.test(filename)
 
 const createRules = () => [
-  // INFO: spacing eslint errors are preventing hmr to work properly :'(
+  // Indentation eslint errors are preventing hmr to work properly :'(
   // {
   //   test: ifNotExample,
   //   include: [styledComponentsSrc],
@@ -53,6 +53,11 @@ const createRules = () => [
 ]
 
 const createPlugins = () => [
+  new webpack.EnvironmentPlugin({
+    // This will provide default value for NODE_ENV, unless defined otherwise
+    // more info: https://webpack.js.org/plugins/environment-plugin/#usage-with-default-values
+    NODE_ENV: 'development',
+  }),
   // new webpack.NoEmitOnErrorsPlugin()
 ]
 
