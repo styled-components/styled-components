@@ -2,9 +2,10 @@
   "parser": "babel-eslint",
   "extends": [
     "airbnb",
-    "prettier"
+    "prettier",
+    "prettier/flowtype"
   ],
-  "plugins": ["flowtype", "flowtype-errors"],
+  "plugins": ["flowtype", "flowtype-errors", "prettier"],
   "rules": {
     "semi": 0,
     "quotes": 0,
@@ -25,7 +26,8 @@
     "flowtype/boolean-style": [2, "boolean"],
     "flowtype/no-dupe-keys": 2,
     "flowtype/union-intersection-spacing": [2, "always"],
-    "flowtype/object-type-delimiter": 2
+    "flowtype/object-type-delimiter": 2,
+    "prettier/prettier": 2
   },
   "env": {
     "jest": true,
