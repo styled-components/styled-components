@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- N/A
+- Re-release the attr filtering optimization with bundle size improvement (see [#1377](https://github.com/styled-components/styled-components/pull/1377))
 
 ## [v2.3.2] - 2017-12-19
 
