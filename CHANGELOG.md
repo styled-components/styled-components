@@ -6,7 +6,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- Re-release the attr filtering optimization with bundle size improvement (see [#1377](https://github.com/styled-components/styled-components/pull/1377))
+-
+
+## [v2.3.3] - 2017-12-20
+
+- Fix the attr filtering optimization removed in v2.3.2; bundle size improvement, thanks to [@probablyup](https://github.com/probablyup) (see [#1377](https://github.com/styled-components/styled-components/pull/1377))
+- Move last bits of docs from the README to the website, thanks to [@Carryon](https://github.com/Carryon), [@SaraVieira](https://github.com/SaraVieira) and [@JamesJefferyUK](https://github.com/JamesJefferyUK)
 
 ## [v2.3.2] - 2017-12-19
 
