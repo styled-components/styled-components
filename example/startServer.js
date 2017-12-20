@@ -1,6 +1,6 @@
 import app from './devServer'
 
-const port = 8080
+const port = 3000
 
 app.listen(port, error => {
   /* eslint-disable no-console */
