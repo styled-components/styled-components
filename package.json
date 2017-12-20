@@ -112,7 +112,6 @@
     "jsdom": "^9.10.0",
     "lint-staged": "^6.0.0",
     "node-watch": "^0.4.1",
-    "pre-commit": "^1.2.2",
     "prettier": "1.9.2",
     "puppeteer": "^0.13.0",
     "react": "^15.5.4",
@@ -153,7 +152,6 @@
       "git add"
     ]
   },
-  "pre-commit": "lint-staged",
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
