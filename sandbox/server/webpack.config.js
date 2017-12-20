@@ -23,22 +23,25 @@ const createOutput = () => ({
 const ifNotExample = filename =>
   /\.js$/.test(filename) && !/\.example\.js/.test(filename)
 
+const ifExample = filename => /\.example\.js/.test(filename)
+
 const createRules = () => [
+  // INFO: spacing eslint errors are preventing hmr to work properly :'(
+  // {
+  //   test: ifNotExample,
+  //   include: [styledComponentsSrc],
+  //   enforce: 'pre',
+  //   use: [
+  //     {
+  //       loader: 'eslint-loader',
+  //       options: {
+  //         ignore: true,
+  //       },
+  //     },
+  //   ],
+  // },
   {
-    test: ifNotExample,
-    include: [styledComponentsSrc],
-    enforce: 'pre',
-    use: [
-      {
-        loader: 'eslint-loader',
-        options: {
-          ignore: true,
-        },
-      },
-    ],
-  },
-  {
-    test: /\.example\.js/,
+    test: ifExample,
     include: [appSrc],
     use: [{ loader: 'raw-loader' }],
   },

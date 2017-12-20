@@ -17,9 +17,11 @@ const Button = styled.button`
     `};
 `
 
-render(
+const content = (
   <div>
     <Button>Normal Button</Button>
     <Button primary>Primary Button</Button>
-  </div>,
+  </div>
 )
+
+render(content)
