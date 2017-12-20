@@ -96,7 +96,6 @@
     "eslint": "^3.15.0",
     "eslint-config-airbnb": "^13.0.0",
     "eslint-config-prettier": "^2.9.0",
-    "eslint-import-resolver-webpack": "^0.8.3",
     "eslint-plugin-flowtype": "^2.40.1",
     "eslint-plugin-flowtype-errors": "^2.0.1",
     "eslint-plugin-import": "^2.2.0",

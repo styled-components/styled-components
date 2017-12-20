@@ -1,6 +1,5 @@
 import React from 'react'
 
-// eslint-disable-next-line
 import styled, { css, keyframes, injectGlobal } from 'styled-components'
 
 import {

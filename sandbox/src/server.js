@@ -1,7 +1,6 @@
 import React from 'react'
 import { renderToString } from 'react-dom/server'
 
-// eslint-disable-next-line
 import { ServerStyleSheet } from 'styled-components'
 
 import App from './App'
