@@ -1,4 +1,4 @@
-import styled, { css } from '../../../../src/index'
+import styled, { css } from '../../../src/index'
 
 const cssMixin = css`
     background: ${props => props.inverted ? 'palevioletred': 'papayawhip'};

@@ -3,7 +3,7 @@ import express from 'express'
 import React from 'react'
 import { renderToStaticMarkup } from  'react-dom/server'
 import StyleSheet from '../src/models/StyleSheet'
-import App from './src/components/app'
+import App from './components/app'
 
 const HTML = fs.readFileSync(__dirname + '/index.html').toString()
 

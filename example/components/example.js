@@ -1,5 +1,5 @@
 import React from 'react'
-import styled from '../../../src/index'
+import styled from '../../src/index'
 import { Title } from './layout'
 
 const ExampleContent = styled.div`
