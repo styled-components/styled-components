@@ -5,22 +5,29 @@ const webpackConfig = require('./webpack.config')
 
 const { composeMiddleware, SANDBOX_PATHS } = require('../util')
 
-const compiler = webpack(webpackConfig)
+const multiCompiler = webpack(webpackConfig)
 
-const devMiddleware = require('webpack-dev-middleware')(compiler, {
+const devMiddleware = require('webpack-dev-middleware')(multiCompiler, {
   publicPath: SANDBOX_PATHS.publicPath,
 })
 
-const hotMiddleware = require('webpack-hot-middleware')(compiler)
+const hotMiddleware = require('webpack-hot-middleware')(multiCompiler)
 
-compiler.plugin('after-emit', (compilation, callback) => {
-  Object.keys(require.cache).forEach(cachedFile => {
-    if (cachedFile.startsWith(path.resolve(SANDBOX_PATHS.outputPath))) {
-      delete require.cache[cachedFile]
-    }
+const waitUntilValid = new Promise(next => devMiddleware.waitUntilValid(next))
+
+const waitMiddleware = (req, res, next) => waitUntilValid.then(next)
+
+multiCompiler.compilers.forEach(compiler => {
+  compiler.plugin('after-emit', (compilation, callback) => {
+    Object.keys(require.cache).forEach(cachedFile => {
+      if (cachedFile.startsWith(path.resolve(SANDBOX_PATHS.outputPath))) {
+        delete require.cache[cachedFile]
+      }
+    })
+
+    callback()
   })
-
-  callback()
 })
 
-module.exports = next => composeMiddleware(devMiddleware, hotMiddleware)(next)
+module.exports = next =>
+  composeMiddleware(waitMiddleware, devMiddleware, hotMiddleware)(next)

@@ -24,13 +24,12 @@ const asyncReadFile = (filePath, encoding) =>
 module.exports = async (req, res) => {
   const template = await asyncReadFile(SANDBOX_PATHS.indexHtml, 'utf-8')
 
-  // TODO
-  // eslint-disable-next-line
-  const app = require(SANDBOX_PATHS.serverBuild);
+  // eslint-disable-next-line global-require, import/no-dynamic-require
+  const { html: markup, css } = require(SANDBOX_PATHS.serverBuild)
 
   const html = template
-    .replace(REPLACE_REGEX.html, 'foo')
-    .replace(REPLACE_REGEX.css, 'bar')
+    .replace(REPLACE_REGEX.html, markup)
+    .replace(REPLACE_REGEX.css, css)
 
   send(res, 200, html)
 }

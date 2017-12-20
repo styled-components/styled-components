@@ -20,9 +20,12 @@ const createOutput = () => ({
   strictModuleExceptionHandling: true,
 })
 
+const ifNotExample = filename =>
+  /\.js$/.test(filename) && !/\.example\.js/.test(filename)
+
 const createRules = () => [
   {
-    test: /\.(js|jsx)$/,
+    test: ifNotExample,
     include: [styledComponentsSrc],
     enforce: 'pre',
     use: [
@@ -35,7 +38,12 @@ const createRules = () => [
     ],
   },
   {
-    test: /\.js$/,
+    test: /\.example\.js/,
+    include: [appSrc],
+    use: [{ loader: 'raw-loader' }],
+  },
+  {
+    test: ifNotExample,
     include: [appSrc, styledComponentsSrc],
     use: [{ loader: 'babel-loader' }],
   },
@@ -77,7 +85,7 @@ module.exports = [
       server: [serverApp],
     },
 
-    output: { ...createOutput() /* TODO: library */ },
+    output: { ...createOutput(), libraryTarget: 'commonjs2' },
 
     module: { rules: createRules() },
 
