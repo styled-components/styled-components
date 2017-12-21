@@ -26,7 +26,7 @@ declare var __DEV__: ?string
 const IS_BROWSER = typeof window !== 'undefined'
 const IS_DEV =
   // `insertRule` doesn't seem to work properly in jest/enzyme
- (typeof __DEV__ === 'boolean' && __DEV__) ||
+  (typeof __DEV__ === 'boolean' && __DEV__) ||
   process.env.NODE_ENV === 'development' ||
   !process.env.NODE_ENV
 const USE_SPEEDY = IS_BROWSER && !IS_DEV
@@ -94,13 +94,14 @@ class BrowserTag implements Tag {
     }
   }
 
-
   inject(componentId: string, css: Array<string>, name: ?string) {
     if (!this.ready) this.replaceElement()
     const comp = this.components[componentId]
 
     if (process.env.NODE_ENV !== 'production' && !comp) {
-      throw new Error('Must add a new component before you can inject css into it')
+      throw new Error(
+        'Must add a new component before you can inject css into it'
+      )
     }
 
     if (USE_SPEEDY) {
