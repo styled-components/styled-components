@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Compile out error messages for production builds (see [#1445](https://github.com/styled-components/styled-components/pull/1445))
 
+- Use much faster CSS injection in the browser, thanks to [@schwers](https://github.com/schwers) (see [#1208](https://github.com/styled-components/styled-components/pull/1208))
+
 ## [v3.0.2] - 2018-01-22
 
 - Add secret internals for jest-styled-components (do not use or you will be haunted by spooky ghosts :ghost:) (see [#1438](https://github.com/styled-components/styled-components/pull/1438))
