@@ -96,7 +96,7 @@ Now you should have the sandbox running on `localhost:3000`. The Sandbox support
 
 You can use an interactive editor, powered by [`react-live`](https://react-live.philpl.com/), to test your changes. But if you want more control, you can edit the sandbox itself too:
 
-* Root `<App>` components is located at `styled-components/sandbox/src/App.js` file
+* Root `<App>` component is located at `styled-components/sandbox/src/App.js` file
 
 * Client-side entry point is at `styled-components/sandbox/src/browser.js`
 
