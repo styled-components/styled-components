@@ -96,7 +96,7 @@ Now you should have the sandbox running on `localhost:3000`. The Sandbox support
 
 You can use an interactive editor, powered by [`react-live`](https://react-live.philpl.com/), to test your changes. But if you want more control, you can edit the sandbox itself too:
 
-* Root `<App>` componens is located at `styled-components/sandbox/src/App.js` file
+* Root `<App>` components is located at `styled-components/sandbox/src/App.js` file
 
 * Client-side entry point is at `styled-components/sandbox/src/browser.js`
 
@@ -112,7 +112,7 @@ When you commit our pre-commit hook will run, which executes `lint-staged`. It w
 
 1. Install `np` by Sindre Sorhus with `npm i -g np`. (note: you only have to do this once) `np` makes sure that everything is correct and runs tests and a build before it releases the new version for you.
 2. Make sure you have the latest changes and are on the master branch: `git checkout master && git pull origin master`
-3. Create a new branch based on the the version number, for example `git checkout -b 3.4.1`
+3. Create a new branch based on the version number, for example `git checkout -b 3.4.1`
 4. Update the [CHANGELOG.md](./CHANGELOG.md) with the new version number, add a new Unreleased section at the top and edit the links at the bottom so everything is linked correctly
 5. Commit the Changelog changes with `git commit -m 'Update CHANGELOG'`
 6. Push the branch to the repo with `git push -u origin <branchname>`
