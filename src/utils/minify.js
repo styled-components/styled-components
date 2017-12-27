@@ -6,9 +6,8 @@ const symbolRegex = /(\s*[;:{},]\s*)/g
 // Counts occurences of substr inside str
 const countOccurences = (str, substr) => str.split(substr).length - 1
 
-const compressSymbols = (code: string) => code
-  .split(symbolRegex)
-  .reduce((str, fragment, index) => {
+const compressSymbols = (code: string) =>
+  code.split(symbolRegex).reduce((str, fragment, index) => {
     // Even-indices are non-symbol fragments
     if (index % 2 === 0) {
       return str + fragment
@@ -16,8 +15,8 @@ const compressSymbols = (code: string) => code
 
     // Only manipulate symbols outside of strings
     if (
-      countOccurences(str, '\'') % 2 === 0 &&
-      countOccurences(str, '\"') % 2 === 0 // eslint-disable-line no-useless-escape
+      countOccurences(str, "'") % 2 === 0 &&
+      countOccurences(str, '"') % 2 === 0 // eslint-disable-line no-useless-escape
     ) {
       return str + fragment.trim()
     }

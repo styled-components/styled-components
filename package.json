@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "main": "lib/index.js",
   "typings": "typings/styled-components.d.ts",
@@ -14,12 +14,13 @@
     "build:dist": "rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
     "build:watch": "npm run build:lib -- --watch",
     "test": "npm run test:web && npm run test:native && npm run test:size",
-    "test:web": "jest",
+    "test:web": "jest --outputFile test-results.json --json",
     "test:web:watch": "npm run test:web -- --watch",
     "test:native": "jest -c .jest.native.json",
     "test:native:watch": "npm run test:native -- --watch",
     "test:primitives": "jest -c .jest.primitives.json",
     "test:primitives:watch": "npm run test:primitives -- --watch",
+    "test:integration": "jest -c .jest.integration.json --forceExit",
     "test:size": "bundlesize",
     "flow": "flow check",
     "flow:watch": "flow-watch",
@@ -28,7 +29,7 @@
     "typescript": "tsc --project ./typings/tests",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
-    "dev": "babel-node example/devServer.js"
+    "dev": "babel-node example/startServer.js"
   },
   "repository": {
     "type": "git",
@@ -64,7 +65,6 @@
     "css-to-react-native": "^2.0.3",
     "fbjs": "^0.8.9",
     "hoist-non-react-statics": "^1.2.0",
-    "is-function": "^1.0.1",
     "is-plain-object": "^2.0.1",
     "prop-types": "^15.5.4",
     "stylis": "^3.4.0",
@@ -98,16 +98,19 @@
     "eslint-plugin-flowtype-errors": "^2.0.1",
     "eslint-plugin-import": "^2.2.0",
     "eslint-plugin-jsx-a11y": "^2.0.2",
+    "eslint-plugin-prettier": "^2.3.1",
     "eslint-plugin-react": "^6.8.0",
     "express": "^4.14.1",
     "flow-bin": "^0.47.0",
     "flow-watch": "^1.1.1",
     "jest": "^20.0.4",
-    "jest-json-reporter": "^1.2.2",
+    "jest-image-snapshot": "^2.2.0",
     "jsdom": "^9.10.0",
-    "lint-staged": "^3.3.0",
+    "lint-staged": "^6.0.0",
     "node-watch": "^0.4.1",
     "pre-commit": "^1.2.2",
+    "prettier": "1.9.2",
+    "puppeteer": "^0.13.0",
     "react": "^15.5.4",
     "react-dom": "^15.5.4",
     "react-native": "^0.39.2",
@@ -138,8 +141,7 @@
     "testPathIgnorePatterns": [
       "<rootDir>/src/native",
       "<rootDir>/src/primitives"
-    ],
-    "testResultsProcessor": "jest-json-reporter"
+    ]
   },
   "lint-staged": {
     "*.js": [
@@ -151,7 +153,7 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "threshold": "15kB"
+      "threshold": "14.5kB"
     }
   ]
 }

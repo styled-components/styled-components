@@ -27,13 +27,15 @@ const aliases = 'Image Text Touchable View '
 
 /* Define a getter for each alias which simply gets the reactNative component
  * and passes it to styled */
-aliases.split(/\s+/m).forEach(alias => Object.defineProperty(styled, alias, {
-  enumerable: true,
-  configurable: false,
-  get() {
-    return styled(reactPrimitives[alias])
-  },
-}))
+aliases.split(/\s+/m).forEach(alias =>
+  Object.defineProperty(styled, alias, {
+    enumerable: true,
+    configurable: false,
+    get() {
+      return styled(reactPrimitives[alias])
+    },
+  }),
+)
 
 export { css, ThemeProvider, withTheme }
 export default styled

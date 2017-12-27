@@ -23,17 +23,30 @@ import ServerStyleSheet from './ServerStyleSheet'
 const STATIC_EXECUTION_CONTEXT = {}
 
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
-  /* We depend on components having unique IDs */
   const identifiers = {}
+
+  /* We depend on components having unique IDs */
   const generateId = (_displayName: string, parentComponentId: string) => {
-    const displayName = typeof _displayName !== 'string' ?
-      'sc' : escape(_displayName)
+    const displayName =
+      typeof _displayName !== 'string' ? 'sc' : escape(_displayName)
 
-    const nr = (identifiers[displayName] || 0) + 1
-    identifiers[displayName] = nr
+    let componentId
 
-    const hash = ComponentStyle.generateName(displayName + nr)
-    const componentId = `${displayName}-${hash}`
+    /**
+     * only fall back to hashing the component injection order if
+     * a proper displayName isn't provided by the babel plugin
+     */
+    if (!_displayName) {
+      const nr = (identifiers[displayName] || 0) + 1
+      identifiers[displayName] = nr
+
+      componentId = `${displayName}-${ComponentStyle.generateName(
+        displayName + nr,
+      )}`
+    } else {
+      componentId = `${displayName}-${ComponentStyle.generateName(displayName)}`
+    }
+
     return parentComponentId !== undefined
       ? `${parentComponentId}-${componentId}`
       : componentId
@@ -83,12 +96,23 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       // staticaly styled-components don't need to build an execution context object,
       // and shouldn't be increasing the number of class names
       if (componentStyle.isStatic && attrs === undefined) {
-        return componentStyle.generateAndInjectStyles(STATIC_EXECUTION_CONTEXT, styleSheet)
+        return componentStyle.generateAndInjectStyles(
+          STATIC_EXECUTION_CONTEXT,
+          styleSheet,
+        )
       } else {
         const executionContext = this.buildExecutionContext(theme, props)
-        const className = componentStyle.generateAndInjectStyles(executionContext, styleSheet)
+        const className = componentStyle.generateAndInjectStyles(
+          executionContext,
+          styleSheet,
+        )
 
-        if (warnTooManyClasses !== undefined) warnTooManyClasses(className)
+        if (
+          process.env.NODE_ENV !== 'production' &&
+          warnTooManyClasses !== undefined
+        ) {
+          warnTooManyClasses(className)
+        }
 
         return className
       }
@@ -106,15 +130,22 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           this.props,
         )
         this.setState({ generatedClassName })
-      // If there is a theme in the context, subscribe to the event emitter. This
-      // is necessary due to pure components blocking context updates, this circumvents
-      // that by updating when an event is emitted
+        // If there is a theme in the context, subscribe to the event emitter. This
+        // is necessary due to pure components blocking context updates, this circumvents
+        // that by updating when an event is emitted
       } else if (styledContext !== undefined) {
         const { subscribe } = styledContext
         this.unsubscribeId = subscribe(nextTheme => {
           // This will be called once immediately
-          const theme = determineTheme(this.props, nextTheme, this.constructor.defaultProps)
-          const generatedClassName = this.generateAndInjectStyles(theme, this.props)
+          const theme = determineTheme(
+            this.props,
+            nextTheme,
+            this.constructor.defaultProps,
+          )
+          const generatedClassName = this.generateAndInjectStyles(
+            theme,
+            this.props,
+          )
 
           this.setState({ theme, generatedClassName })
         })
@@ -129,7 +160,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
     }
 
-    componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
+    componentWillReceiveProps(nextProps: {
+      theme?: Theme,
+      [key: string]: any,
+    }) {
       // If this is a staticaly-styled component, we don't need to listen to
       // props changes to update styles
       const { componentStyle } = this.constructor
@@ -137,9 +171,16 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         return
       }
 
-      this.setState((oldState) => {
-        const theme = determineTheme(nextProps, oldState.theme, this.constructor.defaultProps)
-        const generatedClassName = this.generateAndInjectStyles(theme, nextProps)
+      this.setState(oldState => {
+        const theme = determineTheme(
+          nextProps,
+          oldState.theme,
+          this.constructor.defaultProps,
+        )
+        const generatedClassName = this.generateAndInjectStyles(
+          theme,
+          nextProps,
+        )
 
         return { theme, generatedClassName }
       })
@@ -163,7 +204,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         styledComponentId,
         this.attrs.className,
         generatedClassName,
-      ].filter(Boolean).join(' ')
+      ]
+        .filter(Boolean)
+        .join(' ')
 
       const baseProps = {
         ...this.attrs,
@@ -176,9 +219,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         baseProps.ref = innerRef
       }
 
-      const propsForElement = Object
-        .keys(this.props)
-        .reduce((acc, propName) => {
+      const propsForElement = Object.keys(this.props).reduce(
+        (acc, propName) => {
           // Don't pass through non HTML tags through to HTML elements
           // always omit innerRef
           if (
@@ -191,7 +233,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           }
 
           return acc
-        }, baseProps)
+        },
+        baseProps,
+      )
 
       return createElement(target, propsForElement)
     }
@@ -203,20 +247,19 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     rules: RuleSet,
   ) => {
     const {
-      displayName = isTag(target) ? `styled.${target}` : `Styled(${getComponentName(target)})`,
+      displayName = isTag(target)
+        ? `styled.${target}`
+        : `Styled(${getComponentName(target)})`,
       componentId = generateId(options.displayName, options.parentComponentId),
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
       attrs,
     } = options
 
-    const styledComponentId = (options.displayName && options.componentId) ?
-      `${escape(options.displayName)}-${options.componentId}` : componentId
-
-    let warnTooManyClasses
-    if (process.env.NODE_ENV !== 'production') {
-      warnTooManyClasses = createWarnTooManyClasses(displayName)
-    }
+    const styledComponentId =
+      options.displayName && options.componentId
+        ? `${escape(options.displayName)}-${options.componentId}`
+        : componentId
 
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),
@@ -238,7 +281,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       static styledComponentId = styledComponentId
       static attrs = attrs
       static componentStyle = componentStyle
-      static warnTooManyClasses = warnTooManyClasses
       static target = target
 
       static withComponent(tag) {
@@ -246,7 +288,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
         const newComponentId =
           previousComponentId &&
-          `${previousComponentId}-${isTag(tag) ? tag : escape(getComponentName(tag))}`
+          `${previousComponentId}-${
+            isTag(tag) ? tag : escape(getComponentName(tag))
+          }`
 
         const newOptions = {
           ...optionsToCopy,
@@ -278,6 +322,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
         return constructWithOptions(createStyledComponent, target, newOptions)
       }
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
     }
 
     return StyledComponent

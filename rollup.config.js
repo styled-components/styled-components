@@ -47,18 +47,19 @@ const plugins = [
   commonjs({
     ignoreGlobal: true,
   }),
-  prod && replace({
-    'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
-  }),
-  prod && inject({
-    process: processShim,
-  }),
+  !esbundle &&
+    replace({
+      'process.env.NODE_ENV': JSON.stringify(
+        prod ? 'production' : 'development',
+      ),
+    }),
+  prod &&
+    inject({
+      process: processShim,
+    }),
   babel({
     babelrc: false,
-    presets: [
-      ['env', { modules: false, loose: true }],
-      'react',
-    ],
+    presets: [['env', { modules: false, loose: true }], 'react'],
     plugins: [
       !prod && 'flow-react-proptypes',
       prod && 'transform-react-remove-prop-types',
@@ -70,7 +71,9 @@ const plugins = [
   }),
 ].filter(Boolean)
 
-if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
+if (prod) {
+  plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
+}
 
 export default {
   entry: 'src/index.js',
