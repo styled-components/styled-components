@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed nested themes not being republished on outer theme changes, thanks to [@Andarist](https://github.com/Andarist) (see [#1382](https://github.com/styled-components/styled-components/pull/1382))
 
+- Add warning if you've accidently imported 'styled-components' on React Native instead of 'styled-components/native', thanks to [@tazsingh](https://github.com/tazsingh) (see [#1391](https://github.com/styled-components/styled-components/pull/1391))
+
 ## [v2.4.0] - 2017-12-22
 
 - remove some extra information from the generated hash that can differ between build environments ([see #1381](https://github.com/styled-components/styled-components/pull/1381))
