@@ -17,7 +17,7 @@ const constructWithOptions = _constructWithOptions(css)
 const InlineStyle = _InlineStyle(reactNative.StyleSheet)
 const StyledNativeComponent = _StyledNativeComponent(
   constructWithOptions,
-  InlineStyle,
+  InlineStyle
 )
 const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag)
 
@@ -40,7 +40,7 @@ aliases.split(/\s+/m).forEach(alias =>
     get() {
       return styled(reactNative[alias])
     },
-  }),
+  })
 )
 
 export { css, ThemeProvider, withTheme }

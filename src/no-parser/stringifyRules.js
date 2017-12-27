@@ -4,7 +4,7 @@ import type { Interpolation } from '../types'
 const stringifyRules = (
   rules: Array<Interpolation>,
   selector: ?string,
-  prefix: ?string,
+  prefix: ?string
 ): string =>
   rules.reduce(
     (str: string, partial: Interpolation, index: number): string =>
@@ -14,7 +14,7 @@ const stringifyRules = (
       (partial && Array.isArray(partial)
         ? partial.join('')
         : partial.toString()),
-    '',
+    ''
   )
 
 export default stringifyRules

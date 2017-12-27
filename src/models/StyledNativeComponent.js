@@ -70,11 +70,11 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
           const theme = determineTheme(
             this.props,
             nextTheme,
-            this.constructor.defaultProps,
+            this.constructor.defaultProps
           )
           const generatedStyles = this.generateAndInjectStyles(
             theme,
-            this.props,
+            this.props
           )
 
           this.setState({ theme, generatedStyles })
@@ -95,7 +95,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         const theme = determineTheme(
           nextProps,
           oldState.theme,
-          this.constructor.defaultProps,
+          this.constructor.defaultProps
         )
         const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
 
@@ -118,7 +118,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         console.warn(
           'setNativeProps was called on a Styled Component wrapping a stateless functional component. ' +
             'In this case no ref will be stored, and instead an innerRef prop will be passed on.\n' +
-            `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName}.`,
+            `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName}.`
         )
       }
     }
@@ -164,7 +164,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
   const createStyledNativeComponent = (
     target: Target,
     options: Object,
-    rules: RuleSet,
+    rules: RuleSet
   ) => {
     const {
       displayName = isTag(target)
@@ -176,7 +176,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     } = options
 
     const inlineStyle = new InlineStyle(
-      extendingRules === undefined ? rules : extendingRules.concat(rules),
+      extendingRules === undefined ? rules : extendingRules.concat(rules)
     )
 
     class StyledNativeComponent extends ParentComponent {
@@ -224,7 +224,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         return constructWithOptions(
           createStyledNativeComponent,
           target,
-          newOptions,
+          newOptions
         )
       }
     }

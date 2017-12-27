@@ -46,7 +46,7 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
       ) {
         // eslint-disable-next-line no-console
         console.warn(
-          '[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps',
+          '[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps'
         )
       } else if (styledContext === undefined && themeProp !== undefined) {
         this.setState({ theme: themeProp })
