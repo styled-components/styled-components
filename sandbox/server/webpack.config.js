@@ -69,6 +69,8 @@ module.exports = [
 
     name: 'client',
 
+    devtool: 'cheap-module-eval-source-map',
+
     entry: {
       client: [
         'webpack-hot-middleware/client?timeout=20000&overlay=false&reload=false&name=client',
