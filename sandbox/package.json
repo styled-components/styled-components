@@ -22,6 +22,7 @@
     "react": "^16.2.0",
     "react-dom": "^16.2.0",
     "react-live": "^1.7.1",
+    "strip-ansi": "^4.0.0",
     "webpack": "^3.10.0",
     "webpack-dev-middleware": "^2.0.2",
     "webpack-hot-middleware": "^2.21.0",
