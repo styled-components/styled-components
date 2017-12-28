@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable react/no-multi-comp */
 import React from 'react'
-import { shallow, render } from 'enzyme'
+import { shallow, render, mount } from 'enzyme'
 import ThemeProvider, { CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE  } from '../ThemeProvider'
 
 describe('ThemeProvider', () => {
@@ -113,5 +113,41 @@ describe('ThemeProvider', () => {
         </ThemeProvider>
       </div>
     )
+  })
+
+  it('ThemeProvider propagates theme updates through nested ThemeProviders', () => {
+    const theme = { themed: true }
+    const augment = outerTheme =>
+      Object.assign({}, outerTheme, { augmented: true })
+    const update = { updated: true }
+    let actual
+    const expected = { themed: true, augmented: true, updated: true }
+
+    // Setup Child
+    class Child extends React.Component {
+      componentWillMount() {
+        this.context[CHANNEL_NEXT].subscribe(receivedTheme => {
+          actual = receivedTheme
+        })
+      }
+      render() {
+        return null
+      }
+    }
+    Child.contextTypes = {
+      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+    }
+
+    const wrapper = mount(
+      <ThemeProvider theme={theme}>
+        <ThemeProvider theme={augment}>
+          <Child />
+        </ThemeProvider>
+      </ThemeProvider>,
+    )
+
+    wrapper.setProps({ theme: Object.assign({}, theme, update) })
+
+    expect(actual).toEqual(expected)
   })
 })

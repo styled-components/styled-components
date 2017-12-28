@@ -22,6 +22,19 @@ import ThemeProvider from './models/ThemeProvider'
 /* Import Higher Order Components */
 import withTheme from './hoc/withTheme'
 
+/* Warning if you've imported this file on React Native */
+if (
+  process.env.NODE_ENV !== 'production' &&
+  navigator &&
+  navigator.product === 'ReactNative'
+) {
+  console.warn(
+    "It looks like you've imported 'styled-components' on React Native.\n" +
+      "Perhaps you're looking to import 'styled-components/native'?\n" +
+      'Read more about this at https://www.styled-components.com/docs/basics#react-native',
+  )
+}
+
 /* Instantiate singletons */
 const ComponentStyle = _ComponentStyle(
   generateAlphabeticName,
