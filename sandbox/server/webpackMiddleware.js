@@ -9,6 +9,7 @@ const multiCompiler = webpack(webpackConfig)
 
 const devMiddleware = require('webpack-dev-middleware')(multiCompiler, {
   publicPath: SANDBOX_PATHS.publicPath,
+  logLevel: 'silent',
 })
 
 const hotMiddleware = require('webpack-hot-middleware')(multiCompiler)
