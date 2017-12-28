@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- Add ESLint precommit hook, thanks to [@lukebelliveau](https://github.com/lukehedger)
+- Add ESLint precommit hook, thanks to [@lukebelliveau](https://github.com/lukebelliveau)
 
 ## [v2.3.2] - 2017-12-19
 
