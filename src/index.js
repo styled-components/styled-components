@@ -25,8 +25,7 @@ import withTheme from './hoc/withTheme'
 /* Warning if you've imported this file on React Native */
 if (
   process.env.NODE_ENV !== 'production' &&
-  typeof navigator === 'object' &&
-  navigator !== null &&
+  typeof navigator !== 'undefined' &&
   navigator.product === 'ReactNative'
 ) {
   console.warn(
