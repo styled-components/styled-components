@@ -1,4 +1,3 @@
-/* eslint-disable flowtype/require-valid-file-annotation */
 import React from 'react'
 import { renderToString } from 'react-dom/server'
 

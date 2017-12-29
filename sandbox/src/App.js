@@ -1,4 +1,3 @@
-/* eslint-disable flowtype/require-valid-file-annotation */
 import React from 'react'
 
 import styled, { css, keyframes, injectGlobal } from 'styled-components'
@@ -9,6 +8,8 @@ import {
   LiveError as _LiveError,
   LivePreview as _LivePreview,
 } from 'react-live'
+
+import buttonExample from './Button.example'
 
 // eslint-disable-next-line no-unused-expressions
 injectGlobal`
@@ -28,28 +29,6 @@ injectGlobal`
   }
 `
 
-const code = `const Button = styled.button\`
-  font-size: 16px;
-  border-radius: 5px;
-  padding: 0.25em 1em;
-  margin: 0 1em;
-  background: transparent;
-  color: palevioletred;
-  border: 2px solid palevioletred;
-
-  \${props => props.primary && css\`
-    background: palevioletred;
-    color: white;
-  \`}
-\`;
-
-render(
-  <div>
-    <Button>Normal Button</Button>
-    <Button primary>Primary Button</Button>
-  </div>
-);`
-
 const Body = styled.main`
   width: 100vw;
   min-width: 100vw;
@@ -57,15 +36,18 @@ const Body = styled.main`
 
   background-image: linear-gradient(20deg, #e6356f, #69e7f7);
 
-  padding: 0 20px;
+  padding: 30px 20px;
 `
 
 const Heading = styled.div`
-  padding-top: 30px;
   text-align: center;
 `
 
-const Title = styled.h1`@media (max-width: 40.625em) {font-size: 26px;}`
+const Title = styled.h1`
+  @media (max-width: 40.625em) {
+    font-size: 26px;
+  }
+`
 
 const Subtitle = styled.p``
 
@@ -140,7 +122,11 @@ const App = () => (
       </Subtitle>
     </Heading>
     <Content>
-      <LiveProvider code={code} scope={{ styled, css, keyframes }} noInline>
+      <LiveProvider
+        code={buttonExample}
+        scope={{ styled, css, keyframes }}
+        noInline
+      >
         <LiveEditor />
         <LivePreview />
         <LiveError />

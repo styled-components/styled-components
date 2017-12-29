@@ -1,7 +1,18 @@
-/* eslint-disable flowtype/require-valid-file-annotation */
 import React from 'react'
 import { hydrate } from 'react-dom'
 
 import App from './App'
 
-hydrate(<App />, document.querySelector('#react-root'))
+const render = Component => {
+  hydrate(<Component />, document.querySelector('#react-root'))
+}
+
+render(App)
+
+if (module.hot) {
+  module.hot.accept('./App', () => {
+    // eslint-disable-next-line global-require
+    const { default: Component } = require('./App')
+    render(Component)
+  })
+}

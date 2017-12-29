@@ -1,31 +1,34 @@
-/* eslint-disable flowtype/require-valid-file-annotation */
-const EVENTS = {
-  Connect: 'connect',
-  Disconnect: 'disconnect',
-  Error: 'build-error',
-  Warning: 'build-warning',
-  Done: 'done',
-  Invalid: 'invalid',
+const path = require('path')
+
+const SANDBOX_PATHS = {
+  // common
+  cwd: process.cwd(),
+  // webpack specific
+  outputPath: path.resolve(__dirname, '.build/'),
+  publicPath: '/_build/',
+  // source
+  appSrc: path.resolve(__dirname, 'src'),
+  serverApp: path.resolve(__dirname, 'src', 'server.js'),
+  clientApp: path.resolve(__dirname, 'src', 'browser.js'),
+  styledComponentsSrc: path.resolve(__dirname, '..', 'src'),
+  indexHtml: path.resolve(__dirname, 'public', 'index.html'),
+  // build
+  serverBuild: path.resolve(__dirname, '.build', 'server.js'),
 }
 
-const CONFIG = {
-  HOST: process.env.HOST || '0.0.0.0',
-  PORT: process.env.PORT || '3000',
+const REPLACE_REGEX = {
+  html: /<!-- SSR:HTML -->/,
+  css: /<!-- SSR:CSS -->/,
 }
 
-const PREFIX = '[SANDBOX]'
+const wrapMiddleware = middleware => next => (req, res) =>
+  middleware(req, res, () => next(req, res))
 
-const logger = (type, ...args) => console[type](...args) // eslint-disable-line no-console
-
-logger.info = (...args) => logger('info', ...args)
-
-logger.warn = (...args) => logger('warn', ...args)
-
-logger.err = (...args) => logger('error', ...args)
+const composeMiddleware = (...middleware) => next =>
+  middleware.reduce((p, c) => wrapMiddleware(c)(p), next)
 
 module.exports = {
-  EVENTS,
-  CONFIG,
-  PREFIX,
-  logger,
+  SANDBOX_PATHS,
+  REPLACE_REGEX,
+  composeMiddleware,
 }
