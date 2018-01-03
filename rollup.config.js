@@ -11,7 +11,6 @@ import pkg from './package.json'
 
 const cjs = {
   format: 'cjs',
-  outro: "module.exports = exports['default']",
   exports: 'named',
 }
 

@@ -13,7 +13,6 @@ module.exports = {
     ['transform-react-remove-prop-types', { mode: 'unsafe-wrap' }],
     'transform-object-rest-spread',
     ['transform-class-properties', { loose }],
-    // bundles get the same thing from rollup and not from babel
     modules === 'commonjs' && 'add-module-exports',
   ].filter(Boolean)
 }
