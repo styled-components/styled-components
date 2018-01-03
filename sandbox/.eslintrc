@@ -1,10 +1,8 @@
 {
   "settings": {
-    "import/resolver": {
-      "webpack": {
-        // Uses webpack config aliases for import resolver checks
-        "config": "./webpack.config.dev.js"
-      }
-    }
+    "import/core-modules": ["styled-components"]
+  },
+  "rules": {
+    "flowtype/require-valid-file-annotation": 0
   }
 }

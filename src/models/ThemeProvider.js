@@ -59,8 +59,13 @@ class ThemeProvider extends Component {
     if (outerContext !== undefined) {
       this.unsubscribeToOuterId = outerContext.subscribe(theme => {
         this.outerTheme = theme
+
+        if (this.broadcast !== undefined) {
+          this.publish(this.props.theme)
+        }
       })
     }
+
     this.broadcast = createBroadcast(this.getTheme())
   }
 
@@ -86,7 +91,7 @@ class ThemeProvider extends Component {
 
   componentWillReceiveProps(nextProps: ThemeProviderProps) {
     if (this.props.theme !== nextProps.theme) {
-      this.broadcast.publish(this.getTheme(nextProps.theme))
+      this.publish(nextProps.theme)
     }
   }
 
@@ -117,6 +122,10 @@ class ThemeProvider extends Component {
       )
     }
     return { ...this.outerTheme, ...(theme: Object) }
+  }
+
+  publish(theme: Theme | ((outerTheme: Theme) => void)) {
+    this.broadcast.publish(this.getTheme(theme))
   }
 
   render() {

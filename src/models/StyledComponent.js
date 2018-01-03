@@ -23,17 +23,30 @@ import ServerStyleSheet from './ServerStyleSheet'
 const STATIC_EXECUTION_CONTEXT = {}
 
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
-  /* We depend on components having unique IDs */
   const identifiers = {}
+
+  /* We depend on components having unique IDs */
   const generateId = (_displayName: string, parentComponentId: string) => {
     const displayName =
       typeof _displayName !== 'string' ? 'sc' : escape(_displayName)
 
-    const nr = (identifiers[displayName] || 0) + 1
-    identifiers[displayName] = nr
+    let componentId
 
-    const hash = ComponentStyle.generateName(displayName + nr)
-    const componentId = `${displayName}-${hash}`
+    /**
+     * only fall back to hashing the component injection order if
+     * a proper displayName isn't provided by the babel plugin
+     */
+    if (!_displayName) {
+      const nr = (identifiers[displayName] || 0) + 1
+      identifiers[displayName] = nr
+
+      componentId = `${displayName}-${ComponentStyle.generateName(
+        displayName + nr,
+      )}`
+    } else {
+      componentId = `${displayName}-${ComponentStyle.generateName(displayName)}`
+    }
+
     return parentComponentId !== undefined
       ? `${parentComponentId}-${componentId}`
       : componentId
