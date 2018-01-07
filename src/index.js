@@ -28,11 +28,28 @@ if (
   typeof navigator !== 'undefined' &&
   navigator.product === 'ReactNative'
 ) {
+  // eslint-disable-next-line no-console
   console.warn(
     "It looks like you've imported 'styled-components' on React Native.\n" +
       "Perhaps you're looking to import 'styled-components/native'?\n" +
       'Read more about this at https://www.styled-components.com/docs/basics#react-native',
   )
+}
+
+/* Warning if there are several instances of styled-components */
+if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
+  if (window['__styled-components-init__'] === true) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "It looks like there are several instances of 'styled-components' initialized in this application. " +
+        'This may cause dynamic styles not rendering properly, errors happening during rehydration process ' +
+        'and makes you application bigger without a good reason.\n\n' +
+        'If you are using a building tool like webpack, consider checking your bundle for duplication of ' +
+        "'styled-components' module.",
+    )
+  } else {
+    window['__styled-components-init__'] = true
+  }
 }
 
 /* Instantiate singletons */
