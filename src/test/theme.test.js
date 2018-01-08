@@ -401,7 +401,6 @@ describe('theming', () => {
 
     const inner = wrapper.find(Comp).first()
 
-    // $FlowFixMe
     expect(Object.keys(inner.props()).length).toEqual(1)
     expect(inner.props()).toEqual({ theme: {} })
   })
