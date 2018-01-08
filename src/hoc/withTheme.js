@@ -86,7 +86,7 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
         <Component
           theme={theme}
           {...this.props}
-          innerRef={shouldSetInnerRef ? innerRef : undefined}
+          {...(shouldSetInnerRef ? { innerRef } : {})}
           ref={shouldSetInnerRef ? undefined : innerRef}
         />
       )
