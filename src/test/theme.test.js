@@ -409,7 +409,6 @@ describe('theming', () => {
   it('should accept innerRef and pass it on as ref', () => {
     class Comp extends React.Component {
       render() {
-        console.log("COMP PROPS", this.props);
         return <div />
       }
     }
