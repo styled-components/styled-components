@@ -414,7 +414,7 @@ describe('theming', () => {
       }
     }
 
-    const CompWithTheme = withTheme(Comp, "BLABLA")
+    const CompWithTheme = withTheme(Comp)
     const ref = jest.fn()
 
     const wrapper = mount(
