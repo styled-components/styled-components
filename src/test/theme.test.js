@@ -404,7 +404,7 @@ describe('theming', () => {
 
     // $FlowFixMe
     expect(ref).toHaveBeenCalledWith(inner.node)
-    expect(inner.prop('innerRef')).toBe(undefined)
+    expect(inner.prop('innerRef')).not.toHaveProperty('innerRef')
   })
 
   it('should accept innerRef and pass it on for stateless function components', () => {
