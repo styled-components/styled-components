@@ -38,7 +38,10 @@ if (
 
 /* Warning if there are several instances of styled-components */
 if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
-  if (window['__styled-components-init__'] === true) {
+  window['__styled-components-init__'] =
+    window['__styled-components-init__'] || 0
+
+  if (window['__styled-components-init__'] === 1) {
     // eslint-disable-next-line no-console
     console.warn(
       "It looks like there are several instances of 'styled-components' initialized in this application. " +
@@ -48,7 +51,7 @@ if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
         "'styled-components' module.",
     )
   } else {
-    window['__styled-components-init__'] = true
+    window['__styled-components-init__'] += 1
   }
 }
 
