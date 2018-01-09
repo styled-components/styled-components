@@ -68,6 +68,8 @@ class BrowserTag implements Tag {
     if (!comp) return
 
     this.el.removeChild(comp.textNode)
+
+    this.size -= 1
     this.components = rest
   }
 
