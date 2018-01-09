@@ -9,17 +9,19 @@ const _createGlobalStyle = (stringifyRules: Stringifier, css: Function) => {
     return class extends React.Component {
       componentId = ''
 
-      componentDidMount() {
+      componentWillMount() {
         const rules = css(strings, ...interpolations)
         const hash = hashStr(JSON.stringify(rules))
         this.componentId = `sc-global-${hash}`
+
         if (StyleSheet.instance.hasInjectedComponent(this.componentId)) return
 
         StyleSheet.instance.inject(this.componentId, false, stringifyRules(rules))
       }
 
       componentWillUnmount() {
-        // Remove styles
+        if (!StyleSheet.instance.hasInjectedComponent(this.componentId)) return
+        StyleSheet.instance.removeComponent(this.componentId)
       }
 
       render() {
