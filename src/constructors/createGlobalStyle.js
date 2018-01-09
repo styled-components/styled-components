@@ -6,11 +6,17 @@ import StyleSheet, { CONTEXT_KEY } from '../models/StyleSheet'
 import ServerStyleSheet from '../models/ServerStyleSheet'
 import type { Interpolation, Stringifier } from '../types'
 
-const _createGlobalStyle = (stringifyRules: Stringifier, css: Function) => {
-  const createGlobalStyle = (strings: Array<string>, ...interpolations: Array<Interpolation>) => {
-    return class extends React.Component {
+export default (stringifyRules: Stringifier, css: Function) => {
+  const createGlobalStyle = (
+    strings: Array<string>,
+    ...interpolations: Array<Interpolation>
+  ) =>
+    class extends React.Component {
       static contextTypes = {
-        [CONTEXT_KEY]: PropTypes.oneOfType([PropTypes.instanceOf(StyleSheet), PropTypes.instanceOf(ServerStyleSheet)]),
+        [CONTEXT_KEY]: PropTypes.oneOfType([
+          PropTypes.instanceOf(StyleSheet),
+          PropTypes.instanceOf(ServerStyleSheet),
+        ]),
       }
       componentId = ''
 
@@ -35,9 +41,6 @@ const _createGlobalStyle = (stringifyRules: Stringifier, css: Function) => {
         return null
       }
     }
-  }
 
   return createGlobalStyle
 }
-
-export default _createGlobalStyle
