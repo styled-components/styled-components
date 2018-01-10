@@ -49,7 +49,7 @@ if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
         'This may cause dynamic styles not rendering properly, errors happening during rehydration process ' +
         'and makes you application bigger without a good reason.\n\n' +
         'If you are using a building tool like webpack, consider checking your bundle for duplication of ' +
-        "'styled-components' module.",
+        "'styled-components' module."
     )
   } else {
     window['__styled-components-init__'] += 1
