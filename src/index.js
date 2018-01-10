@@ -3,6 +3,7 @@
 /* Import singletons */
 import flatten from './utils/flatten'
 import stringifyRules from './utils/stringifyRules'
+import isStyledComponent from './utils/isStyledComponent'
 import generateAlphabeticName from './utils/generateAlphabeticName'
 import css from './constructors/css'
 import ServerStyleSheet from './models/ServerStyleSheet'
@@ -55,6 +56,7 @@ export {
   css,
   keyframes,
   injectGlobal,
+  isStyledComponent,
   ThemeProvider,
   withTheme,
   ServerStyleSheet,
