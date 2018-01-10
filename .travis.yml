@@ -9,7 +9,7 @@ script:
   # Tests have to run before Danger runs because
   # danger-plugin-jest references the test output
   - yarn run test
-  - yarn run danger run -- --verbose
+  - yarn run danger
   - yarn run flow
   - yarn run lint && yarn run typescript && yarn run tslint
 notifications:
