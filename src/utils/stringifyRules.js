@@ -14,7 +14,7 @@ const stylis = new Stylis({
 const stringifyRules = (
   rules: Array<Interpolation>,
   selector: ?string,
-  prefix: ?string,
+  prefix: ?string
 ): string => {
   const flatCSS = rules.join('').replace(/^\s*\/\/.*$/gm, '') // replace JS comments
 

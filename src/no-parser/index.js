@@ -28,7 +28,7 @@ import withTheme from '../hoc/withTheme'
 const ComponentStyle = _ComponentStyle(
   generateAlphabeticName,
   flatten,
-  stringifyRules,
+  stringifyRules
 )
 const constructWithOptions = _constructWithOptions(css)
 const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)

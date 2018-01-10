@@ -44,7 +44,7 @@ export default class StyleSheet {
   constructor(
     tagConstructor: boolean => Tag,
     tags: Array<Tag> = [],
-    names: { [string]: boolean } = {},
+    names: { [string]: boolean } = {}
   ) {
     this.tagConstructor = tagConstructor
     this.tags = tags
@@ -97,7 +97,7 @@ export default class StyleSheet {
     isLocal: boolean,
     css: string,
     hash: ?any,
-    name: ?string,
+    name: ?string
   ) {
     if (this === instance) {
       clones.forEach(clone => {
@@ -168,7 +168,7 @@ export default class StyleSheet {
     const newSheet = new StyleSheet(
       oldSheet.tagConstructor,
       oldSheet.tags.map(tag => tag.clone()),
-      { ...oldSheet.names },
+      { ...oldSheet.names }
     )
 
     newSheet.hashes = { ...oldSheet.hashes }

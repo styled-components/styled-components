@@ -21,7 +21,7 @@ export default (displayName: string) => {
             '      background,\n' +
             '    }),\n' +
             '  })`width: 100%;`\n\n' +
-            '  <Component />',
+            '  <Component />'
         )
         warningSeen = true
         generatedClasses = {}

@@ -384,6 +384,27 @@ describe('theming', () => {
     expect(MyComponentWithTheme.myStaticProperty).toBe(true)
   })
 
+  it('should only pass the theme prop', () => {
+    class Comp extends React.Component {
+      render() {
+        return <div />
+      }
+    }
+
+    const CompWithTheme = withTheme(Comp)
+
+    const wrapper = mount(
+      <ThemeProvider theme={{}}>
+        <CompWithTheme />
+      </ThemeProvider>
+    )
+
+    const inner = wrapper.find(Comp).first()
+
+    expect(Object.keys(inner.props()).length).toEqual(1)
+    expect(inner.props()).toEqual({ theme: {} })
+  })
+
   it('should accept innerRef and pass it on as ref', () => {
     class Comp extends React.Component {
       render() {
@@ -400,11 +421,11 @@ describe('theming', () => {
       </ThemeProvider>
     )
 
-    const inner = wrapper.find(Comp).first()
+    const inner = wrapper.find(Comp).first();
 
     // $FlowFixMe
     expect(ref).toHaveBeenCalledWith(inner.node)
-    expect(inner.prop('innerRef')).toBe(undefined)
+    expect(inner.props()).not.toHaveProperty('innerRef')
   })
 
   it('should accept innerRef and pass it on for stateless function components', () => {

@@ -10,6 +10,7 @@ import _constructWithOptions from '../constructors/constructWithOptions'
 import css from '../constructors/css'
 import ThemeProvider from '../models/ThemeProvider'
 import withTheme from '../hoc/withTheme'
+import isStyledComponent from '../utils/isStyledComponent'
 
 import type { Target } from '../types'
 
@@ -17,7 +18,7 @@ const constructWithOptions = _constructWithOptions(css)
 const InlineStyle = _InlineStyle(reactPrimitives.StyleSheet)
 const StyledNativeComponent = _StyledNativeComponent(
   constructWithOptions,
-  InlineStyle,
+  InlineStyle
 )
 const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag)
 
@@ -34,8 +35,8 @@ aliases.split(/\s+/m).forEach(alias =>
     get() {
       return styled(reactPrimitives[alias])
     },
-  }),
+  })
 )
 
-export { css, ThemeProvider, withTheme }
+export { css, isStyledComponent, ThemeProvider, withTheme }
 export default styled
