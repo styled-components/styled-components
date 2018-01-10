@@ -5,7 +5,7 @@ import commonjs from 'rollup-plugin-commonjs'
 import babel from 'rollup-plugin-babel'
 import json from 'rollup-plugin-json'
 import flow from 'rollup-plugin-flow'
-import uglify from 'rollup-plugin-uglify'
+import closure from 'rollup-plugin-closure-compiler-js'
 import visualizer from 'rollup-plugin-visualizer'
 import pkg from './package.json'
 
@@ -63,7 +63,9 @@ const prodUmdConfig = {
     replace({
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
-    uglify(),
+    closure({
+      processCommonJsModules: false
+    }),
     visualizer({ filename: './bundle-stats.html' }),
   ),
 }
