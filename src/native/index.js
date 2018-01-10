@@ -10,6 +10,7 @@ import _constructWithOptions from '../constructors/constructWithOptions'
 import css from '../constructors/css'
 import ThemeProvider from '../models/ThemeProvider'
 import withTheme from '../hoc/withTheme'
+import isStyledComponent from '../utils/isStyledComponent'
 
 import type { Target } from '../types'
 
@@ -43,5 +44,5 @@ aliases.split(/\s+/m).forEach(alias =>
   }),
 )
 
-export { css, ThemeProvider, withTheme }
+export { css, isStyledComponent, ThemeProvider, withTheme }
 export default styled
