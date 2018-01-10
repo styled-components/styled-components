@@ -105,7 +105,7 @@ describe('attrs', () => {
   })
 
   it('pass attrs to style block', () => {
-    /* Would be a React Router Link in URL */
+    /* Would be a React Router Link in real life */
     const Comp = styled.a.attrs({
       href: '#',
       'data-active-class-name': '--is-active'
