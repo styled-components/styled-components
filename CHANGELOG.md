@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Add warning if you've accidently imported 'styled-components' on React Native instead of 'styled-components/native', thanks to [@tazsingh](https://github.com/tazsingh) and [@gribnoysup](https://github.com/gribnoysup) (see [#1391](https://github.com/styled-components/styled-components/pull/1391) and [#1394](https://github.com/styled-components/styled-components/pull/1394))
 
+- Fixed bug where `innerRef` could be passed as undefined to components when using withTheme. This could cause issues when using prop spread within the component (e.g. `{...this.props}`), because React will still warn you about using a non-dom prop even though it's undefined. (see [#1414](https://github.com/styled-components/styled-components/pull/1414))
+
 ## [v2.4.0] - 2017-12-22
 
 - remove some extra information from the generated hash that can differ between build environments ([see #1381](https://github.com/styled-components/styled-components/pull/1381))
