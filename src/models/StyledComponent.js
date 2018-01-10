@@ -41,7 +41,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       identifiers[displayName] = nr
 
       componentId = `${displayName}-${ComponentStyle.generateName(
-        displayName + nr,
+        displayName + nr
       )}`
     } else {
       componentId = `${displayName}-${ComponentStyle.generateName(displayName)}`
@@ -98,13 +98,13 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       if (componentStyle.isStatic && attrs === undefined) {
         return componentStyle.generateAndInjectStyles(
           STATIC_EXECUTION_CONTEXT,
-          styleSheet,
+          styleSheet
         )
       } else {
         const executionContext = this.buildExecutionContext(theme, props)
         const className = componentStyle.generateAndInjectStyles(
           executionContext,
-          styleSheet,
+          styleSheet
         )
 
         if (
@@ -127,7 +127,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       if (componentStyle.isStatic) {
         const generatedClassName = this.generateAndInjectStyles(
           STATIC_EXECUTION_CONTEXT,
-          this.props,
+          this.props
         )
         this.setState({ generatedClassName })
         // If there is a theme in the context, subscribe to the event emitter. This
@@ -140,11 +140,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           const theme = determineTheme(
             this.props,
             nextTheme,
-            this.constructor.defaultProps,
+            this.constructor.defaultProps
           )
           const generatedClassName = this.generateAndInjectStyles(
             theme,
-            this.props,
+            this.props
           )
 
           this.setState({ theme, generatedClassName })
@@ -154,7 +154,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         const theme = this.props.theme || {}
         const generatedClassName = this.generateAndInjectStyles(
           theme,
-          this.props,
+          this.props
         )
         this.setState({ theme, generatedClassName })
       }
@@ -175,11 +175,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         const theme = determineTheme(
           nextProps,
           oldState.theme,
-          this.constructor.defaultProps,
+          this.constructor.defaultProps
         )
         const generatedClassName = this.generateAndInjectStyles(
           theme,
-          nextProps,
+          nextProps
         )
 
         return { theme, generatedClassName }
@@ -234,7 +234,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
           return acc
         },
-        baseProps,
+        baseProps
       )
 
       return createElement(target, propsForElement)
@@ -244,7 +244,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
   const createStyledComponent = (
     target: Target,
     options: Object,
-    rules: RuleSet,
+    rules: RuleSet
   ) => {
     const {
       displayName = isTag(target)
@@ -264,7 +264,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),
       attrs,
-      styledComponentId,
+      styledComponentId
     )
 
     class StyledComponent extends ParentComponent {

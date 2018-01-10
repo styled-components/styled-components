@@ -44,7 +44,7 @@ const isHRMEnabled =
 export default (
   nameGenerator: NameGenerator,
   flatten: Flattener,
-  stringifyRules: Stringifier,
+  stringifyRules: Stringifier
 ) => {
   class ComponentStyle {
     rules: RuleSet

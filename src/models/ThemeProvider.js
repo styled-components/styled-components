@@ -28,7 +28,7 @@ if (process.env.NODE_ENV !== 'production') {
   warnChannelDeprecated = once(() => {
     // eslint-disable-next-line no-console
     console.error(
-      `Warning: Usage of \`context.${CHANNEL}\` as a function is deprecated. It will be replaced with the object on \`.context.${CHANNEL_NEXT}\` in a future version.`,
+      `Warning: Usage of \`context.${CHANNEL}\` as a function is deprecated. It will be replaced with the object on \`.context.${CHANNEL_NEXT}\` in a future version.`
     )
   })
 }
@@ -111,14 +111,14 @@ class ThemeProvider extends Component {
         !isPlainObject(mergedTheme)
       ) {
         throw new Error(
-          '[ThemeProvider] Please return an object from your theme function, i.e. theme={() => ({})}!',
+          '[ThemeProvider] Please return an object from your theme function, i.e. theme={() => ({})}!'
         )
       }
       return mergedTheme
     }
     if (!isPlainObject(theme)) {
       throw new Error(
-        '[ThemeProvider] Please make your theme prop a plain object',
+        '[ThemeProvider] Please make your theme prop a plain object'
       )
     }
     return { ...this.outerTheme, ...(theme: Object) }

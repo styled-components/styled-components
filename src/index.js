@@ -32,7 +32,7 @@ if (
   console.warn(
     "It looks like you've imported 'styled-components' on React Native.\n" +
       "Perhaps you're looking to import 'styled-components/native'?\n" +
-      'Read more about this at https://www.styled-components.com/docs/basics#react-native',
+      'Read more about this at https://www.styled-components.com/docs/basics#react-native'
   )
 }
 
@@ -40,7 +40,7 @@ if (
 const ComponentStyle = _ComponentStyle(
   generateAlphabeticName,
   flatten,
-  stringifyRules,
+  stringifyRules
 )
 const constructWithOptions = _constructWithOptions(css)
 const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
