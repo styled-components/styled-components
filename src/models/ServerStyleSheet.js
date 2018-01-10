@@ -37,7 +37,7 @@ class ServerTag implements Tag {
   concatenateCSS() {
     return Object.keys(this.components).reduce(
       (styles, k) => styles + this.components[k].css,
-      '',
+      ''
     )
   }
 
@@ -46,7 +46,7 @@ class ServerTag implements Tag {
 
     if (process.env.NODE_ENV !== 'production' && !comp) {
       throw new Error(
-        'Must add a new component before you can inject css into it',
+        'Must add a new component before you can inject css into it'
       )
     }
     if (comp.css === '') comp.css = `/* sc-component-id: ${componentId} */\n`

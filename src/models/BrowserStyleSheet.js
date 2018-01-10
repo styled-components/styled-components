@@ -67,7 +67,7 @@ class BrowserTag implements Tag {
 
     if (process.env.NODE_ENV !== 'production' && !comp) {
       throw new Error(
-        'Must add a new component before you can inject css into it',
+        'Must add a new component before you can inject css into it'
       )
     }
     if (comp.textNode.data === '') {
@@ -79,7 +79,7 @@ class BrowserTag implements Tag {
       const existingNames = this.el.getAttribute(SC_ATTR)
       this.el.setAttribute(
         SC_ATTR,
-        existingNames ? `${existingNames} ${name}` : name,
+        existingNames ? `${existingNames} ${name}` : name
       )
     }
 
@@ -145,11 +145,7 @@ export default {
       const el = nodes[i]
 
       tags.push(
-        new BrowserTag(
-          el,
-          el.getAttribute(LOCAL_ATTR) === 'true',
-          el.innerHTML,
-        ),
+        new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML)
       )
 
       const attr = el.getAttribute(SC_ATTR)

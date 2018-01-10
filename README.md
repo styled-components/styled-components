@@ -96,7 +96,7 @@ Let everyone know you're using _styled-components_ → [![style: styled-componen
 
 ## License
 
-Licensed under the MIT License, Copyright © 2017 Glen Maddern and Maximilian Stoiber.
+Licensed under the MIT License, Copyright © 2016-present Glen Maddern and Maximilian Stoiber.
 
 See [LICENSE](./LICENSE) for more information.
 

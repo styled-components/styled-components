@@ -6,9 +6,17 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Add ESLint precommit hook, thanks to [@lukebelliveau](https://github.com/lukebelliveau) (see [#1393](https://github.com/styled-components/styled-components/pull/1393))
+
 - Fixed nested themes not being republished on outer theme changes, thanks to [@Andarist](https://github.com/Andarist) (see [#1382](https://github.com/styled-components/styled-components/pull/1382))
 
-- Add warning if you've accidently imported 'styled-components' on React Native instead of 'styled-components/native', thanks to [@tazsingh](https://github.com/tazsingh) (see [#1391](https://github.com/styled-components/styled-components/pull/1391))
+- Add warning if you've accidently imported 'styled-components' on React Native instead of 'styled-components/native', thanks to [@tazsingh](https://github.com/tazsingh) and [@gribnoysup](https://github.com/gribnoysup) (see [#1391](https://github.com/styled-components/styled-components/pull/1391) and [#1394](https://github.com/styled-components/styled-components/pull/1394))
+
+- Fixed bug where `innerRef` could be passed as undefined to components when using withTheme. This could cause issues when using prop spread within the component (e.g. `{...this.props}`), because React will still warn you about using a non-dom prop even though it's undefined. (see [#1414](https://github.com/styled-components/styled-components/pull/1414))
+
+- Expose `isStyledComponent` utility as a named export. This functionality is useful in some edge cases, such as knowing whether or not to use `innerRef` vs `ref` and detecting if a component class needs to be wrapped such that it can be used in a component selector. (see [#1418](https://github.com/styled-components/styled-components/pull/1418/))
+
+- Remove trailing commas on function arguments (not compatible with ES5 JS engines)
 
 ## [v2.4.0] - 2017-12-22
 

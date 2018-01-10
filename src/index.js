@@ -3,6 +3,7 @@
 /* Import singletons */
 import flatten from './utils/flatten'
 import stringifyRules from './utils/stringifyRules'
+import isStyledComponent from './utils/isStyledComponent'
 import generateAlphabeticName from './utils/generateAlphabeticName'
 import css from './constructors/css'
 import ServerStyleSheet from './models/ServerStyleSheet'
@@ -25,13 +26,13 @@ import withTheme from './hoc/withTheme'
 /* Warning if you've imported this file on React Native */
 if (
   process.env.NODE_ENV !== 'production' &&
-  navigator &&
+  typeof navigator !== 'undefined' &&
   navigator.product === 'ReactNative'
 ) {
   console.warn(
     "It looks like you've imported 'styled-components' on React Native.\n" +
       "Perhaps you're looking to import 'styled-components/native'?\n" +
-      'Read more about this at https://www.styled-components.com/docs/basics#react-native',
+      'Read more about this at https://www.styled-components.com/docs/basics#react-native'
   )
 }
 
@@ -39,7 +40,7 @@ if (
 const ComponentStyle = _ComponentStyle(
   generateAlphabeticName,
   flatten,
-  stringifyRules,
+  stringifyRules
 )
 const constructWithOptions = _constructWithOptions(css)
 const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
@@ -55,6 +56,7 @@ export {
   css,
   keyframes,
   injectGlobal,
+  isStyledComponent,
   ThemeProvider,
   withTheme,
   ServerStyleSheet,

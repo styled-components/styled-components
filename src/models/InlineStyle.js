@@ -39,7 +39,7 @@ export default (styleSheet: StyleSheet) => {
           ) {
             /* eslint-disable no-console */
             console.warn(
-              `Node of type ${node.type} not supported as an inline style`,
+              `Node of type ${node.type} not supported as an inline style`
             )
           }
         })

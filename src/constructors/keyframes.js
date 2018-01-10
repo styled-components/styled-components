@@ -8,7 +8,7 @@ const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '')
 export default (
   nameGenerator: NameGenerator,
   stringifyRules: Stringifier,
-  css: Function,
+  css: Function
 ) => (
   strings: Array<string>,
   ...interpolations: Array<Interpolation>
@@ -28,7 +28,7 @@ export default (
     true,
     generatedCSS,
     hash,
-    name,
+    name
   )
   return name
 }

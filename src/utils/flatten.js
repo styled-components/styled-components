@@ -26,7 +26,7 @@ export const objToCss = (obj: Object, prevKey?: string): string => {
 
 const flatten = (
   chunks: Array<Interpolation>,
-  executionContext: ?Object,
+  executionContext: ?Object
 ): Array<Interpolation> =>
   chunks.reduce((ruleSet: Array<Interpolation>, chunk: ?Interpolation) => {
     /* Remove falsey values */
@@ -53,7 +53,7 @@ const flatten = (
     if (typeof chunk === 'function') {
       return executionContext
         ? ruleSet.concat(
-            ...flatten([chunk(executionContext)], executionContext),
+            ...flatten([chunk(executionContext)], executionContext)
           )
         : ruleSet.concat(chunk)
     }
@@ -61,7 +61,7 @@ const flatten = (
     /* Handle objects */
     return ruleSet.concat(
       // $FlowFixMe have to add %checks somehow to isPlainObject
-      isPlainObject(chunk) ? objToCss(chunk) : chunk.toString(),
+      isPlainObject(chunk) ? objToCss(chunk) : chunk.toString()
     )
   }, [])
 

@@ -5,7 +5,7 @@ export default (css: Function) => {
   const constructWithOptions = (
     componentConstructor: Function,
     tag: Target,
-    options: Object = {},
+    options: Object = {}
   ) => {
     if (
       process.env.NODE_ENV !== 'production' &&
