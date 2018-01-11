@@ -33,8 +33,7 @@ const configBase = {
   plugins: commonPlugins,
 }
 
-const umdConfig = {
-  ...configBase,
+const umdConfig = Object.assign({}, configBase, {
   output: {
     file: 'dist/styled-components.js',
     format: 'umd',
@@ -42,62 +41,60 @@ const umdConfig = {
     exports: 'named',
   },
   external: ['react'],
-}
+})
 
-const devUmdConfig = {
-  ...umdConfig,
+const devUmdConfig = Object.assign({}, umdConfig, {
   plugins: umdConfig.plugins.concat(
     replace({
       'process.env.NODE_ENV': JSON.stringify('development'),
-    }),
+    })
   ),
-}
+})
 
-const prodUmdConfig = {
-  ...umdConfig,
-  output: {
-    ...umdConfig.output,
+const prodUmdConfig = Object.assign({}, umdConfig, {
+  output: Object.assign({}, umdConfig.output, {
     file: 'dist/styled-components.min.js',
-  },
+  }),
   plugins: umdConfig.plugins.concat(
     replace({
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
     uglify(),
-    visualizer({ filename: './bundle-stats.html' }),
+    visualizer({ filename: './bundle-stats.html' })
   ),
-}
+})
 
-const webConfig = {
-  ...configBase,
-  output: [{ file: pkg.module, format: 'es' }, { ...cjs, file: pkg.main }],
-}
+const webConfig = Object.assign({}, configBase, {
+  output: [
+    { file: pkg.module, format: 'es' },
+    Object.assign({}, cjs, { file: pkg.main }),
+  ],
+})
 
-const nativeConfig = {
-  ...configBase,
+const nativeConfig = Object.assign({}, configBase, {
   input: 'src/native/index.js',
-  output: { ...cjs, file: pkg['react-native'] },
+  output: Object.assign({}, cjs, { file: pkg['react-native'] }),
   external: configBase.external.concat('react-native'),
-}
+})
 
-const primitivesConfig = {
-  ...configBase,
+const primitivesConfig = Object.assign({}, configBase, {
   input: 'src/primitives/index.js',
   output: [
     { file: 'dist/styled-components-primitives.es.js', format: 'es' },
-    { ...cjs, file: 'dist/styled-components-primitives.cjs.js' },
+    Object.assign({}, cjs, {
+      file: 'dist/styled-components-primitives.cjs.js',
+    }),
   ],
   external: configBase.external.concat('react-primitives'),
-}
+})
 
-const noParserConfig = {
-  ...configBase,
+const noParserConfig = Object.assign({}, configBase, {
   input: 'src/no-parser/index.js',
   output: [
     { file: 'dist/styled-components-no-parser.es.js', format: 'es' },
-    { ...cjs, file: 'dist/styled-components-no-parser.cjs.js' },
+    Object.assign({}, cjs, { file: 'dist/styled-components-no-parser.cjs.js' }),
   ],
-}
+})
 
 export default [
   devUmdConfig,
