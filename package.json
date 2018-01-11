@@ -110,6 +110,7 @@
     "jest-image-snapshot": "^2.2.0",
     "jsdom": "^9.10.0",
     "lint-staged": "^6.0.0",
+    "material-ui": "^1.0.0-beta.27",
     "node-watch": "^0.4.1",
     "prettier": "1.9.2",
     "puppeteer": "^0.13.0",
