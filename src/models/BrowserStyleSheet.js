@@ -44,7 +44,7 @@ class BrowserTag implements Tag {
     }, {})
   }
 
-  isFull() {
+  isSealed() {
     return this.size >= COMPONENTS_PER_TAG
   }
 
