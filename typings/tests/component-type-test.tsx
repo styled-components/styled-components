@@ -2,7 +2,7 @@ import styled from "../..";
 
 declare const A: React.ComponentClass;
 declare const B: React.StatelessComponent;
-declare const C: React.ComponentClass | React.StatelessComponent;
+declare const C: React.ComponentType;
 
 styled(A); // succeeds
 styled(B); // succeeds
