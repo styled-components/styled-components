@@ -20,6 +20,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Ship source maps ([see #1425](https://github.com/styled-components/styled-components/pull/1425))
 
+- Upgrade test suites to run against react v16 ([see #1426](https://github.com/styled-components/styled-components/pull/1426))
+
 ## [v2.4.0] - 2017-12-22
 
 - remove some extra information from the generated hash that can differ between build environments ([see #1381](https://github.com/styled-components/styled-components/pull/1381))
