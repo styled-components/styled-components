@@ -6,4 +6,9 @@ declare const C: React.ComponentClass | React.StatelessComponent;
 
 styled(A); // succeeds
 styled(B); // succeeds
-styled(C); // fails
+styled(C); // used to fail; see issue trail linked below
+
+// https://github.com/mui-org/material-ui/pull/8781#issuecomment-349460247
+// https://github.com/mui-org/material-ui/issues/9838
+// https://github.com/styled-components/styled-components/pull/1420
+// https://github.com/styled-components/styled-components/pull/1427
