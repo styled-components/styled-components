@@ -7,6 +7,7 @@ import json from 'rollup-plugin-json'
 import flow from 'rollup-plugin-flow'
 import uglify from 'rollup-plugin-uglify'
 import visualizer from 'rollup-plugin-visualizer'
+import sourceMaps from 'rollup-plugin-sourcemaps'
 import pkg from './package.json'
 
 const cjs = {
@@ -15,9 +16,13 @@ const cjs = {
 }
 
 const commonPlugins = [
-  flow(),
+  flow({
+    // needed for sourcemaps to be properly generated
+    pretty: true,
+  }),
   json(),
   nodeResolve(),
+  sourceMaps(),
   commonjs({
     ignoreGlobal: true,
   }),
@@ -31,6 +36,7 @@ const configBase = {
   globals: { react: 'React' },
   external: ['react'].concat(Object.keys(pkg.dependencies)),
   plugins: commonPlugins,
+  sourcemap: true,
 }
 
 const umdConfig = Object.assign({}, configBase, {
@@ -59,7 +65,9 @@ const prodUmdConfig = Object.assign({}, umdConfig, {
     replace({
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
-    uglify(),
+    uglify({
+      sourceMap: true,
+    }),
     visualizer({ filename: './bundle-stats.html' })
   ),
 })

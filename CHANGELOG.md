@@ -18,6 +18,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Remove trailing commas on function arguments (not compatible with ES5 JS engines)
 
+- Ship source maps ([see #1425](https://github.com/styled-components/styled-components/pull/1425))
+
 ## [v2.4.0] - 2017-12-22
 
 - remove some extra information from the generated hash that can differ between build environments ([see #1381](https://github.com/styled-components/styled-components/pull/1381))
