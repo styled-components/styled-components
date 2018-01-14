@@ -72,8 +72,8 @@
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
-    "@types/react": "^15.0.37",
-    "@types/react-dom": "^15.5.1",
+    "@types/react": "^16",
+    "@types/react-dom": "^16",
     "@types/react-native": "^0.46.0",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
@@ -92,7 +92,7 @@
     "danger": "^2.0.0",
     "danger-plugin-jest": "^1.1.0",
     "enzyme": "^3.3.0",
-    "enzyme-adapter-react-15": "^1.0.5",
+    "enzyme-adapter-react-16": "^1.1.1",
     "eslint": "^3.15.0",
     "eslint-config-airbnb": "^13.0.0",
     "eslint-config-prettier": "^2.9.0",
@@ -113,11 +113,12 @@
     "node-watch": "^0.4.1",
     "prettier": "1.9.2",
     "puppeteer": "^0.13.0",
-    "react": "^15.5.4",
-    "react-dom": "^15.5.4",
-    "react-native": "^0.39.2",
+    "raf": "^3.4.0",
+    "react": "^16.0.0",
+    "react-dom": "^16.0.0",
+    "react-native": "^0.46.0",
     "react-primitives": "^0.4.2",
-    "react-test-renderer": "^15.6.1",
+    "react-test-renderer": "^16.0.0",
     "rimraf": "^2.6.1",
     "rollup": "^0.52.2",
     "rollup-plugin-babel": "^2.7.1",
@@ -141,6 +142,7 @@
       "<rootDir>/src/"
     ],
     "setupFiles": [
+      "raf/polyfill",
       "<rootDir>/src/test/enzymeSetup.js"
     ],
     "testPathIgnorePatterns": [

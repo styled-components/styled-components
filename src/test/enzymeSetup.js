@@ -1,6 +1,6 @@
 // @flow
 import Enzyme from 'enzyme'
-import Adapter from 'enzyme-adapter-react-15'
+import Adapter from 'enzyme-adapter-react-16'
 
-// Configure Enzyme for React 15.x
+// Configure Enzyme for React
 Enzyme.configure({ adapter: new Adapter() })
