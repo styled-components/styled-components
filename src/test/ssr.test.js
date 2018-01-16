@@ -246,10 +246,16 @@ describe('ssr', () => {
 
     return new Promise((resolve, reject) => {
       let received = ''
+
       stream.on('data', chunk => {
         received += chunk
       })
-      stream.on('end', () => resolve(expect(received).toMatchSnapshot()))
+
+      stream.on('end', () => {
+        expect(received).toMatchSnapshot()
+        resolve()
+      })
+
       stream.on('error', reject)
     })
   })
