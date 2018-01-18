@@ -192,7 +192,7 @@ export default class ServerStyleSheet {
 
     readableStream.on('end', () => {
       this.closed = true
-      ourStream.emit('end')
+      ourStream.push(null)
     })
 
     readableStream.on('error', err => {
