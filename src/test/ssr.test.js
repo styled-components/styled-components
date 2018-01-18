@@ -1,8 +1,6 @@
-// @flow
 /**
  * @jest-environment node
  */
-
 import React from 'react'
 import { renderToString, renderToNodeStream } from 'react-dom/server'
 import ServerStyleSheet from '../models/ServerStyleSheet'
