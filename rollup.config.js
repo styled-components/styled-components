@@ -8,7 +8,7 @@ import flow from 'rollup-plugin-flow'
 import uglify from 'rollup-plugin-uglify'
 import visualizer from 'rollup-plugin-visualizer'
 import sourceMaps from 'rollup-plugin-sourcemaps'
-import ignore from './scripts/rollup-plugin-ignore'
+import ignore from 'rollup-plugin-ignore'
 import pkg from './package.json'
 
 const cjs = {
@@ -48,6 +48,12 @@ const umdConfig = Object.assign({}, configBase, {
     exports: 'named',
   },
   external: ['react'],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(false),
+    }),
+    ignore(['stream'])
+  ),
 })
 
 const devUmdConfig = Object.assign({}, umdConfig, {
@@ -77,16 +83,35 @@ const prodUmdConfig = Object.assign({}, umdConfig, {
   ]),
 })
 
-const webConfig = Object.assign({}, configBase, {
+const serverConfig = Object.assign({}, configBase, {
+  external: configBase.external.concat('stream'),
   output: [
-    { file: pkg.module, format: 'es' },
-    Object.assign({}, cjs, { file: pkg.main }),
+    { file: 'dist/styled-components.es.js', format: 'es' },
+    Object.assign({}, cjs, { file: 'dist/styled-components.cjs.js' }),
   ],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(true),
+    })
+  ),
+})
+
+const browserConfig = Object.assign({}, configBase, {
+  output: [
+    { file: 'dist/styled-components.browser.es.js', format: 'es' },
+    Object.assign({}, cjs, { file: 'dist/styled-components.browser.cjs.js' }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(false),
+    }),
+    ignore(['stream'])
+  ),
 })
 
 const nativeConfig = Object.assign({}, configBase, {
   input: 'src/native/index.js',
-  output: Object.assign({}, cjs, { file: pkg['react-native'] }),
+  output: Object.assign({}, cjs, { file: 'dist/styled-components.native.js' }),
   external: configBase.external.concat('react-native'),
 })
 
@@ -99,21 +124,49 @@ const primitivesConfig = Object.assign({}, configBase, {
     }),
   ],
   external: configBase.external.concat('react-primitives'),
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(true),
+    })
+  ),
 })
 
 const noParserConfig = Object.assign({}, configBase, {
+  external: configBase.external.concat('stream'),
   input: 'src/no-parser/index.js',
   output: [
     { file: 'dist/styled-components-no-parser.es.js', format: 'es' },
     Object.assign({}, cjs, { file: 'dist/styled-components-no-parser.cjs.js' }),
   ],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(true),
+    })
+  ),
+})
+
+const noParserBrowserConfig = Object.assign({}, configBase, {
+  output: [
+    { file: 'dist/styled-components-no-parser.browser.es.js', format: 'es' },
+    Object.assign({}, cjs, {
+      file: 'dist/styled-components-no-parser.browser.cjs.js',
+    }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(false),
+    }),
+    ignore(['stream'])
+  ),
 })
 
 export default [
   devUmdConfig,
   prodUmdConfig,
-  webConfig,
+  serverConfig,
+  browserConfig,
   nativeConfig,
   primitivesConfig,
   noParserConfig,
+  noParserBrowserConfig,
 ]

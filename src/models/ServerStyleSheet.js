@@ -1,12 +1,14 @@
 // @flow
 /* eslint-disable no-underscore-dangle */
 import React from 'react'
-import { Readable } from 'stream'
+import stream from 'stream'
 import type { Tag } from './StyleSheet'
 import StyleSheet, { SC_ATTR, LOCAL_ATTR, clones } from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
 import minify from '../utils/minify'
 import getNonce from '../utils/nonce'
+
+declare var __SERVER__: boolean
 
 class ServerTag implements Tag {
   emitted: boolean
@@ -170,36 +172,42 @@ export default class ServerStyleSheet {
     return this.instance.toReactElements()
   }
 
-  interleaveWithNodeStream(readableStream: Readable) {
-    const ourStream = new Readable()
+  interleaveWithNodeStream(readableStream: stream.Readable) {
+    if (__SERVER__) {
+      const ourStream = new stream.Readable()
 
-    // $FlowFixMe
-    ourStream._read = () => {}
+      // $FlowFixMe
+      ourStream._read = () => {}
 
-    this.isStreaming = true
-    this.lastIndex = 0
+      this.isStreaming = true
+      this.lastIndex = 0
 
-    readableStream.on('data', chunk => {
-      ourStream.push(
-        this.instance.tags
-          .slice(this.lastIndex)
-          .map(tag => tag.toHTML())
-          .join('') + chunk
+      readableStream.on('data', chunk => {
+        ourStream.push(
+          this.instance.tags
+            .slice(this.lastIndex)
+            .map(tag => tag.toHTML())
+            .join('') + chunk
+        )
+
+        this.lastIndex = this.instance.tags.length - 1
+      })
+
+      readableStream.on('end', () => {
+        this.closed = true
+        ourStream.push(null)
+      })
+
+      readableStream.on('error', err => {
+        ourStream.emit('error', err)
+      })
+
+      return ourStream
+    } else {
+      throw new Error(
+        'streaming is not implemented in browser builds of styled-components.'
       )
-
-      this.lastIndex = this.instance.tags.length - 1
-    })
-
-    readableStream.on('end', () => {
-      this.closed = true
-      ourStream.push(null)
-    })
-
-    readableStream.on('error', err => {
-      ourStream.emit('error', err)
-    })
-
-    return ourStream
+    }
   }
 
   static create() {

@@ -5,6 +5,10 @@ import flatten from './flatten'
 import stringifyRules from './stringifyRules'
 import css from './css'
 
+/* Import utils */
+import isStyledComponent from '../utils/isStyledComponent'
+import migrateStreamingStyles from '../utils/migrateStreamingStyles'
+
 /* Import singletons */
 import generateAlphabeticName from '../utils/generateAlphabeticName'
 import ServerStyleSheet from '../models/ServerStyleSheet'
@@ -44,6 +48,8 @@ export {
   css,
   keyframes,
   injectGlobal,
+  isStyledComponent,
+  migrateStreamingStyles,
   ThemeProvider,
   withTheme,
   ServerStyleSheet,
