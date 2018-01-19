@@ -9,7 +9,9 @@
   "react-native": "dist/styled-components.cjs.native.js",
   "browser": {
     "dist/styled-components.es.js": "dist/styled-components.browser.es.js",
-    "dist/styled-components.cjs.js": "dist/styled-components.browser.cjs.js"
+    "dist/styled-components.cjs.js": "dist/styled-components.browser.cjs.js",
+    "dist/styled-components-no-parser.es.js": "dist/styled-components-no-parser.browser.es.js",
+    "dist/styled-components-no-parser.cjs.js": "dist/styled-components-no-parser.browser.cjs.js"
   },
   "scripts": {
     "build": "rollup -c",

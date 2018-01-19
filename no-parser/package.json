@@ -3,9 +3,5 @@
   "private": true,
   "main": "../dist/styled-components-no-parser.cjs.js",
   "module": "../dist/styled-components-no-parser.es.js",
-  "jsnext:main": "../dist/styled-components-no-parser.es.js",
-  "browser": {
-    "../dist/styled-components-no-parser.es.js": "../dist/styled-components-no-parser.browser.es.js",
-    "../dist/styled-components-no-parser.cjs.js": "../dist/styled-components-no-parser.browser.cjs.js"
-  }
+  "jsnext:main": "../dist/styled-components-no-parser.es.js"
 }
