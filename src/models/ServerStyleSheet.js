@@ -205,7 +205,7 @@ export default class ServerStyleSheet {
       return ourStream
     } else {
       throw new Error(
-        'streaming is not implemented in browser builds of styled-components.'
+        'streaming only works in Node.js, please do not try to call this method in the browser'
       )
     }
   }
