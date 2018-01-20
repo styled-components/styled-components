@@ -423,9 +423,8 @@ describe('theming', () => {
 
     const inner = wrapper.find(Comp).first();
 
-    // $FlowFixMe
-    expect(ref).toHaveBeenCalledWith(inner.node)
-    expect(inner.props()).not.toHaveProperty('innerRef')
+    expect(ref).toHaveBeenCalledWith(inner.instance())
+    expect(inner.prop('innerRef')).toBe(undefined)
   })
 
   it('should accept innerRef and pass it on for stateless function components', () => {
@@ -458,7 +457,6 @@ describe('theming', () => {
 
     const inner = wrapper.find(Comp).first()
 
-    // $FlowFixMe
     expect(ref).toHaveBeenCalledWith(inner.getDOMNode())
     expect(inner.prop('innerRef')).toBe(ref)
   })
