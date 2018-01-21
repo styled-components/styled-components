@@ -35,7 +35,6 @@ export interface StyledInterface extends BaseStyledInterface {
   ListView: ReactNativeStyledFunction<ReactNative.ListViewProperties>;
   MapView: ReactNativeStyledFunction<ReactNative.MapViewProperties>;
   Modal: ReactNativeStyledFunction<ReactNative.ModalProperties>;
-  Navigator: ReactNativeStyledFunction<ReactNative.NavigatorProperties>;
   NavigatorIOS: ReactNativeStyledFunction<ReactNative.NavigatorIOSProperties>;
   Picker: ReactNativeStyledFunction<ReactNative.PickerProperties>;
   PickerIOS: ReactNativeStyledFunction<ReactNative.PickerIOSProperties>;
