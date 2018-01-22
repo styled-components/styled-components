@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Add support for SafeAreaView when using styled-components in a React Native project (see [#1339](https://github.com/styled-components/styled-components/pull/1339))
+
+- Remove support for deprecated Navigator when using styled-components in a React Native project (see [#1339](https://github.com/styled-components/styled-components/pull/1339))
+
 - Add ESLint precommit hook, thanks to [@lukebelliveau](https://github.com/lukebelliveau) (see [#1393](https://github.com/styled-components/styled-components/pull/1393))
 
 - Fixed nested themes not being republished on outer theme changes, thanks to [@Andarist](https://github.com/Andarist) (see [#1382](https://github.com/styled-components/styled-components/pull/1382))
