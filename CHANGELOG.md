@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- n/a
+
+## [v3.0.0] - 2018-01-22
+
+- Ship flat bundles for each possible entry, thanks to [@Andarist](https://github.com/Andarist) (see [#1362](https://github.com/styled-components/styled-components/pull/1362))
+
 - Add ESLint precommit hook, thanks to [@lukebelliveau](https://github.com/lukebelliveau) (see [#1393](https://github.com/styled-components/styled-components/pull/1393))
 
 - Fixed nested themes not being republished on outer theme changes, thanks to [@Andarist](https://github.com/Andarist) (see [#1382](https://github.com/styled-components/styled-components/pull/1382))
@@ -347,7 +353,11 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.3.1...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.0.0...master
+[v3.0.0]: https://github.com/styled-components/styled-components/compare/v2.4.0...v3.0.0
+[v2.4.0]: https://github.com/styled-components/styled-components/compare/v2.3.3...v2.4.0
+[v2.3.3]: https://github.com/styled-components/styled-components/compare/v2.3.2...v2.3.3
+[v2.3.2]: https://github.com/styled-components/styled-components/compare/v2.3.1...v2.3.2
 [v2.3.1]: https://github.com/styled-components/styled-components/compare/v2.3.0...v2.3.1
 [v2.3.0]: https://github.com/styled-components/styled-components/compare/v2.2.4...v2.3.0
 [v2.2.4]: https://github.com/styled-components/styled-components/compare/v2.2.3...v2.2.4
