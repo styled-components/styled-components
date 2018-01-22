@@ -31,6 +31,17 @@ class ServerTag implements Tag {
     this.size += 1
   }
 
+  removeComponent(componentId: string) {
+    const { [componentId]: comp, ...rest } = this.components
+
+    if (!comp) {
+      return
+    }
+
+    this.components = rest
+    this.size -= 1
+  }
+
   concatenateCSS() {
     return Object.keys(this.components).reduce(
       (styles, k) => styles + this.components[k].css,

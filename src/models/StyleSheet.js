@@ -15,6 +15,7 @@ export interface Tag {
   isFull(): boolean;
   addComponent(componentId: string): void;
   inject(componentId: string, css: string, name: ?string): void;
+  removeComponent(componentId: string): void;
   toHTML(): string;
   toReactElement(key: string): React.Element<*>;
   clone(): Tag;
@@ -142,6 +143,15 @@ export default class StyleSheet {
     this.componentTags[componentId] = componentTag
     componentTag.addComponent(componentId)
     return componentTag
+  }
+
+  removeComponent(componentId: string) {
+    const { [componentId]: tag, ...rest } = this.componentTags
+
+    if (tag) {
+      tag.removeComponent(componentId)
+      this.componentTags = rest
+    }
   }
 
   createNewTag(isLocal: boolean) {
