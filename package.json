@@ -1,12 +1,12 @@
 {
   "name": "styled-components",
-  "version": "2.4.0",
+  "version": "3.0.1",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "main": "dist/styled-components.cjs.js",
   "typings": "typings/styled-components.d.ts",
   "jsnext:main": "dist/styled-components.es.js",
   "module": "dist/styled-components.es.js",
-  "react-native": "dist/styled-components.native.js",
+  "react-native": "dist/styled-components.cjs.native.js",
   "scripts": {
     "build": "rollup -c",
     "prebuild": "rimraf dist",
@@ -29,8 +29,7 @@
     "precommit": "lint-staged",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
-    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
-    "postinstall": "node ./_remove_rn_globals"
+    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js"
   },
   "repository": {
     "type": "git",
@@ -73,8 +72,7 @@
   },
   "devDependencies": {
     "@types/react": "^16",
-    "@types/react-dom": "^16",
-    "@types/react-native": "^0.46.0",
+    "@types/react-native": "^0.50.7",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
     "babel-eslint": "^7.1.1",
