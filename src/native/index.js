@@ -44,6 +44,5 @@ aliases.split(/\s+/m).forEach(alias =>
   })
 )
 
-export * from '../secretInternals'
 export { css, isStyledComponent, ThemeProvider, withTheme }
 export default styled
