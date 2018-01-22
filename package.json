@@ -29,8 +29,7 @@
     "precommit": "lint-staged",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
-    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
-    "postinstall": "node ./_remove_rn_globals"
+    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js"
   },
   "repository": {
     "type": "git",
@@ -73,7 +72,6 @@
   },
   "devDependencies": {
     "@types/react": "^16",
-    "@types/react-dom": "^16",
     "@types/react-native": "^0.46.0",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
