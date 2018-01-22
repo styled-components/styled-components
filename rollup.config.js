@@ -8,6 +8,7 @@ import flow from 'rollup-plugin-flow'
 import uglify from 'rollup-plugin-uglify'
 import visualizer from 'rollup-plugin-visualizer'
 import sourceMaps from 'rollup-plugin-sourcemaps'
+import hypothetical from 'rollup-plugin-hypothetical'
 import pkg from './package.json'
 
 const cjs = {
@@ -61,15 +62,22 @@ const prodUmdConfig = Object.assign({}, umdConfig, {
   output: Object.assign({}, umdConfig.output, {
     file: 'dist/styled-components.min.js',
   }),
-  plugins: umdConfig.plugins.concat(
+  plugins: [
+    hypothetical({
+      files: {
+        './src/secretInternals.js': '', // Remove secret internals in production UMD build
+      },
+      allowFallthrough: true,
+    }),
+  ].concat(umdConfig.plugins, [
     replace({
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
     uglify({
       sourceMap: true,
     }),
-    visualizer({ filename: './bundle-stats.html' })
-  ),
+    visualizer({ filename: './bundle-stats.html' }),
+  ]),
 })
 
 const webConfig = Object.assign({}, configBase, {
