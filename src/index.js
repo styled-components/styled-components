@@ -51,6 +51,8 @@ const injectGlobal = _injectGlobal(stringifyRules, css)
 const styled = _styled(StyledComponent, constructWithOptions)
 
 /* Export everything */
+
+export * from './secretInternals'
 export default styled
 export {
   css,

@@ -122,6 +122,7 @@
     "rollup-plugin-babel": "^2.7.1",
     "rollup-plugin-commonjs": "^6.0.0",
     "rollup-plugin-flow": "^1.1.1",
+    "rollup-plugin-hypothetical": "^2.0.0",
     "rollup-plugin-json": "^2.1.0",
     "rollup-plugin-node-resolve": "^2.0.0",
     "rollup-plugin-replace": "^1.1.1",

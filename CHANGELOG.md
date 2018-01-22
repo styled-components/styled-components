@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Add secret internals for jest-styled-components (do not use or you will be haunted by spooky ghosts :ghost:) (see [#1438](https://github.com/styled-components/styled-components/pull/1438))
 
 ## [v3.0.1] - 2018-01-22
 
