@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 - n/a
 
-## [v3.0.0] - 2018-01-22
+## [v3.0.1] - 2018-01-22
 
 - Add support for SafeAreaView when using styled-components in a React Native project (see [#1339](https://github.com/styled-components/styled-components/pull/1339))
 
@@ -357,8 +357,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.0.0...master
-[v3.0.0]: https://github.com/styled-components/styled-components/compare/v2.4.0...v3.0.0
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.0.1...master
+[v3.0.1]: https://github.com/styled-components/styled-components/compare/v2.4.0...v3.0.1
 [v2.4.0]: https://github.com/styled-components/styled-components/compare/v2.3.3...v2.4.0
 [v2.3.3]: https://github.com/styled-components/styled-components/compare/v2.3.2...v2.3.3
 [v2.3.2]: https://github.com/styled-components/styled-components/compare/v2.3.1...v2.3.2
