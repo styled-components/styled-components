@@ -1,9 +1,8 @@
 // @flow
 import type { Target } from '../types'
 
-export default function isStyledComponent(target: Target)/* : %checks */ {
+export default function isStyledComponent(target: Target) /* : %checks */ {
   return (
-    typeof target === 'function' &&
-    typeof target.styledComponentId === 'string'
+    typeof target === 'function' && typeof target.styledComponentId === 'string'
   )
 }

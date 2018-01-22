@@ -7,24 +7,26 @@ export const SC_ATTR = 'data-styled-components'
 export const LOCAL_ATTR = 'data-styled-components-is-local'
 export const CONTEXT_KEY = '__styled-components-stylesheet__'
 
+/* eslint-disable flowtype/object-type-delimiter */
 export interface Tag {
-  isLocal: boolean,
-  components: { [string]: Object },
+  isLocal: boolean;
+  components: { [string]: Object };
 
-  isFull(): boolean,
-  addComponent(componentId: string): void,
-  inject(componentId: string, css: string, name: ?string): void,
-  toHTML(): string,
-  toReactElement(key: string): React.Element<*>,
-  clone(): Tag,
+  isFull(): boolean;
+  addComponent(componentId: string): void;
+  inject(componentId: string, css: string, name: ?string): void;
+  toHTML(): string;
+  toReactElement(key: string): React.Element<*>;
+  clone(): Tag;
 }
+/* eslint-enable flowtype/object-type-delimiter */
 
 let instance = null
 // eslint-disable-next-line no-use-before-define
 export const clones: Array<StyleSheet> = []
 
 export default class StyleSheet {
-  tagConstructor: (boolean) => Tag
+  tagConstructor: boolean => Tag
   tags: Array<Tag>
   names: { [string]: boolean }
   hashes: { [string]: string } = {}
@@ -39,9 +41,10 @@ export default class StyleSheet {
   // with another, losing styles on from your server-side render.
   stylesCacheable = typeof document !== 'undefined'
 
-  constructor(tagConstructor: (boolean) => Tag,
+  constructor(
+    tagConstructor: boolean => Tag,
     tags: Array<Tag> = [],
-    names: { [string]: boolean } = {},
+    names: { [string]: boolean } = {}
   ) {
     this.tagConstructor = tagConstructor
     this.tags = tags
@@ -89,7 +92,13 @@ export default class StyleSheet {
     this.deferredInjections[componentId] = css
   }
 
-  inject(componentId: string, isLocal: boolean, css: string, hash: ?any, name: ?string) {
+  inject(
+    componentId: string,
+    isLocal: boolean,
+    css: string,
+    hash: ?any,
+    name: ?string
+  ) {
     if (this === instance) {
       clones.forEach(clone => {
         clone.inject(componentId, isLocal, css)
@@ -126,9 +135,10 @@ export default class StyleSheet {
     }
 
     const lastTag = this.tags[this.tags.length - 1]
-    const componentTag = (!lastTag || lastTag.isFull() || lastTag.isLocal !== isLocal)
-      ? this.createNewTag(isLocal)
-      : lastTag
+    const componentTag =
+      !lastTag || lastTag.isFull() || lastTag.isLocal !== isLocal
+        ? this.createNewTag(isLocal)
+        : lastTag
     this.componentTags[componentId] = componentTag
     componentTag.addComponent(componentId)
     return componentTag
@@ -154,12 +164,11 @@ export default class StyleSheet {
     return (isServer ? ServerStyleSheet : BrowserStyleSheet).create()
   }
 
-
   static clone(oldSheet: StyleSheet) {
     const newSheet = new StyleSheet(
       oldSheet.tagConstructor,
       oldSheet.tags.map(tag => tag.clone()),
-      { ...oldSheet.names },
+      { ...oldSheet.names }
     )
 
     newSheet.hashes = { ...oldSheet.hashes }

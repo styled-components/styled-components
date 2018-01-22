@@ -554,4 +554,8 @@ describe('validAttr', () => {
     expect(validAttr('onTransitionEnd')).toEqual(true)
     expect(validAttr('onTransitionEndCapture')).toEqual(true)
   })
+  it('should not allow custom props', () => {
+    expect(validAttr('isPrimary')).toEqual(false)
+    expect(validAttr('primary')).toEqual(false)
+  });
 })

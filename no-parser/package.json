@@ -1,0 +1,7 @@
+{
+  "name": "styled-components/no-parser",
+  "private": true,
+  "main": "../dist/styled-components-no-parser.cjs.js",
+  "module": "../dist/styled-components-no-parser.es.js",
+  "jsnext:main": "../dist/styled-components-no-parser.es.js"
+}

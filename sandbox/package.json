@@ -1,0 +1,31 @@
+{
+  "name": "sandbox",
+  "version": "1.0.0",
+  "main": "server/index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "NODE_ENV=development micro-dev --ignore=\"(src|.build)\""
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-plugin-styled-components": "^1.3.0",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-react": "^6.24.1",
+    "eslint": "^4.13.1",
+    "eslint-loader": "^1.9.0",
+    "micro": "^9.0.2",
+    "micro-dev": "^2.1.1",
+    "raw-loader": "^0.5.1",
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0",
+    "react-live": "^1.7.1",
+    "strip-ansi": "^4.0.0",
+    "webpack": "^3.10.0",
+    "webpack-dev-middleware": "^2.0.2",
+    "webpack-hot-middleware": "^2.21.0",
+    "write-file-webpack-plugin": "^4.2.0"
+  }
+}

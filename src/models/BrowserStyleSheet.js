@@ -50,7 +50,9 @@ class BrowserTag implements Tag {
 
   addComponent(componentId: string) {
     if (!this.ready) this.replaceElement()
-    if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
+    if (process.env.NODE_ENV !== 'production' && this.components[componentId]) {
+      throw new Error(`Trying to add Component '${componentId}' twice!`)
+    }
 
     const comp = { componentId, textNode: document.createTextNode('') }
     this.el.appendChild(comp.textNode)
@@ -63,13 +65,22 @@ class BrowserTag implements Tag {
     if (!this.ready) this.replaceElement()
     const comp = this.components[componentId]
 
-    if (!comp) throw new Error('Must add a new component before you can inject css into it')
-    if (comp.textNode.data === '') comp.textNode.appendData(`\n/* sc-component-id: ${componentId} */\n`)
+    if (process.env.NODE_ENV !== 'production' && !comp) {
+      throw new Error(
+        'Must add a new component before you can inject css into it'
+      )
+    }
+    if (comp.textNode.data === '') {
+      comp.textNode.appendData(`\n/* sc-component-id: ${componentId} */\n`)
+    }
 
     comp.textNode.appendData(css)
     if (name) {
       const existingNames = this.el.getAttribute(SC_ATTR)
-      this.el.setAttribute(SC_ATTR, existingNames ? `${existingNames} ${name}` : name)
+      this.el.setAttribute(
+        SC_ATTR,
+        existingNames ? `${existingNames} ${name}` : name
+      )
     }
 
     const nonce = getNonce()
@@ -84,7 +95,7 @@ class BrowserTag implements Tag {
   }
 
   toReactElement() {
-    throw new Error('BrowserTag doesn\'t implement toReactElement!')
+    throw new Error("BrowserTag doesn't implement toReactElement!")
   }
 
   clone() {
@@ -110,7 +121,9 @@ class BrowserTag implements Tag {
       newEl.appendChild(comp.textNode)
     })
 
-    if (!this.el.parentNode) throw new Error("Trying to replace an element that wasn't mounted!")
+    if (!this.el.parentNode) {
+      throw new Error("Trying to replace an element that wasn't mounted!")
+    }
 
     // The ol' switcheroo
     this.el.parentNode.replaceChild(newEl, this.el)
@@ -131,13 +144,18 @@ export default {
     for (let i = 0; i < nodesLength; i += 1) {
       const el = nodes[i]
 
-      tags.push(new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML))
+      tags.push(
+        new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML)
+      )
 
       const attr = el.getAttribute(SC_ATTR)
       if (attr) {
-        attr.trim().split(/\s+/).forEach(name => {
-          names[name] = true
-        })
+        attr
+          .trim()
+          .split(/\s+/)
+          .forEach(name => {
+            names[name] = true
+          })
       }
     }
 
