@@ -6,7 +6,7 @@
   "typings": "typings/styled-components.d.ts",
   "jsnext:main": "dist/styled-components.es.js",
   "module": "dist/styled-components.es.js",
-  "react-native": "dist/styled-components.native.js",
+  "react-native": "dist/styled-components.cjs.native.js",
   "scripts": {
     "build": "rollup -c",
     "prebuild": "rimraf dist",
