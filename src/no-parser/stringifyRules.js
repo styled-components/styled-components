@@ -15,7 +15,7 @@ const stringifyRules = (
         ? partial.join('')
         : partial.toString()),
     ''
-  )
+  ),
 ]
 
 export default stringifyRules

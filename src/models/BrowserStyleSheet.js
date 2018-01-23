@@ -25,10 +25,9 @@ declare var __DEV__: ?string
 
 const IS_BROWSER = typeof window !== 'undefined'
 const IS_DEV =
-  // `insertRule` doesn't seem to work properly in jest/enzyme
   (typeof __DEV__ === 'boolean' && __DEV__) ||
-  process.env.NODE_ENV === 'development' ||
-  !process.env.NODE_ENV
+  process.env.NODE_ENV === 'development'
+
 const USE_SPEEDY = IS_BROWSER && !IS_DEV
 
 export const COMPONENTS_PER_TAG = 40
