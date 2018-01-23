@@ -50,8 +50,12 @@ class BrowserTag implements Tag {
 
   addComponent(componentId: string) {
     if (!this.ready) this.replaceElement()
-    if (process.env.NODE_ENV !== 'production' && this.components[componentId]) {
-      throw new Error(`Trying to add Component '${componentId}' twice!`)
+    if (this.components[componentId]) {
+      throw new Error(
+        process.env.NODE_ENV !== 'production'
+          ? `Trying to add Component '${componentId}' twice!`
+          : ''
+      )
     }
 
     const comp = { componentId, textNode: document.createTextNode('') }
@@ -65,9 +69,11 @@ class BrowserTag implements Tag {
     if (!this.ready) this.replaceElement()
     const comp = this.components[componentId]
 
-    if (process.env.NODE_ENV !== 'production' && !comp) {
+    if (!comp) {
       throw new Error(
-        'Must add a new component before you can inject css into it'
+        process.env.NODE_ENV !== 'production'
+          ? 'Must add a new component before you can inject css into it'
+          : ''
       )
     }
     if (comp.textNode.data === '') {
@@ -95,11 +101,19 @@ class BrowserTag implements Tag {
   }
 
   toReactElement() {
-    throw new Error("BrowserTag doesn't implement toReactElement!")
+    throw new Error(
+      process.env.NODE_ENV !== 'production'
+        ? "BrowserTag doesn't implement toReactElement!"
+        : ''
+    )
   }
 
   clone() {
-    throw new Error('BrowserTag cannot be cloned!')
+    throw new Error(
+      process.env.NODE_ENV !== 'production'
+        ? 'BrowserTag cannot be cloned!'
+        : ''
+    )
   }
 
   /* Because we care about source order, before we can inject anything we need to
@@ -122,7 +136,11 @@ class BrowserTag implements Tag {
     })
 
     if (!this.el.parentNode) {
-      throw new Error("Trying to replace an element that wasn't mounted!")
+      throw new Error(
+        process.env.NODE_ENV !== 'production'
+          ? "Trying to replace an element that wasn't mounted!"
+          : ''
+      )
     }
 
     // The ol' switcheroo
@@ -165,7 +183,11 @@ export default {
       el.type = 'text/css'
       el.setAttribute(SC_ATTR, '')
       el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
-      if (!document.head) throw new Error('Missing document <head>')
+      if (!document.head) {
+        throw new Error(
+          process.env.NODE_ENV !== 'production' ? 'Missing document <head>' : ''
+        )
+      }
       document.head.appendChild(el)
       return new BrowserTag(el, isLocal)
     }

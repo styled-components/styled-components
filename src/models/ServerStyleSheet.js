@@ -27,8 +27,12 @@ class ServerTag implements Tag {
   }
 
   addComponent(componentId: string) {
-    if (process.env.NODE_ENV !== 'production' && this.components[componentId]) {
-      throw new Error(`Trying to add Component '${componentId}' twice!`)
+    if (this.components[componentId]) {
+      throw new Error(
+        process.env.NODE_ENV !== 'production'
+          ? `Trying to add Component '${componentId}' twice!`
+          : ''
+      )
     }
     this.components[componentId] = { componentId, css: '' }
     this.size += 1
@@ -44,9 +48,11 @@ class ServerTag implements Tag {
   inject(componentId: string, css: string, name: ?string) {
     const comp = this.components[componentId]
 
-    if (process.env.NODE_ENV !== 'production' && !comp) {
+    if (!comp) {
       throw new Error(
-        'Must add a new component before you can inject css into it'
+        process.env.NODE_ENV !== 'production'
+          ? 'Must add a new component before you can inject css into it'
+          : ''
       )
     }
     if (comp.css === '') comp.css = `/* sc-component-id: ${componentId} */\n`
@@ -125,7 +131,11 @@ export default class ServerStyleSheet {
 
   collectStyles(children: any) {
     if (this.closed) {
-      throw new Error("Can't collect styles once you've called getStyleTags!")
+      throw new Error(
+        process.env.NODE_ENV !== 'production'
+          ? "Can't collect styles once you've called getStyleTags!"
+          : ''
+      )
     }
     return (
       <StyleSheetManager sheet={this.instance}>{children}</StyleSheetManager>

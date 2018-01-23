@@ -7,13 +7,12 @@ export default (css: Function) => {
     tag: Target,
     options: Object = {}
   ) => {
-    if (
-      process.env.NODE_ENV !== 'production' &&
-      typeof tag !== 'string' &&
-      typeof tag !== 'function'
-    ) {
-      // $FlowInvalidInputTest
-      throw new Error(`Cannot create styled-component for component: ${tag}`)
+    if (typeof tag !== 'string' && typeof tag !== 'function') {
+      throw new Error(
+        process.env.NODE_ENV !== 'production'
+          ? `Cannot create styled-component for component: ${String(tag)}`
+          : ''
+      )
     }
 
     /* This is callable directly as a template function */
