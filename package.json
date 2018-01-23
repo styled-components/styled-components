@@ -133,7 +133,7 @@
     "rollup-plugin-node-resolve": "^2.0.0",
     "rollup-plugin-replace": "^1.1.1",
     "rollup-plugin-sourcemaps": "^0.4.2",
-    "rollup-plugin-uglify": "^1.0.1",
+    "rollup-plugin-uglify": "^3.0.0",
     "rollup-plugin-visualizer": "^0.1.5",
     "tslint": "^4.3.1",
     "typescript": "^2.4.1"
