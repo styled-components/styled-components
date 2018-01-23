@@ -35,7 +35,6 @@ export interface StyledInterface extends BaseStyledInterface {
   ListView: ReactNativeStyledFunction<ReactNative.ListViewProperties>;
   MapView: ReactNativeStyledFunction<ReactNative.MapViewProperties>;
   Modal: ReactNativeStyledFunction<ReactNative.ModalProperties>;
-  Navigator: ReactNativeStyledFunction<ReactNative.NavigatorProperties>;
   NavigatorIOS: ReactNativeStyledFunction<ReactNative.NavigatorIOSProperties>;
   Picker: ReactNativeStyledFunction<ReactNative.PickerProperties>;
   PickerIOS: ReactNativeStyledFunction<ReactNative.PickerIOSProperties>;
@@ -48,6 +47,7 @@ export interface StyledInterface extends BaseStyledInterface {
   SnapshotViewIOS: ReactNativeStyledFunction<ReactNative.SnapshotViewIOSProperties>;
   RecyclerViewBackedScrollView: ReactNativeStyledFunction<ReactNative.RecyclerViewBackedScrollViewProperties>;
   RefreshControl: ReactNativeStyledFunction<ReactNative.RefreshControlProperties>;
+  SafeAreaView: ReactNativeStyledFunction<ReactNative.SafeAreaView>;
   StatusBar: ReactNativeStyledFunction<ReactNative.StatusBarProperties>;
   SwipeableListView: ReactNativeStyledFunction<ReactNative.SwipeableListViewProps>;
   Switch: ReactNativeStyledFunction<ReactNative.SwitchProperties>;
