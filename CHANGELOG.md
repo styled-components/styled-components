@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Minify the output CSS when using SSR in production (see [#1224](https://github.com/styled-components/styled-components/pull/1224))
 
 ## [v3.0.2] - 2018-01-22
 

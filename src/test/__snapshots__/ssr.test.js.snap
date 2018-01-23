@@ -122,6 +122,28 @@ Object {
 }
 `;
 
+exports[`ssr should return a generated React style element with minified CSS in production 1`] = `
+Object {
+  "dangerouslySetInnerHTML": Object {
+    "__html": "/* sc-component-id:sc-global-2303210225 */ body{background:papayawhip;}",
+  },
+  "data-styled-components": "",
+  "data-styled-components-is-local": "false",
+  "type": "text/css",
+}
+`;
+
+exports[`ssr should return a generated React style element with minified CSS in production 2`] = `
+Object {
+  "dangerouslySetInnerHTML": Object {
+    "__html": "/* sc-component-id:sc-a */ .b{color:red;}",
+  },
+  "data-styled-components": "b",
+  "data-styled-components-is-local": "true",
+  "type": "text/css",
+}
+`;
+
 exports[`ssr should share global styles but keep renders separate 1`] = `"<h1 class=\\"PageOne a\\" data-reactroot=\\"\\">Camera One!</h1>"`;
 
 exports[`ssr should share global styles but keep renders separate 2`] = `

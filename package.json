@@ -158,7 +158,7 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "threshold": "14.5kB"
+      "threshold": "14.75kB"
     }
   ]
 }
