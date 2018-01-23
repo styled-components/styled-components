@@ -7,7 +7,7 @@ import css from './css'
 
 /* Import utils */
 import isStyledComponent from '../utils/isStyledComponent'
-import migrateStreamingStyles from '../utils/migrateStreamingStyles'
+import consolidateStreamedStyles from '../utils/consolidateStreamedStyles'
 
 /* Import singletons */
 import generateAlphabeticName from '../utils/generateAlphabeticName'
@@ -49,7 +49,7 @@ export {
   keyframes,
   injectGlobal,
   isStyledComponent,
-  migrateStreamingStyles,
+  consolidateStreamedStyles,
   ThemeProvider,
   withTheme,
   ServerStyleSheet,

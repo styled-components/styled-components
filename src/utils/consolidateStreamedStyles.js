@@ -7,7 +7,7 @@
  *
  * NOTE: this method MUST be called before ReactDOM.hydrate().
  */
-export default function migrateStreamingStyles() {
+export default function consolidateStreamedStyles() {
   const blocks = Array.from(
     document.querySelectorAll('style[data-styled-components]')
   )

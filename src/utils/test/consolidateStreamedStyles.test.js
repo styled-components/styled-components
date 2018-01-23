@@ -1,5 +1,5 @@
 // @flow
-import migrateStreamingStyles from '../migrateStreamingStyles'
+import consolidateStreamedStyles from '../consolidateStreamedStyles'
 
 it('should find all inline style blocks and move them into the document head', () => {
   // verify initial state
@@ -14,7 +14,7 @@ it('should find all inline style blocks and move them into the document head', (
     <body><style type="text/css" data-styled-components="diWxUz" data-styled-components-is-local="true">/* sc-component-id: sc-bdVaJa */.diWxUz{color:red;}</style><h1 class="sc-bdVaJa diWxUz" data-reactroot="">Hello SSR!</h1></body>
   `
 
-  migrateStreamingStyles()
+  consolidateStreamedStyles()
 
   // verify state after regrouping (inline style blocks should be relocated to the end of <head>)
   expect(document.querySelector('body style')).toBeNull()
