@@ -70,6 +70,7 @@ const prodUmdConfig = Object.assign({}, umdConfig, {
   }),
   plugins: umdConfig.plugins.concat([
     replace({
+      __DEV__: JSON.stringify(false),
       'process.env.NODE_ENV': JSON.stringify('production'),
       "export * from './secretInternals'": '',
     }),
