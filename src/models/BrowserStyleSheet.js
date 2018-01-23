@@ -88,7 +88,7 @@ class BrowserTag implements Tag {
       if (rule !== undefined && rule.length) {
         /* eslint-disable */
         // $FlowFixMe Flow's `StyleSheet` breakdown here https://github.com/facebook/flow/issues/2696
-        sheet.insertRule(rule, rule.indexOf('@import') !== -1 ? 0 : sheet.cssRules.length)
+        sheet.insertRule(rule, sheet.cssRules.length)
         /* eslint-enable */
       }
     }
