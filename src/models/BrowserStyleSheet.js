@@ -32,6 +32,23 @@ const USE_SPEEDY = IS_BROWSER && !IS_DEV
 
 export const COMPONENTS_PER_TAG = 40
 
+// Source: https://github.com/threepointone/glamor/blob/master/src/sheet.js#L32-L43
+const sheetForTag = (tag: HTMLStyleElement): ?CSSStyleSheet => {
+  if (tag.sheet) {
+    // $FlowFixMe
+    return tag.sheet
+  }
+
+  for (let i = 0; i < document.styleSheets.length; i += 1) {
+    if (document.styleSheets[i].ownerNode === tag) {
+      // $FlowFixMe
+      return document.styleSheets[i]
+    }
+  }
+
+  return undefined
+}
+
 class BrowserTag implements Tag {
   isLocal: boolean
   components: { [string]: Object }
@@ -77,18 +94,22 @@ class BrowserTag implements Tag {
   }
 
   speedyInsert(el: HTMLStyleElement, cssRules: Array<string>) {
-    const sheet = el.sheet
-    if (sheet === null || sheet === undefined) {
+    const sheet = sheetForTag(el)
+    if (sheet === undefined) {
       return
     }
 
     for (let i = 0; i < cssRules.length; i += 1) {
       const rule = cssRules[i]
-      if (rule !== undefined && rule.length) {
-        /* eslint-disable */
-        // $FlowFixMe Flow's `StyleSheet` breakdown here https://github.com/facebook/flow/issues/2696
-        sheet.insertRule(rule, sheet.cssRules.length)
-        /* eslint-enable */
+      if (rule !== undefined && rule.length > 0) {
+        try {
+          // $FlowFixMe Flow's `StyleSheet` breakdown here https://github.com/facebook/flow/issues/2696
+          sheet.insertRule(rule, sheet.cssRules.length)
+        } catch (e) {
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Tried to insert illegal rule:', rule)
+          }
+        }
       }
     }
   }
