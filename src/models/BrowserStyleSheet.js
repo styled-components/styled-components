@@ -58,6 +58,12 @@ class BrowserTag implements Tag {
 
   constructor(el: HTMLElement, isLocal: boolean, existingSource: string = '') {
     this.el = el
+
+    const nonce = getNonce()
+    if (nonce !== null) {
+      this.el.setAttribute('nonce', nonce)
+    }
+
     this.isLocal = isLocal
     this.ready = false
 
@@ -106,7 +112,7 @@ class BrowserTag implements Tag {
           // $FlowFixMe Flow's `StyleSheet` breakdown here https://github.com/facebook/flow/issues/2696
           sheet.insertRule(rule, sheet.cssRules.length)
         } catch (e) {
-          if (process.env.NODE_ENV === 'development') {
+          if (process.env.NODE_ENV !== 'production') {
             console.error('Tried to insert illegal rule:', rule)
           }
         }
@@ -141,11 +147,6 @@ class BrowserTag implements Tag {
         SC_ATTR,
         existingNames ? `${existingNames} ${name}` : name
       )
-    }
-
-    const nonce = getNonce()
-    if (nonce !== null) {
-      this.el.setAttribute('nonce', nonce)
     }
   }
 
