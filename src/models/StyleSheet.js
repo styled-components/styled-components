@@ -10,9 +10,9 @@ export const CONTEXT_KEY = '__styled-components-stylesheet__'
 /* eslint-disable flowtype/object-type-delimiter */
 export interface Tag {
   isLocal: boolean;
-  components: { [string]: Object };
 
   isSealed(): boolean;
+  getComponentIds(): Array<string>;
   addComponent(componentId: string): void;
   inject(componentId: string, css: Array<string>, name: ?string): void;
   toHTML(): string;
@@ -56,7 +56,7 @@ export default class StyleSheet {
     this.componentTags = {}
 
     this.tags.forEach(tag => {
-      Object.keys(tag.components).forEach(componentId => {
+      tag.getComponentIds().forEach(componentId => {
         this.componentTags[componentId] = tag
       })
     })

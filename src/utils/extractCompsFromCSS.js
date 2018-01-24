@@ -1,7 +1,12 @@
 // @flow
 const SC_COMPONENT_ID = /^[^\S\n]*?\/\* sc-component-id:\s+(\S+)\s+\*\//gm
 
-export default (maybeCSS: ?string): Array<Object> => {
+type ExtractedComp = {
+  componentId: string,
+  cssFromDOM: string,
+}
+
+export default (maybeCSS: ?string): Array<ExtractedComp> => {
   const css = `${maybeCSS || ''}` // Definitely a string, and a clone
   const existingComponents = []
   css.replace(SC_COMPONENT_ID, (match, componentId, matchIndex) => {

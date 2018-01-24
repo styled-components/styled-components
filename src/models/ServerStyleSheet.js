@@ -31,6 +31,10 @@ class ServerTag implements Tag {
     return this.emitted
   }
 
+  getComponentIds() {
+    return Object.keys(this.components)
+  }
+
   addComponent(componentId: string) {
     if (this.components[componentId]) {
       throw new Error(
