@@ -19,14 +19,10 @@ const stylis = new Stylis({
 let parsingRules = []
 // eslint-disable-next-line consistent-return
 const returnRulesPlugin = context => {
-  switch (context) {
-    case -2: {
-      const parsedRules = parsingRules
-      parsingRules = []
-      return parsedRules
-    }
-    default:
-      break
+  if (context === -2) {
+    const parsedRules = parsingRules
+    parsingRules = []
+    return parsedRules
   }
 }
 

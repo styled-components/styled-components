@@ -1,5 +1,5 @@
 // @flow
-const SC_COMPONENT_ID = /^[^\S\n]*?\/\* sc-component-id:\s+(\S+)\s+\*\//gm
+const SC_COMPONENT_ID = /^[^\S\n]*?\/\* sc-component-id:\s*(\S+)\s+\*\//gm
 
 type ExtractedComp = {
   componentId: string,

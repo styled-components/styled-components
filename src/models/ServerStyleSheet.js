@@ -66,7 +66,7 @@ class ServerTag implements Tag {
     }
     if (comp.css === '') comp.css = `/* sc-component-id: ${componentId} */\n`
 
-    comp.css += css.join('\n').replace(/\n*$/, '\n')
+    comp.css += `${css.join(' ')}\n`.replace(/\n*$/, '\n')
 
     if (name) this.names.push(name)
   }
