@@ -30,6 +30,9 @@ const commonPlugins = [
   babel({
     plugins: ['external-helpers'],
   }),
+  replace({
+    __DEV__: JSON.stringify(false), // disable flag indicating a Jest run
+  }),
 ]
 
 const configBase = {
@@ -70,7 +73,6 @@ const prodUmdConfig = Object.assign({}, umdConfig, {
   }),
   plugins: umdConfig.plugins.concat([
     replace({
-      __DEV__: JSON.stringify(false),
       'process.env.NODE_ENV': JSON.stringify('production'),
       "export * from './secretInternals'": '',
     }),
