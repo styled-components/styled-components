@@ -46,7 +46,7 @@ const sheetForTag = (tag: HTMLStyleElement): CSSStyleSheet => {
   }
 
   // NOTE: This should never happen
-  throw new Error('sheet not found')
+  throw new Error('')
 }
 
 // Safely (try/catch) injects rule at index and returns whether it was successful
@@ -86,307 +86,326 @@ const sizeUpToComponentIndex = (
   return cssRulesSize
 }
 
-class SpeedyBrowserTag implements Tag {
-  // Store component ruleSizes in an array per component (in order)
-  componentSizes: Array<number>
+class BaseBrowserTag {
   components: { [string]: Object }
 
-  isLocal: boolean
-  size: number
-  el: HTMLStyleElement
-  ready: boolean
-  names: string
-
-  constructor(el: HTMLStyleElement, isLocal: boolean, existingSource: ?string) {
-    const nonce = getNonce()
-    if (nonce) {
-      el.setAttribute('nonce', nonce)
-    }
-
-    const extractedComps = extractCompsFromCSS(existingSource)
-
-    this.el = el
-    this.isLocal = isLocal
-    this.ready = false
-    this.names = el.getAttribute(SC_ATTR) || ''
-    this.componentSizes = []
-    this.size = extractedComps.length
-    this.components = extractedComps.reduce((acc, obj) => {
-      acc[obj.componentId] = obj // eslint-disable-line no-param-reassign
-      return acc
-    }, {})
+  toReactElement() {
+    throw new Error(
+      process.env.NODE_ENV !== 'production'
+        ? "BrowserTag doesn't implement toReactElement!"
+        : ''
+    )
   }
 
-  isSealed() {
-    return this.size >= SPEEDY_COMPONENTS_PER_TAG
+  clone() {
+    throw new Error(
+      process.env.NODE_ENV !== 'production'
+        ? 'BrowserTag cannot be cloned!'
+        : ''
+    )
   }
 
-  /* Because we care about source order, before we can inject anything we need to
-   * create a text node for each component and replace the existing CSS. */
-  replaceElement() {
-    // Build up our replacement style tag
-    const newEl = this.el.cloneNode(false)
-    newEl.setAttribute(SC_ATTR, '')
+  getComponentIds() {
+    return Object.keys(this.components)
+  }
+}
 
-    if (!this.el.parentNode) {
-      throw new Error(
-        process.env.NODE_ENV !== 'production'
-          ? "Trying to replace an element that wasn't mounted!"
-          : ''
-      )
+let BrowserTag
+if (!DISABLE_SPEEDY) {
+  BrowserTag = class SpeedyBrowserTag extends BaseBrowserTag implements Tag {
+    // Store component ruleSizes in an array per component (in order)
+    componentSizes: Array<number>
+    components: { [string]: Object }
+
+    isLocal: boolean
+    size: number
+    el: HTMLStyleElement
+    ready: boolean
+    names: string
+
+    constructor(
+      el: HTMLStyleElement,
+      isLocal: boolean,
+      existingSource: ?string
+    ) {
+      super()
+
+      const nonce = getNonce()
+      if (nonce) {
+        el.setAttribute('nonce', nonce)
+      }
+
+      const extractedComps = extractCompsFromCSS(existingSource)
+
+      this.el = el
+      this.isLocal = isLocal
+      this.ready = false
+      this.names = el.getAttribute(SC_ATTR) || ''
+      this.componentSizes = []
+      this.size = extractedComps.length
+      this.components = extractedComps.reduce((acc, obj) => {
+        acc[obj.componentId] = obj // eslint-disable-line no-param-reassign
+        return acc
+      }, {})
     }
 
-    this.el.parentNode.replaceChild(newEl, this.el)
-    this.el = newEl
-    this.ready = true
+    /* Because we care about source order, before we can inject anything we need to
+     * create a text node for each component and replace the existing CSS. */
+    replaceElement() {
+      // Build up our replacement style tag
+      const newEl = this.el.cloneNode(false)
+      newEl.setAttribute(SC_ATTR, '')
 
-    // Retrieve the sheet for the new style tag
-    const sheet = sheetForTag(newEl)
+      if (!this.el.parentNode) {
+        throw new Error(
+          process.env.NODE_ENV !== 'production'
+            ? "Trying to replace an element that wasn't mounted!"
+            : ''
+        )
+      }
 
-    Object.keys(this.components).forEach(componentId => {
+      this.el.parentNode.replaceChild(newEl, this.el)
+      this.el = newEl
+      this.ready = true
+
+      // Retrieve the sheet for the new style tag
+      const sheet = sheetForTag(newEl)
+
+      Object.keys(this.components).forEach(componentId => {
+        const comp = this.components[componentId]
+        const { cssFromDOM } = comp
+        const rules = stringifyRules([cssFromDOM])
+        const rulesSize = rules.length
+
+        let injectedRules = 0
+        for (let j = 0; j < rulesSize; j += 1) {
+          if (safeInsertRule(sheet, rules[j], sheet.cssRules.length)) {
+            injectedRules += 1
+          }
+        }
+
+        comp.componentIndex = this.componentSizes.length
+        comp.css = rules.join(' ')
+        this.componentSizes.push(injectedRules)
+      })
+    }
+
+    isSealed() {
+      return this.size >= SPEEDY_COMPONENTS_PER_TAG
+    }
+
+    addComponent(componentId: string) {
+      if (!this.ready) this.replaceElement()
+
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        this.components[componentId]
+      ) {
+        throw new Error(`Trying to add Component '${componentId}' twice!`)
+      }
+
+      this.components[componentId] = {
+        componentIndex: this.componentSizes.length,
+        css: '',
+      }
+
+      this.componentSizes.push(0)
+      this.size += 1
+    }
+
+    inject(componentId: string, cssRules: Array<string>, name: ?string) {
+      if (!this.ready) this.replaceElement()
+
       const comp = this.components[componentId]
-      const { cssFromDOM } = comp
-      const rules = stringifyRules([cssFromDOM])
-      const rulesSize = rules.length
+      if (process.env.NODE_ENV !== 'production' && !comp) {
+        throw new Error(
+          'Must add a new component before you can inject css into it'
+        )
+      }
 
+      const cssRulesSize = cssRules.length
+      const sheet = sheetForTag(this.el)
+      const { componentIndex } = comp
+
+      // Determine start index for injection
+      const insertIndex = sizeUpToComponentIndex(
+        this.componentSizes,
+        componentIndex
+      )
+
+      // Inject each rule shifting index forward for each one (in-order injection)
       let injectedRules = 0
-      for (let j = 0; j < rulesSize; j += 1) {
-        if (safeInsertRule(sheet, rules[j], sheet.cssRules.length)) {
+      for (let i = 0; i < cssRulesSize; i += 1) {
+        const cssRule = cssRules[i]
+        if (safeInsertRule(sheet, cssRule, insertIndex + injectedRules)) {
+          comp.css += ` ${cssRule}`
           injectedRules += 1
         }
       }
 
-      comp.componentIndex = this.componentSizes.length
-      comp.css = rules.join(' ')
-      this.componentSizes.push(injectedRules)
-    })
-  }
+      // Update number of rules for component
+      this.componentSizes[componentIndex] += injectedRules
 
-  getComponentIds() {
-    return Object.keys(this.components)
-  }
-
-  addComponent(componentId: string) {
-    if (!this.ready) this.replaceElement()
-
-    if (process.env.NODE_ENV !== 'production' && this.components[componentId]) {
-      throw new Error(`Trying to add Component '${componentId}' twice!`)
-    }
-
-    this.components[componentId] = {
-      componentIndex: this.componentSizes.length,
-      css: '',
-    }
-
-    this.componentSizes.push(0)
-    this.size += 1
-  }
-
-  inject(componentId: string, cssRules: Array<string>, name: ?string) {
-    if (!this.ready) this.replaceElement()
-
-    const comp = this.components[componentId]
-    if (process.env.NODE_ENV !== 'production' && !comp) {
-      throw new Error(
-        'Must add a new component before you can inject css into it'
-      )
-    }
-
-    const cssRulesSize = cssRules.length
-    const sheet = sheetForTag(this.el)
-    const { componentIndex } = comp
-
-    // Determine start index for injection
-    const insertIndex = sizeUpToComponentIndex(
-      this.componentSizes,
-      componentIndex
-    )
-
-    // Inject each rule shifting index forward for each one (in-order injection)
-    let injectedRules = 0
-    for (let i = 0; i < cssRulesSize; i += 1) {
-      const cssRule = cssRules[i]
-      if (safeInsertRule(sheet, cssRule, insertIndex + injectedRules)) {
-        comp.css += ` ${cssRule}`
-        injectedRules += 1
+      if (name !== undefined && name !== null) {
+        this.names = this.names ? `${this.names} ${name}` : name
       }
     }
 
-    // Update number of rules for component
-    this.componentSizes[componentIndex] += injectedRules
-
-    if (name !== undefined && name !== null) {
-      this.names = this.names ? `${this.names} ${name}` : name
-    }
-  }
-
-  toRawCSS(): string {
-    return Object.keys(this.components).reduce((acc, componentId) => {
-      const { css } = this.components[componentId]
-      return `${acc}\n/* sc-component-id: ${componentId} */\n${css}`
-    }, '')
-  }
-
-  toHTML() {
-    const attrs: Array<string> = [
-      'type="text/css"',
-      `${SC_ATTR}="${this.names}"`,
-      `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`,
-    ]
-
-    const nonce = getNonce()
-    if (nonce) {
-      attrs.push(`nonce="${nonce}"`)
+    toRawCSS(): string {
+      return Object.keys(this.components).reduce((acc, componentId) => {
+        const { css } = this.components[componentId]
+        return `${acc}\n/* sc-component-id: ${componentId} */\n${css}`
+      }, '')
     }
 
-    return `<style ${attrs.join(' ')}>${this.toRawCSS()}</style>`
-  }
+    toHTML() {
+      const attrs: Array<string> = [
+        'type="text/css"',
+        `${SC_ATTR}="${this.names}"`,
+        `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`,
+      ]
 
-  toReactElement() {
-    throw new Error(
-      process.env.NODE_ENV !== 'production'
-        ? "BrowserTag doesn't implement toReactElement!"
-        : ''
-    )
-  }
+      const nonce = getNonce()
+      if (nonce) {
+        attrs.push(`nonce="${nonce}"`)
+      }
 
-  clone() {
-    throw new Error(
-      process.env.NODE_ENV !== 'production'
-        ? 'BrowserTag cannot be cloned!'
-        : ''
-    )
-  }
-}
-
-class TextNodeBrowserTag implements Tag {
-  isLocal: boolean
-  components: { [string]: Object }
-  size: number
-  el: HTMLStyleElement
-  ready: boolean
-
-  constructor(
-    el: HTMLStyleElement,
-    isLocal: boolean,
-    existingSource: string = ''
-  ) {
-    const nonce = getNonce()
-    if (nonce !== null) {
-      el.setAttribute('nonce', nonce)
-    }
-
-    const extractedComps = extractCompsFromCSS(existingSource)
-
-    this.el = el
-    this.isLocal = isLocal
-    this.ready = false
-    this.size = extractedComps.length
-    this.components = extractedComps.reduce((acc, obj) => {
-      acc[obj.componentId] = obj // eslint-disable-line no-param-reassign
-      return acc
-    }, {})
-  }
-
-  getComponentIds() {
-    return Object.keys(this.components)
-  }
-
-  isFull() {
-    return this.size >= COMPONENTS_PER_TAG
-  }
-
-  addComponent(componentId: string) {
-    if (!this.ready) this.replaceElement()
-    if (process.env.NODE_ENV !== 'production' && this.components[componentId]) {
-      throw new Error(`Trying to add Component '${componentId}' twice!`)
-    }
-
-    const comp = { componentId, textNode: document.createTextNode('') }
-    this.el.appendChild(comp.textNode)
-    this.size += 1
-    this.components[componentId] = comp
-  }
-
-  inject(componentId: string, css: Array<string>, name: ?string) {
-    if (!this.ready) this.replaceElement()
-    const comp = this.components[componentId]
-
-    if (process.env.NODE_ENV !== 'production' && !comp) {
-      throw new Error(
-        'Must add a new component before you can inject css into it'
-      )
-    }
-
-    if (comp.textNode.data === '') {
-      comp.textNode.appendData(`\n/* sc-component-id: ${componentId} */\n`)
-    }
-
-    comp.textNode.appendData(css.join(' '))
-
-    if (name !== undefined && name !== null) {
-      const existingNames = this.el.getAttribute(SC_ATTR)
-      this.el.setAttribute(
-        SC_ATTR,
-        existingNames ? `${existingNames} ${name}` : name
-      )
+      return `<style ${attrs.join(' ')}>${this.toRawCSS()}</style>`
     }
   }
+} else {
+  BrowserTag = class TextNodeBrowserTag extends BaseBrowserTag implements Tag {
+    isLocal: boolean
+    components: { [string]: Object }
+    size: number
+    el: HTMLStyleElement
+    ready: boolean
 
-  toHTML() {
-    return this.el.outerHTML
-  }
+    constructor(
+      el: HTMLStyleElement,
+      isLocal: boolean,
+      existingSource: string = ''
+    ) {
+      super()
 
-  toReactElement() {
-    throw new Error(
-      process.env.NODE_ENV !== 'production'
-        ? "BrowserTag doesn't implement toReactElement!"
-        : ''
-    )
-  }
+      const nonce = getNonce()
+      if (nonce !== null) {
+        el.setAttribute('nonce', nonce)
+      }
 
-  clone() {
-    throw new Error(
-      process.env.NODE_ENV !== 'production'
-        ? 'BrowserTag cannot be cloned!'
-        : ''
-    )
-  }
+      const extractedComps = extractCompsFromCSS(existingSource)
 
-  /* Because we care about source order, before we can inject anything we need to
-   * create a text node for each component and replace the existing CSS. */
-  replaceElement() {
-    this.ready = true
-    // We have nothing to inject. Use the current el.
-    if (this.size === 0) return
+      this.el = el
+      this.isLocal = isLocal
+      this.ready = false
+      this.size = extractedComps.length
+      this.components = extractedComps.reduce((acc, obj) => {
+        acc[obj.componentId] = obj // eslint-disable-line no-param-reassign
+        return acc
+      }, {})
+    }
 
-    // Build up our replacement style tag
-    const newEl = this.el.cloneNode(false)
-    newEl.appendChild(document.createTextNode('\n'))
+    getComponentIds() {
+      return Object.keys(this.components)
+    }
 
-    Object.keys(this.components).forEach(key => {
-      const comp = this.components[key]
+    isSealed() {
+      return this.size >= COMPONENTS_PER_TAG
+    }
 
-      // eslint-disable-next-line no-param-reassign
-      comp.textNode = document.createTextNode(comp.cssFromDOM)
-      newEl.appendChild(comp.textNode)
-    })
+    addComponent(componentId: string) {
+      if (!this.ready) this.replaceElement()
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        this.components[componentId]
+      ) {
+        throw new Error(`Trying to add Component '${componentId}' twice!`)
+      }
 
-    if (!this.el.parentNode) {
+      const comp = { componentId, textNode: document.createTextNode('') }
+      this.el.appendChild(comp.textNode)
+      this.size += 1
+      this.components[componentId] = comp
+    }
+
+    inject(componentId: string, css: Array<string>, name: ?string) {
+      if (!this.ready) this.replaceElement()
+      const comp = this.components[componentId]
+
+      if (process.env.NODE_ENV !== 'production' && !comp) {
+        throw new Error(
+          'Must add a new component before you can inject css into it'
+        )
+      }
+
+      if (comp.textNode.data === '') {
+        comp.textNode.appendData(`\n/* sc-component-id: ${componentId} */\n`)
+      }
+
+      comp.textNode.appendData(css.join(' '))
+
+      if (name !== undefined && name !== null) {
+        const existingNames = this.el.getAttribute(SC_ATTR)
+        this.el.setAttribute(
+          SC_ATTR,
+          existingNames ? `${existingNames} ${name}` : name
+        )
+      }
+    }
+
+    toHTML() {
+      return this.el.outerHTML
+    }
+
+    toReactElement() {
       throw new Error(
         process.env.NODE_ENV !== 'production'
-          ? "Trying to replace an element that wasn't mounted!"
+          ? "BrowserTag doesn't implement toReactElement!"
           : ''
       )
     }
 
-    // The ol' switcheroo
-    this.el.parentNode.replaceChild(newEl, this.el)
-    this.el = newEl
+    clone() {
+      throw new Error(
+        process.env.NODE_ENV !== 'production'
+          ? 'BrowserTag cannot be cloned!'
+          : ''
+      )
+    }
+
+    /* Because we care about source order, before we can inject anything we need to
+     * create a text node for each component and replace the existing CSS. */
+    replaceElement() {
+      this.ready = true
+      // We have nothing to inject. Use the current el.
+      if (this.size === 0) return
+
+      // Build up our replacement style tag
+      const newEl = this.el.cloneNode(false)
+      newEl.appendChild(document.createTextNode('\n'))
+
+      Object.keys(this.components).forEach(key => {
+        const comp = this.components[key]
+
+        // eslint-disable-next-line no-param-reassign
+        comp.textNode = document.createTextNode(comp.cssFromDOM)
+        newEl.appendChild(comp.textNode)
+      })
+
+      if (!this.el.parentNode) {
+        throw new Error(
+          process.env.NODE_ENV !== 'production'
+            ? "Trying to replace an element that wasn't mounted!"
+            : ''
+        )
+      }
+
+      // The ol' switcheroo
+      this.el.parentNode.replaceChild(newEl, this.el)
+      this.el = newEl
+    }
   }
 }
-
-const BrowserTag = DISABLE_SPEEDY ? TextNodeBrowserTag : SpeedyBrowserTag
 
 /* Factory function to separate DOM operations from logical ones*/
 export default {
