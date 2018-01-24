@@ -205,7 +205,9 @@ export default class ServerStyleSheet {
       return ourStream
     } else {
       throw new Error(
-        'streaming only works in Node.js, please do not try to call this method in the browser'
+        process.env.NODE_ENV !== 'production'
+          ? 'streaming only works in Node.js, please do not try to call this method in the browser'
+          : ''
       )
     }
   }
