@@ -12,7 +12,7 @@ export interface Tag {
   isLocal: boolean;
   components: { [string]: Object };
 
-  isFull(): boolean;
+  isSealed(): boolean;
   addComponent(componentId: string): void;
   inject(componentId: string, css: string, name: ?string): void;
   toHTML(): string;
@@ -136,7 +136,7 @@ export default class StyleSheet {
 
     const lastTag = this.tags[this.tags.length - 1]
     const componentTag =
-      !lastTag || lastTag.isFull() || lastTag.isLocal !== isLocal
+      !lastTag || lastTag.isSealed() || lastTag.isLocal !== isLocal
         ? this.createNewTag(isLocal)
         : lastTag
     this.componentTags[componentId] = componentTag

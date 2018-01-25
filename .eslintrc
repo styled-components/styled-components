@@ -5,6 +5,9 @@
     "prettier",
     "prettier/flowtype"
   ],
+  "globals": {
+    "__SERVER__": true
+  },
   "plugins": ["flowtype", "flowtype-errors", "prettier"],
   "rules": {
     "semi": 0,

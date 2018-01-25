@@ -38,6 +38,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Upgrade test suites to run against react v16 ([see #1426](https://github.com/styled-components/styled-components/pull/1426))
 
+- Streaming rendering support (requires React 16, [see #1430](https://github.com/styled-components/styled-components/pull/1430))
+
 ## [v2.4.0] - 2017-12-22
 
 - remove some extra information from the generated hash that can differ between build environments ([see #1381](https://github.com/styled-components/styled-components/pull/1381))

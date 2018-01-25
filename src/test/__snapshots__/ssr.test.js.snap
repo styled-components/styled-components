@@ -80,6 +80,16 @@ exports[`ssr should extract the CSS in a simple case 2`] = `
 </style>"
 `;
 
+exports[`ssr should interleave styles with rendered HTML when utilitizing streaming 1`] = `
+"<style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-2303210225 */
+body{background:papayawhip;}
+</style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: sc-a */
+.sc-a {}
+
+.b{color:red;}
+</style><h1 class=\\"sc-a b\\" data-reactroot=\\"\\">Hello SSR!</h1>"
+`;
+
 exports[`ssr should render CSS in the order the components were defined, not rendered 1`] = `"<div data-reactroot=\\"\\"><h2 class=\\"TWO a\\"></h2><h1 class=\\"ONE b\\"></h1></div>"`;
 
 exports[`ssr should render CSS in the order the components were defined, not rendered 2`] = `

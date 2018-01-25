@@ -1,13 +1,17 @@
 // @flow
 /* eslint-disable no-underscore-dangle */
 import React from 'react'
+import stream from 'stream'
 import type { Tag } from './StyleSheet'
 import StyleSheet, { SC_ATTR, LOCAL_ATTR, clones } from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
 import minify from '../utils/minify'
 import getNonce from '../utils/nonce'
 
+declare var __SERVER__: boolean
+
 class ServerTag implements Tag {
+  emitted: boolean
   isLocal: boolean
   isProduction: boolean
   components: { [string]: Object }
@@ -15,6 +19,7 @@ class ServerTag implements Tag {
   names: Array<string>
 
   constructor(isLocal: boolean) {
+    this.emitted = false
     this.isLocal = isLocal
     this.isProduction = process.env.NODE_ENV === 'production'
     this.components = {}
@@ -22,8 +27,8 @@ class ServerTag implements Tag {
     this.names = []
   }
 
-  isFull() {
-    return false
+  isSealed() {
+    return this.emitted
   }
 
   addComponent(componentId: string) {
@@ -79,6 +84,8 @@ class ServerTag implements Tag {
       outputCSS = minify(outputCSS)
     }
 
+    this.emitted = true
+
     return `<style ${attrs.join(' ')}>${outputCSS}</style>`
   }
 
@@ -97,6 +104,8 @@ class ServerTag implements Tag {
     if (this.isProduction) {
       outputCSS = minify(outputCSS)
     }
+
+    this.emitted = true
 
     return (
       <style
@@ -122,11 +131,14 @@ class ServerTag implements Tag {
 }
 
 export default class ServerStyleSheet {
-  instance: StyleSheet
   closed: boolean
+  instance: StyleSheet
+  isStreaming: boolean
+  lastIndex: number
 
   constructor() {
     this.instance = StyleSheet.clone(StyleSheet.instance)
+    this.isStreaming = false
   }
 
   collectStyles(children: any) {
@@ -158,6 +170,46 @@ export default class ServerStyleSheet {
     }
 
     return this.instance.toReactElements()
+  }
+
+  interleaveWithNodeStream(readableStream: stream.Readable) {
+    if (__SERVER__) {
+      const ourStream = new stream.Readable()
+
+      // $FlowFixMe
+      ourStream._read = () => {}
+
+      this.isStreaming = true
+      this.lastIndex = 0
+
+      readableStream.on('data', chunk => {
+        ourStream.push(
+          this.instance.tags
+            .slice(this.lastIndex)
+            .map(tag => tag.toHTML())
+            .join('') + chunk
+        )
+
+        this.lastIndex = this.instance.tags.length - 1
+      })
+
+      readableStream.on('end', () => {
+        this.closed = true
+        ourStream.push(null)
+      })
+
+      readableStream.on('error', err => {
+        ourStream.emit('error', err)
+      })
+
+      return ourStream
+    } else {
+      throw new Error(
+        process.env.NODE_ENV !== 'production'
+          ? 'streaming only works in Node.js, please do not try to call this method in the browser'
+          : ''
+      )
+    }
   }
 
   static create() {

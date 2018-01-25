@@ -2,11 +2,17 @@
   "name": "styled-components",
   "version": "3.0.2",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
-  "main": "dist/styled-components.cjs.js",
   "typings": "typings/styled-components.d.ts",
+  "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.es.js",
   "module": "dist/styled-components.es.js",
   "react-native": "dist/styled-components.cjs.native.js",
+  "browser": {
+    "./dist/styled-components.es.js": "./dist/styled-components.browser.es.js",
+    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js",
+    "./dist/styled-components-no-parser.es.js": "./dist/styled-components-no-parser.browser.es.js",
+    "./dist/styled-components-no-parser.cjs.js": "./dist/styled-components-no-parser.browser.cjs.js"
+  },
   "scripts": {
     "build": "rollup -c",
     "prebuild": "rimraf dist",
@@ -122,11 +128,12 @@
     "rollup-plugin-babel": "^2.7.1",
     "rollup-plugin-commonjs": "^6.0.0",
     "rollup-plugin-flow": "^1.1.1",
+    "rollup-plugin-ignore": "^1.0.3",
     "rollup-plugin-json": "^2.1.0",
     "rollup-plugin-node-resolve": "^2.0.0",
     "rollup-plugin-replace": "^1.1.1",
     "rollup-plugin-sourcemaps": "^0.4.2",
-    "rollup-plugin-uglify": "^1.0.1",
+    "rollup-plugin-uglify": "^3.0.0",
     "rollup-plugin-visualizer": "^0.1.5",
     "tslint": "^4.3.1",
     "typescript": "^2.4.1"
@@ -141,7 +148,8 @@
     ],
     "setupFiles": [
       "raf/polyfill",
-      "<rootDir>/src/test/enzymeSetup.js"
+      "<rootDir>/src/test/enzymeSetup.js",
+      "<rootDir>/src/test/globals.js"
     ],
     "testPathIgnorePatterns": [
       "<rootDir>/src/native",
