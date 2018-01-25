@@ -50,7 +50,8 @@ body{background:papayawhip;}
 .Header {}
 .a{-webkit-animation:keyframe_0 1s both;animation:keyframe_0 1s both;}
 /* sc-component-id: sc-keyframes-keyframe_0 */
-@-webkit-keyframes keyframe_0{0%{opacity:0;}} @keyframes keyframe_0{0%{opacity:0;}}
+@-webkit-keyframes keyframe_0{0%{opacity:0;}}
+@keyframes keyframe_0{0%{opacity:0;}}
 </style>"
 `;
 
@@ -126,7 +127,9 @@ Object {
 exports[`ssr should return a generated React style element with minified CSS in production 1`] = `
 Object {
   "dangerouslySetInnerHTML": Object {
-    "__html": "/* sc-component-id:sc-global-2303210225 */ body{background:papayawhip;}",
+    "__html": "/* sc-component-id: sc-global-2303210225 */
+body{background:papayawhip;}
+",
   },
   "data-styled-components": "",
   "data-styled-components-is-local": "false",
@@ -137,7 +140,10 @@ Object {
 exports[`ssr should return a generated React style element with minified CSS in production 2`] = `
 Object {
   "dangerouslySetInnerHTML": Object {
-    "__html": "/* sc-component-id:sc-a */ .b{color:red;}",
+    "__html": "/* sc-component-id: sc-a */
+
+.b{color:red;}
+",
   },
   "data-styled-components": "b",
   "data-styled-components-is-local": "true",
