@@ -121,7 +121,6 @@ if (!DISABLE_SPEEDY) {
     size: number
     el: HTMLStyleElement
     ready: boolean
-    names: string
 
     constructor(
       el: HTMLStyleElement,
@@ -140,7 +139,6 @@ if (!DISABLE_SPEEDY) {
       this.el = el
       this.isLocal = isLocal
       this.ready = false
-      this.names = el.getAttribute(SC_ATTR) || ''
       this.componentSizes = []
       this.size = extractedComps.length
       this.components = extractedComps.reduce((acc, obj) => {
@@ -213,7 +211,7 @@ if (!DISABLE_SPEEDY) {
       this.size += 1
     }
 
-    inject(componentId: string, cssRules: Array<string>, name: ?string) {
+    inject(componentId: string, cssRules: Array<string>) {
       if (!this.ready) this.replaceElement()
 
       const comp = this.components[componentId]
@@ -245,32 +243,14 @@ if (!DISABLE_SPEEDY) {
 
       // Update number of rules for component
       this.componentSizes[componentIndex] += injectedRules
-
-      if (name !== undefined && name !== null) {
-        this.names = this.names ? `${this.names} ${name}` : name
-      }
     }
 
-    toRawCSS(): string {
-      return Object.keys(this.components).reduce((acc, componentId) => {
-        const { css } = this.components[componentId]
-        return `${acc}\n/* sc-component-id: ${componentId} */\n${css}`
-      }, '')
+    toRawCSS() {
+      return '' // NOTE: Unsupported in production mode (SpeedyBrowserTag)
     }
 
     toHTML() {
-      const attrs: Array<string> = [
-        'type="text/css"',
-        `${SC_ATTR}="${this.names}"`,
-        `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`,
-      ]
-
-      const nonce = getNonce()
-      if (nonce) {
-        attrs.push(`nonce="${nonce}"`)
-      }
-
-      return `<style ${attrs.join(' ')}>${this.toRawCSS()}</style>`
+      return '' // NOTE: Unsupported in production mode (SpeedyBrowserTag)
     }
   }
 } else {

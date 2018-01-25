@@ -77,16 +77,18 @@ export default (
       const flatCSS = flatten(this.rules, executionContext)
       const hash = hashStr(this.componentId + flatCSS.join(''))
 
+      const { stylesCacheable } = styleSheet
       const existingName = styleSheet.getName(hash)
+
       if (existingName !== undefined) {
-        if (styleSheet.stylesCacheable) {
+        if (stylesCacheable) {
           this.lastClassName = existingName
         }
         return existingName
       }
 
       const name = nameGenerator(hash)
-      if (styleSheet.stylesCacheable) {
+      if (stylesCacheable) {
         this.lastClassName = existingName
       }
       if (styleSheet.alreadyInjected(hash, name)) {
