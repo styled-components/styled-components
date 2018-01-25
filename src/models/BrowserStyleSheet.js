@@ -65,7 +65,7 @@ const safeInsertRule = (
   try {
     sheet.insertRule(cssRule, cappedIndex)
   } catch (err) {
-    console.error('Invalid rule:', cssRule, err)
+    // NOTE: An invalid rule here means it's not supported by the browser or obviously malformed
     return false
   }
 
