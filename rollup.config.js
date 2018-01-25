@@ -68,13 +68,10 @@ const prodUmdConfig = Object.assign({}, umdConfig, {
   output: Object.assign({}, umdConfig.output, {
     file: 'dist/styled-components.min.js',
   }),
-  plugins: [
-    ignore([
-      './src/secretInternals.js', // Remove secret internals in production UMD build
-    ]),
-  ].concat(umdConfig.plugins, [
+  plugins: umdConfig.plugins.concat([
     replace({
       'process.env.NODE_ENV': JSON.stringify('production'),
+      "export * from './secretInternals'": '',
     }),
     uglify({
       sourceMap: true,
@@ -104,6 +101,7 @@ const browserConfig = Object.assign({}, configBase, {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
+      "export * from './secretInternals'": '',
     }),
     ignore(['stream'])
   ),
