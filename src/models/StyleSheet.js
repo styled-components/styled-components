@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import BrowserStyleSheet, { DISABLE_SPEEDY } from './BrowserStyleSheet'
+import BrowserStyleSheet from './BrowserStyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
 
 export const SC_ATTR = 'data-styled-components'
@@ -124,19 +124,11 @@ export default class StyleSheet {
   }
 
   toHTML() {
-    if (DISABLE_SPEEDY) {
-      return this.tags.map(tag => tag.toHTML()).join('')
-    }
-
-    return '' // NOTE: Unsupported in production (See SpeedyBrowserTag)
+    return this.tags.map(tag => tag.toHTML()).join('')
   }
 
   toReactElements() {
-    if (DISABLE_SPEEDY) {
-      return this.tags.map((tag, i) => tag.toReactElement(`sc-${i}`))
-    }
-
-    return [] // NOTE: Unsupported in production (See SpeedyBrowserTag)
+    return this.tags.map((tag, i) => tag.toReactElement(`sc-${i}`))
   }
 
   getOrCreateTag(componentId: string, isLocal: boolean) {

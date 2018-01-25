@@ -24,7 +24,7 @@ import StyleSheet, { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
 
 declare var __DEV__: ?string
 
-export const DISABLE_SPEEDY =
+const DISABLE_SPEEDY =
   (typeof __DEV__ === 'boolean' && __DEV__) ||
   process.env.NODE_ENV === 'development'
 
