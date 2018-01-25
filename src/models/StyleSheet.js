@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import BrowserStyleSheet from './BrowserStyleSheet'
+import BrowserStyleSheet, { DISABLE_SPEEDY } from './BrowserStyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
 
 export const SC_ATTR = 'data-styled-components'
@@ -124,7 +124,7 @@ export default class StyleSheet {
   }
 
   toHTML() {
-    if (process.env.NODE_ENV !== 'production') {
+    if (DISABLE_SPEEDY) {
       return this.tags.map(tag => tag.toHTML()).join('')
     }
 
@@ -132,7 +132,7 @@ export default class StyleSheet {
   }
 
   toReactElements() {
-    if (process.env.NODE_ENV !== 'production') {
+    if (DISABLE_SPEEDY) {
       return this.tags.map((tag, i) => tag.toReactElement(`sc-${i}`))
     }
 

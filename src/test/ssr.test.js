@@ -257,26 +257,4 @@ describe('ssr', () => {
       stream.on('error', reject)
     })
   })
-
-  it('should return a generated React style element with minified CSS in production', () => {
-    process.env.NODE_ENV = 'production'
-
-    injectGlobal`
-      body { background: papayawhip; }
-    `
-    const Heading = styled.h1`
-      color: red;
-    `
-
-    const sheet = new ServerStyleSheet()
-    const html = renderToString(
-      sheet.collectStyles(<Heading>Hello Production SSR!</Heading>)
-    )
-    const elements = sheet.getStyleElement()
-
-    expect(elements).toHaveLength(2)
-
-    expect(elements[0].props).toMatchSnapshot()
-    expect(elements[1].props).toMatchSnapshot()
-  })
 })

@@ -80,7 +80,6 @@ exports[`ssr should interleave styles with rendered HTML when utilitizing stream
 body{background:papayawhip;}
 </style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: sc-a */
 .sc-a {}
-
 .b{color:red;}
 </style><h1 class=\\"sc-a b\\" data-reactroot=\\"\\">Hello SSR!</h1>"
 `;
@@ -115,33 +114,6 @@ Object {
   "dangerouslySetInnerHTML": Object {
     "__html": "/* sc-component-id: sc-a */
 .sc-a {}
-.b{color:red;}
-",
-  },
-  "data-styled-components": "b",
-  "data-styled-components-is-local": "true",
-  "type": "text/css",
-}
-`;
-
-exports[`ssr should return a generated React style element with minified CSS in production 1`] = `
-Object {
-  "dangerouslySetInnerHTML": Object {
-    "__html": "/* sc-component-id: sc-global-2303210225 */
-body{background:papayawhip;}
-",
-  },
-  "data-styled-components": "",
-  "data-styled-components-is-local": "false",
-  "type": "text/css",
-}
-`;
-
-exports[`ssr should return a generated React style element with minified CSS in production 2`] = `
-Object {
-  "dangerouslySetInnerHTML": Object {
-    "__html": "/* sc-component-id: sc-a */
-
 .b{color:red;}
 ",
   },
