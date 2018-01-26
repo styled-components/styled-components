@@ -5,7 +5,6 @@ import stream from 'stream'
 import type { Tag } from './StyleSheet'
 import StyleSheet, { SC_ATTR, LOCAL_ATTR, clones } from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
-import minify from '../utils/minify'
 import getNonce from '../utils/nonce'
 
 declare var __SERVER__: boolean
@@ -31,6 +30,10 @@ class ServerTag implements Tag {
     return this.emitted
   }
 
+  getComponentIds() {
+    return Object.keys(this.components)
+  }
+
   addComponent(componentId: string) {
     if (this.components[componentId]) {
       throw new Error(
@@ -50,7 +53,7 @@ class ServerTag implements Tag {
     )
   }
 
-  inject(componentId: string, css: string, name: ?string) {
+  inject(componentId: string, css: Array<string>, name: ?string) {
     const comp = this.components[componentId]
 
     if (!comp) {
@@ -60,9 +63,16 @@ class ServerTag implements Tag {
           : ''
       )
     }
-    if (comp.css === '') comp.css = `/* sc-component-id: ${componentId} */\n`
 
-    comp.css += css.replace(/\n*$/, '\n')
+    if (comp.css === '') {
+      comp.css = `/* sc-component-id: ${componentId} */\n`
+    }
+
+    const cssRulesSize = css.length
+    for (let i = 0; i < cssRulesSize; i += 1) {
+      const cssRule = css[i]
+      comp.css += `${cssRule}\n`.replace(/\n*$/, '\n')
+    }
 
     if (name) this.names.push(name)
   }
@@ -73,20 +83,14 @@ class ServerTag implements Tag {
       `${SC_ATTR}="${this.names.join(' ')}"`,
       `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`,
     ]
-    const nonce = getNonce()
-    let outputCSS = this.concatenateCSS()
 
+    const nonce = getNonce()
     if (nonce) {
       attrs.push(`nonce="${nonce}"`)
     }
 
-    if (this.isProduction) {
-      outputCSS = minify(outputCSS)
-    }
-
     this.emitted = true
-
-    return `<style ${attrs.join(' ')}>${outputCSS}</style>`
+    return `<style ${attrs.join(' ')}>${this.concatenateCSS()}</style>`
   }
 
   toReactElement(key: string) {
@@ -94,15 +98,10 @@ class ServerTag implements Tag {
       [SC_ATTR]: this.names.join(' '),
       [LOCAL_ATTR]: this.isLocal.toString(),
     }
-    const nonce = getNonce()
-    let outputCSS = this.concatenateCSS()
 
+    const nonce = getNonce()
     if (nonce) {
       attrs.nonce = nonce
-    }
-
-    if (this.isProduction) {
-      outputCSS = minify(outputCSS)
     }
 
     this.emitted = true
@@ -112,7 +111,7 @@ class ServerTag implements Tag {
         key={key}
         type="text/css"
         {...attrs}
-        dangerouslySetInnerHTML={{ __html: outputCSS }}
+        dangerouslySetInnerHTML={{ __html: this.concatenateCSS() }}
       />
     )
   }

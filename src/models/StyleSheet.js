@@ -10,11 +10,11 @@ export const CONTEXT_KEY = '__styled-components-stylesheet__'
 /* eslint-disable flowtype/object-type-delimiter */
 export interface Tag {
   isLocal: boolean;
-  components: { [string]: Object };
 
   isSealed(): boolean;
+  getComponentIds(): Array<string>;
   addComponent(componentId: string): void;
-  inject(componentId: string, css: string, name: ?string): void;
+  inject(componentId: string, css: Array<string>, name: ?string): void;
   toHTML(): string;
   toReactElement(key: string): React.Element<*>;
   clone(): Tag;
@@ -25,13 +25,16 @@ let instance = null
 // eslint-disable-next-line no-use-before-define
 export const clones: Array<StyleSheet> = []
 
+const IS_BROWSER = typeof document !== 'undefined'
+
 export default class StyleSheet {
   tagConstructor: boolean => Tag
   tags: Array<Tag>
   names: { [string]: boolean }
   hashes: { [string]: string } = {}
-  deferredInjections: { [string]: string } = {}
+  deferredInjections: { [string]: Array<string> } = {}
   componentTags: { [string]: Tag }
+
   // helper for `ComponentStyle` to know when it cache static styles.
   // staticly styled-component can not safely cache styles on the server
   // without all `ComponentStyle` instances saving a reference to the
@@ -39,7 +42,7 @@ export default class StyleSheet {
   // or listening to creation / reset events. otherwise you might create
   // a component with one stylesheet and render it another api response
   // with another, losing styles on from your server-side render.
-  stylesCacheable = typeof document !== 'undefined'
+  stylesCacheable = IS_BROWSER
 
   constructor(
     tagConstructor: boolean => Tag,
@@ -56,7 +59,7 @@ export default class StyleSheet {
     this.componentTags = {}
 
     this.tags.forEach(tag => {
-      Object.keys(tag.components).forEach(componentId => {
+      tag.getComponentIds().forEach(componentId => {
         this.componentTags[componentId] = tag
       })
     })
@@ -81,7 +84,7 @@ export default class StyleSheet {
     return !!this.componentTags[componentId]
   }
 
-  deferredInject(componentId: string, isLocal: boolean, css: string) {
+  deferredInject(componentId: string, isLocal: boolean, css: Array<string>) {
     if (this === instance) {
       clones.forEach(clone => {
         clone.deferredInject(componentId, isLocal, css)
@@ -95,7 +98,7 @@ export default class StyleSheet {
   inject(
     componentId: string,
     isLocal: boolean,
-    css: string,
+    css: Array<string>,
     hash: ?any,
     name: ?string
   ) {
@@ -160,7 +163,7 @@ export default class StyleSheet {
 
   /* We can make isServer totally implicit once Jest 20 drops and we
    * can change environment on a per-test basis. */
-  static create(isServer: ?boolean = typeof document === 'undefined') {
+  static create(isServer: ?boolean = !IS_BROWSER) {
     return (isServer ? ServerStyleSheet : BrowserStyleSheet).create()
   }
 

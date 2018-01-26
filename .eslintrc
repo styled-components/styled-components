@@ -31,7 +31,13 @@
     "flowtype/no-dupe-keys": 2,
     "flowtype/union-intersection-spacing": [2, "always"],
     "flowtype/object-type-delimiter": 2,
-    "prettier/prettier": 2
+    "prettier/prettier": 2,
+    "no-restricted-syntax": [
+      "error",
+      "ForOfStatement",
+      "LabeledStatement",
+      "WithStatement",
+    ],
   },
   "env": {
     "jest": true,

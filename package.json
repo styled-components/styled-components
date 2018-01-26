@@ -74,6 +74,7 @@
     "is-plain-object": "^2.0.1",
     "prop-types": "^15.5.4",
     "stylis": "^3.4.0",
+    "stylis-rule-sheet": "^0.0.7",
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
@@ -142,6 +143,9 @@
     "react": ">= 0.14.0 < 17.0.0-0"
   },
   "jest": {
+    "globals": {
+      "__DEV__": true
+    },
     "clearMocks": true,
     "roots": [
       "<rootDir>/src/"
@@ -165,7 +169,7 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "threshold": "14.75kB"
+      "threshold": "14.9kB"
     }
   ]
 }

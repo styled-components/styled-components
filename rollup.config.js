@@ -30,6 +30,9 @@ const commonPlugins = [
   babel({
     plugins: ['external-helpers'],
   }),
+  replace({
+    __DEV__: JSON.stringify(false), // disable flag indicating a Jest run
+  }),
 ]
 
 const configBase = {
