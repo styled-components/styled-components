@@ -285,10 +285,6 @@ if (!DISABLE_SPEEDY) {
       }, {})
     }
 
-    getComponentIds() {
-      return Object.keys(this.components)
-    }
-
     isSealed() {
       return this.size >= COMPONENTS_PER_TAG
     }
