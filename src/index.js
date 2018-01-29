@@ -49,8 +49,7 @@ if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
       "It looks like there are several instances of 'styled-components' initialized in this application. " +
         'This may cause dynamic styles not rendering properly, errors happening during rehydration process ' +
         'and makes you application bigger without a good reason.\n\n' +
-        'If you are using a building tool like webpack, consider checking your bundle for duplication of ' +
-        "'styled-components' module."
+        'See https://s-c.sh/2BAXzed for more info.'
     )
   } else {
     window['__styled-components-init__'] += 1
