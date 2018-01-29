@@ -6,7 +6,7 @@
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.es.js",
   "module": "dist/styled-components.es.js",
-  "react-native": "dist/styled-components.cjs.native.js",
+  "react-native": "dist/styled-components.native.cjs.js",
   "browser": {
     "./dist/styled-components.es.js": "./dist/styled-components.browser.es.js",
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js",
