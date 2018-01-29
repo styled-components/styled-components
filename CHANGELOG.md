@@ -6,7 +6,11 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+-
 
+## [v3.1.1] - 2018-01-29
+
+- Hotfix for importing in ReactNative, thanks to [@vvasilev-](https://github.com/vvasilev-) (see [#1455](https://github.com/styled-components/styled-components/pull/1455))
 
 ## [v3.1.0] - 2018-01-29
 
@@ -369,7 +373,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.0...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.1...master
+[v3.1.1]: https://github.com/styled-components/styled-components/compare/v3.1.0...v3.1.1
 [v3.1.0]: https://github.com/styled-components/styled-components/compare/v3.0.2...v3.1.0
 [v3.0.2]: https://github.com/styled-components/styled-components/compare/v3.0.1...v3.0.2
 [v3.0.1]: https://github.com/styled-components/styled-components/compare/v2.4.0...v3.0.1
