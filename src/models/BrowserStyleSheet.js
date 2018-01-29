@@ -26,7 +26,7 @@ declare var __DEV__: ?string
 
 const DISABLE_SPEEDY =
   (typeof __DEV__ === 'boolean' && __DEV__) ||
-  process.env.NODE_ENV === 'development'
+  process.env.NODE_ENV !== 'production'
 
 const COMPONENTS_PER_TAG = 40
 const SPEEDY_COMPONENTS_PER_TAG = 1000 // insertRule allows more injections before a perf slowdown

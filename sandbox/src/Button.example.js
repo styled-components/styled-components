@@ -4,7 +4,7 @@ const Button = styled.button`
   font-size: 16px;
   border-radius: 5px;
   padding: 0.25em 1em;
-  margin: 0 1em;
+  margin: 1em 1em;
   background: transparent;
   color: palevioletred;
   border: 2px solid palevioletred;
@@ -17,11 +17,9 @@ const Button = styled.button`
     `};
 `
 
-const content = (
-  <div>
-    <Button>Normal Button</Button>
-    <Button primary>Primary Button</Button>
-  </div>
-)
+const content = [
+  <Button>Normal Button</Button>,
+  <Button primary>Primary Button</Button>,
+]
 
 render(content)
