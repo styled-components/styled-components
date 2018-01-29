@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-
+- Disable "speedy" mode for non-production cases (see [#1460](https://github.com/styled-components/styled-components/pull/1460))
 
 ## [v3.1.0] - 2018-01-29
 
