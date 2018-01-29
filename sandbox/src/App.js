@@ -101,6 +101,11 @@ const LiveEditor = LiveBlock.withComponent(_LiveEditor).extend`
 
 const LivePreview = LiveBlock.withComponent(_LivePreview).extend`
   background-color: white;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
 `
 
 const LiveError = styled(_LiveError)`
