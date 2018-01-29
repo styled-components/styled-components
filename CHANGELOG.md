@@ -6,7 +6,11 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- Disable "speedy" mode for non-production cases (see [#1460](https://github.com/styled-components/styled-components/pull/1460))
+
+
+## [v3.1.3] - 2018-01-29
+
+- Disable "speedy" mode for non-production environments, fixes `jest-styled-components` compatibility (see [#1460](https://github.com/styled-components/styled-components/pull/1460))
 
 ## [v3.1.1] - 2018-01-29
 
@@ -373,7 +377,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.1...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.3...master
+[v3.1.3]: https://github.com/styled-components/styled-components/compare/v3.1.2...v3.1.3
 [v3.1.1]: https://github.com/styled-components/styled-components/compare/v3.1.0...v3.1.1
 [v3.1.0]: https://github.com/styled-components/styled-components/compare/v3.0.2...v3.1.0
 [v3.0.2]: https://github.com/styled-components/styled-components/compare/v3.0.1...v3.0.2
