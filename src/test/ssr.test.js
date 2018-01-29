@@ -1,9 +1,8 @@
 /**
  * @jest-environment node
  */
-
 import React from 'react'
-import { renderToString } from 'react-dom/server'
+import { renderToString, renderToNodeStream } from 'react-dom/server'
 import ServerStyleSheet from '../models/ServerStyleSheet'
 import { resetStyled } from './utils'
 import _injectGlobal from '../constructors/injectGlobal'
@@ -28,13 +27,19 @@ describe('ssr', () => {
     styled = resetStyled(true)
   })
 
+  afterEach(() => {
+    process.env.NODE_ENV = 'test'
+  })
+
   it('should extract the CSS in a simple case', () => {
     const Heading = styled.h1`
       color: red;
     `
 
     const sheet = new ServerStyleSheet()
-    const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+    const html = renderToString(
+      sheet.collectStyles(<Heading>Hello SSR!</Heading>)
+    )
     const css = sheet.getStyleTags()
 
     expect(html).toMatchSnapshot()
@@ -50,7 +55,9 @@ describe('ssr', () => {
     `
 
     const sheet = new ServerStyleSheet()
-    const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+    const html = renderToString(
+      sheet.collectStyles(<Heading>Hello SSR!</Heading>)
+    )
     const css = sheet.getStyleTags()
 
     expect(html).toMatchSnapshot()
@@ -69,7 +76,9 @@ describe('ssr', () => {
     `
 
     const sheet = new ServerStyleSheet()
-    const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+    const html = renderToString(
+      sheet.collectStyles(<Heading>Hello SSR!</Heading>)
+    )
     const css = sheet.getStyleTags()
 
     expect(html).toMatchSnapshot()
@@ -85,12 +94,14 @@ describe('ssr', () => {
     `
 
     const sheet = new ServerStyleSheet()
-    const html = renderToString(sheet.collectStyles(
-      <div>
-        <TWO/>
-        <ONE/>
-      </div>
-    ))
+    const html = renderToString(
+      sheet.collectStyles(
+        <div>
+          <TWO />
+          <ONE />
+        </div>
+      )
+    )
     const css = sheet.getStyleTags()
 
     expect(html).toMatchSnapshot()
@@ -109,11 +120,15 @@ describe('ssr', () => {
     `
 
     const sheetOne = new ServerStyleSheet()
-    const htmlOne = renderToString(sheetOne.collectStyles(<PageOne>Camera One!</PageOne>))
+    const htmlOne = renderToString(
+      sheetOne.collectStyles(<PageOne>Camera One!</PageOne>)
+    )
     const cssOne = sheetOne.getStyleTags()
 
     const sheetTwo = new ServerStyleSheet()
-    const htmlTwo = renderToString(sheetTwo.collectStyles(<PageTwo>Camera Two!</PageTwo>))
+    const htmlTwo = renderToString(
+      sheetTwo.collectStyles(<PageTwo>Camera Two!</PageTwo>)
+    )
     const cssTwo = sheetTwo.getStyleTags()
 
     expect(htmlOne).toMatchSnapshot()
@@ -132,7 +147,9 @@ describe('ssr', () => {
     `
 
     const sheetOne = new ServerStyleSheet()
-    const htmlOne = renderToString(sheetOne.collectStyles(<PageOne>Camera One!</PageOne>))
+    const htmlOne = renderToString(
+      sheetOne.collectStyles(<PageOne>Camera One!</PageOne>)
+    )
     injectGlobal`html::before { content: 'During first render'; }`
     const cssOne = sheetOne.getStyleTags()
 
@@ -140,7 +157,9 @@ describe('ssr', () => {
 
     const sheetTwo = new ServerStyleSheet()
     injectGlobal`html::before { content: 'During second render'; }`
-    const htmlTwo = renderToString(sheetTwo.collectStyles(<PageTwo>Camera Two!</PageTwo>))
+    const htmlTwo = renderToString(
+      sheetTwo.collectStyles(<PageTwo>Camera Two!</PageTwo>)
+    )
     const cssTwo = sheetTwo.getStyleTags()
 
     injectGlobal`html::before { content: 'After both renders'; }`
@@ -156,13 +175,13 @@ describe('ssr', () => {
       body { background: papayawhip; }
     `
     const Header = styled.h1.withConfig({ componentId: 'Header' })`
-      animation: ${ props => props.animation } 1s both;
+      animation: ${props => props.animation} 1s both;
     `
 
     const sheet = new ServerStyleSheet()
-    const html = renderToString(sheet.collectStyles(
-      <Header animation={keyframes`0% { opacity: 0; }`}/>
-    ))
+    const html = renderToString(
+      sheet.collectStyles(<Header animation={keyframes`0% { opacity: 0; }`} />)
+    )
     const css = sheet.getStyleTags()
 
     expect(html).toMatchSnapshot()
@@ -178,10 +197,12 @@ describe('ssr', () => {
     `
 
     const sheet = new ServerStyleSheet()
-    const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+    const html = renderToString(
+      sheet.collectStyles(<Heading>Hello SSR!</Heading>)
+    )
     const elements = sheet.getStyleElement()
 
-    expect(elements).toHaveLength(2);
+    expect(elements).toHaveLength(2)
 
     expect(elements[0].props).toMatchSnapshot()
     expect(elements[1].props).toMatchSnapshot()
@@ -199,11 +220,41 @@ describe('ssr', () => {
     `
 
     const sheet = new ServerStyleSheet()
-    const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>))
+    const html = renderToString(
+      sheet.collectStyles(<Heading>Hello SSR!</Heading>)
+    )
     const elements = sheet.getStyleElement()
 
-    expect(elements).toHaveLength(2);
-    expect(elements[0].props.nonce).toBe('foo');
-    expect(elements[1].props.nonce).toBe('foo');
+    expect(elements).toHaveLength(2)
+    expect(elements[0].props.nonce).toBe('foo')
+    expect(elements[1].props.nonce).toBe('foo')
+  })
+
+  it('should interleave styles with rendered HTML when utilitizing streaming', () => {
+    injectGlobal`
+      body { background: papayawhip; }
+    `
+    const Heading = styled.h1`
+      color: red;
+    `
+
+    const sheet = new ServerStyleSheet()
+    const jsx = sheet.collectStyles(<Heading>Hello SSR!</Heading>)
+    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx))
+
+    return new Promise((resolve, reject) => {
+      let received = ''
+
+      stream.on('data', chunk => {
+        received += chunk
+      })
+
+      stream.on('end', () => {
+        expect(received).toMatchSnapshot()
+        resolve()
+      })
+
+      stream.on('error', reject)
+    })
   })
 })

@@ -106,6 +106,19 @@ In the sandbox source, `styled-components` is an alias to `styled-components/src
 
 When you commit our pre-commit hook will run, which executes `lint-staged`. It will run the linter automatically and warn you if the code you've written doesn't comply with our code style guidelines.
 
+### How do I fix my pre-commit hook?
+
+We've recently migrated from `pre-commit` to `husky`, so if you're running into issues during this migration, you'll likely have to do the following:
+
+```sh
+rm .git/hooks/pre-commit*
+node ./node_modules/husky/bin/install.js
+```
+
+This will delete the old `pre-commit` git hook and install husky's one.
+Without the proper uninstallation script of the `pre-commit` package, this is necessary because `husky` will skip its installation when
+a git hook is already present.
+
 ## Release process
 
 [Core team members](./CORE_TEAM.md) have the responsibility of pushing new releases to npm. The release process is as follows:

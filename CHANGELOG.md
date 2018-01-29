@@ -8,6 +8,24 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Add warning if there are several instances of `styled-components` initialized on the page (see [#1412](https://github.com/styled-components/styled-components/pull/1412))
 
+- Minify the output CSS when using SSR in production (see [#1224](https://github.com/styled-components/styled-components/pull/1224))
+
+- Compile out error messages for production builds (see [#1445](https://github.com/styled-components/styled-components/pull/1445))
+
+- Use much faster CSS injection in the browser, by [@schwers](https://github.com/schwers) and [@philpl](https://github.com/philpl) (see [#1208](https://github.com/styled-components/styled-components/pull/1208))
+
+## [v3.0.2] - 2018-01-22
+
+- Add secret internals for jest-styled-components (do not use or you will be haunted by spooky ghosts :ghost:) (see [#1438](https://github.com/styled-components/styled-components/pull/1438))
+
+## [v3.0.1] - 2018-01-22
+
+- Add support for SafeAreaView when using styled-components in a React Native project (see [#1339](https://github.com/styled-components/styled-components/pull/1339))
+
+- Remove support for deprecated Navigator when using styled-components in a React Native project (see [#1339](https://github.com/styled-components/styled-components/pull/1339))
+
+- Ship flat bundles for each possible entry, thanks to [@Andarist](https://github.com/Andarist) (see [#1362](https://github.com/styled-components/styled-components/pull/1362))
+
 - Add ESLint precommit hook, thanks to [@lukebelliveau](https://github.com/lukebelliveau) (see [#1393](https://github.com/styled-components/styled-components/pull/1393))
 
 - Fixed nested themes not being republished on outer theme changes, thanks to [@Andarist](https://github.com/Andarist) (see [#1382](https://github.com/styled-components/styled-components/pull/1382))
@@ -19,6 +37,12 @@ All notable changes to this project will be documented in this file. If a contri
 - Expose `isStyledComponent` utility as a named export. This functionality is useful in some edge cases, such as knowing whether or not to use `innerRef` vs `ref` and detecting if a component class needs to be wrapped such that it can be used in a component selector. (see [#1418](https://github.com/styled-components/styled-components/pull/1418/))
 
 - Remove trailing commas on function arguments (not compatible with ES5 JS engines)
+
+- Ship source maps ([see #1425](https://github.com/styled-components/styled-components/pull/1425))
+
+- Upgrade test suites to run against react v16 ([see #1426](https://github.com/styled-components/styled-components/pull/1426))
+
+- Streaming rendering support (requires React 16, [see #1430](https://github.com/styled-components/styled-components/pull/1430))
 
 ## [v2.4.0] - 2017-12-22
 
@@ -345,7 +369,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.3.1...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.0.2...master
+[v3.0.2]: https://github.com/styled-components/styled-components/compare/v3.0.1...v3.0.2
+[v3.0.1]: https://github.com/styled-components/styled-components/compare/v2.4.0...v3.0.1
+[v2.4.0]: https://github.com/styled-components/styled-components/compare/v2.3.3...v2.4.0
+[v2.3.3]: https://github.com/styled-components/styled-components/compare/v2.3.2...v2.3.3
+[v2.3.2]: https://github.com/styled-components/styled-components/compare/v2.3.1...v2.3.2
 [v2.3.1]: https://github.com/styled-components/styled-components/compare/v2.3.0...v2.3.1
 [v2.3.0]: https://github.com/styled-components/styled-components/compare/v2.2.4...v2.3.0
 [v2.2.4]: https://github.com/styled-components/styled-components/compare/v2.2.3...v2.2.4

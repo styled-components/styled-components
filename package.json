@@ -1,12 +1,18 @@
 {
   "name": "styled-components",
-  "version": "2.4.0",
+  "version": "3.0.2",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
-  "main": "dist/styled-components.cjs.js",
   "typings": "typings/styled-components.d.ts",
+  "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.es.js",
   "module": "dist/styled-components.es.js",
-  "react-native": "dist/styled-components.native.js",
+  "react-native": "dist/styled-components.cjs.native.js",
+  "browser": {
+    "./dist/styled-components.es.js": "./dist/styled-components.browser.es.js",
+    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js",
+    "./dist/styled-components-no-parser.es.js": "./dist/styled-components-no-parser.browser.es.js",
+    "./dist/styled-components-no-parser.cjs.js": "./dist/styled-components-no-parser.browser.cjs.js"
+  },
   "scripts": {
     "build": "rollup -c",
     "prebuild": "rimraf dist",
@@ -68,12 +74,12 @@
     "is-plain-object": "^2.0.1",
     "prop-types": "^15.5.4",
     "stylis": "^3.4.0",
+    "stylis-rule-sheet": "^0.0.7",
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
-    "@types/react": "^15.0.37",
-    "@types/react-dom": "^15.5.1",
-    "@types/react-native": "^0.46.0",
+    "@types/react": "^16",
+    "@types/react-native": "^0.50.7",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
     "babel-eslint": "^7.1.1",
@@ -90,7 +96,8 @@
     "cross-env": "^5.1.1",
     "danger": "^2.0.0",
     "danger-plugin-jest": "^1.1.0",
-    "enzyme": "^2.8.2",
+    "enzyme": "^3.3.0",
+    "enzyme-adapter-react-16": "^1.1.1",
     "eslint": "^3.15.0",
     "eslint-config-airbnb": "^13.0.0",
     "eslint-config-prettier": "^2.9.0",
@@ -111,20 +118,23 @@
     "node-watch": "^0.4.1",
     "prettier": "1.9.2",
     "puppeteer": "^0.13.0",
-    "react": "^15.5.4",
-    "react-dom": "^15.5.4",
-    "react-native": "^0.39.2",
+    "raf": "^3.4.0",
+    "react": "^16.0.0",
+    "react-dom": "^16.0.0",
+    "react-native": "^0.46.0",
     "react-primitives": "^0.4.2",
-    "react-test-renderer": "^15.6.1",
+    "react-test-renderer": "^16.0.0",
     "rimraf": "^2.6.1",
     "rollup": "^0.52.2",
     "rollup-plugin-babel": "^2.7.1",
     "rollup-plugin-commonjs": "^6.0.0",
     "rollup-plugin-flow": "^1.1.1",
+    "rollup-plugin-ignore": "^1.0.3",
     "rollup-plugin-json": "^2.1.0",
     "rollup-plugin-node-resolve": "^2.0.0",
     "rollup-plugin-replace": "^1.1.1",
-    "rollup-plugin-uglify": "^1.0.1",
+    "rollup-plugin-sourcemaps": "^0.4.2",
+    "rollup-plugin-uglify": "^3.0.0",
     "rollup-plugin-visualizer": "^0.1.5",
     "tslint": "^4.3.1",
     "typescript": "^2.4.1"
@@ -133,9 +143,17 @@
     "react": ">= 0.14.0 < 17.0.0-0"
   },
   "jest": {
+    "globals": {
+      "__DEV__": true
+    },
     "clearMocks": true,
     "roots": [
       "<rootDir>/src/"
+    ],
+    "setupFiles": [
+      "raf/polyfill",
+      "<rootDir>/src/test/enzymeSetup.js",
+      "<rootDir>/src/test/globals.js"
     ],
     "testPathIgnorePatterns": [
       "<rootDir>/src/native",
@@ -151,7 +169,7 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "threshold": "14.5kB"
+      "threshold": "14.9kB"
     }
   ]
 }
