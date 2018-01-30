@@ -7,11 +7,7 @@ const generateAlphabeticName = (code: number): string => {
   let name = ''
   let x
 
-  for (
-    x = code;
-    x > charsLength;
-    x = Math.floor(x / charsLength)
-  ) {
+  for (x = code; x > charsLength; x = Math.floor(x / charsLength)) {
     name = chars[x % charsLength] + name
   }
 

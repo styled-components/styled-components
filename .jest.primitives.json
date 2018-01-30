@@ -3,6 +3,9 @@
   "globals": {
     "__DEV__": true
   },
+  "setupFiles": [
+    "<rootDir>/src/test/enzymeSetup.js"
+  ],
   "testRegex": "./src/primitives/test/.*.js$",
   "moduleFileExtensions": ["ios.js", "js"],
   "preset": "react-native",

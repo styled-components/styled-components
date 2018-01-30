@@ -5,15 +5,19 @@
 .*/node_modules/animated/.*
 .*/node_modules/react-sketchapp/.*
 .*/node_modules/react-native-web/.*
+.*/node_modules/metro/.*
+.*/node_modules/metro-bundler/.*
+.*/node_modules/metro-source-map/.*
 .*/node_modules/babel-plugin-transform-react-remove-prop-types/.*
 .*/dist/.*
 .*/lib/.*
 .*/node_modules/babel-plugin-flow-react-proptypes/src/__test__/.*
-.*/dangerfile.js
+.*/src/.*/test/.*
 
 [include]
 
 [libs]
+.*/node_modules/danger/distribution/danger.js.flow
 
 [options]
 suppress_comment=.*\\$FlowFixMe

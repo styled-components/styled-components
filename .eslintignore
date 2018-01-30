@@ -1,3 +1,5 @@
+node_modules
+dist/**/*.js
 src/decls/**/*.js
 src/vendor/**/*.js
 src/test/utils.js

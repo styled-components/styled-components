@@ -1,7 +1,8 @@
 node_modules
-lib
 npm-debug.log.*
 dist
 .DS_Store
 bundle-stats.html
 .vscode
+__diff_output__
+test-results.json

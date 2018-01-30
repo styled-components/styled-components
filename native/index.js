@@ -1,2 +1,2 @@
 /* eslint-disable flowtype/require-valid-file-annotation */
-module.exports = require('../lib/native')
+module.exports = require('../dist/styled-components.native.cjs')

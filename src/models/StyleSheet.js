@@ -7,29 +7,34 @@ export const SC_ATTR = 'data-styled-components'
 export const LOCAL_ATTR = 'data-styled-components-is-local'
 export const CONTEXT_KEY = '__styled-components-stylesheet__'
 
+/* eslint-disable flowtype/object-type-delimiter */
 export interface Tag {
-  isLocal: boolean,
-  components: { [string]: Object },
+  isLocal: boolean;
 
-  isFull(): boolean,
-  addComponent(componentId: string): void,
-  inject(componentId: string, css: string, name: ?string): void,
-  toHTML(): string,
-  toReactElement(key: string): React.Element<*>,
-  clone(): Tag,
+  isSealed(): boolean;
+  getComponentIds(): Array<string>;
+  addComponent(componentId: string): void;
+  inject(componentId: string, css: Array<string>, name: ?string): void;
+  toHTML(): string;
+  toReactElement(key: string): React.Element<*>;
+  clone(): Tag;
 }
+/* eslint-enable flowtype/object-type-delimiter */
 
 let instance = null
 // eslint-disable-next-line no-use-before-define
 export const clones: Array<StyleSheet> = []
 
+const IS_BROWSER = typeof document !== 'undefined'
+
 export default class StyleSheet {
-  tagConstructor: (boolean) => Tag
+  tagConstructor: boolean => Tag
   tags: Array<Tag>
   names: { [string]: boolean }
   hashes: { [string]: string } = {}
-  deferredInjections: { [string]: string } = {}
+  deferredInjections: { [string]: Array<string> } = {}
   componentTags: { [string]: Tag }
+
   // helper for `ComponentStyle` to know when it cache static styles.
   // staticly styled-component can not safely cache styles on the server
   // without all `ComponentStyle` instances saving a reference to the
@@ -37,11 +42,12 @@ export default class StyleSheet {
   // or listening to creation / reset events. otherwise you might create
   // a component with one stylesheet and render it another api response
   // with another, losing styles on from your server-side render.
-  stylesCacheable = typeof document !== 'undefined'
+  stylesCacheable = IS_BROWSER
 
-  constructor(tagConstructor: (boolean) => Tag,
+  constructor(
+    tagConstructor: boolean => Tag,
     tags: Array<Tag> = [],
-    names: { [string]: boolean } = {},
+    names: { [string]: boolean } = {}
   ) {
     this.tagConstructor = tagConstructor
     this.tags = tags
@@ -53,7 +59,7 @@ export default class StyleSheet {
     this.componentTags = {}
 
     this.tags.forEach(tag => {
-      Object.keys(tag.components).forEach(componentId => {
+      tag.getComponentIds().forEach(componentId => {
         this.componentTags[componentId] = tag
       })
     })
@@ -78,7 +84,7 @@ export default class StyleSheet {
     return !!this.componentTags[componentId]
   }
 
-  deferredInject(componentId: string, isLocal: boolean, css: string) {
+  deferredInject(componentId: string, isLocal: boolean, css: Array<string>) {
     if (this === instance) {
       clones.forEach(clone => {
         clone.deferredInject(componentId, isLocal, css)
@@ -89,7 +95,13 @@ export default class StyleSheet {
     this.deferredInjections[componentId] = css
   }
 
-  inject(componentId: string, isLocal: boolean, css: string, hash: ?any, name: ?string) {
+  inject(
+    componentId: string,
+    isLocal: boolean,
+    css: Array<string>,
+    hash: ?any,
+    name: ?string
+  ) {
     if (this === instance) {
       clones.forEach(clone => {
         clone.inject(componentId, isLocal, css)
@@ -126,9 +138,10 @@ export default class StyleSheet {
     }
 
     const lastTag = this.tags[this.tags.length - 1]
-    const componentTag = (!lastTag || lastTag.isFull() || lastTag.isLocal !== isLocal)
-      ? this.createNewTag(isLocal)
-      : lastTag
+    const componentTag =
+      !lastTag || lastTag.isSealed() || lastTag.isLocal !== isLocal
+        ? this.createNewTag(isLocal)
+        : lastTag
     this.componentTags[componentId] = componentTag
     componentTag.addComponent(componentId)
     return componentTag
@@ -150,16 +163,15 @@ export default class StyleSheet {
 
   /* We can make isServer totally implicit once Jest 20 drops and we
    * can change environment on a per-test basis. */
-  static create(isServer: ?boolean = typeof document === 'undefined') {
+  static create(isServer: ?boolean = !IS_BROWSER) {
     return (isServer ? ServerStyleSheet : BrowserStyleSheet).create()
   }
-
 
   static clone(oldSheet: StyleSheet) {
     const newSheet = new StyleSheet(
       oldSheet.tagConstructor,
       oldSheet.tags.map(tag => tag.clone()),
-      { ...oldSheet.names },
+      { ...oldSheet.names }
     )
 
     newSheet.hashes = { ...oldSheet.hashes }

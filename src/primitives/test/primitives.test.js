@@ -214,10 +214,9 @@ describe('primitives', () => {
       const view = wrapper.find('View').first()
       const comp = wrapper.find(Comp).first()
 
-      // $FlowFixMe
-      expect(ref).toHaveBeenCalledWith(view.node)
+      expect(ref).toHaveBeenCalledWith(view.instance())
       expect(view.prop('innerRef')).toBeFalsy()
-      expect(comp.node.root).toBeTruthy()
+      expect(comp.instance().root).toBeTruthy()
     })
 
     class InnerComponent extends React.Component {
@@ -234,10 +233,9 @@ describe('primitives', () => {
       const innerComponent = wrapper.find(InnerComponent).first()
       const outerComponent = wrapper.find(OuterComponent).first()
 
-      // $FlowFixMe
-      expect(ref).toHaveBeenCalledWith(innerComponent.node)
+      expect(ref).toHaveBeenCalledWith(innerComponent.instance())
       expect(innerComponent.prop('innerRef')).toBeFalsy()
-      expect(outerComponent.node.root).toBeTruthy()
+      expect(outerComponent.instance().root).toBeTruthy()
     })
 
     it('should pass the innerRef to the wrapped styled component', () => {
@@ -250,9 +248,8 @@ describe('primitives', () => {
       const innerComponent = wrapper.find(InnerComponent).first()
       const outerComponent = wrapper.find(OuterComponent).first()
 
-      // $FlowFixMe
-      expect(ref).toHaveBeenCalledWith(view.node)
-      expect(outerComponent.node.root).toBeTruthy()
+      expect(ref).toHaveBeenCalledWith(view.instance())
+      expect(outerComponent.instance().root).toBeTruthy()
     })
 
     it('should pass innerRef instead of ref to a wrapped stateless functional component', () => {
@@ -266,7 +263,7 @@ describe('primitives', () => {
 
       expect(innerComponent.prop('ref')).toBeFalsy()
       expect(innerComponent.prop('innerRef')).toBeTruthy()
-      expect(outerComponent.node.root).toBeFalsy()
+      expect(outerComponent.instance().root).toBeFalsy()
     })
   })
 })

@@ -1,8 +1,9 @@
 // @flow
-export type Interpolation = ((executionContext: Object) => Interpolation) |
-  string |
-  number |
-  Array<Interpolation>
+export type Interpolation =
+  | ((executionContext: Object) => Interpolation)
+  | string
+  | number
+  | Array<Interpolation>
 
 /* todo: I want this to actually be an array of Function | string but that causes errors */
 export type RuleSet = Array<Interpolation>
@@ -21,8 +22,8 @@ export type Stringifier = (
   rules: Array<Interpolation>,
   selector: ?string,
   prefix: ?string
-) => string
+) => Array<string>
 
 export type StyleSheet = {
-  create: Function
+  create: Function,
 }

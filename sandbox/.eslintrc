@@ -1,0 +1,8 @@
+{
+  "settings": {
+    "import/core-modules": ["styled-components"]
+  },
+  "rules": {
+    "flowtype/require-valid-file-annotation": 0
+  }
+}
