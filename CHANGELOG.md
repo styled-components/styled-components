@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Multiple optimizations in the mount/render cycle (see [#1049](https://github.com/styled-components/styled-components/pull/1049))
+
 ## [v3.1.4] - 2018-01-29
 
 - Disable "speedy" mode for IE and Edge. There seems to be some incompatibility with how the `insertRule` API functions in their rendering stack compared to the other vendors. (see [#1465](https://github.com/styled-components/styled-components/pull/1465)) _Note: this is currently being investigated for reimplementation._
