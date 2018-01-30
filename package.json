@@ -16,7 +16,7 @@
   "scripts": {
     "build": "rollup -c",
     "prebuild": "rimraf dist",
-    "test": "npm run test:web && npm run test:native && npm run test:size",
+    "test": "npm run test:web && npm run test:native && npm run test:jest-styled-components && npm run test:size",
     "test:web": "jest --outputFile test-results.json --json",
     "test:web:watch": "npm run test:web -- --watch",
     "test:native": "jest -c .jest.native.json",
