@@ -17,6 +17,7 @@
  * Note: replace · with * in the above snippet.
  * */
 import extractCompsFromCSS from '../utils/extractCompsFromCSS'
+import isMicrosoft from '../utils/isMicrosoft'
 import stringifyRules from '../utils/stringifyRules'
 import getNonce from '../utils/nonce'
 import type { Tag } from './StyleSheet'
@@ -26,7 +27,8 @@ declare var __DEV__: ?string
 
 const DISABLE_SPEEDY =
   (typeof __DEV__ === 'boolean' && __DEV__) ||
-  process.env.NODE_ENV !== 'production'
+  process.env.NODE_ENV !== 'production' ||
+  isMicrosoft() // IE and Edge have inconsistent behavior with the insertRule API
 
 const COMPONENTS_PER_TAG = 40
 const SPEEDY_COMPONENTS_PER_TAG = 1000 // insertRule allows more injections before a perf slowdown
