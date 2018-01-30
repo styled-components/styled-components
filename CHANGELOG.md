@@ -6,7 +6,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- Disable "speedy" mode for IE and Edge. There seems to be some incompatibility with how the `insertRule` API functions in their rendering stack compared to the other vendors. (see [#1465](https://github.com/styled-components/styled-components/pull/1465))
+## [v3.1.4] - 2018-01-29
+
+- Disable "speedy" mode for IE and Edge. There seems to be some incompatibility with how the `insertRule` API functions in their rendering stack compared to the other vendors. (see [#1465](https://github.com/styled-components/styled-components/pull/1465)) _Note: this is currently being investigated for reimplementation._
 
 ## [v3.1.3] - 2018-01-29
 
@@ -377,8 +379,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.3...master
-[v3.1.3]: https://github.com/styled-components/styled-components/compare/v3.1.2...v3.1.3
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.4...master
+[v3.1.4]: https://github.com/styled-components/styled-components/compare/v3.1.3...v3.1.4
+[v3.1.3]: https://github.com/styled-components/styled-components/compare/v3.1.1...v3.1.3
 [v3.1.1]: https://github.com/styled-components/styled-components/compare/v3.1.0...v3.1.1
 [v3.1.0]: https://github.com/styled-components/styled-components/compare/v3.0.2...v3.1.0
 [v3.0.2]: https://github.com/styled-components/styled-components/compare/v3.0.1...v3.0.2
