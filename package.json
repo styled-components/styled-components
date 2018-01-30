@@ -24,6 +24,7 @@
     "test:primitives": "jest -c .jest.primitives.json",
     "test:primitives:watch": "npm run test:primitives -- --watch",
     "test:integration": "jest -c .jest.integration.json --forceExit",
+    "test:jest-styled-components": "npm install jest-styled-components@next && npm run test:integration",
     "test:size": "bundlesize",
     "danger": "cross-env NODE_ENV=test danger run -- --verbose",
     "flow": "flow check",
