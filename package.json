@@ -1,12 +1,12 @@
 {
   "name": "styled-components",
-  "version": "3.0.2",
+  "version": "3.1.3",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "typings": "typings/styled-components.d.ts",
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.es.js",
   "module": "dist/styled-components.es.js",
-  "react-native": "dist/styled-components.cjs.native.js",
+  "react-native": "dist/styled-components.native.cjs.js",
   "browser": {
     "./dist/styled-components.es.js": "./dist/styled-components.browser.es.js",
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js",
@@ -169,7 +169,7 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "threshold": "14.9kB"
+      "threshold": "15.25kB"
     }
   ]
 }

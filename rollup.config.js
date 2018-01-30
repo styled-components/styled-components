@@ -112,7 +112,7 @@ const browserConfig = Object.assign({}, configBase, {
 
 const nativeConfig = Object.assign({}, configBase, {
   input: 'src/native/index.js',
-  output: Object.assign({}, cjs, { file: 'dist/styled-components.native.js' }),
+  output: Object.assign({}, cjs, { file: 'dist/styled-components.native.cjs.js' }),
   external: configBase.external.concat('react-native'),
 })
 

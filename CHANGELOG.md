@@ -8,11 +8,21 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Add warning if there are several instances of `styled-components` initialized on the page (see [#1412](https://github.com/styled-components/styled-components/pull/1412))
 
-- Minify the output CSS when using SSR in production (see [#1224](https://github.com/styled-components/styled-components/pull/1224))
+- Disable "speedy" mode for IE and Edge. There seems to be some incompatibility with how the `insertRule` API functions in their rendering stack compared to the other vendors. (see [#1465](https://github.com/styled-components/styled-components/pull/1465))
+
+## [v3.1.3] - 2018-01-29
+
+- Disable "speedy" mode for non-production environments, fixes `jest-styled-components` compatibility (see [#1460](https://github.com/styled-components/styled-components/pull/1460))
+
+## [v3.1.1] - 2018-01-29
+
+- Hotfix for importing in ReactNative, thanks to [@vvasilev-](https://github.com/vvasilev-) (see [#1455](https://github.com/styled-components/styled-components/pull/1455))
+
+## [v3.1.0] - 2018-01-29
 
 - Compile out error messages for production builds (see [#1445](https://github.com/styled-components/styled-components/pull/1445))
-
 - Use much faster CSS injection in the browser, by [@schwers](https://github.com/schwers) and [@philpl](https://github.com/philpl) (see [#1208](https://github.com/styled-components/styled-components/pull/1208))
+- Add support for streaming server-side rendering, by [@probablyup](https://github.com/probablyup) (see [#1430](https://github.com/styled-components/styled-components/pull/1430))
 
 ## [v3.0.2] - 2018-01-22
 
@@ -369,7 +379,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.0.2...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.3...master
+[v3.1.3]: https://github.com/styled-components/styled-components/compare/v3.1.2...v3.1.3
+[v3.1.1]: https://github.com/styled-components/styled-components/compare/v3.1.0...v3.1.1
+[v3.1.0]: https://github.com/styled-components/styled-components/compare/v3.0.2...v3.1.0
 [v3.0.2]: https://github.com/styled-components/styled-components/compare/v3.0.1...v3.0.2
 [v3.0.1]: https://github.com/styled-components/styled-components/compare/v2.4.0...v3.0.1
 [v2.4.0]: https://github.com/styled-components/styled-components/compare/v2.3.3...v2.4.0
