@@ -17,7 +17,6 @@
  * Note: replace · with * in the above snippet.
  * */
 import extractCompsFromCSS from '../utils/extractCompsFromCSS'
-import isMicrosoft from '../utils/isMicrosoft'
 import stringifyRules from '../utils/stringifyRules'
 import getNonce from '../utils/nonce'
 import type { Tag } from './StyleSheet'
@@ -27,8 +26,7 @@ declare var __DEV__: ?string
 
 const DISABLE_SPEEDY =
   (typeof __DEV__ === 'boolean' && __DEV__) ||
-  process.env.NODE_ENV !== 'production' ||
-  isMicrosoft() // IE and Edge have inconsistent behavior with the insertRule API
+  process.env.NODE_ENV !== 'production'
 
 const COMPONENTS_PER_TAG = 40
 const SPEEDY_COMPONENTS_PER_TAG = 1000 // insertRule allows more injections before a perf slowdown
@@ -154,7 +152,6 @@ if (!DISABLE_SPEEDY) {
     replaceElement() {
       // Build up our replacement style tag
       const newEl = this.el.cloneNode(false)
-      newEl.setAttribute(SC_ATTR, '')
 
       if (!this.el.parentNode) {
         throw new Error(
@@ -163,6 +160,9 @@ if (!DISABLE_SPEEDY) {
             : ''
         )
       }
+
+      // workaround for an IE/Edge bug: https://twitter.com/probablyup/status/958138927981977600
+      newEl.textContent = ' '
 
       this.el.parentNode.replaceChild(newEl, this.el)
       this.el = newEl
