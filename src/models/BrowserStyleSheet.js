@@ -20,6 +20,7 @@ import extractCompsFromCSS from '../utils/extractCompsFromCSS'
 import isMicrosoft from '../utils/isMicrosoft'
 import stringifyRules from '../utils/stringifyRules'
 import getNonce from '../utils/nonce'
+import appendToHead from '../utils/appendToHead'
 import type { Tag } from './StyleSheet'
 import StyleSheet, { SC_ATTR, LOCAL_ATTR } from './StyleSheet'
 
@@ -425,7 +426,7 @@ export default {
           process.env.NODE_ENV !== 'production' ? 'Missing document <head>' : ''
         )
       }
-      document.head.appendChild(el)
+      appendToHead(el)
       return new BrowserTag(el, isLocal)
     }
 

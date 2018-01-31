@@ -7,6 +7,8 @@
  *
  * NOTE: this method MUST be called before ReactDOM.hydrate().
  */
+import appendToHead from './appendToHead'
+
 export default function consolidateStreamedStyles() {
   const blocks = Array.from(
     document.querySelectorAll('style[data-styled-components]')
@@ -21,6 +23,6 @@ export default function consolidateStreamedStyles() {
     }
 
     // $FlowFixMe
-    document.head.appendChild(frag)
+    appendToHead(frag)
   }
 }
