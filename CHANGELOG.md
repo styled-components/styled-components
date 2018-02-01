@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Fix breaking lines when we are appending styles on streaming. (see [#1480](https://github.com/styled-components/styled-components/pull/1480))
+
 ## [v3.1.5] - 2018-02-01
 
 - Apply a workaround to re-enable "speedy" mode for IE/Edge ([see #1468](https://github.com/styled-components/styled-components/pull/1468))
