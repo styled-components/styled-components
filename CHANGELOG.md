@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+## [v3.1.5] - 2018-02-01
+
+- Append style tags below existing tags. If no tags exist append them to the bottom of the head. This prevents side effects e.g. adding a tag after a critical CSS tag and potentially overriding styles. (see [#1474](https://github.com/styled-components/styled-components/pull/1474))
+
 ## [v3.1.4] - 2018-01-29
 
 - Disable "speedy" mode for IE and Edge. There seems to be some incompatibility with how the `insertRule` API functions in their rendering stack compared to the other vendors. (see [#1465](https://github.com/styled-components/styled-components/pull/1465)) _Note: this is currently being investigated for reimplementation._
