@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Disable "speedy" mode for IE and Edge. There seems to be some incompatibility with how the `insertRule` API functions in their rendering stack compared to the other vendors. (see [#1465](https://github.com/styled-components/styled-components/pull/1465)) _Note: this is currently being investigated for reimplementation._
 
+- Apply a workaround to re-enable "speedy" mode for IE/Edge ([see #1468](https://github.com/styled-components/styled-components/pull/1468))
+
 ## [v3.1.3] - 2018-01-29
 
 - Disable "speedy" mode for non-production environments, fixes `jest-styled-components` compatibility (see [#1460](https://github.com/styled-components/styled-components/pull/1460))
