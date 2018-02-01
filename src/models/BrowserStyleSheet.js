@@ -213,7 +213,7 @@ if (!DISABLE_SPEEDY) {
       this.size += 1
     }
 
-    inject(componentId: string, cssRules: Array<string>) {
+    inject(componentId: string, cssRules: Array<string>, name: ?string) {
       if (!this.ready) this.replaceElement()
 
       const comp = this.components[componentId]
@@ -245,6 +245,14 @@ if (!DISABLE_SPEEDY) {
 
       // Update number of rules for component
       this.componentSizes[componentIndex] += injectedRules
+
+      if (name !== undefined && name !== null) {
+        const existingNames = this.el.getAttribute(SC_ATTR)
+        this.el.setAttribute(
+          SC_ATTR,
+          existingNames ? `${existingNames} ${name}` : name
+        )
+      }
     }
 
     toRawCSS() {
