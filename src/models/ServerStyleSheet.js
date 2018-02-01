@@ -133,7 +133,6 @@ export default class ServerStyleSheet {
   closed: boolean
   instance: StyleSheet
   isStreaming: boolean
-  lastIndex: number
 
   constructor() {
     this.instance = StyleSheet.clone(StyleSheet.instance)
@@ -182,17 +181,17 @@ export default class ServerStyleSheet {
       ourStream._read = () => {}
 
       this.isStreaming = true
-      this.lastIndex = 0
 
       readableStream.on('data', chunk => {
         ourStream.push(
-          this.instance.tags
-            .slice(this.lastIndex)
-            .map(tag => tag.toHTML())
-            .join('') + chunk
-        )
+          this.instance.tags.reduce((html, tag) => {
+            if (!tag.isSealed()) {
+              html += tag.toHTML() // eslint-disable-line no-param-reassign
+            }
 
-        this.lastIndex = this.instance.tags.length - 1
+            return html
+          }, '') + chunk
+        )
       })
 
       readableStream.on('end', () => {
