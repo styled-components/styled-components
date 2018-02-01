@@ -6,13 +6,19 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-## [v3.1.5] - 2018-02-01
+## [v3.1.6] - 2018-02-01
 
 - Append style tags below existing tags. If no tags exist append them to the bottom of the head. This prevents side effects e.g. adding a tag after a critical CSS tag and potentially overriding styles. (see [#1474](https://github.com/styled-components/styled-components/pull/1474))
 
+## [v3.1.5] - 2018-02-01
+
+- Apply a workaround to re-enable "speedy" mode for IE/Edge ([see #1468](https://github.com/styled-components/styled-components/pull/1468))
+
+- Fix memory leak in the server-side streaming logic ([see #1475](https://github.com/styled-components/styled-components/pull/1475))
+
 ## [v3.1.4] - 2018-01-29
 
-- Disable "speedy" mode for IE and Edge. There seems to be some incompatibility with how the `insertRule` API functions in their rendering stack compared to the other vendors. (see [#1465](https://github.com/styled-components/styled-components/pull/1465)) _Note: this is currently being investigated for reimplementation._
+- Disable "speedy" mode for IE and Edge. There seems to be some incompatibility with how the `insertRule` API functions in their rendering stack compared to the other vendors. (see [#1465](https://github.com/styled-components/styled-components/pull/1465))
 
 ## [v3.1.3] - 2018-01-29
 
@@ -383,7 +389,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.4...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.5...master
+[v3.1.5]: https://github.com/styled-components/styled-components/compare/v3.1.4...v3.1.5
 [v3.1.4]: https://github.com/styled-components/styled-components/compare/v3.1.3...v3.1.4
 [v3.1.3]: https://github.com/styled-components/styled-components/compare/v3.1.1...v3.1.3
 [v3.1.1]: https://github.com/styled-components/styled-components/compare/v3.1.0...v3.1.1
