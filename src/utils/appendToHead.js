@@ -11,7 +11,6 @@ export default function appendToHead(el: HTMLStyleElement) {
   )
   if (scStyleTags.length > 0 && document.insertAdjacentElement) {
     const lastScStyleTag = scStyleTags[scStyleTags.length - 1]
-    // $FlowFixMe
     lastScStyleTag.insertAdjacentElement('afterend', el)
     return
   }
