@@ -162,8 +162,9 @@ if (!DISABLE_SPEEDY) {
       }
 
       // workaround for an IE/Edge bug: https://twitter.com/probablyup/status/958138927981977600
-      newEl.textContent = ' '
+      newEl.appendChild(document.createTextNode(''))
 
+      // $FlowFixMe
       this.el.parentNode.replaceChild(newEl, this.el)
       this.el = newEl
       this.ready = true
