@@ -9,10 +9,10 @@ export default function appendToHead(el: HTMLStyleElement) {
   const scStyleTags = Array.from(
     document.querySelectorAll('style[data-styled-components]')
   )
-  if (scStyleTags.length > 0) {
+  if (scStyleTags.length > 0 && document.insertAdjacentElement) {
     const lastScStyleTag = scStyleTags[scStyleTags.length - 1]
     // $FlowFixMe
-    lastScStyleTag.parentNode.insertBefore(el, lastScStyleTag.nextSibling)
+    lastScStyleTag.insertAdjacentElement('afterend', el)
     return
   }
 
