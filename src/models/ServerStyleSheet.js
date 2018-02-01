@@ -153,10 +153,14 @@ export default class ServerStyleSheet {
     )
   }
 
+  close() {
+    clones.splice(clones.indexOf(this.instance), 1)
+    this.closed = true
+  }
+
   getStyleTags(): string {
     if (!this.closed) {
-      clones.splice(clones.indexOf(this.instance), 1)
-      this.closed = true
+      this.close()
     }
 
     return this.instance.toHTML()
@@ -164,8 +168,7 @@ export default class ServerStyleSheet {
 
   getStyleElement() {
     if (!this.closed) {
-      clones.splice(clones.indexOf(this.instance), 1)
-      this.closed = true
+      this.close()
     }
 
     return this.instance.toReactElements()
@@ -193,12 +196,13 @@ export default class ServerStyleSheet {
       })
 
       readableStream.on('end', () => {
-        this.closed = true
         ourStream.push(null)
+        this.close()
       })
 
       readableStream.on('error', err => {
         ourStream.emit('error', err)
+        this.close()
       })
 
       return ourStream
