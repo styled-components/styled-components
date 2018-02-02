@@ -419,7 +419,11 @@ export default {
       }
 
       tags.push(
-        new BrowserTag(el, el.getAttribute(LOCAL_ATTR) === 'true', el.innerHTML)
+        new BrowserTag(
+          el,
+          el.getAttribute(LOCAL_ATTR) === 'true',
+          el.textContent
+        )
       )
     }
 
