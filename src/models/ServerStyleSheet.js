@@ -120,10 +120,7 @@ class ServerTag implements Tag {
     const copy = new ServerTag(this.isLocal)
     copy.names = [].concat(this.names)
     copy.size = this.size
-    copy.components = Object.keys(this.components).reduce((acc, key) => {
-      acc[key] = { ...this.components[key] } // eslint-disable-line no-param-reassign
-      return acc
-    }, {})
+    copy.components = Object.assign({}, this.components);
 
     return copy
   }
