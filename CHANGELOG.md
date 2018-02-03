@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Bugfix for the last style tag sometimes being emitted multiple times during streaming ([see #1479](https://github.com/styled-components/styled-components/pull/1479))
 
+- Bugfix for speedy mode rehydration and added handling for out-of-order style injection ([see #1482](https://github.com/styled-components/styled-components/pull/1482))
+
 ## [v3.1.5] - 2018-02-01
 
 - Apply a workaround to re-enable "speedy" mode for IE/Edge ([see #1468](https://github.com/styled-components/styled-components/pull/1468))

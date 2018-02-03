@@ -34,6 +34,7 @@ export default class StyleSheet {
   hashes: { [string]: string } = {}
   deferredInjections: { [string]: Array<string> } = {}
   componentTags: { [string]: Tag }
+  isStreaming: boolean
 
   // helper for `ComponentStyle` to know when it cache static styles.
   // staticly styled-component can not safely cache styles on the server
@@ -53,6 +54,7 @@ export default class StyleSheet {
     this.tags = tags
     this.names = names
     this.constructComponentTagMap()
+    this.isStreaming = false
   }
 
   constructComponentTagMap() {
@@ -133,7 +135,14 @@ export default class StyleSheet {
 
   getOrCreateTag(componentId: string, isLocal: boolean) {
     const existingTag = this.componentTags[componentId]
-    if (existingTag) {
+
+    /**
+     * in a streaming context, once a tag is sealed it can never be added to again
+     * or those styles will never make it to the client
+     */
+    if (
+      existingTag && this.isStreaming ? !existingTag.isSealed() : existingTag
+    ) {
       return existingTag
     }
 
