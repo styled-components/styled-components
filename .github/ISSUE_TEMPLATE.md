@@ -44,3 +44,6 @@ https://codesandbox.io/s/rkmNRByE4
 ## Expected Behavior
 
 ## Actual Behavior
+
+<!-- Love styled-components? Please consider supporting our collective:
+👉  https://opencollective.com/styled-components/donate -->
