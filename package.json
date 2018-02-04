@@ -35,7 +35,8 @@
     "precommit": "lint-staged",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
-    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js"
+    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
+    "postinstall": "opencollective postinstall"
   },
   "repository": {
     "type": "git",
@@ -72,6 +73,7 @@
     "fbjs": "^0.8.9",
     "hoist-non-react-statics": "^1.2.0",
     "is-plain-object": "^2.0.1",
+    "opencollective": "^1.0.3",
     "prop-types": "^15.5.4",
     "stylis": "^3.4.0",
     "stylis-rule-sheet": "^0.0.7",
@@ -171,5 +173,9 @@
       "path": "./dist/styled-components.min.js",
       "threshold": "15kB"
     }
-  ]
+  ],
+  "collective": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/styled-components"
+  }
 }
