@@ -406,10 +406,15 @@ export function tagConstructorWithTarget(target?: HTMLElement): Function {
     el.setAttribute(SC_ATTR, '')
     el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
     const targ = typeof target !== 'undefined' ? target : document.head
+
     if (targ instanceof HTMLElement === false) {
-      throw new Error(`Expected target to be HTMLElement, received ${target}`)
+      throw new Error(`Expected target to be HTMLElement`)
     }
-    targ.appendChild(el)
+
+    if (targ) {
+      targ.appendChild(el)
+    }
+
     return new BrowserTag(el, isLocal)
   }
 }
