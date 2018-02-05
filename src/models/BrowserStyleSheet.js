@@ -331,6 +331,8 @@ if (!DISABLE_SPEEDY) {
 
       comp.textNode.appendData(css.join(' '))
 
+      // Append to this.el in case the underlying
+      // <style> tag has been edited to not contain comp.textNode
       if (comp.textNode.parentNode !== this.el) {
         this.el.appendChild(comp.textNode)
       }
