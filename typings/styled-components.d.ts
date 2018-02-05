@@ -102,7 +102,7 @@ interface StylesheetComponentProps {
 
 interface StyleSheetManagerProps {
   sheet?: ServerStyleSheet;
-  target?: Node
+  target?: Node;
 }
 
 export class StyleSheetManager extends React.Component<StyleSheetManagerProps, {}> { }
