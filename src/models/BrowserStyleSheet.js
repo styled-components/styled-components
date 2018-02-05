@@ -401,8 +401,10 @@ export function tagConstructorWithTarget(target?: HTMLElement): Function {
     el.type = 'text/css'
     el.setAttribute(SC_ATTR, '')
     el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
-    const targ = target || document.head
-    if (!targ) throw new Error('Missing document <head>')
+    const targ = typeof target !== 'undefined' ? target : document.head
+    if (targ instanceof HTMLElement === false) {
+      throw new Error(`Expected target to be HTMLElement, received ${target}`)
+    }
     targ.appendChild(el)
     return new BrowserTag(el, isLocal)
   }
