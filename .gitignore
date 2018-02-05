@@ -5,3 +5,4 @@ dist
 .DS_Store
 bundle-stats.html
 .vscode
+test-results.json
