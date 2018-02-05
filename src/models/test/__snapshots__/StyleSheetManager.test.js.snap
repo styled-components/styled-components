@@ -3,25 +3,21 @@
 exports[`StyleSheetManager should apply styles to appropriate targets for nested StyleSheetManagers 1`] = `
 "<style type=\\"text/css\\" data-styled-components=\\"d\\" data-styled-components-is-local=\\"true\\">
 /* sc-component-id: sc-a */
-.sc-a {}
-.d{color:red;}</style><style type=\\"text/css\\" data-styled-components=\\"e\\" data-styled-components-is-local=\\"true\\">
+.sc-a {}.d{color:red;}</style><style type=\\"text/css\\" data-styled-components=\\"e\\" data-styled-components-is-local=\\"true\\">
 /* sc-component-id: sc-b */
-
 .e{color:blue;}</style>"
 `;
 
 exports[`StyleSheetManager should apply styles to appropriate targets for nested StyleSheetManagers 2`] = `
 "<style type=\\"text/css\\" data-styled-components=\\"f\\" data-styled-components-is-local=\\"true\\">
 /* sc-component-id: sc-c */
-
 .f{color:green;}</style>"
 `;
 
-exports[`StyleSheetManager ssr should extract CSS outside the nested StyleSheetManager 1`] = `"<div data-reactroot=\\"\\" data-reactid=\\"1\\" data-react-checksum=\\"-1987894045\\"><h1 class=\\"sc-a c\\" data-reactid=\\"2\\"></h1><div data-reactid=\\"3\\"></div></div>"`;
+exports[`StyleSheetManager ssr should extract CSS outside the nested StyleSheetManager 1`] = `"<div data-reactroot=\\"\\"><h1 class=\\"sc-a c\\"></h1><div></div></div>"`;
 
 exports[`StyleSheetManager ssr should extract CSS outside the nested StyleSheetManager 2`] = `
 "<style type=\\"text/css\\" data-styled-components=\\"c\\" data-styled-components-is-local=\\"true\\">
 /* sc-component-id: sc-a */
-.sc-a {}
-.c{color:red;}</style>"
+.sc-a {}.c{color:red;}</style>"
 `;

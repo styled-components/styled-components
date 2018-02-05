@@ -32,27 +32,34 @@ const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
   return true
 }
 
-const isHRMEnabled = typeof module !== 'undefined' && module.hot && process.env.NODE_ENV !== 'production'
+const isHRMEnabled =
+  typeof module !== 'undefined' &&
+  module.hot &&
+  process.env.NODE_ENV !== 'production'
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
  the React-specific stuff.
  */
-export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules: Stringifier) => {
+export default (
+  nameGenerator: NameGenerator,
+  flatten: Flattener,
+  stringifyRules: Stringifier
+) => {
   class ComponentStyle {
     rules: RuleSet
     componentId: string
     isStatic: boolean
     lastClassName: ?string
 
-
     constructor(rules: RuleSet, attrs?: Object, componentId: string) {
       this.rules = rules
       this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
       if (!StyleSheet.instance.hasInjectedComponent(this.componentId)) {
-        const placeholder = process.env.NODE_ENV !== 'production' ? `.${componentId} {}` : ''
-        StyleSheet.instance.deferredInject(componentId, true, placeholder)
+        const placeholder =
+          process.env.NODE_ENV !== 'production' ? `.${componentId} {}` : ''
+        StyleSheet.instance.deferredInject(componentId, true, [placeholder])
       }
     }
 
@@ -70,23 +77,25 @@ export default (nameGenerator: NameGenerator, flatten: Flattener, stringifyRules
       const flatCSS = flatten(this.rules, executionContext)
       const hash = hashStr(this.componentId + flatCSS.join(''))
 
+      const { stylesCacheable } = styleSheet
       const existingName = styleSheet.getName(hash)
+
       if (existingName !== undefined) {
-        if (styleSheet.stylesCacheable) {
+        if (stylesCacheable) {
           this.lastClassName = existingName
         }
         return existingName
       }
 
       const name = nameGenerator(hash)
-      if (styleSheet.stylesCacheable) {
+      if (stylesCacheable) {
         this.lastClassName = existingName
       }
       if (styleSheet.alreadyInjected(hash, name)) {
         return name
       }
 
-      const css = `\n${stringifyRules(flatCSS, `.${name}`)}`
+      const css = stringifyRules(flatCSS, `.${name}`)
       // NOTE: this can only be set when we inject the class-name.
       // For some reason, presumably due to how css is stringifyRules behaves in
       // differently between client and server, styles break.

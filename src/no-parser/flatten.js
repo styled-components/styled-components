@@ -3,22 +3,29 @@ import isPlainObject from 'is-plain-object'
 import type { Interpolation } from '../types'
 import _flatten, { objToCss } from '../utils/flatten'
 
-const isRuleSet = (interpolation: Interpolation): boolean => !!(
-  interpolation &&
-  Array.isArray(interpolation) &&
-  interpolation.length > 0 &&
-  interpolation[0] &&
-  Array.isArray(interpolation[0])
-)
+const isRuleSet = (interpolation: Interpolation): boolean =>
+  !!(
+    interpolation &&
+    Array.isArray(interpolation) &&
+    interpolation.length > 0 &&
+    interpolation[0] &&
+    Array.isArray(interpolation[0])
+  )
 
-const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array<Interpolation> => {
+const flatten = (
+  chunks: Array<Interpolation>,
+  executionContext: ?Object
+): Array<Interpolation> => {
   /* Fall back to old flattener for non-rule-set chunks */
   if (!isRuleSet(chunks)) {
     return _flatten(chunks, executionContext)
   }
 
   return chunks.reduce(
-    (ruleSet: Array<Interpolation>, chunk: ?Interpolation): Array<Interpolation> => {
+    (
+      ruleSet: Array<Interpolation>,
+      chunk: ?Interpolation
+    ): Array<Interpolation> => {
       if (!Array.isArray(chunk)) {
         return ruleSet
       }
@@ -26,9 +33,17 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
       let appendChunks = []
 
       const newChunk = chunk.reduce(
-        (rules: Array<Interpolation>, rule: ?Interpolation): Array<Interpolation> => {
+        (
+          rules: Array<Interpolation>,
+          rule: ?Interpolation
+        ): Array<Interpolation> => {
           /* Remove falsey values */
-          if (rule === undefined || rule === null || rule === false || rule === '') {
+          if (
+            rule === undefined ||
+            rule === null ||
+            rule === false ||
+            rule === ''
+          ) {
             return rules
           }
 
@@ -50,8 +65,11 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
               const res = rule(executionContext)
 
               if (isRuleSet(res)) {
-                // $FlowFixMe Don't know what's wrong here
-                appendChunks = [...appendChunks, ...flatten(res, executionContext)]
+                appendChunks = [
+                  ...appendChunks,
+                  // $FlowFixMe Don't know what's wrong here
+                  ...flatten(res, executionContext),
+                ]
                 return rules
               }
 
@@ -63,7 +81,12 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
           }
 
           /* Handle other components */
-          if (typeof rule === 'object' && rule.hasOwnProperty('styledComponentId')) return [...rules, `.${rule.styledComponentId}`]
+          if (
+            typeof rule === 'object' &&
+            rule.hasOwnProperty('styledComponentId')
+          ) {
+            return [...rules, `.${rule.styledComponentId}`]
+          }
 
           /* Convert object to css string */
           if (typeof rule === 'object' && isPlainObject(rule)) {
@@ -72,7 +95,7 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
 
           return [...rules, rule.toString()]
         },
-        [],
+        []
       )
 
       if (executionContext) {
@@ -85,7 +108,8 @@ const flatten = (chunks: Array<Interpolation>, executionContext: ?Object): Array
       }
 
       return [...ruleSet, newChunk, ...appendChunks]
-    }, [],
+    },
+    []
   )
 }
 

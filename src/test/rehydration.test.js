@@ -204,7 +204,7 @@ describe('rehydration', () => {
         { isLocal: 'false', css: '/* sc-component-id: sc-global-557410406 */ body { background: papayawhip; }', },
         { isLocal: 'true', css: '/* sc-component-id: TWO */ .TWO {} .b { color: red; }', },
         { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;}', },
-        { isLocal: 'true', css: '/* sc-component-id: ONE */ .ONE {} .a{color:blue;}', },
+        { isLocal: 'true', css: '/* sc-component-id: ONE */ .ONE {}.a{color:blue;}', },
       ])
     })
   })
@@ -271,7 +271,7 @@ describe('rehydration', () => {
           /* ...the new data attribute for the new classname "c"... */
           .replace(new RegExp(`${SC_ATTR}="a b"`), `${SC_ATTR}="a b c"`)
           /* ...and the new CSS before the closing tag.  */
-          .replace(/(?=<\/style>)/, '\n/* sc-component-id: THREE */\n.THREE {}\n.c{color:green;}')
+          .replace(/(?=<\/style>)/, '\n/* sc-component-id: THREE */\n.THREE {}.c{color:green;}')
       )
 
       /* Note: any future additions don't replace the style tag */

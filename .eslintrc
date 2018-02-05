@@ -1,9 +1,19 @@
 {
   "parser": "babel-eslint",
-  "extends": "airbnb",
-  "plugins": ["flowtype", "flowtype-errors"],
+  "extends": [
+    "airbnb",
+    "prettier",
+    "prettier/flowtype"
+  ],
+  "globals": {
+    "__SERVER__": true
+  },
+  "plugins": ["flowtype", "flowtype-errors", "prettier"],
   "rules": {
-    "semi": [2, "never"],
+    "semi": 0,
+    "quotes": 0,
+    "comma-dangle": 0,
+    "curly": [2, "multi-line"],
     "arrow-parens": 0,
     "class-methods-use-this": 0,
     "symbol-description": 0,
@@ -17,17 +27,21 @@
     "no-prototype-builtins": 0,
     "no-duplicate-imports": 0,
     "flowtype/require-valid-file-annotation": [2, "always", {"annotationStyle": "line"}],
-    "flowtype/semi": [2, "never"],
     "flowtype/boolean-style": [2, "boolean"],
     "flowtype/no-dupe-keys": 2,
-    "flowtype/space-before-type-colon": [2, "never"],
-    "flowtype/space-after-type-colon": [2, "always"],
     "flowtype/union-intersection-spacing": [2, "always"],
-    "flowtype/object-type-delimiter": 2
+    "flowtype/object-type-delimiter": 2,
+    "prettier/prettier": 2,
+    "no-restricted-syntax": [
+      "error",
+      "ForOfStatement",
+      "LabeledStatement",
+      "WithStatement",
+    ],
   },
   "env": {
     "jest": true,
-    "browser": "true"
+    "browser": true
   },
   "parserOptions": {
     "ecmaVersion": 7,

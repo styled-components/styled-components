@@ -1,13 +1,5 @@
 {
   "presets": [
-    ["env", { "loose": true }],
-    "react"
-  ],
-  "plugins": [
-    "flow-react-proptypes",
-    "add-module-exports",
-    "transform-flow-strip-types",
-    "transform-object-rest-spread",
-    "transform-class-properties"
+    "./.babelrc.js"
   ]
 }
