@@ -9,7 +9,7 @@ class StyleSheetManager extends Component {
   sheetInstance: StyleSheet
   props: {
     sheet?: StyleSheet | null,
-    target?: HTMLElement | null
+    target?: HTMLElement | null,
   }
 
   getChildContext() {
@@ -20,7 +20,9 @@ class StyleSheetManager extends Component {
     if (this.props.sheet) {
       this.sheetInstance = this.props.sheet
     } else if (this.props.target) {
-      this.sheetInstance = new StyleSheet(tagConstructorWithTarget(this.props.target))
+      this.sheetInstance = new StyleSheet(
+        tagConstructorWithTarget(this.props.target)
+      )
     } else {
       throw new Error('StyleSheetManager expects either a sheet or target prop')
     }
