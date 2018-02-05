@@ -331,6 +331,10 @@ if (!DISABLE_SPEEDY) {
 
       comp.textNode.appendData(css.join(' '))
 
+      if (comp.textNode.parentNode !== this.el) {
+        this.el.appendChild(comp.textNode)
+      }
+
       if (name !== undefined && name !== null) {
         const existingNames = this.el.getAttribute(SC_ATTR)
         this.el.setAttribute(
