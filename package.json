@@ -1,6 +1,6 @@
 {
-  "name": "styled-components",
-  "version": "3.1.6",
+  "name": "@marionebl/styled-components",
+  "version": "3.1.9",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "typings": "typings/styled-components.d.ts",
   "main": "dist/styled-components.cjs.js",
@@ -171,7 +171,7 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "threshold": "15kB"
+      "threshold": "16kB"
     }
   ],
   "collective": {
