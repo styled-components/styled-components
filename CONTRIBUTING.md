@@ -106,6 +106,19 @@ In the sandbox source, `styled-components` is an alias to `styled-components/src
 
 When you commit our pre-commit hook will run, which executes `lint-staged`. It will run the linter automatically and warn you if the code you've written doesn't comply with our code style guidelines.
 
+### How do I fix my pre-commit hook?
+
+We've recently migrated from `pre-commit` to `husky`, so if you're running into issues during this migration, you'll likely have to do the following:
+
+```sh
+rm .git/hooks/pre-commit*
+node ./node_modules/husky/bin/install.js
+```
+
+This will delete the old `pre-commit` git hook and install husky's one.
+Without the proper uninstallation script of the `pre-commit` package, this is necessary because `husky` will skip its installation when
+a git hook is already present.
+
 ## Release process
 
 [Core team members](./CORE_TEAM.md) have the responsibility of pushing new releases to npm. The release process is as follows:
@@ -122,3 +135,41 @@ When you commit our pre-commit hook will run, which executes `lint-staged`. It w
 ## Credits
 
 These contribution guidelines are based on https://github.com/moya/contributors, big thanks to @alloy, @orta et al. for the inspiration and guidance.
+
+
+## Financial contributions
+
+We also welcome financial contributions in full transparency on our [open collective](https://opencollective.com/styled-components).
+Anyone can file an expense. If the expense makes sense for the development of the community, it will be "merged" in the ledger of our open collective by the core contributors and the person who filed the expense will be reimbursed.
+
+
+## Credits
+
+
+### Contributors
+
+Thank you to all the people who have already contributed to styled-components!
+<a href="graphs/contributors"><img src="https://opencollective.com/styled-components/contributors.svg?width=890" /></a>
+
+
+### Backers
+
+Thank you to all our backers! [[Become a backer](https://opencollective.com/styled-components#backer)]
+
+<a href="https://opencollective.com/styled-components#backers" target="_blank"><img src="https://opencollective.com/styled-components/backers.svg?width=890"></a>
+
+
+### Sponsors
+
+Thank you to all our sponsors! (please ask your company to also support this open source project by [becoming a sponsor](https://opencollective.com/styled-components#sponsor))
+
+<a href="https://opencollective.com/styled-components/sponsor/0/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/0/avatar.svg"></a>
+<a href="https://opencollective.com/styled-components/sponsor/1/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/1/avatar.svg"></a>
+<a href="https://opencollective.com/styled-components/sponsor/2/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/2/avatar.svg"></a>
+<a href="https://opencollective.com/styled-components/sponsor/3/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/3/avatar.svg"></a>
+<a href="https://opencollective.com/styled-components/sponsor/4/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/4/avatar.svg"></a>
+<a href="https://opencollective.com/styled-components/sponsor/5/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/5/avatar.svg"></a>
+<a href="https://opencollective.com/styled-components/sponsor/6/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/6/avatar.svg"></a>
+<a href="https://opencollective.com/styled-components/sponsor/7/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/7/avatar.svg"></a>
+<a href="https://opencollective.com/styled-components/sponsor/8/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/8/avatar.svg"></a>
+<a href="https://opencollective.com/styled-components/sponsor/9/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/9/avatar.svg"></a>

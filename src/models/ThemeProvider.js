@@ -111,14 +111,18 @@ class ThemeProvider extends Component {
         !isPlainObject(mergedTheme)
       ) {
         throw new Error(
-          '[ThemeProvider] Please return an object from your theme function, i.e. theme={() => ({})}!'
+          process.env.NODE_ENV !== 'production'
+            ? '[ThemeProvider] Please return an object from your theme function, i.e. theme={() => ({})}!'
+            : ''
         )
       }
       return mergedTheme
     }
     if (!isPlainObject(theme)) {
       throw new Error(
-        '[ThemeProvider] Please make your theme prop a plain object'
+        process.env.NODE_ENV !== 'production'
+          ? '[ThemeProvider] Please make your theme prop a plain object'
+          : ''
       )
     }
     return { ...this.outerTheme, ...(theme: Object) }

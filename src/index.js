@@ -4,6 +4,7 @@
 import flatten from './utils/flatten'
 import stringifyRules from './utils/stringifyRules'
 import isStyledComponent from './utils/isStyledComponent'
+import consolidateStreamedStyles from './utils/consolidateStreamedStyles'
 import generateAlphabeticName from './utils/generateAlphabeticName'
 import css from './constructors/css'
 import ServerStyleSheet from './models/ServerStyleSheet'
@@ -53,6 +54,8 @@ const createGlobalStyle = _createGlobalStyle(stringifyRules, css)
 const styled = _styled(StyledComponent, constructWithOptions)
 
 /* Export everything */
+
+export * from './secretInternals'
 export default styled
 export {
   createGlobalStyle,
@@ -60,6 +63,7 @@ export {
   keyframes,
   injectGlobal,
   isStyledComponent,
+  consolidateStreamedStyles,
   ThemeProvider,
   withTheme,
   ServerStyleSheet,

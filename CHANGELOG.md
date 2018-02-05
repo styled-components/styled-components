@@ -8,6 +8,48 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Add `createGlobalStyle` which returns a component which, when mounting ('componentWillMount'), will apply global styles. The styles will also be removed once the component unmounts during `componentWillUnmount` (see [#1416](https://github.com/styled-components/styled-components/pull/1416))
 
+## [v3.1.6] - 2018-02-03
+
+- Bugfix for the last style tag sometimes being emitted multiple times during streaming ([see #1479](https://github.com/styled-components/styled-components/pull/1479))
+
+- Bugfix for speedy mode rehydration and added handling for out-of-order style injection ([see #1482](https://github.com/styled-components/styled-components/pull/1482))
+
+## [v3.1.5] - 2018-02-01
+
+- Apply a workaround to re-enable "speedy" mode for IE/Edge ([see #1468](https://github.com/styled-components/styled-components/pull/1468))
+
+- Fix memory leak in the server-side streaming logic ([see #1475](https://github.com/styled-components/styled-components/pull/1475))
+
+## [v3.1.4] - 2018-01-29
+
+- Disable "speedy" mode for IE and Edge. There seems to be some incompatibility with how the `insertRule` API functions in their rendering stack compared to the other vendors. (see [#1465](https://github.com/styled-components/styled-components/pull/1465))
+
+## [v3.1.3] - 2018-01-29
+
+- Disable "speedy" mode for non-production environments, fixes `jest-styled-components` compatibility (see [#1460](https://github.com/styled-components/styled-components/pull/1460))
+
+## [v3.1.1] - 2018-01-29
+
+- Hotfix for importing in ReactNative, thanks to [@vvasilev-](https://github.com/vvasilev-) (see [#1455](https://github.com/styled-components/styled-components/pull/1455))
+
+## [v3.1.0] - 2018-01-29
+
+- Compile out error messages for production builds (see [#1445](https://github.com/styled-components/styled-components/pull/1445))
+- Use much faster CSS injection in the browser, by [@schwers](https://github.com/schwers) and [@philpl](https://github.com/philpl) (see [#1208](https://github.com/styled-components/styled-components/pull/1208))
+- Add support for streaming server-side rendering, by [@probablyup](https://github.com/probablyup) (see [#1430](https://github.com/styled-components/styled-components/pull/1430))
+
+## [v3.0.2] - 2018-01-22
+
+- Add secret internals for jest-styled-components (do not use or you will be haunted by spooky ghosts :ghost:) (see [#1438](https://github.com/styled-components/styled-components/pull/1438))
+
+## [v3.0.1] - 2018-01-22
+
+- Add support for SafeAreaView when using styled-components in a React Native project (see [#1339](https://github.com/styled-components/styled-components/pull/1339))
+
+- Remove support for deprecated Navigator when using styled-components in a React Native project (see [#1339](https://github.com/styled-components/styled-components/pull/1339))
+
+- Ship flat bundles for each possible entry, thanks to [@Andarist](https://github.com/Andarist) (see [#1362](https://github.com/styled-components/styled-components/pull/1362))
+
 - Add ESLint precommit hook, thanks to [@lukebelliveau](https://github.com/lukebelliveau) (see [#1393](https://github.com/styled-components/styled-components/pull/1393))
 
 - Fixed nested themes not being republished on outer theme changes, thanks to [@Andarist](https://github.com/Andarist) (see [#1382](https://github.com/styled-components/styled-components/pull/1382))
@@ -23,6 +65,8 @@ All notable changes to this project will be documented in this file. If a contri
 - Ship source maps ([see #1425](https://github.com/styled-components/styled-components/pull/1425))
 
 - Upgrade test suites to run against react v16 ([see #1426](https://github.com/styled-components/styled-components/pull/1426))
+
+- Streaming rendering support (requires React 16, [see #1430](https://github.com/styled-components/styled-components/pull/1430))
 
 ## [v2.4.0] - 2017-12-22
 
@@ -349,7 +393,18 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v2.3.1...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.6...master
+[v3.1.6]: https://github.com/styled-components/styled-components/compare/v3.1.5...v3.1.6
+[v3.1.5]: https://github.com/styled-components/styled-components/compare/v3.1.4...v3.1.5
+[v3.1.4]: https://github.com/styled-components/styled-components/compare/v3.1.3...v3.1.4
+[v3.1.3]: https://github.com/styled-components/styled-components/compare/v3.1.1...v3.1.3
+[v3.1.1]: https://github.com/styled-components/styled-components/compare/v3.1.0...v3.1.1
+[v3.1.0]: https://github.com/styled-components/styled-components/compare/v3.0.2...v3.1.0
+[v3.0.2]: https://github.com/styled-components/styled-components/compare/v3.0.1...v3.0.2
+[v3.0.1]: https://github.com/styled-components/styled-components/compare/v2.4.0...v3.0.1
+[v2.4.0]: https://github.com/styled-components/styled-components/compare/v2.3.3...v2.4.0
+[v2.3.3]: https://github.com/styled-components/styled-components/compare/v2.3.2...v2.3.3
+[v2.3.2]: https://github.com/styled-components/styled-components/compare/v2.3.1...v2.3.2
 [v2.3.1]: https://github.com/styled-components/styled-components/compare/v2.3.0...v2.3.1
 [v2.3.0]: https://github.com/styled-components/styled-components/compare/v2.2.4...v2.3.0
 [v2.2.4]: https://github.com/styled-components/styled-components/compare/v2.2.3...v2.2.4

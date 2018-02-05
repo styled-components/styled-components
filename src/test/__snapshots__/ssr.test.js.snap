@@ -7,7 +7,6 @@ exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected i
 body{background:papayawhip;}
 </style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\" nonce=\\"foo\\">/* sc-component-id: sc-a */
 .sc-a {}
-
 .b{color:red;}
 </style>"
 `;
@@ -19,7 +18,6 @@ exports[`ssr should allow global styles to be injected during rendering 2`] = `
 html::before{content:'Before both renders';}
 </style><style type=\\"text/css\\" data-styled-components=\\"a\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: PageOne */
 .PageOne {}
-
 .a{color:red;}
 </style><style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-2914197427 */
 html::before{content:'During first render';}
@@ -33,7 +31,6 @@ exports[`ssr should allow global styles to be injected during rendering 4`] = `
 html::before{content:'Before both renders';}
 </style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: PageTwo */
 .PageTwo {}
-
 .b{color:blue;}
 </style><style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-2914197427 */
 html::before{content:'During first render';}
@@ -51,10 +48,10 @@ exports[`ssr should dispatch global styles to each ServerStyleSheet 2`] = `
 body{background:papayawhip;}
 </style><style type=\\"text/css\\" data-styled-components=\\"a\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: Header */
 .Header {}
-
 .a{-webkit-animation:keyframe_0 1s both;animation:keyframe_0 1s both;}
 /* sc-component-id: sc-keyframes-keyframe_0 */
-@-webkit-keyframes keyframe_0{0%{opacity:0;}}@keyframes keyframe_0{0%{opacity:0;}}
+@-webkit-keyframes keyframe_0{0%{opacity:0;}}
+@keyframes keyframe_0{0%{opacity:0;}}
 </style>"
 `;
 
@@ -65,7 +62,6 @@ exports[`ssr should extract both global and local CSS 2`] = `
 body{background:papayawhip;}
 </style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: sc-a */
 .sc-a {}
-
 .b{color:red;}
 </style>"
 `;
@@ -75,9 +71,17 @@ exports[`ssr should extract the CSS in a simple case 1`] = `"<h1 class=\\"sc-a b
 exports[`ssr should extract the CSS in a simple case 2`] = `
 "<style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: sc-a */
 .sc-a {}
-
 .b{color:red;}
 </style>"
+`;
+
+exports[`ssr should interleave styles with rendered HTML when utilitizing streaming 1`] = `
+"<style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-2303210225 */
+body{background:papayawhip;}
+</style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: sc-a */
+.sc-a {}
+.b{color:red;}
+</style><h1 class=\\"sc-a b\\" data-reactroot=\\"\\">Hello SSR!</h1>"
 `;
 
 exports[`ssr should render CSS in the order the components were defined, not rendered 1`] = `"<div data-reactroot=\\"\\"><h2 class=\\"TWO a\\"></h2><h1 class=\\"ONE b\\"></h1></div>"`;
@@ -85,11 +89,9 @@ exports[`ssr should render CSS in the order the components were defined, not ren
 exports[`ssr should render CSS in the order the components were defined, not rendered 2`] = `
 "<style type=\\"text/css\\" data-styled-components=\\"a b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: ONE */
 .ONE {}
-
 .b{color:red;}
 /* sc-component-id: TWO */
 .TWO {}
-
 .a{color:blue;}
 </style>"
 `;
@@ -112,7 +114,6 @@ Object {
   "dangerouslySetInnerHTML": Object {
     "__html": "/* sc-component-id: sc-a */
 .sc-a {}
-
 .b{color:red;}
 ",
   },
@@ -129,7 +130,6 @@ exports[`ssr should share global styles but keep renders separate 2`] = `
 body{background:papayawhip;}
 </style><style type=\\"text/css\\" data-styled-components=\\"a\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: PageOne */
 .PageOne {}
-
 .a{color:red;}
 </style>"
 `;
@@ -141,7 +141,6 @@ exports[`ssr should share global styles but keep renders separate 4`] = `
 body{background:papayawhip;}
 </style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: PageTwo */
 .PageTwo {}
-
 .b{color:blue;}
 </style>"
 `;
