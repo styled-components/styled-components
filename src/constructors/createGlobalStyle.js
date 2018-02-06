@@ -66,8 +66,8 @@ export default (stringifyRules: Stringifier, css: Function) => {
 
       // TODO: handle updates of existing injected rules
       // instead of appending them always
-      componentWillReceiveProps(props, ctx) {
-        const context = ctx[CHANNEL_NEXT]
+      componentWillReceiveProps(props: {[prop: string]: any}) {
+        const context = this.context[CHANNEL_NEXT]
         const theme = typeof context !== 'undefined' ? context.getTheme() : {}
 
         if (typeof context !== 'undefined') {
@@ -86,7 +86,7 @@ export default (stringifyRules: Stringifier, css: Function) => {
             if (typeof interpol === 'function') {
               return interpol({
                 theme,
-                ...this.props,
+                ...props,
               })
             }
             return interpol
