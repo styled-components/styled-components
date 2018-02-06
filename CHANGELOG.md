@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. If a contri
 ## Unreleased
 
 - Add `createGlobalStyle` which returns a component which, when mounting ('componentWillMount'), will apply global styles. The styles will also be removed once the component unmounts during `componentWillUnmount` (see [#1416](https://github.com/styled-components/styled-components/pull/1416))
+- Add `target` prop to `StyleSheetManager` component to enable specifying where style tags should render (see [#1491](https://github.com/styled-components/styled-components/pull/1491))
 
 ## [v3.1.6] - 2018-02-03
 
