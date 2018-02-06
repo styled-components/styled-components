@@ -73,6 +73,14 @@ export const stripWhitespace = (str: string) =>
     .replace(/([;\{\}])/g, '$1  ')
     .replace(/\s+/g, ' ')
 
+export const getCSS = (scope?: Document | HTMLElement = document) => {
+  return Array.from(scope.querySelectorAll('style'))
+    .map(tag => tag.innerHTML)
+    .join('\n')
+    .replace(/ {/g, '{')
+    .replace(/:\s+;/g, ':;')
+}
+
 export const expectCSSMatches = (
   _expectation: string,
   opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }
@@ -80,11 +88,7 @@ export const expectCSSMatches = (
   // NOTE: This should normalise both CSS strings to make irrelevant mismatches less likely
   const expectation = _expectation.replace(/ {/g, '{').replace(/:\s+;/g, ':;')
 
-  const css = Array.from(document.querySelectorAll('style'))
-    .map(tag => tag.innerHTML)
-    .join('\n')
-    .replace(/ {/g, '{')
-    .replace(/:\s+;/g, ':;')
+  const css = getCSS()
 
   if (opts.ignoreWhitespace) {
     const stripped = stripWhitespace(stripComments(css))
