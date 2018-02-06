@@ -51,9 +51,9 @@ if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
         'and makes you application bigger without a good reason.\n\n' +
         'See https://s-c.sh/2BAXzed for more info.'
     )
-  } else {
-    window['__styled-components-init__'] += 1
   }
+
+  window['__styled-components-init__'] += 1
 }
 
 /* Instantiate singletons */
