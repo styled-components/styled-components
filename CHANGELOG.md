@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Add `target` prop to `StyleSheetManager` component to enable specifying where style tags should render (see [#1491](https://github.com/styled-components/styled-components/pull/1491))
+
 ## [v3.1.6] - 2018-02-03
 
 - Bugfix for the last style tag sometimes being emitted multiple times during streaming ([see #1479](https://github.com/styled-components/styled-components/pull/1479))

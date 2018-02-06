@@ -331,6 +331,12 @@ if (!DISABLE_SPEEDY) {
 
       comp.textNode.appendData(css.join(' '))
 
+      // Append to this.el in case the underlying
+      // <style> tag has been edited to not contain comp.textNode
+      if (comp.textNode.parentNode !== this.el) {
+        this.el.appendChild(comp.textNode)
+      }
+
       if (name !== undefined && name !== null) {
         const existingNames = this.el.getAttribute(SC_ATTR)
         this.el.setAttribute(
@@ -394,6 +400,27 @@ if (!DISABLE_SPEEDY) {
   }
 }
 
+/* Factory for making more tags */
+export function tagConstructorWithTarget(target?: HTMLElement): Function {
+  return function tagConstructor(isLocal: boolean): Tag {
+    const el = document.createElement('style')
+    el.type = 'text/css'
+    el.setAttribute(SC_ATTR, '')
+    el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
+    const targ = typeof target !== 'undefined' ? target : document.head
+
+    if (targ instanceof HTMLElement === false) {
+      throw new Error(`Expected target to be HTMLElement`)
+    }
+
+    if (targ) {
+      targ.appendChild(el)
+    }
+
+    return new BrowserTag(el, isLocal)
+  }
+}
+
 /* Factory function to separate DOM operations from logical ones*/
 export default {
   create() {
@@ -427,21 +454,6 @@ export default {
       )
     }
 
-    /* Factory for making more tags */
-    const tagConstructor = (isLocal: boolean): Tag => {
-      const el = document.createElement('style')
-      el.type = 'text/css'
-      el.setAttribute(SC_ATTR, '')
-      el.setAttribute(LOCAL_ATTR, isLocal ? 'true' : 'false')
-      if (!document.head) {
-        throw new Error(
-          process.env.NODE_ENV !== 'production' ? 'Missing document <head>' : ''
-        )
-      }
-      document.head.appendChild(el)
-      return new BrowserTag(el, isLocal)
-    }
-
-    return new StyleSheet(tagConstructor, tags, names)
+    return new StyleSheet(tagConstructorWithTarget(), tags, names)
   },
 }
