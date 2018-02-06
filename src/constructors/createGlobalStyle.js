@@ -5,6 +5,7 @@ import hashStr from '../vendor/glamor/hash'
 import StyleSheet, { CONTEXT_KEY } from '../models/StyleSheet'
 import ServerStyleSheet from '../models/ServerStyleSheet'
 import type { Interpolation, Stringifier } from '../types'
+import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from '../models/ThemeProvider'
 
 export default (stringifyRules: Stringifier, css: Function) => {
   const createGlobalStyle = (
@@ -13,15 +14,42 @@ export default (stringifyRules: Stringifier, css: Function) => {
   ) =>
     class extends React.Component {
       static contextTypes = {
+        [CHANNEL]: PropTypes.func,
+        [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
         [CONTEXT_KEY]: PropTypes.oneOfType([
           PropTypes.instanceOf(StyleSheet),
           PropTypes.instanceOf(ServerStyleSheet),
         ]),
       }
+      state = { theme: {} }
       componentId = ''
 
       componentWillMount() {
-        const rules = css(strings, ...interpolations)
+        const context = this.context[CHANNEL_NEXT]
+        const theme = typeof context !== 'undefined' ? context.getTheme() : {}
+
+        if (typeof context !== 'undefined') {
+          this.setState({ theme })
+
+          this.unsubscribeId = context.subscribe(nextTheme => {
+            this.setState({
+              theme: nextTheme,
+            })
+          })
+        }
+
+        const rules = css(
+          strings,
+          ...interpolations.map(interpol => {
+            if (typeof interpol === 'function') {
+              return interpol({
+                theme,
+                ...this.props,
+              })
+            }
+            return interpol
+          })
+        )
         const hash = hashStr(JSON.stringify(rules))
         const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.instance
         this.componentId = `sc-global-${hash}`

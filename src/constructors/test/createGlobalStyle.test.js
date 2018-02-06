@@ -35,15 +35,15 @@ describe(`createGlobalStyle`, () => {
     expectCSSMatches(`[data-test-inject]{color:red;} `)
   });
 
-/* it(`supports interpolation`, () => {
+  it(`supports interpolation`, () => {
     const {cleanup, render} = setup()
     const Component = createGlobalStyle`div {color:${props => props.color};} `
     render(
       <ThemeProvider theme={{ color: 'orange' }}>
         <Component color="orange"/>
       </ThemeProvider>
-    );
-    expectCSSMatches(`div{color:black;} `)
+    )
+    expectCSSMatches(`div{color:orange;} `)
     cleanup()
   })
 
@@ -54,10 +54,10 @@ describe(`createGlobalStyle`, () => {
       <ThemeProvider theme={{ color: 'black' }}>
         <Component/>
       </ThemeProvider>
-    );
+    )
     expectCSSMatches(`div{color:black;} `)
     cleanup()
-  }); */
+  })
 
   it(`renders to StyleSheetManager.target`, () => {
     const {container, render} = context
