@@ -84,7 +84,7 @@ describe(`createGlobalStyle`, () => {
     render(<App/>)
     expectCSSMatches(`div{color:grey;} `)
 
-    update({ color: 'black' })
+    update({ color: 'red' })
     expectCSSMatches(`div{color:red;} `)
 
     cleanup()
