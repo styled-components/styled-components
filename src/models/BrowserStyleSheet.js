@@ -205,37 +205,6 @@ if (!DISABLE_SPEEDY) {
       this.components = rest
     }
 
-    inject(componentId: string, css: string, name: ?string) {
-      if (!this.ready) this.replaceElement()
-      const comp = this.components[componentId]
-
-      // $FlowFixMe
-      this.el.parentNode.replaceChild(newEl, this.el)
-      this.el = newEl
-      this.ready = true
-
-      // Retrieve the sheet for the new style tag
-      const sheet = sheetForTag(newEl)
-
-      Object.keys(this.components).forEach(componentId => {
-        const comp = this.components[componentId]
-        const { cssFromDOM } = comp
-        const rules = stringifyRules([cssFromDOM])
-        const rulesSize = rules.length
-
-        let injectedRules = 0
-        for (let j = 0; j < rulesSize; j += 1) {
-          if (safeInsertRule(sheet, rules[j], sheet.cssRules.length)) {
-            injectedRules += 1
-          }
-        }
-
-        comp.componentIndex = this.componentSizes.length
-        comp.css = rules.join(' ')
-        this.componentSizes.push(injectedRules)
-      })
-    }
-
     isSealed() {
       return this.size >= SPEEDY_COMPONENTS_PER_TAG
     }
