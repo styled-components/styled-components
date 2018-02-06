@@ -132,12 +132,10 @@ class ServerTag implements Tag {
 export default class ServerStyleSheet {
   closed: boolean
   instance: StyleSheet
-  isStreaming: boolean
-  lastIndex: number
 
   constructor() {
     this.instance = StyleSheet.clone(StyleSheet.instance)
-    this.isStreaming = false
+    this.instance.isStreaming = false
   }
 
   collectStyles(children: any) {
@@ -153,10 +151,14 @@ export default class ServerStyleSheet {
     )
   }
 
+  close() {
+    clones.splice(clones.indexOf(this.instance), 1)
+    this.closed = true
+  }
+
   getStyleTags(): string {
     if (!this.closed) {
-      clones.splice(clones.indexOf(this.instance), 1)
-      this.closed = true
+      this.close()
     }
 
     return this.instance.toHTML()
@@ -164,8 +166,7 @@ export default class ServerStyleSheet {
 
   getStyleElement() {
     if (!this.closed) {
-      clones.splice(clones.indexOf(this.instance), 1)
-      this.closed = true
+      this.close()
     }
 
     return this.instance.toReactElements()
@@ -178,27 +179,28 @@ export default class ServerStyleSheet {
       // $FlowFixMe
       ourStream._read = () => {}
 
-      this.isStreaming = true
-      this.lastIndex = 0
+      this.instance.isStreaming = true
 
       readableStream.on('data', chunk => {
         ourStream.push(
-          this.instance.tags
-            .slice(this.lastIndex)
-            .map(tag => tag.toHTML())
-            .join('') + chunk
-        )
+          this.instance.tags.reduce((html, tag) => {
+            if (!tag.isSealed()) {
+              html += tag.toHTML() // eslint-disable-line no-param-reassign
+            }
 
-        this.lastIndex = this.instance.tags.length - 1
+            return html
+          }, '') + chunk
+        )
       })
 
       readableStream.on('end', () => {
-        this.closed = true
         ourStream.push(null)
+        this.close()
       })
 
       readableStream.on('error', err => {
         ourStream.emit('error', err)
+        this.close()
       })
 
       return ourStream

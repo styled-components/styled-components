@@ -239,6 +239,9 @@ describe('ssr', () => {
     `
 
     const sheet = new ServerStyleSheet()
+
+    jest.spyOn(sheet, 'close')
+
     const jsx = sheet.collectStyles(<Heading>Hello SSR!</Heading>)
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx))
 
@@ -251,6 +254,7 @@ describe('ssr', () => {
 
       stream.on('end', () => {
         expect(received).toMatchSnapshot()
+        expect(sheet.close).toHaveBeenCalled()
         resolve()
       })
 

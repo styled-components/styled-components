@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "3.1.3",
+  "version": "3.1.6",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "typings": "typings/styled-components.d.ts",
   "main": "dist/styled-components.cjs.js",
@@ -35,7 +35,8 @@
     "precommit": "lint-staged",
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
-    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js"
+    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
+    "postinstall": "opencollective postinstall"
   },
   "repository": {
     "type": "git",
@@ -72,6 +73,7 @@
     "fbjs": "^0.8.9",
     "hoist-non-react-statics": "^1.2.0",
     "is-plain-object": "^2.0.1",
+    "opencollective": "^1.0.3",
     "prop-types": "^15.5.4",
     "stylis": "^3.4.0",
     "stylis-rule-sheet": "^0.0.7",
@@ -169,7 +171,11 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "threshold": "15.25kB"
+      "threshold": "16kB"
     }
-  ]
+  ],
+  "collective": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/styled-components"
+  }
 }
