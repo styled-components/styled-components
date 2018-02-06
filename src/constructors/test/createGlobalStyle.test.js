@@ -59,6 +59,37 @@ describe(`createGlobalStyle`, () => {
     cleanup()
   })
 
+  it(`updates theme correctly`, () => {
+    const {cleanup, render} = setup()
+    const Component = createGlobalStyle`div {color:${props => props.theme.color};} `
+    let update;
+    class App extends React.Component {
+      state = { color: 'grey' }
+
+      constructor() {
+        super()
+        update = (payload) => {
+          this.setState(payload)
+        }
+      }
+
+      render() {
+        return (
+          <ThemeProvider theme={{ color: this.state.color }}>
+            <Component/>
+          </ThemeProvider>
+        );
+      }
+    }
+    render(<App/>)
+    expectCSSMatches(`div{color:grey;} `)
+
+    update({ color: 'black' })
+    expectCSSMatches(`div{color:red;} `)
+
+    cleanup()
+  })
+
   it(`renders to StyleSheetManager.target`, () => {
     const {container, render} = context
     const Component = createGlobalStyle`[data-test-target]{color:red;} `
