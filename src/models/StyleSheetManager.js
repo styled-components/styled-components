@@ -1,9 +1,13 @@
 // @flow
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
+import StyleSheet from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
 import { tagConstructorWithTarget } from './BrowserStyleSheet'
+
+// TODO: Import this from ./StyleSheet again
+// when we figured out why it is undefined during testing sometimes
+const CONTEXT_KEY = '__styled-components-stylesheet__'
 
 class StyleSheetManager extends Component {
   sheetInstance: StyleSheet
