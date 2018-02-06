@@ -153,7 +153,7 @@ if (!DISABLE_SPEEDY) {
       // Build up our replacement style tag
       const newEl = this.el.cloneNode(false)
 
-      if (!this.el.parentNode) {
+      if (!this.el.parentNode || !document.head) {
         throw new Error(
           process.env.NODE_ENV !== 'production'
             ? "Trying to replace an element that wasn't mounted!"
@@ -165,8 +165,7 @@ if (!DISABLE_SPEEDY) {
       newEl.appendChild(document.createTextNode(''))
 
       // $FlowFixMe
-      this.el.parentNode.replaceChild(newEl, this.el)
-      this.el = newEl
+      document.head.appendChild(newEl)
       this.ready = true
 
       // Retrieve the sheet for the new style tag
@@ -189,6 +188,10 @@ if (!DISABLE_SPEEDY) {
         comp.css = rules.join(' ')
         this.componentSizes.push(injectedRules)
       })
+
+      // $FlowFixMe
+      this.el.parentNode.removeChild(this.el)
+      this.el = newEl
     }
 
     isSealed() {
@@ -385,7 +388,7 @@ if (!DISABLE_SPEEDY) {
         newEl.appendChild(comp.textNode)
       })
 
-      if (!this.el.parentNode) {
+      if (!this.el.parentNode || !document.head) {
         throw new Error(
           process.env.NODE_ENV !== 'production'
             ? "Trying to replace an element that wasn't mounted!"
@@ -394,7 +397,9 @@ if (!DISABLE_SPEEDY) {
       }
 
       // The ol' switcheroo
-      this.el.parentNode.replaceChild(newEl, this.el)
+      this.el.parentNode.removeChild(this.el)
+      // $FlowFixMe
+      document.head.appendChild(newEl)
       this.el = newEl
     }
   }
