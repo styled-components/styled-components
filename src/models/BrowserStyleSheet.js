@@ -310,6 +310,20 @@ if (!DISABLE_SPEEDY) {
       }, {})
     }
 
+    removeComponent(componentId: string) {
+      if (!this.ready) this.replaceElement()
+      const { [componentId]: comp, ...rest } = this.components
+
+      if (!comp) {
+        return
+      }
+
+      this.el.removeChild(comp.textNode)
+
+      this.size -= 1
+      this.components = rest
+    }
+
     isSealed() {
       return this.size >= COMPONENTS_PER_TAG
     }
