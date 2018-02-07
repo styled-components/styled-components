@@ -13,7 +13,7 @@ export default (stringifyRules: Stringifier, css: Function) => {
 
     const id = `sc-global-${hash}`
     if (!StyleSheet.global.hasInjectedComponent(id)) {
-      StyleSheet.global.inject(id, stringifyRules(rules), hash, id)
+      StyleSheet.global.inject(id, stringifyRules(rules))
     }
   }
 

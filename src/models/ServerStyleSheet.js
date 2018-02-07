@@ -32,8 +32,7 @@ export default class ServerStyleSheet {
   instance: StyleSheet
 
   constructor() {
-    this.global = StyleSheet.global
-    this.instance = new StyleSheet(null)
+    this.instance = StyleSheet.global.clone()
     this.closed = false
   }
 
@@ -52,7 +51,7 @@ export default class ServerStyleSheet {
       this.closed = true
     }
 
-    return this.global.toHTML() + this.instance.toHTML()
+    return this.instance.toHTML()
   }
 
   getStyleElement() {
@@ -60,7 +59,7 @@ export default class ServerStyleSheet {
       this.closed = true
     }
 
-    return this.global.toReactElements().concat(this.instance.toReactElements())
+    return this.instance.toReactElements()
   }
 
   interleaveWithNodeStream(readableStream: stream.Readable) {
@@ -68,33 +67,27 @@ export default class ServerStyleSheet {
       throw new Error(streamBrowserErr)
     }
 
-    const { instance, global } = this
+    /* the tag index keeps track of which tags have already been emitted */
+    const { instance } = this
+    let instanceTagIndex = 0
+
     const ourStream = new stream.Readable()
     // $FlowFixMe
     ourStream._read = () => {}
 
-    let globalTagIndex = 0
-    let instanceTagIndex = 0
-
     readableStream.on('data', chunk => {
-      const globalTagSize = global.tags.length
-      const instanceTagSize = instance.tags.length
-
+      const { tags } = instance
       let html = ''
 
-      for (; globalTagIndex < globalTagSize; globalTagIndex += 1) {
-        const tag = global.tags[globalTagIndex]
-        html += tag.toHTML()
-      }
-
-      for (; instanceTagIndex < instanceTagSize; instanceTagIndex += 1) {
-        const tag = instance.tags[globalTagIndex]
+      /* retrieve html for each new style tag */
+      for (; instanceTagIndex < tags.length; instanceTagIndex += 1) {
+        const tag = tags[instanceTagIndex]
         html += tag.toHTML()
       }
 
       /* force our StyleSheets to emit entirely new tags */
-      global.sealAllTags()
       instance.sealAllTags()
+      /* prepend style html to chunk */
       ourStream.push(html + chunk)
     })
 

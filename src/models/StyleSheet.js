@@ -38,6 +38,19 @@ Trying to insert a new style tag, but the given Node is unmounted!
 `.trim()
     : ''
 
+/* this error is used for tags */
+const throwCloneTagErr = () => {
+  throw new Error(
+    process.env.NODE_ENV !== 'production'
+      ? `
+The clone method cannot be used on the client!
+- Are you running in a client-like environment on the server?
+- Are you trying to run SSR on the client?
+`.trim()
+      : ''
+  )
+}
+
 /* this marker separates component styles and is important for rehydration */
 const makeTextMarker = id => `\n/* sc-component-id: ${id} */\n`
 
@@ -146,11 +159,13 @@ interface Tag<T> {
   // $FlowFixMe: Doesn't seem to accept any combination w/ HTMLStyleElement for some reason
   styleTag: HTMLStyleElement | null;
   names: string[];
+  getIds(): string[];
   insertMarker(id: string): T;
   insertRules(id: string, cssRules: string[]): void;
   css(): string;
   toHTML(): string;
   toElement(): React.Element<*>;
+  clone(): Tag<T>;
 }
 
 /* takes a css factory function and outputs an html styled tag factory */
@@ -166,6 +181,9 @@ const wrapAsElement = (css: () => string, names: string[]) => () => {
 
   return <style {...props}>{css()}</style>
 }
+
+const getIdsFromMarkersFactory = (markers: Object) => (): string[] =>
+  Object.keys(markers)
 
 /* speedy tags utilise insertRule */
 const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
@@ -210,12 +228,14 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
 
   return {
     styleTag: el,
+    getIds: getIdsFromMarkersFactory(markers),
     names,
     insertMarker,
     insertRules,
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
+    clone: throwCloneTagErr,
   }
 }
 
@@ -249,12 +269,14 @@ const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
 
   return {
     styleTag: el,
+    getIds: getIdsFromMarkersFactory(markers),
     names,
     insertMarker,
     insertRules,
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
+    clone: throwCloneTagErr,
   }
 }
 
@@ -285,15 +307,25 @@ const makeServerTag = (): Tag<[string]> => {
     return str
   }
 
-  return {
+  const tag = {
     styleTag: null,
+    getIds: getIdsFromMarkersFactory(markers),
     names,
     insertMarker,
     insertRules,
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
+    clone() {
+      return {
+        ...tag,
+        names: [...names],
+        markers: { ...markers },
+      }
+    },
   }
+
+  return tag
 }
 
 const makeTag = (
@@ -329,19 +361,19 @@ const makeRehydrationTag = (
     }
 
     /* add all extracted components to the new tag */
-    const extractedSize = extracted.length
-    for (let i = 0; i < extractedSize; i += 1) {
+    for (let i = 0; i < extracted.length; i += 1) {
       const { componentId, cssFromDOM } = extracted[i]
       const cssRules = stringifyRules([cssFromDOM])
       tag.insertRules(componentId, cssRules)
     }
 
     /* remove old HTMLStyleElements, since they have been rehydrated */
-    els.forEach(el => {
+    for (let i = 0; i < els.length; i += 1) {
+      const el = els[i]
       if (el.parentNode) {
         el.parentNode.removeChild(el)
       }
-    })
+    }
 
     isReady = true
   }
@@ -376,6 +408,7 @@ class StyleSheet {
   rehydratedNames: { [string]: boolean }
   tags: Tag<any>[]
   capacity: number
+  clones: StyleSheet[]
 
   constructor(
     target: ?HTMLElement = IS_BROWSER ? document.head : null,
@@ -393,6 +426,7 @@ class StyleSheet {
     this.rehydratedNames = {}
     this.tags = [firstTag]
     this.capacity = MAX_SIZE
+    this.clones = []
   }
 
   /* rehydrate all SSR'd style tags */
@@ -459,6 +493,38 @@ class StyleSheet {
     global = new StyleSheet(undefined, forceServer).rehydrate()
   }
 
+  /* adds "children" to the StyleSheet that inherit all of the parents' rules
+   * while their own rules do not affect the parent */
+  clone() {
+    if (IS_BROWSER) {
+      throwCloneTagErr()
+    }
+
+    const sheet = new StyleSheet(null, true)
+    /* add to clone array */
+    this.clones.push(sheet)
+
+    /* clone all tags */
+    sheet.tags = this.tags.map(tag => {
+      const ids = tag.getIds()
+      const newTag = tag.clone()
+
+      /* reconstruct tagMap */
+      for (let i = 0; i < ids.length; i += 1) {
+        sheet.tagMap[ids[i]] = newTag
+      }
+
+      return newTag
+    })
+
+    /* clone other maps */
+    sheet.rehydratedNames = { ...this.rehydratedNames }
+    sheet.deferred = { ...this.deferred }
+    sheet.hashes = { ...this.hashes }
+
+    return sheet
+  }
+
   /* force StyleSheet to create a new tag on the next injection */
   sealAllTags() {
     this.capacity = 1
@@ -508,11 +574,22 @@ class StyleSheet {
 
   /* registers a componentId and registers it on its tag */
   deferredInject(id: string, cssRules: string[]) {
+    const { clones } = this
+    for (let i = 0; i < clones.length; i += 1) {
+      clones[i].deferredInject(id, cssRules)
+    }
+
     this.getTagForId(id).insertMarker(id)
     this.deferred[id] = cssRules
   }
 
-  inject(id: string, cssRules: string[], hash: string, name: string) {
+  inject(id: string, cssRules: string[], hash?: string, name?: string) {
+    const { clones } = this
+    for (let i = 0; i < clones.length; i += 1) {
+      clones[i].inject(id, cssRules, hash, name)
+    }
+
+    /* add deferred rules for component */
     let injectRules = cssRules
     const deferredRules = this.deferred[id]
     if (deferredRules !== undefined) {
@@ -522,9 +599,11 @@ class StyleSheet {
 
     const tag = this.getTagForId(id)
     tag.insertRules(id, injectRules)
-    tag.names.push(name)
 
-    this.hashes[hash] = name
+    if (hash && name) {
+      tag.names.push(name)
+      this.hashes[hash] = name
+    }
   }
 
   toHTML() {
