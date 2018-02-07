@@ -8,6 +8,16 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fix breaking lines when we are appending styles on streaming. (see [#1480](https://github.com/styled-components/styled-components/pull/1480))
 
+- Add warning if there are several instances of `styled-components` initialized on the page (see [#1412](https://github.com/styled-components/styled-components/pull/1412))
+
+- Add `target` prop to `StyleSheetManager` component to enable specifying where style tags should render (see [#1491](https://github.com/styled-components/styled-components/pull/1491))
+
+## [v3.1.6] - 2018-02-03
+
+- Bugfix for the last style tag sometimes being emitted multiple times during streaming ([see #1479](https://github.com/styled-components/styled-components/pull/1479))
+
+- Bugfix for speedy mode rehydration and added handling for out-of-order style injection ([see #1482](https://github.com/styled-components/styled-components/pull/1482))
+
 ## [v3.1.5] - 2018-02-01
 
 - Apply a workaround to re-enable "speedy" mode for IE/Edge ([see #1468](https://github.com/styled-components/styled-components/pull/1468))
@@ -387,7 +397,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.5...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.6...master
+[v3.1.6]: https://github.com/styled-components/styled-components/compare/v3.1.5...v3.1.6
 [v3.1.5]: https://github.com/styled-components/styled-components/compare/v3.1.4...v3.1.5
 [v3.1.4]: https://github.com/styled-components/styled-components/compare/v3.1.3...v3.1.4
 [v3.1.3]: https://github.com/styled-components/styled-components/compare/v3.1.1...v3.1.3

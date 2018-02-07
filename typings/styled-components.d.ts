@@ -100,7 +100,12 @@ interface StylesheetComponentProps {
   sheet: ServerStyleSheet;
 }
 
-export class StyleSheetManager extends React.Component<StylesheetComponentProps, {}> { }
+interface StyleSheetManagerProps {
+  sheet?: ServerStyleSheet;
+  target?: Node;
+}
+
+export class StyleSheetManager extends React.Component<StyleSheetManagerProps, {}> { }
 
 export class ServerStyleSheet {
   collectStyles(tree: React.ReactNode): ReactElement<StylesheetComponentProps>;
