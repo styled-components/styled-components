@@ -3,8 +3,6 @@ import hashStr from '../vendor/glamor/hash'
 import type { Interpolation, NameGenerator, Stringifier } from '../types'
 import StyleSheet from '../models/StyleSheet'
 
-const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '')
-
 export default (
   nameGenerator: NameGenerator,
   stringifyRules: Stringifier,
@@ -14,21 +12,22 @@ export default (
   ...interpolations: Array<Interpolation>
 ): string => {
   const rules = css(strings, ...interpolations)
-  const hash = hashStr(replaceWhitespace(JSON.stringify(rules)))
+  const hash = hashStr(rules.join(''))
 
-  const existingName = StyleSheet.instance.getName(hash)
-  if (existingName) return existingName
+  const existingName = StyleSheet.global.getNameForHash(hash)
+  if (existingName !== undefined) {
+    return existingName
+  }
 
   const name = nameGenerator(hash)
-  if (StyleSheet.instance.alreadyInjected(hash, name)) return name
+  if (StyleSheet.global.alreadyInjected(hash, name)) return name
 
-  const generatedCSS = stringifyRules(rules, name, '@keyframes')
-  StyleSheet.instance.inject(
+  StyleSheet.global.inject(
     `sc-keyframes-${name}`,
-    true,
-    generatedCSS,
+    stringifyRules(rules, name, '@keyframes'),
     hash,
     name
   )
+
   return name
 }

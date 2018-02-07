@@ -1,7 +1,7 @@
 // @flow
 const SC_COMPONENT_ID = /^[^\S\n]*?\/\* sc-component-id:\s*(\S+)\s+\*\//gm
 
-type ExtractedComp = {
+export type ExtractedComp = {
   componentId: string,
   cssFromDOM: string,
 }

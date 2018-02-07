@@ -9,12 +9,12 @@ export default (stringifyRules: Stringifier, css: Function) => {
     ...interpolations: Array<Interpolation>
   ) => {
     const rules = css(strings, ...interpolations)
-    const hash = hashStr(JSON.stringify(rules))
+    const hash = hashStr(rules.join(''))
 
-    const componentId = `sc-global-${hash}`
-    if (StyleSheet.instance.hasInjectedComponent(componentId)) return
-
-    StyleSheet.instance.inject(componentId, false, stringifyRules(rules))
+    const id = `sc-global-${hash}`
+    if (!StyleSheet.global.hasInjectedComponent(id)) {
+      StyleSheet.global.inject(id, stringifyRules(rules), hash, id)
+    }
   }
 
   return injectGlobal
