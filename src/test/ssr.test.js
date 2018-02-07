@@ -202,10 +202,8 @@ describe('ssr', () => {
     )
     const elements = sheet.getStyleElement()
 
-    expect(elements).toHaveLength(2)
-
+    expect(elements).toHaveLength(1)
     expect(elements[0].props).toMatchSnapshot()
-    expect(elements[1].props).toMatchSnapshot()
   })
 
   it('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
@@ -225,9 +223,8 @@ describe('ssr', () => {
     )
     const elements = sheet.getStyleElement()
 
-    expect(elements).toHaveLength(2)
+    expect(elements).toHaveLength(1)
     expect(elements[0].props.nonce).toBe('foo')
-    expect(elements[1].props.nonce).toBe('foo')
   })
 
   it('should interleave styles with rendered HTML when utilitizing streaming', () => {
@@ -239,9 +236,6 @@ describe('ssr', () => {
     `
 
     const sheet = new ServerStyleSheet()
-
-    jest.spyOn(sheet, 'close')
-
     const jsx = sheet.collectStyles(<Heading>Hello SSR!</Heading>)
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx))
 
@@ -254,7 +248,7 @@ describe('ssr', () => {
 
       stream.on('end', () => {
         expect(received).toMatchSnapshot()
-        expect(sheet.close).toHaveBeenCalled()
+        expect(sheet.closed).toBe(true)
         resolve()
       })
 
