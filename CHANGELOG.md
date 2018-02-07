@@ -6,9 +6,19 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-## [v3.1.6] - 2018-02-01
+## [v3.1.7] - 2018-02-07
 
 - Append style tags below existing tags. If no tags exist append them to the bottom of the head. This prevents side effects e.g. adding a tag after a critical CSS tag and potentially overriding styles. (see [#1474](https://github.com/styled-components/styled-components/pull/1474))
+- Add warning if there are several instances of `styled-components` initialized on the page (see [#1412](https://github.com/styled-components/styled-components/pull/1412))
+
+- Add `target` prop to `StyleSheetManager` component to enable specifying where style tags should render (see [#1491](https://github.com/styled-components/styled-components/pull/1491))
+
+## [v3.1.6] - 2018-02-03
+
+- Bugfix for the last style tag sometimes being emitted multiple times during streaming ([see #1479](https://github.com/styled-components/styled-components/pull/1479))
+
+- Bugfix for speedy mode rehydration and added handling for out-of-order style injection ([see #1482](https://github.com/styled-components/styled-components/pull/1482))
+
 
 ## [v3.1.5] - 2018-02-01
 
@@ -389,7 +399,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.5...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.6...master
+[v3.1.6]: https://github.com/styled-components/styled-components/compare/v3.1.5...v3.1.6
 [v3.1.5]: https://github.com/styled-components/styled-components/compare/v3.1.4...v3.1.5
 [v3.1.4]: https://github.com/styled-components/styled-components/compare/v3.1.3...v3.1.4
 [v3.1.3]: https://github.com/styled-components/styled-components/compare/v3.1.1...v3.1.3
