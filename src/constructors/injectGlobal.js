@@ -9,7 +9,7 @@ export default (stringifyRules: Stringifier, css: Function) => {
     ...interpolations: Array<Interpolation>
   ) => {
     const rules = css(strings, ...interpolations)
-    const hash = hashStr(rules.join(''))
+    const hash = hashStr(JSON.stringify(rules))
 
     const id = `sc-global-${hash}`
     if (!StyleSheet.global.hasInjectedComponent(id)) {

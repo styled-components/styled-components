@@ -38,7 +38,7 @@ class StyleSheet {
     this.id = sheetRunningId += 1
     this.sealed = false
     this.forceServer = forceServer
-    this.target = target
+    this.target = forceServer ? null : target
     this.tagMap = {}
     this.hashes = {}
     this.deferred = {}
@@ -50,12 +50,9 @@ class StyleSheet {
 
   /* rehydrate all SSR'd style tags */
   rehydrate() {
-    if (!IS_BROWSER) {
+    if (!IS_BROWSER || this.forceServer) {
       return this
     }
-
-    /* force sheet to create new tags for non-rehydrated components */
-    this.capacity = 1
 
     const els = []
     const names = []
@@ -86,10 +83,11 @@ class StyleSheet {
     }
 
     /* use initial sheet tag for rehydration */
-    const tag = makeTag(this.target, null)
+    const tag = makeTag(this.target, null, this.forceServer)
     const rehydrationTag = makeRehydrationTag(tag, els, extracted, names)
 
     this.tags = [rehydrationTag]
+    this.capacity = MAX_SIZE
 
     /* retrieve all component ids */
     const extractedSize = extracted.length
@@ -118,7 +116,7 @@ class StyleSheet {
   /* adds "children" to the StyleSheet that inherit all of the parents' rules
    * while their own rules do not affect the parent */
   clone() {
-    const sheet = new StyleSheet(this.target)
+    const sheet = new StyleSheet(this.target, this.forceServer)
     /* add to clone array */
     this.clones.push(sheet)
 

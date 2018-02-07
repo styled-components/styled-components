@@ -1,10 +1,11 @@
 // @flow
 /* eslint-disable flowtype/object-type-delimiter */
+/* eslint-disable react/prop-types */
 
 import React from 'react'
 import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR } from '../constants'
 import { type ExtractedComp } from '../utils/extractCompsFromCSS'
-import stringifyRules from '../utils/stringifyRules'
+import { splitByRules } from '../utils/stringifyRules'
 import getNonce from '../utils/nonce'
 
 export interface Tag<T> {
@@ -146,14 +147,24 @@ const makeStyleTag = (target: ?HTMLElement, lastTag: ?Node) => {
 }
 
 /* takes a css factory function and outputs an html styled tag factory */
-const wrapAsHtmlTag = (css: () => string, names: string[]) => (): string =>
-  `<style type="text/css" ${SC_ATTR}="${names.join(' ')}">${css()}</style>`
+const wrapAsHtmlTag = (css: () => string, names: string[]) => (): string => {
+  const nonce = getNonce()
+  const nonceProp = nonce ? `nonce="${nonce}" ` : ''
+  const attr = `${SC_ATTR}="${names.join(' ')}"`
+  return `<style type="text/css" ${nonceProp}${attr}>${css()}</style>`
+}
 
 /* takes a css factory function and outputs an element factory */
 const wrapAsElement = (css: () => string, names: string[]) => () => {
   const props = {
     type: 'text/css',
     [SC_ATTR]: names.join(' '),
+  }
+
+  const nonce = getNonce()
+  if (nonce) {
+    // $FlowFixMe
+    props.nonce = nonce
   }
 
   return <style {...props}>{css()}</style>
@@ -322,6 +333,7 @@ export const makeTag = (
   return makeServerTag()
 }
 
+/* TODO: Turn into fully functional composition (tag.names) */
 export const makeRehydrationTag = (
   tag: Tag<any>,
   els: HTMLStyleElement[],
@@ -342,7 +354,7 @@ export const makeRehydrationTag = (
     /* add all extracted components to the new tag */
     for (let i = 0; i < extracted.length; i += 1) {
       const { componentId, cssFromDOM } = extracted[i]
-      const cssRules = stringifyRules([cssFromDOM])
+      const cssRules = splitByRules(cssFromDOM)
       tag.insertRules(componentId, cssRules)
     }
 
