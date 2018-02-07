@@ -1,8 +1,9 @@
 // @flow
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
+import StyleSheet from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
+import { CONTEXT_KEY } from '../constants'
 
 /* this error is used for makeStyleTag */
 const targetPropErr =

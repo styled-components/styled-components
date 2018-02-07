@@ -3,12 +3,11 @@
 import React from 'react'
 import stream from 'stream'
 
+import { IS_BROWSER } from '../constants'
 import StyleSheet from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
 
 declare var __SERVER__: boolean
-
-const IS_BROWSER = typeof window !== 'undefined'
 
 /* this error is used for makeStyleTag */
 const sheetClosedErr =
@@ -63,7 +62,7 @@ export default class ServerStyleSheet {
   }
 
   interleaveWithNodeStream(readableStream: stream.Readable) {
-    if (__SERVER__ || IS_BROWSER) {
+    if (!__SERVER__ || IS_BROWSER) {
       throw new Error(streamBrowserErr)
     }
 
