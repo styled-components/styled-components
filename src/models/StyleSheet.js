@@ -162,7 +162,6 @@ class StyleSheet {
     if (this.capacity === 0) {
       this.capacity = MAX_SIZE
       this.sealed = false
-      // $FlowFixMe
       tag = makeTag(this.target, tag ? tag.styleTag : null, this.forceServer)
       this.tags.push(tag)
     }
