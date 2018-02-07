@@ -35,8 +35,6 @@ class StyleSheet {
     target: ?HTMLElement = IS_BROWSER ? document.head : null,
     forceServer?: boolean = false
   ) {
-    const firstTag = makeTag(target, null, forceServer)
-
     this.id = sheetRunningId += 1
     this.sealed = false
     this.forceServer = forceServer
@@ -45,8 +43,8 @@ class StyleSheet {
     this.hashes = {}
     this.deferred = {}
     this.rehydratedNames = {}
-    this.tags = [firstTag]
-    this.capacity = MAX_SIZE
+    this.tags = []
+    this.capacity = 1
     this.clones = []
   }
 
@@ -88,12 +86,10 @@ class StyleSheet {
     }
 
     /* use initial sheet tag for rehydration */
-    const rehydrationTag = (this.tags[0] = makeRehydrationTag(
-      this.tags[0],
-      els,
-      extracted,
-      names
-    ))
+    const tag = makeTag(this.target, null)
+    const rehydrationTag = makeRehydrationTag(tag, els, extracted, names)
+
+    this.tags = [rehydrationTag]
 
     /* retrieve all component ids */
     const extractedSize = extracted.length
@@ -107,6 +103,11 @@ class StyleSheet {
   /* retrieve a "global" instance of StyleSheet which is typically used when no other is available */
   static get global(): StyleSheet {
     return global || (global = new StyleSheet().rehydrate())
+  }
+
+  /* NOTE: This is just for backwards-compatibility with jest-styled-components */
+  static get instance(): StyleSheet {
+    return StyleSheet.global
   }
 
   /* reset the internal "global" instance */
@@ -164,7 +165,7 @@ class StyleSheet {
       this.capacity = MAX_SIZE
       this.sealed = false
       // $FlowFixMe
-      tag = makeTag(this.target, tag.styleTag, this.forceServer)
+      tag = makeTag(this.target, tag ? tag.styleTag : null, this.forceServer)
       this.tags.push(tag)
     }
 

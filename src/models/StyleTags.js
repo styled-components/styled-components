@@ -335,6 +335,8 @@ export const makeRehydrationTag = (
     /* only rehydrate once */
     if (isReady) {
       return
+    } else {
+      isReady = true
     }
 
     /* add all extracted components to the new tag */
@@ -351,14 +353,15 @@ export const makeRehydrationTag = (
         el.parentNode.removeChild(el)
       }
     }
+  }
 
-    isReady = true
+  /* add rehydrated names to the new tag */
+  for (let i = 0; i < names.length; i += 1) {
+    tag.names.push(names[i])
   }
 
   return {
     ...tag,
-    /* add rehydrated names to the new tag */
-    names,
     /* add rehydration hook to insertion methods */
     insertMarker: id => {
       rehydrate()

@@ -3,9 +3,10 @@ import hashStr from '../vendor/glamor/hash'
 
 import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
 import StyleSheet from './StyleSheet'
+import { IS_BROWSER } from '../constants'
 import isStyledComponent from '../utils/isStyledComponent'
 
-const areStylesCacheable = typeof window !== 'undefined'
+const areStylesCacheable = IS_BROWSER
 
 const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
   for (let i = 0; i < rules.length; i += 1) {
