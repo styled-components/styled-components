@@ -71,8 +71,9 @@ class ServerTag implements Tag {
     const cssRulesSize = css.length
     for (let i = 0; i < cssRulesSize; i += 1) {
       const cssRule = css[i]
-      comp.css += `${cssRule}\n`.replace(/\n*$/, '\n')
+      comp.css += cssRule
     }
+    comp.css += '\n'
 
     if (name) this.names.push(name)
   }
