@@ -112,7 +112,7 @@ export class ServerStyleSheet {
 
   getStyleTags(): string;
   getStyleElement(): ReactElement<{}>[];
-  instance: ServerStyleSheet;
+  instance: StyleSheet;
 }
 
 export default styled;
