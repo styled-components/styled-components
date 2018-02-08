@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+## [v3.1.7] - 2018-02-07
+
+- Append style tags below existing tags. If no tags exist append them to the bottom of the head. This prevents side effects e.g. adding a tag after a critical CSS tag and potentially overriding styles. (see [#1474](https://github.com/styled-components/styled-components/pull/1474))
 - Add warning if there are several instances of `styled-components` initialized on the page (see [#1412](https://github.com/styled-components/styled-components/pull/1412))
 
 - Add `target` prop to `StyleSheetManager` component to enable specifying where style tags should render (see [#1491](https://github.com/styled-components/styled-components/pull/1491))
@@ -15,6 +18,7 @@ All notable changes to this project will be documented in this file. If a contri
 - Bugfix for the last style tag sometimes being emitted multiple times during streaming ([see #1479](https://github.com/styled-components/styled-components/pull/1479))
 
 - Bugfix for speedy mode rehydration and added handling for out-of-order style injection ([see #1482](https://github.com/styled-components/styled-components/pull/1482))
+
 
 ## [v3.1.5] - 2018-02-01
 
