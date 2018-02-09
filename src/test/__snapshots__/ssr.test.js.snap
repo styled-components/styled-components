@@ -79,7 +79,7 @@ exports[`ssr should extract the CSS in a simple case 2`] = `
 `;
 
 exports[`ssr should interleave styles with rendered HTML when utilitizing streaming 1`] = `
-"<style type=\\"text/css\\" data-styled-components=\\"\\">
+"<style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-streamed=\\"true\\">
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
 /* sc-component-id: sc-a */

@@ -1,7 +1,12 @@
 // @flow
 
 import { cloneElement } from 'react'
-import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR } from '../constants'
+import {
+  IS_BROWSER,
+  DISABLE_SPEEDY,
+  SC_ATTR,
+  SC_STREAM_ATTR,
+} from '../constants'
 import { makeTag, makeRehydrationTag, type Tag } from './StyleTags'
 import extractComps from '../utils/extractCompsFromCSS'
 
@@ -57,14 +62,23 @@ class StyleSheet {
     const els = []
     const names = []
     let extracted = []
+    let isStreamed = false
 
     /* retrieve all of our SSR style elements from the DOM */
     const nodes = document.querySelectorAll(`style[${SC_ATTR}]`)
     const nodesSize = nodes.length
 
+    /* abort rehydration if no previous style tags were found */
+    if (nodesSize === 0) {
+      return this
+    }
+
     for (let i = 0; i < nodesSize; i += 1) {
       // $FlowFixMe: We can trust that all elements in this query are style elements
       const el = (nodes[i]: HTMLStyleElement)
+
+      /* check if style tag is a streamed tag */
+      isStreamed = !!el.getAttribute(SC_STREAM_ATTR) || isStreamed
 
       /* retrieve all component names */
       const elNames = (el.getAttribute(SC_ATTR) || '').trim().split(/\s+/)
@@ -82,15 +96,27 @@ class StyleSheet {
       els.push(el)
     }
 
-    /* use initial sheet tag for rehydration */
-    const tag = makeTag(this.target, null, this.forceServer)
-    const rehydrationTag = makeRehydrationTag(tag, els, extracted, names)
+    /* abort rehydration if nothing was extracted */
+    const extractedSize = extracted.length
+    if (extractedSize === 0) {
+      return this
+    }
 
-    this.tags = [rehydrationTag]
-    this.capacity = MAX_SIZE
+    /* create a tag to be used for rehydration */
+    const tag = makeTag(this.target, null, this.forceServer)
+    const rehydrationTag = makeRehydrationTag(
+      tag,
+      els,
+      extracted,
+      names,
+      isStreamed
+    )
+
+    /* reset capacity and adjust MAX_SIZE by the initial size of the rehydration */
+    this.capacity = Math.max(1, MAX_SIZE - extractedSize)
+    this.tags.push(rehydrationTag)
 
     /* retrieve all component ids */
-    const extractedSize = extracted.length
     for (let j = 0; j < extractedSize; j += 1) {
       this.tagMap[extracted[j].componentId] = rehydrationTag
     }

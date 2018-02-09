@@ -16,7 +16,7 @@ export interface Tag<T> {
   insertMarker(id: string): T;
   insertRules(id: string, cssRules: string[]): void;
   css(): string;
-  toHTML(): string;
+  toHTML(additionalAttrs: ?string): string;
   toElement(): React.Element<*>;
   clone(): Tag<T>;
 }
@@ -147,11 +147,18 @@ const makeStyleTag = (target: ?HTMLElement, lastTag: ?Node) => {
 }
 
 /* takes a css factory function and outputs an html styled tag factory */
-const wrapAsHtmlTag = (css: () => string, names: string[]) => (): string => {
+const wrapAsHtmlTag = (css: () => string, names: string[]) => (
+  additionalAttrs: ?string
+): string => {
   const nonce = getNonce()
-  const nonceProp = nonce ? `nonce="${nonce}" ` : ''
-  const attr = `${SC_ATTR}="${names.join(' ')}"`
-  return `<style type="text/css" ${nonceProp}${attr}>${css()}</style>`
+  const attrs = [
+    nonce && `nonce="${nonce}"`,
+    `${SC_ATTR}="${names.join(' ')}"`,
+    additionalAttrs,
+  ]
+
+  const htmlAttr = attrs.filter(Boolean).join(' ')
+  return `<style type="text/css" ${htmlAttr}>${css()}</style>`
 }
 
 /* takes a css factory function and outputs an element factory */
@@ -338,7 +345,8 @@ export const makeRehydrationTag = (
   tag: Tag<any>,
   els: HTMLStyleElement[],
   extracted: ExtractedComp[],
-  names: string[]
+  names: string[],
+  immediateRehydration: boolean
 ): Tag<any> => {
   let isReady = false
 
@@ -370,6 +378,10 @@ export const makeRehydrationTag = (
   /* add rehydrated names to the new tag */
   for (let i = 0; i < names.length; i += 1) {
     tag.names.push(names[i])
+  }
+
+  if (immediateRehydration) {
+    rehydrate()
   }
 
   return {

@@ -3,7 +3,7 @@
 import React from 'react'
 import stream from 'stream'
 
-import { IS_BROWSER } from '../constants'
+import { IS_BROWSER, SC_STREAM_ATTR } from '../constants'
 import StyleSheet from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
 
@@ -70,6 +70,7 @@ export default class ServerStyleSheet {
     const { instance } = this
     let instanceTagIndex = 0
 
+    const streamAttr = `${SC_STREAM_ATTR}="true"`
     const ourStream = new stream.Readable()
     // $FlowFixMe
     ourStream._read = () => {}
@@ -81,7 +82,7 @@ export default class ServerStyleSheet {
       /* retrieve html for each new style tag */
       for (; instanceTagIndex < tags.length; instanceTagIndex += 1) {
         const tag = tags[instanceTagIndex]
-        html += tag.toHTML()
+        html += tag.toHTML(streamAttr)
       }
 
       /* force our StyleSheets to emit entirely new tags */
