@@ -314,7 +314,7 @@ const makeServerTag = (): Tag<[string]> => {
     clone() {
       return {
         ...tag,
-        names: [...names],
+        names: names.slice(),
         markers: { ...markers },
       }
     },
@@ -353,11 +353,8 @@ export const makeRehydrationTag = (
   /* rehydration function that adds all rules to the new tag */
   const rehydrate = () => {
     /* only rehydrate once */
-    if (isReady) {
-      return
-    } else {
-      isReady = true
-    }
+    if (isReady) return
+    isReady = true
 
     /* add all extracted components to the new tag */
     for (let i = 0; i < extracted.length; i += 1) {
