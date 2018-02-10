@@ -21,7 +21,7 @@ if (IS_BROWSER) {
 }
 
 let sheetRunningId = 0
-let global
+let master
 
 class StyleSheet {
   id: number
@@ -124,19 +124,21 @@ class StyleSheet {
     return this
   }
 
-  /* retrieve a "global" instance of StyleSheet which is typically used when no other is available */
-  static get global(): StyleSheet {
-    return global || (global = new StyleSheet().rehydrate())
+  /* retrieve a "master" instance of StyleSheet which is typically used when no other is available
+   * The master StyleSheet is targeted by injectGlobal, keyframes, and components outside of any
+    * StyleSheetManager's context */
+  static get master(): StyleSheet {
+    return master || (master = new StyleSheet().rehydrate())
   }
 
   /* NOTE: This is just for backwards-compatibility with jest-styled-components */
   static get instance(): StyleSheet {
-    return StyleSheet.global
+    return StyleSheet.master
   }
 
-  /* reset the internal "global" instance */
+  /* reset the internal "master" instance */
   static reset(forceServer?: boolean = false) {
-    global = new StyleSheet(undefined, forceServer).rehydrate()
+    master = new StyleSheet(undefined, forceServer).rehydrate()
   }
 
   /* adds "children" to the StyleSheet that inherit all of the parents' rules

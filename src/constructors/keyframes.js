@@ -16,15 +16,15 @@ export default (
   const rules = css(strings, ...interpolations)
   const hash = hashStr(replaceWhitespace(JSON.stringify(rules)))
 
-  const existingName = StyleSheet.global.getNameForHash(hash)
+  const existingName = StyleSheet.master.getNameForHash(hash)
   if (existingName !== undefined) {
     return existingName
   }
 
   const name = nameGenerator(hash)
-  if (StyleSheet.global.alreadyInjected(hash, name)) return name
+  if (StyleSheet.master.alreadyInjected(hash, name)) return name
 
-  StyleSheet.global.inject(
+  StyleSheet.master.inject(
     `sc-keyframes-${name}`,
     stringifyRules(rules, name, '@keyframes'),
     hash,

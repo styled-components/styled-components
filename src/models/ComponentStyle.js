@@ -60,10 +60,10 @@ export default (
       this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
 
-      if (!StyleSheet.global.hasInjectedComponent(componentId)) {
+      if (!StyleSheet.master.hasInjectedComponent(componentId)) {
         const placeholder =
           process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : []
-        StyleSheet.global.deferredInject(componentId, placeholder)
+        StyleSheet.master.deferredInject(componentId, placeholder)
       }
     }
 

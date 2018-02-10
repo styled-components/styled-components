@@ -12,8 +12,8 @@ export default (stringifyRules: Stringifier, css: Function) => {
     const hash = hashStr(JSON.stringify(rules))
 
     const id = `sc-global-${hash}`
-    if (!StyleSheet.global.hasInjectedComponent(id)) {
-      StyleSheet.global.inject(id, stringifyRules(rules))
+    if (!StyleSheet.master.hasInjectedComponent(id)) {
+      StyleSheet.master.inject(id, stringifyRules(rules))
     }
   }
 

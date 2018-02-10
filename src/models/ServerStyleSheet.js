@@ -31,7 +31,7 @@ export default class ServerStyleSheet {
   instance: StyleSheet
 
   constructor() {
-    this.instance = StyleSheet.global.clone()
+    this.instance = StyleSheet.master.clone()
     this.closed = false
   }
 
