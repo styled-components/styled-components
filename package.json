@@ -80,7 +80,9 @@
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
+    "@types/node": "9.4.4",
     "@types/react": "^16",
+    "@types/react-dom": "^16",
     "@types/react-native": "^0.50.7",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
