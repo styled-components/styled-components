@@ -27,7 +27,6 @@ const streamBrowserErr =
 
 export default class ServerStyleSheet {
   closed: boolean
-  global: StyleSheet
   instance: StyleSheet
 
   constructor() {
