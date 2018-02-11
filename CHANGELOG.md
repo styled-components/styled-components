@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Add `StyleSheet.remove` API method to be able to delete rules related to a component ([see [#1514](https://github.com/styled-components/styled-components/pull/1514))
+
 - Replace murmurhash implementation and avoid destructuring tag function arguments (see [#1516](https://github.com/styled-components/styled-components/pull/1516))
 
 - Rewrite and refactor `StyleSheet` and `ServerStyleSheet` (no breaking change, see [#1501](https://github.com/styled-components/styled-components/pull/1501))
