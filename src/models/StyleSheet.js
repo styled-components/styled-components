@@ -1,127 +1,251 @@
 // @flow
-import React from 'react'
-import BrowserStyleSheet from './BrowserStyleSheet'
-import ServerStyleSheet from './ServerStyleSheet'
 
-export const SC_ATTR = 'data-styled-components'
-export const LOCAL_ATTR = 'data-styled-components-is-local'
-export const CONTEXT_KEY = '__styled-components-stylesheet__'
+import { cloneElement } from 'react'
+import {
+  IS_BROWSER,
+  DISABLE_SPEEDY,
+  SC_ATTR,
+  SC_STREAM_ATTR,
+} from '../constants'
+import { makeTag, makeRehydrationTag, type Tag } from './StyleTags'
+import extractComps from '../utils/extractCompsFromCSS'
 
-/* eslint-disable flowtype/object-type-delimiter */
-export interface Tag {
-  isLocal: boolean;
-
-  isSealed(): boolean;
-  getComponentIds(): Array<string>;
-  addComponent(componentId: string): void;
-  inject(componentId: string, css: Array<string>, name: ?string): void;
-  toHTML(): string;
-  toReactElement(key: string): React.Element<*>;
-  clone(): Tag;
+/* determine the maximum number of components before tags are sharded */
+let MAX_SIZE
+if (IS_BROWSER) {
+  /* in speedy mode we can keep a lot more rules in a sheet before a slowdown can be expected */
+  MAX_SIZE = DISABLE_SPEEDY ? 40 : 1000
+} else {
+  /* for servers we do not need to shard at all */
+  MAX_SIZE = -1
 }
-/* eslint-enable flowtype/object-type-delimiter */
 
-let instance = null
-// eslint-disable-next-line no-use-before-define
-export const clones: Array<StyleSheet> = []
+let sheetRunningId = 0
+let master
 
-const IS_BROWSER = typeof document !== 'undefined'
-
-export default class StyleSheet {
-  tagConstructor: boolean => Tag
-  tags: Array<Tag>
-  names: { [string]: boolean }
-  hashes: { [string]: string } = {}
-  deferredInjections: { [string]: Array<string> } = {}
-  componentTags: { [string]: Tag }
-  isStreaming: boolean
-
-  // helper for `ComponentStyle` to know when it cache static styles.
-  // staticly styled-component can not safely cache styles on the server
-  // without all `ComponentStyle` instances saving a reference to the
-  // the styleSheet instance they last rendered with,
-  // or listening to creation / reset events. otherwise you might create
-  // a component with one stylesheet and render it another api response
-  // with another, losing styles on from your server-side render.
-  stylesCacheable = IS_BROWSER
+class StyleSheet {
+  id: number
+  sealed: boolean
+  forceServer: boolean
+  target: ?HTMLElement
+  tagMap: { [string]: Tag<any> }
+  hashes: { [string]: string }
+  deferred: { [string]: string[] }
+  rehydratedNames: { [string]: boolean }
+  tags: Tag<any>[]
+  capacity: number
+  clones: StyleSheet[]
 
   constructor(
-    tagConstructor: boolean => Tag,
-    tags: Array<Tag> = [],
-    names: { [string]: boolean } = {}
+    target: ?HTMLElement = IS_BROWSER ? document.head : null,
+    forceServer?: boolean = false
   ) {
-    this.tagConstructor = tagConstructor
-    this.tags = tags
-    this.names = names
-    this.constructComponentTagMap()
-    this.isStreaming = false
+    this.id = sheetRunningId += 1
+    this.sealed = false
+    this.forceServer = forceServer
+    this.target = forceServer ? null : target
+    this.tagMap = {}
+    this.hashes = {}
+    this.deferred = {}
+    this.rehydratedNames = {}
+    this.tags = []
+    this.capacity = 1
+    this.clones = []
   }
 
-  constructComponentTagMap() {
-    this.componentTags = {}
+  /* rehydrate all SSR'd style tags */
+  rehydrate() {
+    if (!IS_BROWSER || this.forceServer) {
+      return this
+    }
 
-    this.tags.forEach(tag => {
-      tag.getComponentIds().forEach(componentId => {
-        this.componentTags[componentId] = tag
-      })
+    const els = []
+    const names = []
+    let extracted = []
+    let isStreamed = false
+
+    /* retrieve all of our SSR style elements from the DOM */
+    const nodes = document.querySelectorAll(`style[${SC_ATTR}]`)
+    const nodesSize = nodes.length
+
+    /* abort rehydration if no previous style tags were found */
+    if (nodesSize === 0) {
+      return this
+    }
+
+    for (let i = 0; i < nodesSize; i += 1) {
+      // $FlowFixMe: We can trust that all elements in this query are style elements
+      const el = (nodes[i]: HTMLStyleElement)
+
+      /* check if style tag is a streamed tag */
+      isStreamed = !!el.getAttribute(SC_STREAM_ATTR) || isStreamed
+
+      /* retrieve all component names */
+      const elNames = (el.getAttribute(SC_ATTR) || '').trim().split(/\s+/)
+      const elNamesSize = elNames.length
+      for (let j = 0; j < elNamesSize; j += 1) {
+        const name = elNames[j]
+        /* add rehydrated name to sheet to avoid readding styles */
+        this.rehydratedNames[name] = true
+        names.push(name)
+      }
+
+      /* extract all components and their CSS */
+      extracted = extracted.concat(extractComps(el.textContent))
+      /* store original HTMLStyleElement */
+      els.push(el)
+    }
+
+    /* abort rehydration if nothing was extracted */
+    const extractedSize = extracted.length
+    if (extractedSize === 0) {
+      return this
+    }
+
+    /* create a tag to be used for rehydration */
+    const tag = makeTag(this.target, null, this.forceServer)
+    const rehydrationTag = makeRehydrationTag(
+      tag,
+      els,
+      extracted,
+      names,
+      isStreamed
+    )
+
+    /* reset capacity and adjust MAX_SIZE by the initial size of the rehydration */
+    this.capacity = Math.max(1, MAX_SIZE - extractedSize)
+    this.tags.push(rehydrationTag)
+
+    /* retrieve all component ids */
+    for (let j = 0; j < extractedSize; j += 1) {
+      this.tagMap[extracted[j].componentId] = rehydrationTag
+    }
+
+    return this
+  }
+
+  /* retrieve a "master" instance of StyleSheet which is typically used when no other is available
+   * The master StyleSheet is targeted by injectGlobal, keyframes, and components outside of any
+    * StyleSheetManager's context */
+  static get master(): StyleSheet {
+    return master || (master = new StyleSheet().rehydrate())
+  }
+
+  /* NOTE: This is just for backwards-compatibility with jest-styled-components */
+  static get instance(): StyleSheet {
+    return StyleSheet.master
+  }
+
+  /* reset the internal "master" instance */
+  static reset(forceServer?: boolean = false) {
+    master = new StyleSheet(undefined, forceServer).rehydrate()
+  }
+
+  /* adds "children" to the StyleSheet that inherit all of the parents' rules
+   * while their own rules do not affect the parent */
+  clone() {
+    const sheet = new StyleSheet(this.target, this.forceServer)
+    /* add to clone array */
+    this.clones.push(sheet)
+
+    /* clone all tags */
+    sheet.tags = this.tags.map(tag => {
+      const ids = tag.getIds()
+      const newTag = tag.clone()
+
+      /* reconstruct tagMap */
+      for (let i = 0; i < ids.length; i += 1) {
+        sheet.tagMap[ids[i]] = newTag
+      }
+
+      return newTag
     })
+
+    /* clone other maps */
+    sheet.rehydratedNames = { ...this.rehydratedNames }
+    sheet.deferred = { ...this.deferred }
+    sheet.hashes = { ...this.hashes }
+
+    return sheet
   }
 
-  /* Best level of caching—get the name from the hash straight away. */
-  getName(hash: any) {
-    return this.hashes[hash.toString()]
+  /* force StyleSheet to create a new tag on the next injection */
+  sealAllTags() {
+    this.capacity = 1
+    this.sealed = true
   }
 
-  /* Second level of caching—if the name is already in the dom, don't
-   * inject anything and record the hash for getName next time. */
+  /* get a tag for a given componentId, assign the componentId to one, or shard */
+  getTagForId(id: string): Tag<any> {
+    /* simply return a tag, when the componentId was already assigned one */
+    const prev = this.tagMap[id]
+    if (prev !== undefined && !this.sealed) {
+      return prev
+    }
+
+    let tag = this.tags[this.tags.length - 1]
+
+    /* shard (create a new tag) if the tag is exhausted (See MAX_SIZE) */
+    this.capacity -= 1
+    if (this.capacity === 0) {
+      this.capacity = MAX_SIZE
+      this.sealed = false
+      tag = makeTag(this.target, tag ? tag.styleTag : null, this.forceServer)
+      this.tags.push(tag)
+    }
+
+    return (this.tagMap[id] = tag)
+  }
+
+  /* optimal caching: hash is known and name can be returned */
+  getNameForHash(hash: string) {
+    return this.hashes[hash]
+  }
+
+  /* rehydration check: name is known, hash is unknown, but styles are present */
   alreadyInjected(hash: any, name: string) {
-    if (!this.names[name]) return false
+    if (!this.rehydratedNames[name]) return false
 
-    this.hashes[hash.toString()] = name
+    this.hashes[hash] = name
     return true
   }
 
-  /* Third type of caching—don't inject components' componentId twice. */
-  hasInjectedComponent(componentId: string) {
-    return !!this.componentTags[componentId]
+  /* checks whether component is already registered */
+  hasInjectedComponent(id: string): boolean {
+    return !!this.tagMap[id]
   }
 
-  deferredInject(componentId: string, isLocal: boolean, css: Array<string>) {
-    if (this === instance) {
-      clones.forEach(clone => {
-        clone.deferredInject(componentId, isLocal, css)
-      })
+  /* registers a componentId and registers it on its tag */
+  deferredInject(id: string, cssRules: string[]) {
+    const { clones } = this
+    for (let i = 0; i < clones.length; i += 1) {
+      clones[i].deferredInject(id, cssRules)
     }
 
-    this.getOrCreateTag(componentId, isLocal)
-    this.deferredInjections[componentId] = css
+    this.getTagForId(id).insertMarker(id)
+    this.deferred[id] = cssRules
   }
 
-  inject(
-    componentId: string,
-    isLocal: boolean,
-    css: Array<string>,
-    hash: ?any,
-    name: ?string
-  ) {
-    if (this === instance) {
-      clones.forEach(clone => {
-        clone.inject(componentId, isLocal, css)
-      })
+  inject(id: string, cssRules: string[], hash?: string, name?: string) {
+    const { clones } = this
+    for (let i = 0; i < clones.length; i += 1) {
+      clones[i].inject(id, cssRules, hash, name)
     }
 
-    const tag = this.getOrCreateTag(componentId, isLocal)
-
-    const deferredInjection = this.deferredInjections[componentId]
-    if (deferredInjection) {
-      tag.inject(componentId, deferredInjection)
-      delete this.deferredInjections[componentId]
+    /* add deferred rules for component */
+    let injectRules = cssRules
+    const deferredRules = this.deferred[id]
+    if (deferredRules !== undefined) {
+      injectRules = deferredRules.concat(injectRules)
+      delete this.deferred[id]
     }
 
-    tag.inject(componentId, css, name)
+    const tag = this.getTagForId(id)
+    tag.insertRules(id, injectRules)
 
     if (hash && name) {
-      this.hashes[hash.toString()] = name
+      tag.names.push(name)
+      this.hashes[hash] = name
     }
   }
 
@@ -130,63 +254,13 @@ export default class StyleSheet {
   }
 
   toReactElements() {
-    return this.tags.map((tag, i) => tag.toReactElement(`sc-${i}`))
-  }
+    const { id } = this
 
-  getOrCreateTag(componentId: string, isLocal: boolean) {
-    const existingTag = this.componentTags[componentId]
-
-    /**
-     * in a streaming context, once a tag is sealed it can never be added to again
-     * or those styles will never make it to the client
-     */
-    if (
-      existingTag && this.isStreaming ? !existingTag.isSealed() : existingTag
-    ) {
-      return existingTag
-    }
-
-    const lastTag = this.tags[this.tags.length - 1]
-    const componentTag =
-      !lastTag || lastTag.isSealed() || lastTag.isLocal !== isLocal
-        ? this.createNewTag(isLocal)
-        : lastTag
-    this.componentTags[componentId] = componentTag
-    componentTag.addComponent(componentId)
-    return componentTag
-  }
-
-  createNewTag(isLocal: boolean) {
-    const newTag = this.tagConstructor(isLocal)
-    this.tags.push(newTag)
-    return newTag
-  }
-
-  static get instance() {
-    return instance || (instance = StyleSheet.create())
-  }
-
-  static reset(isServer: ?boolean) {
-    instance = StyleSheet.create(isServer)
-  }
-
-  /* We can make isServer totally implicit once Jest 20 drops and we
-   * can change environment on a per-test basis. */
-  static create(isServer: ?boolean = !IS_BROWSER) {
-    return (isServer ? ServerStyleSheet : BrowserStyleSheet).create()
-  }
-
-  static clone(oldSheet: StyleSheet) {
-    const newSheet = new StyleSheet(
-      oldSheet.tagConstructor,
-      oldSheet.tags.map(tag => tag.clone()),
-      { ...oldSheet.names }
-    )
-
-    newSheet.hashes = { ...oldSheet.hashes }
-    newSheet.deferredInjections = { ...oldSheet.deferredInjections }
-    clones.push(newSheet)
-
-    return newSheet
+    return this.tags.map((tag, i) => {
+      const key = `sc-${id}-${i}`
+      return cloneElement(tag.toElement(), { key })
+    })
   }
 }
+
+export default StyleSheet

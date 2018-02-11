@@ -3,7 +3,10 @@ import hashStr from '../vendor/glamor/hash'
 
 import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
 import StyleSheet from './StyleSheet'
+import { IS_BROWSER } from '../constants'
 import isStyledComponent from '../utils/isStyledComponent'
+
+const areStylesCacheable = IS_BROWSER
 
 const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
   for (let i = 0; i < rules.length; i += 1) {
@@ -56,10 +59,11 @@ export default (
       this.rules = rules
       this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
-      if (!StyleSheet.instance.hasInjectedComponent(this.componentId)) {
+
+      if (!StyleSheet.master.hasInjectedComponent(componentId)) {
         const placeholder =
-          process.env.NODE_ENV !== 'production' ? `.${componentId} {}` : ''
-        StyleSheet.instance.deferredInject(componentId, true, [placeholder])
+          process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : []
+        StyleSheet.master.deferredInject(componentId, placeholder)
       }
     }
 
@@ -76,21 +80,21 @@ export default (
 
       const flatCSS = flatten(this.rules, executionContext)
       const hash = hashStr(this.componentId + flatCSS.join(''))
-
-      const { stylesCacheable } = styleSheet
-      const existingName = styleSheet.getName(hash)
+      const existingName = styleSheet.getNameForHash(hash)
 
       if (existingName !== undefined) {
-        if (stylesCacheable) {
+        if (areStylesCacheable) {
           this.lastClassName = existingName
         }
+
         return existingName
       }
 
       const name = nameGenerator(hash)
-      if (stylesCacheable) {
+      if (areStylesCacheable) {
         this.lastClassName = existingName
       }
+
       if (styleSheet.alreadyInjected(hash, name)) {
         return name
       }
@@ -99,7 +103,7 @@ export default (
       // NOTE: this can only be set when we inject the class-name.
       // For some reason, presumably due to how css is stringifyRules behaves in
       // differently between client and server, styles break.
-      styleSheet.inject(this.componentId, true, css, hash, name)
+      styleSheet.inject(this.componentId, css, hash, name)
       return name
     }
 

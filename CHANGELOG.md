@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Rewrite and refactor `StyleSheet` and `ServerStyleSheet` (no breaking change, see [#1501](https://github.com/styled-components/styled-components/pull/1501))
+
 - Add warning if there are several instances of `styled-components` initialized on the page (see [#1412](https://github.com/styled-components/styled-components/pull/1412))
 
 - Add `target` prop to `StyleSheetManager` component to enable specifying where style tags should render (see [#1491](https://github.com/styled-components/styled-components/pull/1491))

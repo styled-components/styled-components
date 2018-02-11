@@ -3,6 +3,15 @@ import Stylis from 'stylis'
 import _insertRulePlugin from 'stylis-rule-sheet'
 import type { Interpolation } from '../types'
 
+const stylisSplitter = new Stylis({
+  global: false,
+  cascade: false,
+  keyframe: false,
+  prefix: false,
+  compress: false,
+  semicolon: false,
+})
+
 const stylis = new Stylis({
   global: false,
   cascade: true,
@@ -31,6 +40,7 @@ const parseRulesPlugin = _insertRulePlugin(rule => {
 })
 
 stylis.use([parseRulesPlugin, returnRulesPlugin])
+stylisSplitter.use([parseRulesPlugin, returnRulesPlugin])
 
 const stringifyRules = (
   rules: Array<Interpolation>,
@@ -44,5 +54,8 @@ const stringifyRules = (
 
   return stylis(prefix || !selector ? '' : selector, cssStr)
 }
+
+export const splitByRules = (css: string): Array<string> =>
+  stylisSplitter('', css)
 
 export default stringifyRules

@@ -1,9 +1,19 @@
 // @flow
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
+import StyleSheet from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
-import { tagConstructorWithTarget } from './BrowserStyleSheet'
+import { CONTEXT_KEY } from '../constants'
+
+/* this error is used for makeStyleTag */
+const targetPropErr =
+  process.env.NODE_ENV !== 'production'
+    ? `
+The StyleSheetManager expects a valid target or sheet prop!
+- Does this error occur on the client and is your target falsy?
+- Does this error occur on the server and is the sheet falsy?
+`.trim()
+    : ''
 
 class StyleSheetManager extends Component {
   sheetInstance: StyleSheet
@@ -20,11 +30,9 @@ class StyleSheetManager extends Component {
     if (this.props.sheet) {
       this.sheetInstance = this.props.sheet
     } else if (this.props.target) {
-      this.sheetInstance = new StyleSheet(
-        tagConstructorWithTarget(this.props.target)
-      )
+      this.sheetInstance = new StyleSheet(this.props.target)
     } else {
-      throw new Error('StyleSheetManager expects either a sheet or target prop')
+      throw new Error(targetPropErr)
     }
   }
 

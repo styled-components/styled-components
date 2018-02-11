@@ -11,10 +11,10 @@ export default (stringifyRules: Stringifier, css: Function) => {
     const rules = css(strings, ...interpolations)
     const hash = hashStr(JSON.stringify(rules))
 
-    const componentId = `sc-global-${hash}`
-    if (StyleSheet.instance.hasInjectedComponent(componentId)) return
-
-    StyleSheet.instance.inject(componentId, false, stringifyRules(rules))
+    const id = `sc-global-${hash}`
+    if (!StyleSheet.master.hasInjectedComponent(id)) {
+      StyleSheet.master.inject(id, stringifyRules(rules))
+    }
   }
 
   return injectGlobal

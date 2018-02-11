@@ -16,19 +16,20 @@ export default (
   const rules = css(strings, ...interpolations)
   const hash = hashStr(replaceWhitespace(JSON.stringify(rules)))
 
-  const existingName = StyleSheet.instance.getName(hash)
-  if (existingName) return existingName
+  const existingName = StyleSheet.master.getNameForHash(hash)
+  if (existingName !== undefined) {
+    return existingName
+  }
 
   const name = nameGenerator(hash)
-  if (StyleSheet.instance.alreadyInjected(hash, name)) return name
+  if (StyleSheet.master.alreadyInjected(hash, name)) return name
 
-  const generatedCSS = stringifyRules(rules, name, '@keyframes')
-  StyleSheet.instance.inject(
+  StyleSheet.master.inject(
     `sc-keyframes-${name}`,
-    true,
-    generatedCSS,
+    stringifyRules(rules, name, '@keyframes'),
     hash,
     name
   )
+
   return name
 }
