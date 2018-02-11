@@ -9,10 +9,9 @@ export default function consolidateStreamedStyles() {
   if (process.env.NODE_ENV !== 'production') {
     // eslint-disable-next-line no-console
     console.warn(
-      'The consolidateStreamedStyles function for streamed SSR rehydration was removed.\n' +
-        'The rehydration will now be automatically performed at an earlier point in time ' +
-        'on the client so that this function is now not needed anymore and is thus obsolete.\n' +
-        '- Consider removing this call on the client and use React + styled-components as you would expect'
+      'styled-components automatically does streaming SSR rehydration now.\n' +
+        'Calling consolidateStreamedStyles manually is no longer necessary and a noop now.\n' +
+        '- Please remove the consolidateStreamedStyles call from your client.'
     )
   }
 }
