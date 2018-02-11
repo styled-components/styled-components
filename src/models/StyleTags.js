@@ -13,8 +13,12 @@ export interface Tag<T> {
   styleTag: HTMLStyleElement | null;
   names: string[];
   getIds(): string[];
+  /* inserts a marker to ensure the id's correct position in the sheet */
   insertMarker(id: string): T;
+  /* inserts rules according to the ids markers */
   insertRules(id: string, cssRules: string[]): void;
+  /* removes all rules belonging to the id, keeping the marker around */
+  removeRules(id: string): void;
   css(): string;
   toHTML(additionalAttrs: ?string): string;
   toElement(): React.Element<*>;
@@ -105,6 +109,18 @@ const safeInsertRules = (
 
   /* return number of injected rules */
   return injectedRules
+}
+
+/* deletes `size` rules starting from `removalIndex` */
+const deleteRules = (
+  sheet: CSSStyleSheet,
+  removalIndex: number,
+  size: number
+) => {
+  const lowerBound = removalIndex - size
+  for (let i = removalIndex; i >= lowerBound; i -= 1) {
+    sheet.deleteRule(i)
+  }
 }
 
 /* add up all numbers in array up until and including the index */
@@ -204,6 +220,17 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
     sizes[marker] += safeInsertRules(sheet, cssRules, insertIndex)
   }
 
+  const removeRules = id => {
+    const marker = markers[id]
+    if (marker === undefined) return
+
+    const size = sizes[marker]
+    const sheet = sheetForTag(el)
+    const removalIndex = addUpUntilIndex(sizes, marker)
+    deleteRules(sheet, removalIndex, size)
+    sizes[marker] = 0
+  }
+
   const css = () => {
     const { cssRules } = sheetForTag(el)
     let str = ''
@@ -227,6 +254,7 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
     names,
     insertMarker,
     insertRules,
+    removeRules,
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
@@ -238,19 +266,30 @@ const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
   const markers = Object.create(null)
   const names = []
 
+  const makeTextNode = id => document.createTextNode(makeTextMarker(id))
+
   const insertMarker = id => {
     const prev = markers[id]
     if (prev !== undefined) {
       return prev
     }
 
-    const marker = (markers[id] = document.createTextNode(makeTextMarker(id)))
+    const marker = (markers[id] = makeTextNode(id))
     el.appendChild(marker)
     return marker
   }
 
   const insertRules = (id, cssRules) => {
     insertMarker(id).appendData(cssRules.join(' '))
+  }
+
+  const removeRules = id => {
+    const marker = markers[id]
+    if (marker === undefined) return
+    /* create new empty text node and replace the current one */
+    const newMarker = makeTextNode(id)
+    el.replaceChild(newMarker, marker)
+    markers[id] = newMarker
   }
 
   const css = () => {
@@ -268,6 +307,7 @@ const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
     names,
     insertMarker,
     insertRules,
+    removeRules,
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
@@ -293,6 +333,12 @@ const makeServerTag = (): Tag<[string]> => {
     marker[0] += cssRules.join(' ')
   }
 
+  const removeRules = id => {
+    const marker = markers[id]
+    if (marker === undefined) return
+    marker[0] = makeTextMarker(id)
+  }
+
   const css = () => {
     let str = ''
     // eslint-disable-next-line guard-for-in
@@ -308,6 +354,7 @@ const makeServerTag = (): Tag<[string]> => {
     names,
     insertMarker,
     insertRules,
+    removeRules,
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
