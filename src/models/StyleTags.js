@@ -8,15 +8,53 @@ import { type ExtractedComp } from '../utils/extractCompsFromCSS'
 import { splitByRules } from '../utils/stringifyRules'
 import getNonce from '../utils/nonce'
 
+type Names = { [string]: { [string]: boolean } }
+
+const addNameForId = (names: Names, id: string, name: ?string) => {
+  if (name) {
+    // eslint-disable-next-line no-param-reassign
+    const namesForId = names[id] || (names[id] = Object.create(null))
+    namesForId[name] = true
+  }
+}
+
+const resetId = (names: Names, id: string) => {
+  // eslint-disable-next-line no-param-reassign
+  names[id] = Object.create(null)
+}
+
+const hasNameForId = (names: Names) => (id: string, name: string) =>
+  names[id] !== undefined && names[id][name]
+
+const stringifyNames = (names: Names) => {
+  let str = ''
+  // eslint-disable-next-line guard-for-in
+  for (const id in names) {
+    str += `${Object.keys(names[id]).join(' ')} `
+  }
+  return str.trim()
+}
+
+const cloneNames = (names: Names): Names => {
+  const clone = Object.create(null)
+  // eslint-disable-next-line guard-for-in
+  for (const id in names) {
+    clone[id] = { ...names[id] }
+  }
+  return clone
+}
+
 export interface Tag<T> {
   // $FlowFixMe: Doesn't seem to accept any combination w/ HTMLStyleElement for some reason
   styleTag: HTMLStyleElement | null;
-  names: string[];
+  /* lists all ids of the tag */
   getIds(): string[];
+  /* checks whether `name` is already injected for `id` */
+  hasNameForId(id: string, name: string): boolean;
   /* inserts a marker to ensure the id's correct position in the sheet */
   insertMarker(id: string): T;
   /* inserts rules according to the ids markers */
-  insertRules(id: string, cssRules: string[]): void;
+  insertRules(id: string, cssRules: string[], name: ?string): void;
   /* removes all rules belonging to the id, keeping the marker around */
   removeRules(id: string): void;
   css(): string;
@@ -163,13 +201,13 @@ const makeStyleTag = (target: ?HTMLElement, lastTag: ?Node) => {
 }
 
 /* takes a css factory function and outputs an html styled tag factory */
-const wrapAsHtmlTag = (css: () => string, names: string[]) => (
+const wrapAsHtmlTag = (css: () => string, names: Names) => (
   additionalAttrs: ?string
 ): string => {
   const nonce = getNonce()
   const attrs = [
     nonce && `nonce="${nonce}"`,
-    `${SC_ATTR}="${names.join(' ')}"`,
+    `${SC_ATTR}="${stringifyNames(names)}"`,
     additionalAttrs,
   ]
 
@@ -178,10 +216,10 @@ const wrapAsHtmlTag = (css: () => string, names: string[]) => (
 }
 
 /* takes a css factory function and outputs an element factory */
-const wrapAsElement = (css: () => string, names: string[]) => () => {
+const wrapAsElement = (css: () => string, names: Names) => () => {
   const props = {
     type: 'text/css',
-    [SC_ATTR]: names.join(' '),
+    [SC_ATTR]: stringifyNames(names),
   }
 
   const nonce = getNonce()
@@ -198,9 +236,9 @@ const getIdsFromMarkersFactory = (markers: Object) => (): string[] =>
 
 /* speedy tags utilise insertRule */
 const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
+  const names: Names = Object.create(null)
   const markers = Object.create(null)
-  const sizes = []
-  const names = []
+  const sizes: number[] = []
 
   const insertMarker = id => {
     const prev = markers[id]
@@ -210,14 +248,16 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
 
     const marker = (markers[id] = sizes.length)
     sizes.push(0)
+    resetId(names, id)
     return marker
   }
 
-  const insertRules = (id, cssRules) => {
+  const insertRules = (id, cssRules, name) => {
     const marker = insertMarker(id)
     const sheet = sheetForTag(el)
     const insertIndex = addUpUntilIndex(sizes, marker)
     sizes[marker] += safeInsertRules(sheet, cssRules, insertIndex)
+    addNameForId(names, id, name)
   }
 
   const removeRules = id => {
@@ -229,6 +269,7 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
     const removalIndex = addUpUntilIndex(sizes, marker)
     deleteRules(sheet, removalIndex, size)
     sizes[marker] = 0
+    resetId(names, id)
   }
 
   const css = () => {
@@ -251,7 +292,7 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
   return {
     styleTag: el,
     getIds: getIdsFromMarkersFactory(markers),
-    names,
+    hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
     removeRules,
@@ -263,8 +304,8 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
 }
 
 const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
+  const names = Object.create(null)
   const markers = Object.create(null)
-  const names = []
 
   const makeTextNode = id => document.createTextNode(makeTextMarker(id))
 
@@ -276,11 +317,13 @@ const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
 
     const marker = (markers[id] = makeTextNode(id))
     el.appendChild(marker)
+    names[id] = Object.create(null)
     return marker
   }
 
-  const insertRules = (id, cssRules) => {
+  const insertRules = (id, cssRules, name) => {
     insertMarker(id).appendData(cssRules.join(' '))
+    addNameForId(names, id, name)
   }
 
   const removeRules = id => {
@@ -290,6 +333,7 @@ const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
     const newMarker = makeTextNode(id)
     el.replaceChild(newMarker, marker)
     markers[id] = newMarker
+    resetId(names, id)
   }
 
   const css = () => {
@@ -304,7 +348,7 @@ const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
   return {
     styleTag: el,
     getIds: getIdsFromMarkersFactory(markers),
-    names,
+    hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
     removeRules,
@@ -316,8 +360,8 @@ const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
 }
 
 const makeServerTag = (): Tag<[string]> => {
+  const names = Object.create(null)
   const markers = Object.create(null)
-  const names = []
 
   const insertMarker = id => {
     const prev = markers[id]
@@ -328,15 +372,17 @@ const makeServerTag = (): Tag<[string]> => {
     return (markers[id] = [makeTextMarker(id)])
   }
 
-  const insertRules = (id, cssRules) => {
+  const insertRules = (id, cssRules, name) => {
     const marker = insertMarker(id)
     marker[0] += cssRules.join(' ')
+    addNameForId(names, id, name)
   }
 
   const removeRules = id => {
     const marker = markers[id]
     if (marker === undefined) return
     marker[0] = makeTextMarker(id)
+    resetId(names, id)
   }
 
   const css = () => {
@@ -351,7 +397,7 @@ const makeServerTag = (): Tag<[string]> => {
   const tag = {
     styleTag: null,
     getIds: getIdsFromMarkersFactory(markers),
-    names,
+    hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
     removeRules,
@@ -361,7 +407,7 @@ const makeServerTag = (): Tag<[string]> => {
     clone() {
       return {
         ...tag,
-        names: names.slice(),
+        names: cloneNames(names),
         markers: { ...markers },
       }
     },
@@ -419,14 +465,7 @@ export const makeRehydrationTag = (
     }
   }
 
-  /* add rehydrated names to the new tag */
-  for (let i = 0; i < names.length; i += 1) {
-    tag.names.push(names[i])
-  }
-
-  if (immediateRehydration) {
-    rehydrate()
-  }
+  if (immediateRehydration) rehydrate()
 
   return {
     ...tag,
@@ -435,9 +474,9 @@ export const makeRehydrationTag = (
       rehydrate()
       return tag.insertMarker(id)
     },
-    insertRules: (id, cssRules) => {
+    insertRules: (id, cssRules, name) => {
       rehydrate()
-      return tag.insertRules(id, cssRules)
+      return tag.insertRules(id, cssRules, name)
     },
   }
 }

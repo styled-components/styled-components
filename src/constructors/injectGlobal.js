@@ -1,21 +1,26 @@
 // @flow
 import hashStr from '../vendor/glamor/hash'
 import StyleSheet from '../models/StyleSheet'
-import type { Interpolation, Stringifier } from '../types'
+import type { Interpolation, NameGenerator, Stringifier } from '../types'
 
 type InjectGlobalFn = (
   strings: Array<string>,
   ...interpolations: Array<Interpolation>
 ) => void
 
-export default (stringifyRules: Stringifier, css: Function) => {
+export default (
+  nameGenerator: NameGenerator,
+  stringifyRules: Stringifier,
+  css: Function
+) => {
   const injectGlobal: InjectGlobalFn = (...args) => {
+    const styleSheet = StyleSheet.master
     const rules = css(...args)
-    const hash = hashStr(JSON.stringify(rules))
+    const name = nameGenerator(hashStr(JSON.stringify(rules)))
+    const id = `sc-global-${name}`
 
-    const id = `sc-global-${hash}`
-    if (!StyleSheet.master.hasInjectedComponent(id)) {
-      StyleSheet.master.inject(id, stringifyRules(rules))
+    if (!styleSheet.hasNameForId(id, name)) {
+      styleSheet.inject(id, stringifyRules(rules), name)
     }
   }
 
