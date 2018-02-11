@@ -96,6 +96,14 @@ exports[`ssr should render CSS in the order the components were defined, not ren
 .TWO {} .a{color:blue;}</style>"
 `;
 
+exports[`ssr should respect removed rules 1`] = `
+"<style type=\\"text/css\\" data-styled-components=\\"c\\">
+/* sc-component-id: sc-a */
+.sc-a {} .c{color:red;}
+/* sc-component-id: sc-b */
+</style>"
+`;
+
 exports[`ssr should return a generated React style element 1`] = `
 Object {
   "children": "

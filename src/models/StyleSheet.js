@@ -260,6 +260,11 @@ class StyleSheet {
     const tag = this.tagMap[id]
     if (tag === undefined) return
 
+    const { clones } = this
+    for (let i = 0; i < clones.length; i += 1) {
+      clones[i].remove(id)
+    }
+
     /* remove all rules from the tag */
     tag.removeRules(id)
     /* ignore possible rehydrated names */
