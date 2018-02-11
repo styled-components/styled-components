@@ -203,6 +203,11 @@ class StyleSheet {
     return (this.tagMap[id] = tag)
   }
 
+  /* mainly for injectGlobal to check for its id */
+  hasId(id: string) {
+    return this.tagMap[id] !== undefined
+  }
+
   /* caching layer checking id+name to already have a corresponding tag and injected rules */
   hasNameForId(id: string, name: string) {
     /* exception for rehydrated names which are checked separately */
