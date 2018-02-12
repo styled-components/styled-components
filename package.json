@@ -23,7 +23,7 @@
     "test:native:watch": "npm run test:native -- --watch",
     "test:primitives": "jest -c .jest.primitives.json",
     "test:primitives:watch": "npm run test:primitives -- --watch",
-    "test:integration": "jest -c .jest.integration.json --forceExit",
+    "test:integration": "jest -c .jest.integration.json --runInBand --forceExit",
     "test:size": "bundlesize",
     "danger": "cross-env NODE_ENV=test danger run -- --verbose",
     "flow": "flow check",
