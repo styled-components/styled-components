@@ -46,22 +46,6 @@ describe('ssr', () => {
     expect(css).toMatchSnapshot()
   })
 
-  it('should respect removed rules', () => {
-    const Heading = styled.h1`
-      color: red;
-    `
-
-    const Text = styled.span`
-      color: green;
-    `
-
-    const sheet = new ServerStyleSheet()
-    renderToString(sheet.collectStyles(<Heading><Text>Hello SSR!</Text></Heading>))
-    sheet.instance.remove(Text.styledComponentId)
-    const css = sheet.getStyleTags()
-    expect(css).toMatchSnapshot()
-  })
-
   it('should extract both global and local CSS', () => {
     injectGlobal`
       body { background: papayawhip; }
