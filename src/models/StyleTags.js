@@ -7,42 +7,22 @@ import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR } from '../constants'
 import { type ExtractedComp } from '../utils/extractCompsFromCSS'
 import { splitByRules } from '../utils/stringifyRules'
 import getNonce from '../utils/nonce'
+import once from '../utils/once'
 
-type Names = { [string]: { [string]: boolean } }
+import {
+  type Names,
+  addNameForId,
+  resetIdNames,
+  hasNameForId,
+  stringifyNames,
+  cloneNames,
+} from '../utils/styleNames'
 
-const addNameForId = (names: Names, id: string, name: ?string) => {
-  if (name) {
-    // eslint-disable-next-line no-param-reassign
-    const namesForId = names[id] || (names[id] = Object.create(null))
-    namesForId[name] = true
-  }
-}
-
-const resetId = (names: Names, id: string) => {
-  // eslint-disable-next-line no-param-reassign
-  names[id] = Object.create(null)
-}
-
-const hasNameForId = (names: Names) => (id: string, name: string) =>
-  names[id] !== undefined && names[id][name]
-
-const stringifyNames = (names: Names) => {
-  let str = ''
-  // eslint-disable-next-line guard-for-in
-  for (const id in names) {
-    str += `${Object.keys(names[id]).join(' ')} `
-  }
-  return str.trim()
-}
-
-const cloneNames = (names: Names): Names => {
-  const clone = Object.create(null)
-  // eslint-disable-next-line guard-for-in
-  for (const id in names) {
-    clone[id] = { ...names[id] }
-  }
-  return clone
-}
+import {
+  sheetForTag,
+  safeInsertRules,
+  deleteRules,
+} from '../utils/insertRuleHelpers'
 
 export interface Tag<T> {
   // $FlowFixMe: Doesn't seem to accept any combination w/ HTMLStyleElement for some reason
@@ -89,77 +69,6 @@ The clone method cannot be used on the client!
 
 /* this marker separates component styles and is important for rehydration */
 const makeTextMarker = id => `\n/* sc-component-id: ${id} */\n`
-
-/* retrieve a sheet for a given style tag */
-const sheetForTag = (tag: HTMLStyleElement): CSSStyleSheet => {
-  // $FlowFixMe
-  if (tag.sheet) return tag.sheet
-
-  /* Firefox quirk requires us to step through all stylesheets to find one owned by the given tag */
-  const size = document.styleSheets.length
-  for (let i = 0; i < size; i += 1) {
-    const sheet = document.styleSheets[i]
-    // $FlowFixMe
-    if (sheet.ownerNode === tag) return sheet
-  }
-
-  /* we should always be able to find a tag */
-  throw new Error()
-}
-
-/* insert a rule safely and return whether it was actually injected */
-const safeInsertRule = (
-  sheet: CSSStyleSheet,
-  cssRule: string,
-  index: number
-): boolean => {
-  /* abort early if cssRule string is falsy */
-  if (!cssRule) return false
-
-  const maxIndex = sheet.cssRules.length
-
-  try {
-    /* use insertRule and cap passed index with maxIndex (no of cssRules) */
-    sheet.insertRule(cssRule, index <= maxIndex ? index : maxIndex)
-  } catch (err) {
-    /* any error indicates an invalid rule */
-    return false
-  }
-
-  return true
-}
-
-/* insert multiple rules using safeInsertRule */
-const safeInsertRules = (
-  sheet: CSSStyleSheet,
-  cssRules: string[],
-  insertIndex: number
-): number => {
-  /* inject each rule and count up the number of actually injected ones */
-  let injectedRules = 0
-  const cssRulesSize = cssRules.length
-  for (let i = 0; i < cssRulesSize; i += 1) {
-    const cssRule = cssRules[i]
-    if (safeInsertRule(sheet, cssRule, insertIndex + injectedRules)) {
-      injectedRules += 1
-    }
-  }
-
-  /* return number of injected rules */
-  return injectedRules
-}
-
-/* deletes `size` rules starting from `removalIndex` */
-const deleteRules = (
-  sheet: CSSStyleSheet,
-  removalIndex: number,
-  size: number
-) => {
-  const lowerBound = removalIndex - size
-  for (let i = removalIndex; i >= lowerBound; i -= 1) {
-    sheet.deleteRule(i)
-  }
-}
 
 /* add up all numbers in array up until and including the index */
 const addUpUntilIndex = (sizes: number[], index: number): number => {
@@ -248,7 +157,7 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
 
     const marker = (markers[id] = sizes.length)
     sizes.push(0)
-    resetId(names, id)
+    resetIdNames(names, id)
     return marker
   }
 
@@ -269,7 +178,7 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
     const removalIndex = addUpUntilIndex(sizes, marker)
     deleteRules(sheet, removalIndex, size)
     sizes[marker] = 0
-    resetId(names, id)
+    resetIdNames(names, id)
   }
 
   const css = () => {
@@ -333,7 +242,7 @@ const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
     const newMarker = makeTextNode(id)
     el.replaceChild(newMarker, marker)
     markers[id] = newMarker
-    resetId(names, id)
+    resetIdNames(names, id)
   }
 
   const css = () => {
@@ -382,7 +291,7 @@ const makeServerTag = (): Tag<[string]> => {
     const marker = markers[id]
     if (marker === undefined) return
     marker[0] = makeTextMarker(id)
-    resetId(names, id)
+    resetIdNames(names, id)
   }
 
   const css = () => {
@@ -433,7 +342,7 @@ export const makeTag = (
   return makeServerTag()
 }
 
-/* TODO: Turn into fully functional composition (tag.names) */
+/* wraps a given tag so that rehydration is performed once when necessary */
 export const makeRehydrationTag = (
   tag: Tag<any>,
   els: HTMLStyleElement[],
@@ -441,14 +350,8 @@ export const makeRehydrationTag = (
   names: string[],
   immediateRehydration: boolean
 ): Tag<any> => {
-  let isReady = false
-
   /* rehydration function that adds all rules to the new tag */
-  const rehydrate = () => {
-    /* only rehydrate once */
-    if (isReady) return
-    isReady = true
-
+  const rehydrate = once(() => {
     /* add all extracted components to the new tag */
     for (let i = 0; i < extracted.length; i += 1) {
       const { componentId, cssFromDOM } = extracted[i]
@@ -463,7 +366,7 @@ export const makeRehydrationTag = (
         el.parentNode.removeChild(el)
       }
     }
-  }
+  })
 
   if (immediateRehydration) rehydrate()
 
