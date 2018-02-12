@@ -5,18 +5,33 @@ import StyleSheet from '../models/StyleSheet'
 
 const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '')
 
-export default (nameGenerator: NameGenerator, stringifyRules: Stringifier, css: Function) =>
-  (strings: Array<string>, ...interpolations: Array<Interpolation>): string => {
-    const rules = css(strings, ...interpolations)
-    const hash = hashStr(replaceWhitespace(JSON.stringify(rules)))
+type KeyframesFn = (
+  strings: Array<string>,
+  ...interpolations: Array<Interpolation>
+) => string
 
-    const existingName = StyleSheet.instance.getName(hash)
-    if (existingName) return existingName
+export default (
+  nameGenerator: NameGenerator,
+  stringifyRules: Stringifier,
+  css: Function
+): KeyframesFn => (...arr): string => {
+  const rules = css(...arr)
+  const hash = hashStr(replaceWhitespace(JSON.stringify(rules)))
 
-    const name = nameGenerator(hash)
-    if (StyleSheet.instance.alreadyInjected(hash, name)) return name
-
-    const generatedCSS = stringifyRules(rules, name, '@keyframes')
-    StyleSheet.instance.inject(`sc-keyframes-${name}`, true, generatedCSS, hash, name)
-    return name
+  const existingName = StyleSheet.master.getNameForHash(hash)
+  if (existingName !== undefined) {
+    return existingName
   }
+
+  const name = nameGenerator(hash)
+  if (StyleSheet.master.alreadyInjected(hash, name)) return name
+
+  StyleSheet.master.inject(
+    `sc-keyframes-${name}`,
+    stringifyRules(rules, name, '@keyframes'),
+    hash,
+    name
+  )
+
+  return name
+}

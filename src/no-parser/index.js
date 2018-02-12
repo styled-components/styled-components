@@ -5,6 +5,10 @@ import flatten from './flatten'
 import stringifyRules from './stringifyRules'
 import css from './css'
 
+/* Import utils */
+import isStyledComponent from '../utils/isStyledComponent'
+import consolidateStreamedStyles from '../utils/consolidateStreamedStyles'
+
 /* Import singletons */
 import generateAlphabeticName from '../utils/generateAlphabeticName'
 import ServerStyleSheet from '../models/ServerStyleSheet'
@@ -25,7 +29,11 @@ import ThemeProvider from '../models/ThemeProvider'
 import withTheme from '../hoc/withTheme'
 
 /* Instantiate singletons */
-const ComponentStyle = _ComponentStyle(generateAlphabeticName, flatten, stringifyRules)
+const ComponentStyle = _ComponentStyle(
+  generateAlphabeticName,
+  flatten,
+  stringifyRules
+)
 const constructWithOptions = _constructWithOptions(css)
 const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
 
@@ -40,6 +48,8 @@ export {
   css,
   keyframes,
   injectGlobal,
+  isStyledComponent,
+  consolidateStreamedStyles,
   ThemeProvider,
   withTheme,
   ServerStyleSheet,

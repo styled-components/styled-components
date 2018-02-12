@@ -101,8 +101,7 @@ describe('basic', () => {
       const wrapper = mount(<Wrapper />)
       const component = wrapper.find(Comp).first()
 
-      // $FlowFixMe
-      expect(wrapper.node.testRef).toBe(component.getDOMNode())
+      expect(wrapper.instance().testRef).toBe(component.getDOMNode())
       expect(component.find('div').prop('innerRef')).toBeFalsy()
     })
 
@@ -126,8 +125,7 @@ describe('basic', () => {
       const wrapper = mount(<Wrapper />)
       const innerComponent = wrapper.find(InnerComponent).first()
 
-      // $FlowFixMe
-      expect(wrapper.node.testRef).toBe(innerComponent.node)
+      expect(wrapper.instance().testRef).toBe(innerComponent.instance())
       expect(innerComponent.prop('innerRef')).toBeFalsy()
     })
 
@@ -161,12 +159,11 @@ describe('basic', () => {
       const wrapper = mount(<Wrapper />)
       const innerComponent = wrapper.find(InnerComponent).first()
       const outerComponent = wrapper.find(OuterComponent).first()
+      const wrapperNode = wrapper.instance()
 
-      // $FlowFixMe
-      expect(wrapper.node.testRef).toBe(innerComponent.getDOMNode())
+      expect(wrapperNode.testRef).toBe(innerComponent.getDOMNode())
 
-      // $FlowFixMe
-      expect(innerComponent.prop('innerRef')).toBe(wrapper.node.innerRef)
+      expect(innerComponent.prop('innerRef')).toBe(wrapperNode.innerRef)
     })
 
     it('should respect the order of StyledComponent creation for CSS ordering', () => {

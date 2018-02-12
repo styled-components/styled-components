@@ -18,8 +18,11 @@ export type OuterStyledProps<P> = ThemedOuterStyledProps<P, any>;
 
 export type Interpolation<P> = FlattenInterpolation<P> | ReadonlyArray<FlattenInterpolation<P> | ReadonlyArray<FlattenInterpolation<P>>>;
 export type FlattenInterpolation<P> = InterpolationValue | InterpolationFunction<P>;
-export type InterpolationValue = string | number | StyledComponentClass<any, any>;
+export type InterpolationValue = string | number | Styles | StyledComponentClass<any, any>;
 export type SimpleInterpolation = InterpolationValue | ReadonlyArray<InterpolationValue | ReadonlyArray<InterpolationValue>>;
+export interface Styles {
+  [ruleOrSelector: string]: string | number | Styles;
+}
 export interface InterpolationFunction<P> {
   (props: P): Interpolation<P>;
 }
@@ -50,9 +53,7 @@ type ThemedStyledComponentFactories<T> = {
 export interface ThemedBaseStyledInterface<T> extends ThemedStyledComponentFactories<T> {
   <P, TTag extends keyof JSX.IntrinsicElements>(tag: TTag): ThemedStyledFunction<P, T, P & JSX.IntrinsicElements[TTag]>;
   <P, O>(component: StyledComponentClass<P, T, O>): ThemedStyledFunction<P, T, O>;
-  <P extends { theme: T; }>(component: React.ComponentClass<P>): ThemedStyledFunction<P, T, WithOptionalTheme<P, T>>;
-  <P>(component: React.ComponentClass<P>): ThemedStyledFunction<P, T>;
-  <P extends { [prop: string]: any; theme?: T; }>(component: React.StatelessComponent<P>): ThemedStyledFunction<P, T, WithOptionalTheme<P, T>>;
+  <P extends { [prop: string]: any; theme?: T }>(component: React.ComponentType<P>): ThemedStyledFunction<P, T, WithOptionalTheme<P, T>>;
 }
 export type BaseStyledInterface = ThemedBaseStyledInterface<any>;
 
@@ -92,6 +93,7 @@ export function withTheme<P extends { theme?: T; }, T>(component: Component<P>):
 
 export function keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
+export function consolidateStreamedStyles(): void;
 
 export const ThemeProvider: ThemeProviderComponent<object>;
 
@@ -99,13 +101,20 @@ interface StylesheetComponentProps {
   sheet: ServerStyleSheet;
 }
 
-export class StyleSheetManager extends React.Component<StylesheetComponentProps, {}> { }
+interface StyleSheetManagerProps {
+  sheet?: ServerStyleSheet;
+  target?: Node;
+}
+
+export class StyleSheetManager extends React.Component<StyleSheetManagerProps, {}> { }
 
 export class ServerStyleSheet {
   collectStyles(tree: React.ReactNode): ReactElement<StylesheetComponentProps>;
 
   getStyleTags(): string;
   getStyleElement(): ReactElement<{}>[];
+  interleaveWithNodeStream(readableStream: NodeJS.ReadableStream): NodeJS.ReadableStream;
+  instance: StyleSheet;
 }
 
 export default styled;

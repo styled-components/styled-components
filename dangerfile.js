@@ -16,7 +16,9 @@ const hasTestChanges = jsTestChanges.length > 0
 
 // Congrats, version bump up!
 danger.git.diffForFile('package.json').then(packageDiff => {
-  if (packageDiff && packageDiff.version && packageDiff.version.before && packageDiff.version.after) {
+  if (
+    packageDiff && packageDiff.version && packageDiff.version.before && packageDiff.version.after
+  ) {
     if (semver.lt(packageDiff.version.before, packageDiff.version.after)) {
       message(':tada: Version BUMP UP!')
     }

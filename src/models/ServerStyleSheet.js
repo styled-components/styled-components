@@ -1,119 +1,51 @@
 // @flow
 /* eslint-disable no-underscore-dangle */
 import React from 'react'
-import type { Tag } from './StyleSheet'
-import StyleSheet, { SC_ATTR, LOCAL_ATTR, clones } from './StyleSheet'
+import stream from 'stream'
+
+import { IS_BROWSER, SC_STREAM_ATTR } from '../constants'
+import StyleSheet from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
-import getNonce from '../utils/nonce'
 
-class ServerTag implements Tag {
-  isLocal: boolean
-  components: { [string]: Object }
-  size: number
-  names: Array<string>
+declare var __SERVER__: boolean
 
-  constructor(isLocal: boolean) {
-    this.isLocal = isLocal
-    this.components = {}
-    this.size = 0
-    this.names = []
-  }
+/* this error is used for makeStyleTag */
+const sheetClosedErr =
+  process.env.NODE_ENV !== 'production'
+    ? `
+Can't collect styles once you've consumed a ServerStyleSheet's styles!
+ServerStyleSheet is a one off instance for each server-side render cycle.
+- Are you trying to reuse it across renders?
+- Are you accidentally calling collectStyles twice?
+`.trim()
+    : ''
 
-  isFull() {
-    return false
-  }
-
-  addComponent(componentId: string) {
-    if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
-    this.components[componentId] = { componentId, css: '' }
-    this.size += 1
-  }
-
-  concatenateCSS() {
-    return Object.keys(this.components).reduce((styles, k) => (styles + this.components[k].css), '')
-  }
-
-  inject(componentId: string, css: string, name: ?string) {
-    const comp = this.components[componentId]
-
-    if (!comp) throw new Error('Must add a new component before you can inject css into it')
-    if (comp.css === '') comp.css = `/* sc-component-id: ${componentId} */\n`
-
-    comp.css += css.replace(/\n*$/, '\n')
-
-    if (name) this.names.push(name)
-  }
-
-  toHTML() {
-    const attrs = [
-      'type="text/css"',
-      `${SC_ATTR}="${this.names.join(' ')}"`,
-      `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`,
-    ]
-
-    const nonce = getNonce()
-
-    if (nonce) {
-      attrs.push(`nonce="${nonce}"`)
-    }
-
-    return `<style ${attrs.join(' ')}>${this.concatenateCSS()}</style>`
-  }
-
-  toReactElement(key: string) {
-    const attrs: Object = {
-      [SC_ATTR]: this.names.join(' '),
-      [LOCAL_ATTR]: this.isLocal.toString(),
-    }
-
-    const nonce = getNonce()
-
-    if (nonce) {
-      attrs.nonce = nonce
-    }
-
-    return (
-      <style
-        key={key} type="text/css" {...attrs}
-        dangerouslySetInnerHTML={{ __html: this.concatenateCSS() }}
-      />
-    )
-  }
-
-  clone() {
-    const copy = new ServerTag(this.isLocal)
-    copy.names = [].concat(this.names)
-    copy.size = this.size
-    copy.components = Object.keys(this.components)
-      .reduce((acc, key) => {
-        acc[key] = { ...this.components[key] } // eslint-disable-line no-param-reassign
-        return acc
-      }, {})
-
-    return copy
-  }
-}
+const streamBrowserErr =
+  process.env.NODE_ENV !== 'production'
+    ? 'Streaming SSR is only supported in a Node.js environment; Please do not try to call this method in the browser.'
+    : ''
 
 export default class ServerStyleSheet {
-  instance: StyleSheet
   closed: boolean
+  instance: StyleSheet
 
   constructor() {
-    this.instance = StyleSheet.clone(StyleSheet.instance)
+    this.instance = StyleSheet.master.clone()
+    this.closed = false
   }
 
   collectStyles(children: any) {
-    if (this.closed) throw new Error("Can't collect styles once you've called getStyleTags!")
+    if (this.closed) {
+      throw new Error(sheetClosedErr)
+    }
+
     return (
-      <StyleSheetManager sheet={this.instance}>
-        {children}
-      </StyleSheetManager>
+      <StyleSheetManager sheet={this.instance}>{children}</StyleSheetManager>
     )
   }
 
   getStyleTags(): string {
     if (!this.closed) {
-      clones.splice(clones.indexOf(this.instance), 1)
       this.closed = true
     }
 
@@ -122,14 +54,52 @@ export default class ServerStyleSheet {
 
   getStyleElement() {
     if (!this.closed) {
-      clones.splice(clones.indexOf(this.instance), 1)
       this.closed = true
     }
 
     return this.instance.toReactElements()
   }
 
-  static create() {
-    return new StyleSheet(isLocal => new ServerTag(isLocal))
+  interleaveWithNodeStream(readableStream: stream.Readable) {
+    if (!__SERVER__ || IS_BROWSER) {
+      throw new Error(streamBrowserErr)
+    }
+
+    /* the tag index keeps track of which tags have already been emitted */
+    const { instance } = this
+    let instanceTagIndex = 0
+
+    const streamAttr = `${SC_STREAM_ATTR}="true"`
+    const ourStream = new stream.Readable()
+    // $FlowFixMe
+    ourStream._read = () => {}
+
+    readableStream.on('data', chunk => {
+      const { tags } = instance
+      let html = ''
+
+      /* retrieve html for each new style tag */
+      for (; instanceTagIndex < tags.length; instanceTagIndex += 1) {
+        const tag = tags[instanceTagIndex]
+        html += tag.toHTML(streamAttr)
+      }
+
+      /* force our StyleSheets to emit entirely new tags */
+      instance.sealAllTags()
+      /* prepend style html to chunk */
+      ourStream.push(html + chunk)
+    })
+
+    readableStream.on('end', () => {
+      this.closed = true
+      ourStream.push(null)
+    })
+
+    readableStream.on('error', err => {
+      this.closed = true
+      ourStream.emit('error', err)
+    })
+
+    return ourStream
   }
 }

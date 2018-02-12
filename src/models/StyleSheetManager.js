@@ -1,12 +1,39 @@
 // @flow
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
+import StyleSheet from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
+import { CONTEXT_KEY } from '../constants'
+
+/* this error is used for makeStyleTag */
+const targetPropErr =
+  process.env.NODE_ENV !== 'production'
+    ? `
+The StyleSheetManager expects a valid target or sheet prop!
+- Does this error occur on the client and is your target falsy?
+- Does this error occur on the server and is the sheet falsy?
+`.trim()
+    : ''
 
 class StyleSheetManager extends Component {
+  sheetInstance: StyleSheet
+  props: {
+    sheet?: StyleSheet | null,
+    target?: HTMLElement | null,
+  }
+
   getChildContext() {
-    return { [CONTEXT_KEY]: this.props.sheet }
+    return { [CONTEXT_KEY]: this.sheetInstance }
+  }
+
+  componentWillMount() {
+    if (this.props.sheet) {
+      this.sheetInstance = this.props.sheet
+    } else if (this.props.target) {
+      this.sheetInstance = new StyleSheet(this.props.target)
+    } else {
+      throw new Error(targetPropErr)
+    }
   }
 
   render() {
@@ -29,7 +56,10 @@ StyleSheetManager.propTypes = {
   sheet: PropTypes.oneOfType([
     PropTypes.instanceOf(StyleSheet),
     PropTypes.instanceOf(ServerStyleSheet),
-  ]).isRequired,
+  ]),
+  target: PropTypes.shape({
+    appendChild: PropTypes.func.isRequired,
+  }),
 }
 
 export default StyleSheetManager

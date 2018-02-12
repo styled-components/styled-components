@@ -1,64 +1,40 @@
-// murmurhash2 via https://gist.github.com/raycmorgan/588423
+// Source: https://github.com/garycourt/murmurhash-js/blob/master/murmurhash2_gc.js
+function murmurhash(str) {
+  var
+    l = str.length | 0,
+    h = l | 0,
+    i = 0,
+    k;
 
-export default function doHash(str, seed) {
-  var m = 0x5bd1e995;
-  var r = 24;
-  var h = seed ^ str.length;
-  var length = str.length;
-  var currentIndex = 0;
+  while (l >= 4) {
+    k =
+      ((str.charCodeAt(i) & 0xff)) |
+      ((str.charCodeAt(++i) & 0xff) << 8) |
+      ((str.charCodeAt(++i) & 0xff) << 16) |
+      ((str.charCodeAt(++i) & 0xff) << 24);
 
-  while (length >= 4) {
-    var k = UInt32(str, currentIndex);
+    k = (((k & 0xffff) * 0x5bd1e995) + ((((k >>> 16) * 0x5bd1e995) & 0xffff) << 16));
+    k ^= k >>> 24;
+    k = (((k & 0xffff) * 0x5bd1e995) + ((((k >>> 16) * 0x5bd1e995) & 0xffff) << 16));
 
-    k = Umul32(k, m);
-    k ^= k >>> r;
-    k = Umul32(k, m);
+    h = (((h & 0xffff) * 0x5bd1e995) + ((((h >>> 16) * 0x5bd1e995) & 0xffff) << 16)) ^ k;
 
-    h = Umul32(h, m);
-    h ^= k;
-
-    currentIndex += 4;
-    length -= 4;
+    l -= 4;
+    ++i;
   }
 
-  switch (length) {
-    case 3:
-      h ^= UInt16(str, currentIndex);
-      h ^= str.charCodeAt(currentIndex + 2) << 16;
-      h = Umul32(h, m);
-      break;
-
-    case 2:
-      h ^= UInt16(str, currentIndex);
-      h = Umul32(h, m);
-      break;
-
-    case 1:
-      h ^= str.charCodeAt(currentIndex);
-      h = Umul32(h, m);
-      break;
+  switch (l) {
+    case 3: h ^= (str.charCodeAt(i + 2) & 0xff) << 16;
+    case 2: h ^= (str.charCodeAt(i + 1) & 0xff) << 8;
+    case 1: h ^= (str.charCodeAt(i) & 0xff);
+            h = (((h & 0xffff) * 0x5bd1e995) + ((((h >>> 16) * 0x5bd1e995) & 0xffff) << 16));
   }
 
   h ^= h >>> 13;
-  h = Umul32(h, m);
+  h = (((h & 0xffff) * 0x5bd1e995) + ((((h >>> 16) * 0x5bd1e995) & 0xffff) << 16));
   h ^= h >>> 15;
 
   return h >>> 0;
 }
 
-function UInt32(str, pos) {
-  return str.charCodeAt(pos++) + (str.charCodeAt(pos++) << 8) + (str.charCodeAt(pos++) << 16) + (str.charCodeAt(pos) << 24);
-}
-
-function UInt16(str, pos) {
-  return str.charCodeAt(pos++) + (str.charCodeAt(pos++) << 8);
-}
-
-function Umul32(n, m) {
-  n = n | 0;
-  m = m | 0;
-  var nlo = n & 0xffff;
-  var nhi = n >>> 16;
-  var res = nlo * m + ((nhi * m & 0xffff) << 16) | 0;
-  return res;
-}
+export default murmurhash
