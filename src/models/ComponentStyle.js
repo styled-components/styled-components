@@ -63,9 +63,12 @@ export default (
       this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
 
-      const placeholder =
-        process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : []
-      StyleSheet.master.deferredInject(componentId, placeholder)
+      if (!StyleSheet.master.hasId(componentId)) {
+        const placeholder =
+          process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : []
+
+        StyleSheet.master.deferredInject(componentId, placeholder)
+      }
     }
 
     /*
