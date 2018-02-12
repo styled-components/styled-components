@@ -5,15 +5,17 @@ import StyleSheet from '../models/StyleSheet'
 
 const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '')
 
+type KeyframesFn = (
+  strings: Array<string>,
+  ...interpolations: Array<Interpolation>
+) => string
+
 export default (
   nameGenerator: NameGenerator,
   stringifyRules: Stringifier,
   css: Function
-) => (
-  strings: Array<string>,
-  ...interpolations: Array<Interpolation>
-): string => {
-  const rules = css(strings, ...interpolations)
+): KeyframesFn => (...arr): string => {
+  const rules = css(...arr)
   const hash = hashStr(replaceWhitespace(JSON.stringify(rules)))
 
   const existingName = StyleSheet.master.getNameForHash(hash)
