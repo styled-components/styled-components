@@ -21,11 +21,7 @@ export default (
   const id = `sc-keyframes-${name}`
 
   if (!styleSheet.hasNameForId(id, name)) {
-    styleSheet.inject(
-      `sc-keyframes-${name}`,
-      stringifyRules(rules, name, '@keyframes'),
-      name
-    )
+    styleSheet.inject(id, stringifyRules(rules, name, '@keyframes'), name)
   }
 
   return name
