@@ -49,7 +49,8 @@ export default (
   flatten: Flattener,
   stringifyRules: Stringifier
 ) => {
-  const generateName = (str: string) => nameGenerator(hashStr(str))
+  /* combines hashStr (murmurhash) and nameGenerator for convenience */
+  const generateRuleHash = (str: string) => nameGenerator(hashStr(str))
 
   class ComponentStyle {
     rules: RuleSet
@@ -79,7 +80,7 @@ export default (
       }
 
       const flatCSS = flatten(this.rules, executionContext)
-      const name = generateName(this.componentId + flatCSS.join(''))
+      const name = generateRuleHash(this.componentId + flatCSS.join(''))
 
       if (!styleSheet.hasNameForId(componentId, name)) {
         const css = stringifyRules(flatCSS, `.${name}`)
@@ -91,7 +92,7 @@ export default (
     }
 
     static generateName(str: string): string {
-      return generateName(str)
+      return generateRuleHash(str)
     }
   }
 
