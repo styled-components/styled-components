@@ -97,7 +97,7 @@ Let everyone know you're using _styled-components_ → [![style: styled-componen
 ## Contributors
 
 This project exists thanks to all the people who contribute. [[Contribute](CONTRIBUTING.md)].
-<a href="graphs/contributors"><img src="https://opencollective.com/styled-components/contributors.svg?width=890" /></a>
+<a href="https://github.com/styled-components/styled-components/graphs/contributors"><img src="https://opencollective.com/styled-components/contributors.svg?width=890" /></a>
 
 
 ## Backers
