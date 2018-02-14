@@ -278,7 +278,7 @@ const makeServerTag = (): Tag<[string]> => {
       return prev
     }
 
-    return (markers[id] = [makeTextMarker(id)])
+    return (markers[id] = [''])
   }
 
   const insertRules = (id, cssRules, name) => {
@@ -298,7 +298,10 @@ const makeServerTag = (): Tag<[string]> => {
     let str = ''
     // eslint-disable-next-line guard-for-in
     for (const id in markers) {
-      str += markers[id][0]
+      const cssForId = markers[id][0]
+      if (cssForId) {
+        str += makeTextMarker(id) + cssForId
+      }
     }
     return str
   }

@@ -18,8 +18,6 @@ exports[`ssr should allow global styles to be injected during rendering 2`] = `
 html::before{content:'Before both renders';}
 /* sc-component-id: PageOne */
 .PageOne {} .a{color:red;}
-/* sc-component-id: PageTwo */
-
 /* sc-component-id: sc-global-2914197427 */
 html::before{content:'During first render';}</style><style type=\\"text/css\\" data-styled-components=\\"\\">
 /* sc-component-id: sc-global-2914197427 */
@@ -115,9 +113,7 @@ exports[`ssr should share global styles but keep renders separate 2`] = `
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
 /* sc-component-id: PageOne */
-.PageOne {} .a{color:red;}
-/* sc-component-id: PageTwo */
-</style>"
+.PageOne {} .a{color:red;}</style>"
 `;
 
 exports[`ssr should share global styles but keep renders separate 3`] = `"<h2 class=\\"PageTwo b\\" data-reactroot=\\"\\">Camera Two!</h2>"`;
