@@ -290,7 +290,7 @@ const makeServerTag = (): Tag<[string]> => {
   const removeRules = id => {
     const marker = markers[id]
     if (marker === undefined) return
-    marker[0] = makeTextMarker(id)
+    marker[0] = ''
     resetIdNames(names, id)
   }
 
