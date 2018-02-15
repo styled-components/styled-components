@@ -46,7 +46,10 @@ The clone method cannot be used on the client!
 }
 
 /* this marker separates component styles and is important for rehydration */
-const makeTextMarker = id => `\n/* sc-component-id: ${id} */\n`
+const makeTextMarker = id =>
+  process.env.NODE_ENV !== 'production'
+    ? `\n/* sc-component-id: ${id} */\n`
+    : ''
 
 /* retrieve a sheet for a given style tag */
 const sheetForTag = (tag: HTMLStyleElement): CSSStyleSheet => {
