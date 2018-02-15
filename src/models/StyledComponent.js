@@ -13,15 +13,11 @@ import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
 import type { RuleSet, Target } from '../types'
-import { CONTEXT_KEY } from '../constants'
+import { CONTEXT_KEY, STATIC_EXECUTION_CONTEXT } from '../constants'
 
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 import StyleSheet from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
-
-// HACK for generating all static styles without needing to allocate
-// an empty execution context every single time...
-const STATIC_EXECUTION_CONTEXT = {}
 
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
   const identifiers = {}

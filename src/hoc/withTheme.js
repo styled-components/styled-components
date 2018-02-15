@@ -45,10 +45,12 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
         themeProp === undefined &&
         process.env.NODE_ENV !== 'production'
       ) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          '[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps'
-        )
+        if (!_isStyledComponent(Component)) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            '[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps'
+          )
+        }
       } else if (styledContext === undefined && themeProp !== undefined) {
         this.setState({ theme: themeProp })
       } else {

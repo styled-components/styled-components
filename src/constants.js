@@ -11,3 +11,5 @@ export const IS_BROWSER = typeof window !== 'undefined'
 export const DISABLE_SPEEDY =
   (typeof __DEV__ === 'boolean' && __DEV__) ||
   process.env.NODE_ENV !== 'production'
+
+export const STATIC_EXECUTION_CONTEXT = {}

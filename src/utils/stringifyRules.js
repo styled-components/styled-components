@@ -42,12 +42,14 @@ const parseRulesPlugin = _insertRulePlugin(rule => {
 stylis.use([parseRulesPlugin, returnRulesPlugin])
 stylisSplitter.use([parseRulesPlugin, returnRulesPlugin])
 
+export const replaceComments = (css: string) => css.replace(/^\s*\/\/.*$/gm, '')
+
 const stringifyRules = (
   rules: Array<Interpolation>,
   selector: ?string,
   prefix: ?string
 ): Array<string> => {
-  const flatCSS = rules.join('').replace(/^\s*\/\/.*$/gm, '') // replace JS comments
+  const flatCSS = replaceComments(rules.join(''))
 
   const cssStr =
     selector && prefix ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS

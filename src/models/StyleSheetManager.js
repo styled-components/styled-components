@@ -15,10 +15,6 @@ The StyleSheetManager expects a valid target or sheet prop!
 `.trim()
     : ''
 
-// TODO: Import this from ./StyleSheet again
-// when we figured out why it is undefined during testing sometimes
-const CONTEXT_KEY = '__styled-components-stylesheet__'
-
 class StyleSheetManager extends Component {
   sheetInstance: StyleSheet
   props: {
