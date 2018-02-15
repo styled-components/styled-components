@@ -93,6 +93,7 @@ export function withTheme<P extends { theme?: T; }, T>(component: Component<P>):
 
 export function keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
+export function consolidateStreamedStyles(): void;
 
 export const ThemeProvider: ThemeProviderComponent<object>;
 
@@ -112,6 +113,8 @@ export class ServerStyleSheet {
 
   getStyleTags(): string;
   getStyleElement(): ReactElement<{}>[];
+  interleaveWithNodeStream(readableStream: NodeJS.ReadableStream): NodeJS.ReadableStream;
+  instance: StyleSheet;
 }
 
 export default styled;

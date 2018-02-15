@@ -8,6 +8,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Add `createGlobalStyle` which returns a component which, when mounting ('componentWillMount'), will apply global styles. The styles will also be removed once the component unmounts during `componentWillUnmount` (see [#1416](https://github.com/styled-components/styled-components/pull/1416))
 
+- Add `StyleSheet.remove` API method to be able to delete rules related to a component ([see [#1514](https://github.com/styled-components/styled-components/pull/1514))
+
+- Replace murmurhash implementation and avoid destructuring tag function arguments (see [#1516](https://github.com/styled-components/styled-components/pull/1516))
+
+- Rewrite and refactor `StyleSheet` and `ServerStyleSheet` (no breaking change, see [#1501](https://github.com/styled-components/styled-components/pull/1501))
+
 - Add warning if there are several instances of `styled-components` initialized on the page (see [#1412](https://github.com/styled-components/styled-components/pull/1412))
 
 - Add `target` prop to `StyleSheetManager` component to enable specifying where style tags should render (see [#1491](https://github.com/styled-components/styled-components/pull/1491))

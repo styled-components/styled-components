@@ -7,14 +7,14 @@ import _injectGlobal from '../constructors/injectGlobal'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
 import _keyframes from '../constructors/keyframes'
-import StyleSheet, { SC_ATTR, LOCAL_ATTR } from '../models/StyleSheet'
+import StyleSheet from '../models/StyleSheet'
+import { SC_ATTR } from '../constants'
 
 const keyframes = _keyframes(hash => `keyframe_${hash%1000}`, stringifyRules, css)
 const injectGlobal = _injectGlobal(stringifyRules, css)
 
 const getStyleTags = () => (
   Array.from(document.querySelectorAll('style')).map(el => ({
-    isLocal: el.getAttribute('data-styled-components-is-local'),
     css: el.innerHTML.trim().replace(/\s+/mg, ' ')
   }))
 )
@@ -31,10 +31,8 @@ describe('rehydration', () => {
 
   describe('with existing styled components', () => {
     beforeEach(() => {
-      /* Hash 1323611362 is based on name TWO and contents color: red.
-       * Change either and this will break. */
       document.head.innerHTML = `
-        <style ${SC_ATTR}='b' ${LOCAL_ATTR}='true'>
+        <style ${SC_ATTR}="b">
           /* sc-component-id: TWO */
           .TWO {}
           .b { color: red; }
@@ -52,7 +50,7 @@ describe('rehydration', () => {
         color: blue;
       `
       shallow(<Comp />)
-      expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color:blue; }')
+      expectCSSMatches('.b { color: red; } .ONE { } .a { color:blue; }')
     })
 
     it('should reuse a componentId', () => {
@@ -60,7 +58,7 @@ describe('rehydration', () => {
       shallow(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })``
       shallow(<B />)
-      expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color:blue; }')
+      expectCSSMatches('.b { color: red; } .ONE { } .a { color:blue; }')
     })
 
     it('should reuse a componentId and generated class', () => {
@@ -68,7 +66,7 @@ describe('rehydration', () => {
       shallow(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
       shallow(<B />)
-      expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color:blue; }')
+      expectCSSMatches('.b { color: red; } .ONE { } .a { color:blue; }')
     })
 
     it('should reuse a componentId and inject new classes', () => {
@@ -78,7 +76,7 @@ describe('rehydration', () => {
       shallow(<B />)
       const C = styled.div.withConfig({ componentId: 'TWO' })`color: green;`
       shallow(<C />)
-      expectCSSMatches('.TWO {} .b { color: red; } .c { color:green; } .ONE { } .a { color:blue; }')
+      expectCSSMatches('.b{ color: red; } .c{ color:green; } .ONE { } .a{ color:blue; }')
     })
   })
 
@@ -87,7 +85,7 @@ describe('rehydration', () => {
       /* Hash 1323611362 is based on name TWO and contents color: red.
        * Change either and this will break. */
       document.head.innerHTML = `
-        <style ${SC_ATTR}='a b' ${LOCAL_ATTR}='true'>
+        <style ${SC_ATTR}='a b'>
           /* sc-component-id: ONE */
           .ONE {}
           .a { color: blue; }
@@ -124,8 +122,8 @@ describe('rehydration', () => {
       `
       shallow(<Comp color="green"/>)
       expectCSSMatches(`
-        .ONE { } .a { color: blue; } .x { color:green; }
-        .TWO { } .b { color: red; }
+        .a { color: blue; } .x { color:green; }
+        .b { color: red; }
       `)
     })
   })
@@ -162,11 +160,11 @@ describe('rehydration', () => {
        * derived from "body { background: papayawhip; }" so be careful
        * changing it. */
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${LOCAL_ATTR}='false'>
+        <style ${SC_ATTR}>
           /* sc-component-id: sc-global-557410406 */
           body { background: papayawhip; }
         </style>
-        <style ${SC_ATTR}='b' ${LOCAL_ATTR}='true'>
+        <style ${SC_ATTR}='b'>
           /* sc-component-id: TWO */
           .TWO {}
           .b { color: red; }
@@ -183,13 +181,7 @@ describe('rehydration', () => {
       injectGlobal`
         body { color: tomato; }
       `
-      expectCSSMatches('body { background: papayawhip; } .TWO {} .b { color: red; } body { color:tomato; }')
-
-      expect(getStyleTags()).toEqual([
-        { isLocal: 'false', css: '/* sc-component-id: sc-global-557410406 */ body { background: papayawhip; }', },
-        { isLocal: 'true', css: '/* sc-component-id: TWO */ .TWO {} .b { color: red; }', },
-        { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;}', },
-      ])
+      expectCSSMatches('body { background: papayawhip; } .b { color: red; } body { color:tomato; }')
     })
 
     it('should interleave global and local styles', () => {
@@ -199,13 +191,16 @@ describe('rehydration', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
       shallow(<A />)
 
-      expectCSSMatches('body { background: papayawhip; } .TWO {} .b { color: red; } body { color:tomato; } .ONE { } .a { color:blue; }')
+      expectCSSMatches('body { background: papayawhip; } .b { color: red; } body { color:tomato; } .ONE { } .a { color:blue; }')
       expect(getStyleTags()).toEqual([
-        { isLocal: 'false', css: '/* sc-component-id: sc-global-557410406 */ body { background: papayawhip; }', },
-        { isLocal: 'true', css: '/* sc-component-id: TWO */ .TWO {} .b { color: red; }', },
-        { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;}', },
-        { isLocal: 'true', css: '/* sc-component-id: ONE */ .ONE {}.a{color:blue;}', },
-      ])
+        { css: '/* sc-component-id: sc-global-557410406 */ body{background:papayawhip;} ', },
+        { css: '/* sc-component-id: TWO */ .b{color:red;} ', },
+        { css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;} ', },
+        { css: '/* sc-component-id: ONE */ .ONE {} .a{color:blue;}', },
+      ].reduce((acc, { css }) => {
+        acc[0].css += css
+        return acc
+      }, [{ css: '' }]))
     })
   })
 
@@ -213,13 +208,13 @@ describe('rehydration', () => {
     let styleTags
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${LOCAL_ATTR}='false'>
+        <style ${SC_ATTR}>
            /* sc-component-id: sc-global-1455077013 */
           html { font-size: 16px; }
            /* sc-component-id: sc-global-557410406 */
           body { background: papayawhip; }
         </style>
-        <style ${SC_ATTR}='a b' ${LOCAL_ATTR}='true'>
+        <style ${SC_ATTR}='a b'>
           /* sc-component-id: ONE */
           .ONE {}
           .a { color: blue; }
@@ -252,40 +247,20 @@ describe('rehydration', () => {
       const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
       shallow(<B />)
       const styleTagsAfterRehydration = Array.from(document.querySelectorAll('style'))
-      expect(styleTagsAfterRehydration[0]).toBe(styleTags[0])
-      expect(styleTagsAfterRehydration[1]).toBe(styleTags[1])
+      expect(styleTagsAfterRehydration[0]).toEqual(styleTags[0])
 
       /* Only when new components are introduced (or a previous component
        * generates a new hash) does the style tag get replaced. */
       const C = styled.div.withConfig({ componentId: 'THREE' })`color: green;`
       shallow(<C />)
-      const styleTagsAfterAddition = Array.from(document.querySelectorAll('style'))
 
-      /* The first tag is unchanged */
-      expect(styleTagsAfterAddition[0]).toBe(styleTags[0])
-      /* The local tag has been replaced */
-      expect(styleTagsAfterAddition[1]).not.toBe(styleTags[1])
-      /* But it is identical, except for... */
-      expect(styleTagsAfterAddition[1].outerHTML).toEqual(
-        styleTags[1].outerHTML
-          /* ...the new data attribute for the new classname "c"... */
-          .replace(new RegExp(`${SC_ATTR}="a b"`), `${SC_ATTR}="a b c"`)
-          /* ...and the new CSS before the closing tag.  */
-          .replace(/(?=<\/style>)/, '\n/* sc-component-id: THREE */\n.THREE {}.c{color:green;}')
-      )
-
-      /* Note: any future additions don't replace the style tag */
-      const D = styled.div.withConfig({ componentId: 'TWO' })`color: tomato;`
-      shallow(<D />)
-
-      expect(Array.from(document.querySelectorAll('style'))[1]).toBe(styleTagsAfterAddition[1])
-
-      /* The point being, now we have a style tag we can inject new styles in the middle! */
+      /* the order stays correct and the styles are unharmed
+        * NOTE: during rehydration the empty rules are stripped out however */
       expectCSSMatches(`
-        html { font-size: 16px; }
-        body { background: papayawhip; }
-        .ONE { } .a { color: blue; }
-        .TWO { } .b { color: red; } .d { color:tomato; }
+        html { font-size:16px; }
+        body { background:papayawhip; }
+        .a { color:blue; }
+        .b { color:red; }
         .THREE { } .c { color:green; }
       `)
     })
@@ -334,7 +309,7 @@ describe('rehydration', () => {
   describe('with keyframes', () => {
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR}='keyframe_880' ${LOCAL_ATTR}='false'>
+        <style ${SC_ATTR}='keyframe_880'>
           /* sc-component-id: sc-keyframes-keyframe_880 */
           @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
         </style>

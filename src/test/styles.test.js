@@ -4,12 +4,14 @@ import { shallow } from 'enzyme'
 
 import * as nonce from '../utils/nonce';
 import { resetStyled, expectCSSMatches } from './utils'
+import StyleSheet from '../models/StyleSheet'
 import _injectGlobal from '../constructors/injectGlobal'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
 const injectGlobal = _injectGlobal(stringifyRules, css)
 
 jest.mock('../utils/nonce')
+jest.spyOn(nonce, 'default').mockImplementation(() => 'foo')
 
 let styled
 
@@ -18,6 +20,8 @@ describe('with styles', () => {
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
+    // $FlowFixMe
+    document.head.innerHTML = ''
     styled = resetStyled()
   })
 
@@ -177,48 +181,40 @@ describe('with styles', () => {
       `)
   })
 
-  it('should add a webpack nonce to the style tags if one is available in the global scope', () => {
-    jest.spyOn(nonce, 'default').mockImplementation(() => 'foo')
+  it('should respect removed rules', () => {
+    const Heading = styled.h1`
+      color: red;
+    `
+    const Text = styled.span`
+      color: green;
+    `
 
-    const rule = 'color: blue;'
-    const Comp = styled.div`
-        ${rule}
-      `
-    shallow(<Comp />)
+    shallow(<Heading><Text /></Heading>)
+    StyleSheet.master.remove(Text.styledComponentId)
+
     expectCSSMatches(`
         .sc-a {}
-        .b {
-          color:blue;
+        .c {
+          color:red;
         }
       `)
-
-    Array.from(document.querySelectorAll('style')).forEach(el => expect(el.getAttribute('nonce')).toBe('foo'))
   })
 
-  it('should add a webpack nonce to the global style tags if one is available in the global scope', () => {
-    // eslint-disable-next-line no-underscore-dangle
-    window.__webpack_nonce__ = 'foo'
-
-    injectGlobal`
-        html {
-          background: red;
-        }
-      `
+  it('should add a webpack nonce to the style tags if one is available in the global scope', () => {
     const rule = 'color: blue;'
     const Comp = styled.div`
         ${rule}
       `
     shallow(<Comp />)
     expectCSSMatches(`
-        html {
-          background:red;
-        }
         .sc-a {}
         .b {
           color:blue;
         }
       `)
 
-    Array.from(document.querySelectorAll('style')).forEach(el => expect(el.getAttribute('nonce')).toBe('foo'))
+    Array.from(document.querySelectorAll('style')).forEach(el => {
+      expect(el.getAttribute('nonce')).toBe('foo')
+    })
   })
 })

@@ -1,7 +1,0 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
-
-exports[`should find all inline style blocks and move them into the document head 1`] = `
-"<html><head><title>Testing!</title><style type=\\"text/css\\" data-styled-components=\\"diWxUz\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: sc-bdVaJa */.diWxUz{color:red;}</style></head><body>
-    <h1 class=\\"sc-bdVaJa diWxUz\\" data-reactroot=\\"\\">Hello SSR!</h1>
-  </body></html>"
-`;

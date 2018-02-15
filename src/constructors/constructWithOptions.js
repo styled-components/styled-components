@@ -1,5 +1,5 @@
 // @flow
-import type { Interpolation, Target } from '../types'
+import type { Target } from '../types'
 
 export default (css: Function) => {
   const constructWithOptions = (
@@ -16,10 +16,9 @@ export default (css: Function) => {
     }
 
     /* This is callable directly as a template function */
-    const templateFunction = (
-      strings: Array<string>,
-      ...interpolations: Array<Interpolation>
-    ) => componentConstructor(tag, options, css(strings, ...interpolations))
+    // $FlowFixMe: Not typed to avoid destructuring arguments
+    const templateFunction = (...args) =>
+      componentConstructor(tag, options, css(...args))
 
     /* If config methods are called, wrap up a new template function and merge options */
     templateFunction.withConfig = config =>

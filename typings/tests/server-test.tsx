@@ -1,5 +1,6 @@
 import * as React from "react";
-import styled, { ServerStyleSheet, StyleSheetManager } from "../..";
+import * as ReactDOMServer from "react-dom/server";
+import styled, { consolidateStreamedStyles, ServerStyleSheet, StyleSheetManager } from "../..";
 
 const Title = styled.h1`
   font-size: 1.5em;
@@ -20,3 +21,13 @@ const element = (
 );
 
 const css2 = sheet2.getStyleElement();
+
+// Wrapping a node stream returned from renderToNodeStream with interleaveWithNodeStream
+
+const sheet3 = new ServerStyleSheet();
+const appStream = ReactDOMServer.renderToNodeStream(<Title>Hello world</Title>);
+const wrappedCssStream: NodeJS.ReadableStream = sheet3.interleaveWithNodeStream(appStream);
+
+// Ensure presence of consolidateStreamedStyles
+
+consolidateStreamedStyles();

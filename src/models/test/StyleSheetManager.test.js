@@ -4,7 +4,7 @@ import React from 'react'
 import { renderToString } from 'react-dom/server'
 import { shallow, mount } from 'enzyme'
 import StyleSheetManager from '../StyleSheetManager'
-import StyleSheet, { SC_ATTR, LOCAL_ATTR } from '../StyleSheet'
+import StyleSheet from '../StyleSheet'
 import ServerStyleSheet from '../ServerStyleSheet'
 import { resetStyled, expectCSSMatches } from '../../test/utils'
 
@@ -12,10 +12,12 @@ let styled
 
 describe('StyleSheetManager', () => {
   beforeEach(() => {
-    styled = resetStyled()
     // $FlowFixMe
     document.body.innerHTML = ''
-    StyleSheet.reset()
+    // $FlowFixMe
+    document.head.innerHTML = ''
+
+    styled = resetStyled(true)
   })
 
   it('should use given stylesheet instance', () => {
@@ -147,7 +149,7 @@ describe('StyleSheetManager', () => {
         </StyleSheetManager>
       )
       const css = sheet.getStyleTags()
-      
+
       expect(html).toMatchSnapshot()
       expect(css).toMatchSnapshot()
     })
