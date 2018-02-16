@@ -47,7 +47,7 @@ describe(`createGlobalStyle`, () => {
     cleanup()
   })
 
- it(`supports theming`, () => {
+  it(`supports theming`, () => {
     const {cleanup, render} = setup()
     const Component = createGlobalStyle`div {color:${props => props.theme.color};} `
     render(
@@ -122,6 +122,21 @@ describe(`createGlobalStyle`, () => {
         [data-test-add]{background:yellow;}
       `)
     })
+  })
+
+  it(`stringifies multiple rules correctly`, () => {
+    const {cleanup, render} = setup()
+    const Component = createGlobalStyle`
+      div {
+        color: ${props => props.fg};
+        background: ${props => props.bg};
+      }
+    `
+    render(
+      <Component fg="red" bg="green"/>
+    )
+    expectCSSMatches(`div{color:red;background:green;} `)
+    cleanup()
   })
 
   it(`removes styling injected styling when unmounted`, () => {
