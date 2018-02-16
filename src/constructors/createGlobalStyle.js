@@ -5,17 +5,19 @@ import { CONTEXT_KEY, STATIC_EXECUTION_CONTEXT } from '../constants'
 import _GlobalStyle from '../models/GlobalStyle'
 import StyleSheet from '../models/StyleSheet'
 import ServerStyleSheet from '../models/ServerStyleSheet'
-import type { Interpolation, Stringifier } from '../types'
+import type { CSSConstructor, Interpolation, Stringifier } from '../types'
 import withTheme from '../hoc/withTheme'
+import interleave from '../utils/interleave'
+import flatten from '../utils/flatten'
 
-export default (stringifyRules: Stringifier, css: Function) => {
+export default (stringifyRules: Stringifier, css: CSSConstructor) => {
   const GlobalStyle = _GlobalStyle(stringifyRules)
 
   const createGlobalStyle = (
     strings: Array<string>,
     ...interpolations: Array<Interpolation>
   ) => {
-    const rules = css(strings, interpolations)
+    const rules = css(strings, ...interpolations)
     const style = new GlobalStyle(rules, {}, '')
 
     class GlobalStyleComponent extends React.Component {
