@@ -7,8 +7,6 @@ import StyleSheet from '../models/StyleSheet'
 import ServerStyleSheet from '../models/ServerStyleSheet'
 import type { CSSConstructor, Interpolation, Stringifier } from '../types'
 import withTheme from '../hoc/withTheme'
-import interleave from '../utils/interleave'
-import flatten from '../utils/flatten'
 
 export default (stringifyRules: Stringifier, css: CSSConstructor) => {
   const GlobalStyle = _GlobalStyle(stringifyRules)
