@@ -7,6 +7,7 @@ import StyleSheet from '../models/StyleSheet'
 import ServerStyleSheet from '../models/ServerStyleSheet'
 import type { CSSConstructor, Interpolation, Stringifier } from '../types'
 import withTheme from '../hoc/withTheme'
+import hashStr from '../vendor/glamor/hash'
 
 export default (stringifyRules: Stringifier, css: CSSConstructor) => {
   const GlobalStyle = _GlobalStyle(stringifyRules)
@@ -16,7 +17,8 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
     ...interpolations: Array<Interpolation>
   ) => {
     const rules = css(strings, ...interpolations)
-    const style = new GlobalStyle(rules, {}, '')
+    const id = `sc-global-${hashStr(JSON.stringify(rules))}`
+    const style = new GlobalStyle(rules, id)
 
     class GlobalStyleComponent extends React.Component {
       static contextTypes = {
@@ -26,7 +28,7 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
         ]),
       }
 
-      static styledComponentId = 'global'
+      static styledComponentId = id
 
       componentWillMount() {
         const { props } = this

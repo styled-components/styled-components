@@ -8,7 +8,7 @@ export default (stringifyRules: Stringifier) => {
     rules: RuleSet
     componentId: string
 
-    constructor(rules: RuleSet, attrs?: Object, componentId: string) {
+    constructor(rules: RuleSet, componentId: string) {
       this.rules = rules
       this.componentId = componentId
     }

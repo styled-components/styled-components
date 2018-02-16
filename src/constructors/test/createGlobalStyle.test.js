@@ -177,6 +177,66 @@ describe(`createGlobalStyle`, () => {
     expect(getCSS()).not.toContain(`[data-test-remove]{color:grey;}`)
     cleanup()
   })
+
+  it(`removes styling injected for multiple <GlobalStyle> components correctly`, () => {
+    const {container, render} = context
+
+    const A = createGlobalStyle`body { background: palevioletred; }`;
+    const B = createGlobalStyle`body { color: white; }`;
+
+    class Comp extends React.Component {
+      state = {
+        a: true,
+        b: true
+      }
+
+      onClick() {
+        if (this.state.a === true && this.state.b === true) {
+          this.setState({
+            a: true,
+            b: false
+          })
+        } else if (this.state.a === true && this.state.b === false) {
+          this.setState({
+            a: false,
+            b: false
+          })
+        } else {
+          this.setState({
+            a: true,
+            b: true
+          })
+        }
+      }
+
+      render() {
+        return (
+          <div data-test-el onClick={() => this.onClick()}>
+            {this.state.a ? <A/> : null}
+            {this.state.b ? <B/> : null}
+          </div>
+        )
+      }
+    }
+
+    render(<Comp/>)
+    const el = document.querySelector('[data-test-el]')
+    expectCSSMatches(`body{background:palevioletred;} body{color:white;}`)
+
+    {
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      const css = getCSS()
+      expect(css).not.toContain('body{color:white;}')
+      expect(css).toContain('body{background:palevioletred;}')
+    }
+
+    {
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      const css = getCSS()
+      expect(css).not.toContain('body{color:white;}')
+      expect(css).not.toContain('body{background:palevioletred;}')
+    }
+  })
 })
 
 function setup() {
