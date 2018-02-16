@@ -139,8 +139,24 @@ describe(`createGlobalStyle`, () => {
     cleanup()
   })
 
+  it(`injects multiple <GlobalStyle> components correctly`, () => {
+    const {cleanup, render} = setup()
+
+    const A = createGlobalStyle`body { background: palevioletred; }`;
+    const B = createGlobalStyle`body { color: white; }`;
+
+    render(
+      <React.Fragment>
+        <A/>
+        <B/>
+      </React.Fragment>
+    )
+    expectCSSMatches(`body{background:palevioletred;} body{color:white;}`)
+    cleanup()
+  })
+
   it(`removes styling injected styling when unmounted`, () => {
-    const {container, render} = context
+    const {cleanup, container, render} = setup()
     const Component = createGlobalStyle`[data-test-remove]{color:grey;} `
 
     class Comp extends React.Component {
@@ -159,6 +175,7 @@ describe(`createGlobalStyle`, () => {
 
     render(<Comp/>)
     expect(getCSS()).not.toContain(`[data-test-remove]{color:grey;}`)
+    cleanup()
   })
 })
 
