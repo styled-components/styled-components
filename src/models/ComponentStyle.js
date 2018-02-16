@@ -49,6 +49,9 @@ export default (
   flatten: Flattener,
   stringifyRules: Stringifier
 ) => {
+  /* combines hashStr (murmurhash) and nameGenerator for convenience */
+  const generateRuleHash = (str: string) => nameGenerator(hashStr(str))
+
   class ComponentStyle {
     rules: RuleSet
     componentId: string
@@ -60,9 +63,10 @@ export default (
       this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
 
-      if (!StyleSheet.master.hasInjectedComponent(componentId)) {
+      if (!StyleSheet.master.hasId(componentId)) {
         const placeholder =
           process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : []
+
         StyleSheet.master.deferredInject(componentId, placeholder)
       }
     }
@@ -73,42 +77,25 @@ export default (
      * Returns the hash to be injected on render()
      * */
     generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
-      const { isStatic, lastClassName } = this
-      if (isStatic && lastClassName !== undefined) {
+      const { isStatic, componentId, lastClassName } = this
+      if (areStylesCacheable && isStatic && lastClassName !== undefined) {
         return lastClassName
       }
 
       const flatCSS = flatten(this.rules, executionContext)
-      const hash = hashStr(this.componentId + flatCSS.join(''))
-      const existingName = styleSheet.getNameForHash(hash)
+      const name = generateRuleHash(this.componentId + flatCSS.join(''))
 
-      if (existingName !== undefined) {
-        if (areStylesCacheable) {
-          this.lastClassName = existingName
-        }
-
-        return existingName
+      if (!styleSheet.hasNameForId(componentId, name)) {
+        const css = stringifyRules(flatCSS, `.${name}`)
+        styleSheet.inject(this.componentId, css, name)
       }
 
-      const name = nameGenerator(hash)
-      if (areStylesCacheable) {
-        this.lastClassName = existingName
-      }
-
-      if (styleSheet.alreadyInjected(hash, name)) {
-        return name
-      }
-
-      const css = stringifyRules(flatCSS, `.${name}`)
-      // NOTE: this can only be set when we inject the class-name.
-      // For some reason, presumably due to how css is stringifyRules behaves in
-      // differently between client and server, styles break.
-      styleSheet.inject(this.componentId, css, hash, name)
+      this.lastClassName = name
       return name
     }
 
-    static generateName(str: string) {
-      return nameGenerator(hashStr(str))
+    static generateName(str: string): string {
+      return generateRuleHash(str)
     }
   }
 

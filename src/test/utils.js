@@ -18,9 +18,15 @@ import noParserStringifyRules from '../no-parser/stringifyRules'
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let index = 0
+let inputs = {}
 let seededClassnames = []
-const classNames = () =>
-  seededClassnames.shift() || String.fromCodePoint(97 + index++)
+
+const classNames = input => {
+  const seed = seededClassnames.shift()
+  if (seed) return seed
+
+  return inputs[input] || (inputs[input] = String.fromCodePoint(97 + index++))
+}
 
 export const seedNextClassnames = (names: Array<string>) =>
   (seededClassnames = names)
@@ -36,6 +42,7 @@ export const resetStyled = (isServer: boolean = false) => {
 
   StyleSheet.reset(isServer)
   index = 0
+  inputs = {}
 
   const ComponentStyle = _ComponentStyle(classNames, flatten, stringifyRules)
   const constructWithOptions = _constructWithOptions(css)

@@ -15,23 +15,14 @@ export default (
   stringifyRules: Stringifier,
   css: Function
 ): KeyframesFn => (...arr): string => {
+  const styleSheet = StyleSheet.master
   const rules = css(...arr)
-  const hash = hashStr(replaceWhitespace(JSON.stringify(rules)))
+  const name = nameGenerator(hashStr(replaceWhitespace(JSON.stringify(rules))))
+  const id = `sc-keyframes-${name}`
 
-  const existingName = StyleSheet.master.getNameForHash(hash)
-  if (existingName !== undefined) {
-    return existingName
+  if (!styleSheet.hasNameForId(id, name)) {
+    styleSheet.inject(id, stringifyRules(rules, name, '@keyframes'), name)
   }
-
-  const name = nameGenerator(hash)
-  if (StyleSheet.master.alreadyInjected(hash, name)) return name
-
-  StyleSheet.master.inject(
-    `sc-keyframes-${name}`,
-    stringifyRules(rules, name, '@keyframes'),
-    hash,
-    name
-  )
 
   return name
 }

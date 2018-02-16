@@ -28,12 +28,19 @@ class StyleSheet {
   sealed: boolean
   forceServer: boolean
   target: ?HTMLElement
+  /* a map from ids to tags */
   tagMap: { [string]: Tag<any> }
-  hashes: { [string]: string }
+  /* deferred rules for a given id */
   deferred: { [string]: string[] }
+  /* this is used for not reinjecting rules via hasNameForId() */
   rehydratedNames: { [string]: boolean }
+  /* when rules for an id are removed using remove() we have to ignore rehydratedNames for it */
+  ignoreRehydratedNames: { [string]: boolean }
+  /* a list of tags belonging to this StyleSheet */
   tags: Tag<any>[]
+  /* current capacity until a new tag must be created */
   capacity: number
+  /* children (aka clones) of this StyleSheet inheriting all and future injections */
   clones: StyleSheet[]
 
   constructor(
@@ -45,9 +52,9 @@ class StyleSheet {
     this.forceServer = forceServer
     this.target = forceServer ? null : target
     this.tagMap = {}
-    this.hashes = {}
     this.deferred = {}
     this.rehydratedNames = {}
+    this.ignoreRehydratedNames = {}
     this.tags = []
     this.capacity = 1
     this.clones = []
@@ -164,7 +171,6 @@ class StyleSheet {
     /* clone other maps */
     sheet.rehydratedNames = { ...this.rehydratedNames }
     sheet.deferred = { ...this.deferred }
-    sheet.hashes = { ...this.hashes }
 
     return sheet
   }
@@ -197,26 +203,30 @@ class StyleSheet {
     return (this.tagMap[id] = tag)
   }
 
-  /* optimal caching: hash is known and name can be returned */
-  getNameForHash(hash: string) {
-    return this.hashes[hash]
+  /* mainly for injectGlobal to check for its id */
+  hasId(id: string) {
+    return this.tagMap[id] !== undefined
   }
 
-  /* rehydration check: name is known, hash is unknown, but styles are present */
-  alreadyInjected(hash: any, name: string) {
-    if (!this.rehydratedNames[name]) return false
+  /* caching layer checking id+name to already have a corresponding tag and injected rules */
+  hasNameForId(id: string, name: string) {
+    /* exception for rehydrated names which are checked separately */
+    if (
+      this.ignoreRehydratedNames[id] === undefined &&
+      this.rehydratedNames[name]
+    ) {
+      return true
+    }
 
-    this.hashes[hash] = name
-    return true
-  }
-
-  /* checks whether component is already registered */
-  hasInjectedComponent(id: string): boolean {
-    return !!this.tagMap[id]
+    const tag = this.tagMap[id]
+    return tag !== undefined && tag.hasNameForId(id, name)
   }
 
   /* registers a componentId and registers it on its tag */
   deferredInject(id: string, cssRules: string[]) {
+    /* don't inject when the id is already registered */
+    if (this.tagMap[id] !== undefined) return
+
     const { clones } = this
     for (let i = 0; i < clones.length; i += 1) {
       clones[i].deferredInject(id, cssRules)
@@ -226,10 +236,11 @@ class StyleSheet {
     this.deferred[id] = cssRules
   }
 
-  inject(id: string, cssRules: string[], hash?: string, name?: string) {
+  /* injects rules for a given id with a name that will need to be cached */
+  inject(id: string, cssRules: string[], name?: string) {
     const { clones } = this
     for (let i = 0; i < clones.length; i += 1) {
-      clones[i].inject(id, cssRules, hash, name)
+      clones[i].inject(id, cssRules, name)
     }
 
     /* add deferred rules for component */
@@ -241,12 +252,25 @@ class StyleSheet {
     }
 
     const tag = this.getTagForId(id)
-    tag.insertRules(id, injectRules)
+    tag.insertRules(id, injectRules, name)
+  }
 
-    if (hash && name) {
-      tag.names.push(name)
-      this.hashes[hash] = name
+  /* removes all rules for a given id, which doesn't remove its marker but resets it */
+  remove(id: string) {
+    const tag = this.tagMap[id]
+    if (tag === undefined) return
+
+    const { clones } = this
+    for (let i = 0; i < clones.length; i += 1) {
+      clones[i].remove(id)
     }
+
+    /* remove all rules from the tag */
+    tag.removeRules(id)
+    /* ignore possible rehydrated names */
+    this.ignoreRehydratedNames[id] = true
+    /* delete possible deferred rules */
+    delete this.deferred[id]
   }
 
   toHTML() {

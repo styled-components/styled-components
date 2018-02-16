@@ -7,14 +7,36 @@ import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR } from '../constants'
 import { type ExtractedComp } from '../utils/extractCompsFromCSS'
 import { splitByRules } from '../utils/stringifyRules'
 import getNonce from '../utils/nonce'
+import once from '../utils/once'
+
+import {
+  type Names,
+  addNameForId,
+  resetIdNames,
+  hasNameForId,
+  stringifyNames,
+  cloneNames,
+} from '../utils/styleNames'
+
+import {
+  sheetForTag,
+  safeInsertRules,
+  deleteRules,
+} from '../utils/insertRuleHelpers'
 
 export interface Tag<T> {
   // $FlowFixMe: Doesn't seem to accept any combination w/ HTMLStyleElement for some reason
   styleTag: HTMLStyleElement | null;
-  names: string[];
+  /* lists all ids of the tag */
   getIds(): string[];
+  /* checks whether `name` is already injected for `id` */
+  hasNameForId(id: string, name: string): boolean;
+  /* inserts a marker to ensure the id's correct position in the sheet */
   insertMarker(id: string): T;
-  insertRules(id: string, cssRules: string[]): void;
+  /* inserts rules according to the ids markers */
+  insertRules(id: string, cssRules: string[], name: ?string): void;
+  /* removes all rules belonging to the id, keeping the marker around */
+  removeRules(id: string): void;
   css(): string;
   toHTML(additionalAttrs: ?string): string;
   toElement(): React.Element<*>;
@@ -47,65 +69,6 @@ The clone method cannot be used on the client!
 
 /* this marker separates component styles and is important for rehydration */
 const makeTextMarker = id => `\n/* sc-component-id: ${id} */\n`
-
-/* retrieve a sheet for a given style tag */
-const sheetForTag = (tag: HTMLStyleElement): CSSStyleSheet => {
-  // $FlowFixMe
-  if (tag.sheet) return tag.sheet
-
-  /* Firefox quirk requires us to step through all stylesheets to find one owned by the given tag */
-  const size = document.styleSheets.length
-  for (let i = 0; i < size; i += 1) {
-    const sheet = document.styleSheets[i]
-    // $FlowFixMe
-    if (sheet.ownerNode === tag) return sheet
-  }
-
-  /* we should always be able to find a tag */
-  throw new Error()
-}
-
-/* insert a rule safely and return whether it was actually injected */
-const safeInsertRule = (
-  sheet: CSSStyleSheet,
-  cssRule: string,
-  index: number
-): boolean => {
-  /* abort early if cssRule string is falsy */
-  if (!cssRule) return false
-
-  const maxIndex = sheet.cssRules.length
-
-  try {
-    /* use insertRule and cap passed index with maxIndex (no of cssRules) */
-    sheet.insertRule(cssRule, index <= maxIndex ? index : maxIndex)
-  } catch (err) {
-    /* any error indicates an invalid rule */
-    return false
-  }
-
-  return true
-}
-
-/* insert multiple rules using safeInsertRule */
-const safeInsertRules = (
-  sheet: CSSStyleSheet,
-  cssRules: string[],
-  insertIndex: number
-): number => {
-  /* inject each rule and count up the number of actually injected ones */
-  let injectedRules = 0
-  const cssRulesSize = cssRules.length
-  for (let i = 0; i < cssRulesSize; i += 1) {
-    const cssRule = cssRules[i]
-    if (safeInsertRule(sheet, cssRule, insertIndex + injectedRules)) {
-      injectedRules += 1
-    }
-  }
-
-  /* return number of injected rules */
-  return injectedRules
-}
 
 /* add up all numbers in array up until and including the index */
 const addUpUntilIndex = (sizes: number[], index: number): number => {
@@ -147,13 +110,13 @@ const makeStyleTag = (target: ?HTMLElement, lastTag: ?Node) => {
 }
 
 /* takes a css factory function and outputs an html styled tag factory */
-const wrapAsHtmlTag = (css: () => string, names: string[]) => (
+const wrapAsHtmlTag = (css: () => string, names: Names) => (
   additionalAttrs: ?string
 ): string => {
   const nonce = getNonce()
   const attrs = [
     nonce && `nonce="${nonce}"`,
-    `${SC_ATTR}="${names.join(' ')}"`,
+    `${SC_ATTR}="${stringifyNames(names)}"`,
     additionalAttrs,
   ]
 
@@ -162,10 +125,10 @@ const wrapAsHtmlTag = (css: () => string, names: string[]) => (
 }
 
 /* takes a css factory function and outputs an element factory */
-const wrapAsElement = (css: () => string, names: string[]) => () => {
+const wrapAsElement = (css: () => string, names: Names) => () => {
   const props = {
     type: 'text/css',
-    [SC_ATTR]: names.join(' '),
+    [SC_ATTR]: stringifyNames(names),
   }
 
   const nonce = getNonce()
@@ -182,9 +145,9 @@ const getIdsFromMarkersFactory = (markers: Object) => (): string[] =>
 
 /* speedy tags utilise insertRule */
 const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
+  const names: Names = Object.create(null)
   const markers = Object.create(null)
-  const sizes = []
-  const names = []
+  const sizes: number[] = []
 
   const insertMarker = id => {
     const prev = markers[id]
@@ -194,14 +157,28 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
 
     const marker = (markers[id] = sizes.length)
     sizes.push(0)
+    resetIdNames(names, id)
     return marker
   }
 
-  const insertRules = (id, cssRules) => {
+  const insertRules = (id, cssRules, name) => {
     const marker = insertMarker(id)
     const sheet = sheetForTag(el)
     const insertIndex = addUpUntilIndex(sizes, marker)
     sizes[marker] += safeInsertRules(sheet, cssRules, insertIndex)
+    addNameForId(names, id, name)
+  }
+
+  const removeRules = id => {
+    const marker = markers[id]
+    if (marker === undefined) return
+
+    const size = sizes[marker]
+    const sheet = sheetForTag(el)
+    const removalIndex = addUpUntilIndex(sizes, marker)
+    deleteRules(sheet, removalIndex, size)
+    sizes[marker] = 0
+    resetIdNames(names, id)
   }
 
   const css = () => {
@@ -224,9 +201,10 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
   return {
     styleTag: el,
     getIds: getIdsFromMarkersFactory(markers),
-    names,
+    hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
+    removeRules,
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
@@ -235,8 +213,10 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
 }
 
 const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
+  const names = Object.create(null)
   const markers = Object.create(null)
-  const names = []
+
+  const makeTextNode = id => document.createTextNode(makeTextMarker(id))
 
   const insertMarker = id => {
     const prev = markers[id]
@@ -244,13 +224,25 @@ const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
       return prev
     }
 
-    const marker = (markers[id] = document.createTextNode(makeTextMarker(id)))
+    const marker = (markers[id] = makeTextNode(id))
     el.appendChild(marker)
+    names[id] = Object.create(null)
     return marker
   }
 
-  const insertRules = (id, cssRules) => {
+  const insertRules = (id, cssRules, name) => {
     insertMarker(id).appendData(cssRules.join(' '))
+    addNameForId(names, id, name)
+  }
+
+  const removeRules = id => {
+    const marker = markers[id]
+    if (marker === undefined) return
+    /* create new empty text node and replace the current one */
+    const newMarker = makeTextNode(id)
+    el.replaceChild(newMarker, marker)
+    markers[id] = newMarker
+    resetIdNames(names, id)
   }
 
   const css = () => {
@@ -265,9 +257,10 @@ const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
   return {
     styleTag: el,
     getIds: getIdsFromMarkersFactory(markers),
-    names,
+    hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
+    removeRules,
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
@@ -276,8 +269,8 @@ const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
 }
 
 const makeServerTag = (): Tag<[string]> => {
+  const names = Object.create(null)
   const markers = Object.create(null)
-  const names = []
 
   const insertMarker = id => {
     const prev = markers[id]
@@ -285,19 +278,30 @@ const makeServerTag = (): Tag<[string]> => {
       return prev
     }
 
-    return (markers[id] = [makeTextMarker(id)])
+    return (markers[id] = [''])
   }
 
-  const insertRules = (id, cssRules) => {
+  const insertRules = (id, cssRules, name) => {
     const marker = insertMarker(id)
     marker[0] += cssRules.join(' ')
+    addNameForId(names, id, name)
+  }
+
+  const removeRules = id => {
+    const marker = markers[id]
+    if (marker === undefined) return
+    marker[0] = ''
+    resetIdNames(names, id)
   }
 
   const css = () => {
     let str = ''
     // eslint-disable-next-line guard-for-in
     for (const id in markers) {
-      str += markers[id][0]
+      const cssForId = markers[id][0]
+      if (cssForId) {
+        str += makeTextMarker(id) + cssForId
+      }
     }
     return str
   }
@@ -305,16 +309,17 @@ const makeServerTag = (): Tag<[string]> => {
   const tag = {
     styleTag: null,
     getIds: getIdsFromMarkersFactory(markers),
-    names,
+    hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
+    removeRules,
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
     clone() {
       return {
         ...tag,
-        names: names.slice(),
+        names: cloneNames(names),
         markers: { ...markers },
       }
     },
@@ -340,7 +345,7 @@ export const makeTag = (
   return makeServerTag()
 }
 
-/* TODO: Turn into fully functional composition (tag.names) */
+/* wraps a given tag so that rehydration is performed once when necessary */
 export const makeRehydrationTag = (
   tag: Tag<any>,
   els: HTMLStyleElement[],
@@ -348,14 +353,8 @@ export const makeRehydrationTag = (
   names: string[],
   immediateRehydration: boolean
 ): Tag<any> => {
-  let isReady = false
-
   /* rehydration function that adds all rules to the new tag */
-  const rehydrate = () => {
-    /* only rehydrate once */
-    if (isReady) return
-    isReady = true
-
+  const rehydrate = once(() => {
     /* add all extracted components to the new tag */
     for (let i = 0; i < extracted.length; i += 1) {
       const { componentId, cssFromDOM } = extracted[i]
@@ -370,16 +369,9 @@ export const makeRehydrationTag = (
         el.parentNode.removeChild(el)
       }
     }
-  }
+  })
 
-  /* add rehydrated names to the new tag */
-  for (let i = 0; i < names.length; i += 1) {
-    tag.names.push(names[i])
-  }
-
-  if (immediateRehydration) {
-    rehydrate()
-  }
+  if (immediateRehydration) rehydrate()
 
   return {
     ...tag,
@@ -388,9 +380,9 @@ export const makeRehydrationTag = (
       rehydrate()
       return tag.insertMarker(id)
     },
-    insertRules: (id, cssRules) => {
+    insertRules: (id, cssRules, name) => {
       rehydrate()
-      return tag.insertRules(id, cssRules)
+      return tag.insertRules(id, cssRules, name)
     },
   }
 }

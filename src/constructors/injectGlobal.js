@@ -10,12 +10,13 @@ type InjectGlobalFn = (
 
 export default (stringifyRules: Stringifier, css: Function) => {
   const injectGlobal: InjectGlobalFn = (...args) => {
+    const styleSheet = StyleSheet.master
     const rules = css(...args)
     const hash = hashStr(JSON.stringify(rules))
-
     const id = `sc-global-${hash}`
-    if (!StyleSheet.master.hasInjectedComponent(id)) {
-      StyleSheet.master.inject(id, stringifyRules(rules))
+
+    if (!styleSheet.hasId(id)) {
+      styleSheet.inject(id, stringifyRules(rules))
     }
   }
 

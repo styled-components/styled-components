@@ -4,6 +4,7 @@ import { shallow } from 'enzyme'
 
 import * as nonce from '../utils/nonce';
 import { resetStyled, expectCSSMatches } from './utils'
+import StyleSheet from '../models/StyleSheet'
 import _injectGlobal from '../constructors/injectGlobal'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
@@ -176,6 +177,25 @@ describe('with styles', () => {
         .sc-a {}
         .b {
           color:blue;
+        }
+      `)
+  })
+
+  it('should respect removed rules', () => {
+    const Heading = styled.h1`
+      color: red;
+    `
+    const Text = styled.span`
+      color: green;
+    `
+
+    shallow(<Heading><Text /></Heading>)
+    StyleSheet.master.remove(Text.styledComponentId)
+
+    expectCSSMatches(`
+        .sc-a {}
+        .c {
+          color:red;
         }
       `)
   })

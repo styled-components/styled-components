@@ -14,8 +14,8 @@ const generateAlphabeticName = (code: number): string => {
   let name = ''
   let x
 
-  /* get a char and divide by alphabet-length (bitwise zero for flooring the number) */
-  for (x = code | 0; x > charsLength; x = (x / charsLength) | 0) {
+  /* get a char and divide by alphabet-length */
+  for (x = code; x > charsLength; x = Math.floor(x / charsLength)) {
     name = getAlphabeticChar(x % charsLength) + name
   }
 
