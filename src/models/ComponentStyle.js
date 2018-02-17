@@ -86,27 +86,12 @@ export default (
       const name = generateRuleHash(this.componentId + flatCSS.join(''))
 
       if (!styleSheet.hasNameForId(componentId, name)) {
-        const css = stringifyRules(flatCSS, name ? `.${name}` : '')
+        const css = stringifyRules(flatCSS, `.${name}`)
         styleSheet.inject(this.componentId, css, name)
       }
 
       this.lastClassName = name
       return name
-    }
-
-    updateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
-      const { isStatic, lastClassName } = this
-      if (areStylesCacheable && isStatic && lastClassName !== undefined) {
-        return lastClassName
-      }
-
-      this.removeStyles(styleSheet)
-      return this.generateAndInjectStyles(executionContext, styleSheet)
-    }
-
-    removeStyles(styleSheet: StyleSheet) {
-      const { componentId } = this
-      styleSheet.remove(componentId)
     }
 
     static generateName(str: string): string {
