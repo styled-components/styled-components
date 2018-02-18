@@ -34,6 +34,28 @@ describe('css features', () => {
     `)
   })
 
+  it('should generate styles for nested media queries', () => {
+    const Comp = styled.div`
+      @media (min-width: 10px) {
+        @media (min-height: 20px) {
+          color: red;
+        }
+      }
+    `
+    shallow(<Comp />)
+    expectCSSMatches(`
+      .sc-a {}
+      
+      @media (min-width: 10px) {
+        @media (min-height: 20px) {
+          .b {
+            color: red;
+          }
+        }
+      }
+    `)
+  })
+
   it('should pass through custom properties', () => {
     const Comp = styled.div`
       --custom-prop: some-val;
