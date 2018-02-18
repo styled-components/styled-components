@@ -7310,13 +7310,13 @@ strip-json-comments@~2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/strip-json-comments/-/strip-json-comments-2.0.1.tgz#3c531942e908c2697c0ec344858c286c7ca0a60a"
 
-stylis-rule-sheet@^0.0.7:
-  version "0.0.7"
-  resolved "https://registry.yarnpkg.com/stylis-rule-sheet/-/stylis-rule-sheet-0.0.7.tgz#5c51dc879141a61821c2094ba91d2cbcf2469c6c"
+stylis-rule-sheet@^0.0.8:
+  version "0.0.8"
+  resolved "https://registry.yarnpkg.com/stylis-rule-sheet/-/stylis-rule-sheet-0.0.8.tgz#b0d0a126c945b1f3047447a3aae0647013e8d166"
 
-stylis@^3.4.0:
-  version "3.4.8"
-  resolved "https://registry.yarnpkg.com/stylis/-/stylis-3.4.8.tgz#94380babbcd4c75726215794ca985b38ec96d1a3"
+stylis@^3.4.10:
+  version "3.4.10"
+  resolved "https://registry.yarnpkg.com/stylis/-/stylis-3.4.10.tgz#a135cab4b9ff208e327fbb5a6fde3fa991c638ee"
 
 supports-color@^2.0.0:
   version "2.0.0"
