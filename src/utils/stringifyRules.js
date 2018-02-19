@@ -3,13 +3,14 @@ import Stylis from 'stylis'
 import _insertRulePlugin from 'stylis-rule-sheet'
 import type { Interpolation } from '../types'
 
+// NOTE: This stylis instance is only used to split rules from SSR'd style tags
 const stylisSplitter = new Stylis({
   global: false,
   cascade: false,
   keyframe: false,
   prefix: false,
   compress: false,
-  semicolon: false,
+  semicolon: true,
 })
 
 const stylis = new Stylis({
@@ -18,7 +19,7 @@ const stylis = new Stylis({
   keyframe: false,
   prefix: true,
   compress: false,
-  semicolon: true,
+  semicolon: false, // NOTE: This means "autocomplete missing semicolons"
 })
 
 // Wrap `insertRulePlugin to build a list of rules,
