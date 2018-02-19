@@ -75,8 +75,8 @@
     "is-plain-object": "^2.0.1",
     "opencollective": "^1.0.3",
     "prop-types": "^15.5.4",
-    "stylis": "^3.4.0",
-    "stylis-rule-sheet": "^0.0.7",
+    "stylis": "^3.4.10",
+    "stylis-rule-sheet": "^0.0.8",
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
