@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Enable stylis' semicolon autocompletion which was accidentally disabled for a lot of prior releases (see [#1532](https://github.com/styled-components/styled-components/pull/1532))
+
 - Fix `insertRule` injection (speedy mode in production) of nested media queries by upgrading stylis-rule-sheet (see [#1529](https://github.com/styled-components/styled-components/pull/1529) and [#1528](https://github.com/styled-components/styled-components/pull/1528))
 
 - Add `StyleSheet.remove` API method to be able to delete rules related to a component (see [#1514](https://github.com/styled-components/styled-components/pull/1514))
