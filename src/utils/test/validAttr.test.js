@@ -44,6 +44,7 @@ describe('validAttr', () => {
     expect(validAttr('contentEditable')).toEqual(true)
     expect(validAttr('contextMenu')).toEqual(true)
     expect(validAttr('controls')).toEqual(true)
+    expect(validAttr('controlsList')).toEqual(true)
     expect(validAttr('coords')).toEqual(true)
     expect(validAttr('crossOrigin')).toEqual(true)
     expect(validAttr('data')).toEqual(true)
