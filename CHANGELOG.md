@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Add `foreignObject` svg element (see [#1544](https://github.com/styled-components/styled-components/pull/1544))
+
 - Add `controlsList` to validAttr list (see [#1537](https://github.com/styled-components/styled-components/pull/1537))
 
 - Enable stylis' semicolon autocompletion which was accidentally disabled for a lot of prior releases (see [#1532](https://github.com/styled-components/styled-components/pull/1532))
