@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- remove `type="text/css"`-attribute from style tag to remove warnings from w3c validator (see [#1551](https://github.com/styled-components/styled-components/pull/1551))
+
 - Add `foreignObject` svg element (see [#1544](https://github.com/styled-components/styled-components/pull/1544))
 
 - Add `controlsList` to validAttr list (see [#1537](https://github.com/styled-components/styled-components/pull/1537))
