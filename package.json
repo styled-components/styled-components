@@ -117,7 +117,7 @@
     "husky": "^0.14.3",
     "jest": "^20.0.4",
     "jest-image-snapshot": "2.2.0",
-    "jest-styled-components": "^4.11.0-1",
+    "jest-styled-components": "^5.0.0",
     "jsdom": "^9.10.0",
     "lint-staged": "^6.0.0",
     "node-watch": "^0.4.1",
