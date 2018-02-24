@@ -83,7 +83,6 @@ const addUpUntilIndex = (sizes: number[], index: number): number => {
 /* create a new style tag after lastEl */
 const makeStyleTag = (target: ?HTMLElement, lastTag: ?Node) => {
   const el = document.createElement('style')
-  el.type = 'text/css'
   el.setAttribute(SC_ATTR, '')
 
   const nonce = getNonce()
@@ -121,13 +120,12 @@ const wrapAsHtmlTag = (css: () => string, names: Names) => (
   ]
 
   const htmlAttr = attrs.filter(Boolean).join(' ')
-  return `<style type="text/css" ${htmlAttr}>${css()}</style>`
+  return `<style ${htmlAttr}>${css()}</style>`
 }
 
 /* takes a css factory function and outputs an element factory */
 const wrapAsElement = (css: () => string, names: Names) => () => {
   const props = {
-    type: 'text/css',
     [SC_ATTR]: stringifyNames(names),
   }
 
