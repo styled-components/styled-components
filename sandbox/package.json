@@ -4,7 +4,7 @@
   "main": "server/index.js",
   "license": "MIT",
   "scripts": {
-    "start": "NODE_ENV=development micro-dev --ignore=\"(src|.build)\""
+    "start": "cross-env NODE_ENV=development micro-dev --ignore=\"(src|.build)\""
   },
   "devDependencies": {
     "babel-core": "^6.26.0",
@@ -27,5 +27,8 @@
     "webpack-dev-middleware": "^2.0.2",
     "webpack-hot-middleware": "^2.21.0",
     "write-file-webpack-plugin": "^4.2.0"
+  },
+  "dependencies": {
+    "cross-env": "^5.1.3"
   }
 }

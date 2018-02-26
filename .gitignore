@@ -6,3 +6,5 @@ bundle-stats.html
 .vscode
 __diff_output__
 lib
+sandbox/node_modules
+
