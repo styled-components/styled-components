@@ -74,7 +74,6 @@ const prodUmdConfig = Object.assign({}, umdConfig, {
   plugins: umdConfig.plugins.concat([
     replace({
       'process.env.NODE_ENV': JSON.stringify('production'),
-      "export * from './secretInternals'": '',
     }),
     uglify({
       sourceMap: true,
@@ -104,7 +103,6 @@ const browserConfig = Object.assign({}, configBase, {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
-      "export * from './secretInternals'": '',
     }),
     ignore(['stream'])
   ),
@@ -112,7 +110,9 @@ const browserConfig = Object.assign({}, configBase, {
 
 const nativeConfig = Object.assign({}, configBase, {
   input: 'src/native/index.js',
-  output: Object.assign({}, cjs, { file: 'dist/styled-components.native.cjs.js' }),
+  output: Object.assign({}, cjs, {
+    file: 'dist/styled-components.native.cjs.js',
+  }),
   external: configBase.external.concat('react-native'),
 })
 
