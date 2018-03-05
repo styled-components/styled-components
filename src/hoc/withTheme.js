@@ -42,7 +42,7 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
       const themeProp = determineTheme(this.props, undefined, defaultProps)
       if (
         styledContext === undefined &&
-        themeProp === undefined &&
+        this.props.theme === undefined &&
         process.env.NODE_ENV !== 'production'
       ) {
         // eslint-disable-next-line no-console
@@ -51,7 +51,7 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
         )
       } else if (styledContext === undefined && themeProp !== undefined) {
         this.setState({ theme: themeProp })
-      } else {
+      } else if (styledContext !== undefined) {
         const { subscribe } = styledContext
         this.unsubscribeId = subscribe(nextTheme => {
           const theme = determineTheme(this.props, nextTheme, defaultProps)
@@ -91,6 +91,10 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
 
       return <Component {...props} />
     }
+  }
+
+  WithTheme.propTypes = {
+    theme: PropTypes.oneOfType([PropTypes.func, PropTypes.object]),
   }
 
   return hoistStatics(WithTheme, Component)
