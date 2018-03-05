@@ -94,9 +94,7 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
   }
 
   WithTheme.propTypes = {
-    theme: PropTypes.objectOf(
-      PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-    ),
+    theme: PropTypes.oneOfType([PropTypes.func, PropTypes.object]),
   }
 
   return hoistStatics(WithTheme, Component)
