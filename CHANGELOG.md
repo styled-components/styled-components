@@ -6,7 +6,11 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- remove `type="text/css"`-attribute from style tag to remove warnings from w3c validator (see [#1551](https://github.com/styled-components/styled-components/pull/1551))
+- n/a
+
+## [v3.2.0] - 2018-03-05
+
+- Remove `type="text/css"`-attribute from style tag to remove warnings from w3c validator (see [#1551](https://github.com/styled-components/styled-components/pull/1551))
 
 - Add `foreignObject` svg element (see [#1544](https://github.com/styled-components/styled-components/pull/1544))
 
@@ -411,7 +415,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.6...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.0...master
+[v3.2.0]: https://github.com/styled-components/styled-components/compare/v3.1.6...v3.2.0
 [v3.1.6]: https://github.com/styled-components/styled-components/compare/v3.1.5...v3.1.6
 [v3.1.5]: https://github.com/styled-components/styled-components/compare/v3.1.4...v3.1.5
 [v3.1.4]: https://github.com/styled-components/styled-components/compare/v3.1.3...v3.1.4
