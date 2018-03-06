@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Fix StyleTags toElement outputting inline CSS which would cause URL encoding (see [#1580](https://github.com/styled-components/styled-components/pull/1580))
 
 ## [v3.2.0] - 2018-03-05
 

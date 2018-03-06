@@ -203,6 +203,11 @@ describe('ssr', () => {
     const elements = sheet.getStyleElement()
 
     expect(elements).toHaveLength(1)
+
+    /* I know this looks pointless, but apparently I have the feeling we'll need this */
+    expect(elements[0].props.dangerouslySetInnerHTML).toBeDefined()
+    expect(elements[0].props.children).not.toBeDefined()
+
     expect(elements[0].props).toMatchSnapshot()
   })
 
