@@ -176,5 +176,18 @@ describe('basic', () => {
 
       expectCSSMatches('.sc-a {} .d { color:red; } .sc-b {} .c { color:blue; }')
     })
+
+    it('handle media at-rules inside style rules', () => {
+      const Comp = styled.div`
+        > * {
+          @media (min-width: 500px) {
+            color: pink;
+          }
+        }
+      `
+
+      shallow(<Comp />)
+      expectCSSMatches('.sc-a{ } @media (min-width:500px){ .b > *{ color:pink; } } ')
+    })
   })
 })
