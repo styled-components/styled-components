@@ -20,7 +20,7 @@ import {
 
 import {
   sheetForTag,
-  safeInsertRules,
+  safeInsertRule,
   deleteRules,
 } from '../utils/insertRuleHelpers'
 
@@ -143,10 +143,24 @@ const getIdsFromMarkersFactory = (markers: Object) => (): string[] =>
   Object.keys(markers)
 
 /* speedy tags utilise insertRule */
-const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
+const makeSpeedyTag = (
+  el: HTMLStyleElement,
+  makeExtraTag: ?() => Tag<any>
+): Tag<number> => {
   const names: Names = Object.create(null)
   const markers = Object.create(null)
   const sizes: number[] = []
+  const extractImport = makeExtraTag !== undefined
+  let extraTag: Tag<any>
+
+  const getExtraTag = () => {
+    if (extraTag === undefined && extractImport) {
+      // $FlowFixMe
+      extraTag = makeExtraTag()
+    }
+
+    return extraTag
+  }
 
   const insertMarker = id => {
     const prev = markers[id]
@@ -164,7 +178,27 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
     const marker = insertMarker(id)
     const sheet = sheetForTag(el)
     const insertIndex = addUpUntilIndex(sizes, marker)
-    sizes[marker] += safeInsertRules(sheet, cssRules, insertIndex)
+
+    let injectedRules = 0
+    const importRules = []
+    const cssRulesSize = cssRules.length
+
+    for (let i = 0; i < cssRulesSize; i += 1) {
+      const cssRule = cssRules[i]
+      let mayHaveImport = extractImport /* @import rules are reordered to appear first */
+      if (mayHaveImport && cssRule.indexOf('@import') !== -1) {
+        importRules.push(cssRule)
+      } else if (safeInsertRule(sheet, cssRule, insertIndex + injectedRules)) {
+        mayHaveImport = false
+        injectedRules += 1
+      }
+    }
+
+    if (importRules.length > 0) {
+      getExtraTag().insertRules(`${id}-import`, importRules)
+    }
+
+    sizes[marker] += injectedRules /* add up no of injected rules */
     addNameForId(names, id, name)
   }
 
@@ -178,6 +212,10 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
     deleteRules(sheet, removalIndex, size)
     sizes[marker] = 0
     resetIdNames(names, id)
+
+    if (extraTag !== undefined) {
+      extraTag.removeRules(`${id}-import`)
+    }
   }
 
   const css = () => {
@@ -211,9 +249,23 @@ const makeSpeedyTag = (el: HTMLStyleElement): Tag<number> => {
   }
 }
 
-const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
+const makeBrowserTag = (
+  el: HTMLStyleElement,
+  makeExtraTag: ?() => Tag<any>
+): Tag<Text> => {
   const names = Object.create(null)
   const markers = Object.create(null)
+  const extractImport = makeExtraTag !== undefined
+  let extraTag: Tag<any>
+
+  const getExtraTag = () => {
+    if (extraTag === undefined && extractImport) {
+      // $FlowFixMe
+      extraTag = makeExtraTag()
+    }
+
+    return extraTag
+  }
 
   const makeTextNode = id => document.createTextNode(makeTextMarker(id))
 
@@ -230,18 +282,42 @@ const makeBrowserTag = (el: HTMLStyleElement): Tag<Text> => {
   }
 
   const insertRules = (id, cssRules, name) => {
-    insertMarker(id).appendData(cssRules.join(' '))
+    const marker = insertMarker(id)
+    const importRules = []
+    const cssRulesSize = cssRules.length
+
+    for (let i = 0; i < cssRulesSize; i += 1) {
+      const rule = cssRules[i]
+      let mayHaveImport = extractImport
+      if (mayHaveImport && rule.indexOf('@import') !== -1) {
+        importRules.push(rule)
+      } else {
+        mayHaveImport = false
+        const separator = i === cssRulesSize - 1 ? '' : ' '
+        marker.appendData(`${rule}${separator}`)
+      }
+    }
+
     addNameForId(names, id, name)
+
+    if (importRules.length > 0) {
+      getExtraTag().insertRules(`${id}-import`, importRules)
+    }
   }
 
   const removeRules = id => {
     const marker = markers[id]
     if (marker === undefined) return
+
     /* create new empty text node and replace the current one */
     const newMarker = makeTextNode(id)
     el.replaceChild(newMarker, marker)
     markers[id] = newMarker
     resetIdNames(names, id)
+
+    if (extraTag !== undefined) {
+      extraTag.removeRules(`${id}-import`)
+    }
   }
 
   const css = () => {
@@ -335,9 +411,11 @@ export const makeTag = (
   if (IS_BROWSER && !forceServer) {
     const el = makeStyleTag(target, lastEl)
     if (DISABLE_SPEEDY) {
-      return makeBrowserTag(el)
+      const makeExtraTag = () => makeBrowserTag(makeStyleTag(target, el))
+      return makeBrowserTag(el, makeExtraTag)
     } else {
-      return makeSpeedyTag(el)
+      const makeExtraTag = () => makeSpeedyTag(makeStyleTag(target, el))
+      return makeSpeedyTag(el, makeExtraTag)
     }
   }
 
