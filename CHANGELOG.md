@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Fix `@import` rules not being enforced to appear at the beginning of stylesheets (see [#1577](https://github.com/styled-components/styled-components/pull/1577))
+
 - Fix StyleTags toElement outputting inline CSS which would cause URL encoding (see [#1580](https://github.com/styled-components/styled-components/pull/1580))
 
 ## [v3.2.0] - 2018-03-05
