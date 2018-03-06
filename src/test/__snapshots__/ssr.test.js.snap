@@ -96,11 +96,13 @@ exports[`ssr should render CSS in the order the components were defined, not ren
 
 exports[`ssr should return a generated React style element 1`] = `
 Object {
-  "children": "
+  "dangerouslySetInnerHTML": Object {
+    "__html": "
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
 /* sc-component-id: sc-a */
 .sc-a {} .b{color:red;}",
+  },
   "data-styled-components": "b",
 }
 `;
