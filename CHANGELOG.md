@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- n/a
+
+## [v3.2.1] - 2018-03-07
+
 - Fix `@import` rules not being enforced to appear at the beginning of stylesheets (see [#1577](https://github.com/styled-components/styled-components/pull/1577))
 
 - Fix StyleTags toElement outputting inline CSS which would cause URL encoding (see [#1580](https://github.com/styled-components/styled-components/pull/1580))
@@ -417,7 +421,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.0...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.1...master
+[v3.2.1]: https://github.com/styled-components/styled-components/compare/v3.2.0...v3.2.1
 [v3.2.0]: https://github.com/styled-components/styled-components/compare/v3.1.6...v3.2.0
 [v3.1.6]: https://github.com/styled-components/styled-components/compare/v3.1.5...v3.1.6
 [v3.1.5]: https://github.com/styled-components/styled-components/compare/v3.1.4...v3.1.5
