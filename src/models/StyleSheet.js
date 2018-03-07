@@ -38,6 +38,8 @@ class StyleSheet {
   ignoreRehydratedNames: { [string]: boolean }
   /* a list of tags belonging to this StyleSheet */
   tags: Tag<any>[]
+  /* a tag for import rules */
+  importRuleTag: Tag<any>
   /* current capacity until a new tag must be created */
   capacity: number
   /* children (aka clones) of this StyleSheet inheriting all and future injections */
@@ -110,7 +112,7 @@ class StyleSheet {
     }
 
     /* create a tag to be used for rehydration */
-    const tag = makeTag(this.target, null, this.forceServer)
+    const tag = this.makeTag(null)
     const rehydrationTag = makeRehydrationTag(
       tag,
       els,
@@ -181,6 +183,36 @@ class StyleSheet {
     this.sealed = true
   }
 
+  makeTag(tag: ?Tag<any>): Tag<any> {
+    const lastEl = tag ? tag.styleTag : null
+    const insertBefore = false
+
+    return makeTag(
+      this.target,
+      lastEl,
+      this.forceServer,
+      insertBefore,
+      this.getImportRuleTag
+    )
+  }
+
+  getImportRuleTag = (): Tag<any> => {
+    const { importRuleTag } = this
+    if (importRuleTag !== undefined) {
+      return importRuleTag
+    }
+
+    const firstTag = this.tags[0]
+    const insertBefore = true
+
+    return (this.importRuleTag = makeTag(
+      this.target,
+      firstTag ? firstTag.styleTag : null,
+      this.forceServer,
+      insertBefore
+    ))
+  }
+
   /* get a tag for a given componentId, assign the componentId to one, or shard */
   getTagForId(id: string): Tag<any> {
     /* simply return a tag, when the componentId was already assigned one */
@@ -196,7 +228,7 @@ class StyleSheet {
     if (this.capacity === 0) {
       this.capacity = MAX_SIZE
       this.sealed = false
-      tag = makeTag(this.target, tag ? tag.styleTag : null, this.forceServer)
+      tag = this.makeTag(tag)
       this.tags.push(tag)
     }
 
