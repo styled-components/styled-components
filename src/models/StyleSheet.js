@@ -112,7 +112,7 @@ class StyleSheet {
     }
 
     /* create a tag to be used for rehydration */
-    const tag = makeTag(this.target, null, this.forceServer)
+    const tag = this.makeTag(null)
     const rehydrationTag = makeRehydrationTag(
       tag,
       els,
@@ -183,6 +183,19 @@ class StyleSheet {
     this.sealed = true
   }
 
+  makeTag(tag: ?Tag<any>): Tag<any> {
+    const lastEl = tag ? tag.styleTag : null
+    const insertBefore = false
+
+    return makeTag(
+      this.target,
+      lastEl,
+      this.forceServer,
+      insertBefore,
+      this.getImportRuleTag
+    )
+  }
+
   getImportRuleTag = (): Tag<any> => {
     const { importRuleTag } = this
     if (importRuleTag !== undefined) {
@@ -215,18 +228,7 @@ class StyleSheet {
     if (this.capacity === 0) {
       this.capacity = MAX_SIZE
       this.sealed = false
-
-      const lastEl = tag ? tag.styleTag : null
-      const insertBefore = false
-
-      tag = makeTag(
-        this.target,
-        lastEl,
-        this.forceServer,
-        insertBefore,
-        this.getImportRuleTag
-      )
-
+      tag = this.makeTag(tag)
       this.tags.push(tag)
     }
 
