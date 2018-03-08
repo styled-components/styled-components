@@ -1,5 +1,5 @@
 // @flow
-import { Component, createElement } from 'react'
+import { PureComponent, createElement } from 'react'
 import PropTypes from 'prop-types'
 
 import type { Theme } from './ThemeProvider'
@@ -13,7 +13,7 @@ import type { RuleSet, Target } from '../types'
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
 export default (constructWithOptions: Function, InlineStyle: Function) => {
-  class BaseStyledNativeComponent extends Component {
+  class BaseStyledNativeComponent extends PureComponent {
     static target: Target
     static styledComponentId: string
     static attrs: Object

@@ -1,6 +1,6 @@
 // @flow
 
-import { Component, createElement } from 'react'
+import { PureComponent, createElement } from 'react'
 import PropTypes from 'prop-types'
 
 import type { Theme } from './ThemeProvider'
@@ -53,7 +53,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       : componentId
   }
 
-  class BaseStyledComponent extends Component {
+  class BaseStyledComponent extends PureComponent {
     static target: Target
     static styledComponentId: string
     static attrs: Object
