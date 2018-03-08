@@ -36,7 +36,7 @@
     "prepublish": "npm run build",
     "lint-staged": "lint-staged",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
-    "postinstall": "opencollective postinstall"
+    "postinstall": "opencollective postinstall || exit 0"
   },
   "repository": {
     "type": "git",
