@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fix nested media at-rules by upgrading to stylis@^3.5.0 and stylis-rule-sheet@^0.0.10 (see [#1595](https://github.com/styled-components/styled-components/pull/1595))
 
+- Fix the `IS_BROWSER` check to work more reliably in projects where `window` may be shimmed, by [@danieldunderfelt](https://github.com/danieldunderfelt) (see [#1599](https://github.com/styled-components/styled-components/pull/1599))
+
 ## [v3.2.1] - 2018-03-07
 
 - Fix `@import` rules not being enforced to appear at the beginning of stylesheets (see [#1577](https://github.com/styled-components/styled-components/pull/1577))
