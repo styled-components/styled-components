@@ -339,9 +339,9 @@ const makeBrowserTag = (
   }
 }
 
-const makeServerTag = (): Tag<[string]> => {
-  const names = Object.create(null)
-  const markers = Object.create(null)
+const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
+  const names = namesArg === undefined ? Object.create(null) : namesArg
+  const markers = markersArg === undefined ? Object.create(null) : markersArg
 
   const insertMarker = id => {
     const prev = markers[id]
@@ -377,6 +377,18 @@ const makeServerTag = (): Tag<[string]> => {
     return str
   }
 
+  const clone = () => {
+    const namesClone = cloneNames(names)
+    const markersClone = Object.create(null)
+
+    // eslint-disable-next-line guard-for-in
+    for (const id in markers) {
+      markersClone[id] = [markers[id][0]]
+    }
+
+    return makeServerTagInternal(namesClone, markersClone)
+  }
+
   const tag = {
     styleTag: null,
     getIds: getIdsFromMarkersFactory(markers),
@@ -387,17 +399,13 @@ const makeServerTag = (): Tag<[string]> => {
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
-    clone() {
-      return {
-        ...tag,
-        names: cloneNames(names),
-        markers: { ...markers },
-      }
-    },
+    clone,
   }
 
   return tag
 }
+
+const makeServerTag = (): Tag<[string]> => makeServerTagInternal()
 
 export const makeTag = (
   target: ?HTMLElement,
