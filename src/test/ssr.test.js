@@ -64,6 +64,24 @@ describe('ssr', () => {
     expect(css).toMatchSnapshot()
   })
 
+  it('should not spill ServerStyleSheets into each other', () => {
+    const A = styled.h1`color: red;`
+    const B = styled.h1`color: green;`
+
+    const sheetA = new ServerStyleSheet()
+    renderToString(sheetA.collectStyles(<A />))
+    const cssA = sheetA.getStyleTags()
+
+    const sheetB = new ServerStyleSheet()
+    renderToString(sheetB.collectStyles(<B />))
+    const cssB = sheetB.getStyleTags()
+
+    expect(cssA).toContain('red')
+    expect(cssA).not.toContain('green')
+    expect(cssB).not.toContain('red')
+    expect(cssB).toContain('green')
+  })
+
   it('should add a nonce to the stylesheet if webpack nonce is detected in the global scope', () => {
     // eslint-disable-next-line
     require('../utils/nonce').mockImplementation(() => 'foo')

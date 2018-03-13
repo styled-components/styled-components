@@ -377,6 +377,18 @@ const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
     return str
   }
 
+  const clone = () => {
+    const namesClone = cloneNames(names)
+    const markersClone = Object.create(null)
+
+    // eslint-disable-next-line guard-for-in
+    for (const id in markers) {
+      markersClone[id] = [markers[id][0]]
+    }
+
+    return makeServerTagInternal(namesClone, markersClone)
+  }
+
   const tag = {
     styleTag: null,
     getIds: getIdsFromMarkersFactory(markers),
@@ -387,9 +399,7 @@ const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
-    clone() {
-      return makeServerTagInternal(cloneNames(names), { ...markers })
-    },
+    clone,
   }
 
   return tag

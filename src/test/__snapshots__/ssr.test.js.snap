@@ -28,8 +28,6 @@ exports[`ssr should allow global styles to be injected during rendering 4`] = `
 "<style data-styled-components=\\"b\\">
 /* sc-component-id: sc-global-737874422 */
 html::before{content:'Before both renders';}
-/* sc-component-id: PageOne */
-.PageOne {} .a{color:red;}
 /* sc-component-id: PageTwo */
 .PageTwo {} .b{color:blue;}
 /* sc-component-id: sc-global-2914197427 */
@@ -117,8 +115,6 @@ exports[`ssr should share global styles but keep renders separate 4`] = `
 "<style data-styled-components=\\"b\\">
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
-/* sc-component-id: PageOne */
-.PageOne {} .a{color:red;}
 /* sc-component-id: PageTwo */
 .PageTwo {} .b{color:blue;}</style>"
 `;
