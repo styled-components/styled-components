@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Fix ServerTag.clone() not properly cloning its names and markers (see [#1605](https://github.com/styled-components/styled-components/pull/1605))
+
 - Fix nested media at-rules by upgrading to stylis@^3.5.0 and stylis-rule-sheet@^0.0.10 (see [#1595](https://github.com/styled-components/styled-components/pull/1595))
 
 ## [v3.2.1] - 2018-03-07
