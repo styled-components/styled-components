@@ -17,9 +17,7 @@ exports[`ssr should allow global styles to be injected during rendering 2`] = `
 /* sc-component-id: sc-global-737874422 */
 html::before{content:'Before both renders';}
 /* sc-component-id: PageOne */
-.PageOne {} .a{color:red;}
-/* sc-component-id: sc-global-2914197427 */
-html::before{content:'During first render';}</style><style data-styled-components=\\"\\">
+.PageOne {} .a{color:red;}</style><style data-styled-components=\\"\\">
 /* sc-component-id: sc-global-2914197427 */
 html::before{content:'During first render';}</style>"
 `;
@@ -27,19 +25,15 @@ html::before{content:'During first render';}</style>"
 exports[`ssr should allow global styles to be injected during rendering 3`] = `"<h2 class=\\"PageTwo b\\" data-reactroot=\\"\\">Camera Two!</h2>"`;
 
 exports[`ssr should allow global styles to be injected during rendering 4`] = `
-"<style data-styled-components=\\"a b\\">
+"<style data-styled-components=\\"b\\">
 /* sc-component-id: sc-global-737874422 */
 html::before{content:'Before both renders';}
-/* sc-component-id: PageOne */
-.PageOne {} .a{color:red;}
 /* sc-component-id: PageTwo */
 .PageTwo {} .b{color:blue;}
 /* sc-component-id: sc-global-2914197427 */
 html::before{content:'During first render';}
 /* sc-component-id: sc-global-1207956261 */
-html::before{content:'Between renders';}
-/* sc-component-id: sc-global-3990873394 */
-html::before{content:'During second render';}</style><style data-styled-components=\\"\\">
+html::before{content:'Between renders';}</style><style data-styled-components=\\"\\">
 /* sc-component-id: sc-global-3990873394 */
 html::before{content:'During second render';}</style>"
 `;
@@ -47,13 +41,11 @@ html::before{content:'During second render';}</style>"
 exports[`ssr should dispatch global styles to each ServerStyleSheet 1`] = `"<h1 class=\\"Header a\\" data-reactroot=\\"\\"></h1>"`;
 
 exports[`ssr should dispatch global styles to each ServerStyleSheet 2`] = `
-"<style data-styled-components=\\"keyframe_0 a\\">
+"<style data-styled-components=\\"a\\">
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
 /* sc-component-id: Header */
-.Header {} .a{-webkit-animation:keyframe_0 1s both;animation:keyframe_0 1s both;}
-/* sc-component-id: sc-keyframes-keyframe_0 */
-@-webkit-keyframes keyframe_0{0%{opacity:0;}} @keyframes keyframe_0{0%{opacity:0;}}</style><style data-styled-components=\\"keyframe_0\\">
+.Header {} .a{-webkit-animation:keyframe_0 1s both;animation:keyframe_0 1s both;}</style><style data-styled-components=\\"keyframe_0\\">
 /* sc-component-id: sc-keyframes-keyframe_0 */
 @-webkit-keyframes keyframe_0{0%{opacity:0;}} @keyframes keyframe_0{0%{opacity:0;}}</style>"
 `;
@@ -120,11 +112,9 @@ body{background:papayawhip;}
 exports[`ssr should share global styles but keep renders separate 3`] = `"<h2 class=\\"PageTwo b\\" data-reactroot=\\"\\">Camera Two!</h2>"`;
 
 exports[`ssr should share global styles but keep renders separate 4`] = `
-"<style data-styled-components=\\"a b\\">
+"<style data-styled-components=\\"b\\">
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
-/* sc-component-id: PageOne */
-.PageOne {} .a{color:red;}
 /* sc-component-id: PageTwo */
 .PageTwo {} .b{color:blue;}</style>"
 `;
