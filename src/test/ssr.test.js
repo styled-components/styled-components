@@ -137,6 +137,27 @@ describe('ssr', () => {
     expect(cssTwo).toMatchSnapshot()
   })
 
+  it('should should not leak styles in between renders', () => {
+    const PageOne = styled.h1.withConfig({ componentId: 'PageOne' })`
+      color: red;
+    `
+    const PageTwo = styled.h2.withConfig({ componentId: 'PageTwo' })`
+      color: blue;
+    `
+    const sheetOne = new ServerStyleSheet()
+    const htmlOne = renderToString(
+      sheetOne.collectStyles(<PageOne>Camera One!</PageOne>)
+    )
+
+    const sheetTwo = new ServerStyleSheet()
+    const htmlTwo = renderToString(
+      sheetTwo.collectStyles(<PageTwo>Camera Two!</PageTwo>)
+    )
+    const cssTwo = sheetTwo.getStyleTags()
+
+    expect(cssTwo.indexOf('PageOne')).toEqual(-1)
+  })
+
   it('should allow global styles to be injected during rendering', () => {
     injectGlobal`html::before { content: 'Before both renders'; }`
     const PageOne = styled.h1.withConfig({ componentId: 'PageOne' })`
