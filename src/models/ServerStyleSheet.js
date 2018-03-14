@@ -27,16 +27,22 @@ const streamBrowserErr =
 
 export default class ServerStyleSheet {
   instance: StyleSheet
+  masterSheet: StyleSheet
   closed: boolean
-  cleanup: () => void
 
   constructor() {
-    const masterSheet = StyleSheet.master
+    /* The master sheet might be reset, so keep a reference here */
+    this.masterSheet = StyleSheet.master
+    this.instance = this.masterSheet.clone()
     this.closed = false
-    this.instance = masterSheet.clone()
-    this.cleanup = () => {
-      const index = masterSheet.clones.indexOf(this.instance)
-      masterSheet.clones.splice(index, 1)
+  }
+
+  complete() {
+    if (!this.closed) {
+      /* Remove closed StyleSheets from the master sheet */
+      const index = this.masterSheet.clones.indexOf(this.instance)
+      this.masterSheet.clones.splice(index, 1)
+      this.closed = true
     }
   }
 
@@ -51,20 +57,12 @@ export default class ServerStyleSheet {
   }
 
   getStyleTags(): string {
-    if (!this.closed) {
-      this.cleanup()
-      this.closed = true
-    }
-
+    this.complete()
     return this.instance.toHTML()
   }
 
   getStyleElement() {
-    if (!this.closed) {
-      this.cleanup()
-      this.closed = true
-    }
-
+    this.complete()
     return this.instance.toReactElements()
   }
 
@@ -99,14 +97,12 @@ export default class ServerStyleSheet {
     })
 
     readableStream.on('end', () => {
-      this.cleanup()
-      this.closed = true
+      this.complete()
       ourStream.push(null)
     })
 
     readableStream.on('error', err => {
-      this.cleanup()
-      this.closed = true
+      this.complete()
       ourStream.emit('error', err)
     })
 
