@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Fix SSR memory leak where StyleSheet clones are never freed (see [#1612](https://github.com/styled-components/styled-components/pull/1612))
 
 ## [v3.2.2] - 2018-03-13
 
