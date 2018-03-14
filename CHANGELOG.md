@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- n/a
+
+## [v3.2.2] - 2018-03-13
+
 - Fix ServerTag.clone() not properly cloning its names and markers (see [#1605](https://github.com/styled-components/styled-components/pull/1605))
 
 - Fix nested media at-rules by upgrading to stylis@^3.5.0 and stylis-rule-sheet@^0.0.10 (see [#1595](https://github.com/styled-components/styled-components/pull/1595))
@@ -425,7 +429,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.1...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.2...master
+[v3.2.2]: https://github.com/styled-components/styled-components/compare/v3.2.1...v3.2.2
 [v3.2.1]: https://github.com/styled-components/styled-components/compare/v3.2.0...v3.2.1
 [v3.2.0]: https://github.com/styled-components/styled-components/compare/v3.1.6...v3.2.0
 [v3.1.6]: https://github.com/styled-components/styled-components/compare/v3.1.5...v3.1.6
