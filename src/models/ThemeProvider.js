@@ -76,16 +76,7 @@ class ThemeProvider extends Component {
         getTheme: this.getTheme,
         subscribe: this.broadcast.subscribe,
         unsubscribe: this.broadcast.unsubscribe,
-      },
-      [CHANNEL]: subscriber => {
-        if (process.env.NODE_ENV !== 'production') {
-          warnChannelDeprecated()
-        }
-
-        // Patch the old `subscribe` provide via `CHANNEL` for older clients.
-        const unsubscribeId = this.broadcast.subscribe(subscriber)
-        return () => this.broadcast.unsubscribe(unsubscribeId)
-      },
+      }
     }
   }
 
@@ -141,7 +132,6 @@ class ThemeProvider extends Component {
 }
 
 ThemeProvider.childContextTypes = {
-  [CHANNEL]: PropTypes.func, // legacy
   [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
 }
 ThemeProvider.contextTypes = {

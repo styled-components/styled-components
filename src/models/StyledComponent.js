@@ -15,7 +15,7 @@ import escape from '../utils/escape'
 import type { RuleSet, Target } from '../types'
 import { CONTEXT_KEY } from '../constants'
 
-import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
+import { CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 import StyleSheet from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
 
@@ -270,7 +270,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     class StyledComponent extends ParentComponent {
       static contextTypes = {
-        [CHANNEL]: PropTypes.func,
         [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
         [CONTEXT_KEY]: PropTypes.oneOfType([
           PropTypes.instanceOf(StyleSheet),

@@ -10,7 +10,7 @@ import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
 import type { RuleSet, Target } from '../types'
 
-import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
+import { CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
 export default (constructWithOptions: Function, InlineStyle: Function) => {
   class BaseStyledNativeComponent extends Component {
@@ -186,7 +186,6 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       static inlineStyle = inlineStyle
 
       static contextTypes = {
-        [CHANNEL]: PropTypes.func,
         [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
       }
 
