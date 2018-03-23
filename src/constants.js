@@ -2,7 +2,7 @@
 
 declare var __DEV__: ?string
 
-export const SC_ATTR = 'data-styled-components'
+export const SC_ATTR = process.env.SC_ATTR || 'data-styled-components'
 export const SC_STREAM_ATTR = 'data-styled-streamed'
 export const CONTEXT_KEY = '__styled-components-stylesheet__'
 
