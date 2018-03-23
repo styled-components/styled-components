@@ -130,37 +130,35 @@ describe('StyleSheetManager', () => {
       }
     }
 
-    const Structure = ({ resolve }) => (
-      <Frame>
-        <SheetInjector>
-          <Child resolve={resolve} />
-        </SheetInjector>
-      </Frame>
-    )
+    const div = document.body.appendChild(document.createElement('div'))
 
-    const renderIntoNewIframe = () => {
-      const div = document.body.appendChild(document.createElement('div'))
-      return (
-        new Promise((resolve, reject) => {
-          try {
-            render(<Structure resolve={resolve} />, div)
-          } catch (e) {
-            reject(e)
-          }
-        })
-          // Workaround until Promise.finally is implemented
-          .then(() => div.parentNode.removeChild(div))
-          .catch(error => {
-            div.parentNode.removeChild(div)
-            throw error
-          })
-      )
-    }
-
-    // First render works fine
-    await renderIntoNewIframe()
-    // Kaboom
-    await renderIntoNewIframe()
+    let promiseA, promiseB
+    promiseA = new Promise((resolveA, reject) => {
+      promiseB = new Promise((resolveB, reject) => {
+        try {
+          // Render two iframes. each iframe should have the styles for the child injected into their head
+          render(
+            <div>
+              <Frame>
+                <SheetInjector>
+                  <Child resolve={resolveA} />
+                </SheetInjector>
+              </Frame>
+              <Frame>
+                <SheetInjector>
+                  <Child resolve={resolveB} />
+                </SheetInjector>
+              </Frame>
+            </div>,
+            div
+          )
+        } catch (e) {
+          reject(e)
+          div.parentElement.removeChild(div)
+        }
+      })
+    })
+    await Promise.all([promiseA, promiseB])
   })
 
   it('should apply styles to appropriate targets for nested StyleSheetManagers', () => {
