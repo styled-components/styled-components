@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- Fix issue with multiple iframes and StyleSheetManager instances. @darthtrevino (see [#1634])
+-  Fix ComponentStyle caching strategy to take StyleSheet cache into account. @darthtrevino (see [#1634])
 
 ## [v3.2.3] - 2018-03-14
 
