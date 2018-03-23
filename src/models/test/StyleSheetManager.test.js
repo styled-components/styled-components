@@ -120,7 +120,7 @@ describe('StyleSheetManager', () => {
   })
 
   // https://github.com/styled-components/styled-components/issues/1634
-  it('should flush styles to an iframe when the iframe is re-rendered', async () => {
+  it('should inject styles into two parallel contexts', async () => {
     const Title = styled.h1`
       color: palevioletred;
     `
