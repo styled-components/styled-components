@@ -78,12 +78,14 @@ export default (
      * */
     generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
       const { isStatic, componentId, lastClassName } = this
-      if (areStylesCacheable && isStatic && lastClassName !== undefined) {
-        return lastClassName
-      }
-
       const flatCSS = flatten(this.rules, executionContext)
-      const name = generateRuleHash(this.componentId + flatCSS.join(''))
+
+      const useLastClassName: boolean =
+        areStylesCacheable && isStatic && lastClassName !== undefined
+
+      const name: string = useLastClassName
+        ? ((lastClassName: any): string)
+        : generateRuleHash(this.componentId + flatCSS.join(''))
 
       if (!styleSheet.hasNameForId(componentId, name)) {
         const css = stringifyRules(flatCSS, `.${name}`)
