@@ -1,13 +1,7 @@
 // @flow
 import hashStr from '../vendor/glamor/hash'
 
-import type {
-  RuleSet,
-  NameGenerator,
-  Flattener,
-  Stringifier,
-  Interpolation,
-} from '../types'
+import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
 import StyleSheet from './StyleSheet'
 import { IS_BROWSER } from '../constants'
 import isStyledComponent from '../utils/isStyledComponent'
@@ -84,23 +78,20 @@ export default (
      * */
     generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
       const { isStatic, componentId, lastClassName } = this
-      let flatCSSResult: ?Array<Interpolation> = null
-      const flatCSS = (): Array<Interpolation> => {
-        if (!flatCSSResult) {
-          flatCSSResult = flatten(this.rules, executionContext)
-        }
-        return flatCSSResult
+      if (
+        areStylesCacheable &&
+        isStatic &&
+        lastClassName !== undefined &&
+        styleSheet.hasNameForId(componentId, ((lastClassName: any): string))
+      ) {
+        return lastClassName
       }
 
-      const useLastClassName: boolean =
-        areStylesCacheable && isStatic && lastClassName !== undefined
-
-      const name: string = useLastClassName
-        ? ((lastClassName: any): string)
-        : generateRuleHash(this.componentId + flatCSS().join(''))
+      const flatCSS = flatten(this.rules, executionContext)
+      const name = generateRuleHash(this.componentId + flatCSS.join(''))
 
       if (!styleSheet.hasNameForId(componentId, name)) {
-        const css = stringifyRules(flatCSS(), `.${name}`)
+        const css = stringifyRules(flatCSS, `.${name}`)
         styleSheet.inject(this.componentId, css, name)
       }
 
