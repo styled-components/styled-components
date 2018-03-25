@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Deprecate experimental preprocess mode see [#1619](https://github.com/styled-components/styled-components/issues/1619) - @Samatar26
 
 ## [v3.2.3] - 2018-03-14
 
