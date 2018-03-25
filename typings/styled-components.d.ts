@@ -102,7 +102,7 @@ interface StylesheetComponentProps {
 }
 
 interface StyleSheetManagerProps {
-  sheet?: ServerStyleSheet;
+  sheet?: StyleSheet;
   target?: Node;
 }
 
