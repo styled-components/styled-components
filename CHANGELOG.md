@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Added ability to override `SC_ATTR` via `process.env.SC_ATTR`
 
 ## [v3.2.3] - 2018-03-14
 
