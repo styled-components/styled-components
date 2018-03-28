@@ -1,18 +1,16 @@
-
 import React from 'react'
 import { shallow } from 'enzyme'
 
 import { expectCSSMatches } from './utils'
-import { SC_ATTR as DEFAULT_SC_ATTR } from '../constants';
-
+import { SC_ATTR as DEFAULT_SC_ATTR } from '../constants'
 
 function renderAndExpect(expectedAttr) {
   const SC_ATTR = require('../constants').SC_ATTR
   const styled = require('./utils').resetStyled()
 
   const Comp = styled.div`
-      color: blue;
-    `
+    color: blue;
+  `
 
   shallow(<Comp />)
 
@@ -40,4 +38,4 @@ describe('constants', () => {
   afterEach(() => {
     jest.resetModules()
   })
-});
+})
