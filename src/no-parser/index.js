@@ -42,6 +42,11 @@ const keyframes = _keyframes(generateAlphabeticName, stringifyRules, css)
 const injectGlobal = _injectGlobal(stringifyRules, css)
 const styled = _styled(StyledComponent, constructWithOptions)
 
+if (process.env.NODE_ENV !== 'production') {
+  console.warn(
+    'Usage of the preprocessing plugin is deprecated. The no-parser bundle will be removed in the next major release. \nPlease disable the preprocess option in your Babel config and upgrade to a newer version of our plugin which removes this option entirely.'
+  )
+}
 /* Export everything */
 export default styled
 export {
