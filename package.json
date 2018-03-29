@@ -71,7 +71,7 @@
     "buffer": "^5.0.3",
     "css-to-react-native": "^2.0.3",
     "fbjs": "^0.8.9",
-    "hoist-non-react-statics": "^1.2.0",
+    "hoist-non-react-statics": "^2.5.0",
     "is-plain-object": "^2.0.1",
     "opencollective": "^1.0.3",
     "prop-types": "^15.5.4",

@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Deprecate experimental preprocess mode, by [@Samatar26](https://github.com/Samatar26) (see [#1619](https://github.com/styled-components/styled-components/issues/1619))
 - Added ability to override `SC_ATTR` via `process.env.SC_ATTR`
 
 ## [v3.2.3] - 2018-03-14
