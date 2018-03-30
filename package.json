@@ -16,7 +16,7 @@
   "scripts": {
     "build": "rollup -c",
     "prebuild": "rimraf dist",
-    "test": "npm run test:web && npm run test:native && npm run test:integration && npm run test:size",
+    "test": "run-s test:*",
     "test:web": "jest --outputFile test-results.json --json",
     "test:web:watch": "npm run test:web -- --watch",
     "test:native": "jest -c .jest.native.json",
@@ -33,7 +33,7 @@
     "tslint": "tslint typings/*.ts native/*.ts",
     "typescript": "tsc --project ./typings/tests",
     "precommit": "lint-staged",
-    "prepublish": "npm run build",
+    "prepublishOnly": "run-s build",
     "lint-staged": "lint-staged",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
     "postinstall": "opencollective postinstall || exit 0"
@@ -70,7 +70,7 @@
   "dependencies": {
     "buffer": "^5.0.3",
     "css-to-react-native": "^2.0.3",
-    "fbjs": "^0.8.9",
+    "fbjs": "^0.8.16",
     "hoist-non-react-statics": "^2.5.0",
     "is-plain-object": "^2.0.1",
     "opencollective": "^1.0.3",
@@ -121,6 +121,7 @@
     "jsdom": "^9.10.0",
     "lint-staged": "^6.0.0",
     "node-watch": "^0.4.1",
+    "npm-run-all": "^4.1.2",
     "prettier": "1.9.2",
     "puppeteer": "^0.13.0",
     "raf": "^3.4.0",
