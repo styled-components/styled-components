@@ -2,6 +2,6 @@
 /* eslint-disable */
 /* Adapted from nodemon's postinstall: https://github.com/remy/nodemon/blob/master/package.json */
 
-var msg = 'Take a look at https://opencollective.com/styled-components to help out styled-components’ maintainers';
+var msg = 'Use styled-components at work? Consider supporting our development efforts at opencollective.com/styled-components';
 
 console.log(msg);
