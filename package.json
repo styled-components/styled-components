@@ -36,7 +36,7 @@
     "prepublishOnly": "run-s build",
     "lint-staged": "lint-staged",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
-    "postinstall": "opencollective postinstall || exit 0"
+    "postinstall": "node ./scripts/postinstall.js || exit 0"
   },
   "repository": {
     "type": "git",
@@ -73,7 +73,6 @@
     "fbjs": "^0.8.16",
     "hoist-non-react-statics": "^2.5.0",
     "is-plain-object": "^2.0.1",
-    "opencollective": "^1.0.3",
     "prop-types": "^15.5.4",
     "stylis": "^3.5.0",
     "stylis-rule-sheet": "^0.0.10",
