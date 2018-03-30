@@ -16,6 +16,7 @@ node_js:
 script:
   - node --version
   - yarn --version
+  - yarn run build
   # Tests have to run before Danger runs because
   # danger-plugin-jest references the test output
   - yarn run test
