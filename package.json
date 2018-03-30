@@ -1,7 +1,8 @@
 {
   "name": "styled-components",
   "version": "3.2.5",
-  "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
+  "description":
+    "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "typings": "typings/styled-components.d.ts",
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.es.js",
@@ -9,9 +10,12 @@
   "react-native": "dist/styled-components.native.cjs.js",
   "browser": {
     "./dist/styled-components.es.js": "./dist/styled-components.browser.es.js",
-    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js",
-    "./dist/styled-components-no-parser.es.js": "./dist/styled-components-no-parser.browser.es.js",
-    "./dist/styled-components-no-parser.cjs.js": "./dist/styled-components-no-parser.browser.cjs.js"
+    "./dist/styled-components.cjs.js":
+      "./dist/styled-components.browser.cjs.js",
+    "./dist/styled-components-no-parser.es.js":
+      "./dist/styled-components-no-parser.browser.es.js",
+    "./dist/styled-components-no-parser.cjs.js":
+      "./dist/styled-components-no-parser.browser.cjs.js"
   },
   "scripts": {
     "build": "rollup -c",
@@ -23,7 +27,8 @@
     "test:native:watch": "npm run test:native -- --watch",
     "test:primitives": "jest -c .jest.primitives.json",
     "test:primitives:watch": "npm run test:primitives -- --watch",
-    "test:integration": "jest -c .jest.integration.json --runInBand --forceExit",
+    "test:integration":
+      "jest -c .jest.integration.json --runInBand --forceExit",
     "test:size": "bundlesize",
     "danger": "cross-env NODE_ENV=test danger run -- --verbose",
     "flow": "flow check",
@@ -54,14 +59,10 @@
     "native",
     "primitives",
     "src",
-    "typings"
+    "typings",
+    "test-utils"
   ],
-  "keywords": [
-    "react",
-    "css",
-    "css-in-js",
-    "styled-components"
-  ],
+  "keywords": ["react", "css", "css-in-js", "styled-components"],
   "author": "Glen Maddern",
   "license": "MIT",
   "bugs": {
@@ -153,9 +154,7 @@
       "__DEV__": true
     },
     "clearMocks": true,
-    "roots": [
-      "<rootDir>/src/"
-    ],
+    "roots": ["<rootDir>/src/"],
     "setupFiles": [
       "raf/polyfill",
       "<rootDir>/src/test/enzymeSetup.js",
@@ -167,10 +166,7 @@
     ]
   },
   "lint-staged": {
-    "*.js": [
-      "eslint --fix",
-      "git add"
-    ]
+    "*.js": ["eslint --fix", "git add"]
   },
   "bundlesize": [
     {
