@@ -6,8 +6,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- n/a
+
+## [v3.2.5] - 2018-03-30
+
 - Deprecate experimental preprocess mode, by [@Samatar26](https://github.com/Samatar26) (see [#1619](https://github.com/styled-components/styled-components/issues/1619))
-- Added ability to override `SC_ATTR` via `process.env.SC_ATTR`
+- Added ability to override `SC_ATTR` via `process.env.SC_ATTR` (see [#1632](https://github.com/styled-components/styled-components/pull/1632))
 
 ## [v3.2.3] - 2018-03-14
 
@@ -434,7 +438,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.3...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.5...master
+[v3.2.5]: https://github.com/styled-components/styled-components/compare/v3.2.3...v3.2.5
 [v3.2.3]: https://github.com/styled-components/styled-components/compare/v3.2.2...v3.2.3
 [v3.2.2]: https://github.com/styled-components/styled-components/compare/v3.2.1...v3.2.2
 [v3.2.1]: https://github.com/styled-components/styled-components/compare/v3.2.0...v3.2.1
