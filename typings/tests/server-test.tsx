@@ -15,7 +15,7 @@ const styleElement = sheet.getStyleElement();
 
 const sheet2 = new ServerStyleSheet();
 const element = (
-  <StyleSheetManager sheet={sheet2}>
+  <StyleSheetManager sheet={sheet2.instance}>
     <Title>Hello world</Title>
   </StyleSheetManager>
 );

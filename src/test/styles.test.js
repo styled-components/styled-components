@@ -74,28 +74,28 @@ describe('with styles', () => {
     const rule1 = {
       backgroundColor: 'blue',
       '&:hover': {
-        textDecoration: 'underline',
+        color: 'green',
       },
     }
     const Comp = styled.div`
       ${rule1}
     `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b:hover { text-decoration:underline; }')
+    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b:hover { color:green; }')
   })
 
   it('should handle inline style objects with pseudo selectors', () => {
     const rule1 = {
       backgroundColor: 'blue',
       '&:hover': {
-        textDecoration: 'underline',
+        color: 'green',
       },
     }
     const Comp = styled.div`
       ${rule1}
     `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b:hover { text-decoration:underline; }')
+    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b:hover { color:green; }')
   })
 
   it('should handle inline style objects with nesting', () => {

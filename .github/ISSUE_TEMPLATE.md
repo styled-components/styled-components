@@ -28,10 +28,9 @@ Please keep it product-centric.
 -->
 
 <!-- BUG TEMPLATE -->
-## Version
-styled-components: 2.2.4
-babel-plugin-styled-components: 1.3.0
-<!-- Please remove babel-plugin-styled-components if it's not applicable -->
+## Environment
+<!-- Please run this command inside your project and paste its contents here (it automatically copies to your clipboard) -->
+`npx envinfo --system --binaries --npmPackages styled-components,babel-plugin-styled-components --markdown --clipboard`
 
 ## Reproduction
 

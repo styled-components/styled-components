@@ -20,5 +20,6 @@ cache:
 test_script:
   - node --version
   - yarn --version
+  - yarn run build
   - yarn run flow
   - yarn run lint && npm run test

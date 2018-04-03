@@ -21,7 +21,7 @@ export const sheetForTag = (tag: HTMLStyleElement): CSSStyleSheet => {
 }
 
 /* insert a rule safely and return whether it was actually injected */
-const safeInsertRule = (
+export const safeInsertRule = (
   sheet: CSSStyleSheet,
   cssRule: string,
   index: number
@@ -40,26 +40,6 @@ const safeInsertRule = (
   }
 
   return true
-}
-
-/* insert multiple rules using safeInsertRule */
-export const safeInsertRules = (
-  sheet: CSSStyleSheet,
-  cssRules: string[],
-  insertIndex: number
-): number => {
-  /* inject each rule and count up the number of actually injected ones */
-  let injectedRules = 0
-  const cssRulesSize = cssRules.length
-  for (let i = 0; i < cssRulesSize; i += 1) {
-    const cssRule = cssRules[i]
-    if (safeInsertRule(sheet, cssRule, insertIndex + injectedRules)) {
-      injectedRules += 1
-    }
-  }
-
-  /* return number of injected rules */
-  return injectedRules
 }
 
 /* deletes `size` rules starting from `removalIndex` */

@@ -8,7 +8,42 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Add `createGlobalStyle` which returns a component which, when mounting ('componentWillMount'), will apply global styles. The styles will also be removed once the component unmounts during `componentWillUnmount` (see [#1416](https://github.com/styled-components/styled-components/pull/1416))
 
-- Add `StyleSheet.remove` API method to be able to delete rules related to a component ([see [#1514](https://github.com/styled-components/styled-components/pull/1514))
+## [v3.2.5] - 2018-03-30
+
+- Deprecate experimental preprocess mode, by [@Samatar26](https://github.com/Samatar26) (see [#1619](https://github.com/styled-components/styled-components/issues/1619))
+- Added ability to override `SC_ATTR` via `process.env.SC_ATTR` (see [#1632](https://github.com/styled-components/styled-components/pull/1632))
+
+## [v3.2.3] - 2018-03-14
+
+- Fix SSR memory leak where StyleSheet clones are never freed (see [#1612](https://github.com/styled-components/styled-components/pull/1612))
+
+## [v3.2.2] - 2018-03-13
+
+- Fix ServerTag.clone() not properly cloning its names and markers (see [#1605](https://github.com/styled-components/styled-components/pull/1605))
+
+- Fix nested media at-rules by upgrading to stylis@^3.5.0 and stylis-rule-sheet@^0.0.10 (see [#1595](https://github.com/styled-components/styled-components/pull/1595))
+
+- Fix the `IS_BROWSER` check to work more reliably in projects where `window` may be shimmed, by [@danieldunderfelt](https://github.com/danieldunderfelt) (see [#1599](https://github.com/styled-components/styled-components/pull/1599))
+
+## [v3.2.1] - 2018-03-07
+
+- Fix `@import` rules not being enforced to appear at the beginning of stylesheets (see [#1577](https://github.com/styled-components/styled-components/pull/1577))
+
+- Fix StyleTags toElement outputting inline CSS which would cause URL encoding (see [#1580](https://github.com/styled-components/styled-components/pull/1580))
+
+## [v3.2.0] - 2018-03-05
+
+- Remove `type="text/css"`-attribute from style tag to remove warnings from w3c validator (see [#1551](https://github.com/styled-components/styled-components/pull/1551))
+
+- Add `foreignObject` svg element (see [#1544](https://github.com/styled-components/styled-components/pull/1544))
+
+- Add `controlsList` to validAttr list (see [#1537](https://github.com/styled-components/styled-components/pull/1537))
+
+- Enable stylis' semicolon autocompletion which was accidentally disabled for a lot of prior releases (see [#1532](https://github.com/styled-components/styled-components/pull/1532))
+
+- Fix `insertRule` injection (speedy mode in production) of nested media queries by upgrading stylis-rule-sheet (see [#1529](https://github.com/styled-components/styled-components/pull/1529) and [#1528](https://github.com/styled-components/styled-components/pull/1528))
+
+- Add `StyleSheet.remove` API method to be able to delete rules related to a component (see [#1514](https://github.com/styled-components/styled-components/pull/1514))
 
 - Replace murmurhash implementation and avoid destructuring tag function arguments (see [#1516](https://github.com/styled-components/styled-components/pull/1516))
 
@@ -403,7 +438,12 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.1.6...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.5...master
+[v3.2.5]: https://github.com/styled-components/styled-components/compare/v3.2.3...v3.2.5
+[v3.2.3]: https://github.com/styled-components/styled-components/compare/v3.2.2...v3.2.3
+[v3.2.2]: https://github.com/styled-components/styled-components/compare/v3.2.1...v3.2.2
+[v3.2.1]: https://github.com/styled-components/styled-components/compare/v3.2.0...v3.2.1
+[v3.2.0]: https://github.com/styled-components/styled-components/compare/v3.1.6...v3.2.0
 [v3.1.6]: https://github.com/styled-components/styled-components/compare/v3.1.5...v3.1.6
 [v3.1.5]: https://github.com/styled-components/styled-components/compare/v3.1.4...v3.1.5
 [v3.1.4]: https://github.com/styled-components/styled-components/compare/v3.1.3...v3.1.4
