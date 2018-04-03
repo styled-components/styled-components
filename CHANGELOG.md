@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Add support for react-tree-walker (see [#1656](https://github.com/styled-components/styled-components/pull/1656))
 
 ## [v3.2.5] - 2018-03-30
 
