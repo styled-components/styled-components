@@ -121,43 +121,45 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     componentWillMount() {
       const { componentStyle } = this.constructor
-      const styledContext = this.context[CHANNEL_NEXT]
+      if (this.context) {
+        const styledContext = this.context[CHANNEL_NEXT]
 
-      // If this is a staticaly-styled component, we don't need to the theme
-      // to generate or build styles.
-      if (componentStyle.isStatic) {
-        const generatedClassName = this.generateAndInjectStyles(
-          STATIC_EXECUTION_CONTEXT,
-          this.props
-        )
-        this.setState({ generatedClassName })
-        // If there is a theme in the context, subscribe to the event emitter. This
-        // is necessary due to pure components blocking context updates, this circumvents
-        // that by updating when an event is emitted
-      } else if (styledContext !== undefined) {
-        const { subscribe } = styledContext
-        this.unsubscribeId = subscribe(nextTheme => {
-          // This will be called once immediately
-          const theme = determineTheme(
-            this.props,
-            nextTheme,
-            this.constructor.defaultProps
+        // If this is a staticaly-styled component, we don't need to the theme
+        // to generate or build styles.
+        if (componentStyle.isStatic) {
+          const generatedClassName = this.generateAndInjectStyles(
+            STATIC_EXECUTION_CONTEXT,
+            this.props
           )
+          this.setState({ generatedClassName })
+          // If there is a theme in the context, subscribe to the event emitter. This
+          // is necessary due to pure components blocking context updates, this circumvents
+          // that by updating when an event is emitted
+        } else if (styledContext !== undefined) {
+          const { subscribe } = styledContext
+          this.unsubscribeId = subscribe(nextTheme => {
+            // This will be called once immediately
+            const theme = determineTheme(
+              this.props,
+              nextTheme,
+              this.constructor.defaultProps
+            )
+            const generatedClassName = this.generateAndInjectStyles(
+              theme,
+              this.props
+            )
+
+            this.setState({ theme, generatedClassName })
+          })
+        } else {
+          // eslint-disable-next-line react/prop-types
+          const theme = this.props.theme || {}
           const generatedClassName = this.generateAndInjectStyles(
             theme,
             this.props
           )
-
           this.setState({ theme, generatedClassName })
-        })
-      } else {
-        // eslint-disable-next-line react/prop-types
-        const theme = this.props.theme || {}
-        const generatedClassName = this.generateAndInjectStyles(
-          theme,
-          this.props
-        )
-        this.setState({ theme, generatedClassName })
+        }
       }
     }
 
