@@ -121,7 +121,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     componentWillMount() {
       const { componentStyle } = this.constructor
-      if (this.context) {
+      if (this.context !== undefined) {
         const styledContext = this.context[CHANNEL_NEXT]
 
         // If this is a staticaly-styled component, we don't need to the theme
