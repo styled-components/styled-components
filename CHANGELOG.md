@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Use react-is.isValidElementType to check whether elements passed to constructWithOptions are valid (see [#1658]https://github.com/styled-components/styled-components/pull/1658)
 
 ## [v3.2.5] - 2018-03-30
 
