@@ -16,9 +16,10 @@ export type ThemedOuterStyledProps<P, T> = P & {
 };
 export type OuterStyledProps<P> = ThemedOuterStyledProps<P, any>;
 
+export type FalseyValue = undefined | null | false | "";
 export type Interpolation<P> = FlattenInterpolation<P> | ReadonlyArray<FlattenInterpolation<P> | ReadonlyArray<FlattenInterpolation<P>>>;
 export type FlattenInterpolation<P> = InterpolationValue | InterpolationFunction<P>;
-export type InterpolationValue = string | number | Styles | StyledComponentClass<any, any>;
+export type InterpolationValue = string | number | Styles | FalseyValue | StyledComponentClass<any, any>;
 export type SimpleInterpolation = InterpolationValue | ReadonlyArray<InterpolationValue | ReadonlyArray<InterpolationValue>>;
 export interface Styles {
   [ruleOrSelector: string]: string | number | Styles;
