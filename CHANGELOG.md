@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Fix `makeSpeedyTag`'s css method (see [#1663](https://github.com/styled-components/styled-components/pull/1663))
 
 ## [v3.2.5] - 2018-03-30
 
