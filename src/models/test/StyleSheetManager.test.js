@@ -1,12 +1,15 @@
 // @flow
 /* eslint-disable react/no-multi-comp */
 import React from 'react'
+import PropTypes from 'prop-types'
 import { renderToString } from 'react-dom/server'
+import { render } from 'react-dom'
 import { shallow, mount } from 'enzyme'
 import StyleSheetManager from '../StyleSheetManager'
 import StyleSheet from '../StyleSheet'
 import ServerStyleSheet from '../ServerStyleSheet'
 import { resetStyled, expectCSSMatches } from '../../test/utils'
+import Frame from 'react-frame-component'
 
 let styled
 
@@ -115,6 +118,69 @@ describe('StyleSheetManager', () => {
     // $FlowFixMe
     expect(document.body.innerHTML).toMatchSnapshot()
   })
+
+  // https://github.com/styled-components/styled-components/issues/1634
+  it('should inject styles into two parallel contexts', async () => {
+    const Title = styled.h1`
+      color: palevioletred;
+    `
+
+    // Injects the stylesheet into the document available via context
+    const SheetInjector = ({ children }, { document }) => (
+      <StyleSheetManager target={document.head}>{children}</StyleSheetManager>
+    )
+    SheetInjector.contextTypes = {
+      document: PropTypes.any,
+    }
+
+    class Child extends React.Component {
+      static contextTypes = {
+        document: PropTypes.any,
+      }
+
+      componentDidMount() {
+        // $FlowFixMe
+        const styles = this.context.document.querySelector('style').textContent
+        expect(styles.includes(`palevioletred`)).toEqual(true)
+        this.props.resolve()
+      }
+      render() {
+        return <Title />
+      }
+    }
+
+    const div = document.body.appendChild(document.createElement('div'))
+
+    let promiseA, promiseB
+    promiseA = new Promise((resolveA, reject) => {
+      promiseB = new Promise((resolveB, reject) => {
+        try {
+          // Render two iframes. each iframe should have the styles for the child injected into their head
+          render(
+            <div>
+              <Frame>
+                <SheetInjector>
+                  <Child resolve={resolveA} />
+                </SheetInjector>
+              </Frame>
+              <Frame>
+                <SheetInjector>
+                  <Child resolve={resolveB} />
+                </SheetInjector>
+              </Frame>
+            </div>,
+            div
+          )
+        } catch (e) {
+          reject(e)
+          div.parentElement.removeChild(div)
+        }
+      })
+    })
+    await Promise.all([promiseA, promiseB])
+    div.parentElement.removeChild(div)
+  })
+
 
   describe('ssr', () => {
     it('should extract CSS outside the nested StyleSheetManager', () => {
