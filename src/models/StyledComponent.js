@@ -61,10 +61,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     static warnTooManyClasses: Function
 
     attrs = {}
-    state = {
-      theme: null,
-      generatedClassName: '',
-    }
+    state: {
+      theme?: {},
+      generatedClassName: string,
+    } = this.getInitialState()
     unsubscribeId: number = -1
 
     unsubscribeFromContext() {
@@ -119,22 +119,50 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
     }
 
-    componentWillMount() {
+    getInitialState() {
       const { componentStyle } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
 
-      // If this is a staticaly-styled component, we don't need to the theme
+      // If this is a staticaly-styled component, we don't need the theme
       // to generate or build styles.
       if (componentStyle.isStatic) {
         const generatedClassName = this.generateAndInjectStyles(
           STATIC_EXECUTION_CONTEXT,
           this.props
         )
-        this.setState({ generatedClassName })
-        // If there is a theme in the context, subscribe to the event emitter. This
-        // is necessary due to pure components blocking context updates, this circumvents
-        // that by updating when an event is emitted
+        return { generatedClassName }
+        // If there is a theme in the context, read it
       } else if (styledContext !== undefined) {
+        const { getTheme } = styledContext
+        const theme = determineTheme(
+          this.props,
+          getTheme(),
+          this.constructor.defaultProps
+        )
+        const generatedClassName = this.generateAndInjectStyles(
+          theme,
+          this.props
+        )
+        return { theme, generatedClassName }
+      } else {
+        // eslint-disable-next-line react/prop-types
+        const theme = this.props.theme || {}
+        const generatedClassName = this.generateAndInjectStyles(
+          theme,
+          this.props
+        )
+        return { theme, generatedClassName }
+      }
+    }
+
+    componentDidMount() {
+      const { componentStyle } = this.constructor
+      const styledContext = this.context[CHANNEL_NEXT]
+
+      // If there is a theme in the context, subscribe to the event emitter. This
+      // is necessary due to pure components blocking context updates, this circumvents
+      // that by updating when an event is emitted
+      if (!componentStyle.isStatic && styledContext !== undefined) {
         const { subscribe } = styledContext
         this.unsubscribeId = subscribe(nextTheme => {
           // This will be called once immediately
@@ -150,21 +178,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
           this.setState({ theme, generatedClassName })
         })
-      } else {
-        // eslint-disable-next-line react/prop-types
-        const theme = this.props.theme || {}
-        const generatedClassName = this.generateAndInjectStyles(
-          theme,
-          this.props
-        )
-        this.setState({ theme, generatedClassName })
       }
     }
 
-    componentWillReceiveProps(nextProps: {
-      theme?: Theme,
-      [key: string]: any,
-    }) {
+    componentDidUpdate(prevProps: { theme?: Theme, [key: string]: any }) {
       // If this is a staticaly-styled component, we don't need to listen to
       // props changes to update styles
       const { componentStyle } = this.constructor
@@ -172,15 +189,21 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         return
       }
 
+      // Only react to props change to avoid infinite update loop
+      if (prevProps === this.props) {
+        return
+      }
+
+      // eslint-disable-next-line react/no-did-update-set-state
       this.setState(oldState => {
         const theme = determineTheme(
-          nextProps,
+          this.props,
           oldState.theme,
           this.constructor.defaultProps
         )
         const generatedClassName = this.generateAndInjectStyles(
           theme,
-          nextProps
+          this.props
         )
 
         return { theme, generatedClassName }

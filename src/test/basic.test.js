@@ -1,6 +1,7 @@
 // @flow
 import React, { Component } from 'react'
 import { shallow, mount } from 'enzyme'
+import TestRenderer from 'react-test-renderer'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
@@ -188,6 +189,19 @@ describe('basic', () => {
 
       shallow(<Comp />)
       expectCSSMatches('.sc-a{ } @media (min-width:500px){ .b > *{ color:pink; } } ')
+    })
+
+    it('should work in <StrictMode> without warnings', () => {
+      const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
+      const Comp = styled.div``
+
+      TestRenderer.create(
+        <React.StrictMode>
+          <Comp/>
+        </React.StrictMode>
+      )
+
+      expect(spy).not.toHaveBeenCalled()
     })
   })
 })
