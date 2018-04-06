@@ -78,16 +78,7 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
           '[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps'
         )
       } else if (this.styledContext !== undefined) {
-        const { subscribe, getTheme } = this.styledContext
-        const updatedTheme = determineTheme(
-          this.props,
-          getTheme(),
-          defaultProps
-        )
-        if (updatedTheme !== this.state.theme) {
-          // eslint-disable-next-line react/no-did-mount-set-state
-          this.setState({ theme: updatedTheme })
-        }
+        const { subscribe } = this.styledContext
         this.unsubscribeId = subscribe(nextTheme => {
           const theme = determineTheme(this.props, nextTheme, defaultProps)
           this.setState({ theme })

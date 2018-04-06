@@ -60,12 +60,7 @@ class ThemeProvider extends Component {
     // If there is a ThemeProvider wrapper anywhere around this theme provider, merge this theme
     // with the outer theme
     if (this.outerContext !== undefined) {
-      const { subscribe, getTheme } = this.outerContext
-      const updatedTheme = getTheme()
-      if (updatedTheme !== this.outerTheme) {
-        this.outerTheme = updatedTheme
-        this.publish(this.props.theme)
-      }
+      const { subscribe } = this.outerContext
       this.unsubscribeToOuterId = subscribe(theme => {
         this.outerTheme = theme
         this.publish(this.props.theme)
