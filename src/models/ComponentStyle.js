@@ -63,12 +63,13 @@ export default (
     componentId: string
     isStatic: boolean
     lastClassName: string | void
-    cssCache: { [className: string]: Array<Interpolation> } = {}
+    cssCache: { [className: string]: Array<Interpolation> }
 
     constructor(rules: RuleSet, attrs?: Object, componentId: string) {
       this.rules = rules
       this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
+      this.cssCache = {}
 
       if (!StyleSheet.master.hasId(componentId)) {
         const placeholder =
