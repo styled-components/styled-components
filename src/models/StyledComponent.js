@@ -195,35 +195,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
     }
 
-    componentDidUpdate(prevProps: { theme?: Theme, [key: string]: any }) {
-      // If this is a staticaly-styled component, we don't need to listen to
-      // props changes to update styles
-      const { componentStyle } = this.constructor
-      if (componentStyle.isStatic) {
-        return
-      }
-
-      // Only react to props change to avoid infinite update loop
-      if (prevProps === this.props) {
-        return
-      }
-
-      // eslint-disable-next-line react/no-did-update-set-state
-      this.setState(oldState => {
-        const theme = determineTheme(
-          this.props,
-          oldState.theme,
-          this.constructor.defaultProps
-        )
-        const generatedClassName = this.generateAndInjectStyles(
-          theme,
-          this.props
-        )
-
-        return { theme, generatedClassName }
-      })
-    }
-
     componentWillUnmount() {
       this.unsubscribeFromContext()
     }
