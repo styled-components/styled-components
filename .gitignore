@@ -8,3 +8,4 @@ __diff_output__
 lib
 sandbox/node_modules
 test-results.json
+yarn-error.log
