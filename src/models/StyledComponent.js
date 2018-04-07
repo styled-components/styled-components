@@ -14,7 +14,7 @@ import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
 import type { RuleSet, Target } from '../types'
-import { CONTEXT_KEY } from '../constants'
+import { CONTEXT_KEY, IS_BROWSER } from '../constants'
 
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 import StyleSheet from './StyleSheet'
@@ -65,16 +65,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       nextProps: { theme?: Theme, [key: string]: any },
       prevState
     ) {
+      // If this is a staticaly-styled component, we don't need to listen to
+      // props changes to update styles
       if (prevState.isStatic) {
-        return prevState.generatedClassName === ''
-          ? // First run
-            {
-              generatedClassName: prevState.generateAndInjectStyles(
-                STATIC_EXECUTION_CONTEXT,
-                nextProps
-              ),
-            }
-          : null
+        return null
       }
 
       const theme = determineTheme(
@@ -82,23 +76,37 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         prevState.theme,
         prevState.defaultProps
       )
-      const generatedClassName = prevState.generateAndInjectStyles(
-        theme,
-        nextProps
-      )
+      const generatedClassName = prevState.generateClassName(theme, nextProps)
 
       return { theme, generatedClassName }
     }
 
     attrs = {}
-    state = {
-      theme: this.getInitialTheme(),
-      defaultProps: this.constructor.defaultProps,
-      generateAndInjectStyles: this.generateAndInjectStyles.bind(this),
-      isStatic: this.constructor.componentStyle.isStatic,
-      generatedClassName: '',
+    state: {
+      theme?: any,
+      defaultProps: any,
+      generateClassName: (theme: any, props: any) => any,
+      isStatic: boolean,
+      generatedClassName: string,
     }
     unsubscribeId: number = -1
+
+    constructor(...args) {
+      super(...args)
+
+      this.state = {
+        ...this.getInitialState(),
+        defaultProps: this.constructor.defaultProps,
+        generateClassName: this.generateClassName.bind(this),
+        isStatic: this.constructor.componentStyle.isStatic,
+      }
+
+      // We need to inject styles in SSR
+      const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.master
+      if (!IS_BROWSER || styleSheet.forceServer) {
+        this.injectStyles()
+      }
+    }
 
     unsubscribeFromContext() {
       if (this.unsubscribeId !== -1) {
@@ -123,23 +131,16 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       return { ...context, ...this.attrs }
     }
 
-    generateAndInjectStyles(theme: any, props: any) {
+    generateClassName(theme: any, props: any) {
       const { attrs, componentStyle, warnTooManyClasses } = this.constructor
-      const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.master
 
       // staticaly styled-components don't need to build an execution context object,
       // and shouldn't be increasing the number of class names
       if (componentStyle.isStatic && attrs === undefined) {
-        return componentStyle.generateAndInjectStyles(
-          STATIC_EXECUTION_CONTEXT,
-          styleSheet
-        )
+        return componentStyle.generateClassName(STATIC_EXECUTION_CONTEXT)
       } else {
         const executionContext = this.buildExecutionContext(theme, props)
-        const className = componentStyle.generateAndInjectStyles(
-          executionContext,
-          styleSheet
-        )
+        const className = componentStyle.generateClassName(executionContext)
 
         if (
           process.env.NODE_ENV !== 'production' &&
@@ -152,26 +153,47 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
     }
 
-    getInitialTheme() {
+    injectStyles() {
+      const { componentStyle } = this.constructor
+      const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.master
+      componentStyle.injectStyles(this.state.generatedClassName, styleSheet)
+    }
+
+    getInitialState() {
       const { componentStyle } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
 
       // If this is a staticaly-styled component, we don't need the theme
       // to generate or build styles.
       if (componentStyle.isStatic) {
-        return null
+        const generatedClassName = this.generateClassName(
+          STATIC_EXECUTION_CONTEXT,
+          this.props
+        )
+        return { generatedClassName }
         // If there is a theme in the context, read it
       } else if (styledContext !== undefined) {
-        return styledContext.getTheme()
+        const { getTheme } = styledContext
+        const theme = determineTheme(
+          this.props,
+          getTheme(),
+          this.constructor.defaultProps
+        )
+        const generatedClassName = this.generateClassName(theme, this.props)
+        return { theme, generatedClassName }
       } else {
         // eslint-disable-next-line react/prop-types
-        return this.props.theme || {}
+        const theme = this.props.theme || {}
+        const generatedClassName = this.generateClassName(theme, this.props)
+        return { theme, generatedClassName }
       }
     }
 
     componentDidMount() {
       const { componentStyle } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
+
+      this.injectStyles()
 
       // If there is a theme in the context, subscribe to the event emitter. This
       // is necessary due to pure components blocking context updates, this circumvents
@@ -185,14 +207,15 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
             nextTheme,
             this.constructor.defaultProps
           )
-          const generatedClassName = this.generateAndInjectStyles(
-            theme,
-            this.props
-          )
+          const generatedClassName = this.generateClassName(theme, this.props)
 
           this.setState({ theme, generatedClassName })
         })
       }
+    }
+
+    componentDidUpdate() {
+      this.injectStyles()
     }
 
     componentWillUnmount() {

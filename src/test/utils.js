@@ -21,12 +21,15 @@ let index = 0
 let inputs = {}
 let seededClassnames = []
 
-const classNames = input => {
+const getClassName = input => {
   const seed = seededClassnames.shift()
   if (seed) return seed
 
-  return inputs[input] || (inputs[input] = String.fromCodePoint(97 + index++))
+  return String.fromCodePoint(97 + index++)
 }
+
+const classNames = input =>
+  inputs[input] || (inputs[input] = getClassName(input))
 
 export const seedNextClassnames = (names: Array<string>) =>
   (seededClassnames = names)
