@@ -133,14 +133,21 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     generateClassName(theme: any, props: any) {
       const { attrs, componentStyle, warnTooManyClasses } = this.constructor
+      const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.master
 
       // staticaly styled-components don't need to build an execution context object,
       // and shouldn't be increasing the number of class names
       if (componentStyle.isStatic && attrs === undefined) {
-        return componentStyle.generateClassName(STATIC_EXECUTION_CONTEXT)
+        return componentStyle.generateClassName(
+          STATIC_EXECUTION_CONTEXT,
+          styleSheet
+        )
       } else {
         const executionContext = this.buildExecutionContext(theme, props)
-        const className = componentStyle.generateClassName(executionContext)
+        const className = componentStyle.generateClassName(
+          executionContext,
+          styleSheet
+        )
 
         if (
           process.env.NODE_ENV !== 'production' &&

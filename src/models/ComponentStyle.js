@@ -83,9 +83,14 @@ export default (
      * Hashes it, wraps the whole chunk in a .hash1234 {}
      * Returns the hash to be injected on render()
      * */
-    generateClassName(executionContext: Object) {
-      const { isStatic, lastClassName } = this
-      if (areStylesCacheable && isStatic && lastClassName !== undefined) {
+    generateClassName(executionContext: Object, styleSheet: StyleSheet) {
+      const { isStatic, componentId, lastClassName } = this
+      if (
+        areStylesCacheable &&
+        isStatic &&
+        lastClassName !== undefined &&
+        styleSheet.hasNameForId(componentId, lastClassName)
+      ) {
         return lastClassName
       }
 
