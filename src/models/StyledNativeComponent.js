@@ -1,5 +1,6 @@
 // @flow
 import { Component, createElement } from 'react'
+import { polyfill } from 'react-lifecycles-compat'
 import PropTypes from 'prop-types'
 
 import type { Theme } from './ThemeProvider'
@@ -18,11 +19,28 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     static styledComponentId: string
     static attrs: Object
     static inlineStyle: Object
+
+    static getDerivedStateFromProps(
+      nextProps: { theme?: Theme, [key: string]: any },
+      prevState
+    ) {
+      const theme = determineTheme(
+        nextProps,
+        prevState.theme,
+        prevState.defaultProps
+      )
+      const generatedStyles = prevState.generateStyleObject(theme, nextProps)
+
+      return { theme, generatedStyles }
+    }
+
     root: ?Object
 
     attrs = {}
     state = {
-      theme: null,
+      theme: this.getInitialTheme(),
+      defaultProps: this.constructor.defaultProps,
+      generateStyleObject: this.generateStyleObject.bind(this),
       generatedStyles: undefined,
     }
 
@@ -51,14 +69,25 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       return { ...context, ...this.attrs }
     }
 
-    generateAndInjectStyles(theme: any, props: any) {
+    generateStyleObject(theme: any, props: any) {
       const { inlineStyle } = this.constructor
       const executionContext = this.buildExecutionContext(theme, props)
 
       return inlineStyle.generateStyleObject(executionContext)
     }
 
-    componentWillMount() {
+    getInitialTheme() {
+      // If there is a theme in the context, read it
+      const styledContext = this.context[CHANNEL_NEXT]
+      if (styledContext !== undefined) {
+        return styledContext.getTheme()
+      } else {
+        // eslint-disable-next-line react/prop-types
+        return this.props.theme || {}
+      }
+    }
+
+    componentDidMount() {
       // If there is a theme in the context, subscribe to the event emitter. This
       // is necessary due to pure components blocking context updates, this circumvents
       // that by updating when an event is emitted
@@ -72,35 +101,11 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
             nextTheme,
             this.constructor.defaultProps
           )
-          const generatedStyles = this.generateAndInjectStyles(
-            theme,
-            this.props
-          )
+          const generatedStyles = this.generateStyleObject(theme, this.props)
 
           this.setState({ theme, generatedStyles })
         })
-      } else {
-        // eslint-disable-next-line react/prop-types
-        const theme = this.props.theme || {}
-        const generatedStyles = this.generateAndInjectStyles(theme, this.props)
-        this.setState({ theme, generatedStyles })
       }
-    }
-
-    componentWillReceiveProps(nextProps: {
-      theme?: Theme,
-      [key: string]: any,
-    }) {
-      this.setState(oldState => {
-        const theme = determineTheme(
-          nextProps,
-          oldState.theme,
-          this.constructor.defaultProps
-        )
-        const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
-
-        return { theme, generatedStyles }
-      })
     }
 
     componentWillUnmount() {
@@ -160,6 +165,8 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       return createElement(target, propsForElement, children)
     }
   }
+
+  polyfill(BaseStyledNativeComponent)
 
   const createStyledNativeComponent = (
     target: Target,
