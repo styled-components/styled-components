@@ -1,6 +1,7 @@
 // @flow
 
 import { Component, createElement } from 'react'
+import { polyfill } from 'react-lifecycles-compat'
 import PropTypes from 'prop-types'
 
 import type { Theme } from './ThemeProvider'
@@ -60,11 +61,43 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     static componentStyle: Object
     static warnTooManyClasses: Function
 
+    static getDerivedStateFromProps(
+      nextProps: { theme?: Theme, [key: string]: any },
+      prevState
+    ) {
+      if (prevState.isStatic) {
+        return prevState.generatedClassName === ''
+          ? // First run
+            {
+              generatedClassName: prevState.generateAndInjectStyles(
+                STATIC_EXECUTION_CONTEXT,
+                nextProps
+              ),
+            }
+          : null
+      }
+
+      const theme = determineTheme(
+        nextProps,
+        prevState.theme,
+        prevState.defaultProps
+      )
+      const generatedClassName = prevState.generateAndInjectStyles(
+        theme,
+        nextProps
+      )
+
+      return { theme, generatedClassName }
+    }
+
     attrs = {}
-    state: {
-      theme?: {},
-      generatedClassName: string,
-    } = this.getInitialState()
+    state = {
+      theme: this.getInitialTheme(),
+      defaultProps: this.constructor.defaultProps,
+      generateAndInjectStyles: this.generateAndInjectStyles.bind(this),
+      isStatic: this.constructor.componentStyle.isStatic,
+      generatedClassName: '',
+    }
     unsubscribeId: number = -1
 
     unsubscribeFromContext() {
@@ -119,39 +152,20 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
     }
 
-    getInitialState() {
+    getInitialTheme() {
       const { componentStyle } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
 
       // If this is a staticaly-styled component, we don't need the theme
       // to generate or build styles.
       if (componentStyle.isStatic) {
-        const generatedClassName = this.generateAndInjectStyles(
-          STATIC_EXECUTION_CONTEXT,
-          this.props
-        )
-        return { generatedClassName }
+        return null
         // If there is a theme in the context, read it
       } else if (styledContext !== undefined) {
-        const { getTheme } = styledContext
-        const theme = determineTheme(
-          this.props,
-          getTheme(),
-          this.constructor.defaultProps
-        )
-        const generatedClassName = this.generateAndInjectStyles(
-          theme,
-          this.props
-        )
-        return { theme, generatedClassName }
+        return styledContext.getTheme()
       } else {
         // eslint-disable-next-line react/prop-types
-        const theme = this.props.theme || {}
-        const generatedClassName = this.generateAndInjectStyles(
-          theme,
-          this.props
-        )
-        return { theme, generatedClassName }
+        return this.props.theme || {}
       }
     }
 
@@ -264,6 +278,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       return createElement(target, propsForElement)
     }
   }
+
+  polyfill(BaseStyledComponent)
 
   const createStyledComponent = (
     target: Target,
