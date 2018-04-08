@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- Fix missing 'Invalid' in regex for validating tag attributes, by [@slootsantos](https://github.com/slootsantos) (see [#1668](https://github.com/styled-components/styled-components/pull/1668))
+- Fix onInvalid check in validAttrs, by [@slootsantos](https://github.com/slootsantos) (see [#1668](https://github.com/styled-components/styled-components/pull/1668))
 
 - Fix `makeSpeedyTag`'s css method (see [#1663](https://github.com/styled-components/styled-components/pull/1663))
 
