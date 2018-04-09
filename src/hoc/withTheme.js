@@ -81,6 +81,12 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
         const { subscribe } = this.styledContext
         this.unsubscribeId = subscribe(nextTheme => {
           const theme = determineTheme(this.props, nextTheme, defaultProps)
+
+          // Don't perform any actions if the actual resolved theme didn't change
+          if (theme === this.state.theme) {
+            return
+          }
+
           this.setState({ theme })
         })
       }

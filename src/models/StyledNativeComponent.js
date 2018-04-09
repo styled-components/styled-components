@@ -101,6 +101,12 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
             nextTheme,
             this.constructor.defaultProps
           )
+
+          // Don't perform any actions if the actual resolved theme didn't change
+          if (theme === this.state.theme) {
+            return
+          }
+
           const generatedStyles = this.generateStyleObject(theme, this.props)
 
           this.setState({ theme, generatedStyles })

@@ -62,6 +62,11 @@ class ThemeProvider extends Component {
     if (this.outerContext !== undefined) {
       const { subscribe } = this.outerContext
       this.unsubscribeToOuterId = subscribe(theme => {
+        // Theme may or may not change between constructor and mount
+        if (theme === this.outerTheme) {
+          return
+        }
+
         this.outerTheme = theme
         this.publish(this.props.theme)
       })

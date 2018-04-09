@@ -214,6 +214,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
             nextTheme,
             this.constructor.defaultProps
           )
+
+          // Don't perform any actions if the actual resolved theme didn't change
+          if (theme === this.state.theme) {
+            return
+          }
+
           const generatedClassName = this.generateClassName(theme, this.props)
 
           this.setState({ theme, generatedClassName })
