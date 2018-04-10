@@ -14,12 +14,32 @@ describe('basic', () => {
     styled = resetStyled()
   })
 
-  it('should not throw an error when called', () => {
-    styled.div``
-  })
+  it('should not throw an error when called with a valid element', () => {
+    expect(() => styled.div``).not.toThrowError()
 
-  it('should throw a meaningful error when called with null', () => {
-    const invalidComps = [undefined, null, 123, []]
+    const FunctionalComponent = () => <div />;
+    class ClassComponent extends React.Component{
+      render() {
+        return <div />
+      }
+    }
+    const validComps = ['div', FunctionalComponent, ClassComponent];
+    validComps.forEach(comp => {
+      expect(() => {
+        const Comp = styled(comp)
+        shallow(<Comp />)
+      }).not.toThrowError()
+    })
+  });
+
+  it('should throw a meaningful error when called with an invalid element', () => {
+    const FunctionalComponent = () => <div />;
+    class ClassComponent extends React.Component{
+      render() {
+        return <div />
+      }
+    }
+    const invalidComps = [undefined, null, 123, [], <div />, <FunctionalComponent />, <ClassComponent />];
     invalidComps.forEach(comp => {
       expect(() => {
         // $FlowInvalidInputTest

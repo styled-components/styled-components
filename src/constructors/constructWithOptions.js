@@ -1,4 +1,5 @@
 // @flow
+import { isValidElementType } from 'react-is'
 import type { Target } from '../types'
 
 export default (css: Function) => {
@@ -7,7 +8,7 @@ export default (css: Function) => {
     tag: Target,
     options: Object = {}
   ) => {
-    if (typeof tag !== 'string' && typeof tag !== 'function') {
+    if (!isValidElementType(tag)) {
       throw new Error(
         process.env.NODE_ENV !== 'production'
           ? `Cannot create styled-component for component: ${String(tag)}`
