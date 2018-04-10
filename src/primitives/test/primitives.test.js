@@ -1,4 +1,5 @@
 import 'react-primitives'
+import { View } from 'react-primitives'
 import React from 'react'
 
 import styled from '../index'
@@ -7,8 +8,40 @@ import { shallow, mount } from 'enzyme'
 // NOTE: These tests are copy pasted from ../native/test/native.test.js
 
 describe('primitives', () => {
-  it('should not throw an error when called', () => {
-    styled.View``
+  it('should not throw an error when called with a valid element', () => {
+    expect(() => styled.View``).not.toThrowError()
+
+    const FunctionalComponent = () => <View />;
+    class ClassComponent extends React.Component{
+      render() {
+        return <View />
+      }
+    }
+    const validComps = ['View', FunctionalComponent, ClassComponent];
+    validComps.forEach(comp => {
+      expect(() => {
+        const Comp = styled(comp)
+        shallow(<Comp />)
+      }).not.toThrowError()
+    })
+  });
+
+  it('should throw a meaningful error when called with an invalid element', () => {
+    const FunctionalComponent = () => <View />;
+    class ClassComponent extends React.Component{
+      render() {
+        return <View />
+      }
+    }
+    const invalidComps = [undefined, null, 123, [], <View />, <FunctionalComponent />, <ClassComponent />];
+    invalidComps.forEach(comp => {
+      expect(() => {
+        // $FlowInvalidInputTest
+        const Comp = styled(comp)
+        shallow(<Comp />)
+        // $FlowInvalidInputTest
+      }).toThrow(`Cannot create styled-component for component: ${comp}`)
+    })
   })
 
   it('should generate inline styles', () => {
