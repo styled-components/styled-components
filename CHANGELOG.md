@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Fix `cascade: false` being erroneously set on the Stylis rule splitter (see [#1677](https://github.com/styled-components/styled-components/pull/1677))
+
 - Accept ref forwarding components in styled constructor (see [#1658](https://github.com/styled-components/styled-components/pull/1658))
 
 - Fix onInvalid check in validAttrs, by [@slootsantos](https://github.com/slootsantos) (see [#1668](https://github.com/styled-components/styled-components/pull/1668))
