@@ -12,7 +12,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fix `makeSpeedyTag`'s css method (see [#1663](https://github.com/styled-components/styled-components/pull/1663))
 
--  Fix ComponentStyle caching strategy to take StyleSheet cache into account, by [@darthtrevino](https://github.com/darthtrevino) (see [#1634](https://github.com/styled-components/styled-components/pull/1634))
+- Fix ComponentStyle caching strategy to take StyleSheet cache into account, by [@darthtrevino](https://github.com/darthtrevino) (see [#1634](https://github.com/styled-components/styled-components/pull/1634))
+
+- Add new `test-utils` to simplify finding styled-components in the DOM in unit testing scenarios, by [@jamiebuilds](https://github.com/jamiebuilds) (see [#1652](https://github.com/styled-components/styled-components/pull/1652))
 
 ## [v3.2.5] - 2018-03-30
 
