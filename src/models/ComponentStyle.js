@@ -17,7 +17,7 @@ const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
       return false
     } else if (typeof rule === 'function' && !isStyledComponent(rule)) {
       // functions are allowed to be static if they're just being
-      // used to get the classname of a nested styled copmonent
+      // used to get the classname of a nested styled component
       return false
     }
   }

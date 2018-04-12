@@ -43,17 +43,18 @@
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
   "files": [
-    "no-parser",
-    "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md",
-    "scripts",
+    "CONTRIBUTING.md",
     "dist",
     "docs",
     "flow-typed",
     "lib",
     "native",
+    "no-parser",
     "primitives",
+    "scripts",
     "src",
+    "test-utils",
     "typings"
   ],
   "keywords": [
@@ -81,7 +82,7 @@
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
-    "@types/node": "9.4.4",
+    "@types/node": "9.6.4",
     "@types/react": "^16",
     "@types/react-dom": "^16",
     "@types/react-native": "^0.50.7",
@@ -178,6 +179,12 @@
     {
       "path": "./dist/styled-components.min.js",
       "threshold": "16kB"
+    }, {
+      "path": "./dist/styled-components.cjs.min.js",
+      "threshold": "11.5kB"
+    }, {
+      "path": "./dist/styled-components.es.min.js",
+      "threshold": "11.5kB"
     }
   ],
   "collective": {

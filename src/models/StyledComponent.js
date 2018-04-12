@@ -165,7 +165,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       theme?: Theme,
       [key: string]: any,
     }) {
-      // If this is a staticaly-styled component, we don't need to listen to
+      // If this is a statically-styled component, we don't need to listen to
       // props changes to update styles
       const { componentStyle } = this.constructor
       if (componentStyle.isStatic) {

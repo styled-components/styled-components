@@ -6,7 +6,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+
 - Fix `cascade: false` being erroneously set on the Stylis rule splitter (see [#1677](https://github.com/styled-components/styled-components/pull/1677))
+
+- Fix typo in `ComponentStyle.js` comments (see [#1678](https://github.com/styled-components/styled-components/pull/1678))
 
 - Accept ref forwarding components in styled constructor (see [#1658](https://github.com/styled-components/styled-components/pull/1658))
 
@@ -14,7 +17,11 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fix `makeSpeedyTag`'s css method (see [#1663](https://github.com/styled-components/styled-components/pull/1663))
 
--  Fix ComponentStyle caching strategy to take StyleSheet cache into account, by [@darthtrevino](https://github.com/darthtrevino) (see [#1634](https://github.com/styled-components/styled-components/pull/1634))
+- Fix ComponentStyle caching strategy to take StyleSheet cache into account, by [@darthtrevino](https://github.com/darthtrevino) (see [#1634](https://github.com/styled-components/styled-components/pull/1634))
+
+- Add new `test-utils` to simplify finding styled-components in the DOM in unit testing scenarios, by [@jamiebuilds](https://github.com/jamiebuilds) (see [#1652](https://github.com/styled-components/styled-components/pull/1652))
+
+- Add minified commonjs and esm builds for bundle size tracking (see [#1681](https://github.com/styled-components/styled-components/pull/1681))
 
 ## [v3.2.5] - 2018-03-30
 
