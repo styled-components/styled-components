@@ -43,17 +43,18 @@
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
   "files": [
-    "no-parser",
-    "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md",
-    "scripts",
+    "CONTRIBUTING.md",
     "dist",
     "docs",
     "flow-typed",
     "lib",
     "native",
+    "no-parser",
     "primitives",
+    "scripts",
     "src",
+    "test-utils",
     "typings"
   ],
   "keywords": [
