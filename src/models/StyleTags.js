@@ -221,14 +221,18 @@ const makeSpeedyTag = (
   const css = () => {
     const { cssRules } = sheetForTag(el)
     let str = ''
-    let i = 0
 
     // eslint-disable-next-line guard-for-in
     for (const id in markers) {
       str += makeTextMarker(id)
-      const end = markers[id] + i
-      for (; i < end; i += 1) {
-        str += cssRules[i].cssText
+      const marker = markers[id]
+      const end = addUpUntilIndex(sizes, marker)
+      const size = sizes[marker]
+      for (let i = end - size; i < end; i += 1) {
+        const rule = cssRules[i]
+        if (rule !== undefined) {
+          str += rule.cssText
+        }
       }
     }
 

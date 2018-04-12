@@ -26,6 +26,9 @@ const commonPlugins = [
   sourceMaps(),
   commonjs({
     ignoreGlobal: true,
+    namedExports: {
+      'react-is': ['isValidElementType'],
+    },
   }),
   babel({
     plugins: ['external-helpers'],

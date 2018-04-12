@@ -78,7 +78,12 @@ export default (
      * */
     generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
       const { isStatic, componentId, lastClassName } = this
-      if (areStylesCacheable && isStatic && lastClassName !== undefined) {
+      if (
+        areStylesCacheable &&
+        isStatic &&
+        lastClassName !== undefined &&
+        styleSheet.hasNameForId(componentId, ((lastClassName: any): string))
+      ) {
         return lastClassName
       }
 

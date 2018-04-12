@@ -6,7 +6,13 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-- n/a
+- Accept ref forwarding components in styled constructor (see [#1658](https://github.com/styled-components/styled-components/pull/1658))
+
+- Fix onInvalid check in validAttrs, by [@slootsantos](https://github.com/slootsantos) (see [#1668](https://github.com/styled-components/styled-components/pull/1668))
+
+- Fix `makeSpeedyTag`'s css method (see [#1663](https://github.com/styled-components/styled-components/pull/1663))
+
+-  Fix ComponentStyle caching strategy to take StyleSheet cache into account, by [@darthtrevino](https://github.com/darthtrevino) (see [#1634](https://github.com/styled-components/styled-components/pull/1634))
 
 ## [v3.2.5] - 2018-03-30
 
