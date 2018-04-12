@@ -6,7 +6,7 @@ import type { Interpolation } from '../types'
 // NOTE: This stylis instance is only used to split rules from SSR'd style tags
 const stylisSplitter = new Stylis({
   global: false,
-  cascade: false,
+  cascade: true,
   keyframe: false,
   prefix: false,
   compress: false,
