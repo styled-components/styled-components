@@ -1,0 +1,14 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`injectGlobal should extract @import rules into separate style tags 1`] = `
+"<style data-styled-components=\\"\\">
+/* sc-component-id: sc-global-1433896746-import */
+@import url('bla');</style>
+<style data-styled-components=\\"\\">
+/* sc-component-id: sc-global-3616276198 */
+html{padding:1px;}
+/* sc-component-id: sc-a */
+.sc-a {} .b{color:green;}
+/* sc-component-id: sc-global-1433896746 */
+html{color:blue;}</style>"
+`;

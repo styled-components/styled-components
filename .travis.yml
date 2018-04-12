@@ -1,11 +1,22 @@
 language: node_js
 dist: trusty
+sudo: required
+addons:
+  apt:
+    packages:
+      - libnss3
+      - google-chrome-beta
+env:
+  global:
+    - GOOGLE_CHROME_BINARY="/usr/bin/google-chrome-beta"
+    - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
 node_js:
   - 6
   - 8
 script:
   - node --version
   - yarn --version
+  - yarn run build
   # Tests have to run before Danger runs because
   # danger-plugin-jest references the test output
   - yarn run test

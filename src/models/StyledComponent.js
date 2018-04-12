@@ -13,9 +13,10 @@ import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
 import type { RuleSet, Target } from '../types'
+import { CONTEXT_KEY } from '../constants'
 
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
-import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
+import StyleSheet from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
 
 // HACK for generating all static styles without needing to allocate
@@ -91,7 +92,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     generateAndInjectStyles(theme: any, props: any) {
       const { attrs, componentStyle, warnTooManyClasses } = this.constructor
-      const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.instance
+      const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.master
 
       // staticaly styled-components don't need to build an execution context object,
       // and shouldn't be increasing the number of class names

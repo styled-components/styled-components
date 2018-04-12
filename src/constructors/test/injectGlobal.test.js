@@ -76,4 +76,17 @@ describe('injectGlobal', () => {
       }
     `)
   })
+
+  it('should extract @import rules into separate style tags', () => {
+    injectGlobal`html { padding: 1px; }`
+    const Comp = styled.div`color: green;`
+    shallow(<Comp />)
+    injectGlobal`html { color: blue; } @import url('bla');`
+
+    const style = Array.from(document.querySelectorAll('style'))
+      .map(tag => tag.outerHTML)
+      .join('\n')
+
+    expect(style).toMatchSnapshot()
+  });
 });
