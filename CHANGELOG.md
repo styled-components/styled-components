@@ -6,7 +6,6 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
-
 - Fix `cascade: false` being erroneously set on the Stylis rule splitter (see [#1677](https://github.com/styled-components/styled-components/pull/1677))
 
 - Fix typo in `ComponentStyle.js` comments (see [#1678](https://github.com/styled-components/styled-components/pull/1678))
@@ -22,6 +21,9 @@ All notable changes to this project will be documented in this file. If a contri
 - Add new `test-utils` to simplify finding styled-components in the DOM in unit testing scenarios, by [@jamiebuilds](https://github.com/jamiebuilds) (see [#1652](https://github.com/styled-components/styled-components/pull/1652))
 
 - Add minified commonjs and esm builds for bundle size tracking (see [#1681](https://github.com/styled-components/styled-components/pull/1681))
+
+- Add handling for the new reserved "sc" prop; use it for passing arbitrary styling props that aren't intended to be rendered into the DOM as attributes (see [#1682](https://github.com/styled-components/styled-components/pull/1682))
+>>>>>>> add reserved sc attribute handling
 
 ## [v3.2.5] - 2018-03-30
 

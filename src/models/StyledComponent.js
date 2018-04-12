@@ -143,6 +143,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
             nextTheme,
             this.constructor.defaultProps
           )
+
           const generatedClassName = this.generateAndInjectStyles(
             theme,
             this.props
@@ -227,6 +228,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           if (
             propName !== 'innerRef' &&
             propName !== 'className' &&
+            propName !== 'sc' &&
             (!isTargetTag || validAttr(propName))
           ) {
             // eslint-disable-next-line no-param-reassign
