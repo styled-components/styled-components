@@ -54,7 +54,7 @@ type ThemedStyledComponentFactories<T> = {
 export interface ThemedBaseStyledInterface<T> extends ThemedStyledComponentFactories<T> {
   <P, TTag extends keyof JSX.IntrinsicElements>(tag: TTag): ThemedStyledFunction<P, T, P & JSX.IntrinsicElements[TTag]>;
   <P, O>(component: StyledComponentClass<P, T, O>): ThemedStyledFunction<P, T, O>;
-  <P extends { [prop: string]: any; theme?: T }>(component: React.ComponentType<P>): ThemedStyledFunction<P, T, WithOptionalTheme<P, T>>;
+  <P>(component: React.ComponentType<P>): T extends undefined ? StyledFunction<P> : ThemedStyledFunction<P, T, WithOptionalTheme<P, T>>;
 }
 export type BaseStyledInterface = ThemedBaseStyledInterface<any>;
 
