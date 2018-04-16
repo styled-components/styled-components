@@ -23,7 +23,6 @@ All notable changes to this project will be documented in this file. If a contri
 - Add minified commonjs and esm builds for bundle size tracking (see [#1681](https://github.com/styled-components/styled-components/pull/1681))
 
 - Add handling for the new reserved "sc" prop; use it for passing arbitrary styling props that aren't intended to be rendered into the DOM as attributes (see [#1682](https://github.com/styled-components/styled-components/pull/1682))
->>>>>>> add reserved sc attribute handling
 
 ## [v3.2.5] - 2018-03-30
 
