@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Make the multiple instance warning criteria a little more strict to avoid badgering people running unit tests ([see #1693](https://github.com/styled-components/styled-components/pull/1693))
 
 - Fix `cascade: false` being erroneously set on the Stylis rule splitter (see [#1677](https://github.com/styled-components/styled-components/pull/1677))
 
