@@ -1,6 +1,7 @@
 // @flow
 import hyphenate from 'fbjs/lib/hyphenateStyleName'
 import isPlainObject from 'is-plain-object'
+import { Keyframes } from '../constructors/keyframes'
 
 import type { Interpolation } from '../types'
 
@@ -56,6 +57,10 @@ const flatten = (
             ...flatten([chunk(executionContext)], executionContext)
           )
         : ruleSet.concat(chunk)
+    }
+
+    if (chunk instanceof Keyframes) {
+      return chunk.toString()
     }
 
     /* Handle objects */
