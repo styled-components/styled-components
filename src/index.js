@@ -44,8 +44,8 @@ if (
   process.env.NODE_ENV !== 'test' &&
   typeof window !== 'undefined' &&
   typeof navigator !== 'undefined' &&
-  navigator.userAgent.indexOf('Node.js') !== -1 &&
-  navigator.userAgent.indexOf('jsdom') !== -1
+  navigator.userAgent.indexOf('Node.js') === -1 &&
+  navigator.userAgent.indexOf('jsdom') === -1
 ) {
   window['__styled-components-init__'] =
     window['__styled-components-init__'] || 0
