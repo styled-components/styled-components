@@ -44,6 +44,7 @@ if (
   process.env.NODE_ENV !== 'test' &&
   typeof window !== 'undefined' &&
   typeof navigator !== 'undefined' &&
+  typeof navigator.userAgent === 'string' &&
   navigator.userAgent.indexOf('Node.js') === -1 &&
   navigator.userAgent.indexOf('jsdom') === -1
 ) {
