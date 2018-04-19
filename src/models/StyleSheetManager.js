@@ -1,5 +1,5 @@
 // @flow
-import React, { Component } from 'react'
+import React, { PureComponent } from 'react'
 import PropTypes from 'prop-types'
 import StyleSheet from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
@@ -15,7 +15,7 @@ The StyleSheetManager expects a valid target or sheet prop!
 `.trim()
     : ''
 
-class StyleSheetManager extends Component {
+class StyleSheetManager extends PureComponent {
   sheetInstance: StyleSheet
   props: {
     sheet?: StyleSheet | null,
