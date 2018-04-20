@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+## [v3.2.7] - 2018-04-20
+
+- Adds `testID` prop
 
 ## [v3.2.6] - 2018-04-17
 
