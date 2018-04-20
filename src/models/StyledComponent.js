@@ -13,7 +13,7 @@ import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
 import type { RuleSet, Target } from '../types'
-import { CONTEXT_KEY } from '../constants'
+import { CONTEXT_KEY, TEST_ID } from '../constants'
 
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 import StyleSheet from './StyleSheet'
@@ -193,7 +193,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     render() {
       // eslint-disable-next-line react/prop-types
-      const { innerRef } = this.props
+      const { innerRef, testID } = this.props
       const { generatedClassName } = this.state
       const { styledComponentId, target } = this.constructor
 
@@ -231,6 +231,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           ) {
             // eslint-disable-next-line no-param-reassign
             acc[propName] = this.props[propName]
+          } else if (propName === 'testID') {
+            // eslint-disable-next-line no-param-reassign
+            acc[TEST_ID] = testID
           }
 
           return acc

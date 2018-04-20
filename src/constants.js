@@ -14,3 +14,5 @@ export const IS_BROWSER =
 export const DISABLE_SPEEDY =
   (typeof __DEV__ === 'boolean' && __DEV__) ||
   process.env.NODE_ENV !== 'production'
+
+export const TEST_ID = 'data-test-id'
