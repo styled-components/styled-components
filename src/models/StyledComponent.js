@@ -170,7 +170,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       const { componentStyle } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
 
-      // If this is a staticaly-styled component, we don't need the theme
+      // If this is a statically-styled component, we don't need the theme
       // to generate or build styles.
       if (componentStyle.isStatic) {
         const generatedClassName = this.generateClassName(

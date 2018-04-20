@@ -1,5 +1,4 @@
 node_modules
-npm-debug.log.*
 dist
 .DS_Store
 bundle-stats.html
@@ -8,4 +7,4 @@ __diff_output__
 lib
 sandbox/node_modules
 test-results.json
-yarn-error.log
+*.log
