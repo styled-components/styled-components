@@ -6,23 +6,20 @@ import StyleSheet from '../models/StyleSheet'
 const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '')
 
 export class Keyframes {
+  id: string
   name: string
-  rules: Array<Interpolation>
+  rules: Array<string>
 
-  constructor(
-    name: string,
-    rules: Array<Interpolation>,
-    stringifyRules: Stringifier
-  ) {
+  constructor(name: string, rules: Array<string>) {
     this.name = name
     this.rules = rules
 
-    const styleSheet = StyleSheet.master
+    this.id = `sc-keyframes-${name}`
+  }
 
-    const id = `sc-keyframes-${name}`
-
-    if (!styleSheet.hasNameForId(id, name) && false) {
-      styleSheet.inject(id, stringifyRules(rules, name, '@keyframes'), name)
+  inject(styleSheet: StyleSheet) {
+    if (!styleSheet.hasNameForId(this.id, this.name)) {
+      styleSheet.inject(this.id, this.rules, this.name)
     }
   }
 
@@ -44,6 +41,5 @@ export default (
   const rules = css(...arr)
   const name = nameGenerator(hashStr(replaceWhitespace(JSON.stringify(rules))))
 
-  // return name
-  return new Keyframes(name, rules, stringifyRules)
+  return new Keyframes(name, stringifyRules(rules, name, '@keyframes'))
 }

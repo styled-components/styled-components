@@ -5,6 +5,7 @@ import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
 import StyleSheet from './StyleSheet'
 import { IS_BROWSER } from '../constants'
 import isStyledComponent from '../utils/isStyledComponent'
+import { Keyframes } from '../constructors/keyframes'
 
 const areStylesCacheable = IS_BROWSER
 
@@ -87,6 +88,8 @@ export default (
         return lastClassName
       }
 
+      this.findAndInjectKeyframes(styleSheet)
+
       const flatCSS = flatten(this.rules, executionContext)
       const name = generateRuleHash(this.componentId + flatCSS.join(''))
 
@@ -97,6 +100,14 @@ export default (
 
       this.lastClassName = name
       return name
+    }
+
+    findAndInjectKeyframes(styleSheet: StyleSheet) {
+      this.rules.forEach(rule => {
+        if (rule instanceof Keyframes) {
+          rule.inject(styleSheet)
+        }
+      })
     }
 
     static generateName(str: string): string {

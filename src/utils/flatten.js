@@ -60,7 +60,7 @@ const flatten = (
     }
 
     if (chunk instanceof Keyframes) {
-      return chunk.toString()
+      return ruleSet.concat(chunk)
     }
 
     /* Handle objects */
