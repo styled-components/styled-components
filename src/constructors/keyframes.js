@@ -15,14 +15,15 @@ export class Keyframes {
   name: string
   rules: Array<string>
 
-  static extractRules(rules: RuleSet): [RuleSet, RuleSet] {
+  static extractRules(
+    rules: RuleSet | Array<Object>
+  ): [Array<Function>, RuleSet] {
     const keyframes = []
     const all = []
 
     rules.forEach(rule => {
-      if (rule instanceof Keyframes) {
-        // $FlowFixMe
-        keyframes.push(rule)
+      if (this.isKeyframes(rule)) {
+        keyframes.push(rule.inject)
         all.push(rule.getName())
       } else {
         all.push(rule)
@@ -32,6 +33,10 @@ export class Keyframes {
     return [keyframes, all]
   }
 
+  static isKeyframes(object: ?Interpolation): boolean {
+    return object instanceof Keyframes
+  }
+
   constructor(name: string, rules: Array<string>) {
     this.name = name
     this.rules = rules
@@ -39,7 +44,7 @@ export class Keyframes {
     this.id = `sc-keyframes-${name}`
   }
 
-  inject(styleSheet: StyleSheet) {
+  inject = (styleSheet: StyleSheet) => {
     if (!styleSheet.hasNameForId(this.id, this.name)) {
       styleSheet.inject(this.id, this.rules, this.name)
     }

@@ -58,7 +58,7 @@ export default (
     componentId: string
     isStatic: boolean
     lastClassName: ?string
-    keyframes: Array<Object>
+    keyframesInjectors: Array<Function>
 
     constructor(rules: RuleSet, attrs?: Object, componentId: string) {
       const [keyframes, preparedRules] = Keyframes.extractRules(rules)
@@ -67,7 +67,7 @@ export default (
       this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
 
-      this.keyframes = keyframes
+      this.keyframesInjectors = keyframes
 
       if (!StyleSheet.master.hasId(componentId)) {
         const placeholder =
@@ -93,7 +93,7 @@ export default (
         return lastClassName
       }
 
-      this.injectKeyframes(styleSheet)
+      this.keyframesInjectors.forEach(injector => injector(styleSheet))
 
       const flatCSS = flatten(this.rules, executionContext)
       const name = generateRuleHash(this.componentId + flatCSS.join(''))
@@ -105,10 +105,6 @@ export default (
 
       this.lastClassName = name
       return name
-    }
-
-    injectKeyframes(styleSheet: StyleSheet) {
-      this.keyframes.forEach(rule => rule.inject(styleSheet))
     }
 
     static generateName(str: string): string {

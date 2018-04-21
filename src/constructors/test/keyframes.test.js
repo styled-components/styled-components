@@ -61,7 +61,7 @@ describe('keyframes', () => {
     `)
   })
 
-  it('should execute interpolations and inject props', () => {
+  it('should inject keyframes during render', () => {
     const styled = resetStyled();
 
     const rules = `
@@ -76,8 +76,10 @@ describe('keyframes', () => {
 
     const rotate360 = keyframes`${rules}`
 
+    expectCSSMatches('')
+
     const Comp = styled.div`animation: ${rotate360} 2s linear infinite;`
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { color:red; }')
+    expectCSSMatches('.sc-a{ } .b{ -webkit-animation:keyframe_0 2s linear infinite; animation:keyframe_0 2s linear infinite; } @-webkit-keyframes keyframe_0{ from{ -webkit-transform:rotate(0deg); -ms-transform:rotate(0deg); transform:rotate(0deg); } to{ -webkit-transform:rotate(360deg); -ms-transform:rotate(360deg); transform:rotate(360deg); } } @keyframes keyframe_0{ from{ -webkit-transform:rotate(0deg); -ms-transform:rotate(0deg); transform:rotate(0deg); } to{ -webkit-transform:rotate(360deg); -ms-transform:rotate(360deg); transform:rotate(360deg); } } ')
   })
 })

@@ -59,7 +59,7 @@ const flatten = (
         : ruleSet.concat(chunk)
     }
 
-    if (chunk instanceof Keyframes) {
+    if (Keyframes.isKeyframes(chunk)) {
       return ruleSet.concat(chunk)
     }
 
