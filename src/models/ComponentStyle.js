@@ -58,11 +58,16 @@ export default (
     componentId: string
     isStatic: boolean
     lastClassName: ?string
+    keyframes: Array<Object>
 
     constructor(rules: RuleSet, attrs?: Object, componentId: string) {
-      this.rules = rules
+      const [keyframes, preparedRules] = Keyframes.extractRules(rules)
+
+      this.rules = preparedRules
       this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
+
+      this.keyframes = keyframes
 
       if (!StyleSheet.master.hasId(componentId)) {
         const placeholder =
@@ -88,7 +93,7 @@ export default (
         return lastClassName
       }
 
-      this.findAndInjectKeyframes(styleSheet)
+      this.injectKeyframes(styleSheet)
 
       const flatCSS = flatten(this.rules, executionContext)
       const name = generateRuleHash(this.componentId + flatCSS.join(''))
@@ -102,12 +107,8 @@ export default (
       return name
     }
 
-    findAndInjectKeyframes(styleSheet: StyleSheet) {
-      this.rules.forEach(rule => {
-        if (rule instanceof Keyframes) {
-          rule.inject(styleSheet)
-        }
-      })
+    injectKeyframes(styleSheet: StyleSheet) {
+      this.keyframes.forEach(rule => rule.inject(styleSheet))
     }
 
     static generateName(str: string): string {

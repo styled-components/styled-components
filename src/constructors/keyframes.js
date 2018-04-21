@@ -1,6 +1,11 @@
 // @flow
 import hashStr from '../vendor/glamor/hash'
-import type { Interpolation, NameGenerator, Stringifier } from '../types'
+import type {
+  Interpolation,
+  NameGenerator,
+  RuleSet,
+  Stringifier,
+} from '../types'
 import StyleSheet from '../models/StyleSheet'
 
 const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '')
@@ -9,6 +14,23 @@ export class Keyframes {
   id: string
   name: string
   rules: Array<string>
+
+  static extractRules(rules: RuleSet): [RuleSet, RuleSet] {
+    const keyframes = []
+    const all = []
+
+    rules.forEach(rule => {
+      if (rule instanceof Keyframes) {
+        // $FlowFixMe
+        keyframes.push(rule)
+        all.push(rule.getName())
+      } else {
+        all.push(rule)
+      }
+    })
+
+    return [keyframes, all]
+  }
 
   constructor(name: string, rules: Array<string>) {
     this.name = name
@@ -23,7 +45,7 @@ export class Keyframes {
     }
   }
 
-  toString() {
+  getName() {
     return this.name
   }
 }

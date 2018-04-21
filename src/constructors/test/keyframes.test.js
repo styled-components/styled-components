@@ -78,6 +78,6 @@ describe('keyframes', () => {
 
     const Comp = styled.div`animation: ${rotate360} 2s linear infinite;`
     shallow(<Comp />)
-    // expectCSSMatches('.sc-a {} .b { color:red; }')
+    expectCSSMatches('.sc-a {} .b { color:red; }')
   })
 })
