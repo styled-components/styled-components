@@ -78,7 +78,7 @@ Here is a quick guide to doing code contributions to the library.
 
 ### How do I set up the project?
 
-Run `npm install` and edit code in the `src/` folder. It's luckily very simple! :wink:
+Run [`yarn install`](https://yarnpkg.com/) and edit code in the `src/` folder. It's luckily very simple! :wink:
 
 ### How do I verify and test my changes?
 
