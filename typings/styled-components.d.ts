@@ -1,5 +1,5 @@
 import * as React from "react";
-import { StatelessComponent, ComponentClass, PureComponent, ReactElement } from "react";
+import { StatelessComponent, ComponentClass, PureComponent, ReactElement, RefObject } from "react";
 
 type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 
@@ -12,7 +12,7 @@ export type StyledProps<P> = ThemedStyledProps<P, any>;
 
 export type ThemedOuterStyledProps<P, T> = P & {
   theme?: T;
-  innerRef?: (instance: any) => void;
+  innerRef?: ((instance: any) => void) | RefObject<HTMLElement | SVGElement>
 };
 export type OuterStyledProps<P> = ThemedOuterStyledProps<P, any>;
 
