@@ -127,7 +127,7 @@
     "prettier": "1.9.2",
     "puppeteer": "^0.13.0",
     "raf": "^3.4.0",
-    "react": "^16.0.0",
+    "react": "^16.3.0",
     "react-dom": "^16.0.0",
     "react-frame-component": "^2.0.2",
     "react-native": "^0.46.0",

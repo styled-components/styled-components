@@ -288,7 +288,7 @@ describe('native', () => {
   })
 
   describe('innerRef', () => {
-    it('should pass the ref to the component', () => {
+    it('should pass a callback ref to the component', () => {
       const Comp = styled.View``
       const ref = jest.fn()
 
@@ -297,6 +297,19 @@ describe('native', () => {
       const comp = wrapper.find(Comp).first()
 
       expect(ref).toHaveBeenCalledWith(view.instance())
+      expect(view.prop('innerRef')).toBeFalsy()
+      expect(comp.instance().root).toBeTruthy()
+    })
+
+    it('should pass an object ref to the component', () => {
+      const Comp = styled.View``
+      const ref = React.createRef()
+
+      const wrapper = mount(<Comp innerRef={ref} />)
+      const view = wrapper.find('View').first()
+      const comp = wrapper.find(Comp).first()
+
+      expect(ref.current).toBe(view.instance())
       expect(view.prop('innerRef')).toBeFalsy()
       expect(comp.instance().root).toBeTruthy()
     })
