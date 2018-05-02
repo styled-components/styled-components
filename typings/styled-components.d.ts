@@ -12,7 +12,7 @@ export type StyledProps<P> = ThemedStyledProps<P, any>;
 
 export type ThemedOuterStyledProps<P, T> = P & {
   theme?: T;
-  innerRef?: ((instance: any) => void) | RefObject<HTMLElement | SVGElement>
+  innerRef?: ((instance: object) => void) | RefObject<HTMLElement | SVGElement>
 };
 export type OuterStyledProps<P> = ThemedOuterStyledProps<P, any>;
 
