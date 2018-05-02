@@ -209,15 +209,17 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         .filter(Boolean)
         .join(' ')
 
+      const { ref: attrRef, ...attrs } = this.attrs
+
       const baseProps = {
-        ...this.attrs,
+        ...attrs,
         className,
       }
 
       if (isStyledComponent(target)) {
-        baseProps.innerRef = innerRef
+        baseProps.innerRef = innerRef || attrRef
       } else {
-        baseProps.ref = innerRef
+        baseProps.ref = innerRef || attrRef
       }
 
       const propsForElement = Object.keys(this.props).reduce(
