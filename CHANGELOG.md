@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Fix `React.createRef()` values for `innerRef` being ignored in React Native, by @simonbuchan (see [#1718](https://github.com/styled-components/styled-components/pull/1718))
 
 ## [v3.2.6] - 2018-04-17
 
