@@ -72,7 +72,7 @@ export interface ThemedCssFunction<T> {
 }
 
 // Helper type operators
-type WithOptionalTheme<P extends { theme?: T; }, T> = Pick<P, Exclude<keyof P, "theme">> & { theme?: T; };
+type WithOptionalTheme<P extends { theme: T; }, T> = Pick<P, Exclude<keyof P, "theme">> & { theme?: T; };
 
 export interface ThemedStyledComponentsModule<T> {
   default: ThemedStyledInterface<T>;
