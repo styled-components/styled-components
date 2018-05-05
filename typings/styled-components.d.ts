@@ -1,5 +1,5 @@
 import * as React from "react";
-import { StatelessComponent, ComponentClass, PureComponent, ReactElement } from "react";
+import { StatelessComponent, Component as ReactComponent, ComponentClass, PureComponent, ReactElement, RefObject } from "react";
 
 type Component<P> = ComponentClass<P> | StatelessComponent<P>;
 
@@ -12,13 +12,14 @@ export type StyledProps<P> = ThemedStyledProps<P, any>;
 
 export type ThemedOuterStyledProps<P, T> = P & {
   theme?: T;
-  innerRef?: (instance: any) => void;
+  innerRef?: ((instance: object) => void) | RefObject<HTMLElement | SVGElement | ReactComponent>
 };
 export type OuterStyledProps<P> = ThemedOuterStyledProps<P, any>;
 
+export type FalseyValue = undefined | null | false;
 export type Interpolation<P> = FlattenInterpolation<P> | ReadonlyArray<FlattenInterpolation<P> | ReadonlyArray<FlattenInterpolation<P>>>;
 export type FlattenInterpolation<P> = InterpolationValue | InterpolationFunction<P>;
-export type InterpolationValue = string | number | Styles | StyledComponentClass<any, any>;
+export type InterpolationValue = string | number | Styles | FalseyValue | StyledComponentClass<any, any>;
 export type SimpleInterpolation = InterpolationValue | ReadonlyArray<InterpolationValue | ReadonlyArray<InterpolationValue>>;
 export interface Styles {
   [ruleOrSelector: string]: string | number | Styles;

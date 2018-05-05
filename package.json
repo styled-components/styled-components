@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "3.2.5",
+  "version": "3.2.6",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "typings": "typings/styled-components.d.ts",
   "main": "dist/styled-components.cjs.js",
@@ -43,17 +43,18 @@
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
   "files": [
-    "no-parser",
-    "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md",
-    "scripts",
+    "CONTRIBUTING.md",
     "dist",
     "docs",
     "flow-typed",
     "lib",
     "native",
+    "no-parser",
     "primitives",
+    "scripts",
     "src",
+    "test-utils",
     "typings"
   ],
   "keywords": [
@@ -75,15 +76,16 @@
     "hoist-non-react-statics": "^2.5.0",
     "is-plain-object": "^2.0.1",
     "prop-types": "^15.5.4",
+    "react-is": "^16.3.1",
     "stylis": "^3.5.0",
     "stylis-rule-sheet": "^0.0.10",
     "supports-color": "^3.2.3"
   },
   "devDependencies": {
-    "@types/node": "9.4.4",
-    "@types/react": "^16",
-    "@types/react-dom": "^16",
-    "@types/react-native": "^0.50.7",
+    "@types/node": "9.6.4",
+    "@types/react": "^16.3.12",
+    "@types/react-dom": "^16.0.5",
+    "@types/react-native": "^0.55.7",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
     "babel-eslint": "^7.1.1",
@@ -127,6 +129,7 @@
     "raf": "^3.4.0",
     "react": "^16.0.0",
     "react-dom": "^16.0.0",
+    "react-frame-component": "^2.0.2",
     "react-native": "^0.46.0",
     "react-primitives": "^0.4.2",
     "react-test-renderer": "^16.0.0",
@@ -176,6 +179,14 @@
     {
       "path": "./dist/styled-components.min.js",
       "threshold": "16kB"
+    },
+    {
+      "path": "./dist/styled-components.cjs.min.js",
+      "threshold": "11.5kB"
+    },
+    {
+      "path": "./dist/styled-components.es.min.js",
+      "threshold": "11.5kB"
     }
   ],
   "collective": {

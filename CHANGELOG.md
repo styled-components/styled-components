@@ -8,6 +8,24 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Add `createGlobalStyle` which returns a component which, when mounting ('componentWillMount'), will apply global styles. The styles will also be removed once the component unmounts during `componentWillUnmount` (see [#1416](https://github.com/styled-components/styled-components/pull/1416))
 
+## [v3.2.6] - 2018-04-17
+
+- Fix `cascade: false` being erroneously set on the Stylis rule splitter (see [#1677](https://github.com/styled-components/styled-components/pull/1677))
+
+- Fix typo in `ComponentStyle.js` comments (see [#1678](https://github.com/styled-components/styled-components/pull/1678))
+
+- Accept ref forwarding components in styled constructor (see [#1658](https://github.com/styled-components/styled-components/pull/1658))
+
+- Fix onInvalid check in validAttrs, by [@slootsantos](https://github.com/slootsantos) (see [#1668](https://github.com/styled-components/styled-components/pull/1668))
+
+- Fix `makeSpeedyTag`'s css method (see [#1663](https://github.com/styled-components/styled-components/pull/1663))
+
+- Fix ComponentStyle caching strategy to take StyleSheet cache into account, by [@darthtrevino](https://github.com/darthtrevino) (see [#1634](https://github.com/styled-components/styled-components/pull/1634))
+
+- Add new `test-utils` to simplify finding styled-components in the DOM in unit testing scenarios, by [@jamiebuilds](https://github.com/jamiebuilds) (see [#1652](https://github.com/styled-components/styled-components/pull/1652))
+
+- Add minified commonjs and esm builds for bundle size tracking (see [#1681](https://github.com/styled-components/styled-components/pull/1681))
+
 ## [v3.2.5] - 2018-03-30
 
 - Deprecate experimental preprocess mode, by [@Samatar26](https://github.com/Samatar26) (see [#1619](https://github.com/styled-components/styled-components/issues/1619))
@@ -438,7 +456,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.5...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.6...master
+[v3.2.6]: https://github.com/styled-components/styled-components/compare/v3.2.5...v3.2.6
 [v3.2.5]: https://github.com/styled-components/styled-components/compare/v3.2.3...v3.2.5
 [v3.2.3]: https://github.com/styled-components/styled-components/compare/v3.2.2...v3.2.3
 [v3.2.2]: https://github.com/styled-components/styled-components/compare/v3.2.1...v3.2.2
