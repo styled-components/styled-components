@@ -36,4 +36,14 @@ describe('props', () => {
     shallow(<Comp fg="red" />)
     expectCSSMatches('.sc-a {} .b { border-width:0; }')
   })
+  it('should add data-test-id', () => {
+    const testID = 'COMPONENT_IDENTIFIER'
+    const Comp = styled.div`
+      padding: 1rem;
+    `
+
+    const wrapper = shallow(<Comp testID={testID} />)
+
+    expect(wrapper.find(`div[data-test-id="${testID}"]`)).toBeTruthy()
+  })
 })
