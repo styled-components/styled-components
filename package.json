@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "3.2.5",
+  "version": "3.2.6",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "typings": "typings/styled-components.d.ts",
   "main": "dist/styled-components.cjs.js",
@@ -83,9 +83,9 @@
   },
   "devDependencies": {
     "@types/node": "9.6.4",
-    "@types/react": "^16",
-    "@types/react-dom": "^16",
-    "@types/react-native": "^0.50.7",
+    "@types/react": "^16.3.12",
+    "@types/react-dom": "^16.0.5",
+    "@types/react-native": "^0.55.7",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
     "babel-eslint": "^7.1.1",
@@ -127,7 +127,7 @@
     "prettier": "1.9.2",
     "puppeteer": "^0.13.0",
     "raf": "^3.4.0",
-    "react": "^16.0.0",
+    "react": "^16.3.0",
     "react-dom": "^16.0.0",
     "react-frame-component": "^2.0.2",
     "react-native": "^0.46.0",
@@ -179,10 +179,12 @@
     {
       "path": "./dist/styled-components.min.js",
       "threshold": "16kB"
-    }, {
+    },
+    {
       "path": "./dist/styled-components.cjs.min.js",
       "threshold": "11.5kB"
-    }, {
+    },
+    {
       "path": "./dist/styled-components.es.min.js",
       "threshold": "11.5kB"
     }

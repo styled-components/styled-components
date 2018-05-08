@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Make the multiple instance warning criteria a little more strict to avoid badgering people running unit tests ([see #1693](https://github.com/styled-components/styled-components/pull/1693))
 
+- Fix `React.createRef()` values for `innerRef` being ignored in React Native, by @simonbuchan (see [#1718](https://github.com/styled-components/styled-components/pull/1718))
+
+## [v3.2.6] - 2018-04-17
+
 - Fix `cascade: false` being erroneously set on the Stylis rule splitter (see [#1677](https://github.com/styled-components/styled-components/pull/1677))
 
 - Fix typo in `ComponentStyle.js` comments (see [#1678](https://github.com/styled-components/styled-components/pull/1678))
@@ -454,7 +458,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.5...master
+[Unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.6...master
+[v3.2.6]: https://github.com/styled-components/styled-components/compare/v3.2.5...v3.2.6
 [v3.2.5]: https://github.com/styled-components/styled-components/compare/v3.2.3...v3.2.5
 [v3.2.3]: https://github.com/styled-components/styled-components/compare/v3.2.2...v3.2.3
 [v3.2.2]: https://github.com/styled-components/styled-components/compare/v3.2.1...v3.2.2
