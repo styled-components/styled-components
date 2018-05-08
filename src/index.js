@@ -48,7 +48,7 @@ if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
     console.warn(
       "It looks like there are several instances of 'styled-components' initialized in this application. " +
         'This may cause dynamic styles not rendering properly, errors happening during rehydration process ' +
-        'and makes you application bigger without a good reason.\n\n' +
+        'and makes your application bigger without a good reason.\n\n' +
         'See https://s-c.sh/2BAXzed for more info.'
     )
   }
