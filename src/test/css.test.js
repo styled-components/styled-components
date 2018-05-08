@@ -34,6 +34,16 @@ describe('css features', () => {
     `)
   })
 
+  it('should add vendor prefixes for image-set', () => {
+    const Comp = styled.div`
+      background-image: image-set(url(test.jpg) 2x);
+    `
+    shallow(<Comp />)
+    expectCSSMatches(`
+      .sc-a {} .b {background-image: -webkit-image-set(url(test.jpg) 2x); }
+    `)
+  })
+
   it('should generate styles for nested media queries', () => {
     const Comp = styled.div`
       @media (min-width: 10px) {
