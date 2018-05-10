@@ -141,6 +141,12 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
 
       if (typeof innerRef === 'function') {
         innerRef(node)
+      } else if (
+        typeof innerRef === 'object' &&
+        innerRef &&
+        innerRef.hasOwnProperty('current')
+      ) {
+        innerRef.current = node
       }
     }
 
