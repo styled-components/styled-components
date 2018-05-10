@@ -6,7 +6,17 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+
+- Add first-class support for objects:
+
+  ```JS
+  const Component = styled.div({
+    color: 'blue'
+  })
+  ```
+
 - Fix typo in console warning about multiple instances, by [@lucianbuzzo] (see [#1730](https://github.com/styled-components/styled-components/pull/1730))
+
 
 - Make the multiple instance warning criteria a little more strict to avoid badgering people running unit tests ([see #1693](https://github.com/styled-components/styled-components/pull/1693))
 

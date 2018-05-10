@@ -105,6 +105,14 @@ describe('basic', () => {
     expect(StyledCompWithNothing.displayName).toBe('Styled(Component)')
   })
 
+  it('should allow you to pass in style objects', () => {
+    const Comp = styled.div({
+      color: 'blue'
+    })
+    shallow(<Comp />)
+    expectCSSMatches('.sc-a {} .b { color:blue; }')
+  })
+
   describe('jsdom tests', () => {
     it('should pass the ref to the component', () => {
       const Comp = styled.div``
