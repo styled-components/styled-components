@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Add first-class support for objects:
+
+  ```JS
+  const Component = styled.div({
+    color: 'blue'
+  })
+  ```
+
 - Make the multiple instance warning criteria a little more strict to avoid badgering people running unit tests ([see #1693](https://github.com/styled-components/styled-components/pull/1693))
 
 - Fix `React.createRef()` values for `innerRef` being ignored in React Native, by @simonbuchan (see [#1718](https://github.com/styled-components/styled-components/pull/1718))
