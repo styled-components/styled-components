@@ -77,7 +77,7 @@
     "is-plain-object": "^2.0.1",
     "prop-types": "^15.5.4",
     "react-is": "^16.3.1",
-    "react-lifecycles-compat": "^3.0.3",
+    "react-lifecycles-compat": "3.0.2",
     "stylis": "^3.5.0",
     "stylis-rule-sheet": "^0.0.10",
     "supports-color": "^3.2.3"
@@ -133,7 +133,7 @@
     "react-frame-component": "^2.0.2",
     "react-native": "^0.46.0",
     "react-primitives": "^0.4.2",
-    "react-test-renderer": "^16.3.1",
+    "react-test-renderer": "^16.3.2",
     "rimraf": "^2.6.1",
     "rollup": "^0.52.2",
     "rollup-plugin-babel": "^2.7.1",
