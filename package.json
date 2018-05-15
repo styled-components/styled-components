@@ -155,6 +155,7 @@
     "globals": {
       "__DEV__": true
     },
+    "testURL": "http://localhost",
     "clearMocks": true,
     "roots": [
       "<rootDir>/src/"
