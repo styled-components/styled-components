@@ -14,13 +14,13 @@ describe('warn too many classes', () => {
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    console.warn = () => warnCallCount++
+    (console: any).warn = () => warnCallCount++
     warnCallCount = 0
     styled = resetStyled()
   })
 
   afterEach(() => {
-    console.warn = consoleWarn
+    (console: any).warn = consoleWarn
   })
 
   it('should warn once', () => {
