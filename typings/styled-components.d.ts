@@ -1,8 +1,6 @@
 import * as React from "react";
 import { StatelessComponent, Component as ReactComponent, ComponentClass, PureComponent, ReactElement, RefObject } from "react";
 
-type Component<P> = ComponentClass<P> | StatelessComponent<P>;
-
 export interface ThemeProps<T> {
   theme: T;
 }
@@ -36,7 +34,7 @@ export interface StyledComponentClass<P, T, O = P> extends ComponentClass<Themed
   extend: ThemedStyledFunction<P, T, O>;
 
   withComponent<K extends keyof JSX.IntrinsicElements>(tag: K): StyledComponentClass<JSX.IntrinsicElements[K], T, JSX.IntrinsicElements[K]>;
-  withComponent<U extends Partial<P> = {}>(element: Component<U>): StyledComponentClass<U & P, T, U & O>;
+  withComponent<U extends Partial<P> = {}>(element: React.ComponentType<U>): StyledComponentClass<U & P, T, U & O>;
 }
 
 export interface ThemedStyledFunction<P, T, O = P> {
@@ -83,7 +81,7 @@ export interface ThemedStyledComponentsModule<T> {
   css: ThemedCssFunction<T>;
   keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
   injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
-  withTheme<P extends { theme?: T; }>(component: Component<P>): ComponentClass<WithOptionalTheme<P, T>>;
+  withTheme<P extends { theme?: T; }>(component: React.ComponentType<P>): ComponentClass<WithOptionalTheme<P, T>>;
 
   ThemeProvider: ThemeProviderComponent<T>;
 }
@@ -91,7 +89,7 @@ export interface ThemedStyledComponentsModule<T> {
 declare const styled: StyledInterface;
 
 export const css: ThemedCssFunction<any>;
-export function withTheme<P extends { theme?: T; }, T>(component: Component<P>): ComponentClass<WithOptionalTheme<P, T>>;
+export function withTheme<P extends { theme?: T; }, T>(component: React.ComponentType<P>): ComponentClass<WithOptionalTheme<P, T>>;
 
 export function keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
