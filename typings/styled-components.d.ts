@@ -35,14 +35,15 @@ type Attrs<P, A extends Partial<P>, T> = {
 export interface StyledComponentClass<P, T, O = P> extends ComponentClass<ThemedOuterStyledProps<O, T>> {
   extend: ThemedStyledFunction<P, T, O>;
 
-  withComponent<K extends keyof JSX.IntrinsicElements>(tag: K): StyledComponentClass<JSX.IntrinsicElements[K], T, O>;
-  withComponent(element: ComponentClass<P>): StyledComponentClass<P, T, O>;
+  withComponent<K extends keyof JSX.IntrinsicElements>(tag: K): StyledComponentClass<JSX.IntrinsicElements[K], T, JSX.IntrinsicElements[K]>;
+  withComponent<U extends Partial<P> = {}>(element: Component<U>): StyledComponentClass<U & P, T, O>
 }
 
 export interface ThemedStyledFunction<P, T, O = P> {
   (strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): StyledComponentClass<P, T, O>;
   <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P & U, T, O & U>;
-  attrs<U, A extends Partial<P & U> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<P & A & U, T, O & U>;
+  attrs<U, A extends Partial<P & U> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<DiffBetween<A, P & U>, T, DiffBetween<A, O & U>>
+;
 }
 
 export type StyledFunction<P> = ThemedStyledFunction<P, any>;
@@ -74,6 +75,7 @@ export interface ThemedCssFunction<T> {
 // Helper type operators
 type Diff<T extends string, U extends string> = ({ [P in T]: P } & { [P in U]: never } & { [x: string]: never })[T];
 type Omit<T, K extends keyof T> = Pick<T, Diff<keyof T, K>>;
+type DiffBetween<T, U> = Pick<T, Diff<T, U>> & Pick<U, Diff<U, T>>
 type WithOptionalTheme<P extends { theme?: T; }, T> = Omit<P, "theme"> & { theme?: T; };
 
 export interface ThemedStyledComponentsModule<T> {
