@@ -36,14 +36,13 @@ export interface StyledComponentClass<P, T, O = P> extends ComponentClass<Themed
   extend: ThemedStyledFunction<P, T, O>;
 
   withComponent<K extends keyof JSX.IntrinsicElements>(tag: K): StyledComponentClass<JSX.IntrinsicElements[K], T, JSX.IntrinsicElements[K]>;
-  withComponent<U extends Partial<P> = {}>(element: Component<U>): StyledComponentClass<U & P, T, O>
+  withComponent<U extends Partial<P> = {}>(element: Component<U>): StyledComponentClass<U & P, T, U & O>
 }
 
 export interface ThemedStyledFunction<P, T, O = P> {
   (strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): StyledComponentClass<P, T, O>;
   <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P & U, T, O & U>;
   attrs<U, A extends Partial<P & U> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<DiffBetween<A, P & U>, T, DiffBetween<A, O & U>>;
-;
 }
 
 export type StyledFunction<P> = ThemedStyledFunction<P, any>;
