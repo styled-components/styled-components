@@ -1,6 +1,7 @@
 // @flow
 import React from 'react'
-import { mount, render } from 'enzyme'
+import { mount } from 'enzyme'
+import TestRenderer from 'react-test-renderer'
 
 import { resetStyled, expectCSSMatches } from './utils'
 import ThemeProvider from '../models/ThemeProvider'
@@ -18,7 +19,7 @@ describe('theming', () => {
       color: ${props => props.theme.color};
     `
     const theme = { color: 'black' }
-    render(
+    mount(
       <ThemeProvider theme={theme}>
         <Comp />
       </ThemeProvider>
@@ -31,7 +32,7 @@ describe('theming', () => {
       color: ${props => props.theme.color};
     `
     const theme = { color: 'black' }
-    render(
+    mount(
       <ThemeProvider theme={theme}>
         <div>
           <div>
@@ -55,7 +56,7 @@ describe('theming', () => {
         }
       }
     }
-    render(
+    mount(
       <div>
         <Comp1 />
       </div>
@@ -78,7 +79,7 @@ describe('theming', () => {
     }
     const theme = { test: { color: 'green' } }
 
-    render(
+    mount(
       <ThemeProvider theme={theme}>
         <Comp1 />
       </ThemeProvider>
@@ -100,7 +101,7 @@ describe('theming', () => {
     }
     const theme = { test: { color: 'green' } }
 
-    render(
+    mount(
       <ThemeProvider theme={theme}>
         <Comp1 theme={{ test: { color: 'purple' } }} />
       </ThemeProvider>
@@ -117,7 +118,7 @@ describe('theming', () => {
       color: 'purple',
     }
 
-    render(
+    mount(
       <div>
         <ThemeProvider theme={theme}>
           <Comp theme={{ color: 'red' }} />
@@ -131,7 +132,7 @@ describe('theming', () => {
     const Comp1 = styled.div`
       color: ${props => props.theme.color};
     `
-    render(
+    mount(
       <div>
         <Comp1 />
       </div>
@@ -148,7 +149,7 @@ describe('theming', () => {
     `
 
     const theme = { color: 'black' }
-    render(
+    mount(
       <div>
         <ThemeProvider theme={theme}>
           <div>
@@ -169,7 +170,7 @@ describe('theming', () => {
       background: ${props => props.theme.color};
     `
     const theme = { color: 'black' }
-    render(
+    mount(
       <ThemeProvider theme={theme}>
         <div>
           <div>
@@ -191,7 +192,7 @@ describe('theming', () => {
     let theme = originalTheme
     // Force render the component
     const renderComp = () => {
-      render(
+      mount(
         <ThemeProvider theme={theme}>
           <Comp />
         </ThemeProvider>
@@ -299,6 +300,7 @@ describe('theming', () => {
 
     // Change theme
     wrapper.setProps({ theme: newTheme })
+    wrapper.update()
 
     expectCSSMatches(`.sc-a {} .b { color:${originalTheme.color}; } .c { color:${newTheme.color}; }`)
     expect(wrapper.find('div').prop('className')).toBe('sc-a c')
@@ -478,5 +480,23 @@ describe('theming', () => {
     wrapper.setProps({ theme: newTheme })
 
     expect(wrapper.find('div').text()).toBe('blue')
+  })
+
+  it('should work in <StrictMode> without warnings', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const originalTheme = { color: 'black' }
+
+    const MyDiv = ({ theme }) => <div>{theme.color}</div>
+    const MyDivWithTheme = withTheme(MyDiv);
+
+    TestRenderer.create(
+      <React.StrictMode>
+        <ThemeProvider theme={originalTheme}>
+          <MyDivWithTheme />
+        </ThemeProvider>
+      </React.StrictMode>
+    )
+
+    expect(spy).not.toHaveBeenCalled()
   })
 })

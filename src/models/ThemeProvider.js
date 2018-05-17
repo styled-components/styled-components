@@ -40,33 +40,37 @@ const isFunction = test => typeof test === 'function'
  * both context and event emitter as pure components block context updates)
  */
 class ThemeProvider extends Component {
-  getTheme: (theme?: Theme | ((outerTheme: Theme) => void)) => Theme
+  getTheme: (theme?: Theme | ((outerTheme: ?Theme) => void)) => Theme
   outerTheme: Theme
   unsubscribeToOuterId: string
   props: ThemeProviderProps
-  broadcast: Broadcast
   unsubscribeToOuterId: number = -1
+  outerContext = this.context[CHANNEL_NEXT]
+  outerTheme: ?Theme = this.outerContext !== undefined
+    ? this.outerContext.getTheme()
+    : undefined
+  broadcast: Broadcast = createBroadcast(this.getTheme())
 
-  constructor() {
-    super()
+  constructor(props: ThemeProviderProps, context: any) {
+    super(props, context)
     this.getTheme = this.getTheme.bind(this)
   }
 
-  componentWillMount() {
+  componentDidMount() {
     // If there is a ThemeProvider wrapper anywhere around this theme provider, merge this theme
     // with the outer theme
-    const outerContext = this.context[CHANNEL_NEXT]
-    if (outerContext !== undefined) {
-      this.unsubscribeToOuterId = outerContext.subscribe(theme => {
-        this.outerTheme = theme
-
-        if (this.broadcast !== undefined) {
-          this.publish(this.props.theme)
+    if (this.outerContext !== undefined) {
+      const { subscribe } = this.outerContext
+      this.unsubscribeToOuterId = subscribe(theme => {
+        // Theme may or may not change between constructor and mount
+        if (theme === this.outerTheme) {
+          return
         }
+
+        this.outerTheme = theme
+        this.publish(this.props.theme)
       })
     }
-
-    this.broadcast = createBroadcast(this.getTheme())
   }
 
   getChildContext() {
@@ -89,9 +93,9 @@ class ThemeProvider extends Component {
     }
   }
 
-  componentWillReceiveProps(nextProps: ThemeProviderProps) {
-    if (this.props.theme !== nextProps.theme) {
-      this.publish(nextProps.theme)
+  componentDidUpdate(prevProps: ThemeProviderProps) {
+    if (this.props.theme !== prevProps.theme) {
+      this.publish(this.props.theme)
     }
   }
 
@@ -102,7 +106,7 @@ class ThemeProvider extends Component {
   }
 
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
-  getTheme(passedTheme: (outerTheme: Theme) => void | Theme) {
+  getTheme(passedTheme: (outerTheme: ?Theme) => void | Theme) {
     const theme = passedTheme || this.props.theme
     if (isFunction(theme)) {
       const mergedTheme = theme(this.outerTheme)

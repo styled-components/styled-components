@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Remove usages of async-unsafe lifecycle methods, by [@Hypnosphi](https://github.com/Hypnosphi) (see [#1664](https://github.com/styled-components/styled-components/pull/1664))
+
 
 - Add first-class support for objects:
 

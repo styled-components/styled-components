@@ -1,7 +1,13 @@
 // @flow
 import hashStr from '../vendor/glamor/hash'
 
-import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
+import type {
+  RuleSet,
+  NameGenerator,
+  Flattener,
+  Stringifier,
+  Interpolation,
+} from '../types'
 import StyleSheet from './StyleSheet'
 import { IS_BROWSER } from '../constants'
 import isStyledComponent from '../utils/isStyledComponent'
@@ -56,12 +62,14 @@ export default (
     rules: RuleSet
     componentId: string
     isStatic: boolean
-    lastClassName: ?string
+    lastClassName: string | void
+    cssCache: { [className: string]: Array<Interpolation> }
 
     constructor(rules: RuleSet, attrs?: Object, componentId: string) {
       this.rules = rules
       this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
+      this.cssCache = {}
 
       if (!StyleSheet.master.hasId(componentId)) {
         const placeholder =
@@ -76,13 +84,13 @@ export default (
      * Hashes it, wraps the whole chunk in a .hash1234 {}
      * Returns the hash to be injected on render()
      * */
-    generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
+    generateClassName(executionContext: Object, styleSheet: StyleSheet) {
       const { isStatic, componentId, lastClassName } = this
       if (
         areStylesCacheable &&
         isStatic &&
         lastClassName !== undefined &&
-        styleSheet.hasNameForId(componentId, ((lastClassName: any): string))
+        styleSheet.hasNameForId(componentId, lastClassName)
       ) {
         return lastClassName
       }
@@ -90,13 +98,22 @@ export default (
       const flatCSS = flatten(this.rules, executionContext)
       const name = generateRuleHash(this.componentId + flatCSS.join(''))
 
+      this.cssCache[name] = flatCSS
+      this.lastClassName = name
+      return name
+    }
+
+    /*
+     * Injects a rule set into styleSheet
+     * */
+    injectStyles(name: string, styleSheet: StyleSheet) {
+      const { componentId } = this
+
       if (!styleSheet.hasNameForId(componentId, name)) {
+        const flatCSS = this.cssCache[name]
         const css = stringifyRules(flatCSS, `.${name}`)
         styleSheet.inject(this.componentId, css, name)
       }
-
-      this.lastClassName = name
-      return name
     }
 
     static generateName(str: string): string {

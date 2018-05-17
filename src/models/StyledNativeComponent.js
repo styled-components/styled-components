@@ -1,5 +1,6 @@
 // @flow
 import { Component, createElement } from 'react'
+import { polyfill } from 'react-lifecycles-compat'
 import PropTypes from 'prop-types'
 
 import type { Theme } from './ThemeProvider'
@@ -18,11 +19,13 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     static styledComponentId: string
     static attrs: Object
     static inlineStyle: Object
+
     root: ?Object
 
     attrs = {}
     state = {
-      theme: null,
+      theme: this.getInitialTheme(),
+      generateStyleObject: this.generateStyleObject.bind(this),
       generatedStyles: undefined,
     }
 
@@ -51,14 +54,25 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       return { ...context, ...this.attrs }
     }
 
-    generateAndInjectStyles(theme: any, props: any) {
+    generateStyleObject(theme: any, props: any) {
       const { inlineStyle } = this.constructor
       const executionContext = this.buildExecutionContext(theme, props)
 
       return inlineStyle.generateStyleObject(executionContext)
     }
 
-    componentWillMount() {
+    getInitialTheme() {
+      // If there is a theme in the context, read it
+      const styledContext = this.context[CHANNEL_NEXT]
+      if (styledContext !== undefined) {
+        return styledContext.getTheme()
+      } else {
+        // eslint-disable-next-line react/prop-types
+        return this.props.theme || {}
+      }
+    }
+
+    componentDidMount() {
       // If there is a theme in the context, subscribe to the event emitter. This
       // is necessary due to pure components blocking context updates, this circumvents
       // that by updating when an event is emitted
@@ -72,35 +86,17 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
             nextTheme,
             this.constructor.defaultProps
           )
-          const generatedStyles = this.generateAndInjectStyles(
-            theme,
-            this.props
-          )
+
+          // Don't perform any actions if the actual resolved theme didn't change
+          if (theme === this.state.theme) {
+            return
+          }
+
+          const generatedStyles = this.generateStyleObject(theme, this.props)
 
           this.setState({ theme, generatedStyles })
         })
-      } else {
-        // eslint-disable-next-line react/prop-types
-        const theme = this.props.theme || {}
-        const generatedStyles = this.generateAndInjectStyles(theme, this.props)
-        this.setState({ theme, generatedStyles })
       }
-    }
-
-    componentWillReceiveProps(nextProps: {
-      theme?: Theme,
-      [key: string]: any,
-    }) {
-      this.setState(oldState => {
-        const theme = determineTheme(
-          nextProps,
-          oldState.theme,
-          this.constructor.defaultProps
-        )
-        const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
-
-        return { theme, generatedStyles }
-      })
     }
 
     componentWillUnmount() {
@@ -190,6 +186,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       static target = target
       static attrs = attrs
       static inlineStyle = inlineStyle
+      static isPolyfilled: ?boolean
 
       static contextTypes = {
         [CHANNEL]: PropTypes.func,
@@ -198,6 +195,20 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
 
       // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
       static styledComponentId = 'StyledNativeComponent'
+
+      static getDerivedStateFromProps(
+        nextProps: { theme?: Theme, [key: string]: any },
+        prevState
+      ) {
+        const theme = determineTheme(
+          nextProps,
+          prevState.theme,
+          StyledNativeComponent.defaultProps
+        )
+        const generatedStyles = prevState.generateStyleObject(theme, nextProps)
+
+        return { theme, generatedStyles }
+      }
 
       static withComponent(tag) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options
@@ -233,6 +244,11 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
           newOptions
         )
       }
+    }
+
+    if (!ParentComponent.isPolyfilled) {
+      polyfill(StyledNativeComponent)
+      StyledNativeComponent.isPolyfilled = true
     }
 
     return StyledNativeComponent
