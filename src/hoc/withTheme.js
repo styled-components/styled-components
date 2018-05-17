@@ -114,9 +114,7 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
   }
 
   polyfill(WithTheme)
-  hoistStatics(WithTheme, Component)
-
-  return WithTheme
+  return hoistStatics(WithTheme, Component)
 }
 
 export default wrapWithTheme
