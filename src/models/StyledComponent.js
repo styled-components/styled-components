@@ -61,30 +61,9 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     static componentStyle: Object
     static warnTooManyClasses: Function
 
-    static getDerivedStateFromProps(
-      nextProps: { theme?: Theme, [key: string]: any },
-      prevState
-    ) {
-      // If this is a staticaly-styled component, we don't need to listen to
-      // props changes to update styles
-      if (prevState.isStatic) {
-        return null
-      }
-
-      const theme = determineTheme(
-        nextProps,
-        prevState.theme,
-        prevState.defaultProps
-      )
-      const generatedClassName = prevState.generateClassName(theme, nextProps)
-
-      return { theme, generatedClassName }
-    }
-
     attrs = {}
     state: {
       theme?: any,
-      defaultProps: any,
       generateClassName: (theme: any, props: any) => any,
       isStatic: boolean,
       generatedClassName: string,
@@ -96,7 +75,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
       this.state = {
         ...this.getInitialState(),
-        defaultProps: this.constructor.defaultProps,
         generateClassName: this.generateClassName.bind(this),
         isStatic: this.constructor.componentStyle.isStatic,
       }
@@ -286,8 +264,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
   }
 
-  polyfill(BaseStyledComponent)
-
   const createStyledComponent = (
     target: Target,
     options: Object,
@@ -329,6 +305,27 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       static attrs = attrs
       static componentStyle = componentStyle
       static target = target
+      static isPolyfilled: ?boolean
+
+      static getDerivedStateFromProps(
+        nextProps: { theme?: Theme, [key: string]: any },
+        prevState
+      ) {
+        // If this is a staticaly-styled component, we don't need to listen to
+        // props changes to update styles
+        if (prevState.isStatic) {
+          return null
+        }
+
+        const theme = determineTheme(
+          nextProps,
+          prevState.theme,
+          StyledComponent.defaultProps
+        )
+        const generatedClassName = prevState.generateClassName(theme, nextProps)
+
+        return { theme, generatedClassName }
+      }
 
       static withComponent(tag) {
         const { componentId: previousComponentId, ...optionsToCopy } = options
@@ -373,6 +370,11 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
     if (process.env.NODE_ENV !== 'production') {
       StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
+    }
+
+    if (!ParentComponent.isPolyfilled) {
+      polyfill(StyledComponent)
+      StyledComponent.isPolyfilled = true
     }
 
     return StyledComponent

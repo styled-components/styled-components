@@ -15,7 +15,6 @@ import determineTheme from '../utils/determineTheme'
 
 type State = {
   theme?: ?Object,
-  defaultProps: any,
 }
 
 const wrapWithTheme = (Component: ReactClass<any>) => {
@@ -49,7 +48,7 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
       const theme = determineTheme(
         nextProps,
         prevState.theme,
-        prevState.defaultProps
+        WithTheme.defaultProps
       )
 
       return { theme }
@@ -62,13 +61,10 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
         this.styledContext !== undefined
           ? this.styledContext.getTheme()
           : undefined,
-      // We need it in state so that gDSFP can access it
-      defaultProps: this.constructor.defaultProps,
     }
     unsubscribeId: number = -1
 
     componentDidMount() {
-      const { defaultProps } = this.constructor
       if (
         this.state.theme === undefined &&
         process.env.NODE_ENV !== 'production'
@@ -80,7 +76,11 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
       } else if (this.styledContext !== undefined) {
         const { subscribe } = this.styledContext
         this.unsubscribeId = subscribe(nextTheme => {
-          const theme = determineTheme(this.props, nextTheme, defaultProps)
+          const theme = determineTheme(
+            this.props,
+            nextTheme,
+            WithTheme.defaultProps
+          )
 
           // Don't perform any actions if the actual resolved theme didn't change
           if (theme === this.state.theme) {
@@ -114,8 +114,9 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
   }
 
   polyfill(WithTheme)
+  hoistStatics(WithTheme, Component)
 
-  return hoistStatics(WithTheme, Component)
+  return WithTheme
 }
 
 export default wrapWithTheme

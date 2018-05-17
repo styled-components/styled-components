@@ -20,26 +20,11 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     static attrs: Object
     static inlineStyle: Object
 
-    static getDerivedStateFromProps(
-      nextProps: { theme?: Theme, [key: string]: any },
-      prevState
-    ) {
-      const theme = determineTheme(
-        nextProps,
-        prevState.theme,
-        prevState.defaultProps
-      )
-      const generatedStyles = prevState.generateStyleObject(theme, nextProps)
-
-      return { theme, generatedStyles }
-    }
-
     root: ?Object
 
     attrs = {}
     state = {
       theme: this.getInitialTheme(),
-      defaultProps: this.constructor.defaultProps,
       generateStyleObject: this.generateStyleObject.bind(this),
       generatedStyles: undefined,
     }
@@ -178,8 +163,6 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     }
   }
 
-  polyfill(BaseStyledNativeComponent)
-
   const createStyledNativeComponent = (
     target: Target,
     options: Object,
@@ -203,6 +186,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       static target = target
       static attrs = attrs
       static inlineStyle = inlineStyle
+      static isPolyfilled: ?boolean
 
       static contextTypes = {
         [CHANNEL]: PropTypes.func,
@@ -211,6 +195,20 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
 
       // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
       static styledComponentId = 'StyledNativeComponent'
+
+      static getDerivedStateFromProps(
+        nextProps: { theme?: Theme, [key: string]: any },
+        prevState
+      ) {
+        const theme = determineTheme(
+          nextProps,
+          prevState.theme,
+          StyledNativeComponent.defaultProps
+        )
+        const generatedStyles = prevState.generateStyleObject(theme, nextProps)
+
+        return { theme, generatedStyles }
+      }
 
       static withComponent(tag) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options
@@ -246,6 +244,11 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
           newOptions
         )
       }
+    }
+
+    if (!ParentComponent.isPolyfilled) {
+      polyfill(StyledNativeComponent)
+      StyledNativeComponent.isPolyfilled = true
     }
 
     return StyledNativeComponent
