@@ -12,11 +12,17 @@ import type { RuleSet, Target } from '../types'
 
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
+type State = {
+  theme?: ?Theme,
+  generatedStyles: any,
+}
+
 export default (constructWithOptions: Function, InlineStyle: Function) => {
-  class BaseStyledNativeComponent extends Component {
+  class BaseStyledNativeComponent extends Component<*, State> {
     static target: Target
     static styledComponentId: string
     static attrs: Object
+    static defaultProps: Object
     static inlineStyle: Object
     root: ?Object
 
@@ -118,7 +124,8 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         console.warn(
           'setNativeProps was called on a Styled Component wrapping a stateless functional component. ' +
             'In this case no ref will be stored, and instead an innerRef prop will be passed on.\n' +
-            `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName}.`
+            `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName ||
+              'UnknownStyledNativeComponent'}.`
         )
       }
     }
@@ -155,6 +162,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         !isStyledComponent(target) &&
         // NOTE: We can't pass a ref to a stateless functional component
         (typeof target !== 'function' ||
+          // $FlowFixMe TODO: flow for prototype
           (target.prototype && 'isReactComponent' in target.prototype))
       ) {
         propsForElement.ref = this.onRef
@@ -199,7 +207,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
       static styledComponentId = 'StyledNativeComponent'
 
-      static withComponent(tag) {
+      static withComponent(tag: Target) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options
         const newOptions = {
           ...optionsToCopy,

@@ -309,7 +309,7 @@ class StyleSheet {
     return this.tags.map(tag => tag.toHTML()).join('')
   }
 
-  toReactElements() {
+  toReactElements(): Array<*> {
     const { id } = this
 
     return this.tags.map((tag, i) => {

@@ -18,7 +18,7 @@ describe('basic', () => {
     expect(() => styled.div``).not.toThrowError()
 
     const FunctionalComponent = () => <div />;
-    class ClassComponent extends React.Component{
+    class ClassComponent extends Component<*, *> {
       render() {
         return <div />
       }
@@ -34,7 +34,7 @@ describe('basic', () => {
 
   it('should throw a meaningful error when called with an invalid element', () => {
     const FunctionalComponent = () => <div />;
-    class ClassComponent extends React.Component{
+    class ClassComponent extends Component<*, *> {
       render() {
         return <div />
       }
@@ -117,7 +117,7 @@ describe('basic', () => {
     it('should pass the ref to the component', () => {
       const Comp = styled.div``
 
-      class Wrapper extends Component {
+      class Wrapper extends Component<*, *> {
         testRef: any;
         innerRef = (comp) => { this.testRef = comp }
 
@@ -133,7 +133,7 @@ describe('basic', () => {
       expect(component.find('div').prop('innerRef')).toBeFalsy()
     })
 
-    class InnerComponent extends Component {
+    class InnerComponent extends Component<*, *> {
       render() {
         return null
       }
@@ -142,7 +142,7 @@ describe('basic', () => {
     it('should not leak the innerRef prop to the wrapped child', () => {
       const OuterComponent = styled(InnerComponent)``
 
-      class Wrapper extends Component {
+      class Wrapper extends Component<*, *> {
         testRef: any;
 
         render() {
@@ -160,7 +160,7 @@ describe('basic', () => {
     it('should pass the full className to the wrapped child', () => {
       const OuterComponent = styled(InnerComponent)``
 
-      class Wrapper extends Component {
+      class Wrapper extends Component<*, *> {
         render() {
           return <OuterComponent className="test"/>
         }
@@ -175,7 +175,7 @@ describe('basic', () => {
       const InnerComponent = styled.div``
       const OuterComponent = styled(InnerComponent)``
 
-      class Wrapper extends Component {
+      class Wrapper extends Component<*, *> {
         testRef: any;
         innerRef = (comp) => { this.testRef = comp }
 
