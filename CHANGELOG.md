@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. If a contri
 
 ## Unreleased
 
+- Fix off-by-one error in insertRuleHelpers.js, by [@migueloller](https://github.com/migueloller) (see [#1749](https://github.com/styled-components/styled-components/pull/1749))
 
 - Add first-class support for objects:
 
