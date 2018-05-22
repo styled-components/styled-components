@@ -8,7 +8,7 @@ import styleSheet from '../models/StyleSheet'
 let styled
 
 describe('warn too many classes', () => {
-  const consoleWarn = console.warn
+  const nativeWarn = console.warn
   let warnCallCount
   /**
    * Make sure the setup is the same for every test
@@ -20,7 +20,7 @@ describe('warn too many classes', () => {
   })
 
   afterEach(() => {
-    (console: any).warn = consoleWarn
+    (console: any).warn = nativeWarn
   })
 
   it('should warn once', () => {
