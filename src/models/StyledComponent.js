@@ -251,8 +251,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     const {
       isClass = !isTag(target),
       displayName = isClass
-        ? `Styled(${getComponentName(target)})`
-        : `styled.${target}`,
+        ? // $FlowFixMe
+          `Styled(${getComponentName(target)})`
+        : // $FlowFixMe
+          `styled.${target}`,
       componentId = generateId(options.displayName, options.parentComponentId),
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
