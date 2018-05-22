@@ -12,29 +12,37 @@ describe('native', () => {
   it('should not throw an error when called with a valid element', () => {
     expect(() => styled.View``).not.toThrowError()
 
-    const FunctionalComponent = () => <View />;
-    class ClassComponent extends React.Component{
+    const FunctionalComponent = () => <View />
+    class ClassComponent extends React.Component {
       render() {
         return <View />
       }
     }
-    const validComps = ['View', FunctionalComponent, ClassComponent];
+    const validComps = ['View', FunctionalComponent, ClassComponent]
     validComps.forEach(comp => {
       expect(() => {
         const Comp = styled(comp)
         shallow(<Comp />)
       }).not.toThrowError()
     })
-  });
+  })
 
   it('should throw a meaningful error when called with an invalid element', () => {
-    const FunctionalComponent = () => <View />;
-    class ClassComponent extends React.Component{
+    const FunctionalComponent = () => <View />
+    class ClassComponent extends React.Component {
       render() {
         return <View />
       }
     }
-    const invalidComps = [undefined, null, 123, [], <View />, <FunctionalComponent />, <ClassComponent />];
+    const invalidComps = [
+      undefined,
+      null,
+      123,
+      [],
+      <View />,
+      <FunctionalComponent />,
+      <ClassComponent />,
+    ]
     invalidComps.forEach(comp => {
       expect(() => {
         // $FlowInvalidInputTest
@@ -358,6 +366,26 @@ describe('native', () => {
       expect(innerComponent.prop('ref')).toBeFalsy()
       expect(innerComponent.prop('innerRef')).toBeTruthy()
       expect(outerComponent.instance().root).toBeFalsy()
+    })
+
+    it('should hoist non-react static properties', () => {
+      const InnerComponent = styled.View``
+      InnerComponent.foo = 'bar'
+
+      const OuterComponent = styled(InnerComponent)``
+
+      expect(OuterComponent).toHaveProperty('foo', 'bar')
+    })
+
+    it('should not hoist styled component statics', () => {
+      const InnerComponent = styled.View`
+        color: red;
+      `
+      const OuterComponent = styled(InnerComponent)`
+        color: blue;
+      `
+
+      expect(OuterComponent.inlineStyle).not.toEqual(InnerComponent.inlineStyle)
     })
   })
 })

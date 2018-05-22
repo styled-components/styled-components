@@ -1,4 +1,5 @@
 // @flow
+import hoist from 'hoist-non-react-statics'
 import { Component, createElement } from 'react'
 import PropTypes from 'prop-types'
 
@@ -173,9 +174,12 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     rules: RuleSet
   ) => {
     const {
-      displayName = isTag(target)
-        ? `styled.${target}`
-        : `Styled(${getComponentName(target)})`,
+      isClass = !isTag(target),
+      displayName = isClass
+        ? // $FlowFixMe
+          `Styled(${getComponentName(target)})`
+        : // $FlowFixMe
+          `styled.${target}`,
       ParentComponent = BaseStyledNativeComponent,
       rules: extendingRules,
       attrs,
@@ -186,18 +190,10 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     )
 
     class StyledNativeComponent extends ParentComponent {
-      static displayName = displayName
-      static target = target
-      static attrs = attrs
-      static inlineStyle = inlineStyle
-
       static contextTypes = {
         [CHANNEL]: PropTypes.func,
         [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
       }
-
-      // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
-      static styledComponentId = 'StyledNativeComponent'
 
       static withComponent(tag) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options
@@ -234,6 +230,14 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         )
       }
     }
+
+    if (isClass) hoist(StyledNativeComponent, target)
+
+    StyledNativeComponent.displayName = displayName
+    StyledNativeComponent.target = target
+    StyledNativeComponent.attrs = attrs
+    StyledNativeComponent.inlineStyle = inlineStyle
+    StyledNativeComponent.styledComponentId = 'StyledNativeComponent'
 
     return StyledNativeComponent
   }
