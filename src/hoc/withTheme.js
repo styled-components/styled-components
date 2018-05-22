@@ -5,7 +5,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import hoistStatics from 'hoist-non-react-statics'
 import {
-  CHANNEL,
   CHANNEL_NEXT,
   CONTEXT_CHANNEL_SHAPE,
 } from '../models/ThemeProvider'
@@ -29,7 +28,6 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
     static styledComponentId = 'withTheme'
 
     static contextTypes = {
-      [CHANNEL]: PropTypes.func,
       [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
     }
 
