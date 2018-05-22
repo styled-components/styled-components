@@ -12,6 +12,7 @@ import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
+import isClass from '../utils/isClass'
 import type { RuleSet, Target } from '../types'
 import { CONTEXT_KEY } from '../constants'
 
@@ -83,7 +84,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       this.attrs = Object.keys(attrs).reduce((acc, key) => {
         const attr = attrs[key]
         // eslint-disable-next-line no-param-reassign
-        acc[key] = typeof attr === 'function' ? attr(context) : attr
+        acc[key] =
+          typeof attr === 'function' && !isClass(attr) ? attr(context) : attr
         return acc
       }, {})
 

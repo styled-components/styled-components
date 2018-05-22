@@ -5,6 +5,7 @@ import PropTypes from 'prop-types'
 import type { Theme } from './ThemeProvider'
 
 import isTag from '../utils/isTag'
+import isClass from '../utils/isClass'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
@@ -44,7 +45,8 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       this.attrs = Object.keys(attrs).reduce((acc, key) => {
         const attr = attrs[key]
         // eslint-disable-next-line no-param-reassign
-        acc[key] = typeof attr === 'function' ? attr(context) : attr
+        acc[key] =
+          typeof attr === 'function' && !isClass(attr) ? attr(context) : attr
         return acc
       }, {})
 
