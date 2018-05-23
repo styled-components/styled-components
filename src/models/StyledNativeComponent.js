@@ -1,17 +1,15 @@
 // @flow
 import hoist from 'hoist-non-react-statics'
-import { Component, createElement } from 'react'
 import PropTypes from 'prop-types'
+import { Component, createElement } from 'react'
+import determineTheme from '../utils/determineTheme'
+import generateDisplayName from '../utils/generateDisplayName'
+import isStyledComponent from '../utils/isStyledComponent'
+import isTag from '../utils/isTag'
+import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
 import type { Theme } from './ThemeProvider'
-
-import isTag from '../utils/isTag'
-import isStyledComponent from '../utils/isStyledComponent'
-import getComponentName from '../utils/getComponentName'
-import determineTheme from '../utils/determineTheme'
 import type { RuleSet, Target } from '../types'
-
-import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
 export default (constructWithOptions: Function, InlineStyle: Function) => {
   class BaseStyledNativeComponent extends Component {
@@ -175,11 +173,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
   ) => {
     const {
       isClass = !isTag(target),
-      displayName = isClass
-        ? // $FlowFixMe
-          `Styled(${getComponentName(target)})`
-        : // $FlowFixMe
-          `styled.${target}`,
+      displayName = generateDisplayName(target),
       ParentComponent = BaseStyledNativeComponent,
       rules: extendingRules,
       attrs,

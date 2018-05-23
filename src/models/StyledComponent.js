@@ -3,22 +3,21 @@
 import hoist from 'hoist-non-react-statics'
 import PropTypes from 'prop-types'
 import { Component, createElement } from 'react'
-
-import type { Theme } from './ThemeProvider'
+import { CONTEXT_KEY } from '../constants'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
-
-import validAttr from '../utils/validAttr'
-import isTag from '../utils/isTag'
-import isStyledComponent from '../utils/isStyledComponent'
-import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
-import type { RuleSet, Target } from '../types'
-import { CONTEXT_KEY } from '../constants'
-
-import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
-import StyleSheet from './StyleSheet'
+import generateDisplayName from '../utils/generateDisplayName'
+import getComponentName from '../utils/getComponentName'
+import isStyledComponent from '../utils/isStyledComponent'
+import isTag from '../utils/isTag'
+import validAttr from '../utils/validAttr'
 import ServerStyleSheet from './ServerStyleSheet'
+import StyleSheet from './StyleSheet'
+import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
+
+import type { Theme } from './ThemeProvider'
+import type { RuleSet, Target } from '../types'
 
 // HACK for generating all static styles without needing to allocate
 // an empty execution context every single time...
@@ -250,11 +249,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
   ) => {
     const {
       isClass = !isTag(target),
-      displayName = isClass
-        ? // $FlowFixMe
-          `Styled(${getComponentName(target)})`
-        : // $FlowFixMe
-          `styled.${target}`,
+      displayName = generateDisplayName(target),
       componentId = generateId(options.displayName, options.parentComponentId),
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
