@@ -3,7 +3,6 @@ import styled from "../..";
 const Input = styled.input.attrs({
   // we can define static props
   type: "password",
-  classAttr: class Text{},
 
   // or we can define dynamic ones
   margin: (props: any) => props.size as string || "1em",

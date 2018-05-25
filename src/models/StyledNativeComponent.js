@@ -5,10 +5,10 @@ import PropTypes from 'prop-types'
 import type { Theme } from './ThemeProvider'
 
 import isTag from '../utils/isTag'
-import isClass from '../utils/isClass'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
+import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import type { RuleSet, Target } from '../types'
 
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
@@ -44,9 +44,12 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
 
       this.attrs = Object.keys(attrs).reduce((acc, key) => {
         const attr = attrs[key]
+        const extendsReactComponent = hasInInheritanceChain(attr, Component)
         // eslint-disable-next-line no-param-reassign
         acc[key] =
-          typeof attr === 'function' && !isClass(attr) ? attr(context) : attr
+          typeof attr === 'function' && !extendsReactComponent
+            ? attr(context)
+            : attr
         return acc
       }, {})
 
