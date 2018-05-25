@@ -274,5 +274,24 @@ describe('basic', () => {
 
       expect(Named1.styledComponentId).not.toBe(Named2.styledComponentId)
     })
+
+    it('honors a passed componentId', () => {
+      const Named1 = styled.div.withConfig({
+        componentId: 'foo',
+        displayName: 'Name',
+      })`
+        color: blue;
+      `
+
+      const Named2 = styled.div.withConfig({
+        componentId: 'bar',
+        displayName: 'Name',
+      })`
+        color: red;
+      `
+
+      expect(Named1.styledComponentId).toBe('Name-foo')
+      expect(Named2.styledComponentId).toBe('Name-bar')
+    })
   })
 })
