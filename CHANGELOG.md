@@ -6,9 +6,13 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-* Fix off-by-one error in insertRuleHelpers.js, by [@migueloller](https://github.com/migueloller) (see [#1749](https://github.com/styled-components/styled-components/pull/1749))
+- n/a
 
-* Add first-class support for objects:
+## [v3.3.0] - 2018-05-25
+
+* Fix off-by-one error in insertRuleHelpers.js, by @migueloller (see #1749)
+
+* Add first-class support for objects, by @mxstbr (see #1732)
 
   ```JS
   const Component = styled.div({
@@ -16,15 +20,15 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
   })
   ```
 
-- Fix typo in console warning about multiple instances, by [@lucianbuzzo] (see [#1730](https://github.com/styled-components/styled-components/pull/1730))
+- Fix typo in console warning about multiple instances, by @lucianbuzzo (see #1730)
 
-- Make the multiple instance warning criteria a little more strict to avoid badgering people running unit tests ([see #1693](https://github.com/styled-components/styled-components/pull/1693))
+- Make the multiple instance warning criteria a little more strict to avoid badgering people running unit tests, by @probablyup (see #1693)
 
-- Fix `React.createRef()` values for `innerRef` being ignored in React Native, by @simonbuchan (see [#1718](https://github.com/styled-components/styled-components/pull/1718))
+- Fix `React.createRef()` values for `innerRef` being ignored in React Native, by @simonbuchan (see #1718)
 
 - Hoist non-react static properties on wrapped classes, by @probablyup (see #1750)
 
-- Support attributes prefixed by `x-` (see [#1753](https://github.com/styled-components/styled-components/pull/1753))
+- Support attributes prefixed by `x-`, by @mlecoq (see #1753)
 
 ## [v3.2.6] - 2018-04-17
 
@@ -474,7 +478,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 * Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v3.2.6...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v3.3.0...master
+[v3.3.0]: https://github.com/styled-components/styled-components/compare/v3.2.6...v3.3.0
 [v3.2.6]: https://github.com/styled-components/styled-components/compare/v3.2.5...v3.2.6
 [v3.2.5]: https://github.com/styled-components/styled-components/compare/v3.2.3...v3.2.5
 [v3.2.3]: https://github.com/styled-components/styled-components/compare/v3.2.2...v3.2.3
