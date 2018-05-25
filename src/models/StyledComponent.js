@@ -1,23 +1,23 @@
 // @flow
 
-import { Component, createElement } from 'react'
+import hoist from 'hoist-non-react-statics'
 import PropTypes from 'prop-types'
-
-import type { Theme } from './ThemeProvider'
+import { Component, createElement } from 'react'
+import { CONTEXT_KEY } from '../constants'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
-
-import validAttr from '../utils/validAttr'
-import isTag from '../utils/isTag'
-import isStyledComponent from '../utils/isStyledComponent'
-import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
-import type { RuleSet, Target } from '../types'
-import { CONTEXT_KEY } from '../constants'
-
-import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
-import StyleSheet from './StyleSheet'
+import generateDisplayName from '../utils/generateDisplayName'
+import getComponentName from '../utils/getComponentName'
+import isStyledComponent from '../utils/isStyledComponent'
+import isTag from '../utils/isTag'
+import validAttr from '../utils/validAttr'
 import ServerStyleSheet from './ServerStyleSheet'
+import StyleSheet from './StyleSheet'
+import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
+
+import type { Theme } from './ThemeProvider'
+import type { RuleSet, Target } from '../types'
 
 // HACK for generating all static styles without needing to allocate
 // an empty execution context every single time...
@@ -248,9 +248,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     rules: RuleSet
   ) => {
     const {
-      displayName = isTag(target)
-        ? `styled.${target}`
-        : `Styled(${getComponentName(target)})`,
+      isClass = !isTag(target),
+      displayName = generateDisplayName(target),
       componentId = generateId(options.displayName, options.parentComponentId),
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
@@ -277,12 +276,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           PropTypes.instanceOf(ServerStyleSheet),
         ]),
       }
-
-      static displayName = displayName
-      static styledComponentId = styledComponentId
-      static attrs = attrs
-      static componentStyle = componentStyle
-      static target = target
 
       static withComponent(tag) {
         const { componentId: previousComponentId, ...optionsToCopy } = options
@@ -328,6 +321,16 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     if (process.env.NODE_ENV !== 'production') {
       StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
     }
+
+    if (isClass) hoist(StyledComponent, target)
+
+    // we do this after hoisting to ensure we're overwriting existing
+    // rules when wrapping another styled component class
+    StyledComponent.displayName = displayName
+    StyledComponent.styledComponentId = styledComponentId
+    StyledComponent.attrs = attrs
+    StyledComponent.componentStyle = componentStyle
+    StyledComponent.target = target
 
     return StyledComponent
   }
