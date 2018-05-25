@@ -560,4 +560,7 @@ describe('validAttr', () => {
     expect(validAttr('isPrimary')).toEqual(false)
     expect(validAttr('primary')).toEqual(false)
   });
+  it('should handle x attributes', () => {
+    expect(validAttr('x-error-message')).toEqual(true)
+  })
 })

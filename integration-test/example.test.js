@@ -53,10 +53,10 @@ describe('example page', () => {
     })
     page = await browser.newPage()
     page.on('request', req => {
-      if (urlWhitelist.find(regexp => req.url.match(regexp))) {
+      if (urlWhitelist.find(regexp => req.url().match(regexp))) {
         req.continue()
       } else {
-        throw new Error(req.url)
+        throw new Error(req.url())
         req.abort()
       }
     })
