@@ -1,16 +1,15 @@
 // @flow
-import { Component, createElement } from 'react'
+import hoist from 'hoist-non-react-statics'
 import PropTypes from 'prop-types'
+import { Component, createElement } from 'react'
+import determineTheme from '../utils/determineTheme'
+import generateDisplayName from '../utils/generateDisplayName'
+import isStyledComponent from '../utils/isStyledComponent'
+import isTag from '../utils/isTag'
+import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
 import type { Theme } from './ThemeProvider'
-
-import isTag from '../utils/isTag'
-import isStyledComponent from '../utils/isStyledComponent'
-import getComponentName from '../utils/getComponentName'
-import determineTheme from '../utils/determineTheme'
 import type { RuleSet, Target } from '../types'
-
-import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
 export default (constructWithOptions: Function, InlineStyle: Function) => {
   class BaseStyledNativeComponent extends Component {
@@ -173,9 +172,8 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     rules: RuleSet
   ) => {
     const {
-      displayName = isTag(target)
-        ? `styled.${target}`
-        : `Styled(${getComponentName(target)})`,
+      isClass = !isTag(target),
+      displayName = generateDisplayName(target),
       ParentComponent = BaseStyledNativeComponent,
       rules: extendingRules,
       attrs,
@@ -186,18 +184,10 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     )
 
     class StyledNativeComponent extends ParentComponent {
-      static displayName = displayName
-      static target = target
-      static attrs = attrs
-      static inlineStyle = inlineStyle
-
       static contextTypes = {
         [CHANNEL]: PropTypes.func,
         [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
       }
-
-      // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
-      static styledComponentId = 'StyledNativeComponent'
 
       static withComponent(tag) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options
@@ -234,6 +224,14 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         )
       }
     }
+
+    if (isClass) hoist(StyledNativeComponent, target)
+
+    StyledNativeComponent.displayName = displayName
+    StyledNativeComponent.target = target
+    StyledNativeComponent.attrs = attrs
+    StyledNativeComponent.inlineStyle = inlineStyle
+    StyledNativeComponent.styledComponentId = 'StyledNativeComponent'
 
     return StyledNativeComponent
   }

@@ -16,11 +16,13 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
   })
   ```
 
-* Fix typo in console warning about multiple instances, by [@lucianbuzzo] (see [#1730](https://github.com/styled-components/styled-components/pull/1730))
+- Fix typo in console warning about multiple instances, by [@lucianbuzzo] (see [#1730](https://github.com/styled-components/styled-components/pull/1730))
 
 - Make the multiple instance warning criteria a little more strict to avoid badgering people running unit tests ([see #1693](https://github.com/styled-components/styled-components/pull/1693))
 
 - Fix `React.createRef()` values for `innerRef` being ignored in React Native, by @simonbuchan (see [#1718](https://github.com/styled-components/styled-components/pull/1718))
+
+- Hoist non-react static properties on wrapped classes, by @probablyup (see #1750)
 
 - Support attributes prefixed by `x-` (see [#1753](https://github.com/styled-components/styled-components/pull/1753))
 
