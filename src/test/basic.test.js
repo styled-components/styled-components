@@ -115,7 +115,7 @@ describe('basic', () => {
 
   it('should allow you to pass in style objects', () => {
     const Comp = styled.div({
-      color: 'blue'
+      color: 'blue',
     })
     shallow(<Comp />)
     expectCSSMatches('.sc-a {} .b { color:blue; }')
@@ -261,6 +261,18 @@ describe('basic', () => {
       expect(OuterComponent.componentStyle).not.toEqual(
         InnerComponent.componentStyle
       )
+    })
+
+    it('generates unique classnames when not using babel', () => {
+      const Named1 = styled.div.withConfig({ displayName: 'Name' })`
+        color: blue;
+      `
+
+      const Named2 = styled.div.withConfig({ displayName: 'Name' })`
+        color: red;
+      `
+
+      expect(Named1.styledComponentId).not.toBe(Named2.styledComponentId)
     })
   })
 })
