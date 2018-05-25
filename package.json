@@ -117,7 +117,7 @@
     "flow-bin": "^0.47.0",
     "flow-watch": "^1.1.1",
     "husky": "^0.14.3",
-    "jest": "^22.4.3",
+    "jest": "^23.0.0",
     "jest-image-snapshot": "^2.4.1",
     "jest-styled-components": "^5.0.1",
     "jsdom": "^9.10.0",
