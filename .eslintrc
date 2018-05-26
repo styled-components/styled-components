@@ -36,8 +36,8 @@
       "error",
       "ForOfStatement",
       "LabeledStatement",
-      "WithStatement",
-    ],
+      "WithStatement"
+    ]
   },
   "env": {
     "jest": true,
