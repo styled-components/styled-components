@@ -48,6 +48,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 * Add minified commonjs and esm builds for bundle size tracking (see [#1681](https://github.com/styled-components/styled-components/pull/1681))
 
+- Multiple optimizations in the mount/render cycle (see [#1049](https://github.com/styled-components/styled-components/pull/1049))
+
 ## [v3.2.5] - 2018-03-30
 
 * Deprecate experimental preprocess mode, by [@Samatar26](https://github.com/Samatar26) (see [#1619](https://github.com/styled-components/styled-components/issues/1619))
