@@ -43,10 +43,9 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
 
       this.attrs = Object.keys(attrs).reduce((acc, key) => {
         const attr = attrs[key]
-        const extendsReactComponent = hasInInheritanceChain(attr, Component)
         // eslint-disable-next-line no-param-reassign
         acc[key] =
-          typeof attr === 'function' && !extendsReactComponent
+          typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
             ? attr(context)
             : attr
         return acc
