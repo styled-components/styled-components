@@ -23,6 +23,11 @@ import type { RuleSet, Target } from '../types'
 // an empty execution context every single time...
 const STATIC_EXECUTION_CONTEXT = {}
 
+type BaseState = {
+  theme?: ?Theme,
+  generatedClassName?: string,
+}
+
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
   const identifiers = {}
 
@@ -53,11 +58,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       : componentId
   }
 
-  class BaseStyledComponent extends Component {
+  class BaseStyledComponent extends Component<*, BaseState> {
     static target: Target
     static styledComponentId: string
     static attrs: Object
     static componentStyle: Object
+    static defaultProps: Object
     static warnTooManyClasses: Function
 
     attrs = {}
@@ -172,10 +178,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         return
       }
 
-      this.setState(oldState => {
+      this.setState(prevState => {
         const theme = determineTheme(
           nextProps,
-          oldState.theme,
+          prevState.theme,
           this.constructor.defaultProps
         )
         const generatedClassName = this.generateAndInjectStyles(
@@ -209,7 +215,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         .filter(Boolean)
         .join(' ')
 
-      const baseProps = {
+      const baseProps: any = {
         ...this.attrs,
         className,
       }
@@ -277,7 +283,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         ]),
       }
 
-      static withComponent(tag) {
+      static withComponent(tag: Target) {
         const { componentId: previousComponentId, ...optionsToCopy } = options
 
         const newComponentId =

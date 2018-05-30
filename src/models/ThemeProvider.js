@@ -1,6 +1,5 @@
 // @flow
-/* globals React$Element */
-import React, { Component } from 'react'
+import React, { Component, type Element } from 'react'
 import PropTypes from 'prop-types'
 import isPlainObject from 'is-plain-object'
 import createBroadcast from '../utils/create-broadcast'
@@ -19,7 +18,7 @@ export const CONTEXT_CHANNEL_SHAPE = PropTypes.shape({
 
 export type Theme = { [key: string]: mixed }
 type ThemeProviderProps = {|
-  children?: React$Element<any>,
+  children?: Element<any>,
   theme: Theme | ((outerTheme: Theme) => void),
 |}
 
@@ -39,7 +38,7 @@ const isFunction = test => typeof test === 'function'
  * Provide a theme to an entire react component tree via context and event listeners (have to do
  * both context and event emitter as pure components block context updates)
  */
-class ThemeProvider extends Component {
+class ThemeProvider extends Component<ThemeProviderProps, void> {
   getTheme: (theme?: Theme | ((outerTheme: Theme) => void)) => Theme
   outerTheme: Theme
   unsubscribeToOuterId: string
