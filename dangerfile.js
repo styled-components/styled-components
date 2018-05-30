@@ -35,12 +35,6 @@ danger.git.diffForFile('package.json').then(packageDiff => {
   }
 })
 
-// Warn when there is a big PR
-const bigPRThreshold = 500
-if (danger.github.pr.additions + danger.github.pr.deletions > bigPRThreshold) {
-  warn(':exclamation: Big PR')
-}
-
 // Fail if there are app changes without a CHANGELOG
 if (!danger.git.modified_files.includes('CHANGELOG.md') && hasAppChanges) {
   const changelogLink =
