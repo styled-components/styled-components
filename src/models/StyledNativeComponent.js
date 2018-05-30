@@ -96,10 +96,10 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       theme?: Theme,
       [key: string]: any,
     }) {
-      this.setState(oldState => {
+      this.setState(prevState => {
         const theme = determineTheme(
           nextProps,
-          oldState.theme,
+          prevState.theme,
           this.constructor.defaultProps
         )
         const generatedStyles = this.generateAndInjectStyles(theme, nextProps)

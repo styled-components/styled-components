@@ -178,10 +178,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         return
       }
 
-      this.setState(oldState => {
+      this.setState(prevState => {
         const theme = determineTheme(
           nextProps,
-          oldState.theme,
+          prevState.theme,
           this.constructor.defaultProps
         )
         const generatedClassName = this.generateAndInjectStyles(

@@ -165,10 +165,11 @@ const makeSpeedyTag = (
       return prev
     }
 
-    const marker = (markers[id] = sizes.length)
+    markers[id] = sizes.length
     sizes.push(0)
     resetIdNames(names, id)
-    return marker
+
+    return markers[id]
   }
 
   const insertRules = (id, cssRules, name) => {
@@ -272,10 +273,11 @@ const makeBrowserTag = (
       return prev
     }
 
-    const marker = (markers[id] = makeTextNode(id))
-    el.appendChild(marker)
+    markers[id] = makeTextNode(id)
+    el.appendChild(markers[id])
     names[id] = Object.create(null)
-    return marker
+
+    return markers[id]
   }
 
   const insertRules = (id, cssRules, name) => {
