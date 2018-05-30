@@ -59,6 +59,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       : componentId
   }
 
+  // $FlowFixMe
   class BaseStyledComponent extends Component<*, BaseState> {
     static target: Target
     static styledComponentId: string

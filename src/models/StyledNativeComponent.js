@@ -18,6 +18,7 @@ type State = {
 }
 
 export default (constructWithOptions: Function, InlineStyle: Function) => {
+  // $FlowFixMe
   class BaseStyledNativeComponent extends Component<*, State> {
     static target: Target
     static styledComponentId: string
