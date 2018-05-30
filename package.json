@@ -25,7 +25,7 @@
     "test:primitives:watch": "npm run test:primitives -- --watch",
     "test:integration": "jest -c .jest.integration.json --runInBand --forceExit",
     "test:size": "bundlesize",
-    "danger": "cross-env NODE_ENV=test danger run -- --verbose",
+    "danger": "cross-env NODE_ENV=test danger ci -v",
     "flow": "flow check",
     "flow:watch": "flow-watch",
     "format": "eslint ./**/*.js --fix",
@@ -97,10 +97,10 @@
     "babel-plugin-transform-react-remove-prop-types": "^0.4.12",
     "babel-preset-env": "^1.4.0",
     "babel-preset-react": "^6.22.0",
-    "bundlesize": "^0.13.2",
+    "bundlesize": "^0.17.0",
     "chokidar": "^1.6.0",
     "cross-env": "^5.1.3",
-    "danger": "^2.0.0",
+    "danger": "^3.7.14",
     "danger-plugin-jest": "^1.1.0",
     "enzyme": "^3.3.0",
     "enzyme-adapter-react-16": "^1.1.1",
@@ -180,15 +180,15 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "threshold": "16kB"
+      "maxSize": "16kB"
     },
     {
       "path": "./dist/styled-components.cjs.min.js",
-      "threshold": "11.5kB"
+      "maxSize": "11.5kB"
     },
     {
       "path": "./dist/styled-components.es.min.js",
-      "threshold": "11.5kB"
+      "maxSize": "11.5kB"
     }
   ],
   "collective": {
