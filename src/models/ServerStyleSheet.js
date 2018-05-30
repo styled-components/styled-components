@@ -98,7 +98,12 @@ export default class ServerStyleSheet {
     })
 
     readableStream.on('end', () => this.complete())
-    readableStream.on('error', () => this.complete())
+    readableStream.on('error', err => {
+      this.complete()
+
+      // forward the error to the transform stream
+      transformer.emit('error', err)
+    })
 
     return readableStream.pipe(transformer)
   }
