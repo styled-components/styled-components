@@ -180,15 +180,15 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "threshold": "16kB"
+      "maxSize": "16kB"
     },
     {
       "path": "./dist/styled-components.cjs.min.js",
-      "threshold": "11.5kB"
+      "maxSize": "11.5kB"
     },
     {
       "path": "./dist/styled-components.es.min.js",
-      "threshold": "11.5kB"
+      "maxSize": "11.5kB"
     }
   ],
   "collective": {
