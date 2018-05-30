@@ -7,3 +7,4 @@ __diff_output__
 lib
 sandbox/node_modules
 *.log
+test-results.json
