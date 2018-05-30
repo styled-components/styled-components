@@ -6,7 +6,9 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Upgrade flow-bin to latest, by @halvves (see #1748)
+* Upgrade flow-bin to latest, by @halvves (see #1748)
+
+* Update various CI bits, by @probablyup (see #1769)
 
 ## [v3.3.0] - 2018-05-25
 
