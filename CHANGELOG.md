@@ -8,6 +8,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Upgrade flow-bin to latest, by @halvves (see #1748)
 
+* Update various CI bits, by @probablyup (see #1768)
+
 ## [v3.3.0] - 2018-05-25
 
 * Fix off-by-one error in insertRuleHelpers.js, by @migueloller (see #1749)
