@@ -278,4 +278,27 @@ describe('ssr', () => {
       stream.on('error', reject)
     })
   })
+
+  it('should handle errors while streaming', () => {
+    injectGlobal`
+      body { background: papayawhip; }
+    `
+    const Heading = styled.h1`
+      color: red;
+    `
+
+    const sheet = new ServerStyleSheet()
+    const jsx = sheet.collectStyles(null)
+    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx))
+
+    return new Promise((resolve, reject) => {
+      stream.on('data', function noop(){})
+
+      stream.on('error', (err) => {
+        expect(err).toMatchSnapshot()
+        expect(sheet.closed).toBe(true)
+        resolve()
+      })
+    })
+  })
 })
