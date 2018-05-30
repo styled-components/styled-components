@@ -1,7 +1,5 @@
 // @flow
-/* globals ReactClass */
-
-import React from 'react'
+import React, { type ComponentType } from 'react'
 import PropTypes from 'prop-types'
 import hoistStatics from 'hoist-non-react-statics'
 import {
@@ -12,18 +10,20 @@ import {
 import _isStyledComponent from '../utils/isStyledComponent'
 import determineTheme from '../utils/determineTheme'
 
-const wrapWithTheme = (Component: ReactClass<any>) => {
+const wrapWithTheme = (Component: ComponentType<any>) => {
   const componentName = Component.displayName || Component.name || 'Component'
   const isStatelessFunctionalComponent =
     typeof Component === 'function' &&
+    // $FlowFixMe TODO: flow for prototype
     !(Component.prototype && 'isReactComponent' in Component.prototype)
 
   // NOTE: We can't pass a ref to a stateless functional component
   const shouldSetInnerRef =
     _isStyledComponent(Component) || isStatelessFunctionalComponent
 
-  class WithTheme extends React.Component {
+  class WithTheme extends React.Component<*, *> {
     static displayName = `WithTheme(${componentName})`
+    static defaultProps: Object
 
     // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
     static styledComponentId = 'withTheme'

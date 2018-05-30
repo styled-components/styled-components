@@ -6,7 +6,9 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Allow React Component attrs, by [@valerybugakov](https://github.com/valerybugakov) (see [#1751](https://github.com/styled-components/styled-components/pull/1751))
+- Upgrade flow-bin to latest, by @halvves (see #1748)
+
+- Allow React Component as attr, by @valerybugakov (see #1751)
 
 ## [v3.3.0] - 2018-05-25
 

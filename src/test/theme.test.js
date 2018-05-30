@@ -1,5 +1,5 @@
 // @flow
-import React from 'react'
+import React, { Component } from 'react'
 import { mount, render } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
@@ -375,7 +375,7 @@ describe('theming', () => {
 
   // https://github.com/styled-components/styled-components/issues/596
   it('should hoist static properties when using withTheme', () => {
-    class MyComponent extends React.Component {
+    class MyComponent extends Component<*, *> {
       static myStaticProperty: boolean = true
     }
 
@@ -385,7 +385,7 @@ describe('theming', () => {
   })
 
   it('should only pass the theme prop', () => {
-    class Comp extends React.Component {
+    class Comp extends Component<*, *> {
       render() {
         return <div />
       }
@@ -406,7 +406,7 @@ describe('theming', () => {
   })
 
   it('should accept innerRef and pass it on as ref', () => {
-    class Comp extends React.Component {
+    class Comp extends Component<*, *> {
       render() {
         return <div />
       }
