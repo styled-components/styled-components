@@ -1,29 +1,37 @@
 // @flow
-import { createElement } from 'react'
+import { Component, createElement } from 'react'
+import PropTypes from 'prop-types'
 
 import type { Theme } from './ThemeProvider'
 
 import isTag from '../utils/isTag'
 import isStyledComponent from '../utils/isStyledComponent'
 import getComponentName from '../utils/getComponentName'
+import determineTheme from '../utils/determineTheme'
 import type { RuleSet, Target } from '../types'
 
-import { CHANNEL } from './ThemeProvider'
-import InlineStyle from './InlineStyle'
-import AbstractStyledComponent from './AbstractStyledComponent'
+import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
-export default (constructWithOptions: Function) => {
-  class BaseStyledNativeComponent extends AbstractStyledComponent {
+export default (constructWithOptions: Function, InlineStyle: Function) => {
+  class BaseStyledNativeComponent extends Component {
     static target: Target
     static styledComponentId: string
     static attrs: Object
     static inlineStyle: Object
-    root: Object
+    root: ?Object
 
     attrs = {}
     state = {
       theme: null,
       generatedStyles: undefined,
+    }
+
+    unsubscribeId: number = -1
+
+    unsubscribeFromContext() {
+      if (this.unsubscribeId !== -1) {
+        this.context[CHANNEL_NEXT].unsubscribe(this.unsubscribeId)
+      }
     }
 
     buildExecutionContext(theme: any, props: any) {
@@ -54,36 +62,41 @@ export default (constructWithOptions: Function) => {
       // If there is a theme in the context, subscribe to the event emitter. This
       // is necessary due to pure components blocking context updates, this circumvents
       // that by updating when an event is emitted
-      if (this.context[CHANNEL]) {
-        const subscribe = this.context[CHANNEL]
-        this.unsubscribe = subscribe(nextTheme => {
+      const styledContext = this.context[CHANNEL_NEXT]
+      if (styledContext !== undefined) {
+        const { subscribe } = styledContext
+        this.unsubscribeId = subscribe(nextTheme => {
           // This will be called once immediately
+          const theme = determineTheme(
+            this.props,
+            nextTheme,
+            this.constructor.defaultProps,
+          )
+          const generatedStyles = this.generateAndInjectStyles(
+            theme,
+            this.props,
+          )
 
-          // Props should take precedence over ThemeProvider, which should take precedence over
-          // defaultProps, but React automatically puts defaultProps on props.
-          const { defaultProps } = this.constructor
-          const isDefaultTheme = defaultProps && this.props.theme === defaultProps.theme
-          const theme = this.props.theme && !isDefaultTheme ? this.props.theme : nextTheme
-          const generatedStyles = this.generateAndInjectStyles(theme, this.props)
           this.setState({ theme, generatedStyles })
         })
       } else {
+        // eslint-disable-next-line react/prop-types
         const theme = this.props.theme || {}
-        const generatedStyles = this.generateAndInjectStyles(
-          theme,
-          this.props,
-        )
+        const generatedStyles = this.generateAndInjectStyles(theme, this.props)
         this.setState({ theme, generatedStyles })
       }
     }
 
-    componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-      this.setState((oldState) => {
-        // Props should take precedence over ThemeProvider, which should take precedence over
-        // defaultProps, but React automatically puts defaultProps on props.
-        const { defaultProps } = this.constructor
-        const isDefaultTheme = defaultProps && nextProps.theme === defaultProps.theme
-        const theme = nextProps.theme && !isDefaultTheme ? nextProps.theme : oldState.theme
+    componentWillReceiveProps(nextProps: {
+      theme?: Theme,
+      [key: string]: any,
+    }) {
+      this.setState(oldState => {
+        const theme = determineTheme(
+          nextProps,
+          oldState.theme,
+          this.constructor.defaultProps,
+        )
         const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
 
         return { theme, generatedStyles }
@@ -91,16 +104,27 @@ export default (constructWithOptions: Function) => {
     }
 
     componentWillUnmount() {
-      if (this.unsubscribe) {
-        this.unsubscribe()
-      }
+      this.unsubscribeFromContext()
     }
 
     setNativeProps(nativeProps: Object) {
-      this.root.setNativeProps(nativeProps)
+      if (this.root !== undefined) {
+        // $FlowFixMe
+        this.root.setNativeProps(nativeProps)
+      } else if (process.env.NODE_ENV !== 'production') {
+        const { displayName } = this.constructor
+
+        // eslint-disable-next-line no-console
+        console.warn(
+          'setNativeProps was called on a Styled Component wrapping a stateless functional component. ' +
+            'In this case no ref will be stored, and instead an innerRef prop will be passed on.\n' +
+            `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName}.`,
+        )
+      }
     }
 
     onRef = (node: any) => {
+      // eslint-disable-next-line react/prop-types
       const { innerRef } = this.props
       this.root = node
 
@@ -110,6 +134,7 @@ export default (constructWithOptions: Function) => {
     }
 
     render() {
+      // eslint-disable-next-line react/prop-types
       const { children, style } = this.props
       const { generatedStyles } = this.state
       const { target } = this.constructor
@@ -120,7 +145,12 @@ export default (constructWithOptions: Function) => {
         style: [generatedStyles, style],
       }
 
-      if (!isStyledComponent(target)) {
+      if (
+        !isStyledComponent(target) &&
+        // NOTE: We can't pass a ref to a stateless functional component
+        (typeof target !== 'function' ||
+          (target.prototype && 'isReactComponent' in target.prototype))
+      ) {
         propsForElement.ref = this.onRef
         delete propsForElement.innerRef
       } else {
@@ -137,7 +167,9 @@ export default (constructWithOptions: Function) => {
     rules: RuleSet,
   ) => {
     const {
-      displayName = isTag(target) ? `styled.${target}` : `Styled(${getComponentName(target)})`,
+      displayName = isTag(target)
+        ? `styled.${target}`
+        : `Styled(${getComponentName(target)})`,
       ParentComponent = BaseStyledNativeComponent,
       rules: extendingRules,
       attrs,
@@ -153,17 +185,47 @@ export default (constructWithOptions: Function) => {
       static attrs = attrs
       static inlineStyle = inlineStyle
 
+      static contextTypes = {
+        [CHANNEL]: PropTypes.func,
+        [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+      }
+
       // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
       static styledComponentId = 'StyledNativeComponent'
 
-      static extendWith(tag) {
+      static withComponent(tag) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options
-        const newOptions = { ...optionsToCopy, rules, ParentComponent: StyledNativeComponent }
-        return constructWithOptions(createStyledNativeComponent, tag, newOptions)
+        const newOptions = {
+          ...optionsToCopy,
+          ParentComponent: StyledNativeComponent,
+        }
+        return createStyledNativeComponent(tag, newOptions, rules)
       }
 
       static get extend() {
-        return StyledNativeComponent.extendWith(target)
+        const {
+          displayName: _,
+          componentId: __,
+          rules: rulesFromOptions,
+          ...optionsToCopy
+        } = options
+
+        const newRules =
+          rulesFromOptions === undefined
+            ? rules
+            : rulesFromOptions.concat(rules)
+
+        const newOptions = {
+          ...optionsToCopy,
+          rules: newRules,
+          ParentComponent: StyledNativeComponent,
+        }
+
+        return constructWithOptions(
+          createStyledNativeComponent,
+          target,
+          newOptions,
+        )
       }
     }
 

@@ -52,7 +52,7 @@ describe('rehydration', () => {
         color: blue;
       `
       shallow(<Comp />)
-      expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color: blue; }')
+      expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color:blue; }')
     })
 
     it('should reuse a componentId', () => {
@@ -60,7 +60,7 @@ describe('rehydration', () => {
       shallow(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })``
       shallow(<B />)
-      expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color: blue; }')
+      expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color:blue; }')
     })
 
     it('should reuse a componentId and generated class', () => {
@@ -68,7 +68,7 @@ describe('rehydration', () => {
       shallow(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
       shallow(<B />)
-      expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color: blue; }')
+      expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color:blue; }')
     })
 
     it('should reuse a componentId and inject new classes', () => {
@@ -78,7 +78,7 @@ describe('rehydration', () => {
       shallow(<B />)
       const C = styled.div.withConfig({ componentId: 'TWO' })`color: green;`
       shallow(<C />)
-      expectCSSMatches('.TWO {} .b { color: red; } .c { color: green; } .ONE { } .a { color: blue; }')
+      expectCSSMatches('.TWO {} .b { color: red; } .c { color:green; } .ONE { } .a { color:blue; }')
     })
   })
 
@@ -124,7 +124,7 @@ describe('rehydration', () => {
       `
       shallow(<Comp color="green"/>)
       expectCSSMatches(`
-        .ONE { } .a { color: blue; } .x { color: green; }
+        .ONE { } .a { color: blue; } .x { color:green; }
         .TWO { } .b { color: red; }
       `)
     })
@@ -152,7 +152,7 @@ describe('rehydration', () => {
       shallow(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
       shallow(<B />)
-      expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color: blue; } .TWO {} .b { color: red; } ')
+      expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color:blue; } .TWO {} .b { color:red; } ')
     })
   })
 
@@ -183,12 +183,12 @@ describe('rehydration', () => {
       injectGlobal`
         body { color: tomato; }
       `
-      expectCSSMatches('body { background: papayawhip; } .TWO {} .b { color: red; } body { color: tomato; }')
+      expectCSSMatches('body { background: papayawhip; } .TWO {} .b { color: red; } body { color:tomato; }')
 
       expect(getStyleTags()).toEqual([
         { isLocal: 'false', css: '/* sc-component-id: sc-global-557410406 */ body { background: papayawhip; }', },
         { isLocal: 'true', css: '/* sc-component-id: TWO */ .TWO {} .b { color: red; }', },
-        { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body {color: tomato;}', },
+        { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;}', },
       ])
     })
 
@@ -199,12 +199,12 @@ describe('rehydration', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
       shallow(<A />)
 
-      expectCSSMatches('body { background: papayawhip; } .TWO {} .b { color: red; } body { color: tomato; } .ONE { } .a { color: blue; }')
+      expectCSSMatches('body { background: papayawhip; } .TWO {} .b { color: red; } body { color:tomato; } .ONE { } .a { color:blue; }')
       expect(getStyleTags()).toEqual([
         { isLocal: 'false', css: '/* sc-component-id: sc-global-557410406 */ body { background: papayawhip; }', },
         { isLocal: 'true', css: '/* sc-component-id: TWO */ .TWO {} .b { color: red; }', },
-        { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body {color: tomato;}', },
-        { isLocal: 'true', css: '/* sc-component-id: ONE */ .ONE {} .a {color: blue;}', },
+        { isLocal: 'false', css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;}', },
+        { isLocal: 'true', css: '/* sc-component-id: ONE */ .ONE {} .a{color:blue;}', },
       ])
     })
   })
@@ -268,10 +268,10 @@ describe('rehydration', () => {
       /* But it is identical, except for... */
       expect(styleTagsAfterAddition[1].outerHTML).toEqual(
         styleTags[1].outerHTML
-        /* ...the new data attribute for the new classname "c"... */
+          /* ...the new data attribute for the new classname "c"... */
           .replace(new RegExp(`${SC_ATTR}="a b"`), `${SC_ATTR}="a b c"`)
           /* ...and the new CSS before the closing tag.  */
-          .replace(/(?=<\/style>)/, '\n/* sc-component-id: THREE */\n.THREE {}\n.c {color: green;}')
+          .replace(/(?=<\/style>)/, '\n/* sc-component-id: THREE */\n.THREE {}\n.c{color:green;}')
       )
 
       /* Note: any future additions don't replace the style tag */
@@ -285,8 +285,8 @@ describe('rehydration', () => {
         html { font-size: 16px; }
         body { background: papayawhip; }
         .ONE { } .a { color: blue; }
-        .TWO { } .b { color: red; } .d { color: tomato; }
-        .THREE { } .c { color: green; }
+        .TWO { } .b { color: red; } .d { color:tomato; }
+        .THREE { } .c { color:green; }
       `)
     })
 
@@ -363,7 +363,7 @@ describe('rehydration', () => {
       `
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
-        @-webkit-keyframes keyframe_144 {from {opacity: 1;}}@keyframes keyframe_144 {from {opacity: 1;}}
+        @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
       `)
     })
 
@@ -383,7 +383,7 @@ describe('rehydration', () => {
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
         .sc-a { } .d { -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
-        @-webkit-keyframes keyframe_144 {from {opacity: 1;}}@keyframes keyframe_144 {from {opacity: 1;}}
+        @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
         .sc-b { } .c { -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
       `)
     })

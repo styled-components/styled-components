@@ -1,8 +1,10 @@
 // @flow
+/* eslint-disable no-underscore-dangle */
 import React from 'react'
 import type { Tag } from './StyleSheet'
 import StyleSheet, { SC_ATTR, LOCAL_ATTR, clones } from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
+import getNonce from '../utils/nonce'
 
 class ServerTag implements Tag {
   isLocal: boolean
@@ -22,15 +24,28 @@ class ServerTag implements Tag {
   }
 
   addComponent(componentId: string) {
-    if (this.components[componentId]) throw new Error(`Trying to add Component '${componentId}' twice!`)
+    if (process.env.NODE_ENV !== 'production' && this.components[componentId]) {
+      throw new Error(`Trying to add Component '${componentId}' twice!`)
+    }
     this.components[componentId] = { componentId, css: '' }
     this.size += 1
+  }
+
+  concatenateCSS() {
+    return Object.keys(this.components).reduce(
+      (styles, k) => styles + this.components[k].css,
+      '',
+    )
   }
 
   inject(componentId: string, css: string, name: ?string) {
     const comp = this.components[componentId]
 
-    if (!comp) throw new Error('Must add a new component before you can inject css into it')
+    if (process.env.NODE_ENV !== 'production' && !comp) {
+      throw new Error(
+        'Must add a new component before you can inject css into it',
+      )
+    }
     if (comp.css === '') comp.css = `/* sc-component-id: ${componentId} */\n`
 
     comp.css += css.replace(/\n*$/, '\n')
@@ -39,28 +54,39 @@ class ServerTag implements Tag {
   }
 
   toHTML() {
-    const namesAttr = `${SC_ATTR}="${this.names.join(' ')}"`
-    const localAttr = `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`
-    const css = Object.keys(this.components)
-      .map(key => this.components[key].css)
-      .join('')
+    const attrs = [
+      'type="text/css"',
+      `${SC_ATTR}="${this.names.join(' ')}"`,
+      `${LOCAL_ATTR}="${this.isLocal ? 'true' : 'false'}"`,
+    ]
 
-    return `<style type="text/css" ${namesAttr} ${localAttr}>\n${css}\n</style>`
+    const nonce = getNonce()
+
+    if (nonce) {
+      attrs.push(`nonce="${nonce}"`)
+    }
+
+    return `<style ${attrs.join(' ')}>${this.concatenateCSS()}</style>`
   }
 
   toReactElement(key: string) {
-    const attributes = {
+    const attrs: Object = {
       [SC_ATTR]: this.names.join(' '),
       [LOCAL_ATTR]: this.isLocal.toString(),
     }
-    const css = Object.keys(this.components)
-      .map(k => this.components[k].css)
-      .join('')
+
+    const nonce = getNonce()
+
+    if (nonce) {
+      attrs.nonce = nonce
+    }
 
     return (
       <style
-        key={key} type="text/css" {...attributes}
-        dangerouslySetInnerHTML={{ __html: css }}
+        key={key}
+        type="text/css"
+        {...attrs}
+        dangerouslySetInnerHTML={{ __html: this.concatenateCSS() }}
       />
     )
   }
@@ -69,11 +95,10 @@ class ServerTag implements Tag {
     const copy = new ServerTag(this.isLocal)
     copy.names = [].concat(this.names)
     copy.size = this.size
-    copy.components = Object.keys(this.components)
-      .reduce((acc, key) => {
-        acc[key] = { ...this.components[key] } // eslint-disable-line no-param-reassign
-        return acc
-      }, {})
+    copy.components = Object.keys(this.components).reduce((acc, key) => {
+      acc[key] = { ...this.components[key] } // eslint-disable-line no-param-reassign
+      return acc
+    }, {})
 
     return copy
   }
@@ -88,11 +113,11 @@ export default class ServerStyleSheet {
   }
 
   collectStyles(children: any) {
-    if (this.closed) throw new Error("Can't collect styles once you've called getStyleTags!")
+    if (this.closed) {
+      throw new Error("Can't collect styles once you've called getStyleTags!")
+    }
     return (
-      <StyleSheetManager sheet={this.instance}>
-        {children}
-      </StyleSheetManager>
+      <StyleSheetManager sheet={this.instance}>{children}</StyleSheetManager>
     )
   }
 

@@ -1,5 +1,5 @@
 // @flow
-const SC_COMPONENT_ID = /^[^\S\n]*?\/\* sc-component-id:\s+(\S+)\s+\*\//mg
+const SC_COMPONENT_ID = /^[^\S\n]*?\/\* sc-component-id:\s+(\S+)\s+\*\//gm
 
 export default (maybeCSS: ?string): Array<Object> => {
   const css = `${maybeCSS || ''}` // Definitely a string, and a clone
@@ -10,7 +10,9 @@ export default (maybeCSS: ?string): Array<Object> => {
   })
   return existingComponents.map(({ componentId, matchIndex }, i) => {
     const nextComp = existingComponents[i + 1]
-    const cssFromDOM = nextComp ? css.slice(matchIndex, nextComp.matchIndex) : css.slice(matchIndex)
+    const cssFromDOM = nextComp
+      ? css.slice(matchIndex, nextComp.matchIndex)
+      : css.slice(matchIndex)
     return { componentId, cssFromDOM }
   })
 }

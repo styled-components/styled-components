@@ -46,12 +46,45 @@ describe('expanded api', () => {
     })
 
     it('should be attached if passed in', () => {
-      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })``
-      const Comp2 = styled.div.withConfig({ displayName: 'Comp2', componentId: 'OMGLOL' })``
+      const Comp = styled.div.withConfig({ componentId: 'LOLOMG' })``
+      const Comp2 = styled.div.withConfig({ componentId: 'OMGLOL' })``
       expect(Comp.styledComponentId).toBe('LOLOMG')
       expect(shallow(<Comp />).prop('className')).toMatch(/LOLOMG/)
       expect(Comp2.styledComponentId).toBe('OMGLOL')
       expect(shallow(<Comp2 />).prop('className')).toMatch(/OMGLOL/)
+    })
+
+    it('should be combined with displayName if both passed in', () => {
+      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })``
+      const Comp2 = styled.div.withConfig({ displayName: 'Comp2', componentId: 'OMGLOL' })``
+      expect(Comp.styledComponentId).toBe('Comp-LOLOMG')
+      expect(shallow(<Comp />).prop('className')).toMatch(/Comp-LOLOMG/)
+      expect(Comp2.styledComponentId).toBe('Comp2-OMGLOL')
+      expect(shallow(<Comp2 />).prop('className')).toMatch(/Comp2-OMGLOL/)
+    })
+
+    it('should work with `.extend`', () => {
+      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })`
+        color: blue;
+      `
+      const Comp2 = Comp.extend`
+        color: ${'red'};
+        background: ${props => props.bg};
+      `
+      expect(Comp.styledComponentId).toBe('Comp-LOLOMG')
+      expect(shallow(<Comp />).prop('className')).toMatch(/Comp-LOLOMG/)
+      expect(Comp2.styledComponentId).toBe('LOLOMG-Comp-a')
+      expect(shallow(<Comp2 bg="red" />).prop('className')).toMatch(/LOLOMG-Comp-a/)
+    })
+
+    it('should work with `.withComponent`', () => {
+      const Dummy = () => null
+      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'OMGLOL' })``.withComponent('h1')
+      const Comp2 = styled.div.withConfig({ displayName: 'Comp2', componentId: 'OMFG' })``.withComponent(Dummy)
+      expect(Comp.styledComponentId).toBe('Comp-OMGLOL-h1')
+      expect(shallow(<Comp />).prop('className')).toMatch(/Comp-OMGLOL-h1/)
+      expect(Comp2.styledComponentId).toBe('Comp2-OMFG-Dummy')
+      expect(shallow(<Comp2 />).prop('className')).toMatch(/Comp2-OMFG-Dummy/)
     })
   })
 
@@ -62,7 +95,7 @@ describe('expanded api', () => {
         .withConfig({ displayName: 'dn-2' })
         ``
       expect(Comp.displayName).toBe('dn-2')
-      expect(shallow(<Comp />).prop('className')).toBe('id-1 a')
+      expect(shallow(<Comp />).prop('className')).toBe('dn-2-id-1 a')
     })
 
     it('should keep the last value passed in when merging', () => {
@@ -71,7 +104,7 @@ describe('expanded api', () => {
         .withConfig({ displayName: 'dn-5', componentId: 'id-4' })
         ``
       expect(Comp.displayName).toBe('dn-5')
-      expect(shallow(<Comp />).prop('className')).toBe('id-4 a')
+      expect(shallow(<Comp />).prop('className')).toBe('dn-5-id-4 a')
     })
   })
 })

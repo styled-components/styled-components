@@ -66,6 +66,7 @@ export default [
   'main',
   'map',
   'mark',
+  'marquee',
   'menu',
   'menuitem',
   'meta',
@@ -137,4 +138,3 @@ export default [
   'text',
   'tspan',
 ]
-

@@ -1,0 +1,147 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 1`] = `"<h1 class=\\"sc-a b\\" data-reactroot=\\"\\" data-reactid=\\"1\\" data-react-checksum=\\"197727696\\">Hello SSR!</h1>"`;
+
+exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 2`] = `
+"<style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\" nonce=\\"foo\\">/* sc-component-id: sc-global-2303210225 */
+body{background:papayawhip;}
+</style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\" nonce=\\"foo\\">/* sc-component-id: sc-a */
+.sc-a {}
+
+.b{color:red;}
+</style>"
+`;
+
+exports[`ssr should allow global styles to be injected during rendering 1`] = `"<h1 class=\\"PageOne a\\" data-reactroot=\\"\\" data-reactid=\\"1\\" data-react-checksum=\\"2014320521\\">Camera One!</h1>"`;
+
+exports[`ssr should allow global styles to be injected during rendering 2`] = `
+"<style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-737874422 */
+html::before{content:'Before both renders';}
+</style><style type=\\"text/css\\" data-styled-components=\\"a\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: PageOne */
+.PageOne {}
+
+.a{color:red;}
+</style><style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-2914197427 */
+html::before{content:'During first render';}
+</style>"
+`;
+
+exports[`ssr should allow global styles to be injected during rendering 3`] = `"<h2 class=\\"PageTwo b\\" data-reactroot=\\"\\" data-reactid=\\"1\\" data-react-checksum=\\"2124224444\\">Camera Two!</h2>"`;
+
+exports[`ssr should allow global styles to be injected during rendering 4`] = `
+"<style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-737874422 */
+html::before{content:'Before both renders';}
+</style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: PageTwo */
+.PageTwo {}
+
+.b{color:blue;}
+</style><style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-2914197427 */
+html::before{content:'During first render';}
+/* sc-component-id: sc-global-1207956261 */
+html::before{content:'Between renders';}
+/* sc-component-id: sc-global-3990873394 */
+html::before{content:'During second render';}
+</style>"
+`;
+
+exports[`ssr should dispatch global styles to each ServerStyleSheet 1`] = `"<h1 class=\\"Header a\\" data-reactroot=\\"\\" data-reactid=\\"1\\" data-react-checksum=\\"1829114759\\"></h1>"`;
+
+exports[`ssr should dispatch global styles to each ServerStyleSheet 2`] = `
+"<style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-2303210225 */
+body{background:papayawhip;}
+</style><style type=\\"text/css\\" data-styled-components=\\"a\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: Header */
+.Header {}
+
+.a{-webkit-animation:keyframe_0 1s both;animation:keyframe_0 1s both;}
+/* sc-component-id: sc-keyframes-keyframe_0 */
+@-webkit-keyframes keyframe_0{0%{opacity:0;}}@keyframes keyframe_0{0%{opacity:0;}}
+</style>"
+`;
+
+exports[`ssr should extract both global and local CSS 1`] = `"<h1 class=\\"sc-a b\\" data-reactroot=\\"\\" data-reactid=\\"1\\" data-react-checksum=\\"197727696\\">Hello SSR!</h1>"`;
+
+exports[`ssr should extract both global and local CSS 2`] = `
+"<style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-2303210225 */
+body{background:papayawhip;}
+</style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: sc-a */
+.sc-a {}
+
+.b{color:red;}
+</style>"
+`;
+
+exports[`ssr should extract the CSS in a simple case 1`] = `"<h1 class=\\"sc-a b\\" data-reactroot=\\"\\" data-reactid=\\"1\\" data-react-checksum=\\"197727696\\">Hello SSR!</h1>"`;
+
+exports[`ssr should extract the CSS in a simple case 2`] = `
+"<style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: sc-a */
+.sc-a {}
+
+.b{color:red;}
+</style>"
+`;
+
+exports[`ssr should render CSS in the order the components were defined, not rendered 1`] = `"<div data-reactroot=\\"\\" data-reactid=\\"1\\" data-react-checksum=\\"275982144\\"><h2 class=\\"TWO a\\" data-reactid=\\"2\\"></h2><h1 class=\\"ONE b\\" data-reactid=\\"3\\"></h1></div>"`;
+
+exports[`ssr should render CSS in the order the components were defined, not rendered 2`] = `
+"<style type=\\"text/css\\" data-styled-components=\\"a b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: ONE */
+.ONE {}
+
+.b{color:red;}
+/* sc-component-id: TWO */
+.TWO {}
+
+.a{color:blue;}
+</style>"
+`;
+
+exports[`ssr should return a generated React style element 1`] = `
+Object {
+  "dangerouslySetInnerHTML": Object {
+    "__html": "/* sc-component-id: sc-global-2303210225 */
+body{background:papayawhip;}
+",
+  },
+  "data-styled-components": "",
+  "data-styled-components-is-local": "false",
+  "type": "text/css",
+}
+`;
+
+exports[`ssr should return a generated React style element 2`] = `
+Object {
+  "dangerouslySetInnerHTML": Object {
+    "__html": "/* sc-component-id: sc-a */
+.sc-a {}
+
+.b{color:red;}
+",
+  },
+  "data-styled-components": "b",
+  "data-styled-components-is-local": "true",
+  "type": "text/css",
+}
+`;
+
+exports[`ssr should share global styles but keep renders separate 1`] = `"<h1 class=\\"PageOne a\\" data-reactroot=\\"\\" data-reactid=\\"1\\" data-react-checksum=\\"2014320521\\">Camera One!</h1>"`;
+
+exports[`ssr should share global styles but keep renders separate 2`] = `
+"<style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-2303210225 */
+body{background:papayawhip;}
+</style><style type=\\"text/css\\" data-styled-components=\\"a\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: PageOne */
+.PageOne {}
+
+.a{color:red;}
+</style>"
+`;
+
+exports[`ssr should share global styles but keep renders separate 3`] = `"<h2 class=\\"PageTwo b\\" data-reactroot=\\"\\" data-reactid=\\"1\\" data-react-checksum=\\"2124224444\\">Camera Two!</h2>"`;
+
+exports[`ssr should share global styles but keep renders separate 4`] = `
+"<style type=\\"text/css\\" data-styled-components=\\"\\" data-styled-components-is-local=\\"false\\">/* sc-component-id: sc-global-2303210225 */
+body{background:papayawhip;}
+</style><style type=\\"text/css\\" data-styled-components=\\"b\\" data-styled-components-is-local=\\"true\\">/* sc-component-id: PageTwo */
+.PageTwo {}
+
+.b{color:blue;}
+</style>"
+`;

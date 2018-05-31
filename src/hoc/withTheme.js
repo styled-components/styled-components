@@ -4,17 +4,22 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import hoistStatics from 'hoist-non-react-statics'
-import { CHANNEL } from '../models/ThemeProvider'
+import {
+  CHANNEL,
+  CHANNEL_NEXT,
+  CONTEXT_CHANNEL_SHAPE,
+} from '../models/ThemeProvider'
 import _isStyledComponent from '../utils/isStyledComponent'
+import determineTheme from '../utils/determineTheme'
 
 const wrapWithTheme = (Component: ReactClass<any>) => {
-  const componentName = (
-    Component.displayName ||
-    Component.name ||
-    'Component'
-  )
+  const componentName = Component.displayName || Component.name || 'Component'
 
-  const isStyledComponent = _isStyledComponent(Component)
+  const shouldSetInnerRef =
+    _isStyledComponent(Component) ||
+    // NOTE: We can't pass a ref to a stateless functional component
+    (typeof Component === 'function' &&
+      !(Component.prototype && 'isReactComponent' in Component.prototype))
 
   class WithTheme extends React.Component {
     static displayName = `WithTheme(${componentName})`
@@ -24,24 +29,52 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
 
     static contextTypes = {
       [CHANNEL]: PropTypes.func,
-    };
+      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+    }
 
-    state: { theme?: ?Object } = {};
-    unsubscribe: () => void;
+    state: { theme?: ?Object } = {}
+    unsubscribeId: number = -1
 
     componentWillMount() {
-      if (!this.context[CHANNEL]) {
-        throw new Error('[withTheme] Please use ThemeProvider to be able to use withTheme')
+      const { defaultProps } = this.constructor
+      const styledContext = this.context[CHANNEL_NEXT]
+      const themeProp = determineTheme(this.props, undefined, defaultProps)
+      if (
+        styledContext === undefined &&
+        themeProp === undefined &&
+        process.env.NODE_ENV !== 'production'
+      ) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          '[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps',
+        )
+      } else if (styledContext === undefined && themeProp !== undefined) {
+        this.setState({ theme: themeProp })
+      } else {
+        const { subscribe } = styledContext
+        this.unsubscribeId = subscribe(nextTheme => {
+          const theme = determineTheme(this.props, nextTheme, defaultProps)
+          this.setState({ theme })
+        })
       }
+    }
 
-      const subscribe = this.context[CHANNEL]
-      this.unsubscribe = subscribe(theme => {
-        this.setState({ theme })
+    componentWillReceiveProps(nextProps: {
+      theme?: ?Object,
+      [key: string]: any,
+    }) {
+      const { defaultProps } = this.constructor
+      this.setState(oldState => {
+        const theme = determineTheme(nextProps, oldState.theme, defaultProps)
+
+        return { theme }
       })
     }
 
     componentWillUnmount() {
-      if (typeof this.unsubscribe === 'function') this.unsubscribe()
+      if (this.unsubscribeId !== -1) {
+        this.context[CHANNEL_NEXT].unsubscribe(this.unsubscribeId)
+      }
     }
 
     render() {
@@ -53,8 +86,8 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
         <Component
           theme={theme}
           {...this.props}
-          innerRef={isStyledComponent ? innerRef : undefined}
-          ref={isStyledComponent ? undefined : innerRef}
+          innerRef={shouldSetInnerRef ? innerRef : undefined}
+          ref={shouldSetInnerRef ? undefined : innerRef}
         />
       )
     }

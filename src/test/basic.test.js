@@ -18,6 +18,18 @@ describe('basic', () => {
     styled.div``
   })
 
+  it('should throw a meaningful error when called with null', () => {
+    const invalidComps = [undefined, null, 123, []]
+    invalidComps.forEach(comp => {
+      expect(() => {
+        // $FlowInvalidInputTest
+        const Comp = styled(comp)
+        shallow(<Comp />)
+        // $FlowInvalidInputTest
+      }).toThrow(`Cannot create styled-component for component: ${comp}`)
+    })
+  })
+
   it('should not inject anything by default', () => {
     styled.div``
     expectCSSMatches('')
@@ -34,7 +46,7 @@ describe('basic', () => {
       color: blue;
     `
     shallow(<Comp />)
-    expectCSSMatches('.sc-a { } .b { color: blue; }')
+    expectCSSMatches('.sc-a { } .b { color:blue; }')
   })
 
   it('should inject only once for a styled component, no matter how often it\'s mounted', () => {
@@ -43,7 +55,7 @@ describe('basic', () => {
     `
     shallow(<Comp />)
     shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { color: blue; }')
+    expectCSSMatches('.sc-a {} .b { color:blue; }')
   })
 
   it('Should have the correct styled(component) displayName', () => {
@@ -165,7 +177,7 @@ describe('basic', () => {
       shallow(<SecondComponent />)
       shallow(<FirstComponent />)
 
-      expectCSSMatches('.sc-a {} .d { color: red; } .sc-b {} .c { color: blue; }')
+      expectCSSMatches('.sc-a {} .d { color:red; } .sc-b {} .c { color:blue; }')
     })
   })
 })

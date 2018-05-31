@@ -32,6 +32,42 @@ describe('native', () => {
     expect(view.prop('style')).toEqual([ { paddingTop: 10 }, style ])
   })
 
+  it('should not console.warn if a comment is seen', () => {
+    const oldConsoleWarn = console.warn;
+    console.warn = jest.fn();
+    try {
+      styled.View`
+        /* this is a comment */
+      `
+
+      expect(console.warn).not.toHaveBeenCalled();
+    } finally {
+      console.warn = oldConsoleWarn;
+    }
+  })
+
+  // https://github.com/styled-components/styled-components/issues/1266
+  it('should update when props change', () => {
+    const Comp = styled.View`
+      padding-top: 5px;
+      opacity: ${p => p.opacity || 0};
+    `
+
+    const comp = shallow(<Comp opacity={0.5} />)
+
+    expect(comp.find('View').prop('style')).toEqual([
+      { paddingTop: 5, opacity: 0.5 },
+      undefined
+    ])
+
+    comp.setProps({ opacity: 0.9 });
+
+    expect(comp.find('View').prop('style')).toEqual([
+      { paddingTop: 5, opacity: 0.9 },
+      undefined
+    ])
+  })
+
   describe('extending', () => {
     it('should combine styles of extending components', () => {
       const Parent = styled.View`opacity: 0.9;`
@@ -53,6 +89,55 @@ describe('native', () => {
           paddingBottom: 10,
           paddingLeft: 10
         }, undefined
+      ])
+    })
+
+    it('should combine styles of extending components in >= 3 inheritances', () => {
+      const GrandGrandParent = styled.View`background-color: red;`
+      const GrandParent = GrandGrandParent.extend`borderWidth: 10;`
+      const Parent = GrandParent.extend`opacity: 0.9;`
+      const Child = Parent.extend`padding: 10px;`
+
+      const grandGrandParent = shallow(<GrandGrandParent />)
+      const grandParent = shallow(<GrandParent />)
+      const parent = shallow(<Parent />)
+      const child = shallow(<Child />)
+
+      expect(grandGrandParent.find('View').prop('style')).toEqual([
+        {
+          backgroundColor: 'red',
+        },
+        undefined,
+      ])
+
+      expect(grandParent.find('View').prop('style')).toEqual([
+        {
+          backgroundColor: 'red',
+          borderWidth: 10,
+        },
+        undefined,
+      ])
+
+      expect(parent.find('View').prop('style')).toEqual([
+        {
+          backgroundColor: 'red',
+          borderWidth: 10,
+          opacity: 0.9,
+        },
+        undefined,
+      ])
+
+      expect(child.find('View').prop('style')).toEqual([
+        {
+          backgroundColor: 'red',
+          borderWidth: 10,
+          opacity: 0.9,
+          paddingTop: 10,
+          paddingRight: 10,
+          paddingBottom: 10,
+          paddingLeft: 10,
+        },
+        undefined,
       ])
     })
   })
@@ -164,10 +249,12 @@ describe('native', () => {
 
       const wrapper = mount(<Comp innerRef={ref} />)
       const view = wrapper.find('View').first()
+      const comp = wrapper.find(Comp).first()
 
       // $FlowFixMe
       expect(ref).toHaveBeenCalledWith(view.node)
       expect(view.prop('innerRef')).toBeFalsy()
+      expect(comp.node.root).toBeTruthy()
     })
 
     class InnerComponent extends React.Component {
@@ -182,10 +269,12 @@ describe('native', () => {
 
       const wrapper = mount(<OuterComponent innerRef={ref} />)
       const innerComponent = wrapper.find(InnerComponent).first()
+      const outerComponent = wrapper.find(OuterComponent).first()
 
       // $FlowFixMe
       expect(ref).toHaveBeenCalledWith(innerComponent.node)
       expect(innerComponent.prop('innerRef')).toBeFalsy()
+      expect(outerComponent.node.root).toBeTruthy()
     })
 
     it('should pass the innerRef to the wrapped styled component', () => {
@@ -196,9 +285,25 @@ describe('native', () => {
       const wrapper = mount(<OuterComponent innerRef={ref} />)
       const view = wrapper.find('View').first()
       const innerComponent = wrapper.find(InnerComponent).first()
+      const outerComponent = wrapper.find(OuterComponent).first()
 
       // $FlowFixMe
       expect(ref).toHaveBeenCalledWith(view.node)
+      expect(outerComponent.node.root).toBeTruthy()
+    })
+
+    it('should pass innerRef instead of ref to a wrapped stateless functional component', () => {
+      const InnerComponent = () => null
+      const OuterComponent = styled(InnerComponent)``
+      // NOTE: A ref should always be passed, so we don't need to (setNativeProps feature)
+
+      const wrapper = mount(<OuterComponent />)
+      const outerComponent = wrapper.find(OuterComponent).first()
+      const innerComponent = wrapper.find(InnerComponent).first()
+
+      expect(innerComponent.prop('ref')).toBeFalsy()
+      expect(innerComponent.prop('innerRef')).toBeTruthy()
+      expect(outerComponent.node.root).toBeFalsy()
     })
   })
 })

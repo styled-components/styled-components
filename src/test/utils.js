@@ -23,8 +23,11 @@ const classNames = () => seededClassnames.shift() || String.fromCodePoint(97 + i
 
 export const seedNextClassnames = (names: Array<string>) => seededClassnames = names
 export const resetStyled = (isServer: boolean = false) => {
-  if (!document.head) throw new Error("Missing document <head>")
-  document.head.innerHTML = ''
+  if (!isServer) {
+    if (!document.head) throw new Error("Missing document <head>")
+    document.head.innerHTML = ''
+  }
+
   StyleSheet.reset(isServer)
   index = 0
 
@@ -54,8 +57,17 @@ const stripComments = (str: string) =>
 export const stripWhitespace = (str: string) =>
   str.trim().replace(/([;\{\}])/g, '$1  ').replace(/\s+/g, ' ')
 
-export const expectCSSMatches = (expectation: string, opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }) => {
-  const css = Array.from(document.querySelectorAll('style')).map(tag => tag.innerHTML).join("\n")
+export const expectCSSMatches = (_expectation: string, opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }) => {
+  // NOTE: This should normalise both CSS strings to make irrelevant mismatches less likely
+  const expectation = _expectation
+    .replace(/ {/g, '{')
+    .replace(/:\s+;/g, ':;')
+
+  const css = Array.from(document.querySelectorAll('style'))
+    .map(tag => tag.innerHTML)
+    .join('\n')
+    .replace(/ {/g, '{')
+    .replace(/:\s+;/g, ':;')
 
   if (opts.ignoreWhitespace) {
     const stripped = stripWhitespace(stripComments(css))

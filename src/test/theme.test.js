@@ -23,7 +23,7 @@ describe('theming', () => {
         <Comp />
       </ThemeProvider>
     )
-    expectCSSMatches(`.sc-a {} .b { color: ${theme.color}; }`)
+    expectCSSMatches(`.sc-a {} .b { color:${theme.color}; }`)
   })
 
   it('should inject props.theme into a styled component multiple levels deep', () => {
@@ -40,7 +40,7 @@ describe('theming', () => {
         </div>
       </ThemeProvider>
     )
-    expectCSSMatches(`.sc-a {} .b { color: ${theme.color}; }`)
+    expectCSSMatches(`.sc-a {} .b { color:${theme.color}; }`)
   })
 
   it('should properly allow a component to fallback to its default props when a theme is not provided', () => {
@@ -60,7 +60,7 @@ describe('theming', () => {
         <Comp1 />
       </div>
     )
-    expectCSSMatches(`.sc-a {} .b { color: purple; }`)
+    expectCSSMatches(`.sc-a {} .b { color:purple; }`)
   })
 
   // https://github.com/styled-components/styled-components/issues/344
@@ -83,7 +83,7 @@ describe('theming', () => {
         <Comp1 />
       </ThemeProvider>
     )
-    expectCSSMatches(`.sc-a {} .b { color: green; }`)
+    expectCSSMatches(`.sc-a {} .b { color:green; }`)
   })
 
   it('should properly allow a component to override the theme with a prop even if it is equal to defaultProps theme', () => {
@@ -105,7 +105,7 @@ describe('theming', () => {
         <Comp1 theme={{ test: { color: 'purple' } }} />
       </ThemeProvider>
     )
-    expectCSSMatches(`.sc-a {} .b { color: purple; }`)
+    expectCSSMatches(`.sc-a {} .b { color:purple; }`)
   })
 
   it('should properly allow a component to override the theme with a prop', () => {
@@ -120,11 +120,11 @@ describe('theming', () => {
     render(
       <div>
         <ThemeProvider theme={theme}>
-          <Comp theme={{ color: 'red' }}/>
+          <Comp theme={{ color: 'red' }} />
         </ThemeProvider>
       </div>
     )
-    expectCSSMatches(`.sc-a {} .b { color: red; }`)
+    expectCSSMatches(`.sc-a {} .b { color:red; }`)
   })
 
   it('should properly set the theme with an empty object when no theme is provided and no defaults are set', () => {
@@ -136,7 +136,7 @@ describe('theming', () => {
         <Comp1 />
       </div>
     )
-    expectCSSMatches(`.sc-a {} .b { color: ; }`)
+    expectCSSMatches(`.sc-a {}`)
   })
 
   it('should only inject props.theme into styled components within its child component tree', () => {
@@ -158,7 +158,7 @@ describe('theming', () => {
         <Comp2 />
       </div>
     )
-    expectCSSMatches(`.sc-a {} .c { color: ${theme.color}; } .sc-b {} .d { background: ; }`)
+    expectCSSMatches(`.sc-a {} .c { color:${theme.color}; } .sc-b {}`)
   })
 
   it('should inject props.theme into all styled components within the child component tree', () => {
@@ -179,7 +179,7 @@ describe('theming', () => {
         </div>
       </ThemeProvider>
     )
-    expectCSSMatches(`.sc-a {} .c { color: ${theme.color}; } .sc-b {} .d { background: ${theme.color}; }`)
+    expectCSSMatches(`.sc-a {} .c { color:${theme.color}; } .sc-b {} .d { background:${theme.color}; }`)
   })
 
   it('should inject new CSS when the theme changes', () => {
@@ -198,11 +198,11 @@ describe('theming', () => {
       )
     }
     renderComp()
-    const initialCSS = expectCSSMatches(`.sc-a {} .b { color: ${theme.color}; }`)
+    const initialCSS = expectCSSMatches(`.sc-a {} .b { color:${theme.color}; }`)
     // Change the theme
     theme = newTheme
     renderComp()
-    expectCSSMatches(`${initialCSS} .c { color: ${newTheme.color}; }`)
+    expectCSSMatches(`${initialCSS} .c { color:${newTheme.color}; }`)
   })
 })
 
@@ -224,10 +224,10 @@ describe('theming', () => {
     const wrapper = mount(
       <Comp1 />
     )
-    expectCSSMatches(`.sc-a {} .b { color: purple; }`)
+    expectCSSMatches(`.sc-a {} .b { color:purple; }`)
 
     wrapper.update();
-    expectCSSMatches(`.sc-a {} .b { color: purple; }`)
+    expectCSSMatches(`.sc-a {} .b { color:purple; }`)
   })
 
   it('should properly update style if theme is changed', () => {
@@ -243,10 +243,10 @@ describe('theming', () => {
     const wrapper = mount(
       <Comp1 />
     )
-    expectCSSMatches(`.sc-a {} .b { color: purple; }`)
+    expectCSSMatches(`.sc-a {} .b { color:purple; }`)
 
     wrapper.setProps({ theme: { color: 'pink' } })
-    expectCSSMatches(`.sc-a {} .b { color: purple; } .c { color: pink; }`)
+    expectCSSMatches(`.sc-a {} .b { color:purple; } .c { color:pink; }`)
   })
 
   it('should properly update style if props used in styles is changed', () => {
@@ -264,15 +264,15 @@ describe('theming', () => {
     const wrapper = mount(
       <Comp1 />
     )
-    let expectedStyles = `.sc-a {} .b { color: purple; z-index: 0px; }`
+    let expectedStyles = `.sc-a {} .b { color:purple; z-index:0px; }`
     expectCSSMatches(expectedStyles)
 
     wrapper.setProps({ theme: { color: 'pink' } })
-    expectedStyles = `${expectedStyles} .c { color: pink; z-index: 0px; }`
+    expectedStyles = `${expectedStyles} .c { color:pink; z-index:0px; }`
     expectCSSMatches(expectedStyles)
 
     wrapper.setProps({ zIndex: 1 });
-    expectCSSMatches(`${expectedStyles} .d { color: pink; z-index: 1px; }`)
+    expectCSSMatches(`${expectedStyles} .d { color:pink; z-index:1px; }`)
   })
 
   it('should change the classnames when the theme changes', () => {
@@ -294,13 +294,13 @@ describe('theming', () => {
     )
 
 
-    expectCSSMatches(`.sc-a {} .b { color: ${originalTheme.color}; }`)
+    expectCSSMatches(`.sc-a {} .b { color:${originalTheme.color}; }`)
     expect(wrapper.find('div').prop('className')).toBe('sc-a b')
 
     // Change theme
     wrapper.setProps({ theme: newTheme })
 
-    expectCSSMatches(`.sc-a {} .b { color: ${originalTheme.color}; } .c { color: ${newTheme.color}; }`)
+    expectCSSMatches(`.sc-a {} .b { color:${originalTheme.color}; } .c { color:${newTheme.color}; }`)
     expect(wrapper.find('div').prop('className')).toBe('sc-a c')
   })
 
@@ -356,7 +356,7 @@ describe('theming', () => {
       },
     }
 
-    const Theme = ({ props }) => (
+    const Theme = props => (
       <ThemeProvider theme={{ color: 'green' }}>
         <Text {...props} />
       </ThemeProvider>
@@ -366,11 +366,11 @@ describe('theming', () => {
       <Theme prop="foo" />
     )
 
-    expectCSSMatches(`.sc-a { } .b { color: green; } `)
+    expectCSSMatches(`.sc-a { } .b { color:green; } `)
 
     wrapper.setProps({ prop: 'bar' })
 
-    expectCSSMatches(`.sc-a { } .b { color: green; } `)
+    expectCSSMatches(`.sc-a { } .b { color:green; } `)
   })
 
   // https://github.com/styled-components/styled-components/issues/596
@@ -407,6 +407,23 @@ describe('theming', () => {
     expect(inner.prop('innerRef')).toBe(undefined)
   })
 
+  it('should accept innerRef and pass it on for stateless function components', () => {
+    const Comp = () => <div />
+    const CompWithTheme = withTheme(Comp)
+    const ref = jest.fn()
+
+    const wrapper = mount(
+      <ThemeProvider theme={{}}>
+        <CompWithTheme innerRef={ref} />
+      </ThemeProvider>
+    )
+
+    const inner = wrapper.find(Comp).first()
+
+    expect(ref).toHaveBeenCalledTimes(0)
+    expect(inner.prop('innerRef')).toBe(ref)
+  })
+
   it('should accept innerRef and pass it on for styled components', () => {
     const Comp = styled.div``
     const CompWithTheme = withTheme(Comp)
@@ -423,5 +440,24 @@ describe('theming', () => {
     // $FlowFixMe
     expect(ref).toHaveBeenCalledWith(inner.getDOMNode())
     expect(inner.prop('innerRef')).toBe(ref)
+  })
+
+  // https://github.com/styled-components/styled-components/issues/1130
+  it('should not break without a ThemeProvier if it has a defaultTheme', () => {
+    const MyDiv = ({ theme }) => <div>{theme.color}</div>
+    const MyDivWithTheme = withTheme(MyDiv);
+    const theme = { color: 'red' }
+    const newTheme = { color: 'blue' }
+
+    MyDivWithTheme.defaultProps = { theme }
+
+    const wrapper = mount(<MyDivWithTheme />)
+
+    expect(wrapper.find('div').text()).toBe('red')
+
+    // Change theme
+    wrapper.setProps({ theme: newTheme })
+
+    expect(wrapper.find('div').text()).toBe('blue')
   })
 })

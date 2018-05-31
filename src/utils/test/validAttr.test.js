@@ -445,6 +445,8 @@ describe('validAttr', () => {
     expect(validAttr('onInputCapture')).toEqual(true)
     expect(validAttr('onSubmit')).toEqual(true)
     expect(validAttr('onSubmitCapture')).toEqual(true)
+    expect(validAttr('onReset')).toEqual(true)
+    expect(validAttr('onResetCapture')).toEqual(true)
     expect(validAttr('onClick')).toEqual(true)
     expect(validAttr('onClickCapture')).toEqual(true)
     expect(validAttr('onContextMenu')).toEqual(true)
@@ -552,4 +554,8 @@ describe('validAttr', () => {
     expect(validAttr('onTransitionEnd')).toEqual(true)
     expect(validAttr('onTransitionEndCapture')).toEqual(true)
   })
+  it('should not allow custom props', () => {
+    expect(validAttr('isPrimary')).toEqual(false)
+    expect(validAttr('primary')).toEqual(false)
+  });
 })

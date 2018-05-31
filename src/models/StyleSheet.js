@@ -7,31 +7,42 @@ export const SC_ATTR = 'data-styled-components'
 export const LOCAL_ATTR = 'data-styled-components-is-local'
 export const CONTEXT_KEY = '__styled-components-stylesheet__'
 
+/* eslint-disable flowtype/object-type-delimiter */
 export interface Tag {
-  isLocal: boolean,
-  components: { [string]: Object },
+  isLocal: boolean;
+  components: { [string]: Object };
 
-  isFull(): boolean,
-  addComponent(componentId: string): void,
-  inject(componentId: string, css: string, name: ?string): void,
-  toHTML(): string,
-  toReactElement(key: string): React.Element<*>,
-  clone(): Tag,
+  isFull(): boolean;
+  addComponent(componentId: string): void;
+  inject(componentId: string, css: string, name: ?string): void;
+  toHTML(): string;
+  toReactElement(key: string): React.Element<*>;
+  clone(): Tag;
 }
+/* eslint-enable flowtype/object-type-delimiter */
 
 let instance = null
 // eslint-disable-next-line no-use-before-define
 export const clones: Array<StyleSheet> = []
 
 export default class StyleSheet {
-  tagConstructor: (boolean) => Tag
+  tagConstructor: boolean => Tag
   tags: Array<Tag>
   names: { [string]: boolean }
   hashes: { [string]: string } = {}
   deferredInjections: { [string]: string } = {}
   componentTags: { [string]: Tag }
+  // helper for `ComponentStyle` to know when it cache static styles.
+  // staticly styled-component can not safely cache styles on the server
+  // without all `ComponentStyle` instances saving a reference to the
+  // the styleSheet instance they last rendered with,
+  // or listening to creation / reset events. otherwise you might create
+  // a component with one stylesheet and render it another api response
+  // with another, losing styles on from your server-side render.
+  stylesCacheable = typeof document !== 'undefined'
 
-  constructor(tagConstructor: (boolean) => Tag,
+  constructor(
+    tagConstructor: boolean => Tag,
     tags: Array<Tag> = [],
     names: { [string]: boolean } = {},
   ) {
@@ -81,7 +92,13 @@ export default class StyleSheet {
     this.deferredInjections[componentId] = css
   }
 
-  inject(componentId: string, isLocal: boolean, css: string, hash: ?any, name: ?string) {
+  inject(
+    componentId: string,
+    isLocal: boolean,
+    css: string,
+    hash: ?any,
+    name: ?string,
+  ) {
     if (this === instance) {
       clones.forEach(clone => {
         clone.inject(componentId, isLocal, css)
@@ -118,9 +135,10 @@ export default class StyleSheet {
     }
 
     const lastTag = this.tags[this.tags.length - 1]
-    const componentTag = (!lastTag || lastTag.isFull() || lastTag.isLocal !== isLocal)
-      ? this.createNewTag(isLocal)
-      : lastTag
+    const componentTag =
+      !lastTag || lastTag.isFull() || lastTag.isLocal !== isLocal
+        ? this.createNewTag(isLocal)
+        : lastTag
     this.componentTags[componentId] = componentTag
     componentTag.addComponent(componentId)
     return componentTag

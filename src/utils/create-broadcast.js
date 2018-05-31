@@ -7,29 +7,43 @@
 
 export type Broadcast = {
   publish: (value: mixed) => void,
-  subscribe: (listener: () => void) => () => void
+  subscribe: (listener: (currentValue: mixed) => void) => number,
+  unsubscribe: number => void,
 }
 
-const createBroadcast = (initialValue: mixed): Broadcast => {
-  let listeners = []
-  let currentValue = initialValue
+const createBroadcast = (initialState: mixed): Broadcast => {
+  const listeners = {}
+  let id = 0
+  let state = initialState
 
-  return {
-    publish(value: mixed) {
-      currentValue = value
-      listeners.forEach(listener => listener(currentValue))
-    },
-    subscribe(listener) {
-      listeners.push(listener)
+  function publish(nextState: mixed) {
+    state = nextState
 
-      // Publish to this subscriber once immediately.
-      listener(currentValue)
-
-      return () => {
-        listeners = listeners.filter(item => item !== listener)
+    // eslint-disable-next-line guard-for-in, no-restricted-syntax
+    for (const key in listeners) {
+      const listener = listeners[key]
+      if (listener === undefined) {
+        // eslint-disable-next-line no-continue
+        continue
       }
-    },
+
+      listener(state)
+    }
   }
+
+  function subscribe(listener) {
+    const currentId = id
+    listeners[currentId] = listener
+    id += 1
+    listener(state)
+    return currentId
+  }
+
+  function unsubscribe(unsubID: number) {
+    listeners[unsubID] = undefined
+  }
+
+  return { publish, subscribe, unsubscribe }
 }
 
 export default createBroadcast
