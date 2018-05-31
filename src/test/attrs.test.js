@@ -24,6 +24,7 @@ describe('attrs', () => {
   })
 
   it('pass a React component', () => {
+    // $FlowFixMe
     class ReactComponent extends Component {
       render() {
         return (
