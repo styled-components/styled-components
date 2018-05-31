@@ -83,9 +83,9 @@
   },
   "devDependencies": {
     "@types/node": "9.6.4",
-    "@types/react": "^16.3.12",
+    "@types/react": "^16.3.14",
     "@types/react-dom": "^16.0.5",
-    "@types/react-native": "^0.55.7",
+    "@types/react-native": "^0.55.16",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
     "babel-eslint": "^8.2.3",
@@ -146,7 +146,7 @@
     "rollup-plugin-uglify": "^3.0.0",
     "rollup-plugin-visualizer": "^0.1.5",
     "tslint": "^4.3.1",
-    "typescript": "^2.4.1"
+    "typescript": "^2.9.1"
   },
   "peerDependencies": {
     "react": ">= 0.14.0 < 17.0.0-0"
