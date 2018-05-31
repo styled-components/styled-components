@@ -7,7 +7,10 @@ export default (
   styles: Styles,
   ...interpolations: Array<Interpolation>
 ): RuleSet => {
-  if (!Array.isArray(styles) && typeof styles === 'object') {
+  if (
+    (!Array.isArray(styles) && typeof styles === 'object') ||
+    (Array.isArray(styles) && !styles.raw)
+  ) {
     return flatten(interleave([], [styles, ...interpolations]))
   }
   return flatten(interleave(styles, interpolations))

@@ -9,7 +9,7 @@ export type Interpolation =
 
 export type RuleSet = Array<Interpolation>
 
-export type Styles = Array<string> | Object
+export type Styles = (Array<string> & { raw: Array<string> }) | Object
 
 /* eslint-disable no-undef */
 export type Target = string | ComponentType<*>
