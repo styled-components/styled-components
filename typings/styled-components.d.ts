@@ -35,8 +35,8 @@ type Attrs<P, A extends Partial<P>, T> = {
 export interface StyledComponentClass<P, T, O = P> extends ComponentClass<ThemedOuterStyledProps<O, T>> {
   extend: ThemedStyledFunction<P, T, O>;
 
-  withComponent<K extends keyof JSX.IntrinsicElements>(tag: K): StyledComponentClass<JSX.IntrinsicElements[K], T, O>;
-  withComponent(element: ComponentClass<P>): StyledComponentClass<P, T, O>;
+  withComponent<K extends keyof JSX.IntrinsicElements>(tag: K): StyledComponentClass<JSX.IntrinsicElements[K], T, JSX.IntrinsicElements[K]>;
+  withComponent<NewP>(element: ComponentClass<NewP>): StyledComponentClass<NewP, T, NewP>;
 }
 
 export interface ThemedStyledFunction<P, T, O = P> {
