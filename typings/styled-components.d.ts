@@ -72,7 +72,7 @@ export interface ThemedCssFunction<T> {
 }
 
 // Helper type operators
-type Omit<T, K extends keyof T> = T extends any ? Pick<T, Exclude<keyof T, K>> : never
+type Omit<T, K extends keyof T> = T extends any ? Pick<T, Exclude<keyof T, K>> : never;
 type WithOptionalTheme<P extends { theme?: T; }, T> = Omit<P, "theme"> & { theme?: T; };
 
 export interface ThemedStyledComponentsModule<T> {
