@@ -22,7 +22,7 @@ script:
   - yarn test
   # Tests have to run before Danger runs because
   # danger-plugin-jest references the test output
-  - yarn danger
+  # - yarn danger
   - yarn flow
   - yarn lint
   - yarn typescript
