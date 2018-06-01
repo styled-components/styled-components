@@ -6,12 +6,11 @@ node_js:
 script:
   - node --version
   - yarn --version
-  # Tests have to run before Danger runs because
-  # danger-plugin-jest references the test output
-  - yarn run test
-  - yarn run danger run -- --verbose
-  - yarn run flow
-  - yarn run lint && yarn run typescript && yarn run tslint
+  - yarn test
+  - yarn flow
+  - yarn lint
+  - yarn typescript
+  - yarn tslint
 notifications:
   email:
     on_failure: change
