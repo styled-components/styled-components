@@ -6,6 +6,7 @@ import determineTheme from '../utils/determineTheme'
 import generateDisplayName from '../utils/generateDisplayName'
 import isStyledComponent from '../utils/isStyledComponent'
 import isTag from '../utils/isTag'
+import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
 import type { Theme } from './ThemeProvider'
@@ -17,6 +18,7 @@ type State = {
 }
 
 export default (constructWithOptions: Function, InlineStyle: Function) => {
+  // $FlowFixMe
   class BaseStyledNativeComponent extends Component<*, State> {
     static target: Target
     static styledComponentId: string
@@ -49,7 +51,10 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       this.attrs = Object.keys(attrs).reduce((acc, key) => {
         const attr = attrs[key]
         // eslint-disable-next-line no-param-reassign
-        acc[key] = typeof attr === 'function' ? attr(context) : attr
+        acc[key] =
+          typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
+            ? attr(context)
+            : attr
         return acc
       }, {})
 

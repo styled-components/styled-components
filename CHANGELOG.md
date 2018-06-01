@@ -12,6 +12,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 * Reimplement SSR stream handling as a transform stream rather than a second-order readable stream, by @probablyup (see #1768)
 
+* Allow React Component as attr, by @valerybugakov (see #1751)
+
 ## [v3.3.0] - 2018-05-25
 
 * Fix off-by-one error in insertRuleHelpers.js, by @migueloller (see #1749)

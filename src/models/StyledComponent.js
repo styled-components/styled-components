@@ -12,6 +12,7 @@ import getComponentName from '../utils/getComponentName'
 import isStyledComponent from '../utils/isStyledComponent'
 import isTag from '../utils/isTag'
 import validAttr from '../utils/validAttr'
+import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import ServerStyleSheet from './ServerStyleSheet'
 import StyleSheet from './StyleSheet'
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
@@ -58,6 +59,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       : componentId
   }
 
+  // $FlowFixMe
   class BaseStyledComponent extends Component<*, BaseState> {
     static target: Target
     static styledComponentId: string
@@ -89,7 +91,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       this.attrs = Object.keys(attrs).reduce((acc, key) => {
         const attr = attrs[key]
         // eslint-disable-next-line no-param-reassign
-        acc[key] = typeof attr === 'function' ? attr(context) : attr
+        acc[key] =
+          typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
+            ? attr(context)
+            : attr
         return acc
       }, {})
 
