@@ -1,23 +1,26 @@
 // @flow
+'no babel-plugin-flow-react-proptypes';
 
-import { Component, createElement } from 'react'
+import hoist from 'hoist-non-react-statics'
 import PropTypes from 'prop-types'
-
-import type { Theme } from './ThemeProvider'
+import { Component, createElement } from 'react'
+import { CONTEXT_KEY, STATIC_EXECUTION_CONTEXT } from '../constants'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
-
-import validAttr from '../utils/validAttr'
-import isTag from '../utils/isTag'
-import isStyledComponent from '../utils/isStyledComponent'
-import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
-import type { RuleSet, Target } from '../types'
-import { CONTEXT_KEY, STATIC_EXECUTION_CONTEXT } from '../constants'
 
-import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
-import StyleSheet from './StyleSheet'
+import generateDisplayName from '../utils/generateDisplayName'
+import getComponentName from '../utils/getComponentName'
+import isStyledComponent from '../utils/isStyledComponent'
+import isTag from '../utils/isTag'
+import validAttr from '../utils/validAttr'
+import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import ServerStyleSheet from './ServerStyleSheet'
+import StyleSheet from './StyleSheet'
+import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
+
+import type { Theme } from './ThemeProvider'
+import type { RuleSet, Target } from '../types'
 
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
   const identifiers = {}
@@ -49,11 +52,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       : componentId
   }
 
-  class BaseStyledComponent extends Component {
+  class BaseStyledComponent extends Component<*, BaseState> {
     static target: Target
     static styledComponentId: string
     static attrs: Object
     static componentStyle: Object
+    static defaultProps: Object
     static warnTooManyClasses: Function
 
     attrs = {}
@@ -79,7 +83,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       this.attrs = Object.keys(attrs).reduce((acc, key) => {
         const attr = attrs[key]
         // eslint-disable-next-line no-param-reassign
-        acc[key] = typeof attr === 'function' ? attr(context) : attr
+        acc[key] =
+          typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
+            ? attr(context)
+            : attr
         return acc
       }, {})
 
@@ -168,10 +175,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         return
       }
 
-      this.setState(oldState => {
+      this.setState(prevState => {
         const theme = determineTheme(
           nextProps,
-          oldState.theme,
+          prevState.theme,
           this.constructor.defaultProps
         )
         const generatedClassName = this.generateAndInjectStyles(
@@ -205,7 +212,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         .filter(Boolean)
         .join(' ')
 
-      const baseProps = {
+      const baseProps: any = {
         ...this.attrs,
         className,
       }
@@ -244,9 +251,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     rules: RuleSet
   ) => {
     const {
-      displayName = isTag(target)
-        ? `styled.${target}`
-        : `Styled(${getComponentName(target)})`,
+      isClass = !isTag(target),
+      displayName = generateDisplayName(target),
       componentId = generateId(options.displayName, options.parentComponentId),
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
@@ -274,13 +280,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         ]),
       }
 
-      static displayName = displayName
-      static styledComponentId = styledComponentId
-      static attrs = attrs
-      static componentStyle = componentStyle
-      static target = target
-
-      static withComponent(tag) {
+      static withComponent(tag: Target) {
         const { componentId: previousComponentId, ...optionsToCopy } = options
 
         const newComponentId =
@@ -324,6 +324,16 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     if (process.env.NODE_ENV !== 'production') {
       StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
     }
+
+    if (isClass) hoist(StyledComponent, target)
+
+    // we do this after hoisting to ensure we're overwriting existing
+    // rules when wrapping another styled component class
+    StyledComponent.displayName = displayName
+    StyledComponent.styledComponentId = styledComponentId
+    StyledComponent.attrs = attrs
+    StyledComponent.componentStyle = componentStyle
+    StyledComponent.target = target
 
     return StyledComponent
   }

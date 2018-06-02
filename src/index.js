@@ -40,7 +40,15 @@ if (
 }
 
 /* Warning if there are several instances of styled-components */
-if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
+if (
+  process.env.NODE_ENV !== 'production' &&
+  process.env.NODE_ENV !== 'test' &&
+  typeof window !== 'undefined' &&
+  typeof navigator !== 'undefined' &&
+  typeof navigator.userAgent === 'string' &&
+  navigator.userAgent.indexOf('Node.js') === -1 &&
+  navigator.userAgent.indexOf('jsdom') === -1
+) {
   window['__styled-components-init__'] =
     window['__styled-components-init__'] || 0
 
@@ -49,7 +57,7 @@ if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
     console.warn(
       "It looks like there are several instances of 'styled-components' initialized in this application. " +
         'This may cause dynamic styles not rendering properly, errors happening during rehydration process ' +
-        'and makes you application bigger without a good reason.\n\n' +
+        'and makes your application bigger without a good reason.\n\n' +
         'See https://s-c.sh/2BAXzed for more info.'
     )
   }

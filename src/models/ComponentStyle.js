@@ -35,7 +35,7 @@ const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
   return true
 }
 
-const isHRMEnabled =
+const isHMREnabled =
   typeof module !== 'undefined' &&
   module.hot &&
   process.env.NODE_ENV !== 'production'
@@ -60,7 +60,7 @@ export default (
 
     constructor(rules: RuleSet, attrs?: Object, componentId: string) {
       this.rules = rules
-      this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
+      this.isStatic = !isHMREnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
 
       if (!StyleSheet.master.hasId(componentId)) {

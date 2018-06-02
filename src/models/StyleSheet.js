@@ -49,7 +49,8 @@ class StyleSheet {
     target: ?HTMLElement = IS_BROWSER ? document.head : null,
     forceServer?: boolean = false
   ) {
-    this.id = sheetRunningId += 1
+    sheetRunningId += 1
+    this.id = sheetRunningId
     this.sealed = false
     this.forceServer = forceServer
     this.target = forceServer ? null : target
@@ -309,7 +310,7 @@ class StyleSheet {
     return this.tags.map(tag => tag.toHTML()).join('')
   }
 
-  toReactElements() {
+  toReactElements(): Array<*> {
     const { id } = this
 
     return this.tags.map((tag, i) => {

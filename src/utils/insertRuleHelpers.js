@@ -49,7 +49,7 @@ export const deleteRules = (
   size: number
 ) => {
   const lowerBound = removalIndex - size
-  for (let i = removalIndex; i >= lowerBound; i -= 1) {
+  for (let i = removalIndex; i > lowerBound; i -= 1) {
     sheet.deleteRule(i)
   }
 }

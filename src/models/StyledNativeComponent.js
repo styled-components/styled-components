@@ -1,22 +1,29 @@
 // @flow
-import { Component, createElement } from 'react'
+import hoist from 'hoist-non-react-statics'
 import PropTypes from 'prop-types'
-
-import type { Theme } from './ThemeProvider'
-
-import isTag from '../utils/isTag'
-import isStyledComponent from '../utils/isStyledComponent'
-import getComponentName from '../utils/getComponentName'
+import { Component, createElement } from 'react'
 import determineTheme from '../utils/determineTheme'
-import type { RuleSet, Target } from '../types'
-
+import generateDisplayName from '../utils/generateDisplayName'
+import isStyledComponent from '../utils/isStyledComponent'
+import isTag from '../utils/isTag'
+import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
+import type { Theme } from './ThemeProvider'
+import type { RuleSet, Target } from '../types'
+
+type State = {
+  theme?: ?Theme,
+  generatedStyles: any,
+}
+
 export default (constructWithOptions: Function, InlineStyle: Function) => {
-  class BaseStyledNativeComponent extends Component {
+  // $FlowFixMe
+  class BaseStyledNativeComponent extends Component<*, State> {
     static target: Target
     static styledComponentId: string
     static attrs: Object
+    static defaultProps: Object
     static inlineStyle: Object
     root: ?Object
 
@@ -44,7 +51,10 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       this.attrs = Object.keys(attrs).reduce((acc, key) => {
         const attr = attrs[key]
         // eslint-disable-next-line no-param-reassign
-        acc[key] = typeof attr === 'function' ? attr(context) : attr
+        acc[key] =
+          typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
+            ? attr(context)
+            : attr
         return acc
       }, {})
 
@@ -91,10 +101,10 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       theme?: Theme,
       [key: string]: any,
     }) {
-      this.setState(oldState => {
+      this.setState(prevState => {
         const theme = determineTheme(
           nextProps,
-          oldState.theme,
+          prevState.theme,
           this.constructor.defaultProps
         )
         const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
@@ -118,7 +128,8 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         console.warn(
           'setNativeProps was called on a Styled Component wrapping a stateless functional component. ' +
             'In this case no ref will be stored, and instead an innerRef prop will be passed on.\n' +
-            `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName}.`
+            `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName ||
+              'UnknownStyledNativeComponent'}.`
         )
       }
     }
@@ -130,6 +141,12 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
 
       if (typeof innerRef === 'function') {
         innerRef(node)
+      } else if (
+        typeof innerRef === 'object' &&
+        innerRef &&
+        innerRef.hasOwnProperty('current')
+      ) {
+        innerRef.current = node
       }
     }
 
@@ -149,6 +166,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         !isStyledComponent(target) &&
         // NOTE: We can't pass a ref to a stateless functional component
         (typeof target !== 'function' ||
+          // $FlowFixMe TODO: flow for prototype
           (target.prototype && 'isReactComponent' in target.prototype))
       ) {
         propsForElement.ref = this.onRef
@@ -167,9 +185,8 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     rules: RuleSet
   ) => {
     const {
-      displayName = isTag(target)
-        ? `styled.${target}`
-        : `Styled(${getComponentName(target)})`,
+      isClass = !isTag(target),
+      displayName = generateDisplayName(target),
       ParentComponent = BaseStyledNativeComponent,
       rules: extendingRules,
       attrs,
@@ -180,20 +197,12 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     )
 
     class StyledNativeComponent extends ParentComponent {
-      static displayName = displayName
-      static target = target
-      static attrs = attrs
-      static inlineStyle = inlineStyle
-
       static contextTypes = {
         [CHANNEL]: PropTypes.func,
         [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
       }
 
-      // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
-      static styledComponentId = 'StyledNativeComponent'
-
-      static withComponent(tag) {
+      static withComponent(tag: Target) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options
         const newOptions = {
           ...optionsToCopy,
@@ -228,6 +237,14 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         )
       }
     }
+
+    if (isClass) hoist(StyledNativeComponent, target)
+
+    StyledNativeComponent.displayName = displayName
+    StyledNativeComponent.target = target
+    StyledNativeComponent.attrs = attrs
+    StyledNativeComponent.inlineStyle = inlineStyle
+    StyledNativeComponent.styledComponentId = 'StyledNativeComponent'
 
     return StyledNativeComponent
   }
