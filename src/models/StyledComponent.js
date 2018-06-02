@@ -1,5 +1,6 @@
 // @flow
-'no babel-plugin-flow-react-proptypes';
+
+'no babel-plugin-flow-react-proptypes'
 
 import hoist from 'hoist-non-react-statics'
 import PropTypes from 'prop-types'
@@ -21,6 +22,11 @@ import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
 import type { Theme } from './ThemeProvider'
 import type { RuleSet, Target } from '../types'
+
+type BaseState = {
+  theme?: ?Theme,
+  generatedClassName?: string,
+}
 
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
   const identifiers = {}
@@ -52,6 +58,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       : componentId
   }
 
+  // $FlowFixMe
   class BaseStyledComponent extends Component<*, BaseState> {
     static target: Target
     static styledComponentId: string

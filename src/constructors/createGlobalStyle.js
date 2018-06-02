@@ -20,7 +20,7 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
     const id = `sc-global-${hashStr(JSON.stringify(rules))}`
     const style = new GlobalStyle(rules, id)
 
-    class GlobalStyleComponent extends React.Component {
+    class GlobalStyleComponent extends React.Component<*, *> {
       static contextTypes = {
         [CONTEXT_KEY]: PropTypes.oneOfType([
           PropTypes.instanceOf(StyleSheet),
@@ -51,7 +51,7 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
       }
 
       render() {
-        return null
+        return this.props.children
       }
     }
 
