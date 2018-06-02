@@ -1,7 +1,6 @@
 // @flow
 import React, { Component, type Element } from 'react'
 import PropTypes from 'prop-types'
-import isPlainObject from 'is-plain-object'
 import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
 import once from '../utils/once'
@@ -107,7 +106,9 @@ class ThemeProvider extends Component<ThemeProviderProps, void> {
       const mergedTheme = theme(this.outerTheme)
       if (
         process.env.NODE_ENV !== 'production' &&
-        !isPlainObject(mergedTheme)
+        (mergedTheme === null ||
+          Array.isArray(mergedTheme) ||
+          typeof mergedTheme !== 'object')
       ) {
         throw new Error(
           process.env.NODE_ENV !== 'production'
@@ -117,10 +118,10 @@ class ThemeProvider extends Component<ThemeProviderProps, void> {
       }
       return mergedTheme
     }
-    if (!isPlainObject(theme)) {
+    if (theme === null || Array.isArray(theme) || typeof theme !== 'object') {
       throw new Error(
         process.env.NODE_ENV !== 'production'
-          ? '[ThemeProvider] Please make your theme prop a plain object'
+          ? '[ThemeProvider] Please make your theme prop an object'
           : ''
       )
     }

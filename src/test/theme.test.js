@@ -479,4 +479,85 @@ describe('theming', () => {
 
     expect(wrapper.find('div').text()).toBe('blue')
   })
+
+  // https://github.com/styled-components/styled-components/issues/1776
+  it('should allow module objects to be passed as themes', () => {
+    const theme = {
+      borderRadius: '2px',
+      palette: {
+        black: '#000',
+        white: '#fff',
+        [Symbol.toStringTag]: 'Module'
+      },
+      [Symbol.toStringTag]: 'Module'
+    }
+
+    const Comp1 = styled.div`
+      background-color: ${ ({ theme }) => theme.palette.white };
+      color: ${ ({ theme }) => theme.palette.black };
+    `
+
+    let wrapper
+    expect(() => {
+      wrapper = mount(
+        <ThemeProvider theme={ theme }>
+          <Comp1 />
+        </ThemeProvider>
+      )
+    }).not.toThrow('plain object')
+
+    expectCSSMatches(`.sc-a {} .b {background-color:${theme.palette.white};color:${theme.palette.black};}`)
+  })
+
+  it('should allow other complex objects to be passed as themes', () => {
+    class Theme {
+      constructor(borderRadius) {
+        this.borderRadius = borderRadius
+      }
+    }
+
+    const theme = new Theme('2px')
+
+    const Comp1 = styled.div`
+      border-radius: ${ ({ theme }) => theme.borderRadius };
+    `
+
+    const wrapper = mount(
+      <ThemeProvider theme={ theme }>
+        <Comp1 />
+      </ThemeProvider>
+    )
+
+    expectCSSMatches(`.sc-a {} .b {border-radius:${theme.borderRadius};}`)
+  })
+
+  it('should not allow the theme to be null', () => {
+    expect(() => {
+      mount(
+        <ThemeProvider theme={ null }>
+          <div />
+        </ThemeProvider>
+      )
+    }).toThrowErrorMatchingSnapshot()
+  })
+
+  it('should not allow the theme to be an array', () => {
+    expect(() => {
+      mount(
+        <ThemeProvider theme={ ['a', 'b', 'c'] }>
+          <div />
+        </ThemeProvider>
+      )
+    }).toThrowErrorMatchingSnapshot()
+  })
+
+  it('should not allow the theme to be a non-object', () => {
+    expect(() => {
+      mount(
+        <ThemeProvider theme={ 42 }>
+          <div />
+        </ThemeProvider>
+      )
+    }).toThrowErrorMatchingSnapshot()
+  })
 })
