@@ -1,5 +1,5 @@
 // @flow
-import React from 'react'
+import React, { Component } from 'react'
 import { shallow } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
@@ -21,6 +21,27 @@ describe('attrs', () => {
       type: 'button'
     })``
     expect(shallow(<Comp />).html()).toEqual('<button type="button" class="sc-a b"></button>')
+  })
+
+  it('pass a React component', () => {
+    // $FlowFixMe
+    class ReactComponent extends Component {
+      render() {
+        return (
+          <p>React Component</p>
+        )
+      }
+    }
+
+    const Button = ({ component: ChildComponent }) => (
+      <button><ChildComponent /></button>
+    )
+
+    const Comp = styled(Button).attrs({
+      component: ReactComponent,
+    })``
+
+    expect(shallow(<Comp />).html()).toEqual('<button><p>React Component</p></button>')
   })
 
   it('call an attr function', () => {

@@ -25,7 +25,7 @@
     "test:primitives:watch": "npm run test:primitives -- --watch",
     "test:integration": "jest -c .jest.integration.json --runInBand --forceExit",
     "test:size": "bundlesize",
-    "danger": "cross-env NODE_ENV=test danger run -- --verbose",
+    "danger": "cross-env NODE_ENV=test danger ci -v",
     "flow": "flow check",
     "flow:watch": "flow-watch",
     "format": "eslint ./**/*.js --fix",
@@ -88,7 +88,7 @@
     "@types/react-native": "^0.55.7",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
-    "babel-eslint": "^7.1.1",
+    "babel-eslint": "^8.2.3",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-plugin-external-helpers": "^6.22.0",
     "babel-plugin-flow-react-proptypes": "^2.1.3",
@@ -97,35 +97,35 @@
     "babel-plugin-transform-react-remove-prop-types": "^0.4.12",
     "babel-preset-env": "^1.4.0",
     "babel-preset-react": "^6.22.0",
-    "bundlesize": "^0.13.2",
+    "bundlesize": "^0.17.0",
     "chokidar": "^1.6.0",
     "cross-env": "^5.1.3",
-    "danger": "^2.0.0",
+    "danger": "^3.7.14",
     "danger-plugin-jest": "^1.1.0",
     "enzyme": "^3.3.0",
     "enzyme-adapter-react-16": "^1.1.1",
-    "eslint": "^3.15.0",
-    "eslint-config-airbnb": "^13.0.0",
+    "eslint": "^4.19.1",
+    "eslint-config-airbnb": "^16.1.0",
     "eslint-config-prettier": "^2.9.0",
-    "eslint-plugin-flowtype": "^2.40.1",
-    "eslint-plugin-flowtype-errors": "^2.0.1",
-    "eslint-plugin-import": "^2.2.0",
-    "eslint-plugin-jsx-a11y": "^2.0.2",
-    "eslint-plugin-prettier": "^2.4.0",
-    "eslint-plugin-react": "^6.8.0",
+    "eslint-plugin-flowtype": "^2.48.0",
+    "eslint-plugin-flowtype-errors": "^3.6.0",
+    "eslint-plugin-import": "^2.12.0",
+    "eslint-plugin-jsx-a11y": "^6.0.3",
+    "eslint-plugin-prettier": "^2.6.0",
+    "eslint-plugin-react": "^7.8.2",
     "express": "^4.14.1",
-    "flow-bin": "^0.47.0",
+    "flow-bin": "^0.73.0",
     "flow-watch": "^1.1.1",
     "husky": "^0.14.3",
-    "jest": "^20.0.4",
-    "jest-image-snapshot": "2.2.0",
-    "jest-styled-components": "^5.0.0",
+    "jest": "^23.0.0",
+    "jest-image-snapshot": "^2.4.1",
+    "jest-styled-components": "^5.0.1",
     "jsdom": "^9.10.0",
     "lint-staged": "^6.0.0",
     "node-watch": "^0.4.1",
     "npm-run-all": "^4.1.2",
     "prettier": "1.9.2",
-    "puppeteer": "^0.13.0",
+    "puppeteer": "^1.4.0",
     "raf": "^3.4.0",
     "react": "^16.3.0",
     "react-dom": "^16.0.0",
@@ -155,6 +155,7 @@
     "globals": {
       "__DEV__": true
     },
+    "testURL": "http://localhost",
     "clearMocks": true,
     "roots": [
       "<rootDir>/src/"
@@ -164,6 +165,7 @@
       "<rootDir>/src/test/enzymeSetup.js",
       "<rootDir>/src/test/globals.js"
     ],
+    "setupTestFrameworkScriptFile": "<rootDir>/test-utils/setupTestFramework.js",
     "testPathIgnorePatterns": [
       "<rootDir>/src/native",
       "<rootDir>/src/primitives"
@@ -178,15 +180,15 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "threshold": "16kB"
+      "maxSize": "16kB"
     },
     {
       "path": "./dist/styled-components.cjs.min.js",
-      "threshold": "11.5kB"
+      "maxSize": "11.5kB"
     },
     {
       "path": "./dist/styled-components.es.min.js",
-      "threshold": "11.5kB"
+      "maxSize": "11.5kB"
     }
   ],
   "collective": {

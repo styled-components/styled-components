@@ -8,12 +8,12 @@ const Input = styled.input.attrs({
   margin: (props: any) => props.size as string || "1em",
   padding: (props: any) => props.size as string || "1em"
 })`
-	color: palevioletred;
-	font-size: 1em;
-	border: 2px solid palevioletred;
-	border-radius: 3px;
+  color: palevioletred;
+  font-size: 1em;
+  border: 2px solid palevioletred;
+  border-radius: 3px;
 
-	/* here we use the dynamically computed props */
-	margin: ${(props) => props.margin};
-	padding: ${(props)  => props.padding};
+  /* here we use the dynamically computed props */
+  margin: ${(props) => props.margin};
+  padding: ${(props)  => props.padding};
 `;
