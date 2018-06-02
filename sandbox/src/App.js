@@ -1,6 +1,6 @@
 import React from 'react'
 
-import styled, { css, keyframes, injectGlobal } from 'styled-components'
+import styled, { css, keyframes, createGlobalStyle } from 'styled-components'
 
 import {
   LiveProvider as _LiveProvider,
@@ -11,8 +11,7 @@ import {
 
 import buttonExample from './Button.example'
 
-// eslint-disable-next-line no-unused-expressions
-injectGlobal`
+const GlobalStyle = createGlobalStyle`
   body {
     font-size: 16px;
     line-height: 1.2;
@@ -27,7 +26,7 @@ injectGlobal`
   * {
     box-sizing: border-box;
   }
-`
+`;
 
 const Body = styled.main`
   width: 100vw;
@@ -117,6 +116,7 @@ const LiveError = styled(_LiveError)`
 
 const App = () => (
   <Body>
+    <GlobalStyle/>
     <Heading>
       <Title>
         Interactive sandbox for <Code>styled-components</Code>
@@ -129,7 +129,7 @@ const App = () => (
     <Content>
       <LiveProvider
         code={buttonExample}
-        scope={{ styled, css, keyframes }}
+        scope={{ styled, css, createGlobalStyle, keyframes }}
         noInline
       >
         <LiveEditor />

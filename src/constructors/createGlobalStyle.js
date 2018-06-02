@@ -51,7 +51,16 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
       }
 
       render() {
-        return this.props.children || null
+        if (process.env.NODE_ENV !== 'production') {
+          if (typeof this.props.children !== 'undefined') {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[createGlobalStyle] received children which will not be rendered. Please use the component without passing children elements.`
+            )
+          }
+        }
+
+        return null
       }
     }
 
