@@ -51,15 +51,26 @@ const wrapWithTheme = (Component: ComponentType<any>) => {
             '[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps'
           )
         }
-      } else if (styledContext === undefined && themeProp !== undefined) {
-        this.setState({ theme: themeProp })
-      } else {
-        const { subscribe } = styledContext
-        this.unsubscribeId = subscribe(nextTheme => {
-          const theme = determineTheme(this.props, nextTheme, defaultProps)
-          this.setState({ theme })
-        })
       }
+
+      if (styledContext === undefined && themeProp !== undefined) {
+        this.setState({ theme: themeProp })
+      }
+
+      if (styledContext === undefined) {
+        return
+      }
+
+      const { subscribe } = styledContext
+
+      if (typeof subscribe !== 'function') {
+        return
+      }
+
+      this.unsubscribeId = subscribe(nextTheme => {
+        const theme = determineTheme(this.props, nextTheme, defaultProps)
+        this.setState({ theme })
+      })
     }
 
     componentWillReceiveProps(nextProps: {
