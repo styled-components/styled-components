@@ -80,7 +80,8 @@ export const stripWhitespace = (str: string) =>
     .replace(/([;\{\}])/g, '$1  ')
     .replace(/\s+/g, ' ')
 
-export const getCSS = (scope?: Document | HTMLElement = document) => {
+
+export const getCSS = (scope: Document | HTMLElement) => {
   return Array.from(scope.querySelectorAll('style'))
     .map(tag => tag.innerHTML)
     .join('\n')
@@ -99,7 +100,7 @@ export const expectCSSMatches = (
     .replace(/:\s+/g, ':')
     .replace(/:\s+;/g, ':;')
 
-  const css = getCSS()
+  const css = getCSS(document)
 
   if (opts.ignoreWhitespace) {
     const stripped = stripWhitespace(stripComments(css))
