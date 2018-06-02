@@ -1,6 +1,11 @@
 language: node_js
 dist: trusty
 sudo: required
+cache:
+  yarn: true
+  bundler: true
+  directories:
+    - node_modules
 addons:
   apt:
     packages:
@@ -22,7 +27,7 @@ script:
   - yarn test
   # Tests have to run before Danger runs because
   # danger-plugin-jest references the test output
-  # - yarn danger
+  - yarn danger
   - yarn flow
   - yarn lint
   - yarn typescript
@@ -30,8 +35,3 @@ script:
 notifications:
   email:
     on_failure: change
-cache:
-  yarn: true
-  bundler: true
-  directories:
-    - node_modules
