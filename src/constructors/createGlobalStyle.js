@@ -51,7 +51,7 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
       }
 
       render() {
-        return this.props.children
+        return this.props.children || null
       }
     }
 
