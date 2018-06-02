@@ -487,8 +487,14 @@ describe('theming', () => {
       palette: {
         black: '#000',
         white: '#fff',
+        // Flow has limited support for Symbols and computed properties;
+        // see <https://github.com/facebook/flow/issues/3258>.
+        // $FlowFixMe
         [Symbol.toStringTag]: 'Module'
       },
+      // Flow has limited support for Symbols and computed properties;
+      // see <https://github.com/facebook/flow/issues/3258>.
+      // $FlowFixMe
       [Symbol.toStringTag]: 'Module'
     }
 
@@ -511,6 +517,8 @@ describe('theming', () => {
 
   it('should allow other complex objects to be passed as themes', () => {
     class Theme {
+      borderRadius: string
+
       constructor(borderRadius) {
         this.borderRadius = borderRadius
       }
@@ -534,6 +542,7 @@ describe('theming', () => {
   it('should not allow the theme to be null', () => {
     expect(() => {
       mount(
+        // $FlowInvalidInputTest
         <ThemeProvider theme={ null }>
           <div />
         </ThemeProvider>
@@ -544,6 +553,7 @@ describe('theming', () => {
   it('should not allow the theme to be an array', () => {
     expect(() => {
       mount(
+        // $FlowInvalidInputTest
         <ThemeProvider theme={ ['a', 'b', 'c'] }>
           <div />
         </ThemeProvider>
@@ -554,6 +564,7 @@ describe('theming', () => {
   it('should not allow the theme to be a non-object', () => {
     expect(() => {
       mount(
+        // $FlowInvalidInputTest
         <ThemeProvider theme={ 42 }>
           <div />
         </ThemeProvider>
