@@ -55,6 +55,8 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
       }
     }
 
+    // TODO: Use internal abstractions to avoid additional component layers
+    // Depends on a future overall refactoring of theming system / context
     return withTheme(GlobalStyleComponent)
   }
 
