@@ -6,6 +6,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- [placeholder]
+
+## [v3.3.2] - 2018-06-04
+
 * Allow non-plain objects as `ThemeProvider` themes, by @phyllisstein (see #1780)
 
 * Upgrade flow-bin to latest, by @halvves (see #1748)
@@ -17,6 +21,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 * Allow React Component as attr, by @valerybugakov (see #1751)
 
 * Added pointer events to valid attributes check, by @plankguy (see #1790)
+
+_v3.3.1 was skipped due to a bad deploy._
 
 ## [v3.3.0] - 2018-05-25
 
