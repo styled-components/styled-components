@@ -16,6 +16,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 * Allow React Component as attr, by @valerybugakov (see #1751)
 
+* Added pointer events to valid attributes check, by @plankguy (see #1790)
+
 ## [v3.3.0] - 2018-05-25
 
 * Fix off-by-one error in insertRuleHelpers.js, by @migueloller (see #1749)
