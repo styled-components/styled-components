@@ -184,7 +184,7 @@
     },
     {
       "path": "./dist/styled-components.cjs.min.js",
-      "maxSize": "11.5kB"
+      "maxSize": "12kB"
     },
     {
       "path": "./dist/styled-components.es.min.js",
