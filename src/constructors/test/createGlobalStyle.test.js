@@ -1,12 +1,14 @@
 // @flow
 import React from 'react';
 import ReactDOM from 'react-dom';
+import ReactDOMServer from 'react-dom/server';
 
-import { expectCSSMatches, getCSS, resetStyled } from '../../test/utils'
+import { expectCSSMatches, getCSS, resetStyled, stripComments, stripWhitespace } from '../../test/utils'
 import stringifyRules from '../../utils/stringifyRules'
 import css from '../css'
 import _createGlobalStyle from '../createGlobalStyle';
 import ThemeProvider from '../../models/ThemeProvider'
+import ServerStyleSheet from '../../models/ServerStyleSheet'
 import StyleSheetManager from '../../models/StyleSheetManager'
 
 const createGlobalStyle = _createGlobalStyle(stringifyRules, css)
@@ -33,6 +35,19 @@ describe(`createGlobalStyle`, () => {
     const Component = createGlobalStyle`[data-test-inject]{color:red;} `
     render(<Component/>)
     expectCSSMatches(`[data-test-inject]{color:red;} `)
+  });
+
+  it(`injects global <style> when rendered to string`, () => {
+    const sheet = new ServerStyleSheet();
+    const Component = createGlobalStyle`[data-test-inject]{color:red;} `
+    const html = context.renderToString(sheet.collectStyles(<Component />))
+
+    const container = document.createElement('div');
+    container.innerHTML = sheet.getStyleTags();
+    const style = container.querySelector('style');
+
+    expect(html).toBe('');
+    expect(stripWhitespace(stripComments(style.textContent))).toBe('[data-test-inject]{ color:red; } ');
   });
 
   it(`supports interpolation`, () => {
@@ -247,6 +262,9 @@ function setup() {
     container,
     render(comp) {
       ReactDOM.render(comp, container)
+    },
+    renderToString(comp) {
+      return ReactDOMServer.renderToString(comp)
     },
     cleanup() {
       resetStyled()

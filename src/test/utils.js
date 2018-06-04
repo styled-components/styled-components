@@ -72,7 +72,7 @@ export const resetNoParserStyled = () => {
   return _styled(StyledComponent, constructWithOptions)
 }
 
-const stripComments = (str: string) => str.replace(/\/\*.*?\*\/\n?/g, '')
+export const stripComments = (str: string) => str.replace(/\/\*.*?\*\/\n?/g, '')
 
 export const stripWhitespace = (str: string) =>
   str
