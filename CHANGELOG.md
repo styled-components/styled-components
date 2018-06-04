@@ -7,6 +7,11 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 ## Unreleased
 
 - Add `createGlobalStyle` which returns a component which, when mounting ('componentWillMount'), will apply global styles. The styles will also be removed once the component unmounts during `componentWillUnmount` (see [#1416](https://github.com/styled-components/styled-components/pull/1416))
+
+## [v3.3.2] - 2018-06-04
+
+* Allow non-plain objects as `ThemeProvider` themes, by @phyllisstein (see #1780)
+
 * Upgrade flow-bin to latest, by @halvves (see #1748)
 
 * Update various CI bits, by @probablyup (see #1769)
@@ -14,6 +19,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 * Reimplement SSR stream handling as a transform stream rather than a second-order readable stream, by @probablyup (see #1768)
 
 * Allow React Component as attr, by @valerybugakov (see #1751)
+
+* Added pointer events to valid attributes check, by @plankguy (see #1790)
+
+_v3.3.1 was skipped due to a bad deploy._
 
 ## [v3.3.0] - 2018-05-25
 
