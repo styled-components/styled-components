@@ -6,7 +6,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- [placeholder]
+- Add `createGlobalStyle` which returns a component which, when mounting ('componentWillMount'), will apply global styles. The styles will also be removed once the component unmounts during `componentWillUnmount` (see [#1416](https://github.com/styled-components/styled-components/pull/1416))
 
 ## [v3.3.2] - 2018-06-04
 

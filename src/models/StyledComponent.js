@@ -1,12 +1,15 @@
 // @flow
 
+'no babel-plugin-flow-react-proptypes'
+
 import hoist from 'hoist-non-react-statics'
 import PropTypes from 'prop-types'
 import { Component, createElement } from 'react'
-import { CONTEXT_KEY } from '../constants'
+import { CONTEXT_KEY, STATIC_EXECUTION_CONTEXT } from '../constants'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
+
 import generateDisplayName from '../utils/generateDisplayName'
 import getComponentName from '../utils/getComponentName'
 import isStyledComponent from '../utils/isStyledComponent'
@@ -19,10 +22,6 @@ import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
 
 import type { Theme } from './ThemeProvider'
 import type { RuleSet, Target } from '../types'
-
-// HACK for generating all static styles without needing to allocate
-// an empty execution context every single time...
-const STATIC_EXECUTION_CONTEXT = {}
 
 type BaseState = {
   theme?: ?Theme,
