@@ -197,6 +197,12 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     )
 
     class StyledNativeComponent extends ParentComponent {
+      static attrs = attrs
+      static displayName = displayName
+      static inlineStyle = inlineStyle
+      static styledComponentId = 'StyledNativeComponent'
+      static target = target
+
       static contextTypes = {
         [CHANNEL]: PropTypes.func,
         [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
@@ -238,13 +244,18 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       }
     }
 
-    if (isClass) hoist(StyledNativeComponent, target)
-
-    StyledNativeComponent.displayName = displayName
-    StyledNativeComponent.target = target
-    StyledNativeComponent.attrs = attrs
-    StyledNativeComponent.inlineStyle = inlineStyle
-    StyledNativeComponent.styledComponentId = 'StyledNativeComponent'
+    if (isClass) {
+      hoist(StyledNativeComponent, target, {
+        // all SC-specific things should not be hoisted
+        attrs: true,
+        displayName: true,
+        extend: true,
+        inlineStyle: true,
+        styledComponentId: true,
+        target: true,
+        withComponent: true,
+      })
+    }
 
     return StyledNativeComponent
   }

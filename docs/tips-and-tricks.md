@@ -184,7 +184,36 @@ Passing `ref` to styled component will give a ref to the `StyledComponent`
 wrapper, not to DOM node. So it's not possible to call DOM methods, like focus
 on that wrapper. To get a `ref` to wrapped DOM node, pass `innerRef` prop.
 
-> **Note:** `innerRef` only supports callback refs (i.e. `ref={comp => this.bla = comp}`), string refs (i.e. `ref="bla"`) won't work. Since string based refs will be deprecated in the future anyway, don't worry about it too much and just use the callback pattern.
+> **Note:** `innerRef` supports callback refs (i.e. `ref={comp => this.bla = comp}`) and refs using `React.createRef()` (available since React 16.3). String refs (i.e. `ref="bla"`) won't work. Since string based refs will be deprecated in the future anyway, don't worry about it too much and just use the [`createRef()`](https://reactjs.org/docs/refs-and-the-dom.html#creating-refs) or callback pattern.
+
+Example using a `createRef()`:
+
+```JSX
+const StyledInput = styled.input`
+  color: paleviolet;
+`;
+
+class Form extends Component {
+  constructor(props){
+    super(props);
+    this.input = React.createRef()
+  }
+
+  componentDidMount() {
+    if (this.input.current) {
+      this.input.current.focus()
+    }
+  }
+
+  render() {
+    return (
+      <StyledInput innerRef={this.input} />
+    )
+  }
+}
+```
+
+Example using a callback:
 
 ```JSX
 const StyledInput = styled.input`
@@ -193,7 +222,9 @@ const StyledInput = styled.input`
 
 class Form extends Component {
   componentDidMount() {
-    this.input.focus()
+    if (this.input) {
+      this.input.focus()
+    }
   }
 
   render() {

@@ -273,6 +273,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     )
 
     class StyledComponent extends ParentComponent {
+      static attrs = attrs
+      static componentStyle = componentStyle
+      static displayName = displayName
+      static styledComponentId = styledComponentId
+      static target = target
+
       static contextTypes = {
         [CHANNEL]: PropTypes.func,
         [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
@@ -327,15 +333,19 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
     }
 
-    if (isClass) hoist(StyledComponent, target)
-
-    // we do this after hoisting to ensure we're overwriting existing
-    // rules when wrapping another styled component class
-    StyledComponent.displayName = displayName
-    StyledComponent.styledComponentId = styledComponentId
-    StyledComponent.attrs = attrs
-    StyledComponent.componentStyle = componentStyle
-    StyledComponent.target = target
+    if (isClass) {
+      hoist(StyledComponent, target, {
+        // all SC-specific things should not be hoisted
+        attrs: true,
+        componentStyle: true,
+        displayName: true,
+        extend: true,
+        styledComponentId: true,
+        target: true,
+        warnTooManyClasses: true,
+        withComponent: true,
+      })
+    }
 
     return StyledComponent
   }
