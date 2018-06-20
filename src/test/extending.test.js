@@ -255,7 +255,8 @@ describe('extending', () => {
 
     expect(shallow(<ExtendedExtendedTitle />).html()).toMatchSnapshot()
     expectCSSMatches(`
-      .sc-c {} .d { color:red; background-color:blue; border:2px solid green; }
+      .sc-a { } .e { color:red; }
+      .sc-c { } .d { background-color:blue; border:2px solid green; }
     `)
   })
 })
