@@ -8,6 +8,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 * Fixed a regression when extending a `styled(StyledComponent)` introduced in 3.3.0, by @probablyup (see #1819)
 
+* Adjust how displayName is generated when not using Babel to properly preserve a displayName passed via `withConfig`, by @probablyup (see #1755)
+
 ## [v3.3.2] - 2018-06-04
 
 * Allow non-plain objects as `ThemeProvider` themes, by @phyllisstein (see #1780)
