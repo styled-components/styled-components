@@ -6,7 +6,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- [placeholder]
+* Fixed a regression when extending a `styled(StyledComponent)` introduced in 3.3.0, by @probablyup (see #1819)
 
 ## [v3.3.2] - 2018-06-04
 
