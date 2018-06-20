@@ -37,22 +37,16 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     const displayName =
       typeof _displayName !== 'string' ? 'sc' : escape(_displayName)
 
-    let componentId
-
     /**
-     * only fall back to hashing the component injection order if
-     * a proper displayName isn't provided by the babel plugin
+     * This ensures uniqueness if two components happen to share
+     * the same displayName.
      */
-    if (!_displayName) {
-      const nr = (identifiers[displayName] || 0) + 1
-      identifiers[displayName] = nr
+    const nr = (identifiers[displayName] || 0) + 1
+    identifiers[displayName] = nr
 
-      componentId = `${displayName}-${ComponentStyle.generateName(
-        displayName + nr
-      )}`
-    } else {
-      componentId = `${displayName}-${ComponentStyle.generateName(displayName)}`
-    }
+    const componentId = `${displayName}-${ComponentStyle.generateName(
+      displayName + nr
+    )}`
 
     return parentComponentId !== undefined
       ? `${parentComponentId}-${componentId}`
@@ -270,7 +264,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     const styledComponentId =
       options.displayName && options.componentId
         ? `${escape(options.displayName)}-${options.componentId}`
-        : componentId
+        : options.componentId || componentId
 
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),
