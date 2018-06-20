@@ -10,7 +10,7 @@ export type StyledProps<P> = ThemedStyledProps<P, any>;
 
 export type ThemedOuterStyledProps<P, T> = P & {
   theme?: T;
-  innerRef?: ((instance: object) => void) | RefObject<HTMLElement | SVGElement | ReactComponent>
+  innerRef?: ((instance: any) => void) | RefObject<HTMLElement | SVGElement | ReactComponent>
 };
 export type OuterStyledProps<P> = ThemedOuterStyledProps<P, any>;
 
@@ -39,7 +39,7 @@ export interface StyledComponentClass<P, T, O = P> extends ComponentClass<Themed
 
 export interface ThemedStyledFunction<P, T, O = P> {
   (strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): StyledComponentClass<P, T, O>;
-  <U>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P & U, T, O & U>;
+    <U = {}>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P & U, T, O & U>;
   attrs<U, A extends Partial<P & U> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<DiffBetween<A, P & U>, T, DiffBetween<A, O & U>>;
 }
 
@@ -70,7 +70,8 @@ export interface ThemedCssFunction<T> {
 }
 
 // Helper type operators
-type Diff<T extends string, U extends string> = ({ [P in T]: P } & { [P in U]: never } & { [x: string]: never })[T];
+type KeyofBase = keyof any;
+type Diff<T extends KeyofBase, U extends KeyofBase> = ({ [P in T]: P } & { [P in U]: never })[T];
 type Omit<T, K extends keyof T> = Pick<T, Diff<keyof T, K>>;
 type DiffBetween<T, U> = Pick<T, Diff<keyof T, keyof U>> & Pick<U, Diff<keyof U, keyof T>>;
 type WithOptionalTheme<P extends { theme?: T; }, T> = Omit<P, "theme"> & { theme?: T; };

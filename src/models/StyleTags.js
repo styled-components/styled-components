@@ -2,7 +2,7 @@
 /* eslint-disable flowtype/object-type-delimiter */
 /* eslint-disable react/prop-types */
 
-import React from 'react'
+import React, { type Element } from 'react'
 import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR } from '../constants'
 import { type ExtractedComp } from '../utils/extractCompsFromCSS'
 import { splitByRules } from '../utils/stringifyRules'
@@ -39,7 +39,7 @@ export interface Tag<T> {
   removeRules(id: string): void;
   css(): string;
   toHTML(additionalAttrs: ?string): string;
-  toElement(): React.Element<*>;
+  toElement(): Element<*>;
   clone(): Tag<T>;
 }
 
@@ -151,7 +151,7 @@ const makeSpeedyTag = (
   el: HTMLStyleElement,
   getImportRuleTag: ?() => Tag<any>
 ): Tag<number> => {
-  const names: Names = Object.create(null)
+  const names: Names = (Object.create(null): Object)
   const markers = Object.create(null)
   const sizes: number[] = []
 
@@ -165,10 +165,11 @@ const makeSpeedyTag = (
       return prev
     }
 
-    const marker = (markers[id] = sizes.length)
+    markers[id] = sizes.length
     sizes.push(0)
     resetIdNames(names, id)
-    return marker
+
+    return markers[id]
   }
 
   const insertRules = (id, cssRules, name) => {
@@ -257,7 +258,7 @@ const makeBrowserTag = (
   el: HTMLStyleElement,
   getImportRuleTag: ?() => Tag<any>
 ): Tag<Text> => {
-  const names = Object.create(null)
+  const names = (Object.create(null): Object)
   const markers = Object.create(null)
 
   const extractImport = getImportRuleTag !== undefined
@@ -272,10 +273,11 @@ const makeBrowserTag = (
       return prev
     }
 
-    const marker = (markers[id] = makeTextNode(id))
-    el.appendChild(marker)
+    markers[id] = makeTextNode(id)
+    el.appendChild(markers[id])
     names[id] = Object.create(null)
-    return marker
+
+    return markers[id]
   }
 
   const insertRules = (id, cssRules, name) => {
@@ -344,7 +346,8 @@ const makeBrowserTag = (
 }
 
 const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
-  const names = namesArg === undefined ? Object.create(null) : namesArg
+  const names =
+    namesArg === undefined ? (Object.create(null): Object) : namesArg
   const markers = markersArg === undefined ? Object.create(null) : markersArg
 
   const insertMarker = id => {

@@ -68,6 +68,8 @@ exports[`ssr should extract the CSS in a simple case 2`] = `
 .sc-a {} .b{color:red;}</style>"
 `;
 
+exports[`ssr should handle errors while streaming 1`] = `[Invariant Violation: React.Children.only expected to receive a single React element child.]`;
+
 exports[`ssr should interleave styles with rendered HTML when utilitizing streaming 1`] = `
 "<style data-styled-components=\\"b\\" data-styled-streamed=\\"true\\">
 /* sc-component-id: sc-global-2303210225 */

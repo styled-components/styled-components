@@ -555,9 +555,22 @@ describe('validAttr', () => {
     expect(validAttr('onAnimationIterationCapture')).toEqual(true)
     expect(validAttr('onTransitionEnd')).toEqual(true)
     expect(validAttr('onTransitionEndCapture')).toEqual(true)
+    expect(validAttr('onPointerDown')).toEqual(true)
+    expect(validAttr('onPointerMove')).toEqual(true)
+    expect(validAttr('onPointerUp')).toEqual(true)
+    expect(validAttr('onPointerCancel')).toEqual(true)
+    expect(validAttr('onGotPointerCapture')).toEqual(true)
+    expect(validAttr('onLostPointerCapture')).toEqual(true)
+    expect(validAttr('onPointerEnter')).toEqual(true)
+    expect(validAttr('onPointerLeave')).toEqual(true)
+    expect(validAttr('onPointerOver')).toEqual(true)
+    expect(validAttr('onPointerOut')).toEqual(true)
   })
   it('should not allow custom props', () => {
     expect(validAttr('isPrimary')).toEqual(false)
     expect(validAttr('primary')).toEqual(false)
   });
+  it('should handle x attributes', () => {
+    expect(validAttr('x-error-message')).toEqual(true)
+  })
 })
