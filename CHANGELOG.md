@@ -6,9 +6,19 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+* placeholder, remove me
+
+## [v3.3.3] - 2018-06-20
+
 * Fixed a regression when extending a `styled(StyledComponent)` introduced in 3.3.0, by @probablyup (see #1819)
 
 * Adjust how displayName is generated when not using Babel to properly preserve a displayName passed via `withConfig`, by @probablyup (see #1755)
+
+* [TS] Fix props being removed when indexed types are passed to WithOptionalTheme, by @devrelm (see #1806)
+
+* [TS] Allow TypeScript 2.9.1 to accept tagged template type argument, by @Igorbek (see #1798)
+
+* Add ref documentation for React.createRef(), by @julmot (see #1792)
 
 ## [v3.3.2] - 2018-06-04
 
@@ -496,7 +506,9 @@ _v3.3.1 was skipped due to a bad deploy._
 
 * Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v3.3.0...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v3.3.3...master
+[v3.3.3]: https://github.com/styled-components/styled-components/compare/v3.3.2...v3.3.3
+[v3.3.2]: https://github.com/styled-components/styled-components/compare/v3.3.0...v3.3.2
 [v3.3.0]: https://github.com/styled-components/styled-components/compare/v3.2.6...v3.3.0
 [v3.2.6]: https://github.com/styled-components/styled-components/compare/v3.2.5...v3.2.6
 [v3.2.5]: https://github.com/styled-components/styled-components/compare/v3.2.3...v3.2.5
