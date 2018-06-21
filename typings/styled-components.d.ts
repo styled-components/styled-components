@@ -38,8 +38,7 @@ export interface StyledComponentClass<P, T, O = P> extends ComponentClass<Themed
 }
 
 export interface ThemedStyledFunction<P, T, O = P> {
-  (strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]): StyledComponentClass<P, T, O>;
-    <U = {}>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P & U, T, O & U>;
+  <U = {}>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P & U, T, O & U>;
   attrs<U, A extends Partial<P & U> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<DiffBetween<A, P & U>, T, DiffBetween<A, O & U>>;
 }
 
