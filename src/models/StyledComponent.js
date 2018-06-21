@@ -36,22 +36,16 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     const displayName =
       typeof _displayName !== 'string' ? 'sc' : escape(_displayName)
 
-    let componentId
-
     /**
-     * only fall back to hashing the component injection order if
-     * a proper displayName isn't provided by the babel plugin
+     * This ensures uniqueness if two components happen to share
+     * the same displayName.
      */
-    if (!_displayName) {
-      const nr = (identifiers[displayName] || 0) + 1
-      identifiers[displayName] = nr
+    const nr = (identifiers[displayName] || 0) + 1
+    identifiers[displayName] = nr
 
-      componentId = `${displayName}-${ComponentStyle.generateName(
-        displayName + nr
-      )}`
-    } else {
-      componentId = `${displayName}-${ComponentStyle.generateName(displayName)}`
-    }
+    const componentId = `${displayName}-${ComponentStyle.generateName(
+      displayName + nr
+    )}`
 
     return parentComponentId !== undefined
       ? `${parentComponentId}-${componentId}`
@@ -269,7 +263,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     const styledComponentId =
       options.displayName && options.componentId
         ? `${escape(options.displayName)}-${options.componentId}`
-        : componentId
+        : options.componentId || componentId
 
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),
@@ -278,6 +272,12 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     )
 
     class StyledComponent extends ParentComponent {
+      static attrs = attrs
+      static componentStyle = componentStyle
+      static displayName = displayName
+      static styledComponentId = styledComponentId
+      static target = target
+
       static contextTypes = {
         [CHANNEL]: PropTypes.func,
         [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
@@ -332,15 +332,19 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
     }
 
-    if (isClass) hoist(StyledComponent, target)
-
-    // we do this after hoisting to ensure we're overwriting existing
-    // rules when wrapping another styled component class
-    StyledComponent.displayName = displayName
-    StyledComponent.styledComponentId = styledComponentId
-    StyledComponent.attrs = attrs
-    StyledComponent.componentStyle = componentStyle
-    StyledComponent.target = target
+    if (isClass) {
+      hoist(StyledComponent, target, {
+        // all SC-specific things should not be hoisted
+        attrs: true,
+        componentStyle: true,
+        displayName: true,
+        extend: true,
+        styledComponentId: true,
+        target: true,
+        warnTooManyClasses: true,
+        withComponent: true,
+      })
+    }
 
     return StyledComponent
   }
