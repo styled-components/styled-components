@@ -6,15 +6,13 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Add first-class support for objects:
+* Add first-class support for functions that return objects, by @acjay (see #1820)
 
   ```JS
   const Comp = styled.div((({ color }) => ({
     color,
   }))
   ```
-
-  This can be useful for destructuring the props of the styled component or for inserting logic for computing the styles from props.
 
 ## [v3.3.3] - 2018-06-20
 
