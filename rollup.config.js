@@ -5,15 +5,21 @@ import commonjs from 'rollup-plugin-commonjs'
 import babel from 'rollup-plugin-babel'
 import json from 'rollup-plugin-json'
 import flow from 'rollup-plugin-flow'
-import uglify from 'rollup-plugin-uglify'
+import { terser } from 'rollup-plugin-terser'
 import visualizer from 'rollup-plugin-visualizer'
 import sourceMaps from 'rollup-plugin-sourcemaps'
 import ignore from 'rollup-plugin-ignore'
 import pkg from './package.json'
 
 const cjs = {
-  format: 'cjs',
   exports: 'named',
+  format: 'cjs',
+  sourcemap: true,
+}
+
+const esm = {
+  format: 'esm',
+  sourcemap: true,
 }
 
 const commonPlugins = [
@@ -21,40 +27,43 @@ const commonPlugins = [
     // needed for sourcemaps to be properly generated
     pretty: true,
   }),
+  sourceMaps(),
   json(),
   nodeResolve(),
-  sourceMaps(),
+  babel({
+    exclude: 'node_modules/**',
+    plugins: ['external-helpers'],
+  }),
   commonjs({
     ignoreGlobal: true,
     namedExports: {
       'react-is': ['isValidElementType'],
     },
   }),
-  babel({
-    plugins: ['external-helpers'],
-  }),
   replace({
     __DEV__: JSON.stringify(false), // disable flag indicating a Jest run
   }),
 ]
 
+const globals = { 'prop-types': 'PropTypes', react: 'React' }
+
 const configBase = {
   input: 'src/index.js',
-  globals: { 'prop-types': 'PropTypes', react: 'React' },
   external: ['react', 'prop-types'].concat(
     Object.keys(pkg.dependencies),
     Object.keys(pkg.peerDependencies)
   ),
   plugins: commonPlugins,
-  sourcemap: true,
 }
 
 const umdBaseConfig = Object.assign({}, configBase, {
   output: {
+    exports: 'named',
     file: 'dist/styled-components.js',
     format: 'umd',
+    globals,
     name: 'styled',
-    exports: 'named',
+    sourcemap: true,
   },
   external: ['react'],
   plugins: configBase.plugins.concat(
@@ -81,7 +90,7 @@ const umdProdConfig = Object.assign({}, umdBaseConfig, {
     replace({
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
-    uglify({
+    terser({
       sourceMap: true,
     }),
     visualizer({ filename: './bundle-stats.html' }),
@@ -91,7 +100,7 @@ const umdProdConfig = Object.assign({}, umdBaseConfig, {
 const serverConfig = Object.assign({}, configBase, {
   external: configBase.external.concat('stream'),
   output: [
-    { file: 'dist/styled-components.es.js', format: 'es' },
+    Object.assign({}, esm, { file: 'dist/styled-components.es.js' }),
     Object.assign({}, cjs, { file: 'dist/styled-components.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
@@ -103,14 +112,14 @@ const serverConfig = Object.assign({}, configBase, {
 
 const serverProdConfig = Object.assign({}, configBase, serverConfig, {
   output: [
-    { file: 'dist/styled-components.es.min.js', format: 'es' },
+    Object.assign({}, esm, { file: 'dist/styled-components.es.min.js' }),
     Object.assign({}, cjs, { file: 'dist/styled-components.cjs.min.js' }),
   ],
   plugins: serverConfig.plugins.concat(
     replace({
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
-    uglify({
+    terser({
       sourceMap: true,
     })
   ),
@@ -118,7 +127,7 @@ const serverProdConfig = Object.assign({}, configBase, serverConfig, {
 
 const browserConfig = Object.assign({}, configBase, {
   output: [
-    { file: 'dist/styled-components.browser.es.js', format: 'es' },
+    Object.assign({}, esm, { file: 'dist/styled-components.browser.es.js' }),
     Object.assign({}, cjs, { file: 'dist/styled-components.browser.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
@@ -131,7 +140,9 @@ const browserConfig = Object.assign({}, configBase, {
 
 const browserProdConfig = Object.assign({}, configBase, browserConfig, {
   output: [
-    { file: 'dist/styled-components.browser.es.min.js', format: 'es' },
+    Object.assign({}, esm, {
+      file: 'dist/styled-components.browser.es.min.js',
+    }),
     Object.assign({}, cjs, {
       file: 'dist/styled-components.browser.cjs.min.js',
     }),
@@ -140,7 +151,7 @@ const browserProdConfig = Object.assign({}, configBase, browserConfig, {
     replace({
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
-    uglify({
+    terser({
       sourceMap: true,
     })
   ),
@@ -157,7 +168,7 @@ const nativeConfig = Object.assign({}, configBase, {
 const primitivesConfig = Object.assign({}, configBase, {
   input: 'src/primitives/index.js',
   output: [
-    { file: 'dist/styled-components-primitives.es.js', format: 'es' },
+    Object.assign({}, esm, { file: 'dist/styled-components-primitives.es.js' }),
     Object.assign({}, cjs, {
       file: 'dist/styled-components-primitives.cjs.js',
     }),
@@ -174,7 +185,7 @@ const noParserConfig = Object.assign({}, configBase, {
   external: configBase.external.concat('stream'),
   input: 'src/no-parser/index.js',
   output: [
-    { file: 'dist/styled-components-no-parser.es.js', format: 'es' },
+    Object.assign({}, esm, { file: 'dist/styled-components-no-parser.es.js' }),
     Object.assign({}, cjs, { file: 'dist/styled-components-no-parser.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
@@ -186,7 +197,9 @@ const noParserConfig = Object.assign({}, configBase, {
 
 const noParserBrowserConfig = Object.assign({}, configBase, {
   output: [
-    { file: 'dist/styled-components-no-parser.browser.es.js', format: 'es' },
+    Object.assign({}, esm, {
+      file: 'dist/styled-components-no-parser.browser.es.js',
+    }),
     Object.assign({}, cjs, {
       file: 'dist/styled-components-no-parser.browser.cjs.js',
     }),
