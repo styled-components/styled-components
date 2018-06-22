@@ -4,13 +4,13 @@
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "typings": "typings/styled-components.d.ts",
   "main": "dist/styled-components.cjs.js",
-  "jsnext:main": "dist/styled-components.es.js",
-  "module": "dist/styled-components.es.js",
+  "jsnext:main": "dist/styled-components.esm.js",
+  "module": "dist/styled-components.esm.js",
   "react-native": "dist/styled-components.native.cjs.js",
   "browser": {
-    "./dist/styled-components.es.js": "./dist/styled-components.browser.es.js",
+    "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js",
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js",
-    "./dist/styled-components-no-parser.es.js": "./dist/styled-components-no-parser.browser.es.js",
+    "./dist/styled-components-no-parser.esm.js": "./dist/styled-components-no-parser.browser.esm.js",
     "./dist/styled-components-no-parser.cjs.js": "./dist/styled-components-no-parser.browser.cjs.js"
   },
   "scripts": {
@@ -187,7 +187,7 @@
       "maxSize": "11.5kB"
     },
     {
-      "path": "./dist/styled-components.es.min.js",
+      "path": "./dist/styled-components.esm.min.js",
       "maxSize": "11.5kB"
     }
   ],

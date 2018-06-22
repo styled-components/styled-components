@@ -48,8 +48,6 @@ const commonPlugins = [
   }),
 ]
 
-const globals = { 'prop-types': 'PropTypes', react: 'React' }
-
 const configBase = {
   input: 'src/index.js',
   external: ['react', 'prop-types'].concat(
@@ -58,6 +56,8 @@ const configBase = {
   ),
   plugins: commonPlugins,
 }
+
+const globals = { react: 'React' }
 
 const umdBaseConfig = Object.assign({}, configBase, {
   output: {
@@ -68,7 +68,7 @@ const umdBaseConfig = Object.assign({}, configBase, {
     name: 'styled',
     sourcemap: true,
   },
-  external: ['react'],
+  external: Object.keys(globals),
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
@@ -103,7 +103,7 @@ const umdProdConfig = Object.assign({}, umdBaseConfig, {
 const serverConfig = Object.assign({}, configBase, {
   external: configBase.external.concat('stream'),
   output: [
-    getESM({ file: 'dist/styled-components.es.js' }),
+    getESM({ file: 'dist/styled-components.esm.js' }),
     getCJS({ file: 'dist/styled-components.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
@@ -115,7 +115,7 @@ const serverConfig = Object.assign({}, configBase, {
 
 const serverProdConfig = Object.assign({}, configBase, serverConfig, {
   output: [
-    getESM({ file: 'dist/styled-components.es.min.js' }),
+    getESM({ file: 'dist/styled-components.esm.min.js' }),
     getCJS({ file: 'dist/styled-components.cjs.min.js' }),
   ],
   plugins: serverConfig.plugins.concat(
@@ -130,7 +130,7 @@ const serverProdConfig = Object.assign({}, configBase, serverConfig, {
 
 const browserConfig = Object.assign({}, configBase, {
   output: [
-    getESM({ file: 'dist/styled-components.browser.es.js' }),
+    getESM({ file: 'dist/styled-components.browser.esm.js' }),
     getCJS({ file: 'dist/styled-components.browser.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
@@ -144,7 +144,7 @@ const browserConfig = Object.assign({}, configBase, {
 const browserProdConfig = Object.assign({}, configBase, browserConfig, {
   output: [
     getESM({
-      file: 'dist/styled-components.browser.es.min.js',
+      file: 'dist/styled-components.browser.esm.min.js',
     }),
     getCJS({
       file: 'dist/styled-components.browser.cjs.min.js',
@@ -171,9 +171,9 @@ const nativeConfig = Object.assign({}, configBase, {
 const primitivesConfig = Object.assign({}, configBase, {
   input: 'src/primitives/index.js',
   output: [
-    getESM({ file: 'dist/styled-components-primitives.es.js' }),
+    getESM({ file: 'dist/styled-components-primitivesm.esm.js' }),
     getCJS({
-      file: 'dist/styled-components-primitives.cjs.js',
+      file: 'dist/styled-components-primitivesm.cjs.js',
     }),
   ],
   external: configBase.external.concat('react-primitives'),
@@ -188,7 +188,7 @@ const noParserConfig = Object.assign({}, configBase, {
   external: configBase.external.concat('stream'),
   input: 'src/no-parser/index.js',
   output: [
-    getESM({ file: 'dist/styled-components-no-parser.es.js' }),
+    getESM({ file: 'dist/styled-components-no-parser.esm.js' }),
     getCJS({ file: 'dist/styled-components-no-parser.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
@@ -201,7 +201,7 @@ const noParserConfig = Object.assign({}, configBase, {
 const noParserBrowserConfig = Object.assign({}, configBase, {
   output: [
     getESM({
-      file: 'dist/styled-components-no-parser.browser.es.js',
+      file: 'dist/styled-components-no-parser.browser.esm.js',
     }),
     getCJS({
       file: 'dist/styled-components-no-parser.browser.cjs.js',
