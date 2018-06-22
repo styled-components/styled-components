@@ -22,6 +22,9 @@ const esm = {
   sourcemap: true,
 }
 
+const getCJS = override => Object.assign({}, cjs, override)
+const getESM = override => Object.assign({}, esm, override)
+
 const commonPlugins = [
   flow({
     // needed for sourcemaps to be properly generated
@@ -100,8 +103,8 @@ const umdProdConfig = Object.assign({}, umdBaseConfig, {
 const serverConfig = Object.assign({}, configBase, {
   external: configBase.external.concat('stream'),
   output: [
-    Object.assign({}, esm, { file: 'dist/styled-components.es.js' }),
-    Object.assign({}, cjs, { file: 'dist/styled-components.cjs.js' }),
+    getESM({ file: 'dist/styled-components.es.js' }),
+    getCJS({ file: 'dist/styled-components.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
     replace({
@@ -112,8 +115,8 @@ const serverConfig = Object.assign({}, configBase, {
 
 const serverProdConfig = Object.assign({}, configBase, serverConfig, {
   output: [
-    Object.assign({}, esm, { file: 'dist/styled-components.es.min.js' }),
-    Object.assign({}, cjs, { file: 'dist/styled-components.cjs.min.js' }),
+    getESM({ file: 'dist/styled-components.es.min.js' }),
+    getCJS({ file: 'dist/styled-components.cjs.min.js' }),
   ],
   plugins: serverConfig.plugins.concat(
     replace({
@@ -127,8 +130,8 @@ const serverProdConfig = Object.assign({}, configBase, serverConfig, {
 
 const browserConfig = Object.assign({}, configBase, {
   output: [
-    Object.assign({}, esm, { file: 'dist/styled-components.browser.es.js' }),
-    Object.assign({}, cjs, { file: 'dist/styled-components.browser.cjs.js' }),
+    getESM({ file: 'dist/styled-components.browser.es.js' }),
+    getCJS({ file: 'dist/styled-components.browser.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
     replace({
@@ -140,10 +143,10 @@ const browserConfig = Object.assign({}, configBase, {
 
 const browserProdConfig = Object.assign({}, configBase, browserConfig, {
   output: [
-    Object.assign({}, esm, {
+    getESM({
       file: 'dist/styled-components.browser.es.min.js',
     }),
-    Object.assign({}, cjs, {
+    getCJS({
       file: 'dist/styled-components.browser.cjs.min.js',
     }),
   ],
@@ -159,7 +162,7 @@ const browserProdConfig = Object.assign({}, configBase, browserConfig, {
 
 const nativeConfig = Object.assign({}, configBase, {
   input: 'src/native/index.js',
-  output: Object.assign({}, cjs, {
+  output: getCJS({
     file: 'dist/styled-components.native.cjs.js',
   }),
   external: configBase.external.concat('react-native'),
@@ -168,8 +171,8 @@ const nativeConfig = Object.assign({}, configBase, {
 const primitivesConfig = Object.assign({}, configBase, {
   input: 'src/primitives/index.js',
   output: [
-    Object.assign({}, esm, { file: 'dist/styled-components-primitives.es.js' }),
-    Object.assign({}, cjs, {
+    getESM({ file: 'dist/styled-components-primitives.es.js' }),
+    getCJS({
       file: 'dist/styled-components-primitives.cjs.js',
     }),
   ],
@@ -185,8 +188,8 @@ const noParserConfig = Object.assign({}, configBase, {
   external: configBase.external.concat('stream'),
   input: 'src/no-parser/index.js',
   output: [
-    Object.assign({}, esm, { file: 'dist/styled-components-no-parser.es.js' }),
-    Object.assign({}, cjs, { file: 'dist/styled-components-no-parser.cjs.js' }),
+    getESM({ file: 'dist/styled-components-no-parser.es.js' }),
+    getCJS({ file: 'dist/styled-components-no-parser.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
     replace({
@@ -197,10 +200,10 @@ const noParserConfig = Object.assign({}, configBase, {
 
 const noParserBrowserConfig = Object.assign({}, configBase, {
   output: [
-    Object.assign({}, esm, {
+    getESM({
       file: 'dist/styled-components-no-parser.browser.es.js',
     }),
-    Object.assign({}, cjs, {
+    getCJS({
       file: 'dist/styled-components-no-parser.browser.cjs.js',
     }),
   ],
