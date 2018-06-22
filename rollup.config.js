@@ -6,7 +6,6 @@ import babel from 'rollup-plugin-babel'
 import json from 'rollup-plugin-json'
 import flow from 'rollup-plugin-flow'
 import { terser } from 'rollup-plugin-terser'
-import visualizer from 'rollup-plugin-visualizer'
 import sourceMaps from 'rollup-plugin-sourcemaps'
 import ignore from 'rollup-plugin-ignore'
 import pkg from './package.json'
@@ -96,7 +95,6 @@ const umdProdConfig = Object.assign({}, umdBaseConfig, {
     terser({
       sourceMap: true,
     }),
-    visualizer({ filename: './bundle-stats.html' }),
   ]),
 })
 
