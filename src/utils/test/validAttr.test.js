@@ -580,4 +580,10 @@ describe('validAttr', () => {
   it('should handle x attributes', () => {
     expect(validAttr('x-error-message')).toEqual(true)
   })
+
+  it('should allow all the preact props', () => {
+    expect(validAttr('class')).toEqual(true)
+    expect(validAttr('for')).toEqual(true)
+    expect(validAttr('autofocus')).toEqual(true)
+  })
 })
