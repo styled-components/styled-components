@@ -20,7 +20,24 @@ type Props = {
   target?: HTMLElement | null,
 }
 
-class StyleSheetManager extends Component<Props, void> {
+export default class StyleSheetManager extends Component<Props, void> {
+  static childContextTypes = {
+    [CONTEXT_KEY]: PropTypes.oneOfType([
+      PropTypes.instanceOf(StyleSheet),
+      PropTypes.instanceOf(ServerStyleSheet),
+    ]).isRequired,
+  }
+
+  static propTypes = {
+    sheet: PropTypes.oneOfType([
+      PropTypes.instanceOf(StyleSheet),
+      PropTypes.instanceOf(ServerStyleSheet),
+    ]),
+    target: PropTypes.shape({
+      appendChild: PropTypes.func.isRequired,
+    }),
+  }
+
   sheetInstance: StyleSheet
 
   getChildContext() {
@@ -45,22 +62,3 @@ class StyleSheetManager extends Component<Props, void> {
     return React.Children.only((this.props: any).children)
   }
 }
-
-StyleSheetManager.childContextTypes = {
-  [CONTEXT_KEY]: PropTypes.oneOfType([
-    PropTypes.instanceOf(StyleSheet),
-    PropTypes.instanceOf(ServerStyleSheet),
-  ]).isRequired,
-}
-
-StyleSheetManager.propTypes = {
-  sheet: PropTypes.oneOfType([
-    PropTypes.instanceOf(StyleSheet),
-    PropTypes.instanceOf(ServerStyleSheet),
-  ]),
-  target: PropTypes.shape({
-    appendChild: PropTypes.func.isRequired,
-  }),
-}
-
-export default StyleSheetManager
