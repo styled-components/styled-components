@@ -18,6 +18,7 @@ describe('validAttr', () => {
     expect(validAttr('onFocusOut')).toEqual(true)
     expect(validAttr('className')).toEqual(true)
   })
+
   it('should allow all the html props', () => {
     expect(validAttr('accept')).toEqual(true)
     expect(validAttr('acceptCharset')).toEqual(true)
@@ -164,6 +165,7 @@ describe('validAttr', () => {
     expect(validAttr('security')).toEqual(true)
     expect(validAttr('unselectable')).toEqual(true)
   })
+
   it('should handle all the SVG props', () => {
     expect(validAttr('accentHeight')).toEqual(true)
     expect(validAttr('accumulate')).toEqual(true)
@@ -405,18 +407,21 @@ describe('validAttr', () => {
     expect(validAttr('z')).toEqual(true)
     expect(validAttr('zoomAndPan')).toEqual(true)
   })
+
   it('should handle aria and data attributes', () => {
     expect(validAttr('data-xyz')).toEqual(true)
     expect(validAttr('data-omg-this-works')).toEqual(true)
     expect(validAttr('aria-label')).toEqual(true)
     expect(validAttr('aria-labelled-by')).toEqual(true)
   })
+
   it('should handle uppercase aria and data attributes', () => {
     expect(validAttr('DATA-XYZ')).toEqual(true)
     expect(validAttr('DATA-OMG-THIS-WORKS')).toEqual(true)
     expect(validAttr('ARIA-LABEL')).toEqual(true)
     expect(validAttr('ARIA-LABELLED-BY')).toEqual(true)
   })
+
   it('should allow all the event handlers', () => {
     expect(validAttr('onCopy')).toEqual(true)
     expect(validAttr('onCopyCapture')).toEqual(true)
@@ -566,10 +571,12 @@ describe('validAttr', () => {
     expect(validAttr('onPointerOver')).toEqual(true)
     expect(validAttr('onPointerOut')).toEqual(true)
   })
+
   it('should not allow custom props', () => {
     expect(validAttr('isPrimary')).toEqual(false)
     expect(validAttr('primary')).toEqual(false)
-  });
+  })
+
   it('should handle x attributes', () => {
     expect(validAttr('x-error-message')).toEqual(true)
   })
