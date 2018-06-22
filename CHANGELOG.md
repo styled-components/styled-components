@@ -14,7 +14,18 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
   }))
   ```
   
-* Add `createGlobalStyle` which returns a component which, when mounting ('componentWillMount'), will apply global styles. The styles will also be removed once the component unmounts during `componentWillUnmount`, by @JamieDixon @marionebl and @yjimk (see #1416)
+* Add `createGlobalStyle` that returns a component which, when mounting, will apply global styles. It can be updated, replaced, removed, etc like any normal component and the global scope will update accordingly, by @JamieDixon @marionebl and @yjimk (see #1416)
+
+  ```jsx
+  const GlobalStyles = createGlobalScope`
+    html {
+      color: 'red';
+    }
+  `
+  
+  // then put it in your React tree somewhere:
+  // <GlobalStyles />
+  ```
 
 ## [v3.3.3] - 2018-06-20
 
