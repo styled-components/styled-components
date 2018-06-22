@@ -8,7 +8,6 @@ import flow from 'rollup-plugin-flow'
 import { terser } from 'rollup-plugin-terser'
 import sourceMaps from 'rollup-plugin-sourcemaps'
 import ignore from 'rollup-plugin-ignore'
-import pkg from './package.json'
 
 const cjs = {
   exports: 'named',
@@ -48,11 +47,11 @@ const commonPlugins = [
 ]
 
 const configBase = {
-  input: 'src/index.js',
-  external: ['react', 'prop-types'].concat(
-    Object.keys(pkg.dependencies),
-    Object.keys(pkg.peerDependencies)
-  ),
+  input: './src/index.js',
+
+  // \0 is rollup convention for generated in memory modules
+  external: id =>
+    !id.startsWith('\0') && !id.startsWith('.') && !id.startsWith('/'),
   plugins: commonPlugins,
 }
 
@@ -99,7 +98,6 @@ const umdProdConfig = Object.assign({}, umdBaseConfig, {
 })
 
 const serverConfig = Object.assign({}, configBase, {
-  external: configBase.external.concat('stream'),
   output: [
     getESM({ file: 'dist/styled-components.esm.js' }),
     getCJS({ file: 'dist/styled-components.cjs.js' }),
@@ -159,22 +157,20 @@ const browserProdConfig = Object.assign({}, configBase, browserConfig, {
 })
 
 const nativeConfig = Object.assign({}, configBase, {
-  input: 'src/native/index.js',
+  input: './src/native/index.js',
   output: getCJS({
     file: 'dist/styled-components.native.cjs.js',
   }),
-  external: configBase.external.concat('react-native'),
 })
 
 const primitivesConfig = Object.assign({}, configBase, {
-  input: 'src/primitives/index.js',
+  input: './src/primitives/index.js',
   output: [
     getESM({ file: 'dist/styled-components-primitivesm.esm.js' }),
     getCJS({
       file: 'dist/styled-components-primitivesm.cjs.js',
     }),
   ],
-  external: configBase.external.concat('react-primitives'),
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(true),
@@ -183,8 +179,7 @@ const primitivesConfig = Object.assign({}, configBase, {
 })
 
 const noParserConfig = Object.assign({}, configBase, {
-  external: configBase.external.concat('stream'),
-  input: 'src/no-parser/index.js',
+  input: './src/no-parser/index.js',
   output: [
     getESM({ file: 'dist/styled-components-no-parser.esm.js' }),
     getCJS({ file: 'dist/styled-components-no-parser.cjs.js' }),
