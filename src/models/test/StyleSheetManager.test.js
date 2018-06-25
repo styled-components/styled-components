@@ -219,5 +219,47 @@ describe('StyleSheetManager', () => {
       expect(html).toMatchSnapshot()
       expect(css).toMatchSnapshot()
     })
+
+    it('should escape </style>', () => {
+      const sheet = new ServerStyleSheet()
+      const ONE = styled.h1`
+        background-image: url('</style><script>¯\_(ツ)_/¯</script><style>');
+      `
+      const TWO = styled.h2`
+        &::before {
+          content: "</style><script>¯\_(ツ)_/¯</script><style>"
+        }
+      `
+      class Wrapper extends React.Component {
+        state = {
+          targetRef: null
+        }
+        render() {
+          return (
+            <div ref={(el) => { this.setState({ targetRef: el }) }}>
+              {this.state.targetRef && <StyleSheetManager target={this.state.targetRef}>
+                <TWO />
+              </StyleSheetManager>}
+            </div>
+          )
+        }
+      }
+
+      const html = renderToString(
+        <StyleSheetManager sheet={sheet.instance}>
+          <div>
+            <ONE />
+            <Wrapper />
+          </div>
+        </StyleSheetManager>
+      )
+      const css = sheet.getStyleTags()
+
+      const dummyHead = document.createElement('head');
+      dummyHead.innerHTML = css;
+
+      expect(dummyHead.querySelectorAll('style').length).toEqual(1)
+      expect(dummyHead.querySelectorAll('script').length).toEqual(0)
+    })
   })
 })
