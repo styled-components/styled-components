@@ -95,6 +95,7 @@ export function withTheme<P extends { theme?: T; }, T>(component: Component<P>):
 export function keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
 export function consolidateStreamedStyles(): void;
+export function isStyledComponent(target: string | Component<object>): boolean;
 
 export const ThemeProvider: ThemeProviderComponent<object>;
 
