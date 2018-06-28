@@ -138,6 +138,8 @@ And voila! 💅
 
 ### Media Templates
 
+#### For simple cases
+
 Due to the functional nature of javascript, you can easily define your own tagged template literal to wrap styles in media queries. For example:
 
 ```js
@@ -177,6 +179,70 @@ const Container = styled.div`
 ```
 
 Pretty easy, huh?
+
+<br />
+
+#### Advanced media-query control with `SuperQuery`
+If you need more control over the `styled-component` based application, you can use the **[SuperQuery](https://github.com/themgoncalves/super-query)** to get a **full powerful and simple control over your media query**.
+
+Here is some examples:
+
+How about create a `media query `that handles screen widths **`between`** `360px and 1024px` ?
+
+```jsx
+const Container = styled.div`
+  color: #000;
+  ${SuperQuery().minWidth('360px').and().maxWidth('1024px').css`
+      content: 'this is awesome!'
+  `}
+`
+```
+
+Cool, right? But it's even cooler to use our `built-in breakpoints`, let's rewrite it!
+
+```jsx
+const Container = styled.div`
+  color: #000;
+  ${SuperQuery().minWidth().sm().and().maxWidth().lg().css`
+      content: 'this is even more awesome!'
+  `}
+`
+```
+PS: it's also possible to use _your own custom breakpoints_!
+
+How about control the `screen orientation` over mobile devices ?
+
+```jsx
+const Container = styled.div`
+  color: #000;
+  ${SuperQuery().maxWidth().md().and().landscape().css`
+      content: 'Yep! Your device is on landscape mode!'
+  `}
+`
+```
+
+Want a more `complex query` ?
+
+```jsx
+const Container = styled.div`
+  color: #000;
+  ${SuperQuery()
+        .screen()
+        .and()
+        .deviceAspectRatio('16/9')
+        .or()
+        .screen()
+        .and()
+        .deviceAspectRatio('16/10')
+        .css`
+      content: 'this is awesome!'
+  `}
+`
+```
+Yeah! Now you know how `simple` and `powerful` is SuperQuery!
+
+**Documentation**: [https://github.com/themgoncalves/super-query](https://github.com/themgoncalves/super-query)
+
 
 ### Refs to DOM nodes
 
