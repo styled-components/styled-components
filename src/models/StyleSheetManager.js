@@ -15,12 +15,13 @@ The StyleSheetManager expects a valid target or sheet prop!
 `.trim()
     : ''
 
-class StyleSheetManager extends Component {
+type Props = {
+  sheet?: StyleSheet | null,
+  target?: HTMLElement | null,
+}
+
+class StyleSheetManager extends Component<Props, void> {
   sheetInstance: StyleSheet
-  props: {
-    sheet?: StyleSheet | null,
-    target?: HTMLElement | null,
-  }
 
   getChildContext() {
     return { [CONTEXT_KEY]: this.sheetInstance }

@@ -1,5 +1,5 @@
 // @flow
-import React from 'react'
+import React, { Component } from 'react'
 import { mount, render } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
@@ -375,7 +375,7 @@ describe('theming', () => {
 
   // https://github.com/styled-components/styled-components/issues/596
   it('should hoist static properties when using withTheme', () => {
-    class MyComponent extends React.Component {
+    class MyComponent extends Component<*, *> {
       static myStaticProperty: boolean = true
     }
 
@@ -385,7 +385,7 @@ describe('theming', () => {
   })
 
   it('should only pass the theme prop', () => {
-    class Comp extends React.Component {
+    class Comp extends Component<*, *> {
       render() {
         return <div />
       }
@@ -406,7 +406,7 @@ describe('theming', () => {
   })
 
   it('should accept innerRef and pass it on as ref', () => {
-    class Comp extends React.Component {
+    class Comp extends Component<*, *> {
       render() {
         return <div />
       }
@@ -478,5 +478,97 @@ describe('theming', () => {
     wrapper.setProps({ theme: newTheme })
 
     expect(wrapper.find('div').text()).toBe('blue')
+  })
+
+  // https://github.com/styled-components/styled-components/issues/1776
+  it('should allow module objects to be passed as themes', () => {
+    const theme = {
+      borderRadius: '2px',
+      palette: {
+        black: '#000',
+        white: '#fff',
+        // Flow has limited support for Symbols and computed properties;
+        // see <https://github.com/facebook/flow/issues/3258>.
+        // $FlowFixMe
+        [Symbol.toStringTag]: 'Module'
+      },
+      // Flow has limited support for Symbols and computed properties;
+      // see <https://github.com/facebook/flow/issues/3258>.
+      // $FlowFixMe
+      [Symbol.toStringTag]: 'Module'
+    }
+
+    const Comp1 = styled.div`
+      background-color: ${ ({ theme }) => theme.palette.white };
+      color: ${ ({ theme }) => theme.palette.black };
+    `
+
+    let wrapper
+    expect(() => {
+      wrapper = mount(
+        <ThemeProvider theme={ theme }>
+          <Comp1 />
+        </ThemeProvider>
+      )
+    }).not.toThrow('plain object')
+
+    expectCSSMatches(`.sc-a {} .b {background-color:${theme.palette.white};color:${theme.palette.black};}`)
+  })
+
+  it('should allow other complex objects to be passed as themes', () => {
+    class Theme {
+      borderRadius: string
+
+      constructor(borderRadius) {
+        this.borderRadius = borderRadius
+      }
+    }
+
+    const theme = new Theme('2px')
+
+    const Comp1 = styled.div`
+      border-radius: ${ ({ theme }) => theme.borderRadius };
+    `
+
+    const wrapper = mount(
+      <ThemeProvider theme={ theme }>
+        <Comp1 />
+      </ThemeProvider>
+    )
+
+    expectCSSMatches(`.sc-a {} .b {border-radius:${theme.borderRadius};}`)
+  })
+
+  it('should not allow the theme to be null', () => {
+    expect(() => {
+      mount(
+        // $FlowInvalidInputTest
+        <ThemeProvider theme={ null }>
+          <div />
+        </ThemeProvider>
+      )
+    }).toThrowErrorMatchingSnapshot()
+  })
+
+  it('should not allow the theme to be an array', () => {
+    expect(() => {
+      mount(
+        // $FlowInvalidInputTest
+        <ThemeProvider theme={ ['a', 'b', 'c'] }>
+          <div />
+        </ThemeProvider>
+      )
+    }).toThrowErrorMatchingSnapshot()
+  })
+
+  it('should not allow the theme to be a non-object', () => {
+    expect(() => {
+      mount(
+        // $FlowInvalidInputTest
+        <ThemeProvider theme={ 42 }>
+          <div />
+        </ThemeProvider>
+      )
+    }).toThrowErrorMatchingSnapshot()
   })
 })

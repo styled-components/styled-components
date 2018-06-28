@@ -1,8 +1,6 @@
 // @flow
-/* globals React$Element */
-import React, { Component } from 'react'
+import React, { Component, type Element } from 'react'
 import PropTypes from 'prop-types'
-import isPlainObject from 'is-plain-object'
 import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
 import once from '../utils/once'
@@ -19,7 +17,7 @@ export const CONTEXT_CHANNEL_SHAPE = PropTypes.shape({
 
 export type Theme = { [key: string]: mixed }
 type ThemeProviderProps = {|
-  children?: React$Element<any>,
+  children?: Element<any>,
   theme: Theme | ((outerTheme: Theme) => void),
 |}
 
@@ -39,7 +37,7 @@ const isFunction = test => typeof test === 'function'
  * Provide a theme to an entire react component tree via context and event listeners (have to do
  * both context and event emitter as pure components block context updates)
  */
-class ThemeProvider extends Component {
+class ThemeProvider extends Component<ThemeProviderProps, void> {
   getTheme: (theme?: Theme | ((outerTheme: Theme) => void)) => Theme
   outerTheme: Theme
   unsubscribeToOuterId: string
@@ -108,7 +106,9 @@ class ThemeProvider extends Component {
       const mergedTheme = theme(this.outerTheme)
       if (
         process.env.NODE_ENV !== 'production' &&
-        !isPlainObject(mergedTheme)
+        (mergedTheme === null ||
+          Array.isArray(mergedTheme) ||
+          typeof mergedTheme !== 'object')
       ) {
         throw new Error(
           process.env.NODE_ENV !== 'production'
@@ -118,10 +118,10 @@ class ThemeProvider extends Component {
       }
       return mergedTheme
     }
-    if (!isPlainObject(theme)) {
+    if (theme === null || Array.isArray(theme) || typeof theme !== 'object') {
       throw new Error(
         process.env.NODE_ENV !== 'production'
-          ? '[ThemeProvider] Please make your theme prop a plain object'
+          ? '[ThemeProvider] Please make your theme prop an object'
           : ''
       )
     }

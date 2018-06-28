@@ -76,36 +76,35 @@ export default class ServerStyleSheet {
     let instanceTagIndex = 0
 
     const streamAttr = `${SC_STREAM_ATTR}="true"`
-    const ourStream = new stream.Readable()
-    // $FlowFixMe
-    ourStream._read = () => {}
 
-    readableStream.on('data', chunk => {
-      const { tags } = instance
-      let html = ''
+    const transformer = new stream.Transform({
+      transform: function appendStyleChunks(chunk, /* encoding */ _, callback) {
+        const { tags } = instance
+        let html = ''
 
-      /* retrieve html for each new style tag */
-      for (; instanceTagIndex < tags.length; instanceTagIndex += 1) {
-        const tag = tags[instanceTagIndex]
-        html += tag.toHTML(streamAttr)
-      }
+        /* retrieve html for each new style tag */
+        for (; instanceTagIndex < tags.length; instanceTagIndex += 1) {
+          const tag = tags[instanceTagIndex]
+          html += tag.toHTML(streamAttr)
+        }
 
-      /* force our StyleSheets to emit entirely new tags */
-      instance.sealAllTags()
-      /* prepend style html to chunk */
-      ourStream.push(html + chunk)
+        /* force our StyleSheets to emit entirely new tags */
+        instance.sealAllTags()
+
+        /* prepend style html to chunk */
+        this.push(html + chunk)
+        callback()
+      },
     })
 
-    readableStream.on('end', () => {
-      this.complete()
-      ourStream.push(null)
-    })
-
+    readableStream.on('end', () => this.complete())
     readableStream.on('error', err => {
       this.complete()
-      ourStream.emit('error', err)
+
+      // forward the error to the transform stream
+      transformer.emit('error', err)
     })
 
-    return ourStream
+    return readableStream.pipe(transformer)
   }
 }
