@@ -1,8 +1,6 @@
 import * as React from "react";
 import { StatelessComponent, Component as ReactComponent, ComponentClass, PureComponent, ReactElement, RefObject } from "react";
 
-type Component<P> = ComponentClass<P> | StatelessComponent<P>;
-
 export interface ThemeProps<T> {
   theme: T;
 }
@@ -35,13 +33,13 @@ type Attrs<P, A extends Partial<P>, T> = {
 export interface StyledComponentClass<P, T, O = P> extends ComponentClass<ThemedOuterStyledProps<O, T>> {
   extend: ThemedStyledFunction<P, T, O>;
 
-  withComponent<K extends keyof JSX.IntrinsicElements>(tag: K): StyledComponentClass<JSX.IntrinsicElements[K], T, O>;
-  withComponent(element: ComponentClass<P>): StyledComponentClass<P, T, O>;
+  withComponent<K extends keyof JSX.IntrinsicElements>(tag: K): StyledComponentClass<JSX.IntrinsicElements[K], T, JSX.IntrinsicElements[K] & O>;
+  withComponent<U = {}>(element: React.ComponentType<U>): StyledComponentClass<U, T, U & O>;
 }
 
 export interface ThemedStyledFunction<P, T, O = P> {
   <U = {}>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P & U, T, O & U>;
-  attrs<U, A extends Partial<P & U> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<P & A & U, T, O & U>;
+  attrs<U, A extends Partial<P & U> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<DiffBetween<A, P & U>, T, DiffBetween<A, O & U>>;
 }
 
 export type StyledFunction<P> = ThemedStyledFunction<P, any>;
@@ -74,6 +72,7 @@ export interface ThemedCssFunction<T> {
 type KeyofBase = keyof any;
 type Diff<T extends KeyofBase, U extends KeyofBase> = ({ [P in T]: P } & { [P in U]: never })[T];
 type Omit<T, K extends keyof T> = Pick<T, Diff<keyof T, K>>;
+type DiffBetween<T, U> = Pick<T, Diff<keyof T, keyof U>> & Pick<U, Diff<keyof U, keyof T>>;
 type WithOptionalTheme<P extends { theme?: T; }, T> = Omit<P, "theme"> & { theme?: T; };
 
 export interface ThemedStyledComponentsModule<T> {
@@ -82,7 +81,7 @@ export interface ThemedStyledComponentsModule<T> {
   css: ThemedCssFunction<T>;
   keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
   injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
-  withTheme<P extends { theme?: T; }>(component: Component<P>): ComponentClass<WithOptionalTheme<P, T>>;
+  withTheme<P extends { theme?: T; }>(component: React.ComponentType<P>): ComponentClass<WithOptionalTheme<P, T>>;
 
   ThemeProvider: ThemeProviderComponent<T>;
 }
@@ -90,7 +89,7 @@ export interface ThemedStyledComponentsModule<T> {
 declare const styled: StyledInterface;
 
 export const css: ThemedCssFunction<any>;
-export function withTheme<P extends { theme?: T; }, T>(component: Component<P>): ComponentClass<WithOptionalTheme<P, T>>;
+export function withTheme<P extends { theme?: T; }, T>(component: React.ComponentType<P>): ComponentClass<WithOptionalTheme<P, T>>;
 
 export function keyframes(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): string;
 export function injectGlobal(strings: TemplateStringsArray, ...interpolations: SimpleInterpolation[]): void;
