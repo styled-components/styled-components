@@ -38,7 +38,7 @@
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
     "prebenchmarks": "yarn run build:benchmarks",
     "benchmarks": "node benchmarks/run-headless.js",
-    "build:benchmarks": "(cd benchmarks && yarn run build)",
+    "build:benchmarks": "(cd benchmarks && yarn && yarn run build)",
     "postinstall": "node ./scripts/postinstall.js || exit 0"
   },
   "repository": {
