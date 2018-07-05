@@ -5,7 +5,9 @@
       {
         "loose": true,
         "modules": false,
-        "exclude": ["transform-es2015-typeof-symbol"],
+        "exclude": [
+          "transform-es2015-typeof-symbol"
+        ],
         "targets": {
           "browsers": [
             "chrome 38",
@@ -28,8 +30,20 @@
     "babel-preset-flow"
   ],
   "plugins": [
-    ["babel-plugin-transform-class-properties", { loose: true }],
-    ["babel-plugin-transform-object-rest-spread", { useBuiltIns: true }],
-    ["babel-plugin-transform-react-remove-prop-types", { mode: "wrap" }]
+    [
+      "babel-plugin-transform-class-properties",
+      { loose: true
+      }
+    ],
+    [
+      "babel-plugin-transform-object-rest-spread",
+      { useBuiltIns: true
+      }
+    ],
+    [
+      "babel-plugin-transform-react-remove-prop-types",
+      { mode: "wrap"
+      }
+    ]
   ]
 }
