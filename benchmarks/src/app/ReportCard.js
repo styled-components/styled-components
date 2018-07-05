@@ -35,7 +35,7 @@ class ReportCard extends React.PureComponent {
         </View>
         <View style={styles.right}>
           {mean ? (
-            <View testID="run-result">
+            <View testID={benchmarkName + ' results'}>
               <Text style={[styles.bold, styles.monoFont]}>
                 {fmt(mean)} ±{fmt(stdDev)} ms
               </Text>

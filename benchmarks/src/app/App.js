@@ -61,6 +61,7 @@ export default class App extends Component {
                   onValueChange={this._handleChangeBenchmark}
                   selectedValue={currentBenchmarkName}
                   style={styles.picker}
+                  testID="benchmark-picker"
                 >
                   {Object.keys(tests).map(test => (
                     <Picker.Item key={test} label={test} value={test} />
