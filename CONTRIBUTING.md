@@ -106,6 +106,22 @@ In the sandbox source, `styled-components` is an alias to `styled-components/src
 
 When you commit our pre-commit hook will run, which executes `lint-staged`. It will run the linter automatically and warn you if the code you've written doesn't comply with our code style guidelines.
 
+### How do I run the benchmarks?
+
+We have three different benchmarks: mounting a deep tree, mounting a wide tree and updating dynamic styles. Shoutout to [@necolas](https://github.com/necolas), who wrote these for `react-native-web` and whom we stole these benchmarks from.
+
+To run the benchmarks run:
+
+```sh
+yarn run benchmarks
+```
+
+You can also get traces that you can look at in the Chrome DevTools "Performance" panel by running
+
+```sh
+yarn run benchmarks --tracing
+```
+
 ### How do I fix my pre-commit hook?
 
 We've recently migrated from `pre-commit` to `husky`, so if you're running into issues during this migration, you'll likely have to do the following:
