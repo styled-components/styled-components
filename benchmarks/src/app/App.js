@@ -20,7 +20,7 @@ export default class App extends Component {
     const currentBenchmarkName = Object.keys(props.tests)[0];
     this.state = {
       currentBenchmarkName,
-      currentLibraryName: 'react-native-web',
+      currentLibraryName: 'styled-components',
       status: 'idle',
       results: []
     };
@@ -55,7 +55,7 @@ export default class App extends Component {
               <View style={{ width: 1, backgroundColor: colors.fadedGray }} />
               <View style={styles.pickerContainer}>
                 <Text style={styles.pickerTitle}>Benchmark</Text>
-                <Text>{currentBenchmarkName}</Text>
+                <Text testID="current-benchmark-name">{currentBenchmarkName}</Text>
                 <Picker
                   enabled={status !== 'running'}
                   onValueChange={this._handleChangeBenchmark}
@@ -75,6 +75,8 @@ export default class App extends Component {
                   onPress={this._handleStart}
                   style={styles.button}
                   title={status === 'running' ? 'Running…' : 'Run'}
+                  disabled={status === 'running'}
+                  testID="run-button"
                 />
               </View>
             </View>
