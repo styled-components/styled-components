@@ -11,7 +11,7 @@ const tests = ['Mount deep tree', 'Mount wide tree', 'Update dynamic styles'];
   console.log('Opening benchmark app...')
   await page.goto(`file://${path.join(__dirname, './dist/index.html')}`);
 
-  console.log('Running benchmarks...')
+  console.log('Running benchmarks... (this may take a minute; do not use your machine while these are running!)')
   for (var i = 0; i < tests.length; i++) {
     const test = tests[i];
     // styled-components is auto-selected, so all we gotta do is select the benchmark and press "Run"
