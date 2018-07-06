@@ -26,6 +26,10 @@ export interface InterpolationFunction<P> {
   (props: P): Interpolation<P>;
 }
 
+type StyleObject<P extends { style?: object; }, U, T, S = P['style']> = {
+  [K in keyof S]: ((props: ThemedStyledProps<P & U, T>) => S[K]) | S[K];
+}
+
 type Attrs<P, A extends Partial<P>, T> = {
   [K in keyof A]: ((props: ThemedStyledProps<P, T>) => A[K]) | A[K];
 };
@@ -38,6 +42,7 @@ export interface StyledComponentClass<P, T, O = P> extends ComponentClass<Themed
 }
 
 export interface ThemedStyledFunction<P, T, O = P> {
+  <U = {}>(styles: StyleObject<P, U, T>): StyledComponentClass<P & U, T, O & U>;
   <U = {}>(strings: TemplateStringsArray, ...interpolations: Interpolation<ThemedStyledProps<P & U, T>>[]): StyledComponentClass<P & U, T, O & U>;
   attrs<U, A extends Partial<P & U> = {}>(attrs: Attrs<P & U, A, T>): ThemedStyledFunction<DiffBetween<A, P & U>, T, DiffBetween<A, O & U>>;
 }
