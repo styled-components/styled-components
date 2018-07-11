@@ -13,5 +13,6 @@ export default (
   ) {
     return flatten(interleave([], [styles, ...interpolations]))
   }
+
   return flatten(interleave(styles, interpolations))
 }
