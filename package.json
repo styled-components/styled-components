@@ -77,7 +77,6 @@
     "css-to-react-native": "^2.0.3",
     "fbjs": "^0.8.16",
     "hoist-non-react-statics": "^2.5.0",
-    "is-plain-object": "^2.0.1",
     "prop-types": "^15.5.4",
     "react-is": "^16.3.1",
     "stylis": "^3.5.0",
