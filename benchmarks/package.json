@@ -1,0 +1,44 @@
+{
+  "private": true,
+  "name": "benchmarks",
+  "version": "0.8.6",
+  "scripts": {
+    "build": "mkdir -p dist && cp -f index.html dist/index.html && ./node_modules/.bin/webpack-cli --config ./webpack.config.js"
+  },
+  "dependencies": {
+    "aphrodite": "^2.2.0",
+    "classnames": "^2.2.5",
+    "d3-scale-chromatic": "^1.2.0",
+    "emotion": "^9.1.3",
+    "fela": "^6.1.7",
+    "glamor": "2.20.40",
+    "radium": "^0.24.0",
+    "react": "^16.3.2",
+    "react-art": "^16.4.1",
+    "react-dom": "^16.3.2",
+    "react-fela": "^7.2.0",
+    "react-jss": "^8.4.0",
+    "react-native-web": "0.8.6",
+    "reactxp": "^1.1.1",
+    "styled-components": "^3.2.6",
+    "styled-jsx": "^2.2.6",
+    "styletron-engine-atomic": "^1.0.5",
+    "styletron-react": "^4.2.1"
+  },
+  "devDependencies": {
+    "babel-loader": "^7.1.4",
+    "babel-plugin-react-native-web": "0.8.6",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "babel-plugin-transform-react-remove-prop-types": "^0.4.13",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-flow": "^6.23.0",
+    "babel-preset-react": "^6.24.1",
+    "css-loader": "^0.28.11",
+    "style-loader": "^0.21.0",
+    "url-loader": "^1.0.1",
+    "webpack": "^4.8.1",
+    "webpack-bundle-analyzer": "^2.11.1",
+    "webpack-cli": "^2.1.3"
+  }
+}

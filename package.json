@@ -36,6 +36,9 @@
     "prepublishOnly": "run-s build",
     "lint-staged": "lint-staged",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
+    "prebenchmarks": "yarn run build:benchmarks",
+    "benchmarks": "node benchmarks/run-headless.js",
+    "build:benchmarks": "(cd benchmarks && yarn && yarn run build)",
     "postinstall": "node ./scripts/postinstall.js || exit 0"
   },
   "repository": {
@@ -125,7 +128,7 @@
     "node-watch": "^0.4.1",
     "npm-run-all": "^4.1.2",
     "prettier": "1.9.2",
-    "puppeteer": "^1.4.0",
+    "puppeteer": "^1.5.0",
     "raf": "^3.4.0",
     "react": "^16.3.0",
     "react-dom": "^16.0.0",
