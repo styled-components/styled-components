@@ -7,7 +7,7 @@ export default (css: Function) => {
   const constructWithOptions = (
     componentConstructor: Function,
     tag: Target,
-    options: Object = {}
+    options: Object = EMPTY_OBJECT
   ) => {
     if (!isValidElementType(tag)) {
       throw new Error(

@@ -7,6 +7,7 @@ import {
   CHANNEL_NEXT,
   CONTEXT_CHANNEL_SHAPE,
 } from '../models/ThemeProvider'
+import { EMPTY_OBJECT } from '../utils/empties'
 import _isStyledComponent from '../utils/isStyledComponent'
 import determineTheme from '../utils/determineTheme'
 
@@ -33,7 +34,7 @@ const wrapWithTheme = (Component: ComponentType<any>) => {
       [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
     }
 
-    state: { theme?: ?Object } = {}
+    state: { theme?: ?Object } = EMPTY_OBJECT
     unsubscribeId: number = -1
 
     componentWillMount() {
