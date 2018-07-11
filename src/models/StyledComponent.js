@@ -6,6 +6,7 @@ import { Component, createElement } from 'react'
 import { CONTEXT_KEY } from '../constants'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 import determineTheme from '../utils/determineTheme'
+import { EMPTY_OBJECT } from '../utils/empties'
 import escape from '../utils/escape'
 import generateDisplayName from '../utils/generateDisplayName'
 import getComponentName from '../utils/getComponentName'
@@ -157,7 +158,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         })
       } else {
         // eslint-disable-next-line react/prop-types
-        const theme = this.props.theme || {}
+        const theme = this.props.theme || EMPTY_OBJECT
         const generatedClassName = this.generateAndInjectStyles(
           theme,
           this.props

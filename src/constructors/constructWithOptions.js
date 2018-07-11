@@ -1,5 +1,6 @@
 // @flow
 import { isValidElementType } from 'react-is'
+import { EMPTY_OBJECT } from '../utils/empties'
 import type { Target } from '../types'
 
 export default (css: Function) => {
@@ -27,7 +28,7 @@ export default (css: Function) => {
     templateFunction.attrs = attrs =>
       constructWithOptions(componentConstructor, tag, {
         ...options,
-        attrs: { ...(options.attrs || {}), ...attrs },
+        attrs: { ...(options.attrs || EMPTY_OBJECT), ...attrs },
       })
 
     return templateFunction

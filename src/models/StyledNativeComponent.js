@@ -3,6 +3,7 @@ import hoist from 'hoist-non-react-statics'
 import PropTypes from 'prop-types'
 import { Component, createElement } from 'react'
 import determineTheme from '../utils/determineTheme'
+import { EMPTY_OBJECT } from '../utils/empties'
 import generateDisplayName from '../utils/generateDisplayName'
 import isStyledComponent from '../utils/isStyledComponent'
 import isTag from '../utils/isTag'
@@ -91,7 +92,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         })
       } else {
         // eslint-disable-next-line react/prop-types
-        const theme = this.props.theme || {}
+        const theme = this.props.theme || EMPTY_OBJECT
         const generatedStyles = this.generateAndInjectStyles(theme, this.props)
         this.setState({ theme, generatedStyles })
       }
