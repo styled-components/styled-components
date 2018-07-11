@@ -6,6 +6,7 @@ const appDirectory = path.resolve(__dirname)
 
 module.exports = {
   mode: 'production',
+  devtool: 'source-map',
   context: __dirname,
   entry: './src/index',
   output: {
