@@ -16,7 +16,7 @@ import validAttr from '../utils/validAttr'
 import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import ServerStyleSheet from './ServerStyleSheet'
 import StyleSheet from './StyleSheet'
-import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
+import { CHANNEL_NEXT, contextShape } from './ThemeProvider'
 
 import type { Theme } from './ThemeProvider'
 import type { RuleSet, Target } from '../types'
@@ -30,9 +30,8 @@ type BaseState = {
   generatedClassName?: string,
 }
 
-const contextShape = {
-  [CHANNEL]: PropTypes.func,
-  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+const modifiedContextShape = {
+  ...contextShape,
   [CONTEXT_KEY]: PropTypes.oneOfType([
     PropTypes.instanceOf(StyleSheet),
     PropTypes.instanceOf(ServerStyleSheet),
@@ -282,7 +281,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     class StyledComponent extends ParentComponent {
       static attrs = attrs
       static componentStyle = componentStyle
-      static contextTypes = contextShape
+      static contextTypes = modifiedContextShape
       static displayName = displayName
       static styledComponentId = styledComponentId
       static target = target

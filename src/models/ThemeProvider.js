@@ -15,6 +15,11 @@ export const CONTEXT_CHANNEL_SHAPE = PropTypes.shape({
   unsubscribe: PropTypes.func,
 })
 
+export const contextShape = {
+  [CHANNEL]: PropTypes.func, // legacy
+  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+}
+
 export type Theme = { [key: string]: mixed }
 type ThemeProviderProps = {|
   children?: Element<any>,
@@ -37,13 +42,18 @@ const isFunction = test => typeof test === 'function'
  * Provide a theme to an entire react component tree via context and event listeners (have to do
  * both context and event emitter as pure components block context updates)
  */
-class ThemeProvider extends Component<ThemeProviderProps, void> {
+export default class ThemeProvider extends Component<ThemeProviderProps, void> {
   broadcast: Broadcast
   getTheme: (theme?: Theme | ((outerTheme: Theme) => void)) => Theme
   outerTheme: Theme
   props: ThemeProviderProps
   unsubscribeToOuterId: number = -1
   unsubscribeToOuterId: string
+
+  static childContextTypes = contextShape
+  static contextTypes = {
+    [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+  }
 
   constructor() {
     super()
@@ -136,16 +146,7 @@ class ThemeProvider extends Component<ThemeProviderProps, void> {
     if (!this.props.children) {
       return null
     }
+
     return React.Children.only(this.props.children)
   }
 }
-
-ThemeProvider.childContextTypes = {
-  [CHANNEL]: PropTypes.func, // legacy
-  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-}
-ThemeProvider.contextTypes = {
-  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-}
-
-export default ThemeProvider

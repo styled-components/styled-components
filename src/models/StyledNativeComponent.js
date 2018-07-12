@@ -1,6 +1,5 @@
 // @flow
 import hoist from 'hoist-non-react-statics'
-import PropTypes from 'prop-types'
 import { Component, createElement } from 'react'
 import determineTheme from '../utils/determineTheme'
 import { EMPTY_OBJECT } from '../utils/empties'
@@ -8,7 +7,7 @@ import generateDisplayName from '../utils/generateDisplayName'
 import isStyledComponent from '../utils/isStyledComponent'
 import isTag from '../utils/isTag'
 import hasInInheritanceChain from '../utils/hasInInheritanceChain'
-import { CHANNEL, CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE } from './ThemeProvider'
+import { CHANNEL_NEXT, contextShape } from './ThemeProvider'
 
 import type { Theme } from './ThemeProvider'
 import type { RuleSet, Target } from '../types'
@@ -16,11 +15,6 @@ import type { RuleSet, Target } from '../types'
 type State = {
   theme?: ?Theme,
   generatedStyles: any,
-}
-
-const contextShape = {
-  [CHANNEL]: PropTypes.func,
-  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
 }
 
 // $FlowFixMe
