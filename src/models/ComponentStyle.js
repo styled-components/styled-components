@@ -4,6 +4,7 @@ import hashStr from '../vendor/glamor/hash'
 import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
 import StyleSheet from './StyleSheet'
 import { IS_BROWSER } from '../constants'
+import { EMPTY_ARRAY } from '../utils/empties'
 import isStyledComponent from '../utils/isStyledComponent'
 
 const areStylesCacheable = IS_BROWSER
@@ -65,7 +66,9 @@ export default (
 
       if (!StyleSheet.master.hasId(componentId)) {
         const placeholder =
-          process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : []
+          process.env.NODE_ENV !== 'production'
+            ? [`.${componentId} {}`]
+            : EMPTY_ARRAY
 
         StyleSheet.master.deferredInject(componentId, placeholder)
       }
