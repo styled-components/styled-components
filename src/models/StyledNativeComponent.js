@@ -18,6 +18,11 @@ type State = {
   generatedStyles: any,
 }
 
+const contextShape = {
+  [CHANNEL]: PropTypes.func,
+  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+}
+
 export default (constructWithOptions: Function, InlineStyle: Function) => {
   // $FlowFixMe
   class BaseStyledNativeComponent extends Component<*, State> {
@@ -199,15 +204,11 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
 
     class StyledNativeComponent extends ParentComponent {
       static attrs = attrs
+      static contextTypes = contextShape
       static displayName = displayName
       static inlineStyle = inlineStyle
       static styledComponentId = 'StyledNativeComponent'
       static target = target
-
-      static contextTypes = {
-        [CHANNEL]: PropTypes.func,
-        [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-      }
 
       static withComponent(tag: Target) {
         const { displayName: _, componentId: __, ...optionsToCopy } = options

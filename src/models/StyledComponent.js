@@ -30,6 +30,15 @@ type BaseState = {
   generatedClassName?: string,
 }
 
+const contextShape = {
+  [CHANNEL]: PropTypes.func,
+  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+  [CONTEXT_KEY]: PropTypes.oneOfType([
+    PropTypes.instanceOf(StyleSheet),
+    PropTypes.instanceOf(ServerStyleSheet),
+  ]),
+}
+
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
   const identifiers = {}
 
@@ -129,7 +138,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       const { componentStyle } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
 
-      // If this is a staticaly-styled component, we don't need to the theme
+      // If this is a statically-styled component, we don't need to the theme
       // to generate or build styles.
       if (componentStyle.isStatic) {
         const generatedClassName = this.generateAndInjectStyles(
@@ -149,6 +158,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
             nextTheme,
             this.constructor.defaultProps
           )
+
           const generatedClassName = this.generateAndInjectStyles(
             theme,
             this.props
@@ -215,7 +225,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         .filter(Boolean)
         .join(' ')
 
-      const baseProps: any = {
+      const baseProps: Object = {
         ...this.attrs,
         className,
       }
@@ -226,23 +236,20 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         baseProps.ref = innerRef
       }
 
-      const propsForElement = Object.keys(this.props).reduce(
-        (acc, propName) => {
-          // Don't pass through non HTML tags through to HTML elements
-          // always omit innerRef
-          if (
-            propName !== 'innerRef' &&
-            propName !== 'className' &&
-            (!isTargetTag || validAttr(propName))
-          ) {
-            // eslint-disable-next-line no-param-reassign
-            acc[propName] = this.props[propName]
-          }
+      const propsForElement = baseProps
+      let key
 
-          return acc
-        },
-        baseProps
-      )
+      for (key in this.props) {
+        // Don't pass through non HTML tags through to HTML elements
+        // always omit innerRef
+        if (
+          key !== 'innerRef' &&
+          key !== 'className' &&
+          (!isTargetTag || validAttr(key))
+        ) {
+          propsForElement[key] = this.props[key]
+        }
+      }
 
       return createElement(target, propsForElement)
     }
@@ -276,18 +283,10 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     class StyledComponent extends ParentComponent {
       static attrs = attrs
       static componentStyle = componentStyle
+      static contextTypes = contextShape
       static displayName = displayName
       static styledComponentId = styledComponentId
       static target = target
-
-      static contextTypes = {
-        [CHANNEL]: PropTypes.func,
-        [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-        [CONTEXT_KEY]: PropTypes.oneOfType([
-          PropTypes.instanceOf(StyleSheet),
-          PropTypes.instanceOf(ServerStyleSheet),
-        ]),
-      }
 
       static withComponent(tag: Target) {
         const { componentId: previousComponentId, ...optionsToCopy } = options
