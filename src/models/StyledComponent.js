@@ -111,7 +111,7 @@ class BaseStyledComponent extends Component<*, BaseState> {
     const { attrs, componentStyle, warnTooManyClasses } = this.constructor
     const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.master
 
-    // staticaly styled-components don't need to build an execution context object,
+    // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names
     if (componentStyle.isStatic && attrs === undefined) {
       return componentStyle.generateAndInjectStyles(

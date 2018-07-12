@@ -112,8 +112,10 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
   getTheme(passedTheme: (outerTheme: Theme) => void | Theme) {
     const theme = passedTheme || this.props.theme
+
     if (isFunction(theme)) {
       const mergedTheme = theme(this.outerTheme)
+
       if (
         process.env.NODE_ENV !== 'production' &&
         (mergedTheme === null ||
@@ -128,6 +130,7 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
       }
       return mergedTheme
     }
+
     if (theme === null || Array.isArray(theme) || typeof theme !== 'object') {
       throw new Error(
         process.env.NODE_ENV !== 'production'
@@ -135,6 +138,7 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
           : ''
       )
     }
+
     return { ...this.outerTheme, ...(theme: Object) }
   }
 
