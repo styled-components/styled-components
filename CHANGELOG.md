@@ -16,6 +16,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 * Add support for the prop variants used by Preact (`autofocus`, `class`, `for`), by @probablyup (see #1823)
 
+* Add handling for the new reserved "theme" prop; use it for passing arbitrary styling props that aren't intended to be rendered into the DOM as attributes (see [#1682](https://github.com/styled-components/styled-components/pull/1682))
+
 ## [v3.3.3] - 2018-06-20
 
 * Fixed a regression when extending a `styled(StyledComponent)` introduced in 3.3.0, by @probablyup (see #1819)
