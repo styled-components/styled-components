@@ -10,6 +10,8 @@ import {
 import { makeTag, makeRehydrationTag, type Tag } from './StyleTags'
 import extractComps from '../utils/extractCompsFromCSS'
 
+const SPLIT_REGEX = /\s+/
+
 /* determine the maximum number of components before tags are sharded */
 let MAX_SIZE
 if (IS_BROWSER) {
@@ -31,7 +33,7 @@ class StyleSheet {
   /* a map from ids to tags */
   tagMap: { [string]: Tag<any> }
   /* deferred rules for a given id */
-  deferred: { [string]: string[] }
+  deferred: { [string]: string[] | void }
   /* this is used for not reinjecting rules via hasNameForId() */
   rehydratedNames: { [string]: boolean }
   /* when rules for an id are removed using remove() we have to ignore rehydratedNames for it */
@@ -71,7 +73,7 @@ class StyleSheet {
 
     const els = []
     const names = []
-    let extracted = []
+    const extracted = []
     let isStreamed = false
 
     /* retrieve all of our SSR style elements from the DOM */
@@ -91,7 +93,7 @@ class StyleSheet {
       isStreamed = !!el.getAttribute(SC_STREAM_ATTR) || isStreamed
 
       /* retrieve all component names */
-      const elNames = (el.getAttribute(SC_ATTR) || '').trim().split(/\s+/)
+      const elNames = (el.getAttribute(SC_ATTR) || '').trim().split(SPLIT_REGEX)
       const elNamesSize = elNames.length
       for (let j = 0; j < elNamesSize; j += 1) {
         const name = elNames[j]
@@ -101,7 +103,8 @@ class StyleSheet {
       }
 
       /* extract all components and their CSS */
-      extracted = extracted.concat(extractComps(el.textContent))
+      extracted.push(...extractComps(el.textContent))
+
       /* store original HTMLStyleElement */
       els.push(el)
     }
@@ -275,7 +278,7 @@ class StyleSheet {
     const deferredRules = this.deferred[id]
     if (deferredRules !== undefined) {
       injectRules = deferredRules.concat(injectRules)
-      delete this.deferred[id]
+      this.deferred[id] = undefined
     }
 
     const tag = this.getTagForId(id)
@@ -297,7 +300,7 @@ class StyleSheet {
     /* ignore possible rehydrated names */
     this.ignoreRehydratedNames[id] = true
     /* delete possible deferred rules */
-    delete this.deferred[id]
+    this.deferred[id] = undefined
   }
 
   toHTML() {
