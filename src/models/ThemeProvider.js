@@ -38,12 +38,12 @@ const isFunction = test => typeof test === 'function'
  * both context and event emitter as pure components block context updates)
  */
 class ThemeProvider extends Component<ThemeProviderProps, void> {
+  broadcast: Broadcast
   getTheme: (theme?: Theme | ((outerTheme: Theme) => void)) => Theme
   outerTheme: Theme
-  unsubscribeToOuterId: string
   props: ThemeProviderProps
-  broadcast: Broadcast
   unsubscribeToOuterId: number = -1
+  unsubscribeToOuterId: string
 
   constructor() {
     super()
