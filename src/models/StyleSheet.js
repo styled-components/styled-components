@@ -1,5 +1,4 @@
 // @flow
-
 import { cloneElement } from 'react'
 import {
   IS_BROWSER,
@@ -25,7 +24,7 @@ if (IS_BROWSER) {
 let sheetRunningId = 0
 let master
 
-class StyleSheet {
+export default class StyleSheet {
   id: number
   sealed: boolean
   forceServer: boolean
@@ -90,7 +89,7 @@ class StyleSheet {
       const el = (nodes[i]: HTMLStyleElement)
 
       /* check if style tag is a streamed tag */
-      isStreamed = !!el.getAttribute(SC_STREAM_ATTR) || isStreamed
+      if (!isStreamed) isStreamed = !!el.getAttribute(SC_STREAM_ATTR)
 
       /* retrieve all component names */
       const elNames = (el.getAttribute(SC_ATTR) || '').trim().split(SPLIT_REGEX)
@@ -273,16 +272,16 @@ class StyleSheet {
       clones[i].inject(id, cssRules, name)
     }
 
-    /* add deferred rules for component */
-    let injectRules = cssRules
-    const deferredRules = this.deferred[id]
-    if (deferredRules !== undefined) {
-      injectRules = deferredRules.concat(injectRules)
-      this.deferred[id] = undefined
-    }
-
     const tag = this.getTagForId(id)
-    tag.insertRules(id, injectRules, name)
+
+    /* add deferred rules for component */
+    if (this.deferred[id]) {
+      this.deferred[id].push(...cssRules)
+
+      // $FlowFixMe
+      tag.insertRules(id, this.deferred[id], name)
+      this.deferred[id] = undefined
+    } else tag.insertRules(id, cssRules, name)
   }
 
   /* removes all rules for a given id, which doesn't remove its marker but resets it */
@@ -316,5 +315,3 @@ class StyleSheet {
     })
   }
 }
-
-export default StyleSheet
