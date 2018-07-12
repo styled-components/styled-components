@@ -114,13 +114,7 @@ class StyleSheet {
 
     /* create a tag to be used for rehydration */
     const tag = this.makeTag(null)
-    const rehydrationTag = makeRehydrationTag(
-      tag,
-      els,
-      extracted,
-      names,
-      isStreamed
-    )
+    const rehydrationTag = makeRehydrationTag(tag, els, extracted, isStreamed)
 
     /* reset capacity and adjust MAX_SIZE by the initial size of the rehydration */
     this.capacity = Math.max(1, MAX_SIZE - extractedSize)
