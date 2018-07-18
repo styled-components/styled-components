@@ -1,7 +1,7 @@
 // @flow
-import isPlainObject from 'is-plain-object'
 import type { Interpolation } from '../types'
 import _flatten, { objToCss } from '../utils/flatten'
+import isPlainObject from '../utils/isPlainObject'
 
 const isRuleSet = (interpolation: Interpolation): boolean =>
   !!(

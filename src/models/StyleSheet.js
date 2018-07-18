@@ -1,5 +1,4 @@
 // @flow
-
 import { cloneElement } from 'react'
 import {
   IS_BROWSER,
@@ -9,6 +8,8 @@ import {
 } from '../constants'
 import { makeTag, makeRehydrationTag, type Tag } from './StyleTags'
 import extractComps from '../utils/extractCompsFromCSS'
+
+const SPLIT_REGEX = /\s+/
 
 /* determine the maximum number of components before tags are sharded */
 let MAX_SIZE
@@ -23,7 +24,7 @@ if (IS_BROWSER) {
 let sheetRunningId = 0
 let master
 
-class StyleSheet {
+export default class StyleSheet {
   id: number
   sealed: boolean
   forceServer: boolean
@@ -31,7 +32,7 @@ class StyleSheet {
   /* a map from ids to tags */
   tagMap: { [string]: Tag<any> }
   /* deferred rules for a given id */
-  deferred: { [string]: string[] }
+  deferred: { [string]: string[] | void }
   /* this is used for not reinjecting rules via hasNameForId() */
   rehydratedNames: { [string]: boolean }
   /* when rules for an id are removed using remove() we have to ignore rehydratedNames for it */
@@ -71,7 +72,7 @@ class StyleSheet {
 
     const els = []
     const names = []
-    let extracted = []
+    const extracted = []
     let isStreamed = false
 
     /* retrieve all of our SSR style elements from the DOM */
@@ -88,10 +89,10 @@ class StyleSheet {
       const el = (nodes[i]: HTMLStyleElement)
 
       /* check if style tag is a streamed tag */
-      isStreamed = !!el.getAttribute(SC_STREAM_ATTR) || isStreamed
+      if (!isStreamed) isStreamed = !!el.getAttribute(SC_STREAM_ATTR)
 
       /* retrieve all component names */
-      const elNames = (el.getAttribute(SC_ATTR) || '').trim().split(/\s+/)
+      const elNames = (el.getAttribute(SC_ATTR) || '').trim().split(SPLIT_REGEX)
       const elNamesSize = elNames.length
       for (let j = 0; j < elNamesSize; j += 1) {
         const name = elNames[j]
@@ -101,7 +102,8 @@ class StyleSheet {
       }
 
       /* extract all components and their CSS */
-      extracted = extracted.concat(extractComps(el.textContent))
+      extracted.push(...extractComps(el.textContent))
+
       /* store original HTMLStyleElement */
       els.push(el)
     }
@@ -114,13 +116,7 @@ class StyleSheet {
 
     /* create a tag to be used for rehydration */
     const tag = this.makeTag(null)
-    const rehydrationTag = makeRehydrationTag(
-      tag,
-      els,
-      extracted,
-      names,
-      isStreamed
-    )
+    const rehydrationTag = makeRehydrationTag(tag, els, extracted, isStreamed)
 
     /* reset capacity and adjust MAX_SIZE by the initial size of the rehydration */
     this.capacity = Math.max(1, MAX_SIZE - extractedSize)
@@ -276,16 +272,16 @@ class StyleSheet {
       clones[i].inject(id, cssRules, name)
     }
 
-    /* add deferred rules for component */
-    let injectRules = cssRules
-    const deferredRules = this.deferred[id]
-    if (deferredRules !== undefined) {
-      injectRules = deferredRules.concat(injectRules)
-      delete this.deferred[id]
-    }
-
     const tag = this.getTagForId(id)
-    tag.insertRules(id, injectRules, name)
+
+    /* add deferred rules for component */
+    if (this.deferred[id]) {
+      this.deferred[id].push(...cssRules)
+
+      // $FlowFixMe
+      tag.insertRules(id, this.deferred[id], name)
+      this.deferred[id] = undefined
+    } else tag.insertRules(id, cssRules, name)
   }
 
   /* removes all rules for a given id, which doesn't remove its marker but resets it */
@@ -303,7 +299,7 @@ class StyleSheet {
     /* ignore possible rehydrated names */
     this.ignoreRehydratedNames[id] = true
     /* delete possible deferred rules */
-    delete this.deferred[id]
+    this.deferred[id] = undefined
   }
 
   toHTML() {
@@ -319,5 +315,3 @@ class StyleSheet {
     })
   }
 }
-
-export default StyleSheet
