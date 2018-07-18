@@ -2,16 +2,7 @@
 import styled from 'styled-components';
 import View from './View';
 
-const Dot = styled(View).attrs({
-  style: props => ({
-    marginLeft: `${props.x}px`,
-    marginTop: `${props.y}px`,
-    borderRightWidth: `${props.size / 2}px`,
-    borderBottomWidth: `${props.size / 2}px`,
-    borderLeftWidth: `${props.size / 2}px`,
-    borderBottomColor: `${props.color}`
-  })
-})`
+const Dot = styled(View)`
   position: absolute;
   cursor: pointer;
   width: 0;
@@ -20,6 +11,12 @@ const Dot = styled(View).attrs({
   border-style: solid;
   border-top-width: 0;
   transform: translate(50%, 50%);
+  margin-left: ${props => props.x + 'px'};
+  margin-top: ${props => props.y + 'px'};
+  border-right-width: ${props => props.size / 2 + 'px'};
+  border-bottom-width: ${props => props.size / 2 + 'px'};
+  border-left-width: ${props => props.size / 2 + 'px'};
+  border-bottom-color: ${props => props.color};
 `;
 
 export default Dot;
