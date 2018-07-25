@@ -63,8 +63,11 @@ export default (
       const name = generateRuleHash(this.componentId + flatCSS.join(''))
 
       if (!styleSheet.hasNameForId(componentId, name)) {
-        const css = stringifyRules(flatCSS, `.${name}`)
-        styleSheet.inject(this.componentId, css, name)
+        styleSheet.inject(
+          this.componentId,
+          stringifyRules(flatCSS, `.${name}`),
+          name
+        )
       }
 
       this.lastClassName = name

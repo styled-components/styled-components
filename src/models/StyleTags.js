@@ -254,6 +254,8 @@ const makeSpeedyTag = (
   }
 }
 
+const makeTextNode = id => document.createTextNode(makeTextMarker(id))
+
 const makeBrowserTag = (
   el: HTMLStyleElement,
   getImportRuleTag: ?() => Tag<any>
@@ -262,7 +264,6 @@ const makeBrowserTag = (
   const markers = Object.create(null)
 
   const extractImport = getImportRuleTag !== undefined
-  const makeTextNode = id => document.createTextNode(makeTextMarker(id))
 
   /* indicates whther getImportRuleTag was called */
   let usedImportRuleTag = false
@@ -332,16 +333,16 @@ const makeBrowserTag = (
   }
 
   return {
-    styleTag: el,
+    clone: throwCloneTagErr,
+    css,
     getIds: getIdsFromMarkersFactory(markers),
     hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
     removeRules,
-    css,
-    toHTML: wrapAsHtmlTag(css, names),
+    styleTag: el,
     toElement: wrapAsElement(css, names),
-    clone: throwCloneTagErr,
+    toHTML: wrapAsHtmlTag(css, names),
   }
 }
 
@@ -397,16 +398,16 @@ const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
   }
 
   const tag = {
-    styleTag: null,
+    clone,
+    css,
     getIds: getIdsFromMarkersFactory(markers),
     hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
     removeRules,
-    css,
-    toHTML: wrapAsHtmlTag(css, names),
+    styleTag: null,
     toElement: wrapAsElement(css, names),
-    clone,
+    toHTML: wrapAsHtmlTag(css, names),
   }
 
   return tag
@@ -423,6 +424,7 @@ export const makeTag = (
 ): Tag<any> => {
   if (IS_BROWSER && !forceServer) {
     const el = makeStyleTag(target, tagEl, insertBefore)
+
     if (DISABLE_SPEEDY) {
       return makeBrowserTag(el, getImportRuleTag)
     } else {
@@ -438,20 +440,19 @@ export const makeRehydrationTag = (
   tag: Tag<any>,
   els: HTMLStyleElement[],
   extracted: ExtractedComp[],
-  names: string[],
   immediateRehydration: boolean
 ): Tag<any> => {
   /* rehydration function that adds all rules to the new tag */
   const rehydrate = once(() => {
     /* add all extracted components to the new tag */
-    for (let i = 0; i < extracted.length; i += 1) {
+    for (let i = 0, len = extracted.length; i < len; i += 1) {
       const { componentId, cssFromDOM } = extracted[i]
       const cssRules = splitByRules(cssFromDOM)
       tag.insertRules(componentId, cssRules)
     }
 
     /* remove old HTMLStyleElements, since they have been rehydrated */
-    for (let i = 0; i < els.length; i += 1) {
+    for (let i = 0, len = els.length; i < len; i += 1) {
       const el = els[i]
       if (el.parentNode) {
         el.parentNode.removeChild(el)
