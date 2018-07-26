@@ -31,9 +31,9 @@ describe(`createGlobalStyle`, () => {
   });
 
   it(`injects global <style> when rendered`, () => {
-    const {render} = context
+    const { render } = context
     const Component = createGlobalStyle`[data-test-inject]{color:red;} `
-    render(<Component/>)
+    render(<Component />)
     expectCSSMatches(`[data-test-inject]{color:red;} `)
   });
 
@@ -51,23 +51,21 @@ describe(`createGlobalStyle`, () => {
   });
 
   it(`supports interpolation`, () => {
-    const {cleanup, render} = setup()
+    const { cleanup, render } = setup()
     const Component = createGlobalStyle`div {color:${props => props.color};} `
     render(
-      <ThemeProvider theme={{ color: 'orange' }}>
-        <Component color="orange"/>
-      </ThemeProvider>
+      <Component color="orange" />
     )
     expectCSSMatches(`div{color:orange;} `)
     cleanup()
   })
 
   it(`supports theming`, () => {
-    const {cleanup, render} = setup()
+    const { cleanup, render } = setup()
     const Component = createGlobalStyle`div {color:${props => props.theme.color};} `
     render(
       <ThemeProvider theme={{ color: 'black' }}>
-        <Component/>
+        <Component />
       </ThemeProvider>
     )
     expectCSSMatches(`div{color:black;} `)
@@ -75,7 +73,7 @@ describe(`createGlobalStyle`, () => {
   })
 
   it(`updates theme correctly`, () => {
-    const {cleanup, render} = setup()
+    const { cleanup, render } = setup()
     const Component = createGlobalStyle`div {color:${props => props.theme.color};} `
     let update;
     class App extends React.Component {
@@ -91,12 +89,12 @@ describe(`createGlobalStyle`, () => {
       render() {
         return (
           <ThemeProvider theme={{ color: this.state.color }}>
-            <Component/>
+            <Component />
           </ThemeProvider>
         );
       }
     }
-    render(<App/>)
+    render(<App />)
     expectCSSMatches(`div{color:grey;} `)
 
     update({ color: 'red' })
@@ -106,11 +104,11 @@ describe(`createGlobalStyle`, () => {
   })
 
   it(`renders to StyleSheetManager.target`, () => {
-    const {container, render} = context
+    const { container, render } = context
     const Component = createGlobalStyle`[data-test-target]{color:red;} `
     render(
       <StyleSheetManager target={container}>
-        <Component/>
+        <Component />
       </StyleSheetManager>
     )
 
@@ -120,14 +118,14 @@ describe(`createGlobalStyle`, () => {
   });
 
   it(`adds new global rules non-destructively`, () => {
-    const {container, render} = context
+    const { container, render } = context
     const Color = createGlobalStyle`[data-test-add]{color:red;} `
     const Background = createGlobalStyle`[data-test-add]{background:yellow;} `
 
     render(
       <React.Fragment>
-        <Color/>
-        <Background/>
+        <Color />
+        <Background />
       </React.Fragment>
     )
 
@@ -140,7 +138,7 @@ describe(`createGlobalStyle`, () => {
   })
 
   it(`stringifies multiple rules correctly`, () => {
-    const {cleanup, render} = setup()
+    const { cleanup, render } = setup()
     const Component = createGlobalStyle`
       div {
         color: ${props => props.fg};
@@ -148,22 +146,22 @@ describe(`createGlobalStyle`, () => {
       }
     `
     render(
-      <Component fg="red" bg="green"/>
+      <Component fg="red" bg="green" />
     )
     expectCSSMatches(`div{color:red;background:green;} `)
     cleanup()
   })
 
   it(`injects multiple <GlobalStyle> components correctly`, () => {
-    const {cleanup, render} = setup()
+    const { cleanup, render } = setup()
 
     const A = createGlobalStyle`body { background: palevioletred; }`;
     const B = createGlobalStyle`body { color: white; }`;
 
     render(
       <React.Fragment>
-        <A/>
-        <B/>
+        <A />
+        <B />
       </React.Fragment>
     )
     expectCSSMatches(`body{background:palevioletred;} body{color:white;}`)
@@ -171,7 +169,7 @@ describe(`createGlobalStyle`, () => {
   })
 
   it(`removes styling injected styling when unmounted`, () => {
-    const {cleanup, container, render} = setup()
+    const { cleanup, container, render } = setup()
     const Component = createGlobalStyle`[data-test-remove]{color:grey;} `
 
     class Comp extends React.Component {
@@ -184,17 +182,17 @@ describe(`createGlobalStyle`, () => {
       }
 
       render() {
-        return this.state.styled ? <Component/> : null
+        return this.state.styled ? <Component /> : null
       }
     }
 
-    render(<Comp/>)
+    render(<Comp />)
     expect(getCSS(document)).not.toContain(`[data-test-remove]{color:grey;}`)
     cleanup()
   })
 
   it(`removes styling injected for multiple <GlobalStyle> components correctly`, () => {
-    const {container, render} = context
+    const { container, render } = context
 
     const A = createGlobalStyle`body { background: palevioletred; }`;
     const B = createGlobalStyle`body { color: white; }`;
@@ -227,14 +225,14 @@ describe(`createGlobalStyle`, () => {
       render() {
         return (
           <div data-test-el onClick={() => this.onClick()}>
-            {this.state.a ? <A/> : null}
-            {this.state.b ? <B/> : null}
+            {this.state.a ? <A /> : null}
+            {this.state.b ? <B /> : null}
           </div>
         )
       }
     }
 
-    render(<Comp/>)
+    render(<Comp />)
     const el = document.querySelector('[data-test-el]')
     expectCSSMatches(`body{background:palevioletred;} body{color:white;}`)
 
