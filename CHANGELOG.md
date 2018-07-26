@@ -13,6 +13,19 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
     color,
   }))
   ```
+  
+* Add `createGlobalStyle` that returns a component which, when mounting, will apply global styles. It can be updated, replaced, removed, etc like any normal component and the global scope will update accordingly, by @JamieDixon @marionebl and @yjimk (see #1416)
+
+  ```jsx
+  const GlobalStyles = createGlobalScope`
+    html {
+      color: 'red';
+    }
+  `
+  
+  // then put it in your React tree somewhere:
+  // <GlobalStyles />
+  ```
 
 * Add support for the prop variants used by Preact (`autofocus`, `class`, `for`), by @probablyup (see #1823)
 

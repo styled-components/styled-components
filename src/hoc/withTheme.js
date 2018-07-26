@@ -37,19 +37,32 @@ export default (Component: ComponentType<any>) => {
         themeProp === undefined &&
         process.env.NODE_ENV !== 'production'
       ) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          '[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps'
-        )
-      } else if (styledContext === undefined && themeProp !== undefined) {
-        this.setState({ theme: themeProp })
-      } else {
-        const { subscribe } = styledContext
-        this.unsubscribeId = subscribe(nextTheme => {
-          const theme = determineTheme(this.props, nextTheme, defaultProps)
-          this.setState({ theme })
-        })
+        if (!_isStyledComponent(Component)) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            '[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps'
+          )
+        }
       }
+
+      if (styledContext === undefined && themeProp !== undefined) {
+        this.setState({ theme: themeProp })
+      }
+
+      if (styledContext === undefined) {
+        return
+      }
+
+      const { subscribe } = styledContext
+
+      if (typeof subscribe !== 'function') {
+        return
+      }
+
+      this.unsubscribeId = subscribe(nextTheme => {
+        const theme = determineTheme(this.props, nextTheme, defaultProps)
+        this.setState({ theme })
+      })
     }
 
     componentWillReceiveProps(nextProps: {
