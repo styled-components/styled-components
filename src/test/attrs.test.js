@@ -189,7 +189,7 @@ describe('attrs', () => {
     )
   })
 
-  it('should merge nested "style" attr', () => {
+  it('should shallow merge "style" prop + attr instead of overwriting', () => {
     const Paragraph = styled.p.attrs({
       style: props => ({
         ...props.style,
@@ -224,7 +224,7 @@ describe('attrs', () => {
     })``
 
     expect(shallow(<BlueText>Hello</BlueText>).html()).toEqual(
-      '<p style="color:blue;font-size:4em;" class="sc-b c sc-a d">Hello</p>'
+      '<p style="color:blue;font-size:4em" class="sc-b c sc-a d">Hello</p>'
     )
   })
 })
