@@ -18,59 +18,69 @@ describe('attrs', () => {
 
   it('pass a simple attr', () => {
     const Comp = styled.button.attrs({
-      type: 'button'
+      type: 'button',
     })``
-    expect(shallow(<Comp />).html()).toEqual('<button type="button" class="sc-a b"></button>')
+    expect(shallow(<Comp />).html()).toEqual(
+      '<button type="button" class="sc-a b"></button>'
+    )
   })
 
   it('pass a React component', () => {
     // $FlowFixMe
     class ReactComponent extends Component {
       render() {
-        return (
-          <p>React Component</p>
-        )
+        return <p>React Component</p>
       }
     }
 
     const Button = ({ component: ChildComponent }) => (
-      <button><ChildComponent /></button>
+      <button>
+        <ChildComponent />
+      </button>
     )
 
     const Comp = styled(Button).attrs({
       component: ReactComponent,
     })``
 
-    expect(shallow(<Comp />).html()).toEqual('<button><p>React Component</p></button>')
+    expect(shallow(<Comp />).html()).toEqual(
+      '<button><p>React Component</p></button>'
+    )
   })
 
   it('call an attr function', () => {
     const Comp = styled.button.attrs({
-      type: () => 'button'
+      type: () => 'button',
     })``
-    expect(shallow(<Comp />).html()).toEqual('<button type="button" class="sc-a b"></button>')
+    expect(shallow(<Comp />).html()).toEqual(
+      '<button type="button" class="sc-a b"></button>'
+    )
   })
 
   it('pass props to the attr function', () => {
     const Comp = styled.button.attrs({
-      type: props => props.submit ? 'submit' : 'button'
+      type: props => (props.submit ? 'submit' : 'button'),
     })``
-    expect(shallow(<Comp />).html()).toEqual('<button type="button" class="sc-a b"></button>')
-    expect(shallow(<Comp submit/>).html()).toEqual('<button type="submit" class="sc-a b"></button>')
+    expect(shallow(<Comp />).html()).toEqual(
+      '<button type="button" class="sc-a b"></button>'
+    )
+    expect(shallow(<Comp submit />).html()).toEqual(
+      '<button type="submit" class="sc-a b"></button>'
+    )
   })
 
   it('should replace attrs with props', () => {
     const Comp = styled.button.attrs({
-      type: props => props.submit ? 'submit' : 'button',
-      tabIndex: 0
+      type: props => (props.submit ? 'submit' : 'button'),
+      tabIndex: 0,
     })``
     expect(shallow(<Comp />).html()).toEqual(
       '<button type="button" tabindex="0" class="sc-a b"></button>'
     )
-    expect(shallow(<Comp type="reset"/>).html()).toEqual(
+    expect(shallow(<Comp type="reset" />).html()).toEqual(
       '<button type="reset" tabindex="0" class="sc-a b"></button>'
     )
-    expect(shallow(<Comp type="reset" tabIndex="-1"/>).html()).toEqual(
+    expect(shallow(<Comp type="reset" tabIndex="-1" />).html()).toEqual(
       '<button type="reset" tabindex="-1" class="sc-a b"></button>'
     )
   })
@@ -86,12 +96,12 @@ describe('attrs', () => {
 
   it('should merge className even if its a function', () => {
     const Comp = styled.div.attrs({
-      className: props => `meow ${ props.purr ? 'purr' : 'nya' }`,
+      className: props => `meow ${props.purr ? 'purr' : 'nya'}`,
     })``
     expect(shallow(<Comp />).html()).toEqual(
       '<div class="sc-a meow nya b"></div>'
     )
-    expect(shallow(<Comp purr/>).html()).toEqual(
+    expect(shallow(<Comp purr />).html()).toEqual(
       '<div class="sc-a meow purr b"></div>'
     )
   })
@@ -99,65 +109,122 @@ describe('attrs', () => {
   it('should work with data and aria attributes', () => {
     const Comp = styled.div.attrs({
       'data-foo': 'bar',
-      'aria-label': 'A simple FooBar'
+      'aria-label': 'A simple FooBar',
     })``
-    expect(shallow(<Comp />).html()).toEqual('<div data-foo="bar" aria-label="A simple FooBar" class="sc-a b"></div>')
+    expect(shallow(<Comp />).html()).toEqual(
+      '<div data-foo="bar" aria-label="A simple FooBar" class="sc-a b"></div>'
+    )
   })
 
   it('merge attrs', () => {
-    const Comp = styled.button.attrs({
-      type: 'button',
-      tabIndex: 0
-    }).attrs({
-      type: 'submit'
-    })``
-    expect(shallow(<Comp />).html()).toEqual('<button type="submit" tabindex="0" class="sc-a b"></button>')
+    const Comp = styled.button
+      .attrs({
+        type: 'button',
+        tabIndex: 0,
+      })
+      .attrs({
+        type: 'submit',
+      })``
+    expect(shallow(<Comp />).html()).toEqual(
+      '<button type="submit" tabindex="0" class="sc-a b"></button>'
+    )
   })
 
   it('merge attrs when inheriting SC', () => {
     const Parent = styled.button.attrs({
       type: 'button',
-      tabIndex: 0
+      tabIndex: 0,
     })``
     const Child = Parent.extend.attrs({
-      type: 'submit'
+      type: 'submit',
     })``
-    expect(shallow(<Child />).html()).toEqual('<button type="submit" tabindex="0" class="sc-b c"></button>')
+    expect(shallow(<Child />).html()).toEqual(
+      '<button type="submit" tabindex="0" class="sc-b c"></button>'
+    )
   })
 
   it('pass attrs to style block', () => {
     /* Would be a React Router Link in real life */
     const Comp = styled.a.attrs({
       href: '#',
-      'data-active-class-name': '--is-active'
+      'data-active-class-name': '--is-active',
     })`
-      color:blue;
+      color: blue;
       &.${props => props['data-active-class-name']} {
-        color:red;
+        color: red;
       }
     `
-    expect(shallow(<Comp />).html()).toEqual('<a href="#" data-active-class-name="--is-active" class="sc-a b"></a>')
-    expectCSSMatches('.sc-a {} .b { color:blue; } .b.--is-active { color:red; }')
+    expect(shallow(<Comp />).html()).toEqual(
+      '<a href="#" data-active-class-name="--is-active" class="sc-a b"></a>'
+    )
+    expectCSSMatches(
+      '.sc-a {} .b { color:blue; } .b.--is-active { color:red; }'
+    )
   })
 
   it('should pass through children as a normal prop', () => {
     const Comp = styled.div.attrs({
-      children: 'Probably a bad idea'
+      children: 'Probably a bad idea',
     })``
-    expect(shallow(<Comp />).html()).toEqual('<div class="sc-a b">Probably a bad idea</div>')
+    expect(shallow(<Comp />).html()).toEqual(
+      '<div class="sc-a b">Probably a bad idea</div>'
+    )
   })
 
   it('should pass through complex children as well', () => {
     const Comp = styled.div.attrs({
-      children: <span>Probably a bad idea</span>
+      children: <span>Probably a bad idea</span>,
     })``
-    expect(shallow(<Comp />).html()).toEqual('<div class="sc-a b"><span>Probably a bad idea</span></div>')
+    expect(shallow(<Comp />).html()).toEqual(
+      '<div class="sc-a b"><span>Probably a bad idea</span></div>'
+    )
   })
 
   it('should override children of course', () => {
     const Comp = styled.div.attrs({
-      children: <span>Amazing</span>
+      children: <span>Amazing</span>,
     })``
-    expect(shallow(<Comp>Something else</Comp>).html()).toEqual('<div class="sc-a b">Something else</div>')
+    expect(shallow(<Comp>Something else</Comp>).html()).toEqual(
+      '<div class="sc-a b">Something else</div>'
+    )
+  })
+
+  it('should merge nested "style" attr', () => {
+    const Paragraph = styled.p.attrs({
+      style: props => ({
+        ...props.style,
+        fontSize: `${props.fontScale}em`,
+      }),
+    })``
+
+    class Text extends React.Component {
+      state = {
+        // Assume that will be changed automatically
+        // according to the dimensions of the container
+        fontScale: 4,
+      }
+
+      render() {
+        return (
+          <Paragraph
+            className={this.props.className}
+            style={this.props.style}
+            fontScale={this.state.fontScale}
+          >
+            {this.props.children}
+          </Paragraph>
+        )
+      }
+    }
+
+    const BlueText = styled(Text).attrs({
+      style: props => ({
+        color: 'blue',
+      }),
+    })``
+
+    expect(shallow(<BlueText>Hello</BlueText>).html()).toEqual(
+      '<p style="color:blue;font-size:4em;" class="sc-b c sc-a d">Hello</p>'
+    )
   })
 })
