@@ -1,6 +1,6 @@
 // @flow
 import hyphenate from 'fbjs/lib/hyphenateStyleName'
-import isPlainObject from 'is-plain-object'
+import isPlainObject from './isPlainObject'
 
 import type { Interpolation } from '../types'
 
@@ -38,31 +38,36 @@ const flatten = (
     ) {
       return ruleSet
     }
+
     /* Flatten ruleSet */
     if (Array.isArray(chunk)) {
-      return [...ruleSet, ...flatten(chunk, executionContext)]
+      ruleSet.push(...flatten(chunk, executionContext))
+      return ruleSet
     }
 
     /* Handle other components */
     if (chunk.hasOwnProperty('styledComponentId')) {
       // $FlowFixMe not sure how to make this pass
-      return [...ruleSet, `.${chunk.styledComponentId}`]
+      ruleSet.push(`.${chunk.styledComponentId}`)
+      return ruleSet
     }
 
     /* Either execute or defer the function */
     if (typeof chunk === 'function') {
-      return executionContext
-        ? ruleSet.concat(
-            ...flatten([chunk(executionContext)], executionContext)
-          )
-        : ruleSet.concat(chunk)
+      if (executionContext) {
+        ruleSet.push(...flatten([chunk(executionContext)], executionContext))
+      } else ruleSet.push(chunk)
+
+      return ruleSet
     }
 
     /* Handle objects */
-    return ruleSet.concat(
+    ruleSet.push(
       // $FlowFixMe have to add %checks somehow to isPlainObject
       isPlainObject(chunk) ? objToCss(chunk) : chunk.toString()
     )
+
+    return ruleSet
   }, [])
 
 export default flatten

@@ -8,3 +8,6 @@ lib
 sandbox/node_modules
 *.log
 test-results.json
+mount-deep-tree-trace.json
+mount-wide-tree-trace.json
+update-dynamic-styles-trace.json

@@ -6,11 +6,53 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+* placeholder
+
+## [v3.4.0] - 2018-08-02
+
+* Add first-class support for functions that return objects, by @acjay (see #1820)
+
+  ```JS
+  const Comp = styled.div((({ color }) => ({
+    color,
+  }))
+  ```
+
+* Add support for the prop variants used by Preact (`autofocus`, `class`, `for`), by @probablyup (see #1823)
+
+* Various performance improvements, by @probablyup (see #1843)
+
+* [TS] Revert #1798, by @Igorbek (see #1840)
+
+* [Internal] Add benchmarking suite, by @mxstbr (see #1833)
+
+## [v3.3.3] - 2018-06-20
+
+* Fixed a regression when extending a `styled(StyledComponent)` introduced in 3.3.0, by @probablyup (see #1819)
+
+* Adjust how displayName is generated when not using Babel to properly preserve a displayName passed via `withConfig`, by @probablyup (see #1755)
+
+* [TS] Fix props being removed when indexed types are passed to WithOptionalTheme, by @devrelm (see #1806)
+
+* [TS] Allow TypeScript 2.9.1 to accept tagged template type argument, by @Igorbek (see #1798)
+
+* Add ref documentation for React.createRef(), by @julmot (see #1792)
+
+## [v3.3.2] - 2018-06-04
+
+* Allow non-plain objects as `ThemeProvider` themes, by @phyllisstein (see #1780)
+
 * Upgrade flow-bin to latest, by @halvves (see #1748)
 
 * Update various CI bits, by @probablyup (see #1769)
 
 * Reimplement SSR stream handling as a transform stream rather than a second-order readable stream, by @probablyup (see #1768)
+
+* Allow React Component as attr, by @valerybugakov (see #1751)
+
+* Added pointer events to valid attributes check, by @plankguy (see #1790)
+
+_v3.3.1 was skipped due to a bad deploy._
 
 ## [v3.3.0] - 2018-05-25
 
@@ -482,7 +524,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 * Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v3.3.0...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.0...master
+[v3.4.0]: https://github.com/styled-components/styled-components/compare/v3.3.3...v3.4.0
+[v3.3.3]: https://github.com/styled-components/styled-components/compare/v3.3.2...v3.3.3
+[v3.3.2]: https://github.com/styled-components/styled-components/compare/v3.3.0...v3.3.2
 [v3.3.0]: https://github.com/styled-components/styled-components/compare/v3.2.6...v3.3.0
 [v3.2.6]: https://github.com/styled-components/styled-components/compare/v3.2.5...v3.2.6
 [v3.2.5]: https://github.com/styled-components/styled-components/compare/v3.2.3...v3.2.5

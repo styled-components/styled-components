@@ -1,5 +1,7 @@
 // @flow
 import interleave from '../utils/interleave'
+import isPlainObject from '../utils/isPlainObject'
+import { EMPTY_ARRAY } from '../utils/empties'
 import flatten from '../utils/flatten'
 import type { Interpolation, RuleSet, Styles } from '../types'
 
@@ -8,10 +10,13 @@ export default (
   ...interpolations: Array<Interpolation>
 ): RuleSet => {
   if (
-    (!Array.isArray(styles) && typeof styles === 'object') ||
+    (typeof styles === 'function' ||
+     isPlainObject(styles) ||
     (Array.isArray(styles) && !styles.raw)
   ) {
-    return flatten(interleave([], [styles, ...interpolations]))
+    return flatten(interleave(EMPTY_ARRAY, [styles, ...interpolations]))
   }
+
+  // $FlowFixMe
   return flatten(interleave(styles, interpolations))
 }
