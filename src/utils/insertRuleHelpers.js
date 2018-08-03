@@ -17,7 +17,7 @@ export const sheetForTag = (tag: HTMLStyleElement): CSSStyleSheet => {
   }
 
   /* we should always be able to find a tag */
-  throw new Error()
+  throw new Error('Cannot find sheet for given tag')
 }
 
 /* insert a rule safely and return whether it was actually injected */
