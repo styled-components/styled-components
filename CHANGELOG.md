@@ -6,7 +6,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-* placeholder
+* Add error system, by @probablyup (see #1881)
 
 ## [v3.4.0] - 2018-08-02
 
