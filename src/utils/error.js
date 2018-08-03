@@ -49,7 +49,7 @@ export default function throwError(
 ) {
   if (process.env.NODE_ENV === 'production') {
     throw new Error(
-      `An error occured. See https://github.com/styled-components/styled-components/blob/master/src/utils/errors.md#${code} for more information. ${
+      `An error occurred. See https://github.com/styled-components/styled-components/blob/master/src/utils/errors.md#${code} for more information. ${
         interpolations
           ? `Additional arguments: ${interpolations.join(', ')}`
           : ''
