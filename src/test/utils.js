@@ -8,7 +8,7 @@ import css from '../constructors/css'
 import _constructWithOptions from '../constructors/constructWithOptions'
 import StyleSheet from '../models/StyleSheet'
 import flatten from '../utils/flatten'
-import throwError from '../utils/error'
+import StyledError from '../utils/error'
 import stringifyRules from '../utils/stringifyRules'
 import _StyledComponent from '../models/StyledComponent'
 import _ComponentStyle from '../models/ComponentStyle'
@@ -34,7 +34,7 @@ export const seedNextClassnames = (names: Array<string>) =>
 export const resetStyled = (isServer: boolean = false) => {
   if (!isServer) {
     if (!document.head) {
-      return throwError(9)
+      throw new StyledError(9)
     }
 
     document.head.innerHTML = ''
@@ -53,7 +53,7 @@ export const resetStyled = (isServer: boolean = false) => {
 
 export const resetNoParserStyled = () => {
   if (!document.head) {
-    return throwError(9)
+    throw new StyledError(9)
   }
 
   document.head.innerHTML = ''

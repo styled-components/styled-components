@@ -4,7 +4,7 @@
 
 import React, { type Element } from 'react'
 import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR } from '../constants'
-import throwError from '../utils/error'
+import StyledError from '../utils/error'
 import { type ExtractedComp } from '../utils/extractCompsFromCSS'
 import { splitByRules } from '../utils/stringifyRules'
 import getNonce from '../utils/nonce'
@@ -79,7 +79,7 @@ const makeStyleTag = (
     target.appendChild(el)
   } else {
     if (!tagEl || !target || !tagEl.parentNode) {
-      return throwError(6)
+      throw new StyledError(6)
     }
 
     /* Insert new style tag after the previous one */
@@ -227,7 +227,9 @@ const makeSpeedyTag = (
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
-    clone: () => throwError(5),
+    clone() {
+      throw new StyledError(5)
+    },
   }
 }
 
@@ -310,7 +312,9 @@ const makeBrowserTag = (
   }
 
   return {
-    clone: () => throwError(5),
+    clone() {
+      throw new StyledError(5)
+    },
     css,
     getIds: getIdsFromMarkersFactory(markers),
     hasNameForId: hasNameForId(names),

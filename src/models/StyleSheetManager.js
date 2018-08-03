@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import StyleSheet from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
 import { CONTEXT_KEY } from '../constants'
-import throwError from '../utils/error'
+import StyledError from '../utils/error'
 
 type Props = {
   sheet?: StyleSheet | null,
@@ -41,7 +41,7 @@ export default class StyleSheetManager extends Component<Props, void> {
     } else if (this.props.target) {
       this.sheetInstance = new StyleSheet(this.props.target)
     } else {
-      throwError(4)
+      throw new StyledError(4)
     }
   }
 

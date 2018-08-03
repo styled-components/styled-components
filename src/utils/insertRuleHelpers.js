@@ -1,6 +1,6 @@
 // @flow
 
-import throwError from '../utils/error'
+import StyledError from '../utils/error'
 
 /* These are helpers that deal with the insertRule (aka speedy) API
  * They are used in the StyleTags and specifically the speedy tag
@@ -20,7 +20,7 @@ export const sheetForTag = (tag: HTMLStyleElement): CSSStyleSheet => {
   }
 
   /* we should always be able to find a tag */
-  return throwError(10)
+  throw new StyledError(10)
 }
 
 /* insert a rule safely and return whether it was actually injected */

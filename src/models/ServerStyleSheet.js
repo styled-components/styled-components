@@ -4,7 +4,7 @@ import React from 'react'
 import stream from 'stream'
 
 import { IS_BROWSER, SC_STREAM_ATTR } from '../constants'
-import throwError from '../utils/error'
+import StyledError from '../utils/error'
 import StyleSheet from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
 
@@ -33,7 +33,7 @@ export default class ServerStyleSheet {
 
   collectStyles(children: any) {
     if (this.closed) {
-      return throwError(2)
+      throw new StyledError(2)
     }
 
     return (
@@ -53,7 +53,7 @@ export default class ServerStyleSheet {
 
   interleaveWithNodeStream(readableStream: stream.Readable) {
     if (!__SERVER__ || IS_BROWSER) {
-      return throwError(3)
+      throw new StyledError(3)
     }
 
     /* the tag index keeps track of which tags have already been emitted */

@@ -3,7 +3,7 @@ import React, { Component, type Element } from 'react'
 import PropTypes from 'prop-types'
 import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
-import throwError from '../utils/error'
+import StyledError from '../utils/error'
 import once from '../utils/once'
 
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
@@ -123,14 +123,14 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
           Array.isArray(mergedTheme) ||
           typeof mergedTheme !== 'object')
       ) {
-        return throwError(7)
+        throw new StyledError(7)
       }
 
       return mergedTheme
     }
 
     if (theme === null || Array.isArray(theme) || typeof theme !== 'object') {
-      return throwError(8)
+      throw new StyledError(8)
     }
 
     return { ...this.outerTheme, ...(theme: Object) }
