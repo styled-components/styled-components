@@ -13,6 +13,7 @@
 .*/dist/.*
 .*/lib/.*
 .*/node_modules/babel-plugin-flow-react-proptypes/src/__test__/.*
+.*/src/test/.*
 .*/src/.*/test/.*
 
 [include]
