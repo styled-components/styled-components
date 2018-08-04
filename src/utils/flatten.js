@@ -1,7 +1,7 @@
 // @flow
 import hyphenate from 'fbjs/lib/hyphenateStyleName'
+import React from 'react'
 import isPlainObject from './isPlainObject'
-
 import type { Interpolation } from '../types'
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
@@ -50,6 +50,11 @@ const flatten = (
       // $FlowFixMe not sure how to make this pass
       ruleSet.push(`.${chunk.styledComponentId}`)
       return ruleSet
+    }
+
+    /* Throw if a React Element was given styles */
+    if (React.isValidElement(chunk)) {
+      throw new Error('Cannot reference React Elements within styles')
     }
 
     /* Either execute or defer the function */

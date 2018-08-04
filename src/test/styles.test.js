@@ -56,6 +56,18 @@ describe('with styles', () => {
     expectCSSMatches('.sc-a {} .b { background-color:blue; }')
   })
 
+
+  it('should throw if a none styled component is referred as a nested style', () => {
+    const NestedComp = () => <div></div>
+    const Comp = styled.div`
+      ${ NestedComp} {
+        color: purple;
+      }
+    `
+    expect(() => shallow(<Comp />)).toThrowError('Cannot reference React Elements within styles')
+  })
+
+
   it('should handle inline style objects with media queries', () => {
     const rule1 = {
       backgroundColor: 'blue',
