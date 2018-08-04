@@ -6,7 +6,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-* placeholder
+* Fixed a bug in typings where `isStyledComponent` was defined using an undefined variable, by @MayhemYDG (see #1876)
 
 ## [v3.4.0] - 2018-08-02
 
