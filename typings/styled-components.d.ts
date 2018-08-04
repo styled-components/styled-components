@@ -159,6 +159,7 @@ export interface ThemedStyledComponentsModule<T> {
 declare const styled: StyledInterface
 
 export const css: ThemedCssFunction<any>
+
 export function withTheme<P extends { theme?: T }, T>(
   component: React.ComponentType<P>
 ): ComponentClass<WithOptionalTheme<P, T>>
@@ -167,14 +168,15 @@ export function keyframes(
   strings: TemplateStringsArray,
   ...interpolations: SimpleInterpolation[]
 ): string
+
 export function injectGlobal(
   strings: TemplateStringsArray,
   ...interpolations: SimpleInterpolation[]
 ): void
+
 export function consolidateStreamedStyles(): void
-export function isStyledComponent(
-  target: string | ReactComponent | StyledComponentClass
-): target is StyledComponentClass
+
+export function isStyledComponent(target: any): target is StyledComponentClass
 
 export const ThemeProvider: ThemeProviderComponent<object>
 
