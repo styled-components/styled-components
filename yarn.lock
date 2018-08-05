@@ -7509,10 +7509,6 @@ rollup-plugin-flow@^1.1.1:
     flow-remove-types "^1.1.0"
     rollup-pluginutils "^1.5.1"
 
-rollup-plugin-ignore@^1.0.3:
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/rollup-plugin-ignore/-/rollup-plugin-ignore-1.0.3.tgz#9a3caac6709e481471ce4498a48164bbc2359e3d"
-
 rollup-plugin-json@^3.0.0:
   version "3.0.0"
   resolved "https://registry.npmjs.org/rollup-plugin-json/-/rollup-plugin-json-3.0.0.tgz#aeed2ff36e6c4fd0c60c4a8fc3d0884479e9dfce"

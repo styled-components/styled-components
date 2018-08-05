@@ -10,6 +10,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 * Add error system, by @probablyup (see #1881)
 
+* Fix "stream" module not being properly eliminated by rollup, by @probablyup
+
 ## [v3.4.0] - 2018-08-02
 
 * Add first-class support for functions that return objects, by @acjay (see #1820)
