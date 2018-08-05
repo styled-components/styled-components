@@ -8,6 +8,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 * Fixed a bug in typings where `isStyledComponent` was defined using an undefined variable, by @MayhemYDG (see #1876)
 
+* Add error system, by @probablyup (see #1881)
+
 ## [v3.4.0] - 2018-08-02
 
 * Add first-class support for functions that return objects, by @acjay (see #1820)

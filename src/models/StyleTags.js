@@ -4,6 +4,7 @@
 
 import React, { type Element } from 'react'
 import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR } from '../constants'
+import StyledError from '../utils/error'
 import { type ExtractedComp } from '../utils/extractCompsFromCSS'
 import { splitByRules } from '../utils/stringifyRules'
 import getNonce from '../utils/nonce'
@@ -43,30 +44,6 @@ export interface Tag<T> {
   clone(): Tag<T>;
 }
 
-/* this error is used for makeStyleTag */
-const parentNodeUnmountedErr =
-  process.env.NODE_ENV !== 'production'
-    ? `
-Trying to insert a new style tag, but the given Node is unmounted!
-- Are you using a custom target that isn't mounted?
-- Does your document not have a valid head element?
-- Have you accidentally removed a style tag manually?
-`.trim()
-    : ''
-
-/* this error is used for tags */
-const throwCloneTagErr = () => {
-  throw new Error(
-    process.env.NODE_ENV !== 'production'
-      ? `
-The clone method cannot be used on the client!
-- Are you running in a client-like environment on the server?
-- Are you trying to run SSR on the client?
-`.trim()
-      : ''
-  )
-}
-
 /* this marker separates component styles and is important for rehydration */
 const makeTextMarker = id => `\n/* sc-component-id: ${id} */\n`
 
@@ -102,7 +79,7 @@ const makeStyleTag = (
     target.appendChild(el)
   } else {
     if (!tagEl || !target || !tagEl.parentNode) {
-      throw new Error(parentNodeUnmountedErr)
+      throw new StyledError(6)
     }
 
     /* Insert new style tag after the previous one */
@@ -250,7 +227,9 @@ const makeSpeedyTag = (
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
-    clone: throwCloneTagErr,
+    clone() {
+      throw new StyledError(5)
+    },
   }
 }
 
@@ -333,7 +312,9 @@ const makeBrowserTag = (
   }
 
   return {
-    clone: throwCloneTagErr,
+    clone() {
+      throw new StyledError(5)
+    },
     css,
     getIds: getIdsFromMarkersFactory(markers),
     hasNameForId: hasNameForId(names),
