@@ -1,25 +1,8 @@
 // @flow
-import React, { Component, type Element } from 'react'
-import PropTypes from 'prop-types'
-import createBroadcast from '../utils/create-broadcast'
-import type { Broadcast } from '../utils/create-broadcast'
+import React, { createContext, Component, type Element } from 'react'
 import StyledError from '../utils/error'
-import once from '../utils/once'
 
-// NOTE: DO NOT CHANGE, changing this is a semver major change!
-export const CHANNEL = '__styled-components__'
-export const CHANNEL_NEXT = `${CHANNEL}next__`
-
-export const CONTEXT_CHANNEL_SHAPE = PropTypes.shape({
-  getTheme: PropTypes.func,
-  subscribe: PropTypes.func,
-  unsubscribe: PropTypes.func,
-})
-
-export const contextShape = {
-  [CHANNEL]: PropTypes.func, // legacy
-  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-}
+const Context = createContext()
 
 export type Theme = { [key: string]: mixed }
 type ThemeProviderProps = {|
@@ -27,93 +10,21 @@ type ThemeProviderProps = {|
   theme: Theme | ((outerTheme: Theme) => void),
 |}
 
-let warnChannelDeprecated
-if (process.env.NODE_ENV !== 'production') {
-  warnChannelDeprecated = once(() => {
-    // eslint-disable-next-line no-console
-    console.error(
-      `Warning: Usage of \`context.${CHANNEL}\` as a function is deprecated. It will be replaced with the object on \`.context.${CHANNEL_NEXT}\` in a future version.`
-    )
-  })
-}
-
 const isFunction = test => typeof test === 'function'
+
+export const ThemeConsumer = Context.Consumer
 
 /**
  * Provide a theme to an entire react component tree via context and event listeners (have to do
  * both context and event emitter as pure components block context updates)
  */
 export default class ThemeProvider extends Component<ThemeProviderProps, void> {
-  broadcast: Broadcast
   getTheme: (theme?: Theme | ((outerTheme: Theme) => void)) => Theme
   outerTheme: Theme
   props: ThemeProviderProps
-  unsubscribeToOuterId: number = -1
-  unsubscribeToOuterId: string
-
-  static childContextTypes = contextShape
-  static contextTypes = {
-    [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-  }
-
-  constructor() {
-    super()
-    this.getTheme = this.getTheme.bind(this)
-  }
-
-  componentWillMount() {
-    // If there is a ThemeProvider wrapper anywhere around this theme provider, merge this theme
-    // with the outer theme
-    const outerContext = this.context[CHANNEL_NEXT]
-    if (outerContext !== undefined) {
-      this.unsubscribeToOuterId = outerContext.subscribe(theme => {
-        this.outerTheme = theme
-
-        if (this.broadcast !== undefined) {
-          this.publish(this.props.theme)
-        }
-      })
-    }
-
-    this.broadcast = createBroadcast(this.getTheme())
-  }
-
-  getChildContext() {
-    return {
-      ...this.context,
-      [CHANNEL_NEXT]: {
-        getTheme: this.getTheme,
-        subscribe: this.broadcast.subscribe,
-        unsubscribe: this.broadcast.unsubscribe,
-      },
-      [CHANNEL]: subscriber => {
-        if (process.env.NODE_ENV !== 'production') {
-          warnChannelDeprecated()
-        }
-
-        // Patch the old `subscribe` provide via `CHANNEL` for older clients.
-        const unsubscribeId = this.broadcast.subscribe(subscriber)
-        return () => this.broadcast.unsubscribe(unsubscribeId)
-      },
-    }
-  }
-
-  componentWillReceiveProps(nextProps: ThemeProviderProps) {
-    if (this.props.theme !== nextProps.theme) {
-      this.publish(nextProps.theme)
-    }
-  }
-
-  componentWillUnmount() {
-    if (this.unsubscribeToOuterId !== -1) {
-      this.context[CHANNEL_NEXT].unsubscribe(this.unsubscribeToOuterId)
-    }
-  }
 
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
-  getTheme(passedTheme: (outerTheme: Theme) => void | Theme) {
-    const theme = passedTheme || this.props.theme
-
+  getTheme(theme: (outerTheme: Theme) => void) {
     if (isFunction(theme)) {
       const mergedTheme = theme(this.outerTheme)
 
@@ -136,15 +47,24 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
     return { ...this.outerTheme, ...(theme: Object) }
   }
 
-  publish(theme: Theme | ((outerTheme: Theme) => void)) {
-    this.broadcast.publish(this.getTheme(theme))
+  getContext(theme: Theme | ((outerTheme: Theme) => void)) {
+    return {
+      getTheme: this.getTheme.bind(this, theme),
+    }
   }
 
   render() {
-    if (!this.props.children) {
+    const { children, theme } = this.props
+    const context = this.getContext(theme)
+
+    if (!children) {
       return null
     }
 
-    return React.Children.only(this.props.children)
+    return (
+      <Context.Provider value={context}>
+        {React.Children.only(children)}
+      </Context.Provider>
+    )
   }
 }
