@@ -6,7 +6,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-* placeholder
+* Fix a regression from [#1843](https://github.com/styled-components/pull/1892) that breaks deferred injection and duplicates rules (see [#1892](https://github.com/styled-components/pull/1892))
 
 ## [v3.4.1] - 2018-08-04
 
