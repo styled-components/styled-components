@@ -91,8 +91,7 @@ describe('ThemeProvider', () => {
   })
 
   it('ThemeProvider propagates theme updates through nested ThemeProviders', () => {
-    const augment = outerTheme =>
-      Object.assign({}, outerTheme, { augmented: true })
+    const augment = outerTheme => ({ ...outerTheme, augmented: true })
     const renderFn = jest.fn()
 
     const Component = ({ theme: themeProp }) => (
@@ -108,7 +107,11 @@ describe('ThemeProvider', () => {
     rerender(<Component theme={{ themed: true, updated: true }} />)
 
     expect(renderFn).toHaveBeenCalledWith({
+      theme: { themed: true, augmented: true },
+    })
+    expect(renderFn).toHaveBeenLastCalledWith({
       theme: { themed: true, augmented: true, updated: true },
     })
+    expect(renderFn).toHaveBeenCalledTimes(2)
   })
 })
