@@ -1,8 +1,7 @@
 // @flow
 import React, { createContext, Component, type Element } from 'react'
+import memoize from 'memoize-one'
 import StyledError from '../utils/error'
-
-const Context = createContext()
 
 export type Theme = { [key: string]: mixed }
 type ThemeProviderProps = {|
@@ -12,16 +11,22 @@ type ThemeProviderProps = {|
 
 const isFunction = test => typeof test === 'function'
 
-export const ThemeConsumer = Context.Consumer
+const ThemeContext = createContext()
+
+export const ThemeConsumer = ThemeContext.Consumer
 
 /**
- * Provide a theme to an entire react component tree via context and event listeners (have to do
- * both context and event emitter as pure components block context updates)
+ * Provide a theme to an entire react component tree via context
  */
 export default class ThemeProvider extends Component<ThemeProviderProps, void> {
-  getTheme: (theme?: Theme | ((outerTheme: Theme) => void)) => Theme
+  getContext: (theme: Theme | ((outerTheme: Theme) => void)) => Object
   outerTheme: Theme
   props: ThemeProviderProps
+
+  constructor(props: ThemeProviderProps) {
+    super(props)
+    this.getContext = memoize(this.getContext.bind(this))
+  }
 
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
   getTheme(theme: (outerTheme: Theme) => void) {
@@ -49,6 +54,7 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
 
   getContext(theme: Theme | ((outerTheme: Theme) => void)) {
     return {
+      // $FlowFixMe
       getTheme: this.getTheme.bind(this, theme),
     }
   }
@@ -62,9 +68,9 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
     }
 
     return (
-      <Context.Provider value={context}>
+      <ThemeContext.Provider value={context}>
         {React.Children.only(children)}
-      </Context.Provider>
+      </ThemeContext.Provider>
     )
   }
 }
