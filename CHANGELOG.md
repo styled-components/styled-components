@@ -6,7 +6,13 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-* Fix a regression from [#1843](https://github.com/styled-components/pull/1892) that breaks deferred injection and duplicates rules (see [#1892](https://github.com/styled-components/pull/1892))
+* placeholder
+
+## [v3.4.2] - 2018-08-07
+
+* Fix a regression from [#1843](https://github.com/styled-components/pull/1892) that breaks deferred injection and duplicates rules, by [@kitten](https://github.com/kitten) (see [#1892](https://github.com/styled-components/pull/1892))
+
+* [TS] Fix missing generic type arguments in .d.ts, by [@PzYon](https://github.com/PzYon) (see [#1886](https://github.com/styled-components/pull/1886))
 
 ## [v3.4.1] - 2018-08-04
 
@@ -532,7 +538,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 * Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.1...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.2...master
+[v3.4.2]: https://github.com/styled-components/styled-components/compare/v3.4.1...v3.4.2
 [v3.4.1]: https://github.com/styled-components/styled-components/compare/v3.4.0...v3.4.1
 [v3.4.0]: https://github.com/styled-components/styled-components/compare/v3.3.3...v3.4.0
 [v3.3.3]: https://github.com/styled-components/styled-components/compare/v3.3.2...v3.3.3
