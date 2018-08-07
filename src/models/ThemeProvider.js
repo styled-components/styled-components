@@ -21,7 +21,6 @@ export const ThemeConsumer = ThemeContext.Consumer
 export default class ThemeProvider extends Component<ThemeProviderProps, void> {
   getContext: (theme: Theme | ((outerTheme: Theme) => void)) => Object
   outerTheme: Theme
-  props: ThemeProviderProps
 
   constructor(props: ThemeProviderProps) {
     super(props)
@@ -52,10 +51,9 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
     return { ...this.outerTheme, ...(theme: Object) }
   }
 
-  getContext(theme: Theme | ((outerTheme: Theme) => void)) {
+  getContext(theme: (outerTheme: Theme) => void) {
     return {
-      // $FlowFixMe
-      getTheme: this.getTheme.bind(this, theme),
+      theme: this.getTheme(theme),
     }
   }
 
