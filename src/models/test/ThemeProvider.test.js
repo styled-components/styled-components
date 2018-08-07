@@ -90,23 +90,25 @@ describe('ThemeProvider', () => {
     expect(renderFn).toHaveBeenCalledTimes(2)
   })
 
-  // it('ThemeProvider propagates theme updates through nested ThemeProviders', () => {
-  //   const theme = { themed: true }
-  //   const augment = outerTheme =>
-  //     Object.assign({}, outerTheme, { augmented: true })
-  //   const update = { updated: true }
-  //   const expected = { themed: true, augmented: true, updated: true }
-  //   const renderFn = jest.fn()
+  it('ThemeProvider propagates theme updates through nested ThemeProviders', () => {
+    const augment = outerTheme =>
+      Object.assign({}, outerTheme, { augmented: true })
+    const renderFn = jest.fn()
 
-  //   const {rerender} = render(
-  //     <ThemeProvider theme={theme}>
-  //       <ThemeProvider theme={augment}>
-  //         <ThemeConsumer>{renderFn}</ThemeConsumer>
-  //       </ThemeProvider>
-  //     </ThemeProvider>
-  //   )
+    const Component = ({ theme: themeProp }) => (
+      <ThemeProvider theme={themeProp}>
+        <ThemeProvider theme={augment}>
+          <ThemeConsumer>{renderFn}</ThemeConsumer>
+        </ThemeProvider>
+      </ThemeProvider>
+    )
 
-  //   wrapper.setProps({ theme: Object.assign({}, theme, update) })
-  //   expect(actual).toEqual(expected)
-  // })
+    const { rerender } = render(<Component theme={{ themed: true }} />)
+
+    rerender(<Component theme={{ themed: true, updated: true }} />)
+
+    expect(renderFn).toHaveBeenCalledWith({
+      theme: { themed: true, augmented: true, updated: true },
+    })
+  })
 })
