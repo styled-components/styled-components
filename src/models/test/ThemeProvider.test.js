@@ -29,18 +29,18 @@ describe('ThemeProvider', () => {
   it('should merge its theme with an outer theme', () => {
     const outerTheme = { main: 'black' }
     const innerTheme = { secondary: 'black' }
-    const renderFn = jest.fn()
+    const childrenSpy = jest.fn()
 
     render(
       <ThemeProvider theme={outerTheme}>
         <ThemeProvider theme={innerTheme}>
-          <ThemeConsumer>{renderFn}</ThemeConsumer>
+          <ThemeConsumer>{childrenSpy}</ThemeConsumer>
         </ThemeProvider>
       </ThemeProvider>
     )
 
-    expect(renderFn).toHaveBeenCalledTimes(1)
-    expect(renderFn).toHaveBeenCalledWith({
+    expect(childrenSpy).toHaveBeenCalledTimes(1)
+    expect(childrenSpy).toHaveBeenCalledWith({
       theme: { ...outerTheme, ...innerTheme },
     })
   })
@@ -49,20 +49,20 @@ describe('ThemeProvider', () => {
     const outerestTheme = { main: 'black' }
     const outerTheme = { main: 'blue' }
     const innerTheme = { secondary: 'black' }
-    const renderFn = jest.fn()
+    const childrenSpy = jest.fn()
 
     render(
       <ThemeProvider theme={outerestTheme}>
         <ThemeProvider theme={outerTheme}>
           <ThemeProvider theme={innerTheme}>
-            <ThemeConsumer>{renderFn}</ThemeConsumer>
+            <ThemeConsumer>{childrenSpy}</ThemeConsumer>
           </ThemeProvider>
         </ThemeProvider>
       </ThemeProvider>
     )
 
-    expect(renderFn).toHaveBeenCalledTimes(1)
-    expect(renderFn).toHaveBeenCalledWith({
+    expect(childrenSpy).toHaveBeenCalledTimes(1)
+    expect(childrenSpy).toHaveBeenCalledWith({
       theme: { ...outerestTheme, ...outerTheme, ...innerTheme },
     })
   })
@@ -72,32 +72,32 @@ describe('ThemeProvider', () => {
       one: { main: 'black', secondary: 'red' },
       two: { main: 'blue', other: 'green' },
     }
-    const renderFn = jest.fn()
+    const childrenSpy = jest.fn()
 
     render(
       <div>
         <ThemeProvider theme={themes.one}>
-          <ThemeConsumer>{renderFn}</ThemeConsumer>
+          <ThemeConsumer>{childrenSpy}</ThemeConsumer>
         </ThemeProvider>
         <ThemeProvider theme={themes.two}>
-          <ThemeConsumer>{renderFn}</ThemeConsumer>
+          <ThemeConsumer>{childrenSpy}</ThemeConsumer>
         </ThemeProvider>
       </div>
     )
 
-    expect(renderFn).toHaveBeenCalledWith({ theme: themes.one })
-    expect(renderFn).toHaveBeenLastCalledWith({ theme: themes.two })
-    expect(renderFn).toHaveBeenCalledTimes(2)
+    expect(childrenSpy).toHaveBeenCalledWith({ theme: themes.one })
+    expect(childrenSpy).toHaveBeenLastCalledWith({ theme: themes.two })
+    expect(childrenSpy).toHaveBeenCalledTimes(2)
   })
 
   it('ThemeProvider propagates theme updates through nested ThemeProviders', () => {
     const augment = outerTheme => ({ ...outerTheme, augmented: true })
-    const renderFn = jest.fn()
+    const childrenSpy = jest.fn()
 
     const Component = ({ theme: themeProp }) => (
       <ThemeProvider theme={themeProp}>
         <ThemeProvider theme={augment}>
-          <ThemeConsumer>{renderFn}</ThemeConsumer>
+          <ThemeConsumer>{childrenSpy}</ThemeConsumer>
         </ThemeProvider>
       </ThemeProvider>
     )
@@ -106,12 +106,12 @@ describe('ThemeProvider', () => {
 
     rerender(<Component theme={{ themed: true, updated: true }} />)
 
-    expect(renderFn).toHaveBeenCalledWith({
+    expect(childrenSpy).toHaveBeenCalledWith({
       theme: { themed: true, augmented: true },
     })
-    expect(renderFn).toHaveBeenLastCalledWith({
+    expect(childrenSpy).toHaveBeenLastCalledWith({
       theme: { themed: true, augmented: true, updated: true },
     })
-    expect(renderFn).toHaveBeenCalledTimes(2)
+    expect(childrenSpy).toHaveBeenCalledTimes(2)
   })
 })
