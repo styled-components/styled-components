@@ -19,8 +19,10 @@ export const ThemeConsumer = ThemeContext.Consumer
  * Provide a theme to an entire react component tree via context
  */
 export default class ThemeProvider extends Component<ThemeProviderProps, void> {
-  getContext: (theme: Theme | ((outerTheme: Theme) => void)) => Object
-  outerTheme: Theme
+  getContext: (
+    theme: Theme | ((outerTheme: Theme) => void),
+    outerTheme: Theme
+  ) => Object
 
   constructor(props: ThemeProviderProps) {
     super(props)
@@ -28,9 +30,9 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
   }
 
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
-  getTheme(theme: (outerTheme: Theme) => void) {
+  getTheme(theme: (outerTheme: Theme) => void, outerTheme: Theme) {
     if (isFunction(theme)) {
-      const mergedTheme = theme(this.outerTheme)
+      const mergedTheme = theme(outerTheme)
 
       if (
         process.env.NODE_ENV !== 'production' &&
@@ -48,27 +50,34 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
       throw new StyledError(8)
     }
 
-    return { ...this.outerTheme, ...(theme: Object) }
+    return { ...outerTheme, ...(theme: Object) }
   }
 
-  getContext(theme: (outerTheme: Theme) => void) {
+  getContext(theme: (outerTheme: Theme) => void, outerTheme: Theme) {
     return {
-      theme: this.getTheme(theme),
+      theme: this.getTheme(theme, outerTheme),
     }
   }
 
   render() {
     const { children, theme } = this.props
-    const context = this.getContext(theme)
 
     if (!children) {
       return null
     }
 
     return (
-      <ThemeContext.Provider value={context}>
-        {React.Children.only(children)}
-      </ThemeContext.Provider>
+      <ThemeContext.Consumer>
+        {({ theme: outerTheme } = {}) => {
+          const context = this.getContext(theme, outerTheme)
+
+          return (
+            <ThemeContext.Provider value={context}>
+              {React.Children.only(children)}
+            </ThemeContext.Provider>
+          )
+        }}
+      </ThemeContext.Consumer>
     )
   }
 }
