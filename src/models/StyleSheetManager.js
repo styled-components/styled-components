@@ -1,9 +1,9 @@
 // @flow
-import React, { Component } from 'react'
+import React, { createContext, Component } from 'react'
 import PropTypes from 'prop-types'
+import memoize from 'memoize-one'
 import StyleSheet from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
-import { CONTEXT_KEY } from '../constants'
 import StyledError from '../utils/error'
 
 type Props = {
@@ -11,14 +11,11 @@ type Props = {
   target?: HTMLElement | null,
 }
 
-export default class StyleSheetManager extends Component<Props, void> {
-  static childContextTypes = {
-    [CONTEXT_KEY]: PropTypes.oneOfType([
-      PropTypes.instanceOf(StyleSheet),
-      PropTypes.instanceOf(ServerStyleSheet),
-    ]).isRequired,
-  }
+const StyleSheetContext = createContext()
 
+export const StyleSheetConsumer = StyleSheetContext.Consumer
+
+export default class StyleSheetManager extends Component<Props, void> {
   static propTypes = {
     sheet: PropTypes.oneOfType([
       PropTypes.instanceOf(StyleSheet),
@@ -29,27 +26,34 @@ export default class StyleSheetManager extends Component<Props, void> {
     }),
   }
 
-  sheetInstance: StyleSheet
+  getContext: (sheet: ?StyleSheet, target: ?HTMLElement) => Object
 
-  getChildContext() {
-    return { [CONTEXT_KEY]: this.sheetInstance }
+  constructor(props: Props) {
+    super(props)
+
+    this.getContext = memoize(this.getContext.bind(this))
   }
 
-  componentWillMount() {
-    if (this.props.sheet) {
-      this.sheetInstance = this.props.sheet
-    } else if (this.props.target) {
-      this.sheetInstance = new StyleSheet(this.props.target)
+  getContext(sheet: ?StyleSheet, target: ?HTMLElement) {
+    if (sheet) {
+      return { sheetInstance: sheet }
+    } else if (target) {
+      return { sheetInstance: new StyleSheet(target) }
     } else {
       throw new StyledError(4)
     }
   }
 
   render() {
-    /* eslint-disable react/prop-types */
+    const { sheet, target } = this.props
+    const context = this.getContext(sheet, target)
     // Flow v0.43.1 will report an error accessing the `children` property,
     // but v0.47.0 will not. It is necessary to use a type cast instead of
     // a "fixme" comment to satisfy both Flow versions.
-    return React.Children.only((this.props: any).children)
+    return (
+      <StyleSheetContext.Provider value={context}>
+        {React.Children.only((this.props: any).children)}
+      </StyleSheetContext.Provider>
+    )
   }
 }
