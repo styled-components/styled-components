@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 1`] = `"<h1 class=\\"sc-a b\\" data-reactroot=\\"\\">Hello SSR!</h1>"`;
+exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 1`] = `"<h1 class=\\"sc-a b\\">Hello SSR!</h1>"`;
 
 exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 2`] = `
 "<style nonce=\\"foo\\" data-styled-components=\\"b\\">
@@ -10,7 +10,7 @@ body{background:papayawhip;}
 .sc-a {} .b{color:red;}</style>"
 `;
 
-exports[`ssr should allow global styles to be injected during rendering 1`] = `"<h1 class=\\"PageOne a\\" data-reactroot=\\"\\">Camera One!</h1>"`;
+exports[`ssr should allow global styles to be injected during rendering 1`] = `"<h1 class=\\"PageOne a\\">Camera One!</h1>"`;
 
 exports[`ssr should allow global styles to be injected during rendering 2`] = `
 "<style data-styled-components=\\"a\\">
@@ -22,7 +22,7 @@ html::before{content:'Before both renders';}
 html::before{content:'During first render';}</style>"
 `;
 
-exports[`ssr should allow global styles to be injected during rendering 3`] = `"<h2 class=\\"PageTwo b\\" data-reactroot=\\"\\">Camera Two!</h2>"`;
+exports[`ssr should allow global styles to be injected during rendering 3`] = `"<h2 class=\\"PageTwo b\\">Camera Two!</h2>"`;
 
 exports[`ssr should allow global styles to be injected during rendering 4`] = `
 "<style data-styled-components=\\"b\\">
@@ -38,7 +38,7 @@ html::before{content:'Between renders';}</style><style data-styled-components=\\
 html::before{content:'During second render';}</style>"
 `;
 
-exports[`ssr should dispatch global styles to each ServerStyleSheet 1`] = `"<h1 class=\\"Header a\\" data-reactroot=\\"\\"></h1>"`;
+exports[`ssr should dispatch global styles to each ServerStyleSheet 1`] = `"<h1 class=\\"Header a\\"></h1>"`;
 
 exports[`ssr should dispatch global styles to each ServerStyleSheet 2`] = `
 "<style data-styled-components=\\"a\\">
@@ -50,7 +50,7 @@ body{background:papayawhip;}
 @-webkit-keyframes keyframe_0{0%{opacity:0;}} @keyframes keyframe_0{0%{opacity:0;}}</style>"
 `;
 
-exports[`ssr should extract both global and local CSS 1`] = `"<h1 class=\\"sc-a b\\" data-reactroot=\\"\\">Hello SSR!</h1>"`;
+exports[`ssr should extract both global and local CSS 1`] = `"<h1 class=\\"sc-a b\\">Hello SSR!</h1>"`;
 
 exports[`ssr should extract both global and local CSS 2`] = `
 "<style data-styled-components=\\"b\\">
@@ -60,7 +60,7 @@ body{background:papayawhip;}
 .sc-a {} .b{color:red;}</style>"
 `;
 
-exports[`ssr should extract the CSS in a simple case 1`] = `"<h1 class=\\"sc-a b\\" data-reactroot=\\"\\">Hello SSR!</h1>"`;
+exports[`ssr should extract the CSS in a simple case 1`] = `"<h1 class=\\"sc-a b\\">Hello SSR!</h1>"`;
 
 exports[`ssr should extract the CSS in a simple case 2`] = `
 "<style data-styled-components=\\"b\\">
@@ -75,10 +75,10 @@ exports[`ssr should interleave styles with rendered HTML when utilitizing stream
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
 /* sc-component-id: sc-a */
-.sc-a {} .b{color:red;}</style><h1 class=\\"sc-a b\\" data-reactroot=\\"\\">Hello SSR!</h1>"
+.sc-a {} .b{color:red;}</style><h1 class=\\"sc-a b\\">Hello SSR!</h1>"
 `;
 
-exports[`ssr should render CSS in the order the components were defined, not rendered 1`] = `"<div data-reactroot=\\"\\"><h2 class=\\"TWO a\\"></h2><h1 class=\\"ONE b\\"></h1></div>"`;
+exports[`ssr should render CSS in the order the components were defined, not rendered 1`] = `"<div><h2 class=\\"TWO a\\"></h2><h1 class=\\"ONE b\\"></h1></div>"`;
 
 exports[`ssr should render CSS in the order the components were defined, not rendered 2`] = `
 "<style data-styled-components=\\"a b\\">
@@ -101,7 +101,7 @@ body{background:papayawhip;}
 }
 `;
 
-exports[`ssr should share global styles but keep renders separate 1`] = `"<h1 class=\\"PageOne a\\" data-reactroot=\\"\\">Camera One!</h1>"`;
+exports[`ssr should share global styles but keep renders separate 1`] = `"<h1 class=\\"PageOne a\\">Camera One!</h1>"`;
 
 exports[`ssr should share global styles but keep renders separate 2`] = `
 "<style data-styled-components=\\"a\\">
@@ -111,7 +111,7 @@ body{background:papayawhip;}
 .PageOne {} .a{color:red;}</style>"
 `;
 
-exports[`ssr should share global styles but keep renders separate 3`] = `"<h2 class=\\"PageTwo b\\" data-reactroot=\\"\\">Camera Two!</h2>"`;
+exports[`ssr should share global styles but keep renders separate 3`] = `"<h2 class=\\"PageTwo b\\">Camera Two!</h2>"`;
 
 exports[`ssr should share global styles but keep renders separate 4`] = `
 "<style data-styled-components=\\"b\\">
