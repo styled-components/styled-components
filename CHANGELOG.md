@@ -10,9 +10,9 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## [v3.4.2] - 2018-08-07
 
-* Fix a regression from [#1843](https://github.com/styled-components/pull/1892) that breaks deferred injection and duplicates rules, by [@kitten](https://github.com/kitten) (see [#1892](https://github.com/styled-components/pull/1892))
+* Fix a regression from [#1843](https://github.com/styled-components/styled-components/pull/1892) that breaks deferred injection and duplicates rules, by [@kitten](https://github.com/kitten) (see [#1892](https://github.com/styled-components/styled-components/pull/1892))
 
-* [TS] Fix missing generic type arguments in .d.ts, by [@PzYon](https://github.com/PzYon) (see [#1886](https://github.com/styled-components/pull/1886))
+* [TS] Fix missing generic type arguments in .d.ts, by [@PzYon](https://github.com/PzYon) (see [#1886](https://github.com/styled-components/styled-components/pull/1886))
 
 ## [v3.4.1] - 2018-08-04
 
