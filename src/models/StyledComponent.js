@@ -14,7 +14,7 @@ import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import StyleSheet from './StyleSheet'
 import { ThemeConsumer } from './ThemeProvider'
 
-import type { Theme } from './ThemeProvider'
+import type { Theme, ThemeContextShape } from './ThemeProvider'
 import type { RuleSet, Target } from '../types'
 
 // HACK for generating all static styles without needing to allocate
@@ -115,7 +115,8 @@ class BaseStyledComponent extends Component<*, BaseState> {
     }
   }
 
-  render() {
+  renderInner = (context?: ThemeContextShape) => {
+    const theme = context ? context.theme : undefined
     const { innerRef } = this.props
     const {
       styledComponentId,
@@ -125,70 +126,65 @@ class BaseStyledComponent extends Component<*, BaseState> {
     } = this.constructor
     const isTargetTag = isTag(target)
 
-    return (
-      <ThemeConsumer>
-        {({ theme } = {}) => {
-          let generatedClassName
-          if (componentStyle.isStatic) {
-            generatedClassName = this.generateAndInjectStyles(
-              STATIC_EXECUTION_CONTEXT,
-              this.props
-            )
-          } else if (theme !== undefined) {
-            const themeProp = determineTheme(this.props, theme, defaultProps)
-            generatedClassName = this.generateAndInjectStyles(
-              themeProp,
-              this.props
-            )
-          } else {
-            generatedClassName = this.generateAndInjectStyles(
-              this.props.theme || {},
-              this.props
-            )
-          }
+    let generatedClassName
+    if (componentStyle.isStatic) {
+      generatedClassName = this.generateAndInjectStyles(
+        STATIC_EXECUTION_CONTEXT,
+        this.props
+      )
+    } else if (theme !== undefined) {
+      const themeProp = determineTheme(this.props, theme, defaultProps)
+      generatedClassName = this.generateAndInjectStyles(themeProp, this.props)
+    } else {
+      generatedClassName = this.generateAndInjectStyles(
+        this.props.theme || {},
+        this.props
+      )
+    }
 
-          const className = [
-            this.props.className,
-            styledComponentId,
-            this.attrs.className,
-            generatedClassName,
-          ]
-            .filter(Boolean)
-            .join(' ')
+    const className = [
+      this.props.className,
+      styledComponentId,
+      this.attrs.className,
+      generatedClassName,
+    ]
+      .filter(Boolean)
+      .join(' ')
 
-          const baseProps: Object = {
-            ...this.attrs,
-            className,
-          }
+    const baseProps: Object = {
+      ...this.attrs,
+      className,
+    }
 
-          if (isStyledComponent(target)) {
-            baseProps.innerRef = innerRef
-          } else {
-            baseProps.ref = innerRef
-          }
+    if (isStyledComponent(target)) {
+      baseProps.innerRef = innerRef
+    } else {
+      baseProps.ref = innerRef
+    }
 
-          const propsForElement = baseProps
-          let key
+    const propsForElement = baseProps
+    let key
 
-          for (key in this.props) {
-            // Don't pass through non HTML tags through to HTML elements
-            // always omit innerRef
-            if (
-              key !== 'innerRef' &&
-              key !== 'className' &&
-              (!isTargetTag || validAttr(key))
-            ) {
-              propsForElement[key] =
-                key === 'style' && key in this.attrs
-                  ? { ...this.attrs[key], ...this.props[key] }
-                  : this.props[key]
-            }
-          }
+    for (key in this.props) {
+      // Don't pass through non HTML tags through to HTML elements
+      // always omit innerRef
+      if (
+        key !== 'innerRef' &&
+        key !== 'className' &&
+        (!isTargetTag || validAttr(key))
+      ) {
+        propsForElement[key] =
+          key === 'style' && key in this.attrs
+            ? { ...this.attrs[key], ...this.props[key] }
+            : this.props[key]
+      }
+    }
 
-          return createElement(target, propsForElement)
-        }}
-      </ThemeConsumer>
-    )
+    return createElement(target, propsForElement)
+  }
+
+  render() {
+    return <ThemeConsumer>{this.renderInner}</ThemeConsumer>
   }
 }
 
