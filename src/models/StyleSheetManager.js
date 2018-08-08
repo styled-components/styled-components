@@ -4,16 +4,7 @@ import PropTypes from 'prop-types'
 import StyleSheet from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
 import { CONTEXT_KEY } from '../constants'
-
-/* this error is used for makeStyleTag */
-const targetPropErr =
-  process.env.NODE_ENV !== 'production'
-    ? `
-The StyleSheetManager expects a valid target or sheet prop!
-- Does this error occur on the client and is your target falsy?
-- Does this error occur on the server and is the sheet falsy?
-`.trim()
-    : ''
+import StyledError from '../utils/error'
 
 type Props = {
   sheet?: StyleSheet | null,
@@ -50,7 +41,7 @@ export default class StyleSheetManager extends Component<Props, void> {
     } else if (this.props.target) {
       this.sheetInstance = new StyleSheet(this.props.target)
     } else {
-      throw new Error(targetPropErr)
+      throw new StyledError(4)
     }
   }
 

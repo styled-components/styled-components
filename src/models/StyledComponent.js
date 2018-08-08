@@ -95,6 +95,7 @@ class BaseStyledComponent extends Component<*, BaseState> {
 
     this.attrs = Object.keys(attrs).reduce((acc, key) => {
       const attr = attrs[key]
+
       // eslint-disable-next-line no-param-reassign
       acc[key] =
         typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
@@ -239,7 +240,10 @@ class BaseStyledComponent extends Component<*, BaseState> {
         key !== 'className' &&
         (!isTargetTag || validAttr(key))
       ) {
-        propsForElement[key] = this.props[key]
+        propsForElement[key] =
+          key === 'style' && key in this.attrs
+            ? { ...this.attrs[key], ...this.props[key] }
+            : this.props[key]
       }
     }
 

@@ -217,4 +217,28 @@ describe('with styles', () => {
       expect(el.getAttribute('nonce')).toBe('foo')
     })
   })
+
+  it('should handle deferredInject and inject correctly', () => {
+    const cloneA = StyleSheet.master.clone()
+    const cloneB = StyleSheet.master.clone()
+    const rules = ['.testA {}']
+
+    StyleSheet.master.deferredInject('test', rules)
+
+    expect(StyleSheet.master.deferred.test).toBe(rules)
+    expect(cloneA.deferred.test).toBe(rules)
+    expect(cloneB.deferred.test).toBe(rules)
+
+    StyleSheet.master.inject('test', ['.testB {}'])
+
+    const inspectTag = sheet => {
+      const tag = sheet.getTagForId('test')
+      return tag.css()
+    }
+
+    const masterCss = inspectTag(StyleSheet.master)
+
+    expect(masterCss).toEqual(inspectTag(cloneA))
+    expect(masterCss).toEqual(inspectTag(cloneB))
+  })
 })

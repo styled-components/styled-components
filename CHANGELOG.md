@@ -6,7 +6,25 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-* Add first-class support for functions that return objects, by @acjay (see #1820)
+* placeholder
+
+## [v3.4.2] - 2018-08-07
+
+* Fix a regression from [#1843](https://github.com/styled-components/styled-components/pull/1892) that breaks deferred injection and duplicates rules, by [@kitten](https://github.com/kitten) (see [#1892](https://github.com/styled-components/styled-components/pull/1892))
+
+* [TS] Fix missing generic type arguments in .d.ts, by [@PzYon](https://github.com/PzYon) (see [#1886](https://github.com/styled-components/styled-components/pull/1886))
+
+## [v3.4.1] - 2018-08-04
+
+* Fixed a bug in typings where `isStyledComponent` was defined using an undefined variable, by [@MayhemYDG](https://github.com/MayhemYDG) (see [#1876](https://github.com/styled-components/styled-components/pull/1876))
+
+* Add error system, by [@probablyup](https://github.com/probablyup) (see [#1881](https://github.com/styled-components/styled-components/pull/1881))
+
+* Fix "stream" module not being properly eliminated by rollup, by [@probablyup](https://github.com/probablyup)
+
+## [v3.4.0] - 2018-08-02
+
+* Add first-class support for functions that return objects, by [@acjay](https://github.com/acjay) (see [#1820](https://github.com/styled-components/styled-components/pull/1820))
 
   ```JS
   const Comp = styled.div((({ color }) => ({
@@ -27,41 +45,47 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
   // <GlobalStyles />
   ```
 
-* Add support for the prop variants used by Preact (`autofocus`, `class`, `for`), by @probablyup (see #1823)
+* Add support for the prop variants used by Preact (`autofocus`, `class`, `for`), by [@probablyup](https://github.com/probablyup) (see [#1823](https://github.com/styled-components/styled-components/pull/1823))
+
+* Various performance improvements, by [@probablyup](https://github.com/probablyup) (see [#1843](https://github.com/styled-components/styled-components/pull/1843))
+
+* [TS] Revert #1798, by [@Igorbek](https://github.com/Igorbek) (see [#1840](https://github.com/styled-components/styled-components/pull/1840))
+
+* [Internal] Add benchmarking suite, by [@mxstbr](https://github.com/mxstbr) (see [#1833](https://github.com/styled-components/styled-components/pull/1833))
 
 ## [v3.3.3] - 2018-06-20
 
-* Fixed a regression when extending a `styled(StyledComponent)` introduced in 3.3.0, by @probablyup (see #1819)
+* Fixed a regression when extending a `styled(StyledComponent)` introduced in 3.3.0, by [@probablyup](https://github.com/probablyup) (see [#1819](https://github.com/styled-components/styled-components/pull/1819))
 
-* Adjust how displayName is generated when not using Babel to properly preserve a displayName passed via `withConfig`, by @probablyup (see #1755)
+* Adjust how displayName is generated when not using Babel to properly preserve a displayName passed via `withConfig`, by [@probablyup](https://github.com/probablyup) (see [#1755](https://github.com/styled-components/styled-components/pull/1755))
 
-* [TS] Fix props being removed when indexed types are passed to WithOptionalTheme, by @devrelm (see #1806)
+* [TS] Fix props being removed when indexed types are passed to WithOptionalTheme, by [@devrelm](https://github.com/devrelm) (see [#1806](https://github.com/styled-components/styled-components/pull/1806))
 
-* [TS] Allow TypeScript 2.9.1 to accept tagged template type argument, by @Igorbek (see #1798)
+* [TS] Allow TypeScript 2.9.1 to accept tagged template type argument, by [@Igorbek](https://github.com/Igorbek) (see [#1798](https://github.com/styled-components/styled-components/pull/1798))
 
-* Add ref documentation for React.createRef(), by @julmot (see #1792)
+* Add ref documentation for React.createRef(), by [@julmot](https://github.com/julmot) (see [#1792](https://github.com/styled-components/styled-components/pull/1792))
 
 ## [v3.3.2] - 2018-06-04
 
-* Allow non-plain objects as `ThemeProvider` themes, by @phyllisstein (see #1780)
+* Allow non-plain objects as `ThemeProvider` themes, by [@phyllisstein](https://github.com/phyllisstein) (see [#1780](https://github.com/styled-components/styled-components/pull/1780))
 
-* Upgrade flow-bin to latest, by @halvves (see #1748)
+* Upgrade flow-bin to latest, by [@halvves](https://github.com/halvves) (see [#1748](https://github.com/styled-components/styled-components/pull/1748))
 
-* Update various CI bits, by @probablyup (see #1769)
+* Update various CI bits, by [@probablyup](https://github.com/probablyup) (see [#1769](https://github.com/styled-components/styled-components/pull/1769))
 
-* Reimplement SSR stream handling as a transform stream rather than a second-order readable stream, by @probablyup (see #1768)
+* Reimplement SSR stream handling as a transform stream rather than a second-order readable stream, by [@probablyup](https://github.com/probablyup) (see [#1768](https://github.com/styled-components/styled-components/pull/1768))
 
-* Allow React Component as attr, by @valerybugakov (see #1751)
+* Allow React Component as attr, by [@valerybugakov](https://github.com/valerybugakov) (see [#1751](https://github.com/styled-components/styled-components/pull/1751))
 
-* Added pointer events to valid attributes check, by @plankguy (see #1790)
+* Added pointer events to valid attributes check, by [@plankguy](https://github.com/plankguy) (see [#1790](https://github.com/styled-components/styled-components/pull/1790))
 
 _v3.3.1 was skipped due to a bad deploy._
 
 ## [v3.3.0] - 2018-05-25
 
-* Fix off-by-one error in insertRuleHelpers.js, by @migueloller (see #1749)
+* Fix off-by-one error in insertRuleHelpers.js, by [@migueloller](https://github.com/migueloller) (see [#1749](https://github.com/styled-components/styled-components/pull/1749))
 
-* Add first-class support for objects, by @mxstbr (see #1732)
+* Add first-class support for objects, by [@mxstbr](https://github.com/mxstbr) (see [#1732](https://github.com/styled-components/styled-components/pull/1732))
 
   ```JS
   const Component = styled.div({
@@ -69,15 +93,15 @@ _v3.3.1 was skipped due to a bad deploy._
   })
   ```
 
-- Fix typo in console warning about multiple instances, by @lucianbuzzo (see #1730)
+- Fix typo in console warning about multiple instances, by [@lucianbuzzo](https://github.com/lucianbuzzo) (see [#1730](https://github.com/styled-components/styled-components/pull/1730))
 
-- Make the multiple instance warning criteria a little more strict to avoid badgering people running unit tests, by @probablyup (see #1693)
+- Make the multiple instance warning criteria a little more strict to avoid badgering people running unit tests, by [@probablyup](https://github.com/probablyup) (see [#1693](https://github.com/styled-components/styled-components/pull/1693))
 
-- Fix `React.createRef()` values for `innerRef` being ignored in React Native, by @simonbuchan (see #1718)
+- Fix `React.createRef()` values for `innerRef` being ignored in React Native, by [@simonbuchan](https://github.com/simonbuchan) (see [#1718](https://github.com/styled-components/styled-components/pull/1718))
 
-- Hoist non-react static properties on wrapped classes, by @probablyup (see #1750)
+- Hoist non-react static properties on wrapped classes, by [@probablyup](https://github.com/probablyup) (see [#1750](https://github.com/styled-components/styled-components/pull/1750))
 
-- Support attributes prefixed by `x-`, by @mlecoq (see #1753)
+- Support attributes prefixed by `x-`, by [@mlecoq](https://github.com/mlecoq) (see [#1753](https://github.com/styled-components/styled-components/pull/1753))
 
 ## [v3.2.6] - 2018-04-17
 
@@ -144,15 +168,15 @@ _v3.3.1 was skipped due to a bad deploy._
 
 ## [v3.1.6] - 2018-02-03
 
-* Bugfix for the last style tag sometimes being emitted multiple times during streaming ([see #1479](https://github.com/styled-components/styled-components/pull/1479))
+* Bugfix for the last style tag sometimes being emitted multiple times during streaming (see [#1479](https://github.com/styled-components/styled-components/pull/1479))
 
-* Bugfix for speedy mode rehydration and added handling for out-of-order style injection ([see #1482](https://github.com/styled-components/styled-components/pull/1482))
+* Bugfix for speedy mode rehydration and added handling for out-of-order style injection (see [#1482](https://github.com/styled-components/styled-components/pull/1482))
 
 ## [v3.1.5] - 2018-02-01
 
-* Apply a workaround to re-enable "speedy" mode for IE/Edge ([see #1468](https://github.com/styled-components/styled-components/pull/1468))
+* Apply a workaround to re-enable "speedy" mode for IE/Edge (see [#1468](https://github.com/styled-components/styled-components/pull/1468))
 
-* Fix memory leak in the server-side streaming logic ([see #1475](https://github.com/styled-components/styled-components/pull/1475))
+* Fix memory leak in the server-side streaming logic (see [#1475](https://github.com/styled-components/styled-components/pull/1475))
 
 ## [v3.1.4] - 2018-01-29
 
@@ -196,15 +220,15 @@ _v3.3.1 was skipped due to a bad deploy._
 
 * Remove trailing commas on function arguments (not compatible with ES5 JS engines)
 
-* Ship source maps ([see #1425](https://github.com/styled-components/styled-components/pull/1425))
+* Ship source maps (see [#1425](https://github.com/styled-components/styled-components/pull/1425))
 
-* Upgrade test suites to run against react v16 ([see #1426](https://github.com/styled-components/styled-components/pull/1426))
+* Upgrade test suites to run against react v16 (see [#1426](https://github.com/styled-components/styled-components/pull/1426))
 
-* Streaming rendering support (requires React 16, [see #1430](https://github.com/styled-components/styled-components/pull/1430))
+* Streaming rendering support (requires React 16, see [#1430](https://github.com/styled-components/styled-components/pull/1430))
 
 ## [v2.4.0] - 2017-12-22
 
-* remove some extra information from the generated hash that can differ between build environments ([see #1381](https://github.com/styled-components/styled-components/pull/1381))
+* remove some extra information from the generated hash that can differ between build environments (see [#1381](https://github.com/styled-components/styled-components/pull/1381))
 
 ## [v2.3.3] - 2017-12-20
 
@@ -527,7 +551,10 @@ _v3.3.1 was skipped due to a bad deploy._
 
 * Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v3.3.3...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.2...master
+[v3.4.2]: https://github.com/styled-components/styled-components/compare/v3.4.1...v3.4.2
+[v3.4.1]: https://github.com/styled-components/styled-components/compare/v3.4.0...v3.4.1
+[v3.4.0]: https://github.com/styled-components/styled-components/compare/v3.3.3...v3.4.0
 [v3.3.3]: https://github.com/styled-components/styled-components/compare/v3.3.2...v3.3.3
 [v3.3.2]: https://github.com/styled-components/styled-components/compare/v3.3.0...v3.3.2
 [v3.3.0]: https://github.com/styled-components/styled-components/compare/v3.2.6...v3.3.0

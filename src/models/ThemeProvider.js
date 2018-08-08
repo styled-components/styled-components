@@ -3,6 +3,7 @@ import React, { Component, type Element } from 'react'
 import PropTypes from 'prop-types'
 import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
+import StyledError from '../utils/error'
 import once from '../utils/once'
 
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
@@ -122,21 +123,14 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
           Array.isArray(mergedTheme) ||
           typeof mergedTheme !== 'object')
       ) {
-        throw new Error(
-          process.env.NODE_ENV !== 'production'
-            ? '[ThemeProvider] Please return an object from your theme function, i.e. theme={() => ({})}!'
-            : ''
-        )
+        throw new StyledError(7)
       }
+
       return mergedTheme
     }
 
     if (theme === null || Array.isArray(theme) || typeof theme !== 'object') {
-      throw new Error(
-        process.env.NODE_ENV !== 'production'
-          ? '[ThemeProvider] Please make your theme prop an object'
-          : ''
-      )
+      throw new StyledError(8)
     }
 
     return { ...this.outerTheme, ...(theme: Object) }

@@ -7,7 +7,9 @@ import json from 'rollup-plugin-json'
 import flow from 'rollup-plugin-flow'
 import { terser } from 'rollup-plugin-terser'
 import sourceMaps from 'rollup-plugin-sourcemaps'
-import ignore from 'rollup-plugin-ignore'
+
+// rollup-plugin-ignore stopped working, so we'll just remove the import line 😐
+const ignore = { "import stream from 'stream';": "'';" }
 
 const cjs = {
   exports: 'named',
@@ -68,10 +70,11 @@ const umdBaseConfig = Object.assign({}, configBase, {
   },
   external: Object.keys(globals),
   plugins: configBase.plugins.concat(
-    replace({
-      __SERVER__: JSON.stringify(false),
-    }),
-    ignore(['stream'])
+    replace(
+      Object.assign({}, ignore, {
+        __SERVER__: JSON.stringify(false),
+      })
+    )
   ),
 })
 
@@ -130,10 +133,11 @@ const browserConfig = Object.assign({}, configBase, {
     getCJS({ file: 'dist/styled-components.browser.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
-    replace({
-      __SERVER__: JSON.stringify(false),
-    }),
-    ignore(['stream'])
+    replace(
+      Object.assign({}, ignore, {
+        __SERVER__: JSON.stringify(false),
+      })
+    )
   ),
 })
 
@@ -201,10 +205,11 @@ const noParserBrowserConfig = Object.assign({}, configBase, {
     }),
   ],
   plugins: configBase.plugins.concat(
-    replace({
-      __SERVER__: JSON.stringify(false),
-    }),
-    ignore(['stream'])
+    replace(
+      Object.assign({}, ignore, {
+        __SERVER__: JSON.stringify(false),
+      })
+    )
   ),
 })
 
