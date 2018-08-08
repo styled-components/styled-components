@@ -2,6 +2,7 @@
 import hyphenate from 'fbjs/lib/hyphenateStyleName'
 import React from 'react'
 import isPlainObject from './isPlainObject'
+import StyledError from './error'
 import type { Interpolation } from '../types'
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
@@ -54,7 +55,7 @@ const flatten = (
 
     /* Throw if a React Element was given styles */
     if (React.isValidElement(chunk)) {
-      throw new Error('Cannot reference React Elements within styles')
+      throw new StyledError(1, 'Cannot reference React Elements within styles')
     }
 
     /* Either execute or defer the function */

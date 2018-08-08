@@ -57,7 +57,7 @@ describe('with styles', () => {
   })
 
 
-  it('should throw if a none styled component is referred as a nested style', () => {
+  it('should throw if a non styled component is referred as a nested style', () => {
     const NestedComp = () => <div></div>
     const Comp = styled.div`
       ${ NestedComp} {
