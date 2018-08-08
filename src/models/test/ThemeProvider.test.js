@@ -1,29 +1,27 @@
 // @flow
-import 'jest-dom/extend-expect'
-import 'react-testing-library/cleanup-after-each'
+/* eslint-disable react/no-multi-comp */
 import React from 'react'
-import { render } from 'react-testing-library'
+import { shallow, render, mount } from 'enzyme'
 import ThemeProvider, { ThemeConsumer } from '../ThemeProvider'
 
 describe('ThemeProvider', () => {
   it('should not throw an error when no children are passed', () => {
-    expect(() => render(<ThemeProvider theme={{}} />)).not.toThrow()
-  })
-
-  it("should accept a theme prop that's a plain object", () => {
-    expect(() =>
-      render(<ThemeProvider theme={{ main: 'black' }} />)
+    const result = expect(() =>
+      shallow(<ThemeProvider theme={{}} />)
     ).not.toThrow()
   })
 
+  it("should accept a theme prop that's a plain object", () => {
+    shallow(<ThemeProvider theme={{ main: 'black' }} />)
+  })
+
   it('should render its child', () => {
-    const { container, queryByTestId } = render(
-      <ThemeProvider theme={{ main: 'black' }}>
-        <p data-testid="child">Child!</p>
-      </ThemeProvider>
+    const child = <p>Child!</p>
+    const wrapper = mount(
+      <ThemeProvider theme={{ main: 'black' }}>{child}</ThemeProvider>
     )
 
-    expect(queryByTestId('child')).not.toBeNull()
+    expect(wrapper.find('p').getElement()).toEqual(child)
   })
 
   it('should merge its theme with an outer theme', () => {
@@ -91,20 +89,23 @@ describe('ThemeProvider', () => {
   })
 
   it('ThemeProvider propagates theme updates through nested ThemeProviders', () => {
-    const augment = outerTheme => ({ ...outerTheme, augmented: true })
+    const theme = { themed: true }
+    const augment = outerTheme =>
+      Object.assign({}, outerTheme, { augmented: true })
+    const update = { updated: true }
+    let actual
+    const expected = { themed: true, augmented: true, updated: true }
     const childrenSpy = jest.fn()
 
-    const Component = ({ theme: themeProp }) => (
-      <ThemeProvider theme={themeProp}>
+    const wrapper = mount(
+      <ThemeProvider theme={theme}>
         <ThemeProvider theme={augment}>
           <ThemeConsumer>{childrenSpy}</ThemeConsumer>
         </ThemeProvider>
       </ThemeProvider>
     )
 
-    const { rerender } = render(<Component theme={{ themed: true }} />)
-
-    rerender(<Component theme={{ themed: true, updated: true }} />)
+    wrapper.setProps({ theme: Object.assign({}, theme, update) })
 
     expect(childrenSpy).toHaveBeenCalledWith({
       theme: { themed: true, augmented: true },

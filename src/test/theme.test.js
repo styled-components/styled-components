@@ -1,8 +1,7 @@
 // @flow
-import 'jest-dom/extend-expect'
-import 'react-testing-library/cleanup-after-each'
 import React, { Component } from 'react'
-import { render, getByTestId } from 'react-testing-library'
+import { mount, render } from 'enzyme'
+
 import { resetStyled, expectCSSMatches } from './utils'
 import ThemeProvider from '../models/ThemeProvider'
 import withTheme from '../hoc/withTheme'
@@ -52,9 +51,9 @@ describe('theming', () => {
     Comp1.defaultProps = {
       theme: {
         test: {
-          color: 'purple',
-        },
-      },
+          color: "purple"
+        }
+      }
     }
     render(
       <div>
@@ -73,9 +72,9 @@ describe('theming', () => {
     Comp1.defaultProps = {
       theme: {
         test: {
-          color: 'purple',
-        },
-      },
+          color: "purple"
+        }
+      }
     }
     const theme = { test: { color: 'green' } }
 
@@ -95,9 +94,9 @@ describe('theming', () => {
     Comp1.defaultProps = {
       theme: {
         test: {
-          color: 'purple',
-        },
-      },
+          color: "purple"
+        }
+      }
     }
     const theme = { test: { color: 'green' } }
 
@@ -180,11 +179,7 @@ describe('theming', () => {
         </div>
       </ThemeProvider>
     )
-    expectCSSMatches(
-      `.sc-a {} .c { color:${theme.color}; } .sc-b {} .d { background:${
-        theme.color
-      }; }`
-    )
+    expectCSSMatches(`.sc-a {} .c { color:${theme.color}; } .sc-b {} .d { background:${theme.color}; }`)
   })
 
   it('should inject new CSS when the theme changes', () => {
@@ -223,13 +218,15 @@ describe('theming', () => {
 
     Comp1.defaultProps = {
       theme: {
-        color: 'purple',
-      },
+        color: "purple"
+      }
     }
-    const { rerender } = render(<Comp1 />)
+    const wrapper = mount(
+      <Comp1 />
+    )
     expectCSSMatches(`.sc-a {} .b { color:purple; }`)
 
-    rerender(<Comp1 />)
+    wrapper.update();
     expectCSSMatches(`.sc-a {} .b { color:purple; }`)
   })
 
@@ -240,13 +237,15 @@ describe('theming', () => {
 
     Comp1.defaultProps = {
       theme: {
-        color: 'purple',
-      },
+        color: "purple"
+      }
     }
-    const { rerender } = render(<Comp1 />)
+    const wrapper = mount(
+      <Comp1 />
+    )
     expectCSSMatches(`.sc-a {} .b { color:purple; }`)
 
-    rerender(<Comp1 theme={{ color: 'pink' }} />)
+    wrapper.setProps({ theme: { color: 'pink' } })
     expectCSSMatches(`.sc-a {} .b { color:purple; } .c { color:pink; }`)
   })
 
@@ -258,19 +257,21 @@ describe('theming', () => {
 
     Comp1.defaultProps = {
       theme: {
-        color: 'purple',
+        color: "purple"
       },
-      zIndex: 0,
+      zIndex: 0
     }
-    const { rerender } = render(<Comp1 />)
+    const wrapper = mount(
+      <Comp1 />
+    )
     let expectedStyles = `.sc-a {} .b { color:purple; z-index:0px; }`
     expectCSSMatches(expectedStyles)
 
-    rerender(<Comp1 theme={{ color: 'pink' }} />)
+    wrapper.setProps({ theme: { color: 'pink' } })
     expectedStyles = `${expectedStyles} .c { color:pink; z-index:0px; }`
     expectCSSMatches(expectedStyles)
 
-    rerender(<Comp1 theme={{ color: 'pink' }} zIndex="1" />)
+    wrapper.setProps({ zIndex: 1 });
     expectCSSMatches(`${expectedStyles} .d { color:pink; z-index:1px; }`)
   })
 
@@ -284,44 +285,43 @@ describe('theming', () => {
 
     const Theme = ({ theme }) => (
       <ThemeProvider theme={theme}>
-        <Comp someProps={theme} data-testid="div" />
+        <Comp someProps={theme} />
       </ThemeProvider>
     )
 
-    const { rerender, getByTestId } = render(<Theme theme={originalTheme} />)
+    const wrapper = mount(
+      <Theme theme={originalTheme} />
+    )
+
 
     expectCSSMatches(`.sc-a {} .b { color:${originalTheme.color}; }`)
-    expect(getByTestId('div')).toHaveClass('sc-a b')
+    expect(wrapper.find('div').prop('className')).toBe('sc-a b')
 
     // Change theme
-    rerender(<Theme theme={newTheme} />)
+    wrapper.setProps({ theme: newTheme })
 
-    expectCSSMatches(
-      `.sc-a {} .b { color:${originalTheme.color}; } .c { color:${
-        newTheme.color
-      }; }`
-    )
-    expect(getByTestId('div')).toHaveClass('sc-a c')
+    expectCSSMatches(`.sc-a {} .b { color:${originalTheme.color}; } .c { color:${newTheme.color}; }`)
+    expect(wrapper.find('div').prop('className')).toBe('sc-a c')
   })
 
   it('should inject props.theme into a component that uses withTheme hoc', () => {
     const originalTheme = { color: 'black' }
 
-    const MyDiv = ({ theme }) => <div data-testid="div">{theme.color}</div>
-    const MyDivWithTheme = withTheme(MyDiv)
+    const MyDiv = ({ theme }) => <div>{theme.color}</div>
+    const MyDivWithTheme = withTheme(MyDiv);
 
-    const { getByTestId } = render(
+    const wrapper = mount(
       <ThemeProvider theme={originalTheme}>
         <MyDivWithTheme />
       </ThemeProvider>
     )
 
-    expect(getByTestId('div')).toHaveTextContent('black')
+    expect(wrapper.find('div').text()).toBe('black')
   })
 
   it('should properly update theme prop on hoc component when theme is changed', () => {
-    const MyDiv = ({ theme }) => <div data-testid="div">{theme.color}</div>
-    const MyDivWithTheme = withTheme(MyDiv)
+    const MyDiv = ({ theme }) => <div>{theme.color}</div>
+    const MyDivWithTheme = withTheme(MyDiv);
 
     const originalTheme = { color: 'black' }
     const newTheme = { color: 'blue' }
@@ -332,14 +332,16 @@ describe('theming', () => {
       </ThemeProvider>
     )
 
-    const { getByTestId, rerender } = render(<Theme theme={originalTheme} />)
+    const wrapper = mount(
+      <Theme theme={originalTheme} />
+    )
 
-    expect(getByTestId('div')).toHaveTextContent('black')
+    expect(wrapper.find('div').text()).toBe('black')
 
     // Change theme
-    rerender(<Theme theme={newTheme} />)
+    wrapper.setProps({ theme: newTheme })
 
-    expect(getByTestId('div')).toHaveTextContent('blue')
+    expect(wrapper.find('div').text()).toBe('blue')
   })
 
   // https://github.com/styled-components/styled-components/issues/445
@@ -360,11 +362,13 @@ describe('theming', () => {
       </ThemeProvider>
     )
 
-    const { rerender } = render(<Theme prop="foo" />)
+    const wrapper = mount(
+      <Theme prop="foo" />
+    )
 
     expectCSSMatches(`.sc-a { } .b { color:green; } `)
 
-    rerender(<Theme prop="bar" />)
+    wrapper.setProps({ prop: 'bar' })
 
     expectCSSMatches(`.sc-a { } .b { color:green; } `)
   })
@@ -383,160 +387,163 @@ describe('theming', () => {
   it('should only pass the theme prop', () => {
     class Comp extends Component<*, *> {
       render() {
-        const { children = () => null, ...props } = this.props
-        return <div>{children(props)}</div>
+        return <div />
       }
     }
 
     const CompWithTheme = withTheme(Comp)
-    const childrenSpy = jest.fn()
 
-    const { container, debug } = render(
+    const wrapper = mount(
       <ThemeProvider theme={{}}>
-        <CompWithTheme>{childrenSpy}</CompWithTheme>
+        <CompWithTheme />
       </ThemeProvider>
     )
 
-    expect(childrenSpy).toHaveBeenCalledWith({ theme: {} })
+    const inner = wrapper.find(Comp).first()
+
+    expect(Object.keys(inner.props()).length).toEqual(1)
+    expect(inner.props()).toEqual({ theme: {} })
   })
 
-  // it('should accept innerRef and pass it on as ref', () => {
-  //   class Comp extends Component<*, *> {
-  //     render() {
-  //       return <div data-testid="div" {...this.props} />
-  //     }
-  //   }
+  it('should accept innerRef and pass it on as ref', () => {
+    class Comp extends Component<*, *> {
+      render() {
+        return <div />
+      }
+    }
 
-  //   const CompWithTheme = withTheme(Comp)
-  //   const ref = jest.fn()
+    const CompWithTheme = withTheme(Comp)
+    const ref = jest.fn()
 
-  //   const { getByTestId } = render(
-  //     <ThemeProvider theme={{}}>
-  //       <CompWithTheme innerRef={ref} />
-  //     </ThemeProvider>
-  //   )
+    const wrapper = mount(
+      <ThemeProvider theme={{}}>
+        <CompWithTheme innerRef={ref} />
+      </ThemeProvider>
+    )
 
-  //   expect(ref).toHaveBeenCalledWith(getByTestId('div'))
-  //   expect(getByTestId('div')).not.toHaveAttribute('innerRef')
-  // })
+    const inner = wrapper.find(Comp).first();
 
-  //   it('should accept innerRef and pass it on for stateless function components', () => {
-  //     const Comp = () => <div />
-  //     const CompWithTheme = withTheme(Comp)
-  //     const ref = jest.fn()
+    expect(ref).toHaveBeenCalledWith(inner.instance())
+    expect(inner.prop('innerRef')).toBe(undefined)
+  })
 
-  //     const wrapper = mount(
-  //       <ThemeProvider theme={{}}>
-  //         <CompWithTheme innerRef={ref} />
-  //       </ThemeProvider>
-  //     )
+  it('should accept innerRef and pass it on for stateless function components', () => {
+    const Comp = () => <div />
+    const CompWithTheme = withTheme(Comp)
+    const ref = jest.fn()
 
-  //     const inner = wrapper.find(Comp).first()
+    const wrapper = mount(
+      <ThemeProvider theme={{}}>
+        <CompWithTheme innerRef={ref} />
+      </ThemeProvider>
+    )
 
-  //     expect(ref).toHaveBeenCalledTimes(0)
-  //     expect(inner.prop('innerRef')).toBe(ref)
-  //   })
+    const inner = wrapper.find(Comp).first()
 
-  //   it('should accept innerRef and pass it on for styled components', () => {
-  //     const Comp = styled.div``
-  //     const CompWithTheme = withTheme(Comp)
-  //     const ref = jest.fn()
+    expect(ref).toHaveBeenCalledTimes(0)
+    expect(inner.prop('innerRef')).toBe(ref)
+  })
 
-  //     const wrapper = mount(
-  //       <ThemeProvider theme={{}}>
-  //         <CompWithTheme innerRef={ref} />
-  //       </ThemeProvider>
-  //     )
+  it('should accept innerRef and pass it on for styled components', () => {
+    const Comp = styled.div``
+    const CompWithTheme = withTheme(Comp)
+    const ref = jest.fn()
 
-  //     const inner = wrapper.find(Comp).first()
+    const wrapper = mount(
+      <ThemeProvider theme={{}}>
+        <CompWithTheme innerRef={ref} />
+      </ThemeProvider>
+    )
 
-  //     expect(ref).toHaveBeenCalledWith(inner.getDOMNode())
-  //     expect(inner.prop('innerRef')).toBe(ref)
-  //   })
+    const inner = wrapper.find(Comp).first()
+
+    expect(ref).toHaveBeenCalledWith(inner.getDOMNode())
+    expect(inner.prop('innerRef')).toBe(ref)
+  })
 
   // https://github.com/styled-components/styled-components/issues/1130
   it('should not break without a ThemeProvier if it has a defaultTheme', () => {
-    const MyDiv = ({ theme }) => <div data-testid="div">{theme.color}</div>
-    const MyDivWithTheme = withTheme(MyDiv)
+    const MyDiv = ({ theme }) => <div>{theme.color}</div>
+    const MyDivWithTheme = withTheme(MyDiv);
     const theme = { color: 'red' }
     const newTheme = { color: 'blue' }
 
     MyDivWithTheme.defaultProps = { theme }
 
-    const { rerender, getByTestId } = render(<MyDivWithTheme />)
+    const wrapper = mount(<MyDivWithTheme />)
 
-    expect(getByTestId('div')).toHaveTextContent('red')
+    expect(wrapper.find('div').text()).toBe('red')
 
     // Change theme
-    rerender(<MyDivWithTheme theme={newTheme} />)
+    wrapper.setProps({ theme: newTheme })
 
-    expect(getByTestId('div')).toHaveTextContent('blue')
+    expect(wrapper.find('div').text()).toBe('blue')
   })
 
-  //   // https://github.com/styled-components/styled-components/issues/1776
-  //   it('should allow module objects to be passed as themes', () => {
-  //     const theme = {
-  //       borderRadius: '2px',
-  //       palette: {
-  //         black: '#000',
-  //         white: '#fff',
-  //         // Flow has limited support for Symbols and computed properties;
-  //         // see <https://github.com/facebook/flow/issues/3258>.
-  //         // $FlowFixMe
-  //         [Symbol.toStringTag]: 'Module'
-  //       },
-  //       // Flow has limited support for Symbols and computed properties;
-  //       // see <https://github.com/facebook/flow/issues/3258>.
-  //       // $FlowFixMe
-  //       [Symbol.toStringTag]: 'Module'
-  //     }
+  // https://github.com/styled-components/styled-components/issues/1776
+  it('should allow module objects to be passed as themes', () => {
+    const theme = {
+      borderRadius: '2px',
+      palette: {
+        black: '#000',
+        white: '#fff',
+        // Flow has limited support for Symbols and computed properties;
+        // see <https://github.com/facebook/flow/issues/3258>.
+        // $FlowFixMe
+        [Symbol.toStringTag]: 'Module'
+      },
+      // Flow has limited support for Symbols and computed properties;
+      // see <https://github.com/facebook/flow/issues/3258>.
+      // $FlowFixMe
+      [Symbol.toStringTag]: 'Module'
+    }
 
-  //     const Comp1 = styled.div`
-  //       background-color: ${ ({ theme }) => theme.palette.white };
-  //       color: ${ ({ theme }) => theme.palette.black };
-  //     `
+    const Comp1 = styled.div`
+      background-color: ${ ({ theme }) => theme.palette.white };
+      color: ${ ({ theme }) => theme.palette.black };
+    `
 
-  //     let wrapper
-  //     expect(() => {
-  //       wrapper = mount(
-  //         <ThemeProvider theme={ theme }>
-  //           <Comp1 />
-  //         </ThemeProvider>
-  //       )
-  //     }).not.toThrow('plain object')
+    let wrapper
+    expect(() => {
+      wrapper = mount(
+        <ThemeProvider theme={ theme }>
+          <Comp1 />
+        </ThemeProvider>
+      )
+    }).not.toThrow('plain object')
 
-  //     expectCSSMatches(`.sc-a {} .b {background-color:${theme.palette.white};color:${theme.palette.black};}`)
-  //   })
+    expectCSSMatches(`.sc-a {} .b {background-color:${theme.palette.white};color:${theme.palette.black};}`)
+  })
 
-  //   it('should allow other complex objects to be passed as themes', () => {
-  //     class Theme {
-  //       borderRadius: string
+  it('should allow other complex objects to be passed as themes', () => {
+    class Theme {
+      borderRadius: string
 
-  //       constructor(borderRadius) {
-  //         this.borderRadius = borderRadius
-  //       }
-  //     }
+      constructor(borderRadius) {
+        this.borderRadius = borderRadius
+      }
+    }
 
-  //     const theme = new Theme('2px')
+    const theme = new Theme('2px')
 
-  //     const Comp1 = styled.div`
-  //       border-radius: ${ ({ theme }) => theme.borderRadius };
-  //     `
+    const Comp1 = styled.div`
+      border-radius: ${ ({ theme }) => theme.borderRadius };
+    `
 
-  //     const wrapper = mount(
-  //       <ThemeProvider theme={ theme }>
-  //         <Comp1 />
-  //       </ThemeProvider>
-  //     )
+    const wrapper = mount(
+      <ThemeProvider theme={ theme }>
+        <Comp1 />
+      </ThemeProvider>
+    )
 
-  //     expectCSSMatches(`.sc-a {} .b {border-radius:${theme.borderRadius};}`)
-  //   })
+    expectCSSMatches(`.sc-a {} .b {border-radius:${theme.borderRadius};}`)
+  })
 
   it('should not allow the theme to be null', () => {
     expect(() => {
-      render(
+      mount(
         // $FlowInvalidInputTest
-        <ThemeProvider theme={null}>
+        <ThemeProvider theme={ null }>
           <div />
         </ThemeProvider>
       )
@@ -545,9 +552,9 @@ describe('theming', () => {
 
   it('should not allow the theme to be an array', () => {
     expect(() => {
-      render(
+      mount(
         // $FlowInvalidInputTest
-        <ThemeProvider theme={['a', 'b', 'c']}>
+        <ThemeProvider theme={ ['a', 'b', 'c'] }>
           <div />
         </ThemeProvider>
       )
@@ -556,9 +563,9 @@ describe('theming', () => {
 
   it('should not allow the theme to be a non-object', () => {
     expect(() => {
-      render(
+      mount(
         // $FlowInvalidInputTest
-        <ThemeProvider theme={42}>
+        <ThemeProvider theme={ 42 }>
           <div />
         </ThemeProvider>
       )
