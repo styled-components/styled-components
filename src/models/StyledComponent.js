@@ -13,6 +13,7 @@ import validAttr from '../utils/validAttr'
 import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import StyleSheet from './StyleSheet'
 import { ThemeConsumer } from './ThemeProvider'
+import { StyleSheetConsumer } from './StyleSheetManager'
 
 import type { Theme, ThemeContextShape } from './ThemeProvider'
 import type { RuleSet, Target } from '../types'
@@ -85,10 +86,12 @@ class BaseStyledComponent extends Component<*, BaseState> {
     return { ...context, ...this.attrs }
   }
 
-  generateAndInjectStyles(theme: any, props: any) {
+  generateAndInjectStyles(
+    theme: any,
+    props: any,
+    styleSheet: any = StyleSheet.master
+  ) {
     const { attrs, componentStyle, warnTooManyClasses } = this.constructor
-    // const styleSheet = this.context[CONTEXT_KEY] || StyleSheet.master
-    const styleSheet = StyleSheet.master
 
     // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names
@@ -115,76 +118,96 @@ class BaseStyledComponent extends Component<*, BaseState> {
     }
   }
 
-  renderInner = (context?: ThemeContextShape) => {
-    const theme = context ? context.theme : undefined
-    const { innerRef } = this.props
-    const {
-      styledComponentId,
-      target,
-      defaultProps,
-      componentStyle,
-    } = this.constructor
-    const isTargetTag = isTag(target)
-
-    let generatedClassName
-    if (componentStyle.isStatic) {
-      generatedClassName = this.generateAndInjectStyles(
-        STATIC_EXECUTION_CONTEXT,
-        this.props
-      )
-    } else if (theme !== undefined) {
-      const themeProp = determineTheme(this.props, theme, defaultProps)
-      generatedClassName = this.generateAndInjectStyles(themeProp, this.props)
-    } else {
-      generatedClassName = this.generateAndInjectStyles(
-        this.props.theme || {},
-        this.props
-      )
-    }
-
-    const className = [
-      this.props.className,
-      styledComponentId,
-      this.attrs.className,
-      generatedClassName,
-    ]
-      .filter(Boolean)
-      .join(' ')
-
-    const baseProps: Object = {
-      ...this.attrs,
-      className,
-    }
-
-    if (isStyledComponent(target)) {
-      baseProps.innerRef = innerRef
-    } else {
-      baseProps.ref = innerRef
-    }
-
-    const propsForElement = baseProps
-    let key
-
-    for (key in this.props) {
-      // Don't pass through non HTML tags through to HTML elements
-      // always omit innerRef
-      if (
-        key !== 'innerRef' &&
-        key !== 'className' &&
-        (!isTargetTag || validAttr(key))
-      ) {
-        propsForElement[key] =
-          key === 'style' && key in this.attrs
-            ? { ...this.attrs[key], ...this.props[key] }
-            : this.props[key]
-      }
-    }
-
-    return createElement(target, propsForElement)
-  }
-
   render() {
-    return <ThemeConsumer>{this.renderInner}</ThemeConsumer>
+    // TODO: Refactor to use cached functions
+    return (
+      <StyleSheetConsumer>
+        {styleSheetContext => (
+          <ThemeConsumer>
+            {(themeContext?: ThemeContextShape) => {
+              const styleSheet = styleSheetContext
+                ? styleSheetContext.sheetInstance
+                : undefined
+              const theme = themeContext ? themeContext.theme : undefined
+              const { innerRef } = this.props
+              const {
+                styledComponentId,
+                target,
+                defaultProps,
+                componentStyle,
+              } = this.constructor
+              const isTargetTag = isTag(target)
+
+              let generatedClassName
+              if (componentStyle.isStatic) {
+                generatedClassName = this.generateAndInjectStyles(
+                  STATIC_EXECUTION_CONTEXT,
+                  this.props,
+                  styleSheet
+                )
+              } else if (theme !== undefined) {
+                const themeProp = determineTheme(
+                  this.props,
+                  theme,
+                  defaultProps
+                )
+                generatedClassName = this.generateAndInjectStyles(
+                  themeProp,
+                  this.props,
+                  styleSheet
+                )
+              } else {
+                generatedClassName = this.generateAndInjectStyles(
+                  this.props.theme || {},
+                  this.props,
+                  styleSheet
+                )
+              }
+
+              const className = [
+                this.props.className,
+                styledComponentId,
+                this.attrs.className,
+                generatedClassName,
+              ]
+                .filter(Boolean)
+                .join(' ')
+
+              const baseProps: Object = {
+                ...this.attrs,
+                className,
+              }
+
+              if (isStyledComponent(target)) {
+                baseProps.innerRef = innerRef
+              } else {
+                baseProps.ref = innerRef
+              }
+
+              const propsForElement = baseProps
+
+              let key
+              for (key in this.props) {
+                // Don't pass through non HTML tags through to HTML elements
+                // always omit innerRef
+                if (
+                  key !== 'innerRef' &&
+                  key !== 'className' &&
+                  (!isTargetTag || validAttr(key))
+                ) {
+                  propsForElement[key] =
+                    key === 'style' && key in this.attrs
+                      ? { ...this.attrs[key], ...this.props[key] }
+                      : this.props[key]
+                }
+              }
+
+              return createElement(target, propsForElement)
+            }}
+          </ThemeConsumer>
+        )}
+      </StyleSheetConsumer>
+    )
   }
 }
 
