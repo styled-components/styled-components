@@ -55,10 +55,14 @@ const flatten = (
 
     /* Throw if a React Element was given styles */
     if (React.isValidElement(chunk)) {
+      const elementName =
+        /* $FlowFixMe TODO: flow for chunk of type React Element. Not sure if Element should be added to Interpolation */
+        typeof chunk.type === 'string'
+          ? chunk.type
+          : chunk.type.displayName || chunk.type.name
       throw new StyledError(
         1,
-        // $FlowFixMe TODO: flow for chunk of type React Element
-        `A plain React class (${chunk.displayName || chunk.name}) 
+        `A plain React class (${elementName}) 
         was interpolated in your styles, probably as a component selector (https://www.styled-components.com/docs/advanced#referring-to-other-components). Only styled-component classes can be targeted in this fashion.`
       )
     }
