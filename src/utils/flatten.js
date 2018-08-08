@@ -55,7 +55,12 @@ const flatten = (
 
     /* Throw if a React Element was given styles */
     if (React.isValidElement(chunk)) {
-      throw new StyledError(1, 'Cannot reference React Elements within styles')
+      throw new StyledError(
+        1,
+        // $FlowFixMe TODO: flow for chunk of type React Element
+        `A plain React class (${chunk.displayName || chunk.name}) 
+        was interpolated in your styles, probably as a component selector (https://www.styled-components.com/docs/advanced#referring-to-other-components). Only styled-component classes can be targeted in this fashion.`
+      )
     }
 
     /* Either execute or defer the function */
