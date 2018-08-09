@@ -64,24 +64,7 @@ describe('with styles', () => {
         color: purple;
       }
     `
-    expect(() => shallow(<Comp />)).toThrowError(`A plain React class (div) 
-        was interpolated in your styles, probably as a component selector (https://www.styled-components.com/docs/advanced#referring-to-other-components). Only styled-component classes can be targeted in this fashion.`)
-  })
-
-  it('should throw a meaningful error if a non styled component with react component as root child is referred as a nested style', () => {
-    class Button extends React.Component {
-      render() {
-        return <button>I am a button</button>
-      }
-    }
-    const NestedComp = () => <Button></Button>
-    const Comp = styled.div`
-      ${ NestedComp} {
-        color: purple;
-      }
-    `
-    expect(() => shallow(<Comp />)).toThrowError(`A plain React class (Button) 
-        was interpolated in your styles, probably as a component selector (https://www.styled-components.com/docs/advanced#referring-to-other-components). Only styled-component classes can be targeted in this fashion.`)
+    expect(() => shallow(<Comp />)).toThrowError(`A plain React element (NestedComp) has been interpolated into styles, probably as a component selector (https://www.styled-components.com/docs/advanced#referring-to-other-components). Only styled-component classes can be targeted in this fashion.`)
   })
 
 

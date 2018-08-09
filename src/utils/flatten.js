@@ -53,24 +53,19 @@ const flatten = (
       return ruleSet
     }
 
-    /* Throw if a React Element was given styles */
-    if (React.isValidElement(chunk)) {
-      const elementName =
-        /* $FlowFixMe TODO: flow for chunk of type React Element. Not sure if Element should be added to Interpolation */
-        typeof chunk.type === 'string'
-          ? chunk.type
-          : chunk.type.displayName || chunk.type.name
-      throw new StyledError(
-        1,
-        `A plain React class (${elementName}) 
-        was interpolated in your styles, probably as a component selector (https://www.styled-components.com/docs/advanced#referring-to-other-components). Only styled-component classes can be targeted in this fashion.`
-      )
-    }
-
     /* Either execute or defer the function */
     if (typeof chunk === 'function') {
       if (executionContext) {
-        ruleSet.push(...flatten([chunk(executionContext)], executionContext))
+        const nextChunk = chunk(executionContext)
+        /* Throw if a React Element was given styles */
+        if (React.isValidElement(nextChunk)) {
+          const elementName = chunk.displayName || chunk.name
+          throw new StyledError(
+            1,
+            `A plain React element (${elementName}) has been interpolated into styles, probably as a component selector (https://www.styled-components.com/docs/advanced#referring-to-other-components). Only styled-component classes can be targeted in this fashion.`
+          )
+        }
+        ruleSet.push(...flatten([nextChunk], executionContext))
       } else ruleSet.push(chunk)
 
       return ruleSet
