@@ -252,6 +252,9 @@ class BaseStyledComponent extends Component<*, BaseState> {
   }
 }
 
+BaseStyledComponent.isReactComponent =
+  BaseStyledComponent.prototype.isReactComponent
+
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
   const createStyledComponent = (
     target: Target,
