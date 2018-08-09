@@ -1,7 +1,6 @@
 // @flow
 /* eslint-disable react/no-multi-comp */
 import React from 'react'
-import PropTypes from 'prop-types'
 import { renderToString } from 'react-dom/server'
 import { render } from 'react-dom'
 import { shallow, mount } from 'enzyme'
