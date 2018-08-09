@@ -56,3 +56,7 @@ Missing document `<head>`
 ## 10
 
 Cannot find sheet for given tag
+
+## 11
+
+A plain React element (%s) has been interpolated into styles, probably as a component selector (https://www.styled-components.com/docs/advanced#referring-to-other-components). Only styled-component classes can be targeted in this fashion.

@@ -60,10 +60,7 @@ const flatten = (
         /* Throw if a React Element was given styles */
         if (React.isValidElement(nextChunk)) {
           const elementName = chunk.displayName || chunk.name
-          throw new StyledError(
-            1,
-            `A plain React element (${elementName}) has been interpolated into styles, probably as a component selector (https://www.styled-components.com/docs/advanced#referring-to-other-components). Only styled-component classes can be targeted in this fashion.`
-          )
+          throw new StyledError(11, elementName)
         }
         ruleSet.push(...flatten([nextChunk], executionContext))
       } else ruleSet.push(chunk)

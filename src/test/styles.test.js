@@ -64,7 +64,7 @@ describe('with styles', () => {
         color: purple;
       }
     `
-    expect(() => shallow(<Comp />)).toThrowError(`A plain React element (NestedComp) has been interpolated into styles, probably as a component selector (https://www.styled-components.com/docs/advanced#referring-to-other-components). Only styled-component classes can be targeted in this fashion.`)
+    expect(() => shallow(<Comp />)).toThrowErrorMatchingSnapshot();
   })
 
 
