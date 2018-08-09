@@ -1,4 +1,3 @@
-// @flow
 import app from '../example/devServer.js'
 import { launch } from 'puppeteer'
 import { toMatchImageSnapshot } from 'jest-image-snapshot'
