@@ -14,6 +14,7 @@ import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import StyleSheet from './StyleSheet'
 import { ThemeConsumer } from './ThemeProvider'
 import { StyleSheetConsumer } from './StyleSheetManager'
+import { EMPTY_OBJECT } from '../utils/empties'
 
 import type { Theme } from './ThemeProvider'
 import type { RuleSet, Target } from '../types'
@@ -84,7 +85,7 @@ class BaseStyledComponent extends Component<*> {
   generateAndInjectStyles(
     theme: any,
     props: any,
-    styleSheet: any = StyleSheet.master
+    styleSheet: StyleSheet = StyleSheet.master
   ) {
     const { attrs, componentStyle, warnTooManyClasses } = this.constructor
 
@@ -128,6 +129,7 @@ class BaseStyledComponent extends Component<*> {
                 defaultProps,
                 componentStyle,
               } = this.constructor
+
               const isTargetTag = isTag(target)
 
               let generatedClassName
@@ -150,7 +152,7 @@ class BaseStyledComponent extends Component<*> {
                 )
               } else {
                 generatedClassName = this.generateAndInjectStyles(
-                  this.props.theme || {},
+                  this.props.theme || EMPTY_OBJECT,
                   this.props,
                   styleSheet
                 )
