@@ -39,7 +39,8 @@ describe('ThemeProvider', () => {
 
     expect(childrenSpy).toHaveBeenCalledTimes(1)
     expect(childrenSpy).toHaveBeenCalledWith({
-      theme: { ...outerTheme, ...innerTheme },
+      ...outerTheme,
+      ...innerTheme,
     })
   })
 
@@ -61,7 +62,9 @@ describe('ThemeProvider', () => {
 
     expect(childrenSpy).toHaveBeenCalledTimes(1)
     expect(childrenSpy).toHaveBeenCalledWith({
-      theme: { ...outerestTheme, ...outerTheme, ...innerTheme },
+      ...outerestTheme,
+      ...outerTheme,
+      ...innerTheme,
     })
   })
 
@@ -83,8 +86,8 @@ describe('ThemeProvider', () => {
       </div>
     )
 
-    expect(childrenSpy).toHaveBeenCalledWith({ theme: themes.one })
-    expect(childrenSpy).toHaveBeenLastCalledWith({ theme: themes.two })
+    expect(childrenSpy).toHaveBeenCalledWith({ ...themes.one })
+    expect(childrenSpy).toHaveBeenLastCalledWith({ ...themes.two })
     expect(childrenSpy).toHaveBeenCalledTimes(2)
   })
 
@@ -108,10 +111,13 @@ describe('ThemeProvider', () => {
     wrapper.setProps({ theme: Object.assign({}, theme, update) })
 
     expect(childrenSpy).toHaveBeenCalledWith({
-      theme: { themed: true, augmented: true },
+      themed: true,
+      augmented: true,
     })
     expect(childrenSpy).toHaveBeenLastCalledWith({
-      theme: { themed: true, augmented: true, updated: true },
+      themed: true,
+      augmented: true,
+      updated: true,
     })
     expect(childrenSpy).toHaveBeenCalledTimes(2)
   })

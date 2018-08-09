@@ -6,6 +6,8 @@ import getComponentName from '../utils/getComponentName'
 import _isStyledComponent from '../utils/isStyledComponent'
 import determineTheme from '../utils/determineTheme'
 
+import type { Theme } from '../models/ThemeProvider'
+
 export default (Component: ComponentType<any>) => {
   const isStatelessFunctionalComponent =
     typeof Component === 'function' &&
@@ -26,7 +28,7 @@ export default (Component: ComponentType<any>) => {
     render() {
       return (
         <ThemeConsumer>
-          {({ theme } = {}) => {
+          {(theme?: Theme) => {
             const { defaultProps } = this.constructor
             const themeProp = determineTheme(this.props, theme, defaultProps)
 

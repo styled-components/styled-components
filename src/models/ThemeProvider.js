@@ -8,9 +8,6 @@ type ThemeProviderProps = {|
   children?: Element<any>,
   theme: Theme | ((outerTheme: Theme) => void),
 |}
-export type ThemeContextShape = {|
-  theme?: Theme,
-|}
 
 const isFunction = test => typeof test === 'function'
 
@@ -25,7 +22,7 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
   getContext: (
     theme: Theme | ((outerTheme: Theme) => void),
     outerTheme?: Theme
-  ) => ThemeContextShape
+  ) => Theme
 
   constructor(props: ThemeProviderProps) {
     super(props)
@@ -57,9 +54,7 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
   }
 
   getContext(theme: (outerTheme: ?Theme) => void, outerTheme?: Theme) {
-    return {
-      theme: this.getTheme(theme, outerTheme),
-    }
+    return this.getTheme(theme, outerTheme)
   }
 
   render() {
@@ -71,8 +66,7 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
 
     return (
       <ThemeContext.Consumer>
-        {(outerContext?: ThemeContextShape) => {
-          const outerTheme = outerContext ? outerContext.theme : undefined
+        {(outerTheme?: Theme) => {
           const context = this.getContext(theme, outerTheme)
 
           return (

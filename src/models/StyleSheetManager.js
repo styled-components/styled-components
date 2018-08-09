@@ -36,9 +36,9 @@ export default class StyleSheetManager extends Component<Props, void> {
 
   getContext(sheet: ?StyleSheet, target: ?HTMLElement) {
     if (sheet) {
-      return { sheetInstance: sheet }
+      return sheet
     } else if (target) {
-      return { sheetInstance: new StyleSheet(target) }
+      return new StyleSheet(target)
     } else {
       throw new StyledError(4)
     }

@@ -15,17 +15,12 @@ import StyleSheet from './StyleSheet'
 import { ThemeConsumer } from './ThemeProvider'
 import { StyleSheetConsumer } from './StyleSheetManager'
 
-import type { Theme, ThemeContextShape } from './ThemeProvider'
+import type { Theme } from './ThemeProvider'
 import type { RuleSet, Target } from '../types'
 
 // HACK for generating all static styles without needing to allocate
 // an empty execution context every single time...
 const STATIC_EXECUTION_CONTEXT = {}
-
-type BaseState = {
-  theme?: ?Theme,
-  generatedClassName?: string,
-}
 
 const identifiers = {}
 
@@ -55,7 +50,7 @@ const generateId = (
 }
 
 // $FlowFixMe
-class BaseStyledComponent extends Component<*, BaseState> {
+class BaseStyledComponent extends Component<*> {
   static target: Target
   static styledComponentId: string
   static attrs: Object
@@ -120,15 +115,12 @@ class BaseStyledComponent extends Component<*, BaseState> {
 
   render() {
     // TODO: Refactor to use cached functions
+
     return (
       <StyleSheetConsumer>
-        {styleSheetContext => (
+        {(styleSheet?: StyleSheet) => (
           <ThemeConsumer>
-            {(themeContext?: ThemeContextShape) => {
-              const styleSheet = styleSheetContext
-                ? styleSheetContext.sheetInstance
-                : undefined
-              const theme = themeContext ? themeContext.theme : undefined
+            {(theme?: Theme) => {
               const { innerRef } = this.props
               const {
                 styledComponentId,
@@ -212,11 +204,11 @@ class BaseStyledComponent extends Component<*, BaseState> {
 }
 
 export default (ComponentStyle: Function, constructWithOptions: Function) => {
-  const createStyledComponent = (
+  function createStyledComponent(
     target: Target,
     options: Object,
     rules: RuleSet
-  ) => {
+  ) {
     const {
       isClass = !isTag(target),
       displayName = generateDisplayName(target),
