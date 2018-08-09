@@ -1,3 +1,4 @@
+// @flow
 import 'react-native'
 import { View } from 'react-native'
 import React from 'react'
@@ -22,7 +23,7 @@ describe('native', () => {
     validComps.forEach(comp => {
       expect(() => {
         const Comp = styled(comp)
-        shallow(<Comp />)
+        mount(<Comp />)
       }).not.toThrowError()
     })
   })
@@ -55,7 +56,7 @@ describe('native', () => {
 
   it('should generate inline styles', () => {
     const Comp = styled.View``
-    const wrapper = shallow(<Comp />)
+    const wrapper = mount(<Comp />)
     const view = wrapper.find('View').first()
 
     expect(view.prop('style')).toEqual([{}, undefined])
@@ -67,7 +68,7 @@ describe('native', () => {
     `
 
     const style = { opacity: 0.9 }
-    const wrapper = shallow(<Comp style={style} />)
+    const wrapper = mount(<Comp style={style} />)
     const view = wrapper.find('View').first()
 
     expect(view.prop('style')).toEqual([{ paddingTop: 10 }, style])
@@ -94,7 +95,7 @@ describe('native', () => {
       opacity: ${p => p.opacity || 0};
     `
 
-    const comp = shallow(<Comp opacity={0.5} />)
+    const comp = mount(<Comp opacity={0.5} />)
 
     expect(comp.find('View').prop('style')).toEqual([
       { paddingTop: 5, opacity: 0.5 },
@@ -118,8 +119,8 @@ describe('native', () => {
         padding: 10px;
       `
 
-      const parent = shallow(<Parent />)
-      const child = shallow(<Child />)
+      const parent = mount(<Parent />)
+      const child = mount(<Child />)
 
       expect(parent.find('View').prop('style')).toEqual([
         { opacity: 0.9 },
@@ -152,10 +153,13 @@ describe('native', () => {
         padding: 10px;
       `
 
-      const grandGrandParent = shallow(<GrandGrandParent />)
-      const grandParent = shallow(<GrandParent />)
-      const parent = shallow(<Parent />)
-      const child = shallow(<Child />)
+      const grandGrandParent = mount(<View />)
+      const grandParent = mount(<GrandParent />)
+      const parent = mount(<Parent />)
+      const child = mount(<Child />)
+
+      console.log(grandGrandParent.debug())
+      console.log(grandParent.debug())
 
       expect(grandGrandParent.find('View').prop('style')).toEqual([
         {
@@ -199,7 +203,7 @@ describe('native', () => {
   describe('attrs', () => {
     it('works fine with an empty object', () => {
       const Comp = styled.View.attrs({})``
-      const wrapper = shallow(<Comp />)
+      const wrapper = mount(<Comp />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({
@@ -212,7 +216,7 @@ describe('native', () => {
         test: true,
       })``
 
-      const wrapper = shallow(<Comp />)
+      const wrapper = mount(<Comp />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({
@@ -227,7 +231,7 @@ describe('native', () => {
       })``
 
       const test = 'Put that cookie down!'
-      const wrapper = shallow(<Comp test={test} />)
+      const wrapper = mount(<Comp test={test} />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({
@@ -246,7 +250,7 @@ describe('native', () => {
         test: 'test',
       })``
 
-      const wrapper = shallow(<Comp />)
+      const wrapper = mount(<Comp />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({
@@ -266,7 +270,7 @@ describe('native', () => {
         second: 'second',
       })``
 
-      const wrapper = shallow(<Child />)
+      const wrapper = mount(<Child />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({
