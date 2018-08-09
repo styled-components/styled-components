@@ -16,6 +16,8 @@
   <a href="#alternative-installation-methods"><img src="https://img.shields.io/badge/module%20formats-umd%2C%20cjs%2C%20esm-green.svg" alt="module formats: umd, cjs, esm"></a>
 </div>
 
+> If you are looking for styled-components v4.0 (under active development), check out the [roadmap](https://github.com/styled-components/styled-components/issues/1694) and [dev branch](https://github.com/styled-components/styled-components/tree/develop).
+
 <br />
 <br />
 
@@ -99,13 +101,11 @@ Let everyone know you're using _styled-components_ → [![style: styled-componen
 This project exists thanks to all the people who contribute. [[Contribute](CONTRIBUTING.md)].
 <a href="https://github.com/styled-components/styled-components/graphs/contributors"><img src="https://opencollective.com/styled-components/contributors.svg?width=890" /></a>
 
-
 ## Backers
 
 Thank you to all our backers! 🙏 [[Become a backer](https://opencollective.com/styled-components#backer)]
 
 <a href="https://opencollective.com/styled-components#backers" target="_blank"><img src="https://opencollective.com/styled-components/backers.svg?width=890"></a>
-
 
 ## Sponsors
 
@@ -121,8 +121,6 @@ Support this project by becoming a sponsor. Your logo will show up here with a l
 <a href="https://opencollective.com/styled-components/sponsor/7/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/7/avatar.svg"></a>
 <a href="https://opencollective.com/styled-components/sponsor/8/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/8/avatar.svg"></a>
 <a href="https://opencollective.com/styled-components/sponsor/9/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/9/avatar.svg"></a>
-
-
 
 ## License
 
