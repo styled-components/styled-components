@@ -1,6 +1,6 @@
 // @flow
 import 'react-native'
-import { View } from 'react-native'
+import { View, Text } from 'react-native'
 import React from 'react'
 
 import styled from '../index'
@@ -97,17 +97,29 @@ describe('native', () => {
 
     const comp = mount(<Comp opacity={0.5} />)
 
-    expect(comp.find('View').prop('style')).toEqual([
-      { paddingTop: 5, opacity: 0.5 },
-      undefined,
-    ])
+    const test = mount(
+      <View>
+        <Text>Hello</Text>
+      </View>
+    )
+
+    test.debug()
+
+    expect(
+      comp
+        .find('View')
+        .first()
+        .prop('style')
+    ).toEqual([{ paddingTop: 5, opacity: 0.5 }, undefined])
 
     comp.setProps({ opacity: 0.9 })
 
-    expect(comp.find('View').prop('style')).toEqual([
-      { paddingTop: 5, opacity: 0.9 },
-      undefined,
-    ])
+    expect(
+      comp
+        .find('View')
+        .first()
+        .prop('style')
+    ).toEqual([{ paddingTop: 5, opacity: 0.9 }, undefined])
   })
 
   describe('extending', () => {
@@ -122,12 +134,19 @@ describe('native', () => {
       const parent = mount(<Parent />)
       const child = mount(<Child />)
 
-      expect(parent.find('View').prop('style')).toEqual([
-        { opacity: 0.9 },
-        undefined,
-      ])
+      expect(
+        parent
+          .find('View')
+          .first()
+          .prop('style')
+      ).toEqual([{ opacity: 0.9 }, undefined])
 
-      expect(child.find('View').prop('style')).toEqual([
+      expect(
+        child
+          .find('View')
+          .first()
+          .prop('style')
+      ).toEqual([
         {
           opacity: 0.9,
           paddingTop: 10,
@@ -153,22 +172,29 @@ describe('native', () => {
         padding: 10px;
       `
 
-      const grandGrandParent = mount(<View />)
+      const grandGrandParent = mount(<GrandGrandParent />)
       const grandParent = mount(<GrandParent />)
       const parent = mount(<Parent />)
       const child = mount(<Child />)
 
-      console.log(grandGrandParent.debug())
-      console.log(grandParent.debug())
-
-      expect(grandGrandParent.find('View').prop('style')).toEqual([
+      expect(
+        grandGrandParent
+          .find('View')
+          .first()
+          .prop('style')
+      ).toEqual([
         {
           backgroundColor: 'red',
         },
         undefined,
       ])
 
-      expect(grandParent.find('View').prop('style')).toEqual([
+      expect(
+        grandParent
+          .find('View')
+          .first()
+          .prop('style')
+      ).toEqual([
         {
           backgroundColor: 'red',
           borderWidth: 10,
@@ -176,7 +202,12 @@ describe('native', () => {
         undefined,
       ])
 
-      expect(parent.find('View').prop('style')).toEqual([
+      expect(
+        parent
+          .find('View')
+          .first()
+          .prop('style')
+      ).toEqual([
         {
           backgroundColor: 'red',
           borderWidth: 10,
@@ -185,7 +216,12 @@ describe('native', () => {
         undefined,
       ])
 
-      expect(child.find('View').prop('style')).toEqual([
+      expect(
+        child
+          .find('View')
+          .first()
+          .prop('style')
+      ).toEqual([
         {
           backgroundColor: 'red',
           borderWidth: 10,

@@ -85,12 +85,19 @@ describe('primitives', () => {
       const parent = mount(<Parent />)
       const child = mount(<Child />)
 
-      expect(parent.find('View').prop('style')).toEqual([
-        { opacity: 0.9 },
-        undefined,
-      ])
+      expect(
+        parent
+          .find('View')
+          .first()
+          .prop('style')
+      ).toEqual([{ opacity: 0.9 }, undefined])
 
-      expect(child.find('View').prop('style')).toEqual([
+      expect(
+        child
+          .find('View')
+          .first()
+          .prop('style')
+      ).toEqual([
         {
           opacity: 0.9,
           paddingTop: 10,
@@ -121,14 +128,24 @@ describe('primitives', () => {
       const parent = mount(<Parent />)
       const child = mount(<Child />)
 
-      expect(grandGrandParent.find('View').prop('style')).toEqual([
+      expect(
+        grandGrandParent
+          .find('View')
+          .first()
+          .prop('style')
+      ).toEqual([
         {
           backgroundColor: 'red',
         },
         undefined,
       ])
 
-      expect(grandParent.find('View').prop('style')).toEqual([
+      expect(
+        grandParent
+          .find('View')
+          .first()
+          .prop('style')
+      ).toEqual([
         {
           backgroundColor: 'red',
           borderWidth: 10,
@@ -136,7 +153,12 @@ describe('primitives', () => {
         undefined,
       ])
 
-      expect(parent.find('View').prop('style')).toEqual([
+      expect(
+        parent
+          .find('View')
+          .first()
+          .prop('style')
+      ).toEqual([
         {
           backgroundColor: 'red',
           borderWidth: 10,
@@ -145,7 +167,12 @@ describe('primitives', () => {
         undefined,
       ])
 
-      expect(child.find('View').prop('style')).toEqual([
+      expect(
+        child
+          .find('View')
+          .first()
+          .prop('style')
+      ).toEqual([
         {
           backgroundColor: 'red',
           borderWidth: 10,
