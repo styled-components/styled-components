@@ -288,6 +288,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     }
 
     if (isClass) {
+      // $FlowFixMe
       hoist(StyledComponent, target, {
         // all SC-specific things should not be hoisted
         attrs: true,

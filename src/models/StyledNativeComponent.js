@@ -192,6 +192,7 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
     }
 
     if (isClass) {
+      // $FlowFixMe
       hoist(StyledNativeComponent, target, {
         // all SC-specific things should not be hoisted
         attrs: true,
