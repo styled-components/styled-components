@@ -7,7 +7,9 @@ addons:
       - libnss3
       - google-chrome-beta
 branches:
-  only: master
+  only:
+    - master
+    - develop
 env:
   global:
     - GOOGLE_CHROME_BINARY="/usr/bin/google-chrome-beta"
@@ -20,9 +22,6 @@ script:
   - yarn --version
   - yarn build
   - yarn test
-  # Tests have to run before Danger runs because
-  # danger-plugin-jest references the test output
-  # - yarn danger
   - yarn flow
   - yarn lint
   - yarn typescript
