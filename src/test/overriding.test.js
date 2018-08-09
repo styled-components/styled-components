@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import { shallow } from 'enzyme'
+import { mount } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
@@ -25,8 +25,8 @@ describe('extending', () => {
         font-weight: bold;
       }
     `
-    shallow(<Inner/>)
-    shallow(<Outer/>)
+    mount(<Inner />)
+    mount(<Outer />)
     expectCSSMatches(`
       .sc-a {}
       .c { color:blue; font-weight:light; }

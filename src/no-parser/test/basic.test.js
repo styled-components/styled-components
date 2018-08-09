@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import { shallow } from 'enzyme'
+import { mount } from 'enzyme'
 
 import { resetNoParserStyled, expectCSSMatches } from '../../test/utils'
 
@@ -17,21 +17,21 @@ describe('basic', () => {
       expect(() => {
         // $FlowInvalidInputTest
         const Comp = styled(comp)
-        shallow(<Comp />)
+        mount(<Comp />)
         // $FlowInvalidInputTest
       }).toThrow(`Cannot create styled-component for component: ${comp}`)
     })
   })
 
   it('should correctly assemble preprocessed CSS', () => {
-    const Comp = styled.div([[ '{ color: red; }' ]])
-    shallow(<Comp />)
+    const Comp = styled.div([['{ color: red; }']])
+    mount(<Comp />)
     expectCSSMatches('.sc-a {} .b{ color: red; }')
   })
 
   it('should correctly execute passed functions and assemble preprocessed CSS', () => {
-    const Comp = styled.div([[ '{ color: ', () => 'red', '; }' ]])
-    shallow(<Comp />)
+    const Comp = styled.div([['{ color: ', () => 'red', '; }']])
+    mount(<Comp />)
     expectCSSMatches('.sc-a {} .b{ color: red; }')
   })
 })

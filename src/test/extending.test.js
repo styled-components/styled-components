@@ -1,7 +1,7 @@
 // @flow
 import React from 'react'
 import PropTypes from 'prop-types'
-import { shallow } from 'enzyme'
+import { shallow, mount } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
@@ -19,8 +19,8 @@ describe('extending', () => {
     const Parent = styled.div``
     const Child = Parent.extend``
 
-    shallow(<Parent />)
-    shallow(<Child />)
+    mount(<Parent />)
+    mount(<Child />)
 
     expectCSSMatches('.sc-a {} .sc-b {}')
   })
@@ -31,8 +31,8 @@ describe('extending', () => {
     `
     const Child = Parent.extend``
 
-    shallow(<Parent />)
-    shallow(<Child />)
+    mount(<Parent />)
+    mount(<Child />)
 
     expectCSSMatches('.sc-a {} .c { color:blue; } .sc-b {} .d { color:blue; }')
   })
@@ -43,8 +43,8 @@ describe('extending', () => {
       color: blue;
     `
 
-    shallow(<Parent />)
-    shallow(<Child />)
+    mount(<Parent />)
+    mount(<Child />)
 
     expectCSSMatches('.sc-a {} .sc-b {} .d { color:blue; }')
   })
@@ -57,7 +57,7 @@ describe('extending', () => {
       color: red;
     `
 
-    shallow(<Child />)
+    mount(<Child />)
 
     expectCSSMatches('.sc-b {} .c { color:blue;color:red; }')
   })
@@ -70,8 +70,8 @@ describe('extending', () => {
       color: red;
     `
 
-    shallow(<Parent />)
-    shallow(<Child />)
+    mount(<Parent />)
+    mount(<Child />)
 
     expectCSSMatches(
       '.sc-a {} .c { color:blue; } .sc-b {} .d { color:blue;color:red; }'
@@ -89,8 +89,8 @@ describe('extending', () => {
       color: red;
     `
 
-    shallow(<Parent />)
-    shallow(<Child />)
+    mount(<Parent />)
+    mount(<Child />)
 
     expectCSSMatches(`
       .sc-a {}
@@ -114,8 +114,8 @@ describe('extending', () => {
       background-color: green;
     `
 
-    shallow(<Parent />)
-    shallow(<Child />)
+    mount(<Parent />)
+    mount(<Child />)
 
     expectCSSMatches(`
       .sc-a {} .c { color:red; }
@@ -187,10 +187,10 @@ describe('extending', () => {
       border-width: 10;
     `
 
-    shallow(<GrandGrandParent />)
-    shallow(<GrandParent />)
-    shallow(<Parent />)
-    shallow(<Child />)
+    mount(<GrandGrandParent />)
+    mount(<GrandParent />)
+    mount(<Parent />)
+    mount(<Child />)
 
     expectCSSMatches(`
       .sc-a { }

@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import { shallow } from 'enzyme'
+import { mount } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
@@ -15,12 +15,14 @@ describe('props', () => {
     const Comp = styled.div`
       color: ${props => props.fg || 'black'};
     `
-    shallow(<Comp />)
+    mount(<Comp />)
     expectCSSMatches('.sc-a {} .b { color:black; }')
   })
   it('should execute interpolations and inject props', () => {
-    const Comp = styled.div`color: ${props => props.fg || 'black'};`
-    shallow(<Comp fg="red" />)
+    const Comp = styled.div`
+      color: ${props => props.fg || 'black'};
+    `
+    mount(<Comp fg="red" />)
     expectCSSMatches('.sc-a {} .b { color:red; }')
   })
   it('should ignore non-0 falsy object interpolations', () => {
@@ -33,7 +35,7 @@ describe('props', () => {
         colorD: '',
       })};
     `
-    shallow(<Comp fg="red" />)
+    mount(<Comp fg="red" />)
     expectCSSMatches('.sc-a {} .b { border-width:0; }')
   })
 })

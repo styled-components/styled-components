@@ -1,6 +1,6 @@
 // @flow
 import React, { Component } from 'react'
-import { shallow } from 'enzyme'
+import { shallow, mount } from 'enzyme'
 
 import { resetStyled } from './utils'
 
@@ -31,40 +31,81 @@ describe('expanded api', () => {
       const Comp = styled.div``
       const Comp2 = styled.div``
       expect(Comp.styledComponentId).toBe('sc-a')
-      expect(shallow(<Comp />).prop('className')).toMatch(/sc-a/)
+      expect(
+        mount(<Comp />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toMatch(/sc-a/)
       expect(Comp2.styledComponentId).toBe('sc-b')
-      expect(shallow(<Comp2 />).prop('className')).toMatch(/sc-b/)
+      expect(
+        mount(<Comp2 />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toMatch(/sc-b/)
     })
 
     it('should be generated from displayName + hash', () => {
       const Comp = styled.div.withConfig({ displayName: 'Comp' })``
       const Comp2 = styled.div.withConfig({ displayName: 'Comp2' })``
       expect(Comp.styledComponentId).toBe('Comp-a')
-      expect(shallow(<Comp />).prop('className')).toMatch(/Comp-a/)
+      expect(
+        mount(<Comp />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toMatch(/Comp-a/)
       expect(Comp2.styledComponentId).toBe('Comp2-b')
-      expect(shallow(<Comp2 />).prop('className')).toMatch(/Comp2-b/)
+      expect(
+        mount(<Comp2 />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toMatch(/Comp2-b/)
     })
 
     it('should be attached if passed in', () => {
       const Comp = styled.div.withConfig({ componentId: 'LOLOMG' })``
       const Comp2 = styled.div.withConfig({ componentId: 'OMGLOL' })``
       expect(Comp.styledComponentId).toBe('LOLOMG')
-      expect(shallow(<Comp />).prop('className')).toMatch(/LOLOMG/)
+      expect(
+        mount(<Comp />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toMatch(/LOLOMG/)
       expect(Comp2.styledComponentId).toBe('OMGLOL')
-      expect(shallow(<Comp2 />).prop('className')).toMatch(/OMGLOL/)
+      expect(
+        mount(<Comp2 />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toMatch(/OMGLOL/)
     })
 
     it('should be combined with displayName if both passed in', () => {
-      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })``
-      const Comp2 = styled.div.withConfig({ displayName: 'Comp2', componentId: 'OMGLOL' })``
+      const Comp = styled.div.withConfig({
+        displayName: 'Comp',
+        componentId: 'LOLOMG',
+      })``
+      const Comp2 = styled.div.withConfig({
+        displayName: 'Comp2',
+        componentId: 'OMGLOL',
+      })``
       expect(Comp.styledComponentId).toBe('Comp-LOLOMG')
-      expect(shallow(<Comp />).prop('className')).toMatch(/Comp-LOLOMG/)
+      expect(
+        mount(<Comp />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toMatch(/Comp-LOLOMG/)
       expect(Comp2.styledComponentId).toBe('Comp2-OMGLOL')
-      expect(shallow(<Comp2 />).prop('className')).toMatch(/Comp2-OMGLOL/)
+      expect(
+        mount(<Comp2 />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toMatch(/Comp2-OMGLOL/)
     })
 
     it('should work with `.extend`', () => {
-      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'LOLOMG' })`
+      const Comp = styled.div.withConfig({
+        displayName: 'Comp',
+        componentId: 'LOLOMG',
+      })`
         color: blue;
       `
       const Comp2 = Comp.extend`
@@ -72,19 +113,41 @@ describe('expanded api', () => {
         background: ${props => props.bg};
       `
       expect(Comp.styledComponentId).toBe('Comp-LOLOMG')
-      expect(shallow(<Comp />).prop('className')).toMatch(/Comp-LOLOMG/)
+      expect(
+        mount(<Comp />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toMatch(/Comp-LOLOMG/)
       expect(Comp2.styledComponentId).toBe('LOLOMG-Comp-a')
-      expect(shallow(<Comp2 bg="red" />).prop('className')).toMatch(/LOLOMG-Comp-a/)
+      expect(
+        mount(<Comp2 bg="red" />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toMatch(/LOLOMG-Comp-a/)
     })
 
     it('should work with `.withComponent`', () => {
-      const Dummy = () => null
-      const Comp = styled.div.withConfig({ displayName: 'Comp', componentId: 'OMGLOL' })``.withComponent('h1')
-      const Comp2 = styled.div.withConfig({ displayName: 'Comp2', componentId: 'OMFG' })``.withComponent(Dummy)
+      const Dummy = props => <div {...props} />
+      const Comp = styled.div.withConfig({
+        displayName: 'Comp',
+        componentId: 'OMGLOL',
+      })``.withComponent('h1')
+      const Comp2 = styled.div.withConfig({
+        displayName: 'Comp2',
+        componentId: 'OMFG',
+      })``.withComponent(Dummy)
       expect(Comp.styledComponentId).toBe('Comp-OMGLOL-h1')
-      expect(shallow(<Comp />).prop('className')).toMatch(/Comp-OMGLOL-h1/)
+      expect(
+        mount(<Comp />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toMatch(/Comp-OMGLOL-h1/)
       expect(Comp2.styledComponentId).toBe('Comp2-OMFG-Dummy')
-      expect(shallow(<Comp2 />).prop('className')).toMatch(/Comp2-OMFG-Dummy/)
+      expect(
+        mount(<Comp2 />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toMatch(/Comp2-OMFG-Dummy/)
     })
   })
 
@@ -92,19 +155,25 @@ describe('expanded api', () => {
     it('should merge the options strings', () => {
       const Comp = styled.div
         .withConfig({ componentId: 'id-1' })
-        .withConfig({ displayName: 'dn-2' })
-        ``
+        .withConfig({ displayName: 'dn-2' })``
       expect(Comp.displayName).toBe('dn-2')
-      expect(shallow(<Comp />).prop('className')).toBe('dn-2-id-1 a')
+      expect(
+        mount(<Comp />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toBe('dn-2-id-1 a')
     })
 
     it('should keep the last value passed in when merging', () => {
       const Comp = styled.div
         .withConfig({ displayName: 'dn-2', componentId: 'id-3' })
-        .withConfig({ displayName: 'dn-5', componentId: 'id-4' })
-        ``
+        .withConfig({ displayName: 'dn-5', componentId: 'id-4' })``
       expect(Comp.displayName).toBe('dn-5')
-      expect(shallow(<Comp />).prop('className')).toBe('dn-5-id-4 a')
+      expect(
+        mount(<Comp />)
+          .getDOMNode()
+          .getAttribute('class')
+      ).toBe('dn-5-id-4 a')
     })
   })
 })
