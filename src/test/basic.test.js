@@ -1,6 +1,7 @@
 // @flow
-import React, { Component } from 'react'
+import React, { Component, StrictMode } from 'react'
 import { mount } from 'enzyme'
+import TestRenderer from 'react-test-renderer'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
@@ -300,6 +301,19 @@ describe('basic', () => {
 
       expect(Named1.styledComponentId).toBe('Name-foo')
       expect(Named2.styledComponentId).toBe('Name-bar')
+    })
+
+    it('should work in StrictMode without warnings', () => {
+      const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
+      const Comp = styled.div``
+
+      TestRenderer.create(
+        <StrictMode>
+          <Comp />
+        </StrictMode>
+      )
+
+      expect(spy).not.toHaveBeenCalled()
     })
   })
 })
