@@ -4,10 +4,10 @@ import memoize from 'memoize-one'
 import StyledError from '../utils/error'
 
 export type Theme = { [key: string]: mixed }
-type ThemeProviderProps = {|
+type Props = {
   children?: Element<any>,
   theme: Theme | ((outerTheme: Theme) => void),
-|}
+}
 
 const isFunction = test => typeof test === 'function'
 
@@ -18,13 +18,13 @@ export const ThemeConsumer = ThemeContext.Consumer
 /**
  * Provide a theme to an entire react component tree via context
  */
-export default class ThemeProvider extends Component<ThemeProviderProps, void> {
+export default class ThemeProvider extends Component<Props> {
   getContext: (
     theme: Theme | ((outerTheme: Theme) => void),
     outerTheme?: Theme
   ) => Theme
 
-  constructor(props: ThemeProviderProps) {
+  constructor(props: Props) {
     super(props)
     this.getContext = memoize(this.getContext.bind(this))
   }
@@ -50,7 +50,7 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
       throw new StyledError(8)
     }
 
-    return { ...outerTheme, ...(theme: Object) }
+    return { ...outerTheme, ...(theme: Theme) }
   }
 
   getContext(theme: (outerTheme: ?Theme) => void, outerTheme?: Theme) {
