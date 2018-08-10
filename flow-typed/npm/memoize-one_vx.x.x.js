@@ -15,5 +15,16 @@
  */
 
 declare module 'memoize-one' {
-  declare module.exports: any
+  declare function memoize<R, A>(fn: (A) => R): A => R
+  declare function memoize<R, A, B>(fn: (A, B) => R): (A, B) => R
+  declare function memoize<R, A, B, C>(fn: (A, B, C) => R): (A, B, C) => R
+  declare function memoize<R, A, B, C, D>(
+    fn: (A, B, C, D) => R
+  ): (A, B, C, D) => R
+  declare function memoize<R, A, B, C, D, E>(
+    fn: (A, B, C, D, E) => R
+  ): (A, B, C, D, E) => R
+
+  declare var exports: typeof memoize
+  declare export default typeof memoize
 }
