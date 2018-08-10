@@ -12,11 +12,10 @@ import isTag from '../utils/isTag'
 import validAttr from '../utils/validAttr'
 import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import StyleSheet from './StyleSheet'
-import { ThemeConsumer } from './ThemeProvider'
+import { ThemeConsumer, type Theme } from './ThemeProvider'
 import { StyleSheetConsumer } from './StyleSheetManager'
 import { EMPTY_OBJECT } from '../utils/empties'
 
-import type { Theme } from './ThemeProvider'
 import type { RuleSet, Target } from '../types'
 
 // HACK for generating all static styles without needing to allocate
