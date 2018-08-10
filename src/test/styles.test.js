@@ -57,7 +57,7 @@ describe('with styles', () => {
   })
 
 
-  it('should throw a meaningful error if a non styled component with react element as root child is referred as a nested style', () => {
+  it('should throw a meaningful error if a non styled component with react element is interpolated', () => {
     const NestedComp = () => <div></div>
     const Comp = styled.div`
       ${ NestedComp} {
