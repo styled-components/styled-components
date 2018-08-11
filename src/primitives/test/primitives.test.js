@@ -1,4 +1,3 @@
-// @flow
 import 'react-primitives'
 import { View } from 'react-primitives'
 import React from 'react'
@@ -73,46 +72,6 @@ describe('primitives', () => {
     expect(view.prop('style')).toEqual([{ paddingTop: 10 }, style])
   })
 
-      `
-      const Child = Parent.extend`
-        padding: 10px;
-      `
-          .prop('style')
-      ).toEqual([{ opacity: 0.9 }, undefined])
-        child
-          .find('View')
-          .first()
-          .prop('style')
-      ).toEqual([
-        undefined,
-        border-width: 10;
-      `
-      const Parent = GrandParent.extend`
-        opacity: 0.9;
-      `
-      const Child = Parent.extend`
-        padding: 10px;
-      `
-        grandGrandParent
-          .find('View')
-          .first()
-          .prop('style')
-      ).toEqual([
-        grandParent
-          .find('View')
-          .first()
-          .prop('style')
-      ).toEqual([
-        parent
-          .find('View')
-          .first()
-          .prop('style')
-      ).toEqual([
-        child
-          .find('View')
-          .first()
-          .prop('style')
-      ).toEqual([
   describe('attrs', () => {
     it('works fine with an empty object', () => {
       const Comp = styled.View.attrs({})``

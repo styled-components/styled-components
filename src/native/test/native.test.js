@@ -1,4 +1,3 @@
-// @flow
 import 'react-native'
 import { View, Text } from 'react-native'
 import React from 'react'
@@ -97,14 +96,6 @@ describe('native', () => {
 
     const comp = mount(<Comp opacity={0.5} />)
 
-    const test = mount(
-      <View>
-        <Text>Hello</Text>
-      </View>
-    )
-
-    test.debug()
-
     expect(
       comp
         .find('View')
@@ -122,33 +113,6 @@ describe('native', () => {
     ).toEqual([{ paddingTop: 5, opacity: 0.9 }, undefined])
   })
 
-          .prop('style')
-      ).toEqual([{ opacity: 0.9 }, undefined])
-        child
-          .find('View')
-          .first()
-          .prop('style')
-      ).toEqual([
-        grandGrandParent
-          .find('View')
-          .first()
-          .prop('style')
-      ).toEqual([
-        grandParent
-          .find('View')
-          .first()
-          .prop('style')
-      ).toEqual([
-        parent
-          .find('View')
-          .first()
-          .prop('style')
-      ).toEqual([
-        child
-          .find('View')
-          .first()
-          .prop('style')
-      ).toEqual([
   describe('attrs', () => {
     it('works fine with an empty object', () => {
       const Comp = styled.View.attrs({})``
