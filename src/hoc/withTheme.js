@@ -1,12 +1,10 @@
 // @flow
 import React, { type ComponentType } from 'react'
 import hoistStatics from 'hoist-non-react-statics'
-import { ThemeConsumer } from '../models/ThemeProvider'
+import { ThemeConsumer, type Theme } from '../models/ThemeProvider'
 import getComponentName from '../utils/getComponentName'
 import _isStyledComponent from '../utils/isStyledComponent'
 import determineTheme from '../utils/determineTheme'
-
-import type { Theme } from '../models/ThemeProvider'
 
 export default (Component: ComponentType<any>) => {
   const isStatelessFunctionalComponent =
