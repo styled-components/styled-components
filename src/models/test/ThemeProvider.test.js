@@ -2,9 +2,17 @@
 /* eslint-disable react/no-multi-comp */
 import React from 'react'
 import { shallow, render, mount } from 'enzyme'
-import ThemeProvider, { ThemeConsumer } from '../ThemeProvider'
+import ThemeProvider from '../ThemeProvider'
+import withTheme from '../../hoc/withTheme'
+import { resetStyled, expectCSSMatches } from '../../test/utils'
+
+let styled
 
 describe('ThemeProvider', () => {
+  beforeEach(() => {
+    styled = resetStyled()
+  })
+
   it('should not throw an error when no children are passed', () => {
     const result = expect(() =>
       shallow(<ThemeProvider theme={{}} />)
@@ -27,18 +35,19 @@ describe('ThemeProvider', () => {
   it('should merge its theme with an outer theme', () => {
     const outerTheme = { main: 'black' }
     const innerTheme = { secondary: 'black' }
-    const childrenSpy = jest.fn()
 
-    render(
+    const MyDiv = styled.div``
+    const MyDivWithTheme = withTheme(MyDiv)
+
+    const wrapper = mount(
       <ThemeProvider theme={outerTheme}>
         <ThemeProvider theme={innerTheme}>
-          <ThemeConsumer>{childrenSpy}</ThemeConsumer>
+          <MyDivWithTheme />
         </ThemeProvider>
       </ThemeProvider>
     )
 
-    expect(childrenSpy).toHaveBeenCalledTimes(1)
-    expect(childrenSpy).toHaveBeenCalledWith({
+    expect(wrapper.find(MyDiv).prop('theme')).toEqual({
       ...outerTheme,
       ...innerTheme,
     })
@@ -48,20 +57,21 @@ describe('ThemeProvider', () => {
     const outerestTheme = { main: 'black' }
     const outerTheme = { main: 'blue' }
     const innerTheme = { secondary: 'black' }
-    const childrenSpy = jest.fn()
 
-    render(
+    const MyDiv = styled.div``
+    const MyDivWithTheme = withTheme(MyDiv)
+
+    const wrapper = mount(
       <ThemeProvider theme={outerestTheme}>
         <ThemeProvider theme={outerTheme}>
           <ThemeProvider theme={innerTheme}>
-            <ThemeConsumer>{childrenSpy}</ThemeConsumer>
+            <MyDivWithTheme />
           </ThemeProvider>
         </ThemeProvider>
       </ThemeProvider>
     )
 
-    expect(childrenSpy).toHaveBeenCalledTimes(1)
-    expect(childrenSpy).toHaveBeenCalledWith({
+    expect(wrapper.find(MyDiv).prop('theme')).toEqual({
       ...outerestTheme,
       ...outerTheme,
       ...innerTheme,
@@ -73,22 +83,25 @@ describe('ThemeProvider', () => {
       one: { main: 'black', secondary: 'red' },
       two: { main: 'blue', other: 'green' },
     }
-    const childrenSpy = jest.fn()
 
-    render(
+    const MyDivOne = withTheme(styled.div``)
+    const MyDivWithThemeOne = withTheme(MyDivOne)
+    const MyDivTwo = withTheme(styled.div``)
+    const MyDivWithThemeTwo = withTheme(MyDivTwo)
+
+    const wrapper = mount(
       <div>
         <ThemeProvider theme={themes.one}>
-          <ThemeConsumer>{childrenSpy}</ThemeConsumer>
+          <MyDivWithThemeOne />
         </ThemeProvider>
         <ThemeProvider theme={themes.two}>
-          <ThemeConsumer>{childrenSpy}</ThemeConsumer>
+          <MyDivWithThemeTwo />
         </ThemeProvider>
       </div>
     )
 
-    expect(childrenSpy).toHaveBeenCalledWith({ ...themes.one })
-    expect(childrenSpy).toHaveBeenLastCalledWith({ ...themes.two })
-    expect(childrenSpy).toHaveBeenCalledTimes(2)
+    expect(wrapper.find(MyDivOne).prop('theme')).toEqual(themes.one)
+    expect(wrapper.find(MyDivTwo).prop('theme')).toEqual(themes.two)
   })
 
   it('ThemeProvider propagates theme updates through nested ThemeProviders', () => {
@@ -98,27 +111,20 @@ describe('ThemeProvider', () => {
     const update = { updated: true }
     let actual
     const expected = { themed: true, augmented: true, updated: true }
-    const childrenSpy = jest.fn()
+
+    const MyDiv = styled.div``
+    const MyDivWithTheme = withTheme(MyDiv)
 
     const wrapper = mount(
       <ThemeProvider theme={theme}>
         <ThemeProvider theme={augment}>
-          <ThemeConsumer>{childrenSpy}</ThemeConsumer>
+          <MyDivWithTheme />
         </ThemeProvider>
       </ThemeProvider>
     )
 
     wrapper.setProps({ theme: Object.assign({}, theme, update) })
 
-    expect(childrenSpy).toHaveBeenCalledWith({
-      themed: true,
-      augmented: true,
-    })
-    expect(childrenSpy).toHaveBeenLastCalledWith({
-      themed: true,
-      augmented: true,
-      updated: true,
-    })
-    expect(childrenSpy).toHaveBeenCalledTimes(2)
+    expect(wrapper.find(MyDiv).prop('theme')).toEqual(expected)
   })
 })
