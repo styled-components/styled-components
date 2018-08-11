@@ -70,7 +70,7 @@ const ComponentStyle = _ComponentStyle(
   stringifyRules
 )
 const constructWithOptions = _constructWithOptions(css)
-const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
+const StyledComponent = _StyledComponent(ComponentStyle)
 
 /* Instantiate exported singletons */
 const keyframes = _keyframes(generateAlphabeticName, stringifyRules, css)
