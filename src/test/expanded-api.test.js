@@ -101,31 +101,6 @@ describe('expanded api', () => {
       ).toMatch(/Comp2-OMGLOL/)
     })
 
-    it('should work with `.extend`', () => {
-      const Comp = styled.div.withConfig({
-        displayName: 'Comp',
-        componentId: 'LOLOMG',
-      })`
-        color: blue;
-      `
-      const Comp2 = Comp.extend`
-        color: ${'red'};
-        background: ${props => props.bg};
-      `
-      expect(Comp.styledComponentId).toBe('Comp-LOLOMG')
-      expect(
-        mount(<Comp />)
-          .getDOMNode()
-          .getAttribute('class')
-      ).toMatch(/Comp-LOLOMG/)
-      expect(Comp2.styledComponentId).toBe('LOLOMG-Comp-a')
-      expect(
-        mount(<Comp2 bg="red" />)
-          .getDOMNode()
-          .getAttribute('class')
-      ).toMatch(/LOLOMG-Comp-a/)
-    })
-
     it('should work with `.withComponent`', () => {
       const Dummy = props => <div {...props} />
       const Comp = styled.div.withConfig({

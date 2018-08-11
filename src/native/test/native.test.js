@@ -122,120 +122,33 @@ describe('native', () => {
     ).toEqual([{ paddingTop: 5, opacity: 0.9 }, undefined])
   })
 
-  describe('extending', () => {
-    it('should combine styles of extending components', () => {
-      const Parent = styled.View`
-        opacity: 0.9;
-      `
-      const Child = Parent.extend`
-        padding: 10px;
-      `
-
-      const parent = mount(<Parent />)
-      const child = mount(<Child />)
-
-      expect(
-        parent
-          .find('View')
-          .first()
           .prop('style')
       ).toEqual([{ opacity: 0.9 }, undefined])
-
-      expect(
         child
           .find('View')
           .first()
           .prop('style')
       ).toEqual([
-        {
-          opacity: 0.9,
-          paddingTop: 10,
-          paddingRight: 10,
-          paddingBottom: 10,
-          paddingLeft: 10,
-        },
-        undefined,
-      ])
-    })
-
-    it('should combine styles of extending components in >= 3 inheritances', () => {
-      const GrandGrandParent = styled.View`
-        background-color: red;
-      `
-      const GrandParent = GrandGrandParent.extend`
-        border-width: 10;
-      `
-      const Parent = GrandParent.extend`
-        opacity: 0.9;
-      `
-      const Child = Parent.extend`
-        padding: 10px;
-      `
-
-      const grandGrandParent = mount(<GrandGrandParent />)
-      const grandParent = mount(<GrandParent />)
-      const parent = mount(<Parent />)
-      const child = mount(<Child />)
-
-      expect(
         grandGrandParent
           .find('View')
           .first()
           .prop('style')
       ).toEqual([
-        {
-          backgroundColor: 'red',
-        },
-        undefined,
-      ])
-
-      expect(
         grandParent
           .find('View')
           .first()
           .prop('style')
       ).toEqual([
-        {
-          backgroundColor: 'red',
-          borderWidth: 10,
-        },
-        undefined,
-      ])
-
-      expect(
         parent
           .find('View')
           .first()
           .prop('style')
       ).toEqual([
-        {
-          backgroundColor: 'red',
-          borderWidth: 10,
-          opacity: 0.9,
-        },
-        undefined,
-      ])
-
-      expect(
         child
           .find('View')
           .first()
           .prop('style')
       ).toEqual([
-        {
-          backgroundColor: 'red',
-          borderWidth: 10,
-          opacity: 0.9,
-          paddingTop: 10,
-          paddingRight: 10,
-          paddingBottom: 10,
-          paddingLeft: 10,
-        },
-        undefined,
-      ])
-    })
-  })
-
   describe('attrs', () => {
     it('works fine with an empty object', () => {
       const Comp = styled.View.attrs({})``
@@ -302,15 +215,15 @@ describe('native', () => {
         first: 'first',
       })``
 
-      const Child = Parent.extend.attrs({
+      const Child = styled(Parent).attrs({
         second: 'second',
       })``
 
       const wrapper = mount(<Child />)
       const view = wrapper.find('View').first()
 
-      expect(view.props()).toEqual({
-        style: [{}, undefined],
+      expect(view.props()).toMatchObject({
+        style: [{}, [{}, undefined]],
         first: 'first',
         second: 'second',
       })

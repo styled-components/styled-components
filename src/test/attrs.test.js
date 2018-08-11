@@ -135,11 +135,11 @@ describe('attrs', () => {
       type: 'button',
       tabIndex: 0,
     })``
-    const Child = Parent.extend.attrs({
+    const Child = styled(Parent).attrs({
       type: 'submit',
     })``
     expect(shallow(<Child />).html()).toEqual(
-      '<button type="submit" tabindex="0" class="sc-b c"></button>'
+      '<button type="submit" tabindex="0" class="sc-b c sc-a d"></button>'
     )
   })
 

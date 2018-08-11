@@ -130,7 +130,7 @@ class BaseStyledNativeComponent extends Component<*, *> {
   }
 }
 
-export default (constructWithOptions: Function, InlineStyle: Function) => {
+export default (InlineStyle: Function) => {
   const createStyledNativeComponent = (
     target: Target,
     options: Object,
@@ -140,13 +140,10 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
       isClass = !isTag(target),
       displayName = generateDisplayName(target),
       ParentComponent = BaseStyledNativeComponent,
-      rules: extendingRules,
       attrs,
     } = options
 
-    const inlineStyle = new InlineStyle(
-      extendingRules === undefined ? rules : extendingRules.concat(rules)
-    )
+    const inlineStyle = new InlineStyle(rules)
 
     class StyledNativeComponent extends ParentComponent {
       static attrs = attrs
@@ -163,32 +160,6 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         }
         return createStyledNativeComponent(tag, newOptions, rules)
       }
-
-      static get extend() {
-        const {
-          displayName: _,
-          componentId: __,
-          rules: rulesFromOptions,
-          ...optionsToCopy
-        } = options
-
-        const newRules =
-          rulesFromOptions === undefined
-            ? rules
-            : rulesFromOptions.concat(rules)
-
-        const newOptions = {
-          ...optionsToCopy,
-          rules: newRules,
-          ParentComponent: StyledNativeComponent,
-        }
-
-        return constructWithOptions(
-          createStyledNativeComponent,
-          target,
-          newOptions
-        )
-      }
     }
 
     if (isClass) {
@@ -197,7 +168,6 @@ export default (constructWithOptions: Function, InlineStyle: Function) => {
         // all SC-specific things should not be hoisted
         attrs: true,
         displayName: true,
-        extend: true,
         inlineStyle: true,
         styledComponentId: true,
         target: true,

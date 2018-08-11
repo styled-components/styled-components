@@ -4,14 +4,11 @@
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
   "typings": "typings/styled-components.d.ts",
   "main": "dist/styled-components.cjs.js",
-  "jsnext:main": "dist/styled-components.esm.js",
   "module": "dist/styled-components.esm.js",
   "react-native": "dist/styled-components.native.cjs.js",
   "browser": {
     "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js",
-    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js",
-    "./dist/styled-components-no-parser.esm.js": "./dist/styled-components-no-parser.browser.esm.js",
-    "./dist/styled-components-no-parser.cjs.js": "./dist/styled-components-no-parser.browser.cjs.js"
+    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
   },
   "scripts": {
     "build": "rollup -c",
@@ -53,7 +50,6 @@
     "flow-typed",
     "lib",
     "native",
-    "no-parser",
     "primitives",
     "scripts",
     "src",

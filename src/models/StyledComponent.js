@@ -204,7 +204,7 @@ class BaseStyledComponent extends Component<*> {
   }
 }
 
-export default (ComponentStyle: Function, constructWithOptions: Function) => {
+export default (ComponentStyle: Function) => {
   function createStyledComponent(
     target: Target,
     options: Object,
@@ -219,7 +219,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         options.parentComponentId
       ),
       ParentComponent = BaseStyledComponent,
-      rules: extendingRules,
       attrs,
     } = options
 
@@ -228,11 +227,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         ? `${escape(options.displayName)}-${options.componentId}`
         : options.componentId || componentId
 
-    const componentStyle = new ComponentStyle(
-      extendingRules === undefined ? rules : extendingRules.concat(rules),
-      attrs,
-      styledComponentId
-    )
+    const componentStyle = new ComponentStyle(rules, attrs, styledComponentId)
 
     class StyledComponent extends ParentComponent {
       static attrs = attrs
@@ -258,28 +253,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
 
         return createStyledComponent(tag, newOptions, rules)
       }
-
-      static get extend() {
-        const {
-          rules: rulesFromOptions,
-          componentId: parentComponentId,
-          ...optionsToCopy
-        } = options
-
-        const newRules =
-          rulesFromOptions === undefined
-            ? rules
-            : rulesFromOptions.concat(rules)
-
-        const newOptions = {
-          ...optionsToCopy,
-          rules: newRules,
-          parentComponentId,
-          ParentComponent: StyledComponent,
-        }
-
-        return constructWithOptions(createStyledComponent, target, newOptions)
-      }
     }
 
     if (process.env.NODE_ENV !== 'production') {
@@ -293,7 +266,6 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
         attrs: true,
         componentStyle: true,
         displayName: true,
-        extend: true,
         styledComponentId: true,
         target: true,
         warnTooManyClasses: true,
