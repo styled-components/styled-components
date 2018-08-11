@@ -139,13 +139,13 @@ class BaseStyledComponent extends Component<*> {
                   styleSheet
                 )
               } else if (theme !== undefined) {
-                const themeProp = determineTheme(
+                const determinedTheme = determineTheme(
                   this.props,
                   theme,
                   defaultProps
                 )
                 generatedClassName = this.generateAndInjectStyles(
-                  themeProp,
+                  determinedTheme,
                   this.props,
                   styleSheet
                 )
