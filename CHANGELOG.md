@@ -12,6 +12,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 * Remove deprecated `.extend` API, by [@probablyup](https://github.com/probablyup) (see [#1908](https://github.com/styled-components/styled-components/pull/1908))
 
+* Migrate to new context API, by [@alexandernanberg](https://github.com/alexandernanberg) (see [#1894](https://github.com/styled-components/styled-components/pull/1894))
+
 ## [v3.4.2] - 2018-08-07
 
 * Fix a regression from [#1843](https://github.com/styled-components/styled-components/pull/1892) that breaks deferred injection and duplicates rules, by [@kitten](https://github.com/kitten) (see [#1892](https://github.com/styled-components/styled-components/pull/1892))
