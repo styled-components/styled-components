@@ -148,7 +148,7 @@
     "typescript": "^2.4.1"
   },
   "peerDependencies": {
-    "react": ">= 16.3.0 < 17.0.0-0"
+    "react": ">= 16.3.0"
   },
   "jest": {
     "globals": {
