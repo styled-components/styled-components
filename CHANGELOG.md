@@ -6,7 +6,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-* placeholder
+* Add warning for the upcoming removal of the `extend` API in v4.0, by [@probablyup](https://github.com/probablyup) (see [#1909](https://github.com/styled-components/styled-components/pull/1909))
 
 ## [v3.4.2] - 2018-08-07
 

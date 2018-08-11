@@ -14,6 +14,7 @@ import isStyledComponent from '../utils/isStyledComponent'
 import isTag from '../utils/isTag'
 import validAttr from '../utils/validAttr'
 import hasInInheritanceChain from '../utils/hasInInheritanceChain'
+import once from '../utils/once'
 import ServerStyleSheet from './ServerStyleSheet'
 import StyleSheet from './StyleSheet'
 import { CHANNEL_NEXT, contextShape } from './ThemeProvider'
@@ -63,6 +64,16 @@ const generateId = (
   return parentComponentId !== undefined
     ? `${parentComponentId}-${componentId}`
     : componentId
+}
+
+let warnExtendDeprecated
+if (process.env.NODE_ENV !== 'production') {
+  warnExtendDeprecated = once(() => {
+    // eslint-disable-next-line no-console
+    console.error(
+      'Warning: The "extend" API will be removed in the upcoming v4.0 release. Use styled(StyledComponent) instead. You can find more information here: https://github.com/styled-components/styled-components/issues/1546'
+    )
+  })
 }
 
 // $FlowFixMe
@@ -326,6 +337,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
           parentComponentId,
           ParentComponent: StyledComponent,
         }
+
+        warnExtendDeprecated()
 
         return constructWithOptions(createStyledComponent, target, newOptions)
       }
