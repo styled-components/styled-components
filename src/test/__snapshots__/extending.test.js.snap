@@ -1,3 +1,0 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
-
-exports[`extending regression test for #1781, extending a Styled(StyledComponent) 1`] = `"<h1 class=\\"sc-c d sc-a e\\"></h1>"`;
