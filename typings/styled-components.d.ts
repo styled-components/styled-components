@@ -174,9 +174,9 @@ export function injectGlobal(
   ...interpolations: SimpleInterpolation[]
 ): void
 
-export function consolidateStreamedStyles(): void
-
-export function isStyledComponent(target: any): target is StyledComponentClass<{}, {}>
+export function isStyledComponent(
+  target: any
+): target is StyledComponentClass<{}, {}>
 
 export const ThemeProvider: ThemeProviderComponent<object>
 
