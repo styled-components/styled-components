@@ -182,37 +182,6 @@ const primitivesConfig = Object.assign({}, configBase, {
   ),
 })
 
-const noParserConfig = Object.assign({}, configBase, {
-  input: './src/no-parser/index.js',
-  output: [
-    getESM({ file: 'dist/styled-components-no-parser.esm.js' }),
-    getCJS({ file: 'dist/styled-components-no-parser.cjs.js' }),
-  ],
-  plugins: configBase.plugins.concat(
-    replace({
-      __SERVER__: JSON.stringify(true),
-    })
-  ),
-})
-
-const noParserBrowserConfig = Object.assign({}, configBase, {
-  output: [
-    getESM({
-      file: 'dist/styled-components-no-parser.browser.esm.js',
-    }),
-    getCJS({
-      file: 'dist/styled-components-no-parser.browser.cjs.js',
-    }),
-  ],
-  plugins: configBase.plugins.concat(
-    replace(
-      Object.assign({}, ignore, {
-        __SERVER__: JSON.stringify(false),
-      })
-    )
-  ),
-})
-
 export default [
   umdConfig,
   umdProdConfig,
@@ -222,6 +191,4 @@ export default [
   browserProdConfig,
   nativeConfig,
   primitivesConfig,
-  noParserConfig,
-  noParserBrowserConfig,
 ]
