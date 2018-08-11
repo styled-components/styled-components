@@ -1,7 +1,8 @@
 // @flow
 import hyphenate from 'fbjs/lib/hyphenateStyleName'
+import React from 'react'
 import isPlainObject from './isPlainObject'
-
+import StyledError from './error'
 import type { Interpolation } from '../types'
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
@@ -55,7 +56,13 @@ const flatten = (
     /* Either execute or defer the function */
     if (typeof chunk === 'function') {
       if (executionContext) {
-        ruleSet.push(...flatten([chunk(executionContext)], executionContext))
+        const nextChunk = chunk(executionContext)
+        /* Throw if a React Element was given styles */
+        if (React.isValidElement(nextChunk)) {
+          const elementName = chunk.displayName || chunk.name
+          throw new StyledError(11, elementName)
+        }
+        ruleSet.push(...flatten([nextChunk], executionContext))
       } else ruleSet.push(chunk)
 
       return ruleSet

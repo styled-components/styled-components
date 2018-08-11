@@ -56,6 +56,18 @@ describe('with styles', () => {
     expectCSSMatches('.sc-a {} .b { background-color:blue; }')
   })
 
+
+  it('should throw a meaningful error if a non styled component with react element is interpolated', () => {
+    const NestedComp = () => <div></div>
+    const Comp = styled.div`
+      ${ NestedComp} {
+        color: purple;
+      }
+    `
+    expect(() => shallow(<Comp />)).toThrowErrorMatchingSnapshot();
+  })
+
+
   it('should handle inline style objects with media queries', () => {
     const rule1 = {
       backgroundColor: 'blue',
