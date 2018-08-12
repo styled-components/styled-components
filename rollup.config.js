@@ -159,6 +159,77 @@ const browserProdConfig = {
   plugins: browserConfig.plugins.concat(prodPlugins),
 }
 
+const noTagsPath = './src/index-without-tags.js'
+
+const noTagServerConfig = {
+  ...configBase,
+  input: noTagsPath,
+  output: [
+    getESM({ file: 'dist/styled-components-no-tags.esm.js' }),
+    getCJS({ file: 'dist/styled-components-no-tags.cjs.js' }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(true),
+    })
+  ),
+}
+
+const noTagServerProdConfig = {
+  ...configBase,
+  ...serverConfig,
+  input: noTagsPath,
+  output: [
+    getESM({ file: 'dist/styled-components-no-tags.esm.min.js' }),
+    getCJS({ file: 'dist/styled-components-no-tags.cjs.min.js' }),
+  ],
+  plugins: serverConfig.plugins.concat(
+    replace({
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    }),
+    terser({
+      sourceMap: true,
+    })
+  ),
+}
+
+const noTagBrowserConfig = {
+  ...configBase,
+  input: noTagsPath,
+  output: [
+    getESM({ file: 'dist/styled-components-no-tags.browser.esm.js' }),
+    getCJS({ file: 'dist/styled-components-no-tags.browser.cjs.js' }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace({
+      ...streamIgnore,
+      __SERVER__: JSON.stringify(false),
+    })
+  ),
+}
+
+const noTagBrowserProdConfig = {
+  ...configBase,
+  ...browserConfig,
+  input: noTagsPath,
+  output: [
+    getESM({
+      file: 'dist/styled-components-no-tags.browser.esm.min.js',
+    }),
+    getCJS({
+      file: 'dist/styled-components-no-tags.browser.cjs.min.js',
+    }),
+  ],
+  plugins: browserConfig.plugins.concat(
+    replace({
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    }),
+    terser({
+      sourceMap: true,
+    })
+  ),
+}
+
 const nativeConfig = {
   ...configBase,
   input: './src/native/index.js',
@@ -190,6 +261,10 @@ export default [
   serverProdConfig,
   browserConfig,
   browserProdConfig,
+  noTagServerConfig,
+  noTagServerProdConfig,
+  noTagBrowserConfig,
+  noTagBrowserProdConfig,
   nativeConfig,
   primitivesConfig,
 ]

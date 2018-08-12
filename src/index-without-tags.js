@@ -9,8 +9,9 @@ import css from './constructors/css'
 /* Import singleton constructors */
 import _StyledComponent from './models/StyledComponent'
 import _ComponentStyle from './models/ComponentStyle'
-import _styled from './constructors/styled'
 import _constructWithOptions from './constructors/constructWithOptions'
+
+import type { Target } from './types'
 
 export * from './base'
 
@@ -24,4 +25,4 @@ const ComponentStyle = _ComponentStyle(
 const constructWithOptions = _constructWithOptions(css)
 const StyledComponent = _StyledComponent(ComponentStyle)
 
-export default _styled(StyledComponent, constructWithOptions)
+export default (tag: Target) => constructWithOptions(StyledComponent, tag)
