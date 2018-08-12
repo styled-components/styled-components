@@ -21,7 +21,7 @@ describe('primitives', () => {
     validComps.forEach(comp => {
       expect(() => {
         const Comp = styled(comp)
-        shallow(<Comp />)
+        mount(<Comp />)
       }).not.toThrowError()
     })
   })
@@ -46,7 +46,7 @@ describe('primitives', () => {
       expect(() => {
         // $FlowInvalidInputTest
         const Comp = styled(comp)
-        shallow(<Comp />)
+        mount(<Comp />)
         // $FlowInvalidInputTest
       }).toThrow(`Cannot create styled-component for component: ${comp}`)
     })
@@ -54,7 +54,7 @@ describe('primitives', () => {
 
   it('should generate inline styles', () => {
     const Comp = styled.View``
-    const wrapper = shallow(<Comp />)
+    const wrapper = mount(<Comp />)
     const view = wrapper.find('View').first()
 
     expect(view.prop('style')).toEqual([{}, undefined])
@@ -66,7 +66,7 @@ describe('primitives', () => {
     `
 
     const style = { opacity: 0.9 }
-    const wrapper = shallow(<Comp style={style} />)
+    const wrapper = mount(<Comp style={style} />)
     const view = wrapper.find('View').first()
 
     expect(view.prop('style')).toEqual([{ paddingTop: 10 }, style])
@@ -75,7 +75,7 @@ describe('primitives', () => {
   describe('attrs', () => {
     it('works fine with an empty object', () => {
       const Comp = styled.View.attrs({})``
-      const wrapper = shallow(<Comp />)
+      const wrapper = mount(<Comp />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({
@@ -88,7 +88,7 @@ describe('primitives', () => {
         test: true,
       })``
 
-      const wrapper = shallow(<Comp />)
+      const wrapper = mount(<Comp />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({
@@ -103,7 +103,7 @@ describe('primitives', () => {
       })``
 
       const test = 'Put that cookie down!'
-      const wrapper = shallow(<Comp test={test} />)
+      const wrapper = mount(<Comp test={test} />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({
@@ -122,7 +122,7 @@ describe('primitives', () => {
         test: 'test',
       })``
 
-      const wrapper = shallow(<Comp />)
+      const wrapper = mount(<Comp />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({

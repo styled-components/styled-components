@@ -1,7 +1,6 @@
 // @flow
 /* eslint-disable react/no-multi-comp */
 import React from 'react'
-import PropTypes from 'prop-types'
 import { renderToString } from 'react-dom/server'
 import { render } from 'react-dom'
 import { shallow, mount } from 'enzyme'
@@ -9,7 +8,7 @@ import StyleSheetManager from '../StyleSheetManager'
 import StyleSheet from '../StyleSheet'
 import ServerStyleSheet from '../ServerStyleSheet'
 import { resetStyled, expectCSSMatches } from '../../test/utils'
-import Frame from 'react-frame-component'
+import Frame, { FrameContextConsumer } from 'react-frame-component'
 
 let styled
 
@@ -25,7 +24,9 @@ describe('StyleSheetManager', () => {
 
   it('should use given stylesheet instance', () => {
     const sheet = new ServerStyleSheet()
-    const Title = styled.h1`color: palevioletred;`
+    const Title = styled.h1`
+      color: palevioletred;
+    `
     renderToString(
       <StyleSheetManager sheet={sheet.instance}>
         <Title />
@@ -36,26 +37,30 @@ describe('StyleSheetManager', () => {
 
   it('should render its child', () => {
     const target = document.head
-    const Title = styled.h1`color: palevioletred;`
+    const Title = styled.h1`
+      color: palevioletred;
+    `
     const child = <Title />
     const renderedComp = shallow(
-      <StyleSheetManager target={target}>
-        {child}
-      </StyleSheetManager>
+      <StyleSheetManager target={target}>{child}</StyleSheetManager>
     )
     expect(renderedComp.contains(child)).toEqual(true)
   })
 
   it('should append style to given target', () => {
     const target = document.body
-    const Title = styled.h1`color: palevioletred;`
+    const Title = styled.h1`
+      color: palevioletred;
+    `
     class Child extends React.Component {
       componentDidMount() {
         // $FlowFixMe
         const styles = target.querySelector('style').textContent
         expect(styles.includes(`palevioletred`)).toEqual(true)
       }
-      render() { return <Title /> }
+      render() {
+        return <Title />
+      }
     }
     mount(
       <StyleSheetManager target={target}>
@@ -72,14 +77,18 @@ describe('StyleSheetManager', () => {
     // $FlowFixMe
     iframe.contentDocument.body.appendChild(app)
     const target = iframe.contentDocument.head
-    const Title = styled.h1`color: palevioletred;`
+    const Title = styled.h1`
+      color: palevioletred;
+    `
     class Child extends React.Component {
       componentDidMount() {
         // $FlowFixMe
         const styles = target.querySelector('style').textContent
         expect(styles.includes(`palevioletred`)).toEqual(true)
       }
-      render() { return <Title /> }
+      render() {
+        return <Title />
+      }
     }
     mount(
       <StyleSheetManager target={target}>
@@ -101,7 +110,7 @@ describe('StyleSheetManager', () => {
     `
     mount(
       <div>
-        <ONE/>
+        <ONE />
         <StyleSheetManager target={document.head}>
           <div>
             <TWO />
@@ -126,21 +135,14 @@ describe('StyleSheetManager', () => {
     `
 
     // Injects the stylesheet into the document available via context
-    const SheetInjector = ({ children }, { document }) => (
-      <StyleSheetManager target={document.head}>{children}</StyleSheetManager>
+    const SheetInjector = ({ children, target }) => (
+      <StyleSheetManager target={target}>{children}</StyleSheetManager>
     )
-    SheetInjector.contextTypes = {
-      document: PropTypes.any,
-    }
 
     class Child extends React.Component {
-      static contextTypes = {
-        document: PropTypes.any,
-      }
-
       componentDidMount() {
         // $FlowFixMe
-        const styles = this.context.document.querySelector('style').textContent
+        const styles = this.props.document.querySelector('style').textContent
         expect(styles.includes(`palevioletred`)).toEqual(true)
         this.props.resolve()
       }
@@ -159,14 +161,22 @@ describe('StyleSheetManager', () => {
           render(
             <div>
               <Frame>
-                <SheetInjector>
-                  <Child resolve={resolveA} />
-                </SheetInjector>
+                <FrameContextConsumer>
+                  {({ document }) => (
+                    <SheetInjector target={document.head}>
+                      <Child document={document} resolve={resolveA} />
+                    </SheetInjector>
+                  )}
+                </FrameContextConsumer>
               </Frame>
               <Frame>
-                <SheetInjector>
-                  <Child resolve={resolveB} />
-                </SheetInjector>
+                <FrameContextConsumer>
+                  {({ document }) => (
+                    <SheetInjector target={document.head}>
+                      <Child document={document} resolve={resolveB} />
+                    </SheetInjector>
+                  )}
+                </FrameContextConsumer>
               </Frame>
             </div>,
             div
@@ -181,7 +191,6 @@ describe('StyleSheetManager', () => {
     div.parentElement.removeChild(div)
   })
 
-
   describe('ssr', () => {
     it('should extract CSS outside the nested StyleSheetManager', () => {
       const sheet = new ServerStyleSheet()
@@ -193,14 +202,20 @@ describe('StyleSheetManager', () => {
       `
       class Wrapper extends React.Component {
         state = {
-          targetRef: null
+          targetRef: null,
         }
         render() {
           return (
-            <div ref={(el) => { this.setState({ targetRef: el }) }}>
-              {this.state.targetRef && <StyleSheetManager target={this.state.targetRef}>
-                <TWO />
-              </StyleSheetManager>}
+            <div
+              ref={el => {
+                this.setState({ targetRef: el })
+              }}
+            >
+              {this.state.targetRef && (
+                <StyleSheetManager target={this.state.targetRef}>
+                  <TWO />
+                </StyleSheetManager>
+              )}
             </div>
           )
         }

@@ -1,24 +1,19 @@
 // @flow
 import hoist from 'hoist-non-react-statics'
-import { Component, createElement } from 'react'
+import React, { Component, createElement } from 'react'
 import determineTheme from '../utils/determineTheme'
 import { EMPTY_OBJECT } from '../utils/empties'
 import generateDisplayName from '../utils/generateDisplayName'
 import isStyledComponent from '../utils/isStyledComponent'
 import isTag from '../utils/isTag'
 import hasInInheritanceChain from '../utils/hasInInheritanceChain'
-import { CHANNEL_NEXT, contextShape } from './ThemeProvider'
+import { ThemeConsumer } from './ThemeProvider'
 
 import type { Theme } from './ThemeProvider'
 import type { RuleSet, Target } from '../types'
 
-type State = {
-  theme?: ?Theme,
-  generatedStyles: any,
-}
-
 // $FlowFixMe
-class BaseStyledNativeComponent extends Component<*, State> {
+class BaseStyledNativeComponent extends Component<*, *> {
   static target: Target
   static styledComponentId: string
   static attrs: Object
@@ -27,18 +22,6 @@ class BaseStyledNativeComponent extends Component<*, State> {
   root: ?Object
 
   attrs = {}
-  state = {
-    theme: null,
-    generatedStyles: undefined,
-  }
-
-  unsubscribeId: number = -1
-
-  unsubscribeFromContext() {
-    if (this.unsubscribeId !== -1) {
-      this.context[CHANNEL_NEXT].unsubscribe(this.unsubscribeId)
-    }
-  }
 
   buildExecutionContext(theme: any, props: any) {
     const { attrs } = this.constructor
@@ -65,49 +48,6 @@ class BaseStyledNativeComponent extends Component<*, State> {
     const executionContext = this.buildExecutionContext(theme, props)
 
     return inlineStyle.generateStyleObject(executionContext)
-  }
-
-  componentWillMount() {
-    // If there is a theme in the context, subscribe to the event emitter. This
-    // is necessary due to pure components blocking context updates, this circumvents
-    // that by updating when an event is emitted
-    const styledContext = this.context[CHANNEL_NEXT]
-    if (styledContext !== undefined) {
-      const { subscribe } = styledContext
-      this.unsubscribeId = subscribe(nextTheme => {
-        // This will be called once immediately
-        const theme = determineTheme(
-          this.props,
-          nextTheme,
-          this.constructor.defaultProps
-        )
-        const generatedStyles = this.generateAndInjectStyles(theme, this.props)
-
-        this.setState({ theme, generatedStyles })
-      })
-    } else {
-      // eslint-disable-next-line react/prop-types
-      const theme = this.props.theme || EMPTY_OBJECT
-      const generatedStyles = this.generateAndInjectStyles(theme, this.props)
-      this.setState({ theme, generatedStyles })
-    }
-  }
-
-  componentWillReceiveProps(nextProps: { theme?: Theme, [key: string]: any }) {
-    this.setState(prevState => {
-      const theme = determineTheme(
-        nextProps,
-        prevState.theme,
-        this.constructor.defaultProps
-      )
-      const generatedStyles = this.generateAndInjectStyles(theme, nextProps)
-
-      return { theme, generatedStyles }
-    })
-  }
-
-  componentWillUnmount() {
-    this.unsubscribeFromContext()
   }
 
   setNativeProps(nativeProps: Object) {
@@ -144,31 +84,49 @@ class BaseStyledNativeComponent extends Component<*, State> {
   }
 
   render() {
-    // eslint-disable-next-line react/prop-types
-    const { children, style } = this.props
-    const { generatedStyles } = this.state
-    const { target } = this.constructor
+    return (
+      <ThemeConsumer>
+        {(theme?: Theme) => {
+          const { style } = this.props
+          const { target, defaultProps } = this.constructor
 
-    const propsForElement = {
-      ...this.attrs,
-      ...this.props,
-      style: [generatedStyles, style],
-    }
+          let generatedStyles
+          if (theme !== undefined) {
+            const themeProp = determineTheme(this.props, theme, defaultProps)
+            generatedStyles = this.generateAndInjectStyles(
+              themeProp,
+              this.props
+            )
+          } else {
+            generatedStyles = this.generateAndInjectStyles(
+              theme || EMPTY_OBJECT,
+              this.props
+            )
+          }
 
-    if (
-      !isStyledComponent(target) &&
-      // NOTE: We can't pass a ref to a stateless functional component
-      (typeof target !== 'function' ||
-        // $FlowFixMe TODO: flow for prototype
-        (target.prototype && 'isReactComponent' in target.prototype))
-    ) {
-      propsForElement.ref = this.onRef
-      delete propsForElement.innerRef
-    } else {
-      propsForElement.innerRef = this.onRef
-    }
+          const propsForElement = {
+            ...this.attrs,
+            ...this.props,
+            style: [generatedStyles, style],
+          }
 
-    return createElement(target, propsForElement, children)
+          if (
+            !isStyledComponent(target) &&
+            // NOTE: We can't pass a ref to a stateless functional component
+            (typeof target !== 'function' ||
+              // $FlowFixMe TODO: flow for prototype
+              (target.prototype && 'isReactComponent' in target.prototype))
+          ) {
+            propsForElement.ref = this.onRef
+            delete propsForElement.innerRef
+          } else {
+            propsForElement.innerRef = this.onRef
+          }
+
+          return createElement(target, propsForElement)
+        }}
+      </ThemeConsumer>
+    )
   }
 }
 
@@ -189,7 +147,6 @@ export default (InlineStyle: Function) => {
 
     class StyledNativeComponent extends ParentComponent {
       static attrs = attrs
-      static contextTypes = contextShape
       static displayName = displayName
       static inlineStyle = inlineStyle
       static styledComponentId = 'StyledNativeComponent'
@@ -206,6 +163,7 @@ export default (InlineStyle: Function) => {
     }
 
     if (isClass) {
+      // $FlowFixMe
       hoist(StyledNativeComponent, target, {
         // all SC-specific things should not be hoisted
         attrs: true,

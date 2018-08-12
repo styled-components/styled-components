@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import { shallow } from 'enzyme'
+import { mount } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
@@ -15,8 +15,10 @@ describe('css features', () => {
     const Comp = styled.div`
       transition: opacity 0.3s;
     `
-    shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { -webkit-transition:opacity 0.3s; transition:opacity 0.3s; }')
+    mount(<Comp />)
+    expectCSSMatches(
+      '.sc-a {} .b { -webkit-transition:opacity 0.3s; transition:opacity 0.3s; }'
+    )
   })
 
   it('should add vendor prefixes for display', () => {
@@ -25,7 +27,7 @@ describe('css features', () => {
       flex-direction: column;
       align-items: center;
     `
-    shallow(<Comp />)
+    mount(<Comp />)
     expectCSSMatches(`
       .sc-a {}
       .b {
@@ -42,10 +44,10 @@ describe('css features', () => {
         }
       }
     `
-    shallow(<Comp />)
+    mount(<Comp />)
     expectCSSMatches(`
       .sc-a {}
-      
+
       @media (min-width: 10px) {
         @media (min-height: 20px) {
           .b {
@@ -60,7 +62,7 @@ describe('css features', () => {
     const Comp = styled.div`
       --custom-prop: some-val;
     `
-    shallow(<Comp />)
+    mount(<Comp />)
     expectCSSMatches('.sc-a {} .b { --custom-prop:some-val; }')
   })
 })

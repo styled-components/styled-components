@@ -1,13 +1,14 @@
 // @flow
 import React from 'react'
-import { shallow } from 'enzyme'
+import { mount } from 'enzyme'
 
-import * as nonce from '../utils/nonce';
+import * as nonce from '../utils/nonce'
 import { resetStyled, expectCSSMatches } from './utils'
 import StyleSheet from '../models/StyleSheet'
 import _injectGlobal from '../constructors/injectGlobal'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
+
 const injectGlobal = _injectGlobal(stringifyRules, css)
 
 jest.mock('../utils/nonce')
@@ -28,9 +29,9 @@ describe('with styles', () => {
   it('should append a style', () => {
     const rule = 'color: blue;'
     const Comp = styled.div`
-        ${rule}
-      `
-    shallow(<Comp />)
+      ${rule};
+    `
+    mount(<Comp />)
     expectCSSMatches('.sc-a {} .b { color:blue; }')
   })
 
@@ -38,10 +39,9 @@ describe('with styles', () => {
     const rule1 = 'color: blue;'
     const rule2 = 'background: red;'
     const Comp = styled.div`
-        ${rule1}
-        ${rule2}
-      `
-    shallow(<Comp />)
+      ${rule1} ${rule2};
+    `
+    mount(<Comp />)
     expectCSSMatches('.sc-a {} .b { color:blue; background:red; }')
   })
 
@@ -50,9 +50,9 @@ describe('with styles', () => {
       backgroundColor: 'blue',
     }
     const Comp = styled.div`
-        ${rule1}
-      `
-    shallow(<Comp />)
+      ${rule1};
+    `
+    mount(<Comp />)
     expectCSSMatches('.sc-a {} .b { background-color:blue; }')
   })
 
@@ -64,10 +64,12 @@ describe('with styles', () => {
       },
     }
     const Comp = styled.div`
-        ${rule1}
-      `
-    shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color:blue; } @media screen and (min-width:250px) { .b { background-color:red; } }')
+      ${rule1};
+    `
+    mount(<Comp />)
+    expectCSSMatches(
+      '.sc-a {} .b { background-color:blue; } @media screen and (min-width:250px) { .b { background-color:red; } }'
+    )
   })
 
   it('should handle inline style objects with pseudo selectors', () => {
@@ -78,10 +80,12 @@ describe('with styles', () => {
       },
     }
     const Comp = styled.div`
-      ${rule1}
+      ${rule1};
     `
-    shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b:hover { color:green; }')
+    mount(<Comp />)
+    expectCSSMatches(
+      '.sc-a {} .b { background-color:blue; } .b:hover { color:green; }'
+    )
   })
 
   it('should handle inline style objects with pseudo selectors', () => {
@@ -92,10 +96,12 @@ describe('with styles', () => {
       },
     }
     const Comp = styled.div`
-      ${rule1}
+      ${rule1};
     `
-    shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b:hover { color:green; }')
+    mount(<Comp />)
+    expectCSSMatches(
+      '.sc-a {} .b { background-color:blue; } .b:hover { color:green; }'
+    )
   })
 
   it('should handle inline style objects with nesting', () => {
@@ -106,10 +112,12 @@ describe('with styles', () => {
       },
     }
     const Comp = styled.div`
-      ${rule1}
+      ${rule1};
     `
-    shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b > h1 { color:white; }')
+    mount(<Comp />)
+    expectCSSMatches(
+      '.sc-a {} .b { background-color:blue; } .b > h1 { color:white; }'
+    )
   })
 
   it('should handle inline style objects with contextual selectors', () => {
@@ -120,41 +128,45 @@ describe('with styles', () => {
       },
     }
     const Comp = styled.div`
-      ${rule1}
+      ${rule1};
     `
-    shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { background-color:blue; } html.something .b { color:white; }')
+    mount(<Comp />)
+    expectCSSMatches(
+      '.sc-a {} .b { background-color:blue; } html.something .b { color:white; }'
+    )
   })
 
   it('should inject styles of multiple components', () => {
     const firstRule = 'background: blue;'
     const secondRule = 'background: red;'
     const FirstComp = styled.div`
-        ${firstRule}
-      `
+      ${firstRule};
+    `
     const SecondComp = styled.div`
-        ${secondRule}
-      `
+      ${secondRule};
+    `
 
-    shallow(<FirstComp />)
-    shallow(<SecondComp />)
+    mount(<FirstComp />)
+    mount(<SecondComp />)
 
-    expectCSSMatches('.sc-a {} .c { background:blue; } .sc-b {} .d { background:red; }')
+    expectCSSMatches(
+      '.sc-a {} .c { background:blue; } .sc-b {} .d { background:red; }'
+    )
   })
 
   it('should inject styles of multiple components based on creation, not rendering order', () => {
     const firstRule = 'content: "first rule";'
     const secondRule = 'content: "second rule";'
     const FirstComp = styled.div`
-        ${firstRule}
-      `
+      ${firstRule};
+    `
     const SecondComp = styled.div`
-        ${secondRule}
-      `
+      ${secondRule};
+    `
 
     // Switch rendering order, shouldn't change injection order
-    shallow(<SecondComp />)
-    shallow(<FirstComp />)
+    mount(<SecondComp />)
+    mount(<FirstComp />)
 
     // Classes _do_ get generated in the order of rendering but that's ok
     expectCSSMatches(`
@@ -168,11 +180,12 @@ describe('with styles', () => {
   it('should strip a JS-style (invalid) comment in the styles', () => {
     const comment = '// This is an invalid comment'
     const rule = 'color: blue;'
+    // prettier-ignore
     const Comp = styled.div`
-        ${comment}
-        ${rule}
-      `
-    shallow(<Comp />)
+      ${comment}
+      ${rule}
+    `
+    mount(<Comp />)
     expectCSSMatches(`
         .sc-a {}
         .b {
@@ -189,7 +202,11 @@ describe('with styles', () => {
       color: green;
     `
 
-    shallow(<Heading><Text /></Heading>)
+    mount(
+      <Heading>
+        <Text />
+      </Heading>
+    )
     StyleSheet.master.remove(Text.styledComponentId)
 
     expectCSSMatches(`
@@ -203,9 +220,9 @@ describe('with styles', () => {
   it('should add a webpack nonce to the style tags if one is available in the global scope', () => {
     const rule = 'color: blue;'
     const Comp = styled.div`
-        ${rule}
-      `
-    shallow(<Comp />)
+      ${rule};
+    `
+    mount(<Comp />)
     expectCSSMatches(`
         .sc-a {}
         .b {

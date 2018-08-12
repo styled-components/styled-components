@@ -1,6 +1,7 @@
 // @flow
-import React, { Component } from 'react'
-import { shallow, mount } from 'enzyme'
+import React, { Component, StrictMode } from 'react'
+import { mount } from 'enzyme'
+import TestRenderer from 'react-test-renderer'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
@@ -17,7 +18,7 @@ describe('basic', () => {
   it('should not throw an error when called with a valid element', () => {
     expect(() => styled.div``).not.toThrowError()
 
-    const FunctionalComponent = () => <div />;
+    const FunctionalComponent = () => <div />
     class ClassComponent extends Component<*, *> {
       render() {
         return <div />
@@ -27,13 +28,13 @@ describe('basic', () => {
     validComps.forEach(comp => {
       expect(() => {
         const Comp = styled(comp)
-        shallow(<Comp />)
+        mount(<Comp />)
       }).not.toThrowError()
     })
   })
 
   it('should throw a meaningful error when called with an invalid element', () => {
-    const FunctionalComponent = () => <div />;
+    const FunctionalComponent = () => <div />
     class ClassComponent extends Component<*, *> {
       render() {
         return <div />
@@ -52,7 +53,7 @@ describe('basic', () => {
       expect(() => {
         // $FlowInvalidInputTest
         const Comp = styled(comp)
-        shallow(<Comp />)
+        mount(<Comp />)
         // $FlowInvalidInputTest
       }).toThrow(`Cannot create styled-component for component: ${comp}`)
     })
@@ -65,7 +66,7 @@ describe('basic', () => {
 
   it('should inject component class when rendered even if no styles are passed', () => {
     const Comp = styled.div``
-    shallow(<Comp />)
+    mount(<Comp />)
     expectCSSMatches('.sc-a {}')
   })
 
@@ -73,7 +74,7 @@ describe('basic', () => {
     const Comp = styled.div`
       color: blue;
     `
-    shallow(<Comp />)
+    mount(<Comp />)
     expectCSSMatches('.sc-a { } .b { color:blue; }')
   })
 
@@ -81,8 +82,8 @@ describe('basic', () => {
     const Comp = styled.div`
       color: blue;
     `
-    shallow(<Comp />)
-    shallow(<Comp />)
+    mount(<Comp />)
+    mount(<Comp />)
     expectCSSMatches('.sc-a {} .b { color:blue; }')
   })
 
@@ -117,7 +118,7 @@ describe('basic', () => {
     const Comp = styled.div({
       color: 'blue',
     })
-    shallow(<Comp />)
+    mount(<Comp />)
     expectCSSMatches('.sc-a {} .b { color:blue; }')
   })
 
@@ -125,7 +126,7 @@ describe('basic', () => {
     const Comp = styled.div(({ color }) => ({
       color,
     }))
-    shallow(<Comp color='blue' />)
+    mount(<Comp color="blue" />)
     expectCSSMatches('.sc-a {} .b { color:blue; }')
   })
 
@@ -134,8 +135,10 @@ describe('basic', () => {
       const Comp = styled.div``
 
       class Wrapper extends Component<*, *> {
-        testRef: any;
-        innerRef = (comp) => { this.testRef = comp }
+        testRef: any
+        innerRef = comp => {
+          this.testRef = comp
+        }
 
         render() {
           return <Comp innerRef={this.innerRef} />
@@ -159,7 +162,7 @@ describe('basic', () => {
       const OuterComponent = styled(InnerComponent)``
 
       class Wrapper extends Component<*, *> {
-        testRef: any;
+        testRef: any
 
         render() {
           return (
@@ -197,8 +200,10 @@ describe('basic', () => {
       const OuterComponent = styled(InnerComponent)``
 
       class Wrapper extends Component<*, *> {
-        testRef: any;
-        innerRef = (comp) => { this.testRef = comp }
+        testRef: any
+        innerRef = comp => {
+          this.testRef = comp
+        }
 
         render() {
           return <OuterComponent innerRef={this.innerRef} />
@@ -224,8 +229,8 @@ describe('basic', () => {
       `
 
       // NOTE: We're mounting second before first and check if we're breaking their order
-      shallow(<SecondComponent />)
-      shallow(<FirstComponent />)
+      mount(<SecondComponent />)
+      mount(<FirstComponent />)
 
       expectCSSMatches('.sc-a {} .d { color:red; } .sc-b {} .c { color:blue; }')
     })
@@ -239,7 +244,7 @@ describe('basic', () => {
         }
       `
 
-      shallow(<Comp />)
+      mount(<Comp />)
       expectCSSMatches(
         '.sc-a{ } @media (min-width:500px){ .b > *{ color:pink; } } '
       )
@@ -296,6 +301,19 @@ describe('basic', () => {
 
       expect(Named1.styledComponentId).toBe('Name-foo')
       expect(Named2.styledComponentId).toBe('Name-bar')
+    })
+
+    it('should work in StrictMode without warnings', () => {
+      const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
+      const Comp = styled.div``
+
+      TestRenderer.create(
+        <StrictMode>
+          <Comp />
+        </StrictMode>
+      )
+
+      expect(spy).not.toHaveBeenCalled()
     })
   })
 })

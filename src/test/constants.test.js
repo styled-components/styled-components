@@ -1,5 +1,6 @@
+// @flow
 import React from 'react'
-import { shallow } from 'enzyme'
+import { mount } from 'enzyme'
 
 import { expectCSSMatches } from './utils'
 import { SC_ATTR as DEFAULT_SC_ATTR } from '../constants'
@@ -12,7 +13,7 @@ function renderAndExpect(expectedAttr) {
     color: blue;
   `
 
-  shallow(<Comp />)
+  mount(<Comp />)
 
   expectCSSMatches('.sc-a { } .b { color:blue; }')
 

@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import { shallow } from 'enzyme'
+import { mount } from 'enzyme'
 
 import { resetStyled, expectCSSMatches } from './utils'
 import styleSheet from '../models/StyleSheet'
@@ -14,13 +14,13 @@ describe('warn too many classes', () => {
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    (console: any).warn = () => warnCallCount++
+    ;(console: any).warn = () => warnCallCount++
     warnCallCount = 0
     styled = resetStyled()
   })
 
   afterEach(() => {
-    (console: any).warn = nativeWarn
+    ;(console: any).warn = nativeWarn
   })
 
   it('should warn once', () => {
@@ -28,7 +28,7 @@ describe('warn too many classes', () => {
       width: ${props => props.size};
     `
     for (let i = 0; i < 300; i++) {
-      shallow(<Comp size={i} />)
+      mount(<Comp size={i} />)
     }
     expect(warnCallCount).toEqual(1)
   })
@@ -38,7 +38,7 @@ describe('warn too many classes', () => {
       width: ${props => props.size};
     `
     for (let i = 0; i < 200; i++) {
-      shallow(<Comp size={i} />)
+      mount(<Comp size={i} />)
     }
     expect(warnCallCount).toEqual(1)
   })
@@ -48,7 +48,7 @@ describe('warn too many classes', () => {
       width: ${props => props.size};
     `
     for (let i = 0; i < 199; i++) {
-      shallow(<Comp size={i} />)
+      mount(<Comp size={i} />)
     }
 
     expect(warnCallCount).toEqual(0)
