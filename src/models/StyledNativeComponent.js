@@ -23,6 +23,52 @@ class BaseStyledNativeComponent extends Component<*, *> {
 
   attrs = {}
 
+  render() {
+    return (
+      <ThemeConsumer>
+        {(theme?: Theme) => {
+          const { style } = this.props
+          const { target, defaultProps } = this.constructor
+
+          let generatedStyles
+          if (theme !== undefined) {
+            const themeProp = determineTheme(this.props, theme, defaultProps)
+            generatedStyles = this.generateAndInjectStyles(
+              themeProp,
+              this.props
+            )
+          } else {
+            generatedStyles = this.generateAndInjectStyles(
+              theme || EMPTY_OBJECT,
+              this.props
+            )
+          }
+
+          const propsForElement = {
+            ...this.attrs,
+            ...this.props,
+            style: [generatedStyles, style],
+          }
+
+          if (
+            !isStyledComponent(target) &&
+            // NOTE: We can't pass a ref to a stateless functional component
+            (typeof target !== 'function' ||
+              // $FlowFixMe TODO: flow for prototype
+              (target.prototype && 'isReactComponent' in target.prototype))
+          ) {
+            propsForElement.ref = this.onRef
+            delete propsForElement.innerRef
+          } else {
+            propsForElement.innerRef = this.onRef
+          }
+
+          return createElement(target, propsForElement)
+        }}
+      </ThemeConsumer>
+    )
+  }
+
   buildExecutionContext(theme: any, props: any) {
     const { attrs } = this.constructor
     const context = { ...props, theme }
@@ -81,52 +127,6 @@ class BaseStyledNativeComponent extends Component<*, *> {
     ) {
       innerRef.current = node
     }
-  }
-
-  render() {
-    return (
-      <ThemeConsumer>
-        {(theme?: Theme) => {
-          const { style } = this.props
-          const { target, defaultProps } = this.constructor
-
-          let generatedStyles
-          if (theme !== undefined) {
-            const themeProp = determineTheme(this.props, theme, defaultProps)
-            generatedStyles = this.generateAndInjectStyles(
-              themeProp,
-              this.props
-            )
-          } else {
-            generatedStyles = this.generateAndInjectStyles(
-              theme || EMPTY_OBJECT,
-              this.props
-            )
-          }
-
-          const propsForElement = {
-            ...this.attrs,
-            ...this.props,
-            style: [generatedStyles, style],
-          }
-
-          if (
-            !isStyledComponent(target) &&
-            // NOTE: We can't pass a ref to a stateless functional component
-            (typeof target !== 'function' ||
-              // $FlowFixMe TODO: flow for prototype
-              (target.prototype && 'isReactComponent' in target.prototype))
-          ) {
-            propsForElement.ref = this.onRef
-            delete propsForElement.innerRef
-          } else {
-            propsForElement.innerRef = this.onRef
-          }
-
-          return createElement(target, propsForElement)
-        }}
-      </ThemeConsumer>
-    )
   }
 }
 

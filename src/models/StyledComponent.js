@@ -60,62 +60,7 @@ class BaseStyledComponent extends Component<*> {
 
   attrs = {}
 
-  buildExecutionContext(theme: any, props: any) {
-    const { attrs } = this.constructor
-    const context = { ...props, theme }
-    if (attrs === undefined) {
-      return context
-    }
-
-    this.attrs = Object.keys(attrs).reduce((acc, key) => {
-      const attr = attrs[key]
-
-      // eslint-disable-next-line no-param-reassign
-      acc[key] =
-        typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
-          ? attr(context)
-          : attr
-      return acc
-    }, {})
-
-    return { ...context, ...this.attrs }
-  }
-
-  generateAndInjectStyles(
-    theme: any,
-    props: any,
-    styleSheet: StyleSheet = StyleSheet.master
-  ) {
-    const { attrs, componentStyle, warnTooManyClasses } = this.constructor
-
-    // statically styled-components don't need to build an execution context object,
-    // and shouldn't be increasing the number of class names
-    if (componentStyle.isStatic && attrs === undefined) {
-      return componentStyle.generateAndInjectStyles(
-        STATIC_EXECUTION_CONTEXT,
-        styleSheet
-      )
-    } else {
-      const executionContext = this.buildExecutionContext(theme, props)
-      const className = componentStyle.generateAndInjectStyles(
-        executionContext,
-        styleSheet
-      )
-
-      if (
-        process.env.NODE_ENV !== 'production' &&
-        warnTooManyClasses !== undefined
-      ) {
-        warnTooManyClasses(className)
-      }
-
-      return className
-    }
-  }
-
   render() {
-    // TODO: Refactor to use cached functions
-
     return (
       <StyleSheetConsumer>
         {(styleSheet?: StyleSheet) => (
@@ -201,6 +146,59 @@ class BaseStyledComponent extends Component<*> {
         )}
       </StyleSheetConsumer>
     )
+  }
+
+  buildExecutionContext(theme: any, props: any) {
+    const { attrs } = this.constructor
+    const context = { ...props, theme }
+    if (attrs === undefined) {
+      return context
+    }
+
+    this.attrs = Object.keys(attrs).reduce((acc, key) => {
+      const attr = attrs[key]
+
+      // eslint-disable-next-line no-param-reassign
+      acc[key] =
+        typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
+          ? attr(context)
+          : attr
+      return acc
+    }, {})
+
+    return { ...context, ...this.attrs }
+  }
+
+  generateAndInjectStyles(
+    theme: any,
+    props: any,
+    styleSheet: StyleSheet = StyleSheet.master
+  ) {
+    const { attrs, componentStyle, warnTooManyClasses } = this.constructor
+
+    // statically styled-components don't need to build an execution context object,
+    // and shouldn't be increasing the number of class names
+    if (componentStyle.isStatic && attrs === undefined) {
+      return componentStyle.generateAndInjectStyles(
+        STATIC_EXECUTION_CONTEXT,
+        styleSheet
+      )
+    } else {
+      const executionContext = this.buildExecutionContext(theme, props)
+      const className = componentStyle.generateAndInjectStyles(
+        executionContext,
+        styleSheet
+      )
+
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        warnTooManyClasses !== undefined
+      ) {
+        warnTooManyClasses(className)
+      }
+
+      return className
+    }
   }
 }
 
