@@ -88,7 +88,6 @@
     "babel-eslint": "^8.2.3",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-plugin-external-helpers": "^6.22.0",
-    "babel-plugin-flow-react-proptypes": "^24.0.0",
     "babel-plugin-preval": "^3.0.0",
     "babel-plugin-transform-class-properties": "^6.22.0",
     "babel-plugin-transform-object-rest-spread": "^6.22.0",
