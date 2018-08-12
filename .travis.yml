@@ -15,8 +15,8 @@ env:
     - GOOGLE_CHROME_BINARY="/usr/bin/google-chrome-beta"
     - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
 node_js:
-  - 6
   - 8
+  - 10
 script:
   - node --version
   - yarn --version
