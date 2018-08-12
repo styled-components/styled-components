@@ -121,16 +121,6 @@ const serverConfig = {
   ),
 }
 
-const serverProdConfig = {
-  ...configBase,
-  ...serverConfig,
-  output: [
-    getESM({ file: 'dist/styled-components.esm.min.js' }),
-    getCJS({ file: 'dist/styled-components.cjs.min.js' }),
-  ],
-  plugins: serverConfig.plugins.concat(prodPlugins),
-}
-
 const browserConfig = {
   ...configBase,
   output: [
@@ -143,20 +133,6 @@ const browserConfig = {
       __SERVER__: JSON.stringify(false),
     })
   ),
-}
-
-const browserProdConfig = {
-  ...configBase,
-  ...browserConfig,
-  output: [
-    getESM({
-      file: 'dist/styled-components.browser.esm.min.js',
-    }),
-    getCJS({
-      file: 'dist/styled-components.browser.cjs.min.js',
-    }),
-  ],
-  plugins: browserConfig.plugins.concat(prodPlugins),
 }
 
 const noTagsPath = './src/index-without-tags.js'
@@ -175,24 +151,6 @@ const noTagServerConfig = {
   ),
 }
 
-const noTagServerProdConfig = {
-  ...configBase,
-  ...serverConfig,
-  input: noTagsPath,
-  output: [
-    getESM({ file: 'dist/styled-components-no-tags.esm.min.js' }),
-    getCJS({ file: 'dist/styled-components-no-tags.cjs.min.js' }),
-  ],
-  plugins: serverConfig.plugins.concat(
-    replace({
-      'process.env.NODE_ENV': JSON.stringify('production'),
-    }),
-    terser({
-      sourceMap: true,
-    })
-  ),
-}
-
 const noTagBrowserConfig = {
   ...configBase,
   input: noTagsPath,
@@ -204,28 +162,6 @@ const noTagBrowserConfig = {
     replace({
       ...streamIgnore,
       __SERVER__: JSON.stringify(false),
-    })
-  ),
-}
-
-const noTagBrowserProdConfig = {
-  ...configBase,
-  ...browserConfig,
-  input: noTagsPath,
-  output: [
-    getESM({
-      file: 'dist/styled-components-no-tags.browser.esm.min.js',
-    }),
-    getCJS({
-      file: 'dist/styled-components-no-tags.browser.cjs.min.js',
-    }),
-  ],
-  plugins: browserConfig.plugins.concat(
-    replace({
-      'process.env.NODE_ENV': JSON.stringify('production'),
-    }),
-    terser({
-      sourceMap: true,
     })
   ),
 }
@@ -258,13 +194,9 @@ export default [
   umdConfig,
   umdProdConfig,
   serverConfig,
-  serverProdConfig,
   browserConfig,
-  browserProdConfig,
   noTagServerConfig,
-  noTagServerProdConfig,
   noTagBrowserConfig,
-  noTagBrowserProdConfig,
   nativeConfig,
   primitivesConfig,
 ]
