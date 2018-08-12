@@ -162,22 +162,6 @@
     {
       "path": "./dist/styled-components.min.js",
       "maxSize": "16kB"
-    },
-    {
-      "path": "./dist/styled-components.cjs.min.js",
-      "maxSize": "11kB"
-    },
-    {
-      "path": "./dist/styled-components.esm.min.js",
-      "maxSize": "10.75kB"
-    },
-    {
-      "path": "./dist/styled-components-no-tags.cjs.min.js",
-      "maxSize": "10.25kB"
-    },
-    {
-      "path": "./dist/styled-components-no-tags.esm.min.js",
-      "maxSize": "10kB"
     }
   ],
   "collective": {
