@@ -1,3 +1,4 @@
 {
-  "testRegex": "./integration-test/.*.js$"
+  "testRegex": "./integration-test/.*.js$",
+  "testURL": "http://localhost"
 }

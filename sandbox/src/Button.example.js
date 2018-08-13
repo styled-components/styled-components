@@ -1,4 +1,4 @@
-/* global React, styled, render, css, creatGlobalStyle, keyframes */
+/* global React, styled, render, css */
 
 const Button = styled.button`
   font-size: 16px;
