@@ -1,5 +1,6 @@
+// @flow
 import React from 'react'
-import { shallow } from 'enzyme'
+import { mount } from 'enzyme'
 
 import { resetStyled, expectCSSMatches, seedNextClassnames } from './utils'
 
@@ -10,14 +11,17 @@ import _keyframes from '../constructors/keyframes'
 import StyleSheet from '../models/StyleSheet'
 import { SC_ATTR } from '../constants'
 
-const keyframes = _keyframes(hash => `keyframe_${hash%1000}`, stringifyRules, css)
+const keyframes = _keyframes(
+  hash => `keyframe_${hash % 1000}`,
+  stringifyRules,
+  css
+)
 const injectGlobal = _injectGlobal(stringifyRules, css)
 
-const getStyleTags = () => (
+const getStyleTags = () =>
   Array.from(document.querySelectorAll('style')).map(el => ({
-    css: el.innerHTML.trim().replace(/\s+/mg, ' ')
+    css: el.innerHTML.trim().replace(/\s+/gm, ' '),
   }))
-)
 
 let styled
 
@@ -49,34 +53,48 @@ describe('rehydration', () => {
       const Comp = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `
-      shallow(<Comp />)
+      mount(<Comp />)
       expectCSSMatches('.b { color: red; } .ONE { } .a { color:blue; }')
     })
 
     it('should reuse a componentId', () => {
-      const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
-      shallow(<A />)
+      const A = styled.div.withConfig({ componentId: 'ONE' })`
+        color: blue;
+      `
+      mount(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })``
-      shallow(<B />)
+      mount(<B />)
       expectCSSMatches('.b { color: red; } .ONE { } .a { color:blue; }')
     })
 
     it('should reuse a componentId and generated class', () => {
-      const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
-      shallow(<A />)
-      const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
-      shallow(<B />)
+      const A = styled.div.withConfig({ componentId: 'ONE' })`
+        color: blue;
+      `
+      mount(<A />)
+      const B = styled.div.withConfig({ componentId: 'TWO' })`
+        color: red;
+      `
+      mount(<B />)
       expectCSSMatches('.b { color: red; } .ONE { } .a { color:blue; }')
     })
 
     it('should reuse a componentId and inject new classes', () => {
-      const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
-      shallow(<A />)
-      const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
-      shallow(<B />)
-      const C = styled.div.withConfig({ componentId: 'TWO' })`color: green;`
-      shallow(<C />)
-      expectCSSMatches('.b{ color: red; } .c{ color:green; } .ONE { } .a{ color:blue; }')
+      const A = styled.div.withConfig({ componentId: 'ONE' })`
+        color: blue;
+      `
+      mount(<A />)
+      const B = styled.div.withConfig({ componentId: 'TWO' })`
+        color: red;
+      `
+      mount(<B />)
+      const C = styled.div.withConfig({ componentId: 'TWO' })`
+        color: green;
+      `
+      mount(<C />)
+      expectCSSMatches(
+        '.b{ color: red; } .c{ color:green; } .ONE { } .a{ color:blue; }'
+      )
     })
   })
 
@@ -106,9 +124,9 @@ describe('rehydration', () => {
 
     it('should not inject new styles for a component already rendered', () => {
       const Comp = styled.div.withConfig({ componentId: 'ONE' })`
-        color: ${ props => props.color };
+        color: ${props => props.color};
       `
-      shallow(<Comp color="blue"/>)
+      mount(<Comp color="blue" />)
       expectCSSMatches(`
         .ONE { } .a { color: blue; }
         .TWO { } .b { color: red; }
@@ -118,9 +136,9 @@ describe('rehydration', () => {
     it('should inject new styles for a new computed style of a component', () => {
       seedNextClassnames(['x'])
       const Comp = styled.div.withConfig({ componentId: 'ONE' })`
-        color: ${ props => props.color };
+        color: ${props => props.color};
       `
-      shallow(<Comp color="green"/>)
+      mount(<Comp color="green" />)
       expectCSSMatches(`
         .a { color: blue; } .x { color:green; }
         .b { color: red; }
@@ -146,11 +164,17 @@ describe('rehydration', () => {
     })
 
     it('should generate new classes, even if they have the same name', () => {
-      const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
-      shallow(<A />)
-      const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
-      shallow(<B />)
-      expectCSSMatches('.TWO {} .b { color: red; } .ONE { } .a { color:blue; } .TWO {} .b { color:red; } ')
+      const A = styled.div.withConfig({ componentId: 'ONE' })`
+        color: blue;
+      `
+      mount(<A />)
+      const B = styled.div.withConfig({ componentId: 'TWO' })`
+        color: red;
+      `
+      mount(<B />)
+      expectCSSMatches(
+        '.TWO {} .b { color: red; } .ONE { } .a { color:blue; } .TWO {} .b { color:red; } '
+      )
     })
   })
 
@@ -174,33 +198,52 @@ describe('rehydration', () => {
     })
 
     it('should leave the existing styles there', () => {
-      expectCSSMatches('body { background: papayawhip; } .TWO {} .b { color: red; }')
+      expectCSSMatches(
+        'body { background: papayawhip; } .TWO {} .b { color: red; }'
+      )
     })
 
     it('should inject new global styles at the end', () => {
       injectGlobal`
         body { color: tomato; }
       `
-      expectCSSMatches('body { background: papayawhip; } .b { color: red; } body { color:tomato; }')
+      expectCSSMatches(
+        'body { background: papayawhip; } .b { color: red; } body { color:tomato; }'
+      )
     })
 
     it('should interleave global and local styles', () => {
       injectGlobal`
         body { color: tomato; }
       `
-      const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
-      shallow(<A />)
+      const A = styled.div.withConfig({ componentId: 'ONE' })`
+        color: blue;
+      `
+      mount(<A />)
 
-      expectCSSMatches('body { background: papayawhip; } .b { color: red; } body { color:tomato; } .ONE { } .a { color:blue; }')
-      expect(getStyleTags()).toEqual([
-        { css: '/* sc-component-id: sc-global-557410406 */ body{background:papayawhip;} ', },
-        { css: '/* sc-component-id: TWO */ .b{color:red;} ', },
-        { css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;} ', },
-        { css: '/* sc-component-id: ONE */ .ONE {} .a{color:blue;}', },
-      ].reduce((acc, { css }) => {
-        acc[0].css += css
-        return acc
-      }, [{ css: '' }]))
+      expectCSSMatches(
+        'body { background: papayawhip; } .b { color: red; } body { color:tomato; } .ONE { } .a { color:blue; }'
+      )
+      expect(getStyleTags()).toEqual(
+        [
+          {
+            css:
+              '/* sc-component-id: sc-global-557410406 */ body{background:papayawhip;} ',
+          },
+          { css: '/* sc-component-id: TWO */ .b{color:red;} ' },
+          {
+            css:
+              '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;} ',
+          },
+          { css: '/* sc-component-id: ONE */ .ONE {} .a{color:blue;}' },
+        ].reduce(
+          (acc, { css }) => {
+            acc[0].css += css
+            return acc
+          },
+          [{ css: '' }]
+        )
+      )
     })
   })
 
@@ -242,17 +285,25 @@ describe('rehydration', () => {
       expect(tagsAfterReset[1]).toBe(styleTags[1])
 
       /* Rerendering existing tags doesn't touch the DOM */
-      const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
-      shallow(<A />)
-      const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
-      shallow(<B />)
-      const styleTagsAfterRehydration = Array.from(document.querySelectorAll('style'))
+      const A = styled.div.withConfig({ componentId: 'ONE' })`
+        color: blue;
+      `
+      mount(<A />)
+      const B = styled.div.withConfig({ componentId: 'TWO' })`
+        color: red;
+      `
+      mount(<B />)
+      const styleTagsAfterRehydration = Array.from(
+        document.querySelectorAll('style')
+      )
       expect(styleTagsAfterRehydration[0]).toEqual(styleTags[0])
 
       /* Only when new components are introduced (or a previous component
        * generates a new hash) does the style tag get replaced. */
-      const C = styled.div.withConfig({ componentId: 'THREE' })`color: green;`
-      shallow(<C />)
+      const C = styled.div.withConfig({ componentId: 'THREE' })`
+        color: green;
+      `
+      mount(<C />)
 
       /* the order stays correct and the styles are unharmed
         * NOTE: during rehydration the empty rules are stripped out however */
@@ -272,10 +323,14 @@ describe('rehydration', () => {
       injectGlobal`
         body { background: papayawhip; }
       `
-      const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
-      shallow(<A />)
-      const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
-      shallow(<B />)
+      const A = styled.div.withConfig({ componentId: 'ONE' })`
+        color: blue;
+      `
+      mount(<A />)
+      const B = styled.div.withConfig({ componentId: 'TWO' })`
+        color: red;
+      `
+      mount(<B />)
 
       expectCSSMatches(`
         html { font-size: 16px; }
@@ -286,13 +341,17 @@ describe('rehydration', () => {
     })
 
     it('should still not change styles if rendered in a different order', () => {
-      const B = styled.div.withConfig({ componentId: 'TWO' })`color: red;`
-      shallow(<B />)
+      const B = styled.div.withConfig({ componentId: 'TWO' })`
+        color: red;
+      `
+      mount(<B />)
       injectGlobal`
         body { background: papayawhip; }
       `
-      const A = styled.div.withConfig({ componentId: 'ONE' })`color: blue;`
-      shallow(<A />)
+      const A = styled.div.withConfig({ componentId: 'ONE' })`
+        color: blue;
+      `
+      mount(<A />)
       injectGlobal`
         html { font-size: 16px; }
       `
@@ -346,14 +405,18 @@ describe('rehydration', () => {
       const fadeIn = keyframes`
         from { opacity: 0; }
       `
-      const A = styled.div`animation: ${fadeIn} 1s both;`
+      const A = styled.div`
+        animation: ${fadeIn} 1s both;
+      `
       const fadeOut = keyframes`
         from { opacity: 1; }
       `
-      const B = styled.div`animation: ${fadeOut} 1s both;`
+      const B = styled.div`
+        animation: ${fadeOut} 1s both;
+      `
       /* Purposely rendering out of order to make sure the output looks right */
-      shallow(<B />)
-      shallow(<A />)
+      mount(<B />)
+      mount(<A />)
 
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}

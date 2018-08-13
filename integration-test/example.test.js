@@ -8,10 +8,10 @@ const PORT = 9000
 
 const urlWhitelist = [
   new RegExp(`http:\/\/localhost:${PORT}.*`),
-  /https:\/\/unpkg\.com\/react@[\d\.]+\/dist\/react\.min\.js/,
-  /https:\/\/unpkg\.com\/react-dom@[\d\.]+\/dist\/react-dom\.min\.js/,
-  /https:\/\/unpkg\.com\/react-dom@[\d\.]+\/dist\/react-dom-server\.min\.js/,
-  /https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/babel-core\/[\d\.]+\/browser\.min\.js/
+  /https:\/\/unpkg\.com\/react@[\d\.]+\/umd\/react\.production\.min\.js/,
+  /https:\/\/unpkg\.com\/react-dom@[\d\.]+\/umd\/react-dom\.production\.min\.js/,
+  /https:\/\/unpkg\.com\/react-dom@[\d\.]+\/umd\/react-dom-server\.browser\.production\.min\.js/,
+  /https:\/\/unpkg\.com\/babel-standalone@[\d\.]+\/babel\.min\.js/,
 ]
 
 const globalCss = `
@@ -49,7 +49,7 @@ describe('example page', () => {
     server = await startServer(app, PORT)
     browser = await launch({
       executablePath: process.env.GOOGLE_CHROME_BINARY || undefined,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-lcd-text']
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-lcd-text'],
     })
     page = await browser.newPage()
     page.on('request', req => {
@@ -76,7 +76,7 @@ describe('example page', () => {
     const screenshot = await page.screenshot({ fullPage: true })
     expect(screenshot).toMatchImageSnapshot({
       failureThreshold: '0.06',
-      failureThresholdType: 'percent'
+      failureThresholdType: 'percent',
     })
   })
 })

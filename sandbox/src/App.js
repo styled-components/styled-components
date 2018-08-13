@@ -26,7 +26,7 @@ const GlobalStyle = createGlobalStyle`
   * {
     box-sizing: border-box;
   }
-`;
+`
 
 const Body = styled.main`
   width: 100vw;
@@ -94,11 +94,11 @@ const LiveBlock = styled.div`
   }
 `
 
-const LiveEditor = LiveBlock.withComponent(_LiveEditor).extend`
+const LiveEditor = styled(LiveBlock.withComponent(_LiveEditor))`
   overflow: auto;
 `
 
-const LivePreview = LiveBlock.withComponent(_LivePreview).extend`
+const LivePreview = styled(LiveBlock.withComponent(_LivePreview))`
   background-color: white;
   display: flex;
   flex-direction: row;
@@ -116,7 +116,7 @@ const LiveError = styled(_LiveError)`
 
 const App = () => (
   <Body>
-    <GlobalStyle/>
+    <GlobalStyle />
     <Heading>
       <Title>
         Interactive sandbox for <Code>styled-components</Code>

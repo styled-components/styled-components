@@ -170,46 +170,15 @@ const nativeConfig = Object.assign({}, configBase, {
 const primitivesConfig = Object.assign({}, configBase, {
   input: './src/primitives/index.js',
   output: [
-    getESM({ file: 'dist/styled-components-primitivesm.esm.js' }),
+    getESM({ file: 'dist/styled-components-primitives.esm.js' }),
     getCJS({
-      file: 'dist/styled-components-primitivesm.cjs.js',
+      file: 'dist/styled-components-primitives.cjs.js',
     }),
   ],
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(true),
     })
-  ),
-})
-
-const noParserConfig = Object.assign({}, configBase, {
-  input: './src/no-parser/index.js',
-  output: [
-    getESM({ file: 'dist/styled-components-no-parser.esm.js' }),
-    getCJS({ file: 'dist/styled-components-no-parser.cjs.js' }),
-  ],
-  plugins: configBase.plugins.concat(
-    replace({
-      __SERVER__: JSON.stringify(true),
-    })
-  ),
-})
-
-const noParserBrowserConfig = Object.assign({}, configBase, {
-  output: [
-    getESM({
-      file: 'dist/styled-components-no-parser.browser.esm.js',
-    }),
-    getCJS({
-      file: 'dist/styled-components-no-parser.browser.cjs.js',
-    }),
-  ],
-  plugins: configBase.plugins.concat(
-    replace(
-      Object.assign({}, ignore, {
-        __SERVER__: JSON.stringify(false),
-      })
-    )
   ),
 })
 
@@ -222,6 +191,4 @@ export default [
   browserProdConfig,
   nativeConfig,
   primitivesConfig,
-  noParserConfig,
-  noParserBrowserConfig,
 ]

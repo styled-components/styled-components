@@ -54,8 +54,6 @@ type Attrs<P, A extends Partial<P>, T> = {
 
 export interface StyledComponentClass<P, T, O = P>
   extends ComponentClass<ThemedOuterStyledProps<O, T>> {
-  extend: ThemedStyledFunction<P, T, O>
-
   withComponent<K extends keyof JSX.IntrinsicElements>(
     tag: K
   ): StyledComponentClass<
@@ -174,9 +172,9 @@ export function injectGlobal(
   ...interpolations: SimpleInterpolation[]
 ): void
 
-export function consolidateStreamedStyles(): void
-
-export function isStyledComponent(target: any): target is StyledComponentClass<{}, {}>
+export function isStyledComponent(
+  target: any
+): target is StyledComponentClass<{}, {}>
 
 export const ThemeProvider: ThemeProviderComponent<object>
 

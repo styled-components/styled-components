@@ -13,10 +13,6 @@ import stringifyRules from '../utils/stringifyRules'
 import _StyledComponent from '../models/StyledComponent'
 import _ComponentStyle from '../models/ComponentStyle'
 
-import noParserCss from '../no-parser/css'
-import noParserFlatten from '../no-parser/flatten'
-import noParserStringifyRules from '../no-parser/stringifyRules'
-
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let index = 0
 let inputs = {}
@@ -46,26 +42,6 @@ export const resetStyled = (isServer: boolean = false) => {
 
   const ComponentStyle = _ComponentStyle(classNames, flatten, stringifyRules)
   const constructWithOptions = _constructWithOptions(css)
-  const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
-
-  return _styled(StyledComponent, constructWithOptions)
-}
-
-export const resetNoParserStyled = () => {
-  if (!document.head) {
-    throw new StyledError(9)
-  }
-
-  document.head.innerHTML = ''
-  StyleSheet.reset()
-  index = 0
-
-  const ComponentStyle = _ComponentStyle(
-    classNames,
-    noParserFlatten,
-    noParserStringifyRules
-  )
-  const constructWithOptions = _constructWithOptions(noParserCss)
   const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
 
   return _styled(StyledComponent, constructWithOptions)
