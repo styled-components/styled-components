@@ -1,12 +1,12 @@
 // @flow
 import React from 'react'
-import PropTypes from 'prop-types'
-import { CONTEXT_KEY, STATIC_EXECUTION_CONTEXT } from '../constants'
+import { STATIC_EXECUTION_CONTEXT } from '../constants'
 import _GlobalStyle from '../models/GlobalStyle'
 import StyleSheet from '../models/StyleSheet'
-import ServerStyleSheet from '../models/ServerStyleSheet'
+import determineTheme from '../utils/determineTheme'
+import { ThemeConsumer, type Theme } from '../models/ThemeProvider'
+import { StyleSheetConsumer } from '../models/StyleSheetManager'
 import type { CSSConstructor, Interpolation, Stringifier } from '../types'
-import withTheme from '../hoc/withTheme'
 import hashStr from '../vendor/glamor/hash'
 
 export default (stringifyRules: Stringifier, css: CSSConstructor) => {
@@ -21,34 +21,35 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
     const style = new GlobalStyle(rules, id)
 
     class GlobalStyleComponent extends React.Component<*, *> {
-      static contextTypes = {
-        [CONTEXT_KEY]: PropTypes.oneOfType([
-          PropTypes.instanceOf(StyleSheet),
-          PropTypes.instanceOf(ServerStyleSheet),
-        ]),
-      }
+      static defaultProps: Object
+      // static contextTypes = {
+      //   [CONTEXT_KEY]: PropTypes.oneOfType([
+      //     PropTypes.instanceOf(StyleSheet),
+      //     PropTypes.instanceOf(ServerStyleSheet),
+      //   ]),
+      // }
 
       static styledComponentId = id
 
-      componentWillMount() {
-        const { props } = this
-        const sheet = this.context[CONTEXT_KEY] || StyleSheet.master
-        const context = style.isStatic ? STATIC_EXECUTION_CONTEXT : { ...props }
+      // componentWillMount() {
+      //   const { props } = this
+      //   const sheet = this.context[CONTEXT_KEY] || StyleSheet.master
+      //   const context = style.isStatic ? STATIC_EXECUTION_CONTEXT : { ...props }
 
-        style.createStyles(context, sheet)
-      }
+      //   style.createStyles(context, sheet)
+      // }
 
-      componentWillReceiveProps(props: { [prop: string]: any }) {
-        const sheet = this.context[CONTEXT_KEY] || StyleSheet.master
-        const context = style.isStatic ? STATIC_EXECUTION_CONTEXT : { ...props }
+      // componentWillReceiveProps(props: { [prop: string]: any }) {
+      //   const sheet = this.context[CONTEXT_KEY] || StyleSheet.master
+      //   const context = style.isStatic ? STATIC_EXECUTION_CONTEXT : { ...props }
 
-        style.updateStyles(context, sheet)
-      }
+      //   style.updateStyles(context, sheet)
+      // }
 
-      componentWillUnmount() {
-        const sheet = this.context[CONTEXT_KEY] || StyleSheet.master
-        style.removeStyles(sheet)
-      }
+      // componentWillUnmount() {
+      //   const sheet = this.context[CONTEXT_KEY] || StyleSheet.master
+      //   style.removeStyles(sheet)
+      // }
 
       render() {
         if (process.env.NODE_ENV !== 'production') {
@@ -60,13 +61,37 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
           }
         }
 
-        return null
+        return (
+          <StyleSheetConsumer>
+            {(styleSheet?: StyleSheet) => (
+              <ThemeConsumer>
+                {(theme?: Theme) => {
+                  const { defaultProps } = this.constructor
+
+                  if (style.isStatic) {
+                    // $FlowFixMe TODO: flow for optional styleSheet
+                    style.updateStyles(STATIC_EXECUTION_CONTEXT, styleSheet)
+                  } else if (typeof theme !== 'undefined') {
+                    const determinedTheme = determineTheme(
+                      this.props,
+                      theme,
+                      defaultProps
+                    )
+                    // $FlowFixMe TODO: flow for optional styleSheet
+                    style.updateStyles(determinedTheme, styleSheet)
+                  }
+                  return null
+                }}
+              </ThemeConsumer>
+            )}
+          </StyleSheetConsumer>
+        )
       }
     }
 
     // TODO: Use internal abstractions to avoid additional component layers
     // Depends on a future overall refactoring of theming system / context
-    return withTheme(GlobalStyleComponent)
+    return GlobalStyleComponent
   }
 
   return createGlobalStyle

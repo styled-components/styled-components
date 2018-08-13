@@ -275,13 +275,16 @@ export default class StyleSheet {
     const tag = this.getTagForId(id)
 
     /* add deferred rules for component */
-    if (this.deferred[id]) {
-      this.deferred[id].push(...cssRules)
-
-      // $FlowFixMe
-      tag.insertRules(id, this.deferred[id], name)
+    if (this.deferred[id] !== undefined) {
+      // Combine passed cssRules with previously deferred CSS rules
+      // NOTE: We cannot mutate the deferred array itself as all clones
+      // do the same (see clones[i].inject)
+      const rules = this.deferred[id].concat(cssRules)
+      tag.insertRules(id, rules, name)
       this.deferred[id] = undefined
-    } else tag.insertRules(id, cssRules, name)
+    } else {
+      tag.insertRules(id, cssRules, name)
+    }
   }
 
   /* removes all rules for a given id, which doesn't remove its marker but resets it */

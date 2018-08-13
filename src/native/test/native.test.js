@@ -1,5 +1,5 @@
 import 'react-native'
-import { View } from 'react-native'
+import { View, Text } from 'react-native'
 import React from 'react'
 
 import styled from '../index'
@@ -22,7 +22,7 @@ describe('native', () => {
     validComps.forEach(comp => {
       expect(() => {
         const Comp = styled(comp)
-        shallow(<Comp />)
+        mount(<Comp />)
       }).not.toThrowError()
     })
   })
@@ -55,7 +55,7 @@ describe('native', () => {
 
   it('should generate inline styles', () => {
     const Comp = styled.View``
-    const wrapper = shallow(<Comp />)
+    const wrapper = mount(<Comp />)
     const view = wrapper.find('View').first()
 
     expect(view.prop('style')).toEqual([{}, undefined])
@@ -67,7 +67,7 @@ describe('native', () => {
     `
 
     const style = { opacity: 0.9 }
-    const wrapper = shallow(<Comp style={style} />)
+    const wrapper = mount(<Comp style={style} />)
     const view = wrapper.find('View').first()
 
     expect(view.prop('style')).toEqual([{ paddingTop: 10 }, style])
@@ -94,112 +94,29 @@ describe('native', () => {
       opacity: ${p => p.opacity || 0};
     `
 
-    const comp = shallow(<Comp opacity={0.5} />)
+    const comp = mount(<Comp opacity={0.5} />)
 
-    expect(comp.find('View').prop('style')).toEqual([
-      { paddingTop: 5, opacity: 0.5 },
-      undefined,
-    ])
+    expect(
+      comp
+        .find('View')
+        .first()
+        .prop('style')
+    ).toEqual([{ paddingTop: 5, opacity: 0.5 }, undefined])
 
     comp.setProps({ opacity: 0.9 })
 
-    expect(comp.find('View').prop('style')).toEqual([
-      { paddingTop: 5, opacity: 0.9 },
-      undefined,
-    ])
-  })
-
-  describe('extending', () => {
-    it('should combine styles of extending components', () => {
-      const Parent = styled.View`
-        opacity: 0.9;
-      `
-      const Child = Parent.extend`
-        padding: 10px;
-      `
-
-      const parent = shallow(<Parent />)
-      const child = shallow(<Child />)
-
-      expect(parent.find('View').prop('style')).toEqual([
-        { opacity: 0.9 },
-        undefined,
-      ])
-
-      expect(child.find('View').prop('style')).toEqual([
-        {
-          opacity: 0.9,
-          paddingTop: 10,
-          paddingRight: 10,
-          paddingBottom: 10,
-          paddingLeft: 10,
-        },
-        undefined,
-      ])
-    })
-
-    it('should combine styles of extending components in >= 3 inheritances', () => {
-      const GrandGrandParent = styled.View`
-        background-color: red;
-      `
-      const GrandParent = GrandGrandParent.extend`
-        border-width: 10;
-      `
-      const Parent = GrandParent.extend`
-        opacity: 0.9;
-      `
-      const Child = Parent.extend`
-        padding: 10px;
-      `
-
-      const grandGrandParent = shallow(<GrandGrandParent />)
-      const grandParent = shallow(<GrandParent />)
-      const parent = shallow(<Parent />)
-      const child = shallow(<Child />)
-
-      expect(grandGrandParent.find('View').prop('style')).toEqual([
-        {
-          backgroundColor: 'red',
-        },
-        undefined,
-      ])
-
-      expect(grandParent.find('View').prop('style')).toEqual([
-        {
-          backgroundColor: 'red',
-          borderWidth: 10,
-        },
-        undefined,
-      ])
-
-      expect(parent.find('View').prop('style')).toEqual([
-        {
-          backgroundColor: 'red',
-          borderWidth: 10,
-          opacity: 0.9,
-        },
-        undefined,
-      ])
-
-      expect(child.find('View').prop('style')).toEqual([
-        {
-          backgroundColor: 'red',
-          borderWidth: 10,
-          opacity: 0.9,
-          paddingTop: 10,
-          paddingRight: 10,
-          paddingBottom: 10,
-          paddingLeft: 10,
-        },
-        undefined,
-      ])
-    })
+    expect(
+      comp
+        .find('View')
+        .first()
+        .prop('style')
+    ).toEqual([{ paddingTop: 5, opacity: 0.9 }, undefined])
   })
 
   describe('attrs', () => {
     it('works fine with an empty object', () => {
       const Comp = styled.View.attrs({})``
-      const wrapper = shallow(<Comp />)
+      const wrapper = mount(<Comp />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({
@@ -212,7 +129,7 @@ describe('native', () => {
         test: true,
       })``
 
-      const wrapper = shallow(<Comp />)
+      const wrapper = mount(<Comp />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({
@@ -227,7 +144,7 @@ describe('native', () => {
       })``
 
       const test = 'Put that cookie down!'
-      const wrapper = shallow(<Comp test={test} />)
+      const wrapper = mount(<Comp test={test} />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({
@@ -246,7 +163,7 @@ describe('native', () => {
         test: 'test',
       })``
 
-      const wrapper = shallow(<Comp />)
+      const wrapper = mount(<Comp />)
       const view = wrapper.find('View').first()
 
       expect(view.props()).toEqual({
@@ -262,15 +179,15 @@ describe('native', () => {
         first: 'first',
       })``
 
-      const Child = Parent.extend.attrs({
+      const Child = styled(Parent).attrs({
         second: 'second',
       })``
 
-      const wrapper = shallow(<Child />)
+      const wrapper = mount(<Child />)
       const view = wrapper.find('View').first()
 
-      expect(view.props()).toEqual({
-        style: [{}, undefined],
+      expect(view.props()).toMatchObject({
+        style: [{}, [{}, undefined]],
         first: 'first',
         second: 'second',
       })

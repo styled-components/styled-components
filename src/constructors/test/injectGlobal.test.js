@@ -1,6 +1,6 @@
 // @flow
 import React, { Component } from 'react'
-import { shallow } from 'enzyme'
+import { mount } from 'enzyme'
 
 import _injectGlobal from '../injectGlobal'
 import stringifyRules from '../../utils/stringifyRules'
@@ -9,7 +9,7 @@ import { expectCSSMatches, resetStyled } from '../../test/utils'
 
 const injectGlobal = _injectGlobal(stringifyRules, css)
 
-let styled = resetStyled()
+const styled = resetStyled()
 const rule1 = 'width:100%;'
 const rule2 = 'padding:10px;'
 const rule3 = 'color:blue;'
@@ -56,9 +56,9 @@ describe('injectGlobal', () => {
 
   it(`should non-destructively inject styles when called after a component`, () => {
     const Comp = styled.div`
-      ${rule3}
+      ${rule3};
     `
-    shallow(<Comp />)
+    mount(<Comp />)
 
     injectGlobal`
       html {
@@ -79,8 +79,10 @@ describe('injectGlobal', () => {
 
   it('should extract @import rules into separate style tags', () => {
     injectGlobal`html { padding: 1px; }`
-    const Comp = styled.div`color: green;`
-    shallow(<Comp />)
+    const Comp = styled.div`
+      color: green;
+    `
+    mount(<Comp />)
     injectGlobal`html { color: blue; } @import url('bla');`
 
     const style = Array.from(document.querySelectorAll('style'))
@@ -88,5 +90,5 @@ describe('injectGlobal', () => {
       .join('\n')
 
     expect(style).toMatchSnapshot()
-  });
-});
+  })
+})

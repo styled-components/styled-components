@@ -2,117 +2,106 @@
 /* eslint-disable react/no-multi-comp */
 import React from 'react'
 import { shallow, render, mount } from 'enzyme'
-import ThemeProvider, { CHANNEL_NEXT, CONTEXT_CHANNEL_SHAPE  } from '../ThemeProvider'
+import ThemeProvider from '../ThemeProvider'
+import withTheme from '../../hoc/withTheme'
+import { resetStyled, expectCSSMatches } from '../../test/utils'
+
+let styled
 
 describe('ThemeProvider', () => {
-  it('should not throw an error when no children are passed', () => {
-    const result = shallow(<ThemeProvider theme={{}} />)
-    expect(result.html()).toEqual(null)
+  beforeEach(() => {
+    styled = resetStyled()
   })
 
-  it('should accept a theme prop that\'s a plain object', () => {
+  it('should not throw an error when no children are passed', () => {
+    const result = expect(() =>
+      shallow(<ThemeProvider theme={{}} />)
+    ).not.toThrow()
+  })
+
+  it("should accept a theme prop that's a plain object", () => {
     shallow(<ThemeProvider theme={{ main: 'black' }} />)
   })
 
   it('should render its child', () => {
-    const child = (<p>Child!</p>)
-    const renderedComp = shallow(
-      <ThemeProvider theme={{ main: 'black' }}>
-        { child }
-      </ThemeProvider>
+    const child = <p>Child!</p>
+    const wrapper = mount(
+      <ThemeProvider theme={{ main: 'black' }}>{child}</ThemeProvider>
     )
-    expect(renderedComp.contains(child)).toEqual(true)
+
+    expect(wrapper.find('p').getElement()).toEqual(child)
   })
 
-  it('should merge its theme with an outer theme', (done) => {
+  it('should merge its theme with an outer theme', () => {
     const outerTheme = { main: 'black' }
     const innerTheme = { secondary: 'black' }
-    // Setup Child
-    class Child extends React.Component {
-      componentWillMount() {
-        this.context[CHANNEL_NEXT].subscribe(theme => {
-          expect(theme).toEqual({ ...outerTheme, ...innerTheme })
-          done()
-        })
-      }
-      render() { return null }
-    }
-    Child.contextTypes = {
-      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-    }
 
-    render(
+    const MyDiv = styled.div``
+    const MyDivWithTheme = withTheme(MyDiv)
+
+    const wrapper = mount(
       <ThemeProvider theme={outerTheme}>
         <ThemeProvider theme={innerTheme}>
-          <Child />
+          <MyDivWithTheme />
         </ThemeProvider>
       </ThemeProvider>
     )
+
+    expect(wrapper.find(MyDiv).prop('theme')).toEqual({
+      ...outerTheme,
+      ...innerTheme,
+    })
   })
 
-  it('should merge its theme with multiple outer themes', (done) => {
+  it('should merge its theme with multiple outer themes', () => {
     const outerestTheme = { main: 'black' }
     const outerTheme = { main: 'blue' }
     const innerTheme = { secondary: 'black' }
-    // Setup Child
-    class Child extends React.Component {
-      componentWillMount() {
-        this.context[CHANNEL_NEXT].subscribe(theme => {
-          expect(theme).toEqual({ ...outerestTheme, ...outerTheme, ...innerTheme })
-          done()
-        })
-      }
-      render() { return null }
-    }
-    Child.contextTypes = {
-      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-    }
 
-    render(
+    const MyDiv = styled.div``
+    const MyDivWithTheme = withTheme(MyDiv)
+
+    const wrapper = mount(
       <ThemeProvider theme={outerestTheme}>
         <ThemeProvider theme={outerTheme}>
           <ThemeProvider theme={innerTheme}>
-            <Child />
+            <MyDivWithTheme />
           </ThemeProvider>
         </ThemeProvider>
       </ThemeProvider>
     )
+
+    expect(wrapper.find(MyDiv).prop('theme')).toEqual({
+      ...outerestTheme,
+      ...outerTheme,
+      ...innerTheme,
+    })
   })
 
-  it('should be able to render two independent themes', (done) => {
+  it('should be able to render two independent themes', () => {
     const themes = {
       one: { main: 'black', secondary: 'red' },
       two: { main: 'blue', other: 'green' },
     }
-    let childRendered = 0
-    // Setup Child
-    class Child extends React.Component {
-      componentWillMount() {
-        this.context[CHANNEL_NEXT].subscribe(theme => {
-          // eslint-disable-next-line react/prop-types
-          expect(theme).toEqual(themes[this.props.shouldHaveTheme])
-          childRendered++ // eslint-disable-line no-plusplus
-          if (childRendered === Object.keys(themes).length) {
-            done()
-          }
-        })
-      }
-      render() { return null }
-    }
-    Child.contextTypes = {
-      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-    }
 
-    render(
+    const MyDivOne = withTheme(styled.div``)
+    const MyDivWithThemeOne = withTheme(MyDivOne)
+    const MyDivTwo = withTheme(styled.div``)
+    const MyDivWithThemeTwo = withTheme(MyDivTwo)
+
+    const wrapper = mount(
       <div>
         <ThemeProvider theme={themes.one}>
-          <Child shouldHaveTheme="one" />
+          <MyDivWithThemeOne />
         </ThemeProvider>
         <ThemeProvider theme={themes.two}>
-          <Child shouldHaveTheme="two" />
+          <MyDivWithThemeTwo />
         </ThemeProvider>
       </div>
     )
+
+    expect(wrapper.find(MyDivOne).prop('theme')).toEqual(themes.one)
+    expect(wrapper.find(MyDivTwo).prop('theme')).toEqual(themes.two)
   })
 
   it('ThemeProvider propagates theme updates through nested ThemeProviders', () => {
@@ -123,31 +112,19 @@ describe('ThemeProvider', () => {
     let actual
     const expected = { themed: true, augmented: true, updated: true }
 
-    // Setup Child
-    class Child extends React.Component {
-      componentWillMount() {
-        this.context[CHANNEL_NEXT].subscribe(receivedTheme => {
-          actual = receivedTheme
-        })
-      }
-      render() {
-        return null
-      }
-    }
-    Child.contextTypes = {
-      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-    }
+    const MyDiv = styled.div``
+    const MyDivWithTheme = withTheme(MyDiv)
 
     const wrapper = mount(
       <ThemeProvider theme={theme}>
         <ThemeProvider theme={augment}>
-          <Child />
+          <MyDivWithTheme />
         </ThemeProvider>
-      </ThemeProvider>,
+      </ThemeProvider>
     )
 
     wrapper.setProps({ theme: Object.assign({}, theme, update) })
 
-    expect(actual).toEqual(expected)
+    expect(wrapper.find(MyDiv).prop('theme')).toEqual(expected)
   })
 })

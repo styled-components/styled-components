@@ -4,26 +4,11 @@ import React from 'react'
 import stream from 'stream'
 
 import { IS_BROWSER, SC_STREAM_ATTR } from '../constants'
+import StyledError from '../utils/error'
 import StyleSheet from './StyleSheet'
 import StyleSheetManager from './StyleSheetManager'
 
 declare var __SERVER__: boolean
-
-/* this error is used for makeStyleTag */
-const sheetClosedErr =
-  process.env.NODE_ENV !== 'production'
-    ? `
-Can't collect styles once you've consumed a ServerStyleSheet's styles!
-ServerStyleSheet is a one off instance for each server-side render cycle.
-- Are you trying to reuse it across renders?
-- Are you accidentally calling collectStyles twice?
-`.trim()
-    : ''
-
-const streamBrowserErr =
-  process.env.NODE_ENV !== 'production'
-    ? 'Streaming SSR is only supported in a Node.js environment; Please do not try to call this method in the browser.'
-    : ''
 
 export default class ServerStyleSheet {
   instance: StyleSheet
@@ -48,7 +33,7 @@ export default class ServerStyleSheet {
 
   collectStyles(children: any) {
     if (this.closed) {
-      throw new Error(sheetClosedErr)
+      throw new StyledError(2)
     }
 
     return (
@@ -68,7 +53,7 @@ export default class ServerStyleSheet {
 
   interleaveWithNodeStream(readableStream: stream.Readable) {
     if (!__SERVER__ || IS_BROWSER) {
-      throw new Error(streamBrowserErr)
+      throw new StyledError(3)
     }
 
     /* the tag index keeps track of which tags have already been emitted */
