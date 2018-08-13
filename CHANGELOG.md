@@ -41,7 +41,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 * Add `createGlobalStyle` that returns a component which, when mounting, will apply global styles. It can be updated, replaced, removed, etc like any normal component and the global scope will update accordingly, by @JamieDixon @marionebl and @yjimk (see #1416)
 
   ```jsx
-  const GlobalStyles = createGlobalScope`
+  const GlobalStyles = createGlobalStyle`
     html {
       color: 'red';
     }
