@@ -56,3 +56,7 @@ Missing document `<head>`
 ## 10
 
 Cannot find sheet for given tag
+
+## 11
+
+[createGlobalStyle] received children which will not be rendered. Please use the component without passing children elements.

@@ -4,6 +4,7 @@ import { STATIC_EXECUTION_CONTEXT } from '../constants'
 import _GlobalStyle from '../models/GlobalStyle'
 import StyleSheet from '../models/StyleSheet'
 import { StyleSheetConsumer } from '../models/StyleSheetManager'
+import StyledError from '../utils/error'
 import determineTheme from '../utils/determineTheme'
 import { ThemeConsumer, type Theme } from '../models/ThemeProvider'
 import type { CSSConstructor, Interpolation, Stringifier } from '../types'
@@ -40,10 +41,7 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
       render() {
         if (process.env.NODE_ENV !== 'production') {
           if (typeof this.props.children !== 'undefined') {
-            // eslint-disable-next-line no-console
-            console.warn(
-              `[createGlobalStyle] received children which will not be rendered. Please use the component without passing children elements.`
-            )
+            throw new StyledError(11)
           }
         }
 

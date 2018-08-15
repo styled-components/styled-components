@@ -250,6 +250,23 @@ describe(`createGlobalStyle`, () => {
       expect(css).not.toContain('body{background:palevioletred;}')
     }
   })
+
+  it(`should throw error when children are passed as props`, () => {
+    const { cleanup, render } = setup()
+    const Component = createGlobalStyle`
+      div {
+        color: ${props => props.fg};
+        background: ${props => props.bg};
+      }
+    `
+    expect(() => render(
+      <Component fg="red" bg="green">
+        <div />
+      </Component>
+    )).toThrowErrorMatchingSnapshot()
+
+    cleanup()
+  })
 })
 
 function setup() {
