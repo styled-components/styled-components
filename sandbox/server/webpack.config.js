@@ -59,6 +59,11 @@ const createPlugins = () => [
     NODE_ENV: 'development',
   }),
   // new webpack.NoEmitOnErrorsPlugin()
+
+  new webpack.DefinePlugin({
+    // eslint-disable-next-line global-require
+    __VERSION__: JSON.stringify(require('../../package.json').version),
+  }),
 ]
 
 const createAlias = () => ({ 'styled-components': styledComponentsSrc })
