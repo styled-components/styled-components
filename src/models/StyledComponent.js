@@ -1,7 +1,4 @@
 // @flow
-
-'no babel-plugin-flow-react-proptypes'
-
 import hoist from 'hoist-non-react-statics'
 import React, { Component, createElement } from 'react'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'

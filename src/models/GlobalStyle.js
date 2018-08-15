@@ -22,8 +22,10 @@ export default (stringifyRules: Stringifier) => {
       styleSheet.inject(this.componentId, css, '')
     }
 
-    updateStyles(executionContext: Object, styleSheet: StyleSheet) {
-      this.removeStyles(styleSheet)
+    renderStyles(executionContext: Object, styleSheet: StyleSheet) {
+      if (styleSheet.hasId(this.componentId)) {
+        this.removeStyles(styleSheet)
+      }
       this.createStyles(executionContext, styleSheet)
     }
 

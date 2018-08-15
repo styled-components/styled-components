@@ -21,33 +21,19 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
     const style = new GlobalStyle(rules, id)
 
     class GlobalStyleComponent extends React.Component<*, *> {
-      componentWillMount() {
-        const { sheet, context } = this.props
-        style.createStyles(context, sheet)
-      }
-
-      componentWillReceiveProps(props) {
-        const { sheet, context } = props
-        style.updateStyles(context, sheet)
-      }
-
       componentWillUnmount() {
         const { sheet } = this.props
         style.removeStyles(sheet)
       }
       render() {
+        const { sheet, context } = this.props
+        style.renderStyles(context, sheet)
         return null
       }
     }
 
     class GlobalStyleComponentManager extends React.Component<*, *> {
       static defaultProps: Object
-      // static contextTypes = {
-      //   [CONTEXT_KEY]: PropTypes.oneOfType([
-      //     PropTypes.instanceOf(StyleSheet),
-      //     PropTypes.instanceOf(ServerStyleSheet),
-      //   ]),
-      // }
 
       static styledComponentId = id
 
