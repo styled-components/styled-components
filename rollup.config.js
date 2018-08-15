@@ -8,8 +8,9 @@ import flow from 'rollup-plugin-flow'
 import { terser } from 'rollup-plugin-terser'
 import sourceMaps from 'rollup-plugin-sourcemaps'
 
-// rollup-plugin-ignore stopped working, so we'll just remove the import line 😐
-const ignore = { "import stream from 'stream';": "'';" }
+// rollup-plugin-ignore stopped working, so we'll just remove the import lines 😐
+const propTypeIgnore = { "import PropTypes from 'prop-types';": "'';" }
+const streamIgnore = { "import stream from 'stream';": "'';" }
 
 const cjs = {
   exports: 'named',
@@ -71,7 +72,7 @@ const umdBaseConfig = Object.assign({}, configBase, {
   external: Object.keys(globals),
   plugins: configBase.plugins.concat(
     replace(
-      Object.assign({}, ignore, {
+      Object.assign({}, streamIgnore, {
         __SERVER__: JSON.stringify(false),
       })
     )
@@ -92,6 +93,7 @@ const umdProdConfig = Object.assign({}, umdBaseConfig, {
   }),
   plugins: umdBaseConfig.plugins.concat([
     replace({
+      ...propTypeIgnore,
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
     terser({
@@ -119,6 +121,7 @@ const serverProdConfig = Object.assign({}, configBase, serverConfig, {
   ],
   plugins: serverConfig.plugins.concat(
     replace({
+      ...propTypeIgnore,
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
     terser({
@@ -134,7 +137,7 @@ const browserConfig = Object.assign({}, configBase, {
   ],
   plugins: configBase.plugins.concat(
     replace(
-      Object.assign({}, ignore, {
+      Object.assign({}, streamIgnore, {
         __SERVER__: JSON.stringify(false),
       })
     )
@@ -152,6 +155,7 @@ const browserProdConfig = Object.assign({}, configBase, browserConfig, {
   ],
   plugins: browserConfig.plugins.concat(
     replace({
+      ...propTypeIgnore,
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
     terser({
