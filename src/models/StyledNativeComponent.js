@@ -171,7 +171,7 @@ class BaseStyledNativeComponent extends Component<*, State> {
     if (
       !isStyledComponent(target) &&
       // NOTE: We can't pass a ref to a stateless functional component
-      (isFunction(target) ||
+      (!isFunction(target) ||
         // $FlowFixMe TODO: flow for prototype
         (target.prototype && 'isReactComponent' in target.prototype))
     ) {
