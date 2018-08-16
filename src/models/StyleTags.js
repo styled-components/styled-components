@@ -284,6 +284,18 @@ const makeBrowserTag = (
       // $FlowFixMe
       getImportRuleTag().insertRules(`${id}-import`, importRules)
     }
+
+    /*
+     * The next block is needed because of a bug in some versions of IE.
+     * At least IE10-11 in pair with Win7/8 don't rerender text node after calling appendData,
+     * so we force IE to update text node by calling appendChild.
+     * If node is already appended, repeated call of appendChild just moves it to the end of children list.
+     * For preventing useless work in other browsers we check the existence of replaceWholeText
+     * which is deprecated and was removed from all modern browsers.
+     */
+    if (marker.replaceWholeText) {
+      el.appendChild(marker)
+    }
   }
 
   const removeRules = id => {
