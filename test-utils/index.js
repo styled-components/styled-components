@@ -11,7 +11,7 @@ function assertElement(element) {
 function assertStyledComponent(styledComponent) {
   if (
     !(
-      typeof styledComponent === 'function' &&
+      styledComponent.styledComponentId &&
       typeof styledComponent.styledComponentId === 'string'
     )
   ) {

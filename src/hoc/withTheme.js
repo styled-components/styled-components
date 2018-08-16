@@ -3,25 +3,12 @@ import React, { type ComponentType } from 'react'
 import hoistStatics from 'hoist-non-react-statics'
 import { ThemeConsumer, type Theme } from '../models/ThemeProvider'
 import getComponentName from '../utils/getComponentName'
-import _isStyledComponent from '../utils/isStyledComponent'
 import determineTheme from '../utils/determineTheme'
 
 export default (Component: ComponentType<any>) => {
-  const isStatelessFunctionalComponent =
-    typeof Component === 'function' &&
-    // $FlowFixMe TODO: flow for prototype
-    !(Component.prototype && 'isReactComponent' in Component.prototype)
-
-  // NOTE: We can't pass a ref to a stateless functional component
-  const shouldSetInnerRef =
-    _isStyledComponent(Component) || isStatelessFunctionalComponent
-
   class WithTheme extends React.Component<*, *> {
     static displayName = `WithTheme(${getComponentName(Component)})`
     static defaultProps: Object
-
-    // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
-    static styledComponentId = 'withTheme'
 
     render() {
       return (
@@ -40,15 +27,10 @@ export default (Component: ComponentType<any>) => {
               )
             }
 
-            const props = {
-              theme: themeProp,
-              ...this.props,
-            }
+            const { forwardedRef, ...props } = this.props
 
-            if (!shouldSetInnerRef) {
-              props.ref = props.innerRef
-              delete props.innerRef
-            }
+            props.theme = themeProp
+            if (forwardedRef) props.ref = forwardedRef
 
             return React.createElement(Component, props)
           }}
@@ -57,5 +39,11 @@ export default (Component: ComponentType<any>) => {
     }
   }
 
-  return hoistStatics(WithTheme, Component)
+  const ForwardRef = React.forwardRef((props, ref) => (
+    <WithTheme {...props} forwardedRef={ref} />
+  ))
+
+  hoistStatics(ForwardRef, Component)
+
+  return ForwardRef
 }

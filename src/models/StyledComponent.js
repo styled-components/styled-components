@@ -8,7 +8,6 @@ import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
 import generateDisplayName from '../utils/generateDisplayName'
 import getComponentName from '../utils/getComponentName'
-import isStyledComponent from '../utils/isStyledComponent'
 import isTag from '../utils/isTag'
 import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import StyleSheet from './StyleSheet'
@@ -81,13 +80,8 @@ class BaseStyledComponent extends Component<*> {
   }
 
   renderInner(theme?: Theme) {
-    const { innerRef } = this.props
-    const {
-      styledComponentId,
-      target,
-      defaultProps,
-      componentStyle,
-    } = this.constructor
+    const { styledComponentId, target, componentStyle } = this.constructor
+    const { defaultProps } = this.props.forwardedClass
 
     const isTargetTag = isTag(target)
 
@@ -100,6 +94,7 @@ class BaseStyledComponent extends Component<*> {
       )
     } else if (theme !== undefined) {
       const determinedTheme = determineTheme(this.props, theme, defaultProps)
+
       generatedClassName = this.generateAndInjectStyles(
         determinedTheme,
         this.props,
@@ -113,7 +108,21 @@ class BaseStyledComponent extends Component<*> {
       )
     }
 
-    const className = [
+    const propsForElement: Object = { ...this.attrs }
+
+    let key
+    for (key in this.props) {
+      if (key === 'forwardedRef') propsForElement.ref = this.props[key]
+      // Don't pass through non HTML tags through to HTML elements
+      else if ((key !== 'forwardedClass' && !isTargetTag) || validAttr(key)) {
+        propsForElement[key] =
+          key === 'style' && key in this.attrs
+            ? { ...this.attrs[key], ...this.props[key] }
+            : this.props[key]
+      }
+    }
+
+    propsForElement.className = [
       this.props.className,
       styledComponentId,
       this.attrs.className,
@@ -121,35 +130,6 @@ class BaseStyledComponent extends Component<*> {
     ]
       .filter(Boolean)
       .join(' ')
-
-    const baseProps: Object = {
-      ...this.attrs,
-      className,
-    }
-
-    if (isStyledComponent(target)) {
-      baseProps.innerRef = innerRef
-    } else {
-      baseProps.ref = innerRef
-    }
-
-    const propsForElement = baseProps
-
-    let key
-    for (key in this.props) {
-      // Don't pass through non HTML tags through to HTML elements
-      // always omit innerRef
-      if (
-        key !== 'innerRef' &&
-        key !== 'className' &&
-        (!isTargetTag || validAttr(key))
-      ) {
-        propsForElement[key] =
-          key === 'style' && key in this.attrs
-            ? { ...this.attrs[key], ...this.props[key] }
-            : this.props[key]
-      }
-    }
 
     return createElement(target, propsForElement)
   }
@@ -263,9 +243,24 @@ export default (ComponentStyle: Function) => {
       StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
     }
 
+    const Forwarded = React.forwardRef((props, ref) => (
+      <StyledComponent
+        {...props}
+        forwardedClass={Forwarded}
+        forwardedRef={ref}
+      />
+    ))
+
+    /**
+     * forwardRef creates a new interim component, so we need to lift up all the
+     * stuff from StyledComponent such that integrations expecting the static properties
+     * to be available will work
+     */
+    hoist(Forwarded, StyledComponent)
+
     if (isClass) {
       // $FlowFixMe
-      hoist(StyledComponent, target, {
+      hoist(Forwarded, target, {
         // all SC-specific things should not be hoisted
         attrs: true,
         componentStyle: true,
@@ -277,7 +272,9 @@ export default (ComponentStyle: Function) => {
       })
     }
 
-    return StyledComponent
+    Forwarded.displayName = StyledComponent.displayName
+
+    return Forwarded
   }
 
   return createStyledComponent

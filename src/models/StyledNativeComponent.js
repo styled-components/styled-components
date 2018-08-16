@@ -4,7 +4,6 @@ import React, { Component, createElement } from 'react'
 import determineTheme from '../utils/determineTheme'
 import { EMPTY_OBJECT } from '../utils/empties'
 import generateDisplayName from '../utils/generateDisplayName'
-import isStyledComponent from '../utils/isStyledComponent'
 import isTag from '../utils/isTag'
 import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import { ThemeConsumer } from './ThemeProvider'
@@ -27,8 +26,9 @@ class BaseStyledNativeComponent extends Component<*, *> {
     return (
       <ThemeConsumer>
         {(theme?: Theme) => {
-          const { style } = this.props
-          const { target, defaultProps } = this.constructor
+          const { forwardedClass, forwardedRef, style, ...props } = this.props
+          const { target } = this.constructor
+          const { defaultProps } = forwardedClass
 
           let generatedStyles
           if (theme !== undefined) {
@@ -46,22 +46,11 @@ class BaseStyledNativeComponent extends Component<*, *> {
 
           const propsForElement = {
             ...this.attrs,
-            ...this.props,
+            ...props,
             style: [generatedStyles, style],
           }
 
-          if (
-            !isStyledComponent(target) &&
-            // NOTE: We can't pass a ref to a stateless functional component
-            (typeof target !== 'function' ||
-              // $FlowFixMe TODO: flow for prototype
-              (target.prototype && 'isReactComponent' in target.prototype))
-          ) {
-            propsForElement.ref = this.onRef
-            delete propsForElement.innerRef
-          } else {
-            propsForElement.innerRef = this.onRef
-          }
+          if (forwardedRef) propsForElement.ref = forwardedRef
 
           return createElement(target, propsForElement)
         }}
@@ -70,7 +59,7 @@ class BaseStyledNativeComponent extends Component<*, *> {
   }
 
   buildExecutionContext(theme: any, props: any) {
-    const { attrs } = this.constructor
+    const { attrs } = props.forwardedClass
     const context = { ...props, theme }
     if (attrs === undefined) {
       return context
@@ -101,31 +90,10 @@ class BaseStyledNativeComponent extends Component<*, *> {
       // $FlowFixMe
       this.root.setNativeProps(nativeProps)
     } else if (process.env.NODE_ENV !== 'production') {
-      const { displayName } = this.constructor
-
       // eslint-disable-next-line no-console
       console.warn(
-        'setNativeProps was called on a Styled Component wrapping a stateless functional component. ' +
-          'In this case no ref will be stored, and instead an innerRef prop will be passed on.\n' +
-          `Check whether the stateless functional component is passing on innerRef as a ref in ${displayName ||
-            'UnknownStyledNativeComponent'}.`
+        'setNativeProps was called on a Styled Component wrapping a stateless functional component.'
       )
-    }
-  }
-
-  onRef = (node: any) => {
-    // eslint-disable-next-line react/prop-types
-    const { innerRef } = this.props
-    this.root = node
-
-    if (typeof innerRef === 'function') {
-      innerRef(node)
-    } else if (
-      typeof innerRef === 'object' &&
-      innerRef &&
-      innerRef.hasOwnProperty('current')
-    ) {
-      innerRef.current = node
     }
   }
 }
@@ -162,20 +130,38 @@ export default (InlineStyle: Function) => {
       }
     }
 
+    const Forwarded = React.forwardRef((props, ref) => (
+      <StyledNativeComponent
+        {...props}
+        forwardedClass={Forwarded}
+        forwardedRef={ref}
+      />
+    ))
+
+    /**
+     * forwardRef creates a new interim component, so we need to lift up all the
+     * stuff from StyledComponent such that integrations expecting the static properties
+     * to be available will work
+     */
+    hoist(Forwarded, StyledNativeComponent)
+
     if (isClass) {
       // $FlowFixMe
-      hoist(StyledNativeComponent, target, {
+      hoist(Forwarded, target, {
         // all SC-specific things should not be hoisted
         attrs: true,
+        componentStyle: true,
         displayName: true,
-        inlineStyle: true,
         styledComponentId: true,
         target: true,
+        warnTooManyClasses: true,
         withComponent: true,
       })
     }
 
-    return StyledNativeComponent
+    Forwarded.displayName = StyledNativeComponent.displayName
+
+    return Forwarded
   }
 
   return createStyledNativeComponent

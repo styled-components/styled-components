@@ -1,27 +1,24 @@
 // @flow
 import React, { Component, StrictMode } from 'react'
-import { findDOMNode, render, unmountComponentAtNode } from 'react-dom'
+import { findDOMNode } from 'react-dom'
+import {
+  findRenderedComponentWithType,
+  renderIntoDocument,
+} from 'react-dom/test-utils'
 import TestRenderer from 'react-test-renderer'
-import { findRenderedComponentWithType } from 'react-dom/test-utils'
 
 import { resetStyled, expectCSSMatches } from './utils'
+import { find } from '../../test-utils'
 
 let styled
 
 describe('basic', () => {
-  let root
-
   /**
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    root = document.createElement('div')
     styled = resetStyled()
-
-    document.body.appendChild(root)
   })
-
-  afterEach(() => unmountComponentAtNode(root))
 
   it('should not throw an error when called with a valid element', () => {
     expect(() => styled.div``).not.toThrowError()
@@ -146,53 +143,6 @@ describe('basic', () => {
       }
     }
 
-    it('should pass the ref to the component', () => {
-      const Comp = styled.div``
-
-      class Wrapper extends Component<*, *> {
-        testRef: any
-        innerRef = comp => {
-          this.testRef = comp
-        }
-
-        render() {
-          return <Comp innerRef={this.innerRef} />
-        }
-      }
-
-      const wrapper = render(<Wrapper />, root)
-      const component = findRenderedComponentWithType(wrapper, Comp)
-
-      expect(wrapper.testRef).toBe(findDOMNode(component))
-    })
-
-    it('should not leak the innerRef prop to the wrapped child', () => {
-      const OuterComponent = styled(InnerComponent)``
-
-      class Wrapper extends Component<*, *> {
-        testRef: any
-
-        render() {
-          return (
-            <OuterComponent
-              innerRef={comp => {
-                this.testRef = comp
-              }}
-            />
-          )
-        }
-      }
-
-      const wrapper = render(<Wrapper />, root)
-      const innerComponent = findRenderedComponentWithType(
-        wrapper,
-        InnerComponent
-      )
-
-      expect(wrapper.testRef).toBe(innerComponent)
-      expect(innerComponent.props.innerRef).toBeFalsy()
-    })
-
     it('should pass the full className to the wrapped child', () => {
       const OuterComponent = styled(InnerComponent)``
 
@@ -208,28 +158,47 @@ describe('basic', () => {
       )
     })
 
-    it('should pass the innerRef to the wrapped styled component', () => {
+    it('should pass the ref to the component', () => {
+      const Comp = styled.div``
+
+      class Wrapper extends Component<*, *> {
+        testRef: any = React.createRef()
+
+        render() {
+          return (
+            <div>
+              <Comp ref={this.testRef} />
+            </div>
+          )
+        }
+      }
+
+      const wrapper = renderIntoDocument(<Wrapper />)
+      const component = find(findDOMNode(wrapper), Comp)
+
+      expect(wrapper.testRef.current).toBe(component)
+    })
+
+    it('should pass the ref to the wrapped styled component', () => {
       const InnerComponent = styled.div``
       const OuterComponent = styled(InnerComponent)``
 
       class Wrapper extends Component<*, *> {
-        testRef: any
-
-        innerRef = i => (this.testRef = i)
+        testRef: any = React.createRef()
 
         render() {
-          return <OuterComponent innerRef={this.innerRef} />
+          return (
+            <div>
+              <OuterComponent ref={this.testRef} />
+            </div>
+          )
         }
       }
 
-      const wrapper = render(<Wrapper />, root)
-      const innerComponent = findRenderedComponentWithType(
-        wrapper,
-        InnerComponent
-      )
+      const wrapper = renderIntoDocument(<Wrapper />)
+      const innerComponent = find(findDOMNode(wrapper), InnerComponent)
 
-      expect(wrapper.testRef).toBe(findDOMNode(innerComponent))
-      expect(innerComponent.props.innerRef).toBe(wrapper.innerRef)
+      expect(wrapper.testRef.current).toBe(innerComponent)
     })
 
     it('should respect the order of StyledComponent creation for CSS ordering', () => {

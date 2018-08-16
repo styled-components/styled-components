@@ -8,7 +8,9 @@ export default (props: Props, fallbackTheme: any, defaultProps: any) => {
   // defaultProps, but React automatically puts defaultProps on props.
 
   /* eslint-disable react/prop-types */
-  const isDefaultTheme = defaultProps && props.theme === defaultProps.theme
+  const isDefaultTheme = defaultProps
+    ? props.theme === defaultProps.theme
+    : false
   const theme = props.theme && !isDefaultTheme ? props.theme : fallbackTheme
   /* eslint-enable */
 
