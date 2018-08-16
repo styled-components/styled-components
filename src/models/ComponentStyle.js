@@ -3,8 +3,9 @@ import hashStr from '../vendor/glamor/hash'
 
 import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
 import StyleSheet from './StyleSheet'
-import { IS_BROWSER } from '../constants'
+import { IS_BROWSER, IS_DEV } from '../constants'
 import isStyledComponent from '../utils/isStyledComponent'
+import isFunction from '../utils/isFunction'
 
 const areStylesCacheable = IS_BROWSER
 
@@ -15,7 +16,7 @@ const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
     // recursive case
     if (Array.isArray(rule) && !isStaticRules(rule)) {
       return false
-    } else if (typeof rule === 'function' && !isStyledComponent(rule)) {
+    } else if (isFunction(rule) && !isStyledComponent(rule)) {
       // functions are allowed to be static if they're just being
       // used to get the classname of a nested styled component
       return false
@@ -25,7 +26,7 @@ const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
   if (attrs !== undefined) {
     // eslint-disable-next-line guard-for-in, no-restricted-syntax
     for (const key in attrs) {
-      if (typeof attrs[key] === 'function') {
+      if (isFunction(attrs[key])) {
         return false
       }
     }
@@ -34,10 +35,7 @@ const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
   return true
 }
 
-const isHMREnabled =
-  typeof module !== 'undefined' &&
-  module.hot &&
-  process.env.NODE_ENV !== 'production'
+const isHMREnabled = typeof module !== 'undefined' && module.hot && IS_DEV
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
@@ -63,8 +61,7 @@ export default (
       this.componentId = componentId
 
       if (!StyleSheet.master.hasId(componentId)) {
-        const placeholder =
-          process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : []
+        const placeholder = IS_DEV ? [`.${componentId} {}`] : []
 
         StyleSheet.master.deferredInject(componentId, placeholder)
       }

@@ -5,6 +5,9 @@ import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
 import StyledError from '../utils/error'
 import once from '../utils/once'
+import isFunction from '../utils/isFunction'
+import isPlainObject from '../utils/isPlainObject'
+import { IS_DEV } from '../constants'
 
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
 export const CHANNEL = '__styled-components__'
@@ -28,7 +31,7 @@ type ThemeProviderProps = {|
 |}
 
 let warnChannelDeprecated
-if (process.env.NODE_ENV !== 'production') {
+if (IS_DEV) {
   warnChannelDeprecated = once(() => {
     // eslint-disable-next-line no-console
     console.error(
@@ -36,8 +39,6 @@ if (process.env.NODE_ENV !== 'production') {
     )
   })
 }
-
-const isFunction = test => typeof test === 'function'
 
 /**
  * Provide a theme to an entire react component tree via context and event listeners (have to do
@@ -87,7 +88,7 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
         unsubscribe: this.broadcast.unsubscribe,
       },
       [CHANNEL]: subscriber => {
-        if (process.env.NODE_ENV !== 'production') {
+        if (IS_DEV) {
           warnChannelDeprecated()
         }
 
@@ -117,12 +118,7 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
     if (isFunction(theme)) {
       const mergedTheme = theme(this.outerTheme)
 
-      if (
-        process.env.NODE_ENV !== 'production' &&
-        (mergedTheme === null ||
-          Array.isArray(mergedTheme) ||
-          typeof mergedTheme !== 'object')
-      ) {
+      if (IS_DEV && !isPlainObject) {
         throw new StyledError(7)
       }
 

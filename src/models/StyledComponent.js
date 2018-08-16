@@ -3,7 +3,7 @@
 import hoist from 'hoist-non-react-statics'
 import PropTypes from 'prop-types'
 import { Component, createElement } from 'react'
-import { CONTEXT_KEY } from '../constants'
+import { CONTEXT_KEY, IS_DEV } from '../constants'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 import determineTheme from '../utils/determineTheme'
 import { EMPTY_OBJECT } from '../utils/empties'
@@ -15,6 +15,7 @@ import isTag from '../utils/isTag'
 import validAttr from '../utils/validAttr'
 import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import once from '../utils/once'
+import isFunction from '../utils/isFunction'
 import ServerStyleSheet from './ServerStyleSheet'
 import StyleSheet from './StyleSheet'
 import { CHANNEL_NEXT, contextShape } from './ThemeProvider'
@@ -67,7 +68,7 @@ const generateId = (
 }
 
 let warnExtendDeprecated
-if (process.env.NODE_ENV !== 'production') {
+if (IS_DEV) {
   warnExtendDeprecated = once(() => {
     // eslint-disable-next-line no-console
     console.error(
@@ -110,7 +111,7 @@ class BaseStyledComponent extends Component<*, BaseState> {
 
       // eslint-disable-next-line no-param-reassign
       acc[key] =
-        typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
+        isFunction(attr) && !hasInInheritanceChain(attr, Component)
           ? attr(context)
           : attr
       return acc
@@ -137,10 +138,7 @@ class BaseStyledComponent extends Component<*, BaseState> {
         styleSheet
       )
 
-      if (
-        process.env.NODE_ENV !== 'production' &&
-        warnTooManyClasses !== undefined
-      ) {
+      if (IS_DEV && warnTooManyClasses !== undefined) {
         warnTooManyClasses(className)
       }
 
@@ -344,7 +342,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       }
     }
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (IS_DEV) {
       StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
     }
 

@@ -6,10 +6,12 @@ import { EMPTY_OBJECT } from '../utils/empties'
 import getComponentName from '../utils/getComponentName'
 import _isStyledComponent from '../utils/isStyledComponent'
 import determineTheme from '../utils/determineTheme'
+import isFunction from '../utils/isFunction'
+import { IS_DEV } from '../constants'
 
 export default (Component: ComponentType<any>) => {
   const isStatelessFunctionalComponent =
-    typeof Component === 'function' &&
+    isFunction(Component) &&
     // $FlowFixMe TODO: flow for prototype
     !(Component.prototype && 'isReactComponent' in Component.prototype)
 
@@ -32,11 +34,7 @@ export default (Component: ComponentType<any>) => {
       const { defaultProps } = this.constructor
       const styledContext = this.context[CHANNEL_NEXT]
       const themeProp = determineTheme(this.props, undefined, defaultProps)
-      if (
-        styledContext === undefined &&
-        themeProp === undefined &&
-        process.env.NODE_ENV !== 'production'
-      ) {
+      if (styledContext === undefined && themeProp === undefined && IS_DEV) {
         // eslint-disable-next-line no-console
         console.warn(
           '[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps'
