@@ -6,10 +6,11 @@ import { EMPTY_OBJECT } from '../utils/empties'
 import getComponentName from '../utils/getComponentName'
 import _isStyledComponent from '../utils/isStyledComponent'
 import determineTheme from '../utils/determineTheme'
+import isFunction from '../utils/isFunction'
 
 export default (Component: ComponentType<any>) => {
   const isStatelessFunctionalComponent =
-    typeof Component === 'function' &&
+    isFunction(Component) &&
     // $FlowFixMe TODO: flow for prototype
     !(Component.prototype && 'isReactComponent' in Component.prototype)
 

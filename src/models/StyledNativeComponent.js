@@ -8,6 +8,7 @@ import isStyledComponent from '../utils/isStyledComponent'
 import isTag from '../utils/isTag'
 import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import once from '../utils/once'
+import isFunction from '../utils/isFunction'
 import { CHANNEL_NEXT, contextShape } from './ThemeProvider'
 
 import type { Theme } from './ThemeProvider'
@@ -62,7 +63,7 @@ class BaseStyledNativeComponent extends Component<*, State> {
       const attr = attrs[key]
       // eslint-disable-next-line no-param-reassign
       acc[key] =
-        typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
+        isFunction(attr) && !hasInInheritanceChain(attr, Component)
           ? attr(context)
           : attr
       return acc
@@ -143,7 +144,7 @@ class BaseStyledNativeComponent extends Component<*, State> {
     const { innerRef } = this.props
     this.root = node
 
-    if (typeof innerRef === 'function') {
+    if (isFunction(innerRef)) {
       innerRef(node)
     } else if (
       typeof innerRef === 'object' &&
@@ -169,7 +170,7 @@ class BaseStyledNativeComponent extends Component<*, State> {
     if (
       !isStyledComponent(target) &&
       // NOTE: We can't pass a ref to a stateless functional component
-      (typeof target !== 'function' ||
+      (isFunction(target) ||
         // $FlowFixMe TODO: flow for prototype
         (target.prototype && 'isReactComponent' in target.prototype))
     ) {

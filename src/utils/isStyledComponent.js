@@ -1,9 +1,10 @@
 // @flow
 import type { Target } from '../types'
+import isFunction from './isFunction'
 
 export default function isStyledComponent(target: Target) /* : %checks */ {
   return (
     // $FlowFixMe TODO: flow for styledComponentId
-    typeof target === 'function' && typeof target.styledComponentId === 'string'
+    isFunction(target) && typeof target.styledComponentId === 'string'
   )
 }

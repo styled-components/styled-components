@@ -15,6 +15,7 @@ import isTag from '../utils/isTag'
 import validAttr from '../utils/validAttr'
 import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import once from '../utils/once'
+import isFunction from '../utils/isFunction'
 import ServerStyleSheet from './ServerStyleSheet'
 import StyleSheet from './StyleSheet'
 import { CHANNEL_NEXT, contextShape } from './ThemeProvider'
@@ -110,7 +111,7 @@ class BaseStyledComponent extends Component<*, BaseState> {
 
       // eslint-disable-next-line no-param-reassign
       acc[key] =
-        typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
+        isFunction(attr) && !hasInInheritanceChain(attr, Component)
           ? attr(context)
           : attr
       return acc

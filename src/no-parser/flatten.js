@@ -2,6 +2,7 @@
 import type { Interpolation } from '../types'
 import _flatten, { objToCss } from '../utils/flatten'
 import isPlainObject from '../utils/isPlainObject'
+import isFunction from '../utils/isFunction'
 
 const isRuleSet = (interpolation: Interpolation): boolean =>
   !!(
@@ -60,7 +61,7 @@ const flatten = (
           }
 
           /* Either execute or defer the function */
-          if (typeof rule === 'function') {
+          if (isFunction(rule)) {
             if (executionContext) {
               const res = rule(executionContext)
 

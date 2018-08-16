@@ -5,6 +5,7 @@ import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
 import StyledError from '../utils/error'
 import once from '../utils/once'
+import isFunction from '../utils/isFunction'
 
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
 export const CHANNEL = '__styled-components__'
@@ -36,8 +37,6 @@ if (process.env.NODE_ENV !== 'production') {
     )
   })
 }
-
-const isFunction = test => typeof test === 'function'
 
 /**
  * Provide a theme to an entire react component tree via context and event listeners (have to do

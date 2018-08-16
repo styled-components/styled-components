@@ -4,6 +4,7 @@ import React from 'react'
 import isPlainObject from './isPlainObject'
 import StyledError from './error'
 import type { Interpolation } from '../types'
+import isFunction from './isFunction'
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
   const css = Object.keys(obj)
@@ -54,7 +55,7 @@ const flatten = (
     }
 
     /* Either execute or defer the function */
-    if (typeof chunk === 'function') {
+    if (isFunction(chunk)) {
       if (executionContext) {
         const nextChunk = chunk(executionContext)
         /* Throw if a React Element was given styles */
