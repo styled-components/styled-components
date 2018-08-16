@@ -1,3 +1,4 @@
 // @flow
-export default (x: any): boolean =>
-  typeof x === 'object' && x.constructor === Object
+export default function isPlainObject(x: any) /* : boolean %checks */ {
+  return typeof x === 'object' && x !== null && x.constructor === Object
+}

@@ -6,6 +6,7 @@ import type { Broadcast } from '../utils/create-broadcast'
 import StyledError from '../utils/error'
 import once from '../utils/once'
 import isFunction from '../utils/isFunction'
+import isPlainObject from '../utils/isPlainObject'
 import { IS_DEV } from '../constants'
 
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
@@ -117,12 +118,7 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
     if (isFunction(theme)) {
       const mergedTheme = theme(this.outerTheme)
 
-      if (
-        IS_DEV &&
-        (mergedTheme === null ||
-          Array.isArray(mergedTheme) ||
-          typeof mergedTheme !== 'object')
-      ) {
+      if (IS_DEV && !isPlainObject) {
         throw new StyledError(7)
       }
 

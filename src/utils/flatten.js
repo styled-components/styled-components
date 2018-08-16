@@ -70,10 +70,7 @@ const flatten = (
     }
 
     /* Handle objects */
-    ruleSet.push(
-      // $FlowFixMe have to add %checks somehow to isPlainObject
-      isPlainObject(chunk) ? objToCss(chunk) : chunk.toString()
-    )
+    ruleSet.push(isPlainObject(chunk) ? objToCss(chunk) : chunk.toString())
 
     return ruleSet
   }, [])

@@ -89,7 +89,7 @@ const flatten = (
           }
 
           /* Convert object to css string */
-          if (typeof rule === 'object' && isPlainObject(rule)) {
+          if (isPlainObject(rule)) {
             return [...rules, objToCss(rule)]
           }
 
