@@ -8,8 +8,9 @@ import flow from 'rollup-plugin-flow'
 import { terser } from 'rollup-plugin-terser'
 import sourceMaps from 'rollup-plugin-sourcemaps'
 
-// rollup-plugin-ignore stopped working, so we'll just remove the import line 😐
-const ignore = { "import stream from 'stream';": "'';" }
+// rollup-plugin-ignore stopped working, so we'll just remove the import lines 😐
+const propTypeIgnore = { "import PropTypes from 'prop-types';": "'';" }
+const streamIgnore = { "import stream from 'stream';": "'';" }
 
 const cjs = {
   exports: 'named',
@@ -22,8 +23,8 @@ const esm = {
   sourcemap: true,
 }
 
-const getCJS = override => Object.assign({}, cjs, override)
-const getESM = override => Object.assign({}, esm, override)
+const getCJS = override => ({ ...cjs, ...override })
+const getESM = override => ({ ...esm, ...override })
 
 const commonPlugins = [
   flow({
@@ -48,6 +49,16 @@ const commonPlugins = [
   }),
 ]
 
+const prodPlugins = [
+  replace({
+    ...propTypeIgnore,
+    'process.env.NODE_ENV': JSON.stringify('production'),
+  }),
+  terser({
+    sourceMap: true,
+  }),
+]
+
 const configBase = {
   input: './src/index.js',
 
@@ -59,7 +70,8 @@ const configBase = {
 
 const globals = { react: 'React' }
 
-const umdBaseConfig = Object.assign({}, configBase, {
+const umdBaseConfig = {
+  ...configBase,
   output: {
     exports: 'named',
     file: 'dist/styled-components.js',
@@ -70,37 +82,32 @@ const umdBaseConfig = Object.assign({}, configBase, {
   },
   external: Object.keys(globals),
   plugins: configBase.plugins.concat(
-    replace(
-      Object.assign({}, ignore, {
-        __SERVER__: JSON.stringify(false),
-      })
-    )
+    replace({
+      ...streamIgnore,
+      __SERVER__: JSON.stringify(false),
+    })
   ),
-})
+}
 
-const umdConfig = Object.assign({}, umdBaseConfig, {
+const umdConfig = {
+  ...umdBaseConfig,
   plugins: umdBaseConfig.plugins.concat(
     replace({
       'process.env.NODE_ENV': JSON.stringify('development'),
     })
   ),
-})
+}
 
-const umdProdConfig = Object.assign({}, umdBaseConfig, {
+const umdProdConfig = {
+  ...umdBaseConfig,
   output: Object.assign({}, umdBaseConfig.output, {
     file: 'dist/styled-components.min.js',
   }),
-  plugins: umdBaseConfig.plugins.concat([
-    replace({
-      'process.env.NODE_ENV': JSON.stringify('production'),
-    }),
-    terser({
-      sourceMap: true,
-    }),
-  ]),
-})
+  plugins: umdBaseConfig.plugins.concat(prodPlugins),
+}
 
-const serverConfig = Object.assign({}, configBase, {
+const serverConfig = {
+  ...configBase,
   output: [
     getESM({ file: 'dist/styled-components.esm.js' }),
     getCJS({ file: 'dist/styled-components.cjs.js' }),
@@ -110,38 +117,35 @@ const serverConfig = Object.assign({}, configBase, {
       __SERVER__: JSON.stringify(true),
     })
   ),
-})
+}
 
-const serverProdConfig = Object.assign({}, configBase, serverConfig, {
+const serverProdConfig = {
+  ...configBase,
+  ...serverConfig,
   output: [
     getESM({ file: 'dist/styled-components.esm.min.js' }),
     getCJS({ file: 'dist/styled-components.cjs.min.js' }),
   ],
-  plugins: serverConfig.plugins.concat(
-    replace({
-      'process.env.NODE_ENV': JSON.stringify('production'),
-    }),
-    terser({
-      sourceMap: true,
-    })
-  ),
-})
+  plugins: serverConfig.plugins.concat(prodPlugins),
+}
 
-const browserConfig = Object.assign({}, configBase, {
+const browserConfig = {
+  ...configBase,
   output: [
     getESM({ file: 'dist/styled-components.browser.esm.js' }),
     getCJS({ file: 'dist/styled-components.browser.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
-    replace(
-      Object.assign({}, ignore, {
-        __SERVER__: JSON.stringify(false),
-      })
-    )
+    replace({
+      ...streamIgnore,
+      __SERVER__: JSON.stringify(false),
+    })
   ),
-})
+}
 
-const browserProdConfig = Object.assign({}, configBase, browserConfig, {
+const browserProdConfig = {
+  ...configBase,
+  ...browserConfig,
   output: [
     getESM({
       file: 'dist/styled-components.browser.esm.min.js',
@@ -150,24 +154,19 @@ const browserProdConfig = Object.assign({}, configBase, browserConfig, {
       file: 'dist/styled-components.browser.cjs.min.js',
     }),
   ],
-  plugins: browserConfig.plugins.concat(
-    replace({
-      'process.env.NODE_ENV': JSON.stringify('production'),
-    }),
-    terser({
-      sourceMap: true,
-    })
-  ),
-})
+  plugins: browserConfig.plugins.concat(prodPlugins),
+}
 
-const nativeConfig = Object.assign({}, configBase, {
+const nativeConfig = {
+  ...configBase,
   input: './src/native/index.js',
   output: getCJS({
     file: 'dist/styled-components.native.cjs.js',
   }),
-})
+}
 
-const primitivesConfig = Object.assign({}, configBase, {
+const primitivesConfig = {
+  ...configBase,
   input: './src/primitives/index.js',
   output: [
     getESM({ file: 'dist/styled-components-primitives.esm.js' }),
@@ -180,7 +179,7 @@ const primitivesConfig = Object.assign({}, configBase, {
       __SERVER__: JSON.stringify(true),
     })
   ),
-})
+}
 
 export default [
   umdConfig,
