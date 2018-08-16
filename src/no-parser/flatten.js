@@ -4,14 +4,15 @@ import _flatten, { objToCss } from '../utils/flatten'
 import isPlainObject from '../utils/isPlainObject'
 import isFunction from '../utils/isFunction'
 
-const isRuleSet = (interpolation: Interpolation): boolean =>
-  !!(
+function isRuleSet(interpolation: Interpolation) /* : boolean %checks */ {
+  return !!(
     interpolation &&
     Array.isArray(interpolation) &&
     interpolation.length > 0 &&
     interpolation[0] &&
     Array.isArray(interpolation[0])
   )
+}
 
 const flatten = (
   chunks: Array<Interpolation>,
@@ -50,7 +51,6 @@ const flatten = (
 
           /* Flatten nested rule set */
           if (isRuleSet(rule)) {
-            // $FlowFixMe Don't know what's wrong here
             appendChunks = [...appendChunks, ...flatten(rule, executionContext)]
             return rules
           }
@@ -68,7 +68,6 @@ const flatten = (
               if (isRuleSet(res)) {
                 appendChunks = [
                   ...appendChunks,
-                  // $FlowFixMe Don't know what's wrong here
                   ...flatten(res, executionContext),
                 ]
                 return rules
