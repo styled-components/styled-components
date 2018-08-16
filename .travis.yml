@@ -24,8 +24,6 @@ script:
   - yarn test
   - yarn flow
   - yarn lint
-  - yarn typescript
-  - yarn tslint
 notifications:
   email:
     on_failure: change
