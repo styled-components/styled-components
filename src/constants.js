@@ -11,6 +11,8 @@ export const CONTEXT_KEY = '__styled-components-stylesheet__'
 export const IS_BROWSER =
   typeof window !== 'undefined' && 'HTMLElement' in window
 
-export const DISABLE_SPEEDY =
+export const IS_DEV =
   (typeof __DEV__ === 'boolean' && __DEV__) ||
   process.env.NODE_ENV !== 'production'
+
+export const DISABLE_SPEEDY = IS_DEV

@@ -3,7 +3,7 @@ import hashStr from '../vendor/glamor/hash'
 
 import type { RuleSet, NameGenerator, Flattener, Stringifier } from '../types'
 import StyleSheet from './StyleSheet'
-import { IS_BROWSER } from '../constants'
+import { IS_BROWSER, IS_DEV } from '../constants'
 import isStyledComponent from '../utils/isStyledComponent'
 import isFunction from '../utils/isFunction'
 
@@ -35,10 +35,7 @@ const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
   return true
 }
 
-const isHMREnabled =
-  typeof module !== 'undefined' &&
-  module.hot &&
-  process.env.NODE_ENV !== 'production'
+const isHMREnabled = typeof module !== 'undefined' && module.hot && IS_DEV
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
@@ -64,8 +61,7 @@ export default (
       this.componentId = componentId
 
       if (!StyleSheet.master.hasId(componentId)) {
-        const placeholder =
-          process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : []
+        const placeholder = IS_DEV ? [`.${componentId} {}`] : []
 
         StyleSheet.master.deferredInject(componentId, placeholder)
       }

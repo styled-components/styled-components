@@ -10,6 +10,7 @@ import hasInInheritanceChain from '../utils/hasInInheritanceChain'
 import once from '../utils/once'
 import isFunction from '../utils/isFunction'
 import { CHANNEL_NEXT, contextShape } from './ThemeProvider'
+import { IS_DEV } from '../constants'
 
 import type { Theme } from './ThemeProvider'
 import type { RuleSet, Target } from '../types'
@@ -20,7 +21,7 @@ type State = {
 }
 
 let warnExtendDeprecated
-if (process.env.NODE_ENV !== 'production') {
+if (IS_DEV) {
   warnExtendDeprecated = once(() => {
     // eslint-disable-next-line no-console
     console.error(
@@ -126,7 +127,7 @@ class BaseStyledNativeComponent extends Component<*, State> {
     if (this.root !== undefined) {
       // $FlowFixMe
       this.root.setNativeProps(nativeProps)
-    } else if (process.env.NODE_ENV !== 'production') {
+    } else if (IS_DEV) {
       const { displayName } = this.constructor
 
       // eslint-disable-next-line no-console

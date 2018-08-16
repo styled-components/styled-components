@@ -6,6 +6,7 @@ import hashStr from '../vendor/glamor/hash'
 import type { RuleSet, StyleSheet } from '../types'
 import flatten from '../utils/flatten'
 import parse from '../vendor/postcss-safe-parser/parse'
+import { IS_DEV } from '../constants'
 
 let generated = {}
 
@@ -33,10 +34,7 @@ export default (styleSheet: StyleSheet) => {
         root.each(node => {
           if (node.type === 'decl') {
             declPairs.push([node.prop, node.value])
-          } else if (
-            node.type !== 'comment' &&
-            process.env.NODE_ENV !== 'production'
-          ) {
+          } else if (node.type !== 'comment' && IS_DEV) {
             /* eslint-disable no-console */
             console.warn(
               `Node of type ${node.type} not supported as an inline style`

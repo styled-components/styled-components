@@ -6,6 +6,7 @@ import type { Broadcast } from '../utils/create-broadcast'
 import StyledError from '../utils/error'
 import once from '../utils/once'
 import isFunction from '../utils/isFunction'
+import { IS_DEV } from '../constants'
 
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
 export const CHANNEL = '__styled-components__'
@@ -29,7 +30,7 @@ type ThemeProviderProps = {|
 |}
 
 let warnChannelDeprecated
-if (process.env.NODE_ENV !== 'production') {
+if (IS_DEV) {
   warnChannelDeprecated = once(() => {
     // eslint-disable-next-line no-console
     console.error(
@@ -86,7 +87,7 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
         unsubscribe: this.broadcast.unsubscribe,
       },
       [CHANNEL]: subscriber => {
-        if (process.env.NODE_ENV !== 'production') {
+        if (IS_DEV) {
           warnChannelDeprecated()
         }
 
@@ -117,7 +118,7 @@ export default class ThemeProvider extends Component<ThemeProviderProps, void> {
       const mergedTheme = theme(this.outerTheme)
 
       if (
-        process.env.NODE_ENV !== 'production' &&
+        IS_DEV &&
         (mergedTheme === null ||
           Array.isArray(mergedTheme) ||
           typeof mergedTheme !== 'object')
