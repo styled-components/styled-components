@@ -72,12 +72,13 @@ const configBase = {
 
 const globals = { react: 'React' }
 
-const umdBaseConfig = {
+const standaloneBaseConfig = {
   ...configBase,
+  input: './src/index-standalone.js',
   output: {
-    exports: 'named',
     file: 'dist/styled-components.js',
-    format: 'umd',
+    format: 'iife',
+    footer: ';window.styled = styled;',
     globals,
     name: 'styled',
     sourcemap: true,
@@ -91,21 +92,22 @@ const umdBaseConfig = {
   ),
 }
 
-const umdConfig = {
-  ...umdBaseConfig,
-  plugins: umdBaseConfig.plugins.concat(
+const standaloneConfig = {
+  ...standaloneBaseConfig,
+  plugins: standaloneBaseConfig.plugins.concat(
     replace({
       'process.env.NODE_ENV': JSON.stringify('development'),
     })
   ),
 }
 
-const umdProdConfig = {
-  ...umdBaseConfig,
-  output: Object.assign({}, umdBaseConfig.output, {
+const standaloneProdConfig = {
+  ...standaloneBaseConfig,
+  output: {
+    ...standaloneBaseConfig.output,
     file: 'dist/styled-components.min.js',
-  }),
-  plugins: umdBaseConfig.plugins.concat(prodPlugins),
+  },
+  plugins: standaloneBaseConfig.plugins.concat(prodPlugins),
 }
 
 const serverConfig = {
@@ -191,8 +193,8 @@ const primitivesConfig = {
 }
 
 export default [
-  umdConfig,
-  umdProdConfig,
+  standaloneConfig,
+  standaloneProdConfig,
   serverConfig,
   browserConfig,
   noTagServerConfig,
