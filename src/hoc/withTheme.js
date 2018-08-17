@@ -43,7 +43,7 @@ export default (Component: ComponentType<any>) => {
         )
       } else if (styledContext === undefined && themeProp !== undefined) {
         this.setState({ theme: themeProp })
-      } else {
+      } else if (styledContext !== undefined) {
         const { subscribe } = styledContext
         this.unsubscribeId = subscribe(nextTheme => {
           const theme = determineTheme(this.props, nextTheme, defaultProps)
