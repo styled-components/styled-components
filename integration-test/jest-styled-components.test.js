@@ -1,9 +1,10 @@
+// @flow
 import React from 'react'
-import styled from 'styled-components'
+import styled from '..'
 import renderer from 'react-test-renderer'
 import 'jest-styled-components'
 
-jest.mock('styled-components', () => require('../dist/styled-components'))
+// jest.mock('styled-components', () => require('../dist/styled-components.cjs'))
 
 const Button = styled.button`
   color: red;

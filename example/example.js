@@ -1,5 +1,5 @@
 import React from 'react'
-import styled, { injectGlobal, keyframes } from '../dist/styled-components'
+import styled, { injectGlobal, keyframes } from '..'
 
 export default () => {
   injectGlobal`
@@ -15,14 +15,14 @@ export default () => {
     text-align: center;
     color: palevioletred;
     animation: ${keyframes`from { opacity: 0; }`} 1s both;
-  `;
+  `
 
   // Create a <Wrapper> react component that renders a <section> with
   // some padding and a papayawhip background
   const Wrapper = styled.section`
     padding: 4em;
     background: papayawhip;
-  `;
+  `
 
   return class Example extends React.Component {
     render() {

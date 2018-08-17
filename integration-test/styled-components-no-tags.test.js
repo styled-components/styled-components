@@ -3,7 +3,7 @@ import styled, { css } from 'styled-components'
 import renderer from 'react-test-renderer'
 
 jest.mock('styled-components', () =>
-  require('../dist/styled-components-no-tags.cjs.js')
+  require('../dist/styled-components-no-tags.cjs')
 )
 
 const partial = css`

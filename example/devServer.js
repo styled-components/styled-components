@@ -5,25 +5,26 @@ const watch = require('node-watch')
 
 import fs from 'fs'
 import React from 'react'
-import { renderToString } from  'react-dom/server'
-import { ServerStyleSheet } from '../dist/styled-components'
-import getExample from "./example"
+import { renderToString } from 'react-dom/server'
+import { ServerStyleSheet } from '..'
+import getExample from './example'
 
 const HTML = fs.readFileSync(__dirname + '/index.html').toString()
 
-const srcPath = __dirname.split('/example')[0] + '/src';
+const srcPath = __dirname.split('/example')[0] + '/src'
 
-const hotBuild = () => exec('npm run build:dist', (err, stdout, stderr) => {
-  if (err) throw err
-  if (stdout) {
-    console.log(`npm run build:dist --- ${stdout}`)
-  }
-  if (stderr) {
-    console.log(`npm run build:dist --- ${stderr}`)
-  }
-})
+const hotBuild = () =>
+  exec('npm run build:dist', (err, stdout, stderr) => {
+    if (err) throw err
+    if (stdout) {
+      console.log(`npm run build:dist --- ${stdout}`)
+    }
+    if (stderr) {
+      console.log(`npm run build:dist --- ${stderr}`)
+    }
+  })
 
-watch(srcPath, (filename) => {
+watch(srcPath, filename => {
   console.log(`${filename} file has changed`)
   hotBuild()
 })
@@ -41,12 +42,10 @@ app.get('/ssr.html', (req, res) => {
   const Example = getExample()
 
   const sheet = new ServerStyleSheet()
-  const html = renderToString(sheet.collectStyles(<Example/>))
+  const html = renderToString(sheet.collectStyles(<Example />))
   const css = sheet.getStyleTags()
   res.send(
-    HTML
-      .replace(/<!-- SSR:HTML -->/, html)
-      .replace(/<!-- SSR:CSS -->/, css)
+    HTML.replace(/<!-- SSR:HTML -->/, html).replace(/<!-- SSR:CSS -->/, css)
   )
 })
 
