@@ -4,10 +4,13 @@ import {
   IS_BROWSER,
   DISABLE_SPEEDY,
   SC_ATTR,
+  SC_VERSION_ATTR,
   SC_STREAM_ATTR,
 } from '../constants'
 import { makeTag, makeRehydrationTag, type Tag } from './StyleTags'
 import extractComps from '../utils/extractCompsFromCSS'
+
+declare var __VERSION__: string
 
 const SPLIT_REGEX = /\s+/
 
@@ -76,7 +79,9 @@ export default class StyleSheet {
     let isStreamed = false
 
     /* retrieve all of our SSR style elements from the DOM */
-    const nodes = document.querySelectorAll(`style[${SC_ATTR}]`)
+    const nodes = document.querySelectorAll(
+      `style[${SC_ATTR}][${SC_VERSION_ATTR}="${__VERSION__}"]`
+    )
     const nodesSize = nodes.length
 
     /* abort rehydration if no previous style tags were found */

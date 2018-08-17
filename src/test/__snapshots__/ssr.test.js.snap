@@ -3,7 +3,7 @@
 exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 1`] = `"<h1 class=\\"sc-a b\\">Hello SSR!</h1>"`;
 
 exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 2`] = `
-"<style nonce=\\"foo\\" data-styled-components=\\"b\\">
+"<style nonce=\\"foo\\" data-styled=\\"b\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
 /* sc-component-id: sc-a */
@@ -13,11 +13,11 @@ body{background:papayawhip;}
 exports[`ssr should allow global styles to be injected during rendering 1`] = `"<h1 class=\\"PageOne a\\">Camera One!</h1>"`;
 
 exports[`ssr should allow global styles to be injected during rendering 2`] = `
-"<style data-styled-components=\\"a\\">
+"<style data-styled=\\"a\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: sc-global-737874422 */
 html::before{content:'Before both renders';}
 /* sc-component-id: PageOne */
-.PageOne {} .a{color:red;}</style><style data-styled-components=\\"\\">
+.PageOne {} .a{color:red;}</style><style data-styled=\\"\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: sc-global-2914197427 */
 html::before{content:'During first render';}</style>"
 `;
@@ -25,7 +25,7 @@ html::before{content:'During first render';}</style>"
 exports[`ssr should allow global styles to be injected during rendering 3`] = `"<h2 class=\\"PageTwo b\\">Camera Two!</h2>"`;
 
 exports[`ssr should allow global styles to be injected during rendering 4`] = `
-"<style data-styled-components=\\"b\\">
+"<style data-styled=\\"b\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: sc-global-737874422 */
 html::before{content:'Before both renders';}
 /* sc-component-id: PageTwo */
@@ -33,7 +33,7 @@ html::before{content:'Before both renders';}
 /* sc-component-id: sc-global-2914197427 */
 html::before{content:'During first render';}
 /* sc-component-id: sc-global-1207956261 */
-html::before{content:'Between renders';}</style><style data-styled-components=\\"\\">
+html::before{content:'Between renders';}</style><style data-styled=\\"\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: sc-global-3990873394 */
 html::before{content:'During second render';}</style>"
 `;
@@ -41,11 +41,11 @@ html::before{content:'During second render';}</style>"
 exports[`ssr should dispatch global styles to each ServerStyleSheet 1`] = `"<h1 class=\\"Header a\\"></h1>"`;
 
 exports[`ssr should dispatch global styles to each ServerStyleSheet 2`] = `
-"<style data-styled-components=\\"a\\">
+"<style data-styled=\\"a\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
 /* sc-component-id: Header */
-.Header {} .a{-webkit-animation:keyframe_0 1s both;animation:keyframe_0 1s both;}</style><style data-styled-components=\\"keyframe_0\\">
+.Header {} .a{-webkit-animation:keyframe_0 1s both;animation:keyframe_0 1s both;}</style><style data-styled=\\"keyframe_0\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: sc-keyframes-keyframe_0 */
 @-webkit-keyframes keyframe_0{0%{opacity:0;}} @keyframes keyframe_0{0%{opacity:0;}}</style>"
 `;
@@ -53,7 +53,7 @@ body{background:papayawhip;}
 exports[`ssr should extract both global and local CSS 1`] = `"<h1 class=\\"sc-a b\\">Hello SSR!</h1>"`;
 
 exports[`ssr should extract both global and local CSS 2`] = `
-"<style data-styled-components=\\"b\\">
+"<style data-styled=\\"b\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
 /* sc-component-id: sc-a */
@@ -63,7 +63,7 @@ body{background:papayawhip;}
 exports[`ssr should extract the CSS in a simple case 1`] = `"<h1 class=\\"sc-a b\\">Hello SSR!</h1>"`;
 
 exports[`ssr should extract the CSS in a simple case 2`] = `
-"<style data-styled-components=\\"b\\">
+"<style data-styled=\\"b\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: sc-a */
 .sc-a {} .b{color:red;}</style>"
 `;
@@ -71,7 +71,7 @@ exports[`ssr should extract the CSS in a simple case 2`] = `
 exports[`ssr should handle errors while streaming 1`] = `[Invariant Violation: React.Children.only expected to receive a single React element child.]`;
 
 exports[`ssr should interleave styles with rendered HTML when utilitizing streaming 1`] = `
-"<style data-styled-components=\\"b\\" data-styled-streamed=\\"true\\">
+"<style data-styled=\\"b\\" data-styled-version=\\"JEST_MOCK_VERSION\\" data-styled-streamed=\\"true\\">
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
 /* sc-component-id: sc-a */
@@ -81,7 +81,7 @@ body{background:papayawhip;}
 exports[`ssr should render CSS in the order the components were defined, not rendered 1`] = `"<div><h2 class=\\"TWO a\\"></h2><h1 class=\\"ONE b\\"></h1></div>"`;
 
 exports[`ssr should render CSS in the order the components were defined, not rendered 2`] = `
-"<style data-styled-components=\\"a b\\">
+"<style data-styled=\\"a b\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: ONE */
 .ONE {} .b{color:red;}
 /* sc-component-id: TWO */
@@ -97,14 +97,15 @@ body{background:papayawhip;}
 /* sc-component-id: sc-a */
 .sc-a {} .b{color:red;}",
   },
-  "data-styled-components": "b",
+  "data-styled": "b",
+  "data-styled-version": "JEST_MOCK_VERSION",
 }
 `;
 
 exports[`ssr should share global styles but keep renders separate 1`] = `"<h1 class=\\"PageOne a\\">Camera One!</h1>"`;
 
 exports[`ssr should share global styles but keep renders separate 2`] = `
-"<style data-styled-components=\\"a\\">
+"<style data-styled=\\"a\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
 /* sc-component-id: PageOne */
@@ -114,7 +115,7 @@ body{background:papayawhip;}
 exports[`ssr should share global styles but keep renders separate 3`] = `"<h2 class=\\"PageTwo b\\">Camera Two!</h2>"`;
 
 exports[`ssr should share global styles but keep renders separate 4`] = `
-"<style data-styled-components=\\"b\\">
+"<style data-styled=\\"b\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: sc-global-2303210225 */
 body{background:papayawhip;}
 /* sc-component-id: PageTwo */
