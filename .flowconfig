@@ -9,9 +9,11 @@
 .*/node_modules/metro-bundler/.*
 .*/node_modules/metro-source-map/.*
 .*/node_modules/babel-plugin-transform-react-remove-prop-types/.*
+.*/benchmarks/.*
 .*/dist/.*
 .*/lib/.*
 .*/node_modules/babel-plugin-flow-react-proptypes/src/__test__/.*
+.*/src/test/.*
 .*/src/.*/test/.*
 
 [include]
@@ -22,4 +24,3 @@
 [options]
 suppress_comment=.*\\$FlowFixMe
 suppress_comment=.*\\$FlowInvalidInputTest
-unsafe.enable_getters_and_setters=true

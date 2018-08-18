@@ -1,8 +1,9 @@
 // @flow
 import hyphenate from 'fbjs/lib/hyphenateStyleName'
-import isPlainObject from 'is-plain-object'
+import React from 'react'
+import isPlainObject from './isPlainObject'
+import StyledError from './error'
 import { Keyframes } from '../constructors/keyframes'
-
 import type { Interpolation } from '../types'
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
@@ -39,24 +40,33 @@ const flatten = (
     ) {
       return ruleSet
     }
+
     /* Flatten ruleSet */
     if (Array.isArray(chunk)) {
-      return [...ruleSet, ...flatten(chunk, executionContext)]
+      ruleSet.push(...flatten(chunk, executionContext))
+      return ruleSet
     }
 
     /* Handle other components */
     if (chunk.hasOwnProperty('styledComponentId')) {
       // $FlowFixMe not sure how to make this pass
-      return [...ruleSet, `.${chunk.styledComponentId}`]
+      ruleSet.push(`.${chunk.styledComponentId}`)
+      return ruleSet
     }
 
     /* Either execute or defer the function */
     if (typeof chunk === 'function') {
-      return executionContext
-        ? ruleSet.concat(
-            ...flatten([chunk(executionContext)], executionContext)
-          )
-        : ruleSet.concat(chunk)
+      if (executionContext) {
+        const nextChunk = chunk(executionContext)
+        /* Throw if a React Element was given styles */
+        if (React.isValidElement(nextChunk)) {
+          const elementName = chunk.displayName || chunk.name
+          throw new StyledError(11, elementName)
+        }
+        ruleSet.push(...flatten([nextChunk], executionContext))
+      } else ruleSet.push(chunk)
+
+      return ruleSet
     }
 
     if (Keyframes.isKeyframes(chunk)) {
@@ -64,10 +74,12 @@ const flatten = (
     }
 
     /* Handle objects */
-    return ruleSet.concat(
+    ruleSet.push(
       // $FlowFixMe have to add %checks somehow to isPlainObject
       isPlainObject(chunk) ? objToCss(chunk) : chunk.toString()
     )
+
+    return ruleSet
   }, [])
 
 export default flatten

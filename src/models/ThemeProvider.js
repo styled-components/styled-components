@@ -1,10 +1,9 @@
 // @flow
-/* globals React$Element */
-import React, { Component } from 'react'
+import React, { Component, type Element } from 'react'
 import PropTypes from 'prop-types'
-import isPlainObject from 'is-plain-object'
 import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
+import StyledError from '../utils/error'
 import once from '../utils/once'
 
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
@@ -17,9 +16,14 @@ export const CONTEXT_CHANNEL_SHAPE = PropTypes.shape({
   unsubscribe: PropTypes.func,
 })
 
+export const contextShape = {
+  [CHANNEL]: PropTypes.func, // legacy
+  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+}
+
 export type Theme = { [key: string]: mixed }
 type ThemeProviderProps = {|
-  children?: React$Element<any>,
+  children?: Element<any>,
   theme: Theme | ((outerTheme: Theme) => void),
 |}
 
@@ -39,13 +43,18 @@ const isFunction = test => typeof test === 'function'
  * Provide a theme to an entire react component tree via context and event listeners (have to do
  * both context and event emitter as pure components block context updates)
  */
-class ThemeProvider extends Component {
+export default class ThemeProvider extends Component<ThemeProviderProps, void> {
+  broadcast: Broadcast
   getTheme: (theme?: Theme | ((outerTheme: Theme) => void)) => Theme
   outerTheme: Theme
-  unsubscribeToOuterId: string
   props: ThemeProviderProps
-  broadcast: Broadcast
   unsubscribeToOuterId: number = -1
+  unsubscribeToOuterId: string
+
+  static childContextTypes = contextShape
+  static contextTypes = {
+    [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+  }
 
   constructor() {
     super()
@@ -104,27 +113,26 @@ class ThemeProvider extends Component {
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
   getTheme(passedTheme: (outerTheme: Theme) => void | Theme) {
     const theme = passedTheme || this.props.theme
+
     if (isFunction(theme)) {
       const mergedTheme = theme(this.outerTheme)
+
       if (
         process.env.NODE_ENV !== 'production' &&
-        !isPlainObject(mergedTheme)
+        (mergedTheme === null ||
+          Array.isArray(mergedTheme) ||
+          typeof mergedTheme !== 'object')
       ) {
-        throw new Error(
-          process.env.NODE_ENV !== 'production'
-            ? '[ThemeProvider] Please return an object from your theme function, i.e. theme={() => ({})}!'
-            : ''
-        )
+        throw new StyledError(7)
       }
+
       return mergedTheme
     }
-    if (!isPlainObject(theme)) {
-      throw new Error(
-        process.env.NODE_ENV !== 'production'
-          ? '[ThemeProvider] Please make your theme prop a plain object'
-          : ''
-      )
+
+    if (theme === null || Array.isArray(theme) || typeof theme !== 'object') {
+      throw new StyledError(8)
     }
+
     return { ...this.outerTheme, ...(theme: Object) }
   }
 
@@ -136,16 +144,7 @@ class ThemeProvider extends Component {
     if (!this.props.children) {
       return null
     }
+
     return React.Children.only(this.props.children)
   }
 }
-
-ThemeProvider.childContextTypes = {
-  [CHANNEL]: PropTypes.func, // legacy
-  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-}
-ThemeProvider.contextTypes = {
-  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-}
-
-export default ThemeProvider

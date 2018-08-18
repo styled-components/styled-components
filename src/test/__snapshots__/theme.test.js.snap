@@ -1,0 +1,19 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`theming should not allow the theme to be a non-object 1`] = `
+"ThemeProvider: Please make your \\"theme\\" prop an object.
+
+"
+`;
+
+exports[`theming should not allow the theme to be an array 1`] = `
+"ThemeProvider: Please make your \\"theme\\" prop an object.
+
+"
+`;
+
+exports[`theming should not allow the theme to be null 1`] = `
+"ThemeProvider: Please make your \\"theme\\" prop an object.
+
+"
+`;

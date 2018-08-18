@@ -56,6 +56,18 @@ describe('with styles', () => {
     expectCSSMatches('.sc-a {} .b { background-color:blue; }')
   })
 
+
+  it('should throw a meaningful error if a non styled component with react element is interpolated', () => {
+    const NestedComp = () => <div></div>
+    const Comp = styled.div`
+      ${ NestedComp} {
+        color: purple;
+      }
+    `
+    expect(() => shallow(<Comp />)).toThrowErrorMatchingSnapshot();
+  })
+
+
   it('should handle inline style objects with media queries', () => {
     const rule1 = {
       backgroundColor: 'blue',
@@ -216,5 +228,29 @@ describe('with styles', () => {
     Array.from(document.querySelectorAll('style')).forEach(el => {
       expect(el.getAttribute('nonce')).toBe('foo')
     })
+  })
+
+  it('should handle deferredInject and inject correctly', () => {
+    const cloneA = StyleSheet.master.clone()
+    const cloneB = StyleSheet.master.clone()
+    const rules = ['.testA {}']
+
+    StyleSheet.master.deferredInject('test', rules)
+
+    expect(StyleSheet.master.deferred.test).toBe(rules)
+    expect(cloneA.deferred.test).toBe(rules)
+    expect(cloneB.deferred.test).toBe(rules)
+
+    StyleSheet.master.inject('test', ['.testB {}'])
+
+    const inspectTag = sheet => {
+      const tag = sheet.getTagForId('test')
+      return tag.css()
+    }
+
+    const masterCss = inspectTag(StyleSheet.master)
+
+    expect(masterCss).toEqual(inspectTag(cloneA))
+    expect(masterCss).toEqual(inspectTag(cloneB))
   })
 })

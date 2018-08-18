@@ -1,4 +1,7 @@
 // @flow
+
+import StyledError from '../utils/error'
+
 /* These are helpers that deal with the insertRule (aka speedy) API
  * They are used in the StyleTags and specifically the speedy tag
  */
@@ -17,7 +20,7 @@ export const sheetForTag = (tag: HTMLStyleElement): CSSStyleSheet => {
   }
 
   /* we should always be able to find a tag */
-  throw new Error()
+  throw new StyledError(10)
 }
 
 /* insert a rule safely and return whether it was actually injected */
@@ -49,7 +52,7 @@ export const deleteRules = (
   size: number
 ) => {
   const lowerBound = removalIndex - size
-  for (let i = removalIndex; i >= lowerBound; i -= 1) {
+  for (let i = removalIndex; i > lowerBound; i -= 1) {
     sheet.deleteRule(i)
   }
 }

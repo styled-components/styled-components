@@ -78,7 +78,7 @@ Here is a quick guide to doing code contributions to the library.
 
 ### How do I set up the project?
 
-Run `npm install` and edit code in the `src/` folder. It's luckily very simple! :wink:
+Run [`yarn install`](https://yarnpkg.com/) and edit code in the `src/` folder. It's luckily very simple! :wink:
 
 ### How do I verify and test my changes?
 
@@ -105,6 +105,22 @@ You can use an interactive editor, powered by [`react-live`](https://react-live.
 In the sandbox source, `styled-components` is an alias to `styled-components/src` folder, so you can edit the source directly and dev-server will handle rebuilding the source and livereloading your sandbox after the build is done.
 
 When you commit our pre-commit hook will run, which executes `lint-staged`. It will run the linter automatically and warn you if the code you've written doesn't comply with our code style guidelines.
+
+### How do I run the benchmarks?
+
+We have three different benchmarks: mounting a deep tree, mounting a wide tree and updating dynamic styles. Shoutout to [@necolas](https://github.com/necolas), who wrote these for `react-native-web` and whom we stole these benchmarks from.
+
+To run the benchmarks run:
+
+```sh
+yarn run benchmarks
+```
+
+You can also get traces that you can look at in the Chrome DevTools "Performance" panel by running
+
+```sh
+yarn run benchmarks --tracing
+```
 
 ### How do I fix my pre-commit hook?
 

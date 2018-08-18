@@ -10,7 +10,7 @@ import { Keyframes } from '../constructors/keyframes'
 const areStylesCacheable = IS_BROWSER
 
 const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
-  for (let i = 0; i < rules.length; i += 1) {
+  for (let i = 0, len = rules.length; i < len; i += 1) {
     const rule = rules[i]
 
     // recursive case
@@ -26,8 +26,7 @@ const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
   if (attrs !== undefined) {
     // eslint-disable-next-line guard-for-in, no-restricted-syntax
     for (const key in attrs) {
-      const value = attrs[key]
-      if (typeof value === 'function') {
+      if (typeof attrs[key] === 'function') {
         return false
       }
     }
@@ -36,7 +35,7 @@ const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
   return true
 }
 
-const isHRMEnabled =
+const isHMREnabled =
   typeof module !== 'undefined' &&
   module.hot &&
   process.env.NODE_ENV !== 'production'
@@ -64,7 +63,7 @@ export default (
       const [keyframes, preparedRules] = Keyframes.extractRules(rules)
 
       this.rules = preparedRules
-      this.isStatic = !isHRMEnabled && isStaticRules(rules, attrs)
+      this.isStatic = !isHMREnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
 
       this.keyframesInjectors = keyframes
@@ -99,8 +98,11 @@ export default (
       const name = generateRuleHash(this.componentId + flatCSS.join(''))
 
       if (!styleSheet.hasNameForId(componentId, name)) {
-        const css = stringifyRules(flatCSS, `.${name}`)
-        styleSheet.inject(this.componentId, css, name)
+        styleSheet.inject(
+          this.componentId,
+          stringifyRules(flatCSS, `.${name}`),
+          name
+        )
       }
 
       this.lastClassName = name

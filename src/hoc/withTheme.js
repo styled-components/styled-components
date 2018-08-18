@@ -1,39 +1,31 @@
 // @flow
-/* globals ReactClass */
-
-import React from 'react'
-import PropTypes from 'prop-types'
+import React, { type ComponentType } from 'react'
 import hoistStatics from 'hoist-non-react-statics'
-import {
-  CHANNEL,
-  CHANNEL_NEXT,
-  CONTEXT_CHANNEL_SHAPE,
-} from '../models/ThemeProvider'
+import { CHANNEL_NEXT, contextShape } from '../models/ThemeProvider'
+import { EMPTY_OBJECT } from '../utils/empties'
+import getComponentName from '../utils/getComponentName'
 import _isStyledComponent from '../utils/isStyledComponent'
 import determineTheme from '../utils/determineTheme'
 
-const wrapWithTheme = (Component: ReactClass<any>) => {
-  const componentName = Component.displayName || Component.name || 'Component'
+export default (Component: ComponentType<any>) => {
   const isStatelessFunctionalComponent =
     typeof Component === 'function' &&
+    // $FlowFixMe TODO: flow for prototype
     !(Component.prototype && 'isReactComponent' in Component.prototype)
 
   // NOTE: We can't pass a ref to a stateless functional component
   const shouldSetInnerRef =
     _isStyledComponent(Component) || isStatelessFunctionalComponent
 
-  class WithTheme extends React.Component {
-    static displayName = `WithTheme(${componentName})`
+  class WithTheme extends React.Component<*, *> {
+    static contextTypes = contextShape
+    static displayName = `WithTheme(${getComponentName(Component)})`
+    static defaultProps: Object
 
     // NOTE: This is so that isStyledComponent passes for the innerRef unwrapping
     static styledComponentId = 'withTheme'
 
-    static contextTypes = {
-      [CHANNEL]: PropTypes.func,
-      [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-    }
-
-    state: { theme?: ?Object } = {}
+    state: { theme?: ?Object } = EMPTY_OBJECT
     unsubscribeId: number = -1
 
     componentWillMount() {
@@ -89,11 +81,9 @@ const wrapWithTheme = (Component: ReactClass<any>) => {
         delete props.innerRef
       }
 
-      return <Component {...props} />
+      return React.createElement(Component, props)
     }
   }
 
   return hoistStatics(WithTheme, Component)
 }
-
-export default wrapWithTheme

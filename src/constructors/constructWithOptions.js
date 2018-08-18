@@ -1,19 +1,17 @@
 // @flow
 import { isValidElementType } from 'react-is'
+import StyledError from '../utils/error'
+import { EMPTY_OBJECT } from '../utils/empties'
 import type { Target } from '../types'
 
 export default (css: Function) => {
   const constructWithOptions = (
     componentConstructor: Function,
     tag: Target,
-    options: Object = {}
+    options: Object = EMPTY_OBJECT
   ) => {
     if (!isValidElementType(tag)) {
-      throw new Error(
-        process.env.NODE_ENV !== 'production'
-          ? `Cannot create styled-component for component: ${String(tag)}`
-          : ''
-      )
+      throw new StyledError(1, String(tag))
     }
 
     /* This is callable directly as a template function */
@@ -27,7 +25,7 @@ export default (css: Function) => {
     templateFunction.attrs = attrs =>
       constructWithOptions(componentConstructor, tag, {
         ...options,
-        attrs: { ...(options.attrs || {}), ...attrs },
+        attrs: { ...(options.attrs || EMPTY_OBJECT), ...attrs },
       })
 
     return templateFunction

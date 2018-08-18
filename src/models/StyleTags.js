@@ -2,8 +2,9 @@
 /* eslint-disable flowtype/object-type-delimiter */
 /* eslint-disable react/prop-types */
 
-import React from 'react'
+import React, { type Element } from 'react'
 import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR } from '../constants'
+import StyledError from '../utils/error'
 import { type ExtractedComp } from '../utils/extractCompsFromCSS'
 import { splitByRules } from '../utils/stringifyRules'
 import getNonce from '../utils/nonce'
@@ -39,32 +40,8 @@ export interface Tag<T> {
   removeRules(id: string): void;
   css(): string;
   toHTML(additionalAttrs: ?string): string;
-  toElement(): React.Element<*>;
+  toElement(): Element<*>;
   clone(): Tag<T>;
-}
-
-/* this error is used for makeStyleTag */
-const parentNodeUnmountedErr =
-  process.env.NODE_ENV !== 'production'
-    ? `
-Trying to insert a new style tag, but the given Node is unmounted!
-- Are you using a custom target that isn't mounted?
-- Does your document not have a valid head element?
-- Have you accidentally removed a style tag manually?
-`.trim()
-    : ''
-
-/* this error is used for tags */
-const throwCloneTagErr = () => {
-  throw new Error(
-    process.env.NODE_ENV !== 'production'
-      ? `
-The clone method cannot be used on the client!
-- Are you running in a client-like environment on the server?
-- Are you trying to run SSR on the client?
-`.trim()
-      : ''
-  )
 }
 
 /* this marker separates component styles and is important for rehydration */
@@ -102,7 +79,7 @@ const makeStyleTag = (
     target.appendChild(el)
   } else {
     if (!tagEl || !target || !tagEl.parentNode) {
-      throw new Error(parentNodeUnmountedErr)
+      throw new StyledError(6)
     }
 
     /* Insert new style tag after the previous one */
@@ -151,7 +128,7 @@ const makeSpeedyTag = (
   el: HTMLStyleElement,
   getImportRuleTag: ?() => Tag<any>
 ): Tag<number> => {
-  const names: Names = Object.create(null)
+  const names: Names = (Object.create(null): Object)
   const markers = Object.create(null)
   const sizes: number[] = []
 
@@ -165,10 +142,11 @@ const makeSpeedyTag = (
       return prev
     }
 
-    const marker = (markers[id] = sizes.length)
+    markers[id] = sizes.length
     sizes.push(0)
     resetIdNames(names, id)
-    return marker
+
+    return markers[id]
   }
 
   const insertRules = (id, cssRules, name) => {
@@ -249,19 +227,22 @@ const makeSpeedyTag = (
     css,
     toHTML: wrapAsHtmlTag(css, names),
     toElement: wrapAsElement(css, names),
-    clone: throwCloneTagErr,
+    clone() {
+      throw new StyledError(5)
+    },
   }
 }
+
+const makeTextNode = id => document.createTextNode(makeTextMarker(id))
 
 const makeBrowserTag = (
   el: HTMLStyleElement,
   getImportRuleTag: ?() => Tag<any>
 ): Tag<Text> => {
-  const names = Object.create(null)
+  const names = (Object.create(null): Object)
   const markers = Object.create(null)
 
   const extractImport = getImportRuleTag !== undefined
-  const makeTextNode = id => document.createTextNode(makeTextMarker(id))
 
   /* indicates whther getImportRuleTag was called */
   let usedImportRuleTag = false
@@ -272,10 +253,11 @@ const makeBrowserTag = (
       return prev
     }
 
-    const marker = (markers[id] = makeTextNode(id))
-    el.appendChild(marker)
+    markers[id] = makeTextNode(id)
+    el.appendChild(markers[id])
     names[id] = Object.create(null)
-    return marker
+
+    return markers[id]
   }
 
   const insertRules = (id, cssRules, name) => {
@@ -330,21 +312,24 @@ const makeBrowserTag = (
   }
 
   return {
-    styleTag: el,
+    clone() {
+      throw new StyledError(5)
+    },
+    css,
     getIds: getIdsFromMarkersFactory(markers),
     hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
     removeRules,
-    css,
-    toHTML: wrapAsHtmlTag(css, names),
+    styleTag: el,
     toElement: wrapAsElement(css, names),
-    clone: throwCloneTagErr,
+    toHTML: wrapAsHtmlTag(css, names),
   }
 }
 
 const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
-  const names = namesArg === undefined ? Object.create(null) : namesArg
+  const names =
+    namesArg === undefined ? (Object.create(null): Object) : namesArg
   const markers = markersArg === undefined ? Object.create(null) : markersArg
 
   const insertMarker = id => {
@@ -394,16 +379,16 @@ const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
   }
 
   const tag = {
-    styleTag: null,
+    clone,
+    css,
     getIds: getIdsFromMarkersFactory(markers),
     hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
     removeRules,
-    css,
-    toHTML: wrapAsHtmlTag(css, names),
+    styleTag: null,
     toElement: wrapAsElement(css, names),
-    clone,
+    toHTML: wrapAsHtmlTag(css, names),
   }
 
   return tag
@@ -420,6 +405,7 @@ export const makeTag = (
 ): Tag<any> => {
   if (IS_BROWSER && !forceServer) {
     const el = makeStyleTag(target, tagEl, insertBefore)
+
     if (DISABLE_SPEEDY) {
       return makeBrowserTag(el, getImportRuleTag)
     } else {
@@ -435,20 +421,19 @@ export const makeRehydrationTag = (
   tag: Tag<any>,
   els: HTMLStyleElement[],
   extracted: ExtractedComp[],
-  names: string[],
   immediateRehydration: boolean
 ): Tag<any> => {
   /* rehydration function that adds all rules to the new tag */
   const rehydrate = once(() => {
     /* add all extracted components to the new tag */
-    for (let i = 0; i < extracted.length; i += 1) {
+    for (let i = 0, len = extracted.length; i < len; i += 1) {
       const { componentId, cssFromDOM } = extracted[i]
       const cssRules = splitByRules(cssFromDOM)
       tag.insertRules(componentId, cssRules)
     }
 
     /* remove old HTMLStyleElements, since they have been rehydrated */
-    for (let i = 0; i < els.length; i += 1) {
+    for (let i = 0, len = els.length; i < len; i += 1) {
       const el = els[i]
       if (el.parentNode) {
         el.parentNode.removeChild(el)
