@@ -61,7 +61,6 @@ export default (
 
       const flatCSS = flatten(this.rules, executionContext)
       const name = generateRuleHash(this.componentId + flatCSS.join(''))
-
       if (!styleSheet.hasNameForId(componentId, name)) {
         styleSheet.inject(
           this.componentId,

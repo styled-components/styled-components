@@ -20,7 +20,6 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
     const rules = css(strings, ...interpolations)
     const id = `sc-global-${hashStr(JSON.stringify(rules))}`
     const style = new GlobalStyle(rules, id)
-
     class GlobalStyleComponent extends React.Component<*, *> {
       componentWillUnmount() {
         const { sheet } = this.props
@@ -47,39 +46,45 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
 
         return (
           <StyleSheetConsumer>
-            {(styleSheet?: StyleSheet) => (
-              <ThemeConsumer>
-                {(theme?: Theme) => {
-                  const { defaultProps } = this.constructor
-                  let context
-                  if (style.isStatic) {
-                    // $FlowFixMe TODO: flow for optional styleSheet
-                    context = STATIC_EXECUTION_CONTEXT
-                  } else if (typeof theme !== 'undefined') {
-                    const determinedTheme = determineTheme(
-                      this.props,
-                      theme,
-                      defaultProps
-                    )
-                    // $FlowFixMe TODO: flow for optional styleSheet
-                    context = {
-                      theme: determinedTheme,
-                      ...this.props,
-                    }
-                  } else {
-                    context = {
-                      ...this.props,
-                    }
-                  }
-                  return (
-                    <GlobalStyleComponent
-                      sheet={styleSheet || StyleSheet.master}
-                      context={context}
-                    />
-                  )
-                }}
-              </ThemeConsumer>
-            )}
+            {(styleSheet?: StyleSheet) => {
+              if (style.isStatic) {
+                return (
+                  <GlobalStyleComponent
+                    sheet={styleSheet || StyleSheet.master}
+                    context={STATIC_EXECUTION_CONTEXT}
+                  />
+                )
+              } else {
+                return (
+                  <ThemeConsumer>
+                    {(theme?: Theme) => {
+                      const { defaultProps } = this.constructor
+                      let context = {
+                        ...this.props,
+                      }
+                      if (typeof theme !== 'undefined') {
+                        const determinedTheme = determineTheme(
+                          this.props,
+                          theme,
+                          defaultProps
+                        )
+                        // $FlowFixMe TODO: flow for optional styleSheet
+                        context = {
+                          theme: determinedTheme,
+                          ...context,
+                        }
+                      }
+                      return (
+                        <GlobalStyleComponent
+                          sheet={styleSheet || StyleSheet.master}
+                          context={context}
+                        />
+                      )
+                    }}
+                  </ThemeConsumer>
+                )
+              }
+            }}
           </StyleSheetConsumer>
         )
       }

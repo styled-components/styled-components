@@ -128,7 +128,6 @@ class BaseStyledComponent extends Component<*> {
                 defaultProps,
                 componentStyle,
               } = this.constructor
-
               const isTargetTag = isTag(target)
 
               let generatedClassName

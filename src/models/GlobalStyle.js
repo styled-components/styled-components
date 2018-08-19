@@ -14,6 +14,12 @@ export default (stringifyRules: Stringifier) => {
       this.rules = rules
       this.componentId = componentId
       this.isStatic = isStaticRules(rules)
+      if (!StyleSheet.master.hasId(componentId)) {
+        const placeholder =
+          process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : []
+
+        StyleSheet.master.deferredInject(componentId, placeholder)
+      }
     }
 
     createStyles(executionContext: Object, styleSheet: StyleSheet) {

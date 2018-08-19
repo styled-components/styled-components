@@ -186,7 +186,7 @@ const makeSpeedyTag = (
     const size = sizes[marker]
     const sheet = sheetForTag(el)
     const removalIndex = addUpUntilIndex(sizes, marker)
-    deleteRules(sheet, removalIndex - 1, size)
+    deleteRules(sheet, removalIndex, size)
     sizes[marker] = 0
     resetIdNames(names, id)
 
@@ -276,9 +276,7 @@ const makeBrowserTag = (
         marker.appendData(`${rule}${separator}`)
       }
     }
-
     addNameForId(names, id, name)
-
     if (extractImport && importRules.length > 0) {
       usedImportRuleTag = true
       // $FlowFixMe
@@ -310,7 +308,6 @@ const makeBrowserTag = (
     }
     return str
   }
-
   return {
     clone() {
       throw new StyledError(5)

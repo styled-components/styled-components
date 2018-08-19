@@ -5,11 +5,9 @@ import { mount } from 'enzyme'
 import * as nonce from '../utils/nonce'
 import { resetStyled, expectCSSMatches } from './utils'
 import StyleSheet from '../models/StyleSheet'
-import _injectGlobal from '../constructors/injectGlobal'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
 
-const injectGlobal = _injectGlobal(stringifyRules, css)
 
 jest.mock('../utils/nonce')
 jest.spyOn(nonce, 'default').mockImplementation(() => 'foo')
