@@ -282,7 +282,7 @@ describe('rehydration', () => {
       `)
     })
 
-    it.skip('should replace stylesheets on-demand', () => {
+    it('should replace stylesheets on-demand', () => {
       const tagsAfterReset = Array.from(document.querySelectorAll('style'))
       expect(tagsAfterReset[0]).toBe(styleTags[0])
       expect(tagsAfterReset[1]).toBe(styleTags[1])

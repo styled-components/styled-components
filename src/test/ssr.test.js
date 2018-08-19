@@ -85,7 +85,7 @@ describe('ssr', () => {
     expect(cssB).toContain('green')
   })
 
-  it.skip('should add a nonce to the stylesheet if webpack nonce is detected in the global scope', () => {
+  it('should add a nonce to the stylesheet if webpack nonce is detected in the global scope', () => {
     // eslint-disable-next-line
     require('../utils/nonce').mockImplementation(() => 'foo')
 
@@ -208,7 +208,7 @@ describe('ssr', () => {
     expect(cssTwo).toMatchSnapshot()
   })
 
-  it.skip('should dispatch global styles to each ServerStyleSheet', () => {
+  it('should dispatch global styles to each ServerStyleSheet', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
     `
@@ -255,7 +255,7 @@ describe('ssr', () => {
     expect(elements[0].props).toMatchSnapshot()
   })
 
-  it.skip('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
+  it('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
     // eslint-disable-next-line
     require('../utils/nonce').mockImplementation(() => 'foo')
 
@@ -268,7 +268,10 @@ describe('ssr', () => {
 
     const sheet = new ServerStyleSheet()
     const html = renderToString(
-      sheet.collectStyles(<Heading>Hello SSR!</Heading>)
+      sheet.collectStyles(<React.Fragment>
+        <Heading>Hello SSR!</Heading>
+        <Component />
+      </React.Fragment>)
     )
     const elements = sheet.getStyleElement()
 
