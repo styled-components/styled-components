@@ -68,10 +68,10 @@ const flatten = (
     if (chunk instanceof Keyframes) {
       if (styleSheet) {
         chunk.inject(styleSheet)
-        return ruleSet.concat(chunk.getName())
-      }
+        ruleSet.push(chunk.getName())
+      } else ruleSet.push(chunk)
 
-      return ruleSet.concat(chunk)
+      return ruleSet
     }
 
     /* Handle objects */
