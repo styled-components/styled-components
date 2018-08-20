@@ -383,20 +383,34 @@ describe('rehydration', () => {
     })
 
     it('should not regenerate keyframes', () => {
-      keyframes`
+      const fadeIn = keyframes`
         from { opacity: 0; }
       `
+
+      const A = styled.div`
+        animation: ${fadeIn} 1s both;
+      `
+      mount(<A />)
+
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
+        .sc-a{ } .b{ -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
       `)
     })
 
     it('should still inject new keyframes', () => {
-      keyframes`
+      const fadeOut = keyframes`
         from { opacity: 1; }
       `
+
+      const A = styled.div`
+        animation: ${fadeOut} 1s both;
+      `
+      mount(<A />)
+
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
+        .sc-a{ } .b{ -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
         @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
       `)
     })
@@ -421,8 +435,33 @@ describe('rehydration', () => {
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
         .sc-a { } .d { -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
-        @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
         .sc-b { } .c { -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
+        @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
+      `)
+    })
+
+    it('should pass the keyframes name through props along as well', () => {
+      const fadeIn = keyframes`
+        from { opacity: 0; }
+      `
+      const A = styled.div`
+        animation: ${props => props.animation} 1s both;
+      `
+      const fadeOut = keyframes`
+        from { opacity: 1; }
+      `
+      const B = styled.div`
+        animation: ${props => props.animation} 1s both;
+      `
+      /* Purposely rendering out of order to make sure the output looks right */
+      mount(<B animation={fadeOut} />)
+      mount(<A animation={fadeIn} />)
+
+      expectCSSMatches(`
+        @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
+        .sc-a { } .d { -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
+        .sc-b { } .c { -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
+        @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
       `)
     })
   })
