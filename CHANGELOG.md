@@ -8,6 +8,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 * Edit me into a changelog entry
 
+## [3.4.4] - 2018-08-21
+
+* Fix warning function not having a production fallback, by [@mitoyarzun](https://github.com/mitoyarzun) (see [#1938](https://github.com/styled-components/styled-components/pull/1938)
+
 ## [3.4.3] - 2018-08-21
 
 * Add warning for the upcoming removal of the `extend` API in v4.0, by [@probablyup](https://github.com/probablyup) (see [#1909](https://github.com/styled-components/styled-components/pull/1909))
@@ -546,7 +550,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 * Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.3...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.4...master
+[v3.4.4]: https://github.com/styled-components/styled-components/compare/v3.4.3...v3.4.4
 [v3.4.3]: https://github.com/styled-components/styled-components/compare/v3.4.2...v3.4.3
 [v3.4.2]: https://github.com/styled-components/styled-components/compare/v3.4.1...v3.4.2
 [v3.4.1]: https://github.com/styled-components/styled-components/compare/v3.4.0...v3.4.1
