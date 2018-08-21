@@ -22,9 +22,9 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
  
 - [Breaking change] Refactor `keyframes` helper, by [@fer0x](https://github.com/Fer0x) (see [#1930](https://github.com/styled-components/styled-components/pull/1930)).
   
-  Now keyframes is working "lazy": it styles will be injected with render of components using them.
+  Keyframes is now implemented in a "lazy" manner: its styles will be injected with the render phase of components using them.
    
-  keyframes`` no longer returns animation name, instead it returns object, which has method `.getName()` for purpose of getting animation name.
+  `keyframes` no longer returns an animation name, instead it returns object which has method `.getName()` for purpose of getting the animation name.
 
 ## [v3.4.2] - 2018-08-07
 
