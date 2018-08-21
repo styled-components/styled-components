@@ -4,7 +4,7 @@ import flatten from '../utils/flatten'
 import isStaticRules from '../utils/isStaticRules'
 import StyleSheet from './StyleSheet'
 
-export default (stringifyRules: Stringifier) => {
+export default (ComponentStyle: Function, stringifyRules: Stringifier) => {
   class GlobalStyle {
     rules: RuleSet
     componentId: string
@@ -15,29 +15,28 @@ export default (stringifyRules: Stringifier) => {
       this.componentId = componentId
       this.isStatic = isStaticRules(rules)
       if (!StyleSheet.master.hasId(componentId)) {
-        const placeholder =
-          process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : []
-
-        StyleSheet.master.deferredInject(componentId, placeholder)
+        StyleSheet.master.deferredInject(componentId, [])
       }
     }
 
     createStyles(executionContext: Object, styleSheet: StyleSheet) {
       const flatCSS = flatten(this.rules, executionContext)
       const css = stringifyRules(flatCSS, '')
+      // TODO: We will need to figure out how to do this before 4.0
+      // const name = ComponentStyle.generateName(this.componentId + css)
       styleSheet.inject(this.componentId, css, '')
     }
 
     renderStyles(executionContext: Object, styleSheet: StyleSheet) {
-      if (styleSheet.hasId(this.componentId)) {
-        this.removeStyles(styleSheet)
-      }
+      this.removeStyles(styleSheet)
       this.createStyles(executionContext, styleSheet)
     }
 
     removeStyles(styleSheet: StyleSheet) {
       const { componentId } = this
-      styleSheet.remove(componentId)
+      if (styleSheet.hasId(componentId)) {
+        styleSheet.remove(componentId)
+      }
     }
   }
 

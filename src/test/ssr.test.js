@@ -4,20 +4,18 @@
 import React from 'react'
 import { renderToString, renderToNodeStream } from 'react-dom/server'
 import ServerStyleSheet from '../models/ServerStyleSheet'
-import { resetStyled } from './utils'
-import _createGlobalStyle from '../constructors/createGlobalStyle'
+import { resetStyled, resetCreateGlobalStyle } from './utils'
 import _keyframes from '../constructors/keyframes'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
 
 jest.mock('../utils/nonce')
 
-const createGlobalStyle = _createGlobalStyle(stringifyRules, css)
-
 let index = 0
 const keyframes = _keyframes(() => `keyframe_${index++}`, stringifyRules, css)
 
 let styled
+let createGlobalStyle
 
 describe('ssr', () => {
   beforeEach(() => {
@@ -25,6 +23,7 @@ describe('ssr', () => {
     require('../utils/nonce').mockReset()
 
     styled = resetStyled(true)
+    createGlobalStyle = resetCreateGlobalStyle()
   })
 
   afterEach(() => {
@@ -160,47 +159,6 @@ describe('ssr', () => {
       </React.Fragment>)
     )
     const cssTwo = sheetTwo.getStyleTags()
-
-    expect(htmlOne).toMatchSnapshot()
-    expect(cssOne).toMatchSnapshot()
-    expect(htmlTwo).toMatchSnapshot()
-    expect(cssTwo).toMatchSnapshot()
-  })
-
-  it.skip('should allow global styles to be injected during rendering', () => {
-    const Component1 = createGlobalStyle`html::before { content: 'Before both renders'; }`
-    const PageOne = styled.h1.withConfig({ componentId: 'PageOne' })`
-      color: red;
-    `
-    const PageTwo = styled.h2.withConfig({ componentId: 'PageTwo' })`
-      color: blue;
-    `
-
-    const sheetOne = new ServerStyleSheet()
-    const htmlOne = renderToString(
-      sheetOne.collectStyles(<React.Fragment>
-        <Component1 />
-        <PageOne>Camera One!</PageOne>
-      </React.Fragment>)
-    )
-    const Component2 = createGlobalStyle`html::before { content: 'During first render'; }`
-    const cssOne = sheetOne.getStyleTags()
-
-    const Component3 = createGlobalStyle`html::before { content: 'Between renders'; }`
-
-    const sheetTwo = new ServerStyleSheet()
-    const Component4 = createGlobalStyle`html::before { content: 'During second render'; }`
-    const htmlTwo = renderToString(
-      sheetTwo.collectStyles(<React.Fragment>
-        <Component2 />
-        <Component3 />
-        <Component4 />
-        <PageTwo>Camera Two!</PageTwo>
-      </React.Fragment>)
-    )
-    const cssTwo = sheetTwo.getStyleTags()
-
-    const Component5 = createGlobalStyle`html::before { content: 'After both renders'; }`
 
     expect(htmlOne).toMatchSnapshot()
     expect(cssOne).toMatchSnapshot()

@@ -3,15 +3,12 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import ReactDOMServer from 'react-dom/server';
 
-import { expectCSSMatches, getCSS, resetStyled, stripComments, stripWhitespace } from '../../test/utils'
-import stringifyRules from '../../utils/stringifyRules'
-import css from '../css'
-import _createGlobalStyle from '../createGlobalStyle';
+import { expectCSSMatches, getCSS, resetStyled, resetCreateGlobalStyle, stripComments, stripWhitespace } from '../../test/utils'
 import ThemeProvider from '../../models/ThemeProvider'
 import ServerStyleSheet from '../../models/ServerStyleSheet'
 import StyleSheetManager from '../../models/StyleSheetManager'
 
-const createGlobalStyle = _createGlobalStyle(stringifyRules, css)
+const createGlobalStyle = resetCreateGlobalStyle()
 const styled = resetStyled();
 
 let context;
@@ -283,6 +280,7 @@ function setup() {
     },
     cleanup() {
       resetStyled()
+      resetCreateGlobalStyle()
       document.body.removeChild(container)
     }
   }

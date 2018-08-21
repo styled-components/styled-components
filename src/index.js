@@ -74,7 +74,11 @@ const StyledComponent = _StyledComponent(ComponentStyle)
 
 /* Instantiate exported singletons */
 const keyframes = _keyframes(generateAlphabeticName, stringifyRules, css)
-const createGlobalStyle = _createGlobalStyle(stringifyRules, css)
+const createGlobalStyle = _createGlobalStyle(
+  ComponentStyle,
+  stringifyRules,
+  css
+)
 const styled = _styled(StyledComponent, constructWithOptions)
 
 /* Export everything */
