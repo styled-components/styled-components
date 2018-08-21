@@ -3,8 +3,10 @@
 declare var __DEV__: ?string
 
 export const SC_ATTR =
-  (typeof process !== 'undefined' && process.env.SC_ATTR) ||
-  'data-styled-components'
+  (typeof process !== 'undefined' && process.env.SC_ATTR) || 'data-styled'
+
+export const SC_VERSION_ATTR = 'data-styled-version'
+
 export const SC_STREAM_ATTR = 'data-styled-streamed'
 
 export const IS_BROWSER =

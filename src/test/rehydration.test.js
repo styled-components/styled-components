@@ -9,7 +9,7 @@ import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
 import _keyframes from '../constructors/keyframes'
 import StyleSheet from '../models/StyleSheet'
-import { SC_ATTR } from '../constants'
+import { SC_ATTR, SC_VERSION_ATTR } from '../constants'
 
 const keyframes = _keyframes(
   hash => `keyframe_${hash % 1000}`,
@@ -38,7 +38,7 @@ describe('rehydration', () => {
   describe('with existing styled components', () => {
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR}="b">
+        <style ${SC_ATTR}="b" ${SC_VERSION_ATTR}="${__VERSION__}">
           /* sc-component-id: TWO */
           .TWO {}
           .b { color: red; }
@@ -105,7 +105,7 @@ describe('rehydration', () => {
       /* Hash 1323611362 is based on name TWO and contents color: red.
        * Change either and this will break. */
       document.head.innerHTML = `
-        <style ${SC_ATTR}='a b'>
+        <style ${SC_ATTR}='a b' ${SC_VERSION_ATTR}="${__VERSION__}">
           /* sc-component-id: ONE */
           .ONE {}
           .a { color: blue; }
@@ -186,11 +186,11 @@ describe('rehydration', () => {
        * derived from "body { background: papayawhip; }" so be careful
        * changing it. */
       document.head.innerHTML = `
-        <style ${SC_ATTR}>
+        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
           /* sc-component-id: sc-global-557410406 */
           body { background: papayawhip; }
         </style>
-        <style ${SC_ATTR}='b'>
+        <style ${SC_ATTR}='b' ${SC_VERSION_ATTR}="${__VERSION__}">
           /* sc-component-id: TWO */
           .TWO {}
           .b { color: red; }
@@ -256,13 +256,13 @@ describe('rehydration', () => {
     let styleTags
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR}>
+        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
            /* sc-component-id: sc-global-1455077013 */
           html { font-size: 16px; }
            /* sc-component-id: sc-global-557410406 */
           body { background: papayawhip; }
         </style>
-        <style ${SC_ATTR}='a b'>
+        <style ${SC_ATTR}='a b' ${SC_VERSION_ATTR}="${__VERSION__}">
           /* sc-component-id: ONE */
           .ONE {}
           .a { color: blue; }
@@ -383,7 +383,7 @@ describe('rehydration', () => {
   describe('with keyframes', () => {
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR}='keyframe_880'>
+        <style ${SC_ATTR}='keyframe_880' ${SC_VERSION_ATTR}="${__VERSION__}">
           /* sc-component-id: sc-keyframes-keyframe_880 */
           @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
         </style>
@@ -398,20 +398,34 @@ describe('rehydration', () => {
     })
 
     it('should not regenerate keyframes', () => {
-      keyframes`
+      const fadeIn = keyframes`
         from { opacity: 0; }
       `
+
+      const A = styled.div`
+        animation: ${fadeIn} 1s both;
+      `
+      mount(<A />)
+
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
+        .sc-a{ } .b{ -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
       `)
     })
 
     it('should still inject new keyframes', () => {
-      keyframes`
+      const fadeOut = keyframes`
         from { opacity: 1; }
       `
+
+      const A = styled.div`
+        animation: ${fadeOut} 1s both;
+      `
+      mount(<A />)
+
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
+        .sc-a{ } .b{ -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
         @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
       `)
     })
@@ -436,8 +450,33 @@ describe('rehydration', () => {
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
         .sc-a { } .d { -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
-        @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
         .sc-b { } .c { -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
+        @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
+      `)
+    })
+
+    it('should pass the keyframes name through props along as well', () => {
+      const fadeIn = keyframes`
+        from { opacity: 0; }
+      `
+      const A = styled.div`
+        animation: ${props => props.animation} 1s both;
+      `
+      const fadeOut = keyframes`
+        from { opacity: 1; }
+      `
+      const B = styled.div`
+        animation: ${props => props.animation} 1s both;
+      `
+      /* Purposely rendering out of order to make sure the output looks right */
+      mount(<B animation={fadeOut} />)
+      mount(<A animation={fadeIn} />)
+
+      expectCSSMatches(`
+        @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
+        .sc-a { } .d { -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
+        .sc-b { } .c { -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
+        @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
       `)
     })
   })

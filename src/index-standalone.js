@@ -10,10 +10,9 @@ import css from './constructors/css'
 import _StyledComponent from './models/StyledComponent'
 import _ComponentStyle from './models/ComponentStyle'
 import _styled from './constructors/styled'
-import _createGlobalStyle from './constructors/createGlobalStyle'
 import _constructWithOptions from './constructors/constructWithOptions'
 
-export * from './base'
+import * as secondary from './base'
 
 /* Instantiate singletons */
 const ComponentStyle = _ComponentStyle(
@@ -21,13 +20,19 @@ const ComponentStyle = _ComponentStyle(
   flatten,
   stringifyRules
 )
+
 const constructWithOptions = _constructWithOptions(css)
 const StyledComponent = _StyledComponent(ComponentStyle)
 
-const createGlobalStyle = _createGlobalStyle(
-  ComponentStyle,
-  stringifyRules,
-  css
-)
-export { createGlobalStyle }
-export default _styled(StyledComponent, constructWithOptions)
+const styled = _styled(StyledComponent, constructWithOptions)
+
+/**
+ * eliminates the need to do styled.default since the other APIs
+ * are directly assigned as properties to the main function
+ * */
+// eslint-disable-next-line guard-for-in
+for (const key in secondary) {
+  styled[key] = secondary[key]
+}
+
+export default styled

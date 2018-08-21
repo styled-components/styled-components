@@ -7,9 +7,11 @@ import json from 'rollup-plugin-json'
 import flow from 'rollup-plugin-flow'
 import { terser } from 'rollup-plugin-terser'
 import sourceMaps from 'rollup-plugin-sourcemaps'
+import pkg from './package.json'
 
-// rollup-plugin-ignore stopped working, so we'll just remove the import line 😐
-const ignore = { "import stream from 'stream';": "'';" }
+// rollup-plugin-ignore stopped working, so we'll just remove the import lines 😐
+const propTypeIgnore = { "import PropTypes from 'prop-types';": "'';" }
+const streamIgnore = { "import stream from 'stream';": "'';" }
 
 const cjs = {
   exports: 'named',
@@ -22,8 +24,8 @@ const esm = {
   sourcemap: true,
 }
 
-const getCJS = override => Object.assign({}, cjs, override)
-const getESM = override => Object.assign({}, esm, override)
+const getCJS = override => ({ ...cjs, ...override })
+const getESM = override => ({ ...esm, ...override })
 
 const commonPlugins = [
   flow({
@@ -45,6 +47,17 @@ const commonPlugins = [
   }),
   replace({
     __DEV__: JSON.stringify(false), // disable flag indicating a Jest run
+    __VERSION__: JSON.stringify(pkg.version),
+  }),
+]
+
+const prodPlugins = [
+  replace({
+    ...propTypeIgnore,
+    'process.env.NODE_ENV': JSON.stringify('production'),
+  }),
+  terser({
+    sourceMap: true,
   }),
 ]
 
@@ -59,48 +72,46 @@ const configBase = {
 
 const globals = { react: 'React' }
 
-const umdBaseConfig = Object.assign({}, configBase, {
+const standaloneBaseConfig = {
+  ...configBase,
+  input: './src/index-standalone.js',
   output: {
-    exports: 'named',
     file: 'dist/styled-components.js',
-    format: 'umd',
+    format: 'iife',
+    footer: ';window.styled = styled;',
     globals,
     name: 'styled',
     sourcemap: true,
   },
   external: Object.keys(globals),
   plugins: configBase.plugins.concat(
-    replace(
-      Object.assign({}, ignore, {
-        __SERVER__: JSON.stringify(false),
-      })
-    )
+    replace({
+      ...streamIgnore,
+      __SERVER__: JSON.stringify(false),
+    })
   ),
-})
+}
 
-const umdConfig = Object.assign({}, umdBaseConfig, {
-  plugins: umdBaseConfig.plugins.concat(
+const standaloneConfig = {
+  ...standaloneBaseConfig,
+  plugins: standaloneBaseConfig.plugins.concat(
     replace({
       'process.env.NODE_ENV': JSON.stringify('development'),
     })
   ),
-})
+}
 
-const umdProdConfig = Object.assign({}, umdBaseConfig, {
-  output: Object.assign({}, umdBaseConfig.output, {
+const standaloneProdConfig = {
+  ...standaloneBaseConfig,
+  output: {
+    ...standaloneBaseConfig.output,
     file: 'dist/styled-components.min.js',
-  }),
-  plugins: umdBaseConfig.plugins.concat([
-    replace({
-      'process.env.NODE_ENV': JSON.stringify('production'),
-    }),
-    terser({
-      sourceMap: true,
-    }),
-  ]),
-})
+  },
+  plugins: standaloneBaseConfig.plugins.concat(prodPlugins),
+}
 
-const serverConfig = Object.assign({}, configBase, {
+const serverConfig = {
+  ...configBase,
   output: [
     getESM({ file: 'dist/styled-components.esm.js' }),
     getCJS({ file: 'dist/styled-components.cjs.js' }),
@@ -110,64 +121,63 @@ const serverConfig = Object.assign({}, configBase, {
       __SERVER__: JSON.stringify(true),
     })
   ),
-})
+}
 
-const serverProdConfig = Object.assign({}, configBase, serverConfig, {
-  output: [
-    getESM({ file: 'dist/styled-components.esm.min.js' }),
-    getCJS({ file: 'dist/styled-components.cjs.min.js' }),
-  ],
-  plugins: serverConfig.plugins.concat(
-    replace({
-      'process.env.NODE_ENV': JSON.stringify('production'),
-    }),
-    terser({
-      sourceMap: true,
-    })
-  ),
-})
-
-const browserConfig = Object.assign({}, configBase, {
+const browserConfig = {
+  ...configBase,
   output: [
     getESM({ file: 'dist/styled-components.browser.esm.js' }),
     getCJS({ file: 'dist/styled-components.browser.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
-    replace(
-      Object.assign({}, ignore, {
-        __SERVER__: JSON.stringify(false),
-      })
-    )
-  ),
-})
-
-const browserProdConfig = Object.assign({}, configBase, browserConfig, {
-  output: [
-    getESM({
-      file: 'dist/styled-components.browser.esm.min.js',
-    }),
-    getCJS({
-      file: 'dist/styled-components.browser.cjs.min.js',
-    }),
-  ],
-  plugins: browserConfig.plugins.concat(
     replace({
-      'process.env.NODE_ENV': JSON.stringify('production'),
-    }),
-    terser({
-      sourceMap: true,
+      ...streamIgnore,
+      __SERVER__: JSON.stringify(false),
     })
   ),
-})
+}
 
-const nativeConfig = Object.assign({}, configBase, {
+const noTagsPath = './src/index-without-tags.js'
+
+const noTagServerConfig = {
+  ...configBase,
+  input: noTagsPath,
+  output: [
+    getESM({ file: 'dist/styled-components-no-tags.esm.js' }),
+    getCJS({ file: 'dist/styled-components-no-tags.cjs.js' }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(true),
+    })
+  ),
+}
+
+const noTagBrowserConfig = {
+  ...configBase,
+  input: noTagsPath,
+  output: [
+    getESM({ file: 'dist/styled-components-no-tags.browser.esm.js' }),
+    getCJS({ file: 'dist/styled-components-no-tags.browser.cjs.js' }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace({
+      ...streamIgnore,
+      __SERVER__: JSON.stringify(false),
+    })
+  ),
+}
+
+const nativeConfig = {
+  ...configBase,
   input: './src/native/index.js',
   output: getCJS({
     file: 'dist/styled-components.native.cjs.js',
   }),
-})
+}
 
-const primitivesConfig = Object.assign({}, configBase, {
+const primitivesConfig = {
+  ...configBase,
   input: './src/primitives/index.js',
   output: [
     getESM({ file: 'dist/styled-components-primitives.esm.js' }),
@@ -180,15 +190,15 @@ const primitivesConfig = Object.assign({}, configBase, {
       __SERVER__: JSON.stringify(true),
     })
   ),
-})
+}
 
 export default [
-  umdConfig,
-  umdProdConfig,
+  standaloneConfig,
+  standaloneProdConfig,
   serverConfig,
-  serverProdConfig,
   browserConfig,
-  browserProdConfig,
+  noTagServerConfig,
+  noTagBrowserConfig,
   nativeConfig,
   primitivesConfig,
 ]

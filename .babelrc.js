@@ -7,7 +7,6 @@ module.exports = {
   presets: [['env', { loose, modules }], 'react'],
   plugins: [
     'preval',
-    'flow-react-proptypes',
     ['transform-react-remove-prop-types', { mode: 'unsafe-wrap' }],
     'transform-object-rest-spread',
     ['transform-class-properties', { loose }],

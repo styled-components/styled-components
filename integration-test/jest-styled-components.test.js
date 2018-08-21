@@ -1,15 +1,16 @@
+// @flow
 import React from 'react'
-import styled from 'styled-components'
+import styled from '..'
 import renderer from 'react-test-renderer'
 import 'jest-styled-components'
 
-jest.mock('styled-components', () => require('../dist/styled-components'))
+// jest.mock('styled-components', () => require('../dist/styled-components.cjs'))
 
 const Button = styled.button`
   color: red;
 `
 
-test('it works', () => {
+xtest('it works', () => {
   const tree = renderer.create(<Button />).toJSON()
   expect(tree).toMatchSnapshot()
   expect(tree).toHaveStyleRule('color', 'red')

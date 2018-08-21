@@ -3,7 +3,12 @@
 /* eslint-disable react/prop-types */
 
 import React, { type Element } from 'react'
-import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR } from '../constants'
+import {
+  IS_BROWSER,
+  DISABLE_SPEEDY,
+  SC_ATTR,
+  SC_VERSION_ATTR,
+} from '../constants'
 import StyledError from '../utils/error'
 import { type ExtractedComp } from '../utils/extractCompsFromCSS'
 import { splitByRules } from '../utils/stringifyRules'
@@ -24,6 +29,8 @@ import {
   safeInsertRule,
   deleteRules,
 } from '../utils/insertRuleHelpers'
+
+declare var __VERSION__: string
 
 export interface Tag<T> {
   // $FlowFixMe: Doesn't seem to accept any combination w/ HTMLStyleElement for some reason
@@ -65,6 +72,7 @@ const makeStyleTag = (
 ) => {
   const el = document.createElement('style')
   el.setAttribute(SC_ATTR, '')
+  el.setAttribute(SC_VERSION_ATTR, __VERSION__)
 
   const nonce = getNonce()
   if (nonce) {
@@ -97,6 +105,7 @@ const wrapAsHtmlTag = (css: () => string, names: Names) => (
   const attrs = [
     nonce && `nonce="${nonce}"`,
     `${SC_ATTR}="${stringifyNames(names)}"`,
+    `${SC_VERSION_ATTR}="${__VERSION__}"`,
     additionalAttrs,
   ]
 
@@ -108,6 +117,7 @@ const wrapAsHtmlTag = (css: () => string, names: Names) => (
 const wrapAsElement = (css: () => string, names: Names) => () => {
   const props = {
     [SC_ATTR]: stringifyNames(names),
+    [SC_VERSION_ATTR]: __VERSION__,
   }
 
   const nonce = getNonce()

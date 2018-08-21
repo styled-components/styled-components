@@ -59,7 +59,7 @@ export default (
         return lastClassName
       }
 
-      const flatCSS = flatten(this.rules, executionContext)
+      const flatCSS = flatten(this.rules, executionContext, styleSheet)
       const name = generateRuleHash(this.componentId + flatCSS.join(''))
       if (!styleSheet.hasNameForId(componentId, name)) {
         styleSheet.inject(

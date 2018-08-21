@@ -29,6 +29,28 @@ export default class ThemeProvider extends Component<Props> {
     this.getContext = memoize(this.getContext.bind(this))
   }
 
+  render() {
+    const { children, theme } = this.props
+
+    if (!children) {
+      return null
+    }
+
+    return (
+      <ThemeContext.Consumer>
+        {(outerTheme?: Theme) => {
+          const context = this.getContext(theme, outerTheme)
+
+          return (
+            <ThemeContext.Provider value={context}>
+              {React.Children.only(children)}
+            </ThemeContext.Provider>
+          )
+        }}
+      </ThemeContext.Consumer>
+    )
+  }
+
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
   getTheme(theme: (outerTheme: ?Theme) => void, outerTheme: ?Theme) {
     if (isFunction(theme)) {
@@ -55,27 +77,5 @@ export default class ThemeProvider extends Component<Props> {
 
   getContext(theme: (outerTheme: ?Theme) => void, outerTheme?: Theme) {
     return this.getTheme(theme, outerTheme)
-  }
-
-  render() {
-    const { children, theme } = this.props
-
-    if (!children) {
-      return null
-    }
-
-    return (
-      <ThemeContext.Consumer>
-        {(outerTheme?: Theme) => {
-          const context = this.getContext(theme, outerTheme)
-
-          return (
-            <ThemeContext.Provider value={context}>
-              {React.Children.only(children)}
-            </ThemeContext.Provider>
-          )
-        }}
-      </ThemeContext.Consumer>
-    )
   }
 }

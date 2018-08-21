@@ -1,8 +1,7 @@
 {
   "name": "styled-components",
-  "version": "3.4.2",
+  "version": "4.0.0-alpha.0",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
-  "typings": "typings/styled-components.d.ts",
   "main": "dist/styled-components.cjs.js",
   "module": "dist/styled-components.esm.js",
   "react-native": "dist/styled-components.native.cjs.js",
@@ -27,8 +26,6 @@
     "flow:watch": "flow-watch",
     "format": "eslint ./**/*.js --fix",
     "lint": "eslint src",
-    "tslint": "tslint typings/*.ts native/*.ts",
-    "typescript": "tsc --project ./typings/tests",
     "precommit": "lint-staged",
     "prepublishOnly": "run-s build",
     "lint-staged": "lint-staged",
@@ -46,15 +43,11 @@
     "CODE_OF_CONDUCT.md",
     "CONTRIBUTING.md",
     "dist",
-    "docs",
-    "flow-typed",
-    "lib",
     "native",
+    "no-tags",
     "primitives",
     "scripts",
-    "src",
-    "test-utils",
-    "typings"
+    "test-utils"
   ],
   "keywords": [
     "react",
@@ -79,16 +72,11 @@
     "stylis-rule-sheet": "^0.0.10"
   },
   "devDependencies": {
-    "@types/node": "9.6.4",
-    "@types/react": "^16.3.12",
-    "@types/react-dom": "^16.0.5",
-    "@types/react-native": "^0.55.7",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
     "babel-eslint": "^8.2.3",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-plugin-external-helpers": "^6.22.0",
-    "babel-plugin-flow-react-proptypes": "^24.0.0",
     "babel-plugin-preval": "^3.0.0",
     "babel-plugin-transform-class-properties": "^6.22.0",
     "babel-plugin-transform-object-rest-spread": "^6.22.0",
@@ -139,9 +127,7 @@
     "rollup-plugin-node-resolve": "^3.3.0",
     "rollup-plugin-replace": "^1.0.0",
     "rollup-plugin-sourcemaps": "^0.4.2",
-    "rollup-plugin-terser": "^1.0.1",
-    "tslint": "^4.3.1",
-    "typescript": "^2.4.1"
+    "rollup-plugin-terser": "^1.0.1"
   },
   "peerDependencies": {
     "react": ">= 16.3.0"
@@ -175,15 +161,7 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "maxSize": "16.5kB"
-    },
-    {
-      "path": "./dist/styled-components.cjs.min.js",
-      "maxSize": "12kB"
-    },
-    {
-      "path": "./dist/styled-components.esm.min.js",
-      "maxSize": "11.5kB"
+      "maxSize": "16kB"
     }
   ],
   "collective": {

@@ -23,10 +23,14 @@ export type CSSConstructor = (
   strings: Array<string>,
   ...interpolations: Array<Interpolation>
 ) => RuleSet
+export type StyleSheet = {
+  create: Function,
+}
 
 export type Flattener = (
   chunks: Array<Interpolation>,
-  executionContext: ?Object
+  executionContext: ?Object,
+  styleSheet: ?Object
 ) => Array<Interpolation>
 
 export type Stringifier = (
@@ -34,7 +38,3 @@ export type Stringifier = (
   selector: ?string,
   prefix: ?string
 ) => Array<string>
-
-export type StyleSheet = {
-  create: Function,
-}
