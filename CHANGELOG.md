@@ -19,6 +19,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 - Add new `data-styled-version` attribute to generated `<style>` tags to allow multiple versions of styled-components to function on the page at once without clobbering each other, by [@probablyup](https://github.com/probablyup)
 
   It's still highly recommended to use aliasing via your bundler to dedupe libraries like styled-components and react.
+ 
+- [Breaking change] Refactor `keyframes` helper. Now keyframes is working "lazy": it styles will be injected with render of components using them.
+   
+  keyframes`` no longer returns animation name, instead it returns object, which has method `.getName()` for purpose of getting animation name.
 
 ## [v3.4.2] - 2018-08-07
 
