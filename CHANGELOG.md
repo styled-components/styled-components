@@ -20,7 +20,9 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
   It's still highly recommended to use aliasing via your bundler to dedupe libraries like styled-components and react.
  
-- [Breaking change] Refactor `keyframes` helper. Now keyframes is working "lazy": it styles will be injected with render of components using them.
+- [Breaking change] Refactor `keyframes` helper, by [@fer0x](https://github.com/Fer0x) (see [#1930](https://github.com/styled-components/styled-components/pull/1930)).
+  
+  Now keyframes is working "lazy": it styles will be injected with render of components using them.
    
   keyframes`` no longer returns animation name, instead it returns object, which has method `.getName()` for purpose of getting animation name.
 
