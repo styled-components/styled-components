@@ -4,13 +4,18 @@ All notable changes to this project will be documented in this file. If a contri
 
 _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/)._
 
-## Unreleased
+## unreleased
+
+* Edit me into a changelog entry
+
+## [3.4.3] - 2018-08-21
 
 * Add warning for the upcoming removal of the `extend` API in v4.0, by [@probablyup](https://github.com/probablyup) (see [#1909](https://github.com/styled-components/styled-components/pull/1909))
 
-* Throw Error if a React component was mistakenly interpolated within styles
- by [@imbhargav5](https://github.com/imbhargav5)
- 
+* Throw Error if a React component was mistakenly interpolated within styles, by [@imbhargav5](https://github.com/imbhargav5) (see [#1883](https://github.com/styled-components/styled-components/pull/1883))
+
+* Fix the primitives build, by [@probablyup](https://github.com/probablyup) (see [24f097](https://github.com/styled-components/styled-components/commit/24f097e3d342a1ab3db3ff68b81cc7d172e7dd0b))
+
 ## [v3.4.2] - 2018-08-07
 
 * Fix a regression from [#1843](https://github.com/styled-components/styled-components/pull/1892) that breaks deferred injection and duplicates rules, by [@kitten](https://github.com/kitten) (see [#1892](https://github.com/styled-components/styled-components/pull/1892))
@@ -541,7 +546,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 * Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.2...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.3...master
+[v3.4.3]: https://github.com/styled-components/styled-components/compare/v3.4.2...v3.4.3
 [v3.4.2]: https://github.com/styled-components/styled-components/compare/v3.4.1...v3.4.2
 [v3.4.1]: https://github.com/styled-components/styled-components/compare/v3.4.0...v3.4.1
 [v3.4.0]: https://github.com/styled-components/styled-components/compare/v3.3.3...v3.4.0
