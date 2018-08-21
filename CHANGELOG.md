@@ -10,7 +10,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## [3.4.4] - 2018-08-21
 
-* Fix warning function not having a production fallback, by [@mitoyarzun](https://github.com/mitoyarzun) (see [#1938](https://github.com/styled-components/styled-components/pull/1938)
+* Fix warning function not having a production fallback, by [@mitoyarzun](https://github.com/mitoyarzun) (see [#1938](https://github.com/styled-components/styled-components/pull/1938))
 
 ## [3.4.3] - 2018-08-21
 
