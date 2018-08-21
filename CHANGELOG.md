@@ -24,7 +24,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
   
   Keyframes is now implemented in a "lazy" manner: its styles will be injected with the render phase of components using them.
    
-  `keyframes` no longer returns an animation name, instead it returns object which has method `.getName()` for purpose of getting the animation name.
+  `keyframes` no longer returns an animation name, instead it returns an object which has method `.getName()` for the purpose of getting the animation name.
 
 ## [v3.4.2] - 2018-08-07
 
