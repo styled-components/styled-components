@@ -1,5 +1,5 @@
 // @flow
-import validAttr from '../validAttr'
+import validAttr from '@emotion/is-prop-valid'
 
 describe('validAttr', () => {
   it('should allow all the reactProps', () => {
@@ -9,9 +9,7 @@ describe('validAttr', () => {
     expect(validAttr('ref')).toEqual(true)
     expect(validAttr('autoFocus')).toEqual(true)
     expect(validAttr('defaultValue')).toEqual(true)
-    expect(validAttr('valueLink')).toEqual(true)
     expect(validAttr('defaultChecked')).toEqual(true)
-    expect(validAttr('checkedLink')).toEqual(true)
     expect(validAttr('innerHTML')).toEqual(true)
     expect(validAttr('suppressContentEditableWarning')).toEqual(true)
     expect(validAttr('onFocusIn')).toEqual(true)
@@ -72,7 +70,6 @@ describe('validAttr', () => {
     expect(validAttr('hrefLang')).toEqual(true)
     expect(validAttr('htmlFor')).toEqual(true)
     expect(validAttr('httpEquiv')).toEqual(true)
-    expect(validAttr('icon')).toEqual(true)
     expect(validAttr('id')).toEqual(true)
     expect(validAttr('inputMode')).toEqual(true)
     expect(validAttr('integrity')).toEqual(true)
@@ -85,7 +82,6 @@ describe('validAttr', () => {
     expect(validAttr('list')).toEqual(true)
     expect(validAttr('loop')).toEqual(true)
     expect(validAttr('low')).toEqual(true)
-    expect(validAttr('manifest')).toEqual(true)
     expect(validAttr('marginHeight')).toEqual(true)
     expect(validAttr('marginWidth')).toEqual(true)
     expect(validAttr('max')).toEqual(true)
