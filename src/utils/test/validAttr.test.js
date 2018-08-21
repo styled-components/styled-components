@@ -1,5 +1,5 @@
 // @flow
-import validAttr from '../validAttr'
+import validAttr from '@emotion/is-prop-valid'
 
 describe('validAttr', () => {
   it('should allow all the reactProps', () => {
@@ -9,9 +9,7 @@ describe('validAttr', () => {
     expect(validAttr('ref')).toEqual(true)
     expect(validAttr('autoFocus')).toEqual(true)
     expect(validAttr('defaultValue')).toEqual(true)
-    expect(validAttr('valueLink')).toEqual(true)
     expect(validAttr('defaultChecked')).toEqual(true)
-    expect(validAttr('checkedLink')).toEqual(true)
     expect(validAttr('innerHTML')).toEqual(true)
     expect(validAttr('suppressContentEditableWarning')).toEqual(true)
     expect(validAttr('onFocusIn')).toEqual(true)
