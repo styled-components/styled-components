@@ -3,6 +3,7 @@ import hyphenate from 'fbjs/lib/hyphenateStyleName'
 import isPlainObject from './isPlainObject'
 
 import type { Interpolation } from '../types'
+import Keyframes from '../models/Keyframes'
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
   const css = Object.keys(obj)
@@ -26,7 +27,8 @@ export const objToCss = (obj: Object, prevKey?: string): string => {
 
 const flatten = (
   chunks: Array<Interpolation>,
-  executionContext: ?Object
+  executionContext: ?Object,
+  styleSheet: ?Object
 ): Array<Interpolation> =>
   chunks.reduce((ruleSet: Array<Interpolation>, chunk: ?Interpolation) => {
     /* Remove falsey values */
@@ -41,7 +43,7 @@ const flatten = (
 
     /* Flatten ruleSet */
     if (Array.isArray(chunk)) {
-      ruleSet.push(...flatten(chunk, executionContext))
+      ruleSet.push(...flatten(chunk, executionContext, styleSheet))
       return ruleSet
     }
 
@@ -55,7 +57,18 @@ const flatten = (
     /* Either execute or defer the function */
     if (typeof chunk === 'function') {
       if (executionContext) {
-        ruleSet.push(...flatten([chunk(executionContext)], executionContext))
+        ruleSet.push(
+          ...flatten([chunk(executionContext)], executionContext, styleSheet)
+        )
+      } else ruleSet.push(chunk)
+
+      return ruleSet
+    }
+
+    if (chunk instanceof Keyframes) {
+      if (styleSheet) {
+        chunk.inject(styleSheet)
+        ruleSet.push(chunk.getName())
       } else ruleSet.push(chunk)
 
       return ruleSet

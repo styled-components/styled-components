@@ -19,9 +19,14 @@ export type Target = string | ComponentType<*>
 
 export type NameGenerator = (hash: number) => string
 
+export type StyleSheet = {
+  create: Function,
+}
+
 export type Flattener = (
   chunks: Array<Interpolation>,
-  executionContext: ?Object
+  executionContext: ?Object,
+  styleSheet: ?Object
 ) => Array<Interpolation>
 
 export type Stringifier = (
@@ -29,7 +34,3 @@ export type Stringifier = (
   selector: ?string,
   prefix: ?string
 ) => Array<string>
-
-export type StyleSheet = {
-  create: Function,
-}
