@@ -18,7 +18,7 @@ type State = {
   generatedStyles: any,
 }
 
-let warnExtendDeprecated
+let warnExtendDeprecated = () => {}
 if (process.env.NODE_ENV !== 'production') {
   warnExtendDeprecated = once(() => {
     // eslint-disable-next-line no-console
