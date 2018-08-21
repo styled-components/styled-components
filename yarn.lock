@@ -93,8 +93,8 @@
     to-fast-properties "^2.0.0"
 
 "@emotion/is-prop-valid@^0.6.5":
-  version "0.6.5"
-  resolved "https://registry.npmjs.org/@emotion/is-prop-valid/-/is-prop-valid-0.6.5.tgz#25071b70957f250e7a8a543a9a187b09161f4d1c"
+  version "0.6.6"
+  resolved "https://registry.npmjs.org/@emotion/is-prop-valid/-/is-prop-valid-0.6.6.tgz#9e1943d2db92e5350282551cb2eafdc9960582cb"
   dependencies:
     "@emotion/memoize" "^0.6.5"
 
