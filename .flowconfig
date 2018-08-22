@@ -17,11 +17,6 @@
 .*/example/.*
 .*/integration-test/.*
 
-[include]
-
-[libs]
-.*/node_modules/danger/distribution/danger.js.flow
-
 [options]
 suppress_comment=.*\\$FlowFixMe
 suppress_comment=.*\\$FlowInvalidInputTest
