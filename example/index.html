@@ -18,7 +18,7 @@
   <script src="https://unpkg.com/babel-standalone@6.26.0/babel.min.js"></script>
   <script src="/styled-components.js"></script>
   <script type="text/babel">
-      styled.injectGlobal`
+     const GlobalStyle = styled.createGlobalStyle`
     body {
       font-family: sans-serif;
     }
@@ -44,6 +44,7 @@
         render() {
           return (
             <Wrapper>
+              <GlobalStyle/>
               <Title>Hello World, this is my first styled component!</Title>
             </Wrapper>
           )
