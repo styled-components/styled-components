@@ -5,7 +5,7 @@ import determineTheme from '../utils/determineTheme'
 import { EMPTY_OBJECT } from '../utils/empties'
 import generateDisplayName from '../utils/generateDisplayName'
 import isTag from '../utils/isTag'
-import hasInInheritanceChain from '../utils/hasInInheritanceChain'
+import isDerivedReactComponent from '../utils/isDerivedReactComponent'
 import { ThemeConsumer } from './ThemeProvider'
 
 import type { Theme } from './ThemeProvider'
@@ -57,29 +57,38 @@ class BaseStyledNativeComponent extends Component<*, *> {
     )
   }
 
-  buildExecutionContext(theme: any, props: any) {
-    const { attrs } = props.forwardedClass
+  buildExecutionContext(theme: any, props: any, attrs: any) {
     const context = { ...props, theme }
-    if (attrs === undefined) {
-      return context
-    }
 
-    this.attrs = Object.keys(attrs).reduce((acc, key) => {
-      const attr = attrs[key]
-      // eslint-disable-next-line no-param-reassign
-      acc[key] =
-        typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
+    if (attrs === undefined) return context
+
+    this.attrs = {}
+
+    let attr
+    let key
+
+    /* eslint-disable guard-for-in */
+    for (key in attrs) {
+      attr = attrs[key]
+
+      this.attrs[key] =
+        typeof attr === 'function' && !isDerivedReactComponent(attr)
           ? attr(context)
           : attr
-      return acc
-    }, {})
+    }
+    /* eslint-enable */
 
     return { ...context, ...this.attrs }
   }
 
   generateAndInjectStyles(theme: any, props: any) {
     const { inlineStyle } = props.forwardedClass
-    const executionContext = this.buildExecutionContext(theme, props)
+
+    const executionContext = this.buildExecutionContext(
+      theme,
+      props,
+      props.forwardedClass.attrs
+    )
 
     return inlineStyle.generateStyleObject(executionContext)
   }

@@ -9,7 +9,7 @@ import escape from '../utils/escape'
 import generateDisplayName from '../utils/generateDisplayName'
 import getComponentName from '../utils/getComponentName'
 import isTag from '../utils/isTag'
-import hasInInheritanceChain from '../utils/hasInInheritanceChain'
+import isDerivedReactComponent from '../utils/isDerivedReactComponent'
 import StyleSheet from './StyleSheet'
 import { ThemeConsumer, type Theme } from './ThemeProvider'
 import { StyleSheetConsumer } from './StyleSheetManager'
@@ -139,23 +139,26 @@ class BaseStyledComponent extends Component<*> {
     return createElement(target, propsForElement)
   }
 
-  buildExecutionContext(theme: any, props: any) {
-    const { attrs } = props.forwardedClass
+  buildExecutionContext(theme: any, props: any, attrs: any) {
     const context = { ...props, theme }
-    if (attrs === undefined) {
-      return context
-    }
 
-    this.attrs = Object.keys(attrs).reduce((acc, key) => {
-      const attr = attrs[key]
+    if (attrs === undefined) return context
 
-      // eslint-disable-next-line no-param-reassign
-      acc[key] =
-        typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
+    this.attrs = {}
+
+    let attr
+    let key
+
+    /* eslint-disable guard-for-in */
+    for (key in attrs) {
+      attr = attrs[key]
+
+      this.attrs[key] =
+        typeof attr === 'function' && !isDerivedReactComponent(attr)
           ? attr(context)
           : attr
-      return acc
-    }, {})
+    }
+    /* eslint-enable */
 
     return { ...context, ...this.attrs }
   }
@@ -175,7 +178,12 @@ class BaseStyledComponent extends Component<*> {
         styleSheet
       )
     } else {
-      const executionContext = this.buildExecutionContext(theme, props)
+      const executionContext = this.buildExecutionContext(
+        theme,
+        props,
+        props.forwardedClass.attrs
+      )
+
       const className = componentStyle.generateAndInjectStyles(
         executionContext,
         styleSheet
