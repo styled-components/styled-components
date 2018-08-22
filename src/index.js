@@ -10,7 +10,6 @@ import css from './constructors/css'
 import _StyledComponent from './models/StyledComponent'
 import _ComponentStyle from './models/ComponentStyle'
 import _styled from './constructors/styled'
-import _createGlobalStyle from './constructors/createGlobalStyle'
 import _constructWithOptions from './constructors/constructWithOptions'
 
 export * from './base'
@@ -24,10 +23,4 @@ const ComponentStyle = _ComponentStyle(
 const constructWithOptions = _constructWithOptions(css)
 const StyledComponent = _StyledComponent(ComponentStyle)
 
-const createGlobalStyle = _createGlobalStyle(
-  ComponentStyle,
-  stringifyRules,
-  css
-)
-export { createGlobalStyle }
 export default _styled(StyledComponent, constructWithOptions)
