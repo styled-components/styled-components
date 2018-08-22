@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import { mount } from 'enzyme'
+import TestRenderer from 'react-test-renderer'
 
 import { resetStyled, expectCSSMatches, seedNextClassnames } from './utils'
 
@@ -53,7 +53,7 @@ describe('rehydration', () => {
       const Comp = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `
-      mount(<Comp />)
+      TestRenderer.create(<Comp />)
       expectCSSMatches('.b { color: red; } .ONE { } .a { color:blue; }')
     })
 
@@ -61,9 +61,9 @@ describe('rehydration', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `
-      mount(<A />)
+      TestRenderer.create(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })``
-      mount(<B />)
+      TestRenderer.create(<B />)
       expectCSSMatches('.b { color: red; } .ONE { } .a { color:blue; }')
     })
 
@@ -71,11 +71,11 @@ describe('rehydration', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `
-      mount(<A />)
+      TestRenderer.create(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `
-      mount(<B />)
+      TestRenderer.create(<B />)
       expectCSSMatches('.b { color: red; } .ONE { } .a { color:blue; }')
     })
 
@@ -83,15 +83,15 @@ describe('rehydration', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `
-      mount(<A />)
+      TestRenderer.create(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `
-      mount(<B />)
+      TestRenderer.create(<B />)
       const C = styled.div.withConfig({ componentId: 'TWO' })`
         color: green;
       `
-      mount(<C />)
+      TestRenderer.create(<C />)
       expectCSSMatches(
         '.b{ color: red; } .c{ color:green; } .ONE { } .a{ color:blue; }'
       )
@@ -126,7 +126,7 @@ describe('rehydration', () => {
       const Comp = styled.div.withConfig({ componentId: 'ONE' })`
         color: ${props => props.color};
       `
-      mount(<Comp color="blue" />)
+      TestRenderer.create(<Comp color="blue" />)
       expectCSSMatches(`
         .ONE { } .a { color: blue; }
         .TWO { } .b { color: red; }
@@ -138,7 +138,7 @@ describe('rehydration', () => {
       const Comp = styled.div.withConfig({ componentId: 'ONE' })`
         color: ${props => props.color};
       `
-      mount(<Comp color="green" />)
+      TestRenderer.create(<Comp color="green" />)
       expectCSSMatches(`
         .a { color: blue; } .x { color:green; }
         .b { color: red; }
@@ -167,11 +167,11 @@ describe('rehydration', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `
-      mount(<A />)
+      TestRenderer.create(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `
-      mount(<B />)
+      TestRenderer.create(<B />)
       expectCSSMatches(
         '.TWO {} .b { color: red; } .ONE { } .a { color:blue; } .TWO {} .b { color:red; } '
       )
@@ -219,7 +219,7 @@ describe('rehydration', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `
-      mount(<A />)
+      TestRenderer.create(<A />)
 
       expectCSSMatches(
         'body { background: papayawhip; } .b { color: red; } body { color:tomato; } .ONE { } .a { color:blue; }'
@@ -288,11 +288,11 @@ describe('rehydration', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `
-      mount(<A />)
+      TestRenderer.create(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `
-      mount(<B />)
+      TestRenderer.create(<B />)
       const styleTagsAfterRehydration = Array.from(
         document.querySelectorAll('style')
       )
@@ -303,7 +303,7 @@ describe('rehydration', () => {
       const C = styled.div.withConfig({ componentId: 'THREE' })`
         color: green;
       `
-      mount(<C />)
+      TestRenderer.create(<C />)
 
       /* the order stays correct and the styles are unharmed
         * NOTE: during rehydration the empty rules are stripped out however */
@@ -326,11 +326,11 @@ describe('rehydration', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `
-      mount(<A />)
+      TestRenderer.create(<A />)
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `
-      mount(<B />)
+      TestRenderer.create(<B />)
 
       expectCSSMatches(`
         html { font-size: 16px; }
@@ -344,14 +344,14 @@ describe('rehydration', () => {
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `
-      mount(<B />)
+      TestRenderer.create(<B />)
       injectGlobal`
         body { background: papayawhip; }
       `
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `
-      mount(<A />)
+      TestRenderer.create(<A />)
       injectGlobal`
         html { font-size: 16px; }
       `
@@ -390,7 +390,7 @@ describe('rehydration', () => {
       const A = styled.div`
         animation: ${fadeIn} 1s both;
       `
-      mount(<A />)
+      TestRenderer.create(<A />)
 
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
@@ -406,7 +406,7 @@ describe('rehydration', () => {
       const A = styled.div`
         animation: ${fadeOut} 1s both;
       `
-      mount(<A />)
+      TestRenderer.create(<A />)
 
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
@@ -429,8 +429,8 @@ describe('rehydration', () => {
         animation: ${fadeOut} 1s both;
       `
       /* Purposely rendering out of order to make sure the output looks right */
-      mount(<B />)
-      mount(<A />)
+      TestRenderer.create(<B />)
+      TestRenderer.create(<A />)
 
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
@@ -454,8 +454,8 @@ describe('rehydration', () => {
         animation: ${props => props.animation} 1s both;
       `
       /* Purposely rendering out of order to make sure the output looks right */
-      mount(<B animation={fadeOut} />)
-      mount(<A animation={fadeIn} />)
+      TestRenderer.create(<B animation={fadeOut} />)
+      TestRenderer.create(<A animation={fadeIn} />)
 
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}

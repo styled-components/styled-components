@@ -1,9 +1,9 @@
 import 'react-native'
-import { View, Text } from 'react-native'
+import { View } from 'react-native'
 import React from 'react'
+import TestRenderer from 'react-test-renderer'
 
 import styled from '../index'
-import { shallow, mount } from 'enzyme'
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
@@ -21,8 +21,8 @@ describe('native', () => {
     const validComps = ['View', FunctionalComponent, ClassComponent]
     validComps.forEach(comp => {
       expect(() => {
-        const Comp = styled(comp)
-        mount(<Comp />)
+        const Comp = styled(comp)``
+        TestRenderer.create(<Comp />)
       }).not.toThrowError()
     })
   })
@@ -46,8 +46,8 @@ describe('native', () => {
     invalidComps.forEach(comp => {
       expect(() => {
         // $FlowInvalidInputTest
-        const Comp = styled(comp)
-        shallow(<Comp />)
+        const Comp = styled(comp)``
+        TestRenderer.create(<Comp />)
         // $FlowInvalidInputTest
       }).toThrow(`Cannot create styled-component for component: ${comp}`)
     })
@@ -55,10 +55,10 @@ describe('native', () => {
 
   it('should generate inline styles', () => {
     const Comp = styled.View``
-    const wrapper = mount(<Comp />)
-    const view = wrapper.find('View').first()
+    const wrapper = TestRenderer.create(<Comp />)
+    const view = wrapper.root.findByType('View')
 
-    expect(view.prop('style')).toEqual([{}, undefined])
+    expect(view.props.style).toEqual([{}, undefined])
   })
 
   it('should combine inline styles and the style prop', () => {
@@ -67,10 +67,10 @@ describe('native', () => {
     `
 
     const style = { opacity: 0.9 }
-    const wrapper = mount(<Comp style={style} />)
-    const view = wrapper.find('View').first()
+    const wrapper = TestRenderer.create(<Comp style={style} />)
+    const view = wrapper.root.findByType('View')
 
-    expect(view.prop('style')).toEqual([{ paddingTop: 10 }, style])
+    expect(view.props.style).toEqual([{ paddingTop: 10 }, style])
   })
 
   it('should not console.warn if a comment is seen', () => {
@@ -94,32 +94,28 @@ describe('native', () => {
       opacity: ${p => p.opacity || 0};
     `
 
-    const comp = mount(<Comp opacity={0.5} />)
+    const wrapper = TestRenderer.create(<Comp opacity={0.5} />)
 
-    expect(
-      comp
-        .find('View')
-        .first()
-        .prop('style')
-    ).toEqual([{ paddingTop: 5, opacity: 0.5 }, undefined])
+    expect(wrapper.root.findByType('View').props.style).toEqual([
+      { paddingTop: 5, opacity: 0.5 },
+      undefined,
+    ])
 
-    comp.setProps({ opacity: 0.9 })
+    wrapper.update(<Comp opacity={0.9} />)
 
-    expect(
-      comp
-        .find('View')
-        .first()
-        .prop('style')
-    ).toEqual([{ paddingTop: 5, opacity: 0.9 }, undefined])
+    expect(wrapper.root.findByType('View').props.style).toEqual([
+      { paddingTop: 5, opacity: 0.9 },
+      undefined,
+    ])
   })
 
   describe('attrs', () => {
     it('works fine with an empty object', () => {
       const Comp = styled.View.attrs({})``
-      const wrapper = mount(<Comp />)
-      const view = wrapper.find('View').first()
+      const wrapper = TestRenderer.create(<Comp />)
+      const view = wrapper.root.findByType('View')
 
-      expect(view.props()).toEqual({
+      expect(view.props).toEqual({
         style: [{}, undefined],
       })
     })
@@ -129,10 +125,10 @@ describe('native', () => {
         test: true,
       })``
 
-      const wrapper = mount(<Comp />)
-      const view = wrapper.find('View').first()
+      const wrapper = TestRenderer.create(<Comp />)
+      const view = wrapper.root.findByType('View')
 
-      expect(view.props()).toEqual({
+      expect(view.props).toEqual({
         style: [{}, undefined],
         test: true,
       })
@@ -144,10 +140,10 @@ describe('native', () => {
       })``
 
       const test = 'Put that cookie down!'
-      const wrapper = mount(<Comp test={test} />)
-      const view = wrapper.find('View').first()
+      const wrapper = TestRenderer.create(<Comp test={test} />)
+      const view = wrapper.root.findByType('View')
 
-      expect(view.props()).toEqual({
+      expect(view.props).toEqual({
         style: [{}, undefined],
         copy: test,
         test,
@@ -163,10 +159,10 @@ describe('native', () => {
         test: 'test',
       })``
 
-      const wrapper = mount(<Comp />)
-      const view = wrapper.find('View').first()
+      const wrapper = TestRenderer.create(<Comp />)
+      const view = wrapper.root.findByType('View')
 
-      expect(view.props()).toEqual({
+      expect(view.props).toEqual({
         style: [{}, undefined],
         first: 'first',
         second: 'second',
@@ -183,10 +179,10 @@ describe('native', () => {
         second: 'second',
       })``
 
-      const wrapper = mount(<Child />)
-      const view = wrapper.find('View').first()
+      const wrapper = TestRenderer.create(<Child />)
+      const view = wrapper.root.findByType('View')
 
-      expect(view.props()).toMatchObject({
+      expect(view.props).toMatchObject({
         style: [{}, [{}, undefined]],
         first: 'first',
         second: 'second',
@@ -209,100 +205,6 @@ describe('native', () => {
       })``
 
       expect(Comp.displayName).toBe('Test2')
-    })
-  })
-
-  describe('innerRef', () => {
-    it('should pass a callback ref to the component', () => {
-      const Comp = styled.View``
-      const ref = jest.fn()
-
-      const wrapper = mount(<Comp innerRef={ref} />)
-      const view = wrapper.find('View').first()
-      const comp = wrapper.find(Comp).first()
-
-      expect(ref).toHaveBeenCalledWith(view.instance())
-      expect(view.prop('innerRef')).toBeFalsy()
-      expect(comp.instance().root).toBeTruthy()
-    })
-
-    it('should pass an object ref to the component', () => {
-      const Comp = styled.View``
-      const ref = React.createRef()
-
-      const wrapper = mount(<Comp innerRef={ref} />)
-      const view = wrapper.find('View').first()
-      const comp = wrapper.find(Comp).first()
-
-      expect(ref.current).toBe(view.instance())
-      expect(view.prop('innerRef')).toBeFalsy()
-      expect(comp.instance().root).toBeTruthy()
-    })
-
-    it('should not leak the innerRef prop to the wrapped child', () => {
-      class InnerComponent extends React.Component {
-        render() {
-          return null
-        }
-      }
-
-      const OuterComponent = styled(InnerComponent)``
-      const ref = jest.fn()
-
-      const wrapper = mount(<OuterComponent innerRef={ref} />)
-      const innerComponent = wrapper.find(InnerComponent).first()
-      const outerComponent = wrapper.find(OuterComponent).first()
-
-      expect(ref).toHaveBeenCalledWith(innerComponent.instance())
-      expect(innerComponent.prop('innerRef')).toBeFalsy()
-      expect(outerComponent.instance().root).toBeTruthy()
-    })
-
-    it('should pass the innerRef to the wrapped styled component', () => {
-      const InnerComponent = styled.View``
-      const OuterComponent = styled(InnerComponent)``
-      const ref = jest.fn()
-
-      const wrapper = mount(<OuterComponent innerRef={ref} />)
-      const view = wrapper.find('View').first()
-      const outerComponent = wrapper.find(OuterComponent).first()
-
-      expect(ref).toHaveBeenCalledWith(view.instance())
-      expect(outerComponent.instance().root).toBeTruthy()
-    })
-
-    it('should pass innerRef instead of ref to a wrapped stateless functional component', () => {
-      const InnerComponent = () => null
-      const OuterComponent = styled(InnerComponent)``
-      // NOTE: A ref should always be passed, so we don't need to (setNativeProps feature)
-
-      const wrapper = mount(<OuterComponent />)
-      const outerComponent = wrapper.find(OuterComponent).first()
-      const innerComponent = wrapper.find(InnerComponent).first()
-
-      expect(innerComponent.prop('ref')).toBeFalsy()
-      expect(innerComponent.prop('innerRef')).toBeTruthy()
-      expect(outerComponent.instance().root).toBeFalsy()
-    })
-
-    it('should hoist non-react static properties', () => {
-      const InnerComponent = styled.View``
-      InnerComponent.foo = 'bar'
-
-      const OuterComponent = styled(InnerComponent)``
-
-      expect(OuterComponent).toHaveProperty('foo', 'bar')
-    })
-
-    it('should not hoist styled component statics', () => {
-      const InnerComponent = styled.View`
-        color: red;
-      `
-      const OuterComponent = styled(InnerComponent)`
-        color: blue;
-      `
-
-      expect(OuterComponent.inlineStyle).not.toEqual(InnerComponent.inlineStyle)
     })
   })
 })

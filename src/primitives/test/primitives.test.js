@@ -1,9 +1,9 @@
+import React from 'react'
 import 'react-primitives'
 import { View } from 'react-primitives'
-import React from 'react'
+import TestRenderer from 'react-test-renderer'
 
 import styled from '../index'
-import { shallow, mount } from 'enzyme'
 
 // NOTE: These tests are copy pasted from ../native/test/native.test.js
 
@@ -20,8 +20,8 @@ describe('primitives', () => {
     const validComps = ['View', FunctionalComponent, ClassComponent]
     validComps.forEach(comp => {
       expect(() => {
-        const Comp = styled(comp)
-        mount(<Comp />)
+        const Comp = styled(comp)``
+        TestRenderer.create(<Comp />)
       }).not.toThrowError()
     })
   })
@@ -45,8 +45,8 @@ describe('primitives', () => {
     invalidComps.forEach(comp => {
       expect(() => {
         // $FlowInvalidInputTest
-        const Comp = styled(comp)
-        mount(<Comp />)
+        const Comp = styled(comp)``
+        TestRenderer.create(<Comp />)
         // $FlowInvalidInputTest
       }).toThrow(`Cannot create styled-component for component: ${comp}`)
     })
@@ -54,10 +54,10 @@ describe('primitives', () => {
 
   it('should generate inline styles', () => {
     const Comp = styled.View``
-    const wrapper = mount(<Comp />)
-    const view = wrapper.find('View').first()
+    const wrapper = TestRenderer.create(<Comp />)
+    const view = wrapper.root.findByType('View')
 
-    expect(view.prop('style')).toEqual([{}, undefined])
+    expect(view.props.style).toEqual([{}, undefined])
   })
 
   it('should combine inline styles and the style prop', () => {
@@ -66,19 +66,19 @@ describe('primitives', () => {
     `
 
     const style = { opacity: 0.9 }
-    const wrapper = mount(<Comp style={style} />)
-    const view = wrapper.find('View').first()
+    const wrapper = TestRenderer.create(<Comp style={style} />)
+    const view = wrapper.root.findByType('View')
 
-    expect(view.prop('style')).toEqual([{ paddingTop: 10 }, style])
+    expect(view.props.style).toEqual([{ paddingTop: 10 }, style])
   })
 
   describe('attrs', () => {
     it('works fine with an empty object', () => {
       const Comp = styled.View.attrs({})``
-      const wrapper = mount(<Comp />)
-      const view = wrapper.find('View').first()
+      const wrapper = TestRenderer.create(<Comp />)
+      const view = wrapper.root.findByType('View')
 
-      expect(view.props()).toEqual({
+      expect(view.props).toEqual({
         style: [{}, undefined],
       })
     })
@@ -88,10 +88,10 @@ describe('primitives', () => {
         test: true,
       })``
 
-      const wrapper = mount(<Comp />)
-      const view = wrapper.find('View').first()
+      const wrapper = TestRenderer.create(<Comp />)
+      const view = wrapper.root.findByType('View')
 
-      expect(view.props()).toEqual({
+      expect(view.props).toEqual({
         style: [{}, undefined],
         test: true,
       })
@@ -103,10 +103,10 @@ describe('primitives', () => {
       })``
 
       const test = 'Put that cookie down!'
-      const wrapper = mount(<Comp test={test} />)
-      const view = wrapper.find('View').first()
+      const wrapper = TestRenderer.create(<Comp test={test} />)
+      const view = wrapper.root.findByType('View')
 
-      expect(view.props()).toEqual({
+      expect(view.props).toEqual({
         style: [{}, undefined],
         copy: test,
         test,
@@ -122,10 +122,10 @@ describe('primitives', () => {
         test: 'test',
       })``
 
-      const wrapper = mount(<Comp />)
-      const view = wrapper.find('View').first()
+      const wrapper = TestRenderer.create(<Comp />)
+      const view = wrapper.root.findByType('View')
 
-      expect(view.props()).toEqual({
+      expect(view.props).toEqual({
         style: [{}, undefined],
         first: 'first',
         second: 'second',
@@ -142,10 +142,10 @@ describe('primitives', () => {
         second: 'second',
       })``
 
-      const wrapper = mount(<Child />)
-      const view = wrapper.find('View').first()
+      const wrapper = TestRenderer.create(<Child />)
+      const view = wrapper.root.findByType('View')
 
-      expect(view.props()).toEqual({
+      expect(view.props).toEqual({
         style: [{}, [{}, undefined]],
         first: 'first',
         second: 'second',
@@ -168,81 +168,6 @@ describe('primitives', () => {
       })``
 
       expect(Comp.displayName).toBe('Test2')
-    })
-  })
-
-  describe('innerRef', () => {
-    it('should pass a callback ref to the component', () => {
-      const Comp = styled.View``
-      const ref = jest.fn()
-
-      const wrapper = mount(<Comp innerRef={ref} />)
-      const view = wrapper.find('View').first()
-      const comp = wrapper.find(Comp).first()
-
-      expect(ref).toHaveBeenCalledWith(view.instance())
-      expect(view.prop('innerRef')).toBeFalsy()
-      expect(comp.instance().root).toBeTruthy()
-    })
-
-    it('should pass an object ref to the component', () => {
-      const Comp = styled.View``
-      const ref = React.createRef()
-
-      const wrapper = mount(<Comp innerRef={ref} />)
-      const view = wrapper.find('View').first()
-      const comp = wrapper.find(Comp).first()
-
-      expect(ref.current).toBe(view.instance())
-      expect(view.prop('innerRef')).toBeFalsy()
-      expect(comp.instance().root).toBeTruthy()
-    })
-
-    class InnerComponent extends React.Component {
-      render() {
-        return null
-      }
-    }
-
-    it('should not leak the innerRef prop to the wrapped child', () => {
-      const OuterComponent = styled(InnerComponent)``
-      const ref = jest.fn()
-
-      const wrapper = mount(<OuterComponent innerRef={ref} />)
-      const innerComponent = wrapper.find(InnerComponent).first()
-      const outerComponent = wrapper.find(OuterComponent).first()
-
-      expect(ref).toHaveBeenCalledWith(innerComponent.instance())
-      expect(innerComponent.prop('innerRef')).toBeFalsy()
-      expect(outerComponent.instance().root).toBeTruthy()
-    })
-
-    it('should pass the innerRef to the wrapped styled component', () => {
-      const InnerComponent = styled.View``
-      const OuterComponent = styled(InnerComponent)``
-      const ref = jest.fn()
-
-      const wrapper = mount(<OuterComponent innerRef={ref} />)
-      const view = wrapper.find('View').first()
-      const innerComponent = wrapper.find(InnerComponent).first()
-      const outerComponent = wrapper.find(OuterComponent).first()
-
-      expect(ref).toHaveBeenCalledWith(view.instance())
-      expect(outerComponent.instance().root).toBeTruthy()
-    })
-
-    it('should pass innerRef instead of ref to a wrapped stateless functional component', () => {
-      const InnerComponent = () => null
-      const OuterComponent = styled(InnerComponent)``
-      // NOTE: A ref should always be passed, so we don't need to (setNativeProps feature)
-
-      const wrapper = mount(<OuterComponent />)
-      const outerComponent = wrapper.find(OuterComponent).first()
-      const innerComponent = wrapper.find(InnerComponent).first()
-
-      expect(innerComponent.prop('ref')).toBeFalsy()
-      expect(innerComponent.prop('innerRef')).toBeTruthy()
-      expect(outerComponent.instance().root).toBeFalsy()
     })
   })
 })

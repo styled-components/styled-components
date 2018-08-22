@@ -1,6 +1,6 @@
 // @flow
-import React, { Component } from 'react'
-import { mount } from 'enzyme'
+import React from 'react'
+import TestRenderer from 'react-test-renderer'
 
 import _injectGlobal from '../injectGlobal'
 import stringifyRules from '../../utils/stringifyRules'
@@ -58,7 +58,7 @@ describe('injectGlobal', () => {
     const Comp = styled.div`
       ${rule3};
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
 
     injectGlobal`
       html {
@@ -82,7 +82,7 @@ describe('injectGlobal', () => {
     const Comp = styled.div`
       color: green;
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     injectGlobal`html { color: blue; } @import url('bla');`
 
     const style = Array.from(document.querySelectorAll('style'))
