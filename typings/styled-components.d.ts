@@ -141,9 +141,9 @@ export interface ThemedStyledComponentsModule<T> {
   default: ThemedStyledInterface<T>
 
   css: ThemedCssFunction<T>
-  keyframes(
+  keyframes<P>(
     strings: TemplateStringsArray,
-    ...interpolations: SimpleInterpolation[]
+    ...interpolations: Interpolation<ThemedStyledProps<P, T>>[]
   ): string
   injectGlobal(
     strings: TemplateStringsArray,
