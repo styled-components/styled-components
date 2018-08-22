@@ -28,6 +28,7 @@
       }
     ],
     "import/no-extraneous-dependencies": 0,
+    "no-continue": 0,
     "no-confusing-arrow": 0,
     "no-else-return": 0,
     "react/sort-comp": 0,

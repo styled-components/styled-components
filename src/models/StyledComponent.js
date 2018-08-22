@@ -81,10 +81,10 @@ class BaseStyledComponent extends Component<*> {
 
   renderInner(theme?: Theme) {
     const {
-      styledComponentId,
-      target,
       componentStyle,
       defaultProps,
+      styledComponentId,
+      target,
     } = this.props.forwardedClass
 
     const isTargetTag = isTag(target)
@@ -116,9 +116,10 @@ class BaseStyledComponent extends Component<*> {
 
     let key
     for (key in this.props) {
-      if (key === 'forwardedRef') propsForElement.ref = this.props[key]
+      if (key === 'forwardedClass') continue
+      else if (key === 'forwardedRef') propsForElement.ref = this.props[key]
       // Don't pass through non HTML tags through to HTML elements
-      else if ((key !== 'forwardedClass' && !isTargetTag) || validAttr(key)) {
+      else if (!isTargetTag || validAttr(key)) {
         propsForElement[key] =
           key === 'style' && key in this.attrs
             ? { ...this.attrs[key], ...this.props[key] }
