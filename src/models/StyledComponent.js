@@ -80,8 +80,12 @@ class BaseStyledComponent extends Component<*> {
   }
 
   renderInner(theme?: Theme) {
-    const { styledComponentId, target, componentStyle } = this.constructor
-    const { defaultProps } = this.props.forwardedClass
+    const {
+      styledComponentId,
+      target,
+      componentStyle,
+      defaultProps,
+    } = this.props.forwardedClass
 
     const isTargetTag = isTag(target)
 
@@ -135,7 +139,7 @@ class BaseStyledComponent extends Component<*> {
   }
 
   buildExecutionContext(theme: any, props: any) {
-    const { attrs } = this.constructor
+    const { attrs } = props.forwardedClass
     const context = { ...props, theme }
     if (attrs === undefined) {
       return context
@@ -160,7 +164,7 @@ class BaseStyledComponent extends Component<*> {
     props: any,
     styleSheet: ?StyleSheet = StyleSheet.master
   ) {
-    const { attrs, componentStyle, warnTooManyClasses } = this.constructor
+    const { attrs, componentStyle, warnTooManyClasses } = props.forwardedClass
 
     // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names

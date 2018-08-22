@@ -27,8 +27,7 @@ class BaseStyledNativeComponent extends Component<*, *> {
       <ThemeConsumer>
         {(theme?: Theme) => {
           const { forwardedClass, forwardedRef, style, ...props } = this.props
-          const { target } = this.constructor
-          const { defaultProps } = forwardedClass
+          const { defaultProps, target } = forwardedClass
 
           let generatedStyles
           if (theme !== undefined) {
@@ -79,7 +78,7 @@ class BaseStyledNativeComponent extends Component<*, *> {
   }
 
   generateAndInjectStyles(theme: any, props: any) {
-    const { inlineStyle } = this.constructor
+    const { inlineStyle } = props.forwardedClass
     const executionContext = this.buildExecutionContext(theme, props)
 
     return inlineStyle.generateStyleObject(executionContext)
