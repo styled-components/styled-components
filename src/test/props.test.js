@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import { mount } from 'enzyme'
+import TestRenderer from 'react-test-renderer'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
@@ -15,14 +15,14 @@ describe('props', () => {
     const Comp = styled.div`
       color: ${props => props.fg || 'black'};
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches('.sc-a {} .b { color:black; }')
   })
   it('should execute interpolations and inject props', () => {
     const Comp = styled.div`
       color: ${props => props.fg || 'black'};
     `
-    mount(<Comp fg="red" />)
+    TestRenderer.create(<Comp fg="red" />)
     expectCSSMatches('.sc-a {} .b { color:red; }')
   })
   it('should ignore non-0 falsy object interpolations', () => {
@@ -35,7 +35,7 @@ describe('props', () => {
         colorD: '',
       })};
     `
-    mount(<Comp fg="red" />)
+    TestRenderer.create(<Comp fg="red" />)
     expectCSSMatches('.sc-a {} .b { border-width:0; }')
   })
 })

@@ -1,9 +1,8 @@
 // @flow
 import React from 'react'
-import { mount } from 'enzyme'
+import TestRenderer from 'react-test-renderer'
 
-import { resetStyled, expectCSSMatches } from './utils'
-import styleSheet from '../models/StyleSheet'
+import { resetStyled } from './utils'
 
 let styled
 
@@ -28,7 +27,7 @@ describe('warn too many classes', () => {
       width: ${props => props.size};
     `
     for (let i = 0; i < 300; i++) {
-      mount(<Comp size={i} />)
+      TestRenderer.create(<Comp size={i} />)
     }
     expect(warnCallCount).toEqual(1)
   })
@@ -38,7 +37,7 @@ describe('warn too many classes', () => {
       width: ${props => props.size};
     `
     for (let i = 0; i < 200; i++) {
-      mount(<Comp size={i} />)
+      TestRenderer.create(<Comp size={i} />)
     }
     expect(warnCallCount).toEqual(1)
   })
@@ -48,7 +47,7 @@ describe('warn too many classes', () => {
       width: ${props => props.size};
     `
     for (let i = 0; i < 199; i++) {
-      mount(<Comp size={i} />)
+      TestRenderer.create(<Comp size={i} />)
     }
 
     expect(warnCallCount).toEqual(0)

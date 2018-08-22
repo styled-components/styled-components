@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import { render } from 'enzyme'
+import TestRenderer from 'react-test-renderer'
 
 import _keyframes from '../keyframes'
 import stringifyRules from '../../utils/stringifyRules'
@@ -32,29 +32,33 @@ describe('keyframes', () => {
   })
 
   it('should return its name via .getName()', () => {
-    expect(keyframes`
+    expect(
+      keyframes`
       0% {
         opacity: 0;
       }
       100% {
         opacity: 1;
       }
-    `.getName()).toEqual('keyframe_0')
+    `.getName()
+    ).toEqual('keyframe_0')
   })
 
   it('should return its name', () => {
-    expect(keyframes`
+    expect(
+      keyframes`
       0% {
         opacity: 0;
       }
       100% {
         opacity: 1;
       }
-    `.getName()).toEqual('keyframe_0')
+    `.getName()
+    ).toEqual('keyframe_0')
   })
 
   it('should insert the correct styles', () => {
-    const styled = resetStyled();
+    const styled = resetStyled()
 
     const rules = `
       0% {
@@ -65,13 +69,15 @@ describe('keyframes', () => {
       }
     `
 
-    const animation = keyframes`${rules}`;
-    const name = animation.getName();
+    const animation = keyframes`${rules}`
+    const name = animation.getName()
 
     expectCSSMatches('')
 
-    const Comp = styled.div`animation: ${animation} 2s linear infinite;`
-    render(<Comp />)
+    const Comp = styled.div`
+      animation: ${animation} 2s linear infinite;
+    `
+    TestRenderer.create(<Comp />)
 
     expectCSSMatches(`
       .sc-a {}
@@ -79,7 +85,7 @@ describe('keyframes', () => {
         -webkit-animation: ${name} 2s linear infinite;
         animation: ${name} 2s linear infinite;
       }
-    
+
       @-webkit-keyframes ${name} {
         0% {
           opacity:0;
@@ -101,7 +107,7 @@ describe('keyframes', () => {
   })
 
   it('should insert the correct styles when keyframes in props', () => {
-    const styled = resetStyled();
+    const styled = resetStyled()
 
     const rules = `
       0% {
@@ -112,13 +118,15 @@ describe('keyframes', () => {
       }
     `
 
-    const animation = keyframes`${rules}`;
-    const name = animation.getName();
+    const animation = keyframes`${rules}`
+    const name = animation.getName()
 
     expectCSSMatches('')
 
-    const Comp = styled.div`animation: ${props => props.animation} 2s linear infinite;`
-    render(<Comp animation={animation} />)
+    const Comp = styled.div`
+      animation: ${props => props.animation} 2s linear infinite;
+    `
+    TestRenderer.create(<Comp animation={animation} />)
 
     expectCSSMatches(`
       .sc-a {}
@@ -126,7 +134,7 @@ describe('keyframes', () => {
         -webkit-animation: ${name} 2s linear infinite;
         animation: ${name} 2s linear infinite;
       }
-    
+
       @-webkit-keyframes ${name} {
         0% {
           opacity:0;

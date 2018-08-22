@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import { mount } from 'enzyme'
+import TestRenderer from 'react-test-renderer'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
@@ -15,7 +15,7 @@ describe('css features', () => {
     const Comp = styled.div`
       transition: opacity 0.3s;
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches(
       '.sc-a {} .b { -webkit-transition:opacity 0.3s; transition:opacity 0.3s; }'
     )
@@ -27,7 +27,7 @@ describe('css features', () => {
       flex-direction: column;
       align-items: center;
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches(`
       .sc-a {}
       .b {
@@ -44,7 +44,7 @@ describe('css features', () => {
         }
       }
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches(`
       .sc-a {}
 
@@ -62,7 +62,7 @@ describe('css features', () => {
     const Comp = styled.div`
       --custom-prop: some-val;
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches('.sc-a {} .b { --custom-prop:some-val; }')
   })
 })
