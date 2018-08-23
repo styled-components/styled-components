@@ -6,6 +6,7 @@ import { EMPTY_OBJECT } from '../utils/empties'
 import generateDisplayName from '../utils/generateDisplayName'
 import isTag from '../utils/isTag'
 import isDerivedReactComponent from '../utils/isDerivedReactComponent'
+import isStyledComponent from '../utils/isStyledComponent'
 import once from '../utils/once'
 import { ThemeConsumer } from './ThemeProvider'
 
@@ -87,7 +88,9 @@ class BaseStyledNativeComponent extends Component<*, *> {
       attr = attrs[key]
 
       this.attrs[key] =
-        typeof attr === 'function' && !isDerivedReactComponent(attr)
+        typeof attr === 'function' &&
+        !isDerivedReactComponent(attr) &&
+        !isStyledComponent(attr)
           ? attr(context)
           : attr
     }

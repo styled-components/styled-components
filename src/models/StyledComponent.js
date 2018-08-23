@@ -11,6 +11,7 @@ import getComponentName from '../utils/getComponentName'
 import once from '../utils/once'
 import isTag from '../utils/isTag'
 import isDerivedReactComponent from '../utils/isDerivedReactComponent'
+import isStyledComponent from '../utils/isStyledComponent'
 import StyleSheet from './StyleSheet'
 import { ThemeConsumer, type Theme } from './ThemeProvider'
 import { StyleSheetConsumer } from './StyleSheetManager'
@@ -162,7 +163,9 @@ class BaseStyledComponent extends Component<*> {
       attr = attrs[key]
 
       this.attrs[key] =
-        typeof attr === 'function' && !isDerivedReactComponent(attr)
+        typeof attr === 'function' &&
+        !isDerivedReactComponent(attr) &&
+        !isStyledComponent(attr)
           ? attr(context)
           : attr
     }
