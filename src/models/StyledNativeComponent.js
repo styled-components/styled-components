@@ -22,7 +22,7 @@ let warnExtendDeprecated = () => {}
 if (process.env.NODE_ENV !== 'production') {
   warnExtendDeprecated = once(() => {
     // eslint-disable-next-line no-console
-    console.error(
+    console.warn(
       'Warning: The "extend" API will be removed in the upcoming v4.0 release. Use styled(StyledComponent) instead. You can find more information here: https://github.com/styled-components/styled-components/issues/1546'
     )
   })

@@ -31,7 +31,7 @@ let warnChannelDeprecated
 if (process.env.NODE_ENV !== 'production') {
   warnChannelDeprecated = once(() => {
     // eslint-disable-next-line no-console
-    console.error(
+    console.warn(
       `Warning: Usage of \`context.${CHANNEL}\` as a function is deprecated. It will be replaced with the object on \`.context.${CHANNEL_NEXT}\` in a future version.`
     )
   })
