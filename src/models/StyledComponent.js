@@ -44,9 +44,7 @@ function generateId(
     displayName + nr
   )}`
 
-  return parentComponentId !== undefined
-    ? `${parentComponentId}-${componentId}`
-    : componentId
+  return parentComponentId ? `${parentComponentId}-${componentId}` : componentId
 }
 
 const warnInnerRef = once(() =>
