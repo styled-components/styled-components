@@ -11,7 +11,11 @@ export default (props: Props, fallbackTheme: any, defaultProps: any) => {
   const isDefaultTheme = defaultProps
     ? props.theme === defaultProps.theme
     : false
-  const theme = props.theme && !isDefaultTheme ? props.theme : fallbackTheme
+
+  const theme =
+    props.theme && !isDefaultTheme
+      ? props.theme
+      : fallbackTheme || defaultProps.theme
   /* eslint-enable */
 
   return theme

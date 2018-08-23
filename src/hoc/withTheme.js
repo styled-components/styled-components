@@ -6,44 +6,30 @@ import getComponentName from '../utils/getComponentName'
 import determineTheme from '../utils/determineTheme'
 
 export default (Component: ComponentType<any>) => {
-  class WithTheme extends React.Component<*, *> {
-    static displayName = `WithTheme(${getComponentName(Component)})`
-    static defaultProps: Object
+  const WithTheme = React.forwardRef((props, ref) => (
+    <ThemeConsumer>
+      {(theme?: Theme) => {
+        // $FlowFixMe
+        const { defaultProps } = WithTheme
+        const themeProp = determineTheme(props, theme, defaultProps)
 
-    render() {
-      return (
-        <ThemeConsumer>
-          {(theme?: Theme) => {
-            const { defaultProps } = this.constructor
-            const themeProp = determineTheme(this.props, theme, defaultProps)
+        if (process.env.NODE_ENV !== 'production' && themeProp === undefined) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class ${getComponentName(
+              Component
+            )}`
+          )
+        }
 
-            if (
-              themeProp === undefined &&
-              process.env.NODE_ENV !== 'production'
-            ) {
-              // eslint-disable-next-line no-console
-              console.warn(
-                '[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps'
-              )
-            }
-
-            const { forwardedRef, ...props } = this.props
-
-            props.theme = themeProp
-            if (forwardedRef) props.ref = forwardedRef
-
-            return React.createElement(Component, props)
-          }}
-        </ThemeConsumer>
-      )
-    }
-  }
-
-  const ForwardRef = React.forwardRef((props, ref) => (
-    <WithTheme {...props} forwardedRef={ref} />
+        return <Component {...props} theme={themeProp} ref={ref} />
+      }}
+    </ThemeConsumer>
   ))
 
-  hoistStatics(ForwardRef, Component)
+  hoistStatics(WithTheme, Component)
 
-  return ForwardRef
+  WithTheme.displayName = `WithTheme(${getComponentName(Component)})`
+
+  return WithTheme
 }
