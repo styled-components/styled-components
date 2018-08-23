@@ -35,9 +35,9 @@ const isStaticRules = (rules: RuleSet, attrs?: Object): boolean => {
 }
 
 const isHMREnabled =
+  process.env.NODE_ENV !== 'production' &&
   typeof module !== 'undefined' &&
-  module.hot &&
-  process.env.NODE_ENV !== 'production'
+  module.hot
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
