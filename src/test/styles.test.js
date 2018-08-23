@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import { mount } from 'enzyme'
+import TestRenderer from 'react-test-renderer'
 
 import * as nonce from '../utils/nonce'
 import { resetStyled, expectCSSMatches } from './utils'
@@ -29,7 +29,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule};
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches('.sc-a {} .b { color:blue; }')
   })
 
@@ -39,7 +39,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1} ${rule2};
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches('.sc-a {} .b { color:blue; background:red; }')
   })
 
@@ -50,7 +50,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1};
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches('.sc-a {} .b { background-color:blue; }')
   })
 
@@ -64,7 +64,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1};
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches(
       '.sc-a {} .b { background-color:blue; } @media screen and (min-width:250px) { .b { background-color:red; } }'
     )
@@ -80,7 +80,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1};
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches(
       '.sc-a {} .b { background-color:blue; } .b:hover { color:green; }'
     )
@@ -96,7 +96,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1};
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches(
       '.sc-a {} .b { background-color:blue; } .b:hover { color:green; }'
     )
@@ -112,7 +112,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1};
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches(
       '.sc-a {} .b { background-color:blue; } .b > h1 { color:white; }'
     )
@@ -128,7 +128,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1};
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches(
       '.sc-a {} .b { background-color:blue; } html.something .b { color:white; }'
     )
@@ -144,8 +144,8 @@ describe('with styles', () => {
       ${secondRule};
     `
 
-    mount(<FirstComp />)
-    mount(<SecondComp />)
+    TestRenderer.create(<FirstComp />)
+    TestRenderer.create(<SecondComp />)
 
     expectCSSMatches(
       '.sc-a {} .c { background:blue; } .sc-b {} .d { background:red; }'
@@ -163,8 +163,8 @@ describe('with styles', () => {
     `
 
     // Switch rendering order, shouldn't change injection order
-    mount(<SecondComp />)
-    mount(<FirstComp />)
+    TestRenderer.create(<SecondComp />)
+    TestRenderer.create(<FirstComp />)
 
     // Classes _do_ get generated in the order of rendering but that's ok
     expectCSSMatches(`
@@ -183,7 +183,7 @@ describe('with styles', () => {
       ${comment}
       ${rule}
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches(`
         .sc-a {}
         .b {
@@ -200,7 +200,7 @@ describe('with styles', () => {
       color: green;
     `
 
-    mount(
+    TestRenderer.create(
       <Heading>
         <Text />
       </Heading>
@@ -220,7 +220,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule};
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches(`
         .sc-a {}
         .b {

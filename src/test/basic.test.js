@@ -1,19 +1,27 @@
 // @flow
 import React, { Component, StrictMode } from 'react'
-import { mount } from 'enzyme'
+import { findDOMNode, render, unmountComponentAtNode } from 'react-dom'
 import TestRenderer from 'react-test-renderer'
+import { findRenderedComponentWithType } from 'react-dom/test-utils'
 
 import { resetStyled, expectCSSMatches } from './utils'
 
 let styled
 
 describe('basic', () => {
+  let root
+
   /**
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
+    root = document.createElement('div')
     styled = resetStyled()
+
+    document.body.appendChild(root)
   })
+
+  afterEach(() => unmountComponentAtNode(root))
 
   it('should not throw an error when called with a valid element', () => {
     expect(() => styled.div``).not.toThrowError()
@@ -27,8 +35,8 @@ describe('basic', () => {
     const validComps = ['div', FunctionalComponent, ClassComponent]
     validComps.forEach(comp => {
       expect(() => {
-        const Comp = styled(comp)
-        mount(<Comp />)
+        const Comp = styled(comp)``
+        TestRenderer.create(<Comp />)
       }).not.toThrowError()
     })
   })
@@ -49,11 +57,12 @@ describe('basic', () => {
       <FunctionalComponent />,
       <ClassComponent />,
     ]
+
     invalidComps.forEach(comp => {
       expect(() => {
         // $FlowInvalidInputTest
-        const Comp = styled(comp)
-        mount(<Comp />)
+        const Comp = styled(comp)``
+        TestRenderer.create(<Comp />)
         // $FlowInvalidInputTest
       }).toThrow(`Cannot create styled-component for component: ${comp}`)
     })
@@ -66,7 +75,7 @@ describe('basic', () => {
 
   it('should inject component class when rendered even if no styles are passed', () => {
     const Comp = styled.div``
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches('.sc-a {}')
   })
 
@@ -74,7 +83,7 @@ describe('basic', () => {
     const Comp = styled.div`
       color: blue;
     `
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches('.sc-a { } .b { color:blue; }')
   })
 
@@ -82,8 +91,8 @@ describe('basic', () => {
     const Comp = styled.div`
       color: blue;
     `
-    mount(<Comp />)
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches('.sc-a {} .b { color:blue; }')
   })
 
@@ -118,7 +127,7 @@ describe('basic', () => {
     const Comp = styled.div({
       color: 'blue',
     })
-    mount(<Comp />)
+    TestRenderer.create(<Comp />)
     expectCSSMatches('.sc-a {} .b { color:blue; }')
   })
 
@@ -126,11 +135,17 @@ describe('basic', () => {
     const Comp = styled.div(({ color }) => ({
       color,
     }))
-    mount(<Comp color="blue" />)
+    TestRenderer.create(<Comp color="blue" />)
     expectCSSMatches('.sc-a {} .b { color:blue; }')
   })
 
   describe('jsdom tests', () => {
+    class InnerComponent extends Component<*, *> {
+      render() {
+        return <div {...this.props} />
+      }
+    }
+
     it('should pass the ref to the component', () => {
       const Comp = styled.div``
 
@@ -145,18 +160,11 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = mount(<Wrapper />)
-      const component = wrapper.find(Comp).first()
+      const wrapper = render(<Wrapper />, root)
+      const component = findRenderedComponentWithType(wrapper, Comp)
 
-      expect(wrapper.instance().testRef).toBe(component.getDOMNode())
-      expect(component.find('div').prop('innerRef')).toBeFalsy()
+      expect(wrapper.testRef).toBe(findDOMNode(component))
     })
-
-    class InnerComponent extends Component<*, *> {
-      render() {
-        return null
-      }
-    }
 
     it('should not leak the innerRef prop to the wrapped child', () => {
       const OuterComponent = styled(InnerComponent)``
@@ -175,11 +183,14 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = mount(<Wrapper />)
-      const innerComponent = wrapper.find(InnerComponent).first()
+      const wrapper = render(<Wrapper />, root)
+      const innerComponent = findRenderedComponentWithType(
+        wrapper,
+        InnerComponent
+      )
 
-      expect(wrapper.instance().testRef).toBe(innerComponent.instance())
-      expect(innerComponent.prop('innerRef')).toBeFalsy()
+      expect(wrapper.testRef).toBe(innerComponent)
+      expect(innerComponent.props.innerRef).toBeFalsy()
     })
 
     it('should pass the full className to the wrapped child', () => {
@@ -191,8 +202,10 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = mount(<Wrapper />)
-      expect(wrapper.find(InnerComponent).prop('className')).toBe('test sc-a b')
+      const wrapper = TestRenderer.create(<Wrapper />)
+      expect(wrapper.root.findByType(InnerComponent).props.className).toBe(
+        'test sc-a b'
+      )
     })
 
     it('should pass the innerRef to the wrapped styled component', () => {
@@ -201,23 +214,22 @@ describe('basic', () => {
 
       class Wrapper extends Component<*, *> {
         testRef: any
-        innerRef = comp => {
-          this.testRef = comp
-        }
+
+        innerRef = i => (this.testRef = i)
 
         render() {
           return <OuterComponent innerRef={this.innerRef} />
         }
       }
 
-      const wrapper = mount(<Wrapper />)
-      const innerComponent = wrapper.find(InnerComponent).first()
-      const outerComponent = wrapper.find(OuterComponent).first()
-      const wrapperNode = wrapper.instance()
+      const wrapper = render(<Wrapper />, root)
+      const innerComponent = findRenderedComponentWithType(
+        wrapper,
+        InnerComponent
+      )
 
-      expect(wrapperNode.testRef).toBe(innerComponent.getDOMNode())
-
-      expect(innerComponent.prop('innerRef')).toBe(wrapperNode.innerRef)
+      expect(wrapper.testRef).toBe(findDOMNode(innerComponent))
+      expect(innerComponent.props.innerRef).toBe(wrapper.innerRef)
     })
 
     it('should respect the order of StyledComponent creation for CSS ordering', () => {
@@ -229,8 +241,8 @@ describe('basic', () => {
       `
 
       // NOTE: We're mounting second before first and check if we're breaking their order
-      mount(<SecondComponent />)
-      mount(<FirstComponent />)
+      TestRenderer.create(<SecondComponent />)
+      TestRenderer.create(<FirstComponent />)
 
       expectCSSMatches('.sc-a {} .d { color:red; } .sc-b {} .c { color:blue; }')
     })
@@ -244,7 +256,7 @@ describe('basic', () => {
         }
       `
 
-      mount(<Comp />)
+      TestRenderer.create(<Comp />)
       expectCSSMatches(
         '.sc-a{ } @media (min-width:500px){ .b > *{ color:pink; } } '
       )

@@ -1,0 +1,73 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`expanded api chaining should keep the last value passed in when merging 1`] = `
+<div
+  className="dn-5-id-4 a"
+/>
+`;
+
+exports[`expanded api chaining should merge the options strings 1`] = `
+<div
+  className="dn-2-id-1 a"
+/>
+`;
+
+exports[`expanded api componentId should be attached if passed in 1`] = `
+<div
+  className="LOLOMG a"
+/>
+`;
+
+exports[`expanded api componentId should be attached if passed in 2`] = `
+<div
+  className="OMGLOL b"
+/>
+`;
+
+exports[`expanded api componentId should be combined with displayName if both passed in 1`] = `
+<div
+  className="Comp-LOLOMG a"
+/>
+`;
+
+exports[`expanded api componentId should be combined with displayName if both passed in 2`] = `
+<div
+  className="Comp2-OMGLOL b"
+/>
+`;
+
+exports[`expanded api componentId should be generated as "sc" + hash 1`] = `
+<div
+  className="sc-a c"
+/>
+`;
+
+exports[`expanded api componentId should be generated as "sc" + hash 2`] = `
+<div
+  className="sc-b d"
+/>
+`;
+
+exports[`expanded api componentId should be generated from displayName + hash 1`] = `
+<div
+  className="Comp-a c"
+/>
+`;
+
+exports[`expanded api componentId should be generated from displayName + hash 2`] = `
+<div
+  className="Comp2-b d"
+/>
+`;
+
+exports[`expanded api componentId should work with \`.withComponent\` 1`] = `
+<h1
+  className="Comp-OMGLOL-h1 a"
+/>
+`;
+
+exports[`expanded api componentId should work with \`.withComponent\` 2`] = `
+<div
+  className="Comp2-OMFG-Dummy b"
+/>
+`;

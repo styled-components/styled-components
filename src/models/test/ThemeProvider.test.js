@@ -1,10 +1,10 @@
 // @flow
 /* eslint-disable react/no-multi-comp */
 import React from 'react'
-import { shallow, render, mount } from 'enzyme'
+import TestRenderer from 'react-test-renderer'
 import ThemeProvider from '../ThemeProvider'
 import withTheme from '../../hoc/withTheme'
-import { resetStyled, expectCSSMatches } from '../../test/utils'
+import { resetStyled } from '../../test/utils'
 
 let styled
 
@@ -14,22 +14,20 @@ describe('ThemeProvider', () => {
   })
 
   it('should not throw an error when no children are passed', () => {
-    const result = expect(() =>
-      shallow(<ThemeProvider theme={{}} />)
-    ).not.toThrow()
+    TestRenderer.create(<ThemeProvider theme={{}} />)
   })
 
   it("should accept a theme prop that's a plain object", () => {
-    shallow(<ThemeProvider theme={{ main: 'black' }} />)
+    TestRenderer.create(<ThemeProvider theme={{ main: 'black' }} />)
   })
 
   it('should render its child', () => {
     const child = <p>Child!</p>
-    const wrapper = mount(
+    const wrapper = TestRenderer.create(
       <ThemeProvider theme={{ main: 'black' }}>{child}</ThemeProvider>
     )
 
-    expect(wrapper.find('p').getElement()).toEqual(child)
+    expect(wrapper.toJSON()).toMatchSnapshot()
   })
 
   it('should merge its theme with an outer theme', () => {
@@ -39,7 +37,7 @@ describe('ThemeProvider', () => {
     const MyDiv = styled.div``
     const MyDivWithTheme = withTheme(MyDiv)
 
-    const wrapper = mount(
+    const wrapper = TestRenderer.create(
       <ThemeProvider theme={outerTheme}>
         <ThemeProvider theme={innerTheme}>
           <MyDivWithTheme />
@@ -47,7 +45,7 @@ describe('ThemeProvider', () => {
       </ThemeProvider>
     )
 
-    expect(wrapper.find(MyDiv).prop('theme')).toEqual({
+    expect(wrapper.root.findByType(MyDiv).props.theme).toEqual({
       ...outerTheme,
       ...innerTheme,
     })
@@ -61,7 +59,7 @@ describe('ThemeProvider', () => {
     const MyDiv = styled.div``
     const MyDivWithTheme = withTheme(MyDiv)
 
-    const wrapper = mount(
+    const wrapper = TestRenderer.create(
       <ThemeProvider theme={outerestTheme}>
         <ThemeProvider theme={outerTheme}>
           <ThemeProvider theme={innerTheme}>
@@ -71,7 +69,7 @@ describe('ThemeProvider', () => {
       </ThemeProvider>
     )
 
-    expect(wrapper.find(MyDiv).prop('theme')).toEqual({
+    expect(wrapper.root.findByType(MyDiv).props.theme).toEqual({
       ...outerestTheme,
       ...outerTheme,
       ...innerTheme,
@@ -89,7 +87,7 @@ describe('ThemeProvider', () => {
     const MyDivTwo = withTheme(styled.div``)
     const MyDivWithThemeTwo = withTheme(MyDivTwo)
 
-    const wrapper = mount(
+    const wrapper = TestRenderer.create(
       <div>
         <ThemeProvider theme={themes.one}>
           <MyDivWithThemeOne />
@@ -100,8 +98,8 @@ describe('ThemeProvider', () => {
       </div>
     )
 
-    expect(wrapper.find(MyDivOne).prop('theme')).toEqual(themes.one)
-    expect(wrapper.find(MyDivTwo).prop('theme')).toEqual(themes.two)
+    expect(wrapper.root.findByType(MyDivOne).props.theme).toEqual(themes.one)
+    expect(wrapper.root.findByType(MyDivTwo).props.theme).toEqual(themes.two)
   })
 
   it('ThemeProvider propagates theme updates through nested ThemeProviders', () => {
@@ -115,16 +113,18 @@ describe('ThemeProvider', () => {
     const MyDiv = styled.div``
     const MyDivWithTheme = withTheme(MyDiv)
 
-    const wrapper = mount(
-      <ThemeProvider theme={theme}>
+    const getJSX = (givenTheme = theme) => (
+      <ThemeProvider theme={givenTheme}>
         <ThemeProvider theme={augment}>
           <MyDivWithTheme />
         </ThemeProvider>
       </ThemeProvider>
     )
 
-    wrapper.setProps({ theme: Object.assign({}, theme, update) })
+    const wrapper = TestRenderer.create(getJSX())
 
-    expect(wrapper.find(MyDiv).prop('theme')).toEqual(expected)
+    wrapper.update(getJSX(Object.assign({}, theme, update)))
+
+    expect(wrapper.root.findByType(MyDiv).props.theme).toEqual(expected)
   })
 })

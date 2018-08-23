@@ -1,7 +1,4 @@
 // @flow
-import React from 'react'
-import { shallow } from 'enzyme'
-
 import { resetStyled } from './utils'
 
 let styled
@@ -14,13 +11,12 @@ describe('static style caching', () => {
   it('should mark styles without any functions as static', () => {
     const TOP_AS_NUMBER = 10
     const FONT_SIZE_NUMBER = 14
-    const COLOR_AS_STRING = 'purple'
 
     const Comp = styled.div`
       color: purple;
-      font-size: ${ FONT_SIZE_NUMBER }px
+      font-size: ${FONT_SIZE_NUMBER}px
       position: absolute;
-      top: ${ TOP_AS_NUMBER }
+      top: ${TOP_AS_NUMBER}
     `
 
     expect(Comp.componentStyle.isStatic).toEqual(true)
@@ -30,7 +26,7 @@ describe('static style caching', () => {
     const NestedComp = styled.div``
 
     const Comp = styled.div`
-      ${ NestedComp } {
+      ${NestedComp} {
         color: purple;
       }
     `
@@ -40,7 +36,7 @@ describe('static style caching', () => {
 
   it('should mark styles with a dynamic style as not static', () => {
     const Comp = styled.div`
-      color: ${ props => props.color }
+      color: ${props => props.color};
     `
 
     expect(Comp.componentStyle.isStatic).toEqual(false)
@@ -49,21 +45,21 @@ describe('static style caching', () => {
   it('should mark components with numeric attriutes as static', () => {
     const Comp = styled.div.attrs({
       style: {
-        color: 'purple'
+        color: 'purple',
       },
       height: 100,
     })``
 
-    expect(Comp.componentStyle.isStatic).toEqual(true)      
+    expect(Comp.componentStyle.isStatic).toEqual(true)
   })
 
   it('should mark components with dynamic attributes as not static', () => {
     const Comp = styled.div.attrs({
       style: props => ({
         height: props.height,
-      })
+      }),
     })``
 
-    expect(Comp.componentStyle.isStatic).toEqual(false)      
+    expect(Comp.componentStyle.isStatic).toEqual(false)
   })
 })
