@@ -4,7 +4,7 @@ import type { ComponentType } from 'react'
 export type Interpolation =
   | ((executionContext: Object) => Interpolation)
   | string
-  | number
+  | ComponentType<*>
   | Array<Interpolation>
 
 export type RuleSet = Array<Interpolation>

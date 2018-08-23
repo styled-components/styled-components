@@ -8,9 +8,9 @@ import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
 import generateDisplayName from '../utils/generateDisplayName'
 import getComponentName from '../utils/getComponentName'
-import isStyledComponent from '../utils/isStyledComponent'
+import once from '../utils/once'
 import isTag from '../utils/isTag'
-import hasInInheritanceChain from '../utils/hasInInheritanceChain'
+import isDerivedReactComponent from '../utils/isDerivedReactComponent'
 import StyleSheet from './StyleSheet'
 import { ThemeConsumer, type Theme } from './ThemeProvider'
 import { StyleSheetConsumer } from './StyleSheetManager'
@@ -44,10 +44,15 @@ function generateId(
     displayName + nr
   )}`
 
-  return parentComponentId !== undefined
-    ? `${parentComponentId}-${componentId}`
-    : componentId
+  return parentComponentId ? `${parentComponentId}-${componentId}` : componentId
 }
+
+const warnInnerRef = once(() =>
+  // eslint-disable-next-line no-console
+  console.warn(
+    'The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component.'
+  )
+)
 
 // $FlowFixMe
 class BaseStyledComponent extends Component<*> {
@@ -81,13 +86,12 @@ class BaseStyledComponent extends Component<*> {
   }
 
   renderInner(theme?: Theme) {
-    const { innerRef } = this.props
     const {
+      componentStyle,
+      defaultProps,
       styledComponentId,
       target,
-      defaultProps,
-      componentStyle,
-    } = this.constructor
+    } = this.props.forwardedClass
 
     const isTargetTag = isTag(target)
 
@@ -100,6 +104,7 @@ class BaseStyledComponent extends Component<*> {
       )
     } else if (theme !== undefined) {
       const determinedTheme = determineTheme(this.props, theme, defaultProps)
+
       generatedClassName = this.generateAndInjectStyles(
         determinedTheme,
         this.props,
@@ -113,7 +118,24 @@ class BaseStyledComponent extends Component<*> {
       )
     }
 
-    const className = [
+    const propsForElement: Object = { ...this.attrs }
+
+    let key
+    for (key in this.props) {
+      if (key === 'forwardedClass') continue
+      else if (process.env.NODE_ENV !== 'production' && key === 'innerRef') {
+        warnInnerRef()
+      } else if (key === 'forwardedRef') propsForElement.ref = this.props[key]
+      // Don't pass through non HTML tags through to HTML elements
+      else if (!isTargetTag || validAttr(key)) {
+        propsForElement[key] =
+          key === 'style' && key in this.attrs
+            ? { ...this.attrs[key], ...this.props[key] }
+            : this.props[key]
+      }
+    }
+
+    propsForElement.className = [
       this.props.className,
       styledComponentId,
       this.attrs.className,
@@ -122,55 +144,29 @@ class BaseStyledComponent extends Component<*> {
       .filter(Boolean)
       .join(' ')
 
-    const baseProps: Object = {
-      ...this.attrs,
-      className,
-    }
-
-    if (isStyledComponent(target)) {
-      baseProps.innerRef = innerRef
-    } else {
-      baseProps.ref = innerRef
-    }
-
-    const propsForElement = baseProps
-
-    let key
-    for (key in this.props) {
-      // Don't pass through non HTML tags through to HTML elements
-      // always omit innerRef
-      if (
-        key !== 'innerRef' &&
-        key !== 'className' &&
-        (!isTargetTag || validAttr(key))
-      ) {
-        propsForElement[key] =
-          key === 'style' && key in this.attrs
-            ? { ...this.attrs[key], ...this.props[key] }
-            : this.props[key]
-      }
-    }
-
     return createElement(target, propsForElement)
   }
 
-  buildExecutionContext(theme: any, props: any) {
-    const { attrs } = this.constructor
+  buildExecutionContext(theme: any, props: any, attrs: any) {
     const context = { ...props, theme }
-    if (attrs === undefined) {
-      return context
-    }
 
-    this.attrs = Object.keys(attrs).reduce((acc, key) => {
-      const attr = attrs[key]
+    if (attrs === undefined) return context
 
-      // eslint-disable-next-line no-param-reassign
-      acc[key] =
-        typeof attr === 'function' && !hasInInheritanceChain(attr, Component)
+    this.attrs = {}
+
+    let attr
+    let key
+
+    /* eslint-disable guard-for-in */
+    for (key in attrs) {
+      attr = attrs[key]
+
+      this.attrs[key] =
+        typeof attr === 'function' && !isDerivedReactComponent(attr)
           ? attr(context)
           : attr
-      return acc
-    }, {})
+    }
+    /* eslint-enable */
 
     return { ...context, ...this.attrs }
   }
@@ -180,7 +176,7 @@ class BaseStyledComponent extends Component<*> {
     props: any,
     styleSheet: ?StyleSheet = StyleSheet.master
   ) {
-    const { attrs, componentStyle, warnTooManyClasses } = this.constructor
+    const { attrs, componentStyle, warnTooManyClasses } = props.forwardedClass
 
     // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names
@@ -190,7 +186,12 @@ class BaseStyledComponent extends Component<*> {
         styleSheet
       )
     } else {
-      const executionContext = this.buildExecutionContext(theme, props)
+      const executionContext = this.buildExecutionContext(
+        theme,
+        props,
+        props.forwardedClass.attrs
+      )
+
       const className = componentStyle.generateAndInjectStyles(
         executionContext,
         styleSheet
@@ -233,38 +234,52 @@ export default (ComponentStyle: Function) => {
 
     const componentStyle = new ComponentStyle(rules, attrs, styledComponentId)
 
-    class StyledComponent extends ParentComponent {
-      static attrs = attrs
-      static componentStyle = componentStyle
-      static displayName = displayName
-      static styledComponentId = styledComponentId
-      static target = target
+    /**
+     * forwardRef creates a new interim component, which we'll take advantage of
+     * instead of extending ParentComponent to create _another_ interim class
+     */
+    const StyledComponent = React.forwardRef((props, ref) => (
+      <ParentComponent
+        {...props}
+        forwardedClass={StyledComponent}
+        forwardedRef={ref}
+      />
+    ))
 
-      static withComponent(tag: Target) {
-        const { componentId: previousComponentId, ...optionsToCopy } = options
+    // $FlowFixMe
+    StyledComponent.attrs = attrs
+    // $FlowFixMe
+    StyledComponent.componentStyle = componentStyle
+    StyledComponent.displayName = displayName
+    // $FlowFixMe
+    StyledComponent.styledComponentId = styledComponentId
+    // $FlowFixMe
+    StyledComponent.target = target
+    // $FlowFixMe
+    StyledComponent.withComponent = function withComponent(tag: Target) {
+      const { componentId: previousComponentId, ...optionsToCopy } = options
 
-        const newComponentId =
-          previousComponentId &&
-          `${previousComponentId}-${
-            isTag(tag) ? tag : escape(getComponentName(tag))
-          }`
+      const newComponentId =
+        previousComponentId &&
+        `${previousComponentId}-${
+          isTag(tag) ? tag : escape(getComponentName(tag))
+        }`
 
-        const newOptions = {
-          ...optionsToCopy,
-          componentId: newComponentId,
-          ParentComponent: StyledComponent,
-        }
-
-        return createStyledComponent(tag, newOptions, rules)
+      const newOptions = {
+        ...optionsToCopy,
+        componentId: newComponentId,
+        ParentComponent,
       }
+
+      return createStyledComponent(tag, newOptions, rules)
     }
 
     if (process.env.NODE_ENV !== 'production') {
+      // $FlowFixMe
       StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
     }
 
     if (isClass) {
-      // $FlowFixMe
       hoist(StyledComponent, target, {
         // all SC-specific things should not be hoisted
         attrs: true,

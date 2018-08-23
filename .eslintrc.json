@@ -28,6 +28,7 @@
       }
     ],
     "import/no-extraneous-dependencies": 0,
+    "no-continue": 0,
     "no-confusing-arrow": 0,
     "no-else-return": 0,
     "react/sort-comp": 0,
@@ -38,6 +39,7 @@
     "flowtype-errors/show-errors": 2,
     "no-prototype-builtins": 0,
     "no-duplicate-imports": 0,
+    "no-underscore-dangle": 0,
     "flowtype/require-valid-file-annotation": [
       2,
       "always",

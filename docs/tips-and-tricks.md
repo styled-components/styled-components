@@ -114,27 +114,27 @@ import { css } from 'styled-components'
 export const media = {
   handheld: (...args) => css`
     @media (max-width: 420px) {
-      ${ css(...args) }
+      ${css(...args)};
     }
-  `
+  `,
 }
 ```
 
 ```js
-import { media } from '../style-utils';
+import { media } from '../style-utils'
 
 // Make the text smaller on handheld devices
 const Box = styled.div`
   font-size: 16px;
-  ${ media.handheld`
+  ${media.handheld`
     font-size: 14px;
-  ` }
-`;
+  `};
+`
 ```
 
 And voila! 💅
 
-*Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals](https://www.styled-components.com/docs/advanced#tagged-template-literals)*
+_Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals](https://www.styled-components.com/docs/advanced#tagged-template-literals)_
 
 ### Media Templates
 
@@ -148,7 +148,7 @@ const sizes = {
   giant: 1170,
   desktop: 992,
   tablet: 768,
-  phone: 376
+  phone: 376,
 }
 
 // iterate through the sizes and create a media template
@@ -158,7 +158,7 @@ export const media = Object.keys(sizes).reduce((accumulator, label) => {
   const emSize = sizes[label] / 16
   accumulator[label] = (...args) => css`
     @media (max-width: ${emSize}em) {
-      ${css(...args)}
+      ${css(...args)};
     }
   `
   return accumulator
@@ -180,13 +180,7 @@ Pretty easy, huh?
 
 ### Refs to DOM nodes
 
-Passing `ref` to styled component will give a ref to the `StyledComponent`
-wrapper, not to DOM node. So it's not possible to call DOM methods, like focus
-on that wrapper. To get a `ref` to wrapped DOM node, pass `innerRef` prop.
-
-> **Note:** `innerRef` supports callback refs (i.e. `ref={comp => this.bla = comp}`) and refs using `React.createRef()` (available since React 16.3). String refs (i.e. `ref="bla"`) won't work. Since string based refs will be deprecated in the future anyway, don't worry about it too much and just use the [`createRef()`](https://reactjs.org/docs/refs-and-the-dom.html#creating-refs) or callback pattern.
-
-Example using a `createRef()`:
+styled-components makes use of the new React 16.3 API [`forwardRef`](https://reactjs.org/docs/forwarding-refs.html). Thus, set refs like you would on any other component and they will automatically resolve to the underlying DOM element or wrapped component class instance.
 
 ```JSX
 const StyledInput = styled.input`
@@ -194,42 +188,17 @@ const StyledInput = styled.input`
 `;
 
 class Form extends Component {
-  constructor(props){
-    super(props);
-    this.input = React.createRef()
-  }
+  inputRef = React.createRef()
 
   componentDidMount() {
-    if (this.input.current) {
-      this.input.current.focus()
+    if (this.inputRef) {
+      this.inputRef.current.focus()
     }
   }
 
   render() {
     return (
-      <StyledInput innerRef={this.input} />
-    )
-  }
-}
-```
-
-Example using a callback:
-
-```JSX
-const StyledInput = styled.input`
-  color: paleviolet;
-`;
-
-class Form extends Component {
-  componentDidMount() {
-    if (this.input) {
-      this.input.focus()
-    }
-  }
-
-  render() {
-    return (
-      <StyledInput innerRef={(comp) => { this.input = comp }} />
+      <StyledInput ref={this.inputRef} />
     )
   }
 }

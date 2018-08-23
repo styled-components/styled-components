@@ -4,6 +4,7 @@ import memoize from 'memoize-one'
 import StyledError from '../utils/error'
 
 export type Theme = { [key: string]: mixed }
+
 type Props = {
   children?: Element<any>,
   theme: Theme | ((outerTheme: Theme) => void),
@@ -24,34 +25,34 @@ export default class ThemeProvider extends Component<Props> {
     outerTheme?: Theme
   ) => Theme
 
+  renderInner: Function
+
   constructor(props: Props) {
     super(props)
     this.getContext = memoize(this.getContext.bind(this))
+    this.renderInner = this.renderInner.bind(this)
   }
 
   render() {
-    const { children, theme } = this.props
+    if (!this.props.children) return null
 
-    if (!children) {
-      return null
-    }
+    return <ThemeContext.Consumer>{this.renderInner}</ThemeContext.Consumer>
+  }
+
+  renderInner(outerTheme?: Theme) {
+    const context = this.getContext(this.props.theme, outerTheme)
 
     return (
-      <ThemeContext.Consumer>
-        {(outerTheme?: Theme) => {
-          const context = this.getContext(theme, outerTheme)
-
-          return (
-            <ThemeContext.Provider value={context}>
-              {React.Children.only(children)}
-            </ThemeContext.Provider>
-          )
-        }}
-      </ThemeContext.Consumer>
+      <ThemeContext.Provider value={context}>
+        {React.Children.only(this.props.children)}
+      </ThemeContext.Provider>
     )
   }
 
-  // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
+  /**
+   * Get the theme from the props, supporting both (outerTheme) => {}
+   * as well as object notation
+   */
   getTheme(theme: (outerTheme: ?Theme) => void, outerTheme: ?Theme) {
     if (isFunction(theme)) {
       const mergedTheme = theme(outerTheme)
@@ -72,7 +73,7 @@ export default class ThemeProvider extends Component<Props> {
       throw new StyledError(8)
     }
 
-    return { ...outerTheme, ...(theme: Theme) }
+    return { ...outerTheme, ...theme }
   }
 
   getContext(theme: (outerTheme: ?Theme) => void, outerTheme?: Theme) {

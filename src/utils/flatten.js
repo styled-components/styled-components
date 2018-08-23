@@ -1,6 +1,7 @@
 // @flow
 import hyphenate from 'fbjs/lib/hyphenateStyleName'
 import isPlainObject from './isPlainObject'
+import isStyledComponent from './isStyledComponent'
 
 import type { Interpolation } from '../types'
 import Keyframes from '../models/Keyframes'
@@ -48,7 +49,7 @@ const flatten = (
     }
 
     /* Handle other components */
-    if (chunk.hasOwnProperty('styledComponentId')) {
+    if (isStyledComponent(chunk)) {
       // $FlowFixMe not sure how to make this pass
       ruleSet.push(`.${chunk.styledComponentId}`)
       return ruleSet
@@ -58,6 +59,7 @@ const flatten = (
     if (typeof chunk === 'function') {
       if (executionContext) {
         ruleSet.push(
+          // $FlowFixMe it's a normal function but flow doesn't get that
           ...flatten([chunk(executionContext)], executionContext, styleSheet)
         )
       } else ruleSet.push(chunk)

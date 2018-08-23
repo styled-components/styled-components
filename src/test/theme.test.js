@@ -255,8 +255,7 @@ describe('theming', () => {
     expectCSSMatches(`.sc-a {} .b { color:purple; }`)
 
     Comp1.defaultProps.theme.color = 'pink'
-    wrapper.root.instance.forceUpdate()
-
+    wrapper.update(<Comp1 />)
     expectCSSMatches(`.sc-a {} .b { color:purple; } .c { color:pink; }`)
   })
 
@@ -273,18 +272,17 @@ describe('theming', () => {
       zIndex: 0,
     }
 
-    const wrapper = TestRenderer.create(<Comp1 key="a" />)
+    const wrapper = TestRenderer.create(<Comp1 />)
     let expectedStyles = `.sc-a {} .b { color:purple; z-index:0px; }`
     expectCSSMatches(expectedStyles)
 
     Comp1.defaultProps.theme.color = 'pink'
-    wrapper.update(<Comp1 key="a" />)
-
+    wrapper.update(<Comp1 />)
     expectedStyles = `${expectedStyles} .c { color:pink; z-index:0px; }`
     expectCSSMatches(expectedStyles)
 
     Comp1.defaultProps.zIndex = 1
-    wrapper.update(<Comp1 key="a" />)
+    wrapper.update(<Comp1 />)
     expectCSSMatches(`${expectedStyles} .d { color:pink; z-index:1px; }`)
   })
 
@@ -315,6 +313,7 @@ describe('theming', () => {
         newTheme.color
       }; }`
     )
+
     expect(wrapper.root.findByType('div').props.className).toBe('sc-a c')
   })
 
@@ -347,7 +346,6 @@ describe('theming', () => {
     )
 
     const wrapper = TestRenderer.create(<Theme key="a" theme={originalTheme} />)
-
     expect(wrapper.root.findByType('div').props.children).toBe('black')
 
     // Change theme
@@ -375,11 +373,9 @@ describe('theming', () => {
     )
 
     const wrapper = TestRenderer.create(<Theme key="a" prop="foo" />)
-
     expectCSSMatches(`.sc-a { } .b { color:green; } `)
 
     wrapper.update(<Theme key="a" prop="bar" />)
-
     expectCSSMatches(`.sc-a { } .b { color:green; } `)
   })
 
@@ -415,60 +411,23 @@ describe('theming', () => {
     expect(inner.props).toEqual({ theme: {} })
   })
 
-  it('should accept innerRef and pass it on as ref', () => {
+  it('should forward refs', () => {
     class Comp extends Component<*, *> {
       render() {
-        return <div />
+        return <div {...this.props} />
       }
     }
 
     const CompWithTheme = withTheme(Comp)
-    const ref = jest.fn()
+    const ref = React.createRef()
 
-    const wrapper = renderIntoDocument(
+    renderIntoDocument(
       <ThemeProvider theme={{}}>
-        <CompWithTheme innerRef={ref} />
+        <CompWithTheme ref={ref} />
       </ThemeProvider>
     )
 
-    const inner = findRenderedComponentWithType(wrapper, Comp)
-
-    expect(ref).toHaveBeenCalledWith(inner)
-    expect(inner.props.innerRef).toBe(undefined)
-  })
-
-  it('should accept innerRef and pass it on for stateless function components', () => {
-    const Comp = () => <div />
-    const CompWithTheme = withTheme(Comp)
-    const ref = jest.fn()
-
-    const wrapper = renderIntoDocument(
-      <ThemeProvider theme={{}}>
-        <CompWithTheme innerRef={ref} />
-      </ThemeProvider>
-    )
-
-    const inner = findRenderedComponentWithType(wrapper, CompWithTheme)
-
-    expect(ref).toHaveBeenCalledTimes(0)
-    expect(inner.props.innerRef).toBe(ref)
-  })
-
-  it('should accept innerRef and pass it on for styled components', () => {
-    const Comp = styled.div``
-    const CompWithTheme = withTheme(Comp)
-    const ref = jest.fn()
-
-    const wrapper = renderIntoDocument(
-      <ThemeProvider theme={{}}>
-        <CompWithTheme innerRef={ref} />
-      </ThemeProvider>
-    )
-
-    const inner = findRenderedComponentWithType(wrapper, Comp)
-
-    expect(ref).toHaveBeenCalledWith(findDOMNode(inner))
-    expect(inner.props.innerRef).toBe(ref)
+    expect(ref.current).toBeInstanceOf(Comp)
   })
 
   // https://github.com/styled-components/styled-components/issues/1130

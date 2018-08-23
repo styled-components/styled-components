@@ -34,8 +34,8 @@ export default (styleSheet: StyleSheet) => {
           if (node.type === 'decl') {
             declPairs.push([node.prop, node.value])
           } else if (
-            node.type !== 'comment' &&
-            process.env.NODE_ENV !== 'production'
+            process.env.NODE_ENV !== 'production' &&
+            node.type !== 'comment'
           ) {
             /* eslint-disable no-console */
             console.warn(
