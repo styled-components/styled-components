@@ -6,10 +6,18 @@ import { EMPTY_OBJECT } from '../utils/empties'
 import generateDisplayName from '../utils/generateDisplayName'
 import isTag from '../utils/isTag'
 import isDerivedReactComponent from '../utils/isDerivedReactComponent'
+import once from '../utils/once'
 import { ThemeConsumer } from './ThemeProvider'
 
 import type { Theme } from './ThemeProvider'
 import type { RuleSet, Target } from '../types'
+
+const warnInnerRef = once(() =>
+  // eslint-disable-next-line no-console
+  console.warn(
+    'The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component.'
+  )
+)
 
 // $FlowFixMe
 class BaseStyledNativeComponent extends Component<*, *> {
@@ -26,7 +34,13 @@ class BaseStyledNativeComponent extends Component<*, *> {
     return (
       <ThemeConsumer>
         {(theme?: Theme) => {
-          const { forwardedClass, forwardedRef, style, ...props } = this.props
+          const {
+            forwardedClass,
+            forwardedRef,
+            innerRef,
+            style,
+            ...props
+          } = this.props
           const { defaultProps, target } = forwardedClass
 
           let generatedStyles
@@ -50,6 +64,7 @@ class BaseStyledNativeComponent extends Component<*, *> {
           }
 
           if (forwardedRef) propsForElement.ref = forwardedRef
+          if (process.env.NODE_ENV !== 'production' && innerRef) warnInnerRef()
 
           return createElement(target, propsForElement)
         }}

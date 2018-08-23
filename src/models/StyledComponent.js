@@ -8,6 +8,7 @@ import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
 import generateDisplayName from '../utils/generateDisplayName'
 import getComponentName from '../utils/getComponentName'
+import once from '../utils/once'
 import isTag from '../utils/isTag'
 import isDerivedReactComponent from '../utils/isDerivedReactComponent'
 import StyleSheet from './StyleSheet'
@@ -47,6 +48,13 @@ function generateId(
     ? `${parentComponentId}-${componentId}`
     : componentId
 }
+
+const warnInnerRef = once(() =>
+  // eslint-disable-next-line no-console
+  console.warn(
+    'The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component.'
+  )
+)
 
 // $FlowFixMe
 class BaseStyledComponent extends Component<*> {
@@ -117,7 +125,9 @@ class BaseStyledComponent extends Component<*> {
     let key
     for (key in this.props) {
       if (key === 'forwardedClass') continue
-      else if (key === 'forwardedRef') propsForElement.ref = this.props[key]
+      else if (process.env.NODE_ENV !== 'production' && key === 'innerRef') {
+        warnInnerRef()
+      } else if (key === 'forwardedRef') propsForElement.ref = this.props[key]
       // Don't pass through non HTML tags through to HTML elements
       else if (!isTargetTag || validAttr(key)) {
         propsForElement[key] =

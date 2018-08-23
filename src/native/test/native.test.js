@@ -207,4 +207,20 @@ describe('native', () => {
       expect(Comp.displayName).toBe('Test2')
     })
   })
+
+  describe('warnings', () => {
+    beforeEach(() => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {})
+    })
+
+    it('warns upon use of the removed "innerRef" prop', () => {
+      const Comp = styled.View``
+      const ref = React.createRef()
+
+      TestRenderer.create(<Comp innerRef={ref} />)
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('The "innerRef" API has been removed')
+      )
+    })
+  })
 })

@@ -297,4 +297,20 @@ describe('basic', () => {
       expect(spy).not.toHaveBeenCalled()
     })
   })
+
+  describe('warnings', () => {
+    beforeEach(() => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {})
+    })
+
+    it('warns upon use of the removed "innerRef" prop', () => {
+      const Comp = styled.div``
+      const ref = React.createRef()
+
+      TestRenderer.create(<Comp innerRef={ref} />)
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('The "innerRef" API has been removed')
+      )
+    })
+  })
 })
