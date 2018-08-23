@@ -136,41 +136,40 @@ export default (InlineStyle: Function) => {
 
     const inlineStyle = new InlineStyle(rules)
 
-    class StyledNativeComponent extends ParentComponent {
-      static attrs = attrs
-      static displayName = displayName
-      static inlineStyle = inlineStyle
-      static styledComponentId = 'StyledNativeComponent'
-      static target = target
-
-      static withComponent(tag: Target) {
-        const { displayName: _, componentId: __, ...optionsToCopy } = options
-        const newOptions = {
-          ...optionsToCopy,
-          ParentComponent: StyledNativeComponent,
-        }
-        return createStyledNativeComponent(tag, newOptions, rules)
-      }
-    }
-
-    const Forwarded = React.forwardRef((props, ref) => (
-      <StyledNativeComponent
+    const StyledNativeComponent = React.forwardRef((props, ref) => (
+      <ParentComponent
         {...props}
-        forwardedClass={Forwarded}
+        forwardedClass={StyledNativeComponent}
         forwardedRef={ref}
       />
     ))
 
     /**
-     * forwardRef creates a new interim component, so we need to lift up all the
-     * stuff from StyledComponent such that integrations expecting the static properties
-     * to be available will work
+     * forwardRef creates a new interim component, which we'll take advantage of
+     * instead of extending ParentComponent to create _another_ interim class
      */
-    hoist(Forwarded, StyledNativeComponent)
+    // $FlowFixMe
+    StyledNativeComponent.attrs = attrs
+    StyledNativeComponent.displayName = displayName
+    // $FlowFixMe
+    StyledNativeComponent.inlineStyle = inlineStyle
+    // $FlowFixMe
+    StyledNativeComponent.styledComponentId = 'StyledNativeComponent'
+    // $FlowFixMe
+    StyledNativeComponent.target = target
+    // $FlowFixMe
+    StyledNativeComponent.withComponent = function withComponent(tag: Target) {
+      const { displayName: _, componentId: __, ...optionsToCopy } = options
+      const newOptions = {
+        ...optionsToCopy,
+        ParentComponent,
+      }
+      return createStyledNativeComponent(tag, newOptions, rules)
+    }
 
     if (isClass) {
       // $FlowFixMe
-      hoist(Forwarded, target, {
+      hoist(StyledNativeComponent, target, {
         // all SC-specific things should not be hoisted
         attrs: true,
         componentStyle: true,
@@ -182,9 +181,7 @@ export default (InlineStyle: Function) => {
       })
     }
 
-    Forwarded.displayName = StyledNativeComponent.displayName
-
-    return Forwarded
+    return StyledNativeComponent
   }
 
   return createStyledNativeComponent

@@ -66,7 +66,7 @@ describe('expanded api', () => {
       expect(Comp.styledComponentId).toBe('Comp-LOLOMG')
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot()
       expect(Comp2.styledComponentId).toBe('Comp2-OMGLOL')
-      expect(TestRenderer.create(<Comp2 />)).toMatchSnapshot()
+      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot()
     })
 
     it('should work with `.withComponent`', () => {
@@ -82,7 +82,7 @@ describe('expanded api', () => {
       expect(Comp.styledComponentId).toBe('Comp-OMGLOL-h1')
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot()
       expect(Comp2.styledComponentId).toBe('Comp2-OMFG-Dummy')
-      expect(TestRenderer.create(<Comp2 />)).toMatchSnapshot()
+      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot()
     })
   })
 

@@ -1,0 +1,27 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`native expanded API withComponent should work 1`] = `
+<Text
+  accessible={true}
+  allowFontScaling={true}
+  disabled={false}
+  ellipsizeMode="tail"
+  style={
+    Array [
+      Object {},
+      undefined,
+    ]
+  }
+/>
+`;
+
+exports[`native expanded API withComponent should work 2`] = `
+<View
+  style={
+    Array [
+      Object {},
+      undefined,
+    ]
+  }
+/>
+`;

@@ -236,54 +236,53 @@ export default (ComponentStyle: Function) => {
 
     const componentStyle = new ComponentStyle(rules, attrs, styledComponentId)
 
-    class StyledComponent extends ParentComponent {
-      static attrs = attrs
-      static componentStyle = componentStyle
-      static displayName = displayName
-      static styledComponentId = styledComponentId
-      static target = target
-
-      static withComponent(tag: Target) {
-        const { componentId: previousComponentId, ...optionsToCopy } = options
-
-        const newComponentId =
-          previousComponentId &&
-          `${previousComponentId}-${
-            isTag(tag) ? tag : escape(getComponentName(tag))
-          }`
-
-        const newOptions = {
-          ...optionsToCopy,
-          componentId: newComponentId,
-          ParentComponent: StyledComponent,
-        }
-
-        return createStyledComponent(tag, newOptions, rules)
-      }
-    }
-
-    if (process.env.NODE_ENV !== 'production') {
-      StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
-    }
-
-    const Forwarded = React.forwardRef((props, ref) => (
-      <StyledComponent
+    /**
+     * forwardRef creates a new interim component, which we'll take advantage of
+     * instead of extending ParentComponent to create _another_ interim class
+     */
+    const StyledComponent = React.forwardRef((props, ref) => (
+      <ParentComponent
         {...props}
-        forwardedClass={Forwarded}
+        forwardedClass={StyledComponent}
         forwardedRef={ref}
       />
     ))
 
-    /**
-     * forwardRef creates a new interim component, so we need to lift up all the
-     * stuff from StyledComponent such that integrations expecting the static properties
-     * to be available will work
-     */
-    hoist(Forwarded, StyledComponent)
+    // $FlowFixMe
+    StyledComponent.attrs = attrs
+    // $FlowFixMe
+    StyledComponent.componentStyle = componentStyle
+    StyledComponent.displayName = displayName
+    // $FlowFixMe
+    StyledComponent.styledComponentId = styledComponentId
+    // $FlowFixMe
+    StyledComponent.target = target
+    // $FlowFixMe
+    StyledComponent.withComponent = function withComponent(tag: Target) {
+      const { componentId: previousComponentId, ...optionsToCopy } = options
+
+      const newComponentId =
+        previousComponentId &&
+        `${previousComponentId}-${
+          isTag(tag) ? tag : escape(getComponentName(tag))
+        }`
+
+      const newOptions = {
+        ...optionsToCopy,
+        componentId: newComponentId,
+        ParentComponent,
+      }
+
+      return createStyledComponent(tag, newOptions, rules)
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      // $FlowFixMe
+      StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
+    }
 
     if (isClass) {
-      // $FlowFixMe
-      hoist(Forwarded, target, {
+      hoist(StyledComponent, target, {
         // all SC-specific things should not be hoisted
         attrs: true,
         componentStyle: true,
@@ -295,9 +294,7 @@ export default (ComponentStyle: Function) => {
       })
     }
 
-    Forwarded.displayName = StyledComponent.displayName
-
-    return Forwarded
+    return StyledComponent
   }
 
   return createStyledComponent
