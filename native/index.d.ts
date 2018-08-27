@@ -101,3 +101,67 @@ export interface StyledInterface extends BaseStyledInterface {
 declare const styled: StyledInterface
 
 export default styled
+
+// Themed version of StyledInterface
+
+import {
+  ThemedStyledFunction,
+  ThemedBaseStyledInterface,
+  ThemedCssFunction,
+  ThemeProviderComponent,
+  WithOptionalTheme,
+} from '..'
+
+export type ThemedReactNativeStyledFunction<P, T> = ThemedStyledFunction<P, T>
+export interface ThemedStyledInterface<T> extends ThemedBaseStyledInterface<T> {
+  ActivityIndicator: ThemedReactNativeStyledFunction<ReactNative.ActivityIndicatorProperties, T>
+  ActivityIndicatorIOS: ThemedReactNativeStyledFunction<ReactNative.ActivityIndicatorProperties, T>
+  Button: ThemedReactNativeStyledFunction<ReactNative.ButtonProperties, T>
+  DatePickerIOS: ThemedReactNativeStyledFunction<ReactNative.DatePickerIOSProperties, T>
+  DrawerLayoutAndroid: ThemedReactNativeStyledFunction<ReactNative.DrawerLayoutAndroidProperties, T>
+  Image: ThemedReactNativeStyledFunction<ReactNative.ImageProperties, T>
+  ImageBackground: ThemedReactNativeStyledFunction<ReactNative.ImageBackgroundProperties, T>
+  KeyboardAvoidingView: ThemedReactNativeStyledFunction<ReactNative.KeyboardAvoidingViewProps, T>
+  ListView: ThemedReactNativeStyledFunction<ReactNative.ListViewProperties, T>
+  MapView: ThemedReactNativeStyledFunction<ReactNative.MapViewProperties, T>
+  Modal: ThemedReactNativeStyledFunction<ReactNative.ModalProperties, T>
+  NavigatorIOS: ThemedReactNativeStyledFunction<ReactNative.NavigatorIOSProperties, T>
+  Picker: ThemedReactNativeStyledFunction<ReactNative.PickerProperties, T>
+  PickerIOS: ThemedReactNativeStyledFunction<ReactNative.PickerIOSProperties, T>
+  ProgressBarAndroid: ThemedReactNativeStyledFunction<ReactNative.ProgressBarAndroidProperties, T>
+  ProgressViewIOS: ThemedReactNativeStyledFunction<ReactNative.ProgressViewIOSProperties, T>
+  RecyclerViewBackedScrollView: ThemedReactNativeStyledFunction<ReactNative.RecyclerViewBackedScrollViewProperties, T>
+  RefreshControl: ThemedReactNativeStyledFunction<ReactNative.RefreshControlProperties, T>
+  SafeAreaView: ThemedReactNativeStyledFunction<ReactNative.SafeAreaView, T>
+  ScrollView: ThemedReactNativeStyledFunction<ReactNative.ScrollViewProps, T>
+  SegmentedControlIOS: ThemedReactNativeStyledFunction<ReactNative.SegmentedControlIOSProperties, T>
+  Slider: ThemedReactNativeStyledFunction<ReactNative.SliderProperties, T>
+  SliderIOS: ThemedReactNativeStyledFunction<ReactNative.SliderPropertiesIOS, T>
+  SnapshotViewIOS: ThemedReactNativeStyledFunction<ReactNative.SnapshotViewIOSProperties, T>
+  StatusBar: ThemedReactNativeStyledFunction<ReactNative.StatusBarProperties, T>
+  SwipeableListView: ThemedReactNativeStyledFunction<ReactNative.SwipeableListViewProps, T>
+  Switch: ThemedReactNativeStyledFunction<ReactNative.SwitchProperties, T>
+  SwitchIOS: ThemedReactNativeStyledFunction<ReactNative.SwitchIOSProperties, T>
+  Text: ThemedReactNativeStyledFunction<ReactNative.TextProperties, T>
+  TextInput: ThemedReactNativeStyledFunction<ReactNative.TextInputProperties, T>
+  TouchableHighlight: ThemedReactNativeStyledFunction<ReactNative.TouchableHighlightProperties, T>
+  TouchableNativeFeedback: ThemedReactNativeStyledFunction<ReactNative.TouchableNativeFeedbackProperties, T>
+  TouchableOpacity: ThemedReactNativeStyledFunction<ReactNative.TouchableOpacityProperties, T>
+  TouchableWithoutFeedback: ThemedReactNativeStyledFunction<ReactNative.TouchableWithoutFeedbackProps, T>
+  View: ThemedReactNativeStyledFunction<ReactNative.ViewProperties, T>
+  ViewPagerAndroid: ThemedReactNativeStyledFunction<ReactNative.ViewPagerAndroidProperties, T>
+  WebView: ThemedReactNativeStyledFunction<ReactNative.WebViewProperties, T>
+}
+
+// Useful for https://www.styled-components.com/docs/api#define-a-theme-interface
+export interface ThemedStyledComponentsModule<T> {
+  default: ThemedStyledInterface<T>
+
+  css: ThemedCssFunction<T>
+
+  withTheme<P extends { theme?: T }>(
+    component: React.ComponentType<P>
+  ): ComponentClass<WithOptionalTheme<P, T>>
+
+  ThemeProvider: ThemeProviderComponent<T>
+}

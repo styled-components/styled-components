@@ -133,7 +133,7 @@ type Diff<T extends KeyofBase, U extends KeyofBase> = ({ [P in T]: P } &
 type Omit<T, K extends keyof T> = Pick<T, Diff<keyof T, K>>
 type DiffBetween<T, U> = Pick<T, Diff<keyof T, keyof U>> &
   Pick<U, Diff<keyof U, keyof T>>
-type WithOptionalTheme<P extends { theme?: T }, T> = Omit<P, 'theme'> & {
+export type WithOptionalTheme<P extends { theme?: T }, T> = Omit<P, 'theme'> & {
   theme?: T
 }
 
