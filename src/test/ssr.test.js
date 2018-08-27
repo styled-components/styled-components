@@ -4,20 +4,18 @@
 import React from 'react'
 import { renderToString, renderToNodeStream } from 'react-dom/server'
 import ServerStyleSheet from '../models/ServerStyleSheet'
-import { resetStyled } from './utils'
-import _injectGlobal from '../constructors/injectGlobal'
+import { resetStyled, resetCreateGlobalStyle } from './utils'
 import _keyframes from '../constructors/keyframes'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
 
 jest.mock('../utils/nonce')
 
-const injectGlobal = _injectGlobal(stringifyRules, css)
-
 let index = 0
 const keyframes = _keyframes(() => `keyframe_${index++}`, stringifyRules, css)
 
 let styled
+let createGlobalStyle
 
 describe('ssr', () => {
   beforeEach(() => {
@@ -25,6 +23,7 @@ describe('ssr', () => {
     require('../utils/nonce').mockReset()
 
     styled = resetStyled(true)
+    createGlobalStyle = resetCreateGlobalStyle()
   })
 
   afterEach(() => {
@@ -47,7 +46,7 @@ describe('ssr', () => {
   })
 
   it('should extract both global and local CSS', () => {
-    injectGlobal`
+    const Component = createGlobalStyle`
       body { background: papayawhip; }
     `
     const Heading = styled.h1`
@@ -56,7 +55,10 @@ describe('ssr', () => {
 
     const sheet = new ServerStyleSheet()
     const html = renderToString(
-      sheet.collectStyles(<Heading>Hello SSR!</Heading>)
+      sheet.collectStyles(<React.Fragment>
+        <Component />
+        <Heading>Hello SSR!</Heading>
+      </React.Fragment>)
     )
     const css = sheet.getStyleTags()
 
@@ -86,7 +88,7 @@ describe('ssr', () => {
     // eslint-disable-next-line
     require('../utils/nonce').mockImplementation(() => 'foo')
 
-    injectGlobal`
+    const Component = createGlobalStyle`
       body { background: papayawhip; }
     `
     const Heading = styled.h1`
@@ -95,7 +97,10 @@ describe('ssr', () => {
 
     const sheet = new ServerStyleSheet()
     const html = renderToString(
-      sheet.collectStyles(<Heading>Hello SSR!</Heading>)
+      sheet.collectStyles(<React.Fragment>
+        <Component />
+        <Heading>Hello SSR!</Heading>
+      </React.Fragment>)
     )
     const css = sheet.getStyleTags()
 
@@ -127,7 +132,7 @@ describe('ssr', () => {
   })
 
   it('should share global styles but keep renders separate', () => {
-    injectGlobal`
+    const Component = createGlobalStyle`
       body { background: papayawhip; }
     `
     const PageOne = styled.h1.withConfig({ componentId: 'PageOne' })`
@@ -139,48 +144,21 @@ describe('ssr', () => {
 
     const sheetOne = new ServerStyleSheet()
     const htmlOne = renderToString(
-      sheetOne.collectStyles(<PageOne>Camera One!</PageOne>)
+      sheetOne.collectStyles(<React.Fragment>
+        <Component />
+        <PageOne>Camera One!</PageOne>
+      </React.Fragment>)
     )
     const cssOne = sheetOne.getStyleTags()
 
     const sheetTwo = new ServerStyleSheet()
     const htmlTwo = renderToString(
-      sheetTwo.collectStyles(<PageTwo>Camera Two!</PageTwo>)
+      sheetTwo.collectStyles(<React.Fragment>
+        <Component />
+        <PageTwo>Camera Two!</PageTwo>
+      </React.Fragment>)
     )
     const cssTwo = sheetTwo.getStyleTags()
-
-    expect(htmlOne).toMatchSnapshot()
-    expect(cssOne).toMatchSnapshot()
-    expect(htmlTwo).toMatchSnapshot()
-    expect(cssTwo).toMatchSnapshot()
-  })
-
-  it('should allow global styles to be injected during rendering', () => {
-    injectGlobal`html::before { content: 'Before both renders'; }`
-    const PageOne = styled.h1.withConfig({ componentId: 'PageOne' })`
-      color: red;
-    `
-    const PageTwo = styled.h2.withConfig({ componentId: 'PageTwo' })`
-      color: blue;
-    `
-
-    const sheetOne = new ServerStyleSheet()
-    const htmlOne = renderToString(
-      sheetOne.collectStyles(<PageOne>Camera One!</PageOne>)
-    )
-    injectGlobal`html::before { content: 'During first render'; }`
-    const cssOne = sheetOne.getStyleTags()
-
-    injectGlobal`html::before { content: 'Between renders'; }`
-
-    const sheetTwo = new ServerStyleSheet()
-    injectGlobal`html::before { content: 'During second render'; }`
-    const htmlTwo = renderToString(
-      sheetTwo.collectStyles(<PageTwo>Camera Two!</PageTwo>)
-    )
-    const cssTwo = sheetTwo.getStyleTags()
-
-    injectGlobal`html::before { content: 'After both renders'; }`
 
     expect(htmlOne).toMatchSnapshot()
     expect(cssOne).toMatchSnapshot()
@@ -189,7 +167,7 @@ describe('ssr', () => {
   })
 
   it('should dispatch global styles to each ServerStyleSheet', () => {
-    injectGlobal`
+    const Component = createGlobalStyle`
       body { background: papayawhip; }
     `
     const Header = styled.h1.withConfig({ componentId: 'Header' })`
@@ -198,7 +176,10 @@ describe('ssr', () => {
 
     const sheet = new ServerStyleSheet()
     const html = renderToString(
-      sheet.collectStyles(<Header animation={keyframes`0% { opacity: 0; }`} />)
+      sheet.collectStyles(<React.Fragment>
+        <Component />
+        <Header animation={keyframes`0% { opacity: 0; }`} />
+      </React.Fragment>)
     )
     const css = sheet.getStyleTags()
 
@@ -207,7 +188,7 @@ describe('ssr', () => {
   })
 
   it('should return a generated React style element', () => {
-    injectGlobal`
+    const Component = createGlobalStyle`
       body { background: papayawhip; }
     `
     const Heading = styled.h1`
@@ -216,7 +197,10 @@ describe('ssr', () => {
 
     const sheet = new ServerStyleSheet()
     const html = renderToString(
-      sheet.collectStyles(<Heading>Hello SSR!</Heading>)
+      sheet.collectStyles(<React.Fragment>
+        <Component />
+        <Heading>Hello SSR!</Heading>
+      </React.Fragment>)
     )
     const elements = sheet.getStyleElement()
 
@@ -233,7 +217,7 @@ describe('ssr', () => {
     // eslint-disable-next-line
     require('../utils/nonce').mockImplementation(() => 'foo')
 
-    injectGlobal`
+    const Component = createGlobalStyle`
       body { background: papayawhip; }
     `
     const Heading = styled.h1`
@@ -242,7 +226,10 @@ describe('ssr', () => {
 
     const sheet = new ServerStyleSheet()
     const html = renderToString(
-      sheet.collectStyles(<Heading>Hello SSR!</Heading>)
+      sheet.collectStyles(<React.Fragment>
+        <Heading>Hello SSR!</Heading>
+        <Component />
+      </React.Fragment>)
     )
     const elements = sheet.getStyleElement()
 
@@ -251,7 +238,7 @@ describe('ssr', () => {
   })
 
   it('should interleave styles with rendered HTML when utilitizing streaming', () => {
-    injectGlobal`
+    const Component = createGlobalStyle`
       body { background: papayawhip; }
     `
     const Heading = styled.h1`
@@ -259,7 +246,10 @@ describe('ssr', () => {
     `
 
     const sheet = new ServerStyleSheet()
-    const jsx = sheet.collectStyles(<Heading>Hello SSR!</Heading>)
+    const jsx = sheet.collectStyles(<React.Fragment>
+      <Component />
+      <Heading>Hello SSR!</Heading>
+    </React.Fragment>)
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx))
 
     return new Promise((resolve, reject) => {
@@ -280,7 +270,7 @@ describe('ssr', () => {
   })
 
   it('should handle errors while streaming', () => {
-    injectGlobal`
+    const Component = createGlobalStyle`
       body { background: papayawhip; }
     `
     const Heading = styled.h1`
@@ -292,7 +282,7 @@ describe('ssr', () => {
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx))
 
     return new Promise((resolve, reject) => {
-      stream.on('data', function noop(){})
+      stream.on('data', function noop() { })
 
       stream.on('error', (err) => {
         expect(err).toMatchSnapshot()

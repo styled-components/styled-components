@@ -25,6 +25,19 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
   Keyframes is now implemented in a "lazy" manner: its styles will be injected with the render phase of components using them.
    
   `keyframes` no longer returns an animation name, instead it returns an object which has method `.getName()` for the purpose of getting the animation name.
+  
+* Add `createGlobalStyle` that returns a component which, when mounting, will apply global styles. This is a replacement for the `injectGlobal` API. It can be updated, replaced, removed, etc like any normal component and the global scope will update accordingly, by @JamieDixon @marionebl and @yjimk (see #1416)
+
+  ```jsx
+  const GlobalStyles = createGlobalStyle`
+    html {
+      color: 'red';
+    }
+  `
+  
+  // then put it in your React tree somewhere:
+  // <GlobalStyles />
+  ```
 
 - Migrate to use new `React.forwardRef` API, by [@probablyup](https://github.com/probablyup); note that this removes the `innerRef` API since it is no longer needed.
 

@@ -10,34 +10,6 @@ body{background:papayawhip;}
 .sc-a {} .b{color:red;}</style>"
 `;
 
-exports[`ssr should allow global styles to be injected during rendering 1`] = `"<h1 class=\\"PageOne a\\">Camera One!</h1>"`;
-
-exports[`ssr should allow global styles to be injected during rendering 2`] = `
-"<style data-styled=\\"a\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
-/* sc-component-id: sc-global-737874422 */
-html::before{content:'Before both renders';}
-/* sc-component-id: PageOne */
-.PageOne {} .a{color:red;}</style><style data-styled=\\"\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
-/* sc-component-id: sc-global-2914197427 */
-html::before{content:'During first render';}</style>"
-`;
-
-exports[`ssr should allow global styles to be injected during rendering 3`] = `"<h2 class=\\"PageTwo b\\">Camera Two!</h2>"`;
-
-exports[`ssr should allow global styles to be injected during rendering 4`] = `
-"<style data-styled=\\"b\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
-/* sc-component-id: sc-global-737874422 */
-html::before{content:'Before both renders';}
-/* sc-component-id: PageTwo */
-.PageTwo {} .b{color:blue;}
-/* sc-component-id: sc-global-2914197427 */
-html::before{content:'During first render';}
-/* sc-component-id: sc-global-1207956261 */
-html::before{content:'Between renders';}</style><style data-styled=\\"\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
-/* sc-component-id: sc-global-3990873394 */
-html::before{content:'During second render';}</style>"
-`;
-
 exports[`ssr should dispatch global styles to each ServerStyleSheet 1`] = `"<h1 class=\\"Header a\\"></h1>"`;
 
 exports[`ssr should dispatch global styles to each ServerStyleSheet 2`] = `

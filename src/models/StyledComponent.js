@@ -6,6 +6,7 @@ import React, { Component, createElement } from 'react'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
+
 import generateDisplayName from '../utils/generateDisplayName'
 import getComponentName from '../utils/getComponentName'
 import once from '../utils/once'

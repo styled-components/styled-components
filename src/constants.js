@@ -15,3 +15,6 @@ export const IS_BROWSER =
 export const DISABLE_SPEEDY =
   (typeof __DEV__ === 'boolean' && __DEV__) ||
   process.env.NODE_ENV !== 'production'
+
+// Shared empty execution context when generating static styles
+export const STATIC_EXECUTION_CONTEXT = {}

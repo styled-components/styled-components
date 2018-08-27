@@ -20,7 +20,6 @@ const ComponentStyle = _ComponentStyle(
   flatten,
   stringifyRules
 )
-
 const constructWithOptions = _constructWithOptions(css)
 const StyledComponent = _StyledComponent(ComponentStyle)
 

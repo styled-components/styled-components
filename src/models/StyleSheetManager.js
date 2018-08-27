@@ -47,7 +47,6 @@ export default class StyleSheetManager extends Component<Props> {
   render() {
     const { children, sheet, target } = this.props
     const context = this.getContext(sheet, target)
-
     return (
       <StyleSheetContext.Provider value={context}>
         {React.Children.only(children)}

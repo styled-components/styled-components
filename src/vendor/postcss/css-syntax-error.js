@@ -201,7 +201,7 @@ class CssSyntaxError {
     }
 
     get generated() {
-        warnOnce('CssSyntaxError#generated is depreacted. Use input instead.');
+        warnOnce('CssSyntaxError#generated is deprecated. Use input instead.');
         return this.input;
     }
 

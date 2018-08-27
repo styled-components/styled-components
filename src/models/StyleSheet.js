@@ -72,7 +72,6 @@ export default class StyleSheet {
     if (!IS_BROWSER || this.forceServer) {
       return this
     }
-
     const els = []
     const names = []
     const extracted = []
@@ -136,7 +135,7 @@ export default class StyleSheet {
   }
 
   /* retrieve a "master" instance of StyleSheet which is typically used when no other is available
-   * The master StyleSheet is targeted by injectGlobal, keyframes, and components outside of any
+   * The master StyleSheet is targeted by createGlobalStyle, keyframes, and components outside of any
     * StyleSheetManager's context */
   static get master(): StyleSheet {
     return master || (master = new StyleSheet().rehydrate())
@@ -237,7 +236,7 @@ export default class StyleSheet {
     return (this.tagMap[id] = tag)
   }
 
-  /* mainly for injectGlobal to check for its id */
+  /* mainly for createGlobalStyle to check for its id */
   hasId(id: string) {
     return this.tagMap[id] !== undefined
   }
@@ -278,7 +277,6 @@ export default class StyleSheet {
     }
 
     const tag = this.getTagForId(id)
-
     /* add deferred rules for component */
     if (this.deferred[id] !== undefined) {
       // Combine passed cssRules with previously deferred CSS rules

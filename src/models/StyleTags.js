@@ -286,9 +286,7 @@ const makeBrowserTag = (
         marker.appendData(`${rule}${separator}`)
       }
     }
-
     addNameForId(names, id, name)
-
     if (extractImport && importRules.length > 0) {
       usedImportRuleTag = true
       // $FlowFixMe
@@ -320,7 +318,6 @@ const makeBrowserTag = (
     }
     return str
   }
-
   return {
     clone() {
       throw new StyledError(5)
