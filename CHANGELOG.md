@@ -19,14 +19,14 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 - Add new `data-styled-version` attribute to generated `<style>` tags to allow multiple versions of styled-components to function on the page at once without clobbering each other, by [@probablyup](https://github.com/probablyup)
 
   It's still highly recommended to use aliasing via your bundler to dedupe libraries like styled-components and react.
- 
+
 - [Breaking change] Refactor `keyframes` helper, by [@fer0x](https://github.com/Fer0x) (see [#1930](https://github.com/styled-components/styled-components/pull/1930)).
-  
+
   Keyframes is now implemented in a "lazy" manner: its styles will be injected with the render phase of components using them.
-   
+
   `keyframes` no longer returns an animation name, instead it returns an object which has method `.getName()` for the purpose of getting the animation name.
-  
-* Add `createGlobalStyle` that returns a component which, when mounting, will apply global styles. This is a replacement for the `injectGlobal` API. It can be updated, replaced, removed, etc like any normal component and the global scope will update accordingly, by @JamieDixon @marionebl and @yjimk (see #1416)
+
+* Add `createGlobalStyle` that returns a component which, when mounting, will apply global styles. This is a replacement for the `injectGlobal` API. It can be updated, replaced, removed, etc like any normal component and the global scope will update accordingly, by [@JamieDixon](https://github.com/JamieDixon) [@marionebl](https://github.com/marionebl), [@yjimk](https://github.com/yjimk), and [@imbhargav5](https://github.com/imbhargav5) (see [#1416](https://github.com/styled-components/styled-components/pull/1416))
 
   ```jsx
   const GlobalStyles = createGlobalStyle`
@@ -34,7 +34,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
       color: 'red';
     }
   `
-  
+
   // then put it in your React tree somewhere:
   // <GlobalStyles />
   ```
