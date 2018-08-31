@@ -124,7 +124,7 @@ class BaseStyledComponent extends Component<*> {
 
     let key
     for (key in this.props) {
-      if (key === 'forwardedClass') continue
+      if (key === 'forwardedClass' || key === 'as') continue
       else if (process.env.NODE_ENV !== 'production' && key === 'innerRef') {
         warnInnerRef()
       } else if (key === 'forwardedRef') propsForElement.ref = this.props[key]
@@ -219,6 +219,8 @@ export default (ComponentStyle: Function) => {
     options: Object,
     rules: RuleSet
   ) {
+    const targetIsSC = isStyledComponent(target)
+
     const {
       isClass = !isTag(target),
       displayName = generateDisplayName(target),
@@ -236,7 +238,27 @@ export default (ComponentStyle: Function) => {
         ? `${escape(options.displayName)}-${options.componentId}`
         : options.componentId || componentId
 
-    const componentStyle = new ComponentStyle(rules, attrs, styledComponentId)
+    let finalAttrs = attrs
+
+    // fold the underlying StyledComponent attrs up (implicit extend)
+    // $FlowFixMe
+    if (targetIsSC && target.attrs) finalAttrs = { ...target.attrs, ...attrs }
+
+    const componentStyle = new ComponentStyle(
+      targetIsSC
+        ? // fold the underlying StyledComponent rules up (implicit extend)
+          // $FlowFixMe
+          target.componentStyle.rules.concat(rules)
+        : rules,
+      finalAttrs,
+      styledComponentId
+    )
+
+    let finalTarget = target
+
+    // fold the underlying StyledComponent target up since we folded the styles
+    // $FlowFixMe
+    if (targetIsSC) finalTarget = target.target
 
     /**
      * forwardRef creates a new interim component, which we'll take advantage of
@@ -251,14 +273,14 @@ export default (ComponentStyle: Function) => {
     ))
 
     // $FlowFixMe
-    StyledComponent.attrs = attrs
+    StyledComponent.attrs = finalAttrs
     // $FlowFixMe
     StyledComponent.componentStyle = componentStyle
     StyledComponent.displayName = displayName
     // $FlowFixMe
     StyledComponent.styledComponentId = styledComponentId
     // $FlowFixMe
-    StyledComponent.target = target
+    StyledComponent.target = finalTarget
     // $FlowFixMe
     StyledComponent.withComponent = function withComponent(tag: Target) {
       const { componentId: previousComponentId, ...optionsToCopy } = options
@@ -271,6 +293,7 @@ export default (ComponentStyle: Function) => {
 
       const newOptions = {
         ...optionsToCopy,
+        attrs: finalAttrs,
         componentId: newComponentId,
         ParentComponent,
       }
