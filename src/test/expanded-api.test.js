@@ -2,7 +2,7 @@
 import React from 'react'
 import TestRenderer from 'react-test-renderer'
 
-import { resetStyled } from './utils'
+import { getCSS, resetStyled } from './utils'
 
 let styled
 
@@ -101,6 +101,53 @@ describe('expanded api', () => {
         .withConfig({ displayName: 'dn-5', componentId: 'id-4' })``
       expect(Comp.displayName).toBe('dn-5')
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot()
+    })
+  })
+
+  describe('"as" prop', () => {
+    it('changes the rendered element type', () => {
+      const Comp = styled.div`
+        color: red;
+      `
+
+      expect(TestRenderer.create(<Comp as="span" />).toJSON()).toMatchSnapshot()
+    })
+
+    it('works with custom components', () => {
+      const Override = props => <figure {...props} />
+      const Comp = styled.div`
+        color: red;
+      `
+
+      expect(
+        TestRenderer.create(<Comp as={Override} />).toJSON()
+      ).toMatchSnapshot()
+    })
+
+    it('transfers all styles that have been applied', () => {
+      const Comp = styled.div`
+        background: blue;
+        color: red;
+      `
+
+      const Comp2 = styled(Comp)`
+        color: green;
+      `
+
+      const Comp3 = styled(Comp2)`
+        text-align: center;
+      `
+
+      expect(Comp.displayName).toMatchSnapshot()
+      expect(Comp2.displayName).toMatchSnapshot()
+      expect(Comp3.displayName).toMatchSnapshot()
+      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot()
+      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot()
+      expect(
+        TestRenderer.create(<Comp3 as="span" />).toJSON()
+      ).toMatchSnapshot()
+
+      expect(getCSS(document)).toMatchSnapshot()
     })
   })
 })

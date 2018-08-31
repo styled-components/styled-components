@@ -95,7 +95,7 @@ class BaseStyledComponent extends Component<*> {
       target,
     } = this.props.forwardedClass
 
-    const isTargetTag = isTag(target)
+    const isTargetTag = isTag(this.props.as || target)
 
     let generatedClassName
     if (componentStyle.isStatic) {
@@ -146,7 +146,7 @@ class BaseStyledComponent extends Component<*> {
       .filter(Boolean)
       .join(' ')
 
-    return createElement(target, propsForElement)
+    return createElement(this.props.as || target, propsForElement)
   }
 
   buildExecutionContext(theme: any, props: any, attrs: any) {
