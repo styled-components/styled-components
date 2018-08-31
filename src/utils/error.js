@@ -54,7 +54,7 @@ export default class StyledComponentsError extends Error {
         }`
       )
     } else {
-      super(format(ERRORS[code], ...interpolations))
+      super(format(ERRORS[code], ...interpolations).trim())
     }
   }
 }
