@@ -26,6 +26,7 @@ export default (styleSheet: StyleSheet) => {
 
     generateStyleObject(executionContext: Object) {
       const flatCSS = flatten(this.rules, executionContext).join('')
+
       const hash = hashStr(flatCSS)
       if (!generated[hash]) {
         const root = parse(flatCSS)

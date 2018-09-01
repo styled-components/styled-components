@@ -58,7 +58,22 @@ describe('native', () => {
     const wrapper = TestRenderer.create(<Comp />)
     const view = wrapper.root.findByType('View')
 
-    expect(view.props.style).toEqual([{}, undefined])
+    expect(view.props.style).toEqual([{}])
+  })
+
+  it('should fold successive styled() wrappings', () => {
+    const Comp = styled.Text`
+      color: red;
+    `
+
+    const Comp2 = styled(Comp)`
+      text-align: left;
+    `
+
+    const wrapper = TestRenderer.create(<Comp2 />)
+    const view = wrapper.root.findByType('Text')
+
+    expect(view.props.style).toEqual([{ color: 'red', textAlign: 'left' }])
   })
 
   it('should combine inline styles and the style prop', () => {
@@ -98,14 +113,12 @@ describe('native', () => {
 
     expect(wrapper.root.findByType('View').props.style).toEqual([
       { paddingTop: 5, opacity: 0.5 },
-      undefined,
     ])
 
     wrapper.update(<Comp opacity={0.9} />)
 
     expect(wrapper.root.findByType('View').props.style).toEqual([
       { paddingTop: 5, opacity: 0.9 },
-      undefined,
     ])
   })
 
@@ -116,7 +129,7 @@ describe('native', () => {
       const view = wrapper.root.findByType('View')
 
       expect(view.props).toEqual({
-        style: [{}, undefined],
+        style: [{}],
       })
     })
 
@@ -129,7 +142,7 @@ describe('native', () => {
       const view = wrapper.root.findByType('View')
 
       expect(view.props).toEqual({
-        style: [{}, undefined],
+        style: [{}],
         test: true,
       })
     })
@@ -144,7 +157,7 @@ describe('native', () => {
       const view = wrapper.root.findByType('View')
 
       expect(view.props).toEqual({
-        style: [{}, undefined],
+        style: [{}],
         copy: test,
         test,
       })
@@ -163,7 +176,7 @@ describe('native', () => {
       const view = wrapper.root.findByType('View')
 
       expect(view.props).toEqual({
-        style: [{}, undefined],
+        style: [{}],
         first: 'first',
         second: 'second',
         test: 'test',
@@ -183,7 +196,7 @@ describe('native', () => {
       const view = wrapper.root.findByType('View')
 
       expect(view.props).toMatchObject({
-        style: [{}, [{}, undefined]],
+        style: [{}],
         first: 'first',
         second: 'second',
       })
@@ -222,6 +235,20 @@ describe('native', () => {
 
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot()
       expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot()
+    })
+
+    it('"as" prop should change the rendered element without affecting the styling', () => {
+      const OtherText = props => <Text {...props} foo />
+
+      const Comp = styled.Text`
+        color: red;
+      `
+
+      const wrapper = TestRenderer.create(<Comp as={OtherText} />)
+      const view = wrapper.root.findByType('Text')
+
+      expect(view.props).toHaveProperty('foo')
+      expect(view.props.style).toEqual([{ color: 'red' }])
     })
   })
 

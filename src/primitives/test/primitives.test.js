@@ -1,6 +1,6 @@
 import React from 'react'
 import 'react-primitives'
-import { View } from 'react-primitives'
+import { Text, View } from 'react-primitives'
 import TestRenderer from 'react-test-renderer'
 
 import styled from '../index'
@@ -57,7 +57,22 @@ describe('primitives', () => {
     const wrapper = TestRenderer.create(<Comp />)
     const view = wrapper.root.findByType('View')
 
-    expect(view.props.style).toEqual([{}, undefined])
+    expect(view.props.style).toEqual([{}])
+  })
+
+  it('should fold successive styled() wrappings', () => {
+    const Comp = styled.Text`
+      color: red;
+    `
+
+    const Comp2 = styled(Comp)`
+      text-align: left;
+    `
+
+    const wrapper = TestRenderer.create(<Comp2 />)
+    const view = wrapper.root.findByType('Text')
+
+    expect(view.props.style).toEqual([{ color: 'red', textAlign: 'left' }])
   })
 
   it('should combine inline styles and the style prop', () => {
@@ -79,7 +94,7 @@ describe('primitives', () => {
       const view = wrapper.root.findByType('View')
 
       expect(view.props).toEqual({
-        style: [{}, undefined],
+        style: [{}],
       })
     })
 
@@ -92,7 +107,7 @@ describe('primitives', () => {
       const view = wrapper.root.findByType('View')
 
       expect(view.props).toEqual({
-        style: [{}, undefined],
+        style: [{}],
         test: true,
       })
     })
@@ -107,7 +122,7 @@ describe('primitives', () => {
       const view = wrapper.root.findByType('View')
 
       expect(view.props).toEqual({
-        style: [{}, undefined],
+        style: [{}],
         copy: test,
         test,
       })
@@ -126,7 +141,7 @@ describe('primitives', () => {
       const view = wrapper.root.findByType('View')
 
       expect(view.props).toEqual({
-        style: [{}, undefined],
+        style: [{}],
         first: 'first',
         second: 'second',
         test: 'test',
@@ -146,7 +161,7 @@ describe('primitives', () => {
       const view = wrapper.root.findByType('View')
 
       expect(view.props).toEqual({
-        style: [{}, [{}, undefined]],
+        style: [{}],
         first: 'first',
         second: 'second',
       })
@@ -168,6 +183,37 @@ describe('primitives', () => {
       })``
 
       expect(Comp.displayName).toBe('Test2')
+    })
+
+    it('"as" prop should change the rendered element without affecting the styling', () => {
+      const OtherText = props => <Text {...props} foo />
+
+      const Comp = styled.Text`
+        color: red;
+      `
+
+      const wrapper = TestRenderer.create(<Comp as={OtherText} />)
+      const view = wrapper.root.findByType('Text')
+
+      expect(view.props).toHaveProperty('foo')
+      expect(view.props.style).toEqual([{ color: 'red' }])
+    })
+
+    it('withComponent should work', () => {
+      const Dummy = props => <View {...props} />
+
+      const Comp = styled.View.withConfig({
+        displayName: 'Comp',
+        componentId: 'OMGLOL',
+      })``.withComponent(Text)
+
+      const Comp2 = styled.View.withConfig({
+        displayName: 'Comp2',
+        componentId: 'OMFG',
+      })``.withComponent(Dummy)
+
+      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot()
+      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot()
     })
   })
 })

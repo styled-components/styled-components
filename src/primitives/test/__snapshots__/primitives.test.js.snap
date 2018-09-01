@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`native expanded API withComponent should work 1`] = `
+exports[`primitives expanded API withComponent should work 1`] = `
 <Text
   accessible={true}
   allowFontScaling={true}
@@ -14,7 +14,7 @@ exports[`native expanded API withComponent should work 1`] = `
 />
 `;
 
-exports[`native expanded API withComponent should work 2`] = `
+exports[`primitives expanded API withComponent should work 2`] = `
 <View
   style={
     Array [
