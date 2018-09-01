@@ -41,6 +41,23 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Migrate to use new `React.forwardRef` API, by [@probablyup](https://github.com/probablyup); note that this removes the `innerRef` API since it is no longer needed.
 
+- Implement `styled()` wrapper folding. In a nutshell, when you nest styled wrappers (e.g. `styled(styled.div)`) the components are now folded such that only one is mounted that contains the merged styles of its ancestors. This is conceptually equivalent to the removed "extend" functionality, but without many of the downsides -- and it's automatic, by [@probablyup](https://github.com/probablyup) (see [#1962](https://github.com/styled-components/styled-components/pull/1962))
+
+- Added a first-class API for rendering polymorphism via "as" prop. In most cases, this new prop will replace your need to use the `.withComponent` API. It allows you to control what underlying element or component is rendered at runtime, while not messing with the styles, by [@probablyup](https://github.com/probablyup) (see [#1962](https://github.com/styled-components/styled-components/pull/1962))
+
+  ```jsx
+  import { Link } from 'react-router'
+
+  const Component = styled.div`
+    color: red;
+  `
+
+  // Examples
+  <Component>Hello world!</Component>
+  <Component as="span">Hello world!</Component>
+  <Component as={Link} to="home">Hello world!</Component>
+  ```
+
 ## [v3.4.2] - 2018-08-07
 
 - Fix a regression from [#1843](https://github.com/styled-components/styled-components/pull/1892) that breaks deferred injection and duplicates rules, by [@kitten](https://github.com/kitten) (see [#1892](https://github.com/styled-components/styled-components/pull/1892))
