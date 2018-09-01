@@ -180,7 +180,12 @@ describe('basic', () => {
     })
 
     it('should pass the ref to the wrapped styled component', () => {
-      const InnerComponent = styled.div``
+      class InnerComponent extends React.Component {
+        render() {
+          return <div {...this.props} />
+        }
+      }
+
       const OuterComponent = styled(InnerComponent)``
 
       class Wrapper extends Component<*, *> {
@@ -196,7 +201,10 @@ describe('basic', () => {
       }
 
       const wrapper = renderIntoDocument(<Wrapper />)
-      const innerComponent = find(findDOMNode(wrapper), InnerComponent)
+      const innerComponent = findRenderedComponentWithType(
+        wrapper,
+        InnerComponent
+      )
 
       expect(wrapper.testRef.current).toBe(innerComponent)
     })

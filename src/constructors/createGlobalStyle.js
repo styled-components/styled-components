@@ -43,7 +43,7 @@ export default (
 
       render() {
         if (process.env.NODE_ENV !== 'production') {
-          if (typeof this.props.children !== 'undefined') {
+          if (React.Children.count(this.props.children)) {
             throw new StyledError(11)
           }
         }

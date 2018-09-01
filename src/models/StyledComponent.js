@@ -58,13 +58,6 @@ const warnInnerRef = once(() =>
 
 // $FlowFixMe
 class BaseStyledComponent extends Component<*> {
-  static target: Target
-  static styledComponentId: string
-  static attrs: Object
-  static componentStyle: Object
-  static defaultProps: Object
-  static warnTooManyClasses: Function
-
   renderOuter: Function
   renderInner: Function
   styleSheet: ?StyleSheet
@@ -95,7 +88,7 @@ class BaseStyledComponent extends Component<*> {
       target,
     } = this.props.forwardedClass
 
-    const isTargetTag = isTag(target)
+    const isTargetTag = isTag(this.props.as || target)
 
     let generatedClassName
     if (componentStyle.isStatic) {
@@ -124,7 +117,7 @@ class BaseStyledComponent extends Component<*> {
 
     let key
     for (key in this.props) {
-      if (key === 'forwardedClass') continue
+      if (key === 'forwardedClass' || key === 'as') continue
       else if (process.env.NODE_ENV !== 'production' && key === 'innerRef') {
         warnInnerRef()
       } else if (key === 'forwardedRef') propsForElement.ref = this.props[key]
@@ -146,7 +139,7 @@ class BaseStyledComponent extends Component<*> {
       .filter(Boolean)
       .join(' ')
 
-    return createElement(target, propsForElement)
+    return createElement(this.props.as || target, propsForElement)
   }
 
   buildExecutionContext(theme: any, props: any, attrs: any) {
@@ -219,8 +212,10 @@ export default (ComponentStyle: Function) => {
     options: Object,
     rules: RuleSet
   ) {
+    const isTargetStyledComp = isStyledComponent(target)
+    const isClass = !isTag(target)
+
     const {
-      isClass = !isTag(target),
       displayName = generateDisplayName(target),
       componentId = generateId(
         ComponentStyle,
@@ -236,7 +231,20 @@ export default (ComponentStyle: Function) => {
         ? `${escape(options.displayName)}-${options.componentId}`
         : options.componentId || componentId
 
-    const componentStyle = new ComponentStyle(rules, attrs, styledComponentId)
+    // fold the underlying StyledComponent attrs up (implicit extend)
+    const finalAttrs =
+      // $FlowFixMe
+      isTargetStyledComp && target.attrs ? { ...target.attrs, ...attrs } : attrs
+
+    const componentStyle = new ComponentStyle(
+      isTargetStyledComp
+        ? // fold the underlying StyledComponent rules up (implicit extend)
+          // $FlowFixMe
+          target.componentStyle.rules.concat(rules)
+        : rules,
+      finalAttrs,
+      styledComponentId
+    )
 
     /**
      * forwardRef creates a new interim component, which we'll take advantage of
@@ -251,14 +259,17 @@ export default (ComponentStyle: Function) => {
     ))
 
     // $FlowFixMe
-    StyledComponent.attrs = attrs
+    StyledComponent.attrs = finalAttrs
     // $FlowFixMe
     StyledComponent.componentStyle = componentStyle
     StyledComponent.displayName = displayName
     // $FlowFixMe
     StyledComponent.styledComponentId = styledComponentId
+
+    // fold the underlying StyledComponent target up since we folded the styles
     // $FlowFixMe
-    StyledComponent.target = target
+    StyledComponent.target = isTargetStyledComp ? target.target : target
+
     // $FlowFixMe
     StyledComponent.withComponent = function withComponent(tag: Target) {
       const { componentId: previousComponentId, ...optionsToCopy } = options
@@ -271,6 +282,7 @@ export default (ComponentStyle: Function) => {
 
       const newOptions = {
         ...optionsToCopy,
+        attrs: finalAttrs,
         componentId: newComponentId,
         ParentComponent,
       }

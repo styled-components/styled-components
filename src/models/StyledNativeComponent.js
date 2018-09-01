@@ -22,11 +22,6 @@ const warnInnerRef = once(() =>
 
 // $FlowFixMe
 class BaseStyledNativeComponent extends Component<*, *> {
-  static target: Target
-  static styledComponentId: string
-  static attrs: Object
-  static defaultProps: Object
-  static inlineStyle: Object
   root: ?Object
 
   attrs = {}
@@ -36,12 +31,14 @@ class BaseStyledNativeComponent extends Component<*, *> {
       <ThemeConsumer>
         {(theme?: Theme) => {
           const {
+            as: renderAs,
             forwardedClass,
             forwardedRef,
             innerRef,
-            style,
+            style = [],
             ...props
           } = this.props
+
           const { defaultProps, target } = forwardedClass
 
           let generatedStyles
@@ -61,13 +58,13 @@ class BaseStyledNativeComponent extends Component<*, *> {
           const propsForElement = {
             ...this.attrs,
             ...props,
-            style: [generatedStyles, style],
+            style: [generatedStyles].concat(style),
           }
 
           if (forwardedRef) propsForElement.ref = forwardedRef
           if (process.env.NODE_ENV !== 'production' && innerRef) warnInnerRef()
 
-          return createElement(target, propsForElement)
+          return createElement(renderAs || target, propsForElement)
         }}
       </ThemeConsumer>
     )
@@ -131,13 +128,13 @@ export default (InlineStyle: Function) => {
     rules: RuleSet
   ) => {
     const {
-      isClass = !isTag(target),
+      attrs,
       displayName = generateDisplayName(target),
       ParentComponent = BaseStyledNativeComponent,
-      attrs,
     } = options
 
-    const inlineStyle = new InlineStyle(rules)
+    const isClass = !isTag(target)
+    const isTargetStyledComp = isStyledComponent(target)
 
     const StyledNativeComponent = React.forwardRef((props, ref) => (
       <ParentComponent
@@ -147,26 +144,39 @@ export default (InlineStyle: Function) => {
       />
     ))
 
+    const finalAttrs =
+      // $FlowFixMe
+      isTargetStyledComp && target.attrs ? { ...target.attrs, ...attrs } : attrs
+
     /**
      * forwardRef creates a new interim component, which we'll take advantage of
      * instead of extending ParentComponent to create _another_ interim class
      */
+
     // $FlowFixMe
-    StyledNativeComponent.attrs = attrs
+    StyledNativeComponent.attrs = finalAttrs
+
     StyledNativeComponent.displayName = displayName
+
     // $FlowFixMe
-    StyledNativeComponent.inlineStyle = inlineStyle
+    StyledNativeComponent.inlineStyle = new InlineStyle(
+      // $FlowFixMe
+      isTargetStyledComp ? target.inlineStyle.rules.concat(rules) : rules
+    )
+
     // $FlowFixMe
     StyledNativeComponent.styledComponentId = 'StyledNativeComponent'
     // $FlowFixMe
-    StyledNativeComponent.target = target
+    StyledNativeComponent.target = isTargetStyledComp ? target.target : target
     // $FlowFixMe
     StyledNativeComponent.withComponent = function withComponent(tag: Target) {
       const { displayName: _, componentId: __, ...optionsToCopy } = options
       const newOptions = {
         ...optionsToCopy,
+        attrs: finalAttrs,
         ParentComponent,
       }
+
       return createStyledNativeComponent(tag, newOptions, rules)
     }
 
@@ -175,8 +185,8 @@ export default (InlineStyle: Function) => {
       hoist(StyledNativeComponent, target, {
         // all SC-specific things should not be hoisted
         attrs: true,
-        componentStyle: true,
         displayName: true,
+        inlineStyle: true,
         styledComponentId: true,
         target: true,
         warnTooManyClasses: true,

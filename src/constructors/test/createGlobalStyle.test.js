@@ -1,17 +1,24 @@
 // @flow
-import React from 'react';
-import ReactDOM from 'react-dom';
-import ReactDOMServer from 'react-dom/server';
+import React from 'react'
+import ReactDOM from 'react-dom'
+import ReactDOMServer from 'react-dom/server'
 
-import { expectCSSMatches, getCSS, resetStyled, resetCreateGlobalStyle, stripComments, stripWhitespace } from '../../test/utils'
+import {
+  expectCSSMatches,
+  getCSS,
+  resetStyled,
+  resetCreateGlobalStyle,
+  stripComments,
+  stripWhitespace,
+} from '../../test/utils'
+
 import ThemeProvider from '../../models/ThemeProvider'
 import ServerStyleSheet from '../../models/ServerStyleSheet'
 import StyleSheetManager from '../../models/StyleSheetManager'
 
 const createGlobalStyle = resetCreateGlobalStyle()
-const styled = resetStyled();
 
-let context;
+let context
 
 beforeEach(() => {
   context = setup()
@@ -25,41 +32,42 @@ describe(`createGlobalStyle`, () => {
   it(`returns a function`, () => {
     const Component = createGlobalStyle``
     expect(typeof Component).toBe('function')
-  });
+  })
 
   it(`injects global <style> when rendered`, () => {
     const { render } = context
     const Component = createGlobalStyle`[data-test-inject]{color:red;} `
     render(<Component />)
     expectCSSMatches(`[data-test-inject]{color:red;} `)
-  });
+  })
 
   it(`injects global <style> when rendered to string`, () => {
-    const sheet = new ServerStyleSheet();
+    const sheet = new ServerStyleSheet()
     const Component = createGlobalStyle`[data-test-inject]{color:red;} `
     const html = context.renderToString(sheet.collectStyles(<Component />))
 
-    const container = document.createElement('div');
-    container.innerHTML = sheet.getStyleTags();
-    const style = container.querySelector('style');
+    const container = document.createElement('div')
+    container.innerHTML = sheet.getStyleTags()
+    const style = container.querySelector('style')
 
-    expect(html).toBe('');
-    expect(stripWhitespace(stripComments(style.textContent))).toBe('[data-test-inject]{ color:red; } ');
-  });
+    expect(html).toBe('')
+    expect(stripWhitespace(stripComments(style.textContent))).toBe(
+      '[data-test-inject]{ color:red; } '
+    )
+  })
 
   it(`supports interpolation`, () => {
     const { cleanup, render } = setup()
     const Component = createGlobalStyle`div {color:${props => props.color};} `
-    render(
-      <Component color="orange" />
-    )
+    render(<Component color="orange" />)
     expectCSSMatches(`div{color:orange;} `)
     cleanup()
   })
 
   it(`supports theming`, () => {
     const { cleanup, render } = setup()
-    const Component = createGlobalStyle`div {color:${props => props.theme.color};} `
+    const Component = createGlobalStyle`div {color:${props =>
+      props.theme.color};} `
     render(
       <ThemeProvider theme={{ color: 'black' }}>
         <Component />
@@ -71,14 +79,15 @@ describe(`createGlobalStyle`, () => {
 
   it(`updates theme correctly`, () => {
     const { cleanup, render } = setup()
-    const Component = createGlobalStyle`div {color:${props => props.theme.color};} `
-    let update;
+    const Component = createGlobalStyle`div {color:${props =>
+      props.theme.color};} `
+    let update
     class App extends React.Component {
       state = { color: 'grey' }
 
       constructor() {
         super()
-        update = (payload) => {
+        update = payload => {
           this.setState(payload)
         }
       }
@@ -88,7 +97,7 @@ describe(`createGlobalStyle`, () => {
           <ThemeProvider theme={{ color: this.state.color }}>
             <Component />
           </ThemeProvider>
-        );
+        )
       }
     }
     render(<App />)
@@ -109,10 +118,10 @@ describe(`createGlobalStyle`, () => {
       </StyleSheetManager>
     )
 
-    const style = container.firstChild;
+    const style = container.firstChild
     expect(style.tagName).toBe('STYLE')
     expect(style.textContent).toContain(`[data-test-target]{color:red;}`)
-  });
+  })
 
   it(`adds new global rules non-destructively`, () => {
     const { container, render } = context
@@ -142,9 +151,7 @@ describe(`createGlobalStyle`, () => {
         background: ${props => props.bg};
       }
     `
-    render(
-      <Component fg="red" bg="green" />
-    )
+    render(<Component fg="red" bg="green" />)
     expectCSSMatches(`div{color:red;background:green;} `)
     cleanup()
   })
@@ -152,8 +159,8 @@ describe(`createGlobalStyle`, () => {
   it(`injects multiple <GlobalStyle> components correctly`, () => {
     const { cleanup, render } = setup()
 
-    const A = createGlobalStyle`body { background: palevioletred; }`;
-    const B = createGlobalStyle`body { color: white; }`;
+    const A = createGlobalStyle`body { background: palevioletred; }`
+    const B = createGlobalStyle`body { color: white; }`
 
     render(
       <React.Fragment>
@@ -171,7 +178,7 @@ describe(`createGlobalStyle`, () => {
 
     class Comp extends React.Component {
       state = {
-        styled: true
+        styled: true,
       }
 
       componentDidMount() {
@@ -191,30 +198,30 @@ describe(`createGlobalStyle`, () => {
   it(`removes styling injected for multiple <GlobalStyle> components correctly`, () => {
     const { container, render } = context
 
-    const A = createGlobalStyle`body { background: palevioletred; }`;
-    const B = createGlobalStyle`body { color: white; }`;
+    const A = createGlobalStyle`body { background: palevioletred; }`
+    const B = createGlobalStyle`body { color: white; }`
 
     class Comp extends React.Component {
       state = {
         a: true,
-        b: true
+        b: true,
       }
 
       onClick() {
         if (this.state.a === true && this.state.b === true) {
           this.setState({
             a: true,
-            b: false
+            b: false,
           })
         } else if (this.state.a === true && this.state.b === false) {
           this.setState({
             a: false,
-            b: false
+            b: false,
           })
         } else {
           this.setState({
             a: true,
-            b: true
+            b: true,
           })
         }
       }
@@ -256,11 +263,13 @@ describe(`createGlobalStyle`, () => {
         background: ${props => props.bg};
       }
     `
-    expect(() => render(
-      <Component fg="red" bg="green">
-        <div />
-      </Component>
-    )).toThrowErrorMatchingSnapshot()
+    expect(() =>
+      render(
+        <Component fg="red" bg="green">
+          <div />
+        </Component>
+      )
+    ).toThrowErrorMatchingSnapshot()
 
     cleanup()
   })
@@ -282,6 +291,6 @@ function setup() {
       resetStyled()
       resetCreateGlobalStyle()
       document.body.removeChild(container)
-    }
+    },
   }
 }

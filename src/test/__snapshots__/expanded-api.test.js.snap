@@ -1,5 +1,51 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`expanded api "as" prop changes the rendered element type 1`] = `
+<span
+  className="sc-a b"
+/>
+`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 1`] = `"styled.div"`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 2`] = `"Styled(styled.div)"`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 3`] = `"Styled(Styled(styled.div))"`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 4`] = `
+<div
+  className="sc-a d"
+/>
+`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 5`] = `
+<div
+  className="sc-b e"
+/>
+`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 6`] = `
+<span
+  className="sc-c f"
+/>
+`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 7`] = `
+"
+/* sc-component-id:sc-a */
+.sc-a{} .d{background:blue;color:red;}
+/* sc-component-id:sc-b */
+.sc-b{} .e{background:blue;color:red;color:green;}
+/* sc-component-id:sc-c */
+.sc-c{} .f{background:blue;color:red;color:green;text-align:center;}"
+`;
+
+exports[`expanded api "as" prop works with custom components 1`] = `
+<figure
+  className="sc-a b"
+/>
+`;
+
 exports[`expanded api chaining should keep the last value passed in when merging 1`] = `
 <div
   className="dn-5-id-4 a"
