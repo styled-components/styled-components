@@ -58,13 +58,6 @@ const warnInnerRef = once(() =>
 
 // $FlowFixMe
 class BaseStyledComponent extends Component<*> {
-  static target: Target
-  static styledComponentId: string
-  static attrs: Object
-  static componentStyle: Object
-  static defaultProps: Object
-  static warnTooManyClasses: Function
-
   renderOuter: Function
   renderInner: Function
   styleSheet: ?StyleSheet
@@ -219,10 +212,10 @@ export default (ComponentStyle: Function) => {
     options: Object,
     rules: RuleSet
   ) {
-    const targetIsSC = isStyledComponent(target)
+    const isTargetStyledComp = isStyledComponent(target)
+    const isClass = !isTag(target)
 
     const {
-      isClass = !isTag(target),
       displayName = generateDisplayName(target),
       componentId = generateId(
         ComponentStyle,
@@ -238,14 +231,13 @@ export default (ComponentStyle: Function) => {
         ? `${escape(options.displayName)}-${options.componentId}`
         : options.componentId || componentId
 
-    let finalAttrs = attrs
-
     // fold the underlying StyledComponent attrs up (implicit extend)
-    // $FlowFixMe
-    if (targetIsSC && target.attrs) finalAttrs = { ...target.attrs, ...attrs }
+    const finalAttrs =
+      // $FlowFixMe
+      isTargetStyledComp && target.attrs ? { ...target.attrs, ...attrs } : attrs
 
     const componentStyle = new ComponentStyle(
-      targetIsSC
+      isTargetStyledComp
         ? // fold the underlying StyledComponent rules up (implicit extend)
           // $FlowFixMe
           target.componentStyle.rules.concat(rules)
@@ -253,12 +245,6 @@ export default (ComponentStyle: Function) => {
       finalAttrs,
       styledComponentId
     )
-
-    let finalTarget = target
-
-    // fold the underlying StyledComponent target up since we folded the styles
-    // $FlowFixMe
-    if (targetIsSC) finalTarget = target.target
 
     /**
      * forwardRef creates a new interim component, which we'll take advantage of
@@ -279,8 +265,11 @@ export default (ComponentStyle: Function) => {
     StyledComponent.displayName = displayName
     // $FlowFixMe
     StyledComponent.styledComponentId = styledComponentId
+
+    // fold the underlying StyledComponent target up since we folded the styles
     // $FlowFixMe
-    StyledComponent.target = finalTarget
+    StyledComponent.target = isTargetStyledComp ? target.target : target
+
     // $FlowFixMe
     StyledComponent.withComponent = function withComponent(tag: Target) {
       const { componentId: previousComponentId, ...optionsToCopy } = options
