@@ -2,7 +2,12 @@
 import React from 'react'
 import TestRenderer from 'react-test-renderer'
 
-import { resetStyled, expectCSSMatches, seedNextClassnames, resetCreateGlobalStyle } from './utils'
+import {
+  resetStyled,
+  expectCSSMatches,
+  seedNextClassnames,
+  resetCreateGlobalStyle,
+} from './utils'
 
 import _createGlobalStyle from '../constructors/createGlobalStyle'
 import stringifyRules from '../utils/stringifyRules'
@@ -321,7 +326,7 @@ describe('rehydration', () => {
     })
 
     // TODO: We need this test to run before we release 4.0 to the public
-    // Skipping this test for now, because a fix to StyleTags is needed 
+    // Skipping this test for now, because a fix to StyleTags is needed
     // which is being worked on
     it.skip('should not change styles if rendered in the same order they were created with', () => {
       const Component1 = createGlobalStyle`
@@ -350,7 +355,7 @@ describe('rehydration', () => {
     })
 
     // TODO: We need this test to run before we release 4.0 to the public
-    // Skipping this test for now, because a fix to StyleTags is needed 
+    // Skipping this test for now, because a fix to StyleTags is needed
     // which is being worked on
     it.skip('should still not change styles if rendered in a different order', () => {
       const B = styled.div.withConfig({ componentId: 'TWO' })`
