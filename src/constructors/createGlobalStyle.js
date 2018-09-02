@@ -24,22 +24,16 @@ export default (
     const rules = css(strings, ...interpolations)
     const id = `sc-global-${hashStr(JSON.stringify(rules))}`
     const style = new GlobalStyle(rules, id)
-    class GlobalStyleComponent extends React.Component<*, *> {
-      componentWillUnmount() {
-        const { sheet } = this.props
-        style.removeStyles(sheet)
-      }
-      render() {
-        const { sheet, context } = this.props
-        style.renderStyles(context, sheet)
-        return null
-      }
-    }
 
-    class GlobalStyleComponentManager extends React.Component<*, *> {
+    class GlobalStyleComponent extends React.Component<*, *> {
       static defaultProps: Object
+      styleSheet: Object
 
       static styledComponentId = id
+
+      componentWillUnmount() {
+        style.removeStyles(this.styleSheet)
+      }
 
       render() {
         if (process.env.NODE_ENV !== 'production') {
@@ -51,39 +45,33 @@ export default (
         return (
           <StyleSheetConsumer>
             {(styleSheet?: StyleSheet) => {
+              this.styleSheet = styleSheet || StyleSheet.master
+
               if (style.isStatic) {
-                return (
-                  <GlobalStyleComponent
-                    sheet={styleSheet || StyleSheet.master}
-                    context={STATIC_EXECUTION_CONTEXT}
-                  />
-                )
+                style.renderStyles(STATIC_EXECUTION_CONTEXT, this.styleSheet)
+
+                return null
               } else {
                 return (
                   <ThemeConsumer>
                     {(theme?: Theme) => {
                       const { defaultProps } = this.constructor
-                      let context = {
+
+                      const context = {
                         ...this.props,
                       }
+
                       if (typeof theme !== 'undefined') {
-                        const determinedTheme = determineTheme(
+                        context.theme = determineTheme(
                           this.props,
                           theme,
                           defaultProps
                         )
-                        // $FlowFixMe TODO: flow for optional styleSheet
-                        context = {
-                          theme: determinedTheme,
-                          ...context,
-                        }
                       }
-                      return (
-                        <GlobalStyleComponent
-                          sheet={styleSheet || StyleSheet.master}
-                          context={context}
-                        />
-                      )
+
+                      style.renderStyles(context, this.styleSheet)
+
+                      return null
                     }}
                   </ThemeConsumer>
                 )
@@ -94,9 +82,7 @@ export default (
       }
     }
 
-    // TODO: Use internal abstractions to avoid additional component layers
-    // Depends on a future overall refactoring of theming system / context
-    return GlobalStyleComponentManager
+    return GlobalStyleComponent
   }
 
   return createGlobalStyle

@@ -14,6 +14,7 @@ export default (ComponentStyle: Function, stringifyRules: Stringifier) => {
       this.rules = rules
       this.componentId = componentId
       this.isStatic = isStaticRules(rules)
+
       if (!StyleSheet.master.hasId(componentId)) {
         StyleSheet.master.deferredInject(componentId, [])
       }
