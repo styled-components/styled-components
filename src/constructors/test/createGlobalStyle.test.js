@@ -255,6 +255,66 @@ describe(`createGlobalStyle`, () => {
     }
   })
 
+
+  it(`removes styling injected for multiple instances of same <GlobalStyle> components correctly`, () => {
+    const { container, render } = context
+
+    const A = createGlobalStyle`body { ${props => `background : ${props.bgColor};`} }`
+
+    class Comp extends React.Component {
+      state = {
+        a: true,
+        b: true,
+      }
+
+      onClick() {
+        if (this.state.a === true && this.state.b === true) {
+          this.setState({
+            a: true,
+            b: false,
+          })
+        } else if (this.state.a === true && this.state.b === false) {
+          this.setState({
+            a: false,
+            b: false,
+          })
+        } else {
+          this.setState({
+            a: true,
+            b: true,
+          })
+        }
+      }
+
+      render() {
+        return (
+          <div data-test-el onClick={() => this.onClick()}>
+            {this.state.a ? <A bgColor="red" /> : null}
+            {this.state.b ? <A bgColor="blue" /> : null}
+          </div>
+        )
+      }
+    }
+
+    render(<Comp />)
+    const el = document.querySelector('[data-test-el]')
+    expectCSSMatches(`body{background:red;} body{background:blue;}`)
+
+    {
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      const css = getCSS(document)
+      expect(css).not.toContain('body{color:blue;}')
+      expect(css).toContain('body{background:red;}')
+    }
+
+    {
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      const css = getCSS(document)
+      expect(css).not.toContain('body{background:blue;}')
+      expect(css).not.toContain('body{background:red;}')
+    }
+  })
+
   it(`should throw error when children are passed as props`, () => {
     const { cleanup, render } = setup()
     const Component = createGlobalStyle`
