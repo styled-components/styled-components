@@ -6,6 +6,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- _placeholder_
+
+## [v4.0.0-beta.0] - 2018-09-04
+
 - Remove deprecated `consolidateStreamedStyles` API, by [@probablyup](https://github.com/probablyup) (see [#1906](https://github.com/styled-components/styled-components/pull/1906))
 
 - Remove deprecated `jsnext:main` entry point from package.json, by [@probablyup](https://github.com/probablyup) (see [#1907](https://github.com/styled-components/styled-components/pull/1907))
@@ -588,7 +592,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.2...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.0...master
+[v4.0.0-beta.0]: https://github.com/styled-components/styled-components/compare/v3.4.2...v4.0.0-beta.0
 [v3.4.2]: https://github.com/styled-components/styled-components/compare/v3.4.1...v3.4.2
 [v3.4.1]: https://github.com/styled-components/styled-components/compare/v3.4.0...v3.4.1
 [v3.4.0]: https://github.com/styled-components/styled-components/compare/v3.3.3...v3.4.0
