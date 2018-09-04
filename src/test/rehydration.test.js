@@ -328,7 +328,7 @@ describe('rehydration', () => {
     // TODO: We need this test to run before we release 4.0 to the public
     // Skipping this test for now, because a fix to StyleTags is needed
     // which is being worked on
-    it.skip('should not change styles if rendered in the same order they were created with', () => {
+    it('should not change styles if rendered in the same order they were created with', () => {
       const Component1 = createGlobalStyle`
         html { font-size: 16px; }
       `
@@ -349,15 +349,15 @@ describe('rehydration', () => {
       expectCSSMatches(`
         html { font-size: 16px; }
         body { background: papayawhip; }
-        .ONE { } .a { color: blue; }
-        .TWO { } .b { color: red; }
+        .a { color: blue; }
+        .b { color: red; }
       `)
     })
 
     // TODO: We need this test to run before we release 4.0 to the public
     // Skipping this test for now, because a fix to StyleTags is needed
     // which is being worked on
-    it.skip('should still not change styles if rendered in a different order', () => {
+    it('should still not change styles if rendered in a different order', () => {
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `
@@ -378,8 +378,8 @@ describe('rehydration', () => {
       expectCSSMatches(`
         html { font-size: 16px; }
         body { background: papayawhip; }
-        .ONE { } .a { color: blue; }
-        .TWO { } .b { color: red; }
+        .a { color: blue; }
+        .b { color: red; }
       `)
     })
   })

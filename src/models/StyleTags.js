@@ -286,7 +286,9 @@ const makeBrowserTag = (
         marker.appendData(`${rule}${separator}`)
       }
     }
+
     addNameForId(names, id, name)
+
     if (extractImport && importRules.length > 0) {
       usedImportRuleTag = true
       // $FlowFixMe
@@ -457,9 +459,15 @@ export const makeRehydrationTag = (
       rehydrate()
       return tag.insertMarker(id)
     },
+
     insertRules: (id, cssRules, name) => {
       rehydrate()
       return tag.insertRules(id, cssRules, name)
+    },
+
+    removeRules: id => {
+      rehydrate()
+      return tag.removeRules(id)
     },
   }
 }

@@ -25,7 +25,7 @@ export default (ComponentStyle: Function, stringifyRules: Stringifier) => {
       const css = stringifyRules(flatCSS, '')
       // TODO: We will need to figure out how to do this before 4.0
       // const name = ComponentStyle.generateName(this.componentId + css)
-      styleSheet.inject(this.componentId, css, '')
+      styleSheet.inject(this.componentId, css)
     }
 
     renderStyles(executionContext: Object, styleSheet: StyleSheet) {
