@@ -255,11 +255,12 @@ describe(`createGlobalStyle`, () => {
     }
   })
 
-
-  it(`removes styling injected for multiple instances of same <GlobalStyle> components correctly`, () => {
+  it.skip(`removes styling injected for multiple instances of same <GlobalStyle> components correctly`, () => {
     const { container, render } = context
 
-    const A = createGlobalStyle`body { ${props => `background : ${props.bgColor};`} }`
+    const A = createGlobalStyle`
+      body { background: ${props => props.bgColor}; }
+    `
 
     class Comp extends React.Component {
       state = {
