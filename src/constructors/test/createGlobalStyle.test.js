@@ -303,7 +303,7 @@ describe(`createGlobalStyle`, () => {
     {
       el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
       const css = getCSS(document)
-      expect(css).not.toContain('body{color:blue;}')
+      expect(css).not.toContain('body{background:blue;}')
       expect(css).toContain('body{background:red;}')
     }
 
