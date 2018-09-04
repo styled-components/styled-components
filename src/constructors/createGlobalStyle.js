@@ -1,6 +1,6 @@
 // @flow
 import React from 'react'
-import { STATIC_EXECUTION_CONTEXT } from '../constants'
+import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants'
 import _GlobalStyle from '../models/GlobalStyle'
 import StyleSheet from '../models/StyleSheet'
 import { StyleSheetConsumer } from '../models/StyleSheetManager'
@@ -24,14 +24,24 @@ export default (
     const rules = css(strings, ...interpolations)
     const id = `sc-global-${hashStr(JSON.stringify(rules))}`
     const style = new GlobalStyle(rules, id)
+    let count = 0
 
     class GlobalStyleComponent extends React.Component<*, *> {
       static defaultProps: Object
+      instance: number
       styleSheet: Object
 
       static styledComponentId = id
 
+      constructor() {
+        super()
+
+        count += 1
+        this.instance = count
+      }
+
       componentWillUnmount() {
+        count -= 1
         style.removeStyles(this.styleSheet)
       }
 
@@ -39,6 +49,10 @@ export default (
         if (process.env.NODE_ENV !== 'production') {
           if (React.Children.count(this.props.children)) {
             throw new StyledError(11)
+          } else if (IS_BROWSER && this.instance > 1) {
+            console.warn(
+              `The global style component ${id} was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head>.`
+            )
           }
         }
 
