@@ -22,7 +22,7 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
     const style = new GlobalStyle(rules, id)
     let count = 0
 
-    class GlobalStyleComponent extends React.Component<*, *> {
+    class GlobalStyleComponent extends React.PureComponent<*, *> {
       static defaultProps: Object
       instance: number
       styleSheet: Object
