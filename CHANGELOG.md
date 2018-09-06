@@ -6,6 +6,9 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+
+## [v4.0.0-beta.1] - 2018-09-06
+
 - Fixed an issue where `createGlobalStyle` was clobbering the very next style to be applied during rehydration in production mode, by [@probablyup](https://github.com/probablyup) (see [#1976](https://github.com/styled-components/styled-components/pull/1976))
 
 - Removed some unused code, by [@probablyup](https://github.com/probablyup) (see [#1976](https://github.com/styled-components/styled-components/pull/1976))
@@ -596,7 +599,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.0...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.1...master
+[v4.0.0-beta.1]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.0...v4.0.0-beta.1
 [v4.0.0-beta.0]: https://github.com/styled-components/styled-components/compare/v3.4.2...v4.0.0-beta.0
 [v3.4.2]: https://github.com/styled-components/styled-components/compare/v3.4.1...v3.4.2
 [v3.4.1]: https://github.com/styled-components/styled-components/compare/v3.4.0...v3.4.1
