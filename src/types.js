@@ -14,7 +14,6 @@ export type Styles =
   | Object
   | ((executionContext: Object) => Interpolation)
 
-/* eslint-disable no-undef */
 export type Target = string | ComponentType<*>
 
 export type NameGenerator = (hash: number) => string
