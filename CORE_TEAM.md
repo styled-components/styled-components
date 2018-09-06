@@ -23,6 +23,7 @@ The current core team members, ordered by time of addition:
 * [@philpl](https://github.com/philpl)
 * [@schwers](https://github.com/schwers)
 * [@probablyup](https://github.com/probablyup)
+* [@imbhargav5](https://github.com/imbhargav5)
 
 ## Adding new Core Team Members
 
