@@ -4,7 +4,7 @@ import flatten from '../utils/flatten'
 import isStaticRules from '../utils/isStaticRules'
 import StyleSheet from './StyleSheet'
 
-export default (ComponentStyle: Function, stringifyRules: Stringifier) => {
+export default (stringifyRules: Stringifier) => {
   class GlobalStyle {
     rules: RuleSet
     componentId: string
@@ -23,8 +23,7 @@ export default (ComponentStyle: Function, stringifyRules: Stringifier) => {
     createStyles(executionContext: Object, styleSheet: StyleSheet) {
       const flatCSS = flatten(this.rules, executionContext)
       const css = stringifyRules(flatCSS, '')
-      // TODO: We will need to figure out how to do this before 4.0
-      // const name = ComponentStyle.generateName(this.componentId + css)
+
       styleSheet.inject(this.componentId, css)
     }
 

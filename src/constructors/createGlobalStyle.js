@@ -10,12 +10,8 @@ import { ThemeConsumer, type Theme } from '../models/ThemeProvider'
 import type { CSSConstructor, Interpolation, Stringifier } from '../types'
 import hashStr from '../vendor/glamor/hash'
 
-export default (
-  ComponentStyle: Function,
-  stringifyRules: Stringifier,
-  css: CSSConstructor
-) => {
-  const GlobalStyle = _GlobalStyle(ComponentStyle, stringifyRules)
+export default (stringifyRules: Stringifier, css: CSSConstructor) => {
+  const GlobalStyle = _GlobalStyle(stringifyRules)
 
   const createGlobalStyle = (
     strings: Array<string>,

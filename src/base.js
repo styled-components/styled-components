@@ -1,12 +1,10 @@
 // @flow
 
 /* Import singletons */
-import flatten from './utils/flatten'
 import stringifyRules from './utils/stringifyRules'
 import isStyledComponent from './utils/isStyledComponent'
 import generateAlphabeticName from './utils/generateAlphabeticName'
 import css from './constructors/css'
-import _ComponentStyle from './models/ComponentStyle'
 import ServerStyleSheet from './models/ServerStyleSheet'
 import StyleSheetManager from './models/StyleSheetManager'
 
@@ -60,20 +58,9 @@ if (
   window['__styled-components-init__'] += 1
 }
 
-/* Instantiate internal singletons */
-const ComponentStyle = _ComponentStyle(
-  generateAlphabeticName,
-  flatten,
-  stringifyRules
-)
-
 /* Instantiate exported singletons */
 const keyframes = _keyframes(generateAlphabeticName, stringifyRules, css)
-const createGlobalStyle = _createGlobalStyle(
-  ComponentStyle,
-  stringifyRules,
-  css
-)
+const createGlobalStyle = _createGlobalStyle(stringifyRules, css)
 /* Export everything */
 
 export * from './secretInternals'
