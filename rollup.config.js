@@ -143,8 +143,8 @@ const noTagServerConfig = {
   ...configBase,
   input: noTagsPath,
   output: [
-    getESM({ file: 'dist/styled-components-no-tags.esm.js' }),
-    getCJS({ file: 'dist/styled-components-no-tags.cjs.js' }),
+    getESM({ file: 'no-tags/dist/styled-components-no-tags.esm.js' }),
+    getCJS({ file: 'no-tags/dist/styled-components-no-tags.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
     replace({
@@ -157,8 +157,8 @@ const noTagBrowserConfig = {
   ...configBase,
   input: noTagsPath,
   output: [
-    getESM({ file: 'dist/styled-components-no-tags.browser.esm.js' }),
-    getCJS({ file: 'dist/styled-components-no-tags.browser.cjs.js' }),
+    getESM({ file: 'no-tags/dist/styled-components-no-tags.browser.esm.js' }),
+    getCJS({ file: 'no-tags/dist/styled-components-no-tags.browser.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
     replace({
@@ -171,18 +171,23 @@ const noTagBrowserConfig = {
 const nativeConfig = {
   ...configBase,
   input: './src/native/index.js',
-  output: getCJS({
-    file: 'dist/styled-components.native.cjs.js',
-  }),
+  output: [
+    getCJS({
+      file: 'native/dist/styled-components.native.cjs.js',
+    }),
+    getESM({
+      file: 'native/dist/styled-components.native.esm.js',
+    }),
+  ],
 }
 
 const primitivesConfig = {
   ...configBase,
   input: './src/primitives/index.js',
   output: [
-    getESM({ file: 'dist/styled-components-primitives.esm.js' }),
+    getESM({ file: 'primitives/dist/styled-components-primitives.esm.js' }),
     getCJS({
-      file: 'dist/styled-components-primitives.cjs.js',
+      file: 'primitives/dist/styled-components-primitives.cjs.js',
     }),
   ],
   plugins: configBase.plugins.concat(
