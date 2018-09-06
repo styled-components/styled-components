@@ -195,7 +195,7 @@ const makeSpeedyTag = (
 
     const size = sizes[marker]
     const sheet = sheetForTag(el)
-    const removalIndex = addUpUntilIndex(sizes, marker)
+    const removalIndex = addUpUntilIndex(sizes, marker) - 1
     deleteRules(sheet, removalIndex, size)
     sizes[marker] = 0
     resetIdNames(names, id)

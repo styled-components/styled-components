@@ -1,7 +1,7 @@
 // @flow
-import hyphenate from 'fbjs/lib/hyphenateStyleName'
 import isPlainObject from './isPlainObject'
 import isStyledComponent from './isStyledComponent'
+import hyphenate from '../utils/hyphenateStyleName'
 
 import type { Interpolation } from '../types'
 import Keyframes from '../models/Keyframes'

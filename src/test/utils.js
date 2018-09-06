@@ -49,8 +49,7 @@ export const resetStyled = (isServer: boolean = false) => {
 }
 
 export const resetCreateGlobalStyle = () => {
-  const ComponentStyle = _ComponentStyle(classNames, flatten, stringifyRules)
-  return _createGlobalStyle(ComponentStyle, stringifyRules, css)
+  return _createGlobalStyle(stringifyRules, css)
 }
 
 export const stripComments = (str: string) => str.replace(/\/\*.*?\*\/\n?/g, '')
@@ -60,7 +59,6 @@ export const stripWhitespace = (str: string) =>
     .trim()
     .replace(/([;\{\}])/g, '$1  ')
     .replace(/\s+/g, ' ')
-
 
 export const getCSS = (scope: Document | HTMLElement) => {
   return Array.from(scope.querySelectorAll('style'))

@@ -22,10 +22,7 @@
     "class-methods-use-this": 0,
     "symbol-description": 0,
     "no-unused-vars": [
-      2,
-      {
-        "varsIgnorePattern": "^_+$"
-      }
+      2
     ],
     "import/no-extraneous-dependencies": 0,
     "no-continue": 0,
