@@ -137,37 +137,6 @@ const browserConfig = {
   ),
 }
 
-const noTagsPath = './src/index-without-tags.js'
-
-const noTagServerConfig = {
-  ...configBase,
-  input: noTagsPath,
-  output: [
-    getESM({ file: 'no-tags/dist/styled-components-no-tags.esm.js' }),
-    getCJS({ file: 'no-tags/dist/styled-components-no-tags.cjs.js' }),
-  ],
-  plugins: configBase.plugins.concat(
-    replace({
-      __SERVER__: JSON.stringify(true),
-    })
-  ),
-}
-
-const noTagBrowserConfig = {
-  ...configBase,
-  input: noTagsPath,
-  output: [
-    getESM({ file: 'no-tags/dist/styled-components-no-tags.browser.esm.js' }),
-    getCJS({ file: 'no-tags/dist/styled-components-no-tags.browser.cjs.js' }),
-  ],
-  plugins: configBase.plugins.concat(
-    replace({
-      ...streamIgnore,
-      __SERVER__: JSON.stringify(false),
-    })
-  ),
-}
-
 const nativeConfig = {
   ...configBase,
   input: './src/native/index.js',
@@ -202,8 +171,6 @@ export default [
   standaloneProdConfig,
   serverConfig,
   browserConfig,
-  noTagServerConfig,
-  noTagBrowserConfig,
   nativeConfig,
   primitivesConfig,
 ]
