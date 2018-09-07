@@ -270,7 +270,7 @@ describe('ssr', () => {
   })
 
   it('should interleave styles with rendered HTML when chunked streaming', () => {
-    injectGlobal`
+    const Component = createGlobalStyle`
       body { background: papayawhip; }
     `
     const Heading = styled.h1`
@@ -291,7 +291,8 @@ describe('ssr', () => {
 
     const sheet = new ServerStyleSheet()
     const jsx = sheet.collectStyles(
-      <div>
+      <React.Fragment>
+        <Component />
         <Heading>Hello SSR!</Heading>
         <Body>
         {new Array(1000)
@@ -300,7 +301,7 @@ describe('ssr', () => {
         </Body>
         <SideBar>SideBar</SideBar>
         <Footer>Footer</Footer>
-      </div>
+      </React.Fragment>
     )
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx))
 
