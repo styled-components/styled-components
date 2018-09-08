@@ -33,19 +33,24 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
         super()
 
         count += 1
-        this.instance = count
       }
 
       componentWillUnmount() {
         count -= 1
-        style.removeStyles(this.styleSheet)
+
+        /**
+         * Depending on the order "render" is called this can cause the styles to be lost
+         * until the next render pass of the remaining instance, which may
+         * not be immediate.
+         */
+        if (count === 0) style.removeStyles(this.styleSheet)
       }
 
       render() {
         if (process.env.NODE_ENV !== 'production') {
           if (React.Children.count(this.props.children)) {
             throw new StyledError(11)
-          } else if (IS_BROWSER && this.instance > 1) {
+          } else if (IS_BROWSER && count > 1) {
             console.warn(
               `The global style component ${id} was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head>.`
             )
