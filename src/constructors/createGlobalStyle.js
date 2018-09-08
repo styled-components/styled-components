@@ -24,7 +24,6 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
 
     class GlobalStyleComponent extends React.PureComponent<*, *> {
       static defaultProps: Object
-      instance: number
       styleSheet: Object
 
       static styledComponentId = id
