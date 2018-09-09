@@ -45,7 +45,6 @@
     "CONTRIBUTING.md",
     "dist",
     "native",
-    "no-tags",
     "primitives",
     "scripts",
     "test-utils"
