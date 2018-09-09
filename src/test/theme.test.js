@@ -1,10 +1,6 @@
 // @flow
 import React, { Component } from 'react'
-import { findDOMNode } from 'react-dom'
-import {
-  findRenderedComponentWithType,
-  renderIntoDocument,
-} from 'react-dom/test-utils'
+import { renderIntoDocument } from 'react-dom/test-utils'
 import TestRenderer from 'react-test-renderer'
 
 import { resetStyled, expectCSSMatches } from './utils'
@@ -245,17 +241,26 @@ describe('theming', () => {
       color: ${props => props.theme.color};
     `
 
-    Comp1.defaultProps = {
-      theme: {
-        color: 'purple',
-      },
-    }
-
-    const wrapper = TestRenderer.create(<Comp1 />)
+    const wrapper = TestRenderer.create(
+      <ThemeProvider
+        theme={{
+          color: 'purple',
+        }}
+      >
+        <Comp1 />
+      </ThemeProvider>
+    )
     expectCSSMatches(`.sc-a {} .b { color:purple; }`)
 
-    Comp1.defaultProps.theme.color = 'pink'
-    wrapper.update(<Comp1 />)
+    wrapper.update(
+      <ThemeProvider
+        theme={{
+          color: 'pink',
+        }}
+      >
+        <Comp1 />
+      </ThemeProvider>
+    )
     expectCSSMatches(`.sc-a {} .b { color:purple; } .c { color:pink; }`)
   })
 
@@ -266,23 +271,43 @@ describe('theming', () => {
     `
 
     Comp1.defaultProps = {
-      theme: {
-        color: 'purple',
-      },
       zIndex: 0,
     }
 
-    const wrapper = TestRenderer.create(<Comp1 />)
+    const wrapper = TestRenderer.create(
+      <ThemeProvider
+        theme={{
+          color: 'purple',
+        }}
+      >
+        <Comp1 />
+      </ThemeProvider>
+    )
     let expectedStyles = `.sc-a {} .b { color:purple; z-index:0px; }`
     expectCSSMatches(expectedStyles)
 
-    Comp1.defaultProps.theme.color = 'pink'
-    wrapper.update(<Comp1 />)
+    wrapper.update(
+      <ThemeProvider
+        theme={{
+          color: 'pink',
+        }}
+      >
+        <Comp1 />
+      </ThemeProvider>
+    )
     expectedStyles = `${expectedStyles} .c { color:pink; z-index:0px; }`
     expectCSSMatches(expectedStyles)
 
     Comp1.defaultProps.zIndex = 1
-    wrapper.update(<Comp1 />)
+    wrapper.update(
+      <ThemeProvider
+        theme={{
+          color: 'pink',
+        }}
+      >
+        <Comp1 />
+      </ThemeProvider>
+    )
     expectCSSMatches(`${expectedStyles} .d { color:pink; z-index:1px; }`)
   })
 

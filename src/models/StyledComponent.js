@@ -2,7 +2,7 @@
 
 import validAttr from '@emotion/is-prop-valid'
 import hoist from 'hoist-non-react-statics'
-import React, { Component, createElement } from 'react'
+import React, { createElement, PureComponent } from 'react'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
@@ -57,7 +57,7 @@ const warnInnerRef = once(() =>
 )
 
 // $FlowFixMe
-class BaseStyledComponent extends Component<*> {
+class BaseStyledComponent extends PureComponent<*> {
   renderOuter: Function
   renderInner: Function
   styleSheet: ?StyleSheet
