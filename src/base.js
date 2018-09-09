@@ -13,7 +13,7 @@ import _keyframes from './constructors/keyframes'
 import _createGlobalStyle from './constructors/createGlobalStyle'
 
 /* Import components */
-import ThemeProvider from './models/ThemeProvider'
+import ThemeProvider, { ThemeConsumer } from './models/ThemeProvider'
 
 /* Import Higher Order Components */
 import withTheme from './hoc/withTheme'
@@ -69,6 +69,7 @@ export {
   keyframes,
   createGlobalStyle,
   isStyledComponent,
+  ThemeConsumer,
   ThemeProvider,
   withTheme,
   ServerStyleSheet,
