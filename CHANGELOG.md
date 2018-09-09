@@ -8,6 +8,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Remove "no tags" experiment, by [@probablyup](https://github.com/probablyup) (see [#1987](https://github.com/styled-components/styled-components/pull/1987))
 
+- Fixed an issue with `createGlobalStyle` when the component was composed in multiple places and render of the subsequent component instance happened before unmount of the original; previously we removed styles immediately upon unmount of any instance without checking how many copies were still alive, by [@probablyup](https://github.com/probablyup) (see [#1989](https://github.com/styled-components/styled-components/pull/1989))
+
 ## [v4.0.0-beta.1] - 2018-09-06
 
 - Fixed an issue where `createGlobalStyle` was clobbering the very next style to be applied during rehydration in production mode, by [@probablyup](https://github.com/probablyup) (see [#1976](https://github.com/styled-components/styled-components/pull/1976))
