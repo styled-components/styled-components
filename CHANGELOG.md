@@ -6,6 +6,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Fixed an issue with `createGlobalStyle` when the component was composed in multiple places and render of the subsequent component instance happened before unmount of the original; previously we removed styles immediately upon unmount of any instance without checking how many copies were still alive, by [@probablyup](https://github.com/probablyup) (see [#1989](https://github.com/styled-components/styled-components/pull/1989))
 
 ## [v4.0.0-beta.1] - 2018-09-06
 
