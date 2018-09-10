@@ -6,9 +6,11 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Fix an issue when streaming with very large amounts of output where sometimes styles might not make it to the client, by [@probablyup](https://github.com/probablyup) (see [#1996](https://github.com/styled-components/styled-components/pull/1996))
+
 ## [v4.0.0-beta.2] - 2018-09-09
 
-- Expose `ThemeConsumer` component, context consumer render prop component from the `React.createContext` API if people are interested in using it rather than / in addition to the `withTheme` HOC, [@probablyup](https://github.com/probablyup)
+- Expose `ThemeConsumer` component, context consumer render prop component from the `React.createContext` API if people are interested in using it rather than / in addition to the `withTheme` HOC, by [@probablyup](https://github.com/probablyup)
 
 - Remove "no tags" experiment, by [@probablyup](https://github.com/probablyup) (see [#1987](https://github.com/styled-components/styled-components/pull/1987))
 
