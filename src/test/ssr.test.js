@@ -65,8 +65,12 @@ describe('ssr', () => {
   })
 
   it('should not spill ServerStyleSheets into each other', () => {
-    const A = styled.h1`color: red;`
-    const B = styled.h1`color: green;`
+    const A = styled.h1`
+      color: red;
+    `
+    const B = styled.h1`
+      color: green;
+    `
 
     const sheetA = new ServerStyleSheet()
     renderToString(sheetA.collectStyles(<A />))
@@ -279,6 +283,57 @@ describe('ssr', () => {
     })
   })
 
+  it('should interleave styles with rendered HTML when chunked streaming', () => {
+    const Heading = styled.h1`
+      color: red;
+    `
+
+    const Body = styled.div`
+      color: blue;
+    `
+
+    const SideBar = styled.div`
+      color: yellow;
+    `
+
+    const Footer = styled.div`
+      color: green;
+    `
+
+    const sheet = new ServerStyleSheet()
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
+        <Heading>Hello SSR!</Heading>
+        <Body>
+          {new Array(1000).fill(0).map(() => (
+            <div>*************************</div>
+          ))}
+        </Body>
+        <SideBar>SideBar</SideBar>
+        <Footer>Footer</Footer>
+      </React.Fragment>
+    )
+    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx))
+
+    return new Promise((resolve, reject) => {
+      let received = ''
+
+      stream.on('data', chunk => {
+        received += chunk
+      })
+
+      stream.on('end', () => {
+        expect(received).toMatchSnapshot()
+        expect(sheet.closed).toBe(true)
+        expect(received).toMatch(/yellow/)
+        expect(received).toMatch(/green/)
+        resolve()
+      })
+
+      stream.on('error', reject)
+    })
+  })
+
   it('should handle errors while streaming', () => {
     injectGlobal`
       body { background: papayawhip; }
@@ -292,9 +347,9 @@ describe('ssr', () => {
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx))
 
     return new Promise((resolve, reject) => {
-      stream.on('data', function noop(){})
+      stream.on('data', function noop() {})
 
-      stream.on('error', (err) => {
+      stream.on('error', err => {
         expect(err).toMatchSnapshot()
         expect(sheet.closed).toBe(true)
         resolve()

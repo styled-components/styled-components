@@ -26,7 +26,6 @@ let master
 
 export default class StyleSheet {
   id: number
-  sealed: boolean
   forceServer: boolean
   target: ?HTMLElement
   /* a map from ids to tags */
@@ -52,7 +51,6 @@ export default class StyleSheet {
   ) {
     sheetRunningId += 1
     this.id = sheetRunningId
-    this.sealed = false
     this.forceServer = forceServer
     this.target = forceServer ? null : target
     this.tagMap = {}
@@ -151,6 +149,7 @@ export default class StyleSheet {
    * while their own rules do not affect the parent */
   clone() {
     const sheet = new StyleSheet(this.target, this.forceServer)
+
     /* add to clone array */
     this.clones.push(sheet)
 
@@ -177,7 +176,11 @@ export default class StyleSheet {
   /* force StyleSheet to create a new tag on the next injection */
   sealAllTags() {
     this.capacity = 1
-    this.sealed = true
+
+    this.tags.forEach(tag => {
+      // eslint-disable-next-line no-param-reassign
+      tag.sealed = true
+    })
   }
 
   makeTag(tag: ?Tag<any>): Tag<any> {
@@ -214,7 +217,7 @@ export default class StyleSheet {
   getTagForId(id: string): Tag<any> {
     /* simply return a tag, when the componentId was already assigned one */
     const prev = this.tagMap[id]
-    if (prev !== undefined && !this.sealed) {
+    if (prev !== undefined && !prev.sealed) {
       return prev
     }
 
@@ -222,9 +225,9 @@ export default class StyleSheet {
 
     /* shard (create a new tag) if the tag is exhausted (See MAX_SIZE) */
     this.capacity -= 1
+
     if (this.capacity === 0) {
       this.capacity = MAX_SIZE
-      this.sealed = false
       tag = this.makeTag(tag)
       this.tags.push(tag)
     }
@@ -268,6 +271,7 @@ export default class StyleSheet {
   /* injects rules for a given id with a name that will need to be cached */
   inject(id: string, cssRules: string[], name?: string) {
     const { clones } = this
+
     for (let i = 0; i < clones.length; i += 1) {
       clones[i].inject(id, cssRules, name)
     }
@@ -281,6 +285,7 @@ export default class StyleSheet {
       // do the same (see clones[i].inject)
       const rules = this.deferred[id].concat(cssRules)
       tag.insertRules(id, rules, name)
+
       this.deferred[id] = undefined
     } else {
       tag.insertRules(id, cssRules, name)
