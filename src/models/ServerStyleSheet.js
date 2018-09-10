@@ -43,7 +43,6 @@ export default class ServerStyleSheet {
 
   getStyleTags(): string {
     this.complete()
-
     return this.instance.toHTML()
   }
 
