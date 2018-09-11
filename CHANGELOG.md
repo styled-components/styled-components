@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## unreleased
 
+- Add warning for the upcoming removal of the `injectGlobal` API in v4.0, by [@rainboxx](https://github.com/rainboxx) (see [#1867](https://github.com/styled-components/styled-components/pull/1867))
+
 ## [3.4.6] - 2018-09-10
 
 - Fix an issue when streaming with very large amounts of output where sometimes styles might not make it to the client, by [@probablyup](https://github.com/probablyup) (see [#1997](https://github.com/styled-components/styled-components/pull/1997))
