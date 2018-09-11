@@ -4,12 +4,10 @@
  * our public API works the way we promise/want
  */
 import _styled from '../constructors/styled'
-import _createGlobalStyle from '../constructors/createGlobalStyle'
 import css from '../constructors/css'
 import _constructWithOptions from '../constructors/constructWithOptions'
 import StyleSheet from '../models/StyleSheet'
 import StyledError from '../utils/error'
-import stringifyRules from '../utils/stringifyRules'
 import _StyledComponent from '../models/StyledComponent'
 import ComponentStyle from '../models/ComponentStyle'
 
@@ -47,10 +45,6 @@ export const resetStyled = (isServer: boolean = false) => {
   const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
 
   return _styled(StyledComponent, constructWithOptions)
-}
-
-export const resetCreateGlobalStyle = () => {
-  return _createGlobalStyle(css)
 }
 
 export const stripComments = (str: string) => str.replace(/\/\*.*?\*\/\n?/g, '')

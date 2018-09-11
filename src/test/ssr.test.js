@@ -4,10 +4,11 @@
 import React from 'react'
 import { renderToString, renderToNodeStream } from 'react-dom/server'
 import ServerStyleSheet from '../models/ServerStyleSheet'
-import { resetStyled, resetCreateGlobalStyle } from './utils'
+import { resetStyled } from './utils'
 import _keyframes from '../constructors/keyframes'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
+import createGlobalStyle from '../constructors/createGlobalStyle'
 
 jest.mock('../utils/nonce')
 
@@ -15,7 +16,6 @@ let index = 0
 const keyframes = _keyframes(() => `keyframe_${index++}`, stringifyRules, css)
 
 let styled
-let createGlobalStyle
 
 describe('ssr', () => {
   beforeEach(() => {
@@ -23,7 +23,6 @@ describe('ssr', () => {
     require('../utils/nonce').mockReset()
 
     styled = resetStyled(true)
-    createGlobalStyle = resetCreateGlobalStyle()
   })
 
   afterEach(() => {
