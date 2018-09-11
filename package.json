@@ -10,6 +10,7 @@
     "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js",
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
   },
+  "sideEffects": false,
   "scripts": {
     "build": "rollup -c",
     "prebuild": "rimraf dist",
