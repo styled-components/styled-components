@@ -1,5 +1,5 @@
 // @flow
-import styled from '../../index'
+import styled from '../styled'
 import domElements from '../../utils/domElements'
 
 describe('styled', () => {

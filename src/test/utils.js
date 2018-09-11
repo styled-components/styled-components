@@ -3,11 +3,9 @@
  * This sets up our end-to-end test suite, which essentially makes sure
  * our public API works the way we promise/want
  */
-import _styled from '../constructors/styled'
-import constructWithOptions from '../constructors/constructWithOptions'
+import styled from '../constructors/styled'
 import StyleSheet from '../models/StyleSheet'
 import StyledError from '../utils/error'
-import StyledComponent from '../models/StyledComponent'
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let mockIndex = 0
@@ -39,7 +37,7 @@ export const resetStyled = (isServer: boolean = false) => {
   mockIndex = 0
   mockInputs = {}
 
-  return _styled(StyledComponent, constructWithOptions)
+  return styled
 }
 
 export const stripComments = (str: string) => str.replace(/\/\*.*?\*\/\n?/g, '')
