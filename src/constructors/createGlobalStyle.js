@@ -1,18 +1,17 @@
 // @flow
 import React from 'react'
 import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants'
-import _GlobalStyle from '../models/GlobalStyle'
+import GlobalStyle from '../models/GlobalStyle'
 import StyleSheet from '../models/StyleSheet'
 import { StyleSheetConsumer } from '../models/StyleSheetManager'
 import StyledError from '../utils/error'
 import determineTheme from '../utils/determineTheme'
 import { ThemeConsumer, type Theme } from '../models/ThemeProvider'
-import type { CSSConstructor, Interpolation, Stringifier } from '../types'
 import hashStr from '../vendor/glamor/hash'
 
-export default (stringifyRules: Stringifier, css: CSSConstructor) => {
-  const GlobalStyle = _GlobalStyle(stringifyRules)
+import type { CSSConstructor, Interpolation } from '../types'
 
+export default (css: CSSConstructor) => {
   const createGlobalStyle = (
     strings: Array<string>,
     ...interpolations: Array<Interpolation>

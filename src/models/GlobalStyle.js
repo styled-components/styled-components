@@ -1,44 +1,42 @@
 // @flow
-import type { RuleSet, Stringifier } from '../types'
 import flatten from '../utils/flatten'
 import isStaticRules from '../utils/isStaticRules'
+import stringifyRules from '../utils/stringifyRules'
 import StyleSheet from './StyleSheet'
 
-export default (stringifyRules: Stringifier) => {
-  class GlobalStyle {
-    rules: RuleSet
-    componentId: string
-    isStatic: boolean
+import type { RuleSet } from '../types'
 
-    constructor(rules: RuleSet, componentId: string) {
-      this.rules = rules
-      this.componentId = componentId
-      this.isStatic = isStaticRules(rules)
+export default class GlobalStyle {
+  rules: RuleSet
+  componentId: string
+  isStatic: boolean
 
-      if (!StyleSheet.master.hasId(componentId)) {
-        StyleSheet.master.deferredInject(componentId, [])
-      }
-    }
+  constructor(rules: RuleSet, componentId: string) {
+    this.rules = rules
+    this.componentId = componentId
+    this.isStatic = isStaticRules(rules)
 
-    createStyles(executionContext: Object, styleSheet: StyleSheet) {
-      const flatCSS = flatten(this.rules, executionContext)
-      const css = stringifyRules(flatCSS, '')
-
-      styleSheet.inject(this.componentId, css)
-    }
-
-    renderStyles(executionContext: Object, styleSheet: StyleSheet) {
-      this.removeStyles(styleSheet)
-      this.createStyles(executionContext, styleSheet)
-    }
-
-    removeStyles(styleSheet: StyleSheet) {
-      const { componentId } = this
-      if (styleSheet.hasId(componentId)) {
-        styleSheet.remove(componentId)
-      }
+    if (!StyleSheet.master.hasId(componentId)) {
+      StyleSheet.master.deferredInject(componentId, [])
     }
   }
 
-  return GlobalStyle
+  createStyles(executionContext: Object, styleSheet: StyleSheet) {
+    const flatCSS = flatten(this.rules, executionContext)
+    const css = stringifyRules(flatCSS, '')
+
+    styleSheet.inject(this.componentId, css)
+  }
+
+  renderStyles(executionContext: Object, styleSheet: StyleSheet) {
+    this.removeStyles(styleSheet)
+    this.createStyles(executionContext, styleSheet)
+  }
+
+  removeStyles(styleSheet: StyleSheet) {
+    const { componentId } = this
+    if (styleSheet.hasId(componentId)) {
+      styleSheet.remove(componentId)
+    }
+  }
 }

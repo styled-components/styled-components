@@ -60,9 +60,9 @@ if (
 
 /* Instantiate exported singletons */
 const keyframes = _keyframes(generateAlphabeticName, stringifyRules, css)
-const createGlobalStyle = _createGlobalStyle(stringifyRules, css)
-/* Export everything */
+const createGlobalStyle = _createGlobalStyle(css)
 
+/* Export everything */
 export * from './secretInternals'
 export {
   css,

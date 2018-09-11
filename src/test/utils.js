@@ -50,7 +50,7 @@ export const resetStyled = (isServer: boolean = false) => {
 }
 
 export const resetCreateGlobalStyle = () => {
-  return _createGlobalStyle(stringifyRules, css)
+  return _createGlobalStyle(css)
 }
 
 export const stripComments = (str: string) => str.replace(/\/\*.*?\*\/\n?/g, '')
