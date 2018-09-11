@@ -7,8 +7,7 @@ import _styled from '../constructors/styled'
 import constructWithOptions from '../constructors/constructWithOptions'
 import StyleSheet from '../models/StyleSheet'
 import StyledError from '../utils/error'
-import _StyledComponent from '../models/StyledComponent'
-import ComponentStyle from '../models/ComponentStyle'
+import StyledComponent from '../models/StyledComponent'
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let mockIndex = 0
@@ -39,8 +38,6 @@ export const resetStyled = (isServer: boolean = false) => {
   StyleSheet.reset(isServer)
   mockIndex = 0
   mockInputs = {}
-
-  const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
 
   return _styled(StyledComponent, constructWithOptions)
 }

@@ -1,16 +1,13 @@
 // @flow
 
 import constructWithOptions from './constructors/constructWithOptions'
-import ComponentStyle from './models/ComponentStyle'
+import StyledComponent from './models/StyledComponent'
 import * as secondary from './base'
 
 /* Import singleton constructors */
-import _StyledComponent from './models/StyledComponent'
 import _styled from './constructors/styled'
 
 /* Instantiate singletons */
-const StyledComponent = _StyledComponent(ComponentStyle)
-
 const styled = _styled(StyledComponent, constructWithOptions)
 
 /**
