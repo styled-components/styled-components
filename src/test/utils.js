@@ -8,26 +8,28 @@ import _createGlobalStyle from '../constructors/createGlobalStyle'
 import css from '../constructors/css'
 import _constructWithOptions from '../constructors/constructWithOptions'
 import StyleSheet from '../models/StyleSheet'
-import flatten from '../utils/flatten'
 import StyledError from '../utils/error'
 import stringifyRules from '../utils/stringifyRules'
 import _StyledComponent from '../models/StyledComponent'
-import _ComponentStyle from '../models/ComponentStyle'
+import ComponentStyle from '../models/ComponentStyle'
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
-let index = 0
-let inputs = {}
-let seededClassnames = []
+let mockIndex = 0
+let mockInputs = {}
+let mockSeededClasses = []
 
-const classNames = input => {
-  const seed = seededClassnames.shift()
+jest.mock('../utils/generateAlphabeticName', () => input => {
+  const seed = mockSeededClasses.shift()
   if (seed) return seed
 
-  return inputs[input] || (inputs[input] = String.fromCodePoint(97 + index++))
-}
+  return (
+    mockInputs[input] ||
+    (mockInputs[input] = String.fromCodePoint(97 + mockIndex++))
+  )
+})
 
 export const seedNextClassnames = (names: Array<string>) =>
-  (seededClassnames = names)
+  (mockSeededClasses = names)
 export const resetStyled = (isServer: boolean = false) => {
   if (!isServer) {
     if (!document.head) {
@@ -38,10 +40,9 @@ export const resetStyled = (isServer: boolean = false) => {
   }
 
   StyleSheet.reset(isServer)
-  index = 0
-  inputs = {}
+  mockIndex = 0
+  mockInputs = {}
 
-  const ComponentStyle = _ComponentStyle(classNames, flatten, stringifyRules)
   const constructWithOptions = _constructWithOptions(css)
   const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
 
