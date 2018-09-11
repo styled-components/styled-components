@@ -4,8 +4,7 @@
  * our public API works the way we promise/want
  */
 import _styled from '../constructors/styled'
-import css from '../constructors/css'
-import _constructWithOptions from '../constructors/constructWithOptions'
+import constructWithOptions from '../constructors/constructWithOptions'
 import StyleSheet from '../models/StyleSheet'
 import StyledError from '../utils/error'
 import _StyledComponent from '../models/StyledComponent'
@@ -41,7 +40,6 @@ export const resetStyled = (isServer: boolean = false) => {
   mockIndex = 0
   mockInputs = {}
 
-  const constructWithOptions = _constructWithOptions(css)
   const StyledComponent = _StyledComponent(ComponentStyle, constructWithOptions)
 
   return _styled(StyledComponent, constructWithOptions)

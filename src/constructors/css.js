@@ -6,10 +6,10 @@ import isFunction from '../utils/isFunction'
 import flatten from '../utils/flatten'
 import type { Interpolation, RuleSet, Styles } from '../types'
 
-export default (
+export default function css(
   styles: Styles,
   ...interpolations: Array<Interpolation>
-): RuleSet => {
+): RuleSet {
   if (isFunction(styles) || isPlainObject(styles)) {
     // $FlowFixMe
     return flatten(interleave(EMPTY_ARRAY, [styles, ...interpolations]))
