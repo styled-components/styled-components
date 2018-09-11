@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Internal refactoring to simplify the codebase and make it more readily DCE-able, by [@probablyup](https://github.com/probablyup)
+
 ## [v4.0.0-beta.3] - 2018-09-10
 
 - Fix an issue when streaming with very large amounts of output where sometimes styles might not make it to the client, by [@probablyup](https://github.com/probablyup) (see [#1996](https://github.com/styled-components/styled-components/pull/1996))
