@@ -345,13 +345,6 @@ describe('ssr', () => {
   })
 
   it('should handle errors while streaming', () => {
-    const Component = createGlobalStyle`
-      body { background: papayawhip; }
-    `
-    const Heading = styled.h1`
-      color: red;
-    `
-
     const sheet = new ServerStyleSheet()
     const jsx = sheet.collectStyles(null)
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx))
