@@ -43,17 +43,23 @@ export default (stringifyRules: Stringifier, css: CSSConstructor) => {
          * not be immediate.
          */
         if (count === 0) style.removeStyles(this.styleSheet)
+        else if (
+          process.env.NODE_ENV !== 'production' &&
+          IS_BROWSER &&
+          count > 1
+        ) {
+          console.warn(
+            `The global style component ${id} was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head>.`
+          )
+        }
       }
 
       render() {
-        if (process.env.NODE_ENV !== 'production') {
-          if (React.Children.count(this.props.children)) {
-            throw new StyledError(11)
-          } else if (IS_BROWSER && count > 1) {
-            console.warn(
-              `The global style component ${id} was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head>.`
-            )
-          }
+        if (
+          process.env.NODE_ENV !== 'production' &&
+          React.Children.count(this.props.children)
+        ) {
+          throw new StyledError(11)
         }
 
         return (

@@ -49,6 +49,8 @@ export interface Tag<T> {
   toHTML(additionalAttrs: ?string): string;
   toElement(): Element<*>;
   clone(): Tag<T>;
+  /* used in server side rendering to indicate that the rules in the tag have been flushed to HTML */
+  sealed: boolean;
 }
 
 /* this marker separates component styles and is important for rehydration */
@@ -228,18 +230,19 @@ const makeSpeedyTag = (
   }
 
   return {
-    styleTag: el,
+    clone() {
+      throw new StyledError(5)
+    },
+    css,
     getIds: getIdsFromMarkersFactory(markers),
     hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
     removeRules,
-    css,
-    toHTML: wrapAsHtmlTag(css, names),
+    sealed: false,
+    styleTag: el,
     toElement: wrapAsElement(css, names),
-    clone() {
-      throw new StyledError(5)
-    },
+    toHTML: wrapAsHtmlTag(css, names),
   }
 }
 
@@ -330,6 +333,7 @@ const makeBrowserTag = (
     insertMarker,
     insertRules,
     removeRules,
+    sealed: false,
     styleTag: el,
     toElement: wrapAsElement(css, names),
     toHTML: wrapAsHtmlTag(css, names),
@@ -395,6 +399,7 @@ const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
     insertMarker,
     insertRules,
     removeRules,
+    sealed: false,
     styleTag: null,
     toElement: wrapAsElement(css, names),
     toHTML: wrapAsHtmlTag(css, names),
