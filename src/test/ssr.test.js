@@ -281,7 +281,7 @@ describe('ssr', () => {
 
       stream.on('end', () => {
         expect(received).toMatchSnapshot()
-        expect(sheet.closed).toBe(true)
+        expect(sheet.sealed).toBe(true)
         resolve()
       })
 
@@ -334,7 +334,7 @@ describe('ssr', () => {
 
       stream.on('end', () => {
         expect(received).toMatchSnapshot()
-        expect(sheet.closed).toBe(true)
+        expect(sheet.sealed).toBe(true)
         expect(received).toMatch(/yellow/)
         expect(received).toMatch(/green/)
         resolve()
@@ -361,7 +361,7 @@ describe('ssr', () => {
 
       stream.on('error', err => {
         expect(err).toMatchSnapshot()
-        expect(sheet.closed).toBe(true)
+        expect(sheet.sealed).toBe(true)
         resolve()
       })
     })

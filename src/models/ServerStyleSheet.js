@@ -13,26 +13,30 @@ declare var __SERVER__: boolean
 export default class ServerStyleSheet {
   instance: StyleSheet
   masterSheet: StyleSheet
-  closed: boolean
+  sealed: boolean
 
   constructor() {
     /* The master sheet might be reset, so keep a reference here */
     this.masterSheet = StyleSheet.master
     this.instance = this.masterSheet.clone()
-    this.closed = false
+    this.sealed = false
   }
 
-  complete() {
-    if (!this.closed) {
-      /* Remove closed StyleSheets from the master sheet */
+  /**
+   * Mark the ServerStyleSheet as being fully emitted and manually GC it from the
+   * StyleSheet singleton.
+   */
+  seal() {
+    if (!this.sealed) {
+      /* Remove sealed StyleSheets from the master sheet */
       const index = this.masterSheet.clones.indexOf(this.instance)
       this.masterSheet.clones.splice(index, 1)
-      this.closed = true
+      this.sealed = true
     }
   }
 
   collectStyles(children: any) {
-    if (this.closed) {
+    if (this.sealed) {
       throw new StyledError(2)
     }
 
@@ -42,12 +46,12 @@ export default class ServerStyleSheet {
   }
 
   getStyleTags(): string {
-    this.complete()
+    this.seal()
     return this.instance.toHTML()
   }
 
   getStyleElement() {
-    this.complete()
+    this.seal()
     return this.instance.toReactElements()
   }
 
@@ -82,9 +86,9 @@ export default class ServerStyleSheet {
       },
     })
 
-    readableStream.on('end', () => this.complete())
+    readableStream.on('end', () => this.seal())
     readableStream.on('error', err => {
-      this.complete()
+      this.seal()
 
       // forward the error to the transform stream
       transformer.emit('error', err)
