@@ -6,13 +6,13 @@ import React, { Component, createElement } from 'react'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
 import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
-
 import generateDisplayName from '../utils/generateDisplayName'
 import getComponentName from '../utils/getComponentName'
-import once from '../utils/once'
+import isFunction from '../utils/isFunction'
 import isTag from '../utils/isTag'
 import isDerivedReactComponent from '../utils/isDerivedReactComponent'
 import isStyledComponent from '../utils/isStyledComponent'
+import once from '../utils/once'
 import StyleSheet from './StyleSheet'
 import { ThemeConsumer, type Theme } from './ThemeProvider'
 import { StyleSheetConsumer } from './StyleSheetManager'
@@ -157,7 +157,7 @@ class BaseStyledComponent extends Component<*> {
       attr = attrs[key]
 
       this.attrs[key] =
-        typeof attr === 'function' &&
+        isFunction(attr) &&
         !isDerivedReactComponent(attr) &&
         !isStyledComponent(attr)
           ? attr(context)

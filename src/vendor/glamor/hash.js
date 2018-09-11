@@ -1,6 +1,6 @@
 // @flow
 // Source: https://github.com/garycourt/murmurhash-js/blob/master/murmurhash2_gc.js
-export default function murmurhash(c) {
+export default function murmurhash(c: string): number {
   for (var e = c.length | 0, a = e | 0, d = 0, b; e >= 4; ) {
     ;(b =
       (c.charCodeAt(d) & 255) |

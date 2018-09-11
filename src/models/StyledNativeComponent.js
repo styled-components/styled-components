@@ -4,6 +4,7 @@ import React, { Component, createElement } from 'react'
 import determineTheme from '../utils/determineTheme'
 import { EMPTY_OBJECT } from '../utils/empties'
 import generateDisplayName from '../utils/generateDisplayName'
+import isFunction from '../utils/isFunction'
 import isTag from '../utils/isTag'
 import isDerivedReactComponent from '../utils/isDerivedReactComponent'
 import isStyledComponent from '../utils/isStyledComponent'
@@ -85,7 +86,7 @@ class BaseStyledNativeComponent extends Component<*, *> {
       attr = attrs[key]
 
       this.attrs[key] =
-        typeof attr === 'function' &&
+        isFunction(attr) &&
         !isDerivedReactComponent(attr) &&
         !isStyledComponent(attr)
           ? attr(context)
