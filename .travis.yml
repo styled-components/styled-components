@@ -17,6 +17,7 @@ env:
 node_js:
   - 8
   - 10
+install: yarn --frozen-lockfile
 script:
   - node --version
   - yarn --version

@@ -5,9 +5,6 @@ import TestRenderer from 'react-test-renderer'
 import * as nonce from '../utils/nonce'
 import { resetStyled, expectCSSMatches } from './utils'
 import StyleSheet from '../models/StyleSheet'
-import stringifyRules from '../utils/stringifyRules'
-import css from '../constructors/css'
-
 
 jest.mock('../utils/nonce')
 jest.spyOn(nonce, 'default').mockImplementation(() => 'foo')

@@ -2,14 +2,9 @@
 import React from 'react'
 import TestRenderer from 'react-test-renderer'
 
-import {
-  resetStyled,
-  expectCSSMatches,
-  seedNextClassnames,
-  resetCreateGlobalStyle,
-} from './utils'
+import { resetStyled, expectCSSMatches, seedNextClassnames } from './utils'
 
-import _createGlobalStyle from '../constructors/createGlobalStyle'
+import createGlobalStyle from '../constructors/createGlobalStyle'
 import stringifyRules from '../utils/stringifyRules'
 import css from '../constructors/css'
 import _keyframes from '../constructors/keyframes'
@@ -21,8 +16,6 @@ const keyframes = _keyframes(
   stringifyRules,
   css
 )
-
-let createGlobalStyle
 
 const getStyleTags = () =>
   Array.from(document.querySelectorAll('style')).map(el => ({
@@ -37,7 +30,6 @@ describe('rehydration', () => {
    */
   beforeEach(() => {
     styled = resetStyled()
-    createGlobalStyle = resetCreateGlobalStyle()
   })
 
   describe('with existing styled components', () => {

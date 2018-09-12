@@ -6,6 +6,7 @@ import { render } from 'react-dom'
 import TestRenderer from 'react-test-renderer'
 import StyleSheetManager from '../StyleSheetManager'
 import ServerStyleSheet from '../ServerStyleSheet'
+import StyleSheet from '../StyleSheet'
 import { resetStyled } from '../../test/utils'
 import Frame, { FrameContextConsumer } from 'react-frame-component'
 
@@ -246,5 +247,31 @@ describe('StyleSheetManager', () => {
       expect(html).toMatchSnapshot()
       expect(css).toMatchSnapshot()
     })
+  })
+
+  it('should render styles in correct order when styled(StyledComponent) and StyleSheetManager is used', () => {
+    const Red = styled.div`
+      color: red;
+    `
+    const RedChangedToBlue = styled(Red)`
+      color: blue;
+    `
+    const sheet = new StyleSheet()
+    const App = () =>
+      <StyleSheetManager sheet={sheet}>
+        <RedChangedToBlue>I should be blue</RedChangedToBlue>
+      </StyleSheetManager>
+    const attachPoint = document.body.appendChild(document.createElement('div'))
+    render(<App />, attachPoint)
+    // window.getComputedStyles would be perfect, but it seems that JSDOM
+    // implementation of that function isn't complete, so need to work around
+    // it.
+    const source = document.documentElement.outerHTML
+    // regex in case test is run against minified CSS in the future
+    const indexOfRedStyle = source.search('color:red')
+    const indexOfBlueStyle = source.search('color:blue')
+    expect(indexOfRedStyle).toBeGreaterThanOrEqual(0)
+    expect(indexOfBlueStyle).toBeGreaterThanOrEqual(0)
+    expect(indexOfBlueStyle).toBeGreaterThan(indexOfRedStyle)
   })
 })
