@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.0.0-beta.4] - 2018-09-12
+
 - Use PureComponent instead of Component for the StyledComponent base class, by [@probablyup](https://github.com/probablyup)
 
 - Internal refactoring to simplify the codebase and make it more readily DCE-able, by [@probablyup](https://github.com/probablyup)
@@ -616,10 +618,11 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.3...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.4...master
+[v4.0.0-beta.4]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.3...v4.0.0-beta.4
 [v4.0.0-beta.3]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.2...v4.0.0-beta.3
-
-[v4.0.0-beta.2]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.1...v4.0.0-beta.2[v4.0.0-beta.1]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.0...v4.0.0-beta.1
+[v4.0.0-beta.2]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.1...v4.0.0-beta.2
+[v4.0.0-beta.1]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.0...v4.0.0-beta.1
 [v4.0.0-beta.0]: https://github.com/styled-components/styled-components/compare/v3.4.2...v4.0.0-beta.0
 [v3.4.2]: https://github.com/styled-components/styled-components/compare/v3.4.1...v3.4.2
 [v3.4.1]: https://github.com/styled-components/styled-components/compare/v3.4.0...v3.4.1
