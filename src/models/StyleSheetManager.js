@@ -22,6 +22,7 @@ export default class StyleSheetManager extends Component<Props> {
       PropTypes.instanceOf(StyleSheet),
       PropTypes.instanceOf(ServerStyleSheet),
     ]),
+
     target: PropTypes.shape({
       appendChild: PropTypes.func.isRequired,
     }),

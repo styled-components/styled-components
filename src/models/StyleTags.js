@@ -317,12 +317,15 @@ const makeBrowserTag = (
 
   const css = () => {
     let str = ''
+
     // eslint-disable-next-line guard-for-in
     for (const id in markers) {
       str += markers[id].data
     }
+
     return str
   }
+
   return {
     clone() {
       throw new StyledError(5)
@@ -340,7 +343,7 @@ const makeBrowserTag = (
   }
 }
 
-const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
+const makeServerTag = (namesArg, markersArg): Tag<[string]> => {
   const names =
     namesArg === undefined ? (Object.create(null): Object) : namesArg
   const markers = markersArg === undefined ? Object.create(null) : markersArg
@@ -388,7 +391,7 @@ const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
       markersClone[id] = [markers[id][0]]
     }
 
-    return makeServerTagInternal(namesClone, markersClone)
+    return makeServerTag(namesClone, markersClone)
   }
 
   const tag = {
@@ -407,8 +410,6 @@ const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
 
   return tag
 }
-
-const makeServerTag = (): Tag<[string]> => makeServerTagInternal()
 
 export const makeTag = (
   target: ?HTMLElement,
@@ -459,7 +460,8 @@ export const makeRehydrationTag = (
 
   return {
     ...tag,
-    /* add rehydration hook to insertion methods */
+
+    /* add rehydration hook to methods */
     insertMarker: id => {
       rehydrate()
       return tag.insertMarker(id)

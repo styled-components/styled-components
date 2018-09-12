@@ -10,7 +10,7 @@ const getAlphabeticChar = (code: number): string =>
   String.fromCharCode(code + (code > 25 ? 39 : 97))
 
 /* input a number, usually a hash and convert it to base-52 */
-const generateAlphabeticName = (code: number): string => {
+export default function generateAlphabeticName(code: number): string {
   let name = ''
   let x
 
@@ -21,5 +21,3 @@ const generateAlphabeticName = (code: number): string => {
 
   return getAlphabeticChar(x % charsLength) + name
 }
-
-export default generateAlphabeticName

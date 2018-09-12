@@ -7,7 +7,6 @@ import {
   expectCSSMatches,
   getCSS,
   resetStyled,
-  resetCreateGlobalStyle,
   stripComments,
   stripWhitespace,
 } from '../../test/utils'
@@ -16,7 +15,7 @@ import ThemeProvider from '../../models/ThemeProvider'
 import ServerStyleSheet from '../../models/ServerStyleSheet'
 import StyleSheetManager from '../../models/StyleSheetManager'
 
-const createGlobalStyle = resetCreateGlobalStyle()
+import createGlobalStyle from '../createGlobalStyle'
 
 let context
 
@@ -350,7 +349,6 @@ function setup() {
     },
     cleanup() {
       resetStyled()
-      resetCreateGlobalStyle()
       document.body.removeChild(container)
     },
   }

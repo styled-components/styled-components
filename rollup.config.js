@@ -57,7 +57,7 @@ const prodPlugins = [
     'process.env.NODE_ENV': JSON.stringify('production'),
   }),
   terser({
-    sourceMap: true,
+    sourcemap: true,
   }),
 ]
 
