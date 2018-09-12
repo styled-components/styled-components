@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Use PureComponent instead of Component for the StyledComponent base class, by [@probablyup](https://github.com/probablyup)
+
 - Internal refactoring to simplify the codebase and make it more readily DCE-able, by [@probablyup](https://github.com/probablyup)
 
 ## [v4.0.0-beta.3] - 2018-09-10

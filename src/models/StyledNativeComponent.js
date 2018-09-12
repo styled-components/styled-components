@@ -1,6 +1,6 @@
 // @flow
 import hoist from 'hoist-non-react-statics'
-import React, { Component, createElement } from 'react'
+import React, { createElement, PureComponent } from 'react'
 import determineTheme from '../utils/determineTheme'
 import { EMPTY_OBJECT } from '../utils/empties'
 import generateDisplayName from '../utils/generateDisplayName'
@@ -22,7 +22,7 @@ const warnInnerRef = once(() =>
 )
 
 // $FlowFixMe
-class BaseStyledNativeComponent extends Component<*, *> {
+class BaseStyledNativeComponent extends PureComponent<*, *> {
   root: ?Object
 
   attrs = {}
