@@ -25,30 +25,43 @@ export default function createGlobalStyle(
     static defaultProps: Object
     styleSheet: Object
 
+    static globalStyle = style
     static styledComponentId = id
 
     constructor() {
       super()
 
       count += 1
+
+      /**
+       * This fixes HMR compatiblility. Don't ask me why, but this combination of
+       * caching the closure variables via statics and then persisting the statics in
+       * state works across HMR where no other combination did. ¯\_(ツ)_/¯
+       */
+      this.state = {
+        globalStyle: this.constructor.globalStyle,
+        styledComponentId: this.constructor.styledComponentId,
+      }
     }
 
     componentWillUnmount() {
       count -= 1
+
+      const { globalStyle, styledComponentId } = this.state
 
       /**
        * Depending on the order "render" is called this can cause the styles to be lost
        * until the next render pass of the remaining instance, which may
        * not be immediate.
        */
-      if (count === 0) style.removeStyles(this.styleSheet)
+      if (count === 0) globalStyle.removeStyles(this.styleSheet)
       else if (
         process.env.NODE_ENV !== 'production' &&
         IS_BROWSER &&
         count > 1
       ) {
         console.warn(
-          `The global style component ${id} was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head>.`
+          `The global style component ${styledComponentId} was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head>.`
         )
       }
     }
@@ -66,8 +79,13 @@ export default function createGlobalStyle(
           {(styleSheet?: StyleSheet) => {
             this.styleSheet = styleSheet || StyleSheet.master
 
-            if (style.isStatic) {
-              style.renderStyles(STATIC_EXECUTION_CONTEXT, this.styleSheet)
+            const { globalStyle } = this.state
+
+            if (globalStyle.isStatic) {
+              globalStyle.renderStyles(
+                STATIC_EXECUTION_CONTEXT,
+                this.styleSheet
+              )
 
               return null
             } else {
@@ -88,7 +106,7 @@ export default function createGlobalStyle(
                       )
                     }
 
-                    style.renderStyles(context, this.styleSheet)
+                    globalStyle.renderStyles(context, this.styleSheet)
 
                     return null
                   }}
