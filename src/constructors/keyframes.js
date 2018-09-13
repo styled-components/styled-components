@@ -1,22 +1,22 @@
 // @flow
+import css from './css'
+import generateAlphabeticName from '../utils/generateAlphabeticName'
+import stringifyRules from '../utils/stringifyRules'
 import hashStr from '../vendor/glamor/hash'
-import type { Interpolation, NameGenerator, Stringifier } from '../types'
 import Keyframes from '../models/Keyframes'
+
+import type { Interpolation } from '../types'
 
 const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '')
 
-type KeyframesFn = (
+export default function keyframes(
   strings: Array<string>,
   ...interpolations: Array<Interpolation>
-) => Keyframes
-
-export default (
-  nameGenerator: NameGenerator,
-  stringifyRules: Stringifier,
-  css: Function
-): KeyframesFn => (...arr): Keyframes => {
-  const rules = css(...arr)
-  const name = nameGenerator(hashStr(replaceWhitespace(JSON.stringify(rules))))
+): Keyframes {
+  const rules = css(strings, interpolations)
+  const name = generateAlphabeticName(
+    hashStr(replaceWhitespace(JSON.stringify(rules)))
+  )
 
   return new Keyframes(name, stringifyRules(rules, name, '@keyframes'))
 }

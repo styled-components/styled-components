@@ -1,16 +1,12 @@
 // @flow
 
 /* Import singletons */
-import stringifyRules from './utils/stringifyRules'
 import isStyledComponent from './utils/isStyledComponent'
-import generateAlphabeticName from './utils/generateAlphabeticName'
 import css from './constructors/css'
 import createGlobalStyle from './constructors/createGlobalStyle'
+import keyframes from './constructors/keyframes'
 import ServerStyleSheet from './models/ServerStyleSheet'
 import StyleSheetManager from './models/StyleSheetManager'
-
-/* Import singleton constructors */
-import _keyframes from './constructors/keyframes'
 
 /* Import components */
 import ThemeProvider, { ThemeConsumer } from './models/ThemeProvider'
@@ -57,9 +53,6 @@ if (
 
   window['__styled-components-init__'] += 1
 }
-
-/* Instantiate exported singletons */
-const keyframes = _keyframes(generateAlphabeticName, stringifyRules, css)
 
 /* Export everything */
 export * from './secretInternals'

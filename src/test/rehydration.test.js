@@ -3,19 +3,10 @@ import React from 'react'
 import TestRenderer from 'react-test-renderer'
 
 import { resetStyled, expectCSSMatches, seedNextClassnames } from './utils'
-
 import createGlobalStyle from '../constructors/createGlobalStyle'
-import stringifyRules from '../utils/stringifyRules'
-import css from '../constructors/css'
-import _keyframes from '../constructors/keyframes'
+import keyframes from '../constructors/keyframes'
 import StyleSheet from '../models/StyleSheet'
 import { SC_ATTR, SC_VERSION_ATTR } from '../constants'
-
-const keyframes = _keyframes(
-  hash => `keyframe_${hash % 1000}`,
-  stringifyRules,
-  css
-)
 
 const getStyleTags = () =>
   Array.from(document.querySelectorAll('style')).map(el => ({
@@ -394,6 +385,8 @@ describe('rehydration', () => {
     })
 
     it('should not regenerate keyframes', () => {
+      seedNextClassnames(['keyframe_880'])
+
       const fadeIn = keyframes`
         from { opacity: 0; }
       `
@@ -410,6 +403,8 @@ describe('rehydration', () => {
     })
 
     it('should still inject new keyframes', () => {
+      seedNextClassnames(['keyframe_144'])
+
       const fadeOut = keyframes`
         from { opacity: 1; }
       `
@@ -427,14 +422,16 @@ describe('rehydration', () => {
     })
 
     it('should pass the keyframes name along as well', () => {
+      seedNextClassnames(['keyframe_880', 'keyframe_144'])
+
       const fadeIn = keyframes`
         from { opacity: 0; }
       `
-      const A = styled.div`
-        animation: ${fadeIn} 1s both;
-      `
       const fadeOut = keyframes`
         from { opacity: 1; }
+      `
+      const A = styled.div`
+        animation: ${fadeIn} 1s both;
       `
       const B = styled.div`
         animation: ${fadeOut} 1s both;
@@ -452,14 +449,16 @@ describe('rehydration', () => {
     })
 
     it('should pass the keyframes name through props along as well', () => {
+      seedNextClassnames(['keyframe_880', 'keyframe_144'])
+
       const fadeIn = keyframes`
         from { opacity: 0; }
       `
-      const A = styled.div`
-        animation: ${props => props.animation} 1s both;
-      `
       const fadeOut = keyframes`
         from { opacity: 1; }
+      `
+      const A = styled.div`
+        animation: ${props => props.animation} 1s both;
       `
       const B = styled.div`
         animation: ${props => props.animation} 1s both;

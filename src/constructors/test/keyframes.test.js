@@ -2,22 +2,16 @@
 import React from 'react'
 import TestRenderer from 'react-test-renderer'
 
-import _keyframes from '../keyframes'
-import stringifyRules from '../../utils/stringifyRules'
-import css from '../css'
-import { expectCSSMatches, resetStyled } from '../../test/utils'
+import keyframes from '../keyframes'
 import Keyframes from '../../models/Keyframes'
+import { expectCSSMatches, resetStyled } from '../../test/utils'
 
 /**
  * Setup
  */
-let index = 0
-const keyframes = _keyframes(() => `keyframe_${index++}`, stringifyRules, css)
-
 describe('keyframes', () => {
   beforeEach(() => {
     resetStyled()
-    index = 0
   })
 
   it('should return Keyframes instance', () => {
@@ -41,20 +35,7 @@ describe('keyframes', () => {
         opacity: 1;
       }
     `.getName()
-    ).toEqual('keyframe_0')
-  })
-
-  it('should return its name', () => {
-    expect(
-      keyframes`
-      0% {
-        opacity: 0;
-      }
-      100% {
-        opacity: 1;
-      }
-    `.getName()
-    ).toEqual('keyframe_0')
+    ).toMatchInlineSnapshot('"bcCCNc"')
   })
 
   it('should insert the correct styles', () => {

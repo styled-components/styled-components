@@ -24,6 +24,7 @@ jest.mock('../utils/generateAlphabeticName', () => input => {
 
 export const seedNextClassnames = (names: Array<string>) =>
   (mockSeededClasses = names)
+
 export const resetStyled = (isServer: boolean = false) => {
   if (!isServer) {
     if (!document.head) {
