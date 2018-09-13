@@ -4,16 +4,11 @@
 import React from 'react'
 import { renderToString, renderToNodeStream } from 'react-dom/server'
 import ServerStyleSheet from '../models/ServerStyleSheet'
-import { resetStyled } from './utils'
-import _keyframes from '../constructors/keyframes'
-import stringifyRules from '../utils/stringifyRules'
-import css from '../constructors/css'
+import { resetStyled, seedNextClassnames } from './utils'
+import keyframes from '../constructors/keyframes'
 import createGlobalStyle from '../constructors/createGlobalStyle'
 
 jest.mock('../utils/nonce')
-
-let index = 0
-const keyframes = _keyframes(() => `keyframe_${index++}`, stringifyRules, css)
 
 let styled
 
@@ -185,6 +180,8 @@ describe('ssr', () => {
       animation: ${props => props.animation} 1s both;
     `
 
+    seedNextClassnames(['keyframe_0'])
+
     const sheet = new ServerStyleSheet()
     const html = renderToString(
       sheet.collectStyles(
@@ -349,7 +346,7 @@ describe('ssr', () => {
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx))
 
     return new Promise((resolve, reject) => {
-      stream.on('data', function noop() {})
+      stream.on('data', function noop() { })
 
       stream.on('error', err => {
         expect(err).toMatchSnapshot()
