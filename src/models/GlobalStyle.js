@@ -1,6 +1,4 @@
 // @flow
-import { IS_BROWSER } from '../constants'
-import { EMPTY_OBJECT } from '../utils/empties'
 import flatten from '../utils/flatten'
 import isStaticRules from '../utils/isStaticRules'
 import stringifyRules from '../utils/stringifyRules'
@@ -11,11 +9,9 @@ import type { RuleSet } from '../types'
 export default class GlobalStyle {
   componentId: string
   isStatic: boolean
-  lastExecutionContext: Object
   rules: RuleSet
 
   constructor(rules: RuleSet, componentId: string) {
-    this.lastExecutionContext = EMPTY_OBJECT
     this.rules = rules
     this.componentId = componentId
     this.isStatic = isStaticRules(rules)
@@ -39,27 +35,8 @@ export default class GlobalStyle {
     }
   }
 
-  /**
-   * Rendering for global styles is removing + adding, so it's a
-   * little expensive on the DOM. We don't want to do it unless
-   * something actually changed.
-   */
-  shouldRenderStyles(executionContext: Object) {
-    return (
-      !IS_BROWSER ||
-      !this.lastExecutionContext ||
-      Object.keys(executionContext).some(
-        key => this.lastExecutionContext[key] !== executionContext[key]
-      )
-    )
-  }
-
   renderStyles(executionContext: Object, styleSheet: StyleSheet) {
-    if (this.shouldRenderStyles(executionContext)) {
-      this.removeStyles(styleSheet)
-      this.createStyles(executionContext, styleSheet)
-
-      this.lastExecutionContext = executionContext
-    }
+    this.removeStyles(styleSheet)
+    this.createStyles(executionContext, styleSheet)
   }
 }

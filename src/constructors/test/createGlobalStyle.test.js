@@ -342,26 +342,6 @@ body{background:red;}"
       `"The global style component sc-global-2176982909 was given child JSX. createGlobalStyle does not render children."`
     )
   })
-
-  it(`rendering the same createGlobalStyle multiple times with the same setup should not touch the DOM after the first time`, () => {
-    const { render } = setup()
-
-    const Component = createGlobalStyle`
-      div {
-        color: ${props => props.fg};
-        background: ${props => props.bg};
-      }
-    `
-
-    jest.spyOn(Component.globalStyle, 'createStyles')
-
-    render(<Component fg="red" bg="green" />)
-    render(<Component fg="red" bg="green" />)
-    render(<Component fg="red" bg="green" />)
-    render(<Component fg="red" bg="green" />)
-
-    expect(Component.globalStyle.createStyles).toHaveBeenCalledTimes(1)
-  })
 })
 
 function setup() {
