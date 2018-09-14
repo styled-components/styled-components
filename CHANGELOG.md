@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Fix issue with `createGlobalStyle` and hot module reload, by [@probablyup](https://github.com/probablyup)
+
 ## [v4.0.0-beta.4] - 2018-09-12
 
 - Use PureComponent instead of Component for the StyledComponent base class, by [@probablyup](https://github.com/probablyup)

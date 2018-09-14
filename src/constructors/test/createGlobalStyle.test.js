@@ -2,6 +2,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 import ReactDOMServer from 'react-dom/server'
+import { Simulate } from 'react-dom/test-utils'
 
 import {
   expectCSSMatches,
@@ -56,15 +57,14 @@ describe(`createGlobalStyle`, () => {
   })
 
   it(`supports interpolation`, () => {
-    const { cleanup, render } = setup()
+    const { render } = setup()
     const Component = createGlobalStyle`div {color:${props => props.color};} `
     render(<Component color="orange" />)
     expectCSSMatches(`div{color:orange;} `)
-    cleanup()
   })
 
   it(`supports theming`, () => {
-    const { cleanup, render } = setup()
+    const { render } = setup()
     const Component = createGlobalStyle`div {color:${props =>
       props.theme.color};} `
     render(
@@ -73,11 +73,10 @@ describe(`createGlobalStyle`, () => {
       </ThemeProvider>
     )
     expectCSSMatches(`div{color:black;} `)
-    cleanup()
   })
 
   it(`updates theme correctly`, () => {
-    const { cleanup, render } = setup()
+    const { render } = setup()
     const Component = createGlobalStyle`div {color:${props =>
       props.theme.color};} `
     let update
@@ -104,8 +103,6 @@ describe(`createGlobalStyle`, () => {
 
     update({ color: 'red' })
     expectCSSMatches(`div{color:red;} `)
-
-    cleanup()
   })
 
   it(`renders to StyleSheetManager.target`, () => {
@@ -123,7 +120,7 @@ describe(`createGlobalStyle`, () => {
   })
 
   it(`adds new global rules non-destructively`, () => {
-    const { container, render } = context
+    const { render } = context
     const Color = createGlobalStyle`[data-test-add]{color:red;} `
     const Background = createGlobalStyle`[data-test-add]{background:yellow;} `
 
@@ -143,7 +140,7 @@ describe(`createGlobalStyle`, () => {
   })
 
   it(`stringifies multiple rules correctly`, () => {
-    const { cleanup, render } = setup()
+    const { render } = setup()
     const Component = createGlobalStyle`
       div {
         color: ${props => props.fg};
@@ -152,11 +149,10 @@ describe(`createGlobalStyle`, () => {
     `
     render(<Component fg="red" bg="green" />)
     expectCSSMatches(`div{color:red;background:green;} `)
-    cleanup()
   })
 
   it(`injects multiple <GlobalStyle> components correctly`, () => {
-    const { cleanup, render } = setup()
+    const { render } = setup()
 
     const A = createGlobalStyle`body { background: palevioletred; }`
     const B = createGlobalStyle`body { color: white; }`
@@ -168,11 +164,10 @@ describe(`createGlobalStyle`, () => {
       </React.Fragment>
     )
     expectCSSMatches(`body{background:palevioletred;} body{color:white;}`)
-    cleanup()
   })
 
   it(`removes styling injected styling when unmounted`, () => {
-    const { cleanup, container, render } = setup()
+    const { render } = setup()
     const Component = createGlobalStyle`[data-test-remove]{color:grey;} `
 
     class Comp extends React.Component {
@@ -190,12 +185,13 @@ describe(`createGlobalStyle`, () => {
     }
 
     render(<Comp />)
-    expect(getCSS(document)).not.toContain(`[data-test-remove]{color:grey;}`)
-    cleanup()
+    expect(getCSS(document).trim()).not.toContain(
+      `[data-test-remove]{color:grey;}`
+    )
   })
 
   it(`removes styling injected for multiple <GlobalStyle> components correctly`, () => {
-    const { container, render } = context
+    const { render } = context
 
     const A = createGlobalStyle`body { background: palevioletred; }`
     const B = createGlobalStyle`body { color: white; }`
@@ -237,25 +233,32 @@ describe(`createGlobalStyle`, () => {
 
     render(<Comp />)
     const el = document.querySelector('[data-test-el]')
-    expectCSSMatches(`body{background:palevioletred;} body{color:white;}`)
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
+"/* sc-component-id:sc-global-3005254895 */
+body{background:palevioletred;}
+/* sc-component-id:sc-global-1591963405 */
+body{color:white;}"
+`) // should have both styles
 
-    {
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      const css = getCSS(document)
-      expect(css).not.toContain('body{color:white;}')
-      expect(css).toContain('body{background:palevioletred;}')
-    }
+    Simulate.click(el)
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
+"/* sc-component-id:sc-global-3005254895 */
+body{background:palevioletred;}
+/* sc-component-id:sc-global-1591963405 */"
+`) // should only have palevioletred
 
-    {
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      const css = getCSS(document)
-      expect(css).not.toContain('body{color:white;}')
-      expect(css).not.toContain('body{background:palevioletred;}')
-    }
+    Simulate.click(el)
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
+"/* sc-component-id:sc-global-3005254895 */
+
+/* sc-component-id:sc-global-1591963405 */"
+`) // should be empty
   })
 
-  it.skip(`removes styling injected for multiple instances of same <GlobalStyle> components correctly`, () => {
-    const { container, render } = context
+  it(`removes styling injected for multiple instances of same <GlobalStyle> components correctly`, () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const { render } = context
 
     const A = createGlobalStyle`
       body { background: ${props => props.bgColor}; }
@@ -267,7 +270,7 @@ describe(`createGlobalStyle`, () => {
         b: true,
       }
 
-      onClick() {
+      onClick = () => {
         if (this.state.a === true && this.state.b === true) {
           this.setState({
             a: true,
@@ -288,7 +291,7 @@ describe(`createGlobalStyle`, () => {
 
       render() {
         return (
-          <div data-test-el onClick={() => this.onClick()}>
+          <div data-test-el onClick={this.onClick}>
             {this.state.a ? <A bgColor="red" /> : null}
             {this.state.b ? <A bgColor="blue" /> : null}
           </div>
@@ -296,42 +299,48 @@ describe(`createGlobalStyle`, () => {
       }
     }
 
-    render(<Comp />)
+    render(<Comp />) // should be blue
     const el = document.querySelector('[data-test-el]')
-    expectCSSMatches(`body{background:red;} body{background:blue;}`)
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
+"/* sc-component-id:sc-global-1846532150 */
+body{background:blue;}"
+`)
 
-    {
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      const css = getCSS(document)
-      expect(css).not.toContain('body{background:blue;}')
-      expect(css).toContain('body{background:red;}')
-    }
+    Simulate.click(el) // should be red
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
+"/* sc-component-id:sc-global-1846532150 */
+body{background:red;}"
+`)
 
-    {
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      const css = getCSS(document)
-      expect(css).not.toContain('body{background:blue;}')
-      expect(css).not.toContain('body{background:red;}')
-    }
+    Simulate.click(el) // should be empty
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(
+      `"/* sc-component-id:sc-global-1846532150 */"`
+    )
+
+    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
+      `"The global style component sc-global-1846532150 was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head> (or your StyleSheetManager target.)"`
+    )
   })
 
-  it(`should throw error when children are passed as props`, () => {
-    const { cleanup, render } = setup()
+  it(`should warn when children are passed as props`, () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const { render } = setup()
     const Component = createGlobalStyle`
       div {
         color: ${props => props.fg};
         background: ${props => props.bg};
       }
     `
-    expect(() =>
-      render(
-        <Component fg="red" bg="green">
-          <div />
-        </Component>
-      )
-    ).toThrowErrorMatchingSnapshot()
+    render(
+      <Component fg="red" bg="green">
+        <div />
+      </Component>
+    )
 
-    cleanup()
+    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
+      `"The global style component sc-global-2176982909 was given child JSX. createGlobalStyle does not render children."`
+    )
   })
 })
 

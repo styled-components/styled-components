@@ -7,9 +7,9 @@ import StyleSheet from './StyleSheet'
 import type { RuleSet } from '../types'
 
 export default class GlobalStyle {
-  rules: RuleSet
   componentId: string
   isStatic: boolean
+  rules: RuleSet
 
   constructor(rules: RuleSet, componentId: string) {
     this.rules = rules
@@ -28,15 +28,16 @@ export default class GlobalStyle {
     styleSheet.inject(this.componentId, css)
   }
 
-  renderStyles(executionContext: Object, styleSheet: StyleSheet) {
-    this.removeStyles(styleSheet)
-    this.createStyles(executionContext, styleSheet)
-  }
-
   removeStyles(styleSheet: StyleSheet) {
     const { componentId } = this
     if (styleSheet.hasId(componentId)) {
       styleSheet.remove(componentId)
     }
+  }
+
+  // TODO: overwrite in-place instead of remove+create?
+  renderStyles(executionContext: Object, styleSheet: StyleSheet) {
+    this.removeStyles(styleSheet)
+    this.createStyles(executionContext, styleSheet)
   }
 }

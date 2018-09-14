@@ -59,4 +59,4 @@ Cannot find sheet for given tag
 
 ## 11
 
-[createGlobalStyle] received children which will not be rendered. Please use the component without passing children elements.
+_This error was replaced with a dev-time warning, it will be deleted for v4 final._ [createGlobalStyle] received children which will not be rendered. Please use the component without passing children elements.
