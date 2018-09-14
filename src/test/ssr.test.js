@@ -311,8 +311,8 @@ describe('ssr', () => {
         <Component />
         <Heading>Hello SSR!</Heading>
         <Body>
-          {new Array(1000).fill(0).map(() => (
-            <div>*************************</div>
+          {new Array(1000).fill(0).map((_, i) => (
+            <div key={i}>*************************</div>
           ))}
         </Body>
         <SideBar>SideBar</SideBar>
@@ -346,7 +346,7 @@ describe('ssr', () => {
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx))
 
     return new Promise((resolve, reject) => {
-      stream.on('data', function noop() { })
+      stream.on('data', function noop() {})
 
       stream.on('error', err => {
         expect(err).toMatchSnapshot()

@@ -57,14 +57,14 @@ describe(`createGlobalStyle`, () => {
   })
 
   it(`supports interpolation`, () => {
-    const { cleanup, render } = setup()
+    const { render } = setup()
     const Component = createGlobalStyle`div {color:${props => props.color};} `
     render(<Component color="orange" />)
     expectCSSMatches(`div{color:orange;} `)
   })
 
   it(`supports theming`, () => {
-    const { cleanup, render } = setup()
+    const { render } = setup()
     const Component = createGlobalStyle`div {color:${props =>
       props.theme.color};} `
     render(
@@ -76,7 +76,7 @@ describe(`createGlobalStyle`, () => {
   })
 
   it(`updates theme correctly`, () => {
-    const { cleanup, render } = setup()
+    const { render } = setup()
     const Component = createGlobalStyle`div {color:${props =>
       props.theme.color};} `
     let update
@@ -140,7 +140,7 @@ describe(`createGlobalStyle`, () => {
   })
 
   it(`stringifies multiple rules correctly`, () => {
-    const { cleanup, render } = setup()
+    const { render } = setup()
     const Component = createGlobalStyle`
       div {
         color: ${props => props.fg};
@@ -152,7 +152,7 @@ describe(`createGlobalStyle`, () => {
   })
 
   it(`injects multiple <GlobalStyle> components correctly`, () => {
-    const { cleanup, render } = setup()
+    const { render } = setup()
 
     const A = createGlobalStyle`body { background: palevioletred; }`
     const B = createGlobalStyle`body { color: white; }`
@@ -167,7 +167,7 @@ describe(`createGlobalStyle`, () => {
   })
 
   it(`removes styling injected styling when unmounted`, () => {
-    const { cleanup, render } = setup()
+    const { render } = setup()
     const Component = createGlobalStyle`[data-test-remove]{color:grey;} `
 
     class Comp extends React.Component {
@@ -325,7 +325,7 @@ body{background:red;}"
   it(`should warn when children are passed as props`, () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {})
 
-    const { cleanup, render } = setup()
+    const { render } = setup()
     const Component = createGlobalStyle`
       div {
         color: ${props => props.fg};
@@ -341,6 +341,26 @@ body{background:red;}"
     expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
       `"The global style component sc-global-2176982909 was given child JSX. createGlobalStyle does not render children."`
     )
+  })
+
+  it(`rendering the same createGlobalStyle multiple times with the same setup should not touch the DOM after the first time`, () => {
+    const { render } = setup()
+
+    const Component = createGlobalStyle`
+      div {
+        color: ${props => props.fg};
+        background: ${props => props.bg};
+      }
+    `
+
+    jest.spyOn(Component.globalStyle, 'createStyles')
+
+    render(<Component fg="red" bg="green" />)
+    render(<Component fg="red" bg="green" />)
+    render(<Component fg="red" bg="green" />)
+    render(<Component fg="red" bg="green" />)
+
+    expect(Component.globalStyle.createStyles).toHaveBeenCalledTimes(1)
   })
 })
 
