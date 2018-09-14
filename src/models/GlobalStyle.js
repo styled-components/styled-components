@@ -35,6 +35,7 @@ export default class GlobalStyle {
     }
   }
 
+  // TODO: overwrite in-place instead of remove+create?
   renderStyles(executionContext: Object, styleSheet: StyleSheet) {
     this.removeStyles(styleSheet)
     this.createStyles(executionContext, styleSheet)

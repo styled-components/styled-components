@@ -308,8 +308,10 @@ export default class StyleSheet {
 
     /* remove all rules from the tag */
     tag.removeRules(id)
+
     /* ignore possible rehydrated names */
     this.ignoreRehydratedNames[id] = true
+
     /* delete possible deferred rules */
     this.deferred[id] = undefined
   }
