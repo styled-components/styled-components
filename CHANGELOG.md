@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.0.0-beta.5] - 2018-09-14
+
 - Fix issue with `createGlobalStyle` and hot module reload, by [@probablyup](https://github.com/probablyup)
 
 ## [v4.0.0-beta.4] - 2018-09-12
@@ -620,7 +622,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.4...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.5...master
+[v4.0.0-beta.5]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.4...v4.0.0-beta.5
 [v4.0.0-beta.4]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.3...v4.0.0-beta.4
 [v4.0.0-beta.3]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.2...v4.0.0-beta.3
 [v4.0.0-beta.2]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.1...v4.0.0-beta.2
