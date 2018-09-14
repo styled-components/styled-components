@@ -1,3 +1,0 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
-
-exports[`createGlobalStyle should throw error when children are passed as props 1`] = `"[createGlobalStyle] received children which will not be rendered. Please use the component without passing children elements."`;

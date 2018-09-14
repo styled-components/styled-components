@@ -18,9 +18,10 @@ export default function createGlobalStyle(
   const rules = css(strings, ...interpolations)
   const id = `sc-global-${hashStr(JSON.stringify(rules))}`
   const style = new GlobalStyle(rules, id)
+
   let count = 0
 
-  class GlobalStyleComponent extends React.PureComponent<*, *> {
+  class GlobalStyleComponent extends React.Component<*, *> {
     static defaultProps: Object
     styleSheet: Object
 
@@ -43,28 +44,25 @@ export default function createGlobalStyle(
 
     componentDidMount() {
       count += 1
+
+      if (process.env.NODE_ENV !== 'production' && IS_BROWSER && count > 1) {
+        console.warn(
+          `The global style component ${
+            this.state.styledComponentId
+          } was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head> (or your StyleSheetManager target.)`
+        )
+      }
     }
 
     componentWillUnmount() {
       count -= 1
-
-      const { globalStyle, styledComponentId } = this.state
 
       /**
        * Depending on the order "render" is called this can cause the styles to be lost
        * until the next render pass of the remaining instance, which may
        * not be immediate.
        */
-      if (count === 0) globalStyle.removeStyles(this.styleSheet)
-      else if (
-        process.env.NODE_ENV !== 'production' &&
-        IS_BROWSER &&
-        count > 1
-      ) {
-        console.warn(
-          `The global style component ${styledComponentId} was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head> (or your StyleSheetManager target.)`
-        )
-      }
+      if (count === 0) this.state.globalStyle.removeStyles(this.styleSheet)
     }
 
     render() {
