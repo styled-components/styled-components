@@ -4,7 +4,6 @@ import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants'
 import GlobalStyle from '../models/GlobalStyle'
 import StyleSheet from '../models/StyleSheet'
 import { StyleSheetConsumer } from '../models/StyleSheetManager'
-import StyledError from '../utils/error'
 import determineTheme from '../utils/determineTheme'
 import { ThemeConsumer, type Theme } from '../models/ThemeProvider'
 import hashStr from '../vendor/glamor/hash'
@@ -31,8 +30,6 @@ export default function createGlobalStyle(
     constructor() {
       super()
 
-      count += 1
-
       /**
        * This fixes HMR compatiblility. Don't ask me why, but this combination of
        * caching the closure variables via statics and then persisting the statics in
@@ -42,6 +39,10 @@ export default function createGlobalStyle(
         globalStyle: this.constructor.globalStyle,
         styledComponentId: this.constructor.styledComponentId,
       }
+    }
+
+    componentDidMount() {
+      count += 1
     }
 
     componentWillUnmount() {
@@ -61,7 +62,7 @@ export default function createGlobalStyle(
         count > 1
       ) {
         console.warn(
-          `The global style component ${styledComponentId} was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head>.`
+          `The global style component ${styledComponentId} was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head> (or your StyleSheetManager target.)`
         )
       }
     }
@@ -71,7 +72,11 @@ export default function createGlobalStyle(
         process.env.NODE_ENV !== 'production' &&
         React.Children.count(this.props.children)
       ) {
-        throw new StyledError(11)
+        console.warn(
+          `The global style component ${
+            this.state.styledComponentId
+          } was given child JSX. createGlobalStyle does not render children.`
+        )
       }
 
       return (
