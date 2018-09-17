@@ -22,7 +22,7 @@ const warnInnerRef = once(() =>
 )
 
 // $FlowFixMe
-class BaseStyledNativeComponent extends PureComponent<*, *> {
+class StyledNativeComponent extends PureComponent<*, *> {
   root: ?Object
 
   attrs = {}
@@ -131,16 +131,16 @@ export default (InlineStyle: Function) => {
     const {
       attrs,
       displayName = generateDisplayName(target),
-      ParentComponent = BaseStyledNativeComponent,
+      ParentComponent = StyledNativeComponent,
     } = options
 
     const isClass = !isTag(target)
     const isTargetStyledComp = isStyledComponent(target)
 
-    const StyledNativeComponent = React.forwardRef((props, ref) => (
+    const WrappedStyledNativeComponent = React.forwardRef((props, ref) => (
       <ParentComponent
         {...props}
-        forwardedClass={StyledNativeComponent}
+        forwardedClass={WrappedStyledNativeComponent}
         forwardedRef={ref}
       />
     ))
@@ -155,22 +155,27 @@ export default (InlineStyle: Function) => {
      */
 
     // $FlowFixMe
-    StyledNativeComponent.attrs = finalAttrs
+    WrappedStyledNativeComponent.attrs = finalAttrs
 
-    StyledNativeComponent.displayName = displayName
+    WrappedStyledNativeComponent.displayName = displayName
 
     // $FlowFixMe
-    StyledNativeComponent.inlineStyle = new InlineStyle(
+    WrappedStyledNativeComponent.inlineStyle = new InlineStyle(
       // $FlowFixMe
       isTargetStyledComp ? target.inlineStyle.rules.concat(rules) : rules
     )
 
     // $FlowFixMe
-    StyledNativeComponent.styledComponentId = 'StyledNativeComponent'
+    WrappedStyledNativeComponent.styledComponentId = 'StyledNativeComponent'
     // $FlowFixMe
-    StyledNativeComponent.target = isTargetStyledComp ? target.target : target
+    WrappedStyledNativeComponent.target = isTargetStyledComp
+      ? // $FlowFixMe
+        target.target
+      : target
     // $FlowFixMe
-    StyledNativeComponent.withComponent = function withComponent(tag: Target) {
+    WrappedStyledNativeComponent.withComponent = function withComponent(
+      tag: Target
+    ) {
       const { displayName: _, componentId: __, ...optionsToCopy } = options
       const newOptions = {
         ...optionsToCopy,
@@ -183,7 +188,7 @@ export default (InlineStyle: Function) => {
 
     if (isClass) {
       // $FlowFixMe
-      hoist(StyledNativeComponent, target, {
+      hoist(WrappedStyledNativeComponent, target, {
         // all SC-specific things should not be hoisted
         attrs: true,
         displayName: true,
@@ -195,7 +200,7 @@ export default (InlineStyle: Function) => {
       })
     }
 
-    return StyledNativeComponent
+    return WrappedStyledNativeComponent
   }
 
   return createStyledNativeComponent

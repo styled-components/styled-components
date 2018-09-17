@@ -58,7 +58,7 @@ const warnInnerRef = once(() =>
 )
 
 // $FlowFixMe
-class BaseStyledComponent extends PureComponent<*> {
+class StyledComponent extends PureComponent<*> {
   renderOuter: Function
   renderInner: Function
   styleSheet: ?StyleSheet
@@ -222,7 +222,7 @@ export default function createStyledComponent(
       options.displayName,
       options.parentComponentId
     ),
-    ParentComponent = BaseStyledComponent,
+    ParentComponent = StyledComponent,
     attrs,
   } = options
 
@@ -250,28 +250,28 @@ export default function createStyledComponent(
    * forwardRef creates a new interim component, which we'll take advantage of
    * instead of extending ParentComponent to create _another_ interim class
    */
-  const StyledComponent = React.forwardRef((props, ref) => (
+  const WrappedStyledComponent = React.forwardRef((props, ref) => (
     <ParentComponent
       {...props}
-      forwardedClass={StyledComponent}
+      forwardedClass={WrappedStyledComponent}
       forwardedRef={ref}
     />
   ))
 
   // $FlowFixMe
-  StyledComponent.attrs = finalAttrs
+  WrappedStyledComponent.attrs = finalAttrs
   // $FlowFixMe
-  StyledComponent.componentStyle = componentStyle
-  StyledComponent.displayName = displayName
+  WrappedStyledComponent.componentStyle = componentStyle
+  WrappedStyledComponent.displayName = displayName
   // $FlowFixMe
-  StyledComponent.styledComponentId = styledComponentId
+  WrappedStyledComponent.styledComponentId = styledComponentId
 
   // fold the underlying StyledComponent target up since we folded the styles
   // $FlowFixMe
-  StyledComponent.target = isTargetStyledComp ? target.target : target
+  WrappedStyledComponent.target = isTargetStyledComp ? target.target : target
 
   // $FlowFixMe
-  StyledComponent.withComponent = function withComponent(tag: Target) {
+  WrappedStyledComponent.withComponent = function withComponent(tag: Target) {
     const { componentId: previousComponentId, ...optionsToCopy } = options
 
     const newComponentId =
@@ -292,11 +292,13 @@ export default function createStyledComponent(
 
   if (process.env.NODE_ENV !== 'production') {
     // $FlowFixMe
-    StyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName)
+    WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(
+      displayName
+    )
   }
 
   if (isClass) {
-    hoist(StyledComponent, target, {
+    hoist(WrappedStyledComponent, target, {
       // all SC-specific things should not be hoisted
       attrs: true,
       componentStyle: true,
@@ -308,5 +310,5 @@ export default function createStyledComponent(
     })
   }
 
-  return StyledComponent
+  return WrappedStyledComponent
 }
