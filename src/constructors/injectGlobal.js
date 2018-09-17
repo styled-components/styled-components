@@ -9,7 +9,7 @@ type InjectGlobalFn = (
   ...interpolations: Array<Interpolation>
 ) => void
 
-let warnInjectGlobalDeprecated
+let warnInjectGlobalDeprecated = () => {}
 if (process.env.NODE_ENV !== 'production') {
   warnInjectGlobalDeprecated = once(() => {
     // eslint-disable-next-line no-console
