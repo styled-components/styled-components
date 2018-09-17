@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## unreleased
 
+- Fix an issue where the `injectGlobal` deprecation warning errors for production, by [@benmagyar](https://github.com/BenMagyar) (see [#2015](https://github.com/styled-components/styled-components/pull/2015))
+
 ## [3.4.7] - 2018-09-17
 
 - Add warning for the upcoming removal of the `injectGlobal` API in v4.0, by [@rainboxx](https://github.com/rainboxx) (see [#1867](https://github.com/styled-components/styled-components/pull/1867))
