@@ -5,15 +5,16 @@ import stringifyRules from '../utils/stringifyRules'
 import hashStr from '../vendor/glamor/hash'
 import Keyframes from '../models/Keyframes'
 
-import type { Interpolation } from '../types'
+import type { Interpolation, Styles } from '../types'
 
 const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '')
 
 export default function keyframes(
-  strings: Array<string>,
+  strings: Styles,
   ...interpolations: Array<Interpolation>
 ): Keyframes {
-  const rules = css(strings, interpolations)
+  const rules = css(strings, ...interpolations)
+
   const name = generateAlphabeticName(
     hashStr(replaceWhitespace(JSON.stringify(rules)))
   )
