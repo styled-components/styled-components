@@ -6,7 +6,11 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## unreleased
 
+## [3.4.7] - 2018-09-17
+
 - Add warning for the upcoming removal of the `injectGlobal` API in v4.0, by [@rainboxx](https://github.com/rainboxx) (see [#1867](https://github.com/styled-components/styled-components/pull/1867))
+
+- Backport from v4: Beef up the error message that sometimes occurs when multiple versions of styled components are used together and the StyleSheet instance can't be found, by [@probablyup](https://github.com/probablyup) (see [#2012](https://github.com/styled-components/styled-components/pull/2012))
 
 ## [3.4.6] - 2018-09-10
 
@@ -558,7 +562,9 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.5...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.7...master
+[v3.4.7]: https://github.com/styled-components/styled-components/compare/v3.4.6...v3.4.7
+[v3.4.6]: https://github.com/styled-components/styled-components/compare/v3.4.5...v3.4.6
 [v3.4.5]: https://github.com/styled-components/styled-components/compare/v3.4.4...v3.4.5
 [v3.4.4]: https://github.com/styled-components/styled-components/compare/v3.4.3...v3.4.4
 [v3.4.3]: https://github.com/styled-components/styled-components/compare/v3.4.2...v3.4.3
