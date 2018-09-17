@@ -194,11 +194,11 @@ describe('keyframes', () => {
 
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`
 "/* sc-component-id:sc-a */
-.sc-a{} .b{-webkit-animation:none;animation:none;}.c{-webkit-animation:hNeMbn 1s linear;animation:hNeMbn 1s linear;, gUyypn 1s linear;}.d{-webkit-animation:gUyypn 1s linear;animation:gUyypn 1s linear;}.e{-webkit-animation:hNeMbn 1s linear;animation:hNeMbn 1s linear;}
+.sc-a{} .b{-webkit-animation:none;animation:none;}.c{-webkit-animation:hNeMbn 1s linear;animation:hNeMbn 1s linear;, dHUfhi 1s linear;}.d{-webkit-animation:dHUfhi 1s linear;animation:dHUfhi 1s linear;}.e{-webkit-animation:hNeMbn 1s linear;animation:hNeMbn 1s linear;}
 /* sc-component-id:sc-keyframes-hNeMbn */
 @-webkit-keyframes hNeMbn{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}} @keyframes hNeMbn{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}}
-/* sc-component-id:sc-keyframes-gUyypn */
-@-webkit-keyframes gUyypn{from{opacity:0;}to{opacity:1;}} @keyframes gUyypn{from{opacity:0;}to{opacity:1;}}"
+/* sc-component-id:sc-keyframes-dHUfhi */
+@-webkit-keyframes dHUfhi{from{opacity:0;}to{opacity:1;}} @keyframes dHUfhi{from{opacity:0;}to{opacity:1;}}"
 `)
   })
 })
