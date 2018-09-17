@@ -6,6 +6,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## unreleased
 
+## [3.4.8] - 2018-09-17
+
+- Fix the `injectGlobal` warning not being properly guarded for production, by [@probablyup](https://github.com/probablyup)
+
 ## [3.4.7] - 2018-09-17
 
 - Add warning for the upcoming removal of the `injectGlobal` API in v4.0, by [@rainboxx](https://github.com/rainboxx) (see [#1867](https://github.com/styled-components/styled-components/pull/1867))
