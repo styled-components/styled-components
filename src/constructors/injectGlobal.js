@@ -30,7 +30,7 @@ export default (stringifyRules: Stringifier, css: Function) => {
       styleSheet.inject(id, stringifyRules(rules))
     }
 
-    warnInjectGlobalDeprecated()
+    if (warnInjectGlobalDeprecated) warnInjectGlobalDeprecated()
   }
 
   return injectGlobal
