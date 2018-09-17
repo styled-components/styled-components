@@ -55,7 +55,7 @@ Missing document `<head>`
 
 ## 10
 
-Cannot find sheet for given tag
+Cannot find a StyleSheet instance. Usually this happens if there are multiple copies of styled-components loaded at once. Check out this issue for how to troubleshoot and fix the common cases where this situation can happen: https://github.com/styled-components/styled-components/issues/1941#issuecomment-417862021
 
 ## 11
 
