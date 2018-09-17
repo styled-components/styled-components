@@ -6,9 +6,19 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.0.0-beta.6] - 2018-09-17
+
+- Fix a bug introduced from some refactoring that went into beta.5 around usage of `keyframes` with multiple interpolations, by [@probablyup](https://github.com/probablyup) (see [#2013](https://github.com/styled-components/styled-components/pull/2013))
+
+- Tweak the styled components base component naming to look nicer in DevTools, by [@probablyup](https://github.com/probablyup) (see [#2012](https://github.com/styled-components/styled-components/pull/2012))
+
+- Beef up the error message that sometimes occurs when multiple versions of styled components are used together and the StyleSheet instance can't be found, by [@probablyup](https://github.com/probablyup) (see [#2012](https://github.com/styled-components/styled-components/pull/2012))
+
 ## [v4.0.0-beta.5] - 2018-09-14
 
-- Fix issue with `createGlobalStyle` and hot module reload, by [@probablyup](https://github.com/probablyup)
+- Fix issue with `createGlobalStyle` and hot module reload, by [@probablyup](https://github.com/probablyup) (see [#2007](https://github.com/styled-components/styled-components/pull/2007))
+
+- Remove keyframes factory function, by [@probablyup](https://github.com/probablyup) (see [#2006](https://github.com/styled-components/styled-components/pull/2006))
 
 ## [v4.0.0-beta.4] - 2018-09-12
 
@@ -622,7 +632,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.5...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.6...develop
+[v4.0.0-beta.6]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.5...v4.0.0-beta.6
 [v4.0.0-beta.5]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.4...v4.0.0-beta.5
 [v4.0.0-beta.4]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.3...v4.0.0-beta.4
 [v4.0.0-beta.3]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.2...v4.0.0-beta.3
