@@ -6,7 +6,11 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.0.0-beta.7] - 2018-09-18
+
 - Revise createGlobalStyle HMR back to the original PR code without using `componentDidMount`, by [@probablyup](https://github.com/probablyup) (see [#2017](https://github.com/styled-components/styled-components/pull/2017))
+
+- Some light refactoring to further reduce object allocations, by [@probablyup](https://github.com/probablyup) (see [#2016](https://github.com/styled-components/styled-components/pull/2016))
 
 ## [v4.0.0-beta.6] - 2018-09-17
 
@@ -634,7 +638,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.6...develop
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.7...develop
+[v4.0.0-beta.7]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.6...v4.0.0-beta.7
 [v4.0.0-beta.6]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.5...v4.0.0-beta.6
 [v4.0.0-beta.5]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.4...v4.0.0-beta.5
 [v4.0.0-beta.4]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.3...v4.0.0-beta.4
