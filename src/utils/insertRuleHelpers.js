@@ -13,10 +13,12 @@ export const sheetForTag = (tag: HTMLStyleElement): CSSStyleSheet => {
 
   /* Firefox quirk requires us to step through all stylesheets to find one owned by the given tag */
   const size = document.styleSheets.length
-  for (let i = 0; i < size; i += 1) {
-    const sheet = document.styleSheets[i]
-    // $FlowFixMe
-    if (sheet.ownerNode === tag) return sheet
+  if (size) {
+    for (let i = 0; i < size; i += 1) {
+      const sheet = document.styleSheets[i]
+      // $FlowFixMe
+      if (sheet.ownerNode === tag) return sheet
+    }
   }
 
   /* we should always be able to find a tag */
