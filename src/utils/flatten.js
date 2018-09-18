@@ -2,10 +2,8 @@
 import isFunction from './isFunction'
 import isPlainObject from './isPlainObject'
 import isStyledComponent from './isStyledComponent'
-import hyphenate from '../utils/hyphenateStyleName'
-
-import type { Interpolation } from '../types'
 import Keyframes from '../models/Keyframes'
+import hyphenate from '../utils/hyphenateStyleName'
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
   const css = Object.keys(obj)
@@ -27,63 +25,54 @@ export const objToCss = (obj: Object, prevKey?: string): string => {
     : css
 }
 
-const flatten = (
-  chunks: Array<Interpolation>,
+/**
+ * It's falsish not falsy because 0 is allowed.
+ */
+const isFalsish = chunk =>
+  chunk === undefined || chunk === null || chunk === false || chunk === ''
+
+export default function flatten(
+  chunk: any,
   executionContext: ?Object,
   styleSheet: ?Object
-): Array<Interpolation> =>
-  chunks.reduce((ruleSet: Array<Interpolation>, chunk: ?Interpolation) => {
-    /* Remove falsey values */
-    if (
-      chunk === undefined ||
-      chunk === null ||
-      chunk === false ||
-      chunk === ''
-    ) {
-      return ruleSet
+): any {
+  if (Array.isArray(chunk)) {
+    const ruleSet = []
+
+    for (let i = 0, len = chunk.length, result; i < len; i += 1) {
+      result = flatten(chunk[i], executionContext, styleSheet)
+
+      if (result === null) continue
+      else if (Array.isArray(result)) ruleSet.push(...result)
+      else ruleSet.push(result)
     }
-
-    /* Flatten ruleSet */
-    if (Array.isArray(chunk)) {
-      ruleSet.push(...flatten(chunk, executionContext, styleSheet))
-      return ruleSet
-    }
-
-    /* Handle other components */
-    if (isStyledComponent(chunk)) {
-      // $FlowFixMe not sure how to make this pass
-      ruleSet.push(`.${chunk.styledComponentId}`)
-      return ruleSet
-    }
-
-    /* Either execute or defer the function */
-    if (isFunction(chunk)) {
-      if (executionContext) {
-        ruleSet.push(
-          // $FlowFixMe it's a normal function but flow doesn't get that
-          ...flatten([chunk(executionContext)], executionContext, styleSheet)
-        )
-      } else ruleSet.push(chunk)
-
-      return ruleSet
-    }
-
-    if (chunk instanceof Keyframes) {
-      if (styleSheet) {
-        chunk.inject(styleSheet)
-        ruleSet.push(chunk.getName())
-      } else ruleSet.push(chunk)
-
-      return ruleSet
-    }
-
-    /* Handle objects */
-    ruleSet.push(
-      // $FlowFixMe have to add %checks somehow to isPlainObject
-      isPlainObject(chunk) ? objToCss(chunk) : chunk.toString()
-    )
 
     return ruleSet
-  }, [])
+  }
 
-export default flatten
+  if (isFalsish(chunk)) {
+    return null
+  }
+
+  /* Handle other components */
+  if (isStyledComponent(chunk)) {
+    return `.${chunk.styledComponentId}`
+  }
+
+  /* Either execute or defer the function */
+  if (isFunction(chunk)) {
+    if (executionContext) {
+      return flatten(chunk(executionContext), executionContext, styleSheet)
+    } else return chunk
+  }
+
+  if (chunk instanceof Keyframes) {
+    if (styleSheet) {
+      chunk.inject(styleSheet)
+      return chunk.getName()
+    } else return chunk
+  }
+
+  /* Handle objects */
+  return isPlainObject(chunk) ? objToCss(chunk) : chunk.toString()
+}
