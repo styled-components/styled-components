@@ -4,6 +4,7 @@ dist/**/*.js
 src/decls/**/*.js
 src/vendor/**/*.js
 src/test/utils.js
+src/macro/test/**/*.js
 *.test.js
 example/
 flow-typed/**/*.js

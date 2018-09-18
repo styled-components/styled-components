@@ -78,6 +78,7 @@
     "fbjs": "^0.8.16",
     "hoist-non-react-statics": "^2.5.0",
     "prop-types": "^15.5.4",
+    "babel-plugin-styled-components": "^1.2.1"
     "react-is": "^16.3.1",
     "stylis": "^3.5.0",
     "stylis-rule-sheet": "^0.0.10",
@@ -90,6 +91,9 @@
     "@types/react-native": "^0.55.7",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
+    "babel-loader": "^6.2.10",
+    "babel-macros": "^1.1.1",
+    "babel-plugin-tester": "^4.0.0",
     "babel-eslint": "^8.2.3",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-plugin-external-helpers": "^6.22.0",
