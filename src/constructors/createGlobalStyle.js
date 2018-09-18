@@ -31,6 +31,8 @@ export default function createGlobalStyle(
     constructor() {
       super()
 
+      count += 1
+
       /**
        * This fixes HMR compatiblility. Don't ask me why, but this combination of
        * caching the closure variables via statics and then persisting the statics in
@@ -43,8 +45,6 @@ export default function createGlobalStyle(
     }
 
     componentDidMount() {
-      count += 1
-
       if (process.env.NODE_ENV !== 'production' && IS_BROWSER && count > 1) {
         console.warn(
           `The global style component ${
