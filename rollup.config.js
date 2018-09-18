@@ -2,82 +2,226 @@
 import nodeResolve from 'rollup-plugin-node-resolve'
 import replace from 'rollup-plugin-replace'
 import commonjs from 'rollup-plugin-commonjs'
-import inject from 'rollup-plugin-inject'
 import babel from 'rollup-plugin-babel'
 import json from 'rollup-plugin-json'
 import flow from 'rollup-plugin-flow'
-import uglify from 'rollup-plugin-uglify'
-import visualizer from 'rollup-plugin-visualizer'
-import pkg from './package.json'
+import { terser } from 'rollup-plugin-terser'
+import sourceMaps from 'rollup-plugin-sourcemaps'
 
-const processShim = '\0process-shim'
+// rollup-plugin-ignore stopped working, so we'll just remove the import line 😐
+const ignore = { "import stream from 'stream';": "'';" }
 
-const prod = process.env.PRODUCTION
-const esbundle = process.env.ESBUNDLE
-
-let targets
-if (prod) {
-  console.log('Creating production UMD bundle...')
-  targets = [{ dest: 'dist/styled-components.min.js', format: 'umd' }]
-} else if (esbundle) {
-  console.log('Creating ES modules bundle...')
-  targets = [{ dest: 'dist/styled-components.es.js', format: 'es' }]
-} else {
-  console.log('Creating development UMD bundle')
-  targets = [{ dest: 'dist/styled-components.js', format: 'umd' }]
+const cjs = {
+  exports: 'named',
+  format: 'cjs',
+  sourcemap: true,
 }
 
-const plugins = [
-  // Unlike Webpack and Browserify, Rollup doesn't automatically shim Node
-  // builtins like `process`. This ad-hoc plugin creates a 'virtual module'
-  // which includes a shim containing just the parts the bundle needs.
-  {
-    resolveId(importee) {
-      if (importee === processShim) return importee
-      return null
-    },
-    load(id) {
-      if (id === processShim) return 'export default { argv: [], env: {} }'
-      return null
-    },
-  },
-  flow(),
+const esm = {
+  format: 'esm',
+  sourcemap: true,
+}
+
+const getCJS = override => Object.assign({}, cjs, override)
+const getESM = override => Object.assign({}, esm, override)
+
+const commonPlugins = [
+  flow({
+    // needed for sourcemaps to be properly generated
+    pretty: true,
+  }),
+  sourceMaps(),
   json(),
   nodeResolve(),
+  babel({
+    exclude: 'node_modules/**',
+    plugins: ['external-helpers'],
+  }),
   commonjs({
     ignoreGlobal: true,
+    namedExports: {
+      'react-is': ['isValidElementType'],
+    },
   }),
-  prod && replace({
-    'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
+  replace({
+    __DEV__: JSON.stringify(false), // disable flag indicating a Jest run
   }),
-  prod && inject({
-    process: processShim,
-  }),
-  babel({
-    babelrc: false,
-    presets: [
-      ['env', { modules: false, loose: true }],
-      'react',
-    ],
-    plugins: [
-      !prod && 'flow-react-proptypes',
-      prod && 'transform-react-remove-prop-types',
-      'transform-flow-strip-types',
-      'external-helpers',
-      'transform-object-rest-spread',
-      'transform-class-properties',
-    ].filter(Boolean),
-  }),
-].filter(Boolean)
+]
 
-if (prod) plugins.push(uglify(), visualizer({ filename: './bundle-stats.html' }))
+const configBase = {
+  input: './src/index.js',
 
-export default {
-  entry: 'src/index.js',
-  moduleName: 'styled',
-  external: ['react'].concat(esbundle ? Object.keys(pkg.dependencies) : []),
-  exports: 'named',
-  targets,
-  plugins,
-  globals: { react: 'React' },
+  // \0 is rollup convention for generated in memory modules
+  external: id =>
+    !id.startsWith('\0') && !id.startsWith('.') && !id.startsWith('/'),
+  plugins: commonPlugins,
 }
+
+const globals = { react: 'React' }
+
+const umdBaseConfig = Object.assign({}, configBase, {
+  output: {
+    exports: 'named',
+    file: 'dist/styled-components.js',
+    format: 'umd',
+    globals,
+    name: 'styled',
+    sourcemap: true,
+  },
+  external: Object.keys(globals),
+  plugins: configBase.plugins.concat(
+    replace(
+      Object.assign({}, ignore, {
+        __SERVER__: JSON.stringify(false),
+      })
+    )
+  ),
+})
+
+const umdConfig = Object.assign({}, umdBaseConfig, {
+  plugins: umdBaseConfig.plugins.concat(
+    replace({
+      'process.env.NODE_ENV': JSON.stringify('development'),
+    })
+  ),
+})
+
+const umdProdConfig = Object.assign({}, umdBaseConfig, {
+  output: Object.assign({}, umdBaseConfig.output, {
+    file: 'dist/styled-components.min.js',
+  }),
+  plugins: umdBaseConfig.plugins.concat([
+    replace({
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    }),
+    terser({
+      sourceMap: true,
+    }),
+  ]),
+})
+
+const serverConfig = Object.assign({}, configBase, {
+  output: [
+    getESM({ file: 'dist/styled-components.esm.js' }),
+    getCJS({ file: 'dist/styled-components.cjs.js' }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(true),
+    })
+  ),
+})
+
+const serverProdConfig = Object.assign({}, configBase, serverConfig, {
+  output: [
+    getESM({ file: 'dist/styled-components.esm.min.js' }),
+    getCJS({ file: 'dist/styled-components.cjs.min.js' }),
+  ],
+  plugins: serverConfig.plugins.concat(
+    replace({
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    }),
+    terser({
+      sourceMap: true,
+    })
+  ),
+})
+
+const browserConfig = Object.assign({}, configBase, {
+  output: [
+    getESM({ file: 'dist/styled-components.browser.esm.js' }),
+    getCJS({ file: 'dist/styled-components.browser.cjs.js' }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace(
+      Object.assign({}, ignore, {
+        __SERVER__: JSON.stringify(false),
+      })
+    )
+  ),
+})
+
+const browserProdConfig = Object.assign({}, configBase, browserConfig, {
+  output: [
+    getESM({
+      file: 'dist/styled-components.browser.esm.min.js',
+    }),
+    getCJS({
+      file: 'dist/styled-components.browser.cjs.min.js',
+    }),
+  ],
+  plugins: browserConfig.plugins.concat(
+    replace({
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    }),
+    terser({
+      sourceMap: true,
+    })
+  ),
+})
+
+const nativeConfig = Object.assign({}, configBase, {
+  input: './src/native/index.js',
+  output: getCJS({
+    file: 'dist/styled-components.native.cjs.js',
+  }),
+})
+
+const primitivesConfig = Object.assign({}, configBase, {
+  input: './src/primitives/index.js',
+  output: [
+    getESM({ file: 'dist/styled-components-primitives.esm.js' }),
+    getCJS({
+      file: 'dist/styled-components-primitives.cjs.js',
+    }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(true),
+    })
+  ),
+})
+
+const noParserConfig = Object.assign({}, configBase, {
+  input: './src/no-parser/index.js',
+  output: [
+    getESM({ file: 'dist/styled-components-no-parser.esm.js' }),
+    getCJS({ file: 'dist/styled-components-no-parser.cjs.js' }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(true),
+    })
+  ),
+})
+
+const noParserBrowserConfig = Object.assign({}, configBase, {
+  output: [
+    getESM({
+      file: 'dist/styled-components-no-parser.browser.esm.js',
+    }),
+    getCJS({
+      file: 'dist/styled-components-no-parser.browser.cjs.js',
+    }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace(
+      Object.assign({}, ignore, {
+        __SERVER__: JSON.stringify(false),
+      })
+    )
+  ),
+})
+
+export default [
+  umdConfig,
+  umdProdConfig,
+  serverConfig,
+  serverProdConfig,
+  browserConfig,
+  browserProdConfig,
+  nativeConfig,
+  primitivesConfig,
+  noParserConfig,
+  noParserBrowserConfig,
+]

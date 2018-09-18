@@ -1,0 +1,21 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`StyleSheetManager should apply styles to appropriate targets for nested StyleSheetManagers 1`] = `
+"<style data-styled-components=\\"\\">
+/* sc-component-id: sc-b */
+.e{color:blue;}</style>"
+`;
+
+exports[`StyleSheetManager should apply styles to appropriate targets for nested StyleSheetManagers 2`] = `
+"<style data-styled-components=\\"\\">
+/* sc-component-id: sc-c */
+.f{color:green;}</style>"
+`;
+
+exports[`StyleSheetManager ssr should extract CSS outside the nested StyleSheetManager 1`] = `"<div data-reactroot=\\"\\"><h1 class=\\"sc-a c\\"></h1><div></div></div>"`;
+
+exports[`StyleSheetManager ssr should extract CSS outside the nested StyleSheetManager 2`] = `
+"<style data-styled-components=\\"c\\">
+/* sc-component-id: sc-a */
+.sc-a {} .c{color:red;}</style>"
+`;

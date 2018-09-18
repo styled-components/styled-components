@@ -1,12 +1,48 @@
 // @flow
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import StyleSheet, { CONTEXT_KEY } from './StyleSheet'
+import StyleSheet from './StyleSheet'
 import ServerStyleSheet from './ServerStyleSheet'
+import { CONTEXT_KEY } from '../constants'
+import StyledError from '../utils/error'
 
-class StyleSheetManager extends Component {
+type Props = {
+  sheet?: StyleSheet | null,
+  target?: HTMLElement | null,
+}
+
+export default class StyleSheetManager extends Component<Props, void> {
+  static childContextTypes = {
+    [CONTEXT_KEY]: PropTypes.oneOfType([
+      PropTypes.instanceOf(StyleSheet),
+      PropTypes.instanceOf(ServerStyleSheet),
+    ]).isRequired,
+  }
+
+  static propTypes = {
+    sheet: PropTypes.oneOfType([
+      PropTypes.instanceOf(StyleSheet),
+      PropTypes.instanceOf(ServerStyleSheet),
+    ]),
+    target: PropTypes.shape({
+      appendChild: PropTypes.func.isRequired,
+    }),
+  }
+
+  sheetInstance: StyleSheet
+
   getChildContext() {
-    return { [CONTEXT_KEY]: this.props.sheet }
+    return { [CONTEXT_KEY]: this.sheetInstance }
+  }
+
+  componentWillMount() {
+    if (this.props.sheet) {
+      this.sheetInstance = this.props.sheet
+    } else if (this.props.target) {
+      this.sheetInstance = new StyleSheet(this.props.target)
+    } else {
+      throw new StyledError(4)
+    }
   }
 
   render() {
@@ -17,19 +53,3 @@ class StyleSheetManager extends Component {
     return React.Children.only((this.props: any).children)
   }
 }
-
-StyleSheetManager.childContextTypes = {
-  [CONTEXT_KEY]: PropTypes.oneOfType([
-    PropTypes.instanceOf(StyleSheet),
-    PropTypes.instanceOf(ServerStyleSheet),
-  ]).isRequired,
-}
-
-StyleSheetManager.propTypes = {
-  sheet: PropTypes.oneOfType([
-    PropTypes.instanceOf(StyleSheet),
-    PropTypes.instanceOf(ServerStyleSheet),
-  ]).isRequired,
-}
-
-export default StyleSheetManager

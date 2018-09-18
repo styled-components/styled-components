@@ -1,10 +1,6 @@
 // @flow
+import type { ComponentType } from 'react'
 
-/* eslint-disable no-undef */
-export default function getComponentName(target: ReactClass<*>): string {
-  return (
-    target.displayName ||
-    target.name ||
-    'Component'
-  )
+export default function getComponentName(target: ComponentType<*>): string {
+  return target.displayName || target.name || 'Component'
 }

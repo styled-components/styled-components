@@ -1,11 +1,9 @@
 // @flow
-/* globals React$Element */
-import React, { Component } from 'react'
+import React, { Component, type Element } from 'react'
 import PropTypes from 'prop-types'
-import isFunction from 'is-function'
-import isPlainObject from 'is-plain-object'
 import createBroadcast from '../utils/create-broadcast'
 import type { Broadcast } from '../utils/create-broadcast'
+import StyledError from '../utils/error'
 import once from '../utils/once'
 
 // NOTE: DO NOT CHANGE, changing this is a semver major change!
@@ -18,28 +16,45 @@ export const CONTEXT_CHANNEL_SHAPE = PropTypes.shape({
   unsubscribe: PropTypes.func,
 })
 
-export type Theme = {[key: string]: mixed}
+export const contextShape = {
+  [CHANNEL]: PropTypes.func, // legacy
+  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+}
+
+export type Theme = { [key: string]: mixed }
 type ThemeProviderProps = {|
-  children?: React$Element<any>,
-  theme: Theme | (outerTheme: Theme) => void,
+  children?: Element<any>,
+  theme: Theme | ((outerTheme: Theme) => void),
 |}
 
+let warnChannelDeprecated
+if (process.env.NODE_ENV !== 'production') {
+  warnChannelDeprecated = once(() => {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `Warning: Usage of \`context.${CHANNEL}\` as a function is deprecated. It will be replaced with the object on \`.context.${CHANNEL_NEXT}\` in a future version.`
+    )
+  })
+}
 
-const warnChannelDeprecated = once(() => {
-  // eslint-disable-next-line no-console
-  console.error(`Warning: Usage of \`context.${CHANNEL}\` as a function is deprecated. It will be replaced with the object on \`.context.${CHANNEL_NEXT}\` in a future version.`)
-})
+const isFunction = test => typeof test === 'function'
+
 /**
  * Provide a theme to an entire react component tree via context and event listeners (have to do
  * both context and event emitter as pure components block context updates)
  */
-class ThemeProvider extends Component {
-  getTheme: (theme?: Theme | (outerTheme: Theme) => void) => Theme
-  outerTheme: Theme
-  unsubscribeToOuterId: string
-  props: ThemeProviderProps
+export default class ThemeProvider extends Component<ThemeProviderProps, void> {
   broadcast: Broadcast
+  getTheme: (theme?: Theme | ((outerTheme: Theme) => void)) => Theme
+  outerTheme: Theme
+  props: ThemeProviderProps
   unsubscribeToOuterId: number = -1
+  unsubscribeToOuterId: string
+
+  static childContextTypes = contextShape
+  static contextTypes = {
+    [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
+  }
 
   constructor() {
     super()
@@ -53,8 +68,13 @@ class ThemeProvider extends Component {
     if (outerContext !== undefined) {
       this.unsubscribeToOuterId = outerContext.subscribe(theme => {
         this.outerTheme = theme
+
+        if (this.broadcast !== undefined) {
+          this.publish(this.props.theme)
+        }
       })
     }
+
     this.broadcast = createBroadcast(this.getTheme())
   }
 
@@ -66,8 +86,10 @@ class ThemeProvider extends Component {
         subscribe: this.broadcast.subscribe,
         unsubscribe: this.broadcast.unsubscribe,
       },
-      [CHANNEL]: (subscriber) => {
-        warnChannelDeprecated()
+      [CHANNEL]: subscriber => {
+        if (process.env.NODE_ENV !== 'production') {
+          warnChannelDeprecated()
+        }
 
         // Patch the old `subscribe` provide via `CHANNEL` for older clients.
         const unsubscribeId = this.broadcast.subscribe(subscriber)
@@ -77,7 +99,9 @@ class ThemeProvider extends Component {
   }
 
   componentWillReceiveProps(nextProps: ThemeProviderProps) {
-    if (this.props.theme !== nextProps.theme) this.broadcast.publish(this.getTheme(nextProps.theme))
+    if (this.props.theme !== nextProps.theme) {
+      this.publish(nextProps.theme)
+    }
   }
 
   componentWillUnmount() {
@@ -89,33 +113,38 @@ class ThemeProvider extends Component {
   // Get the theme from the props, supporting both (outerTheme) => {} as well as object notation
   getTheme(passedTheme: (outerTheme: Theme) => void | Theme) {
     const theme = passedTheme || this.props.theme
+
     if (isFunction(theme)) {
       const mergedTheme = theme(this.outerTheme)
-      if (!isPlainObject(mergedTheme)) {
-        throw new Error('[ThemeProvider] Please return an object from your theme function, i.e. theme={() => ({})}!')
+
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        (mergedTheme === null ||
+          Array.isArray(mergedTheme) ||
+          typeof mergedTheme !== 'object')
+      ) {
+        throw new StyledError(7)
       }
+
       return mergedTheme
     }
-    if (!isPlainObject(theme)) {
-      throw new Error('[ThemeProvider] Please make your theme prop a plain object')
+
+    if (theme === null || Array.isArray(theme) || typeof theme !== 'object') {
+      throw new StyledError(8)
     }
+
     return { ...this.outerTheme, ...(theme: Object) }
+  }
+
+  publish(theme: Theme | ((outerTheme: Theme) => void)) {
+    this.broadcast.publish(this.getTheme(theme))
   }
 
   render() {
     if (!this.props.children) {
       return null
     }
+
     return React.Children.only(this.props.children)
   }
 }
-
-ThemeProvider.childContextTypes = {
-  [CHANNEL]: PropTypes.func, // legacy
-  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-}
-ThemeProvider.contextTypes = {
-  [CHANNEL_NEXT]: CONTEXT_CHANNEL_SHAPE,
-}
-
-export default ThemeProvider

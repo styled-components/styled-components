@@ -37,7 +37,29 @@ class Random extends React.Component<any, any> {
 }
 
 const H2 = H1.withComponent("h2");
-const a = H1.withComponent("a");
 const abbr = H1.withComponent("abbr");
 
+const Anchor = H1.withComponent("a");
+const AnchorContainer = () => (
+  <Anchor href="https://example.com">withComponent Anchor </Anchor>
+);
+
 const RandomHeading = H1.withComponent(Random);
+
+const CompA: React.SFC<{ a: number; className?: string }> = ({ className }) => (
+  <div className={className} />
+);
+const CompB: React.SFC<{ b: number; className?: string }> = ({ className }) => (
+  <div className={className} />
+);
+const StyledA = styled(CompA)`
+  color: ${(props: { color: string }) => props.color};
+`;
+
+const FirstStyledA = styled(StyledA).attrs({ a: 1 })``;
+const FirstStyledB = FirstStyledA.withComponent(CompB);
+
+const test = () => [
+  <FirstStyledA color={"black"} />,
+  <FirstStyledB b={2} color={"black"} />,
+];

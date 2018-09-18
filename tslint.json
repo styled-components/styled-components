@@ -1,48 +1,4 @@
 {
-  "jsRules": {
-    "class-name": true,
-    "comment-format": [
-      true,
-      "check-space"
-    ],
-    "indent": [
-      true,
-      "spaces"
-    ],
-    "no-duplicate-variable": true,
-    "no-eval": true,
-    "no-trailing-whitespace": true,
-    "no-unsafe-finally": true,
-    "one-line": [
-      true,
-      "check-open-brace",
-      "check-whitespace"
-    ],
-    "quotemark": [
-      true,
-      "double"
-    ],
-    "semicolon": [
-      true,
-      "always"
-    ],
-    "triple-equals": [
-      true,
-      "allow-null-check"
-    ],
-    "variable-name": [
-      true,
-      "ban-keywords"
-    ],
-    "whitespace": [
-      true,
-      "check-branch",
-      "check-decl",
-      "check-operator",
-      "check-separator",
-      "check-type"
-    ]
-  },
   "rules": {
     "class-name": true,
     "comment-format": [
@@ -65,11 +21,8 @@
     ],
     "quotemark": [
       true,
-      "double"
-    ],
-    "semicolon": [
-      true,
-      "always"
+      "single",
+      "jsx-double"
     ],
     "triple-equals": [
       true,

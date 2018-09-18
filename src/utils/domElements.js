@@ -122,6 +122,7 @@ export default [
   'clipPath',
   'defs',
   'ellipse',
+  'foreignObject',
   'g',
   'image',
   'line',
@@ -138,4 +139,3 @@ export default [
   'text',
   'tspan',
 ]
-
