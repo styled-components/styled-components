@@ -6,6 +6,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## unreleased
 
+## [3.4.9] - 2018-09-18
+
+- Remove the `injectGlobal` warning; it's not actionable since the replacement API is in v4 only, so why say anything?
+
 ## [3.4.8] - 2018-09-17
 
 - Fix the `injectGlobal` warning not being properly guarded for production, by [@probablyup](https://github.com/probablyup)
@@ -566,7 +570,9 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.7...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.9...master
+[v3.4.9]: https://github.com/styled-components/styled-components/compare/v3.4.8...v3.4.9
+[v3.4.8]: https://github.com/styled-components/styled-components/compare/v3.4.7...v3.4.8
 [v3.4.7]: https://github.com/styled-components/styled-components/compare/v3.4.6...v3.4.7
 [v3.4.6]: https://github.com/styled-components/styled-components/compare/v3.4.5...v3.4.6
 [v3.4.5]: https://github.com/styled-components/styled-components/compare/v3.4.4...v3.4.5
