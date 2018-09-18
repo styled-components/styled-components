@@ -21,15 +21,11 @@ import { EMPTY_OBJECT } from '../utils/empties'
 
 import type { RuleSet, Target } from '../types'
 
-// HACK for generating all static styles without needing to allocate
-// an empty execution context every single time...
-const STATIC_EXECUTION_CONTEXT = {}
-
 const identifiers = {}
 
 /* We depend on components having unique IDs */
 function generateId(
-  componentStyleInstance: Function,
+  _ComponentStyle: Function,
   _displayName: string,
   parentComponentId: string
 ) {
@@ -43,7 +39,7 @@ function generateId(
   const nr = (identifiers[displayName] || 0) + 1
   identifiers[displayName] = nr
 
-  const componentId = `${displayName}-${componentStyleInstance.generateName(
+  const componentId = `${displayName}-${_ComponentStyle.generateName(
     displayName + nr
   )}`
 
@@ -94,15 +90,13 @@ class StyledComponent extends PureComponent<*> {
     let generatedClassName
     if (componentStyle.isStatic) {
       generatedClassName = this.generateAndInjectStyles(
-        STATIC_EXECUTION_CONTEXT,
+        EMPTY_OBJECT,
         this.props,
         this.styleSheet
       )
     } else if (theme !== undefined) {
-      const determinedTheme = determineTheme(this.props, theme, defaultProps)
-
       generatedClassName = this.generateAndInjectStyles(
-        determinedTheme,
+        determineTheme(this.props, theme, defaultProps),
         this.props,
         this.styleSheet
       )
@@ -179,31 +173,19 @@ class StyledComponent extends PureComponent<*> {
     // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names
     if (componentStyle.isStatic && attrs === undefined) {
-      return componentStyle.generateAndInjectStyles(
-        STATIC_EXECUTION_CONTEXT,
-        styleSheet
-      )
-    } else {
-      const executionContext = this.buildExecutionContext(
-        theme,
-        props,
-        props.forwardedClass.attrs
-      )
-
-      const className = componentStyle.generateAndInjectStyles(
-        executionContext,
-        styleSheet
-      )
-
-      if (
-        process.env.NODE_ENV !== 'production' &&
-        warnTooManyClasses !== undefined
-      ) {
-        warnTooManyClasses(className)
-      }
-
-      return className
+      return componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet)
     }
+
+    const className = componentStyle.generateAndInjectStyles(
+      this.buildExecutionContext(theme, props, props.forwardedClass.attrs),
+      styleSheet
+    )
+
+    if (warnTooManyClasses) {
+      warnTooManyClasses(className)
+    }
+
+    return className
   }
 }
 
