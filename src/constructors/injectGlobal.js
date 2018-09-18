@@ -13,7 +13,7 @@ let warnInjectGlobalDeprecated
 if (process.env.NODE_ENV !== 'production') {
   warnInjectGlobalDeprecated = once(() => {
     // eslint-disable-next-line no-console
-    console.error(
+    console.warn(
       'Notice: The "injectGlobal" API will be removed in the upcoming v4.0 release. Use "createGlobalStyle" instead. You can find more information here: https://github.com/styled-components/styled-components/issues/1333'
     )
   })
