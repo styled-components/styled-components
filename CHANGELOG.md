@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Revise createGlobalStyle HMR back to the original PR code without using `componentDidMount`, by [@probablyup](https://github.com/probablyup) (see [#2017](https://github.com/styled-components/styled-components/pull/2017))
+
 ## [v4.0.0-beta.6] - 2018-09-17
 
 - Fix a bug introduced from some refactoring that went into beta.5 around usage of `keyframes` with multiple interpolations, by [@probablyup](https://github.com/probablyup) (see [#2013](https://github.com/styled-components/styled-components/pull/2013))
