@@ -103,7 +103,8 @@ const wrapAsHtmlTag = (css: () => string, names: Names) => (
   ]
 
   const htmlAttr = attrs.filter(Boolean).join(' ')
-  return `<style ${htmlAttr}>${css()}</style>`
+  const safeCSS = css().replace(/<\/(style)>/gi, '<\\/$1>')
+  return `<style ${htmlAttr}>${safeCSS}</style>`
 }
 
 /* takes a css factory function and outputs an element factory */
