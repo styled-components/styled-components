@@ -65,7 +65,6 @@
   "dependencies": {
     "@emotion/is-prop-valid": "^0.6.5",
     "css-to-react-native": "^2.0.3",
-    "hoist-non-react-statics": "^3.0.0",
     "memoize-one": "^4.0.0",
     "prop-types": "^15.5.4",
     "react-is": "^16.3.1",

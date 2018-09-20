@@ -1,7 +1,6 @@
 // @flow
 
 import validAttr from '@emotion/is-prop-valid'
-import hoist from 'hoist-non-react-statics'
 import React, { createElement, PureComponent } from 'react'
 import ComponentStyle from './ComponentStyle'
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses'
@@ -9,6 +8,7 @@ import determineTheme from '../utils/determineTheme'
 import escape from '../utils/escape'
 import generateDisplayName from '../utils/generateDisplayName'
 import getComponentName from '../utils/getComponentName'
+import hoist from '../utils/hoist'
 import isFunction from '../utils/isFunction'
 import isTag from '../utils/isTag'
 import isDerivedReactComponent from '../utils/isDerivedReactComponent'
