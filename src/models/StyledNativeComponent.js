@@ -1,9 +1,9 @@
 // @flow
-import hoist from 'hoist-non-react-statics'
 import React, { createElement, PureComponent } from 'react'
 import determineTheme from '../utils/determineTheme'
 import { EMPTY_OBJECT } from '../utils/empties'
 import generateDisplayName from '../utils/generateDisplayName'
+import hoist from '../utils/hoist'
 import isFunction from '../utils/isFunction'
 import isTag from '../utils/isTag'
 import isDerivedReactComponent from '../utils/isDerivedReactComponent'
