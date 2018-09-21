@@ -106,15 +106,15 @@
     lodash "^4.2.0"
     to-fast-properties "^2.0.0"
 
-"@emotion/is-prop-valid@^0.6.5":
-  version "0.6.7"
-  resolved "https://registry.yarnpkg.com/@emotion/is-prop-valid/-/is-prop-valid-0.6.7.tgz#1767d39c29ba786b7afc3d8d727a2896995f01eb"
+"@emotion/is-prop-valid@^0.6.8":
+  version "0.6.8"
+  resolved "https://registry.npmjs.org/@emotion/is-prop-valid/-/is-prop-valid-0.6.8.tgz#68ad02831da41213a2089d2cab4e8ac8b30cbd85"
   dependencies:
-    "@emotion/memoize" "^0.6.5"
+    "@emotion/memoize" "^0.6.6"
 
-"@emotion/memoize@^0.6.5":
-  version "0.6.5"
-  resolved "https://registry.yarnpkg.com/@emotion/memoize/-/memoize-0.6.5.tgz#f868c314b889e7c3d84868a1d1cc323fbb40ca86"
+"@emotion/memoize@^0.6.6":
+  version "0.6.6"
+  resolved "https://registry.npmjs.org/@emotion/memoize/-/memoize-0.6.6.tgz#004b98298d04c7ca3b4f50ca2035d4f60d2eed1b"
 
 "@octokit/rest@^15.5.0":
   version "15.9.5"
