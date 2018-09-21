@@ -1,7 +1,7 @@
-// @flow
 /**
  * @jest-environment node
  */
+// @flow
 import React from 'react';
 import { renderToString, renderToNodeStream } from 'react-dom/server';
 import ServerStyleSheet from '../models/ServerStyleSheet';
@@ -16,7 +16,7 @@ let styled;
 describe('ssr', () => {
   beforeEach(() => {
     // eslint-disable-next-line
-    require('../utils/nonce').mockReset()
+    require('../utils/nonce').mockReset();
 
     styled = resetStyled(true);
   });
@@ -85,7 +85,7 @@ describe('ssr', () => {
 
   it('should add a nonce to the stylesheet if webpack nonce is detected in the global scope', () => {
     // eslint-disable-next-line
-    require('../utils/nonce').mockImplementation(() => 'foo')
+    require('../utils/nonce').mockImplementation(() => 'foo');
 
     const Component = createGlobalStyle`
       body { background: papayawhip; }
@@ -226,7 +226,7 @@ describe('ssr', () => {
 
   it('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
     // eslint-disable-next-line
-    require('../utils/nonce').mockImplementation(() => 'foo')
+    require('../utils/nonce').mockImplementation(() => 'foo');
 
     const Component = createGlobalStyle`
       body { background: papayawhip; }
