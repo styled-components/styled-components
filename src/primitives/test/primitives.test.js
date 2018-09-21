@@ -1,36 +1,37 @@
-import React from 'react'
-import 'react-primitives'
-import { Text, View } from 'react-primitives'
-import TestRenderer from 'react-test-renderer'
+// @flow
+import React from 'react';
+import 'react-primitives';
+import { Text, View } from 'react-primitives';
+import TestRenderer from 'react-test-renderer';
 
-import styled from '../index'
+import styled from '../index';
 
 // NOTE: These tests are copy pasted from ../native/test/native.test.js
 
 describe('primitives', () => {
   it('should not throw an error when called with a valid element', () => {
-    expect(() => styled.View``).not.toThrowError()
+    expect(() => styled.View``).not.toThrowError();
 
-    const FunctionalComponent = () => <View />
+    const FunctionalComponent = () => <View />;
     class ClassComponent extends React.Component {
       render() {
-        return <View />
+        return <View />;
       }
     }
-    const validComps = ['View', FunctionalComponent, ClassComponent]
+    const validComps = ['View', FunctionalComponent, ClassComponent];
     validComps.forEach(comp => {
       expect(() => {
-        const Comp = styled(comp)``
-        TestRenderer.create(<Comp />)
-      }).not.toThrowError()
-    })
-  })
+        const Comp = styled(comp)``;
+        TestRenderer.create(<Comp />);
+      }).not.toThrowError();
+    });
+  });
 
   it('should throw a meaningful error when called with an invalid element', () => {
-    const FunctionalComponent = () => <View />
+    const FunctionalComponent = () => <View />;
     class ClassComponent extends React.Component {
       render() {
-        return <View />
+        return <View />;
       }
     }
     const invalidComps = [
@@ -41,92 +42,92 @@ describe('primitives', () => {
       <View />,
       <FunctionalComponent />,
       <ClassComponent />,
-    ]
+    ];
     invalidComps.forEach(comp => {
       expect(() => {
         // $FlowInvalidInputTest
-        const Comp = styled(comp)``
-        TestRenderer.create(<Comp />)
+        const Comp = styled(comp)``;
+        TestRenderer.create(<Comp />);
         // $FlowInvalidInputTest
-      }).toThrow(`Cannot create styled-component for component: ${comp}`)
-    })
-  })
+      }).toThrow(`Cannot create styled-component for component: ${comp}`);
+    });
+  });
 
   it('should generate inline styles', () => {
-    const Comp = styled.View``
-    const wrapper = TestRenderer.create(<Comp />)
-    const view = wrapper.root.findByType('View')
+    const Comp = styled.View``;
+    const wrapper = TestRenderer.create(<Comp />);
+    const view = wrapper.root.findByType('View');
 
-    expect(view.props.style).toEqual([{}])
-  })
+    expect(view.props.style).toEqual([{}]);
+  });
 
   it('should fold successive styled() wrappings', () => {
     const Comp = styled.Text`
       color: red;
-    `
+    `;
 
     const Comp2 = styled(Comp)`
       text-align: left;
-    `
+    `;
 
-    const wrapper = TestRenderer.create(<Comp2 />)
-    const view = wrapper.root.findByType('Text')
+    const wrapper = TestRenderer.create(<Comp2 />);
+    const view = wrapper.root.findByType('Text');
 
-    expect(view.props.style).toEqual([{ color: 'red', textAlign: 'left' }])
-  })
+    expect(view.props.style).toEqual([{ color: 'red', textAlign: 'left' }]);
+  });
 
   it('should combine inline styles and the style prop', () => {
     const Comp = styled.View`
       padding-top: 10;
-    `
+    `;
 
-    const style = { opacity: 0.9 }
-    const wrapper = TestRenderer.create(<Comp style={style} />)
-    const view = wrapper.root.findByType('View')
+    const style = { opacity: 0.9 };
+    const wrapper = TestRenderer.create(<Comp style={style} />);
+    const view = wrapper.root.findByType('View');
 
-    expect(view.props.style).toEqual([{ paddingTop: 10 }, style])
-  })
+    expect(view.props.style).toEqual([{ paddingTop: 10 }, style]);
+  });
 
   describe('attrs', () => {
     it('works fine with an empty object', () => {
-      const Comp = styled.View.attrs({})``
-      const wrapper = TestRenderer.create(<Comp />)
-      const view = wrapper.root.findByType('View')
+      const Comp = styled.View.attrs({})``;
+      const wrapper = TestRenderer.create(<Comp />);
+      const view = wrapper.root.findByType('View');
 
       expect(view.props).toEqual({
         style: [{}],
-      })
-    })
+      });
+    });
 
     it('passes simple props on', () => {
       const Comp = styled.View.attrs({
         test: true,
-      })``
+      })``;
 
-      const wrapper = TestRenderer.create(<Comp />)
-      const view = wrapper.root.findByType('View')
+      const wrapper = TestRenderer.create(<Comp />);
+      const view = wrapper.root.findByType('View');
 
       expect(view.props).toEqual({
         style: [{}],
         test: true,
-      })
-    })
+      });
+    });
 
     it('calls an attr-function with context', () => {
       const Comp = styled.View.attrs({
         copy: props => props.test,
-      })``
+      })``;
 
-      const test = 'Put that cookie down!'
-      const wrapper = TestRenderer.create(<Comp test={test} />)
-      const view = wrapper.root.findByType('View')
+      const test = 'Put that cookie down!';
+      const wrapper = TestRenderer.create(<Comp test={test} />);
+      const view = wrapper.root.findByType('View');
 
       expect(view.props).toEqual({
         style: [{}],
         copy: test,
         test,
-      })
-    })
+      });
+    });
 
     it('merges multiple calls', () => {
       const Comp = styled.View.attrs({
@@ -135,85 +136,85 @@ describe('primitives', () => {
       }).attrs({
         second: 'second',
         test: 'test',
-      })``
+      })``;
 
-      const wrapper = TestRenderer.create(<Comp />)
-      const view = wrapper.root.findByType('View')
+      const wrapper = TestRenderer.create(<Comp />);
+      const view = wrapper.root.findByType('View');
 
       expect(view.props).toEqual({
         style: [{}],
         first: 'first',
         second: 'second',
         test: 'test',
-      })
-    })
+      });
+    });
 
     it('merges attrs when inheriting SC', () => {
       const Parent = styled.View.attrs({
         first: 'first',
-      })``
+      })``;
 
       const Child = styled(Parent).attrs({
         second: 'second',
-      })``
+      })``;
 
-      const wrapper = TestRenderer.create(<Child />)
-      const view = wrapper.root.findByType('View')
+      const wrapper = TestRenderer.create(<Child />);
+      const view = wrapper.root.findByType('View');
 
       expect(view.props).toEqual({
         style: [{}],
         first: 'first',
         second: 'second',
-      })
-    })
-  })
+      });
+    });
+  });
 
   describe('expanded API', () => {
     it('should attach a displayName', () => {
-      const Comp = styled.View``
-      expect(Comp.displayName).toBe('Styled(View)')
+      const Comp = styled.View``;
+      expect(Comp.displayName).toBe('Styled(View)');
 
-      const CompTwo = styled.View.withConfig({ displayName: 'Test' })``
-      expect(CompTwo.displayName).toBe('Test')
-    })
+      const CompTwo = styled.View.withConfig({ displayName: 'Test' })``;
+      expect(CompTwo.displayName).toBe('Test');
+    });
 
     it('should allow multiple calls to be chained', () => {
       const Comp = styled.View.withConfig({ displayName: 'Test1' }).withConfig({
         displayName: 'Test2',
-      })``
+      })``;
 
-      expect(Comp.displayName).toBe('Test2')
-    })
+      expect(Comp.displayName).toBe('Test2');
+    });
 
     it('"as" prop should change the rendered element without affecting the styling', () => {
-      const OtherText = props => <Text {...props} foo />
+      const OtherText = props => <Text {...props} foo />;
 
       const Comp = styled.Text`
         color: red;
-      `
+      `;
 
-      const wrapper = TestRenderer.create(<Comp as={OtherText} />)
-      const view = wrapper.root.findByType('Text')
+      const wrapper = TestRenderer.create(<Comp as={OtherText} />);
+      const view = wrapper.root.findByType('Text');
 
-      expect(view.props).toHaveProperty('foo')
-      expect(view.props.style).toEqual([{ color: 'red' }])
-    })
+      expect(view.props).toHaveProperty('foo');
+      expect(view.props.style).toEqual([{ color: 'red' }]);
+    });
 
     it('withComponent should work', () => {
-      const Dummy = props => <View {...props} />
+      const Dummy = props => <View {...props} />;
 
       const Comp = styled.View.withConfig({
         displayName: 'Comp',
         componentId: 'OMGLOL',
-      })``.withComponent(Text)
+      })``.withComponent(Text);
 
       const Comp2 = styled.View.withConfig({
         displayName: 'Comp2',
         componentId: 'OMFG',
-      })``.withComponent(Dummy)
+      })``.withComponent(Dummy);
 
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot()
-      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot()
-    })
-  })
-})
+      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot();
+    });
+  });
+});

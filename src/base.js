@@ -1,18 +1,18 @@
 // @flow
 
 /* Import singletons */
-import isStyledComponent from './utils/isStyledComponent'
-import css from './constructors/css'
-import createGlobalStyle from './constructors/createGlobalStyle'
-import keyframes from './constructors/keyframes'
-import ServerStyleSheet from './models/ServerStyleSheet'
-import StyleSheetManager from './models/StyleSheetManager'
+import isStyledComponent from './utils/isStyledComponent';
+import css from './constructors/css';
+import createGlobalStyle from './constructors/createGlobalStyle';
+import keyframes from './constructors/keyframes';
+import ServerStyleSheet from './models/ServerStyleSheet';
+import StyleSheetManager from './models/StyleSheetManager';
 
 /* Import components */
-import ThemeProvider, { ThemeConsumer } from './models/ThemeProvider'
+import ThemeProvider, { ThemeConsumer } from './models/ThemeProvider';
 
 /* Import Higher Order Components */
-import withTheme from './hoc/withTheme'
+import withTheme from './hoc/withTheme';
 
 /* Warning if you've imported this file on React Native */
 if (
@@ -25,7 +25,7 @@ if (
     "It looks like you've imported 'styled-components' on React Native.\n" +
       "Perhaps you're looking to import 'styled-components/native'?\n" +
       'Read more about this at https://www.styled-components.com/docs/basics#react-native'
-  )
+  );
 }
 
 /* Warning if there are several instances of styled-components */
@@ -38,8 +38,7 @@ if (
   navigator.userAgent.indexOf('Node.js') === -1 &&
   navigator.userAgent.indexOf('jsdom') === -1
 ) {
-  window['__styled-components-init__'] =
-    window['__styled-components-init__'] || 0
+  window['__styled-components-init__'] = window['__styled-components-init__'] || 0;
 
   if (window['__styled-components-init__'] === 1) {
     // eslint-disable-next-line no-console
@@ -48,14 +47,14 @@ if (
         'This may cause dynamic styles not rendering properly, errors happening during rehydration process ' +
         'and makes your application bigger without a good reason.\n\n' +
         'See https://s-c.sh/2BAXzed for more info.'
-    )
+    );
   }
 
-  window['__styled-components-init__'] += 1
+  window['__styled-components-init__'] += 1;
 }
 
 /* Export everything */
-export * from './secretInternals'
+export * from './secretInternals';
 export {
   css,
   keyframes,
@@ -66,4 +65,4 @@ export {
   withTheme,
   ServerStyleSheet,
   StyleSheetManager,
-}
+};

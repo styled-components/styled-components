@@ -1,30 +1,30 @@
 // @flow
-import React from 'react'
-import TestRenderer from 'react-test-renderer'
+import React from 'react';
+import TestRenderer from 'react-test-renderer';
 
-import { resetStyled, expectCSSMatches } from './utils'
+import { resetStyled, expectCSSMatches } from './utils';
 
-let styled
+let styled;
 
 describe('props', () => {
   beforeEach(() => {
-    styled = resetStyled()
-  })
+    styled = resetStyled();
+  });
 
   it('should execute interpolations and fall back', () => {
     const Comp = styled.div`
       color: ${props => props.fg || 'black'};
-    `
-    TestRenderer.create(<Comp />)
-    expectCSSMatches('.sc-a {} .b { color:black; }')
-  })
+    `;
+    TestRenderer.create(<Comp />);
+    expectCSSMatches('.sc-a {} .b { color:black; }');
+  });
   it('should execute interpolations and inject props', () => {
     const Comp = styled.div`
       color: ${props => props.fg || 'black'};
-    `
-    TestRenderer.create(<Comp fg="red" />)
-    expectCSSMatches('.sc-a {} .b { color:red; }')
-  })
+    `;
+    TestRenderer.create(<Comp fg="red" />);
+    expectCSSMatches('.sc-a {} .b { color:red; }');
+  });
   it('should ignore non-0 falsy object interpolations', () => {
     const Comp = styled.div`
       ${() => ({
@@ -34,8 +34,8 @@ describe('props', () => {
         colorC: undefined,
         colorD: '',
       })};
-    `
-    TestRenderer.create(<Comp fg="red" />)
-    expectCSSMatches('.sc-a {} .b { border-width:0; }')
-  })
-})
+    `;
+    TestRenderer.create(<Comp fg="red" />);
+    expectCSSMatches('.sc-a {} .b { border-width:0; }');
+  });
+});

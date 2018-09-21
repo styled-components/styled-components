@@ -1,6 +1,6 @@
 // @flow
-const escapeRegex = /[[\].#*$><+~=|^:(),"'`-]+/g
-const dashesAtEnds = /(^-|-$)/g
+const escapeRegex = /[[\].#*$><+~=|^:(),"'`-]+/g;
+const dashesAtEnds = /(^-|-$)/g;
 
 /**
  * TODO: Explore using CSS.escape when it becomes more available
@@ -14,5 +14,5 @@ export default function escape(str: string): string {
 
       // Remove extraneous hyphens at the start and end
       .replace(dashesAtEnds, '')
-  )
+  );
 }

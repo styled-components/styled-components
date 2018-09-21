@@ -1,5 +1,5 @@
 // @flow
-import styled from './constructors/styled'
+import styled from './constructors/styled';
 
-export * from './base'
-export default styled
+export * from './base';
+export default styled;

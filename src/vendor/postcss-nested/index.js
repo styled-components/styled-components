@@ -1,9 +1,10 @@
+// @flow
 function selectors(parent, node) {
-  var result = [];
-  parent.selectors.forEach(function (i) {
-    node.selectors.forEach(function (j) {
+  const result = [];
+  parent.selectors.forEach(i => {
+    node.selectors.forEach(j => {
       if (j.indexOf('&') === -1) {
-        result.push(i + ' ' + j);
+        result.push(`${i} ${j}`);
       } else {
         result.push(j.replace(/&/g, i));
       }
@@ -21,8 +22,8 @@ function pickComment(comment, after) {
 }
 
 function atruleChilds(rule, atrule) {
-  var children = [];
-  atrule.each(function (child) {
+  const children = [];
+  atrule.each(child => {
     if (child.type === 'comment') {
       children.push(child);
     }
@@ -35,16 +36,16 @@ function atruleChilds(rule, atrule) {
     }
   });
   if (children.length) {
-    var clone = rule.clone({ nodes: [] });
-    for (var i = 0; i < children.length; i++) children[i].moveTo(clone);
+    const clone = rule.clone({ nodes: [] });
+    for (let i = 0; i < children.length; i++) children[i].moveTo(clone);
     atrule.prepend(clone);
   }
 }
 
 function processRule(rule, bubble) {
-  var unwrapped = false;
-  var after = rule;
-  rule.each(function (child) {
+  let unwrapped = false;
+  let after = rule;
+  rule.each(child => {
     if (child.type === 'rule') {
       unwrapped = true;
       child.selectors = selectors(rule, child);
@@ -65,10 +66,10 @@ function processRule(rule, bubble) {
   }
 }
 
-var bubble = ['media', 'supports', 'document'];
+const bubble = ['media', 'supports', 'document'];
 
 const process = node => {
-  node.each(function (child) {
+  node.each(child => {
     if (child.type === 'rule') {
       processRule(child, bubble);
     } else if (child.type === 'atrule') {

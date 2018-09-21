@@ -1,12 +1,12 @@
 // @flow
 // Helper to call a given function, only once
 export default (cb: () => void): (() => void) => {
-  let called = false
+  let called = false;
 
   return () => {
     if (!called) {
-      called = true
-      cb()
+      called = true;
+      cb();
     }
-  }
-}
+  };
+};

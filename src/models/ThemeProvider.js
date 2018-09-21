@@ -1,51 +1,48 @@
 // @flow
-import React, { createContext, Component, type Element } from 'react'
-import memoize from 'memoize-one'
-import StyledError from '../utils/error'
-import isFunction from '../utils/isFunction'
+import React, { createContext, Component, type Element } from 'react';
+import memoize from 'memoize-one';
+import StyledError from '../utils/error';
+import isFunction from '../utils/isFunction';
 
-export type Theme = { [key: string]: mixed }
+export type Theme = { [key: string]: mixed };
 
 type Props = {
   children?: Element<any>,
   theme: Theme | ((outerTheme: Theme) => void),
-}
+};
 
-const ThemeContext = createContext()
+const ThemeContext = createContext();
 
-export const ThemeConsumer = ThemeContext.Consumer
+export const ThemeConsumer = ThemeContext.Consumer;
 
 /**
  * Provide a theme to an entire react component tree via context
  */
 export default class ThemeProvider extends Component<Props> {
-  getContext: (
-    theme: Theme | ((outerTheme: Theme) => void),
-    outerTheme?: Theme
-  ) => Theme
+  getContext: (theme: Theme | ((outerTheme: Theme) => void), outerTheme?: Theme) => Theme;
 
-  renderInner: Function
+  renderInner: Function;
 
   constructor(props: Props) {
-    super(props)
-    this.getContext = memoize(this.getContext.bind(this))
-    this.renderInner = this.renderInner.bind(this)
+    super(props);
+    this.getContext = memoize(this.getContext.bind(this));
+    this.renderInner = this.renderInner.bind(this);
   }
 
   render() {
-    if (!this.props.children) return null
+    if (!this.props.children) return null;
 
-    return <ThemeContext.Consumer>{this.renderInner}</ThemeContext.Consumer>
+    return <ThemeContext.Consumer>{this.renderInner}</ThemeContext.Consumer>;
   }
 
   renderInner(outerTheme?: Theme) {
-    const context = this.getContext(this.props.theme, outerTheme)
+    const context = this.getContext(this.props.theme, outerTheme);
 
     return (
       <ThemeContext.Provider value={context}>
         {React.Children.only(this.props.children)}
       </ThemeContext.Provider>
-    )
+    );
   }
 
   /**
@@ -54,28 +51,26 @@ export default class ThemeProvider extends Component<Props> {
    */
   getTheme(theme: (outerTheme: ?Theme) => void, outerTheme: ?Theme) {
     if (isFunction(theme)) {
-      const mergedTheme = theme(outerTheme)
+      const mergedTheme = theme(outerTheme);
 
       if (
         process.env.NODE_ENV !== 'production' &&
-        (mergedTheme === null ||
-          Array.isArray(mergedTheme) ||
-          typeof mergedTheme !== 'object')
+        (mergedTheme === null || Array.isArray(mergedTheme) || typeof mergedTheme !== 'object')
       ) {
-        throw new StyledError(7)
+        throw new StyledError(7);
       }
 
-      return mergedTheme
+      return mergedTheme;
     }
 
     if (theme === null || Array.isArray(theme) || typeof theme !== 'object') {
-      throw new StyledError(8)
+      throw new StyledError(8);
     }
 
-    return { ...outerTheme, ...theme }
+    return { ...outerTheme, ...theme };
   }
 
   getContext(theme: (outerTheme: ?Theme) => void, outerTheme?: Theme) {
-    return this.getTheme(theme, outerTheme)
+    return this.getTheme(theme, outerTheme);
   }
 }

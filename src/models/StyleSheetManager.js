@@ -1,20 +1,20 @@
 // @flow
-import React, { createContext, Component, type Element } from 'react'
-import PropTypes from 'prop-types'
-import memoize from 'memoize-one'
-import StyleSheet from './StyleSheet'
-import ServerStyleSheet from './ServerStyleSheet'
-import StyledError from '../utils/error'
+import React, { createContext, Component, type Element } from 'react';
+import PropTypes from 'prop-types';
+import memoize from 'memoize-one';
+import StyleSheet from './StyleSheet';
+import ServerStyleSheet from './ServerStyleSheet';
+import StyledError from '../utils/error';
 
 type Props = {
   children?: Element<any>,
   sheet?: StyleSheet,
   target?: HTMLElement,
-}
+};
 
-const StyleSheetContext = createContext()
+const StyleSheetContext = createContext();
 
-export const StyleSheetConsumer = StyleSheetContext.Consumer
+export const StyleSheetConsumer = StyleSheetContext.Consumer;
 
 export default class StyleSheetManager extends Component<Props> {
   static propTypes = {
@@ -26,32 +26,32 @@ export default class StyleSheetManager extends Component<Props> {
     target: PropTypes.shape({
       appendChild: PropTypes.func.isRequired,
     }),
-  }
+  };
 
-  getContext: (sheet: ?StyleSheet, target: ?HTMLElement) => StyleSheet
+  getContext: (sheet: ?StyleSheet, target: ?HTMLElement) => StyleSheet;
 
   constructor(props: Props) {
-    super(props)
-    this.getContext = memoize(this.getContext)
+    super(props);
+    this.getContext = memoize(this.getContext);
   }
 
   getContext(sheet: ?StyleSheet, target: ?HTMLElement) {
     if (sheet) {
-      return sheet
+      return sheet;
     } else if (target) {
-      return new StyleSheet(target)
+      return new StyleSheet(target);
     } else {
-      throw new StyledError(4)
+      throw new StyledError(4);
     }
   }
 
   render() {
-    const { children, sheet, target } = this.props
-    const context = this.getContext(sheet, target)
+    const { children, sheet, target } = this.props;
+    const context = this.getContext(sheet, target);
     return (
       <StyleSheetContext.Provider value={context}>
         {React.Children.only(children)}
       </StyleSheetContext.Provider>
-    )
+    );
   }
 }
