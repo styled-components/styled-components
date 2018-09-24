@@ -17,6 +17,7 @@ import ServerStyleSheet from '../../models/ServerStyleSheet';
 import StyleSheetManager from '../../models/StyleSheetManager';
 
 import createGlobalStyle from '../createGlobalStyle';
+import keyframes from '../keyframes';
 
 let context;
 
@@ -337,6 +338,43 @@ body{background:red;}"
     expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
       `"The global style component sc-global-2176982909 was given child JSX. createGlobalStyle does not render children."`
     );
+  });
+
+  it('works with keyframes', () => {
+    const { render } = setup();
+
+    const rotate360 = keyframes`
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    `;
+
+    const GlobalStyle = createGlobalStyle`
+      div {
+        display: inline-block;
+        animation: ${rotate360} 2s linear infinite;
+        padding: 2rem 1rem;
+        font-size: 1.2rem;
+      }
+    `;
+
+    render(
+      <div>
+        <GlobalStyle />
+        <div>&lt; 💅 &gt;</div>
+      </div>
+    );
+
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
+"/* sc-component-id:sc-global-2592835591 */
+div{display:inline-block;-webkit-animation:a 2s linear infinite;animation:a 2s linear infinite;padding:2rem 1rem;font-size:1.2rem;}
+/* sc-component-id:sc-keyframes-a */
+@-webkit-keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}} @keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}}"
+`);
   });
 });
 
