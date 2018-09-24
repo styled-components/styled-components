@@ -6,6 +6,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.0.0-beta.9] - 2018-09-24
+
+- Fix usage of `keyframes` with `createGlobalStyle`, by [@probablyup](https://github.com/probablyup) (see [#2029](https://github.com/styled-components/styled-components/pull/2029))
+
 ## [v4.0.0-beta.8] - 2018-09-20
 
 - Inline and optimize the static hoisting functionality to avoid a bundler bug and shed a bit of package weight, by [@probablyup](https://github.com/probablyup) (see [#2021](https://github.com/styled-components/styled-components/pull/2021))
@@ -642,7 +646,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.8...develop
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.9...develop
+[v4.0.0-beta.9]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.8...v4.0.0-beta.9
 [v4.0.0-beta.8]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.7...v4.0.0-beta.8
 [v4.0.0-beta.7]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.6...v4.0.0-beta.7
 [v4.0.0-beta.6]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.5...v4.0.0-beta.6
