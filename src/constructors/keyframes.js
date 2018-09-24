@@ -2,6 +2,7 @@
 import css from './css';
 import generateAlphabeticName from '../utils/generateAlphabeticName';
 import stringifyRules from '../utils/stringifyRules';
+// $FlowFixMe
 import hashStr from '../vendor/glamor/hash';
 import Keyframes from '../models/Keyframes';
 

@@ -1,4 +1,5 @@
 // @flow
+// $FlowFixMe
 import hashStr from '../vendor/glamor/hash';
 import flatten from '../utils/flatten';
 import generateAlphabeticName from '../utils/generateAlphabeticName';

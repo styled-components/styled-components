@@ -2,9 +2,11 @@
 /* eslint-disable import/no-unresolved */
 import transformDeclPairs from 'css-to-react-native';
 
+// $FlowFixMe
 import hashStr from '../vendor/glamor/hash';
 import type { RuleSet, StyleSheet } from '../types';
 import flatten from '../utils/flatten';
+// $FlowFixMe
 import parse from '../vendor/postcss-safe-parser/parse';
 
 let generated = {};

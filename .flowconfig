@@ -13,6 +13,7 @@
 .*/dist/.*
 .*/lib/.*
 .*/src/test/.*
+.*/src/vendor/.*
 .*/src/.*/test/.*
 .*/example/.*
 .*/integration-test/.*

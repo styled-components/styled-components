@@ -6,6 +6,7 @@ import StyleSheet from '../models/StyleSheet';
 import { StyleSheetConsumer } from '../models/StyleSheetManager';
 import determineTheme from '../utils/determineTheme';
 import { ThemeConsumer, type Theme } from '../models/ThemeProvider';
+// $FlowFixMe
 import hashStr from '../vendor/glamor/hash';
 import css from './css';
 
