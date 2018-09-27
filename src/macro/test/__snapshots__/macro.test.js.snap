@@ -45,3 +45,23 @@ _styled.div.withConfig({
 })(['background:red;']);
 "
 `;
+
+exports[`macro should work with require() to import styled-components: should work with require() to import styled-components 1`] = `
+"
+const myStyled = require('../../macro')
+
+myStyled.div\`
+  background: red;
+\`
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import _styled from 'styled-components';
+
+
+_styled.div.withConfig({
+  displayName: 'macrotest',
+  componentId: 'sc-11gvsec-0'
+})(['background:red;']);
+"
+`;
