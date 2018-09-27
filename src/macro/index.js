@@ -14,7 +14,9 @@ function styledComponentsMacro({
   // and add it to top of the document
   const program = state.file.path
   const id = program.scope.generateUidIdentifier('styled')
-  const declaration = template(`import VAR from 'styled-components'`)({
+  const declaration = template(`import VAR from 'styled-components'`, {
+    sourceType: 'module',
+  })({
     VAR: id,
   })
   program.node.body.unshift(declaration)
