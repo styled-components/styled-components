@@ -3,6 +3,7 @@ import { createMacro } from 'babel-plugin-macros'
 import minify from 'babel-plugin-styled-components/lib/visitors/minify'
 import displayNameAndId from 'babel-plugin-styled-components/lib/visitors/displayNameAndId'
 import templateLiteral from 'babel-plugin-styled-components/lib/visitors/templateLiterals'
+import pureAnnotation from 'babel-plugin-styled-components/lib/visitors/pure'
 
 function styledComponentsMacro({
   references,
@@ -38,6 +39,7 @@ function styledComponentsMacro({
     minify(t)(templatePath, stateWithOpts)
     displayNameAndId(t)(templatePath, stateWithOpts)
     templateLiteral(t)(templatePath, stateWithOpts)
+    pureAnnotation(t)(templatePath, stateWithOpts)
   })
 }
 
