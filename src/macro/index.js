@@ -7,7 +7,7 @@ import templateLiteral from 'babel-plugin-styled-components/lib/visitors/templat
 function styledComponentsMacro({
   references,
   state,
-  babel: { template },
+  babel: { types: t, template },
   config = {},
 }) {
   // create a node for : 'import styled from styled-components'
@@ -35,9 +35,9 @@ function styledComponentsMacro({
     // merge config into the state
     const stateWithOpts = { ...state, opts: config }
     // run babel-plugin-styled-components appropriate visitors
-    minify(templatePath, stateWithOpts)
-    displayNameAndId(templatePath, stateWithOpts)
-    templateLiteral(templatePath, stateWithOpts)
+    minify(t)(templatePath, stateWithOpts)
+    displayNameAndId(t)(templatePath, stateWithOpts)
+    templateLiteral(t)(templatePath, stateWithOpts)
   })
 }
 
