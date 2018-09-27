@@ -1,0 +1,47 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`macro should work when extending a component: should work when extending a component 1`] = `
+"
+import React from 'react'
+import styled from '../../macro'
+
+const Hello = () => React.createComponent(div, null, 'hello')
+
+styled(Hello)\`
+  background: red;
+\`
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import _styled from 'styled-components';
+import React from 'react';
+
+
+const Hello = () => React.createComponent(div, null, 'hello');
+
+_styled(Hello).withConfig({
+  displayName: 'macrotest',
+  componentId: 'sc-11gvsec-0'
+})(['background:red;']);
+"
+`;
+
+exports[`macro should work with a basic example: should work with a basic example 1`] = `
+"
+import styled from '../../macro'
+
+styled.div\`
+  background: red;
+\`
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import _styled from 'styled-components';
+
+
+_styled.div.withConfig({
+  displayName: 'macrotest',
+  componentId: 'sc-11gvsec-0'
+})(['background:red;']);
+"
+`;
