@@ -20,7 +20,9 @@ export default function keyframes(
     typeof navigator !== 'undefined' &&
     navigator.product === 'ReactNative'
   ) {
-    console.warn('Helper `keyframes` cannot be used on React Native');
+    console.warn(
+      '`keyframes` cannot be used on ReactNative, only on the web. To do animation in ReactNative please use Animated.'
+    );
   }
 
   const rules = css(strings, ...interpolations);
