@@ -5,7 +5,7 @@ import displayNameAndId from 'babel-plugin-styled-components/lib/visitors/displa
 import templateLiteral from 'babel-plugin-styled-components/lib/visitors/templateLiterals'
 import pureAnnotation from 'babel-plugin-styled-components/lib/visitors/pure'
 
-const taggedTemplateImports = ['css', 'keyframes', 'injectGlobal', 'default']
+const taggedTemplateImports = ['css', 'keyframes', 'default']
 
 const allowedImports = [
   'css',
@@ -65,13 +65,20 @@ function styledComponentsMacro({
         const templatePath = referencePath.findParent(path =>
           path.isTaggedTemplateExpression()
         )
-        // merge config into the state
-        const stateWithOpts = { ...state, opts: config }
-        // run babel-plugin-styled-components appropriate visitors
-        minify(t)(templatePath, stateWithOpts)
-        displayNameAndId(t)(templatePath, stateWithOpts)
-        templateLiteral(t)(templatePath, stateWithOpts)
-        pureAnnotation(t)(templatePath, stateWithOpts)
+
+        if (!templatePath) {
+          throw new MacroError(
+            `Invalid usage : ${refName}. ${refName} needs to be used with a template literal, like this : ${refName}\`background: red;\`.`
+          )
+        } else {
+          // merge config into the state
+          const stateWithOpts = { ...state, opts: config }
+          // run babel-plugin-styled-components appropriate visitors
+          minify(t)(templatePath, stateWithOpts)
+          displayNameAndId(t)(templatePath, stateWithOpts)
+          templateLiteral(t)(templatePath, stateWithOpts)
+          pureAnnotation(t)(templatePath, stateWithOpts)
+        }
       }
     })
   })
@@ -80,3 +87,5 @@ function styledComponentsMacro({
 const configName = 'styledComponents'
 
 export default createMacro(styledComponentsMacro, { configName })
+
+export { allowedImports, taggedTemplateImports }
