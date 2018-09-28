@@ -5,7 +5,7 @@ import displayNameAndId from 'babel-plugin-styled-components/lib/visitors/displa
 import templateLiteral from 'babel-plugin-styled-components/lib/visitors/templateLiterals'
 import pureAnnotation from 'babel-plugin-styled-components/lib/visitors/pure'
 
-const taggedTemplateImports = ['css', 'keyframes', 'default']
+const taggedTemplateImports = ['css', 'keyframes', 'injectGlobal', 'default']
 
 const allowedImports = [
   'css',
