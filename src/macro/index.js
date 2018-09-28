@@ -5,6 +5,8 @@ import displayNameAndId from 'babel-plugin-styled-components/lib/visitors/displa
 import templateLiteral from 'babel-plugin-styled-components/lib/visitors/templateLiterals'
 import pureAnnotation from 'babel-plugin-styled-components/lib/visitors/pure'
 
+const allowedImports = ['default', 'css', 'keyframes']
+
 function styledComponentsMacro({
   references,
   state,
@@ -20,9 +22,11 @@ function styledComponentsMacro({
   // references looks like this
   // { default: [path, path], css: [path], ... }
   Object.keys(references).forEach(refName => {
-    if (refName !== 'default' && refName !== 'css') {
+    if (!allowedImports.includes(refName)) {
       throw new MacroError(
-        `Imported an invalid named import: ${refName}. You can only use the default import, or the css name import with 'styled-components/macro'.`
+        `Invalid import: ${refName}. You can only import ${allowedImports.join(
+          ', '
+        )} from 'styled-components/macro'.`
       )
     }
 

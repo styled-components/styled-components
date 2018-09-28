@@ -36,6 +36,10 @@ css\`
 \`
 `
 
+const invalidExampleCode = `
+import { ThemeProvider } from '../../macro'
+`
+
 pluginTester({
   title: 'macro',
   plugin,
@@ -46,5 +50,9 @@ pluginTester({
     'should work when extending a component': extendsExampleCode,
     'should work with require() to import styled-components': requireExampleCode,
     'should work with css': cssExampleCode,
+    'should throw error when importing { ThemeProvider }': {
+      code: invalidExampleCode,
+      error: true,
+    },
   },
 })
