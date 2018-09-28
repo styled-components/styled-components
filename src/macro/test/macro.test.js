@@ -4,12 +4,47 @@ import plugin from 'babel-plugin-macros'
 import * as styledTopLevel from '../../'
 import { allowedImports } from '../../macro'
 
-const basicExampleCode = `
+const styledExampleCode = `
 import styled from '../../macro'
 
 styled.div\`
   background: \${p => (p.error ? 'red' : 'green')};
 \`
+`
+
+const cssExampleCode = `
+import { css } from '../../macro'
+
+css\`
+  color: \${props => (props.whiteColor ? 'white' : 'black')};
+\`
+`
+
+const keyframesExampleCode = `
+import { keyframes } from '../../macro'
+
+keyframes\`
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+\`
+`
+
+const injectGlobalExampleCode = `
+import { injectGlobal } from '../../macro'
+
+injectGlobal\`
+  background: red;
+\`
+`
+
+const ThemeProviderExampleCode = `
+import { ThemeProvider } from '../../macro'
+
+React.createComponent(
+  ThemeProvider, 
+  { theme: { color: 'red' }}, 
+  'hello'
+)
 `
 
 const extendsExampleCode = `
@@ -31,14 +66,6 @@ myStyled.div\`
 \`
 `
 
-const cssExampleCode = `
-import { css } from '../../macro'
-
-css\`
-  color: \${props => (props.whiteColor ? 'white' : 'black')};
-\`
-`
-
 const invalidExampleCode = `
 import { UnknownImport } from '../../macro'
 `
@@ -49,10 +76,13 @@ pluginTester({
   snapshot: true,
   babelOptions: { filename: __filename },
   tests: {
-    'should work with a basic example': basicExampleCode,
+    'should work with styled': styledExampleCode,
+    'should work with { css }': cssExampleCode,
+    'should work with { keyframes }': keyframesExampleCode,
+    'should work with { injectGlobal }': injectGlobalExampleCode,
+    'should work with { ThemeProvider }': ThemeProviderExampleCode,
     'should work when extending a component': extendsExampleCode,
     'should work with require() to import styled-components': requireExampleCode,
-    'should work with css': cssExampleCode,
     'should throw error when importing { UnknownImport }': {
       code: invalidExampleCode,
       error: true,
