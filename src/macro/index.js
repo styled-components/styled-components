@@ -5,7 +5,21 @@ import displayNameAndId from 'babel-plugin-styled-components/lib/visitors/displa
 import templateLiteral from 'babel-plugin-styled-components/lib/visitors/templateLiterals'
 import pureAnnotation from 'babel-plugin-styled-components/lib/visitors/pure'
 
-const allowedImports = ['default', 'css', 'keyframes']
+const taggedTemplateImports = ['css', 'keyframes', 'injectGlobal', 'default']
+
+const allowedImports = [
+  'css',
+  'keyframes',
+  'injectGlobal',
+  'isStyledComponent',
+  'consolidateStreamedStyles',
+  'ThemeProvider',
+  'withTheme',
+  'ServerStyleSheet',
+  'StyleSheetManager',
+  '__DO_NOT_USE_OR_YOU_WILL_BE_HAUNTED_BY_SPOOKY_GHOSTS',
+  'default',
+]
 
 function styledComponentsMacro({
   references,
@@ -46,17 +60,19 @@ function styledComponentsMacro({
       // eslint-disable-next-line no-param-reassign
       referencePath.node.name = id.name
 
-      // find the TaggedTemplateExpression
-      const templatePath = referencePath.findParent(path =>
-        path.isTaggedTemplateExpression()
-      )
-      // merge config into the state
-      const stateWithOpts = { ...state, opts: config }
-      // run babel-plugin-styled-components appropriate visitors
-      minify(t)(templatePath, stateWithOpts)
-      displayNameAndId(t)(templatePath, stateWithOpts)
-      templateLiteral(t)(templatePath, stateWithOpts)
-      pureAnnotation(t)(templatePath, stateWithOpts)
+      if (taggedTemplateImports.includes(refName)) {
+        // find the TaggedTemplateExpression
+        const templatePath = referencePath.findParent(path =>
+          path.isTaggedTemplateExpression()
+        )
+        // merge config into the state
+        const stateWithOpts = { ...state, opts: config }
+        // run babel-plugin-styled-components appropriate visitors
+        minify(t)(templatePath, stateWithOpts)
+        displayNameAndId(t)(templatePath, stateWithOpts)
+        templateLiteral(t)(templatePath, stateWithOpts)
+        pureAnnotation(t)(templatePath, stateWithOpts)
+      }
     })
   })
 }

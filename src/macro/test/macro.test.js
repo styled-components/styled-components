@@ -37,7 +37,7 @@ css\`
 `
 
 const invalidExampleCode = `
-import { ThemeProvider } from '../../macro'
+import { UnknownImport } from '../../macro'
 `
 
 pluginTester({
@@ -50,7 +50,7 @@ pluginTester({
     'should work when extending a component': extendsExampleCode,
     'should work with require() to import styled-components': requireExampleCode,
     'should work with css': cssExampleCode,
-    'should throw error when importing { ThemeProvider }': {
+    'should throw error when importing { UnknownImport }': {
       code: invalidExampleCode,
       error: true,
       snapshot: false,
