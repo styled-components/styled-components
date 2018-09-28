@@ -1,15 +1,5 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`macro should throw error when importing { ThemeProvider }: should throw error when importing { ThemeProvider } 1`] = `
-"
-import { ThemeProvider } from '../../macro'
-
-      ↓ ↓ ↓ ↓ ↓ ↓
-
-MacroError: /Users/luc/w/test/styled-components/src/macro/test/macro.test.js: Invalid import: ThemeProvider. You can only import default, css, keyframes from 'styled-components/macro'.
-"
-`;
-
 exports[`macro should work when extending a component: should work when extending a component 1`] = `
 "
 import React from 'react'

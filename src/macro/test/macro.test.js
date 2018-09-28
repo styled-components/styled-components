@@ -53,6 +53,7 @@ pluginTester({
     'should throw error when importing { ThemeProvider }': {
       code: invalidExampleCode,
       error: true,
+      snapshot: false,
     },
   },
 })
