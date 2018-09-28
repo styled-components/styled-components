@@ -31,7 +31,7 @@ exports[`macro should work with a basic example: should work with a basic exampl
 import styled from '../../macro'
 
 styled.div\`
-  background: red;
+  background: \${p => (p.error ? 'red' : 'green')};
 \`
 
       ↓ ↓ ↓ ↓ ↓ ↓
@@ -42,7 +42,24 @@ import _styled from 'styled-components';
 _styled.div.withConfig({
   displayName: 'macrotest',
   componentId: 'sc-11gvsec-0'
-})(['background:red;']);
+})(['background:', ';'], p => p.error ? 'red' : 'green');
+"
+`;
+
+exports[`macro should work with css: should work with css 1`] = `
+"
+import { css } from '../../macro'
+
+css\`
+  color: \${props => (props.whiteColor ? 'white' : 'black')};
+\`
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import { css as _css } from 'styled-components';
+
+
+_css(['color:', ';'], props => props.whiteColor ? 'white' : 'black');
 "
 `;
 

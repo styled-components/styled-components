@@ -5,7 +5,7 @@ const basicExampleCode = `
 import styled from '../../macro'
 
 styled.div\`
-  background: red;
+  background: \${p => (p.error ? 'red' : 'green')};
 \`
 `
 
@@ -28,6 +28,14 @@ myStyled.div\`
 \`
 `
 
+const cssExampleCode = `
+import { css } from '../../macro'
+
+css\`
+  color: \${props => (props.whiteColor ? 'white' : 'black')};
+\`
+`
+
 pluginTester({
   title: 'macro',
   plugin,
@@ -37,5 +45,6 @@ pluginTester({
     'should work with a basic example': basicExampleCode,
     'should work when extending a component': extendsExampleCode,
     'should work with require() to import styled-components': requireExampleCode,
+    'should work with css': cssExampleCode,
   },
 })
