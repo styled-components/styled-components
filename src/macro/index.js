@@ -1,8 +1,8 @@
-/* eslint-disable flowtype/require-valid-file-annotation */
+// @flow
 import { createMacro, MacroError } from 'babel-plugin-macros'
 import minify from 'babel-plugin-styled-components/lib/visitors/minify'
 import displayNameAndId from 'babel-plugin-styled-components/lib/visitors/displayNameAndId'
-import templateLiteral from 'babel-plugin-styled-components/lib/visitors/templateLiterals'
+import templateLiteral from 'babel-plugin-styled-components/lib/visitors/templateLiterals/index'
 import pureAnnotation from 'babel-plugin-styled-components/lib/visitors/pure'
 
 const taggedTemplateImports = ['css', 'keyframes', 'injectGlobal', 'default']
