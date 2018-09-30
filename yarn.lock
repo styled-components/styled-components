@@ -749,9 +749,9 @@ babel-plugin-macros@^2.2.2:
   dependencies:
     cosmiconfig "^5.0.5"
 
-babel-plugin-preval@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/babel-plugin-preval/-/babel-plugin-preval-3.0.0.tgz#16fd31f5ac7869b0648211c21d93b34af7281a4f"
+babel-plugin-preval@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.npmjs.org/babel-plugin-preval/-/babel-plugin-preval-3.0.1.tgz#a26f9690114a864a54a5cbdf865496ebf541a9c3"
   dependencies:
     babel-plugin-macros "^2.2.2"
     require-from-string "^2.0.2"
@@ -2117,9 +2117,9 @@ css-in-js-utils@^2.0.0:
     hyphenate-style-name "^1.0.2"
     isobject "^3.0.1"
 
-css-to-react-native@^2.0.3:
-  version "2.2.1"
-  resolved "https://registry.yarnpkg.com/css-to-react-native/-/css-to-react-native-2.2.1.tgz#7f3f4c95de65501b8720c87bf0caf1f39073b88e"
+css-to-react-native@^2.2.2:
+  version "2.2.2"
+  resolved "https://registry.npmjs.org/css-to-react-native/-/css-to-react-native-2.2.2.tgz#c077d0f7bf3e6c915a539e7325821c9dd01f9965"
   dependencies:
     css-color-keywords "^1.0.0"
     fbjs "^0.8.5"
