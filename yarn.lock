@@ -675,9 +675,9 @@ amdefine@>=0.0.4:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/amdefine/-/amdefine-1.0.1.tgz#4a5282ac164729e93619bcfd3ad151f817ce91f5"
 
-animated@^0.1.5:
-  version "0.1.5"
-  resolved "https://registry.yarnpkg.com/animated/-/animated-0.1.5.tgz#83df8dc443d57abab7b0bb04818b0b655b31c9b9"
+animated@^0.2.2:
+  version "0.2.2"
+  resolved "https://registry.npmjs.org/animated/-/animated-0.2.2.tgz#04af7846ad0b9b8d1f0472cc53d82b8efeb4a751"
   dependencies:
     invariant "^2.2.0"
     normalize-css-color "^1.0.1"
@@ -2496,10 +2496,6 @@ delegates@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/delegates/-/delegates-1.0.0.tgz#84c6e159b81904fdca59a0ef44cd870d31250f9a"
 
-deline@^1.0.4:
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/deline/-/deline-1.0.4.tgz#6c05c87836926e1a1c63e47882f3d2eb2c6f14c9"
-
 denodeify@^1.2.1:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/denodeify/-/denodeify-1.2.1.tgz#3a36287f5034e699e7577901052c2e6c94251631"
@@ -3809,7 +3805,7 @@ ini@^1.3.4, ini@~1.3.0:
   version "1.3.5"
   resolved "https://registry.yarnpkg.com/ini/-/ini-1.3.5.tgz#eee25f56db1c9ec6085e0c22778083f596abf927"
 
-inline-style-prefixer@^4.0.0, inline-style-prefixer@^4.0.2:
+inline-style-prefixer@^4.0.2:
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/inline-style-prefixer/-/inline-style-prefixer-4.0.2.tgz#d390957d26f281255fe101da863158ac6eb60911"
   dependencies:
@@ -6179,24 +6175,20 @@ rc@^1.0.1, rc@^1.1.6, rc@^1.2.7:
     minimist "^1.2.0"
     strip-json-comments "~2.0.1"
 
-react-art@^16.2.0:
-  version "16.4.2"
-  resolved "https://registry.yarnpkg.com/react-art/-/react-art-16.4.2.tgz#df6846dab6e11ef13ae07d33d64cff50925de2da"
+react-art@^16.4.0:
+  version "16.5.2"
+  resolved "https://registry.npmjs.org/react-art/-/react-art-16.5.2.tgz#dabfc9a5ef565ecb4f817bb0e872f9a5cd7f89cb"
   dependencies:
     art "^0.10.1"
     create-react-class "^15.6.2"
-    fbjs "^0.8.16"
     loose-envify "^1.1.0"
     object-assign "^4.1.1"
-    prop-types "^15.6.0"
+    prop-types "^15.6.2"
+    schedule "^0.5.0"
 
 react-clone-referenced-element@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/react-clone-referenced-element/-/react-clone-referenced-element-1.0.1.tgz#2bba8c69404c5e4a944398600bcc4c941f860682"
-
-react-css-property-operations@^15.4.1:
-  version "15.4.1"
-  resolved "https://registry.yarnpkg.com/react-css-property-operations/-/react-css-property-operations-15.4.1.tgz#4c0e305df4cc35f0f5fd2d65a79214c8b012db35"
 
 react-deep-force-update@^1.0.0:
   version "1.1.1"
@@ -6226,9 +6218,9 @@ react-is@^16.3.1, react-is@^16.5.2:
   version "16.5.2"
   resolved "https://registry.npmjs.org/react-is/-/react-is-16.5.2.tgz#e2a7b7c3f5d48062eb769fcb123505eb928722e3"
 
-react-native-web@^0.3.2:
-  version "0.3.4"
-  resolved "https://registry.yarnpkg.com/react-native-web/-/react-native-web-0.3.4.tgz#b73a483f3c37a37ed832903e02d9c3c96f3ea109"
+react-native-web@^0.8.3:
+  version "0.8.11"
+  resolved "https://registry.npmjs.org/react-native-web/-/react-native-web-0.8.11.tgz#e569af7076527af40ae7b4e6ce81e0544913a7c7"
   dependencies:
     array-find-index "^1.0.2"
     create-react-class "^15.6.2"
@@ -6236,10 +6228,9 @@ react-native-web@^0.3.2:
     deep-assign "^2.0.0"
     fbjs "^0.8.16"
     hyphenate-style-name "^1.0.2"
-    inline-style-prefixer "^4.0.0"
+    inline-style-prefixer "^4.0.2"
     normalize-css-color "^1.0.2"
     prop-types "^15.6.0"
-    react-art "^16.2.0"
     react-timer-mixin "^0.13.3"
 
 react-native@^0.56.0:
@@ -6298,21 +6289,20 @@ react-native@^0.56.0:
     xmldoc "^0.4.0"
     yargs "^9.0.0"
 
-react-primitives@^0.5.0:
-  version "0.5.1"
-  resolved "https://registry.yarnpkg.com/react-primitives/-/react-primitives-0.5.1.tgz#caa466afd029e7d024f48b5be7c5717fe94fc703"
+react-primitives@^0.6.1:
+  version "0.6.1"
+  resolved "https://registry.npmjs.org/react-primitives/-/react-primitives-0.6.1.tgz#7ea4082a7831cbaf928a12058f7950d228dbcdec"
   dependencies:
-    animated "^0.1.5"
+    animated "^0.2.2"
     asap "^2.0.5"
     create-react-class "^15.6.2"
-    deline "^1.0.4"
     flexibility "^2.0.1"
     inline-style-prefixer "^4.0.2"
     invariant "^2.2.1"
     normalize-css-color "^1.0.1"
     prop-types "^15.5.10"
-    react-css-property-operations "^15.4.1"
-    react-native-web "^0.3.2"
+    react-art "^16.4.0"
+    react-native-web "^0.8.3"
     react-timer-mixin "^0.13.3"
     string-hash "^1.1.3"
 

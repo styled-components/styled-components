@@ -109,7 +109,7 @@
     "react-dom": "^16.4",
     "react-frame-component": "^4.0.0",
     "react-native": "^0.56.0",
-    "react-primitives": "^0.5.0",
+    "react-primitives": "^0.6.1",
     "react-test-renderer": "^16.4",
     "rimraf": "^2.6.1",
     "rollup": "^0.66.2",
