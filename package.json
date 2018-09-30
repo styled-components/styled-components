@@ -97,7 +97,7 @@
     "eslint-plugin-prettier": "^2.6.0",
     "eslint-plugin-react": "^7.8.2",
     "express": "^4.14.1",
-    "flow-bin": "^0.78.0",
+    "flow-bin": "^0.81.0",
     "flow-watch": "^1.1.1",
     "husky": "^0.14.3",
     "jest": "^23.0.0",
