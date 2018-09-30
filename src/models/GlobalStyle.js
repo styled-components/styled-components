@@ -8,7 +8,9 @@ import type { RuleSet } from '../types';
 
 export default class GlobalStyle {
   componentId: string;
+
   isStatic: boolean;
+
   rules: RuleSet;
 
   constructor(rules: RuleSet, componentId: string) {

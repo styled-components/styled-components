@@ -23,22 +23,32 @@ let master;
 
 export default class StyleSheet {
   id: number;
+
   forceServer: boolean;
+
   target: ?HTMLElement;
+
   /* a map from ids to tags */
   tagMap: { [string]: Tag<any> };
+
   /* deferred rules for a given id */
   deferred: { [string]: string[] | void };
+
   /* this is used for not reinjecting rules via hasNameForId() */
   rehydratedNames: { [string]: boolean };
+
   /* when rules for an id are removed using remove() we have to ignore rehydratedNames for it */
   ignoreRehydratedNames: { [string]: boolean };
+
   /* a list of tags belonging to this StyleSheet */
   tags: Tag<any>[];
+
   /* a tag for import rules */
   importRuleTag: Tag<any>;
+
   /* current capacity until a new tag must be created */
   capacity: number;
+
   /* children (aka clones) of this StyleSheet inheriting all and future injections */
   clones: StyleSheet[];
 

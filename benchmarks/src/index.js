@@ -21,7 +21,7 @@ const createTestBlock = fn => {
       Provider,
       benchmarkType,
       version,
-      name
+      name,
     };
     return testSetups;
   }, {});
@@ -33,14 +33,14 @@ const tests = {
     Component: Tree,
     getComponentProps: () => ({ breadth: 2, components, depth: 7, id: 0, wrap: 1 }),
     Provider: components.Provider,
-    sampleCount: 500
+    sampleCount: 500,
   })),
   'Mount wide tree': createTestBlock(components => ({
     benchmarkType: 'mount',
     Component: Tree,
     getComponentProps: () => ({ breadth: 6, components, depth: 3, id: 0, wrap: 2 }),
     Provider: components.Provider,
-    sampleCount: 500
+    sampleCount: 500,
   })),
   'Update dynamic styles': createTestBlock(components => ({
     benchmarkType: 'update',
@@ -49,8 +49,8 @@ const tests = {
       return { components, s: 200, renderCount: cycle, x: 0, y: 0 };
     },
     Provider: components.Provider,
-    sampleCount: 1000
-  }))
+    sampleCount: 1000,
+  })),
 };
 
 ReactDOM.render(<App tests={tests} />, document.querySelector('.root'));

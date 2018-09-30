@@ -24,9 +24,11 @@ export default function createGlobalStyle(
 
   class GlobalStyleComponent extends React.Component<*, *> {
     static defaultProps: Object;
+
     styleSheet: Object;
 
     static globalStyle = style;
+
     static styledComponentId = id;
 
     constructor() {

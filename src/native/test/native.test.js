@@ -202,7 +202,10 @@ describe('native', () => {
 
   describe('expanded API', () => {
     it('should attach a displayName', () => {
-      const Comp = styled.View``;
+      View.displayName = 'View';
+
+      const Comp = styled(View)``;
+
       expect(Comp.displayName).toBe('Styled(View)');
 
       const CompTwo = styled.View.withConfig({ displayName: 'Test' })``;

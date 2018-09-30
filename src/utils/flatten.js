@@ -3,7 +3,7 @@ import isFunction from './isFunction';
 import isPlainObject from './isPlainObject';
 import isStyledComponent from './isStyledComponent';
 import Keyframes from '../models/Keyframes';
-import hyphenate from '../utils/hyphenateStyleName';
+import hyphenate from './hyphenateStyleName';
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
   const css = Object.keys(obj)
