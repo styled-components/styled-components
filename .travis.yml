@@ -15,8 +15,8 @@ env:
     - GOOGLE_CHROME_BINARY="/usr/bin/google-chrome-beta"
     - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
 node_js:
-  - 8
-  - 10
+  - '8'
+  - '10'
 install: yarn --frozen-lockfile
 script:
   - node --version
@@ -30,6 +30,5 @@ notifications:
     on_failure: change
 cache:
   yarn: true
-  bundler: true
   directories:
     - node_modules
