@@ -6,7 +6,7 @@ const tracing = process.argv.some(arg => arg.indexOf('tracing') > -1);
 
 if (tracing) {
   console.log(
-    '\nTracing enabled. (note that this might impact benchmark results, we recommend leaving this turned off unless you need a trace)'
+    '\nTracing enabled. (note that this might impact benchmark results, we recommend leaving this turned off unless you need a trace)',
   );
 }
 
@@ -18,7 +18,7 @@ if (tracing) {
   await page.goto(`file://${path.join(__dirname, './dist/index.html')}`);
 
   console.log(
-    'Running benchmarks... (this may take a minute or two; do not use your machine while these are running!)'
+    'Running benchmarks... (this may take a minute or two; do not use your machine while these are running!)',
   );
   for (var i = 0; i < tests.length; i++) {
     const test = tests[i];

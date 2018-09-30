@@ -27,6 +27,7 @@
     "flow:watch": "flow-watch",
     "format": "eslint ./**/*.js --fix",
     "lint": "eslint src",
+    "prettier": "prettier */**/*.js --write",
     "prepublishOnly": "run-s build",
     "lint-staged": "lint-staged",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",

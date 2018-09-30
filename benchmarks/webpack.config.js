@@ -1,9 +1,9 @@
 // @flow
-const webpack = require('webpack')
-const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer')
-const path = require('path')
+const webpack = require('webpack');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+const path = require('path');
 
-const appDirectory = path.resolve(__dirname)
+const appDirectory = path.resolve(__dirname);
 
 module.exports = {
   mode: 'production',
@@ -51,4 +51,4 @@ module.exports = {
       'styled-components': path.resolve('../src'),
     },
   },
-}
+};
