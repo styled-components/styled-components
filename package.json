@@ -28,7 +28,6 @@
     "flow:watch": "flow-watch",
     "format": "eslint ./**/*.js --fix",
     "lint": "eslint src",
-    "precommit": "lint-staged",
     "prepublishOnly": "run-s build",
     "lint-staged": "lint-staged",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
@@ -164,5 +163,10 @@
   "collective": {
     "type": "opencollective",
     "url": "https://opencollective.com/styled-components"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
   }
 }
