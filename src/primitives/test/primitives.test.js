@@ -171,6 +171,7 @@ describe('primitives', () => {
 
   describe('expanded API', () => {
     it('should attach a displayName', () => {
+      View.displayName = 'View';
       const Comp = styled.View``;
       expect(Comp.displayName).toBe('Styled(View)');
 
