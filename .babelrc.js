@@ -1,7 +1,7 @@
-const { BABEL_ENV, NODE_ENV } = process.env
-const modules = BABEL_ENV === 'cjs' || NODE_ENV === 'test' ? 'commonjs' : false
+const { BABEL_ENV, NODE_ENV } = process.env;
+const modules = BABEL_ENV === 'cjs' || NODE_ENV === 'test' ? 'commonjs' : false;
 
-const loose = true
+const loose = true;
 
 module.exports = {
   presets: [['env', { loose, modules }], 'react'],
@@ -12,4 +12,4 @@ module.exports = {
     ['transform-class-properties', { loose }],
     modules === 'commonjs' && 'add-module-exports',
   ].filter(Boolean),
-}
+};
