@@ -1,6 +1,6 @@
 // @flow
 
-import StyledError from '../utils/error';
+import StyledError from './error';
 
 /* These are helpers that deal with the insertRule (aka speedy) API
  * They are used in the StyleTags and specifically the speedy tag

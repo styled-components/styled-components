@@ -12,7 +12,9 @@ declare var __SERVER__: boolean;
 
 export default class ServerStyleSheet {
   instance: StyleSheet;
+
   masterSheet: StyleSheet;
+
   sealed: boolean;
 
   constructor() {

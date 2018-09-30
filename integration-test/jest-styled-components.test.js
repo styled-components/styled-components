@@ -1,8 +1,8 @@
 // @flow
-import React from 'react';
-import styled from '..';
-import renderer from 'react-test-renderer';
 import 'jest-styled-components';
+import React from 'react';
+import renderer from 'react-test-renderer';
+import styled from '..';
 
 const Button = styled.button`
   color: red;

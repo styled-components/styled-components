@@ -49,7 +49,9 @@ const warnInnerRef = once(() =>
 // $FlowFixMe
 class StyledComponent extends PureComponent<*> {
   renderOuter: Function;
+
   renderInner: Function;
+
   styleSheet: ?StyleSheet;
 
   attrs = {};

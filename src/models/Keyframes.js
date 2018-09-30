@@ -1,9 +1,11 @@
 // @flow
-import StyleSheet from '../models/StyleSheet';
+import StyleSheet from './StyleSheet';
 
 export default class Keyframes {
   id: string;
+
   name: string;
+
   rules: Array<string>;
 
   constructor(name: string, rules: Array<string>) {

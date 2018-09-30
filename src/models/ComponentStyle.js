@@ -22,8 +22,11 @@ const hasher = (str: string): string => generateAlphabeticName(hashStr(str));
  */
 export default class ComponentStyle {
   rules: RuleSet;
+
   componentId: string;
+
   isStatic: boolean;
+
   lastClassName: ?string;
 
   constructor(rules: RuleSet, attrs?: Object, componentId: string) {
