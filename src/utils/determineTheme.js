@@ -11,10 +11,7 @@ export default (props: Props, fallbackTheme: any, defaultProps: any = EMPTY_OBJE
 
   /* eslint-disable react/prop-types, flowtype-errors/show-errors */
   const isDefaultTheme = defaultProps ? props.theme === defaultProps.theme : false;
-  const theme =
-    props.theme && !isDefaultTheme
-      ? props.theme
-      : fallbackTheme || defaultProps.theme;
+  const theme = props.theme && !isDefaultTheme ? props.theme : fallbackTheme || defaultProps.theme;
   /* eslint-enable */
 
   return theme;
