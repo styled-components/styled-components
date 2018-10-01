@@ -118,33 +118,33 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
   <Component as={Link} to="home">Hello world!</Component>
   ```
 
-## [3.4.9] - 2018-09-18
+## [v3.4.9] - 2018-09-18
 
 - Remove the `injectGlobal` warning; it's not actionable since the replacement API is in v4 only, so why say anything?
 
-## [3.4.8] - 2018-09-17
+## [v3.4.8] - 2018-09-17
 
 - Fix the `injectGlobal` warning not being properly guarded for production, by [@probablyup](https://github.com/probablyup)
 
-## [3.4.7] - 2018-09-17
+## [v3.4.7] - 2018-09-17
 
 - Add warning for the upcoming removal of the `injectGlobal` API in v4.0, by [@rainboxx](https://github.com/rainboxx) (see [#1867](https://github.com/styled-components/styled-components/pull/1867))
 
 - Backport from v4: Beef up the error message that sometimes occurs when multiple versions of styled components are used together and the StyleSheet instance can't be found, by [@probablyup](https://github.com/probablyup) (see [#2012](https://github.com/styled-components/styled-components/pull/2012))
 
-## [3.4.6] - 2018-09-10
+## [v3.4.6] - 2018-09-10
 
 - Fix an issue when streaming with very large amounts of output where sometimes styles might not make it to the client, by [@probablyup](https://github.com/probablyup) (see [#1997](https://github.com/styled-components/styled-components/pull/1997))
 
-## [3.4.5] - 2018-08-23
+## [v3.4.5] - 2018-08-23
 
 - Tone down the dev warnings for deprecated APIs (they were `console.error`, now `console.warn`), by [@probablyup](https://github.com/probablyup)
 
-## [3.4.4] - 2018-08-21
+## [v3.4.4] - 2018-08-21
 
 - Fix warning function not having a production fallback, by [@mitoyarzun](https://github.com/mitoyarzun) (see [#1938](https://github.com/styled-components/styled-components/pull/1938))
 
-## [3.4.3] - 2018-08-21
+## [v3.4.3] - 2018-08-21
 
 - Add warning for the upcoming removal of the `extend` API in v4.0, by [@probablyup](https://github.com/probablyup) (see [#1909](https://github.com/styled-components/styled-components/pull/1909))
 
