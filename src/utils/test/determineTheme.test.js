@@ -16,6 +16,6 @@ describe('determineTheme', () => {
   });
 
   it('should be undefined when no theme is passed', () => {
-    expect(determineTheme({}, null, null)).toEqual(undefined);
+    expect(determineTheme({}, undefined, undefined)).toEqual(undefined);
   });
 });
