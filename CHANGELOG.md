@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Fix `withTheme` HOC to use a theme defined in `defaultProps` of the wrapped component, by @theboyWhoCriedWoolf (see [#2033](https://github.com/styled-components/styled-components/pull/2033))
+
 ## [v4.0.0-beta.9] - 2018-09-24
 
 - Fix usage of `keyframes` with `createGlobalStyle`, by [@probablyup](https://github.com/probablyup) (see [#2029](https://github.com/styled-components/styled-components/pull/2029))
