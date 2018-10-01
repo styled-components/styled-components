@@ -10,7 +10,7 @@ export default (Component: ComponentType<any>) => {
     <ThemeConsumer>
       {(theme?: Theme) => {
         // $FlowFixMe
-        const { defaultProps } = WithTheme;
+        const { defaultProps } = Component;
         const themeProp = determineTheme(props, theme, defaultProps);
 
         if (process.env.NODE_ENV !== 'production' && themeProp === undefined) {

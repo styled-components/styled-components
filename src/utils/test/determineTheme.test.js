@@ -14,4 +14,8 @@ describe('determineTheme', () => {
   it('should fallback to default theme', () => {
     expect(determineTheme({}, fallback, props)).toEqual(fallback);
   });
+
+  it('should be undefined when no theme is passed', () => {
+    expect(determineTheme({}, undefined, undefined)).toEqual(undefined);
+  });
 });
