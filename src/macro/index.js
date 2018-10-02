@@ -1,11 +1,6 @@
 // @flow
 import { createMacro, MacroError } from 'babel-plugin-macros';
-import minify from 'babel-plugin-styled-components/lib/visitors/minify';
-import displayNameAndId from 'babel-plugin-styled-components/lib/visitors/displayNameAndId';
-import templateLiteral from 'babel-plugin-styled-components/lib/visitors/templateLiterals/index';
-import pureAnnotation from 'babel-plugin-styled-components/lib/visitors/pure';
-
-const taggedTemplateImports = ['css', 'keyframes', 'createGlobalStyle', 'default'];
+import babelPlugin from 'babel-plugin-styled-components';
 
 const allowedImports = [
   'css',
@@ -54,31 +49,15 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
       // into the new id generated
       // eslint-disable-next-line no-param-reassign
       referencePath.node.name = id.name;
-
-      if (taggedTemplateImports.includes(refName)) {
-        // find the TaggedTemplateExpression
-        const templatePath = referencePath.findParent(path => path.isTaggedTemplateExpression());
-
-        if (!templatePath) {
-          throw new MacroError(
-            `Invalid usage : ${refName}. ${refName} needs to be used with a template literal, like this : ${refName}\`background: red;\`.`
-          );
-        } else {
-          // merge config into the state
-          const stateWithOpts = { ...state, opts: config };
-          // run babel-plugin-styled-components appropriate visitors
-          minify(t)(templatePath, stateWithOpts);
-          displayNameAndId(t)(templatePath, stateWithOpts);
-          templateLiteral(t)(templatePath, stateWithOpts);
-          pureAnnotation(t)(templatePath, stateWithOpts);
-        }
-      }
     });
   });
+
+  const stateWithOpts = { ...state, opts: config };
+  program.traverse(babelPlugin({ types: t }).visitor, stateWithOpts);
 }
 
 const configName = 'styledComponents';
 
 export default createMacro(styledComponentsMacro, { configName });
 
-export { allowedImports, taggedTemplateImports };
+export { allowedImports };
