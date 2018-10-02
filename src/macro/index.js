@@ -17,8 +17,10 @@ const allowedImports = [
 ];
 
 function styledComponentsMacro({ references, state, babel: { types: t }, config = {} }) {
-  // create a node for styled-components's imports
   const program = state.file.path;
+
+  // replace `styled-components/macro` by `styled-components`
+  // create a node for styled-components's imports
   const imports = t.importDeclaration([], t.stringLiteral('styled-components'));
   // and add it to top of the document
   program.node.body.unshift(imports);
@@ -34,7 +36,7 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
       );
     }
 
-    // add imports
+    // generate new identifier and add to imports
     let id;
     if (refName === 'default') {
       id = program.scope.generateUidIdentifier('styled');
@@ -44,14 +46,14 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
       imports.specifiers.push(t.importSpecifier(id, t.identifier(refName)));
     }
 
+    // update references with the new identifiers
     references[refName].forEach(referencePath => {
-      // transform the variable imported for the macro
-      // into the new id generated
       // eslint-disable-next-line no-param-reassign
       referencePath.node.name = id.name;
     });
   });
 
+  // apply babel-plugin-styled-components to the file
   const stateWithOpts = { ...state, opts: config };
   program.traverse(babelPlugin({ types: t }).visitor, stateWithOpts);
 }
