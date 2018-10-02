@@ -97,13 +97,16 @@ class StyledComponent extends PureComponent<*> {
     const propsForElement: Object = { ...this.attrs };
 
     let key;
+    // eslint-disable-next-line guard-for-in
     for (key in this.props) {
-      if (key === 'forwardedClass' || key === 'as') continue;
-      else if (process.env.NODE_ENV !== 'production' && key === 'innerRef') {
+      if (process.env.NODE_ENV !== 'production' && key === 'innerRef') {
         warnInnerRef();
-      } else if (key === 'forwardedRef') propsForElement.ref = this.props[key];
-      // Don't pass through non HTML tags through to HTML elements
+      }
+
+      if (key === 'forwardedClass' || key === 'as') continue;
+      else if (key === 'forwardedRef') propsForElement.ref = this.props[key];
       else if (!isTargetTag || validAttr(key)) {
+        // Don't pass through non HTML tags through to HTML elements
         propsForElement[key] =
           key === 'style' && key in this.attrs
             ? { ...this.attrs[key], ...this.props[key] }
