@@ -1,7 +1,7 @@
 // @flow
 
 import validAttr from '@emotion/is-prop-valid';
-import React, { createElement, PureComponent } from 'react';
+import React, { createElement, Component } from 'react';
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
@@ -47,7 +47,7 @@ const warnInnerRef = once(() =>
 );
 
 // $FlowFixMe
-class StyledComponent extends PureComponent<*> {
+class StyledComponent extends Component<*> {
   renderOuter: Function;
 
   renderInner: Function;
