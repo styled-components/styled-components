@@ -97,6 +97,7 @@ class StyledComponent extends PureComponent<*> {
     const propsForElement: Object = { ...this.attrs };
 
     let key;
+    // eslint-disable-next-line guard-for-in
     for (key in this.props) {
       if (process.env.NODE_ENV !== 'production' && key === 'innerRef') {
         warnInnerRef();
