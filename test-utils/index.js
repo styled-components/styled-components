@@ -10,8 +10,18 @@ function assertStyledComponent(styledComponent) {
   if (
     !(styledComponent.styledComponentId && typeof styledComponent.styledComponentId === 'string')
   ) {
-    throw new Error('Must pass a styled component to find/findAll(element, styledComponent)"');
+    throw new Error(
+      `${styledComponent.displayName ||
+        styledComponent.name ||
+        'Component'} is not a styled component.`
+    );
   }
+}
+
+function enzymeFind(wrapper /* : Object */, styledComponent /* : Object */) {
+  assertStyledComponent(styledComponent);
+
+  return wrapper.find(`.${styledComponent.styledComponentId}`);
 }
 
 function find(element /* : Element */, styledComponent /* : Object */) {
@@ -26,5 +36,6 @@ function findAll(element /* : Element */, styledComponent /* : Object */) {
   return element.querySelectorAll(`.${styledComponent.styledComponentId}`);
 }
 
+exports.enzymeFind = enzymeFind;
 exports.find = find;
 exports.findAll = findAll;
