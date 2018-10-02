@@ -1,8 +1,8 @@
-import pluginTester from 'babel-plugin-tester'
-import plugin from 'babel-plugin-macros'
+import pluginTester from 'babel-plugin-tester';
+import plugin from 'babel-plugin-macros';
 
-import * as styledTopLevel from '../../'
-import { allowedImports } from '../../macro'
+import * as styledTopLevel from '../../';
+import { allowedImports } from '../../macro';
 
 const styledExampleCode = `
 import styled from '../../macro'
@@ -10,7 +10,7 @@ import styled from '../../macro'
 styled.div\`
   background: \${p => (p.error ? 'red' : 'green')};
 \`
-`
+`;
 
 const cssExampleCode = `
 import { css } from '../../macro'
@@ -18,7 +18,7 @@ import { css } from '../../macro'
 css\`
   color: \${props => (props.whiteColor ? 'white' : 'black')};
 \`
-`
+`;
 
 const keyframesExampleCode = `
 import { keyframes } from '../../macro'
@@ -27,15 +27,15 @@ keyframes\`
   0% { opacity: 0; }
   100% { opacity: 1; }
 \`
-`
+`;
 
-const injectGlobalExampleCode = `
-import { injectGlobal } from '../../macro'
+const createGlobalStyleExampleCode = `
+import { createGlobalStyle } from '../../macro'
 
-injectGlobal\`
+createGlobalStyle\`
   background: red;
 \`
-`
+`;
 
 const ThemeProviderExampleCode = `
 import { ThemeProvider } from '../../macro'
@@ -45,7 +45,7 @@ React.createComponent(
   { theme: { color: 'red' }}, 
   'hello'
 )
-`
+`;
 
 const extendsExampleCode = `
 import React from 'react'
@@ -56,7 +56,7 @@ const Hello = () => React.createComponent(div, null, 'hello')
 styled(Hello)\`
   background: red;
 \`
-`
+`;
 
 const requireExampleCode = `
 const myStyled = require('../../macro')
@@ -64,11 +64,11 @@ const myStyled = require('../../macro')
 myStyled.div\`
   background: red;
 \`
-`
+`;
 
 const invalidExampleCode = `
 import { UnknownImport } from '../../macro'
-`
+`;
 
 pluginTester({
   title: 'macro',
@@ -79,7 +79,7 @@ pluginTester({
     'should work with styled': styledExampleCode,
     'should work with { css }': cssExampleCode,
     'should work with { keyframes }': keyframesExampleCode,
-    'should work with { injectGlobal }': injectGlobalExampleCode,
+    'should work with { createGlobalStyle }': createGlobalStyleExampleCode,
     'should work with { ThemeProvider }': ThemeProviderExampleCode,
     'should work when extending a component': extendsExampleCode,
     'should work with require() to import styled-components': requireExampleCode,
@@ -89,12 +89,10 @@ pluginTester({
       snapshot: false,
     },
   },
-})
+});
 
 test('should allow all helpers exported from styled-components', () => {
-  const styledExports = Object.keys(styledTopLevel).filter(
-    helper => helper !== '__esModule'
-  )
+  const styledExports = Object.keys(styledTopLevel).filter(helper => helper !== '__esModule');
 
-  expect(styledExports).toEqual(allowedImports)
-})
+  expect(styledExports).toEqual(allowedImports);
+});

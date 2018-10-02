@@ -45,6 +45,25 @@ React.createComponent(_ThemeProvider, { theme: { color: 'red' } }, 'hello');
 "
 `;
 
+exports[`macro should work with { createGlobalStyle }: should work with { createGlobalStyle } 1`] = `
+"
+import { createGlobalStyle } from '../../macro'
+
+createGlobalStyle\`
+  background: red;
+\`
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import { createGlobalStyle as _createGlobalStyle } from 'styled-components';
+
+
+_createGlobalStyle\`
+  background: red;
+\`;
+"
+`;
+
 exports[`macro should work with { css }: should work with { css } 1`] = `
 "
 import { css } from '../../macro'
@@ -59,25 +78,6 @@ import { css as _css } from 'styled-components';
 
 
 _css(['color:', ';'], props => props.whiteColor ? 'white' : 'black');
-"
-`;
-
-exports[`macro should work with { injectGlobal }: should work with { injectGlobal } 1`] = `
-"
-import { injectGlobal } from '../../macro'
-
-injectGlobal\`
-  background: red;
-\`
-
-      ↓ ↓ ↓ ↓ ↓ ↓
-
-import { injectGlobal as _injectGlobal } from 'styled-components';
-
-
-_injectGlobal\`
-  background: red;
-\`;
 "
 `;
 

@@ -1,37 +1,32 @@
 // @flow
-import { createMacro, MacroError } from 'babel-plugin-macros'
-import minify from 'babel-plugin-styled-components/lib/visitors/minify'
-import displayNameAndId from 'babel-plugin-styled-components/lib/visitors/displayNameAndId'
-import templateLiteral from 'babel-plugin-styled-components/lib/visitors/templateLiterals/index'
-import pureAnnotation from 'babel-plugin-styled-components/lib/visitors/pure'
+import { createMacro, MacroError } from 'babel-plugin-macros';
+import minify from 'babel-plugin-styled-components/lib/visitors/minify';
+import displayNameAndId from 'babel-plugin-styled-components/lib/visitors/displayNameAndId';
+import templateLiteral from 'babel-plugin-styled-components/lib/visitors/templateLiterals/index';
+import pureAnnotation from 'babel-plugin-styled-components/lib/visitors/pure';
 
-const taggedTemplateImports = ['css', 'keyframes', 'injectGlobal', 'default']
+const taggedTemplateImports = ['css', 'keyframes', 'createGlobalStyle', 'default'];
 
 const allowedImports = [
   'css',
   'keyframes',
-  'injectGlobal',
+  'createGlobalStyle',
   'isStyledComponent',
-  'consolidateStreamedStyles',
+  'ThemeConsumer',
   'ThemeProvider',
   'withTheme',
   'ServerStyleSheet',
   'StyleSheetManager',
   '__DO_NOT_USE_OR_YOU_WILL_BE_HAUNTED_BY_SPOOKY_GHOSTS',
   'default',
-]
+];
 
-function styledComponentsMacro({
-  references,
-  state,
-  babel: { types: t },
-  config = {},
-}) {
+function styledComponentsMacro({ references, state, babel: { types: t }, config = {} }) {
   // create a node for styled-components's imports
-  const program = state.file.path
-  const imports = t.importDeclaration([], t.stringLiteral('styled-components'))
+  const program = state.file.path;
+  const imports = t.importDeclaration([], t.stringLiteral('styled-components'));
   // and add it to top of the document
-  program.node.body.unshift(imports)
+  program.node.body.unshift(imports);
 
   // references looks like this
   // { default: [path, path], css: [path], ... }
@@ -41,51 +36,49 @@ function styledComponentsMacro({
         `Invalid import: ${refName}. You can only import ${allowedImports.join(
           ', '
         )} from 'styled-components/macro'.`
-      )
+      );
     }
 
     // add imports
-    let id
+    let id;
     if (refName === 'default') {
-      id = program.scope.generateUidIdentifier('styled')
-      imports.specifiers.push(t.importDefaultSpecifier(id))
+      id = program.scope.generateUidIdentifier('styled');
+      imports.specifiers.push(t.importDefaultSpecifier(id));
     } else {
-      id = program.scope.generateUidIdentifier(refName)
-      imports.specifiers.push(t.importSpecifier(id, t.identifier(refName)))
+      id = program.scope.generateUidIdentifier(refName);
+      imports.specifiers.push(t.importSpecifier(id, t.identifier(refName)));
     }
 
     references[refName].forEach(referencePath => {
       // transform the variable imported for the macro
       // into the new id generated
       // eslint-disable-next-line no-param-reassign
-      referencePath.node.name = id.name
+      referencePath.node.name = id.name;
 
       if (taggedTemplateImports.includes(refName)) {
         // find the TaggedTemplateExpression
-        const templatePath = referencePath.findParent(path =>
-          path.isTaggedTemplateExpression()
-        )
+        const templatePath = referencePath.findParent(path => path.isTaggedTemplateExpression());
 
         if (!templatePath) {
           throw new MacroError(
             `Invalid usage : ${refName}. ${refName} needs to be used with a template literal, like this : ${refName}\`background: red;\`.`
-          )
+          );
         } else {
           // merge config into the state
-          const stateWithOpts = { ...state, opts: config }
+          const stateWithOpts = { ...state, opts: config };
           // run babel-plugin-styled-components appropriate visitors
-          minify(t)(templatePath, stateWithOpts)
-          displayNameAndId(t)(templatePath, stateWithOpts)
-          templateLiteral(t)(templatePath, stateWithOpts)
-          pureAnnotation(t)(templatePath, stateWithOpts)
+          minify(t)(templatePath, stateWithOpts);
+          displayNameAndId(t)(templatePath, stateWithOpts);
+          templateLiteral(t)(templatePath, stateWithOpts);
+          pureAnnotation(t)(templatePath, stateWithOpts);
         }
       }
-    })
-  })
+    });
+  });
 }
 
-const configName = 'styledComponents'
+const configName = 'styledComponents';
 
-export default createMacro(styledComponentsMacro, { configName })
+export default createMacro(styledComponentsMacro, { configName });
 
-export { allowedImports, taggedTemplateImports }
+export { allowedImports, taggedTemplateImports };
