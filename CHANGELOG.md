@@ -8,6 +8,29 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Fix `withTheme` HOC to use a theme defined in `defaultProps` of the wrapped component, by [@theboyWhoCriedWoolf](https://github.com/theboyWhoCriedWoolf) (see [#2033](https://github.com/styled-components/styled-components/pull/2033))
 
+- Add `enzymeFind` test utility to easily grab instances of a styled-component from enyzme mounted testing scenarios, by [@probablyup](https://github.com/probablyup) (see [#2049](https://github.com/styled-components/styled-components/pull/2049))
+
+```js
+import { mount } from 'enzyme';
+import React from 'react';
+import styled from 'styled-components';
+import { enzymeFind } from 'styled-components/test-utils';
+
+const Thing = styled.div`
+  color: red;
+`;
+
+const wrapper = mount(
+  <div>
+    <Thing isCool />
+  </div>
+);
+
+const thing = enzymeFind(wrapper, Thing);
+
+// expect(thing.props()).toHaveProperty('isCool') etc
+```
+
 ## [v4.0.0-beta.9] - 2018-09-24
 
 - Fix usage of `keyframes` with `createGlobalStyle`, by [@probablyup](https://github.com/probablyup) (see [#2029](https://github.com/styled-components/styled-components/pull/2029))
