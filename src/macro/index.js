@@ -1,20 +1,9 @@
 // @flow
 import { createMacro, MacroError } from 'babel-plugin-macros';
 import babelPlugin from 'babel-plugin-styled-components';
+import * as styled from '..';
 
-const allowedImports = [
-  'css',
-  'keyframes',
-  'createGlobalStyle',
-  'isStyledComponent',
-  'ThemeConsumer',
-  'ThemeProvider',
-  'withTheme',
-  'ServerStyleSheet',
-  'StyleSheetManager',
-  '__DO_NOT_USE_OR_YOU_WILL_BE_HAUNTED_BY_SPOOKY_GHOSTS',
-  'default',
-];
+const allowedImports: Array<string> = Object.keys(styled).filter(helper => helper !== '__esModule');
 
 function styledComponentsMacro({ references, state, babel: { types: t }, config = {} }) {
   const program = state.file.path;
