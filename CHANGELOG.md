@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Add support for `as` to be used with `attrs` for better polymorphism, by [@imbhargav5](https://github.com/imbhargav5) (see [#2055](https://github.com/styled-components/styled-components/pull/2055))
+
 - Fix `withTheme` HOC to use a theme defined in `defaultProps` of the wrapped component, by [@theboyWhoCriedWoolf](https://github.com/theboyWhoCriedWoolf) (see [#2033](https://github.com/styled-components/styled-components/pull/2033))
 
 - Add `enzymeFind` test utility to easily grab instances of a styled-component from enyzme mounted testing scenarios, by [@probablyup](https://github.com/probablyup) (see [#2049](https://github.com/styled-components/styled-components/pull/2049))

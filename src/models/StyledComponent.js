@@ -75,8 +75,6 @@ class StyledComponent extends Component<*> {
   renderInner(theme?: Theme) {
     const { componentStyle, defaultProps, styledComponentId, target } = this.props.forwardedClass;
 
-    const isTargetTag = isTag(this.props.as || target);
-
     let generatedClassName;
     if (componentStyle.isStatic) {
       generatedClassName = this.generateAndInjectStyles(EMPTY_OBJECT, this.props, this.styleSheet);
@@ -93,6 +91,8 @@ class StyledComponent extends Component<*> {
         this.styleSheet
       );
     }
+    const elementToBeCreated = this.props.as || this.attrs.as || target;
+    const isTargetTag = isTag(elementToBeCreated);
 
     const propsForElement: Object = { ...this.attrs };
 
@@ -123,7 +123,7 @@ class StyledComponent extends Component<*> {
       .filter(Boolean)
       .join(' ');
 
-    return createElement(this.props.as || target, propsForElement);
+    return createElement(elementToBeCreated, propsForElement);
   }
 
   buildExecutionContext(theme: any, props: any, attrs: any) {
