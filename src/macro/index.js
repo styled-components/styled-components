@@ -50,5 +50,3 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
 const configName = 'styledComponents';
 
 export default createMacro(styledComponentsMacro, { configName });
-
-export { allowedImports };

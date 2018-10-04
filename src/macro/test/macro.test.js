@@ -1,9 +1,6 @@
 import pluginTester from 'babel-plugin-tester';
 import plugin from 'babel-plugin-macros';
 
-import * as styledTopLevel from '../../';
-import { allowedImports } from '../../macro';
-
 const styledExampleCode = `
 import styled from '../../macro'
 
@@ -89,10 +86,4 @@ pluginTester({
       snapshot: false,
     },
   },
-});
-
-test('should allow all helpers exported from styled-components', () => {
-  const styledExports = Object.keys(styledTopLevel).filter(helper => helper !== '__esModule');
-
-  expect(styledExports).toEqual(allowedImports);
 });
