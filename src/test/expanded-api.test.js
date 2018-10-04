@@ -113,6 +113,26 @@ describe('expanded api', () => {
       expect(TestRenderer.create(<Comp as="span" />).toJSON()).toMatchSnapshot();
     });
 
+    it('changes the rendered element type when used with attrs', () => {
+      const Comp = styled.div.attrs({
+        as: 'header',
+      })`
+        color: red;
+      `;
+
+      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    });
+
+    it('prefers prop over attrs', () => {
+      const Comp = styled.div.attrs({
+        as: 'header',
+      })`
+        color: red;
+      `;
+
+      expect(TestRenderer.create(<Comp as="span" />).toJSON()).toMatchSnapshot();
+    });
+
     it('works with custom components', () => {
       const Override = props => <figure {...props} />;
       const Comp = styled.div`
