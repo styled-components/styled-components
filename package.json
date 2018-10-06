@@ -78,6 +78,7 @@
     "babel-plugin-external-helpers": "^6.22.0",
     "babel-plugin-macros": "^2.4.2",
     "babel-plugin-preval": "^3.0.1",
+    "babel-plugin-styled-components": "^1.8.0",
     "babel-plugin-tester": "^5.5.1",
     "babel-plugin-transform-class-properties": "^6.22.0",
     "babel-plugin-transform-object-rest-spread": "^6.22.0",
