@@ -4,7 +4,7 @@ import _insertRulePlugin from 'stylis-rule-sheet';
 import type { Interpolation } from '../types';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
-const SELF_REFERENTIAL_COMBINATOR = /([>~+] *)&( *{)/g;
+const SELF_REFERENTIAL_COMBINATOR = /(&([^{]*)[^&}]*&)?( *[>~+] *)&( *{[^{}]*)/gm;
 
 // NOTE: This stylis instance is only used to split rules from SSR'd style tags
 const stylisSplitter = new Stylis({
@@ -56,7 +56,7 @@ const stringifyRules = (
 
   const cssStr = (selector && prefix ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS).replace(
     SELF_REFERENTIAL_COMBINATOR,
-    `$1.${componentId}$2`
+    `$1$3.${componentId}$2$4`
   );
 
   return stylis(prefix || !selector ? '' : selector, cssStr);
