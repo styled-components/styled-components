@@ -71,9 +71,21 @@ describe('with styles', () => {
         <Comp color="red" />
       </React.Fragment>
     );
-    expectCSSMatches(
-      '.sc-a{ } .b{ background:red; color:white; } .b[disabled]{ color:red; } .b + .sc-a{ margin-left:4px; } .b ~ .sc-a{ margin-right:4px; } .b > .sc-a{ margin-top:4px; } .foo .b{ color:silver; } .c{ background:red; color:red; } .c[disabled]{ color:red; } .c + .sc-a{ margin-left:4px; } .c ~ .sc-a{ margin-right:4px; } .c > .sc-a{ margin-top:4px; } .foo .c{ color:silver; }'
-    );
+    expectCSSMatches(`
+      .sc-a{ }
+      .b{ background:red; color:white; }
+      .b[disabled]{ color:red; }
+      .b + .sc-a{ margin-left:4px; }
+      .b ~ .sc-a{ margin-right:4px; }
+      .b > .sc-a{ margin-top:4px; }
+      .foo .b{ color:silver; }
+      .c{ background:red; color:red; }
+      .c[disabled]{ color:red; }
+      .c + .sc-a{ margin-left:4px; }
+      .c ~ .sc-a{ margin-right:4px; }
+      .c > .sc-a{ margin-top:4px; }
+      .foo .c{ color:silver; }
+    `);
   });
 
   it('should handle inline style objects', () => {
