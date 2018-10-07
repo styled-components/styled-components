@@ -40,6 +40,42 @@ describe('with styles', () => {
     expectCSSMatches('.sc-a {} .b { color:blue; background:red; }');
   });
 
+  it('amperstand should refer to the static class when making a self-referential combo selector', () => {
+    const Comp = styled.div`
+      background: red;
+      color: ${p => p.color};
+
+      &[disabled] {
+        color: red;
+      }
+
+      & + & {
+        margin-left: 4px;
+      }
+
+      & ~ & {
+        margin-right: 4px;
+      }
+
+      & > & {
+        margin-top: 4px;
+      }
+
+      .foo & {
+        color: silver;
+      }
+    `;
+    TestRenderer.create(
+      <React.Fragment>
+        <Comp color="white" />
+        <Comp color="red" />
+      </React.Fragment>
+    );
+    expectCSSMatches(
+      '.sc-a{ } .b{ background:red; color:white; } .b[disabled]{ color:red; } .b + .sc-a{ margin-left:4px; } .b ~ .sc-a{ margin-right:4px; } .b > .sc-a{ margin-top:4px; } .foo .b{ color:silver; } .c{ background:red; color:red; } .c[disabled]{ color:red; } .c + .sc-a{ margin-left:4px; } .c ~ .sc-a{ margin-right:4px; } .c > .sc-a{ margin-top:4px; } .foo .c{ color:silver; }'
+    );
+  });
+
   it('should handle inline style objects', () => {
     const rule1 = {
       backgroundColor: 'blue',
