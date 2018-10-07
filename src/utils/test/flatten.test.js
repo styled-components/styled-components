@@ -1,5 +1,8 @@
 // @flow
+import React from 'react';
 import flatten from '../flatten';
+import styled from '../../constructors/styled';
+import TestRenderer from 'react-test-renderer';
 
 describe('flatten', () => {
   it('doesnt merge strings', () => {
@@ -98,5 +101,23 @@ describe('flatten', () => {
     const func = () => ['static', ({ bool }) => (bool ? 'bar' : 'baz')];
     expect(flatten(['foo', func], { bool: true })).toEqual(['foo', 'static', 'bar']);
     expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'static', 'baz']);
+  });
+  it('warns to refer styled-components', () => {
+    const Foo = ({ className }) => <div className={className}>hello there!</div>
+
+    const Bar = styled.div`
+      ${Foo}: {
+        background-color: red;
+      };
+    `;
+
+    console.warn = jest.fn();
+    global.console = { warn: jest.fn() };
+
+    expect(() => {
+      flatten(TestRenderer.create(<Bar />));
+    }).toThrowError();
+
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Foo is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.'));
   });
 });
