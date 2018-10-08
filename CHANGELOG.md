@@ -8,6 +8,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Add warning when component is not a styled component and cannot be referred via component selector, by [@egdbear](https://github.com/egdbear) (see [#2070](https://github.com/styled-components/styled-components/pull/2070))
 
+- Fix how ampersand is handled in self-referential selector combinations, e.g. `& + &` (see [#2071](https://github.com/styled-components/styled-components/pull/2071))
+
 ## [v4.0.0-beta.10] - 2018-10-04
 
 - Add support for `as` to be used with `attrs` for better polymorphism, by [@imbhargav5](https://github.com/imbhargav5) (see [#2055](https://github.com/styled-components/styled-components/pull/2055))
