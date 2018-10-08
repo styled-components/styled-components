@@ -6,28 +6,23 @@ import getComponentName from './getComponentName';
 export default (target: Object) => {
   let elementClassName = '';
 
-  const prevComponentDidMount = target.componentDidMount;
+  const targetCDM = target.componentDidMount;
 
   // eslint-disable-next-line no-param-reassign
   target.componentDidMount = function componentDidMount() {
-    if (typeof prevComponentDidMount === 'function') {
-      prevComponentDidMount.call(this);
+    if (typeof targetCDM === 'function') {
+      targetCDM.call(this);
     }
 
     const classNames = elementClassName.split(' ');
     // eslint-disable-next-line react/no-find-dom-node
-    const node = ReactDOM.findDOMNode(this);
+    const node: Element | null = (ReactDOM.findDOMNode(this): any);
     const selector = classNames.map(s => `.${s}`).join('');
 
     if (
       node &&
-      !classNames.every(
-        className =>
-          node.classList &&
-          typeof node.classList.contains === 'function' &&
-          node.classList.contains(className)
-      ) &&
-      typeof node.querySelector === 'function' &&
+      node.nodeType === 1 &&
+      !classNames.every(className => node.classList && node.classList.contains(className)) &&
       !node.querySelector(selector)
     ) {
       console.warn(
