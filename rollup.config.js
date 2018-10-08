@@ -165,6 +165,14 @@ const primitivesConfig = {
   ),
 };
 
+const macroConfig = Object.assign({}, configBase, {
+  input: './src/macro/index.js',
+  output: [
+    getESM({ file: 'dist/styled-components-macro.esm.js' }),
+    getCJS({ file: 'dist/styled-components-macro.cjs.js' }),
+  ],
+});
+
 export default [
   standaloneConfig,
   standaloneProdConfig,
@@ -172,4 +180,5 @@ export default [
   browserConfig,
   nativeConfig,
   primitivesConfig,
+  macroConfig,
 ];
