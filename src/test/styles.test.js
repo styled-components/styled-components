@@ -57,6 +57,10 @@ describe('with styles', () => {
         margin-left: 4px;
       }
 
+      & + & ~ & {
+        background: black;
+      }
+
       & ~ & {
         margin-right: 4px;
       }
@@ -81,6 +85,7 @@ describe('with styles', () => {
       .b[disabled]{ color:red; }
       .b[disabled] + .sc-a[disabled]{ margin-bottom:4px; }
       .b + .sc-a{ margin-left:4px; }
+      .b + .sc-a ~ .sc-a{ background:black; }
       .b ~ .sc-a{ margin-right:4px; }
       .b > .sc-a{ margin-top:4px; }
       .foo .b{ color:silver; }
@@ -88,6 +93,7 @@ describe('with styles', () => {
       .c[disabled]{ color:red; }
       .c[disabled] + .sc-a[disabled]{ margin-bottom:4px; }
       .c + .sc-a{ margin-left:4px; }
+      .c + .sc-a ~ .sc-a{ background:black; }
       .c ~ .sc-a{ margin-right:4px; }
       .c > .sc-a{ margin-top:4px; }
       .foo .c{ color:silver; }
