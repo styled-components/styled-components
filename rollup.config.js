@@ -69,7 +69,7 @@ const configBase = {
   plugins: commonPlugins,
 };
 
-const globals = { react: 'React' };
+const globals = { react: 'React', 'react-dom': 'ReactDOM' };
 
 const standaloneBaseConfig = {
   ...configBase,
