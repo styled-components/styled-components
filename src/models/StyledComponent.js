@@ -64,8 +64,6 @@ class StyledComponent extends Component<*> {
     this.renderInner = this.renderInner.bind(this);
 
     if (process.env.NODE_ENV !== 'production' && IS_BROWSER) {
-      // eslint-disable-next-line global-require
-
       classNameUseCheckInjector(this);
     }
   }
