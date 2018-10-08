@@ -1,6 +1,6 @@
 // @flow
 
-import * as ReactIs from 'react-is';
+import { isElement } from 'react-is';
 import getComponentName from './getComponentName';
 import isFunction from './isFunction';
 import isPlainObject from './isPlainObject';
@@ -61,7 +61,7 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
       if (process.env.NODE_ENV !== 'production') {
         /* Warn if not referring styled component */
         // eslint-disable-next-line new-cap
-        if (ReactIs.isElement(new chunk(executionContext))) {
+        if (isElement(new chunk(executionContext))) {
           console.warn(
             `${getComponentName(
               chunk
