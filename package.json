@@ -67,7 +67,6 @@
     "memoize-one": "^4.0.0",
     "prop-types": "^15.5.4",
     "react-is": "^16.3.1",
-    "stylis": "^3.5.0",
     "stylis-rule-sheet": "^0.0.10"
   },
   "devDependencies": {

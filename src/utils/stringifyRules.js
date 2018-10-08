@@ -1,7 +1,9 @@
 // @flow
-import Stylis from 'stylis/stylis.min';
 import _insertRulePlugin from 'stylis-rule-sheet';
 import type { Interpolation } from '../types';
+
+// $FlowFixMe
+import Stylis from '../vendor/stylis';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 const SELF_REFERENTIAL_COMBINATOR = /(&(?! *[+~>])([^&{][^{]+)[^+~>]*)?([+~>] *)&/g;
