@@ -2,4 +2,4 @@
 import styled from './constructors/styled';
 
 export * from './base';
-export default styled;
+export { styled as default };
