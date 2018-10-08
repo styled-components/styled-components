@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.0.0-beta.11] - 2018-10-08
+
 - Add warning when component is not a styled component and cannot be referred via component selector, by [@egdbear](https://github.com/egdbear) (see [#2070](https://github.com/styled-components/styled-components/pull/2070))
 
 - Fix how ampersand is handled in self-referential selector combinations, e.g. `& + &` (see [#2071](https://github.com/styled-components/styled-components/pull/2071))
@@ -719,7 +721,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.10...develop
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.11...develop
+[v4.0.0-beta.11]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.10...v4.0.0-beta.11
 [v4.0.0-beta.10]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.9...v4.0.0-beta.10
 [v4.0.0-beta.9]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.8...v4.0.0-beta.9
 [v4.0.0-beta.8]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.7...v4.0.0-beta.8
