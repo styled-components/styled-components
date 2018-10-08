@@ -14,6 +14,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
   When using CRA v2, import styled components from `styled-components/macro` instead to gain all the benefits of [our babel plugin](https://github.com/styled-components/babel-plugin-styled-components).
 
+- Add a warning when wrapping a React component with `styled()` and the `className` isn't used (meaning styling isn't applied), by [@Fer0x](https://github.com/Fer0x) (see [#2073](https://github.com/styled-components/styled-components/pull/2073))
+
 ## [v4.0.0-beta.10] - 2018-10-04
 
 - Add support for `as` to be used with `attrs` for better polymorphism, by [@imbhargav5](https://github.com/imbhargav5) (see [#2055](https://github.com/styled-components/styled-components/pull/2055))

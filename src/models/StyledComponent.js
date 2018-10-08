@@ -18,8 +18,10 @@ import StyleSheet from './StyleSheet';
 import { ThemeConsumer, type Theme } from './ThemeProvider';
 import { StyleSheetConsumer } from './StyleSheetManager';
 import { EMPTY_OBJECT } from '../utils/empties';
+import classNameUseCheckInjector from '../utils/classNameUseCheckInjector';
 
 import type { RuleSet, Target } from '../types';
+import { IS_BROWSER } from '../constants';
 
 const identifiers = {};
 
@@ -60,6 +62,10 @@ class StyledComponent extends Component<*> {
     super();
     this.renderOuter = this.renderOuter.bind(this);
     this.renderInner = this.renderInner.bind(this);
+
+    if (process.env.NODE_ENV !== 'production' && IS_BROWSER) {
+      classNameUseCheckInjector(this);
+    }
   }
 
   render() {
