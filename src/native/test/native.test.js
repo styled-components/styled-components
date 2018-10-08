@@ -198,6 +198,48 @@ describe('native', () => {
         second: 'second',
       });
     });
+
+    it('should pass through children as a normal prop', () => {
+      const Comp = styled.Text.attrs({
+        children: 'Probably a bad idea',
+      })``;
+
+      const wrapper = TestRenderer.create(<Comp />);
+      const text = wrapper.root.findByType('Text');
+
+      expect(text.props).toMatchObject({
+        children: 'Probably a bad idea',
+        style: [{}],
+      });
+    });
+
+    it('should pass through complex children as well', () => {
+      const Comp = styled.Text.attrs({
+        children: <Text>Probably a bad idea</Text>,
+      })``;
+
+      const wrapper = TestRenderer.create(<Comp />);
+      const text = wrapper.root.findByType('Text');
+
+      expect(text.props).toMatchObject({
+        children: <Text>Probably a bad idea</Text>,
+        style: [{}],
+      });
+    });
+
+    it('should override children of course', () => {
+      const Comp = styled.Text.attrs({
+        children: <Text>Amazing</Text>,
+      })``;
+
+      const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
+      const text = wrapper.root.findByType('Text');
+
+      expect(text.props).toMatchObject({
+        children: 'Something else',
+        style: [{}],
+      });
+    });
   });
 
   describe('expanded API', () => {

@@ -1,7 +1,7 @@
 // @flow
 
 import validAttr from '@emotion/is-prop-valid';
-import React, { createElement, PureComponent } from 'react';
+import React, { createElement, Component } from 'react';
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
@@ -47,7 +47,7 @@ const warnInnerRef = once(() =>
 );
 
 // $FlowFixMe
-class StyledComponent extends PureComponent<*> {
+class StyledComponent extends Component<*> {
   renderOuter: Function;
 
   renderInner: Function;
@@ -75,8 +75,6 @@ class StyledComponent extends PureComponent<*> {
   renderInner(theme?: Theme) {
     const { componentStyle, defaultProps, styledComponentId, target } = this.props.forwardedClass;
 
-    const isTargetTag = isTag(this.props.as || target);
-
     let generatedClassName;
     if (componentStyle.isStatic) {
       generatedClassName = this.generateAndInjectStyles(EMPTY_OBJECT, this.props, this.styleSheet);
@@ -93,6 +91,8 @@ class StyledComponent extends PureComponent<*> {
         this.styleSheet
       );
     }
+    const elementToBeCreated = this.props.as || this.attrs.as || target;
+    const isTargetTag = isTag(elementToBeCreated);
 
     const propsForElement: Object = { ...this.attrs };
 
@@ -123,7 +123,7 @@ class StyledComponent extends PureComponent<*> {
       .filter(Boolean)
       .join(' ');
 
-    return createElement(this.props.as || target, propsForElement);
+    return createElement(elementToBeCreated, propsForElement);
   }
 
   buildExecutionContext(theme: any, props: any, attrs: any) {

@@ -6,7 +6,38 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Add warning when component is not a styled component and cannot be referred via component selector, by [@egdbear](https://github.com/egdbear) (see [#2070](https://github.com/styled-components/styled-components/pull/2070))
+
+- Fix how ampersand is handled in self-referential selector combinations, e.g. `& + &` (see [#2071](https://github.com/styled-components/styled-components/pull/2071))
+
+## [v4.0.0-beta.10] - 2018-10-04
+
+- Add support for `as` to be used with `attrs` for better polymorphism, by [@imbhargav5](https://github.com/imbhargav5) (see [#2055](https://github.com/styled-components/styled-components/pull/2055))
+
 - Fix `withTheme` HOC to use a theme defined in `defaultProps` of the wrapped component, by [@theboyWhoCriedWoolf](https://github.com/theboyWhoCriedWoolf) (see [#2033](https://github.com/styled-components/styled-components/pull/2033))
+
+- Add `enzymeFind` test utility to easily grab instances of a styled-component from enyzme mounted testing scenarios, by [@probablyup](https://github.com/probablyup) (see [#2049](https://github.com/styled-components/styled-components/pull/2049))
+
+```js
+import { mount } from 'enzyme';
+import React from 'react';
+import styled from 'styled-components';
+import { enzymeFind } from 'styled-components/test-utils';
+
+const Thing = styled.div`
+  color: red;
+`;
+
+const wrapper = mount(
+  <div>
+    <Thing isCool />
+  </div>
+);
+
+const thing = enzymeFind(wrapper, Thing);
+
+// expect(thing.props()).toHaveProperty('isCool') etc
+```
 
 ## [v4.0.0-beta.9] - 2018-09-24
 
@@ -682,7 +713,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.9...develop
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.10...develop
+[v4.0.0-beta.10]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.9...v4.0.0-beta.10
 [v4.0.0-beta.9]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.8...v4.0.0-beta.9
 [v4.0.0-beta.8]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.7...v4.0.0-beta.8
 [v4.0.0-beta.7]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.6...v4.0.0-beta.7

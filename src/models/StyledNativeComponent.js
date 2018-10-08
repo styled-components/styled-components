@@ -1,5 +1,5 @@
 // @flow
-import React, { createElement, PureComponent } from 'react';
+import React, { createElement, Component } from 'react';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_OBJECT } from '../utils/empties';
 import generateDisplayName from '../utils/generateDisplayName';
@@ -22,7 +22,7 @@ const warnInnerRef = once(() =>
 );
 
 // $FlowFixMe
-class StyledNativeComponent extends PureComponent<*, *> {
+class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
 
   attrs = {};

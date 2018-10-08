@@ -60,7 +60,11 @@ export default class ComponentStyle {
     const flatCSS = flatten(this.rules, executionContext, styleSheet);
     const name = hasher(this.componentId + flatCSS.join(''));
     if (!styleSheet.hasNameForId(componentId, name)) {
-      styleSheet.inject(this.componentId, stringifyRules(flatCSS, `.${name}`), name);
+      styleSheet.inject(
+        this.componentId,
+        stringifyRules(flatCSS, `.${name}`, undefined, componentId),
+        name
+      );
     }
 
     this.lastClassName = name;
