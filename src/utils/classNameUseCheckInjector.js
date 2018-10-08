@@ -1,14 +1,15 @@
 // @flow
 
 import ReactDOM from 'react-dom';
+import getComponentName from './getComponentName';
 
-export default (component: Object) => {
+export default (target: Object) => {
   let elementClassName = '';
 
-  const prevComponentDidMount = component.componentDidMount;
+  const prevComponentDidMount = target.componentDidMount;
 
   // eslint-disable-next-line no-param-reassign
-  component.componentDidMount = function componentDidMount() {
+  target.componentDidMount = function componentDidMount() {
     if (typeof prevComponentDidMount === 'function') {
       prevComponentDidMount.call(this);
     }
@@ -30,15 +31,17 @@ export default (component: Object) => {
       !node.querySelector(selector)
     ) {
       console.warn(
-        "It looks like you've used styled() factor with React component, but prop `className` is not used"
+        `It looks like you've wrapped styled() around your React component (${getComponentName(
+          this.props.forwardedClass.target
+        )}), but the className prop is not being passed down to a child. No styles will be rendered unless className is composed within your React component.`
       );
     }
   };
 
-  const prevRenderInner = component.renderInner;
+  const prevRenderInner = target.renderInner;
 
   // eslint-disable-next-line no-param-reassign
-  component.renderInner = function renderInner(...args) {
+  target.renderInner = function renderInner(...args) {
     const element = prevRenderInner.apply(this, args);
 
     elementClassName = element.props.className;
