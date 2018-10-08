@@ -63,6 +63,7 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "@emotion/is-prop-valid": "^0.6.8",
+    "babel-plugin-styled-components": ">= 1",
     "css-to-react-native": "^2.2.2",
     "memoize-one": "^4.0.0",
     "prop-types": "^15.5.4",
@@ -78,7 +79,6 @@
     "babel-plugin-external-helpers": "^6.22.0",
     "babel-plugin-macros": "^2.4.2",
     "babel-plugin-preval": "^3.0.1",
-    "babel-plugin-styled-components": "^1.8.0",
     "babel-plugin-tester": "^5.5.1",
     "babel-plugin-transform-class-properties": "^6.22.0",
     "babel-plugin-transform-object-rest-spread": "^6.22.0",
@@ -127,7 +127,6 @@
     "rollup-plugin-terser": "^3.0.0"
   },
   "peerDependencies": {
-    "babel-plugin-styled-components": ">= 1",
     "react": ">= 16.3.0"
   },
   "jest": {
