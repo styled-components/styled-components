@@ -1,4 +1,7 @@
 // @flow
+
+import * as ReactIs from 'react-is';
+import getComponentName from './getComponentName';
 import isFunction from './isFunction';
 import isPlainObject from './isPlainObject';
 import isStyledComponent from './isStyledComponent';
@@ -55,6 +58,18 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
     if (executionContext) {
+      if (process.env.NODE_ENV !== 'production') {
+        /* Warn if not referring styled component */
+        // eslint-disable-next-line new-cap
+        if (ReactIs.isElement(new chunk(executionContext))) {
+          console.warn(
+            `${getComponentName(
+              chunk
+            )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
+          );
+        }
+      }
+
       return flatten(chunk(executionContext), executionContext, styleSheet);
     } else return chunk;
   }
