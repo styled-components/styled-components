@@ -45,6 +45,10 @@ describe('with styles', () => {
       background: red;
       color: ${p => p.color};
 
+      &&& {
+        border: 1px solid red;
+      }
+
       &[disabled] {
         color: red;
 
@@ -82,6 +86,7 @@ describe('with styles', () => {
     expectCSSMatches(`
       .sc-a{ }
       .b{ background:red; color:white; }
+      .b.b.b{ border:1px solid red; }
       .b[disabled]{ color:red; }
       .b[disabled] + .sc-a[disabled]{ margin-bottom:4px; }
       .b + .sc-a{ margin-left:4px; }
@@ -90,6 +95,7 @@ describe('with styles', () => {
       .b > .sc-a{ margin-top:4px; }
       .foo .b{ color:silver; }
       .c{ background:red; color:red; }
+      .c.c.c{ border:1px solid red; }
       .c[disabled]{ color:red; }
       .c[disabled] + .sc-a[disabled]{ margin-bottom:4px; }
       .c + .sc-a{ margin-left:4px; }
