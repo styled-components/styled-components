@@ -102,14 +102,13 @@ describe('flatten', () => {
     expect(flatten(['foo', func], { bool: true })).toEqual(['foo', 'static', 'bar']);
     expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'static', 'baz']);
   });
-  it('warns to refer styled-components', () => {
-    const Foo = ({ className }) => <div className={className}>hello there!</div>
+  it('warns if trying to interpolate a normal React component', () => {
+    const Foo = ({ className }) => <div className={className}>hello there!</div>;
 
     const Bar = styled.div`
       ${Foo}: {
         background-color: red;
-      };
-    `;
+      };`;
 
     console.warn = jest.fn();
     global.console = { warn: jest.fn() };
