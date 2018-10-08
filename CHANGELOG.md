@@ -10,6 +10,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Fix how ampersand is handled in self-referential selector combinations, e.g. `& + &` (see [#2071](https://github.com/styled-components/styled-components/pull/2071))
 
+- Add babel macro for full-featured interop with create react app v2+, by [@lucleray](https://github.com/lucleray) (see [#2032](https://github.com/styled-components/styled-components/pull/2032))
+
+  When using CRA v2, import styled components from `styled-components/macro` instead to gain all the benefits of [our babel plugin](https://github.com/styled-components/babel-plugin-styled-components).
+
 ## [v4.0.0-beta.10] - 2018-10-04
 
 - Add support for `as` to be used with `attrs` for better polymorphism, by [@imbhargav5](https://github.com/imbhargav5) (see [#2055](https://github.com/styled-components/styled-components/pull/2055))
