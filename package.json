@@ -47,7 +47,8 @@
     "native",
     "primitives",
     "scripts",
-    "test-utils"
+    "test-utils",
+    "macro"
   ],
   "keywords": [
     "react",
