@@ -1,17 +1,19 @@
 // @flow
 import React from 'react';
+import TestRenderer from 'react-test-renderer';
 import flatten from '../flatten';
 import styled from '../../constructors/styled';
-import TestRenderer from 'react-test-renderer';
 
 describe('flatten', () => {
   it('doesnt merge strings', () => {
     expect(flatten(['foo', 'bar', 'baz'])).toEqual(['foo', 'bar', 'baz']);
   });
+
   it('drops nulls', () => {
     // $FlowInvalidInputTest
     expect(flatten(['foo', false, 'bar', undefined, 'baz', null])).toEqual(['foo', 'bar', 'baz']);
   });
+
   it('doesnt drop any numbers', () => {
     expect(flatten(['foo', 0, 'bar', NaN, 'baz', -1])).toEqual([
       'foo',
@@ -22,10 +24,12 @@ describe('flatten', () => {
       '-1',
     ]);
   });
+
   it('toStrings everything', () => {
     // $FlowInvalidInputTest
     expect(flatten([1, true])).toEqual(['1', 'true']);
   });
+
   it('hypenates objects', () => {
     const obj = {
       fontSize: '14px',
@@ -41,6 +45,7 @@ describe('flatten', () => {
       'something: else;',
     ]);
   });
+
   it('handles nested objects', () => {
     const obj = {
       fontSize: '14px',
@@ -62,6 +67,7 @@ describe('flatten', () => {
       'something: else;',
     ]);
   });
+
   it('toStrings class instances', () => {
     class SomeClass {
       toString() {
@@ -71,6 +77,7 @@ describe('flatten', () => {
     // $FlowFixMe
     expect(flatten([new SomeClass()])).toEqual(['some: thing;']);
   });
+
   it('flattens subarrays', () => {
     expect(flatten([1, 2, [3, 4, 5], 'come:on;', 'lets:ride;'])).toEqual([
       '1',
@@ -82,41 +89,70 @@ describe('flatten', () => {
       'lets:ride;',
     ]);
   });
+
   it('defers functions', () => {
     const func = () => 'bar';
     const funcWFunc = () => ['static', subfunc => (subfunc ? 'bar' : 'baz')];
     expect(flatten(['foo', func, 'baz'])).toEqual(['foo', func, 'baz']);
     expect(flatten(['foo', funcWFunc, 'baz'])).toEqual(['foo', funcWFunc, 'baz']);
   });
+
   it('executes functions', () => {
     const func = () => 'bar';
     expect(flatten(['foo', func, 'baz'], { bool: true })).toEqual(['foo', 'bar', 'baz']);
   });
+
   it('passes values to function', () => {
     const func = ({ bool }) => (bool ? 'bar' : 'baz');
     expect(flatten(['foo', func], { bool: true })).toEqual(['foo', 'bar']);
     expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'baz']);
   });
+
   it('recursively calls functions', () => {
     const func = () => ['static', ({ bool }) => (bool ? 'bar' : 'baz')];
     expect(flatten(['foo', func], { bool: true })).toEqual(['foo', 'static', 'bar']);
     expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'static', 'baz']);
   });
+
   it('warns if trying to interpolate a normal React component', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+
     const Foo = ({ className }) => <div className={className}>hello there!</div>;
 
     const Bar = styled.div`
       ${Foo}: {
         background-color: red;
-      };`;
+      };
+    `;
 
-    console.warn = jest.fn();
-    global.console = { warn: jest.fn() };
+    expect(() => TestRenderer.create(<Bar />)).toThrowErrorMatchingInlineSnapshot(
+      `"Cannot convert a Symbol value to a string"`
+    );
 
-    expect(() => {
-      flatten(TestRenderer.create(<Bar />));
-    }).toThrowError();
+    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
+      `"Foo is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details."`
+    );
+  });
 
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Foo is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.'));
+  it('does not warn for regular functions', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const SvgIcon = styled.svg`
+      vertical-align: middle;
+      height: ${props => (props.height ? props.height : '22px')};
+      width: ${props => (props.width ? props.width : '22px')};
+      text-align: center;
+      font-size: 40px;
+    `;
+
+    expect(() =>
+      TestRenderer.create(
+        <SvgIcon viewBox="0 0 512 512">
+          <path d="M39.6,95.6z" />
+        </SvgIcon>
+      )
+    ).not.toThrowError();
+
+    expect(console.warn).not.toHaveBeenCalled();
   });
 });

@@ -60,14 +60,17 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
     if (executionContext) {
       if (process.env.NODE_ENV !== 'production') {
         /* Warn if not referring styled component */
-        // eslint-disable-next-line new-cap
-        if (isElement(new chunk(executionContext))) {
-          console.warn(
-            `${getComponentName(
-              chunk
-            )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
-          );
-        }
+        try {
+          // eslint-disable-next-line new-cap
+          if (isElement(new chunk(executionContext))) {
+            console.warn(
+              `${getComponentName(
+                chunk
+              )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
+            );
+          }
+          // eslint-disable-next-line no-empty
+        } catch (e) {}
       }
 
       return flatten(chunk(executionContext), executionContext, styleSheet);
