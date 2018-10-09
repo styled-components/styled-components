@@ -54,7 +54,10 @@
     "react",
     "css",
     "css-in-js",
-    "styled-components"
+    "styled-components",
+    "babel-macro",
+    "babel-macros",
+    "styling"
   ],
   "author": "Glen Maddern",
   "license": "MIT",
