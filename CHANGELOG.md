@@ -6,6 +6,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## unreleased
 
+## [3.4.10] - 2018-10-09
+
+- Added a few iframe attributes to the valid attribute list: `allow`, `allowUserMedia`, `allowPaymentRequest`, by [@asoltys](https://github.com/asoltys) (see [#2083](https://github.com/styled-components/styled-components/pull/2083) and [#2085](https://github.com/styled-components/styled-components/pull/2085))
+
 ## [3.4.9] - 2018-09-18
 
 - Remove the `injectGlobal` warning; it's not actionable since the replacement API is in v4 only, so why say anything?
@@ -570,7 +574,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.9...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.10...master
+[v3.4.10]: https://github.com/styled-components/styled-components/compare/v3.4.9...v3.4.10
 [v3.4.9]: https://github.com/styled-components/styled-components/compare/v3.4.8...v3.4.9
 [v3.4.8]: https://github.com/styled-components/styled-components/compare/v3.4.7...v3.4.8
 [v3.4.7]: https://github.com/styled-components/styled-components/compare/v3.4.6...v3.4.7
