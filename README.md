@@ -31,11 +31,11 @@ _Supported by [Front End Center](https://frontend.center). Thank you for making 
 
 Quicklinks to some of the most-visited pages:
 
-* [**Getting started**](https://www.styled-components.com/docs/basics)
-* [API Reference](https://styled-components.com/docs/api)
-* [Theming](https://www.styled-components.com/docs/advanced#theming)
-* [Server-side rendering](https://www.styled-components.com/docs/advanced#server-side-rendering)
-* [Tagged Template Literals explained](https://www.styled-components.com/docs/advanced#tagged-template-literals)
+- [**Getting started**](https://www.styled-components.com/docs/basics)
+- [API Reference](https://styled-components.com/docs/api)
+- [Theming](https://www.styled-components.com/docs/advanced#theming)
+- [Server-side rendering](https://www.styled-components.com/docs/advanced#server-side-rendering)
+- [Tagged Template Literals explained](https://www.styled-components.com/docs/advanced#tagged-template-literals)
 
 ## Example
 
@@ -74,6 +74,21 @@ This is what you'll see in your browser:
   </a>
 </div>
 
+## Babel Macro
+
+If you're using tooling that has babel-plugin-macros set up, you can switch to the `styled-components/macro` import path instead to gain the effects of the babel plugin without further setup.
+
+```js
+import styled from 'styled-components/macro';
+
+// A static className will be generated for Title (important for SSR)
+const Title = styled.h1`
+  font-size: 1.5em;
+  text-align: center;
+  color: palevioletred;
+`;
+```
+
 ## Built with `styled-components`
 
 A lot of hard work goes into community libraries, projects, and guides. A lot of them make it easier to get started or help you with your next project! There’s also a whole lot of interesting apps and sites that people have built using styled-components.
@@ -99,13 +114,11 @@ Let everyone know you're using _styled-components_ → [![style: styled-componen
 This project exists thanks to all the people who contribute. [[Contribute](CONTRIBUTING.md)].
 <a href="https://github.com/styled-components/styled-components/graphs/contributors"><img src="https://opencollective.com/styled-components/contributors.svg?width=890" /></a>
 
-
 ## Backers
 
 Thank you to all our backers! 🙏 [[Become a backer](https://opencollective.com/styled-components#backer)]
 
 <a href="https://opencollective.com/styled-components#backers" target="_blank"><img src="https://opencollective.com/styled-components/backers.svg?width=890"></a>
-
 
 ## Sponsors
 
@@ -121,8 +134,6 @@ Support this project by becoming a sponsor. Your logo will show up here with a l
 <a href="https://opencollective.com/styled-components/sponsor/7/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/7/avatar.svg"></a>
 <a href="https://opencollective.com/styled-components/sponsor/8/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/8/avatar.svg"></a>
 <a href="https://opencollective.com/styled-components/sponsor/9/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/9/avatar.svg"></a>
-
-
 
 ## License
 
