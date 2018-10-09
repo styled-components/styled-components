@@ -1,5 +1,8 @@
+import cosmiconfigMock from 'cosmiconfig';
 import pluginTester from 'babel-plugin-tester';
 import plugin from 'babel-plugin-macros';
+
+jest.mock('cosmiconfig', () => jest.fn(require.requireActual('cosmiconfig')));
 
 const styledExampleCode = `
 import styled from '../../macro'
@@ -84,6 +87,20 @@ pluginTester({
       code: invalidExampleCode,
       error: true,
       snapshot: false,
+    },
+    'should not add componentId with a config disabling ssr': {
+      code: styledExampleCode,
+      setup: () => {
+        cosmiconfigMock.mockImplementationOnce(() => ({
+          searchSync: () => ({
+            config: {
+              styledComponents: {
+                ssr: false,
+              },
+            },
+          }),
+        }));
+      },
     },
   },
 });
