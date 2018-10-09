@@ -8,6 +8,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Wrap the React component detector dev check in `flatten` with a try/catch to handle use cases where the chunk being inspected cannot be called with `new` (see [#2079](https://github.com/styled-components/styled-components/pull/2079))
 
+- Fix an edge case error caused by `classNameUseCheckInjector` creating invalid CSS selectors with multiple subsequent dots when `className` contains spaces (see [#2080](https://github.com/styled-components/styled-components/pull/2080)
+
 ## [v4.0.0-beta.11] - 2018-10-08
 
 - Add warning when component is not a styled component and cannot be referred via component selector, by [@egdbear](https://github.com/egdbear) (see [#2070](https://github.com/styled-components/styled-components/pull/2070))
