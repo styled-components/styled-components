@@ -16,8 +16,14 @@ describe('development', () => {
 });
 
 describe('production', () => {
+  let prevValue = process.env.NODE_ENV;
+
   beforeEach(() => {
     process.env.NODE_ENV = 'production';
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = prevValue;
   });
 
   it('returns an error link', () => {
