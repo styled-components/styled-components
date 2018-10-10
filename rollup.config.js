@@ -105,7 +105,10 @@ const standaloneProdConfig = {
     ...standaloneBaseConfig.output,
     file: 'dist/styled-components.min.js',
   },
-  plugins: standaloneBaseConfig.plugins.concat(prodPlugins),
+  plugins: standaloneBaseConfig.plugins.concat(
+    prodPlugins,
+    replace({ 'process.env.SC_DISABLE_SPEEDY': false })
+  ),
 };
 
 const serverConfig = {
