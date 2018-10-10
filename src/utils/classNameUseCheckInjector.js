@@ -14,7 +14,10 @@ export default (target: Object) => {
       targetCDM.call(this);
     }
 
-    const classNames = elementClassName.split(' ');
+    const classNames = elementClassName
+      .replace(/ +/g, ' ')
+      .trim()
+      .split(' ');
     // eslint-disable-next-line react/no-find-dom-node
     const node: Element | null = (ReactDOM.findDOMNode(this): any);
     const selector = classNames.map(s => `.${s}`).join('');
