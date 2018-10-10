@@ -36,6 +36,8 @@ export interface Tag<T> {
   insertMarker(id: string): T;
   /* inserts rules according to the ids markers */
   insertRules(id: string, cssRules: string[], name: ?string): void;
+  /* insert sourcemap to be appended at the end of the style tag */
+  insertSourceMap(sourceMap: string): void;
   /* removes all rules belonging to the id, keeping the marker around */
   removeRules(id: string): void;
   css(): string;
@@ -181,6 +183,8 @@ const makeSpeedyTag = (
     addNameForId(names, id, name)
   }
 
+  const insertSourceMap = () => {} // not implemented
+
   const removeRules = id => {
     const marker = markers[id]
     if (marker === undefined) return
@@ -227,6 +231,7 @@ const makeSpeedyTag = (
     getIds: getIdsFromMarkersFactory(markers),
     hasNameForId: hasNameForId(names),
     insertMarker,
+    insertSourceMap,
     insertRules,
     removeRules,
     sealed: false,
@@ -244,6 +249,8 @@ const makeBrowserTag = (
 ): Tag<Text> => {
   const names = (Object.create(null): Object)
   const markers = Object.create(null)
+  let sourceMapContent: ?string
+  let sourceMapNode: ?Text
 
   const extractImport = getImportRuleTag !== undefined
 
@@ -261,6 +268,16 @@ const makeBrowserTag = (
     names[id] = Object.create(null)
 
     return markers[id]
+  }
+
+  const insertSourceMap = (sourceMap: string) => {
+    sourceMapContent = sourceMap
+    if (!sourceMapNode) {
+      sourceMapNode = document.createTextNode(sourceMap)
+      el.appendChild(sourceMapNode)
+    } else {
+      sourceMapNode.nodeValue = sourceMap
+    }
   }
 
   const insertRules = (id, cssRules, name) => {
@@ -314,6 +331,13 @@ const makeBrowserTag = (
     return str
   }
 
+  const cssWithSourceMap = () => {
+    if (sourceMapContent) {
+      return css() + sourceMapContent
+    }
+    return css()
+  }
+
   return {
     clone() {
       throw new StyledError(5)
@@ -323,11 +347,12 @@ const makeBrowserTag = (
     hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
+    insertSourceMap,
     removeRules,
     sealed: false,
     styleTag: el,
-    toElement: wrapAsElement(css, names),
-    toHTML: wrapAsHtmlTag(css, names),
+    toElement: wrapAsElement(cssWithSourceMap, names),
+    toHTML: wrapAsHtmlTag(cssWithSourceMap, names),
   }
 }
 
@@ -336,6 +361,7 @@ const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
     namesArg === undefined ? (Object.create(null): Object) : namesArg
   const markers = markersArg === undefined ? Object.create(null) : markersArg
 
+  let sourceMapContent: ?string
   const insertMarker = id => {
     const prev = markers[id]
     if (prev !== undefined) {
@@ -349,6 +375,10 @@ const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
     const marker = insertMarker(id)
     marker[0] += cssRules.join(' ')
     addNameForId(names, id, name)
+  }
+
+  const insertSourceMap = (sourceMap: string) => {
+    sourceMapContent = sourceMap
   }
 
   const removeRules = id => {
@@ -370,6 +400,13 @@ const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
     return str
   }
 
+  const cssWithSourceMap = () => {
+    if (sourceMapContent) {
+      return css() + sourceMapContent
+    }
+    return css()
+  }
+
   const clone = () => {
     const namesClone = cloneNames(names)
     const markersClone = Object.create(null)
@@ -389,11 +426,12 @@ const makeServerTagInternal = (namesArg, markersArg): Tag<[string]> => {
     hasNameForId: hasNameForId(names),
     insertMarker,
     insertRules,
+    insertSourceMap,
     removeRules,
     sealed: false,
     styleTag: null,
-    toElement: wrapAsElement(css, names),
-    toHTML: wrapAsHtmlTag(css, names),
+    toElement: wrapAsElement(cssWithSourceMap, names),
+    toHTML: wrapAsHtmlTag(cssWithSourceMap, names),
   }
 
   return tag

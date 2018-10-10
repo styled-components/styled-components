@@ -56,17 +56,24 @@ export default (
     componentId: string
     isStatic: boolean
     lastClassName: ?string
+    sourceMap: ?string
 
-    constructor(rules: RuleSet, attrs?: Object, componentId: string) {
+    constructor(
+      rules: RuleSet,
+      attrs?: Object,
+      componentId: string,
+      sourceMap?: string
+    ) {
       this.rules = rules
       this.isStatic = !isHMREnabled && isStaticRules(rules, attrs)
       this.componentId = componentId
+      this.sourceMap = sourceMap
 
       if (!StyleSheet.master.hasId(componentId)) {
         const placeholder =
           process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : []
 
-        StyleSheet.master.deferredInject(componentId, placeholder)
+        StyleSheet.master.deferredInject(componentId, placeholder, sourceMap)
       }
     }
 
@@ -93,7 +100,8 @@ export default (
         styleSheet.inject(
           this.componentId,
           stringifyRules(flatCSS, `.${name}`),
-          name
+          name,
+          this.sourceMap
         )
       }
 

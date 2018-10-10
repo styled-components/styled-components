@@ -280,6 +280,7 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
       ParentComponent = BaseStyledComponent,
       rules: extendingRules,
       attrs,
+      sourceMap = '/* some sourcemap */',
     } = options
 
     const styledComponentId =
@@ -290,7 +291,8 @@ export default (ComponentStyle: Function, constructWithOptions: Function) => {
     const componentStyle = new ComponentStyle(
       extendingRules === undefined ? rules : extendingRules.concat(rules),
       attrs,
-      styledComponentId
+      styledComponentId,
+      sourceMap
     )
 
     class StyledComponent extends ParentComponent {
