@@ -10,6 +10,23 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Fix an edge case error caused by `classNameUseCheckInjector` creating invalid CSS selectors with multiple subsequent dots when `className` contains spaces (see [#2080](https://github.com/styled-components/styled-components/pull/2080)
 
+- Add `process.env.SC_DISABLE_SPEEDY` environment override (see [#2089](https://github.com/styled-components/styled-components/pull/2089))
+
+  Setting this attribute to anything truthy will disable "speedy" mode. Note that you'll want to use
+  something like `webpack.DefinePlugin` to write the variable since most bundlers don't write any environment variables other than `NODE_ENV` by default:
+
+  ```js
+  // webpack.config.js
+
+  {
+    plugins: [
+      new webpack.DefinePlugin({
+        'process.env.SC_DISABLE_SPEEDY': true,
+      })
+    ]
+  }
+  ```
+
 ## [v4.0.0-beta.11] - 2018-10-08
 
 - Add warning when component is not a styled component and cannot be referred via component selector, by [@egdbear](https://github.com/egdbear) (see [#2070](https://github.com/styled-components/styled-components/pull/2070))
