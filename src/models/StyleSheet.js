@@ -213,23 +213,34 @@ export default class StyleSheet {
     ))
   }
 
+  createTagForId(id: string, lastTag?: Tag<any>): Tag<any> {
+    this.capacity = MAX_SIZE
+    const tag = this.makeTag(lastTag)
+    this.tags.push(tag)
+    this.tagMap[id] = tag
+    return tag
+  }
+
+  getPrevUnsealedTagForId(id: string) {
+    const prev = this.tagMap[id]
+    return prev !== undefined && !prev.sealed && prev
+  }
+
   /* get a tag for a given componentId, assign the componentId to one, or shard */
   getTagForId(id: string): Tag<any> {
     /* simply return a tag, when the componentId was already assigned one */
-    const prev = this.tagMap[id]
-    if (prev !== undefined && !prev.sealed) {
+    const prev = this.getPrevUnsealedTagForId(id)
+    if (prev) {
       return prev
     }
 
-    let tag = this.tags[this.tags.length - 1]
+    const tag = this.tags[this.tags.length - 1]
 
     /* shard (create a new tag) if the tag is exhausted (See MAX_SIZE) */
     this.capacity -= 1
 
     if (this.capacity === 0) {
-      this.capacity = MAX_SIZE
-      tag = this.makeTag(tag)
-      this.tags.push(tag)
+      return this.createTagForId(id, tag)
     }
 
     return (this.tagMap[id] = tag)
@@ -255,7 +266,7 @@ export default class StyleSheet {
   }
 
   /* registers a componentId and registers it on its tag */
-  deferredInject(id: string, cssRules: string[]) {
+  deferredInject(id: string, cssRules: string[], sourceMap: ?string) {
     /* don't inject when the id is already registered */
     if (this.tagMap[id] !== undefined) return
 
@@ -264,19 +275,30 @@ export default class StyleSheet {
       clones[i].deferredInject(id, cssRules)
     }
 
-    this.getTagForId(id).insertMarker(id)
+    const tag = (() => {
+      if (sourceMap && !this.getPrevUnsealedTagForId(id)) {
+        return this.createTagForId(id)
+      }
+      return this.getTagForId(id)
+    })()
+    tag.insertMarker(id)
     this.deferred[id] = cssRules
   }
 
   /* injects rules for a given id with a name that will need to be cached */
-  inject(id: string, cssRules: string[], name?: string) {
+  inject(id: string, cssRules: string[], name?: string, sourceMap: ?string) {
     const { clones } = this
 
     for (let i = 0; i < clones.length; i += 1) {
-      clones[i].inject(id, cssRules, name)
+      clones[i].inject(id, cssRules, name, undefined)
     }
 
-    const tag = this.getTagForId(id)
+    const tag = (() => {
+      if (sourceMap && !this.getPrevUnsealedTagForId(id)) {
+        return this.createTagForId(id)
+      }
+      return this.getTagForId(id)
+    })()
 
     /* add deferred rules for component */
     if (this.deferred[id] !== undefined) {
@@ -289,6 +311,10 @@ export default class StyleSheet {
       this.deferred[id] = undefined
     } else {
       tag.insertRules(id, cssRules, name)
+    }
+
+    if (sourceMap && tag.insertSourceMap) {
+      tag.insertSourceMap(sourceMap)
     }
   }
 
