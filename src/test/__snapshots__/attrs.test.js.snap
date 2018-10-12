@@ -7,6 +7,14 @@ exports[`attrs call an attr function 1`] = `
 />
 `;
 
+exports[`attrs does not forward transient props 1`] = `
+<div
+  className="sc-a b"
+>
+  Something else
+</div>
+`;
+
 exports[`attrs merge attrs 1`] = `
 <button
   className="sc-a b"
@@ -78,7 +86,7 @@ exports[`attrs should merge className even if its a function 2`] = `
 />
 `;
 
-exports[`attrs should override children of course 1`] = `
+exports[`attrs should override children 1`] = `
 <div
   className="sc-a b"
 >
@@ -94,7 +102,7 @@ exports[`attrs should pass through children as a normal prop 1`] = `
 </div>
 `;
 
-exports[`attrs should pass through complex children as well 1`] = `
+exports[`attrs should pass through complex children 1`] = `
 <div
   className="sc-a b"
 >

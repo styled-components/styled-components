@@ -176,7 +176,7 @@ describe('ssr', () => {
       body { background: papayawhip; }
     `;
     const Header = styled.h1.withConfig({ componentId: 'Header' })`
-      animation: ${props => props.animation} 1s both;
+      animation: ${props => props.$animation} 1s both;
     `;
 
     seedNextClassnames(['keyframe_0']);
@@ -186,7 +186,7 @@ describe('ssr', () => {
       sheet.collectStyles(
         <React.Fragment>
           <Component />
-          <Header animation={keyframes`0% { opacity: 0; }`} />
+          <Header $animation={keyframes`0% { opacity: 0; }`} />
         </React.Fragment>
       )
     );

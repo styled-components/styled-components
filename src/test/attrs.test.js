@@ -53,10 +53,10 @@ describe('attrs', () => {
 
   it('pass props to the attr function', () => {
     const Comp = styled.button.attrs({
-      type: props => (props.submit ? 'submit' : 'button'),
+      type: props => (props.$submit ? 'submit' : 'button'),
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-    expect(TestRenderer.create(<Comp submit />).toJSON()).toMatchSnapshot();
+    expect(TestRenderer.create(<Comp $submit />).toJSON()).toMatchSnapshot();
   });
 
   it('should replace attrs with props', () => {
@@ -78,10 +78,10 @@ describe('attrs', () => {
 
   it('should merge className even if its a function', () => {
     const Comp = styled.div.attrs({
-      className: props => `meow ${props.purr ? 'purr' : 'nya'}`,
+      className: props => `meow ${props.$purr ? 'purr' : 'nya'}`,
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-    expect(TestRenderer.create(<Comp purr />).toJSON()).toMatchSnapshot();
+    expect(TestRenderer.create(<Comp $purr />).toJSON()).toMatchSnapshot();
   });
 
   it('should work with data and aria attributes', () => {
@@ -137,14 +137,14 @@ describe('attrs', () => {
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
-  it('should pass through complex children as well', () => {
+  it('should pass through complex children', () => {
     const Comp = styled.div.attrs({
       children: <span>Probably a bad idea</span>,
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
-  it('should override children of course', () => {
+  it('should override children', () => {
     const Comp = styled.div.attrs({
       children: <span>Amazing</span>,
     })``;
@@ -155,7 +155,7 @@ describe('attrs', () => {
     const Paragraph = styled.p.attrs({
       style: props => ({
         ...props.style,
-        fontSize: `${props.fontScale}em`,
+        fontSize: `${props.$fontScale}em`,
       }),
     })``;
 
@@ -171,7 +171,7 @@ describe('attrs', () => {
           <Paragraph
             className={this.props.className}
             style={this.props.style}
-            fontScale={this.state.fontScale}
+            $fontScale={this.state.fontScale}
           >
             {this.props.children}
           </Paragraph>
@@ -186,5 +186,12 @@ describe('attrs', () => {
     })``;
 
     expect(TestRenderer.create(<BlueText>Hello</BlueText>).toJSON()).toMatchSnapshot();
+  });
+
+  it('does not forward transient props', () => {
+    const Comp = styled.div.attrs({
+      $foo: 'blue',
+    })``;
+    expect(TestRenderer.create(<Comp>Something else</Comp>).toJSON()).toMatchSnapshot();
   });
 });

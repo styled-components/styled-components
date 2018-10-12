@@ -50,14 +50,21 @@ class StyledNativeComponent extends Component<*, *> {
             generatedStyles = this.generateAndInjectStyles(theme || EMPTY_OBJECT, this.props);
           }
 
-          const propsForElement = {
-            ...this.attrs,
-            ...props,
-            style: [generatedStyles].concat(style),
-          };
+          const propsForElement = {};
+          let key;
+
+          for (key in this.attrs) {
+            if (key[0] !== '$') propsForElement[key] = this.attrs[key];
+          }
+
+          for (key in props) {
+            if (key[0] !== '$') propsForElement[key] = props[key];
+          }
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
           if (process.env.NODE_ENV !== 'production' && innerRef) warnInnerRef();
+
+          propsForElement.style = [generatedStyles].concat(style);
 
           return createElement(renderAs || target, propsForElement);
         }}

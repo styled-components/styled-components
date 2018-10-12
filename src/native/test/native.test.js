@@ -292,6 +292,43 @@ describe('native', () => {
       expect(view.props).toHaveProperty('foo');
       expect(view.props.style).toEqual([{ color: 'red' }]);
     });
+
+    it('normal props are forwarded', () => {
+      const Comp = styled.Text`
+        color: ${p => p.color};
+      `;
+
+      expect(TestRenderer.create(<Comp color="red" />)).toMatchInlineSnapshot(`
+<Text
+  color="red"
+  style={
+    Array [
+      Object {
+        "color": "red",
+      },
+    ]
+  }
+/>
+`);
+    });
+
+    it('transient props are not forwarded', () => {
+      const Comp = styled.Text`
+        color: ${p => p.$color};
+      `;
+
+      expect(TestRenderer.create(<Comp $color="red" />)).toMatchInlineSnapshot(`
+<Text
+  style={
+    Array [
+      Object {
+        "color": "red",
+      },
+    ]
+  }
+/>
+`);
+    });
   });
 
   describe('warnings', () => {

@@ -13,18 +13,20 @@ describe('props', () => {
 
   it('should execute interpolations and fall back', () => {
     const Comp = styled.div`
-      color: ${props => props.fg || 'black'};
+      color: ${props => props.$fg || 'black'};
     `;
     TestRenderer.create(<Comp />);
     expectCSSMatches('.sc-a {} .b { color:black; }');
   });
+
   it('should execute interpolations and inject props', () => {
     const Comp = styled.div`
-      color: ${props => props.fg || 'black'};
+      color: ${props => props.$fg || 'black'};
     `;
-    TestRenderer.create(<Comp fg="red" />);
+    TestRenderer.create(<Comp $fg="red" />);
     expectCSSMatches('.sc-a {} .b { color:red; }');
   });
+
   it('should ignore non-0 falsy object interpolations', () => {
     const Comp = styled.div`
       ${() => ({
@@ -35,7 +37,32 @@ describe('props', () => {
         colorD: '',
       })};
     `;
-    TestRenderer.create(<Comp fg="red" />);
+    TestRenderer.create(<Comp $fg="red" />);
     expectCSSMatches('.sc-a {} .b { border-width:0; }');
+  });
+
+  it('does not pass through transient props', () => {
+    const Comp = styled.div`
+      color: red;
+    `;
+
+    expect(TestRenderer.create(<Comp $color="blue" />).toJSON()).toMatchInlineSnapshot(`
+<div
+  className="sc-a b"
+/>
+`);
+  });
+
+  it('passes through normal props', () => {
+    const Comp = styled.div`
+      color: red;
+    `;
+
+    expect(TestRenderer.create(<Comp color="blue" />).toJSON()).toMatchInlineSnapshot(`
+<div
+  className="sc-a b"
+  color="blue"
+/>
+`);
   });
 });
