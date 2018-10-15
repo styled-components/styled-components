@@ -1,10 +1,8 @@
 {
   "rootDir": ".",
-  "roots": ["<rootDir>"],
   "globals": {
     "__DEV__": true
   },
-  "modulePathIgnorePatterns": ["<rootDir>/node_modules/react-native/Libraries/react-native/"],
   "testRegex": "./src/native/test/.*.js$",
   "preset": "react-native",
   "testURL": "http://localhost",

@@ -1,7 +1,7 @@
-version: "{build}"
+version: '{build}'
 branches:
   only:
-  - master
+    - master
 skip_tags: true
 build: off
 clone_depth: 1
@@ -24,4 +24,4 @@ test_script:
   - yarn --version
   - yarn build
   - yarn flow
-  - yarn test
+  - yarn test:web
