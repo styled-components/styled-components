@@ -6,9 +6,110 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Wrap the React component detector dev check in `flatten` with a try/catch to handle use cases where the chunk being inspected cannot be called with `new` (see [#2079](https://github.com/styled-components/styled-components/pull/2079))
+## [v4.0.0] - 2018-10-15
 
-- Fix an edge case error caused by `classNameUseCheckInjector` creating invalid CSS selectors with multiple subsequent dots when `className` contains spaces (see [#2080](https://github.com/styled-components/styled-components/pull/2080)
+This is a rollup of the highlights of beta 0-11 for convenience. See the [migration guide](https://www.styled-components.com/docs/faqs#what-do-i-need-to-do-to-migrate-to-v4) for easy updating steps and the [beta announcement blog](https://medium.com/styled-components/announcing-styled-components-v4-better-faster-stronger-3fe1aba1a112) for our summary of v4's changes, thought process, etc.
+
+### New stuff
+
+- Add babel macro for full-featured interop with create react app v2+, by [@lucleray](https://github.com/lucleray) (see [#2032](https://github.com/styled-components/styled-components/pull/2032))
+
+- Expose `ThemeConsumer` component, context consumer render prop component from the `React.createContext` API if people are interested in using it rather than / in addition to the `withTheme` HOC, by [@probablyup](https://github.com/probablyup)
+
+- Add `createGlobalStyle` that returns a component which, when mounting, will apply global styles. This is a replacement for the `injectGlobal` API. It can be updated, replaced, removed, etc like any normal component and the global scope will update accordingly, by [@JamieDixon](https://github.com/JamieDixon) [@marionebl](https://github.com/marionebl), [@yjimk](https://github.com/yjimk), and [@imbhargav5](https://github.com/imbhargav5) (see [#1416](https://github.com/styled-components/styled-components/pull/1416))
+
+  ```jsx
+  const GlobalStyles = createGlobalStyle`
+    html {
+      color: 'red';
+    }
+  `;
+
+  // then put it in your React tree somewhere:
+  // <GlobalStyles />
+  ```
+
+- Added a first-class API for rendering polymorphism via "as" prop. In most cases, this new prop will replace your need to use the `.withComponent` API. It allows you to control what underlying element or component is rendered at runtime, while not messing with the styles, by [@probablyup](https://github.com/probablyup) (see [#1962](https://github.com/styled-components/styled-components/pull/1962))
+
+  ```jsx
+  import { Link } from 'react-router'
+
+  const Component = styled.div`
+    color: red;
+  `
+
+  // Examples
+  <Component>Hello world!</Component>
+  <Component as="span">Hello world!</Component>
+  <Component as={Link} to="home">Hello world!</Component>
+  ```
+
+### Breaking changes
+
+- Fix how ampersand is handled in self-referential selector combinations, e.g. `& + &` (see [#2071](https://github.com/styled-components/styled-components/pull/2071))
+
+- Remove deprecated `consolidateStreamedStyles` API, by [@probablyup](https://github.com/probablyup) (see [#1906](https://github.com/styled-components/styled-components/pull/1906))
+
+- Remove deprecated `jsnext:main` entry point from package.json, by [@probablyup](https://github.com/probablyup) (see [#1907](https://github.com/styled-components/styled-components/pull/1907))
+
+- Remove deprecated `.extend` API, by [@probablyup](https://github.com/probablyup) (see [#1908](https://github.com/styled-components/styled-components/pull/1908))
+
+- Migrate to new context API, by [@alexandernanberg](https://github.com/alexandernanberg) (see [#1894](https://github.com/styled-components/styled-components/pull/1894))
+
+- Remove TS typings; they are now to be found in DefinitelyTyped, by [@probablyup](https://github.com/probablyup). See https://github.com/styled-components/styled-components/issues/1778 for more information.
+
+- Add new `data-styled-version` attribute to generated `<style>` tags to allow multiple versions of styled-components to function on the page at once without clobbering each other, by [@probablyup](https://github.com/probablyup)
+
+  It's still highly recommended to use aliasing via your bundler to dedupe libraries like styled-components and react.
+
+- [Breaking change] Refactor `keyframes` helper, by [@fer0x](https://github.com/Fer0x) (see [#1930](https://github.com/styled-components/styled-components/pull/1930)).
+
+  Keyframes is now implemented in a "lazy" manner: its styles will be injected with the render phase of components using them.
+
+  `keyframes` no longer returns an animation name, instead it returns an object which has method `.getName()` for the purpose of getting the animation name.
+
+- Migrate to use new `React.forwardRef` API, by [@probablyup](https://github.com/probablyup); note that this removes the `innerRef` API since it is no longer needed.
+
+- Implement `styled()` wrapper folding. In a nutshell, when you nest styled wrappers (e.g. `styled(styled.div)`) the components are now folded such that only one is mounted that contains the merged styles of its ancestors. This is conceptually equivalent to the removed "extend" functionality, but without many of the downsides -- and it's automatic, by [@probablyup](https://github.com/probablyup) (see [#1962](https://github.com/styled-components/styled-components/pull/1962))
+
+### Developer experience improvements
+
+- Add warning when component is not a styled component and cannot be referred via component selector, by [@egdbear](https://github.com/egdbear) (see [#2070](https://github.com/styled-components/styled-components/pull/2070))
+
+  When using CRA v2, import styled components from `styled-components/macro` instead to gain all the benefits of [our babel plugin](https://github.com/styled-components/babel-plugin-styled-components).
+
+- Add a warning when wrapping a React component with `styled()` and the `className` isn't used (meaning styling isn't applied), by [@Fer0x](https://github.com/Fer0x) (see [#2073](https://github.com/styled-components/styled-components/pull/2073))
+
+- Tweak the styled components base component naming to look nicer in DevTools, by [@probablyup](https://github.com/probablyup) (see [#2012](https://github.com/styled-components/styled-components/pull/2012))
+
+- Beef up the error message that sometimes occurs when multiple versions of styled components are used together and the StyleSheet instance can't be found, by [@probablyup](https://github.com/probablyup) (see [#2012](https://github.com/styled-components/styled-components/pull/2012))
+
+### Misc
+
+- Add `enzymeFind` test utility to easily grab instances of a styled-component from enyzme mounted testing scenarios, by [@probablyup](https://github.com/probablyup) (see [#2049](https://github.com/styled-components/styled-components/pull/2049))
+
+  ```js
+  import { mount } from 'enzyme';
+  import React from 'react';
+  import styled from 'styled-components';
+  import { enzymeFind } from 'styled-components/test-utils';
+
+  const Thing = styled.div`
+    color: red;
+  `;
+
+  const wrapper = mount(
+    <div>
+      <Thing isCool />
+    </div>
+  );
+
+  const thing = enzymeFind(wrapper, Thing);
+
+  // expect(thing.props()).toHaveProperty('isCool') etc
+  ```
+
+- Inline and optimize the static hoisting functionality to avoid a bundler bug and shed a bit of package weight, by [@probablyup](https://github.com/probablyup) (see [#2021](https://github.com/styled-components/styled-components/pull/2021)
 
 ## [v4.0.0-beta.11] - 2018-10-08
 
@@ -729,7 +830,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.11...develop
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.0...master
+[v4.0.0]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.11...v4.0.0
 [v4.0.0-beta.11]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.10...v4.0.0-beta.11
 [v4.0.0-beta.10]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.9...v4.0.0-beta.10
 [v4.0.0-beta.9]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.8...v4.0.0-beta.9
