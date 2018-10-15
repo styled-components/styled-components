@@ -1,13 +1,11 @@
 {
   "rootDir": ".",
+  "roots": ["<rootDir>"],
   "globals": {
     "__DEV__": true
   },
   "testRegex": "./src/primitives/test/.*.js$",
-  "moduleFileExtensions": [
-    "ios.js",
-    "js"
-  ],
+  "moduleFileExtensions": ["ios.js", "js"],
   "preset": "react-native",
   "testURL": "http://localhost",
   "testEnvironment": "jsdom"

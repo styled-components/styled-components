@@ -1,5 +1,6 @@
 {
   "rootDir": ".",
+  "roots": ["<rootDir>"],
   "globals": {
     "__DEV__": true
   },
