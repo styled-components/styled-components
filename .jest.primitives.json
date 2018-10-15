@@ -6,6 +6,7 @@
   },
   "testRegex": "./src/primitives/test/.*.js$",
   "moduleFileExtensions": ["ios.js", "js"],
+  "modulePathIgnorePatterns": ["<rootDir>/node_modules/react-native/Libraries/react-native/"],
   "preset": "react-native",
   "testURL": "http://localhost",
   "testEnvironment": "jsdom"
