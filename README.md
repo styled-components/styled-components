@@ -89,6 +89,8 @@ const Title = styled.h1`
 `;
 ```
 
+If you wish to provide configuration options to the babel plugin similar to how you would in a `.babelrc`, [see this guide](https://github.com/kentcdodds/babel-plugin-macros/blob/master/other/docs/author.md#config-experimental). The config name is `"styledComponents"`.
+
 ## Built with `styled-components`
 
 A lot of hard work goes into community libraries, projects, and guides. A lot of them make it easier to get started or help you with your next project! There’s also a whole lot of interesting apps and sites that people have built using styled-components.
