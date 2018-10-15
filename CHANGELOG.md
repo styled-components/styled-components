@@ -161,6 +161,10 @@ const thing = enzymeFind(wrapper, Thing);
   <Component as={Link} to="home">Hello world!</Component>
   ```
 
+## [3.4.10] - 2018-10-09
+
+- Added a few iframe attributes to the valid attribute list: `allow`, `allowUserMedia`, `allowPaymentRequest`, by [@asoltys](https://github.com/asoltys) (see [#2083](https://github.com/styled-components/styled-components/pull/2083) and [#2085](https://github.com/styled-components/styled-components/pull/2085))
+
 ## [v3.4.9] - 2018-09-18
 
 - Remove the `injectGlobal` warning; it's not actionable since the replacement API is in v4 only, so why say anything?
@@ -737,7 +741,8 @@ _v3.3.1 was skipped due to a bad deploy._
 [v4.0.0-beta.3]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.2...v4.0.0-beta.3
 [v4.0.0-beta.2]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.1...v4.0.0-beta.2
 [v4.0.0-beta.1]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.0...v4.0.0-beta.1
-[v4.0.0-beta.0]: https://github.com/styled-components/styled-components/compare/v3.4.9...v4.0.0-beta.0
+[v4.0.0-beta.0]: https://github.com/styled-components/styled-components/compare/v3.4.10...v4.0.0-beta.0
+[v3.4.10]: https://github.com/styled-components/styled-components/compare/v3.4.9...v3.4.10
 [v3.4.9]: https://github.com/styled-components/styled-components/compare/v3.4.8...v3.4.9
 [v3.4.8]: https://github.com/styled-components/styled-components/compare/v3.4.7...v3.4.8
 [v3.4.7]: https://github.com/styled-components/styled-components/compare/v3.4.6...v3.4.7
