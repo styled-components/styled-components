@@ -1,18 +1,16 @@
 {
   "name": "styled-components",
-  "version": "3.4.10",
+  "version": "4.0.0",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
-  "typings": "typings/styled-components.d.ts",
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.esm.js",
   "module": "dist/styled-components.esm.js",
-  "react-native": "dist/styled-components.native.cjs.js",
+  "react-native": "native/dist/styled-components.native.cjs.js",
   "browser": {
     "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js",
-    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js",
-    "./dist/styled-components-no-parser.esm.js": "./dist/styled-components-no-parser.browser.esm.js",
-    "./dist/styled-components-no-parser.cjs.js": "./dist/styled-components-no-parser.browser.cjs.js"
+    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
   },
+  "sideEffects": false,
   "scripts": {
     "build": "rollup -c",
     "prebuild": "rimraf dist",
@@ -24,15 +22,12 @@
     "test:primitives": "jest -c .jest.primitives.json",
     "test:primitives:watch": "npm run test:primitives -- --watch",
     "test:integration": "jest -c .jest.integration.json --runInBand --forceExit",
-    "test:size": "bundlesize",
-    "danger": "cross-env NODE_ENV=test danger ci -v",
+    "size": "bundlesize",
     "flow": "flow check",
     "flow:watch": "flow-watch",
     "format": "eslint ./**/*.js --fix",
     "lint": "eslint src",
-    "tslint": "tslint typings/*.ts native/*.ts",
-    "typescript": "tsc --project ./typings/tests",
-    "precommit": "lint-staged",
+    "prettier": "prettier */**/*.js --write",
     "prepublishOnly": "run-s build",
     "lint-staged": "lint-staged",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
@@ -49,22 +44,20 @@
     "CODE_OF_CONDUCT.md",
     "CONTRIBUTING.md",
     "dist",
-    "docs",
-    "flow-typed",
-    "lib",
     "native",
-    "no-parser",
     "primitives",
     "scripts",
-    "src",
     "test-utils",
-    "typings"
+    "macro"
   ],
   "keywords": [
     "react",
     "css",
     "css-in-js",
-    "styled-components"
+    "styled-components",
+    "babel-macro",
+    "babel-macros",
+    "styling"
   ],
   "author": "Glen Maddern",
   "license": "MIT",
@@ -73,84 +66,72 @@
   },
   "homepage": "https://styled-components.com",
   "dependencies": {
-    "buffer": "^5.0.3",
-    "css-to-react-native": "^2.0.3",
-    "fbjs": "^0.8.16",
-    "hoist-non-react-statics": "^2.5.0",
+    "@emotion/is-prop-valid": "^0.6.8",
+    "babel-plugin-styled-components": ">= 1",
+    "css-to-react-native": "^2.2.2",
+    "memoize-one": "^4.0.0",
     "prop-types": "^15.5.4",
     "react-is": "^16.3.1",
     "stylis": "^3.5.0",
-    "stylis-rule-sheet": "^0.0.10",
-    "supports-color": "^3.2.3"
+    "stylis-rule-sheet": "^0.0.10"
   },
   "devDependencies": {
-    "@types/node": "9.6.4",
-    "@types/react": "^16.3.12",
-    "@types/react-dom": "^16.0.5",
-    "@types/react-native": "^0.55.7",
     "babel-cli": "^6.22.2",
     "babel-core": "^6.17.0",
-    "babel-eslint": "^8.2.3",
-    "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-eslint": "^10.0.1",
+    "babel-plugin-add-module-exports": "^1.0.0",
     "babel-plugin-external-helpers": "^6.22.0",
-    "babel-plugin-flow-react-proptypes": "^2.1.3",
-    "babel-plugin-preval": "^3.0.0",
+    "babel-plugin-macros": "^2.4.2",
+    "babel-plugin-preval": "^3.0.1",
+    "babel-plugin-tester": "^5.5.1",
     "babel-plugin-transform-class-properties": "^6.22.0",
     "babel-plugin-transform-object-rest-spread": "^6.22.0",
-    "babel-plugin-transform-react-remove-prop-types": "^0.4.12",
+    "babel-plugin-transform-react-remove-prop-types": "0.4.14",
     "babel-preset-env": "^1.4.0",
     "babel-preset-react": "^6.22.0",
     "bundlesize": "^0.17.0",
-    "chokidar": "^1.6.0",
     "cross-env": "^5.1.3",
-    "danger": "^3.7.14",
-    "danger-plugin-jest": "^1.1.0",
-    "enzyme": "^3.3.0",
-    "enzyme-adapter-react-16": "^1.1.1",
-    "eslint": "^4.19.1",
-    "eslint-config-airbnb": "^16.1.0",
-    "eslint-config-prettier": "^2.9.0",
-    "eslint-plugin-flowtype": "^2.48.0",
+    "eslint": "^5.6.1",
+    "eslint-config-airbnb": "^17.1.0",
+    "eslint-config-prettier": "^3.1.0",
+    "eslint-plugin-flowtype": "^2.50.3",
     "eslint-plugin-flowtype-errors": "^3.6.0",
-    "eslint-plugin-import": "^2.12.0",
-    "eslint-plugin-jsx-a11y": "^6.0.3",
-    "eslint-plugin-prettier": "^2.6.0",
-    "eslint-plugin-react": "^7.8.2",
+    "eslint-plugin-import": "^2.14.0",
+    "eslint-plugin-jsx-a11y": "^6.1.2",
+    "eslint-plugin-prettier": "^3.0.0",
+    "eslint-plugin-react": "^7.11.1",
     "express": "^4.14.1",
-    "flow-bin": "^0.73.0",
+    "flow-bin": "^0.82.0",
     "flow-watch": "^1.1.1",
-    "husky": "^0.14.3",
-    "jest": "^23.0.0",
-    "jest-image-snapshot": "^2.4.1",
-    "jest-styled-components": "^5.0.1",
-    "jsdom": "^9.10.0",
-    "lint-staged": "^6.0.0",
-    "node-watch": "^0.4.1",
+    "husky": "^1.0.1",
+    "jest": "^23.6.0",
+    "jest-image-snapshot": "^2.5.0",
+    "jest-styled-components": "^6.0.0",
+    "lint-staged": "^7.3.0",
+    "node-watch": "^0.5.0",
     "npm-run-all": "^4.1.2",
-    "prettier": "1.9.2",
-    "puppeteer": "^1.5.0",
+    "prettier": "^1.14.3",
+    "puppeteer": "^1.8.0",
     "raf": "^3.4.0",
-    "react": "^16.3.0",
-    "react-dom": "^16.0.0",
-    "react-frame-component": "^2.0.2",
-    "react-native": "^0.46.0",
-    "react-primitives": "^0.4.2",
-    "react-test-renderer": "^16.0.0",
+    "react": "^16.4",
+    "react-dom": "^16.4",
+    "react-frame-component": "^4.0.2",
+    "react-native": "^0.56.0",
+    "react-primitives": "^0.6.1",
+    "react-test-renderer": "^16.4",
     "rimraf": "^2.6.1",
-    "rollup": "^0.61.1",
+    "rollup": "^0.66.5",
     "rollup-plugin-babel": "^3.0.4",
-    "rollup-plugin-commonjs": "^9.1.3",
+    "rollup-plugin-commonjs": "^9.1.8",
     "rollup-plugin-flow": "^1.1.1",
-    "rollup-plugin-json": "^3.0.0",
+    "rollup-plugin-json": "^3.1.0",
     "rollup-plugin-node-resolve": "^3.3.0",
-    "rollup-plugin-replace": "^1.1.1",
+    "rollup-plugin-replace": "^1.0.0",
     "rollup-plugin-sourcemaps": "^0.4.2",
-    "rollup-plugin-terser": "^1.0.1",
-    "tslint": "^4.3.1",
-    "typescript": "^2.4.1"
+    "rollup-plugin-terser": "^3.0.0"
   },
   "peerDependencies": {
-    "react": ">= 0.14.0 < 17.0.0-0"
+    "react": ">= 16.3.0"
   },
   "jest": {
     "globals": {
@@ -163,7 +144,6 @@
     ],
     "setupFiles": [
       "raf/polyfill",
-      "<rootDir>/src/test/enzymeSetup.js",
       "<rootDir>/src/test/globals.js"
     ],
     "setupTestFrameworkScriptFile": "<rootDir>/test-utils/setupTestFramework.js",
@@ -181,19 +161,16 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "maxSize": "16.5kB"
-    },
-    {
-      "path": "./dist/styled-components.cjs.min.js",
-      "maxSize": "11.5kB"
-    },
-    {
-      "path": "./dist/styled-components.esm.min.js",
-      "maxSize": "11.5kB"
+      "maxSize": "16kB"
     }
   ],
   "collective": {
     "type": "opencollective",
     "url": "https://opencollective.com/styled-components"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
   }
 }

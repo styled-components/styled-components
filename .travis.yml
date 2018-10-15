@@ -7,31 +7,29 @@ addons:
       - libnss3
       - google-chrome-beta
 branches:
-  only: master
+  only:
+    - master
+    - develop
 env:
   global:
     - GOOGLE_CHROME_BINARY="/usr/bin/google-chrome-beta"
     - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
 node_js:
-  - 6
-  - 8
+  - '8'
+  - '10'
+install: yarn --frozen-lockfile
 script:
   - node --version
   - yarn --version
   - yarn build
   - yarn test
-  # Tests have to run before Danger runs because
-  # danger-plugin-jest references the test output
-  # - yarn danger
   - yarn flow
   - yarn lint
-  - yarn typescript
-  - yarn tslint
+  - yarn size
 notifications:
   email:
     on_failure: change
 cache:
   yarn: true
-  bundler: true
   directories:
     - node_modules

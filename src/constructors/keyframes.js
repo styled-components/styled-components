@@ -1,28 +1,33 @@
 // @flow
-import hashStr from '../vendor/glamor/hash'
-import type { Interpolation, NameGenerator, Stringifier } from '../types'
-import StyleSheet from '../models/StyleSheet'
+import css from './css';
+import generateAlphabeticName from '../utils/generateAlphabeticName';
+import stringifyRules from '../utils/stringifyRules';
+// $FlowFixMe
+import hashStr from '../vendor/glamor/hash';
+import Keyframes from '../models/Keyframes';
 
-const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '')
+import type { Interpolation, Styles } from '../types';
 
-type KeyframesFn = (
-  strings: Array<string>,
+const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '');
+
+export default function keyframes(
+  strings: Styles,
   ...interpolations: Array<Interpolation>
-) => string
-
-export default (
-  nameGenerator: NameGenerator,
-  stringifyRules: Stringifier,
-  css: Function
-): KeyframesFn => (...arr): string => {
-  const styleSheet = StyleSheet.master
-  const rules = css(...arr)
-  const name = nameGenerator(hashStr(replaceWhitespace(JSON.stringify(rules))))
-  const id = `sc-keyframes-${name}`
-
-  if (!styleSheet.hasNameForId(id, name)) {
-    styleSheet.inject(id, stringifyRules(rules, name, '@keyframes'), name)
+): Keyframes {
+  /* Warning if you've used keyframes on React Native */
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    typeof navigator !== 'undefined' &&
+    navigator.product === 'ReactNative'
+  ) {
+    console.warn(
+      '`keyframes` cannot be used on ReactNative, only on the web. To do animation in ReactNative please use Animated.'
+    );
   }
 
-  return name
+  const rules = css(strings, ...interpolations);
+
+  const name = generateAlphabeticName(hashStr(replaceWhitespace(JSON.stringify(rules))));
+
+  return new Keyframes(name, stringifyRules(rules, name, '@keyframes'));
 }

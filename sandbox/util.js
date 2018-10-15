@@ -1,4 +1,4 @@
-const path = require('path')
+const path = require('path');
 
 const SANDBOX_PATHS = {
   // common
@@ -14,21 +14,21 @@ const SANDBOX_PATHS = {
   indexHtml: path.resolve(__dirname, 'public', 'index.html'),
   // build
   serverBuild: path.resolve(__dirname, '.build', 'server.js'),
-}
+};
 
 const REPLACE_REGEX = {
   html: /<!-- SSR:HTML -->/,
   css: /<!-- SSR:CSS -->/,
-}
+};
 
 const wrapMiddleware = middleware => next => (req, res) =>
-  middleware(req, res, () => next(req, res))
+  middleware(req, res, () => next(req, res));
 
 const composeMiddleware = (...middleware) => next =>
-  middleware.reduce((p, c) => wrapMiddleware(c)(p), next)
+  middleware.reduce((p, c) => wrapMiddleware(c)(p), next);
 
 module.exports = {
   SANDBOX_PATHS,
   REPLACE_REGEX,
   composeMiddleware,
-}
+};

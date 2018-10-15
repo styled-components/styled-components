@@ -1,8 +1,9 @@
 // @flow
-const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer')
-const path = require('path')
+const webpack = require('webpack');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+const path = require('path');
 
-const appDirectory = path.resolve(__dirname)
+const appDirectory = path.resolve(__dirname);
 
 module.exports = {
   mode: 'production',
@@ -21,7 +22,7 @@ module.exports = {
           'style-loader',
           {
             loader: 'css-loader',
-            options: { module: true, localIdentName: '[hash:base64:8]' },
+            options: { modules: true, localIdentName: '[hash:base64:8]' },
           },
         ],
       },
@@ -39,6 +40,10 @@ module.exports = {
       analyzerMode: 'static',
       openAnalyzer: false,
     }),
+
+    new webpack.DefinePlugin({
+      __VERSION__: JSON.stringify('benchmark'),
+    }),
   ],
   resolve: {
     alias: {
@@ -46,4 +51,4 @@ module.exports = {
       'styled-components': path.resolve('../src'),
     },
   },
-}
+};

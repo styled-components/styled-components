@@ -1,38 +1,38 @@
 // @flow
-import React from 'react'
-import { shallow } from 'enzyme'
+import React from 'react';
+import TestRenderer from 'react-test-renderer';
 
-import { resetStyled, expectCSSMatches } from './utils'
+import { resetStyled, expectCSSMatches } from './utils';
 
-let styled
+let styled;
 
 describe('css features', () => {
   beforeEach(() => {
-    styled = resetStyled()
-  })
+    styled = resetStyled();
+  });
 
   it('should add vendor prefixes in the right order', () => {
     const Comp = styled.div`
       transition: opacity 0.3s;
-    `
-    shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { -webkit-transition:opacity 0.3s; transition:opacity 0.3s; }')
-  })
+    `;
+    TestRenderer.create(<Comp />);
+    expectCSSMatches('.sc-a {} .b { -webkit-transition:opacity 0.3s; transition:opacity 0.3s; }');
+  });
 
   it('should add vendor prefixes for display', () => {
     const Comp = styled.div`
       display: flex;
       flex-direction: column;
       align-items: center;
-    `
-    shallow(<Comp />)
+    `;
+    TestRenderer.create(<Comp />);
     expectCSSMatches(`
       .sc-a {}
       .b {
         display:-webkit-box; display:-webkit-flex; display:-ms-flexbox; display:flex; -webkit-flex-direction:column; -ms-flex-direction:column; flex-direction:column; -webkit-align-items:center; -webkit-box-align:center; -ms-flex-align:center; align-items:center;
       }
-    `)
-  })
+    `);
+  });
 
   it('should generate styles for nested media queries', () => {
     const Comp = styled.div`
@@ -41,11 +41,11 @@ describe('css features', () => {
           color: red;
         }
       }
-    `
-    shallow(<Comp />)
+    `;
+    TestRenderer.create(<Comp />);
     expectCSSMatches(`
       .sc-a {}
-      
+
       @media (min-width: 10px) {
         @media (min-height: 20px) {
           .b {
@@ -53,14 +53,14 @@ describe('css features', () => {
           }
         }
       }
-    `)
-  })
+    `);
+  });
 
   it('should pass through custom properties', () => {
     const Comp = styled.div`
       --custom-prop: some-val;
-    `
-    shallow(<Comp />)
-    expectCSSMatches('.sc-a {} .b { --custom-prop:some-val; }')
-  })
-})
+    `;
+    TestRenderer.create(<Comp />);
+    expectCSSMatches('.sc-a {} .b { --custom-prop:some-val; }');
+  });
+});

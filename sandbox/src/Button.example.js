@@ -15,11 +15,8 @@ const Button = styled.button`
       background: palevioletred;
       color: white;
     `};
-`
+`;
 
-const content = [
-  <Button>Normal Button</Button>,
-  <Button primary>Primary Button</Button>,
-]
+const content = [<Button>Normal Button</Button>, <Button primary>Primary Button</Button>];
 
-render(content)
+render(content);

@@ -1,0 +1,7 @@
+{
+  "name": "styled-components/macro",
+  "private": true,
+  "main": "../dist/styled-components-macro.cjs.js",
+  "module": "../dist/styled-components-macro.esm.js",
+  "jsnext:main": "../dist/styled-components-macro.esm.js"
+}

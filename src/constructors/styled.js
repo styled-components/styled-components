@@ -1,14 +1,15 @@
 // @flow
-import type { Target } from '../types'
-import domElements from '../utils/domElements'
+import constructWithOptions from './constructWithOptions';
+import StyledComponent from '../models/StyledComponent';
+import domElements from '../utils/domElements';
 
-export default (styledComponent: Function, constructWithOptions: Function) => {
-  const styled = (tag: Target) => constructWithOptions(styledComponent, tag)
+import type { Target } from '../types';
 
-  // Shorthands for all valid HTML Elements
-  domElements.forEach(domElement => {
-    styled[domElement] = styled(domElement)
-  })
+const styled = (tag: Target) => constructWithOptions(StyledComponent, tag);
 
-  return styled
-}
+// Shorthands for all valid HTML Elements
+domElements.forEach(domElement => {
+  styled[domElement] = styled(domElement);
+});
+
+export default styled;

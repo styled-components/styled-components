@@ -1,17 +1,13 @@
-import app from './devServer'
+import app from './devServer';
 
-const port = 3000
+const port = 3000;
 
 app.listen(port, error => {
   /* eslint-disable no-console */
   if (error) {
-    console.error(error)
+    console.error(error);
   } else {
-    console.info(
-      '🌎 Listening on port %s. Open up http://localhost:%s/ in your browser.',
-      port,
-      port
-    )
+    console.info('🌎 Listening on port %s. Open up http://localhost:%s/ in your browser.', port, port);
   }
   /* eslint-enable no-console */
-})
+});

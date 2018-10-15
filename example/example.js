@@ -1,12 +1,12 @@
-import React from 'react'
-import styled, { injectGlobal, keyframes } from '../dist/styled-components'
+import React from 'react';
+import styled, { createGlobalStyle, keyframes } from '..';
 
 export default () => {
-  injectGlobal`
+  const GlobalStyle = createGlobalStyle`
     body {
       font-family: sans-serif;
     }
-  `
+  `;
 
   // Create a <Title> react component that renders an <h1> which is
   // centered, palevioletred and sized at 1.5em
@@ -28,9 +28,10 @@ export default () => {
     render() {
       return (
         <Wrapper>
+          <GlobalStyle />
           <Title>Hello World, this is my first styled component!</Title>
         </Wrapper>
-      )
+      );
     }
-  }
-}
+  };
+};

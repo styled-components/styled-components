@@ -138,4 +138,4 @@ export default [
   'svg',
   'text',
   'tspan',
-]
+];

@@ -1,13 +1,14 @@
+// @flow
 import Declaration from './declaration';
-import Processor   from './processor';
-import stringify   from './stringify';
-import Comment     from './comment';
-import AtRule      from './at-rule';
-import vendor      from './vendor';
-import parse       from './parse';
-import list        from './list';
-import Rule        from './rule';
-import Root        from './root';
+import Processor from './processor';
+import stringify from './stringify';
+import Comment from './comment';
+import AtRule from './at-rule';
+import vendor from './vendor';
+import parse from './parse';
+import list from './list';
+import Rule from './rule';
+import Root from './root';
 
 /**
  * Create a new {@link Processor} instance that will apply `plugins`
@@ -28,10 +29,10 @@ import Root        from './root';
  * @namespace postcss
  */
 function postcss(...plugins) {
-    if ( plugins.length === 1 && Array.isArray(plugins[0]) ) {
-        plugins = plugins[0];
-    }
-    return new Processor(plugins);
+  if (plugins.length === 1 && Array.isArray(plugins[0])) {
+    plugins = plugins[0];
+  }
+  return new Processor(plugins);
 }
 
 /**
@@ -107,26 +108,26 @@ function postcss(...plugins) {
  * @return {Plugin} PostCSS plugin
  */
 postcss.plugin = function plugin(name, initializer) {
-    let creator = function (...args) {
-        let transformer = initializer(...args);
-        transformer.postcssPlugin  = name;
-        transformer.postcssVersion = (new Processor()).version;
-        return transformer;
-    };
+  const creator = function(...args) {
+    const transformer = initializer(...args);
+    transformer.postcssPlugin = name;
+    transformer.postcssVersion = new Processor().version;
+    return transformer;
+  };
 
-    let cache;
-    Object.defineProperty(creator, 'postcss', {
-        get() {
-            if ( !cache ) cache = creator();
-            return cache;
-        }
-    });
+  let cache;
+  Object.defineProperty(creator, 'postcss', {
+    get() {
+      if (!cache) cache = creator();
+      return cache;
+    },
+  });
 
-    creator.process = function (root, opts) {
-        return postcss([ creator(opts) ]).process(root, opts);
-    };
+  creator.process = function(root, opts) {
+    return postcss([creator(opts)]).process(root, opts);
+  };
 
-    return creator;
+  return creator;
 };
 
 /**
