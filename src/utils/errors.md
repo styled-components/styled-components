@@ -63,4 +63,4 @@ _This error was replaced with a dev-time warning, it will be deleted for v4 fina
 
 ## 12
 
-It seems you are interpolating a keyframe declaration (%s) into a vanilla string. This was supported in styled-components v3, but is not longer supported in v4. Please wrap your string in the css\`\` helper (see https://www.styled-components.com/docs/api#css).
+It seems you are interpolating a keyframe declaration (%s) into an untagged string. This was supported in styled-components v3, but is not longer supported in v4 as keyframes are now injected on-demand. Please wrap your string in the css\`\` helper (see https://www.styled-components.com/docs/api#css), which ensures the styles are injected correctly.
