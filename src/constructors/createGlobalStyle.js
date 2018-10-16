@@ -59,7 +59,8 @@ export default function createGlobalStyle(
       if (
         process.env.NODE_ENV !== 'production' &&
         IS_BROWSER &&
-        window.scCGSHMRCache[this.state.styledComponentId] > 1
+        window.scCGSHMRCache[this.state.styledComponentId] > 1 &&
+        !this.props.suppressMultiMountWarnings
       ) {
         console.warn(
           `The global style component ${
