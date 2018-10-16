@@ -3,10 +3,8 @@
   "globals": {
     "__DEV__": true
   },
-  "setupFiles": [
-    "<rootDir>/src/test/enzymeSetup.js"
-  ],
   "testRegex": "./src/native/test/.*.js$",
   "preset": "react-native",
+  "testURL": "http://localhost",
   "testEnvironment": "jsdom"
 }

@@ -1,7 +1,7 @@
-const webpack = require('webpack')
-const WriteFilePlugin = require('write-file-webpack-plugin')
+const webpack = require('webpack');
+const WriteFilePlugin = require('write-file-webpack-plugin');
 
-const { SANDBOX_PATHS } = require('../util')
+const { SANDBOX_PATHS } = require('../util');
 
 const {
   cwd,
@@ -11,19 +11,18 @@ const {
   serverApp,
   clientApp,
   styledComponentsSrc,
-} = SANDBOX_PATHS
+} = SANDBOX_PATHS;
 
 const createOutput = () => ({
   path: outputPath,
   filename: '[name].js',
   publicPath,
   strictModuleExceptionHandling: true,
-})
+});
 
-const ifNotExample = filename =>
-  /\.js$/.test(filename) && !/\.example\.js/.test(filename)
+const ifNotExample = filename => /\.js$/.test(filename) && !/\.example\.js/.test(filename);
 
-const ifExample = filename => /\.example\.js/.test(filename)
+const ifExample = filename => /\.example\.js/.test(filename);
 
 const createRules = () => [
   // Indentation eslint errors are preventing hmr to work properly :'(
@@ -50,7 +49,7 @@ const createRules = () => [
     include: [appSrc, styledComponentsSrc],
     use: [{ loader: 'babel-loader' }],
   },
-]
+];
 
 const createPlugins = () => [
   new webpack.EnvironmentPlugin({
@@ -59,9 +58,14 @@ const createPlugins = () => [
     NODE_ENV: 'development',
   }),
   // new webpack.NoEmitOnErrorsPlugin()
-]
 
-const createAlias = () => ({ 'styled-components': styledComponentsSrc })
+  new webpack.DefinePlugin({
+    // eslint-disable-next-line global-require
+    __VERSION__: JSON.stringify(require('../../package.json').version),
+  }),
+];
+
+const createAlias = () => ({ 'styled-components': styledComponentsSrc });
 
 module.exports = [
   {
@@ -109,4 +113,4 @@ module.exports = [
 
     resolve: { alias: createAlias() },
   },
-]
+];

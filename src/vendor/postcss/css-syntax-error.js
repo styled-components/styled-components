@@ -1,7 +1,8 @@
+// @flow
 import supportsColor from 'supports-color';
 
 import terminalHighlight from './terminal-highlight';
-import warnOnce          from './warn-once';
+import warnOnce from './warn-once';
 
 /**
  * The CSS parser throws this error for broken CSS.
@@ -31,193 +32,193 @@ import warnOnce          from './warn-once';
  * throw node.error('Unknown variable', { plugin: 'postcss-vars' });
  */
 class CssSyntaxError {
-
+  /**
+   * @param {string} message  - error message
+   * @param {number} [line]   - source line of the error
+   * @param {number} [column] - source column of the error
+   * @param {string} [source] - source code of the broken file
+   * @param {string} [file]   - absolute path to the broken file
+   * @param {string} [plugin] - PostCSS plugin name, if error came from plugin
+   */
+  constructor(message, line, column, source, file, plugin) {
     /**
-     * @param {string} message  - error message
-     * @param {number} [line]   - source line of the error
-     * @param {number} [column] - source column of the error
-     * @param {string} [source] - source code of the broken file
-     * @param {string} [file]   - absolute path to the broken file
-     * @param {string} [plugin] - PostCSS plugin name, if error came from plugin
-     */
-    constructor(message, line, column, source, file, plugin) {
-        /**
-         * @member {string} - Always equal to `'CssSyntaxError'`. You should
-         *                    always check error type
-         *                    by `error.name === 'CssSyntaxError'` instead of
-         *                    `error instanceof CssSyntaxError`, because
-         *                    npm could have several PostCSS versions.
-         *
-         * @example
-         * if ( error.name === 'CssSyntaxError' ) {
-         *   error //=> CssSyntaxError
-         * }
-         */
-        this.name   = 'CssSyntaxError';
-        /**
-         * @member {string} - Error message.
-         *
-         * @example
-         * error.message //=> 'Unclosed block'
-         */
-        this.reason = message;
-
-        if ( file ) {
-            /**
-             * @member {string} - Absolute path to the broken file.
-             *
-             * @example
-             * error.file       //=> 'a.sass'
-             * error.input.file //=> 'a.css'
-             */
-            this.file = file;
-        }
-        if ( source ) {
-            /**
-             * @member {string} - Source code of the broken file.
-             *
-             * @example
-             * error.source       //=> 'a { b {} }'
-             * error.input.column //=> 'a b { }'
-             */
-            this.source = source;
-        }
-        if ( plugin ) {
-            /**
-             * @member {string} - Plugin name, if error came from plugin.
-             *
-             * @example
-             * error.plugin //=> 'postcss-vars'
-             */
-            this.plugin = plugin;
-        }
-        if ( typeof line !== 'undefined' && typeof column !== 'undefined' ) {
-            /**
-             * @member {number} - Source line of the error.
-             *
-             * @example
-             * error.line       //=> 2
-             * error.input.line //=> 4
-             */
-            this.line   = line;
-            /**
-             * @member {number} - Source column of the error.
-             *
-             * @example
-             * error.column       //=> 1
-             * error.input.column //=> 4
-             */
-            this.column = column;
-        }
-
-        this.setMessage();
-
-        if ( Error.captureStackTrace ) {
-            Error.captureStackTrace(this, CssSyntaxError);
-        }
-    }
-
-    setMessage() {
-        /**
-         * @member {string} - Full error text in the GNU error format
-         *                    with plugin, file, line and column.
-         *
-         * @example
-         * error.message //=> 'a.css:1:1: Unclosed block'
-         */
-        this.message  = this.plugin ? this.plugin + ': ' : '';
-        this.message += this.file ? this.file : '<css input>';
-        if ( typeof this.line !== 'undefined' ) {
-            this.message += ':' + this.line + ':' + this.column;
-        }
-        this.message += ': ' + this.reason;
-    }
-
-    /**
-     * Returns a few lines of CSS source that caused the error.
-     *
-     * If the CSS has an input source map without `sourceContent`,
-     * this method will return an empty string.
-     *
-     * @param {boolean} [color] whether arrow will be colored red by terminal
-     *                          color codes. By default, PostCSS will detect
-     *                          color support by `process.stdout.isTTY`
-     *                          and `process.env.NODE_DISABLE_COLORS`.
+     * @member {string} - Always equal to `'CssSyntaxError'`. You should
+     *                    always check error type
+     *                    by `error.name === 'CssSyntaxError'` instead of
+     *                    `error instanceof CssSyntaxError`, because
+     *                    npm could have several PostCSS versions.
      *
      * @example
-     * error.showSourceCode() //=> "  4 | }
-     *                        //      5 | a {
-     *                        //    > 6 |   bad
-     *                        //        |   ^
-     *                        //      7 | }
-     *                        //      8 | b {"
-     *
-     * @return {string} few lines of CSS source that caused the error
+     * if ( error.name === 'CssSyntaxError' ) {
+     *   error //=> CssSyntaxError
+     * }
      */
-    showSourceCode(color) {
-        if ( !this.source ) return '';
-
-        let css = this.source;
-        if ( typeof color === 'undefined' ) color = supportsColor;
-        if ( color ) css = terminalHighlight(css);
-
-        let lines = css.split(/\r?\n/);
-        let start = Math.max(this.line - 3, 0);
-        let end   = Math.min(this.line + 2, lines.length);
-
-        let maxWidth = String(end).length;
-
-        return lines.slice(start, end).map( (line, index) => {
-            let number = start + 1 + index;
-            let padded = (' ' + number).slice(-maxWidth);
-            let gutter = ' ' + padded + ' | ';
-            if ( number === this.line ) {
-                let spacing =
-                    gutter.replace(/\d/g, ' ') +
-                    line.slice(0, this.column - 1).replace(/[^\t]/g, ' ');
-                return '>' + gutter + line + '\n ' + spacing + '^';
-            } else {
-                return ' ' + gutter + line;
-            }
-        }).join('\n');
-    }
-
+    this.name = 'CssSyntaxError';
     /**
-     * Returns error position, message and source code of the broken part.
+     * @member {string} - Error message.
      *
      * @example
-     * error.toString() //=> "CssSyntaxError: app.css:1:1: Unclosed block
-     *                  //    > 1 | a {
-     *                  //        | ^"
-     *
-     * @return {string} error position, message and source code
+     * error.message //=> 'Unclosed block'
      */
-    toString() {
-        let code = this.showSourceCode();
-        if ( code ) {
-            code = '\n\n' + code + '\n';
+    this.reason = message;
+
+    if (file) {
+      /**
+       * @member {string} - Absolute path to the broken file.
+       *
+       * @example
+       * error.file       //=> 'a.sass'
+       * error.input.file //=> 'a.css'
+       */
+      this.file = file;
+    }
+    if (source) {
+      /**
+       * @member {string} - Source code of the broken file.
+       *
+       * @example
+       * error.source       //=> 'a { b {} }'
+       * error.input.column //=> 'a b { }'
+       */
+      this.source = source;
+    }
+    if (plugin) {
+      /**
+       * @member {string} - Plugin name, if error came from plugin.
+       *
+       * @example
+       * error.plugin //=> 'postcss-vars'
+       */
+      this.plugin = plugin;
+    }
+    if (typeof line !== 'undefined' && typeof column !== 'undefined') {
+      /**
+       * @member {number} - Source line of the error.
+       *
+       * @example
+       * error.line       //=> 2
+       * error.input.line //=> 4
+       */
+      this.line = line;
+      /**
+       * @member {number} - Source column of the error.
+       *
+       * @example
+       * error.column       //=> 1
+       * error.input.column //=> 4
+       */
+      this.column = column;
+    }
+
+    this.setMessage();
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, CssSyntaxError);
+    }
+  }
+
+  setMessage() {
+    /**
+     * @member {string} - Full error text in the GNU error format
+     *                    with plugin, file, line and column.
+     *
+     * @example
+     * error.message //=> 'a.css:1:1: Unclosed block'
+     */
+    this.message = this.plugin ? `${this.plugin}: ` : '';
+    this.message += this.file ? this.file : '<css input>';
+    if (typeof this.line !== 'undefined') {
+      this.message += `:${this.line}:${this.column}`;
+    }
+    this.message += `: ${this.reason}`;
+  }
+
+  /**
+   * Returns a few lines of CSS source that caused the error.
+   *
+   * If the CSS has an input source map without `sourceContent`,
+   * this method will return an empty string.
+   *
+   * @param {boolean} [color] whether arrow will be colored red by terminal
+   *                          color codes. By default, PostCSS will detect
+   *                          color support by `process.stdout.isTTY`
+   *                          and `process.env.NODE_DISABLE_COLORS`.
+   *
+   * @example
+   * error.showSourceCode() //=> "  4 | }
+   *                        //      5 | a {
+   *                        //    > 6 |   bad
+   *                        //        |   ^
+   *                        //      7 | }
+   *                        //      8 | b {"
+   *
+   * @return {string} few lines of CSS source that caused the error
+   */
+  showSourceCode(color) {
+    if (!this.source) return '';
+
+    let css = this.source;
+    if (typeof color === 'undefined') color = supportsColor;
+    if (color) css = terminalHighlight(css);
+
+    const lines = css.split(/\r?\n/);
+    const start = Math.max(this.line - 3, 0);
+    const end = Math.min(this.line + 2, lines.length);
+
+    const maxWidth = String(end).length;
+
+    return lines
+      .slice(start, end)
+      .map((line, index) => {
+        const number = start + 1 + index;
+        const padded = ` ${number}`.slice(-maxWidth);
+        const gutter = ` ${padded} | `;
+        if (number === this.line) {
+          const spacing =
+            gutter.replace(/\d/g, ' ') + line.slice(0, this.column - 1).replace(/[^\t]/g, ' ');
+          return `>${gutter}${line}\n ${spacing}^`;
+        } else {
+          return ` ${gutter}${line}`;
         }
-        return this.name + ': ' + this.message + code;
+      })
+      .join('\n');
+  }
+
+  /**
+   * Returns error position, message and source code of the broken part.
+   *
+   * @example
+   * error.toString() //=> "CssSyntaxError: app.css:1:1: Unclosed block
+   *                  //    > 1 | a {
+   *                  //        | ^"
+   *
+   * @return {string} error position, message and source code
+   */
+  toString() {
+    let code = this.showSourceCode();
+    if (code) {
+      code = `\n\n${code}\n`;
     }
+    return `${this.name}: ${this.message}${code}`;
+  }
 
-    get generated() {
-        warnOnce('CssSyntaxError#generated is depreacted. Use input instead.');
-        return this.input;
-    }
+  get generated() {
+    warnOnce('CssSyntaxError#generated is deprecated. Use input instead.');
+    return this.input;
+  }
 
-    /**
-     * @memberof CssSyntaxError#
-     * @member {Input} input - Input object with PostCSS internal information
-     *                         about input file. If input has source map
-     *                         from previous tool, PostCSS will use origin
-     *                         (for example, Sass) source. You can use this
-     *                         object to get PostCSS input source.
-     *
-     * @example
-     * error.input.file //=> 'a.css'
-     * error.file       //=> 'a.sass'
-     */
-
+  /**
+   * @memberof CssSyntaxError#
+   * @member {Input} input - Input object with PostCSS internal information
+   *                         about input file. If input has source map
+   *                         from previous tool, PostCSS will use origin
+   *                         (for example, Sass) source. You can use this
+   *                         object to get PostCSS input source.
+   *
+   * @example
+   * error.input.file //=> 'a.css'
+   * error.file       //=> 'a.sass'
+   */
 }
 
 export default CssSyntaxError;

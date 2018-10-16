@@ -12,14 +12,11 @@
 .*/benchmarks/.*
 .*/dist/.*
 .*/lib/.*
-.*/node_modules/babel-plugin-flow-react-proptypes/src/__test__/.*
 .*/src/test/.*
+.*/src/vendor/.*
 .*/src/.*/test/.*
-
-[include]
-
-[libs]
-.*/node_modules/danger/distribution/danger.js.flow
+.*/example/.*
+.*/integration-test/.*
 
 [options]
 suppress_comment=.*\\$FlowFixMe

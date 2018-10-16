@@ -1,6 +1,6 @@
 // @flow
 
-declare var preval: Function
+declare var preval: Function;
 
 /**
  * Parse errors.md and turn it into a simple hash of code: message
@@ -18,25 +18,25 @@ const ERRORS =
         return errors;
       }, {});
     `
-    : {}
+    : {};
 
 /**
  * super basic version of sprintf
  */
 function format(...args) {
-  let a = args[0]
-  const b = []
-  let c
+  let a = args[0];
+  const b = [];
+  let c;
 
   for (c = 1; c < args.length; c += 1) {
-    b.push(args[c])
+    b.push(args[c]);
   }
 
   b.forEach(d => {
-    a = a.replace(/%[a-z]/, d)
-  })
+    a = a.replace(/%[a-z]/, d);
+  });
 
-  return a
+  return a;
 }
 
 /**
@@ -48,13 +48,11 @@ export default class StyledComponentsError extends Error {
     if (process.env.NODE_ENV === 'production') {
       super(
         `An error occurred. See https://github.com/styled-components/styled-components/blob/master/src/utils/errors.md#${code} for more information. ${
-          interpolations
-            ? `Additional arguments: ${interpolations.join(', ')}`
-            : ''
+          interpolations ? `Additional arguments: ${interpolations.join(', ')}` : ''
         }`
-      )
+      );
     } else {
-      super(format(ERRORS[code], ...interpolations))
+      super(format(ERRORS[code], ...interpolations).trim());
     }
   }
 }

@@ -1,80 +1,89 @@
 // @flow
-import hyphenate from 'fbjs/lib/hyphenateStyleName'
-import React from 'react'
-import isPlainObject from './isPlainObject'
-import StyledError from './error'
-import type { Interpolation } from '../types'
+
+import { isElement } from 'react-is';
+import getComponentName from './getComponentName';
+import isFunction from './isFunction';
+import isPlainObject from './isPlainObject';
+import isStyledComponent from './isStyledComponent';
+import Keyframes from '../models/Keyframes';
+import hyphenate from './hyphenateStyleName';
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
   const css = Object.keys(obj)
     .filter(key => {
-      const chunk = obj[key]
-      return (
-        chunk !== undefined && chunk !== null && chunk !== false && chunk !== ''
-      )
+      const chunk = obj[key];
+      return chunk !== undefined && chunk !== null && chunk !== false && chunk !== '';
     })
     .map(key => {
-      if (isPlainObject(obj[key])) return objToCss(obj[key], key)
-      return `${hyphenate(key)}: ${obj[key]};`
+      if (isPlainObject(obj[key])) return objToCss(obj[key], key);
+      return `${hyphenate(key)}: ${obj[key]};`;
     })
-    .join(' ')
+    .join(' ');
   return prevKey
     ? `${prevKey} {
   ${css}
 }`
-    : css
+    : css;
+};
+
+/**
+ * It's falsish not falsy because 0 is allowed.
+ */
+const isFalsish = chunk => chunk === undefined || chunk === null || chunk === false || chunk === '';
+
+export default function flatten(chunk: any, executionContext: ?Object, styleSheet: ?Object): any {
+  if (Array.isArray(chunk)) {
+    const ruleSet = [];
+
+    for (let i = 0, len = chunk.length, result; i < len; i += 1) {
+      result = flatten(chunk[i], executionContext, styleSheet);
+
+      if (result === null) continue;
+      else if (Array.isArray(result)) ruleSet.push(...result);
+      else ruleSet.push(result);
+    }
+
+    return ruleSet;
+  }
+
+  if (isFalsish(chunk)) {
+    return null;
+  }
+
+  /* Handle other components */
+  if (isStyledComponent(chunk)) {
+    return `.${chunk.styledComponentId}`;
+  }
+
+  /* Either execute or defer the function */
+  if (isFunction(chunk)) {
+    if (executionContext) {
+      if (process.env.NODE_ENV !== 'production') {
+        /* Warn if not referring styled component */
+        try {
+          // eslint-disable-next-line new-cap
+          if (isElement(new chunk(executionContext))) {
+            console.warn(
+              `${getComponentName(
+                chunk
+              )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
+            );
+          }
+          // eslint-disable-next-line no-empty
+        } catch (e) {}
+      }
+
+      return flatten(chunk(executionContext), executionContext, styleSheet);
+    } else return chunk;
+  }
+
+  if (chunk instanceof Keyframes) {
+    if (styleSheet) {
+      chunk.inject(styleSheet);
+      return chunk.getName();
+    } else return chunk;
+  }
+
+  /* Handle objects */
+  return isPlainObject(chunk) ? objToCss(chunk) : chunk.toString();
 }
-
-const flatten = (
-  chunks: Array<Interpolation>,
-  executionContext: ?Object
-): Array<Interpolation> =>
-  chunks.reduce((ruleSet: Array<Interpolation>, chunk: ?Interpolation) => {
-    /* Remove falsey values */
-    if (
-      chunk === undefined ||
-      chunk === null ||
-      chunk === false ||
-      chunk === ''
-    ) {
-      return ruleSet
-    }
-
-    /* Flatten ruleSet */
-    if (Array.isArray(chunk)) {
-      ruleSet.push(...flatten(chunk, executionContext))
-      return ruleSet
-    }
-
-    /* Handle other components */
-    if (chunk.hasOwnProperty('styledComponentId')) {
-      // $FlowFixMe not sure how to make this pass
-      ruleSet.push(`.${chunk.styledComponentId}`)
-      return ruleSet
-    }
-
-    /* Either execute or defer the function */
-    if (typeof chunk === 'function') {
-      if (executionContext) {
-        const nextChunk = chunk(executionContext)
-        /* Throw if a React Element was given styles */
-        if (React.isValidElement(nextChunk)) {
-          const elementName = chunk.displayName || chunk.name
-          throw new StyledError(11, elementName)
-        }
-        ruleSet.push(...flatten([nextChunk], executionContext))
-      } else ruleSet.push(chunk)
-
-      return ruleSet
-    }
-
-    /* Handle objects */
-    ruleSet.push(
-      // $FlowFixMe have to add %checks somehow to isPlainObject
-      isPlainObject(chunk) ? objToCss(chunk) : chunk.toString()
-    )
-
-    return ruleSet
-  }, [])
-
-export default flatten

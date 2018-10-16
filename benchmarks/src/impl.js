@@ -8,13 +8,13 @@ type ComponentsType = {
   Box: Component,
   Dot: Component,
   Provider: Component,
-  View: Component
+  View: Component,
 };
 
 type ImplementationType = {
   components: ComponentsType,
   name: string,
-  version: string
+  version: string,
 };
 
 const toImplementations = (context: Object): Array<ImplementationType> =>

@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ThemeProvider should render its child 1`] = `
+<p>
+  Child!
+</p>
+`;

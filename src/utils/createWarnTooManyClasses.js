@@ -1,14 +1,14 @@
 // @flow
 
-const LIMIT = 200
+const LIMIT = 200;
 
 export default (displayName: string) => {
-  let generatedClasses = {}
-  let warningSeen = false
+  let generatedClasses = {};
+  let warningSeen = false;
 
   return (className: string) => {
     if (!warningSeen) {
-      generatedClasses[className] = true
+      generatedClasses[className] = true;
       if (Object.keys(generatedClasses).length >= LIMIT) {
         // Unable to find latestRule in test environment.
         /* eslint-disable no-console, prefer-template */
@@ -22,10 +22,10 @@ export default (displayName: string) => {
             '    }),\n' +
             '  })`width: 100%;`\n\n' +
             '  <Component />'
-        )
-        warningSeen = true
-        generatedClasses = {}
+        );
+        warningSeen = true;
+        generatedClasses = {};
       }
     }
-  }
-}
+  };
+};

@@ -1,7 +1,7 @@
 {
   "presets": [
     [
-      "babel-preset-env",
+      "env",
       {
         "loose": true,
         "modules": false,
@@ -26,22 +26,22 @@
         }
       }
     ],
-    "babel-preset-react",
-    "babel-preset-flow"
+    "react",
+    "flow"
   ],
   "plugins": [
     [
-      "babel-plugin-transform-class-properties",
+      "transform-class-properties",
       { loose: true
       }
     ],
     [
-      "babel-plugin-transform-object-rest-spread",
+      "transform-object-rest-spread",
       { useBuiltIns: true
       }
     ],
     [
-      "babel-plugin-transform-react-remove-prop-types",
+      "transform-react-remove-prop-types",
       { mode: "wrap"
       }
     ]
