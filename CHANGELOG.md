@@ -6,7 +6,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Add suppressMultiMountWarnings prop to disable warning on multiple cgs mount, by [@imbhargav5](https://github.com/imbhargav5) (see [#2107](https://github.com/styled-components/styled-components/pull/2107))
+- Add suppressMultiMountWarning prop to disable warning on multiple cgs mount, by [@imbhargav5](https://github.com/imbhargav5) (see [#2107](https://github.com/styled-components/styled-components/pull/2107))
 
 ## [v4.0.0] - 2018-10-15
 
