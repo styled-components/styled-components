@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Add suppressMultiMountWarning prop to disable warning on multiple cgs mount, by [@imbhargav5](https://github.com/imbhargav5) (see [#2107](https://github.com/styled-components/styled-components/pull/2107))
+
 ## [v4.0.0] - 2018-10-15
 
 This is a rollup of the highlights of beta 0-11 for convenience. See the [migration guide](https://www.styled-components.com/docs/faqs#what-do-i-need-to-do-to-migrate-to-v4) for easy updating steps and the [beta announcement blog](https://medium.com/styled-components/announcing-styled-components-v4-better-faster-stronger-3fe1aba1a112) for our summary of v4's changes, thought process, etc.
