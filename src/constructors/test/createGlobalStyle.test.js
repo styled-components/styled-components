@@ -388,8 +388,8 @@ div{display:inline-block;-webkit-animation:a 2s linear infinite;animation:a 2s l
     `;
     render(
       <div>
-        <Component fg="red" suppressMultiMountWarnings />
-        <Component fg="blue" suppressMultiMountWarnings />
+        <Component fg="red" suppressMultiMountWarning />
+        <Component fg="blue" suppressMultiMountWarning />
       </div>
     );
 
