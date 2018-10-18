@@ -6,6 +6,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.0.2] - 2018-10-18
+
+- Handle an edge case where an at-rule was being supplied to the self-reference stylis plugin at an incorrect context setting, by [@probablyup](https://github.com/probablyup) (see [#2114](https://github.com/styled-components/styled-components/pull/2114))
+
 ## [v4.0.1] - 2018-10-17
 
 - Add suppressMultiMountWarning prop to disable warning on multiple cgs mount, by [@imbhargav5](https://github.com/imbhargav5) (see [#2107](https://github.com/styled-components/styled-components/pull/2107))
@@ -836,7 +840,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.1...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.2...master
+[v4.0.2]: https://github.com/styled-components/styled-components/compare/v4.0.1...v4.0.2
 [v4.0.1]: https://github.com/styled-components/styled-components/compare/v4.0.0...v4.0.1
 [v4.0.0]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.11...v4.0.0
 [v4.0.0-beta.11]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.10...v4.0.0-beta.11
