@@ -15,6 +15,9 @@ const suite = new Benchmark.Suite('ssr', {
   onError: event => {
     console.log(event.target.error);
   },
+  onStart: () => {
+    console.log('\nStarting benchmarks...');
+  },
 });
 
 Benchmark.options.minSamples = 100;
@@ -59,7 +62,7 @@ class HocButton extends React.Component {
   }
 }
 
-const StyledButton = styled.button`
+const StyledComponentsButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -105,9 +108,11 @@ const EmotionButton = styledEmotion('button')({
 const sheetsCache = new Map();
 
 suite
-  .add('StyledButton', () => {
+  .add('StyledComponentsButton', () => {
     const sheet = new ServerStyleSheet();
-    ReactDOMServer.renderToString(sheet.collectStyles(<StyledButton>Material-UI</StyledButton>));
+    ReactDOMServer.renderToString(
+      sheet.collectStyles(<StyledComponentsButton>Material-UI</StyledComponentsButton>)
+    );
   })
   .add('EmotionButton', () => {
     renderStylesToString(ReactDOMServer.renderToString(<EmotionButton>Material-UI</EmotionButton>));
@@ -187,6 +192,9 @@ suite
   })
   .add('ButtonBase disableRipple', () => {
     ReactDOMServer.renderToString(<ButtonBase disableRipple>Material-UI</ButtonBase>);
+  })
+  .on('cycle start', event => {
+    console.log(`Starting benchmark "${event.target.name}"...`);
   })
   .on('cycle', event => {
     console.log(String(event.target));
