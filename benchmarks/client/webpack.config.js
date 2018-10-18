@@ -28,7 +28,7 @@ module.exports = {
       },
       {
         test: /\.js$/,
-        include: [path.resolve(appDirectory, 'src'), path.resolve('..', 'src')],
+        include: [path.resolve(appDirectory, 'src'), path.resolve('..', '..', 'src')],
         use: {
           loader: 'babel-loader',
         },
@@ -48,7 +48,7 @@ module.exports = {
   resolve: {
     alias: {
       'react-native': 'react-native-web',
-      'styled-components': path.resolve('../src'),
+      'styled-components': path.resolve('../../src'),
     },
   },
 };

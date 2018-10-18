@@ -1,0 +1,35 @@
+{
+  "name": "@material-ui/benchmark",
+  "private": true,
+  "version": "3.0.0",
+  "description": "Material-UI Benchmark.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mui-org/material-ui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mui-org/material-ui/issues"
+  },
+  "homepage": "https://github.com/mui-org/material-ui/tree/master/packages/material-ui-benchmark",
+  "scripts": {
+    "benchmark": "(cd ../../ && NODE_ENV=production BABEL_ENV=cjs babel-node benchmarks/server/src/benchmark.js)"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "benchmark": "^2.1.4",
+    "react": "^16.5.2",
+    "react-dom": "^16.5.2"
+  },
+  "engines": {
+    "node": ">=6.0.0"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@material-ui/core": "^3.2.2",
+    "emotion": "^9.2.12",
+    "emotion-server": "^9.2.12",
+    "nodemod": "^1.5.19",
+    "react-emotion": "^9.2.12",
+    "styled-components": "^4.0.0"
+  }
+}

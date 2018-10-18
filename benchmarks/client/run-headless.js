@@ -6,19 +6,19 @@ const tracing = process.argv.some(arg => arg.indexOf('tracing') > -1);
 
 if (tracing) {
   console.log(
-    '\nTracing enabled. (note that this might impact benchmark results, we recommend leaving this turned off unless you need a trace)',
+    'Tracing enabled. (note that this might impact benchmark results, we recommend leaving this turned off unless you need a trace)'
   );
 }
 
 (async () => {
-  console.log('\nStarting headless browser...');
+  console.log('Starting headless browser...');
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
   console.log('Opening benchmark app...');
   await page.goto(`file://${path.join(__dirname, './dist/index.html')}`);
 
   console.log(
-    'Running benchmarks... (this may take a minute or two; do not use your machine while these are running!)',
+    'Running benchmarks... (this may take a minute or two; do not use your machine while these are running!)'
   );
   for (var i = 0; i < tests.length; i++) {
     const test = tests[i];
