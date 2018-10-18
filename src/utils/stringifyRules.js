@@ -73,7 +73,7 @@ const selfReferenceReplacer = (match, offset, string) => {
  * has no knowledge of static class so we have to intelligently replace the base selector.
  */
 const selfReferenceReplacementPlugin = (context, _, selectors) => {
-  if (context === 2 && selectors[0].lastIndexOf(_selector) > 0) {
+  if (context === 2 && selectors.length && selectors[0].lastIndexOf(_selector) > 0) {
     // eslint-disable-next-line no-param-reassign
     selectors[0] = selectors[0].replace(_selectorRegexp, selfReferenceReplacer);
   }
