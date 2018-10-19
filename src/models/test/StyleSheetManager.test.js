@@ -274,7 +274,7 @@ describe('StyleSheetManager', () => {
     expect(indexOfBlueStyle).toBeGreaterThan(indexOfRedStyle);
   });
 
-  it('should render styles in correct order when styled(StyledComponent) and StyleSheetManager with 3rd party components are used', () => {
+  it('should render styles in correct order when styled(StyledComponent) and StyleSheetManager and 3rd party components are used', () => {
     const Red = styled.div`
       color: red;
     `;
