@@ -187,4 +187,15 @@ describe('attrs', () => {
 
     expect(TestRenderer.create(<BlueText>Hello</BlueText>).toJSON()).toMatchSnapshot();
   });
+
+  it('does not pass non html tags to HTML element', () => {
+    const Comp = styled.div`
+      color: ${props => props.textColor};
+    `;
+
+    const StyledComp = styled(Comp).attrs({
+      textColor: 'red',
+    })``;
+    expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();
+  });
 });
