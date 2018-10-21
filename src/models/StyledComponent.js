@@ -1,4 +1,5 @@
 // @flow
+import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, Component } from 'react';
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
@@ -95,13 +96,19 @@ class StyledComponent extends Component<*> {
         this.styleSheet
       );
     }
+
     const elementToBeCreated =
       this.props.$as || this.props.as || this.attrs.$as || this.attrs.as || target;
+
+    const shouldFilterInvalidAttributes = isTag(elementToBeCreated);
+
     const propsForElement: Object = {};
     let key;
 
     for (key in this.attrs) {
-      if (key[0] !== '$') propsForElement[key] = this.attrs[key];
+      if (key[0] !== '$' && (shouldFilterInvalidAttributes ? isPropValid(key) : true)) {
+        propsForElement[key] = this.attrs[key];
+      }
     }
 
     // eslint-disable-next-line guard-for-in
@@ -112,7 +119,7 @@ class StyledComponent extends Component<*> {
 
       if (key === 'forwardedClass' || key === 'as') continue;
       else if (key === 'forwardedRef') propsForElement.ref = this.props[key];
-      else if (key[0] !== '$') {
+      else if (key[0] !== '$' && (shouldFilterInvalidAttributes ? isPropValid(key) : true)) {
         // Don't pass through non HTML tags through to HTML elements
         propsForElement[key] =
           key === 'style' && key in this.attrs

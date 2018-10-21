@@ -31,14 +31,14 @@ describe('attrs', () => {
       }
     }
 
-    const Button = ({ component: ChildComponent }) => (
+    const Button = ({ childComponent: ChildComponent }) => (
       <button>
         <ChildComponent />
       </button>
     );
 
     const Comp = styled(Button).attrs({
-      component: ReactComponent,
+      childComponent: () => ReactComponent,
     })``;
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();

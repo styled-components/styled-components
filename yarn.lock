@@ -568,6 +568,16 @@
     lodash "^4.17.10"
     to-fast-properties "^2.0.0"
 
+"@emotion/is-prop-valid@^0.7.0":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@emotion/is-prop-valid/-/is-prop-valid-0.7.0.tgz#ea730c5e75846faae1e4946253bd1ee87ae0e39e"
+  dependencies:
+    "@emotion/memoize" "^0.7.0"
+
+"@emotion/memoize@^0.7.0":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@emotion/memoize/-/memoize-0.7.0.tgz#b4363577017f94a7ab9417f030516c7dad9995d7"
+
 "@samverschueren/stream-to-observable@^0.3.0":
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/@samverschueren/stream-to-observable/-/stream-to-observable-0.3.0.tgz#ecdf48d532c58ea477acfcab80348424f8d0662f"
