@@ -197,4 +197,12 @@ describe('keyframes', () => {
 @-webkit-keyframes dHUfhi{from{opacity:0;}to{opacity:1;}} @keyframes dHUfhi{from{opacity:0;}to{opacity:1;}}"
 `);
   });
+
+  it('should throw an error when interpolated in a vanilla string', () => {
+    const styled = resetStyled();
+
+    const animation = keyframes``;
+
+    expect(() => `animation-name: ${animation};`).toThrow();
+  });
 });
