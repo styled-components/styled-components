@@ -13,6 +13,12 @@ exports[`attrs does not pass non html props to element 1`] = `
 />
 `;
 
+exports[`attrs does not pass non html tags to HTML element 1`] = `
+<div
+  className="sc-b c"
+/>
+`;
+
 exports[`attrs merge attrs 1`] = `
 <button
   className="sc-a b"
