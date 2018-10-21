@@ -1,5 +1,6 @@
 // @flow
 import React from 'react';
+import PropTypes from 'prop-types';
 import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import StyleSheet from '../models/StyleSheet';
@@ -26,7 +27,13 @@ export default function createGlobalStyle(
   const style = new GlobalStyle(rules, id);
 
   class GlobalStyleComponent extends React.Component<*, *> {
-    static defaultProps: Object;
+    static propTypes = {
+      suppressMultiMountWarning: PropTypes.bool,
+    };
+
+    static defaultProps = {
+      suppressMultiMountWarning: false,
+    };
 
     styleSheet: Object;
 
@@ -59,7 +66,8 @@ export default function createGlobalStyle(
       if (
         process.env.NODE_ENV !== 'production' &&
         IS_BROWSER &&
-        window.scCGSHMRCache[this.state.styledComponentId] > 1
+        window.scCGSHMRCache[this.state.styledComponentId] > 1 &&
+        !this.props.suppressMultiMountWarning
       ) {
         console.warn(
           `The global style component ${

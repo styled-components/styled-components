@@ -55,6 +55,10 @@ describe('with styles', () => {
         & + & {
           margin-bottom: 4px;
         }
+
+        & > & {
+          margin-top: 4px;
+        }
       }
 
       & + & {
@@ -76,6 +80,10 @@ describe('with styles', () => {
       .foo & {
         color: silver;
       }
+
+      .foo > & {
+        color: green;
+      }
     `;
     TestRenderer.create(
       <React.Fragment>
@@ -89,20 +97,24 @@ describe('with styles', () => {
       .b.b.b{ border:1px solid red; }
       .b[disabled]{ color:red; }
       .b[disabled] + .sc-a[disabled]{ margin-bottom:4px; }
+      .b[disabled] > .sc-a[disabled]{ margin-top:4px; }
       .b + .sc-a{ margin-left:4px; }
       .b + .sc-a ~ .sc-a{ background:black; }
       .b ~ .sc-a{ margin-right:4px; }
       .b > .sc-a{ margin-top:4px; }
       .foo .b{ color:silver; }
+      .foo > .b{ color:green; }
       .c{ background:red; color:red; }
       .c.c.c{ border:1px solid red; }
       .c[disabled]{ color:red; }
       .c[disabled] + .sc-a[disabled]{ margin-bottom:4px; }
+      .c[disabled] > .sc-a[disabled]{ margin-top:4px; }
       .c + .sc-a{ margin-left:4px; }
       .c + .sc-a ~ .sc-a{ background:black; }
       .c ~ .sc-a{ margin-right:4px; }
       .c > .sc-a{ margin-top:4px; }
       .foo .c{ color:silver; }
+      .foo > .c{ color:green; }
     `);
   });
 
