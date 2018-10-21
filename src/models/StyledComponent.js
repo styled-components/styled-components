@@ -101,20 +101,20 @@ class StyledComponent extends Component<*> {
     const isTargetTag = isTag(elementToBeCreated);
 
     const propsForElement: Object = {};
-    const nextProps: Object = { ...this.attrs, ...this.props };
+    const computedProps: Object = { ...this.attrs, ...this.props };
 
     let key;
     // eslint-disable-next-line guard-for-in
-    for (key in nextProps) {
+    for (key in computedProps) {
       if (process.env.NODE_ENV !== 'production' && key === 'innerRef') {
         warnInnerRef();
       }
 
       if (key === 'forwardedClass' || key === 'as') continue;
-      else if (key === 'forwardedRef') propsForElement.ref = nextProps[key];
+      else if (key === 'forwardedRef') propsForElement.ref = computedProps[key];
       else if (!isTargetTag || validAttr(key)) {
         // Don't pass through non HTML tags through to HTML elements
-        propsForElement[key] = nextProps[key];
+        propsForElement[key] = computedProps[key];
       }
     }
 
