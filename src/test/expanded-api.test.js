@@ -165,5 +165,45 @@ describe('expanded api', () => {
 
       expect(getCSS(document)).toMatchSnapshot();
     });
+
+    it('"$as" transient prop works', () => {
+      const Comp = styled.div`
+        background: blue;
+        color: red;
+      `;
+
+      expect(TestRenderer.create(<Comp $as="span" />).toJSON()).toMatchSnapshot();
+      expect(getCSS(document)).toMatchSnapshot();
+    });
+
+    it('"$as" transient prop overrides a normal "as" prop', () => {
+      const Comp = styled.div`
+        background: blue;
+        color: red;
+      `;
+
+      expect(TestRenderer.create(<Comp $as="span" as="figure" />).toJSON()).toMatchSnapshot();
+      expect(getCSS(document)).toMatchSnapshot();
+    });
+
+    it('"$as" attr works', () => {
+      const Comp = styled.div.attrs({ $as: 'span' })`
+        background: blue;
+        color: red;
+      `;
+
+      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+      expect(getCSS(document)).toMatchSnapshot();
+    });
+
+    it('"$as" attr overrides a normal "as" attr', () => {
+      const Comp = styled.div.attrs({ $as: 'span', as: 'figure' })`
+        background: blue;
+        color: red;
+      `;
+
+      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+      expect(getCSS(document)).toMatchSnapshot();
+    });
   });
 });

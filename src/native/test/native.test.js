@@ -293,6 +293,62 @@ describe('native', () => {
       expect(view.props.style).toEqual([{ color: 'red' }]);
     });
 
+    it('"$as" transient prop should change the rendered element without affecting the styling', () => {
+      const OtherText = props => <Text {...props} foo />;
+
+      const Comp = styled.Text`
+        color: red;
+      `;
+
+      const wrapper = TestRenderer.create(<Comp $as={OtherText} />);
+      const view = wrapper.root.findByType('Text');
+
+      expect(view.props).toHaveProperty('foo');
+      expect(view.props.style).toEqual([{ color: 'red' }]);
+    });
+
+    it('"$as" transient prop should override normal "as" prop if both are supplied', () => {
+      const OtherText = props => <Text {...props} foo />;
+
+      const Comp = styled.Text`
+        color: red;
+      `;
+
+      const wrapper = TestRenderer.create(<Comp $as={OtherText} as={View} />);
+      const view = wrapper.root.findByType('Text');
+
+      expect(view.props).toHaveProperty('foo');
+      expect(view.props.style).toEqual([{ color: 'red' }]);
+    });
+
+    it('"$as" transient attr should change the rendered element without affecting the styling', () => {
+      const OtherText = props => <Text {...props} foo />;
+
+      const Comp = styled.Text.attrs({ $as: () => OtherText })`
+        color: red;
+      `;
+
+      const wrapper = TestRenderer.create(<Comp />);
+      const view = wrapper.root.findByType('Text');
+
+      expect(view.props).toHaveProperty('foo');
+      expect(view.props.style).toEqual([{ color: 'red' }]);
+    });
+
+    it('"$as" transient attr should override normal "as" attr if both are supplied', () => {
+      const OtherText = props => <Text {...props} foo />;
+
+      const Comp = styled.Text.attrs({ $as: () => OtherText, as: () => View })`
+        color: red;
+      `;
+
+      const wrapper = TestRenderer.create(<Comp />);
+      const view = wrapper.root.findByType('Text');
+
+      expect(view.props).toHaveProperty('foo');
+      expect(view.props.style).toEqual([{ color: 'red' }]);
+    });
+
     it('normal props are forwarded', () => {
       const Comp = styled.Text`
         color: ${p => p.color};

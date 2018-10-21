@@ -95,7 +95,8 @@ class StyledComponent extends Component<*> {
         this.styleSheet
       );
     }
-    const elementToBeCreated = this.props.as || this.attrs.as || target;
+    const elementToBeCreated =
+      this.props.$as || this.props.as || this.attrs.$as || this.attrs.as || target;
     const propsForElement: Object = {};
     let key;
 

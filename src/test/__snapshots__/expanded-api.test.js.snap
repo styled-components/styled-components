@@ -1,5 +1,54 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`expanded api "as" prop "$as" attr overrides a normal "as" attr 1`] = `
+<span
+  as="figure"
+  className="sc-a b"
+/>
+`;
+
+exports[`expanded api "as" prop "$as" attr overrides a normal "as" attr 2`] = `
+"
+/* sc-component-id:sc-a */
+.sc-a{} .b{background:blue;color:red;}"
+`;
+
+exports[`expanded api "as" prop "$as" attr works 1`] = `
+<span
+  className="sc-a b"
+/>
+`;
+
+exports[`expanded api "as" prop "$as" attr works 2`] = `
+"
+/* sc-component-id:sc-a */
+.sc-a{} .b{background:blue;color:red;}"
+`;
+
+exports[`expanded api "as" prop "$as" transient prop overrides a normal "as" prop 1`] = `
+<span
+  className="sc-a b"
+/>
+`;
+
+exports[`expanded api "as" prop "$as" transient prop overrides a normal "as" prop 2`] = `
+"
+/* sc-component-id:sc-a */
+.sc-a{} .b{background:blue;color:red;}"
+`;
+
+exports[`expanded api "as" prop "$as" transient prop works 1`] = `
+<span
+  className="sc-a b"
+/>
+`;
+
+exports[`expanded api "as" prop "$as" transient prop works 2`] = `
+"
+/* sc-component-id:sc-a */
+.sc-a{} .b{background:blue;color:red;}"
+`;
+
 exports[`expanded api "as" prop changes the rendered element type 1`] = `
 <span
   className="sc-a b"
