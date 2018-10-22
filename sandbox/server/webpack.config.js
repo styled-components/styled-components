@@ -11,6 +11,7 @@ const {
   serverApp,
   clientApp,
   styledComponentsSrc,
+  reactDOM,
 } = SANDBOX_PATHS;
 
 const createOutput = () => ({
@@ -65,7 +66,7 @@ const createPlugins = () => [
   }),
 ];
 
-const createAlias = () => ({ 'styled-components': styledComponentsSrc });
+const createAlias = () => ({ 'styled-components': styledComponentsSrc, 'react-dom': reactDOM });
 
 module.exports = [
   {
