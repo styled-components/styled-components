@@ -4,6 +4,8 @@ import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR, SC_VERSION_ATTR, SC_STREAM_ATTR } 
 import { makeTag, makeRehydrationTag, type Tag } from './StyleTags';
 import extractComps from '../utils/extractCompsFromCSS';
 
+import type { SourceMap } from '../types';
+
 declare var __VERSION__: string;
 
 const SPLIT_REGEX = /\s+/;
@@ -241,11 +243,26 @@ export default class StyleSheet {
     /* shard (create a new tag) if the tag is exhausted (See MAX_SIZE) */
     this.capacity -= 1;
 
-    if (this.capacity === 0) {
+    const isSourceMapTag = tag && tag.sourceMapManager && tag.sourceMapManager.hasSourceMap();
+    if (this.capacity === 0 || isSourceMapTag) {
       return this.createTagForId(id, tag);
     }
 
     return (this.tagMap[id] = tag);
+  }
+
+  getSourceMapTagForId(id: string): Tag<any> {
+    /* simply return a tag, when the componentId was already assigned one */
+    const prev = this.getPrevUnsealedTagForId(id);
+    if (prev) {
+      return prev;
+    }
+
+    const lastTag = this.tags[this.tags.length - 1];
+    /* create a new tag for sourceMap because one style tag can contain only one sourceMap */
+    const tag = this.createTagForId(id, lastTag);
+    this.tagMap[id] = tag;
+    return tag;
   }
 
   /* mainly for createGlobalStyle to check for its id */
@@ -265,39 +282,32 @@ export default class StyleSheet {
   }
 
   /* registers a componentId and registers it on its tag */
-  deferredInject(id: string, cssRules: string[], sourceMap: ?string) {
+  deferredInject(id: string, cssRules: string[], sourceMap: ?SourceMap) {
     /* don't inject when the id is already registered */
     if (this.tagMap[id] !== undefined) return;
 
     const { clones } = this;
     for (let i = 0; i < clones.length; i += 1) {
-      clones[i].deferredInject(id, cssRules);
+      clones[i].deferredInject(id, cssRules, sourceMap);
     }
 
-    const tag = (() => {
-      if (sourceMap && !this.getPrevUnsealedTagForId(id)) {
-        return this.createTagForId(id);
-      }
-      return this.getTagForId(id);
-    })();
+    const tag = sourceMap ? this.getSourceMapTagForId(id) : this.getTagForId(id);
     tag.insertMarker(id);
+    if (sourceMap && tag.sourceMapManager) {
+      tag.sourceMapManager.inject(sourceMap);
+    }
     this.deferred[id] = cssRules;
   }
 
   /* injects rules for a given id with a name that will need to be cached */
-  inject(id: string, cssRules: string[], name?: string, sourceMap: ?string) {
+  inject(id: string, cssRules: string[], name?: string, sourceMap: ?SourceMap) {
     const { clones } = this;
 
     for (let i = 0; i < clones.length; i += 1) {
-      clones[i].inject(id, cssRules, name, undefined);
+      clones[i].inject(id, cssRules, name, sourceMap);
     }
 
-    const tag = (() => {
-      if (sourceMap && !this.getPrevUnsealedTagForId(id)) {
-        return this.createTagForId(id);
-      }
-      return this.getTagForId(id);
-    })();
+    const tag = sourceMap ? this.getSourceMapTagForId(id) : this.getTagForId(id);
 
     /* add deferred rules for component */
     if (this.deferred[id] !== undefined) {
@@ -312,8 +322,8 @@ export default class StyleSheet {
       tag.insertRules(id, cssRules, name);
     }
 
-    if (sourceMap && tag.insertSourceMap) {
-      tag.insertSourceMap(sourceMap);
+    if (sourceMap && tag.sourceMapManager) {
+      tag.sourceMapManager.inject(sourceMap);
     }
   }
 

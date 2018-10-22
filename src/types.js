@@ -34,3 +34,5 @@ export type Stringifier = (
   selector: ?string,
   prefix: ?string
 ) => Array<string>;
+
+export type SourceMap = string;

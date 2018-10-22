@@ -4,7 +4,7 @@ import isStaticRules from '../utils/isStaticRules';
 import stringifyRules from '../utils/stringifyRules';
 import StyleSheet from './StyleSheet';
 
-import type { RuleSet } from '../types';
+import type { RuleSet, SourceMap } from '../types';
 
 export default class GlobalStyle {
   componentId: string;
@@ -13,21 +13,22 @@ export default class GlobalStyle {
 
   rules: RuleSet;
 
-  constructor(rules: RuleSet, componentId: string) {
+  sourceMap: SourceMap;
+
+  constructor(rules: RuleSet, componentId: string, sourceMap: SourceMap) {
     this.rules = rules;
     this.componentId = componentId;
     this.isStatic = isStaticRules(rules);
-
+    this.sourceMap = sourceMap;
     if (!StyleSheet.master.hasId(componentId)) {
-      StyleSheet.master.deferredInject(componentId, []);
+      StyleSheet.master.deferredInject(componentId, [], sourceMap);
     }
   }
 
   createStyles(executionContext: Object, styleSheet: StyleSheet) {
     const flatCSS = flatten(this.rules, executionContext, styleSheet);
     const css = stringifyRules(flatCSS, '');
-
-    styleSheet.inject(this.componentId, css);
+    styleSheet.inject(this.componentId, css, undefined, this.sourceMap);
   }
 
   removeStyles(styleSheet: StyleSheet) {

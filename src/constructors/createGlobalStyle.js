@@ -11,20 +11,23 @@ import { ThemeConsumer, type Theme } from '../models/ThemeProvider';
 import hashStr from '../vendor/glamor/hash';
 import css from './css';
 
-import type { Interpolation } from '../types';
+import type { Interpolation, SourceMap } from '../types';
+import { EMPTY_OBJECT } from '../utils/empties';
 
 // place our cache into shared context so it'll persist between HMRs
 if (IS_BROWSER) {
   window.scCGSHMRCache = {};
 }
 
-export default function createGlobalStyle(
+function baseCreateGlobalStyle(
+  options: Object = EMPTY_OBJECT,
   strings: Array<string>,
   ...interpolations: Array<Interpolation>
 ) {
   const rules = css(strings, ...interpolations);
   const id = `sc-global-${hashStr(JSON.stringify(rules))}`;
-  const style = new GlobalStyle(rules, id);
+  const { sourceMap } = options;
+  const style = new GlobalStyle(rules, id, sourceMap);
 
   class GlobalStyleComponent extends React.Component<*, *> {
     static propTypes = {
@@ -40,6 +43,8 @@ export default function createGlobalStyle(
     static globalStyle = style;
 
     static styledComponentId = id;
+
+    static sourceMap: SourceMap = sourceMap;
 
     constructor() {
       super();
@@ -140,3 +145,12 @@ export default function createGlobalStyle(
 
   return GlobalStyleComponent;
 }
+
+const createGlobalStyle = (strings: Array<string>, ...interpolations: Array<Interpolation>) =>
+  baseCreateGlobalStyle(EMPTY_OBJECT, strings, ...interpolations);
+createGlobalStyle.withConfig = (config: Object) => (
+  strings: Array<string>,
+  ...interpolations: Array<Interpolation>
+) => baseCreateGlobalStyle(config, strings, ...interpolations);
+
+export default createGlobalStyle;
