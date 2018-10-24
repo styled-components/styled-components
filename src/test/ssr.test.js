@@ -354,4 +354,27 @@ describe('ssr', () => {
       });
     });
   });
+
+  it('should hoist @import rules', () => {
+    const Component = createGlobalStyle`
+      body { margin: 0; }
+      @import url('bla');
+    `;
+    const Heading = styled.h1`
+      color: red;
+    `;
+
+    const sheet = new ServerStyleSheet();
+    const html = renderToString(
+      sheet.collectStyles(
+        <React.Fragment>
+          <Component />
+          <Heading>Hello SSR!</Heading>
+        </React.Fragment>
+      )
+    );
+    const styles = sheet.getStyleTags();
+
+    expect(styles).toMatchSnapshot();
+  });
 });

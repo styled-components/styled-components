@@ -321,7 +321,7 @@ const makeBrowserTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>)
   };
 };
 
-const makeServerTag = (namesArg, markersArg): Tag<[string]> => {
+const makeServerTag = (namesArg, markersArg): Tag<[Array<string>]> => {
   const names = namesArg === undefined ? (Object.create(null): Object) : namesArg;
   const markers = markersArg === undefined ? Object.create(null) : markersArg;
 
@@ -331,32 +331,47 @@ const makeServerTag = (namesArg, markersArg): Tag<[string]> => {
       return prev;
     }
 
-    return (markers[id] = ['']);
+    return (markers[id] = [[]]);
   };
 
   const insertRules = (id, cssRules, name) => {
     const marker = insertMarker(id);
-    marker[0] += cssRules.join(' ');
+    marker[0] = marker[0].concat(cssRules);
     addNameForId(names, id, name);
   };
 
   const removeRules = id => {
     const marker = markers[id];
     if (marker === undefined) return;
-    marker[0] = '';
+    marker[0] = [];
     resetIdNames(names, id);
   };
 
   const css = () => {
     let str = '';
+    let imports = '';
     // eslint-disable-next-line guard-for-in
     for (const id in markers) {
       const cssForId = markers[id][0];
-      if (cssForId) {
-        str += makeTextMarker(id) + cssForId;
+      let importRules = '';
+      let rules = '';
+      if (cssForId.length) {
+        for (let i = 0, len = cssForId.length; i < len; i += 1) {
+          const rule = cssForId[i];
+          if (rule[0] === '@' && rule.indexOf('@import') !== -1) {
+            importRules += (importRules ? ' ' : '') + rule;
+          } else {
+            rules += (rules ? ' ' : '') + rule;
+          }
+        }
+
+        str += makeTextMarker(id) + rules;
+        if (importRules) {
+          imports += makeTextMarker(id) + importRules;
+        }
       }
     }
-    return str;
+    return imports + str;
   };
 
   const clone = () => {
