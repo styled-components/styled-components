@@ -23,4 +23,20 @@ describe('classNameUseCheckInjector', () => {
 
     ReactDOM.findDOMNode.mockRestore();
   });
+
+  it('does not show a warning if suppressClassNameWarning is passed', () => {
+    const Comp = () => <div />;
+    const StyledComp = styled(Comp)``;
+
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    renderIntoDocument(
+      <div>
+        <StyledComp />
+        <StyledComp suppressClassNameWarning />
+      </div>
+    );
+
+    expect(console.warn.mock.calls.length).toBe(1);
+  })
 });

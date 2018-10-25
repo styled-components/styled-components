@@ -13,6 +13,13 @@ export default (target: Object) => {
       targetCDM.call(this);
     }
 
+    if (
+      (target.props && target.props.suppressClassNameWarning) ||
+      (target.attrs && target.attrs.suppressClassNameWarning)
+    ) {
+      return;
+    }
+
     const classNames = elementClassName
       .replace(/ +/g, ' ')
       .trim()

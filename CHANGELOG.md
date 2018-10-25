@@ -17,6 +17,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
   `${Comp}`; // .sc-hash
   ```
+- Add `suppressClassNameWarning` prop to disable warning when wrapping a React component with `styled()` and the `className` isn't used, by [@Fer0x](https://github.com/Fer0x) (see [#2156](https://github.com/styled-components/styled-components/pull/2156))
 
 - Expose ThemeContext to enable static contextType support for React 16.6, by [@imbhargav5](https://github.com/imbhargav5) (see [#2152](https://github.com/styled-components/styled-components/pull/2152))
 
