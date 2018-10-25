@@ -1,5 +1,4 @@
 // @flow
-
 import ReactDOM from 'react-dom';
 import getComponentName from './getComponentName';
 
