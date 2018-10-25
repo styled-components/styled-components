@@ -2,6 +2,7 @@
 
 /* Import singletons */
 import isStyledComponent from './utils/isStyledComponent';
+import getSelector from './utils/getSelector';
 import css from './constructors/css';
 import createGlobalStyle from './constructors/createGlobalStyle';
 import keyframes from './constructors/keyframes';
@@ -60,6 +61,7 @@ export {
   keyframes,
   createGlobalStyle,
   isStyledComponent,
+  getSelector,
   ThemeConsumer,
   ThemeProvider,
   withTheme,

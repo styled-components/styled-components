@@ -1,0 +1,5 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`getSelector returns a strinigified id for a nested styled component 1`] = `".sc-htpNat"`;
+
+exports[`getSelector returns a strinigified id for styled component 1`] = `".sc-bdVaJa"`;
