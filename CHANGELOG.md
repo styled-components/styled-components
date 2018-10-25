@@ -18,6 +18,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
   `${Comp}`; // .sc-hash
   ```
 
+- Expose ThemeContext to enable static contextType support for React 16.6, by [@imbhargav5](https://github.com/imbhargav5) (see [#2152](https://github.com/styled-components/styled-components/pull/2152))
+
 ## [v4.0.2] - 2018-10-18
 
 - Handle an edge case where an at-rule was being supplied to the self-reference stylis plugin at an incorrect context setting, by [@probablyup](https://github.com/probablyup) (see [#2114](https://github.com/styled-components/styled-components/pull/2114))
