@@ -6,6 +6,18 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Interpolating a styled component into a string now returns the static component selector (emotion cross-compat)
+
+  ```js
+  import styled from 'styled-components';
+
+  const Comp = styled.div`
+    color: red;
+  `;
+
+  `${Comp}`; // .sc-hash
+  ```
+
 ## [v4.0.2] - 2018-10-18
 
 - Handle an edge case where an at-rule was being supplied to the self-reference stylis plugin at an incorrect context setting, by [@probablyup](https://github.com/probablyup) (see [#2114](https://github.com/styled-components/styled-components/pull/2114))

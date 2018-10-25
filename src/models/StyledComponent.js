@@ -254,6 +254,9 @@ export default function createStyledComponent(target: Target, options: Object, r
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName);
   }
 
+  // $FlowFixMe
+  WrappedStyledComponent.toString = () => `.${WrappedStyledComponent.styledComponentId}`;
+
   if (isClass) {
     hoist(WrappedStyledComponent, target, {
       // all SC-specific things should not be hoisted
