@@ -133,6 +133,14 @@ describe('basic', () => {
     expectCSSMatches('.sc-a {} .b { color:blue; }');
   });
 
+  it('emits the correct selector when a StyledComponent is interpolated into a template string', () => {
+    const Comp = styled.div`
+      color: red;
+    `;
+
+    expect(`${Comp}`).toBe(`.${Comp.styledComponentId}`);
+  });
+
   describe('jsdom tests', () => {
     class InnerComponent extends Component<*, *> {
       render() {
