@@ -17,6 +17,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
   `${Comp}`; // .sc-hash
   ```
+- Add `suppressClassNameWarning` prop to disable warning when wrapping a React component with `styled()` and the `className` isn't used, by [@Fer0x](https://github.com/Fer0x) (see [#2156](https://github.com/styled-components/styled-components/pull/2156))
 
 ## [v4.0.2] - 2018-10-18
 
