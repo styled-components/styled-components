@@ -73,6 +73,11 @@ class StyledComponent extends Component<*> {
   }
 
   renderOuter(styleSheet?: StyleSheet) {
+    const { componentStyle } = this.props.forwardedClass;
+    
+    // No need to subscribe a static component to theme changes, it won't change anything
+    if (componentStyle.isStatic) return this.renderInner();
+
     this.styleSheet = styleSheet;
 
     return <ThemeConsumer>{this.renderInner}</ThemeConsumer>;
