@@ -18,7 +18,7 @@ import StyleSheet from './StyleSheet';
 import { ThemeConsumer, type Theme } from './ThemeProvider';
 import { StyleSheetConsumer } from './StyleSheetManager';
 import { EMPTY_OBJECT } from '../utils/empties';
-import classNameUseCheckInjector from '../utils/classNameUseCheckInjector';
+import classNameUsageCheckInjector from '../utils/classNameUsageCheckInjector';
 
 import type { RuleSet, Target } from '../types';
 import { IS_BROWSER } from '../constants';
@@ -64,7 +64,7 @@ class StyledComponent extends Component<*> {
     this.renderInner = this.renderInner.bind(this);
 
     if (process.env.NODE_ENV !== 'production' && IS_BROWSER) {
-      classNameUseCheckInjector(this);
+      classNameUsageCheckInjector(this);
     }
   }
 
