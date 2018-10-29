@@ -73,7 +73,8 @@
     "prop-types": "^15.5.4",
     "react-is": "^16.6.0",
     "stylis": "^3.5.0",
-    "stylis-rule-sheet": "^0.0.10"
+    "stylis-rule-sheet": "^0.0.10",
+    "supports-color": "^5.5.0"
   },
   "devDependencies": {
     "babel-cli": "^6.22.2",
