@@ -4,15 +4,14 @@ import determineTheme from '../utils/determineTheme';
 import { EMPTY_OBJECT } from '../utils/empties';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
-import isFunction from '../utils/isFunction';
 import isTag from '../utils/isTag';
-import isDerivedReactComponent from '../utils/isDerivedReactComponent';
 import isStyledComponent from '../utils/isStyledComponent';
 import once from '../utils/once';
+import processAttrs from '../utils/processAttrs';
 import { ThemeConsumer } from './ThemeProvider';
 
 import type { Theme } from './ThemeProvider';
-import type { RuleSet, Target } from '../types';
+import type { AttrsResolver, Context, RuleSet, Target } from '../types';
 
 const warnInnerRef = once(() =>
   // eslint-disable-next-line no-console
@@ -65,36 +64,12 @@ class StyledNativeComponent extends Component<*, *> {
     );
   }
 
-  buildExecutionContext(theme: any, props: any, attrs: any) {
-    const context = { ...props, theme };
+  buildExecutionContext(theme: any, props: any, attrs: AttrsResolver): Context {
+    const context: Context = { ...props, theme };
 
     if (attrs === undefined) return context;
 
-    this.attrs = {};
-
-    let attr;
-    let key;
-
-    /* eslint-disable guard-for-in */
-    for (key in attrs) {
-      attr = attrs[key];
-
-      if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
-        attr = attr(context);
-
-        if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            `It looks like you've used a component as value for the ${key} prop in the attrs constructor.\n` +
-              "You'll need to wrap it in a function to make it available inside the styled component.\n" +
-              `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
-          );
-        }
-      }
-
-      this.attrs[key] = attr;
-    }
-    /* eslint-enable */
+    this.attrs = attrs(context);
 
     return { ...context, ...this.attrs };
   }
@@ -141,7 +116,13 @@ export default (InlineStyle: Function) => {
 
     const finalAttrs =
       // $FlowFixMe
-      isTargetStyledComp && target.attrs ? { ...target.attrs, ...attrs } : attrs;
+      isTargetStyledComp && target.attrs
+        ? (context: Context): Object => ({
+            // $FlowFixMe <- target.attrs
+            ...processAttrs(target.attrs, context),
+            ...processAttrs(attrs, context),
+          })
+        : attrs;
 
     /**
      * forwardRef creates a new interim component, which we'll take advantage of

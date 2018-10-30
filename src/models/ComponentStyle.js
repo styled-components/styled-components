@@ -9,6 +9,7 @@ import StyleSheet from './StyleSheet';
 import { IS_BROWSER } from '../constants';
 
 import { type RuleSet } from '../types';
+import type { Context } from '../types';
 
 const isHMREnabled =
   process.env.NODE_ENV !== 'production' && typeof module !== 'undefined' && module.hot;
@@ -29,9 +30,9 @@ export default class ComponentStyle {
 
   lastClassName: ?string;
 
-  constructor(rules: RuleSet, attrs?: Object, componentId: string) {
+  constructor(rules: RuleSet, withStaticAttrs: boolean, componentId: string) {
     this.rules = rules;
-    this.isStatic = !isHMREnabled && isStaticRules(rules, attrs);
+    this.isStatic = !isHMREnabled && withStaticAttrs && isStaticRules(rules);
     this.componentId = componentId;
 
     if (!StyleSheet.master.hasId(componentId)) {
@@ -46,7 +47,7 @@ export default class ComponentStyle {
      * Hashes it, wraps the whole chunk in a .hash1234 {}
      * Returns the hash to be injected on render()
      * */
-  generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
+  generateAndInjectStyles(executionContext: Context, styleSheet: StyleSheet) {
     const { isStatic, componentId, lastClassName } = this;
     if (
       IS_BROWSER &&

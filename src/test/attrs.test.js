@@ -226,4 +226,42 @@ For example, { component: () => InnerComponent } instead of { component: InnerCo
       expect(console.warn).not.toHaveBeenCalled();
     });
   });
+
+
+  it('should work fine with null attrs', () => {
+    const attrs = null;
+    const Comp = styled.fieldset.attrs(attrs)``;
+    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+  });
+
+  it('should accept function with props as argument', () => {
+    const Comp = styled.input.attrs(props => ({
+      className: props.example,
+      type: 'password',
+    }))``;
+
+    expect(TestRenderer.create(<Comp example="test" />).toJSON()).toMatchSnapshot();
+  });
+
+  it('should accept attrs nesting', () => {
+    const WithNestedAttrs = styled.input
+    .attrs({
+      type: 'password',
+    })
+    .attrs({
+      className: 'nested',
+    })
+    .attrs(props => ({
+      id: props.val,
+    }))
+    .attrs({
+      disabled: 'disabled',
+      name: props => props.test,
+      required: false,
+    })``;
+
+    expect(
+      TestRenderer.create(<WithNestedAttrs val="nested-value" test="test" />).toJSON()
+    ).toMatchSnapshot();
+  });
 });

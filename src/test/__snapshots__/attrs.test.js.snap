@@ -66,6 +66,24 @@ exports[`attrs pass props to the attr function 2`] = `
 />
 `;
 
+exports[`attrs should accept attrs nesting 1`] = `
+<input
+  className="sc-a nested b"
+  disabled="disabled"
+  id="nested-value"
+  name="test"
+  required={false}
+  type="password"
+/>
+`;
+
+exports[`attrs should accept function with props as argument 1`] = `
+<input
+  className="sc-a test b"
+  type="password"
+/>
+`;
+
 exports[`attrs should merge className 1`] = `
 <div
   className="sc-a meow nya b"
@@ -146,6 +164,12 @@ exports[`attrs should shallow merge "style" prop + attr instead of overwriting 1
 >
   Hello
 </p>
+`;
+
+exports[`attrs should work fine with null attrs 1`] = `
+<fieldset
+  className="sc-a b"
+/>
 `;
 
 exports[`attrs should work with data and aria attributes 1`] = `

@@ -9,9 +9,7 @@ import escape from '../utils/escape';
 import generateDisplayName from '../utils/generateDisplayName';
 import getComponentName from '../utils/getComponentName';
 import hoist from '../utils/hoist';
-import isFunction from '../utils/isFunction';
 import isTag from '../utils/isTag';
-import isDerivedReactComponent from '../utils/isDerivedReactComponent';
 import isStyledComponent from '../utils/isStyledComponent';
 import once from '../utils/once';
 import StyleSheet from './StyleSheet';
@@ -19,14 +17,19 @@ import { ThemeConsumer, type Theme } from './ThemeProvider';
 import { StyleSheetConsumer } from './StyleSheetManager';
 import { EMPTY_OBJECT } from '../utils/empties';
 import classNameUsageCheckInjector from '../utils/classNameUsageCheckInjector';
+import processAttrs from '../utils/processAttrs';
 
-import type { RuleSet, Target } from '../types';
+import type { AttrsResolver, ConstructorOptions, Context, RuleSet, Target } from '../types';
 import { IS_BROWSER } from '../constants';
 
 const identifiers = {};
 
 /* We depend on components having unique IDs */
-function generateId(_ComponentStyle: Function, _displayName: string, parentComponentId: string) {
+function generateId(
+  _ComponentStyle: Function,
+  _displayName: ?string,
+  parentComponentId: ?string
+): string {
   const displayName = typeof _displayName !== 'string' ? 'sc' : escape(_displayName);
 
   /**
@@ -134,36 +137,12 @@ class StyledComponent extends Component<*> {
     return createElement(elementToBeCreated, propsForElement);
   }
 
-  buildExecutionContext(theme: any, props: any, attrs: any) {
-    const context = { ...props, theme };
+  buildExecutionContext(theme: any, props: any, attrs: AttrsResolver): Context {
+    const context: Context = { ...props, theme };
 
     if (attrs === undefined) return context;
 
-    this.attrs = {};
-
-    let attr;
-    let key;
-
-    /* eslint-disable guard-for-in */
-    for (key in attrs) {
-      attr = attrs[key];
-
-      if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
-        attr = attr(context);
-
-        if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            `It looks like you've used a component as value for the ${key} prop in the attrs constructor.\n` +
-              "You'll need to wrap it in a function to make it available inside the styled component.\n" +
-              `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
-          );
-        }
-      }
-
-      this.attrs[key] = attr;
-    }
-    /* eslint-enable */
+    this.attrs = attrs(context);
 
     return { ...context, ...this.attrs };
   }
@@ -190,7 +169,11 @@ class StyledComponent extends Component<*> {
   }
 }
 
-export default function createStyledComponent(target: Target, options: Object, rules: RuleSet) {
+export default function createStyledComponent(
+  target: Target,
+  options: ConstructorOptions,
+  rules: RuleSet
+) {
   const isTargetStyledComp = isStyledComponent(target);
   const isClass = !isTag(target);
 
@@ -203,13 +186,19 @@ export default function createStyledComponent(target: Target, options: Object, r
 
   const styledComponentId =
     options.displayName && options.componentId
-      ? `${escape(options.displayName)}-${options.componentId}`
+      ? `${escape(options.displayName)}-${String(options.componentId)}`
       : options.componentId || componentId;
 
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     // $FlowFixMe
-    isTargetStyledComp && target.attrs ? { ...target.attrs, ...attrs } : attrs;
+    isTargetStyledComp && target.attrs
+      ? (context: Context): Object => ({
+          // $FlowFixMe <- target.attrs
+          ...processAttrs(target.attrs, context),
+          ...processAttrs(attrs, context),
+        })
+      : attrs;
 
   const componentStyle = new ComponentStyle(
     isTargetStyledComp
@@ -217,7 +206,7 @@ export default function createStyledComponent(target: Target, options: Object, r
         // $FlowFixMe
         target.componentStyle.rules.concat(rules)
       : rules,
-    finalAttrs,
+    options.withStaticAttrs,
     styledComponentId
   );
 
@@ -249,7 +238,7 @@ export default function createStyledComponent(target: Target, options: Object, r
       previousComponentId &&
       `${previousComponentId}-${isTag(tag) ? tag : escape(getComponentName(tag))}`;
 
-    const newOptions = {
+    const newOptions: ConstructorOptions = {
       ...optionsToCopy,
       attrs: finalAttrs,
       componentId: newComponentId,
