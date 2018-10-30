@@ -71,7 +71,7 @@ describe('classNameUsageCheckInjector', () => {
     const Comp1 = props => <div {...props} />;
     const StyledComp1 = styled(Comp1)``;
 
-    const Comp2 = props => <div>><Comp1 {...props} /></div>;
+    const Comp2 = props => <div><Comp1 {...props} /></div>;
     const StyledComp2 = styled(Comp2)``;
 
     jest.spyOn(console, 'warn').mockImplementation(() => {});
