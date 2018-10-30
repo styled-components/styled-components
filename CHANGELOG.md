@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.0.3] - 2018-10-30
+
 - Interpolating a styled component into a string now returns the static component selector (emotion cross-compat)
 
   ```js
@@ -17,6 +19,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
   `${Comp}`; // .sc-hash
   ```
+
 - Add `suppressClassNameWarning` prop to disable warning when wrapping a React component with `styled()` and the `className` isn't used, by [@Fer0x](https://github.com/Fer0x) (see [#2156](https://github.com/styled-components/styled-components/pull/2156))
 
 - Expose ThemeContext to enable static contextType support for React 16.6, by [@imbhargav5](https://github.com/imbhargav5) (see [#2152](https://github.com/styled-components/styled-components/pull/2152))
@@ -859,7 +862,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.2...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.3...master
+[v4.0.3]: https://github.com/styled-components/styled-components/compare/v4.0.2...v4.0.3
 [v4.0.2]: https://github.com/styled-components/styled-components/compare/v4.0.1...v4.0.2
 [v4.0.1]: https://github.com/styled-components/styled-components/compare/v4.0.0...v4.0.1
 [v4.0.0]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.11...v4.0.0
