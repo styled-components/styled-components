@@ -32,10 +32,12 @@ describe('flatten', () => {
 
   it('hypenates objects', () => {
     const obj = {
-      fontSize: '14px',
+      fontSize: 14,
+      lineHeight: '15px',
       WebkitFilter: 'blur(2px)',
+      fontWeight: 500
     };
-    const css = 'font-size: 14px; -webkit-filter: blur(2px);';
+    const css = 'font-size: 14px; line-height: 15px; -webkit-filter: blur(2px); font-weight: 500;';
     // $FlowFixMe
     expect(flatten([obj])).toEqual([css]);
     // $FlowFixMe
