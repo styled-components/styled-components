@@ -2,9 +2,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { renderIntoDocument } from 'react-dom/test-utils';
-import styled from '../../constructors/styled';
+import { resetStyled } from '../../test/utils';
+
+let styled;
 
 describe('classNameUsageCheckInjector', () => {
+  beforeEach(() => {
+    styled = resetStyled();
+  });
+
   it('should generate valid selectors', () => {
     const div = document.createElement('div');
     const StyledDiv = styled.div``;
@@ -59,5 +65,24 @@ describe('classNameUsageCheckInjector', () => {
     );
 
     expect(console.warn.mock.calls.length).toEqual(2);
+  });
+
+  it('does not warn for correct usage of styled(Comp)', () => {
+    const Comp1 = props => <div {...props} />;
+    const StyledComp1 = styled(Comp1)``;
+
+    const Comp2 = props => <div>><Comp1 {...props} /></div>;
+    const StyledComp2 = styled(Comp2)``;
+
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    renderIntoDocument(
+      <div>
+        <StyledComp1 />
+        <StyledComp2 />
+      </div>
+    );
+
+    expect(console.warn.mock.calls.length).toEqual(0);
   });
 });
