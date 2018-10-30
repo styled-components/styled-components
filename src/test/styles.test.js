@@ -5,6 +5,7 @@ import TestRenderer from 'react-test-renderer';
 import * as nonce from '../utils/nonce';
 import { resetStyled, expectCSSMatches } from './utils';
 import StyleSheet from '../models/StyleSheet';
+import StyledProvider from '../models/StyledProvider';
 
 jest.mock('../utils/nonce');
 jest.spyOn(nonce, 'default').mockImplementation(() => 'foo');
@@ -320,5 +321,23 @@ describe('with styles', () => {
 
     expect(masterCss).toEqual(inspectTag(cloneA));
     expect(masterCss).toEqual(inspectTag(cloneB));
+  });
+
+  it('should scope styles when used with StyledProvider', () => {
+    const rule = 'color: blue;';
+    const Comp = styled.div`
+      ${rule};
+    `;
+    TestRenderer.create(
+      <StyledProvider scope=".scope">
+        <Comp />
+      </StyledProvider>
+    );
+    expectCSSMatches(`
+        .sc-a {}
+        .scope .b {
+          color:blue;
+        }
+      `);
   });
 });

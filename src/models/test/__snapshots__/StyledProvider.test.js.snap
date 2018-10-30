@@ -13,17 +13,3 @@ exports[`StyledProvider should scope styles to the prefix specified in the scope
   Child!
 </div>
 `;
-
-exports[`ThemeProvider should render its child 1`] = `
-<p>
-  Child!
-</p>
-`;
-
-exports[`ThemeProvider should scope styles to the prefix specified in the scope prop 1`] = `
-<div
-  className="sc-a b"
->
-  Child!
-</div>
-`;
