@@ -46,7 +46,7 @@ export default class ComponentStyle {
      * Hashes it, wraps the whole chunk in a .hash1234 {}
      * Returns the hash to be injected on render()
      * */
-  generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
+  generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet, scope: string) {
     const { isStatic, componentId, lastClassName } = this;
     if (
       IS_BROWSER &&
@@ -60,9 +60,10 @@ export default class ComponentStyle {
     const flatCSS = flatten(this.rules, executionContext, styleSheet);
     const name = hasher(this.componentId + flatCSS.join(''));
     if (!styleSheet.hasNameForId(componentId, name)) {
+      const prefix = scope ? `${scope} .${name}` : `.${name}`;
       styleSheet.inject(
         this.componentId,
-        stringifyRules(flatCSS, `.${name}`, undefined, componentId),
+        stringifyRules(flatCSS, prefix, undefined, componentId),
         name
       );
     }

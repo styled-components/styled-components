@@ -18,6 +18,7 @@ import StyleSheet from './StyleSheet';
 import { ThemeConsumer, type Theme } from './ThemeProvider';
 import { StyleSheetConsumer } from './StyleSheetManager';
 import { EMPTY_OBJECT } from '../utils/empties';
+import { StyledConsumer } from './StyledProvider';
 import classNameUseCheckInjector from '../utils/classNameUseCheckInjector';
 
 import type { RuleSet, Target } from '../types';
@@ -75,26 +76,39 @@ class StyledComponent extends Component<*> {
   renderOuter(styleSheet?: StyleSheet) {
     this.styleSheet = styleSheet;
 
-    return <ThemeConsumer>{this.renderInner}</ThemeConsumer>;
+    return (
+      <ThemeConsumer>
+        {theme => <StyledConsumer>{options => this.renderInner(theme, options)}</StyledConsumer>}
+      </ThemeConsumer>
+    );
   }
 
-  renderInner(theme?: Theme) {
+  renderInner(theme?: Theme, options?: Object) {
     const { componentStyle, defaultProps, styledComponentId, target } = this.props.forwardedClass;
+
+    const { scope = '' } = options || {};
 
     let generatedClassName;
     if (componentStyle.isStatic) {
-      generatedClassName = this.generateAndInjectStyles(EMPTY_OBJECT, this.props, this.styleSheet);
+      generatedClassName = this.generateAndInjectStyles(
+        EMPTY_OBJECT,
+        this.props,
+        this.styleSheet,
+        scope
+      );
     } else if (theme !== undefined) {
       generatedClassName = this.generateAndInjectStyles(
         determineTheme(this.props, theme, defaultProps),
         this.props,
-        this.styleSheet
+        this.styleSheet,
+        scope
       );
     } else {
       generatedClassName = this.generateAndInjectStyles(
         this.props.theme || EMPTY_OBJECT,
         this.props,
-        this.styleSheet
+        this.styleSheet,
+        scope
       );
     }
     const elementToBeCreated = this.props.as || this.attrs.as || target;
@@ -158,18 +172,24 @@ class StyledComponent extends Component<*> {
     return { ...context, ...this.attrs };
   }
 
-  generateAndInjectStyles(theme: any, props: any, styleSheet: ?StyleSheet = StyleSheet.master) {
+  generateAndInjectStyles(
+    theme: any,
+    props: any,
+    styleSheet: ?StyleSheet = StyleSheet.master,
+    scope: string
+  ) {
     const { attrs, componentStyle, warnTooManyClasses } = props.forwardedClass;
 
     // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names
     if (componentStyle.isStatic && attrs === undefined) {
-      return componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet);
+      return componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet, scope);
     }
 
     const className = componentStyle.generateAndInjectStyles(
       this.buildExecutionContext(theme, props, props.forwardedClass.attrs),
-      styleSheet
+      styleSheet,
+      scope
     );
 
     if (warnTooManyClasses) {
