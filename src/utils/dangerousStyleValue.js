@@ -4,7 +4,7 @@ import isUnitlessNumber from './isUnitlessNumber';
 // Taken from https://github.com/facebook/react/blob/b87aabdfe1b7461e7331abb3601d9e6bb27544bc/packages/react-dom/src/shared/dangerousStyleValue.js
 export default function dangerousStyleValue(name: string, value: any): any {
   // https://github.com/amilajack/eslint-plugin-flowtype-errors/issues/133
-  // eslint-disable-next-line flowtype-errors/show-errors
+  // $FlowFixMe
   if (typeof value === 'symbol') {
     return value;
   }
