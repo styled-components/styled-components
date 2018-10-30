@@ -79,10 +79,20 @@ class StyledNativeComponent extends Component<*, *> {
     for (key in attrs) {
       attr = attrs[key];
 
-      this.attrs[key] =
-        isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)
-          ? attr(context)
-          : attr;
+      if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
+        attr = attr(context);
+
+        if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `It looks like you've used a component as value for the ${key} prop in the attrs constructor.\n` +
+              "You'll need to wrap it in a function to make it available inside the styled component.\n" +
+              `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
+          );
+        }
+      }
+
+      this.attrs[key] = attr;
     }
     /* eslint-enable */
 
