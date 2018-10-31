@@ -17,7 +17,7 @@ import { ThemeConsumer, type Theme } from './ThemeProvider';
 import { StyleSheetConsumer } from './StyleSheetManager';
 import { EMPTY_OBJECT } from '../utils/empties';
 import classNameUsageCheckInjector from '../utils/classNameUsageCheckInjector';
-import processAttrs from '../utils/processAttrs';
+import createAttrsResolver from '../utils/attrsResolver';
 
 import type { AttrsResolver, ConstructorOptions, Context, RuleSet, Target } from '../types';
 import { IS_BROWSER } from '../constants';
@@ -190,15 +190,9 @@ export default function createStyledComponent(
       : options.componentId || componentId;
 
   // fold the underlying StyledComponent attrs up (implicit extend)
-  const finalAttrs =
+  const finalAttrs: AttrsResolver =
     // $FlowFixMe
-    isTargetStyledComp && target.attrs
-      ? (context: Context): Object => ({
-          // $FlowFixMe <- target.attrs
-          ...processAttrs(target.attrs, context),
-          ...processAttrs(attrs, context),
-        })
-      : attrs;
+    isTargetStyledComp && target.attrs ? createAttrsResolver(target.attrs, attrs) : attrs;
 
   const componentStyle = new ComponentStyle(
     isTargetStyledComp

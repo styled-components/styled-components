@@ -2,13 +2,12 @@
 import { isValidElementType } from 'react-is';
 import css from './css';
 import StyledError from '../utils/error';
-import { EMPTY_OBJECT } from '../utils/empties';
-import processAttrs from '../utils/processAttrs';
+import createAttrsResolver from '../utils/attrsResolver';
 import isStaticAttrsObject from '../utils/isStaticAttrsObject';
 
-import type { Attrs, ConstructorOptions, Context, Target } from '../types';
+import type { Attrs, ConstructorOptions, Target } from '../types';
 
-const defaultOptions = {
+const defaultOptions: ConstructorOptions = {
   // assume that attrs are static by default - they will be checked anyway
   withStaticAttrs: true,
 };
@@ -36,10 +35,7 @@ export default function constructWithOptions(
       withStaticAttrs: options.withStaticAttrs && isStaticAttrsObject(attrs),
       // wrap the attrs into a resolver function which knows how to extract attrs
       // either from a plain object or factory function [.attrs(props => ({}))]
-      attrs: (context: Context): Object => ({
-        ...processAttrs(options.attrs || EMPTY_OBJECT, context),
-        ...processAttrs(attrs, context),
-      }),
+      attrs: createAttrsResolver(options.attrs, attrs),
     });
 
   return templateFunction;

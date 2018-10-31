@@ -36,7 +36,7 @@ export type Stringifier = (
 ) => Array<string>;
 
 export type Attr = {
-  [x: string]: (props: Object) => any | any,
+  [x: string]: (props: Object) => any | Object,
 };
 
 export type Context = Object;

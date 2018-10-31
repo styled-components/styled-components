@@ -7,7 +7,7 @@ import hoist from '../utils/hoist';
 import isTag from '../utils/isTag';
 import isStyledComponent from '../utils/isStyledComponent';
 import once from '../utils/once';
-import processAttrs from '../utils/processAttrs';
+import createAttrsResolver from '../utils/attrsResolver';
 import { ThemeConsumer } from './ThemeProvider';
 
 import type { Theme } from './ThemeProvider';
@@ -114,15 +114,9 @@ export default (InlineStyle: Function) => {
       />
     ));
 
-    const finalAttrs =
+    const finalAttrs: AttrsResolver =
       // $FlowFixMe
-      isTargetStyledComp && target.attrs
-        ? (context: Context): Object => ({
-            // $FlowFixMe <- target.attrs
-            ...processAttrs(target.attrs, context),
-            ...processAttrs(attrs, context),
-          })
-        : attrs;
+      isTargetStyledComp && target.attrs ? createAttrsResolver(target.attrs, attrs) : attrs;
 
     /**
      * forwardRef creates a new interim component, which we'll take advantage of
