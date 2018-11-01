@@ -1,5 +1,5 @@
 // @flow
-import isUnitlessNumber from './isUnitlessNumber';
+import unitless from '@emotion/unitless';
 
 // Taken from https://github.com/facebook/react/blob/b87aabdfe1b7461e7331abb3601d9e6bb27544bc/packages/react-dom/src/shared/dangerousStyleValue.js
 export default function dangerousStyleValue(name: string, value: any): any {
@@ -17,7 +17,7 @@ export default function dangerousStyleValue(name: string, value: any): any {
   if (
     typeof value === 'number' &&
     value !== 0 &&
-    !(isUnitlessNumber.hasOwnProperty(name) && isUnitlessNumber[name])
+    !(unitless.hasOwnProperty(name) && unitless[name] === 1)
   ) {
     return `${value}px`; // Presumes implicit 'px' suffix for unitless numbers
   }
