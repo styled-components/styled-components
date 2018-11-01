@@ -1,3 +1,4 @@
+// @flow
 import React from 'react';
 
 import styled, { css, keyframes, createGlobalStyle } from 'styled-components';
@@ -128,7 +129,7 @@ const App = () => (
     <Content>
       <LiveProvider
         code={buttonExample}
-        scope={{ styled, css, createGlobalStyle, keyframes }}
+        scope={{ React, styled, css, createGlobalStyle, keyframes }}
         noInline
       >
         <LiveEditor />
