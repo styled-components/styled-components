@@ -141,6 +141,16 @@ describe('basic', () => {
     expect(`${Comp}`).toBe(`.${Comp.styledComponentId}`);
   });
 
+  it('works with the React 16.6 "memo" API', () => {
+    const Comp = React.memo(props => <div {...props} />);
+    const StyledComp = styled(Comp)`
+      color: red;
+    `;
+
+    TestRenderer.create(<StyledComp color="blue" />);
+    expectCSSMatches('.sc-a {} .b { color:red; }');
+  });
+
   describe('jsdom tests', () => {
     class InnerComponent extends Component<*, *> {
       render() {
