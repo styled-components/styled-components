@@ -8,14 +8,12 @@ exports[`expanded api "as" prop changes the rendered element type 1`] = `
 
 exports[`expanded api "as" prop changes the rendered element type when used with attrs 1`] = `
 <header
-  as="header"
   className="sc-a b"
 />
 `;
 
 exports[`expanded api "as" prop prefers prop over attrs 1`] = `
 <span
-  as="header"
   className="sc-a b"
 />
 `;

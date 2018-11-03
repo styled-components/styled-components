@@ -187,4 +187,43 @@ describe('attrs', () => {
 
     expect(TestRenderer.create(<BlueText>Hello</BlueText>).toJSON()).toMatchSnapshot();
   });
+
+  it('does not pass non html tags to HTML element', () => {
+    const Comp = styled.div`
+      color: ${props => props.textColor};
+    `;
+
+    const StyledComp = styled(Comp).attrs({
+      textColor: 'red',
+    })``;
+    expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();
+  });
+
+  describe('warnings', () => {
+    beforeEach(() => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    it('warns upon use of a Stateless Functional Component as a prop', () => {
+      const Inner = () => <div />;
+      const Comp = styled.div.attrs({ component: Inner })``;
+
+      TestRenderer.create(<Comp />);
+
+      expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(`
+"It looks like you've used a component as value for the component prop in the attrs constructor.
+You'll need to wrap it in a function to make it available inside the styled component.
+For example, { component: () => InnerComponent } instead of { component: InnerComponent }"
+`);
+    });
+
+    it('does not warn if the Stateless Functional Component is wrapped in a function', () => {
+      const Inner = () => <div />;
+      const Comp = styled.div.attrs({ component: () => Inner })``;
+
+      TestRenderer.create(<Comp />);
+
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -1,7 +1,8 @@
 // @flow
-
 import ReactDOM from 'react-dom';
 import getComponentName from './getComponentName';
+
+const didWarnAboutClassNameUsage = new Set();
 
 export default (target: Object) => {
   let elementClassName = '';
@@ -13,6 +14,18 @@ export default (target: Object) => {
     if (typeof targetCDM === 'function') {
       targetCDM.call(this);
     }
+
+    const forwardTarget = this.props.forwardedClass.target;
+
+    if (
+      (target.props && target.props.suppressClassNameWarning) ||
+      (target.attrs && target.attrs.suppressClassNameWarning) ||
+      didWarnAboutClassNameUsage.has(forwardTarget)
+    ) {
+      return;
+    }
+
+    didWarnAboutClassNameUsage.add(forwardTarget);
 
     const classNames = elementClassName
       .replace(/ +/g, ' ')
@@ -30,7 +43,7 @@ export default (target: Object) => {
     ) {
       console.warn(
         `It looks like you've wrapped styled() around your React component (${getComponentName(
-          this.props.forwardedClass.target
+          forwardTarget
         )}), but the className prop is not being passed down to a child. No styles will be rendered unless className is composed within your React component.`
       );
     }

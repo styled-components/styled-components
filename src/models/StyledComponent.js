@@ -18,7 +18,7 @@ import StyleSheet from './StyleSheet';
 import { ThemeConsumer, type Theme } from './ThemeProvider';
 import { StyleSheetConsumer } from './StyleSheetManager';
 import { EMPTY_OBJECT } from '../utils/empties';
-import classNameUseCheckInjector from '../utils/classNameUseCheckInjector';
+import classNameUsageCheckInjector from '../utils/classNameUsageCheckInjector';
 
 import type { RuleSet, Target } from '../types';
 import { IS_BROWSER } from '../constants';
@@ -64,7 +64,7 @@ class StyledComponent extends Component<*> {
     this.renderInner = this.renderInner.bind(this);
 
     if (process.env.NODE_ENV !== 'production' && IS_BROWSER) {
-      classNameUseCheckInjector(this);
+      classNameUsageCheckInjector(this);
     }
   }
 
@@ -100,24 +100,26 @@ class StyledComponent extends Component<*> {
     const elementToBeCreated = this.props.as || this.attrs.as || target;
     const isTargetTag = isTag(elementToBeCreated);
 
-    const propsForElement: Object = { ...this.attrs };
+    const propsForElement: Object = {};
+    const computedProps: Object = { ...this.attrs, ...this.props };
 
     let key;
     // eslint-disable-next-line guard-for-in
-    for (key in this.props) {
+    for (key in computedProps) {
       if (process.env.NODE_ENV !== 'production' && key === 'innerRef') {
         warnInnerRef();
       }
 
       if (key === 'forwardedClass' || key === 'as') continue;
-      else if (key === 'forwardedRef') propsForElement.ref = this.props[key];
+      else if (key === 'forwardedRef') propsForElement.ref = computedProps[key];
       else if (!isTargetTag || validAttr(key)) {
         // Don't pass through non HTML tags through to HTML elements
-        propsForElement[key] =
-          key === 'style' && key in this.attrs
-            ? { ...this.attrs[key], ...this.props[key] }
-            : this.props[key];
+        propsForElement[key] = computedProps[key];
       }
+    }
+
+    if (this.props.style && this.attrs.style) {
+      propsForElement.style = { ...this.attrs.style, ...this.props.style };
     }
 
     propsForElement.className = [
@@ -146,10 +148,20 @@ class StyledComponent extends Component<*> {
     for (key in attrs) {
       attr = attrs[key];
 
-      this.attrs[key] =
-        isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)
-          ? attr(context)
-          : attr;
+      if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
+        attr = attr(context);
+
+        if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `It looks like you've used a component as value for the ${key} prop in the attrs constructor.\n` +
+              "You'll need to wrap it in a function to make it available inside the styled component.\n" +
+              `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
+          );
+        }
+      }
+
+      this.attrs[key] = attr;
     }
     /* eslint-enable */
 
@@ -253,6 +265,9 @@ export default function createStyledComponent(target: Target, options: Object, r
     // $FlowFixMe
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName);
   }
+
+  // $FlowFixMe
+  WrappedStyledComponent.toString = () => `.${WrappedStyledComponent.styledComponentId}`;
 
   if (isClass) {
     hoist(WrappedStyledComponent, target, {

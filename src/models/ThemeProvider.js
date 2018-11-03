@@ -11,7 +11,7 @@ type Props = {
   theme: Theme | ((outerTheme: Theme) => void),
 };
 
-const ThemeContext = createContext();
+export const ThemeContext = createContext();
 
 export const ThemeConsumer = ThemeContext.Consumer;
 

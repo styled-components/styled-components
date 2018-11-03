@@ -9,7 +9,7 @@ import ServerStyleSheet from './models/ServerStyleSheet';
 import StyleSheetManager from './models/StyleSheetManager';
 
 /* Import components */
-import ThemeProvider, { ThemeConsumer } from './models/ThemeProvider';
+import ThemeProvider, { ThemeContext, ThemeConsumer } from './models/ThemeProvider';
 
 /* Import Higher Order Components */
 import withTheme from './hoc/withTheme';
@@ -61,6 +61,7 @@ export {
   createGlobalStyle,
   isStyledComponent,
   ThemeConsumer,
+  ThemeContext,
   ThemeProvider,
   withTheme,
   ServerStyleSheet,
