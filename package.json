@@ -1,7 +1,7 @@
 {
   "name": "styled-components",
-  "version": "4.0.2",
-  "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
+  "version": "4.0.3",
+  "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.esm.js",
   "module": "dist/styled-components.esm.js",
@@ -73,7 +73,8 @@
     "prop-types": "^15.5.4",
     "react-is": "^16.6.0",
     "stylis": "^3.5.0",
-    "stylis-rule-sheet": "^0.0.10"
+    "stylis-rule-sheet": "^0.0.10",
+    "supports-color": "^5.5.0"
   },
   "devDependencies": {
     "babel-cli": "^6.22.2",

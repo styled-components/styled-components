@@ -8,3 +8,4 @@ src/test/utils.js
 example/
 flow-typed/**/*.js
 lib/
+sandbox/**/*.js
