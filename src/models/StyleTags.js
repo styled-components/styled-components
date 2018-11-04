@@ -8,7 +8,6 @@ import StyledError from '../utils/error';
 import { type ExtractedComp } from '../utils/extractCompsFromCSS';
 import { splitByRules } from '../utils/stringifyRules';
 import getNonce from '../utils/nonce';
-import once from '../utils/once';
 
 import {
   type Names,
@@ -408,50 +407,23 @@ export const makeTag = (
   return makeServerTag();
 };
 
-/* wraps a given tag so that rehydration is performed once when necessary */
-export const makeRehydrationTag = (
+export const rehydrate = (
   tag: Tag<any>,
   els: HTMLStyleElement[],
-  extracted: ExtractedComp[],
-  immediateRehydration: boolean
-): Tag<any> => {
-  /* rehydration function that adds all rules to the new tag */
-  const rehydrate = once(() => {
-    /* add all extracted components to the new tag */
-    for (let i = 0, len = extracted.length; i < len; i += 1) {
-      const { componentId, cssFromDOM } = extracted[i];
-      const cssRules = splitByRules(cssFromDOM);
-      tag.insertRules(componentId, cssRules);
+  extracted: ExtractedComp[]
+): void => {
+  /* add all extracted components to the new tag */
+  for (let i = 0, len = extracted.length; i < len; i += 1) {
+    const { componentId, cssFromDOM } = extracted[i];
+    const cssRules = splitByRules(cssFromDOM);
+    tag.insertRules(componentId, cssRules);
+  }
+
+  /* remove old HTMLStyleElements, since they have been rehydrated */
+  for (let i = 0, len = els.length; i < len; i += 1) {
+    const el = els[i];
+    if (el.parentNode) {
+      el.parentNode.removeChild(el);
     }
-
-    /* remove old HTMLStyleElements, since they have been rehydrated */
-    for (let i = 0, len = els.length; i < len; i += 1) {
-      const el = els[i];
-      if (el.parentNode) {
-        el.parentNode.removeChild(el);
-      }
-    }
-  });
-
-  if (immediateRehydration) rehydrate();
-
-  return {
-    ...tag,
-
-    /* add rehydration hook to methods */
-    insertMarker: id => {
-      rehydrate();
-      return tag.insertMarker(id);
-    },
-
-    insertRules: (id, cssRules, name) => {
-      rehydrate();
-      return tag.insertRules(id, cssRules, name);
-    },
-
-    removeRules: id => {
-      rehydrate();
-      return tag.removeRules(id);
-    },
-  };
+  }
 };

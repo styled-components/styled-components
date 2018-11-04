@@ -27,7 +27,7 @@ describe('with styles', () => {
       ${rule};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.sc-a {} .b { color:blue; }');
+    expectCSSMatches('.b { color:blue; }');
   });
 
   it('should append multiple styles', () => {
@@ -37,7 +37,7 @@ describe('with styles', () => {
       ${rule1} ${rule2};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.sc-a {} .b { color:blue; background:red; }');
+    expectCSSMatches('.b { color:blue; background:red; }');
   });
 
   it('amperstand should refer to the static class when making a self-referential combo selector', () => {
@@ -92,7 +92,6 @@ describe('with styles', () => {
       </React.Fragment>
     );
     expectCSSMatches(`
-      .sc-a{ }
       .b{ background:red; color:white; }
       .b.b.b{ border:1px solid red; }
       .b[disabled]{ color:red; }
@@ -126,7 +125,7 @@ describe('with styles', () => {
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.sc-a {} .b { background-color:blue; }');
+    expectCSSMatches('.b { background-color:blue; }');
   });
 
   it('should handle inline style objects with media queries', () => {
@@ -141,7 +140,7 @@ describe('with styles', () => {
     `;
     TestRenderer.create(<Comp />);
     expectCSSMatches(
-      '.sc-a {} .b { background-color:blue; } @media screen and (min-width:250px) { .b { background-color:red; } }'
+      '.b { background-color:blue; } @media screen and (min-width:250px) { .b { background-color:red; } }'
     );
   });
 
@@ -156,7 +155,7 @@ describe('with styles', () => {
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b:hover { color:green; }');
+    expectCSSMatches('.b { background-color:blue; } .b:hover { color:green; }');
   });
 
   it('should handle inline style objects with pseudo selectors', () => {
@@ -170,7 +169,7 @@ describe('with styles', () => {
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b:hover { color:green; }');
+    expectCSSMatches('.b { background-color:blue; } .b:hover { color:green; }');
   });
 
   it('should handle inline style objects with nesting', () => {
@@ -184,7 +183,7 @@ describe('with styles', () => {
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.sc-a {} .b { background-color:blue; } .b > h1 { color:white; }');
+    expectCSSMatches('.b { background-color:blue; } .b > h1 { color:white; }');
   });
 
   it('should handle inline style objects with contextual selectors', () => {
@@ -198,7 +197,7 @@ describe('with styles', () => {
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.sc-a {} .b { background-color:blue; } html.something .b { color:white; }');
+    expectCSSMatches('.b { background-color:blue; } html.something .b { color:white; }');
   });
 
   it('should inject styles of multiple components', () => {
@@ -214,7 +213,7 @@ describe('with styles', () => {
     TestRenderer.create(<FirstComp />);
     TestRenderer.create(<SecondComp />);
 
-    expectCSSMatches('.sc-a {} .c { background:blue; } .sc-b {} .d { background:red; }');
+    expectCSSMatches('.c { background:blue; } .d { background:red; }');
   });
 
   it('should inject styles of multiple components based on creation, not rendering order', () => {
@@ -233,9 +232,7 @@ describe('with styles', () => {
 
     // Classes _do_ get generated in the order of rendering but that's ok
     expectCSSMatches(`
-        .sc-a {}
         .d { content:"first rule"; }
-        .sc-b {}
         .c { content:"second rule"; }
       `);
   });
@@ -250,7 +247,6 @@ describe('with styles', () => {
     `
     TestRenderer.create(<Comp />);
     expectCSSMatches(`
-        .sc-a {}
         .b {
           color:blue;
         }
@@ -273,7 +269,6 @@ describe('with styles', () => {
     StyleSheet.master.remove(Text.styledComponentId);
 
     expectCSSMatches(`
-        .sc-a {}
         .c {
           color:red;
         }
@@ -287,7 +282,6 @@ describe('with styles', () => {
     `;
     TestRenderer.create(<Comp />);
     expectCSSMatches(`
-        .sc-a {}
         .b {
           color:blue;
         }

@@ -1,7 +1,7 @@
 // @flow
 import { cloneElement } from 'react';
 import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR, SC_VERSION_ATTR, SC_STREAM_ATTR } from '../constants';
-import { makeTag, makeRehydrationTag, type Tag } from './StyleTags';
+import { makeTag, rehydrate, type Tag } from './StyleTags';
 import extractComps from '../utils/extractCompsFromCSS';
 
 declare var __VERSION__: string;
@@ -122,15 +122,16 @@ export default class StyleSheet {
 
     /* create a tag to be used for rehydration */
     const tag = this.makeTag(null);
-    const rehydrationTag = makeRehydrationTag(tag, els, extracted, isStreamed);
+
+    rehydrate(tag, els, extracted);
 
     /* reset capacity and adjust MAX_SIZE by the initial size of the rehydration */
     this.capacity = Math.max(1, MAX_SIZE - extractedSize);
-    this.tags.push(rehydrationTag);
+    this.tags.push(tag);
 
     /* retrieve all component ids */
     for (let j = 0; j < extractedSize; j += 1) {
-      this.tagMap[extracted[j].componentId] = rehydrationTag;
+      this.tagMap[extracted[j].componentId] = tag;
     }
 
     return this;

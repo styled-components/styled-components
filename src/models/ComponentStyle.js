@@ -35,9 +35,7 @@ export default class ComponentStyle {
     this.componentId = componentId;
 
     if (!StyleSheet.master.hasId(componentId)) {
-      const placeholder = process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : [];
-
-      StyleSheet.master.deferredInject(componentId, placeholder);
+      StyleSheet.master.deferredInject(componentId, []);
     }
   }
 
