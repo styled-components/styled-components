@@ -3,6 +3,7 @@ import { cloneElement } from 'react';
 import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR, SC_VERSION_ATTR, SC_STREAM_ATTR } from '../constants';
 import { makeTag, makeRehydrationTag, type Tag } from './StyleTags';
 import extractComps from '../utils/extractCompsFromCSS';
+import { containsSourceMap } from './SourceMapManager';
 
 import type { SourceMap } from '../types';
 
@@ -76,15 +77,32 @@ export default class StyleSheet {
     if (!IS_BROWSER || this.forceServer) {
       return this;
     }
+    /* retrieve all of our SSR style elements from the DOM */
+    const nodes = document.querySelectorAll(
+      `style[${SC_ATTR}][${SC_VERSION_ATTR}="${__VERSION__}"]`
+    );
+    let nodesInSingleTag = [];
+    nodes.forEach(node => {
+      if (containsSourceMap(node)) {
+        /* if a node contains sourceMap, it needs to be isolated.
+        We will package up any previous node into a single tag, and package 
+        the current node into another tag */
+        this.rehydrateNodes(nodesInSingleTag);
+        this.rehydrateNodes([node]);
+        nodesInSingleTag = [];
+      } else {
+        nodesInSingleTag.push(node);
+      }
+    });
+    return this.rehydrateNodes(nodesInSingleTag);
+  }
+
+  rehydrateNodes(nodes: Element[]) {
     const els = [];
     const names = [];
     const extracted = [];
     let isStreamed = false;
 
-    /* retrieve all of our SSR style elements from the DOM */
-    const nodes = document.querySelectorAll(
-      `style[${SC_ATTR}][${SC_VERSION_ATTR}="${__VERSION__}"]`
-    );
     const nodesSize = nodes.length;
 
     /* abort rehydration if no previous style tags were found */

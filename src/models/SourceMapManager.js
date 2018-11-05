@@ -40,3 +40,7 @@ export default class SourceMapManager {
     return !!this.sourceMapContent;
   }
 }
+
+export function containsSourceMap(node: HTMLElement) {
+  return /\/\*#\ssourceMappingURL/.test(node.innerHTML);
+}
