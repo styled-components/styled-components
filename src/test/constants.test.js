@@ -41,4 +41,62 @@ describe('constants', () => {
       delete process.env.SC_ATTR;
     });
   });
+
+  describe('DISABLE_SPEEDY', () => {
+    const oldDev = window.__DEV__;
+
+    function renderAndExpect(expectedDisableSpeedy, expectedCss) {
+      const DISABLE_SPEEDY = require('../constants').DISABLE_SPEEDY;
+      const styled = require('./utils').resetStyled();
+
+      const Comp = styled.div`
+        color: blue;
+      `;
+
+      TestRenderer.create(<Comp />);
+
+      expect(DISABLE_SPEEDY).toEqual(expectedDisableSpeedy);
+      expectCSSMatches(expectedCss);
+    }
+
+    beforeEach(() => {
+      window.__DEV__ = false;
+      process.env.NODE_ENV = 'production';
+    });
+
+    afterEach(() => {
+      window.__DEV__ = oldDev;
+      process.env.NODE_ENV = 'test';
+      delete process.env.DISABLE_SPEEDY;
+    });
+
+    it('should be false in production NODE_ENV when SC_DISABLE_SPEEDY is not set', () => {
+      renderAndExpect(false, '');
+    });
+
+    it('should be false in production NODE_ENV when window.SC_DISABLE_SPEEDY is set to false', () => {
+      window.SC_DISABLE_SPEEDY = false;
+      renderAndExpect(false, '');
+    });
+
+    it('should be false in production NODE_ENV when window.SC_DISABLE_SPEEDY is set to truthy value', () => {
+      window.SC_DISABLE_SPEEDY = 'true';
+      renderAndExpect(false, '');
+    });
+
+    it('should be true in production NODE_ENV when window.SC_DISABLE_SPEEDY is set to true', () => {
+      window.SC_DISABLE_SPEEDY = true;
+      renderAndExpect(true, '.b { color:blue; }');
+    });
+
+    it('should be true in test NODE_ENV', () => {
+      process.env.NODE_ENV = 'test';
+      renderAndExpect(true, '.b { color:blue; }');
+    });
+
+    it('should be true in development NODE_ENV', () => {
+      process.env.NODE_ENV = 'development';
+      renderAndExpect(true, '.b { color:blue; }');
+    });
+  });
 });
