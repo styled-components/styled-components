@@ -67,18 +67,12 @@ describe('basic', () => {
     expectCSSMatches('');
   });
 
-  it('should inject component class when rendered even if no styles are passed', () => {
-    const Comp = styled.div``;
-    TestRenderer.create(<Comp />);
-    expectCSSMatches('.sc-a {}');
-  });
-
   it('should inject styles', () => {
     const Comp = styled.div`
       color: blue;
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.sc-a { } .b { color:blue; }');
+    expectCSSMatches('.b { color:blue; }');
   });
 
   it("should inject only once for a styled component, no matter how often it's mounted", () => {
@@ -87,7 +81,7 @@ describe('basic', () => {
     `;
     TestRenderer.create(<Comp />);
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.sc-a {} .b { color:blue; }');
+    expectCSSMatches('.b { color:blue; }');
   });
 
   it('Should have the correct styled(component) displayName', () => {
@@ -122,7 +116,7 @@ describe('basic', () => {
       color: 'blue',
     });
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.sc-a {} .b { color:blue; }');
+    expectCSSMatches('.b { color:blue; }');
   });
 
   it('should allow you to pass in a function returning a style object', () => {
@@ -130,7 +124,7 @@ describe('basic', () => {
       color,
     }));
     TestRenderer.create(<Comp color="blue" />);
-    expectCSSMatches('.sc-a {} .b { color:blue; }');
+    expectCSSMatches('.b { color:blue; }');
   });
 
   it('emits the correct selector when a StyledComponent is interpolated into a template string', () => {
@@ -148,7 +142,7 @@ describe('basic', () => {
     `;
 
     TestRenderer.create(<StyledComp color="blue" />);
-    expectCSSMatches('.sc-a {} .b { color:red; }');
+    expectCSSMatches('.b { color:red; }');
   });
 
   describe('jsdom tests', () => {
@@ -231,7 +225,7 @@ describe('basic', () => {
       TestRenderer.create(<SecondComponent />);
       TestRenderer.create(<FirstComponent />);
 
-      expectCSSMatches('.sc-a {} .d { color:red; } .sc-b {} .c { color:blue; }');
+      expectCSSMatches('.d { color:red; } .c { color:blue; }');
     });
 
     it('handle media at-rules inside style rules', () => {
@@ -244,7 +238,7 @@ describe('basic', () => {
       `;
 
       TestRenderer.create(<Comp />);
-      expectCSSMatches('.sc-a{ } @media (min-width:500px){ .b > *{ color:pink; } } ');
+      expectCSSMatches('@media (min-width:500px){ .b > *{ color:pink; } } ');
     });
 
     it('should hoist non-react static properties', () => {

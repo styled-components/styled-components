@@ -24,7 +24,7 @@ describe('theming', () => {
         <Comp />
       </ThemeProvider>
     );
-    expectCSSMatches(`.sc-a {} .b { color:${theme.color}; }`);
+    expectCSSMatches(`.b { color:${theme.color}; }`);
   });
 
   it('should inject props.theme into a styled component multiple levels deep', () => {
@@ -41,7 +41,7 @@ describe('theming', () => {
         </div>
       </ThemeProvider>
     );
-    expectCSSMatches(`.sc-a {} .b { color:${theme.color}; }`);
+    expectCSSMatches(`.b { color:${theme.color}; }`);
   });
 
   it('should properly allow a component to fallback to its default props when a theme is not provided', () => {
@@ -61,7 +61,7 @@ describe('theming', () => {
         <Comp1 />
       </div>
     );
-    expectCSSMatches(`.sc-a {} .b { color:purple; }`);
+    expectCSSMatches(`.b { color:purple; }`);
   });
 
   // https://github.com/styled-components/styled-components/issues/344
@@ -84,7 +84,7 @@ describe('theming', () => {
         <Comp1 />
       </ThemeProvider>
     );
-    expectCSSMatches(`.sc-a {} .b { color:green; }`);
+    expectCSSMatches(`.b { color:green; }`);
   });
 
   it('should properly allow a component to override the theme with a prop even if it is equal to defaultProps theme', () => {
@@ -106,7 +106,7 @@ describe('theming', () => {
         <Comp1 theme={{ test: { color: 'purple' } }} />
       </ThemeProvider>
     );
-    expectCSSMatches(`.sc-a {} .b { color:purple; }`);
+    expectCSSMatches(`.b { color:purple; }`);
   });
 
   it('should properly allow a component to override the theme with a prop', () => {
@@ -125,19 +125,7 @@ describe('theming', () => {
         </ThemeProvider>
       </div>
     );
-    expectCSSMatches(`.sc-a {} .b { color:red; }`);
-  });
-
-  it('should properly set the theme with an empty object when no theme is provided and no defaults are set', () => {
-    const Comp1 = styled.div`
-      color: ${props => props.theme.color};
-    `;
-    TestRenderer.create(
-      <div>
-        <Comp1 />
-      </div>
-    );
-    expectCSSMatches(`.sc-a {}`);
+    expectCSSMatches(`.b { color:red; }`);
   });
 
   it('should only inject props.theme into styled components within its child component tree', () => {
@@ -159,7 +147,7 @@ describe('theming', () => {
         <Comp2 />
       </div>
     );
-    expectCSSMatches(`.sc-a {} .c { color:${theme.color}; } .sc-b {}`);
+    expectCSSMatches(`.c { color:${theme.color}; }`);
   });
 
   it('should inject props.theme into all styled components within the child component tree', () => {
@@ -180,9 +168,7 @@ describe('theming', () => {
         </div>
       </ThemeProvider>
     );
-    expectCSSMatches(
-      `.sc-a {} .c { color:${theme.color}; } .sc-b {} .d { background:${theme.color}; }`
-    );
+    expectCSSMatches(`.c { color:${theme.color}; } .d { background:${theme.color}; }`);
   });
 
   it('should inject new CSS when the theme changes', () => {
@@ -201,7 +187,7 @@ describe('theming', () => {
       );
     };
     renderComp();
-    const initialCSS = expectCSSMatches(`.sc-a {} .b { color:${theme.color}; }`);
+    const initialCSS = expectCSSMatches(`.b { color:${theme.color}; }`);
     // Change the theme
     theme = newTheme;
     renderComp();
@@ -228,10 +214,10 @@ describe('theming', () => {
     const jsx = <Comp1 />;
 
     const wrapper = TestRenderer.create(jsx);
-    expectCSSMatches(`.sc-a {} .b { color:purple; }`);
+    expectCSSMatches(`.b { color:purple; }`);
 
     wrapper.update(jsx);
-    expectCSSMatches(`.sc-a {} .b { color:purple; }`);
+    expectCSSMatches(`.b { color:purple; }`);
   });
 
   it('should properly update style if theme is changed', () => {
@@ -248,7 +234,7 @@ describe('theming', () => {
         <Comp1 />
       </ThemeProvider>
     );
-    expectCSSMatches(`.sc-a {} .b { color:purple; }`);
+    expectCSSMatches(`.b { color:purple; }`);
 
     wrapper.update(
       <ThemeProvider
@@ -259,7 +245,7 @@ describe('theming', () => {
         <Comp1 />
       </ThemeProvider>
     );
-    expectCSSMatches(`.sc-a {} .b { color:purple; } .c { color:pink; }`);
+    expectCSSMatches(`.b { color:purple; } .c { color:pink; }`);
   });
 
   it('should properly update style if props used in styles is changed', () => {
@@ -281,7 +267,7 @@ describe('theming', () => {
         <Comp1 />
       </ThemeProvider>
     );
-    let expectedStyles = `.sc-a {} .b { color:purple; z-index:0px; }`;
+    let expectedStyles = `.b { color:purple; z-index:0px; }`;
     expectCSSMatches(expectedStyles);
 
     wrapper.update(
@@ -325,15 +311,13 @@ describe('theming', () => {
 
     const wrapper = TestRenderer.create(<Theme theme={originalTheme} />);
 
-    expectCSSMatches(`.sc-a {} .b { color:${originalTheme.color}; }`);
+    expectCSSMatches(`.b { color:${originalTheme.color}; }`);
     expect(wrapper.root.findByType('div').props.className).toBe('sc-a b');
 
     // Change theme
     wrapper.update(Theme({ theme: newTheme }));
 
-    expectCSSMatches(
-      `.sc-a {} .b { color:${originalTheme.color}; } .c { color:${newTheme.color}; }`
-    );
+    expectCSSMatches(`.b { color:${originalTheme.color}; } .c { color:${newTheme.color}; }`);
 
     expect(wrapper.root.findByType('div').props.className).toBe('sc-a c');
   });
@@ -394,10 +378,10 @@ describe('theming', () => {
     );
 
     const wrapper = TestRenderer.create(<Theme key="a" prop="foo" />);
-    expectCSSMatches(`.sc-a { } .b { color:green; } `);
+    expectCSSMatches('.b { color:green; } ');
 
     wrapper.update(<Theme key="a" prop="bar" />);
-    expectCSSMatches(`.sc-a { } .b { color:green; } `);
+    expectCSSMatches('.b { color:green; } ');
   });
 
   // https://github.com/styled-components/styled-components/issues/596
@@ -512,9 +496,7 @@ describe('theming', () => {
       );
     }).not.toThrow('plain object');
 
-    expectCSSMatches(
-      `.sc-a {} .b {background-color:${theme.palette.white};color:${theme.palette.black};}`
-    );
+    expectCSSMatches(`.b {background-color:${theme.palette.white};color:${theme.palette.black};}`);
   });
 
   it('should allow other complex objects to be passed as themes', () => {
@@ -538,7 +520,7 @@ describe('theming', () => {
       </ThemeProvider>
     );
 
-    expectCSSMatches(`.sc-a {} .b {border-radius:${theme.borderRadius};}`);
+    expectCSSMatches(`.b {border-radius:${theme.borderRadius};}`);
   });
 
   it('should not allow the theme to be null', () => {

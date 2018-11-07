@@ -45,11 +45,11 @@ exports[`expanded api "as" prop transfers all styles that have been applied 6`] 
 exports[`expanded api "as" prop transfers all styles that have been applied 7`] = `
 "
 /* sc-component-id:sc-a */
-.sc-a{} .d{background:blue;color:red;}
+.d{background:blue;color:red;}
 /* sc-component-id:sc-b */
-.sc-b{} .e{background:blue;color:red;color:green;}
+.e{background:blue;color:red;color:green;}
 /* sc-component-id:sc-c */
-.sc-c{} .f{background:blue;color:red;color:green;text-align:center;}"
+.f{background:blue;color:red;color:green;text-align:center;}"
 `;
 
 exports[`expanded api "as" prop works with custom components 1`] = `

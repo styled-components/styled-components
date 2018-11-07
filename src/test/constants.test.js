@@ -15,7 +15,7 @@ function renderAndExpect(expectedAttr) {
 
   TestRenderer.create(<Comp />);
 
-  expectCSSMatches('.sc-a { } .b { color:blue; }');
+  expectCSSMatches('.b { color:blue; }');
 
   expect(SC_ATTR).toEqual(expectedAttr);
   expect(document.head.querySelectorAll(`style[${SC_ATTR}]`)).toHaveLength(1);
