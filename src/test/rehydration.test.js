@@ -28,7 +28,6 @@ describe('rehydration', () => {
       document.head.innerHTML = `
         <style ${SC_ATTR}="b" ${SC_VERSION_ATTR}="${__VERSION__}">
           /* sc-component-id: TWO */
-          .TWO {}
           .b { color: red; }
         </style>
       `;
@@ -36,7 +35,7 @@ describe('rehydration', () => {
     });
 
     it('should preserve the styles', () => {
-      expectCSSMatches('.TWO {} .b { color: red; }');
+      expectCSSMatches('.b { color: red; }');
     });
 
     it('should append a new component like normal', () => {
@@ -44,7 +43,7 @@ describe('rehydration', () => {
         color: blue;
       `;
       TestRenderer.create(<Comp />);
-      expectCSSMatches('.b { color: red; } .ONE { } .a { color:blue; }');
+      expectCSSMatches('.b { color: red; } .a { color:blue; }');
     });
 
     it('should reuse a componentId', () => {
@@ -54,7 +53,7 @@ describe('rehydration', () => {
       TestRenderer.create(<A />);
       const B = styled.div.withConfig({ componentId: 'TWO' })``;
       TestRenderer.create(<B />);
-      expectCSSMatches('.b { color: red; } .ONE { } .a { color:blue; }');
+      expectCSSMatches('.b { color: red; } .a { color:blue; }');
     });
 
     it('should reuse a componentId and generated class', () => {
@@ -66,7 +65,7 @@ describe('rehydration', () => {
         color: red;
       `;
       TestRenderer.create(<B />);
-      expectCSSMatches('.b { color: red; } .ONE { } .a { color:blue; }');
+      expectCSSMatches('.b { color: red; } .a { color:blue; }');
     });
 
     it('should reuse a componentId and inject new classes', () => {
@@ -82,7 +81,7 @@ describe('rehydration', () => {
         color: green;
       `;
       TestRenderer.create(<C />);
-      expectCSSMatches('.b{ color: red; } .c{ color:green; } .ONE { } .a{ color:blue; }');
+      expectCSSMatches('.b{ color: red; } .c{ color:green; } .a{ color:blue; }');
     });
   });
 
@@ -93,10 +92,8 @@ describe('rehydration', () => {
       document.head.innerHTML = `
         <style ${SC_ATTR}='a b' ${SC_VERSION_ATTR}="${__VERSION__}">
           /* sc-component-id: ONE */
-          .ONE {}
           .a { color: blue; }
           /* sc-component-id: TWO */
-          .TWO {}
           .b { color: red; }
         </style>
       `;
@@ -105,8 +102,8 @@ describe('rehydration', () => {
 
     it('should preserve the styles', () => {
       expectCSSMatches(`
-        .ONE { } .a { color: blue; }
-        .TWO { } .b { color: red; }
+        .a { color: blue; }
+        .b { color: red; }
       `);
     });
 
@@ -116,8 +113,8 @@ describe('rehydration', () => {
       `;
       TestRenderer.create(<Comp color="blue" />);
       expectCSSMatches(`
-        .ONE { } .a { color: blue; }
-        .TWO { } .b { color: red; }
+        .a { color: blue; }
+        .b { color: red; }
       `);
     });
 
@@ -140,7 +137,6 @@ describe('rehydration', () => {
       document.head.innerHTML = `
         <style>
           /* sc-component-id: TWO */
-          .TWO {}
           .b { color: red; }
         </style>
       `;
@@ -148,7 +144,7 @@ describe('rehydration', () => {
     });
 
     it('should leave the existing styles there', () => {
-      expectCSSMatches('.TWO {} .b { color: red; }');
+      expectCSSMatches('.b { color: red; }');
     });
 
     it('should generate new classes, even if they have the same name', () => {
@@ -160,9 +156,7 @@ describe('rehydration', () => {
         color: red;
       `;
       TestRenderer.create(<B />);
-      expectCSSMatches(
-        '.TWO {} .b { color: red; } .ONE { } .a { color:blue; } .TWO {} .b { color:red; } '
-      );
+      expectCSSMatches('.b { color: red; } .a { color:blue; } .b { color:red; } ');
     });
   });
 
@@ -178,7 +172,6 @@ describe('rehydration', () => {
         </style>
         <style ${SC_ATTR}='b' ${SC_VERSION_ATTR}="${__VERSION__}">
           /* sc-component-id: TWO */
-          .TWO {}
           .b { color: red; }
         </style>
       `;
@@ -186,7 +179,7 @@ describe('rehydration', () => {
     });
 
     it('should leave the existing styles there', () => {
-      expectCSSMatches('body { background: papayawhip; } .TWO {} .b { color: red; }');
+      expectCSSMatches('body { background: papayawhip; } .b { color: red; }');
     });
 
     it('should inject new global styles at the end', () => {
@@ -210,7 +203,7 @@ describe('rehydration', () => {
       TestRenderer.create(<A />);
 
       expectCSSMatches(
-        'body { background: papayawhip; } .b { color: red; } body { color:tomato; } .ONE { } .a { color:blue; }'
+        'body { background: papayawhip; } .b { color: red; } body { color:tomato; } .a { color:blue; }'
       );
       expect(getStyleTags()).toEqual(
         [
@@ -221,7 +214,7 @@ describe('rehydration', () => {
           {
             css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;} ',
           },
-          { css: '/* sc-component-id: ONE */ .ONE {} .a{color:blue;}' },
+          { css: '/* sc-component-id: ONE */ .a{color:blue;}' },
         ].reduce(
           (acc, { css }) => {
             acc[0].css += css;
@@ -245,10 +238,8 @@ describe('rehydration', () => {
         </style>
         <style ${SC_ATTR}='a b' ${SC_VERSION_ATTR}="${__VERSION__}">
           /* sc-component-id: ONE */
-          .ONE {}
           .a { color: blue; }
           /* sc-component-id: TWO */
-          .TWO {}
           .b { color: red; }
         </style>
       `;
@@ -260,43 +251,8 @@ describe('rehydration', () => {
       expectCSSMatches(`
         html { font-size: 16px; }
         body { background: papayawhip; }
-        .ONE { } .a { color: blue; }
-        .TWO { } .b { color: red; }
-      `);
-    });
-
-    it('should replace stylesheets on-demand', () => {
-      const tagsAfterReset = Array.from(document.querySelectorAll('style'));
-      expect(tagsAfterReset[0]).toBe(styleTags[0]);
-      expect(tagsAfterReset[1]).toBe(styleTags[1]);
-
-      /* Rerendering existing tags doesn't touch the DOM */
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
-        color: blue;
-      `;
-      TestRenderer.create(<A />);
-      const B = styled.div.withConfig({ componentId: 'TWO' })`
-        color: red;
-      `;
-      TestRenderer.create(<B />);
-      const styleTagsAfterRehydration = Array.from(document.querySelectorAll('style'));
-      expect(styleTagsAfterRehydration[0]).toEqual(styleTags[0]);
-
-      /* Only when new components are introduced (or a previous component
-       * generates a new hash) does the style tag get replaced. */
-      const C = styled.div.withConfig({ componentId: 'THREE' })`
-        color: green;
-      `;
-      TestRenderer.create(<C />);
-
-      /* the order stays correct and the styles are unharmed
-        * NOTE: during rehydration the empty rules are stripped out however */
-      expectCSSMatches(`
-        html { font-size:16px; }
-        body { background:papayawhip; }
-        .a { color:blue; }
-        .b { color:red; }
-        .THREE { } .c { color:green; }
+        .a { color: blue; }
+        .b { color: red; }
       `);
     });
 
@@ -384,7 +340,7 @@ describe('rehydration', () => {
 
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
-        .sc-a{ } .b{ -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
+        .b{ -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
       `);
     });
 
@@ -402,7 +358,7 @@ describe('rehydration', () => {
 
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
-        .sc-a{ } .b{ -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
+        .b{ -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
         @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
       `);
     });
@@ -428,8 +384,8 @@ describe('rehydration', () => {
 
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
-        .sc-a { } .d { -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
-        .sc-b { } .c { -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
+        .d { -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
+        .c { -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
         @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
       `);
     });
@@ -455,8 +411,8 @@ describe('rehydration', () => {
 
       expectCSSMatches(`
         @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
-        .sc-a { } .d { -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
-        .sc-b { } .c { -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
+        .d { -webkit-animation:keyframe_880 1s both; animation:keyframe_880 1s both; }
+        .c { -webkit-animation:keyframe_144 1s both; animation:keyframe_144 1s both; }
         @-webkit-keyframes keyframe_144 {from {opacity:1;}}@keyframes keyframe_144 {from {opacity:1;}}
       `);
     });

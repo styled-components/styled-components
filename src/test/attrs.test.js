@@ -127,7 +127,7 @@ describe('attrs', () => {
       }
     `;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-    expectCSSMatches('.sc-a {} .b { color:blue; } .b.--is-active { color:red; }');
+    expectCSSMatches('.b { color:blue; } .b.--is-active { color:red; }');
   });
 
   it('should pass through children as a normal prop', () => {

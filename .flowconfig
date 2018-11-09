@@ -17,6 +17,7 @@
 .*/src/.*/test/.*
 .*/example/.*
 .*/integration-test/.*
+.*/sandbox/.*
 
 [options]
 suppress_comment=.*\\$FlowFixMe

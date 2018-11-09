@@ -17,5 +17,5 @@ exports[`StyleSheetManager ssr should extract CSS outside the nested StyleSheetM
 exports[`StyleSheetManager ssr should extract CSS outside the nested StyleSheetManager 2`] = `
 "<style data-styled=\\"c\\" data-styled-version=\\"JEST_MOCK_VERSION\\">
 /* sc-component-id: sc-a */
-.sc-a {} .c{color:red;}</style>"
+.c{color:red;}</style>"
 `;
