@@ -357,5 +357,21 @@ describe('basic', () => {
 
       expect(console.warn).not.toHaveBeenCalled();
     });
+
+    it('creates component with type function for DOM elements', () => {
+      const Comp = styled.div`
+        color: red;
+      `;
+
+      expect(typeof Comp).toEqual('function');
+    });
+
+    it('creates component with type function for wrapped components', () => {
+      const Comp = styled(({ className }) => <div className={className} />)`
+        color: red;
+      `;
+
+      expect(typeof Comp).toEqual('function');
+    });
   });
 });
