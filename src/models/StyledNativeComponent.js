@@ -99,11 +99,12 @@ class StyledNativeComponent extends Component<*, *> {
         }
 
         this.attrs[key] = attr;
+        context[key] = attr;
       }
       /* eslint-enable */
     });
 
-    return { ...context, ...this.attrs };
+    return context;
   }
 
   generateAndInjectStyles(theme: any, props: any) {
