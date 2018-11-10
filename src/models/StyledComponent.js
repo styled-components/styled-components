@@ -207,7 +207,7 @@ export default function createStyledComponent(target: Target, options: Object, r
     displayName = generateDisplayName(target),
     componentId = generateId(ComponentStyle, options.displayName, options.parentComponentId),
     ParentComponent = StyledComponent,
-    attrs,
+    attrs = EMPTY_ARRAY,
   } = options;
 
   const styledComponentId =
@@ -218,8 +218,9 @@ export default function createStyledComponent(target: Target, options: Object, r
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     // $FlowFixMe
-    (isTargetStyledComp && target.attrs ? [...target.attrs, ...attrs].filter(Boolean) : attrs) ||
-    EMPTY_ARRAY;
+    isTargetStyledComp && target.attrs
+      ? Array.prototype.concat(target.attrs, attrs).filter(Boolean)
+      : attrs;
 
   const componentStyle = new ComponentStyle(
     isTargetStyledComp

@@ -128,7 +128,7 @@ class StyledNativeComponent extends Component<*, *> {
 export default (InlineStyle: Function) => {
   const createStyledNativeComponent = (target: Target, options: Object, rules: RuleSet) => {
     const {
-      attrs,
+      attrs = EMPTY_ARRAY,
       displayName = generateDisplayName(target),
       ParentComponent = StyledNativeComponent,
     } = options;
@@ -146,7 +146,9 @@ export default (InlineStyle: Function) => {
 
     const finalAttrs =
       // $FlowFixMe
-      (isTargetStyledComp && target.attrs ? [...target.attrs, ...attrs] : attrs) || EMPTY_ARRAY;
+      isTargetStyledComp && target.attrs
+        ? Array.prototype.concat(target.attrs, attrs).filter(Boolean)
+        : attrs;
 
     /**
      * forwardRef creates a new interim component, which we'll take advantage of

@@ -27,7 +27,7 @@ export default function constructWithOptions(
   templateFunction.attrs = attrs =>
     constructWithOptions(componentConstructor, tag, {
       ...options,
-      attrs: [...options.attrs, attrs].filter(Boolean),
+      attrs: Array.prototype.concat(options.attrs, attrs).filter(Boolean),
     });
 
   return templateFunction;
