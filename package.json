@@ -156,7 +156,6 @@
     "linters": {
       "*.js": [
         "eslint --fix",
-        "flow check",
         "git add"
       ]
     },
@@ -174,7 +173,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged"
+      "pre-commit": "flow check && lint-staged"
     }
   }
 }

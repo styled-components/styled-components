@@ -6,6 +6,9 @@ import TestRenderer from 'react-test-renderer';
 
 import styled from '../index';
 
+// for the purpose of testing warnings we want to make sure they're always fired
+jest.mock('../../utils/once', () => cb => cb);
+
 // NOTE: These tests are copy pasted from ../native/test/native.test.js
 
 describe('primitives', () => {
@@ -292,6 +295,50 @@ describe('primitives', () => {
 
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
       expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot();
+    });
+  });
+
+  describe('warnings', () => {
+    beforeEach(() => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      console.warn.mockClear();
+    });
+
+    it('warns upon use of the removed "innerRef" prop', () => {
+      const Comp = styled.View``;
+      const ref = React.createRef();
+
+      TestRenderer.create(<Comp innerRef={ref} />);
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('The "innerRef" API has been removed')
+      );
+    });
+
+    it('warns upon use of a Stateless Functional Component as a prop for attrs', () => {
+      const Inner = () => <Text />;
+      const Comp = styled.Text.attrs({ component: Inner })``;
+
+      TestRenderer.create(<Comp />);
+
+      expect(console.warn.mock.calls[1][0]).toMatchInlineSnapshot(`
+"It looks like you've used a non styled-component as the value for the \\"component\\" prop in an object-form attrs constructor of \\"Styled(Component)\\".
+You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))
+To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)
+For example, { component: () => InnerComponent } instead of { component: InnerComponent }"
+`);
+    });
+
+    it('warns for using fns as attrs object keys', () => {
+      const Comp = styled.View.attrs({ 'data-text-color': props => props.textColor })``;
+
+      TestRenderer.create(<Comp textColor="blue" />);
+
+      expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
+        `"Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is \\"data-text-color\\" on component \\"Styled(View)\\"."`
+      );
     });
   });
 });
