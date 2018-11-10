@@ -178,7 +178,7 @@ class StyledComponent extends Component<*> {
   }
 
   generateAndInjectStyles(theme: any, props: any, styleSheet: ?StyleSheet = StyleSheet.master) {
-    const { attrs, componentStyle, warnTooManyClasses } = props.forwardedClass;
+    const { attrs, componentStyle } = props.forwardedClass;
 
     // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names
@@ -191,8 +191,8 @@ class StyledComponent extends Component<*> {
       styleSheet
     );
 
-    if (warnTooManyClasses) {
-      warnTooManyClasses(className);
+    if (process.env.NODE_ENV !== 'production' && props.forwardedClass.warnTooManyClasses) {
+      props.forwardedClass.warnTooManyClasses(className);
     }
 
     return className;
@@ -286,7 +286,6 @@ export default function createStyledComponent(target: Target, options: Object, r
       displayName: true,
       styledComponentId: true,
       target: true,
-      warnTooManyClasses: true,
       withComponent: true,
     });
   }
