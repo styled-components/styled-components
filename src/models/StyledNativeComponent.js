@@ -68,6 +68,8 @@ class StyledNativeComponent extends Component<*, *> {
   buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs) {
     const context = { ...props, theme };
 
+    if (!attrs.length) return context;
+
     this.attrs = {};
 
     attrs.forEach(attrDef => {

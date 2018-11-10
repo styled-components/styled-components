@@ -104,8 +104,8 @@ class StyledComponent extends Component<*> {
     const elementToBeCreated = this.props.as || this.attrs.as || target;
     const isTargetTag = isTag(elementToBeCreated);
 
-    const propsForElement: Object = {};
-    const computedProps: Object = { ...this.attrs, ...this.props };
+    const propsForElement = {};
+    const computedProps = { ...this.attrs, ...this.props };
 
     let key;
     // eslint-disable-next-line guard-for-in
@@ -140,6 +140,8 @@ class StyledComponent extends Component<*> {
 
   buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs) {
     const context = { ...props, theme };
+
+    if (!attrs.length) return context;
 
     this.attrs = {};
 
@@ -182,7 +184,7 @@ class StyledComponent extends Component<*> {
 
     // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names
-    if (componentStyle.isStatic && attrs === undefined) {
+    if (componentStyle.isStatic && !attrs.length) {
       return componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet);
     }
 
