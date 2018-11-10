@@ -1,5 +1,7 @@
 // @flow
 import React, { createElement, Component } from 'react';
+// $FlowFixMe
+import shallowEqual from 'fbjs/lib/shallowEqual';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_OBJECT } from '../utils/empties';
 import generateDisplayName from '../utils/generateDisplayName';
@@ -26,6 +28,12 @@ class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
 
   attrs = {};
+
+  shouldComponentUpdate(nextProps, nextState) {
+    return (
+      !shallowEqual(this.props, nextProps) || !shallowEqual(this.state, nextState)
+    );
+  }
 
   render() {
     return (

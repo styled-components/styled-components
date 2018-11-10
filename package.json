@@ -69,6 +69,7 @@
     "@emotion/is-prop-valid": "^0.6.8",
     "babel-plugin-styled-components": ">= 1",
     "css-to-react-native": "^2.2.2",
+    "fbjs": "^0.8.17",
     "memoize-one": "^4.0.0",
     "prop-types": "^15.5.4",
     "react-is": "^16.6.0",

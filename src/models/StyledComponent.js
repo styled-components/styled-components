@@ -2,6 +2,8 @@
 
 import validAttr from '@emotion/is-prop-valid';
 import React, { createElement, Component } from 'react';
+// $FlowFixMe
+import shallowEqual from 'fbjs/lib/shallowEqual';
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
@@ -66,6 +68,12 @@ class StyledComponent extends Component<*> {
     if (process.env.NODE_ENV !== 'production' && IS_BROWSER) {
       classNameUsageCheckInjector(this);
     }
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    return (
+      !shallowEqual(this.props, nextProps) || !shallowEqual(this.state, nextState)
+    );
   }
 
   render() {
