@@ -1,5 +1,4 @@
 // @flow
-
 import validAttr from '@emotion/is-prop-valid';
 import React, { createElement, Component } from 'react';
 import ComponentStyle from './ComponentStyle';
