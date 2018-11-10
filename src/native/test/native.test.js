@@ -227,10 +227,24 @@ describe('native', () => {
       });
     });
 
-    it('should override children of course', () => {
+    it('should override children', () => {
       const Comp = styled.Text.attrs({
         children: <Text>Amazing</Text>,
       })``;
+
+      const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
+      const text = wrapper.root.findByType('Text');
+
+      expect(text.props).toMatchObject({
+        children: 'Something else',
+        style: [{}],
+      });
+    });
+
+    it('accepts a function', () => {
+      const Comp = styled.Text.attrs(props => ({
+        children: <Text>Amazing</Text>,
+      }))``;
 
       const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
       const text = wrapper.root.findByType('Text');
