@@ -1,9 +1,8 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`attrs call an attr function 1`] = `
-<button
+<div
   className="sc-a b"
-  type="button"
 />
 `;
 
@@ -35,6 +34,12 @@ exports[`attrs pass a React component 1`] = `
     React Component
   </p>
 </button>
+`;
+
+exports[`attrs pass a fn to attrs 1`] = `
+<div
+  className="sc-a b"
+/>
 `;
 
 exports[`attrs pass a simple attr 1`] = `

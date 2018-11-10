@@ -17,10 +17,10 @@ import once from '../utils/once';
 import StyleSheet from './StyleSheet';
 import { ThemeConsumer, type Theme } from './ThemeProvider';
 import { StyleSheetConsumer } from './StyleSheetManager';
-import { EMPTY_OBJECT } from '../utils/empties';
+import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import classNameUsageCheckInjector from '../utils/classNameUsageCheckInjector';
 
-import type { RuleSet, Target } from '../types';
+import type { Attrs, RuleSet, Target } from '../types';
 import { IS_BROWSER } from '../constants';
 
 const identifiers = {};
@@ -138,36 +138,41 @@ class StyledComponent extends Component<*> {
     return createElement(elementToBeCreated, propsForElement);
   }
 
-  buildExecutionContext(theme: any, props: any, attrs: any) {
+  buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs) {
     const context = { ...props, theme };
-
-    if (attrs === undefined) return context;
 
     this.attrs = {};
 
-    let attr;
-    let key;
+    attrs.forEach(attrDef => {
+      let resolvedAttrDef = attrDef;
+      let attr;
+      let key;
 
-    /* eslint-disable guard-for-in */
-    for (key in attrs) {
-      attr = attrs[key];
+      // $FlowFixMe
+      if (isFunction(resolvedAttrDef)) resolvedAttrDef = resolvedAttrDef(props);
 
-      if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
-        attr = attr(context);
+      /* eslint-disable guard-for-in */
+      // $FlowFixMe
+      for (key in resolvedAttrDef) {
+        attr = resolvedAttrDef[key];
 
-        if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            `It looks like you've used a component as value for the ${key} prop in the attrs constructor.\n` +
-              "You'll need to wrap it in a function to make it available inside the styled component.\n" +
-              `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
-          );
+        if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
+          attr = attr(context);
+
+          if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `It looks like you've used a component as value for the ${key} prop in the attrs constructor.\n` +
+                "You'll need to wrap it in a function to make it available inside the styled component.\n" +
+                `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
+            );
+          }
         }
-      }
 
-      this.attrs[key] = attr;
-    }
-    /* eslint-enable */
+        this.attrs[key] = attr;
+      }
+      /* eslint-enable */
+    });
 
     return { ...context, ...this.attrs };
   }
@@ -213,7 +218,8 @@ export default function createStyledComponent(target: Target, options: Object, r
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     // $FlowFixMe
-    isTargetStyledComp && target.attrs ? { ...target.attrs, ...attrs } : attrs;
+    (isTargetStyledComp && target.attrs ? [...target.attrs, ...attrs].filter(Boolean) : attrs) ||
+    EMPTY_ARRAY;
 
   const componentStyle = new ComponentStyle(
     isTargetStyledComp

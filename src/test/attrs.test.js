@@ -46,9 +46,16 @@ describe('attrs', () => {
 
   it('call an attr function', () => {
     const Comp = styled.button.attrs({
-      type: () => 'button',
+      as: () => 'div',
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+  });
+
+  it('pass a fn to attrs', () => {
+    const Comp = styled.button.attrs(props => ({
+      as: props.renderAs,
+    }))``;
+    expect(TestRenderer.create(<Comp renderAs="div" />).toJSON()).toMatchSnapshot();
   });
 
   it('pass props to the attr function', () => {

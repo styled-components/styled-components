@@ -8,7 +8,7 @@ import isStaticRules from '../utils/isStaticRules';
 import StyleSheet from './StyleSheet';
 import { IS_BROWSER } from '../constants';
 
-import { type RuleSet } from '../types';
+import type { Attrs, RuleSet } from '../types';
 
 const isHMREnabled =
   process.env.NODE_ENV !== 'production' && typeof module !== 'undefined' && module.hot;
@@ -29,7 +29,7 @@ export default class ComponentStyle {
 
   lastClassName: ?string;
 
-  constructor(rules: RuleSet, attrs?: Object, componentId: string) {
+  constructor(rules: RuleSet, attrs: Attrs, componentId: string) {
     this.rules = rules;
     this.isStatic = !isHMREnabled && isStaticRules(rules, attrs);
     this.componentId = componentId;

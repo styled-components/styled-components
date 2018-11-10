@@ -1,6 +1,8 @@
 // @flow
 import type { ComponentType } from 'react';
 
+export type Attrs = Array<Function | Object>;
+
 export type Interpolation =
   | ((executionContext: Object) => Interpolation)
   | string
