@@ -111,6 +111,18 @@ describe('attrs', () => {
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
+  it('merge fn attrs', () => {
+    const Comp = styled.button
+      .attrs(() => ({
+        type: 'button',
+        tabIndex: 0,
+      }))
+      .attrs(() => ({
+        type: 'submit',
+      }))``;
+    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+  });
+
   it('merge attrs when inheriting SC', () => {
     const Parent = styled.button.attrs({
       type: 'button',

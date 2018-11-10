@@ -153,11 +153,14 @@
     ]
   },
   "lint-staged": {
-    "*.js": [
-      "eslint --fix",
-      "flow check",
-      "git add"
-    ]
+    "linters": {
+      "*.js": [
+        "eslint --fix",
+        "flow check",
+        "git add"
+      ]
+    },
+    "ignore": ["**/test/*.js"]
   },
   "bundlesize": [
     {

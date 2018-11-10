@@ -180,6 +180,26 @@ describe('native', () => {
       });
     });
 
+    it('merges multiple fn calls', () => {
+      const Comp = styled.View.attrs(() => ({
+        first: 'first',
+        test: '_',
+      })).attrs(() => ({
+        second: 'second',
+        test: 'test',
+      }))``;
+
+      const wrapper = TestRenderer.create(<Comp />);
+      const view = wrapper.root.findByType('View');
+
+      expect(view.props).toEqual({
+        style: [{}],
+        first: 'first',
+        second: 'second',
+        test: 'test',
+      });
+    });
+
     it('merges attrs when inheriting SC', () => {
       const Parent = styled.View.attrs({
         first: 'first',
