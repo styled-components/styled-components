@@ -8,6 +8,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Performance optimization for fully static (no function interpolation) styled-components by avoiding using `ThemeConsumer` since it isn't necessary, by [@mxstbr](https://github.com/mxstbr) (see [#2166](https://github.com/styled-components/styled-components/pull/2166))
 
+- Attrs can now be passed a function (see [#2200](https://github.com/styled-components/styled-components/pull/2200)); thanks @oliverlaz for providing an early PoC PR for this!
+
+- Fix the `warnTooManyClasses` dev helper not being totally dead code eliminated in production (see [#2200](https://github.com/styled-components/styled-components/pull/2200))
+
 ## [v4.0.3] - 2018-10-30
 
 - Interpolating a styled component into a string now returns the static component selector (emotion cross-compat)
