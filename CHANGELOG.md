@@ -7,6 +7,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 ## Unreleased
 
 - Performance optimization for fully static (no function interpolation) styled-components by avoiding using `ThemeConsumer` since it isn't necessary, by [@mxstbr](https://github.com/mxstbr) (see [#2166](https://github.com/styled-components/styled-components/pull/2166))
+- Allow disabling "speedy" mode via global `SC_DISABLE_SPEEDY` variable, by [@devrelm](https://github.com/devrelm) (see [#2185](https://github.com/styled-components/styled-components/pull/2185))
 
 - Attrs can now be passed a function (see [#2200](https://github.com/styled-components/styled-components/pull/2200)); thanks [@oliverlaz](https://github.com/oliverlaz) for providing an early PoC PR for this!
 
