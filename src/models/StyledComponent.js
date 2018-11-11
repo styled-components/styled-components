@@ -183,7 +183,7 @@ class StyledComponent extends Component<*> {
         if (!attrDefWasFn) {
           if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
             if (process.env.NODE_ENV !== 'production' && warnAttrsFnObjectKeyDeprecated) {
-              warnAttrsFnObjectKeyDeprecated(key, this.props.forwardedClass.displayName);
+              warnAttrsFnObjectKeyDeprecated(key, props.forwardedClass.displayName);
             }
 
             attr = attr(context);
@@ -193,7 +193,7 @@ class StyledComponent extends Component<*> {
               React.isValidElement(attr) &&
               warnNonStyledComponentAttrsObjectKey
             ) {
-              warnNonStyledComponentAttrsObjectKey(key, this.props.forwardedClass.displayName);
+              warnNonStyledComponentAttrsObjectKey(key, props.forwardedClass.displayName);
             }
           }
         }
@@ -208,7 +208,7 @@ class StyledComponent extends Component<*> {
   }
 
   generateAndInjectStyles(theme: any, props: any, styleSheet: ?StyleSheet = StyleSheet.master) {
-    const { attrs, componentStyle } = props.forwardedClass;
+    const { attrs, componentStyle, warnTooManyClasses } = props.forwardedClass;
 
     // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names
@@ -217,13 +217,11 @@ class StyledComponent extends Component<*> {
     }
 
     const className = componentStyle.generateAndInjectStyles(
-      this.buildExecutionContext(theme, props, props.forwardedClass.attrs),
+      this.buildExecutionContext(theme, props, attrs),
       styleSheet
     );
 
-    if (process.env.NODE_ENV !== 'production' && props.forwardedClass.warnTooManyClasses) {
-      props.forwardedClass.warnTooManyClasses(className);
-    }
+    if (process.env.NODE_ENV !== 'production' && warnTooManyClasses) warnTooManyClasses(className);
 
     return className;
   }

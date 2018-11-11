@@ -71,27 +71,24 @@ export default class StyleSheet {
 
   /* rehydrate all SSR'd style tags */
   rehydrate() {
-    if (!IS_BROWSER || this.forceServer) {
-      return this;
-    }
+    if (!IS_BROWSER || this.forceServer) return this;
+
     const els = [];
     const names = [];
     const extracted = [];
     let isStreamed = false;
 
     /* retrieve all of our SSR style elements from the DOM */
-    const nodes = document.querySelectorAll(
+    const nodes: NodeList<HTMLStyleElement> = (document.querySelectorAll(
       `style[${SC_ATTR}][${SC_VERSION_ATTR}="${__VERSION__}"]`
-    );
+    ): any);
+
     const nodesSize = nodes.length;
 
     /* abort rehydration if no previous style tags were found */
-    if (nodesSize === 0) {
-      return this;
-    }
+    if (!nodesSize) return this;
 
     for (let i = 0; i < nodesSize; i += 1) {
-      // $FlowFixMe: We can trust that all elements in this query are style elements
       const el = (nodes[i]: HTMLStyleElement);
 
       /* check if style tag is a streamed tag */
@@ -100,9 +97,9 @@ export default class StyleSheet {
       /* retrieve all component names */
       const elNames = (el.getAttribute(SC_ATTR) || '').trim().split(SPLIT_REGEX);
       const elNamesSize = elNames.length;
-      for (let j = 0; j < elNamesSize; j += 1) {
-        const name = elNames[j];
-        /* add rehydrated name to sheet to avoid readding styles */
+      for (let j = 0, name; j < elNamesSize; j += 1) {
+        name = elNames[j];
+        /* add rehydrated name to sheet to avoid re-adding styles */
         this.rehydratedNames[name] = true;
         names.push(name);
       }
@@ -116,9 +113,7 @@ export default class StyleSheet {
 
     /* abort rehydration if nothing was extracted */
     const extractedSize = extracted.length;
-    if (extractedSize === 0) {
-      return this;
-    }
+    if (!extractedSize) return this;
 
     /* create a tag to be used for rehydration */
     const tag = this.makeTag(null);

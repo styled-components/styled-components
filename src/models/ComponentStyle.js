@@ -49,8 +49,8 @@ export default class ComponentStyle {
     if (
       IS_BROWSER &&
       isStatic &&
-      lastClassName !== undefined &&
-      styleSheet.hasNameForId(componentId, ((lastClassName: any): string))
+      typeof lastClassName === 'string' &&
+      styleSheet.hasNameForId(componentId, lastClassName)
     ) {
       return lastClassName;
     }
