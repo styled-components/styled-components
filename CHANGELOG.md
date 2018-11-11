@@ -9,6 +9,37 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 - Performance optimization for fully static (no function interpolation) styled-components by avoiding using `ThemeConsumer` since it isn't necessary, by [@mxstbr](https://github.com/mxstbr) (see [#2166](https://github.com/styled-components/styled-components/pull/2166))
 - Allow disabling "speedy" mode via global `SC_DISABLE_SPEEDY` variable, by [@devrelm](https://github.com/devrelm) (see [#2185](https://github.com/styled-components/styled-components/pull/2185))
 
+- Allow disabling "speedy" mode via global `SC_DISABLE_SPEEDY` variable, by [@devrelm](https://github.com/devrelm) (see [#2185](https://github.com/styled-components/styled-components/pull/2185))
+
+  To make use of this, you can either set `SC_DISABLE_SPEEDY` in your app's entry file or use something like `webpack.DefinePlugin` to do it at build time:
+
+  ```js
+  webpack.DefinePlugin({
+    SC_DISABLE_SPEEDY: true,
+  });
+  ```
+
+- Attrs can now be passed a function (see [#2200](https://github.com/styled-components/styled-components/pull/2200)); thanks [@oliverlaz](https://github.com/oliverlaz) for providing an early PoC PR for this!
+
+  e.g.:
+
+  ```js
+  styled.div.attrs(props => ({ 'aria-title': props.title }))``;
+  ```
+
+- Fix the `warnTooManyClasses` dev helper not being totally dead code eliminated in production (see [#2200](https://github.com/styled-components/styled-components/pull/2200))
+
+- Deprecate functions as object keys for object-form attrs (see [#2200](https://github.com/styled-components/styled-components/pull/2200))
+
+  e.g.:
+
+  ```js
+  styled.div.attrs({ 'aria-title': props => props.title })``; // bad
+  styled.div.attrs(props => ({ 'aria-title': props.title }))``; // good
+  ```
+
+  Support for this will be removed in styled-components v5. The primary impetus behind this change is to eliminate confusion around basic functions vs styled-components vs React components provided as values in the object-form attrs constructor, each of which has different handling behaviors. The single outer function to receive the props and then return a props object is conceptually simpler.
+
 ## [v4.0.3] - 2018-10-30
 
 - Interpolating a styled component into a string now returns the static component selector (emotion cross-compat)

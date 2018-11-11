@@ -1,5 +1,4 @@
 // @flow
-
 import validAttr from '@emotion/is-prop-valid';
 import React, { createElement, Component } from 'react';
 import ComponentStyle from './ComponentStyle';
@@ -17,10 +16,10 @@ import once from '../utils/once';
 import StyleSheet from './StyleSheet';
 import { ThemeConsumer, type Theme } from './ThemeProvider';
 import { StyleSheetConsumer } from './StyleSheetManager';
-import { EMPTY_OBJECT } from '../utils/empties';
+import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import classNameUsageCheckInjector from '../utils/classNameUsageCheckInjector';
 
-import type { RuleSet, Target } from '../types';
+import type { Attrs, RuleSet, Target } from '../types';
 import { IS_BROWSER } from '../constants';
 
 const identifiers = {};
@@ -46,6 +45,25 @@ const warnInnerRef = once(() =>
   console.warn(
     'The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component.'
   )
+);
+
+const warnAttrsFnObjectKeyDeprecated = once(
+  (key, displayName): void =>
+    // eslint-disable-next-line no-console
+    console.warn(
+      `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`
+    )
+);
+
+const warnNonStyledComponentAttrsObjectKey = once(
+  (key, displayName): void =>
+    // eslint-disable-next-line no-console
+    console.warn(
+      `It looks like you've used a non styled-component as the value for the "${key}" prop in an object-form attrs constructor of "${displayName}".\n` +
+        'You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))\n' +
+        "To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)\n" +
+        `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
+    )
 );
 
 // $FlowFixMe
@@ -104,8 +122,8 @@ class StyledComponent extends Component<*> {
     const elementToBeCreated = this.props.as || this.attrs.as || target;
     const isTargetTag = isTag(elementToBeCreated);
 
-    const propsForElement: Object = {};
-    const computedProps: Object = { ...this.attrs, ...this.props };
+    const propsForElement = {};
+    const computedProps = { ...this.attrs, ...this.props };
 
     let key;
     // eslint-disable-next-line guard-for-in
@@ -138,38 +156,55 @@ class StyledComponent extends Component<*> {
     return createElement(elementToBeCreated, propsForElement);
   }
 
-  buildExecutionContext(theme: any, props: any, attrs: any) {
+  buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs) {
     const context = { ...props, theme };
 
-    if (attrs === undefined) return context;
+    if (!attrs.length) return context;
 
     this.attrs = {};
 
-    let attr;
-    let key;
+    attrs.forEach(attrDef => {
+      let resolvedAttrDef = attrDef;
+      let attrDefWasFn = false;
+      let attr;
+      let key;
 
-    /* eslint-disable guard-for-in */
-    for (key in attrs) {
-      attr = attrs[key];
-
-      if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
-        attr = attr(context);
-
-        if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            `It looks like you've used a component as value for the ${key} prop in the attrs constructor.\n` +
-              "You'll need to wrap it in a function to make it available inside the styled component.\n" +
-              `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
-          );
-        }
+      if (isFunction(resolvedAttrDef)) {
+        // $FlowFixMe
+        resolvedAttrDef = resolvedAttrDef(props);
+        attrDefWasFn = true;
       }
 
-      this.attrs[key] = attr;
-    }
-    /* eslint-enable */
+      /* eslint-disable guard-for-in */
+      // $FlowFixMe
+      for (key in resolvedAttrDef) {
+        attr = resolvedAttrDef[key];
 
-    return { ...context, ...this.attrs };
+        if (!attrDefWasFn) {
+          if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
+            if (process.env.NODE_ENV !== 'production' && warnAttrsFnObjectKeyDeprecated) {
+              warnAttrsFnObjectKeyDeprecated(key, props.forwardedClass.displayName);
+            }
+
+            attr = attr(context);
+
+            if (
+              process.env.NODE_ENV !== 'production' &&
+              React.isValidElement(attr) &&
+              warnNonStyledComponentAttrsObjectKey
+            ) {
+              warnNonStyledComponentAttrsObjectKey(key, props.forwardedClass.displayName);
+            }
+          }
+        }
+
+        this.attrs[key] = attr;
+        context[key] = attr;
+      }
+      /* eslint-enable */
+    });
+
+    return context;
   }
 
   generateAndInjectStyles(theme: any, props: any, styleSheet: ?StyleSheet = StyleSheet.master) {
@@ -177,18 +212,16 @@ class StyledComponent extends Component<*> {
 
     // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names
-    if (componentStyle.isStatic && attrs === undefined) {
+    if (componentStyle.isStatic && !attrs.length) {
       return componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet);
     }
 
     const className = componentStyle.generateAndInjectStyles(
-      this.buildExecutionContext(theme, props, props.forwardedClass.attrs),
+      this.buildExecutionContext(theme, props, attrs),
       styleSheet
     );
 
-    if (warnTooManyClasses) {
-      warnTooManyClasses(className);
-    }
+    if (process.env.NODE_ENV !== 'production' && warnTooManyClasses) warnTooManyClasses(className);
 
     return className;
   }
@@ -202,7 +235,7 @@ export default function createStyledComponent(target: Target, options: Object, r
     displayName = generateDisplayName(target),
     componentId = generateId(ComponentStyle, options.displayName, options.parentComponentId),
     ParentComponent = StyledComponent,
-    attrs,
+    attrs = EMPTY_ARRAY,
   } = options;
 
   const styledComponentId =
@@ -213,7 +246,9 @@ export default function createStyledComponent(target: Target, options: Object, r
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     // $FlowFixMe
-    isTargetStyledComp && target.attrs ? { ...target.attrs, ...attrs } : attrs;
+    isTargetStyledComp && target.attrs
+      ? Array.prototype.concat(target.attrs, attrs).filter(Boolean)
+      : attrs;
 
   const componentStyle = new ComponentStyle(
     isTargetStyledComp
@@ -279,7 +314,6 @@ export default function createStyledComponent(target: Target, options: Object, r
       displayName: true,
       styledComponentId: true,
       target: true,
-      warnTooManyClasses: true,
       withComponent: true,
     });
   }

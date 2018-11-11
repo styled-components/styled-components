@@ -1,7 +1,7 @@
 // @flow
 import React, { createElement, Component } from 'react';
 import determineTheme from '../utils/determineTheme';
-import { EMPTY_OBJECT } from '../utils/empties';
+import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
@@ -12,13 +12,32 @@ import once from '../utils/once';
 import { ThemeConsumer } from './ThemeProvider';
 
 import type { Theme } from './ThemeProvider';
-import type { RuleSet, Target } from '../types';
+import type { Attrs, RuleSet, Target } from '../types';
 
 const warnInnerRef = once(() =>
   // eslint-disable-next-line no-console
   console.warn(
     'The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component.'
   )
+);
+
+const warnAttrsFnObjectKeyDeprecated = once(
+  (key, displayName): void =>
+    // eslint-disable-next-line no-console
+    console.warn(
+      `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`
+    )
+);
+
+const warnNonStyledComponentAttrsObjectKey = once(
+  (key, displayName): void =>
+    // eslint-disable-next-line no-console
+    console.warn(
+      `It looks like you've used a non styled-component as the value for the "${key}" prop in an object-form attrs constructor of "${displayName}".\n` +
+        'You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))\n' +
+        "To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)\n" +
+        `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
+    )
 );
 
 // $FlowFixMe
@@ -65,38 +84,55 @@ class StyledNativeComponent extends Component<*, *> {
     );
   }
 
-  buildExecutionContext(theme: any, props: any, attrs: any) {
+  buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs) {
     const context = { ...props, theme };
 
-    if (attrs === undefined) return context;
+    if (!attrs.length) return context;
 
     this.attrs = {};
 
-    let attr;
-    let key;
+    attrs.forEach(attrDef => {
+      let resolvedAttrDef = attrDef;
+      let attrDefWasFn = false;
+      let attr;
+      let key;
 
-    /* eslint-disable guard-for-in */
-    for (key in attrs) {
-      attr = attrs[key];
-
-      if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
-        attr = attr(context);
-
-        if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            `It looks like you've used a component as value for the ${key} prop in the attrs constructor.\n` +
-              "You'll need to wrap it in a function to make it available inside the styled component.\n" +
-              `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
-          );
-        }
+      if (isFunction(resolvedAttrDef)) {
+        // $FlowFixMe
+        resolvedAttrDef = resolvedAttrDef(props);
+        attrDefWasFn = true;
       }
 
-      this.attrs[key] = attr;
-    }
-    /* eslint-enable */
+      /* eslint-disable guard-for-in */
+      // $FlowFixMe
+      for (key in resolvedAttrDef) {
+        attr = resolvedAttrDef[key];
 
-    return { ...context, ...this.attrs };
+        if (!attrDefWasFn) {
+          if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
+            if (process.env.NODE_ENV !== 'production' && warnAttrsFnObjectKeyDeprecated) {
+              warnAttrsFnObjectKeyDeprecated(key, this.props.forwardedClass.displayName);
+            }
+
+            attr = attr(context);
+
+            if (
+              process.env.NODE_ENV !== 'production' &&
+              React.isValidElement(attr) &&
+              warnNonStyledComponentAttrsObjectKey
+            ) {
+              warnNonStyledComponentAttrsObjectKey(key, this.props.forwardedClass.displayName);
+            }
+          }
+        }
+
+        this.attrs[key] = attr;
+        context[key] = attr;
+      }
+      /* eslint-enable */
+    });
+
+    return context;
   }
 
   generateAndInjectStyles(theme: any, props: any) {
@@ -123,7 +159,7 @@ class StyledNativeComponent extends Component<*, *> {
 export default (InlineStyle: Function) => {
   const createStyledNativeComponent = (target: Target, options: Object, rules: RuleSet) => {
     const {
-      attrs,
+      attrs = EMPTY_ARRAY,
       displayName = generateDisplayName(target),
       ParentComponent = StyledNativeComponent,
     } = options;
@@ -141,7 +177,9 @@ export default (InlineStyle: Function) => {
 
     const finalAttrs =
       // $FlowFixMe
-      isTargetStyledComp && target.attrs ? { ...target.attrs, ...attrs } : attrs;
+      isTargetStyledComp && target.attrs
+        ? Array.prototype.concat(target.attrs, attrs).filter(Boolean)
+        : attrs;
 
     /**
      * forwardRef creates a new interim component, which we'll take advantage of
@@ -187,7 +225,6 @@ export default (InlineStyle: Function) => {
         inlineStyle: true,
         styledComponentId: true,
         target: true,
-        warnTooManyClasses: true,
         withComponent: true,
       });
     }

@@ -1,6 +1,0 @@
-{
-  "globals": {
-    "__DEV__": true
-  },
-  "testEnvironment": "jsdom"
-}

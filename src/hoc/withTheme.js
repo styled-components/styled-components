@@ -16,9 +16,9 @@ export default (Component: ComponentType<any>) => {
         if (process.env.NODE_ENV !== 'production' && themeProp === undefined) {
           // eslint-disable-next-line no-console
           console.warn(
-            `[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class ${getComponentName(
+            `[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class "${getComponentName(
               Component
-            )}`
+            )}"`
           );
         }
 
