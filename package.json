@@ -134,9 +134,6 @@
     "react-dom": ">= 16.3.0"
   },
   "jest": {
-    "globals": {
-      "__DEV__": true
-    },
     "testURL": "http://localhost",
     "clearMocks": true,
     "roots": [

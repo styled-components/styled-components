@@ -1,8 +1,5 @@
 {
   "rootDir": ".",
-  "globals": {
-    "__DEV__": true
-  },
   "testRegex": "./src/primitives/test/.*.js$",
   "moduleFileExtensions": ["ios.js", "js"],
   "preset": "react-native",

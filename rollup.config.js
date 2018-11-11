@@ -46,7 +46,6 @@ const commonPlugins = [
     },
   }),
   replace({
-    __DEV__: JSON.stringify(false), // disable flag indicating a Jest run
     __VERSION__: JSON.stringify(pkg.version),
   }),
 ];

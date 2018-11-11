@@ -43,8 +43,6 @@ describe('constants', () => {
   });
 
   describe('DISABLE_SPEEDY', () => {
-    const oldDev = window.__DEV__;
-
     function renderAndExpect(expectedDisableSpeedy, expectedCss) {
       const DISABLE_SPEEDY = require('../constants').DISABLE_SPEEDY;
       const styled = require('./utils').resetStyled();
@@ -60,12 +58,10 @@ describe('constants', () => {
     }
 
     beforeEach(() => {
-      window.__DEV__ = false;
       process.env.NODE_ENV = 'production';
     });
 
     afterEach(() => {
-      window.__DEV__ = oldDev;
       process.env.NODE_ENV = 'test';
       delete process.env.DISABLE_SPEEDY;
     });
