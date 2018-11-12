@@ -117,6 +117,8 @@ describe('primitives', () => {
     });
 
     it('calls an attr-function with context', () => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+
       const Comp = styled.View.attrs({
         copy: props => props.test,
       })``;
