@@ -7,7 +7,7 @@ import isPlainObject from './isPlainObject';
 import isStyledComponent from './isStyledComponent';
 import Keyframes from '../models/Keyframes';
 import hyphenate from './hyphenateStyleName';
-import dangerousStyleValue from './dangerousStyleValue';
+import addUnitIfNeeded from './addUnitIfNeeded';
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
   const css = Object.keys(obj)
@@ -17,7 +17,7 @@ export const objToCss = (obj: Object, prevKey?: string): string => {
     })
     .map(key => {
       if (isPlainObject(obj[key])) return objToCss(obj[key], key);
-      return `${hyphenate(key)}: ${dangerousStyleValue(key, obj[key])};`;
+      return `${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`;
     })
     .join(' ');
   return prevKey
