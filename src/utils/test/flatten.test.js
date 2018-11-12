@@ -32,10 +32,12 @@ describe('flatten', () => {
 
   it('hypenates objects', () => {
     const obj = {
-      fontSize: '14px',
+      fontSize: 14,
+      lineHeight: '15px',
       WebkitFilter: 'blur(2px)',
+      fontWeight: 500,
     };
-    const css = 'font-size: 14px; -webkit-filter: blur(2px);';
+    const css = 'font-size: 14px; line-height: 15px; -webkit-filter: blur(2px); font-weight: 500;';
     // $FlowFixMe
     expect(flatten([obj])).toEqual([css]);
     // $FlowFixMe
@@ -114,9 +116,7 @@ describe('flatten', () => {
     expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'static', 'baz']);
   });
 
-  it('warns if trying to interpolate a normal React component', () => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
-
+  it('throws if trying to interpolate a normal React component', () => {
     const Foo = ({ className }) => <div className={className}>hello there!</div>;
 
     const Bar = styled.div`
@@ -126,10 +126,6 @@ describe('flatten', () => {
     `;
 
     expect(() => TestRenderer.create(<Bar />)).toThrowErrorMatchingInlineSnapshot(
-      `"Cannot convert a Symbol value to a string"`
-    );
-
-    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
       `"Foo is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details."`
     );
   });

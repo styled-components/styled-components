@@ -15,7 +15,7 @@
     "build": "rollup -c",
     "prebuild": "rimraf dist",
     "test": "run-s test:*",
-    "test:web": "jest --outputFile test-results.json --json",
+    "test:web": "jest",
     "test:web:watch": "npm run test:web -- --watch",
     "test:native": "jest -c .jest.native.json",
     "test:native:watch": "npm run test:native -- --watch",
@@ -67,6 +67,7 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "@emotion/is-prop-valid": "^0.6.8",
+    "@emotion/unitless": "^0.7.0",
     "babel-plugin-styled-components": ">= 1",
     "css-to-react-native": "^2.2.2",
     "memoize-one": "^4.0.0",

@@ -26,9 +26,8 @@ const ERRORS =
 function format(...args) {
   let a = args[0];
   const b = [];
-  let c;
 
-  for (c = 1; c < args.length; c += 1) {
+  for (let c = 1, len = args.length; c < len; c += 1) {
     b.push(args[c]);
   }
 

@@ -1,5 +1,4 @@
 // @flow
-
 import { isElement } from 'react-is';
 import getComponentName from './getComponentName';
 import isFunction from './isFunction';
@@ -7,16 +6,20 @@ import isPlainObject from './isPlainObject';
 import isStyledComponent from './isStyledComponent';
 import Keyframes from '../models/Keyframes';
 import hyphenate from './hyphenateStyleName';
+import addUnitIfNeeded from './addUnitIfNeeded';
+import StyledError from './error';
+
+/**
+ * It's falsish not falsy because 0 is allowed.
+ */
+const isFalsish = chunk => chunk === undefined || chunk === null || chunk === false || chunk === '';
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
   const css = Object.keys(obj)
-    .filter(key => {
-      const chunk = obj[key];
-      return chunk !== undefined && chunk !== null && chunk !== false && chunk !== '';
-    })
+    .filter(key => !isFalsish(obj[key]))
     .map(key => {
       if (isPlainObject(obj[key])) return objToCss(obj[key], key);
-      return `${hyphenate(key)}: ${obj[key]};`;
+      return `${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`;
     })
     .join(' ');
   return prevKey
@@ -25,11 +28,6 @@ export const objToCss = (obj: Object, prevKey?: string): string => {
 }`
     : css;
 };
-
-/**
- * It's falsish not falsy because 0 is allowed.
- */
-const isFalsish = chunk => chunk === undefined || chunk === null || chunk === false || chunk === '';
 
 export default function flatten(chunk: any, executionContext: ?Object, styleSheet: ?Object): any {
   if (Array.isArray(chunk)) {
@@ -58,19 +56,9 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
     if (executionContext) {
-      if (process.env.NODE_ENV !== 'production') {
-        /* Warn if not referring styled component */
-        try {
-          // eslint-disable-next-line new-cap
-          if (isElement(new chunk(executionContext))) {
-            console.warn(
-              `${getComponentName(
-                chunk
-              )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
-            );
-          }
-          // eslint-disable-next-line no-empty
-        } catch (e) {}
+      // eslint-disable-next-line new-cap
+      if (isElement(new chunk(executionContext))) {
+        throw new StyledError(13, getComponentName(chunk));
       }
 
       return flatten(chunk(executionContext), executionContext, styleSheet);
