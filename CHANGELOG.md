@@ -41,6 +41,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - The standalone CDN build is now UMD-compliant and can be used with RequireJS, etc.
 
+- Add pixels to unitless numbers when object interpolation is used, by [@Fer0x](https://github.com/Fer0x) (see [#2173](https://github.com/styled-components/styled-components/pull/2173))
+
 ## [v4.0.3] - 2018-10-30
 
 - Interpolating a styled component into a string now returns the static component selector (emotion cross-compat)
