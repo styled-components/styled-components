@@ -7,7 +7,6 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 ## Unreleased
 
 - Performance optimization for fully static (no function interpolation) styled-components by avoiding using `ThemeConsumer` since it isn't necessary, by [@mxstbr](https://github.com/mxstbr) (see [#2166](https://github.com/styled-components/styled-components/pull/2166))
-- Allow disabling "speedy" mode via global `SC_DISABLE_SPEEDY` variable, by [@devrelm](https://github.com/devrelm) (see [#2185](https://github.com/styled-components/styled-components/pull/2185))
 
 - Allow disabling "speedy" mode via global `SC_DISABLE_SPEEDY` variable, by [@devrelm](https://github.com/devrelm) (see [#2185](https://github.com/styled-components/styled-components/pull/2185))
 
@@ -39,6 +38,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
   ```
 
   Support for this will be removed in styled-components v5. The primary impetus behind this change is to eliminate confusion around basic functions vs styled-components vs React components provided as values in the object-form attrs constructor, each of which has different handling behaviors. The single outer function to receive the props and then return a props object is conceptually simpler.
+
+- The standalone CDN build is now UMD-compliant and can be used with RequireJS, etc.
 
 ## [v4.0.3] - 2018-10-30
 
