@@ -1,5 +1,4 @@
 // @flow
-
 import { isElement } from 'react-is';
 import getComponentName from './getComponentName';
 import isFunction from './isFunction';
@@ -10,12 +9,14 @@ import hyphenate from './hyphenateStyleName';
 import addUnitIfNeeded from './addUnitIfNeeded';
 import StyledError from './error';
 
+/**
+ * It's falsish not falsy because 0 is allowed.
+ */
+const isFalsish = chunk => chunk === undefined || chunk === null || chunk === false || chunk === '';
+
 export const objToCss = (obj: Object, prevKey?: string): string => {
   const css = Object.keys(obj)
-    .filter(key => {
-      const chunk = obj[key];
-      return chunk !== undefined && chunk !== null && chunk !== false && chunk !== '';
-    })
+    .filter(key => !isFalsish(obj[key]))
     .map(key => {
       if (isPlainObject(obj[key])) return objToCss(obj[key], key);
       return `${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`;
@@ -27,11 +28,6 @@ export const objToCss = (obj: Object, prevKey?: string): string => {
 }`
     : css;
 };
-
-/**
- * It's falsish not falsy because 0 is allowed.
- */
-const isFalsish = chunk => chunk === undefined || chunk === null || chunk === false || chunk === '';
 
 export default function flatten(chunk: any, executionContext: ?Object, styleSheet: ?Object): any {
   if (Array.isArray(chunk)) {

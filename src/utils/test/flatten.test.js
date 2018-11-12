@@ -35,7 +35,7 @@ describe('flatten', () => {
       fontSize: 14,
       lineHeight: '15px',
       WebkitFilter: 'blur(2px)',
-      fontWeight: 500
+      fontWeight: 500,
     };
     const css = 'font-size: 14px; line-height: 15px; -webkit-filter: blur(2px); font-weight: 500;';
     // $FlowFixMe
@@ -116,7 +116,7 @@ describe('flatten', () => {
     expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'static', 'baz']);
   });
 
-  it('warns if trying to interpolate a normal React component', () => {
+  it('throws if trying to interpolate a normal React component', () => {
     const Foo = ({ className }) => <div className={className}>hello there!</div>;
 
     const Bar = styled.div`
