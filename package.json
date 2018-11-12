@@ -15,7 +15,7 @@
     "build": "rollup -c",
     "prebuild": "rimraf dist",
     "test": "run-s test:*",
-    "test:web": "jest --outputFile test-results.json --json",
+    "test:web": "jest",
     "test:web:watch": "npm run test:web -- --watch",
     "test:native": "jest -c .jest.native.json",
     "test:native:watch": "npm run test:native -- --watch",
