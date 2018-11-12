@@ -5,10 +5,6 @@ import unitless from '@emotion/unitless';
 export default function addUnitIfNeeded(name: string, value: any): any {
   // https://github.com/amilajack/eslint-plugin-flowtype-errors/issues/133
   // $FlowFixMe
-  if (typeof value === 'symbol') {
-    return value;
-  }
-
   if (value == null || typeof value === 'boolean' || value === '') {
     return '';
   }

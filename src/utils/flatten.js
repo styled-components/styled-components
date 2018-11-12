@@ -8,6 +8,7 @@ import isStyledComponent from './isStyledComponent';
 import Keyframes from '../models/Keyframes';
 import hyphenate from './hyphenateStyleName';
 import addUnitIfNeeded from './addUnitIfNeeded';
+import StyledError from './error';
 
 export const objToCss = (obj: Object, prevKey?: string): string => {
   const css = Object.keys(obj)
@@ -59,19 +60,9 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
     if (executionContext) {
-      if (process.env.NODE_ENV !== 'production') {
-        /* Warn if not referring styled component */
-        try {
-          // eslint-disable-next-line new-cap
-          if (isElement(new chunk(executionContext))) {
-            console.warn(
-              `${getComponentName(
-                chunk
-              )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
-            );
-          }
-          // eslint-disable-next-line no-empty
-        } catch (e) {}
+      // eslint-disable-next-line new-cap
+      if (isElement(new chunk(executionContext))) {
+        throw new StyledError(13, getComponentName(chunk));
       }
 
       return flatten(chunk(executionContext), executionContext, styleSheet);
