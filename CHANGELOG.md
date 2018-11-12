@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.1.0] - 2018-11-12
+
 - Performance optimization for fully static (no function interpolation) styled-components by avoiding using `ThemeConsumer` since it isn't necessary, by [@mxstbr](https://github.com/mxstbr) (see [#2166](https://github.com/styled-components/styled-components/pull/2166))
 
 - Allow disabling "speedy" mode via global `SC_DISABLE_SPEEDY` variable, by [@devrelm](https://github.com/devrelm) (see [#2185](https://github.com/styled-components/styled-components/pull/2185))
@@ -901,7 +903,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.3...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.1.0...master
+[v4.1.0]: https://github.com/styled-components/styled-components/compare/v4.0.3...v4.1.0
 [v4.0.3]: https://github.com/styled-components/styled-components/compare/v4.0.2...v4.0.3
 [v4.0.2]: https://github.com/styled-components/styled-components/compare/v4.0.1...v4.0.2
 [v4.0.1]: https://github.com/styled-components/styled-components/compare/v4.0.0...v4.0.1
