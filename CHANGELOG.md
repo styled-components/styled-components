@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.1.1] - 2018-11-12
+
 - Put back the try/catch guard around a part of the flattener that sometimes receives undetectable SFCs (fixes an errand hard error in an edge case)
 
 ## [v4.1.0] - 2018-11-12
@@ -905,7 +907,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.1.0...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.1.1...master
+[v4.1.1]: https://github.com/styled-components/styled-components/compare/v4.1.0...v4.1.1
 [v4.1.0]: https://github.com/styled-components/styled-components/compare/v4.0.3...v4.1.0
 [v4.0.3]: https://github.com/styled-components/styled-components/compare/v4.0.2...v4.0.3
 [v4.0.2]: https://github.com/styled-components/styled-components/compare/v4.0.1...v4.0.2
