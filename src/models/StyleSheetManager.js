@@ -47,10 +47,10 @@ export default class StyleSheetManager extends Component<Props> {
 
   render() {
     const { children, sheet, target } = this.props;
-    const context = this.getContext(sheet, target);
+
     return (
-      <StyleSheetContext.Provider value={context}>
-        {React.Children.only(children)}
+      <StyleSheetContext.Provider value={this.getContext(sheet, target)}>
+        {process.env.NODE_ENV !== 'production' ? React.Children.only(children) : children}
       </StyleSheetContext.Provider>
     );
   }

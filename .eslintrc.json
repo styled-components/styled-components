@@ -1,15 +1,14 @@
 {
   "parser": "babel-eslint",
-  "extends": ["airbnb", "prettier", "prettier/flowtype"],
+  "extends": ["airbnb", "prettier"],
   "globals": {
     "__SERVER__": true,
     "__VERSION__": true
   },
-  "plugins": ["flowtype", "flowtype-errors", "prettier"],
+  "plugins": ["prettier"],
   "rules": {
     "class-methods-use-this": 0,
     "curly": [2, "multi-line"],
-    "flowtype-errors/show-errors": 2,
     "import/no-extraneous-dependencies": 0,
     "no-confusing-arrow": 0,
     "no-continue": 0,
@@ -25,18 +24,6 @@
     "react/require-default-props": 0,
     "react/sort-comp": 0,
     "symbol-description": 0,
-    "flowtype/require-valid-file-annotation": [
-      2,
-      "always",
-      {
-        "annotationStyle": "line"
-      }
-    ],
-    "flowtype/boolean-style": [2, "boolean"],
-    "flowtype/no-dupe-keys": 2,
-    "flowtype/union-intersection-spacing": [2, "always"],
-    "flowtype/object-type-delimiter": 2,
-    "prettier/prettier": 2,
     "no-restricted-syntax": ["error", "ForOfStatement", "LabeledStatement", "WithStatement"],
     "no-return-assign": 0
   },

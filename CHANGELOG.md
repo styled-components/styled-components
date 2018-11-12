@@ -6,6 +6,43 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Performance optimization for fully static (no function interpolation) styled-components by avoiding using `ThemeConsumer` since it isn't necessary, by [@mxstbr](https://github.com/mxstbr) (see [#2166](https://github.com/styled-components/styled-components/pull/2166))
+
+- Allow disabling "speedy" mode via global `SC_DISABLE_SPEEDY` variable, by [@devrelm](https://github.com/devrelm) (see [#2185](https://github.com/styled-components/styled-components/pull/2185))
+
+  To make use of this, you can either set `SC_DISABLE_SPEEDY` in your app's entry file or use something like `webpack.DefinePlugin` to do it at build time:
+
+  ```js
+  webpack.DefinePlugin({
+    SC_DISABLE_SPEEDY: true,
+  });
+  ```
+
+- Attrs can now be passed a function (see [#2200](https://github.com/styled-components/styled-components/pull/2200)); thanks [@oliverlaz](https://github.com/oliverlaz) for providing an early PoC PR for this!
+
+  e.g.:
+
+  ```js
+  styled.div.attrs(props => ({ 'aria-title': props.title }))``;
+  ```
+
+- Fix the `warnTooManyClasses` dev helper not being totally dead code eliminated in production (see [#2200](https://github.com/styled-components/styled-components/pull/2200))
+
+- Deprecate functions as object keys for object-form attrs (see [#2200](https://github.com/styled-components/styled-components/pull/2200))
+
+  e.g.:
+
+  ```js
+  styled.div.attrs({ 'aria-title': props => props.title })``; // bad
+  styled.div.attrs(props => ({ 'aria-title': props.title }))``; // good
+  ```
+
+  Support for this will be removed in styled-components v5. The primary impetus behind this change is to eliminate confusion around basic functions vs styled-components vs React components provided as values in the object-form attrs constructor, each of which has different handling behaviors. The single outer function to receive the props and then return a props object is conceptually simpler.
+
+- The standalone CDN build is now UMD-compliant and can be used with RequireJS, etc.
+
+## [v4.0.3] - 2018-10-30
+
 - Interpolating a styled component into a string now returns the static component selector (emotion cross-compat)
 
   ```js
@@ -17,11 +54,14 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
   `${Comp}`; // .sc-hash
   ```
+
 - Add `suppressClassNameWarning` prop to disable warning when wrapping a React component with `styled()` and the `className` isn't used, by [@Fer0x](https://github.com/Fer0x) (see [#2156](https://github.com/styled-components/styled-components/pull/2156))
 
 - Expose ThemeContext to enable static contextType support for React 16.6, by [@imbhargav5](https://github.com/imbhargav5) (see [#2152](https://github.com/styled-components/styled-components/pull/2152))
 
 - Filter out invalid HTML attributes from `attrs`, by [@Fer0x](https://github.com/Fer0x) (see [#2133](https://github.com/styled-components/styled-components/pull/2133))
+
+- Add warning if an `attrs` prop is a function that returns an element, by [@timswalling](https://github.com/timswalling) (see [#2162](https://github.com/styled-components/styled-components/pull/2162))
 
 ## [v4.0.2] - 2018-10-18
 
@@ -857,7 +897,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.2...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.3...master
+[v4.0.3]: https://github.com/styled-components/styled-components/compare/v4.0.2...v4.0.3
 [v4.0.2]: https://github.com/styled-components/styled-components/compare/v4.0.1...v4.0.2
 [v4.0.1]: https://github.com/styled-components/styled-components/compare/v4.0.0...v4.0.1
 [v4.0.0]: https://github.com/styled-components/styled-components/compare/v4.0.0-beta.11...v4.0.0

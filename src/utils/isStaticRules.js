@@ -1,14 +1,25 @@
 // @flow
 import isFunction from './isFunction';
 import isStyledComponent from './isStyledComponent';
-import type { RuleSet } from '../types';
+import type { Attrs, RuleSet } from '../types';
 
-export default function isStaticRules(rules: RuleSet, attrs?: Object): boolean {
+function hasFunctionObjectKey(obj: Object): boolean {
+  // eslint-disable-next-line guard-for-in, no-restricted-syntax
+  for (const key in obj) {
+    if (isFunction(obj[key])) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export default function isStaticRules(rules: RuleSet, attrs: Attrs): boolean {
   for (let i = 0; i < rules.length; i += 1) {
     const rule = rules[i];
 
     // recursive case
-    if (Array.isArray(rule) && !isStaticRules(rule)) {
+    if (Array.isArray(rule) && !isStaticRules(rule, attrs)) {
       return false;
     } else if (isFunction(rule) && !isStyledComponent(rule)) {
       // functions are allowed to be static if they're just being
@@ -17,15 +28,7 @@ export default function isStaticRules(rules: RuleSet, attrs?: Object): boolean {
     }
   }
 
-  if (attrs !== undefined) {
-    // eslint-disable-next-line guard-for-in, no-restricted-syntax
-    for (const key in attrs) {
-      const value = attrs[key];
-      if (isFunction(value)) {
-        return false;
-      }
-    }
-  }
+  if (attrs.some(x => isFunction(x) || hasFunctionObjectKey(x))) return false;
 
   return true;
 }

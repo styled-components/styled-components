@@ -6,8 +6,12 @@ import { resetStyled, expectCSSMatches } from './utils';
 
 let styled;
 
+// for the purpose of testing warnings we want to make sure they're always fired
+jest.mock('../utils/once', () => cb => cb);
+
 describe('attrs', () => {
   beforeEach(() => {
+    jest.spyOn(console, 'warn');
     styled = resetStyled();
   });
 
@@ -45,10 +49,21 @@ describe('attrs', () => {
   });
 
   it('call an attr function', () => {
+    console.warn.mockImplementation(() => {});
     const Comp = styled.button.attrs({
-      type: () => 'button',
+      as: () => 'div',
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+
+    // deprecation message for fn as attrs object key
+    expect(console.warn).toHaveBeenCalled();
+  });
+
+  it('pass a fn to attrs', () => {
+    const Comp = styled.button.attrs(props => ({
+      as: props.renderAs,
+    }))``;
+    expect(TestRenderer.create(<Comp renderAs="div" />).toJSON()).toMatchSnapshot();
   });
 
   it('pass props to the attr function', () => {
@@ -104,6 +119,19 @@ describe('attrs', () => {
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
+  it('merge fn attrs', () => {
+    const Comp = styled.button
+      .attrs(() => ({
+        type: 'button',
+        tabIndex: 0,
+      }))
+      .attrs(() => ({
+        type: 'submit',
+      }))``;
+
+    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+  });
+
   it('merge attrs when inheriting SC', () => {
     const Parent = styled.button.attrs({
       type: 'button',
@@ -127,7 +155,7 @@ describe('attrs', () => {
       }
     `;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-    expectCSSMatches('.sc-a {} .b { color:blue; } .b.--is-active { color:red; }');
+    expectCSSMatches('.b { color:blue; } .b.--is-active { color:red; }');
   });
 
   it('should pass through children as a normal prop', () => {
@@ -197,5 +225,35 @@ describe('attrs', () => {
       textColor: 'red',
     })``;
     expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();
+  });
+
+  describe('warnings', () => {
+    beforeEach(() => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    it('warns upon use of a Stateless Functional Component as a prop', () => {
+      const Inner = () => <div />;
+      const Comp = styled.div.attrs({ component: Inner })``;
+
+      TestRenderer.create(<Comp />);
+
+      expect(console.warn.mock.calls[1][0]).toMatchInlineSnapshot(`
+"It looks like you've used a non styled-component as the value for the \\"component\\" prop in an object-form attrs constructor of \\"styled.div\\".
+You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))
+To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)
+For example, { component: () => InnerComponent } instead of { component: InnerComponent }"
+`);
+    });
+
+    it('warns for using fns as attrs object keys', () => {
+      const Comp = styled.div.attrs({ 'data-text-color': props => props.textColor })``;
+
+      TestRenderer.create(<Comp textColor="blue" />);
+
+      expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
+        `"Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is \\"data-text-color\\" on component \\"styled.div\\"."`
+      );
+    });
   });
 });

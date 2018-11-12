@@ -1,7 +1,7 @@
 {
   "name": "styled-components",
-  "version": "4.0.2",
-  "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅",
+  "version": "4.0.3",
+  "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.esm.js",
   "module": "dist/styled-components.esm.js",
@@ -93,34 +93,32 @@
     "babel-preset-react": "^6.22.0",
     "bundlesize": "^0.17.0",
     "cross-env": "^5.1.3",
-    "eslint": "^5.6.1",
+    "eslint": "^5.9.0",
     "eslint-config-airbnb": "^17.1.0",
-    "eslint-config-prettier": "^3.1.0",
-    "eslint-plugin-flowtype": "^2.50.3",
-    "eslint-plugin-flowtype-errors": "^3.6.0",
+    "eslint-config-prettier": "^3.3.0",
     "eslint-plugin-import": "^2.14.0",
     "eslint-plugin-jsx-a11y": "^6.1.2",
     "eslint-plugin-prettier": "^3.0.0",
     "eslint-plugin-react": "^7.11.1",
-    "express": "^4.14.1",
+    "express": "^4.16.4",
     "flow-bin": "^0.82.0",
     "flow-watch": "^1.1.1",
-    "husky": "^1.0.1",
+    "husky": "^1.1.3",
     "jest": "^23.6.0",
-    "jest-image-snapshot": "^2.5.0",
-    "jest-styled-components": "^6.0.0",
-    "lint-staged": "^7.3.0",
+    "jest-image-snapshot": "^2.7.0",
+    "jest-styled-components": "^6.3.1",
+    "lint-staged": "^8.0.4",
     "node-watch": "^0.5.0",
     "npm-run-all": "^4.1.2",
-    "prettier": "^1.14.3",
-    "puppeteer": "^1.8.0",
-    "raf": "^3.4.0",
-    "react": "^16.6.0",
-    "react-dom": "^16.6.0",
+    "prettier": "^1.15.2",
+    "puppeteer": "^1.10.0",
+    "raf": "^3.4.1",
+    "react": "^16.6.1",
+    "react-dom": "^16.6.1",
     "react-frame-component": "^4.0.2",
     "react-native": "^0.56.0",
     "react-primitives": "^0.6.1",
-    "react-test-renderer": "^16.6.0",
+    "react-test-renderer": "^16.6.1",
     "rimraf": "^2.6.1",
     "rollup": "^0.66.5",
     "rollup-plugin-babel": "^3.0.4",
@@ -137,9 +135,6 @@
     "react-dom": ">= 16.3.0"
   },
   "jest": {
-    "globals": {
-      "__DEV__": true
-    },
     "testURL": "http://localhost",
     "clearMocks": true,
     "roots": [
@@ -156,9 +151,14 @@
     ]
   },
   "lint-staged": {
-    "*.js": [
-      "eslint --fix",
-      "git add"
+    "linters": {
+      "*.js": [
+        "eslint --fix",
+        "git add"
+      ]
+    },
+    "ignore": [
+      "**/test/*.js"
     ]
   },
   "bundlesize": [
@@ -173,7 +173,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged"
+      "pre-commit": "flow check && lint-staged"
     }
   }
 }

@@ -1,9 +1,8 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`attrs call an attr function 1`] = `
-<button
+<div
   className="sc-a b"
-  type="button"
 />
 `;
 
@@ -29,12 +28,26 @@ exports[`attrs merge attrs when inheriting SC 1`] = `
 />
 `;
 
+exports[`attrs merge fn attrs 1`] = `
+<button
+  className="sc-a b"
+  tabIndex={0}
+  type="submit"
+/>
+`;
+
 exports[`attrs pass a React component 1`] = `
 <button>
   <p>
     React Component
   </p>
 </button>
+`;
+
+exports[`attrs pass a fn to attrs 1`] = `
+<div
+  className="sc-a b"
+/>
 `;
 
 exports[`attrs pass a simple attr 1`] = `

@@ -8,7 +8,7 @@ import isStaticRules from '../utils/isStaticRules';
 import StyleSheet from './StyleSheet';
 import { IS_BROWSER } from '../constants';
 
-import { type RuleSet } from '../types';
+import type { Attrs, RuleSet } from '../types';
 
 const isHMREnabled =
   process.env.NODE_ENV !== 'production' && typeof module !== 'undefined' && module.hot;
@@ -29,15 +29,13 @@ export default class ComponentStyle {
 
   lastClassName: ?string;
 
-  constructor(rules: RuleSet, attrs?: Object, componentId: string) {
+  constructor(rules: RuleSet, attrs: Attrs, componentId: string) {
     this.rules = rules;
     this.isStatic = !isHMREnabled && isStaticRules(rules, attrs);
     this.componentId = componentId;
 
     if (!StyleSheet.master.hasId(componentId)) {
-      const placeholder = process.env.NODE_ENV !== 'production' ? [`.${componentId} {}`] : [];
-
-      StyleSheet.master.deferredInject(componentId, placeholder);
+      StyleSheet.master.deferredInject(componentId, []);
     }
   }
 
@@ -51,8 +49,8 @@ export default class ComponentStyle {
     if (
       IS_BROWSER &&
       isStatic &&
-      lastClassName !== undefined &&
-      styleSheet.hasNameForId(componentId, ((lastClassName: any): string))
+      typeof lastClassName === 'string' &&
+      styleSheet.hasNameForId(componentId, lastClassName)
     ) {
       return lastClassName;
     }

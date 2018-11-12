@@ -5,6 +5,8 @@ import ThemeProvider from '../../models/ThemeProvider';
 import withTheme from '../withTheme';
 
 describe('withTheme', () => {
+  beforeEach(() => jest.spyOn(console, 'warn').mockImplementation(() => {}));
+
   it('should not throw an error when defaultProps is defined', () => {
     const Component = () => <div>Wrapped Component</div>;
     Component.defaultProps = {
@@ -24,10 +26,11 @@ describe('withTheme', () => {
   });
 
   it('should throw a warning when no default theme is provided', () => {
-    const spy = jest.spyOn(global.console, 'warn');
-    const Component = () => <div>Wrapped Component</div>;
-    const WrappedComponent = withTheme(Component);
+    const Comp = () => <div>Wrapped Component</div>;
+    const WrappedComponent = withTheme(Comp);
     TestRenderer.create(<WrappedComponent />);
-    expect(spy).toHaveBeenCalled();
+    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
+      `"[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class \\"Comp\\""`
+    );
   });
 });

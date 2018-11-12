@@ -46,7 +46,6 @@ const commonPlugins = [
     },
   }),
   replace({
-    __DEV__: JSON.stringify(false), // disable flag indicating a Jest run
     __VERSION__: JSON.stringify(pkg.version),
   }),
 ];
@@ -76,8 +75,7 @@ const standaloneBaseConfig = {
   input: './src/index-standalone.js',
   output: {
     file: 'dist/styled-components.js',
-    format: 'iife',
-    footer: ';window.styled = styled;',
+    format: 'umd',
     globals,
     name: 'styled',
     sourcemap: true,
