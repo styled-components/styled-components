@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Put back the try/catch guard around a part of the flattener that sometimes receives undetectable SFCs (fixes an errand hard error in an edge case)
+
 ## [v4.1.0] - 2018-11-12
 
 - Performance optimization for fully static (no function interpolation) styled-components by avoiding using `ThemeConsumer` since it isn't necessary, by [@mxstbr](https://github.com/mxstbr) (see [#2166](https://github.com/styled-components/styled-components/pull/2166))

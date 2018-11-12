@@ -56,8 +56,18 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
     if (executionContext) {
-      // eslint-disable-next-line new-cap
-      if (isElement(new chunk(executionContext))) {
+      let shouldThrow = false;
+
+      try {
+        // eslint-disable-next-line new-cap
+        if (isElement(new chunk(executionContext))) {
+          shouldThrow = true;
+        }
+      } catch (e) {
+        /* */
+      }
+
+      if (shouldThrow) {
         throw new StyledError(13, getComponentName(chunk));
       }
 
