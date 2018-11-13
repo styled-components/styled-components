@@ -7,9 +7,6 @@ import { resetStyled, expectCSSMatches } from './utils';
 
 let styled;
 
-// for the purpose of testing warnings we want to make sure they're always fired
-jest.mock('../utils/once', () => cb => cb);
-
 describe('attrs', () => {
   beforeEach(() => {
     jest.spyOn(console, 'warn');

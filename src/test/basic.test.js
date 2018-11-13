@@ -9,9 +9,6 @@ import { find } from '../../test-utils';
 
 let styled;
 
-// for the purpose of testing warnings we want to make sure they're always fired
-jest.mock('../utils/once', () => cb => cb);
-
 describe('basic', () => {
   /**
    * Make sure the setup is the same for every test
@@ -320,7 +317,7 @@ describe('basic', () => {
 
       TestRenderer.create(<Comp innerRef={ref} />);
       expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-        `"The \\"innerRef\\" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use \\"ref\\" instead like a typical component."`
+        `"The \\"innerRef\\" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use \\"ref\\" instead like a typical component. \\"innerRef\\" was detected on component \\"styled.div\\"."`
       );
     });
 
