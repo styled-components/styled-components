@@ -128,7 +128,7 @@ class StyledComponent extends Component<*> {
     let key;
     // eslint-disable-next-line guard-for-in
     for (key in computedProps) {
-      if (process.env.NODE_ENV !== 'production' && key === 'innerRef') {
+      if (process.env.NODE_ENV !== 'production' && key === 'innerRef' && isTargetTag) {
         warnInnerRef();
       }
 
