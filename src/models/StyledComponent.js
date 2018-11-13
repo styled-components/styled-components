@@ -171,7 +171,7 @@ class StyledComponent extends Component<*> {
 
       if (isFunction(resolvedAttrDef)) {
         // $FlowFixMe
-        resolvedAttrDef = resolvedAttrDef(props);
+        resolvedAttrDef = resolvedAttrDef(context);
         attrDefWasFn = true;
       }
 

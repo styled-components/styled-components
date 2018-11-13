@@ -1,6 +1,7 @@
 // @flow
 import React, { Component } from 'react';
 import TestRenderer from 'react-test-renderer';
+import ThemeProvider from '../models/ThemeProvider';
 
 import { resetStyled, expectCSSMatches } from './utils';
 
@@ -64,6 +65,44 @@ describe('attrs', () => {
       as: props.renderAs,
     }))``;
     expect(TestRenderer.create(<Comp renderAs="div" />).toJSON()).toMatchSnapshot();
+  });
+
+  it('function form allows access to theme', () => {
+    const Comp = styled.button.attrs(props => ({
+      'data-color': props.theme.color,
+    }))``;
+
+    expect(
+      TestRenderer.create(
+        <ThemeProvider theme={{ color: 'red' }}>
+          <Comp />
+        </ThemeProvider>
+      ).toJSON()
+    ).toMatchInlineSnapshot(`
+<button
+  className="sc-a b"
+  data-color="red"
+/>
+`);
+  });
+
+  it('defaultProps are merged into what function attrs receives', () => {
+    const Comp = styled.button.attrs(props => ({
+      'data-color': props.theme.color,
+    }))``;
+
+    Comp.defaultProps = {
+      theme: {
+        color: 'red',
+      },
+    };
+
+    expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
+<button
+  className="sc-a b"
+  data-color="red"
+/>
+`);
   });
 
   it('pass props to the attr function', () => {
