@@ -317,8 +317,17 @@ describe('basic', () => {
 
       TestRenderer.create(<Comp innerRef={ref} />);
       expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-        `"The \\"innerRef\\" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use \\"ref\\" instead like a typical component."`
+        `"The \\"innerRef\\" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use \\"ref\\" instead like a typical component. \\"innerRef\\" was detected on component \\"styled.div\\"."`
       );
+    });
+
+    it('does not warn for innerRef if using a custom component', () => {
+      const InnerComp = props => <div {...props} />;
+      const Comp = styled(InnerComp)``;
+      const ref = React.createRef();
+
+      TestRenderer.create(<Comp innerRef={ref} />);
+      expect(console.warn).not.toHaveBeenCalled();
     });
 
     it('warns when a wrapped React component does not consume className', () => {

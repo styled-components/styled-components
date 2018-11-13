@@ -6,9 +6,6 @@ import TestRenderer from 'react-test-renderer';
 
 import styled, { ThemeProvider } from '../index';
 
-// for the purpose of testing warnings we want to make sure they're always fired
-jest.mock('../../utils/once', () => cb => cb);
-
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
 

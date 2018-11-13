@@ -14,37 +14,49 @@ import { ThemeConsumer } from './ThemeProvider';
 import type { Theme } from './ThemeProvider';
 import type { Attrs, RuleSet, Target } from '../types';
 
-const warnInnerRef = once(() =>
-  // eslint-disable-next-line no-console
-  console.warn(
-    'The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component.'
-  )
-);
-
-const warnAttrsFnObjectKeyDeprecated = once(
-  (key, displayName): void =>
-    // eslint-disable-next-line no-console
-    console.warn(
-      `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`
-    )
-);
-
-const warnNonStyledComponentAttrsObjectKey = once(
-  (key, displayName): void =>
-    // eslint-disable-next-line no-console
-    console.warn(
-      `It looks like you've used a non styled-component as the value for the "${key}" prop in an object-form attrs constructor of "${displayName}".\n` +
-        'You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))\n' +
-        "To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)\n" +
-        `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
-    )
-);
-
 // $FlowFixMe
 class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
 
+  warnInnerRef: Function;
+
+  warnAttrsFnObjectKeyDeprecated: Function;
+
+  warnNonStyledComponentAttrsObjectKey: Function;
+
   attrs = {};
+
+  constructor(props) {
+    super(props);
+
+    if (process.env.NODE_ENV !== 'production') {
+      this.warnInnerRef = once(displayName =>
+        // eslint-disable-next-line no-console
+        console.warn(
+          `The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component. "innerRef" was detected on component "${displayName}".`
+        )
+      );
+
+      this.warnAttrsFnObjectKeyDeprecated = once(
+        (key, displayName): void =>
+          // eslint-disable-next-line no-console
+          console.warn(
+            `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`
+          )
+      );
+
+      this.warnNonStyledComponentAttrsObjectKey = once(
+        (key, displayName): void =>
+          // eslint-disable-next-line no-console
+          console.warn(
+            `It looks like you've used a non styled-component as the value for the "${key}" prop in an object-form attrs constructor of "${displayName}".\n` +
+              'You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))\n' +
+              "To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)\n" +
+              `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
+          )
+      );
+    }
+  }
 
   render() {
     return (
@@ -59,7 +71,7 @@ class StyledNativeComponent extends Component<*, *> {
             ...props
           } = this.props;
 
-          const { defaultProps, target } = forwardedClass;
+          const { defaultProps, displayName, target } = forwardedClass;
 
           let generatedStyles;
           if (theme !== undefined) {
@@ -76,7 +88,10 @@ class StyledNativeComponent extends Component<*, *> {
           };
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
-          if (process.env.NODE_ENV !== 'production' && innerRef) warnInnerRef();
+
+          if (process.env.NODE_ENV !== 'production' && innerRef) {
+            this.warnInnerRef(displayName);
+          }
 
           return createElement(renderAs || target, propsForElement);
         }}
@@ -110,18 +125,14 @@ class StyledNativeComponent extends Component<*, *> {
 
         if (!attrDefWasFn) {
           if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
-            if (process.env.NODE_ENV !== 'production' && warnAttrsFnObjectKeyDeprecated) {
-              warnAttrsFnObjectKeyDeprecated(key, this.props.forwardedClass.displayName);
+            if (process.env.NODE_ENV !== 'production') {
+              this.warnAttrsFnObjectKeyDeprecated(key, this.props.forwardedClass.displayName);
             }
 
             attr = attr(context);
 
-            if (
-              process.env.NODE_ENV !== 'production' &&
-              React.isValidElement(attr) &&
-              warnNonStyledComponentAttrsObjectKey
-            ) {
-              warnNonStyledComponentAttrsObjectKey(key, this.props.forwardedClass.displayName);
+            if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
+              this.warnNonStyledComponentAttrsObjectKey(key, this.props.forwardedClass.displayName);
             }
           }
         }
