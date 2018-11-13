@@ -86,6 +86,25 @@ describe('attrs', () => {
 `);
   });
 
+  it('defaultProps are merged into what function attrs receives', () => {
+    const Comp = styled.button.attrs(props => ({
+      'data-color': props.theme.color,
+    }))``;
+
+    Comp.defaultProps = {
+      theme: {
+        color: 'red',
+      },
+    };
+
+    expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
+<button
+  className="sc-a b"
+  data-color="red"
+/>
+`);
+  });
+
   it('pass props to the attr function', () => {
     const Comp = styled.button.attrs({
       type: props => (props.submit ? 'submit' : 'button'),
