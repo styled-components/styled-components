@@ -8,6 +8,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Fix function-form attrs to receive the full execution context (including theme) (see [#2210](https://github.com/styled-components/styled-components/pull/2210))
 
+- Adjust `innerRef` deprecation warning to not be fired if wrapping a custom component, since that underlying component may not be on forwardRef yet and actually using the prop (see [#2211](https://github.com/styled-components/styled-components/pull/2211))
+
 ## [v4.1.1] - 2018-11-12
 
 - Put back the try/catch guard around a part of the flattener that sometimes receives undetectable SFCs (fixes an errand hard error in an edge case)
