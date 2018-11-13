@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
-import styled from '../index';
+import styled, { ThemeProvider } from '../index';
 
 // for the purpose of testing warnings we want to make sure they're always fired
 jest.mock('../../utils/once', () => cb => cb);
@@ -276,6 +276,25 @@ describe('native', () => {
 
       expect(text.props).toMatchObject({
         children: 'Something else',
+        style: [{}],
+      });
+    });
+
+    it('function form allows access to theme', () => {
+      const Comp = styled.Text.attrs(props => ({
+        'data-color': props.theme.color,
+      }))``;
+
+      const wrapper = TestRenderer.create(
+        <ThemeProvider theme={{ color: 'red' }}>
+          <Comp>Something else</Comp>
+        </ThemeProvider>
+      );
+      const text = wrapper.root.findByType('Text');
+
+      expect(text.props).toMatchObject({
+        children: 'Something else',
+        'data-color': 'red',
         style: [{}],
       });
     });
