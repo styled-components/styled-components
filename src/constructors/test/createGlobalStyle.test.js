@@ -313,10 +313,6 @@ body{background:red;}"
     expect(getCSS(document).trim()).toMatchInlineSnapshot(
       `"/* sc-component-id:sc-global-1846532150 */"`
     );
-
-    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"The global style component sc-global-1846532150 was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head> (or your StyleSheetManager target.)"`
-    );
   });
 
   it(`should warn when children are passed as props`, () => {
@@ -375,25 +371,6 @@ div{display:inline-block;-webkit-animation:a 2s linear infinite;animation:a 2s l
 /* sc-component-id:sc-keyframes-a */
 @-webkit-keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}} @keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}}"
 `);
-  });
-
-  it('does not show a warning if multiple cgs are rendered with suppressMultiMountWarnings', () => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-    const { render } = setup();
-    const Component = createGlobalStyle`
-      div {
-        color: ${props => props.fg};
-      }
-    `;
-    render(
-      <div>
-        <Component fg="red" suppressMultiMountWarning />
-        <Component fg="blue" suppressMultiMountWarning />
-      </div>
-    );
-
-    expect(console.warn.mock.calls.length).toBe(0);
   });
 });
 
