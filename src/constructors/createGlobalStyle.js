@@ -1,6 +1,5 @@
 // @flow
 import React from 'react';
-import PropTypes from 'prop-types';
 import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import StyleSheet from '../models/StyleSheet';
@@ -27,14 +26,6 @@ export default function createGlobalStyle(
   const style = new GlobalStyle(rules, id);
 
   class GlobalStyleComponent extends React.Component<*, *> {
-    static propTypes = {
-      suppressMultiMountWarning: PropTypes.bool,
-    };
-
-    static defaultProps = {
-      suppressMultiMountWarning: false,
-    };
-
     styleSheet: Object;
 
     static globalStyle = style;
@@ -62,21 +53,6 @@ export default function createGlobalStyle(
       };
     }
 
-    componentDidMount() {
-      if (
-        process.env.NODE_ENV !== 'production' &&
-        IS_BROWSER &&
-        window.scCGSHMRCache[this.state.styledComponentId] > 1 &&
-        !this.props.suppressMultiMountWarning
-      ) {
-        console.warn(
-          `The global style component ${
-            this.state.styledComponentId
-          } was composed and rendered multiple times in your React component tree. Only the last-rendered copy will have its styles remain in <head> (or your StyleSheetManager target.)`
-        );
-      }
-    }
-
     componentWillUnmount() {
       if (window.scCGSHMRCache[this.state.styledComponentId]) {
         window.scCGSHMRCache[this.state.styledComponentId] -= 1;
@@ -93,6 +69,7 @@ export default function createGlobalStyle(
 
     render() {
       if (process.env.NODE_ENV !== 'production' && React.Children.count(this.props.children)) {
+        // eslint-disable-next-line no-console
         console.warn(
           `The global style component ${
             this.state.styledComponentId
@@ -115,6 +92,7 @@ export default function createGlobalStyle(
               return (
                 <ThemeConsumer>
                   {(theme?: Theme) => {
+                    // $FlowFixMe
                     const { defaultProps } = this.constructor;
 
                     const context = {
