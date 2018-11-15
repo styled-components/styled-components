@@ -8,7 +8,7 @@ import _StyledNativeComponent from '../models/StyledNativeComponent';
 
 import css from '../constructors/css';
 import constructWithOptions from '../constructors/constructWithOptions';
-import ThemeProvider from '../models/ThemeProvider';
+import ThemeProvider, { ThemeConsumer, ThemeContext } from '../models/ThemeProvider';
 import withTheme from '../hoc/withTheme';
 import isStyledComponent from '../utils/isStyledComponent';
 
@@ -19,7 +19,7 @@ const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
 const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag);
 
 /* React native lazy-requires each of these modules for some reason, so let's
-*  assume it's for a good reason and not eagerly load them all */
+ *  assume it's for a good reason and not eagerly load them all */
 const aliases = `ActivityIndicator ActivityIndicatorIOS ART Button DatePickerIOS DrawerLayoutAndroid
  Image ImageBackground ImageEditor ImageStore KeyboardAvoidingView ListView MapView Modal NavigatorIOS
  Picker PickerIOS ProgressBarAndroid ProgressViewIOS ScrollView SegmentedControlIOS Slider
@@ -40,5 +40,5 @@ aliases.split(/\s+/m).forEach(alias =>
   })
 );
 
-export { css, isStyledComponent, ThemeProvider, withTheme };
+export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme };
 export default styled;

@@ -10,6 +10,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Adjust `innerRef` deprecation warning to not be fired if wrapping a custom component, since that underlying component may not be on forwardRef yet and actually using the prop (see [#2211](https://github.com/styled-components/styled-components/pull/2211))
 
+- Expose the `ThemeConsumer` and `ThemeContext` exports for the native and primitives entries (see [#2217](https://github.com/styled-components/styled-components/pull/2217))
+
 - Remove `createGlobalStyle` multimount warning; Concurrent and Strict modes intentionally render the same component multiple times, which causes this warning to be triggered always even when usage is correct in the application (see [#2216](https://github.com/styled-components/styled-components/pull/2216))
 
 ## [v4.1.1] - 2018-11-12
