@@ -12,6 +12,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Expose the `ThemeConsumer` and `ThemeContext` exports for the native and primitives entries (see [#2217](https://github.com/styled-components/styled-components/pull/2217))
 
+- Remove `createGlobalStyle` multimount warning; Concurrent and Strict modes intentionally render the same component multiple times, which causes this warning to be triggered always even when usage is correct in the application (see [#2216](https://github.com/styled-components/styled-components/pull/2216))
+
 ## [v4.1.1] - 2018-11-12
 
 - Put back the try/catch guard around a part of the flattener that sometimes receives undetectable SFCs (fixes an errand hard error in an edge case)
