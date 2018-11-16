@@ -56,6 +56,12 @@ const prodPlugins = [
     'process.env.NODE_ENV': JSON.stringify('production'),
   }),
   terser({
+    mangle: {
+      safari10: true,
+    },
+    output: {
+      safari10: true,
+    },
     sourcemap: true,
   }),
 ];
