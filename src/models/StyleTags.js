@@ -125,7 +125,7 @@ const makeSpeedyTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>):
   const sizes: number[] = [];
 
   const extractImport = getImportRuleTag !== undefined;
-  /* indicates whther getImportRuleTag was called */
+  /* indicates whether getImportRuleTag was called */
   let usedImportRuleTag = false;
 
   const insertMarker = id => {
@@ -234,7 +234,7 @@ const makeBrowserTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>)
 
   const extractImport = getImportRuleTag !== undefined;
 
-  /* indicates whther getImportRuleTag was called */
+  /* indicates whether getImportRuleTag was called */
   let usedImportRuleTag = false;
 
   const insertMarker = id => {
