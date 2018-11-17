@@ -66,6 +66,7 @@ class StyledNativeComponent extends Component<*, *> {
             as: renderAs,
             forwardedClass,
             forwardedRef,
+            isRefExternal,
             innerRef,
             style = [],
             ...props
@@ -87,7 +88,13 @@ class StyledNativeComponent extends Component<*, *> {
             style: [generatedStyles].concat(style),
           };
 
-          if (forwardedRef) propsForElement.ref = forwardedRef;
+          if (forwardedRef) {
+            if (isRefExternal) {
+              propsForElement.forwardedRef = forwardedRef;
+            } else {
+              propsForElement.ref = forwardedRef;
+            }
+          }
 
           if (process.env.NODE_ENV !== 'production' && innerRef) {
             this.warnInnerRef(displayName);
@@ -182,7 +189,8 @@ export default (InlineStyle: Function) => {
       <ParentComponent
         {...props}
         forwardedClass={WrappedStyledNativeComponent}
-        forwardedRef={ref}
+        forwardedRef={ref !== null ? ref : props.forwardedRef}
+        isRefExternal={ref === null && props.forwardedRef !== undefined}
       />
     ));
 

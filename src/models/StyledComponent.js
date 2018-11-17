@@ -147,8 +147,13 @@ class StyledComponent extends Component<*> {
       }
 
       if (key === 'forwardedClass' || key === 'as') continue;
-      else if (key === 'forwardedRef') propsForElement.ref = computedProps[key];
-      else if (!isTargetTag || validAttr(key)) {
+      else if (key === 'forwardedRef') {
+        if (computedProps.isRefExternal) {
+          propsForElement[key] = computedProps[key];
+        } else {
+          propsForElement.ref = computedProps[key];
+        }
+      } else if (!isTargetTag || validAttr(key)) {
         // Don't pass through non HTML tags through to HTML elements
         propsForElement[key] = computedProps[key];
       }
@@ -275,7 +280,12 @@ export default function createStyledComponent(target: Target, options: Object, r
    * instead of extending ParentComponent to create _another_ interim class
    */
   const WrappedStyledComponent = React.forwardRef((props, ref) => (
-    <ParentComponent {...props} forwardedClass={WrappedStyledComponent} forwardedRef={ref} />
+    <ParentComponent
+      {...props}
+      forwardedClass={WrappedStyledComponent}
+      forwardedRef={ref !== null ? ref : props.forwardedRef}
+      isRefExternal={ref === null && props.forwardedRef !== undefined}
+    />
   ));
 
   // $FlowFixMe
