@@ -28,9 +28,7 @@ describe('extending', () => {
     TestRenderer.create(<Inner />);
     TestRenderer.create(<Outer />);
     expectCSSMatches(`
-      .sc-a {}
       .c { color:blue; font-weight:light; }
-      .sc-b {}
       .d { padding:1rem; }
       .d > .sc-a { font-weight:bold; }
     `);

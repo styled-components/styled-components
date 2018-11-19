@@ -62,7 +62,6 @@ describe('keyframes', () => {
     TestRenderer.create(<Comp />);
 
     expectCSSMatches(`
-      .sc-a {}
       .b {
         -webkit-animation: ${name} 2s linear infinite;
         animation: ${name} 2s linear infinite;
@@ -111,7 +110,6 @@ describe('keyframes', () => {
     TestRenderer.create(<Comp animation={animation} />);
 
     expectCSSMatches(`
-      .sc-a {}
       .b {
         -webkit-animation: ${name} 2s linear infinite;
         animation: ${name} 2s linear infinite;
@@ -190,7 +188,7 @@ describe('keyframes', () => {
 
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`
 "/* sc-component-id:sc-a */
-.sc-a{} .b{-webkit-animation:none;animation:none;}.c{-webkit-animation:hNeMbn 1s linear;animation:hNeMbn 1s linear;, dHUfhi 1s linear;}.d{-webkit-animation:dHUfhi 1s linear;animation:dHUfhi 1s linear;}.e{-webkit-animation:hNeMbn 1s linear;animation:hNeMbn 1s linear;}
+.b{-webkit-animation:none;animation:none;}.c{-webkit-animation:hNeMbn 1s linear;animation:hNeMbn 1s linear;, dHUfhi 1s linear;}.d{-webkit-animation:dHUfhi 1s linear;animation:dHUfhi 1s linear;}.e{-webkit-animation:hNeMbn 1s linear;animation:hNeMbn 1s linear;}
 /* sc-component-id:sc-keyframes-hNeMbn */
 @-webkit-keyframes hNeMbn{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}} @keyframes hNeMbn{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}}
 /* sc-component-id:sc-keyframes-dHUfhi */

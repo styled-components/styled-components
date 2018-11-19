@@ -16,14 +16,14 @@ describe('props', () => {
       color: ${props => props.fg || 'black'};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.sc-a {} .b { color:black; }');
+    expectCSSMatches('.b { color:black; }');
   });
   it('should execute interpolations and inject props', () => {
     const Comp = styled.div`
       color: ${props => props.fg || 'black'};
     `;
     TestRenderer.create(<Comp fg="red" />);
-    expectCSSMatches('.sc-a {} .b { color:red; }');
+    expectCSSMatches('.b { color:red; }');
   });
   it('should ignore non-0 falsy object interpolations', () => {
     const Comp = styled.div`
@@ -36,6 +36,6 @@ describe('props', () => {
       })};
     `;
     TestRenderer.create(<Comp fg="red" />);
-    expectCSSMatches('.sc-a {} .b { border-width:0; }');
+    expectCSSMatches('.b { border-width:0; }');
   });
 });

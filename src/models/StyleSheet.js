@@ -1,7 +1,7 @@
 // @flow
 import { cloneElement } from 'react';
 import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR, SC_VERSION_ATTR, SC_STREAM_ATTR } from '../constants';
-import { makeTag, makeRehydrationTag, type Tag } from './StyleTags';
+import { makeTag, rehydrate, type Tag } from './StyleTags';
 import extractComps from '../utils/extractCompsFromCSS';
 import { containsSourceMap } from './SourceMapManager';
 
@@ -74,13 +74,13 @@ export default class StyleSheet {
 
   /* rehydrate all SSR'd style tags */
   rehydrate() {
-    if (!IS_BROWSER || this.forceServer) {
-      return this;
-    }
+    if (!IS_BROWSER || this.forceServer) return this;
+
     /* retrieve all of our SSR style elements from the DOM */
-    const nodes = document.querySelectorAll(
+    const nodes: NodeList<HTMLStyleElement> = (document.querySelectorAll(
       `style[${SC_ATTR}][${SC_VERSION_ATTR}="${__VERSION__}"]`
-    );
+    ): any);
+
     let nodesInSingleTag = [];
     nodes.forEach(node => {
       if (containsSourceMap(node)) {
@@ -97,7 +97,7 @@ export default class StyleSheet {
     return this.rehydrateNodes(nodesInSingleTag);
   }
 
-  rehydrateNodes(nodes: Element[]) {
+  rehydrateNodes(nodes: HTMLStyleElement[]) {
     const els = [];
     const names = [];
     const extracted = [];
@@ -106,12 +106,9 @@ export default class StyleSheet {
     const nodesSize = nodes.length;
 
     /* abort rehydration if no previous style tags were found */
-    if (nodesSize === 0) {
-      return this;
-    }
+    if (!nodesSize) return this;
 
     for (let i = 0; i < nodesSize; i += 1) {
-      // $FlowFixMe: We can trust that all elements in this query are style elements
       const el = (nodes[i]: HTMLStyleElement);
 
       /* check if style tag is a streamed tag */
@@ -120,9 +117,9 @@ export default class StyleSheet {
       /* retrieve all component names */
       const elNames = (el.getAttribute(SC_ATTR) || '').trim().split(SPLIT_REGEX);
       const elNamesSize = elNames.length;
-      for (let j = 0; j < elNamesSize; j += 1) {
-        const name = elNames[j];
-        /* add rehydrated name to sheet to avoid readding styles */
+      for (let j = 0, name; j < elNamesSize; j += 1) {
+        name = elNames[j];
+        /* add rehydrated name to sheet to avoid re-adding styles */
         this.rehydratedNames[name] = true;
         names.push(name);
       }
@@ -136,21 +133,20 @@ export default class StyleSheet {
 
     /* abort rehydration if nothing was extracted */
     const extractedSize = extracted.length;
-    if (extractedSize === 0) {
-      return this;
-    }
+    if (!extractedSize) return this;
 
     /* create a tag to be used for rehydration */
     const tag = this.makeTag(null);
-    const rehydrationTag = makeRehydrationTag(tag, els, extracted, isStreamed);
+
+    rehydrate(tag, els, extracted);
 
     /* reset capacity and adjust MAX_SIZE by the initial size of the rehydration */
     this.capacity = Math.max(1, MAX_SIZE - extractedSize);
-    this.tags.push(rehydrationTag);
+    this.tags.push(tag);
 
     /* retrieve all component ids */
     for (let j = 0; j < extractedSize; j += 1) {
-      this.tagMap[extracted[j].componentId] = rehydrationTag;
+      this.tagMap[extracted[j].componentId] = tag;
     }
 
     return this;

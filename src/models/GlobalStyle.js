@@ -1,4 +1,5 @@
 // @flow
+import { EMPTY_ARRAY } from '../utils/empties';
 import flatten from '../utils/flatten';
 import isStaticRules from '../utils/isStaticRules';
 import stringifyRules from '../utils/stringifyRules';
@@ -18,8 +19,9 @@ export default class GlobalStyle {
   constructor(rules: RuleSet, componentId: string, sourceMap: SourceMap) {
     this.rules = rules;
     this.componentId = componentId;
-    this.isStatic = isStaticRules(rules);
+    this.isStatic = isStaticRules(rules, EMPTY_ARRAY);
     this.sourceMap = sourceMap;
+
     if (!StyleSheet.master.hasId(componentId)) {
       StyleSheet.master.deferredInject(componentId, [], sourceMap);
     }

@@ -6,6 +6,59 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Fix function-form attrs to receive the full execution context (including theme) (see [#2210](https://github.com/styled-components/styled-components/pull/2210))
+
+- Adjust `innerRef` deprecation warning to not be fired if wrapping a custom component, since that underlying component may not be on forwardRef yet and actually using the prop (see [#2211](https://github.com/styled-components/styled-components/pull/2211))
+
+- Expose the `ThemeConsumer` and `ThemeContext` exports for the native and primitives entries (see [#2217](https://github.com/styled-components/styled-components/pull/2217))
+
+- Remove `createGlobalStyle` multimount warning; Concurrent and Strict modes intentionally render the same component multiple times, which causes this warning to be triggered always even when usage is correct in the application (see [#2216](https://github.com/styled-components/styled-components/pull/2216))
+
+## [v4.1.1] - 2018-11-12
+
+- Put back the try/catch guard around a part of the flattener that sometimes receives undetectable SFCs (fixes an errand hard error in an edge case)
+
+## [v4.1.0] - 2018-11-12
+
+- Performance optimization for fully static (no function interpolation) styled-components by avoiding using `ThemeConsumer` since it isn't necessary, by [@mxstbr](https://github.com/mxstbr) (see [#2166](https://github.com/styled-components/styled-components/pull/2166))
+
+- Allow disabling "speedy" mode via global `SC_DISABLE_SPEEDY` variable, by [@devrelm](https://github.com/devrelm) (see [#2185](https://github.com/styled-components/styled-components/pull/2185))
+
+  To make use of this, you can either set `SC_DISABLE_SPEEDY` in your app's entry file or use something like `webpack.DefinePlugin` to do it at build time:
+
+  ```js
+  webpack.DefinePlugin({
+    SC_DISABLE_SPEEDY: true,
+  });
+  ```
+
+- Attrs can now be passed a function (see [#2200](https://github.com/styled-components/styled-components/pull/2200)); thanks [@oliverlaz](https://github.com/oliverlaz) for providing an early PoC PR for this!
+
+  e.g.:
+
+  ```js
+  styled.div.attrs(props => ({ 'aria-title': props.title }))``;
+  ```
+
+- Fix the `warnTooManyClasses` dev helper not being totally dead code eliminated in production (see [#2200](https://github.com/styled-components/styled-components/pull/2200))
+
+- Deprecate functions as object keys for object-form attrs (see [#2200](https://github.com/styled-components/styled-components/pull/2200))
+
+  e.g.:
+
+  ```js
+  styled.div.attrs({ 'aria-title': props => props.title })``; // bad
+  styled.div.attrs(props => ({ 'aria-title': props.title }))``; // good
+  ```
+
+  Support for this will be removed in styled-components v5. The primary impetus behind this change is to eliminate confusion around basic functions vs styled-components vs React components provided as values in the object-form attrs constructor, each of which has different handling behaviors. The single outer function to receive the props and then return a props object is conceptually simpler.
+
+- The standalone CDN build is now UMD-compliant and can be used with RequireJS, etc.
+
+- Add pixels to unitless numbers when object interpolation is used, by [@Fer0x](https://github.com/Fer0x) (see [#2173](https://github.com/styled-components/styled-components/pull/2173))
+
+- Trying to interpolate a non-styled component into CSS is now a hard error, rather than a warning (see [#2173](https://github.com/styled-components/styled-components/pull/2173))
+
 ## [v4.0.3] - 2018-10-30
 
 - Interpolating a styled component into a string now returns the static component selector (emotion cross-compat)
@@ -862,7 +915,9 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.0.3...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.1.1...master
+[v4.1.1]: https://github.com/styled-components/styled-components/compare/v4.1.0...v4.1.1
+[v4.1.0]: https://github.com/styled-components/styled-components/compare/v4.0.3...v4.1.0
 [v4.0.3]: https://github.com/styled-components/styled-components/compare/v4.0.2...v4.0.3
 [v4.0.2]: https://github.com/styled-components/styled-components/compare/v4.0.1...v4.0.2
 [v4.0.1]: https://github.com/styled-components/styled-components/compare/v4.0.0...v4.0.1
