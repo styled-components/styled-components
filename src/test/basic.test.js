@@ -213,6 +213,35 @@ describe('basic', () => {
       expect(wrapper.testRef.current).toBe(innerComponent);
     });
 
+    it('should pass along forwardedRef to the wrapped styled component', () => {
+      const InnerComponent = styled.div``;
+
+      class OuterComponent extends React.Component {
+        render() {
+          return <InnerComponent className={this.props.className} ref={this.props.forwardedRef} />;
+        }
+      }
+
+      const WrappedOuterComponent = styled(OuterComponent)``;
+
+      class Wrapper extends Component<*, *> {
+        testRef: any = React.createRef();
+
+        render() {
+          return (
+            <div>
+              <WrappedOuterComponent forwardedRef={this.testRef} />
+            </div>
+          );
+        }
+      }
+
+      const wrapper = renderIntoDocument(<Wrapper />);
+      const outerComponent = findRenderedComponentWithType(wrapper, OuterComponent);
+
+      expect(wrapper.testRef).toBe(outerComponent.props.forwardedRef);
+    });
+
     it('should respect the order of StyledComponent creation for CSS ordering', () => {
       const FirstComponent = styled.div`
         color: red;
