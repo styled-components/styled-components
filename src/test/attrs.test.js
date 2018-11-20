@@ -282,6 +282,15 @@ For example, { component: () => InnerComponent } instead of { component: InnerCo
 `);
     });
 
+    it('does not warn upon use of a Stateless Functional Component as children', () => {
+      const Inner = () => <div />;
+      const Comp = styled.div.attrs({ children: Inner })``;
+
+      TestRenderer.create(<Comp />);
+
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+
     it('warns for using fns as attrs object keys', () => {
       const Comp = styled.div.attrs({ 'data-text-color': props => props.textColor })``;
 
