@@ -14,6 +14,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Remove `createGlobalStyle` multimount warning; Concurrent and Strict modes intentionally render the same component multiple times, which causes this warning to be triggered always even when usage is correct in the application (see [#2216](https://github.com/styled-components/styled-components/pull/2216))
 
+- Don't treat uppercased strings as tag-like components and don't filter out props from them (see [#2225](https://github.com/styled-components/styled-components/pull/2225))
+
 ## [v4.1.1] - 2018-11-12
 
 - Put back the try/catch guard around a part of the flattener that sometimes receives undetectable SFCs (fixes an errand hard error in an edge case)

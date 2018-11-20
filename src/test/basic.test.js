@@ -145,6 +145,14 @@ describe('basic', () => {
     expectCSSMatches('.b { color:red; }');
   });
 
+  it('does not filter outs custom props for uppercased string-like components', () => {
+    const Comp = styled('Comp')`
+      color: red;
+    `;
+    const wrapper = TestRenderer.create(<Comp customProp="abc" />);
+    expect(wrapper.root.findByType("Comp").props.customProp).toBe("abc");
+  });
+
   describe('jsdom tests', () => {
     class InnerComponent extends Component<*, *> {
       render() {
