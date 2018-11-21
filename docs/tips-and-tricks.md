@@ -198,7 +198,7 @@ class Form extends Component {
 
   render() {
     return (
-      <StyledInput ref={this.inputRef} />
+      <StyledInput innerRef={this.inputRef} />
     )
   }
 }
