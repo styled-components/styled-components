@@ -98,12 +98,11 @@ class StyledComponent extends Component<*> {
     return <StyleSheetConsumer>{this.renderOuter}</StyleSheetConsumer>;
   }
 
-  renderOuter(styleSheet?: StyleSheet) {
+  renderOuter(styleSheet?: StyleSheet = StyleSheet.master) {
     this.styleSheet = styleSheet;
-    const { componentStyle } = this.props.forwardedClass;
 
     // No need to subscribe a static component to theme changes, it won't change anything
-    if (componentStyle.isStatic) return this.renderInner();
+    if (this.props.forwardedComponent.componentStyle.isStatic) return this.renderInner();
 
     return <ThemeConsumer>{this.renderInner}</ThemeConsumer>;
   }
@@ -113,26 +112,26 @@ class StyledComponent extends Component<*> {
       componentStyle,
       defaultProps,
       displayName,
+      foldedComponentIds,
       styledComponentId,
       target,
-    } = this.props.forwardedClass;
+    } = this.props.forwardedComponent;
 
     let generatedClassName;
     if (componentStyle.isStatic) {
-      generatedClassName = this.generateAndInjectStyles(EMPTY_OBJECT, this.props, this.styleSheet);
+      generatedClassName = this.generateAndInjectStyles(EMPTY_OBJECT, this.props);
     } else if (theme !== undefined) {
       generatedClassName = this.generateAndInjectStyles(
         determineTheme(this.props, theme, defaultProps),
-        this.props,
-        this.styleSheet
+        this.props
       );
     } else {
       generatedClassName = this.generateAndInjectStyles(
         this.props.theme || EMPTY_OBJECT,
-        this.props,
-        this.styleSheet
+        this.props
       );
     }
+
     const elementToBeCreated = this.props.as || this.attrs.as || target;
     const isTargetTag = isTag(elementToBeCreated);
 
@@ -146,7 +145,7 @@ class StyledComponent extends Component<*> {
         this.warnInnerRef(displayName);
       }
 
-      if (key === 'forwardedClass' || key === 'as') continue;
+      if (key === 'forwardedComponent' || key === 'as') continue;
       else if (key === 'forwardedRef') propsForElement.ref = computedProps[key];
       else if (!isTargetTag || validAttr(key)) {
         // Don't pass through non HTML tags through to HTML elements
@@ -158,12 +157,14 @@ class StyledComponent extends Component<*> {
       propsForElement.style = { ...this.attrs.style, ...this.props.style };
     }
 
-    propsForElement.className = [
-      this.props.className,
-      styledComponentId,
-      this.attrs.className,
-      generatedClassName,
-    ]
+    propsForElement.className = Array.prototype
+      .concat(
+        foldedComponentIds,
+        this.props.className,
+        styledComponentId,
+        this.attrs.className,
+        generatedClassName
+      )
       .filter(Boolean)
       .join(' ');
 
@@ -197,13 +198,13 @@ class StyledComponent extends Component<*> {
         if (!attrDefWasFn) {
           if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
             if (process.env.NODE_ENV !== 'production') {
-              this.warnAttrsFnObjectKeyDeprecated(key, props.forwardedClass.displayName);
+              this.warnAttrsFnObjectKeyDeprecated(key, props.forwardedComponent.displayName);
             }
 
             attr = attr(context);
 
             if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-              this.warnNonStyledComponentAttrsObjectKey(key, props.forwardedClass.displayName);
+              this.warnNonStyledComponentAttrsObjectKey(key, props.forwardedComponent.displayName);
             }
           }
         }
@@ -217,18 +218,18 @@ class StyledComponent extends Component<*> {
     return context;
   }
 
-  generateAndInjectStyles(theme: any, props: any, styleSheet: ?StyleSheet = StyleSheet.master) {
-    const { attrs, componentStyle, warnTooManyClasses } = props.forwardedClass;
+  generateAndInjectStyles(theme: any, props: any) {
+    const { attrs, componentStyle, warnTooManyClasses } = props.forwardedComponent;
 
     // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names
     if (componentStyle.isStatic && !attrs.length) {
-      return componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet);
+      return componentStyle.generateAndInjectStyles(EMPTY_OBJECT, this.styleSheet);
     }
 
     const className = componentStyle.generateAndInjectStyles(
       this.buildExecutionContext(theme, props, attrs),
-      styleSheet
+      this.styleSheet
     );
 
     if (process.env.NODE_ENV !== 'production' && warnTooManyClasses) warnTooManyClasses(className);
@@ -275,7 +276,7 @@ export default function createStyledComponent(target: Target, options: Object, r
    * instead of extending ParentComponent to create _another_ interim class
    */
   const WrappedStyledComponent = React.forwardRef((props, ref) => (
-    <ParentComponent {...props} forwardedClass={WrappedStyledComponent} forwardedRef={ref} />
+    <ParentComponent {...props} forwardedComponent={WrappedStyledComponent} forwardedRef={ref} />
   ));
 
   // $FlowFixMe
@@ -283,6 +284,13 @@ export default function createStyledComponent(target: Target, options: Object, r
   // $FlowFixMe
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
+
+  // $FlowFixMe
+  WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
+    ? // $FlowFixMe
+      Array.prototype.concat(target.foldedComponentIds, target.styledComponentId)
+    : EMPTY_ARRAY;
+
   // $FlowFixMe
   WrappedStyledComponent.styledComponentId = styledComponentId;
 
@@ -322,6 +330,7 @@ export default function createStyledComponent(target: Target, options: Object, r
       attrs: true,
       componentStyle: true,
       displayName: true,
+      foldedComponentIds: true,
       styledComponentId: true,
       target: true,
       withComponent: true,

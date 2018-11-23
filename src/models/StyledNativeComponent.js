@@ -64,14 +64,14 @@ class StyledNativeComponent extends Component<*, *> {
         {(theme?: Theme) => {
           const {
             as: renderAs,
-            forwardedClass,
+            forwardedComponent,
             forwardedRef,
             innerRef,
             style = [],
             ...props
           } = this.props;
 
-          const { defaultProps, displayName, target } = forwardedClass;
+          const { defaultProps, displayName, target } = forwardedComponent;
 
           let generatedStyles;
           if (theme !== undefined) {
@@ -126,13 +126,16 @@ class StyledNativeComponent extends Component<*, *> {
         if (!attrDefWasFn) {
           if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
             if (process.env.NODE_ENV !== 'production') {
-              this.warnAttrsFnObjectKeyDeprecated(key, this.props.forwardedClass.displayName);
+              this.warnAttrsFnObjectKeyDeprecated(key, this.props.forwardedComponent.displayName);
             }
 
             attr = attr(context);
 
             if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-              this.warnNonStyledComponentAttrsObjectKey(key, this.props.forwardedClass.displayName);
+              this.warnNonStyledComponentAttrsObjectKey(
+                key,
+                this.props.forwardedComponent.displayName
+              );
             }
           }
         }
@@ -147,9 +150,13 @@ class StyledNativeComponent extends Component<*, *> {
   }
 
   generateAndInjectStyles(theme: any, props: any) {
-    const { inlineStyle } = props.forwardedClass;
+    const { inlineStyle } = props.forwardedComponent;
 
-    const executionContext = this.buildExecutionContext(theme, props, props.forwardedClass.attrs);
+    const executionContext = this.buildExecutionContext(
+      theme,
+      props,
+      props.forwardedComponent.attrs
+    );
 
     return inlineStyle.generateStyleObject(executionContext);
   }
@@ -181,7 +188,7 @@ export default (InlineStyle: Function) => {
     const WrappedStyledNativeComponent = React.forwardRef((props, ref) => (
       <ParentComponent
         {...props}
-        forwardedClass={WrappedStyledNativeComponent}
+        forwardedComponent={WrappedStyledNativeComponent}
         forwardedRef={ref}
       />
     ));

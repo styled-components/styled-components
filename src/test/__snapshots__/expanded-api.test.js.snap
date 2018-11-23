@@ -32,13 +32,13 @@ exports[`expanded api "as" prop transfers all styles that have been applied 4`] 
 
 exports[`expanded api "as" prop transfers all styles that have been applied 5`] = `
 <div
-  className="sc-b e"
+  className="sc-a sc-b e"
 />
 `;
 
 exports[`expanded api "as" prop transfers all styles that have been applied 6`] = `
 <span
-  className="sc-c f"
+  className="sc-a sc-b sc-c f"
 />
 `;
 
