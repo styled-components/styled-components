@@ -100,7 +100,7 @@ class StyledComponent extends Component<*> {
 
   renderOuter(styleSheet?: StyleSheet) {
     this.styleSheet = styleSheet;
-    const { componentStyle } = this.props.forwardedClass;
+    const { componentStyle } = this.props.forwardedComponent;
 
     // No need to subscribe a static component to theme changes, it won't change anything
     if (componentStyle.isStatic) return this.renderInner();
@@ -115,7 +115,7 @@ class StyledComponent extends Component<*> {
       displayName,
       styledComponentId,
       target,
-    } = this.props.forwardedClass;
+    } = this.props.forwardedComponent;
 
     let generatedClassName;
     if (componentStyle.isStatic) {
@@ -146,7 +146,7 @@ class StyledComponent extends Component<*> {
         this.warnInnerRef(displayName);
       }
 
-      if (key === 'forwardedClass' || key === 'as') continue;
+      if (key === 'forwardedComponent' || key === 'as') continue;
       else if (key === 'forwardedRef') propsForElement.ref = computedProps[key];
       else if (!isTargetTag || validAttr(key)) {
         // Don't pass through non HTML tags through to HTML elements
@@ -197,13 +197,13 @@ class StyledComponent extends Component<*> {
         if (!attrDefWasFn) {
           if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
             if (process.env.NODE_ENV !== 'production') {
-              this.warnAttrsFnObjectKeyDeprecated(key, props.forwardedClass.displayName);
+              this.warnAttrsFnObjectKeyDeprecated(key, props.forwardedComponent.displayName);
             }
 
             attr = attr(context);
 
             if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-              this.warnNonStyledComponentAttrsObjectKey(key, props.forwardedClass.displayName);
+              this.warnNonStyledComponentAttrsObjectKey(key, props.forwardedComponent.displayName);
             }
           }
         }
@@ -218,7 +218,7 @@ class StyledComponent extends Component<*> {
   }
 
   generateAndInjectStyles(theme: any, props: any, styleSheet: ?StyleSheet = StyleSheet.master) {
-    const { attrs, componentStyle, warnTooManyClasses } = props.forwardedClass;
+    const { attrs, componentStyle, warnTooManyClasses } = props.forwardedComponent;
 
     // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names
@@ -275,7 +275,7 @@ export default function createStyledComponent(target: Target, options: Object, r
    * instead of extending ParentComponent to create _another_ interim class
    */
   const WrappedStyledComponent = React.forwardRef((props, ref) => (
-    <ParentComponent {...props} forwardedClass={WrappedStyledComponent} forwardedRef={ref} />
+    <ParentComponent {...props} forwardedComponent={WrappedStyledComponent} forwardedRef={ref} />
   ));
 
   // $FlowFixMe
