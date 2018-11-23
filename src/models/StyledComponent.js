@@ -98,12 +98,11 @@ class StyledComponent extends Component<*> {
     return <StyleSheetConsumer>{this.renderOuter}</StyleSheetConsumer>;
   }
 
-  renderOuter(styleSheet?: StyleSheet) {
+  renderOuter(styleSheet?: StyleSheet = StyleSheet.master) {
     this.styleSheet = styleSheet;
-    const { componentStyle } = this.props.forwardedComponent;
 
     // No need to subscribe a static component to theme changes, it won't change anything
-    if (componentStyle.isStatic) return this.renderInner();
+    if (this.props.forwardedComponent.componentStyle.isStatic) return this.renderInner();
 
     return <ThemeConsumer>{this.renderInner}</ThemeConsumer>;
   }
@@ -120,20 +119,19 @@ class StyledComponent extends Component<*> {
 
     let generatedClassName;
     if (componentStyle.isStatic) {
-      generatedClassName = this.generateAndInjectStyles(EMPTY_OBJECT, this.props, this.styleSheet);
+      generatedClassName = this.generateAndInjectStyles(EMPTY_OBJECT, this.props);
     } else if (theme !== undefined) {
       generatedClassName = this.generateAndInjectStyles(
         determineTheme(this.props, theme, defaultProps),
-        this.props,
-        this.styleSheet
+        this.props
       );
     } else {
       generatedClassName = this.generateAndInjectStyles(
         this.props.theme || EMPTY_OBJECT,
-        this.props,
-        this.styleSheet
+        this.props
       );
     }
+
     const elementToBeCreated = this.props.as || this.attrs.as || target;
     const isTargetTag = isTag(elementToBeCreated);
 
@@ -159,13 +157,14 @@ class StyledComponent extends Component<*> {
       propsForElement.style = { ...this.attrs.style, ...this.props.style };
     }
 
-    propsForElement.className = [
-      ...foldedClasses,
-      this.props.className,
-      styledComponentId,
-      this.attrs.className,
-      generatedClassName,
-    ]
+    propsForElement.className = Array.prototype
+      .concat(
+        foldedClasses,
+        this.props.className,
+        styledComponentId,
+        this.attrs.className,
+        generatedClassName
+      )
       .filter(Boolean)
       .join(' ');
 
@@ -219,18 +218,18 @@ class StyledComponent extends Component<*> {
     return context;
   }
 
-  generateAndInjectStyles(theme: any, props: any, styleSheet: ?StyleSheet = StyleSheet.master) {
+  generateAndInjectStyles(theme: any, props: any) {
     const { attrs, componentStyle, warnTooManyClasses } = props.forwardedComponent;
 
     // statically styled-components don't need to build an execution context object,
     // and shouldn't be increasing the number of class names
     if (componentStyle.isStatic && !attrs.length) {
-      return componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet);
+      return componentStyle.generateAndInjectStyles(EMPTY_OBJECT, this.styleSheet);
     }
 
     const className = componentStyle.generateAndInjectStyles(
       this.buildExecutionContext(theme, props, attrs),
-      styleSheet
+      this.styleSheet
     );
 
     if (process.env.NODE_ENV !== 'production' && warnTooManyClasses) warnTooManyClasses(className);
