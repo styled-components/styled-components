@@ -112,7 +112,7 @@ class StyledComponent extends Component<*> {
       componentStyle,
       defaultProps,
       displayName,
-      foldedClasses,
+      foldedComponentIds,
       styledComponentId,
       target,
     } = this.props.forwardedComponent;
@@ -159,7 +159,7 @@ class StyledComponent extends Component<*> {
 
     propsForElement.className = Array.prototype
       .concat(
-        foldedClasses,
+        foldedComponentIds,
         this.props.className,
         styledComponentId,
         this.attrs.className,
@@ -286,9 +286,9 @@ export default function createStyledComponent(target: Target, options: Object, r
   WrappedStyledComponent.displayName = displayName;
 
   // $FlowFixMe
-  WrappedStyledComponent.foldedClasses = isTargetStyledComp
+  WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
     ? // $FlowFixMe
-      Array.prototype.concat(target.foldedClasses, target.styledComponentId)
+      Array.prototype.concat(target.foldedComponentIds, target.styledComponentId)
     : EMPTY_ARRAY;
 
   // $FlowFixMe
@@ -330,7 +330,7 @@ export default function createStyledComponent(target: Target, options: Object, r
       attrs: true,
       componentStyle: true,
       displayName: true,
-      foldedClasses: true,
+      foldedComponentIds: true,
       styledComponentId: true,
       target: true,
       withComponent: true,
