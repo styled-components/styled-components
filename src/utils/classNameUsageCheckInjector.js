@@ -15,7 +15,7 @@ export default (target: Object) => {
       targetCDM.call(this);
     }
 
-    const forwardTarget = this.props.forwardedClass.target;
+    const forwardTarget = this.props.forwardedComponent.target;
 
     if (
       (target.props && target.props.suppressClassNameWarning) ||
