@@ -279,7 +279,7 @@ export default class StyleSheet {
       this.tagMap[id] = tag;
       return tag;
     }
-    return null;
+    return this.getTagForId(id);
   }
 
   /* mainly for createGlobalStyle to check for its id */

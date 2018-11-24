@@ -119,10 +119,10 @@ const wrapAsElement = (css: () => string, names: Names) => () => {
   return <style {...props} dangerouslySetInnerHTML={{ __html: css() }} />;
 };
 
-const cssWithSourceMap = (css: () => string, sourceMapManager: SourceMapManager) => {
-  if (process.env.NODE_ENV !== 'production' && sourceMapManager) {
+const cssWithSourceMap = (css: () => string, sourceMapManager: ?SourceMapManager) => {
+  if (process.env.NODE_ENV !== 'production') {
     return () => {
-      if (sourceMapManager.hasSourceMap()) {
+      if (sourceMapManager && sourceMapManager.hasSourceMap()) {
         return css() + sourceMapManager.sourceMapContent;
       }
       return css();
