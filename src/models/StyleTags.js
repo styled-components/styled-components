@@ -8,7 +8,7 @@ import StyledError from '../utils/error';
 import { type ExtractedComp } from '../utils/extractCompsFromCSS';
 import { splitByRules } from '../utils/stringifyRules';
 import getNonce from '../utils/nonce';
-import SourceMapManager from './SourceMapManager';
+import SourceMapManager, { sourceMapRegex } from './SourceMapManager';
 
 import {
   type Names,
@@ -117,6 +117,18 @@ const wrapAsElement = (css: () => string, names: Names) => () => {
 
   // eslint-disable-next-line react/no-danger
   return <style {...props} dangerouslySetInnerHTML={{ __html: css() }} />;
+};
+
+const cssWithSourceMap = (css: () => string, sourceMapManager: SourceMapManager) => {
+  if (process.env.NODE_ENV !== 'production' && sourceMapManager) {
+    return () => {
+      if (sourceMapManager.hasSourceMap()) {
+        return css() + sourceMapManager.sourceMapContent;
+      }
+      return css();
+    };
+  }
+  return css;
 };
 
 const getIdsFromMarkersFactory = (markers: Object) => (): string[] => Object.keys(markers);
@@ -239,7 +251,8 @@ export const makeBrowserTag = (
   const names = (Object.create(null): Object);
   const markers = Object.create(null);
 
-  const sourceMapManager = new SourceMapManager(el);
+  const sourceMapManager =
+    process.env.NODE_ENV !== 'production' ? new SourceMapManager(el) : undefined;
 
   const extractImport = getImportRuleTag !== undefined;
 
@@ -301,7 +314,7 @@ export const makeBrowserTag = (
     }
   };
 
-  const css = () => {
+  const css = cssWithSourceMap(() => {
     let str = '';
 
     // eslint-disable-next-line guard-for-in
@@ -310,14 +323,7 @@ export const makeBrowserTag = (
     }
 
     return str;
-  };
-
-  const cssWithSourceMap = () => {
-    if (sourceMapManager.hasSourceMap()) {
-      return css() + sourceMapManager.sourceMapContent;
-    }
-    return css();
-  };
+  }, sourceMapManager);
 
   return {
     clone() {
@@ -332,8 +338,8 @@ export const makeBrowserTag = (
     sourceMapManager,
     sealed: false,
     styleTag: el,
-    toElement: wrapAsElement(cssWithSourceMap, names),
-    toHTML: wrapAsHtmlTag(cssWithSourceMap, names),
+    toElement: wrapAsElement(css, names),
+    toHTML: wrapAsHtmlTag(css, names),
   };
 };
 
@@ -341,7 +347,8 @@ const makeServerTag = (namesArg, markersArg): Tag<[string]> => {
   const names = namesArg === undefined ? (Object.create(null): Object) : namesArg;
   const markers = markersArg === undefined ? Object.create(null) : markersArg;
 
-  const sourceMapManager = new SourceMapManager();
+  const sourceMapManager =
+    process.env.NODE_ENV !== 'production' ? new SourceMapManager() : undefined;
   const insertMarker = id => {
     const prev = markers[id];
     if (prev !== undefined) {
@@ -364,7 +371,7 @@ const makeServerTag = (namesArg, markersArg): Tag<[string]> => {
     resetIdNames(names, id);
   };
 
-  const css = () => {
+  const css = cssWithSourceMap(() => {
     let str = '';
     // eslint-disable-next-line guard-for-in
     for (const id in markers) {
@@ -374,14 +381,7 @@ const makeServerTag = (namesArg, markersArg): Tag<[string]> => {
       }
     }
     return str;
-  };
-
-  const cssWithSourceMap = () => {
-    if (sourceMapManager.hasSourceMap()) {
-      return css() + sourceMapManager.sourceMapContent;
-    }
-    return css();
-  };
+  }, sourceMapManager);
 
   const clone = () => {
     const namesClone = cloneNames(names);
@@ -406,8 +406,8 @@ const makeServerTag = (namesArg, markersArg): Tag<[string]> => {
     sourceMapManager,
     sealed: false,
     styleTag: null,
-    toElement: wrapAsElement(cssWithSourceMap, names),
-    toHTML: wrapAsHtmlTag(cssWithSourceMap, names),
+    toElement: wrapAsElement(css, names),
+    toHTML: wrapAsHtmlTag(css, names),
   };
 
   return tag;
@@ -441,8 +441,15 @@ export const rehydrate = (
   /* add all extracted components to the new tag */
   for (let i = 0, len = extracted.length; i < len; i += 1) {
     const { componentId, cssFromDOM } = extracted[i];
+
     const cssRules = splitByRules(cssFromDOM);
     tag.insertRules(componentId, cssRules);
+    if (process.env.NODE_ENV !== 'production') {
+      const sourceMap = (cssFromDOM.match(sourceMapRegex) || [])[0];
+      if (tag.sourceMapManager && sourceMap) {
+        tag.sourceMapManager.inject(sourceMap);
+      }
+    }
   }
 
   /* remove old HTMLStyleElements, since they have been rehydrated */

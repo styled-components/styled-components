@@ -266,17 +266,20 @@ export default class StyleSheet {
   }
 
   getSourceMapTagForId(id: string): Tag<any> {
-    /* simply return a tag, when the componentId was already assigned one */
-    const prev = this.getPrevUnsealedTagForId(id);
-    if (prev) {
-      return prev;
-    }
+    if (process.env.NODE_ENV !== 'production') {
+      /* simply return a tag, when the componentId was already assigned one */
+      const prev = this.getPrevUnsealedTagForId(id);
+      if (prev) {
+        return prev;
+      }
 
-    const lastTag = this.tags[this.tags.length - 1];
-    /* create a new tag for sourceMap because one style tag can contain only one sourceMap */
-    const tag = this.createTagForId(id, lastTag);
-    this.tagMap[id] = tag;
-    return tag;
+      const lastTag = this.tags[this.tags.length - 1];
+      /* create a new tag for sourceMap because one style tag can contain only one sourceMap */
+      const tag = this.createTagForId(id, lastTag);
+      this.tagMap[id] = tag;
+      return tag;
+    }
+    return null;
   }
 
   /* mainly for createGlobalStyle to check for its id */
@@ -305,7 +308,10 @@ export default class StyleSheet {
       clones[i].deferredInject(id, cssRules, sourceMap);
     }
 
-    const tag = sourceMap ? this.getSourceMapTagForId(id) : this.getTagForId(id);
+    const tag =
+      sourceMap && process.env.NODE_ENV !== 'production'
+        ? this.getSourceMapTagForId(id)
+        : this.getTagForId(id);
     tag.insertMarker(id);
     if (sourceMap && tag.sourceMapManager) {
       tag.sourceMapManager.inject(sourceMap);
@@ -321,7 +327,10 @@ export default class StyleSheet {
       clones[i].inject(id, cssRules, name, sourceMap);
     }
 
-    const tag = sourceMap ? this.getSourceMapTagForId(id) : this.getTagForId(id);
+    const tag =
+      sourceMap && process.env.NODE_ENV !== 'production'
+        ? this.getSourceMapTagForId(id)
+        : this.getTagForId(id);
 
     /* add deferred rules for component */
     if (this.deferred[id] !== undefined) {
@@ -336,7 +345,7 @@ export default class StyleSheet {
       tag.insertRules(id, cssRules, name);
     }
 
-    if (sourceMap && tag.sourceMapManager) {
+    if (process.env.NODE_ENV !== 'production' && sourceMap && tag.sourceMapManager) {
       tag.sourceMapManager.inject(sourceMap);
     }
   }
