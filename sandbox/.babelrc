@@ -1,11 +1,13 @@
 {
-  "presets": [
-    ["env", { "loose": true, "modules": false }],
-    "react"
-  ],
+  "presets": [["env", { "loose": true, "modules": false }], "react"],
   "plugins": [
-    "babel-plugin-styled-components",
+    [
+      "babel-plugin-styled-components",
+      {
+        "sourceMap": true
+      }
+    ],
     "transform-object-rest-spread",
-    "transform-class-properties",
+    "transform-class-properties"
   ]
 }

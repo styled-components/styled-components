@@ -3,7 +3,6 @@ import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import TestRenderer from 'react-test-renderer';
 import { resetStyled } from './utils';
-import { makeBrowserTag, makeRehydrationTag } from '../models/StyleTags';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 import ServerStyleSheet from '../models/ServerStyleSheet';
 
@@ -23,8 +22,6 @@ describe('sourceMap', () => {
   beforeEach(() => {
     styled = resetStyled();
   });
-
-  describe('makeBrowserTag', () => {});
 
   describe('styledComponent', () => {
     it('should inject sourceMap', () => {
@@ -124,6 +121,35 @@ describe('sourceMap', () => {
       const [firstGlobalStyleTag, secondGlobalStyleTag] = container.querySelectorAll('style');
       expect(secondGlobalStyleTag.innerHTML.includes(fakeSourceMap)).toBe(true);
       expect(secondGlobalStyleTag.innerHTML.includes('body { color: red }'));
+    });
+  });
+
+  describe('ssr', () => {
+    it('should inject sourceMap when we have style', () => {
+      styled = resetStyled(true);
+      const fakeSourceMap = '/* fake source map */';
+      const HasStyle = styled('p').withConfig({
+        sourceMap: fakeSourceMap,
+      })`
+        color: red;
+      `;
+      const hasStyleSheet = new ServerStyleSheet();
+      ReactDOMServer.renderToString(hasStyleSheet.collectStyles(<HasStyle />));
+      expect(hasStyleSheet.getStyleTags()).toEqual(expect.stringContaining(fakeSourceMap));
+    });
+
+    it('should not inject sourceMap when we do not have style', () => {
+      styled = resetStyled(true);
+      const fakeSourceMap = '/* fake source map */';
+      const NoStyle = styled('p').withConfig({
+        sourceMap: fakeSourceMap,
+      })`
+        /* some comment */
+      `;
+
+      const noStyleSheet = new ServerStyleSheet();
+      ReactDOMServer.renderToString(noStyleSheet.collectStyles(<NoStyle />));
+      expect(noStyleSheet.getStyleTags()).not.toEqual(expect.stringContaining(fakeSourceMap));
     });
   });
 });

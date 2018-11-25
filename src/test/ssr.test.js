@@ -354,4 +354,16 @@ describe('ssr', () => {
       });
     });
   });
+
+  it('should not create marker when we do not have any style', () => {
+    const NoStyle = styled.p`
+      /* some comment */
+    `;
+    const sheet = new ServerStyleSheet();
+    const jsx = sheet.collectStyles(<NoStyle />);
+    renderToString(jsx);
+    expect(sheet.getStyleTags()).toBe(
+      '<style data-styled="b" data-styled-version="JEST_MOCK_VERSION"></style>'
+    );
+  });
 });

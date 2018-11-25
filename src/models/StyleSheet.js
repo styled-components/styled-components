@@ -154,7 +154,7 @@ export default class StyleSheet {
 
   /* retrieve a "master" instance of StyleSheet which is typically used when no other is available
    * The master StyleSheet is targeted by createGlobalStyle, keyframes, and components outside of any
-    * StyleSheetManager's context */
+   * StyleSheetManager's context */
   static get master(): StyleSheet {
     return master || (master = new StyleSheet().rehydrate());
   }
@@ -362,6 +362,9 @@ export default class StyleSheet {
 
     /* remove all rules from the tag */
     tag.removeRules(id);
+    if (process.env.NODE_ENV !== 'production' && tag.sourceMapManager) {
+      tag.sourceMapManager.remove();
+    }
 
     /* ignore possible rehydrated names */
     this.ignoreRehydratedNames[id] = true;

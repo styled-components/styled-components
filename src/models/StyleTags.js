@@ -123,7 +123,12 @@ const cssWithSourceMap = (css: () => string, sourceMapManager: ?SourceMapManager
   if (process.env.NODE_ENV !== 'production') {
     return () => {
       if (sourceMapManager && sourceMapManager.hasSourceMap()) {
-        return css() + sourceMapManager.sourceMapContent;
+        const cssString = css();
+        const cssStringContainsRulesOrMarker = cssString.trim() !== '';
+        if (cssStringContainsRulesOrMarker) {
+          return cssString + sourceMapManager.sourceMapContent;
+        }
+        return cssString;
       }
       return css();
     };
@@ -244,10 +249,7 @@ const makeSpeedyTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>):
 
 const makeTextNode = id => document.createTextNode(makeTextMarker(id));
 
-export const makeBrowserTag = (
-  el: HTMLStyleElement,
-  getImportRuleTag: ?() => Tag<any>
-): Tag<Text> => {
+const makeBrowserTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>): Tag<Text> => {
   const names = (Object.create(null): Object);
   const markers = Object.create(null);
 
