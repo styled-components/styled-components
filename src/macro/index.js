@@ -28,8 +28,7 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
     // generate new identifier and add to imports
     let id;
     if (refName === 'default') {
-      id = program.scope.generateUidIdentifier('styled');
-      imports.specifiers.push(t.importDefaultSpecifier(id));
+      imports.specifiers.push(t.importDefaultSpecifier(t.identifier('styled')));
     } else {
       id = program.scope.generateUidIdentifier(refName);
       imports.specifiers.push(t.importSpecifier(id, t.identifier(refName)));
