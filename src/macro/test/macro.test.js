@@ -12,6 +12,15 @@ styled.div\`
 \`
 `;
 
+const customStyledExampleCode = `
+import myStyled from '../../macro'
+import styled from 'another-package'
+
+myStyled.div\`
+  background: \${p => (p.error ? 'red' : 'green')};
+\`
+`;
+
 const cssExampleCode = `
 import { css } from '../../macro'
 
@@ -59,9 +68,9 @@ styled(Hello)\`
 `;
 
 const requireExampleCode = `
-const myStyled = require('../../macro')
+const styled = require('../../macro')
 
-myStyled.div\`
+styled.div\`
   background: red;
 \`
 `;
@@ -77,6 +86,7 @@ pluginTester({
   babelOptions: { filename: __filename },
   tests: {
     'should work with styled': styledExampleCode,
+    'should work with custom import name': customStyledExampleCode,
     'should work with { css }': cssExampleCode,
     'should work with { keyframes }': keyframesExampleCode,
     'should work with { createGlobalStyle }': createGlobalStyleExampleCode,
