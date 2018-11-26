@@ -10,10 +10,10 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import styled from 'styled-components';
+import _styled from 'styled-components';
 
 
-styled.div.withConfig({
+_styled.div.withConfig({
   displayName: 'macrotest'
 })(['background:', ';'], p => p.error ? 'red' : 'green');
 "
@@ -32,13 +32,13 @@ styled(Hello)\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import styled from 'styled-components';
+import _styled from 'styled-components';
 import React from 'react';
 
 
 const Hello = () => React.createComponent(div, null, 'hello');
 
-styled(Hello).withConfig({
+_styled(Hello).withConfig({
   displayName: 'macrotest',
   componentId: 'sc-11gvsec-0'
 })(['background:red;']);
@@ -60,7 +60,7 @@ React.createComponent(
 import { ThemeProvider as _ThemeProvider } from 'styled-components';
 
 
-React.createComponent([object Object], { theme: { color: 'red' } }, 'hello');
+React.createComponent(_ThemeProvider, { theme: { color: 'red' } }, 'hello');
 "
 `;
 
@@ -77,7 +77,7 @@ createGlobalStyle\`
 import { createGlobalStyle as _createGlobalStyle } from 'styled-components';
 
 
-[object Object]\`
+_createGlobalStyle\`
   background: red;
 \`;
 "
@@ -96,9 +96,7 @@ css\`
 import { css as _css } from 'styled-components';
 
 
-[object Object]\`
-  color: \${props => props.whiteColor ? 'white' : 'black'};
-\`;
+_css(['color:', ';'], props => props.whiteColor ? 'white' : 'black');
 "
 `;
 
@@ -116,10 +114,7 @@ keyframes\`
 import { keyframes as _keyframes } from 'styled-components';
 
 
-[object Object]\`
-  0% { opacity: 0; }
-  100% { opacity: 1; }
-\`;
+_keyframes(['0%{opacity:0;}100%{opacity:1;}']);
 "
 `;
 
@@ -134,11 +129,11 @@ myStyled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import myStyled from 'styled-components';
+import _styled from 'styled-components';
 
 import styled from 'another-package';
 
-myStyled.div.withConfig({
+_styled.div.withConfig({
   displayName: 'macrotest',
   componentId: 'sc-11gvsec-0'
 })(['background:', ';'], p => p.error ? 'red' : 'green');
@@ -155,10 +150,10 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import styled from 'styled-components';
+import _styled from 'styled-components';
 
 
-styled.div.withConfig({
+_styled.div.withConfig({
   displayName: 'macrotest',
   componentId: 'sc-11gvsec-0'
 })(['background:red;']);
@@ -175,10 +170,10 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import styled from 'styled-components';
+import _styled from 'styled-components';
 
 
-styled.div.withConfig({
+_styled.div.withConfig({
   displayName: 'macrotest',
   componentId: 'sc-11gvsec-0'
 })(['background:', ';'], p => p.error ? 'red' : 'green');
