@@ -43,7 +43,7 @@ export default function createGlobalStyle(
       }
 
       /**
-       * This fixes HMR compatiblility. Don't ask me why, but this combination of
+       * This fixes HMR compatibility. Don't ask me why, but this combination of
        * caching the closure variables via statics and then persisting the statics in
        * state works across HMR where no other combination did. ¯\_(ツ)_/¯
        */
