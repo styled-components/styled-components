@@ -16,6 +16,7 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
 
   // references looks like this
   // { default: [path, path], css: [path], ... }
+  let customImportName;
   Object.keys(references).forEach(refName => {
     if (!allowedImports.includes(refName)) {
       throw new MacroError(
@@ -29,6 +30,7 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
     let name;
     if (refName === 'default') {
       name = program.scope.generateUidIdentifier('styled');
+      customImportName = name;
       imports.specifiers.push(t.importDefaultSpecifier(name));
     } else {
       name = program.scope.generateUidIdentifier(refName);
@@ -38,12 +40,12 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
     // update references with the new identifiers
     references[refName].forEach(referencePath => {
       // eslint-disable-next-line no-param-reassign
-      referencePath.node.name = name;
+      referencePath.node.name = name.name;
     });
   });
 
   // apply babel-plugin-styled-components to the file
-  const stateWithOpts = { ...state, opts: config };
+  const stateWithOpts = { ...state, opts: config, customImportName };
   program.traverse(babelPlugin({ types: t }).visitor, stateWithOpts);
 }
 
