@@ -26,18 +26,19 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
     }
 
     // generate new identifier and add to imports
-    let id;
+    let name;
     if (refName === 'default') {
-      imports.specifiers.push(t.importDefaultSpecifier(t.identifier('styled')));
+      name = 'styled';
+      imports.specifiers.push(t.importDefaultSpecifier(t.identifier(name)));
     } else {
-      id = program.scope.generateUidIdentifier(refName);
-      imports.specifiers.push(t.importSpecifier(id, t.identifier(refName)));
+      name = program.scope.generateUidIdentifier(refName);
+      imports.specifiers.push(t.importSpecifier(name, t.identifier(refName)));
     }
 
     // update references with the new identifiers
     references[refName].forEach(referencePath => {
       // eslint-disable-next-line no-param-reassign
-      referencePath.node.name = id.name;
+      referencePath.node.name = name;
     });
   });
 
