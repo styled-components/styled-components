@@ -34,7 +34,7 @@ describe('extending', () => {
     `);
   });
 
-  describe('heridity', () => {
+  describe('inheritance', () => {
 
     const setupParent = () => {
       const colors = {
