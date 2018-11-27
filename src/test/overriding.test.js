@@ -79,31 +79,31 @@ describe('extending', () => {
     describe('when overriding with another component', () => {
       it('should override parents defaultProps', () => {
         const Parent = setupParent();
-        const Child = styled(Parent.withComponent('h2'))``;
-        const Grandson = styled(Child.withComponent('h3'))``;
+        const Child = styled(Parent).attrs({as: 'h2'})``;
+        const Grandson = styled(Child).attrs({as: 'h3'})``;
         console.log
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);
         TestRenderer.create(<Grandson />);
         expectCSSMatches(`
-          .f{ position:relative; color:red; }
-          .g{ position:relative; color:blue; }
-          .h{ position:relative; color:green; }
+          .d{ position:relative; color:red; }
+          .e{ position:relative; color:blue; }
+          .f{ position:relative; color:green; }
         `);
       });
       it('should evaluate grandsons props', () => {
         const Parent = setupParent();
-        const Child = styled(Parent.withComponent('h2'))``;
-        const Grandson = styled(Child.withComponent('h3'))``;
+        const Child = styled(Parent).attrs({as: 'h2'})``;
+        const Grandson = styled(Child).attrs({as: 'h3'})``;
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);
         TestRenderer.create(<Grandson color="primary" />);
         expectCSSMatches(`
+          .d{ position:relative; color:red; }
+          .e{ position:relative; color:blue; }
           .f{ position:relative; color:red; }
-          .g{ position:relative; color:blue; }
-          .h{ position:relative; color:red; }
         `);
       });
     });
