@@ -33,4 +33,56 @@ describe('extending', () => {
       .d > .sc-a { font-weight:bold; }
     `);
   });
+
+  describe('heridity', () => {
+
+    const setupParent = () => {
+      const colors = {
+        primary: 'red',
+        secondary: 'blue',
+        tertiary: 'green',
+      }
+      const Parent = styled.h1`
+        position: relative;
+        color: ${props => colors[props.color]};
+      `;
+      return Parent;
+    }
+
+    const evaluateSnapshot = (Parent, Child, Grandson) => {
+      Parent.defaultProps = {
+        color: 'primary',
+      }
+      Child.defaultProps = {
+        color: 'secondary',
+      }
+      Grandson.defaultProps = {
+        color: 'tertiary',
+      }
+      TestRenderer.create(<Parent />);
+      TestRenderer.create(<Child />);
+      TestRenderer.create(<Grandson />);
+      expectCSSMatches(`
+        .d{ position:relative; color:red; }
+        .e{ position:relative; color:blue; }
+        .f{ position:relative; color:green; }
+      `);
+    }
+
+    it('should override parents defaultProps', () => {
+      const Parent = setupParent();
+      const Child = styled(Parent)``;
+      const Grandson = styled(Child)``;
+      evaluateSnapshot(Parent, Child, Grandson);
+    });
+    
+    describe('when overriding with another component', () => {
+      it('should override parents defaultProps', () => {
+        const Parent = setupParent();
+        const Child = styled(Parent.withComponent('h2'))``;
+        const Grandson = styled(Child.withComponent('h3'))``;
+        evaluateSnapshot(Parent, Child, Grandson);
+      });
+    });
+  });
 });
