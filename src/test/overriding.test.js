@@ -33,4 +33,79 @@ describe('extending', () => {
       .d > .sc-a { font-weight:bold; }
     `);
   });
+
+  describe('inheritance', () => {
+
+    const setupParent = () => {
+      const colors = {
+        primary: 'red',
+        secondary: 'blue',
+        tertiary: 'green',
+      }
+      const Parent = styled.h1`
+        position: relative;
+        color: ${props => colors[props.color]};
+      `;
+      return Parent;
+    }
+
+    const addDefaultProps = (Parent, Child, Grandson) => {
+      Parent.defaultProps = {
+        color: 'primary',
+      }
+      Child.defaultProps = {
+        color: 'secondary',
+      }
+      Grandson.defaultProps = {
+        color: 'tertiary',
+      }
+    }
+
+    it('should override parents defaultProps', () => {
+      const Parent = setupParent();
+      const Child = styled(Parent)``;
+      const Grandson = styled(Child)``;
+      addDefaultProps(Parent, Child, Grandson);
+      TestRenderer.create(<Parent />);
+      TestRenderer.create(<Child />);
+      TestRenderer.create(<Grandson />);
+      expectCSSMatches(`
+        .d{ position:relative; color:red; }
+        .e{ position:relative; color:blue; }
+        .f{ position:relative; color:green; }
+      `);
+    });
+
+    describe('when overriding with another component', () => {
+      it('should override parents defaultProps', () => {
+        const Parent = setupParent();
+        const Child = styled(Parent).attrs({as: 'h2'})``;
+        const Grandson = styled(Child).attrs({as: 'h3'})``;
+        console.log
+        addDefaultProps(Parent, Child, Grandson);
+        TestRenderer.create(<Parent />);
+        TestRenderer.create(<Child />);
+        TestRenderer.create(<Grandson />);
+        expectCSSMatches(`
+          .d{ position:relative; color:red; }
+          .e{ position:relative; color:blue; }
+          .f{ position:relative; color:green; }
+        `);
+      });
+      it('should evaluate grandsons props', () => {
+        const Parent = setupParent();
+        const Child = styled(Parent).attrs({as: 'h2'})``;
+        const Grandson = styled(Child).attrs({as: 'h3'})``;
+        addDefaultProps(Parent, Child, Grandson);
+        TestRenderer.create(<Parent />);
+        TestRenderer.create(<Child />);
+        TestRenderer.create(<Grandson color="primary" />);
+        expectCSSMatches(`
+          .d{ position:relative; color:red; }
+          .e{ position:relative; color:blue; }
+          .f{ position:relative; color:red; }
+        `);
+      });
+    });
+  });
 });
