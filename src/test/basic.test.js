@@ -150,7 +150,15 @@ describe('basic', () => {
       color: red;
     `;
     const wrapper = TestRenderer.create(<Comp customProp="abc" />);
-    expect(wrapper.root.findByType("Comp").props.customProp).toBe("abc");
+    expect(wrapper.root.findByType('Comp').props.customProp).toBe('abc');
+  });
+
+  it('creates a proper displayName for uppercased string-like components', () => {
+    const Comp = styled('Comp')`
+      color: red;
+    `;
+
+    expect(Comp.displayName).toBe('Styled(Comp)');
   });
 
   describe('jsdom tests', () => {
