@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.1.2] - 2018-11-28
+
 - Fix function-form attrs to receive the full execution context (including theme) (see [#2210](https://github.com/styled-components/styled-components/pull/2210))
 
 - Adjust `innerRef` deprecation warning to not be fired if wrapping a custom component, since that underlying component may not be on forwardRef yet and actually using the prop (see [#2211](https://github.com/styled-components/styled-components/pull/2211))
@@ -919,7 +921,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.1.1...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.1.2...master
+[v4.1.2]: https://github.com/styled-components/styled-components/compare/v4.1.1...v4.1.2
 [v4.1.1]: https://github.com/styled-components/styled-components/compare/v4.1.0...v4.1.1
 [v4.1.0]: https://github.com/styled-components/styled-components/compare/v4.0.3...v4.1.0
 [v4.0.3]: https://github.com/styled-components/styled-components/compare/v4.0.2...v4.0.3
