@@ -16,6 +16,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Folded components are now targettable via component selector as in v3 if you used the old `.extend` API (see [#2239](https://github.com/styled-components/styled-components/pull/2239))
 
+- Don't treat uppercased strings as tag-like components and don't filter out props from them (see [#2225](https://github.com/styled-components/styled-components/pull/2225))
+
 ## [v4.1.1] - 2018-11-12
 
 - Put back the try/catch guard around a part of the flattener that sometimes receives undetectable SFCs (fixes an errand hard error in an edge case)

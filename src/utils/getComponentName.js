@@ -2,5 +2,10 @@
 import type { ComponentType } from 'react';
 
 export default function getComponentName(target: ComponentType<*>): string {
-  return target.displayName || target.name || 'Component';
+  return (
+    (process.env.NODE_ENV !== 'production' ? typeof target === 'string' && target : false) ||
+    target.displayName ||
+    target.name ||
+    'Component'
+  );
 }
