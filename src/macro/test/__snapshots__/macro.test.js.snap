@@ -118,11 +118,33 @@ _keyframes(['0%{opacity:0;}100%{opacity:1;}']);
 "
 `;
 
-exports[`macro should work with require() to import styled-components: should work with require() to import styled-components 1`] = `
+exports[`macro should work with custom import name: should work with custom import name 1`] = `
 "
-const myStyled = require('../../macro')
+import myStyled from '../../macro'
+import styled from 'another-package'
 
 myStyled.div\`
+  background: \${p => (p.error ? 'red' : 'green')};
+\`
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import _styled from 'styled-components';
+
+import styled from 'another-package';
+
+_styled.div.withConfig({
+  displayName: 'macrotest',
+  componentId: 'sc-11gvsec-0'
+})(['background:', ';'], p => p.error ? 'red' : 'green');
+"
+`;
+
+exports[`macro should work with require() to import styled-components: should work with require() to import styled-components 1`] = `
+"
+const styled = require('../../macro')
+
+styled.div\`
   background: red;
 \`
 

@@ -16,6 +16,7 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
 
   // references looks like this
   // { default: [path, path], css: [path], ... }
+  let customImportName;
   Object.keys(references).forEach(refName => {
     if (!allowedImports.includes(refName)) {
       throw new MacroError(
@@ -29,6 +30,7 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
     let id;
     if (refName === 'default') {
       id = program.scope.generateUidIdentifier('styled');
+      customImportName = id;
       imports.specifiers.push(t.importDefaultSpecifier(id));
     } else {
       id = program.scope.generateUidIdentifier(refName);
@@ -43,7 +45,7 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
   });
 
   // apply babel-plugin-styled-components to the file
-  const stateWithOpts = { ...state, opts: config };
+  const stateWithOpts = { ...state, opts: config, customImportName };
   program.traverse(babelPlugin({ types: t }).visitor, stateWithOpts);
 }
 
