@@ -114,7 +114,7 @@ class StyledNativeComponent extends Component<*, *> {
 
       if (isFunction(resolvedAttrDef)) {
         // $FlowFixMe
-        resolvedAttrDef = resolvedAttrDef(context);
+        resolvedAttrDef = resolvedAttrDef({ ...props, theme });
         attrDefWasFn = true;
       }
 
