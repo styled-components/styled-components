@@ -35,31 +35,31 @@ describe('extending', () => {
   });
 
   describe('inheritance', () => {
-
     const setupParent = () => {
       const colors = {
         primary: 'red',
         secondary: 'blue',
         tertiary: 'green',
-      }
+        quaternary: 'yellow',
+      };
       const Parent = styled.h1`
         position: relative;
         color: ${props => colors[props.color]};
       `;
       return Parent;
-    }
+    };
 
     const addDefaultProps = (Parent, Child, Grandson) => {
       Parent.defaultProps = {
         color: 'primary',
-      }
+      };
       Child.defaultProps = {
         color: 'secondary',
-      }
+      };
       Grandson.defaultProps = {
         color: 'tertiary',
-      }
-    }
+      };
+    };
 
     it('should override parents defaultProps', () => {
       const Parent = setupParent();
@@ -76,12 +76,54 @@ describe('extending', () => {
       `);
     });
 
+    it('should override parents static attrs', () => {
+      const Parent = styled(setupParent()).attrs({
+        color: 'primary',
+      })``;
+      const Child = styled(Parent).attrs({
+        color: 'secondary',
+      })``;
+      const Grandson = styled(Child).attrs({
+        color: 'tertiary',
+      })``;
+      TestRenderer.create(<Parent />);
+      TestRenderer.create(<Child />);
+      TestRenderer.create(<Grandson />);
+      expectCSSMatches(`
+        .e{ position:relative; color:red; }
+        .f{ position:relative; color:blue; }
+        .g{ position:relative; color:green; }
+      `);
+    });
+
+    it('should override parents dynamic attrs', () => {
+      const Parent = styled(setupParent()).attrs(props => ({
+        color: props.color || 'primary',
+      }))``;
+      const Child = styled(Parent).attrs(props => ({
+        color: props.color || 'secondary',
+      }))``;
+      const Grandson = styled(Child).attrs(props => ({
+        color: props.color || 'tertiary',
+      }))``;
+      TestRenderer.create(<Parent />);
+      TestRenderer.create(<Child />);
+      TestRenderer.create(<Grandson />);
+      TestRenderer.create(<Grandson color="quaternary" />);
+      expectCSSMatches(`
+        .e{ position:relative; color:red; }
+        .f{ position:relative; color:blue; }
+        .g{ position:relative; color:green; }
+        .h{ position:relative; color:yellow; }
+      `);
+    });
+
     describe('when overriding with another component', () => {
       it('should override parents defaultProps', () => {
         const Parent = setupParent();
-        const Child = styled(Parent).attrs({as: 'h2'})``;
-        const Grandson = styled(Child).attrs({as: 'h3'})``;
-        console.log
+        const Child = styled(Parent).attrs({ as: 'h2' })``;
+        const Grandson = styled(Child).attrs({ as: 'h3' })``;
+        console.log;
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);
@@ -94,8 +136,8 @@ describe('extending', () => {
       });
       it('should evaluate grandsons props', () => {
         const Parent = setupParent();
-        const Child = styled(Parent).attrs({as: 'h2'})``;
-        const Grandson = styled(Child).attrs({as: 'h3'})``;
+        const Child = styled(Parent).attrs({ as: 'h2' })``;
+        const Grandson = styled(Child).attrs({ as: 'h3' })``;
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);
