@@ -114,13 +114,14 @@ class StyledNativeComponent extends Component<*, *> {
 
       if (isFunction(resolvedAttrDef)) {
         // $FlowFixMe
-        resolvedAttrDef = resolvedAttrDef({ ...props, theme });
+        resolvedAttrDef = resolvedAttrDef(context);
         attrDefWasFn = true;
       }
 
       /* eslint-disable guard-for-in */
       // $FlowFixMe
       for (key in resolvedAttrDef) {
+        if (this.attrs[key]) continue;
         attr = resolvedAttrDef[key];
 
         if (!attrDefWasFn) {
@@ -196,7 +197,7 @@ export default (InlineStyle: Function) => {
     const finalAttrs =
       // $FlowFixMe
       isTargetStyledComp && target.attrs
-        ? Array.prototype.concat(target.attrs, attrs).filter(Boolean)
+        ? Array.prototype.concat(attrs, target.attrs).filter(Boolean)
         : attrs;
 
     /**
