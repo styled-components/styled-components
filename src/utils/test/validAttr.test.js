@@ -568,6 +568,10 @@ describe('validAttr', () => {
     expect(validAttr('onPointerOut')).toEqual(true);
   });
 
+  it('should not allow non-handler props starting with "on"', () => {
+    expect(validAttr('onlyOneColumn')).toEqual(false);
+  })
+
   it('should not allow custom props', () => {
     expect(validAttr('isPrimary')).toEqual(false);
     expect(validAttr('primary')).toEqual(false);
