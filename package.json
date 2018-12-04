@@ -71,6 +71,7 @@
     "@emotion/unitless": "^0.7.0",
     "babel-plugin-styled-components": ">= 1",
     "css-to-react-native": "^2.2.2",
+    "hoist-non-react-statics": "^3.2.1",
     "memoize-one": "^5.0.0",
     "prop-types": "^15.5.4",
     "react-is": "^16.6.0",
