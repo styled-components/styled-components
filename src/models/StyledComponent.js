@@ -193,7 +193,7 @@ class StyledComponent extends Component<*> {
       /* eslint-disable guard-for-in */
       // $FlowFixMe
       for (key in resolvedAttrDef) {
-        if(this.attrs[key]) continue
+        if (this.attrs[key]) continue;
         attr = resolvedAttrDef[key];
 
         if (!attrDefWasFn) {
