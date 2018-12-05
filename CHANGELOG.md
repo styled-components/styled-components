@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [3.5.0] - 2018-12-05
+
 - Allow disabling "speedy" mode via global `SC_DISABLE_SPEEDY` variable, by [@devrelm](https://github.com/devrelm) (see [#2185](https://github.com/styled-components/styled-components/pull/2185) and [#2272](https://github.com/styled-components/styled-components/pull/2272))
 
 ## [3.4.10] - 2018-10-09
@@ -576,7 +578,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v3.4.10...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v3.5.0...v3
+[v3.4.10]: https://github.com/styled-components/styled-components/compare/v3.4.10...v3.5.0
 [v3.4.10]: https://github.com/styled-components/styled-components/compare/v3.4.9...v3.4.10
 [v3.4.9]: https://github.com/styled-components/styled-components/compare/v3.4.8...v3.4.9
 [v3.4.8]: https://github.com/styled-components/styled-components/compare/v3.4.7...v3.4.8
