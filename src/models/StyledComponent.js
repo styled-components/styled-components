@@ -239,6 +239,7 @@ class StyledComponent extends Component<*> {
 }
 
 export default function createStyledComponent(target: Target, options: Object, rules: RuleSet) {
+  
   const isTargetStyledComp = isStyledComponent(target);
   const isClass = !isTag(target);
 
@@ -250,9 +251,9 @@ export default function createStyledComponent(target: Target, options: Object, r
   } = options;
 
   const styledComponentId =
-    options.displayName && options.componentId
-      ? `${escape(options.displayName)}-${options.componentId}`
-      : options.componentId || componentId;
+    displayName && componentId
+      ? `${escape(displayName)}-${componentId}`
+      : componentId;
 
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
