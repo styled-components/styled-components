@@ -135,6 +135,54 @@ describe('keyframes', () => {
     `);
   });
 
+  it('should allow keyframes in style object', () => {
+    const styled = resetStyled();
+
+    const rules = `
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    `;
+
+    const animation = keyframes`${rules}`;
+    const name = animation.getName();
+
+    expectCSSMatches('');
+
+    const Comp = styled.div({
+      animation: css`${animation} 2s linear infinite`
+    });
+    TestRenderer.create(<Comp />);
+
+    expectCSSMatches(`
+      .b {
+        -webkit-animation: ${name} 2s linear infinite;
+        animation: ${name} 2s linear infinite;
+      }
+
+      @-webkit-keyframes ${name} {
+        0% {
+          opacity:0;
+        }
+        100% {
+          opacity:1;
+        }
+      }
+
+      @keyframes ${name} {
+        0% {
+          opacity:0;
+        }
+        100% {
+          opacity:1;
+        }
+      }
+    `);
+  });
+
   it('should handle interpolations', () => {
     const styled = resetStyled();
 
