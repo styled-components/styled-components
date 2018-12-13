@@ -66,6 +66,7 @@
   },
   "homepage": "https://styled-components.com",
   "dependencies": {
+    "@babel/helper-module-imports": "^7.0.0",
     "@emotion/is-prop-valid": "^0.7.3",
     "@emotion/unitless": "^0.7.0",
     "babel-plugin-styled-components": ">= 1",
