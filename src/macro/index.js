@@ -1,6 +1,7 @@
 // @flow
 import { createMacro, MacroError } from 'babel-plugin-macros';
 import babelPlugin from 'babel-plugin-styled-components';
+import { addDefault, addNamed } from '@babel/helper-module-imports';
 import * as styled from '..';
 
 const allowedImports: Array<string> = Object.keys(styled).filter(helper => helper !== '__esModule');
@@ -8,12 +9,7 @@ const allowedImports: Array<string> = Object.keys(styled).filter(helper => helpe
 function styledComponentsMacro({ references, state, babel: { types: t }, config = {} }) {
   const program = state.file.path;
 
-  // replace `styled-components/macro` by `styled-components`
-  // create a node for styled-components's imports
-  const imports = t.importDeclaration([], t.stringLiteral('styled-components'));
-  // and add it to top of the document
-  program.node.body.unshift(imports);
-
+  // FIRST STEP : replace `styled-components/macro` by `styled-components
   // references looks like this
   // { default: [path, path], css: [path], ... }
   let customImportName;
@@ -26,15 +22,13 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
       );
     }
 
-    // generate new identifier and add to imports
+    // generate new identifier
     let id;
     if (refName === 'default') {
-      id = program.scope.generateUidIdentifier('styled');
+      id = addDefault(program, 'styled-components', { nameHint: 'styled' });
       customImportName = id;
-      imports.specifiers.push(t.importDefaultSpecifier(id));
     } else {
-      id = program.scope.generateUidIdentifier(refName);
-      imports.specifiers.push(t.importSpecifier(id, t.identifier(refName)));
+      id = addNamed(program, refName, 'styled-components', { nameHint: refName });
     }
 
     // update references with the new identifiers
@@ -44,7 +38,7 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
     });
   });
 
-  // apply babel-plugin-styled-components to the file
+  // SECOND STEP : apply babel-plugin-styled-components to the file
   const stateWithOpts = { ...state, opts: config, customImportName };
   program.traverse(babelPlugin({ types: t }).visitor, stateWithOpts);
 }
