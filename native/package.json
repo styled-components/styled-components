@@ -3,5 +3,6 @@
   "private": true,
   "main": "./dist/styled-components.native.cjs.js",
   "jsnext:main": "./dist/styled-components.native.esm.js",
-  "module": "./dist/styled-components.native.esm.js"
+  "module": "./dist/styled-components.native.esm.js",
+  "peerDependencies": {"react-native": ">= 0.44"}
 }
