@@ -6,6 +6,8 @@ import stringifyRules from '../utils/stringifyRules';
 import hashStr from '../vendor/glamor/hash';
 import Keyframes from '../models/Keyframes';
 
+import { errorKeyFramesInNative } from '../utils/error';
+import isReactNative from '../utils/isReactNative';
 import type { Interpolation, Styles } from '../types';
 
 const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '');
@@ -15,14 +17,8 @@ export default function keyframes(
   ...interpolations: Array<Interpolation>
 ): Keyframes {
   /* Warning if you've used keyframes on React Native */
-  if (
-    process.env.NODE_ENV !== 'production' &&
-    typeof navigator !== 'undefined' &&
-    navigator.product === 'ReactNative'
-  ) {
-    console.warn(
-      '`keyframes` cannot be used on ReactNative, only on the web. To do animation in ReactNative please use Animated.'
-    );
+  if (process.env.NODE_ENV !== 'production' && isReactNative) {
+    errorKeyFramesInNative();
   }
 
   const rules = css(strings, ...interpolations);

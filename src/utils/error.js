@@ -20,6 +20,10 @@ const ERRORS =
     `
     : {};
 
+export function errorKeyFramesInNative() {
+  throw new Error('`keyframes` cannot be used on ReactNative, only on the web. To do animation in ReactNative please use `Animated` https://bit.ly/2VzGVqs.')
+};
+
 /**
  * super basic version of sprintf
  */

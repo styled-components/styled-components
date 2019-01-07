@@ -12,11 +12,28 @@ import ThemeProvider, { ThemeConsumer, ThemeContext } from '../models/ThemeProvi
 import withTheme from '../hoc/withTheme';
 import isStyledComponent from '../utils/isStyledComponent';
 
+import { errorKeyFramesInNative } from '../utils/error';
 import type { Target } from '../types';
 
 const InlineStyle = _InlineStyle(reactNative.StyleSheet);
 const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
 const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag);
+const keyframes = errorKeyFramesInNative;
+function createGlobalStyle() {
+  throw new Error(
+    '`createGlobalStyle` cannot be used on ReactNative, only on the web.' +
+      '\n' +
+      'To use global styles in ReactNative you can create rules with `css` and compose with other styles like' +
+      `\n\n` +
+      `import { globalTextStyle } from '../global'` +
+      '\n' +
+      `
+const ButtonText = styled.Text\`
+  $\{globalTextStyle};
+  font-size: 20px;
+\`.`
+  );
+}
 
 /* React native lazy-requires each of these modules for some reason, so let's
  *  assume it's for a good reason and not eagerly load them all */
@@ -40,5 +57,14 @@ aliases.split(/\s+/m).forEach(alias =>
   })
 );
 
-export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme };
+export {
+  css,
+  isStyledComponent,
+  ThemeProvider,
+  ThemeConsumer,
+  ThemeContext,
+  withTheme,
+  keyframes,
+  createGlobalStyle,
+};
 export default styled;

@@ -13,13 +13,10 @@ import ThemeProvider, { ThemeContext, ThemeConsumer } from './models/ThemeProvid
 
 /* Import Higher Order Components */
 import withTheme from './hoc/withTheme';
+import isReactNative from './utils/isReactNative';
 
 /* Warning if you've imported this file on React Native */
-if (
-  process.env.NODE_ENV !== 'production' &&
-  typeof navigator !== 'undefined' &&
-  navigator.product === 'ReactNative'
-) {
+if (process.env.NODE_ENV !== 'production' && isReactNative) {
   // eslint-disable-next-line no-console
   console.warn(
     "It looks like you've imported 'styled-components' on React Native.\n" +
