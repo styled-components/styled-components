@@ -10,7 +10,7 @@ const SANDBOX_PATHS = {
   appSrc: path.resolve(__dirname, 'src'),
   serverApp: path.resolve(__dirname, 'src', 'server.js'),
   clientApp: path.resolve(__dirname, 'src', 'browser.js'),
-  styledComponentsSrc: path.resolve(__dirname, '..', 'src'),
+  styledComponentsSrc: path.resolve(__dirname, '../styled-components', 'src'),
   reactDOM: path.resolve(__dirname, 'node_modules', 'react-dom'),
   indexHtml: path.resolve(__dirname, 'public', 'index.html'),
   // build

@@ -30,9 +30,8 @@ watch(srcPath, filename => {
 });
 
 const app = new Express();
-
 app.use(Express.static(__dirname));
-app.use(Express.static('dist'));
+app.use(Express.static(path.join(__dirname, '../dist')));
 
 app.get('/with-perf.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'with-perf.html'));

@@ -34,9 +34,9 @@ We want contributors to provide ideas, keep the ship shipping and to take some o
 
 The fact that you'll have push access will allow you to:
 
-* Avoid having to fork the project if you want to submit other pull requests as you'll be able to create branches directly on the project.
-* Help triage issues, merge pull requests.
-* Pick up the project if other maintainers move their focus elsewhere.
+- Avoid having to fork the project if you want to submit other pull requests as you'll be able to create branches directly on the project.
+- Help triage issues, merge pull requests.
+- Pick up the project if other maintainers move their focus elsewhere.
 
 It's up to you to use those superpowers or not though 😉
 
@@ -62,47 +62,51 @@ Here is a quick guide to doing code contributions to the library.
 
 3. Create a branch with a meaningful name for the issue: `git checkout -b fix-something`
 
-4. Make your changes and commit: `git add` and `git commit`
+4. Install packages by running `yarn` in the root of the project.
 
-5. Make sure that the tests still pass: `npm test` and `npm run flow` (for the type checks)
+5. Make your changes and commit: `git add` and `git commit`
 
-6. Push your branch: `git push -u origin your-branch-name`
+6. Make sure that the tests still pass: `yarn test` and `yarn run flow` (for the type checks)
 
-7. Submit a pull request to the upstream styled-components repository.
+7. Push your branch: `git push -u origin your-branch-name`
 
-8. Choose a descriptive title and describe your changes briefly.
+8. Submit a pull request to the upstream styled-components repository.
 
-9. Wait for a maintainer to review your PR, make changes if it's being recommended, and get it merged.
+9. Choose a descriptive title and describe your changes briefly.
 
-10. Perform a celebratory dance! :dancer:
+10. Wait for a maintainer to review your PR, make changes if it's being recommended, and get it merged.
+
+11. Perform a celebratory dance! :dancer:
 
 ### How do I set up the project?
 
-Run [`yarn install`](https://yarnpkg.com/) and edit code in the `src/` folder. It's luckily very simple! :wink:
+Run [`yarn install`](https://yarnpkg.com/) and edit code in the `packages/styled-components/src/` folder. It's luckily very simple! :wink:
+
+> We use yarn workspaces with [lerna](https://github.com/lerna/lerna) to make this work as a monorepo under the hood.
 
 ### How do I verify and test my changes?
 
-To make development process easier we provide a Sandbox React application in this repo which automatically uses your local version of the `styled-components` library. That means when you make any changes in the `src/` folder they'll show up automatically there!
+To make development process easier we provide a Sandbox React application in this repo which automatically uses your local version of the `styled-components` library. That means when you make any changes in the `packages/styled-components/src/` folder they'll show up automatically there!
 
 To use the sandbox, follow these steps:
 
-1. Go to sandbox folder: `cd sandbox`
+1. Go to sandbox folder: `cd packages/sandbox`
 
-2. Install all the dependencies: `yarn install` or `npm install`
+2. Install all the dependencies: `yarn install`. Since this repository uses `yarn` workspaces, avoid using `npm` where you can.
 
-3. Run `yarn start` or `npm start` to start sandbox server
+3. Run `yarn start` to start sandbox server
 
 Now you should have the sandbox running on `localhost:3000`. The Sandbox supports client-side and server-side rendering.
 
 You can use an interactive editor, powered by [`react-live`](https://react-live.philpl.com/), to test your changes. But if you want more control, you can edit the sandbox itself too:
 
-* Root `<App>` component is located at `styled-components/sandbox/src/App.js` file
+- Root `<App>` component is located at `packages/sandbox/src/App.js` file
 
-* Client-side entry point is at `styled-components/sandbox/src/browser.js`
+- Client-side entry point is at `packages/sandbox/src/browser.js`
 
-* Server-side entry point is at `styled-components/sandbox/src/server.js`
+- Server-side entry point is at `packages/sandbox/src/server.js`
 
-In the sandbox source, `styled-components` is an alias to `styled-components/src` folder, so you can edit the source directly and dev-server will handle rebuilding the source and livereloading your sandbox after the build is done.
+In the sandbox source, `styled-components` is an alias to `packages/styled-components/src` folder, so you can edit the source directly and dev-server will handle rebuilding the source and livereloading your sandbox after the build is done.
 
 When you commit our pre-commit hook will run, which executes `lint-staged`. It will run the linter automatically and warn you if the code you've written doesn't comply with our code style guidelines.
 
@@ -111,6 +115,10 @@ When you commit our pre-commit hook will run, which executes `lint-staged`. It w
 We have three different benchmarks: mounting a deep tree, mounting a wide tree and updating dynamic styles. Shoutout to [@necolas](https://github.com/necolas), who wrote these for `react-native-web` and whom we stole these benchmarks from.
 
 To run the benchmarks run:
+
+```sh
+cd packages/styled-components`
+```
 
 ```sh
 yarn run benchmarks
@@ -139,41 +147,36 @@ a git hook is already present.
 
 [Core team members](./CORE_TEAM.md) have the responsibility of pushing new releases to npm. The release process is as follows:
 
-1. Install `np` by Sindre Sorhus with `npm i -g np`. (note: you only have to do this once) `np` makes sure that everything is correct and runs tests and a build before it releases the new version for you.
-2. Make sure you have the latest changes and are on the master branch: `git checkout master && git pull origin master`
+1. Make sure you have the latest changes and are on the master branch: `git checkout master && git pull origin master`
+2. Install all the dependecies by running `yarn` in the root folder. This will also install `lerna`.
 3. Create a new branch based on the version number, for example `git checkout -b 3.4.1`
 4. Update the [CHANGELOG.md](./CHANGELOG.md) with the new version number, add a new Unreleased section at the top and edit the links at the bottom so everything is linked correctly
 5. Commit the Changelog changes with `git commit -m 'Update CHANGELOG'`
 6. Push the branch to the repo with `git push -u origin <branchname>`
-7. Run `np --any-branch` and follow its instructions
+7. Run `yarn run publish`. (Not `yarn publish`) This will run `test` cases, check for `flow` and `lint` errors and then start the `lerna publish` process. You will prompted to choose the next versions for all the packages including `styled-components`. (Note: Packages which are marked as `private` will not be published to `npm`, choose any version for them).
 8. Congratulations, you just published a new release of `styled-components`! :tada: Let everybody know on Twitter, in our community and all the other places
 
 ## Credits
 
 These contribution guidelines are based on https://github.com/moya/contributors, big thanks to @alloy, @orta et al. for the inspiration and guidance.
 
-
 ## Financial contributions
 
 We also welcome financial contributions in full transparency on our [open collective](https://opencollective.com/styled-components).
 Anyone can file an expense. If the expense makes sense for the development of the community, it will be "merged" in the ledger of our open collective by the core contributors and the person who filed the expense will be reimbursed.
 
-
 ## Credits
-
 
 ### Contributors
 
 Thank you to all the people who have already contributed to styled-components!
 <a href="graphs/contributors"><img src="https://opencollective.com/styled-components/contributors.svg?width=890" /></a>
 
-
 ### Backers
 
 Thank you to all our backers! [[Become a backer](https://opencollective.com/styled-components#backer)]
 
 <a href="https://opencollective.com/styled-components#backers" target="_blank"><img src="https://opencollective.com/styled-components/backers.svg?width=890"></a>
-
 
 ### Sponsors
 
