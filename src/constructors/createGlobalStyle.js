@@ -12,6 +12,10 @@ import css from './css';
 
 import type { Interpolation } from '../types';
 
+type GlobalStyleComponentPropsType = Object;
+
+type GlobalStyleComponentStateType = Object;
+
 // place our cache into shared context so it'll persist between HMRs
 if (IS_BROWSER) {
   window.scCGSHMRCache = {};
@@ -25,15 +29,15 @@ export default function createGlobalStyle(
   const id = `sc-global-${hashStr(JSON.stringify(rules))}`;
   const style = new GlobalStyle(rules, id);
 
-  class GlobalStyleComponent extends React.Component<*, *> {
+  class GlobalStyleComponent extends React.Component<GlobalStyleComponentPropsType, GlobalStyleComponentStateType> {
     styleSheet: Object;
 
     static globalStyle = style;
 
     static styledComponentId = id;
 
-    constructor() {
-      super();
+    constructor(props: GlobalStyleComponentPropsType) {
+      super(props);
 
       const { globalStyle, styledComponentId } = this.constructor;
 
