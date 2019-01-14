@@ -62,7 +62,7 @@ const createPlugins = () => [
 
   new webpack.DefinePlugin({
     // eslint-disable-next-line global-require
-    __VERSION__: JSON.stringify(require('../../package.json').version),
+    __VERSION__: JSON.stringify(require('../../styled-components/package.json').version),
   }),
 ];
 
