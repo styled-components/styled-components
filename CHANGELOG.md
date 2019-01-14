@@ -6,7 +6,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Make the `GlobalStyleComponent` call the base constructor with `props`.
+- Make the `GlobalStyleComponent` created by `createGlobalStyle` call the base constructor with `props`.
 
 ## [v4.1.2] - 2018-11-28
 
