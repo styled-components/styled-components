@@ -3,7 +3,7 @@ import { EMPTY_ARRAY } from '../utils/empties';
 import flatten from '../utils/flatten';
 import isStaticRules from '../utils/isStaticRules';
 import stringifyRules from '../utils/stringifyRules';
-import StyleSheet from './StyleSheet';
+import GlobalStyleSheet from './GlobalStyleSheet';
 
 import type { RuleSet } from '../types';
 
@@ -19,19 +19,19 @@ export default class GlobalStyle {
     this.componentId = componentId;
     this.isStatic = isStaticRules(rules, EMPTY_ARRAY);
 
-    if (!StyleSheet.master.hasId(componentId)) {
-      StyleSheet.master.deferredInject(componentId, []);
+    if (!GlobalStyleSheet.master.hasId(componentId)) {
+      GlobalStyleSheet.master.deferredInject(componentId, []);
     }
   }
 
-  createStyles(executionContext: Object, styleSheet: StyleSheet) {
+  createStyles(executionContext: Object, styleSheet: GlobalStyleSheet) {
     const flatCSS = flatten(this.rules, executionContext, styleSheet);
     const css = stringifyRules(flatCSS, '');
 
     styleSheet.inject(this.componentId, css);
   }
 
-  removeStyles(styleSheet: StyleSheet) {
+  removeStyles(styleSheet: GlobalStyleSheet) {
     const { componentId } = this;
     if (styleSheet.hasId(componentId)) {
       styleSheet.remove(componentId);
@@ -39,7 +39,7 @@ export default class GlobalStyle {
   }
 
   // TODO: overwrite in-place instead of remove+create?
-  renderStyles(executionContext: Object, styleSheet: StyleSheet) {
+  renderStyles(executionContext: Object, styleSheet: GlobalStyleSheet) {
     this.removeStyles(styleSheet);
     this.createStyles(executionContext, styleSheet);
   }

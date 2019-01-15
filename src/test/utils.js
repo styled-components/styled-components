@@ -5,6 +5,7 @@
  */
 import styled from '../constructors/styled';
 import StyleSheet from '../models/StyleSheet';
+import GlobalStyleSheet from '../models/GlobalStyleSheet';
 import StyledError from '../utils/error';
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
@@ -31,6 +32,8 @@ export const resetStyled = (isServer: boolean = false) => {
   }
 
   StyleSheet.reset(isServer);
+  GlobalStyleSheet.reset(isServer);
+
   mockIndex = 0;
   mockInputs = {};
   if (typeof window !== 'undefined') window.scCGSHMRCache = {};

@@ -2,7 +2,7 @@
 import React from 'react';
 import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
-import StyleSheet from '../models/StyleSheet';
+import GlobalStyleSheet from '../models/GlobalStyleSheet';
 import { StyleSheetConsumer } from '../models/StyleSheetManager';
 import determineTheme from '../utils/determineTheme';
 import { ThemeConsumer, type Theme } from '../models/ThemeProvider';
@@ -11,6 +11,7 @@ import hashStr from '../vendor/glamor/hash';
 import css from './css';
 
 import type { Interpolation } from '../types';
+import type { StyleSheetContextType } from '../models/StyleSheetManager';
 
 // place our cache into shared context so it'll persist between HMRs
 if (IS_BROWSER) {
@@ -26,7 +27,7 @@ export default function createGlobalStyle(
   const style = new GlobalStyle(rules, id);
 
   class GlobalStyleComponent extends React.Component<*, *> {
-    styleSheet: Object;
+    styleSheet: GlobalStyleSheet;
 
     static globalStyle = style;
 
@@ -79,8 +80,8 @@ export default function createGlobalStyle(
 
       return (
         <StyleSheetConsumer>
-          {(styleSheet?: StyleSheet) => {
-            this.styleSheet = styleSheet || StyleSheet.master;
+          {(contextValue?: StyleSheetContextType) => {
+            this.styleSheet = (contextValue && contextValue.globalSheet) || GlobalStyleSheet.master;
 
             const { globalStyle } = this.state;
 

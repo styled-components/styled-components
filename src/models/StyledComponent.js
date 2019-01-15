@@ -98,8 +98,8 @@ class StyledComponent extends Component<*> {
     return <StyleSheetConsumer>{this.renderOuter}</StyleSheetConsumer>;
   }
 
-  renderOuter(styleSheet?: StyleSheet = StyleSheet.master) {
-    this.styleSheet = styleSheet;
+  renderOuter(context) {
+    this.styleSheet = (context && context.sheet) || StyleSheet.master;
 
     // No need to subscribe a static component to theme changes, it won't change anything
     if (this.props.forwardedComponent.componentStyle.isStatic) return this.renderInner();

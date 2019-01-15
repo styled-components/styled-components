@@ -6,7 +6,8 @@ import { resetStyled, expectCSSMatches, seedNextClassnames } from './utils';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 import keyframes from '../constructors/keyframes';
 import StyleSheet from '../models/StyleSheet';
-import { SC_ATTR, SC_VERSION_ATTR } from '../constants';
+import GlobalStyleSheet from '../models/GlobalStyleSheet';
+import { GLOBAL_SC_ATTR, SC_ATTR, SC_VERSION_ATTR } from '../constants';
 
 const getStyleTags = () =>
   Array.from(document.querySelectorAll('style')).map(el => ({
@@ -14,6 +15,11 @@ const getStyleTags = () =>
   }));
 
 let styled;
+
+function resetStyleSheets() {
+  GlobalStyleSheet.reset();
+  StyleSheet.reset();
+}
 
 describe('rehydration', () => {
   /**
@@ -31,7 +37,7 @@ describe('rehydration', () => {
           .b { color: red; }
         </style>
       `;
-      StyleSheet.reset();
+      resetStyleSheets();
     });
 
     it('should preserve the styles', () => {
@@ -97,7 +103,7 @@ describe('rehydration', () => {
           .b { color: red; }
         </style>
       `;
-      StyleSheet.reset();
+      resetStyleSheets();
     });
 
     it('should preserve the styles', () => {
@@ -140,7 +146,7 @@ describe('rehydration', () => {
           .b { color: red; }
         </style>
       `;
-      StyleSheet.reset();
+      resetStyleSheets();
     });
 
     it('should leave the existing styles there', () => {
@@ -166,7 +172,7 @@ describe('rehydration', () => {
        * derived from "body { background: papayawhip; }" so be careful
        * changing it. */
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${GLOBAL_SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
           /* sc-component-id: sc-global-557410406 */
           body { background: papayawhip; }
         </style>
@@ -175,7 +181,7 @@ describe('rehydration', () => {
           .b { color: red; }
         </style>
       `;
-      StyleSheet.reset();
+      resetStyleSheets();
     });
 
     it('should leave the existing styles there', () => {
@@ -188,7 +194,7 @@ describe('rehydration', () => {
       `;
       TestRenderer.create(<Component />);
       expectCSSMatches(
-        'body { background: papayawhip; } .b { color: red; } body { color:tomato; }'
+        'body { background: papayawhip; } body { color:tomato; } .b { color: red; }'
       );
     });
 
@@ -203,25 +209,30 @@ describe('rehydration', () => {
       TestRenderer.create(<A />);
 
       expectCSSMatches(
-        'body { background: papayawhip; } .b { color: red; } body { color:tomato; } .a { color:blue; }'
+        'body { background: papayawhip; } body { color:tomato; } .b { color: red; } .a { color:blue; }'
       );
+      function formatToStyleTag(arr) {
+        return arr.reduce((acc, { css }) => {
+          acc.css += css;
+          return acc;
+        },{ css: '' });
+      }
+
       expect(getStyleTags()).toEqual(
         [
-          {
-            css: '/* sc-component-id: sc-global-557410406 */ body{background:papayawhip;} ',
-          },
-          { css: '/* sc-component-id: TWO */ .b{color:red;} ' },
-          {
-            css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;} ',
-          },
-          { css: '/* sc-component-id: ONE */ .a{color:blue;}' },
-        ].reduce(
-          (acc, { css }) => {
-            acc[0].css += css;
-            return acc;
-          },
-          [{ css: '' }]
-        )
+          formatToStyleTag([
+            {
+              css: '/* sc-component-id: sc-global-557410406 */ body{background:papayawhip;} ',
+            },
+            {
+              css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;}',
+            },
+          ]),
+          formatToStyleTag([
+            { css: '/* sc-component-id: TWO */ .b{color:red;} ' },
+            { css: '/* sc-component-id: ONE */ .a{color:blue;}' },
+          ])
+        ]
       );
     });
   });
@@ -230,7 +241,7 @@ describe('rehydration', () => {
     let styleTags;
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${GLOBAL_SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
            /* sc-component-id: sc-global-1455077013 */
           html { font-size: 16px; }
            /* sc-component-id: sc-global-557410406 */
@@ -244,7 +255,7 @@ describe('rehydration', () => {
         </style>
       `;
       styleTags = Array.from(document.querySelectorAll('style'));
-      StyleSheet.reset();
+      resetStyleSheets();
     });
 
     it('should not touch existing styles', () => {

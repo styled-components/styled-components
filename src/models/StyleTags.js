@@ -57,9 +57,9 @@ const addUpUntilIndex = (sizes: number[], index: number): number => {
 };
 
 /* create a new style tag after lastEl */
-const makeStyleTag = (target: ?HTMLElement, tagEl: ?Node, insertBefore: ?boolean) => {
+const makeStyleTag = (srcAttribute: string, target: ?HTMLElement, tagEl: ?Node, insertBefore: ?boolean) => {
   const el = document.createElement('style');
-  el.setAttribute(SC_ATTR, '');
+  el.setAttribute(srcAttribute, '');
   el.setAttribute(SC_VERSION_ATTR, __VERSION__);
 
   const nonce = getNonce();
@@ -229,15 +229,17 @@ const makeSpeedyTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>):
 const makeTextNode = id => document.createTextNode(makeTextMarker(id));
 
 const makeBrowserTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>): Tag<Text> => {
-  const names = (Object.create(null): Object);
-  const markers = Object.create(null);
+  //
+  const names: { [id: string]: Object } = (Object.create(null): Object);
+  // markers are text nodes that separates styles inside styled node
+  const markers: { [id: string]: Text } = (Object.create(null): Object);
 
   const extractImport = getImportRuleTag !== undefined;
 
   /* indicates whether getImportRuleTag was called */
   let usedImportRuleTag = false;
 
-  const insertMarker = id => {
+  const insertMarker = (id: string) => {
     const prev = markers[id];
     if (prev !== undefined) {
       return prev;
@@ -250,7 +252,7 @@ const makeBrowserTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>)
     return markers[id];
   };
 
-  const insertRules = (id, cssRules, name) => {
+  const insertRules = (id: string, cssRules, name) => {
     const marker = insertMarker(id);
     const importRules = [];
     const cssRulesSize = cssRules.length;
@@ -388,6 +390,7 @@ const makeServerTag = (namesArg, markersArg): Tag<[string]> => {
 };
 
 export const makeTag = (
+  attribute: string,
   target: ?HTMLElement,
   tagEl: ?HTMLStyleElement,
   forceServer?: boolean,
@@ -395,8 +398,7 @@ export const makeTag = (
   getImportRuleTag?: () => Tag<any>
 ): Tag<any> => {
   if (IS_BROWSER && !forceServer) {
-    const el = makeStyleTag(target, tagEl, insertBefore);
-
+    const el = makeStyleTag(attribute, target, tagEl, insertBefore);
     if (DISABLE_SPEEDY) {
       return makeBrowserTag(el, getImportRuleTag);
     } else {

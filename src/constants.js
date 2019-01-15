@@ -3,6 +3,8 @@ declare var SC_DISABLE_SPEEDY: ?boolean;
 
 export const SC_ATTR = (typeof process !== 'undefined' && process.env.SC_ATTR) || 'data-styled';
 
+export const GLOBAL_SC_ATTR = (typeof process !== 'undefined' && process.env.GLOBAL_SC_ATTR) || 'global-data-styled';
+
 export const SC_VERSION_ATTR = 'data-styled-version';
 
 export const SC_STREAM_ATTR = 'data-styled-streamed';

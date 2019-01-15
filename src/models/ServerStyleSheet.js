@@ -6,6 +6,7 @@ import stream from 'stream';
 import { IS_BROWSER, SC_STREAM_ATTR } from '../constants';
 import StyledError from '../utils/error';
 import StyleSheet from './StyleSheet';
+import GlobalStyleSheet from './GlobalStyleSheet';
 import StyleSheetManager from './StyleSheetManager';
 
 declare var __SERVER__: boolean;
@@ -13,14 +14,22 @@ declare var __SERVER__: boolean;
 export default class ServerStyleSheet {
   instance: StyleSheet;
 
+  globalInstance: StyleSheet;
+
   masterSheet: StyleSheet;
+
+  globalMasterSheet: StyleSheet;
 
   sealed: boolean;
 
   constructor() {
     /* The master sheet might be reset, so keep a reference here */
     this.masterSheet = StyleSheet.master;
+    this.globalMasterSheet = GlobalStyleSheet.master;
+
     this.instance = this.masterSheet.clone();
+    this.globalInstance = this.globalMasterSheet.clone();
+
     this.sealed = false;
   }
 
@@ -33,6 +42,10 @@ export default class ServerStyleSheet {
       /* Remove sealed StyleSheets from the master sheet */
       const index = this.masterSheet.clones.indexOf(this.instance);
       this.masterSheet.clones.splice(index, 1);
+
+      const globalIndex = this.globalMasterSheet.clones.indexOf(this.globalInstance);
+      this.globalMasterSheet.clones.splice(globalIndex, 1);
+
       this.sealed = true;
     }
   }
@@ -42,12 +55,12 @@ export default class ServerStyleSheet {
       throw new StyledError(2);
     }
 
-    return <StyleSheetManager sheet={this.instance}>{children}</StyleSheetManager>;
+    return <StyleSheetManager sheet={this.instance} globalSheet={this.globalInstance}>{children}</StyleSheetManager>;
   }
 
   getStyleTags(): string {
     this.seal();
-    return this.instance.toHTML();
+    return [this.instance, this.globalInstance].map((instance) => instance.toHTML()).join('');
   }
 
   getStyleElement() {
@@ -61,15 +74,23 @@ export default class ServerStyleSheet {
     }
 
     /* the tag index keeps track of which tags have already been emitted */
-    const { instance } = this;
+    const { instance, globalInstance } = this;
     let instanceTagIndex = 0;
+    let globalInstanceTagIndex = 0;
 
     const streamAttr = `${SC_STREAM_ATTR}="true"`;
 
     const transformer = new stream.Transform({
       transform: function appendStyleChunks(chunk, /* encoding */ _, callback) {
         const { tags } = instance;
+        const { tags: globalTags } = globalInstance;
         let html = '';
+
+        /* retrieve html for each new style tag */
+        for (; globalInstanceTagIndex < globalTags.length; globalInstanceTagIndex += 1) {
+          const tag = globalTags[instanceTagIndex];
+          html += tag.toHTML(streamAttr);
+        }
 
         /* retrieve html for each new style tag */
         for (; instanceTagIndex < tags.length; instanceTagIndex += 1) {
