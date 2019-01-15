@@ -19,6 +19,7 @@ import { StyleSheetConsumer } from './StyleSheetManager';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import classNameUsageCheckInjector from '../utils/classNameUsageCheckInjector';
 
+import type { StyleSheetContextType } from './StyleSheetManager';
 import type { Attrs, RuleSet, Target } from '../types';
 import { IS_BROWSER } from '../constants';
 
@@ -98,7 +99,7 @@ class StyledComponent extends Component<*> {
     return <StyleSheetConsumer>{this.renderOuter}</StyleSheetConsumer>;
   }
 
-  renderOuter(context) {
+  renderOuter(context?: StyleSheetContextType) {
     this.styleSheet = (context && context.sheet) || StyleSheet.master;
 
     // No need to subscribe a static component to theme changes, it won't change anything
