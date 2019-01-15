@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Make the `GlobalStyleComponent` created by `createGlobalStyle` call the base constructor with `props` (see [#2321](https://github.com/styled-components/styled-components/pull/2321)).
+
 ## [v4.1.2] - 2018-11-28
 
 - Fix function-form attrs to receive the full execution context (including theme) (see [#2210](https://github.com/styled-components/styled-components/pull/2210))
