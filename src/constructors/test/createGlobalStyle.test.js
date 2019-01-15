@@ -19,6 +19,8 @@ import StyleSheetManager from '../../models/StyleSheetManager';
 import createGlobalStyle from '../createGlobalStyle';
 import keyframes from '../keyframes';
 
+import { GLOBAL_SC_ATTR } from '../../constants';
+
 let context;
 
 beforeEach(() => {
@@ -33,6 +35,13 @@ describe(`createGlobalStyle`, () => {
   it(`returns a function`, () => {
     const Component = createGlobalStyle``;
     expect(typeof Component).toBe('function');
+  });
+
+  it(`inserts global style tag`, () => {
+    const { render } = context;
+    const Component = createGlobalStyle``;
+    render(<Component />);
+    expect([...document.querySelector(`style[${GLOBAL_SC_ATTR}]`)]).toHaveLength(1);
   });
 
   it(`injects global <style> when rendered`, () => {
