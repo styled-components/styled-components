@@ -8,6 +8,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Make the `GlobalStyleComponent` created by `createGlobalStyle` call the base constructor with `props` (see [#2321](https://github.com/styled-components/styled-components/pull/2321)).
 
+## [v4.1.3] - 2018-12-17
+
+- Under the hood code cleanup of the Babel macro, by [@lucleray](https://github.com/lucleray) (see [#2286](https://github.com/styled-components/styled-components/pull/2286))
+
 ## [v4.1.2] - 2018-11-28
 
 - Fix function-form attrs to receive the full execution context (including theme) (see [#2210](https://github.com/styled-components/styled-components/pull/2210))
@@ -923,7 +927,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.1.2...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.1.3...master
+[v4.1.3]: https://github.com/styled-components/styled-components/compare/v4.1.2...v4.1.3
 [v4.1.2]: https://github.com/styled-components/styled-components/compare/v4.1.1...v4.1.2
 [v4.1.1]: https://github.com/styled-components/styled-components/compare/v4.1.0...v4.1.1
 [v4.1.0]: https://github.com/styled-components/styled-components/compare/v4.0.3...v4.1.0
