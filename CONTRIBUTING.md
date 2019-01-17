@@ -117,7 +117,7 @@ We have three different benchmarks: mounting a deep tree, mounting a wide tree a
 To run the benchmarks run:
 
 ```sh
-cd packages/styled-components
+cd packages/styled-components`
 ```
 
 ```sh
