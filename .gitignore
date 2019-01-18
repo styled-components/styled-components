@@ -3,4 +3,3 @@ dist
 .DS_Store
 *.log
 package-lock.json
-packages/styled-components/README.md
