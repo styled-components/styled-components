@@ -147,15 +147,14 @@ a git hook is already present.
 
 [Core team members](./CORE_TEAM.md) have the responsibility of pushing new releases to npm. The release process is as follows:
 
-1.Install all the dependecies by running `yarn` in the root folder. This will also install `lerna`.
-
 1. Make sure you have the latest changes and are on the master branch: `git checkout master && git pull origin master`
-2. Create a new branch based on the version number, for example `git checkout -b 3.4.1`
-3. Update the [CHANGELOG.md](./CHANGELOG.md) with the new version number, add a new Unreleased section at the top and edit the links at the bottom so everything is linked correctly
-4. Commit the Changelog changes with `git commit -m 'Update CHANGELOG'`
-5. Push the branch to the repo with `git push -u origin <branchname>`
-6. Run `npm run release`. This will run `test` cases, check for `flow` and `lint` errors and then start the `lerna publish` process. You will prompted to choose the next versions for all the packages including `styled-components`. (Note: Packages which are marked as `private` will not be published to `npm`. So feel free to choose a version for them as well).
-7. Congratulations, you just published a new release of `styled-components`! :tada: Let everybody know on Twitter, in our community and all the other places
+2. Install all the dependecies by running `yarn` in the root folder. This will also install `lerna`.
+3. Create a new branch based on the version number, for example `git checkout -b 3.4.1`
+4. Update the [CHANGELOG.md](./CHANGELOG.md) with the new version number, add a new Unreleased section at the top and edit the links at the bottom so everything is linked correctly
+5. Commit the Changelog changes with `git commit -m 'Update CHANGELOG'`
+6. Push the branch to the repo with `git push -u origin <branchname>`
+7. Run `npm run publish`. This will run `test` cases, check for `flow` and `lint` errors and then start the `lerna publish` process. You will prompted to choose the next versions for all the packages including `styled-components`. (Note: Packages which are marked as `private` will not be published to `npm`. So feel free to choose a version for them as well).
+8. Congratulations, you just published a new release of `styled-components`! :tada: Let everybody know on Twitter, in our community and all the other places
 
 ## Credits
 
