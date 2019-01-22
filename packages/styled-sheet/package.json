@@ -6,6 +6,9 @@
     "type": "git",
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
+  "scripts": {
+    "flow": "flow"
+  },
   "keywords": [
     "react",
     "css",

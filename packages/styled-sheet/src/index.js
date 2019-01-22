@@ -1,6 +1,5 @@
+// @flow
 const IS_BROWSER = true;
-const DISABLE_SPEEDY = false;
-const MAX_SIZE = DISABLE_SPEEDY ? 40 : 1000;
 
 class ServerStyleSheet {
   rules = [];
@@ -10,13 +9,20 @@ class ServerStyleSheet {
   };
 }
 
-class DOMStyleSheet {
-  tags = [];
+export class DOMStyleSheet {
+  tag: ?HTMLStyleElement;
 
-  _getTag = index => {
-    const tagIndex = Math.ceil(index / MAX_SIZE);
-    if (!this.tags[tagIndex]) this.tags[tagIndex] = this._createTag();
-    return this.tags[tagIndex];
+  tag = null;
+
+  insertRule = (rule: string, index: number) => {
+    const tag = this._getTag();
+    // $FlowIssue flow doesn't understand the CSSOM
+    return tag.sheet.insertRule(rule, index);
+  };
+
+  _getTag = () => {
+    if (this.tag) return this.tag;
+    return (this.tag = this._createTag());
   };
 
   _createTag = () => {
@@ -36,29 +42,32 @@ class DOMStyleSheet {
 
     return el;
   };
-
-  insertRule = (rule, index) => {
-    const tag = this._getTag(index);
-    tag.sheet.insertRule(rule, tag.sheet.cssRules.length);
-  };
 }
 
 class StyleSheet {
-  rules = [];
+  ruleGroups: Array<number>;
 
-  constructor() {
-    this.sheet = IS_BROWSER ? new DOMStyleSheet() : new ServerStyleSheet();
+  sheet: typeof DOMStyleSheet;
+
+  ruleGroups = [];
+
+  constructor(sheet: typeof DOMStyleSheet) {
+    this.sheet = sheet || (IS_BROWSER ? new DOMStyleSheet() : new ServerStyleSheet());
   }
 
-  insertRules = (rules, creationIndex) => {
-    const injectionIndex = this.rules.reduce((group, index) => {
-      if (index <= creationIndex) return index + group.length;
-      return index;
+  insertRules = (ruleGroup: Array<string>, creationIndex: number) => {
+    const injectionIndex = this.ruleGroups.reduce((count, acc) => {
+      if (acc <= creationIndex) return acc + count;
+      return acc;
     }, 0);
 
-    this.rules.push(rules);
-    rules.forEach((rule, ruleIndex) => {
-      this.sheet.insertRule(rule, injectionIndex + ruleIndex);
+    if (!this.ruleGroups[creationIndex]) this.ruleGroups[creationIndex] = 0;
+    ruleGroup.forEach((rule, ruleIndex) => {
+      try {
+        this.sheet.insertRule(rule, injectionIndex + ruleIndex);
+        this.ruleGroups[creationIndex] += 1;
+        // eslint-disable-next-line no-empty
+      } catch (err) {}
     });
   };
 }
