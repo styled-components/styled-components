@@ -7,6 +7,7 @@ import { Simulate } from 'react-dom/test-utils';
 import {
   expectCSSMatches,
   getCSS,
+  getElementCSS,
   resetStyled,
   stripComments,
   stripWhitespace,
@@ -370,6 +371,65 @@ body{background:red;}"
 div{display:inline-block;-webkit-animation:a 2s linear infinite;animation:a 2s linear infinite;padding:2rem 1rem;font-size:1.2rem;}
 /* sc-component-id:sc-keyframes-a */
 @-webkit-keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}} @keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}}"
+`);
+  });
+
+  it(`inserts fonts to separate style tag`, () => {
+    const { render } = setup();
+    const GlobalStyle = createGlobalStyle`
+      @font-face {
+        font-family: "Test";
+        src: url('./font') format("woff");
+        font-weight: 400;
+        font-style: normal;
+      }
+      body {
+        color: #14171a;
+      }
+    `;
+    render(<GlobalStyle />);
+
+    const styles = Array.from(document.querySelectorAll('style'));
+
+    expect(styles).toHaveLength(2);
+
+    const [firstStyleTag, secondStyleTag] = styles;
+
+    expect(getElementCSS(firstStyleTag).trim()).toMatchInlineSnapshot(`
+"/* sc-component-id:sc-global-2828917665 */
+body{color:#14171a;}"
+`);
+
+    expect(getElementCSS(secondStyleTag).trim()).toMatchInlineSnapshot(`
+"/* sc-component-id:sc-global-2828917665-font-face */
+@font-face{font-family:\\"Test\\";src:url('./font') format(\\"woff\\");font-weight:400;font-style:normal;}"
+`);
+  });
+
+  it(`inserts imports to separate style tag`, () => {
+    const { render } = setup();
+    const GlobalStyle = createGlobalStyle`
+      @import "url";
+      body {
+        color: #14171a;
+      }
+    `;
+    render(<GlobalStyle />);
+
+    const styles = Array.from(document.querySelectorAll('style'));
+
+    expect(styles).toHaveLength(2);
+
+    const [firstStyleTag, secondStyleTag] = styles;
+
+    expect(getElementCSS(firstStyleTag).trim()).toMatchInlineSnapshot(`
+"/* sc-component-id:sc-global-3499582472-import */
+@import \\"url\\";"
+`);
+
+    expect(getElementCSS(secondStyleTag).trim()).toMatchInlineSnapshot(`
+"/* sc-component-id:sc-global-3499582472 */
+body{color:#14171a;}"
 `);
   });
 });

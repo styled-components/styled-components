@@ -46,23 +46,30 @@ export const stripWhitespace = (str: string) =>
     .replace(/([;\{\}])/g, '$1  ')
     .replace(/\s+/g, ' ');
 
-export const getCSS = (scope: Document | HTMLElement) =>
-  Array.from(scope.querySelectorAll('style'))
-    .map(tag => tag.innerHTML)
-    .join('\n')
+export const escapeCss = (str: string) =>
+  str
     .replace(/ {/g, '{')
     .replace(/:\s+/g, ':')
     .replace(/:\s+;/g, ':;');
+
+export const getCSS = (scope: Document | HTMLElement) =>
+  escapeCss(
+    Array.from(scope.querySelectorAll('style'))
+    .map(tag => tag.innerHTML)
+    .join('\n')
+  );
+
+export const getElementCSS = (element: HTMLStyleElement) =>
+  escapeCss(
+    element.innerHTML
+  );
 
 export const expectCSSMatches = (
   _expectation: string,
   opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }
 ) => {
   // NOTE: This should normalise both CSS strings to make irrelevant mismatches less likely
-  const expectation = _expectation
-    .replace(/ {/g, '{')
-    .replace(/:\s+/g, ':')
-    .replace(/:\s+;/g, ':;');
+  const expectation = escapeCss(_expectation);
 
   const css = getCSS(document);
 

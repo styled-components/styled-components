@@ -3,6 +3,7 @@ import { cloneElement } from 'react';
 import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR, SC_VERSION_ATTR, SC_STREAM_ATTR } from '../constants';
 import { makeTag, rehydrate, type Tag } from './StyleTags';
 import extractComps from '../utils/extractCompsFromCSS';
+import { type ExtraRules, importRule, fontRule } from './ExtraRule';
 
 declare var __VERSION__: string;
 
@@ -46,6 +47,8 @@ export default class StyleSheet {
   /* a tag for import rules */
   importRuleTag: Tag<any>;
 
+  extraRules: ExtraRules[];
+
   /* current capacity until a new tag must be created */
   capacity: number;
 
@@ -67,6 +70,10 @@ export default class StyleSheet {
     this.tags = [];
     this.capacity = 1;
     this.clones = [];
+    this.extraRules = [
+      importRule(this.target, this.forceServer, () => this.tags[0]),
+      fontRule(this.target, this.forceServer)
+    ];
   }
 
   /* rehydrate all SSR'd style tags */
@@ -191,7 +198,7 @@ export default class StyleSheet {
     const lastEl = tag ? tag.styleTag : null;
     const insertBefore = false;
 
-    return makeTag(this.target, lastEl, this.forceServer, insertBefore, this.getImportRuleTag);
+    return makeTag(this.target, lastEl, this.forceServer, insertBefore, this.extraRules);
   }
 
   getImportRuleTag = (): Tag<any> => {
