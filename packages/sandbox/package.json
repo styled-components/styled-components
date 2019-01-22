@@ -1,7 +1,8 @@
 {
   "name": "sandbox",
-  "version": "1.0.0",
+  "version": "4.1.4-alpha.0",
   "main": "server/index.js",
+  "private": true,
   "license": "MIT",
   "scripts": {
     "start": "cross-env NODE_ENV=development micro-dev --ignore=\"(src|.build)\""

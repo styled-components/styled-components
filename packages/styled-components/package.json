@@ -1,0 +1,110 @@
+{
+  "name": "styled-components",
+  "version": "4.1.4-alpha.5",
+  "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
+  "main": "dist/styled-components.cjs.js",
+  "jsnext:main": "dist/styled-components.esm.js",
+  "module": "dist/styled-components.esm.js",
+  "react-native": "native/dist/styled-components.native.cjs.js",
+  "browser": {
+    "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js",
+    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "rollup -c",
+    "prebuild": "rimraf dist",
+    "size": "bundlesize",
+    "flow": "flow check",
+    "flow:watch": "flow-watch",
+    "format": "eslint ./**/*.js --fix",
+    "lint": "eslint src",
+    "prettier": "prettier */**/*.js --write",
+    "prepublishOnly": "run-s build",
+    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
+    "prebenchmarks": "yarn run build:benchmarks",
+    "benchmarks": "node benchmarks/run-headless.js",
+    "build:benchmarks": "(cd benchmarks && yarn && yarn run build)",
+    "postinstall": "node ./scripts/postinstall.js || exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/styled-components/styled-components.git"
+  },
+  "files": [
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "dist",
+    "native",
+    "primitives",
+    "scripts",
+    "test-utils",
+    "macro"
+  ],
+  "keywords": [
+    "react",
+    "css",
+    "css-in-js",
+    "styled-components",
+    "babel-macro",
+    "babel-macros",
+    "styling"
+  ],
+  "author": "Glen Maddern",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/styled-components/styled-components/issues"
+  },
+  "homepage": "https://styled-components.com",
+  "dependencies": {
+    "@babel/helper-module-imports": "^7.0.0",
+    "@emotion/is-prop-valid": "^0.7.3",
+    "@emotion/unitless": "^0.7.0",
+    "babel-plugin-styled-components": ">= 1",
+    "css-to-react-native": "^2.2.2",
+    "memoize-one": "^5.0.0",
+    "prop-types": "^15.5.4",
+    "react-is": "^16.6.0",
+    "stylis": "^3.5.0",
+    "stylis-rule-sheet": "^0.0.10",
+    "supports-color": "^5.5.0"
+  },
+  "peerDependencies": {
+    "react": ">= 16.3.0",
+    "react-dom": ">= 16.3.0"
+  },
+  "devDependencies": {
+    "react": "^16.6.1",
+    "react-dom": "^16.6.1",
+    "react-frame-component": "^4.0.2",
+    "react-native": "^0.56.0",
+    "react-primitives": "^0.6.1",
+    "react-test-renderer": "^16.6.1"
+  },
+  "jest": {
+    "testURL": "http://localhost",
+    "clearMocks": true,
+    "roots": [
+      "<rootDir>/src/"
+    ],
+    "setupFiles": [
+      "raf/polyfill",
+      "<rootDir>/src/test/globals.js"
+    ],
+    "setupTestFrameworkScriptFile": "<rootDir>/test-utils/setupTestFramework.js",
+    "testPathIgnorePatterns": [
+      "<rootDir>/src/native",
+      "<rootDir>/src/primitives"
+    ]
+  },
+  "bundlesize": [
+    {
+      "path": "./dist/styled-components.min.js",
+      "maxSize": "16kB"
+    }
+  ],
+  "collective": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/styled-components"
+  }
+}
