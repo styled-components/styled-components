@@ -1,0 +1,28 @@
+{
+  "name": "styled-sheet",
+  "version": "0.0.0",
+  "description": "Low-level CSS injection package used in styled-components",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/styled-components/styled-components.git"
+  },
+  "keywords": [
+    "react",
+    "css",
+    "css-in-js",
+    "styled-components",
+    "babel-macro",
+    "babel-macros",
+    "styling"
+  ],
+  "author": "Glen Maddern",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/styled-components/styled-components/issues"
+  },
+  "homepage": "https://styled-components.com",
+  "collective": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/styled-components"
+  }
+}
