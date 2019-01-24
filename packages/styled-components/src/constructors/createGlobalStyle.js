@@ -81,8 +81,8 @@ export default function createGlobalStyle(
 
       return (
         <StyleSheetConsumer>
-          {(styleSheet?: StyleSheet) => {
-            this.styleSheet = styleSheet || StyleSheet.master;
+          {(styleSheet: StyleSheet) => {
+            this.styleSheet = styleSheet;
 
             const { globalStyle } = this.state;
 

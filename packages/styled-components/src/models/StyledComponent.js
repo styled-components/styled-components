@@ -98,7 +98,7 @@ class StyledComponent extends Component<*> {
     return <StyleSheetConsumer>{this.renderOuter}</StyleSheetConsumer>;
   }
 
-  renderOuter(styleSheet?: StyleSheet = StyleSheet.master) {
+  renderOuter(styleSheet: StyleSheet) {
     this.styleSheet = styleSheet;
 
     // No need to subscribe a static component to theme changes, it won't change anything

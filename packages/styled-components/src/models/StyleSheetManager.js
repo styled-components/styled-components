@@ -12,7 +12,7 @@ type Props = {
   target?: HTMLElement,
 };
 
-const StyleSheetContext = createContext();
+const StyleSheetContext = createContext(StyleSheet.master);
 
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
 
