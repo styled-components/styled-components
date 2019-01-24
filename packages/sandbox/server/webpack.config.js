@@ -58,8 +58,6 @@ const createPlugins = () => [
     // more info: https://webpack.js.org/plugins/environment-plugin/#usage-with-default-values
     NODE_ENV: 'development',
   }),
-  // new webpack.NoEmitOnErrorsPlugin()
-
   new webpack.DefinePlugin({
     // eslint-disable-next-line global-require
     __VERSION__: JSON.stringify(require('../../styled-components/package.json').version),
@@ -73,6 +71,8 @@ module.exports = [
     context: cwd,
 
     name: 'client',
+
+    mode: 'development',
 
     devtool: 'cheap-module-eval-source-map',
 
@@ -95,6 +95,8 @@ module.exports = [
     context: cwd,
 
     name: 'server',
+
+    mode: 'development',
 
     entry: {
       server: [serverApp],
