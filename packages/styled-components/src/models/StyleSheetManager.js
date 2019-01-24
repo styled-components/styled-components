@@ -1,7 +1,6 @@
 // @flow
-import React, { createContext, Component, type Element } from 'react';
+import React, { createContext, useMemo, type Element } from 'react';
 import PropTypes from 'prop-types';
-import memoize from 'memoize-one';
 import StyleSheet from './StyleSheet';
 import ServerStyleSheet from './ServerStyleSheet';
 import StyledError from '../utils/error';
@@ -12,46 +11,37 @@ type Props = {
   target?: HTMLElement,
 };
 
-const StyleSheetContext = createContext();
+export const StyleSheetContext = createContext();
 
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
 
-export default class StyleSheetManager extends Component<Props> {
-  static propTypes = {
-    sheet: PropTypes.oneOfType([
-      PropTypes.instanceOf(StyleSheet),
-      PropTypes.instanceOf(ServerStyleSheet),
-    ]),
+export default function StyleSheetManager(props: Props) {
+  const styleSheet = useMemo(
+    () => {
+      if (props.sheet) {
+        return props.sheet;
+      } else if (props.target) {
+        return new StyleSheet(props.target);
+      } else {
+        throw new StyledError(4);
+      }
+    },
+    [props.sheet, props.target]
+  );
 
-    target: PropTypes.shape({
-      appendChild: PropTypes.func.isRequired,
-    }),
-  };
-
-  getContext: (sheet: ?StyleSheet, target: ?HTMLElement) => StyleSheet;
-
-  constructor(props: Props) {
-    super(props);
-    this.getContext = memoize(this.getContext);
-  }
-
-  getContext(sheet: ?StyleSheet, target: ?HTMLElement) {
-    if (sheet) {
-      return sheet;
-    } else if (target) {
-      return new StyleSheet(target);
-    } else {
-      throw new StyledError(4);
-    }
-  }
-
-  render() {
-    const { children, sheet, target } = this.props;
-
-    return (
-      <StyleSheetContext.Provider value={this.getContext(sheet, target)}>
-        {process.env.NODE_ENV !== 'production' ? React.Children.only(children) : children}
-      </StyleSheetContext.Provider>
-    );
-  }
+  return (
+    <StyleSheetContext.Provider value={styleSheet}>
+      {process.env.NODE_ENV !== 'production' ? React.Children.only(props.children) : props.children}
+    </StyleSheetContext.Provider>
+  );
 }
+
+StyleSheetManager.propTypes = {
+  sheet: PropTypes.oneOfType([
+    PropTypes.instanceOf(StyleSheet),
+    PropTypes.instanceOf(ServerStyleSheet),
+  ]),
+  target: PropTypes.shape({
+    appendChild: PropTypes.func.isRequired,
+  }),
+};

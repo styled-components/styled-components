@@ -2,10 +2,10 @@
   "name": "styled-components-project",
   "private": true,
   "version": "4.1.3",
-  "scripts":{
+  "scripts": {
     "bs": "lerna bootstrap",
     "build": "lerna run build --stream --parallel",
-    "clean":"lerna clean",
+    "clean": "lerna clean",
     "dev": "lerna run dev --stream --parallel",
     "flow": "lerna run flow --stream --parallel",
     "lint": "lerna run lint --stream --parallel",
