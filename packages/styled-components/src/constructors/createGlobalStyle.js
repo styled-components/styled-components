@@ -1,11 +1,11 @@
 // @flow
-import React from 'react';
+import React, { useContext, useEffect, useRef } from 'react';
 import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
+import { StyleSheetContext } from '../models/StyleSheetManager';
 import StyleSheet from '../models/StyleSheet';
-import { StyleSheetConsumer } from '../models/StyleSheetManager';
 import determineTheme from '../utils/determineTheme';
-import { ThemeConsumer, type Theme } from '../models/ThemeProvider';
+import { ThemeContext } from '../models/ThemeProvider';
 // $FlowFixMe
 import hashStr from '../vendor/glamor/hash';
 import css from './css';
@@ -27,95 +27,57 @@ export default function createGlobalStyle(
   const id = `sc-global-${hashStr(JSON.stringify(rules))}`;
   const style = new GlobalStyle(rules, id);
 
-  class GlobalStyleComponent extends React.Component<GlobalStyleComponentPropsType, *> {
-    styleSheet: Object;
+  function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
+    const styleSheet = useContext(StyleSheetContext) || StyleSheet.master;
+    const theme = useContext(ThemeContext);
+    const globalStyle = useRef(style);
+    const styledComponentId = useRef(id);
 
-    static globalStyle = style;
-
-    static styledComponentId = id;
-
-    constructor(props: GlobalStyleComponentPropsType) {
-      super(props);
-
-      const { globalStyle, styledComponentId } = this.constructor;
-
-      if (IS_BROWSER) {
-        window.scCGSHMRCache[styledComponentId] =
-          (window.scCGSHMRCache[styledComponentId] || 0) + 1;
-      }
-
-      /**
-       * This fixes HMR compatibility. Don't ask me why, but this combination of
-       * caching the closure variables via statics and then persisting the statics in
-       * state works across HMR where no other combination did. ¯\_(ツ)_/¯
-       */
-      this.state = {
-        globalStyle,
-        styledComponentId,
-      };
-    }
-
-    componentWillUnmount() {
-      if (window.scCGSHMRCache[this.state.styledComponentId]) {
-        window.scCGSHMRCache[this.state.styledComponentId] -= 1;
-      }
-      /**
-       * Depending on the order "render" is called this can cause the styles to be lost
-       * until the next render pass of the remaining instance, which may
-       * not be immediate.
-       */
-      if (window.scCGSHMRCache[this.state.styledComponentId] === 0) {
-        this.state.globalStyle.removeStyles(this.styleSheet);
-      }
-    }
-
-    render() {
-      if (process.env.NODE_ENV !== 'production' && React.Children.count(this.props.children)) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          `The global style component ${
-            this.state.styledComponentId
-          } was given child JSX. createGlobalStyle does not render children.`
-        );
-      }
-
-      return (
-        <StyleSheetConsumer>
-          {(styleSheet?: StyleSheet) => {
-            this.styleSheet = styleSheet || StyleSheet.master;
-
-            const { globalStyle } = this.state;
-
-            if (globalStyle.isStatic) {
-              globalStyle.renderStyles(STATIC_EXECUTION_CONTEXT, this.styleSheet);
-
-              return null;
-            } else {
-              return (
-                <ThemeConsumer>
-                  {(theme?: Theme) => {
-                    // $FlowFixMe
-                    const { defaultProps } = this.constructor;
-
-                    const context = {
-                      ...this.props,
-                    };
-
-                    if (typeof theme !== 'undefined') {
-                      context.theme = determineTheme(this.props, theme, defaultProps);
-                    }
-
-                    globalStyle.renderStyles(context, this.styleSheet);
-
-                    return null;
-                  }}
-                </ThemeConsumer>
-              );
-            }
-          }}
-        </StyleSheetConsumer>
+    if (process.env.NODE_ENV !== 'production' && React.Children.count(props.children)) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `The global style component ${
+          styledComponentId.current
+        } was given child JSX. createGlobalStyle does not render children.`
       );
     }
+
+    if (globalStyle.current.isStatic) {
+      globalStyle.current.renderStyles(STATIC_EXECUTION_CONTEXT, styleSheet);
+    } else {
+      const context = {
+        ...props,
+      };
+
+      if (typeof theme !== 'undefined') {
+        context.theme = determineTheme(props, theme);
+      }
+
+      globalStyle.current.renderStyles(context, styleSheet);
+    }
+
+    useEffect(() => {
+      if (IS_BROWSER) {
+        window.scCGSHMRCache[styledComponentId.current] =
+          (window.scCGSHMRCache[styledComponentId.current] || 0) + 1;
+      }
+
+      return () => {
+        if (window.scCGSHMRCache[styledComponentId.current]) {
+          window.scCGSHMRCache[styledComponentId.current] -= 1;
+        }
+        /**
+         * Depending on the order "render" is called this can cause the styles to be lost
+         * until the next render pass of the remaining instance, which may
+         * not be immediate.
+         */
+        if (window.scCGSHMRCache[styledComponentId.current] === 0) {
+          globalStyle.current.removeStyles(styleSheet);
+        }
+      };
+    }, []);
+
+    return null;
   }
 
   return GlobalStyleComponent;
