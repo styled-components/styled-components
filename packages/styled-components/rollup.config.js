@@ -37,7 +37,8 @@ const commonPlugins = [
   nodeResolve(),
   babel({
     exclude: ['node_modules/**', '../../node_modules/**'],
-    plugins: ['external-helpers'],
+    plugins: ['@babel/plugin-external-helpers'],
+    externalHelpers: true,
   }),
   commonjs({
     ignoreGlobal: true,
