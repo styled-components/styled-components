@@ -92,7 +92,8 @@
       ]
     },
     "ignore": [
-      "**/test/*.js"
+      "**/test/*.js",
+      "**/flow-typed/**/*.js"
     ]
   },
   "husky": {

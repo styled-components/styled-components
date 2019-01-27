@@ -13,11 +13,11 @@ export class VirtualTag implements Tag {
   }
 
   insertRule(index: number, rule: string): boolean {
-    if (index < this.length && index >= 0) {
+    if (index < 0 || (index >= this.length && this.length !== 0)) {
+      return false;
+    } else {
       this.rules.splice(index, 0, rule);
       return true;
-    } else {
-      return false;
     }
   }
 
