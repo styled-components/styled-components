@@ -2,10 +2,7 @@
 
 import type { Tag } from './types';
 
-const makeRuleGroupMarker = (name: string) =>
-  `/* sc-component-id: ${name} */\n`;
-
-class StyleSheet {
+class RuleGroupTag {
   // Keep the size of each rule group in an array
   rulesPerGroup: number[];
 
@@ -85,12 +82,13 @@ class StyleSheet {
     // Iterate through all groups by name
     // We rely on this order being identical to the groups' ordering
     for (const name in namesPerGroup) {
-      const size = rulesPerGroup[groupIndex++];
+      const group = groupIndex++;
+      const size = rulesPerGroup[group];
       const endIndex = ruleIndex + size;
 
-      css += makeRuleGroupMarker(name);
+      css += `/* sc-${group} "${name}" */\n`;
       while (ruleIndex < endIndex) {
-        css += `${this.tag.getRule(ruleIndex++)  }\n`;
+        css += `${this.tag.getRule(ruleIndex++)}\n`;
       }
     }
 
@@ -98,4 +96,4 @@ class StyleSheet {
   }
 }
 
-export default StyleSheet;
+export default RuleGroupTag;
