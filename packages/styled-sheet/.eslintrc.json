@@ -22,6 +22,8 @@
     "no-return-assign": 0,
     "import/no-mutable-exports": 0,
     "prefer-destructuring": 0,
+    "no-param-reassign": 0,
+    "no-bitwise": 0,
     "guard-for-in": 0,
     "no-multi-assign": 0,
     "no-plusplus": 0
