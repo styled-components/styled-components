@@ -30,6 +30,10 @@ export class SpeedyTag implements Tag {
   deleteRule(index: number): void {
     this.sheet.deleteRule(index);
   }
+
+  getRule(index: number): string {
+    return this.sheet.cssRules[index].cssText;
+  }
 }
 
 export default SpeedyTag;

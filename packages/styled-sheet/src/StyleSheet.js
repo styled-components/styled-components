@@ -2,21 +2,35 @@
 
 import type { Tag } from './types';
 
+const makeRuleGroupMarker = (name: string) =>
+  `/* sc-component-id: ${name} */\n`;
+
 class StyleSheet {
   // Keep the size of each rule group in an array
   rulesPerGroup: number[];
+
+  // Keep a mapping of a group's index to its name
+  namesPerGroup: { [name: string]: number };
 
   tag: Tag;
 
   constructor(tag: Tag) {
     this.tag = tag;
     this.rulesPerGroup = [];
+    // $FlowFixMe
+    this.namesPerGroup = Object.create(null);
   }
 
   // Registers a new rule group and returns its "order index"
-  createRuleGroup(): number {
-    const index = this.rulesPerGroup.length;
+  createRuleGroup(name: string): number {
+    let index = this.namesPerGroup[name];
+    if (index !== undefined) {
+      return index;
+    }
+
+    index = this.rulesPerGroup.length;
     this.rulesPerGroup.push(0);
+    this.namesPerGroup[name] = index;
     return index;
   }
 
@@ -59,6 +73,28 @@ class StyleSheet {
     }
 
     this.rulesPerGroup[group] = 0;
+  }
+
+  toString(): string {
+    const { rulesPerGroup, namesPerGroup } = this;
+
+    let css = '';
+    let groupIndex = 0;
+    let ruleIndex = 0;
+
+    // Iterate through all groups by name
+    // We rely on this order being identical to the groups' ordering
+    for (const name in namesPerGroup) {
+      const size = rulesPerGroup[groupIndex++];
+      const endIndex = ruleIndex + size;
+
+      css += makeRuleGroupMarker(name);
+      while (ruleIndex < endIndex) {
+        css += `${this.tag.getRule(ruleIndex++)  }\n`;
+      }
+    }
+
+    return css;
   }
 }
 

@@ -17,15 +17,23 @@ class TextTag implements Tag {
   }
 
   insertRule(index: number, rule: string): boolean {
-    const node = document.createTextNode(rule);
-    const refNode = this.nodes[index];
-    this.element.insertBefore(node, refNode || null);
-    this.length++;
-    return true;
+    if (index < this.length && index >= 0) {
+      const node = document.createTextNode(rule);
+      const refNode = this.nodes[index];
+      this.element.insertBefore(node, refNode || null);
+      this.length++;
+      return true;
+    } else {
+      return false;
+    }
   }
 
   deleteRule(index: number): void {
     this.element.removeChild(this.nodes[index]);
+  }
+
+  getRule(index: number): string {
+    return this.nodes[index].textContent;
   }
 }
 
