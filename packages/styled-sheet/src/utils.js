@@ -39,3 +39,9 @@ export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
 export const makeCssMarker = (name: string, group: number, keys: string[]) => `/*sc-${group}:${name}:${keys.join(',')}*/`;
 
 export const cssMarkerRe = new RegExp(/\/\*sc-(\d+):([^:]+):([^*]*)\*\//, 'g');
+
+export const wrapInStyleTag = (css: string): string => {
+  const opening = `<style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">\n`;
+  const closing = `</style>`;
+  return `${opening}${css}${closing}`;
+};

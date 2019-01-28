@@ -3,7 +3,7 @@
 import type { GroupedTag, GroupedKeys } from './types';
 import { IS_BROWSER } from './constants';
 import { RuleGroupTag, DefaultTag, VirtualTag } from './tags';
-import { makeCssMarker } from './utils';
+import { makeCssMarker, wrapInStyleTag } from './utils';
 import GroupRegistry from './GroupRegistry';
 import rehydrate from './rehydrate';
 
@@ -28,10 +28,6 @@ class StyleSheet {
       SHOULD_REHYDRATE = false;
       rehydrate(groups);
     }
-  }
-
-  register(name: string): number {
-    return GroupRegistry.registerRuleGroup(name);
   }
 
   hasKey(group: number, key: string): boolean {
@@ -74,6 +70,10 @@ class StyleSheet {
     });
 
     return css;
+  }
+
+  toHTML(): string {
+    return wrapInStyleTag(this.toString());
   }
 }
 
