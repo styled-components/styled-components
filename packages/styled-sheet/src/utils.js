@@ -2,9 +2,6 @@
 
 import { SC_ATTR, SC_ATTR_VERSION, SC_VERSION, NONCE } from './constants';
 
-// $FlowFixMe
-const head = (document.head: HTMLElement);
-
 export const setStyledAttributes = (tag: HTMLElement): void => {
   tag.setAttribute(SC_ATTR, '');
   tag.setAttribute(SC_ATTR_VERSION, SC_VERSION);
@@ -12,6 +9,8 @@ export const setStyledAttributes = (tag: HTMLElement): void => {
 };
 
 export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
+  // $FlowFixMe
+  const head = (document.head: HTMLElement);
   const element = document.createElement('style');
   setStyledAttributes(element);
   (target || head).appendChild(element);
