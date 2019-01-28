@@ -14,9 +14,17 @@ module.exports = api => {
     ],
     plugins: [
       'preval',
+      '@babel/plugin-transform-flow-strip-types',
       ['@babel/plugin-proposal-class-properties', { loose }],
+      [
+        '@babel/plugin-transform-runtime',
+        {
+          helpers: false,
+          regenerator: true,
+        },
+      ],
       ['transform-react-remove-prop-types', { mode: 'unsafe-wrap' }],
-      // modules === 'commonjs' && 'add-module-exports',
+      modules === 'commonjs' && 'add-module-exports',
     ].filter(Boolean),
   };
 };
