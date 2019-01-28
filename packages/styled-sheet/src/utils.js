@@ -36,3 +36,7 @@ export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
 
   throw new TypeError(`CSSStyleSheet could not be found on HTMLStyleElement`);
 };
+
+export const makeCssMarker = (name: string, group: number) => `/*sc-${group}:${name}*/`;
+
+export const cssMarkerRe = new RegExp(/\/\*sc-(\d+):([^*]+)\*\//, 'g');
