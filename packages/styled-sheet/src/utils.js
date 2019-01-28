@@ -1,9 +1,9 @@
 // @flow
 
-import { SC_ATTR, SC_ATTR_VERSION, SC_VERSION, NONCE } from './constants';
+import { SC_ATTR, SC_ATTR_VERSION, SC_VERSION, SC_ACTIVE, NONCE } from './constants';
 
 export const setStyledAttributes = (tag: HTMLElement): void => {
-  tag.setAttribute(SC_ATTR, '');
+  tag.setAttribute(SC_ATTR, SC_ACTIVE);
   tag.setAttribute(SC_ATTR_VERSION, SC_VERSION);
   tag.setAttribute('nonce', NONCE);
 };
@@ -36,6 +36,6 @@ export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
   throw new TypeError(`CSSStyleSheet could not be found on HTMLStyleElement`);
 };
 
-export const makeCssMarker = (name: string, group: number) => `/*sc-${group}:${name}*/`;
+export const makeCssMarker = (name: string, group: number, keys: string[]) => `/*sc-${group}:${name}:${keys.join(',')}*/`;
 
-export const cssMarkerRe = new RegExp(/\/\*sc-(\d+):([^*]+)\*\//, 'g');
+export const cssMarkerRe = new RegExp(/\/\*sc-(\d+):([^:]+):([^*]*)\*\//, 'g');

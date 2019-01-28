@@ -1,7 +1,7 @@
 // @flow
 
-import type { Tag } from './types';
-import { makeStyleTag, getSheet } from './utils';
+import type { Tag } from '../types';
+import { makeStyleTag, getSheet } from '../utils';
 
 export class SpeedyTag implements Tag {
   element: HTMLStyleElement;

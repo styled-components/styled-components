@@ -1,6 +1,6 @@
 // @flow
 
-import type { Tag } from './types';
+import type { Tag } from '../types';
 
 export class VirtualTag implements Tag {
   rules: string[];

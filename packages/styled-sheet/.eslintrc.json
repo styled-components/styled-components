@@ -21,6 +21,7 @@
     "no-restricted-syntax": ["error", "ForOfStatement", "LabeledStatement", "WithStatement"],
     "no-return-assign": 0,
     "import/no-mutable-exports": 0,
+    "import/no-named-as-default": 0,
     "prefer-destructuring": 0,
     "no-cond-assign": 0,
     "no-param-reassign": 0,

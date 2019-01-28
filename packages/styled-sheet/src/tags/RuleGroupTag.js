@@ -1,20 +1,16 @@
 // @flow
 
-import type { Tag, GroupedTag } from './types';
-import { makeBuffer, resizeBuffer } from './buffer';
+import type { Tag, GroupedTag } from '../types';
+import { makeBuffer, resizeBuffer } from '../buffer';
 
 class RuleGroupTag implements GroupedTag {
   // Keep the size of each rule group in an array
   rulesPerGroup: number[];
 
-  // This keeps track of the next free index (i.e. max group + 1)
-  maxGroup: number;
-
   tag: Tag;
 
   constructor(tag: Tag) {
     this.tag = tag;
-    this.maxGroup = 0;
     this.rulesPerGroup = makeBuffer();
   }
 
@@ -31,12 +27,7 @@ class RuleGroupTag implements GroupedTag {
   // Appends rules to the end of the specified group's rules and
   // returns the number of rules that have been added
   insertRules(group: number, rules: string[]): number {
-    // Update maxGroup if this index is higher
-    if (group >= this.maxGroup) {
-      this.maxGroup = group + 1;
-      // Resize rulesPerGroup to fit the new group index
-      resizeBuffer(this.rulesPerGroup, group);
-    }
+    resizeBuffer(this.rulesPerGroup, group);
 
     // Retrieve the index of this group's last rule (by adding 1)
     let index = this.indexOfGroup(group + 1);

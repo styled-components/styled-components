@@ -13,6 +13,11 @@ export interface GroupedTag {
   insertRules(group: number, rules: string[]): number;
   clearGroup(group: number): void;
   getGroup(group: number): string;
-  maxGroup: number;
   tag: Tag;
 }
+
+export type GroupedKeys = {
+  [group: number]: {
+    [key: string]: any
+  }
+};

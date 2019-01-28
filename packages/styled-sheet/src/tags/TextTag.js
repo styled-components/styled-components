@@ -1,7 +1,7 @@
 // @flow
 
-import type { Tag } from './types';
-import { makeStyleTag } from './utils';
+import type { Tag } from '../types';
+import { makeStyleTag } from '../utils';
 
 class TextTag implements Tag {
   element: HTMLStyleElement;

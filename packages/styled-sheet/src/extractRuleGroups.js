@@ -5,14 +5,16 @@ import { cssMarkerRe } from './utils';
 type ExtractedRuleGroup = {
   contents: string,
   group: number,
-  name: string
+  name: string,
+  keys: string[]
 };
 
 // eslint-disable-next-line no-undef
 const makeRuleGroup = (contents: string, match: RegExp$matchResult): ExtractedRuleGroup => ({
   contents,
   group: parseInt(match[1], 10),
-  name: match[2]
+  name: match[2],
+  keys: match[3].split(',')
 });
 
 // eslint-disable-next-line no-undef

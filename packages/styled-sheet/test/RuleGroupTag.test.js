@@ -1,7 +1,7 @@
 // @flow
 
-import RuleGroupTag from '../src/RuleGroupTag';
-import VirtualTag from '../src/VirtualTag';
+import RuleGroupTag from '../src/tags/RuleGroupTag';
+import VirtualTag from '../src/tags/VirtualTag';
 
 let tag;
 let ruleGroupTag;
