@@ -28,5 +28,9 @@
   "collective": {
     "type": "opencollective",
     "url": "https://opencollective.com/styled-components"
+  },
+  "dependencies": {
+    "stylis": "^3.5.4",
+    "stylis-rule-sheet": "^0.0.10"
   }
 }
