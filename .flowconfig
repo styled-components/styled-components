@@ -10,14 +10,16 @@
 .*/node_modules/metro-source-map/.*
 .*/node_modules/babel-plugin-transform-react-remove-prop-types/.*
 .*/benchmarks/.*
-.*/dist/.*
-.*/lib/.*
-.*/src/test/.*
-.*/src/vendor/.*
-.*/src/.*/test/.*
-.*/example/.*
-.*/integration-test/.*
 .*/sandbox/.*
+
+<PROJECT_ROOT>/packages/styled-components/dist/.*
+<PROJECT_ROOT>/packages/styled-components/lib/.*
+<PROJECT_ROOT>/packages/styled-components/src/test/.*
+<PROJECT_ROOT>/packages/styled-components/src/vendor/.*
+<PROJECT_ROOT>/packages/styled-components/src/.*/test/.*
+<PROJECT_ROOT>/packages/styled-components/example/.*
+<PROJECT_ROOT>/packages/styled-components/integration-test/.*
+<PROJECT_ROOT>/packages/styled-sheet/dist/.*
 
 [options]
 suppress_comment=.*\\$FlowFixMe
