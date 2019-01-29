@@ -13,7 +13,14 @@ export interface GroupedTag {
   insertRules(group: number, rules: string[]): number;
   clearGroup(group: number): void;
   getGroup(group: number): string;
+  forEach(fn: (group: number, css: string) => void): void;
   tag: Tag;
+}
+
+export interface UniqueGroup {
+  constructor(name: string): UniqueGroup;
+  name: string;
+  index: number;
 }
 
 export type GroupedKeys = {

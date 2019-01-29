@@ -6,12 +6,14 @@ import { makeBuffer, resizeBuffer } from '../buffer';
 class RuleGroupTag implements GroupedTag {
   // Keep the size of each rule group in an array
   rulesPerGroup: number[];
-
+  // An approximate end of the rulesPerGroup buffer
+  length: number;
   tag: Tag;
 
   constructor(tag: Tag) {
     this.tag = tag;
     this.rulesPerGroup = makeBuffer();
+    this.length = 0;
   }
 
   // Retrieves the index of the first rule of a group,
@@ -27,7 +29,10 @@ class RuleGroupTag implements GroupedTag {
   // Appends rules to the end of the specified group's rules and
   // returns the number of rules that have been added
   insertRules(group: number, rules: string[]): number {
-    resizeBuffer(this.rulesPerGroup, group);
+    if (group >= this.length) {
+      this.length = group + 1;
+      resizeBuffer(this.rulesPerGroup, group);
+    }
 
     // Retrieve the index of this group's last rule (by adding 1)
     let index = this.indexOfGroup(group + 1);
@@ -75,6 +80,17 @@ class RuleGroupTag implements GroupedTag {
     }
 
     return css;
+  }
+
+  // Calls fn for each group with the group's CSS string if the group is not empty
+  forEach(fn: (group: number, css: string) => void): void {
+    const { length } = this;
+    for (let i = 0; i < length; i++) {
+      const css = this.getGroup(i);
+      if (css !== '') {
+        fn(i, css);
+      }
+    }
   }
 }
 

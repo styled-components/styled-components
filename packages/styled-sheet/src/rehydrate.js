@@ -2,7 +2,7 @@
 
 import type { GroupedTag, GroupedKeys } from './types';
 import { SC_ATTR, SC_ATTR_VERSION, SC_VERSION, SC_ACTIVE } from './constants';
-import GroupRegistry from './GroupRegistry';
+import Group from './Group';
 import extractRuleGroups from './extractRuleGroups';
 import splitCssRules from './splitCssRules';
 
@@ -34,7 +34,7 @@ const rehydrate = (groupedTag: GroupedTag): GroupedKeys => {
       const { contents, group, name, keys } = ruleGroups[j];
 
       const rules = splitCssRules(contents);
-      GroupRegistry.rehydrateRuleGroup(name, group);
+      Group.rehydrate(name, group);
       groupedTag.insertRules(group, rules);
 
       let groupKeys = groupedKeys[group];

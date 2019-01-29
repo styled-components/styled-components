@@ -1,10 +1,9 @@
 // @flow
 
-import type { GroupedTag, GroupedKeys } from './types';
+import type { GroupedTag, GroupedKeys, UniqueGroup } from './types';
 import { IS_BROWSER } from './constants';
 import { RuleGroupTag, DefaultTag, VirtualTag } from './tags';
 import { makeCssMarker, wrapInStyleTag } from './utils';
-import GroupRegistry from './GroupRegistry';
 import rehydrate from './rehydrate';
 
 // Ensure we only rehydrate once
@@ -17,20 +16,16 @@ const makeRuleGroupTag = (target?: HTMLElement, forceServer?: boolean): GroupedT
 
 class Sheet {
   groups: GroupedTag;
-
   target: void | HTMLElement;
-
   forceServer: boolean;
-
   hasRehydrated: boolean;
-
-  keys: GroupedKeys;
+  keys: { [groupIndex: number]: { [key: string]: any } };
+  names: { [groupIndex: number]: string };
 
   constructor(target?: HTMLElement, forceServer?: boolean) {
-    // $FlowFixMe
-    this.keys = Object.create(null);
     this.forceServer = !!forceServer;
     this.target = target;
+    this.reset();
 
     const groups = (this.groups = makeRuleGroupTag(target, forceServer));
     if (!forceServer && SHOULD_REHYDRATE) {
@@ -39,47 +34,46 @@ class Sheet {
     }
   }
 
-  inject(group: number, key: string, rules: string[]) {
-    if (!this.hasKey(group, key)) {
-      this.registerKey(group, key);
-      this.groups.insertRules(group, rules);
-    }
-  }
-
-  remove(group: number) {
-    // $FlowFixMe
-    this.keys[group] = Object.create(null);
-    this.groups.clearGroup(group);
-  }
-
-  // This is just meant for SSR where it's safe to reset
-  // the inner rule group tag to flush known rules
   reset() {
+    this.keys = (Object.create(null): any);
+    this.names = (Object.create(null): any);
     this.groups = makeRuleGroupTag(this.target, this.forceServer);
   }
 
-  hasKey(group: number, key: string): boolean {
-    const groupKeys = this.keys[group];
-    return groupKeys !== undefined && groupKeys[key] !== undefined;
+  getGroupKeys(groupIndex: number) {
+    const { keys } = this;
+    if (groupIndex in keys) {
+      return keys[groupIndex];
+    } else {
+      return (keys[groupIndex] = (Object.create(null): any));
+    }
   }
 
-  registerKey(group: number, key: string) {
-    let groupKeys = this.keys[group]
-    if (groupKeys === undefined) {
-      // $FlowFixMe
-      groupKeys = (this.keys[group] = Object.create(null));
+  inject({ name, index }: UniqueGroup, key: string, rules: string[]) {
+    if (!(name in this.names)) {
+      this.names[index] = name;
     }
 
-    groupKeys[key] = true;
+    const groupKeys = this.getGroupKeys(index);
+    if (!(key in groupKeys)) {
+      groupKeys[key] = true;
+      this.groups.insertRules(index, rules);
+    }
+  }
+
+  remove({ index }: UniqueGroup) {
+    delete this.keys[index];
+    this.groups.clearGroup(index);
   }
 
   toString(): string {
     let css = '';
-    GroupRegistry.forEach((name, group) => {
-      const groupRules = this.groups.getGroup(group);
-      if (groupRules !== '') {
-        const keysForGroup = Object.keys(this.keys[group] || {});
-        const marker = makeCssMarker(name, group, keysForGroup);
+
+    this.groups.forEach((groupIndex: number, groupRules: string) => {
+      const name = this.names[groupIndex];
+      if (name !== undefined && groupRules !== '') {
+        const keysForGroup = Object.keys(this.getGroupKeys(groupIndex));
+        const marker = makeCssMarker(name, groupIndex, keysForGroup);
         css += `${marker}\n${groupRules}`;
       }
     });
