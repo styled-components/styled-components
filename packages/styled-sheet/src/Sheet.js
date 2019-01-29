@@ -11,7 +11,7 @@ import rehydrate from './rehydrate';
 let SHOULD_REHYDRATE = !IS_BROWSER;
 
 const makeRuleGroupTag = (target?: HTMLElement, forceServer?: boolean): GroupedTag => {
-  const tag = forceServer ? new DefaultTag(target) : new VirtualTag();
+  const tag = forceServer ? new VirtualTag() : new DefaultTag(target);
   return new RuleGroupTag(tag);
 };
 
