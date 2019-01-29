@@ -53,8 +53,6 @@ if (
   window['__styled-components-init__'] += 1;
 }
 
-/* Export everything */
-export * from './secretInternals';
 export {
   css,
   keyframes,

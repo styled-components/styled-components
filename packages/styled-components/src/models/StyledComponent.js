@@ -1,6 +1,8 @@
 // @flow
 import validAttr from '@emotion/is-prop-valid';
 import React, { createElement, Component } from 'react';
+import { Sheet } from 'styled-sheet';
+
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
@@ -13,7 +15,6 @@ import isTag from '../utils/isTag';
 import isDerivedReactComponent from '../utils/isDerivedReactComponent';
 import isStyledComponent from '../utils/isStyledComponent';
 import once from '../utils/once';
-import StyleSheet from './StyleSheet';
 import { ThemeConsumer, type Theme } from './ThemeProvider';
 import { StyleSheetConsumer } from './StyleSheetManager';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
@@ -46,7 +47,7 @@ class StyledComponent extends Component<*> {
 
   renderInner: Function;
 
-  styleSheet: ?StyleSheet;
+  styleSheet: Sheet;
 
   warnInnerRef: Function;
 
@@ -98,7 +99,7 @@ class StyledComponent extends Component<*> {
     return <StyleSheetConsumer>{this.renderOuter}</StyleSheetConsumer>;
   }
 
-  renderOuter(styleSheet?: StyleSheet = StyleSheet.master) {
+  renderOuter(styleSheet: Sheet) {
     this.styleSheet = styleSheet;
 
     // No need to subscribe a static component to theme changes, it won't change anything

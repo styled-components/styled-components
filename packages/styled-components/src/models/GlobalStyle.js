@@ -1,45 +1,38 @@
 // @flow
-import { EMPTY_ARRAY } from '../utils/empties';
+
+import { GroupRegistry, Sheet } from 'styled-sheet';
+
 import flatten from '../utils/flatten';
-import isStaticRules from '../utils/isStaticRules';
 import stringifyRules from '../utils/stringifyRules';
-import StyleSheet from './StyleSheet';
 
 import type { RuleSet } from '../types';
 
 export default class GlobalStyle {
   componentId: string;
 
-  isStatic: boolean;
+  group: number;
 
   rules: RuleSet;
 
   constructor(rules: RuleSet, componentId: string) {
     this.rules = rules;
     this.componentId = componentId;
-    this.isStatic = isStaticRules(rules, EMPTY_ARRAY);
-
-    if (!StyleSheet.master.hasId(componentId)) {
-      StyleSheet.master.deferredInject(componentId, []);
-    }
+    this.group = GroupRegistry.registerRuleGroup(componentId);
   }
 
-  createStyles(executionContext: Object, styleSheet: StyleSheet) {
+  createStyles(executionContext: Object, styleSheet: Sheet) {
     const flatCSS = flatten(this.rules, executionContext, styleSheet);
     const css = stringifyRules(flatCSS, '');
-
-    styleSheet.inject(this.componentId, css);
+    // componentId is used as key, which means only one variant of GlobalStyle
+    // can be rendered at all times
+    styleSheet.inject(this.group, this.componentId, css);
   }
 
-  removeStyles(styleSheet: StyleSheet) {
-    const { componentId } = this;
-    if (styleSheet.hasId(componentId)) {
-      styleSheet.remove(componentId);
-    }
+  removeStyles(styleSheet: Sheet) {
+    styleSheet.remove(this.group);
   }
 
-  // TODO: overwrite in-place instead of remove+create?
-  renderStyles(executionContext: Object, styleSheet: StyleSheet) {
+  renderStyles(executionContext: Object, styleSheet: Sheet) {
     this.removeStyles(styleSheet);
     this.createStyles(executionContext, styleSheet);
   }

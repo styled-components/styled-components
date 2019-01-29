@@ -1,9 +1,12 @@
 // @flow
-import StyleSheet from './StyleSheet';
+
+import { GroupRegistry, Sheet } from 'styled-sheet';
 import StyledError from '../utils/error';
 
 export default class Keyframes {
   id: string;
+
+  group: number;
 
   name: string;
 
@@ -14,12 +17,11 @@ export default class Keyframes {
     this.rules = rules;
 
     this.id = `sc-keyframes-${name}`;
+    this.group = GroupRegistry.registerRuleGroup(this.id);
   }
 
-  inject = (styleSheet: StyleSheet) => {
-    if (!styleSheet.hasNameForId(this.id, this.name)) {
-      styleSheet.inject(this.id, this.rules, this.name);
-    }
+  inject = (styleSheet: Sheet) => {
+    styleSheet.inject(this.group, this.name, this.rules);
   };
 
   toString = () => {

@@ -1,45 +1,43 @@
 // @flow
+
 import React, { createContext, Component, type Element } from 'react';
 import PropTypes from 'prop-types';
 import memoize from 'memoize-one';
-import StyleSheet from './StyleSheet';
-import ServerStyleSheet from './ServerStyleSheet';
+import { Sheet } from 'styled-sheet';
+
 import StyledError from '../utils/error';
 
 type Props = {
   children?: Element<any>,
-  sheet?: StyleSheet,
+  sheet?: Sheet,
   target?: HTMLElement,
 };
 
-const StyleSheetContext = createContext();
+// Provide default Sheet to context
+const StyleSheetContext = createContext(new Sheet());
 
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
 
 export default class StyleSheetManager extends Component<Props> {
   static propTypes = {
-    sheet: PropTypes.oneOfType([
-      PropTypes.instanceOf(StyleSheet),
-      PropTypes.instanceOf(ServerStyleSheet),
-    ]),
-
+    sheet: PropTypes.instanceOf(Sheet),
     target: PropTypes.shape({
       appendChild: PropTypes.func.isRequired,
     }),
   };
 
-  getContext: (sheet: ?StyleSheet, target: ?HTMLElement) => StyleSheet;
+  getContext: (sheet: ?Sheet, target: ?HTMLElement) => Sheet;
 
   constructor(props: Props) {
     super(props);
     this.getContext = memoize(this.getContext);
   }
 
-  getContext(sheet: ?StyleSheet, target: ?HTMLElement) {
+  getContext(sheet: ?Sheet, target: ?HTMLElement) {
     if (sheet) {
       return sheet;
     } else if (target) {
-      return new StyleSheet(target);
+      return new Sheet(target);
     } else {
       throw new StyledError(4);
     }

@@ -1,8 +1,10 @@
 // @flow
+
 import React from 'react';
-import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants';
+import { Sheet } from 'styled-sheet';
+
+import { IS_BROWSER } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
-import StyleSheet from '../models/StyleSheet';
 import { StyleSheetConsumer } from '../models/StyleSheetManager';
 import determineTheme from '../utils/determineTheme';
 import { ThemeConsumer, type Theme } from '../models/ThemeProvider';
@@ -28,7 +30,7 @@ export default function createGlobalStyle(
   const style = new GlobalStyle(rules, id);
 
   class GlobalStyleComponent extends React.Component<GlobalStyleComponentPropsType, *> {
-    styleSheet: Object;
+    styleSheet: Sheet;
 
     static globalStyle = style;
 
@@ -81,37 +83,31 @@ export default function createGlobalStyle(
 
       return (
         <StyleSheetConsumer>
-          {(styleSheet?: StyleSheet) => {
-            this.styleSheet = styleSheet || StyleSheet.master;
+          {(styleSheet: Sheet) => {
+            this.styleSheet = styleSheet;
 
             const { globalStyle } = this.state;
 
-            if (globalStyle.isStatic) {
-              globalStyle.renderStyles(STATIC_EXECUTION_CONTEXT, this.styleSheet);
+            return (
+              <ThemeConsumer>
+                {(theme?: Theme) => {
+                  // $FlowFixMe
+                  const { defaultProps } = this.constructor;
 
-              return null;
-            } else {
-              return (
-                <ThemeConsumer>
-                  {(theme?: Theme) => {
-                    // $FlowFixMe
-                    const { defaultProps } = this.constructor;
+                  const context = {
+                    ...this.props,
+                  };
 
-                    const context = {
-                      ...this.props,
-                    };
+                  if (typeof theme !== 'undefined') {
+                    context.theme = determineTheme(this.props, theme, defaultProps);
+                  }
 
-                    if (typeof theme !== 'undefined') {
-                      context.theme = determineTheme(this.props, theme, defaultProps);
-                    }
+                  globalStyle.renderStyles(context, this.styleSheet);
 
-                    globalStyle.renderStyles(context, this.styleSheet);
-
-                    return null;
-                  }}
-                </ThemeConsumer>
-              );
-            }
+                  return null;
+                }}
+              </ThemeConsumer>
+            );
           }}
         </StyleSheetConsumer>
       );
