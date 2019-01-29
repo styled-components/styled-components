@@ -2,24 +2,24 @@
   "name": "styled-sheet",
   "version": "0.0.0",
   "description": "Low-level CSS injection package used in styled-components",
+  "source": "./src/index.js",
+  "main": "./dist/styled-sheet.js",
+  "module": "./dist/styled-sheet.es.js",
+  "files": [
+    "dist",
+    "index.js",
+    "index.js.flow"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
   "scripts": {
     "jest": "jest",
-    "flow": "flow"
+    "flow": "flow",
+    "build": "microbundle"
   },
-  "keywords": [
-    "react",
-    "css",
-    "css-in-js",
-    "styled-components",
-    "babel-macro",
-    "babel-macros",
-    "styling"
-  ],
-  "author": "Glen Maddern",
+  "author": "Phil Pluckthun",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/styled-components/styled-components/issues"
@@ -32,5 +32,9 @@
   "dependencies": {
     "stylis": "^3.5.4",
     "stylis-rule-sheet": "^0.0.10"
+  },
+  "devDependencies": {
+    "microbundle": "^0.9.0",
+    "npm-run-all": "^4.1.5"
   }
 }

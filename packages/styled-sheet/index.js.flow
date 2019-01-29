@@ -1,0 +1,89 @@
+// @flow
+
+declare interface ITag {
+  length: number;
+  constructor(target?: HTMLElement): void;
+  deleteRule(index: number): void;
+  getRule(index: number): string;
+  insertRule(index: number, rule: string): boolean;
+}
+
+declare interface IGroupedTag {
+  tag: ITag;
+  clearGroup(group: number): void;
+  constructor(tag: ITag): void;
+  getGroup(group: number): string;
+  insertRules(group: number, rules: Array<string>): number;
+}
+
+declare export var DefaultTag: VirtualTag | TextTag | SpeedyTag;
+export type GroupedKeys = {[group: number]: {[key: string]: any}};
+declare export var GroupedTag: Class<IGroupedTag>;
+
+declare export class RuleGroupTag implements IGroupedTag {
+  rulesPerGroup: Array<number>;
+  tag: ITag;
+  clearGroup(group: number): void;
+  constructor(tag: ITag): void;
+  getGroup(group: number): string;
+  indexOfGroup(group: number): number;
+  insertRules(group: number, rules: Array<string>): number;
+}
+
+declare export class Sheet {
+  forceServer: boolean;
+  groups: IGroupedTag;
+  hasRehydrated: boolean;
+  keys: {[group: number]: {[key: string]: any}};
+  target: void | HTMLElement;
+  constructor(target?: HTMLElement, forceServer?: boolean): void;
+  hasKey(group: number, key: string): boolean;
+  inject(group: number, key: string, rules: Array<string>): void;
+  registerKey(group: number, key: string): void;
+  remove(group: number): void;
+  reset(): void;
+  toHTML(): string;
+  toString(): string;
+}
+
+declare export class SpeedyTag implements ITag {
+  element: HTMLStyleElement;
+  length: number;
+  sheet: CSSStyleSheet;
+  constructor(target?: HTMLElement): void;
+  deleteRule(index: number): void;
+  getRule(index: number): string;
+  insertRule(index: number, rule: string): boolean;
+}
+
+declare export var Tag: Class<ITag>;
+
+declare export class TextTag implements ITag {
+  element: HTMLStyleElement;
+  length: number;
+  nodes: NodeList<Node>;
+  constructor(target?: HTMLElement): void;
+  deleteRule(index: number): void;
+  getRule(index: number): string;
+  insertRule(index: number, rule: string): boolean;
+}
+
+declare export class VirtualTag implements ITag {
+  length: number;
+  rules: Array<string>;
+  constructor(_target?: HTMLElement): void;
+  deleteRule(index: number): void;
+  getRule(index: number): string;
+  insertRule(index: number, rule: string): boolean;
+}
+
+declare interface IGroupRegistry {
+  groupToName: {[group: number]: string};
+  length: number;
+  nameToGroup: {[name: string]: number};
+  forEach(fn: (_: string, _: number) => void): void;
+  registerRuleGroup(name: string): number;
+  rehydrateRuleGroup(name: string, group: number): void;
+}
+
+declare export var GroupRegistry: IGroupRegistry;

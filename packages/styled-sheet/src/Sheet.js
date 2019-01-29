@@ -15,11 +15,15 @@ const makeRuleGroupTag = (target?: HTMLElement, forceServer?: boolean): GroupedT
   return new RuleGroupTag(tag);
 };
 
-class StyleSheet {
+class Sheet {
   groups: GroupedTag;
+
   target: void | HTMLElement;
+
   forceServer: boolean;
+
   hasRehydrated: boolean;
+
   keys: GroupedKeys;
 
   constructor(target?: HTMLElement, forceServer?: boolean) {
@@ -89,4 +93,4 @@ class StyleSheet {
   }
 }
 
-export default StyleSheet;
+export default Sheet;

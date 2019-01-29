@@ -1,7 +1,6 @@
 // @flow
 
-import StyleSheet from './StyleSheet';
-import GroupRegistry from './GroupRegistry';
-
+export * from './types';
 export * from './tags';
-export { StyleSheet, GroupRegistry };
+export { default as Sheet } from './Sheet';
+export { default as GroupRegistry } from './GroupRegistry';
