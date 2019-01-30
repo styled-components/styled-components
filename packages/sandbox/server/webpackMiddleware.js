@@ -19,15 +19,20 @@ const waitUntilValid = new Promise(next => devMiddleware.waitUntilValid(next));
 const waitMiddleware = (req, res, next) => waitUntilValid.then(next);
 
 multiCompiler.compilers.forEach(compiler => {
-  compiler.plugin('after-emit', (compilation, callback) => {
-    Object.keys(require.cache).forEach(cachedFile => {
-      if (cachedFile.startsWith(path.resolve(SANDBOX_PATHS.outputPath))) {
-        delete require.cache[cachedFile];
-      }
-    });
+  compiler.hooks.afterEmit.tapAsync(
+    {
+      name: 'ClearSandboxCache',
+    },
+    (compilation, callback) => {
+      Object.keys(require.cache).forEach(cachedFile => {
+        if (cachedFile.startsWith(path.resolve(SANDBOX_PATHS.outputPath))) {
+          delete require.cache[cachedFile];
+        }
+      });
 
-    callback();
-  });
+      callback();
+    }
+  );
 });
 
 module.exports = next => composeMiddleware(waitMiddleware, devMiddleware, hotMiddleware)(next);
