@@ -40,6 +40,8 @@ function generateId(_ComponentStyle: Function, _displayName: string, parentCompo
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
+// TODO: Right now these warnings will only fire once in the whole app. Previously
+// these fired once per component.
 const warnInnerRef = once(displayName =>
   // eslint-disable-next-line no-console
   console.warn(
@@ -66,12 +68,12 @@ const warnNonStyledComponentAttrsObjectKey = once(
     )
 );
 
-function buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs) {
+function buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs, styledAttrs) {
   const context = { ...props, theme };
 
   if (!attrs.length) return context;
 
-  attrs.current = {};
+  styledAttrs.current = {};
 
   attrs.forEach(attrDef => {
     let resolvedAttrDef = attrDef;
@@ -104,7 +106,7 @@ function buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs) {
         }
       }
 
-      attrs.current[key] = attr;
+      styledAttrs.current[key] = attr;
       context[key] = attr;
     }
     /* eslint-enable */
@@ -113,7 +115,7 @@ function buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs) {
   return context;
 }
 
-function generateAndInjectStyles(theme: any, props: any, styleSheet: StyleSheet) {
+function generateAndInjectStyles(theme: any, props: any, styleSheet: StyleSheet, styledAttrs) {
   const { attrs, componentStyle, warnTooManyClasses } = props.forwardedComponent;
 
   // statically styled-components don't need to build an execution context object,
@@ -123,7 +125,7 @@ function generateAndInjectStyles(theme: any, props: any, styleSheet: StyleSheet)
   }
 
   const className = componentStyle.generateAndInjectStyles(
-    buildExecutionContext(theme, props, attrs),
+    buildExecutionContext(theme, props, attrs, styledAttrs),
     styleSheet
   );
 
@@ -153,15 +155,21 @@ function StyledComponent(props) {
 
   let generatedClassName;
   if (componentStyle.isStatic) {
-    generatedClassName = generateAndInjectStyles(EMPTY_OBJECT, props, styleSheet);
+    generatedClassName = generateAndInjectStyles(EMPTY_OBJECT, props, styleSheet, attrs);
   } else if (theme !== undefined) {
     generatedClassName = generateAndInjectStyles(
       determineTheme(props, theme, defaultProps),
       props,
-      styleSheet
+      styleSheet,
+      attrs
     );
   } else {
-    generatedClassName = generateAndInjectStyles(props.theme || EMPTY_OBJECT, props, styleSheet);
+    generatedClassName = generateAndInjectStyles(
+      props.theme || EMPTY_OBJECT,
+      props,
+      styleSheet,
+      attrs
+    );
   }
 
   const elementToBeCreated = props.as || attrs.current.as || target;
