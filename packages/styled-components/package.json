@@ -73,12 +73,12 @@
     "react-dom": ">= 16.8.0"
   },
   "devDependencies": {
-    "react": "^16.8.0-alpha.1",
-    "react-dom": "^16.8.0-alpha.1",
+    "react": "^16.8.0",
+    "react-dom": "^16.8.0",
     "react-frame-component": "^4.0.2",
     "react-native": "^0.56.0",
     "react-primitives": "^0.6.1",
-    "react-test-renderer": "^16.8.0-alpha.1"
+    "react-test-renderer": "^16.8.0"
   },
   "jest": {
     "testURL": "http://localhost",
