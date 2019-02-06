@@ -346,7 +346,7 @@ describe('basic', () => {
       expect(console.warn).not.toHaveBeenCalled();
     });
 
-    it('warns when a wrapped React component does not consume className', () => {
+    it.skip('warns when a wrapped React component does not consume className', () => {
       const Inner = () => <div />;
       const Comp = styled(Inner)`
         color: red;
