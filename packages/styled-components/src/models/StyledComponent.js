@@ -40,35 +40,7 @@ function generateId(_ComponentStyle: Function, _displayName: string, parentCompo
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-// TODO: Right now these warnings will only fire once in the whole app. Previously
-// these fired once per component.
-const warnInnerRef = once(displayName =>
-  // eslint-disable-next-line no-console
-  console.warn(
-    `The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component. "innerRef" was detected on component "${displayName}".`
-  )
-);
-
-const warnAttrsFnObjectKeyDeprecated = once(
-  (key, displayName): void =>
-    // eslint-disable-next-line no-console
-    console.warn(
-      `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`
-    )
-);
-
-const warnNonStyledComponentAttrsObjectKey = once(
-  (key, displayName): void =>
-    // eslint-disable-next-line no-console
-    console.warn(
-      `It looks like you've used a non styled-component as the value for the "${key}" prop in an object-form attrs constructor of "${displayName}".\n` +
-        'You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))\n' +
-        "To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)\n" +
-        `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
-    )
-);
-
-function buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs, styledAttrs) {
+function buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs, styledAttrs, utils) {
   const context = { ...props, theme };
 
   if (!attrs.length) return context;
@@ -95,13 +67,16 @@ function buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs, styl
       if (!attrDefWasFn) {
         if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
           if (process.env.NODE_ENV !== 'production') {
-            warnAttrsFnObjectKeyDeprecated(key, props.forwardedComponent.displayName);
+            utils.current.warnAttrsFnObjectKeyDeprecated(key, props.forwardedComponent.displayName);
           }
 
           attr = attr(context);
 
           if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-            warnNonStyledComponentAttrsObjectKey(key, props.forwardedComponent.displayName);
+            utils.current.warnNonStyledComponentAttrsObjectKey(
+              key,
+              props.forwardedComponent.displayName
+            );
           }
         }
       }
@@ -115,7 +90,13 @@ function buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs, styl
   return context;
 }
 
-function generateAndInjectStyles(theme: any, props: any, styleSheet: StyleSheet, styledAttrs) {
+function generateAndInjectStyles(
+  theme: any,
+  props: any,
+  styleSheet: StyleSheet,
+  styledAttrs,
+  utils
+) {
   const { attrs, componentStyle, warnTooManyClasses } = props.forwardedComponent;
 
   // statically styled-components don't need to build an execution context object,
@@ -125,24 +106,51 @@ function generateAndInjectStyles(theme: any, props: any, styleSheet: StyleSheet,
   }
 
   const className = componentStyle.generateAndInjectStyles(
-    buildExecutionContext(theme, props, attrs, styledAttrs),
+    buildExecutionContext(theme, props, attrs, styledAttrs, utils),
     styleSheet
   );
 
-  if (process.env.NODE_ENV !== 'production' && warnTooManyClasses) warnTooManyClasses(className);
+  if (process.env.NODE_ENV !== 'production' && warnTooManyClasses) {
+    warnTooManyClasses(className);
+  }
 
   return className;
 }
 
 function StyledComponent(props) {
-  const attrs = useRef({});
-  const styleSheet = useContext(StyleSheetContext) || StyleSheet.master;
-  const theme = useContext(ThemeContext);
-
-  // @TODO: maybe convert this into a hook?
+  // @TODO: convert this into a hook?
   // if (process.env.NODE_ENV !== 'production' && IS_BROWSER) {
   //   classNameUsageCheckInjector(this);
   // }
+
+  const styleSheet = useContext(StyleSheetContext) || StyleSheet.master;
+  const theme = useContext(ThemeContext);
+  const attrs = useRef({});
+  const utils = useRef({
+    warnInnerRef: once(displayName =>
+      // eslint-disable-next-line no-console
+      console.warn(
+        `The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component. "innerRef" was detected on component "${displayName}".`
+      )
+    ),
+    warnAttrsFnObjectKeyDeprecated: once(
+      (key, displayName): void =>
+        // eslint-disable-next-line no-console
+        console.warn(
+          `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`
+        )
+    ),
+    warnNonStyledComponentAttrsObjectKey: once(
+      (key, displayName): void =>
+        // eslint-disable-next-line no-console
+        console.warn(
+          `It looks like you've used a non styled-component as the value for the "${key}" prop in an object-form attrs constructor of "${displayName}".\n` +
+            'You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))\n' +
+            "To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)\n" +
+            `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
+        )
+    ),
+  });
 
   const {
     componentStyle,
@@ -155,20 +163,22 @@ function StyledComponent(props) {
 
   let generatedClassName;
   if (componentStyle.isStatic) {
-    generatedClassName = generateAndInjectStyles(EMPTY_OBJECT, props, styleSheet, attrs);
+    generatedClassName = generateAndInjectStyles(EMPTY_OBJECT, props, styleSheet, attrs, utils);
   } else if (theme !== undefined) {
     generatedClassName = generateAndInjectStyles(
       determineTheme(props, theme, defaultProps),
       props,
       styleSheet,
-      attrs
+      attrs,
+      utils
     );
   } else {
     generatedClassName = generateAndInjectStyles(
       props.theme || EMPTY_OBJECT,
       props,
       styleSheet,
-      attrs
+      attrs,
+      utils
     );
   }
 
@@ -182,7 +192,7 @@ function StyledComponent(props) {
   // eslint-disable-next-line guard-for-in
   for (key in computedProps) {
     if (process.env.NODE_ENV !== 'production' && key === 'innerRef' && isTargetTag) {
-      warnInnerRef(displayName);
+      utils.current.warnInnerRef(displayName);
     }
 
     if (key === 'forwardedComponent' || key === 'as') continue;
