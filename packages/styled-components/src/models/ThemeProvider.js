@@ -1,5 +1,5 @@
 // @flow
-import React, { useContext, useMemo, type Element } from 'react';
+import React, { useContext, type Element } from 'react';
 import StyledError from '../utils/error';
 import isFunction from '../utils/isFunction';
 
@@ -10,11 +10,11 @@ type Props = {
   theme: Theme | ((outerTheme: Theme) => void),
 };
 
-export const ThemeContext = React.createContext();
+export const ThemeContext = React.createContext<Theme | void>();
 
 export const ThemeConsumer = ThemeContext.Consumer;
 
-function getTheme(theme: (outerTheme: ?Theme) => void, outerTheme: ?Theme) {
+function useMergedTheme(theme: Theme | ((outerTheme?: Theme) => Theme), outerTheme?: Theme): Theme {
   if (isFunction(theme)) {
     const mergedTheme = theme(outerTheme);
 
@@ -32,7 +32,7 @@ function getTheme(theme: (outerTheme: ?Theme) => void, outerTheme: ?Theme) {
     throw new StyledError(8);
   }
 
-  return { ...outerTheme, ...theme };
+  return outerTheme ? { ...outerTheme, ...theme } : theme;
 }
 
 /**
@@ -40,7 +40,8 @@ function getTheme(theme: (outerTheme: ?Theme) => void, outerTheme: ?Theme) {
  */
 export default function ThemeProvider(props: Props) {
   const outerTheme = useContext(ThemeContext);
-  const themeContext = useMemo(() => getTheme(props.theme, outerTheme), [props.theme, outerTheme]);
+  // NOTE: can't really memoize with props.theme as that'd cause incorrect memoization when it's a function
+  const themeContext = useMergedTheme(props.theme, outerTheme);
 
   if (!props.children) {
     return null;

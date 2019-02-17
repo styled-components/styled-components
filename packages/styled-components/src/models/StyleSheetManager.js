@@ -1,5 +1,5 @@
 // @flow
-import React, { useMemo, type Element } from 'react';
+import React, { useContext, useMemo, type Element } from 'react';
 import PropTypes from 'prop-types';
 import StyleSheet from './StyleSheet';
 import ServerStyleSheet from './ServerStyleSheet';
@@ -11,22 +11,26 @@ type Props = {
   target?: HTMLElement,
 };
 
-export const StyleSheetContext = React.createContext();
+const StyleSheetContext = React.createContext<StyleSheet | void>();
 
-export const StyleSheetConsumer = StyleSheetContext.Consumer;
+export function useStyleSheet() {
+  return useContext(StyleSheetContext) || StyleSheet.master;
+}
 
-function getSheet(sheet?: StyleSheet, target?: HTMLElement): StyleSheet {
-  if (sheet) {
-    return sheet;
-  } else if (target) {
-    return new StyleSheet(target);
-  } else {
-    throw new StyledError(4);
-  }
+function useStyleSheetProvider(sheet?: StyleSheet, target?: HTMLElement) {
+  return useMemo(() => {
+    if (sheet) {
+      return sheet;
+    } else if (target) {
+      return new StyleSheet(target);
+    } else {
+      throw new StyledError(4);
+    }
+  }, [sheet, target]);
 }
 
 export default function StyleSheetManager(props: Props) {
-  const sheet = useMemo(() => getSheet(props.sheet, props.target), [props.sheet, props.target]);
+  const sheet = useStyleSheetProvider(props.sheet, props.target);
 
   return (
     <StyleSheetContext.Provider value={sheet}>

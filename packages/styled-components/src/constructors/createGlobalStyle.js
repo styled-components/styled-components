@@ -2,7 +2,7 @@
 import React, { useContext, useEffect, useRef } from 'react';
 import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
-import { StyleSheetContext } from '../models/StyleSheetManager';
+import { useStyleSheet } from '../models/StyleSheetManager';
 import StyleSheet from '../models/StyleSheet';
 import determineTheme from '../utils/determineTheme';
 import { ThemeContext } from '../models/ThemeProvider';
@@ -28,7 +28,7 @@ export default function createGlobalStyle(
   const style = new GlobalStyle(rules, id);
 
   function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
-    const styleSheet = useContext(StyleSheetContext) || StyleSheet.master;
+    const styleSheet = useStyleSheet();
     const theme = useContext(ThemeContext);
     const globalStyle = useRef(style);
     const styledComponentId = useRef(id);
