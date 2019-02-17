@@ -14,7 +14,6 @@ import { ThemeConsumer } from './ThemeProvider';
 import type { Theme } from './ThemeProvider';
 import type { Attrs, RuleSet, Target } from '../types';
 
-// $FlowFixMe
 class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
 
@@ -185,7 +184,7 @@ export default (InlineStyle: Function) => {
     const isClass = !isTag(target);
     const isTargetStyledComp = isStyledComponent(target);
 
-    const WrappedStyledNativeComponent = React.forwardRef((props, ref) => (
+    const WrappedStyledNativeComponent = React.forwardRef<*, *>((props, ref) => (
       <ParentComponent
         {...props}
         forwardedComponent={WrappedStyledNativeComponent}
@@ -235,7 +234,6 @@ export default (InlineStyle: Function) => {
     };
 
     if (isClass) {
-      // $FlowFixMe
       hoist(WrappedStyledNativeComponent, target, {
         // all SC-specific things should not be hoisted
         attrs: true,

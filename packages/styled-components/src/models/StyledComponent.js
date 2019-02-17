@@ -1,6 +1,13 @@
 // @flow
 import validAttr from '@emotion/is-prop-valid';
-import React, { createElement, useRef, useContext } from 'react';
+import React, {
+  createElement,
+  useRef,
+  useContext,
+  useState,
+  type AbstractComponent,
+  type Ref,
+} from 'react';
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
@@ -15,12 +22,13 @@ import isStyledComponent from '../utils/isStyledComponent';
 import once from '../utils/once';
 import StyleSheet from './StyleSheet';
 import { ThemeContext } from './ThemeProvider';
-import { StyleSheetContext } from './StyleSheetManager';
+import { useStyleSheet } from './StyleSheetManager';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
-import classNameUsageCheckInjector from '../utils/classNameUsageCheckInjector';
+import useCheckClassNameUsage from '../utils/useCheckClassNameUsage';
 
 import type { Attrs, RuleSet, Target } from '../types';
-import { IS_BROWSER } from '../constants';
+
+/* global $Call */
 
 const identifiers = {};
 
@@ -54,29 +62,24 @@ function buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs, styl
     let key;
 
     if (isFunction(resolvedAttrDef)) {
-      // $FlowFixMe
       resolvedAttrDef = resolvedAttrDef(context);
       attrDefWasFn = true;
     }
 
     /* eslint-disable guard-for-in */
-    // $FlowFixMe
     for (key in resolvedAttrDef) {
       attr = resolvedAttrDef[key];
 
       if (!attrDefWasFn) {
         if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
           if (process.env.NODE_ENV !== 'production') {
-            utils.current.warnAttrsFnObjectKeyDeprecated(key, props.forwardedComponent.displayName);
+            utils.warnAttrsFnObjectKeyDeprecated(key, props.forwardedComponent.displayName);
           }
 
           attr = attr(context);
 
           if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-            utils.current.warnNonStyledComponentAttrsObjectKey(
-              key,
-              props.forwardedComponent.displayName
-            );
+            utils.warnNonStyledComponentAttrsObjectKey(key, props.forwardedComponent.displayName);
           }
         }
       }
@@ -90,9 +93,27 @@ function buildExecutionContext(theme: ?Object, props: Object, attrs: Attrs, styl
   return context;
 }
 
+interface StyledComponentWrapperProperties {
+  attrs: Array<Object>;
+  componentStyle: ComponentStyle;
+  foldedComponentIds: Array<string>;
+  target: Target;
+  styledComponentId: string;
+  warnTooManyClasses: $Call<typeof createWarnTooManyClasses, string>;
+}
+
+type StyledComponentWrapper<Config, Instance> = AbstractComponent<Config, Instance> &
+  StyledComponentWrapperProperties;
+
+type StyledComponentProps<Config, Instance> = {
+  forwardedComponent: StyledComponentWrapper<Config, Instance>,
+  forwardedRef: Ref<Instance>,
+  [string]: any,
+};
+
 function generateAndInjectStyles(
   theme: any,
-  props: any,
+  props: StyledComponentProps<*, *>,
   styleSheet: StyleSheet,
   styledAttrs,
   utils
@@ -117,31 +138,23 @@ function generateAndInjectStyles(
   return className;
 }
 
-function StyledComponent(props) {
-  // @TODO: convert this into a hook?
-  // if (process.env.NODE_ENV !== 'production' && IS_BROWSER) {
-  //   classNameUsageCheckInjector(this);
-  // }
-
-  const styleSheet = useContext(StyleSheetContext) || StyleSheet.master;
-  const theme = useContext(ThemeContext);
-  const attrs = useRef({});
-  const utils = useRef({
-    warnInnerRef: once(displayName =>
+function developmentDeprecationWarningsFactory() {
+  return {
+    warnInnerRef: once((displayName: ?string) =>
       // eslint-disable-next-line no-console
       console.warn(
         `The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component. "innerRef" was detected on component "${displayName}".`
       )
     ),
     warnAttrsFnObjectKeyDeprecated: once(
-      (key, displayName): void =>
+      (key: string, displayName: string): void =>
         // eslint-disable-next-line no-console
         console.warn(
           `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`
         )
     ),
     warnNonStyledComponentAttrsObjectKey: once(
-      (key, displayName): void =>
+      (key: string, displayName: string): void =>
         // eslint-disable-next-line no-console
         console.warn(
           `It looks like you've used a non styled-component as the value for the "${key}" prop in an object-form attrs constructor of "${displayName}".\n` +
@@ -150,10 +163,33 @@ function StyledComponent(props) {
             `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
         )
     ),
-  });
+  };
+}
+
+function useDevelopmentDeprecationWarnings(): $Call<typeof developmentDeprecationWarningsFactory> {
+  return useState(developmentDeprecationWarningsFactory)[0];
+}
+
+const useDeprecationWarnings =
+  process.env.NODE_ENV !== 'production'
+    ? useDevelopmentDeprecationWarnings
+    : // NOTE: return value must only be accessed in non-production, of course
+      // $FlowFixMe
+      (() => {}: typeof useDevelopmentDeprecationWarnings);
+
+function StyledComponent(props: StyledComponentProps<*, *>) {
+  // NOTE: this has to be called unconditionally due to the rules of hooks
+  // it will just do nothing if it's not an in-browser development build
+  useCheckClassNameUsage();
+
+  const styleSheet = useStyleSheet();
+  const theme = useContext(ThemeContext);
+  const attrs = useRef({});
+  const utils = useDeprecationWarnings();
 
   const {
     componentStyle,
+    // $FlowFixMe
     defaultProps,
     displayName,
     foldedComponentIds,
@@ -174,6 +210,7 @@ function StyledComponent(props) {
     );
   } else {
     generatedClassName = generateAndInjectStyles(
+      // eslint-disable-next-line react/prop-types
       props.theme || EMPTY_OBJECT,
       props,
       styleSheet,
@@ -192,7 +229,7 @@ function StyledComponent(props) {
   // eslint-disable-next-line guard-for-in
   for (key in computedProps) {
     if (process.env.NODE_ENV !== 'production' && key === 'innerRef' && isTargetTag) {
-      utils.current.warnInnerRef(displayName);
+      utils.warnInnerRef(displayName);
     }
 
     if (key === 'forwardedComponent' || key === 'as') continue;
@@ -221,7 +258,11 @@ function StyledComponent(props) {
   return createElement(elementToBeCreated, propsForElement);
 }
 
-export default function createStyledComponent(target: Target, options: Object, rules: RuleSet) {
+export default function createStyledComponent(
+  target: Target | StyledComponentWrapper<*, *>,
+  options: Object,
+  rules: RuleSet
+) {
   const isTargetStyledComp = isStyledComponent(target);
   const isClass = !isTag(target);
 
@@ -254,32 +295,38 @@ export default function createStyledComponent(target: Target, options: Object, r
     styledComponentId
   );
 
+  // TODO: it might be better to inline the definition of function StyledComponent in here,
+  // closing over the WrappedStyledComponent value, instead of using this anonymous wrapper.
+  // This would allow us to completely flatten the render tree to only take up a single node
+  // per styled component, and also stop overwriting forwardedComponent or forwardedRef in user props.
+  //
+  // If the code gets big we can always just refactor it into a custom hook and call from the inlined wrapper.
+  // wait a minute... 💡
   /**
    * forwardRef creates a new interim component, which we'll take advantage of
    * instead of extending ParentComponent to create _another_ interim class
    */
-  const WrappedStyledComponent = React.forwardRef((props, ref) => (
+  // $FlowFixMe this is a forced cast to merge it StyledComponentWrapperProperties
+  const WrappedStyledComponent: StyledComponentWrapper<*, *> = React.forwardRef((props, ref) => (
     <ParentComponent {...props} forwardedComponent={WrappedStyledComponent} forwardedRef={ref} />
   ));
 
-  // $FlowFixMe
   WrappedStyledComponent.attrs = finalAttrs;
-  // $FlowFixMe
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
 
-  // $FlowFixMe
   WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
     ? // $FlowFixMe
       Array.prototype.concat(target.foldedComponentIds, target.styledComponentId)
     : EMPTY_ARRAY;
 
-  // $FlowFixMe
   WrappedStyledComponent.styledComponentId = styledComponentId;
 
   // fold the underlying StyledComponent target up since we folded the styles
-  // $FlowFixMe
-  WrappedStyledComponent.target = isTargetStyledComp ? target.target : target;
+  WrappedStyledComponent.target = isTargetStyledComp
+    ? // $FlowFixMe
+      target.target
+    : target;
 
   // $FlowFixMe
   WrappedStyledComponent.withComponent = function withComponent(tag: Target) {
@@ -300,7 +347,6 @@ export default function createStyledComponent(target: Target, options: Object, r
   };
 
   if (process.env.NODE_ENV !== 'production') {
-    // $FlowFixMe
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName);
   }
 
