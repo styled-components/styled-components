@@ -113,6 +113,7 @@ class StyledComponent extends Component<*> {
       defaultProps,
       displayName,
       foldedComponentIds,
+      shouldForwardProp,
       styledComponentId,
       target,
     } = this.props.forwardedComponent;
@@ -138,6 +139,16 @@ class StyledComponent extends Component<*> {
     const propsForElement = {};
     const computedProps = { ...this.attrs, ...this.props };
 
+    // use explicit `shouldForwardProp` function if one is set, otherwise
+    // if no explicit `shouldForwardProp` set then
+    //   if we're on a tag, use `validAttr`
+    //     i.e. Don't pass through non HTML tags through to HTML elements
+    // else (we're on a component - pass throug all by default)
+    //   () => true
+    const shouldReallyForwardProp = shouldForwardProp || (
+      isTargetTag ? validAttr : () => true
+    );
+
     let key;
     // eslint-disable-next-line guard-for-in
     for (key in computedProps) {
@@ -147,8 +158,7 @@ class StyledComponent extends Component<*> {
 
       if (key === 'forwardedComponent' || key === 'as') continue;
       else if (key === 'forwardedRef') propsForElement.ref = computedProps[key];
-      else if (!isTargetTag || validAttr(key)) {
-        // Don't pass through non HTML tags through to HTML elements
+      else if (shouldReallyForwardProp(key)) {
         propsForElement[key] = computedProps[key];
       }
     }
@@ -238,6 +248,20 @@ class StyledComponent extends Component<*> {
   }
 }
 
+function getShouldForwardProp(options, target, isTargetStyledComp) {
+  // $FlowFixMe
+  if (isTargetStyledComp && target.shouldForwardProp) {
+    if (options.shouldForwardProp) {
+      // compose nested shouldForwardProp calls
+      // $FlowFixMe
+      return prop => target.shouldForwardProp(prop) && options.shouldForwardProp(prop);
+    }
+    return target.shouldForwardProp;
+  }
+
+  return options.shouldForwardProp;
+}
+
 export default function createStyledComponent(target: Target, options: Object, rules: RuleSet) {
   const isTargetStyledComp = isStyledComponent(target);
   const isClass = !isTag(target);
@@ -284,6 +308,8 @@ export default function createStyledComponent(target: Target, options: Object, r
   // $FlowFixMe
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
+  // $FlowFixMe
+  WrappedStyledComponent.shouldForwardProp = getShouldForwardProp(options, target, isTargetStyledComp);
 
   // $FlowFixMe
   WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
@@ -331,6 +357,7 @@ export default function createStyledComponent(target: Target, options: Object, r
       componentStyle: true,
       displayName: true,
       foldedComponentIds: true,
+      shouldForwardProp: true,
       styledComponentId: true,
       target: true,
       withComponent: true,
