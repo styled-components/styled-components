@@ -105,12 +105,6 @@ interface StyledComponentWrapperProperties {
 type StyledComponentWrapper<Config, Instance> = AbstractComponent<Config, Instance> &
   StyledComponentWrapperProperties;
 
-type StyledComponentProps<Config, Instance> = {
-  forwardedComponent: StyledComponentWrapper<Config, Instance>,
-  forwardedRef: Ref<Instance>,
-  [string]: any,
-};
-
 function generateAndInjectStyles(
   theme: any,
   props: StyledComponentProps<*, *>,
@@ -143,6 +137,7 @@ function developmentDeprecationWarningsFactory() {
     warnInnerRef: once((displayName: ?string) =>
       // eslint-disable-next-line no-console
       console.warn(
+        // $FlowFixMe
         `The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component. "innerRef" was detected on component "${displayName}".`
       )
     ),
@@ -177,12 +172,19 @@ const useDeprecationWarnings =
       // $FlowFixMe
       (() => {}: typeof useDevelopmentDeprecationWarnings);
 
-function StyledComponent(props: StyledComponentProps<*, *>) {
+function useStyledComponentImpl<Config, Instance>(
+  forwardedComponent: StyledComponentWrapper<Config, Instance>,
+  props: Config,
+  forwardedRef: Ref<Instance>
+) {
   // NOTE: this has to be called unconditionally due to the rules of hooks
   // it will just do nothing if it's not an in-browser development build
   useCheckClassNameUsage();
 
   const styleSheet = useStyleSheet();
+  // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
+  // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
+  // should be an immutable value, but behave for now.
   const theme = useContext(ThemeContext);
   const attrs = useRef({});
   const utils = useDeprecationWarnings();
@@ -195,7 +197,7 @@ function StyledComponent(props: StyledComponentProps<*, *>) {
     foldedComponentIds,
     styledComponentId,
     target,
-  } = props.forwardedComponent;
+  } = forwardedComponent;
 
   let generatedClassName;
   if (componentStyle.isStatic) {
@@ -210,8 +212,8 @@ function StyledComponent(props: StyledComponentProps<*, *>) {
     );
   } else {
     generatedClassName = generateAndInjectStyles(
-      // eslint-disable-next-line react/prop-types
-      props.theme || EMPTY_OBJECT,
+      // $FlowFixMe
+      props.theme || EMPTY_OBJECT, // eslint-disable-line react/prop-types
       props,
       styleSheet,
       attrs,
@@ -219,7 +221,11 @@ function StyledComponent(props: StyledComponentProps<*, *>) {
     );
   }
 
-  const elementToBeCreated = props.as || attrs.current.as || target;
+  const elementToBeCreated: Target =
+    // $FlowFixMe
+    props.as || // eslint-disable-line react/prop-types
+    attrs.current.as ||
+    target;
   const isTargetTag = isTag(elementToBeCreated);
 
   const propsForElement = {};
@@ -240,14 +246,20 @@ function StyledComponent(props: StyledComponentProps<*, *>) {
     }
   }
 
-  if (props.style && attrs.current.style) {
+  if (
+    // $FlowFixMe
+    props.style && // eslint-disable-line react/prop-types
+    attrs.current.style
+  ) {
+    // eslint-disable-next-line react/prop-types
     propsForElement.style = { ...attrs.current.style, ...props.style };
   }
 
   propsForElement.className = Array.prototype
     .concat(
       foldedComponentIds,
-      props.className,
+      // $FlowFixMe
+      props.className, // eslint-disable-line react/prop-types
       styledComponentId,
       attrs.current.className,
       generatedClassName
@@ -269,7 +281,6 @@ export default function createStyledComponent(
   const {
     displayName = generateDisplayName(target),
     componentId = generateId(ComponentStyle, options.displayName, options.parentComponentId),
-    ParentComponent = StyledComponent,
     attrs = EMPTY_ARRAY,
   } = options;
 
@@ -295,21 +306,14 @@ export default function createStyledComponent(
     styledComponentId
   );
 
-  // TODO: it might be better to inline the definition of function StyledComponent in here,
-  // closing over the WrappedStyledComponent value, instead of using this anonymous wrapper.
-  // This would allow us to completely flatten the render tree to only take up a single node
-  // per styled component, and also stop overwriting forwardedComponent or forwardedRef in user props.
-  //
-  // If the code gets big we can always just refactor it into a custom hook and call from the inlined wrapper.
-  // wait a minute... 💡
   /**
    * forwardRef creates a new interim component, which we'll take advantage of
    * instead of extending ParentComponent to create _another_ interim class
    */
   // $FlowFixMe this is a forced cast to merge it StyledComponentWrapperProperties
-  const WrappedStyledComponent: StyledComponentWrapper<*, *> = React.forwardRef((props, ref) => (
-    <ParentComponent {...props} forwardedComponent={WrappedStyledComponent} forwardedRef={ref} />
-  ));
+  const WrappedStyledComponent: StyledComponentWrapper<*, *> = React.forwardRef((props, ref) =>
+    useStyledComponentImpl(WrappedStyledComponent, props, ref)
+  );
 
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
@@ -340,7 +344,6 @@ export default function createStyledComponent(
       ...optionsToCopy,
       attrs: finalAttrs,
       componentId: newComponentId,
-      ParentComponent,
     };
 
     return createStyledComponent(tag, newOptions, rules);

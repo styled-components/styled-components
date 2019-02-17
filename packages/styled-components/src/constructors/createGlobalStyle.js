@@ -3,7 +3,6 @@ import React, { useContext, useEffect, useRef } from 'react';
 import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet } from '../models/StyleSheetManager';
-import StyleSheet from '../models/StyleSheet';
 import determineTheme from '../utils/determineTheme';
 import { ThemeContext } from '../models/ThemeProvider';
 // $FlowFixMe

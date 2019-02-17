@@ -14,6 +14,9 @@ import { ThemeConsumer } from './ThemeProvider';
 import type { Theme } from './ThemeProvider';
 import type { Attrs, RuleSet, Target } from '../types';
 
+// NOTE: no hooks available for react-native yet;
+// if the user makes use of ThemeProvider or StyleSheetManager things will break.
+
 class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
 
@@ -112,13 +115,11 @@ class StyledNativeComponent extends Component<*, *> {
       let key;
 
       if (isFunction(resolvedAttrDef)) {
-        // $FlowFixMe
         resolvedAttrDef = resolvedAttrDef(context);
         attrDefWasFn = true;
       }
 
       /* eslint-disable guard-for-in */
-      // $FlowFixMe
       for (key in resolvedAttrDef) {
         attr = resolvedAttrDef[key];
 
