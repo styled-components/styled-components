@@ -73,6 +73,7 @@
     "react-dom": ">= 16.8.0"
   },
   "devDependencies": {
+    "flow-bin": "^0.93.0",
     "react": "^16.8.0",
     "react-dom": "^16.8.0",
     "react-frame-component": "^4.0.2",
