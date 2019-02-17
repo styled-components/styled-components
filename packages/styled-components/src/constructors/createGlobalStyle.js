@@ -1,5 +1,5 @@
 // @flow
-import React, { useContext, useEffect, useRef } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet } from '../models/StyleSheetManager';
@@ -23,26 +23,22 @@ export default function createGlobalStyle(
   ...interpolations: Array<Interpolation>
 ) {
   const rules = css(strings, ...interpolations);
-  const id = `sc-global-${hashStr(JSON.stringify(rules))}`;
-  const style = new GlobalStyle(rules, id);
+  const styledComponentId = `sc-global-${hashStr(JSON.stringify(rules))}`;
+  const globalStyle = new GlobalStyle(rules, styledComponentId);
 
   function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
     const styleSheet = useStyleSheet();
     const theme = useContext(ThemeContext);
-    const globalStyle = useRef(style);
-    const styledComponentId = useRef(id);
 
     if (process.env.NODE_ENV !== 'production' && React.Children.count(props.children)) {
       // eslint-disable-next-line no-console
       console.warn(
-        `The global style component ${
-          styledComponentId.current
-        } was given child JSX. createGlobalStyle does not render children.`
+        `The global style component ${styledComponentId} was given child JSX. createGlobalStyle does not render children.`
       );
     }
 
-    if (globalStyle.current.isStatic) {
-      globalStyle.current.renderStyles(STATIC_EXECUTION_CONTEXT, styleSheet);
+    if (globalStyle.isStatic) {
+      globalStyle.renderStyles(STATIC_EXECUTION_CONTEXT, styleSheet);
     } else {
       const context = {
         ...props,
@@ -52,28 +48,29 @@ export default function createGlobalStyle(
         context.theme = determineTheme(props, theme);
       }
 
-      globalStyle.current.renderStyles(context, styleSheet);
+      globalStyle.renderStyles(context, styleSheet);
     }
 
     useEffect(() => {
       if (IS_BROWSER) {
-        window.scCGSHMRCache[styledComponentId.current] =
-          (window.scCGSHMRCache[styledComponentId.current] || 0) + 1;
-      }
+        window.scCGSHMRCache[styledComponentId] =
+          (window.scCGSHMRCache[styledComponentId] || 0) + 1;
 
-      return () => {
-        if (window.scCGSHMRCache[styledComponentId.current]) {
-          window.scCGSHMRCache[styledComponentId.current] -= 1;
-        }
-        /**
-         * Depending on the order "render" is called this can cause the styles to be lost
-         * until the next render pass of the remaining instance, which may
-         * not be immediate.
-         */
-        if (window.scCGSHMRCache[styledComponentId.current] === 0) {
-          globalStyle.current.removeStyles(styleSheet);
-        }
-      };
+        return () => {
+          if (window.scCGSHMRCache[styledComponentId]) {
+            window.scCGSHMRCache[styledComponentId] -= 1;
+          }
+          /**
+           * Depending on the order "render" is called this can cause the styles to be lost
+           * until the next render pass of the remaining instance, which may
+           * not be immediate.
+           */
+          if (window.scCGSHMRCache[styledComponentId] === 0) {
+            globalStyle.removeStyles(styleSheet);
+          }
+        };
+      }
+      return undefined;
     }, []);
 
     return null;

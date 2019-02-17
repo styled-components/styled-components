@@ -1,5 +1,5 @@
 // @flow
-import React, { useContext, useMemo, type Element, type Context } from 'react';
+import React, { useContext, useMemo, useDebugValue, type Element, type Context } from 'react';
 import PropTypes from 'prop-types';
 import StyleSheet from './StyleSheet';
 import ServerStyleSheet from './ServerStyleSheet';
@@ -14,7 +14,12 @@ type Props = {
 const StyleSheetContext: Context<StyleSheet | void> = React.createContext();
 
 export function useStyleSheet() {
-  return useContext(StyleSheetContext) || StyleSheet.master;
+  const fromContext = useContext(StyleSheetContext);
+  // $FlowFixMe the type defs are wrong and forgot to add the second argument to it
+  useDebugValue(fromContext, (provided?: StyleSheet) =>
+    provided ? `sheet id ${provided.id}` : 'master'
+  );
+  return fromContext || StyleSheet.master;
 }
 
 function useStyleSheetProvider(sheet?: StyleSheet, target?: HTMLElement) {
