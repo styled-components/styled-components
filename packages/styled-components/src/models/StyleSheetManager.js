@@ -1,5 +1,5 @@
 // @flow
-import React, { useContext, useMemo, type Element } from 'react';
+import React, { useContext, useMemo, type Element, type Context } from 'react';
 import PropTypes from 'prop-types';
 import StyleSheet from './StyleSheet';
 import ServerStyleSheet from './ServerStyleSheet';
@@ -11,7 +11,7 @@ type Props = {
   target?: HTMLElement,
 };
 
-const StyleSheetContext = React.createContext<StyleSheet | void>();
+const StyleSheetContext: Context<StyleSheet | void> = React.createContext();
 
 export function useStyleSheet() {
   return useContext(StyleSheetContext) || StyleSheet.master;

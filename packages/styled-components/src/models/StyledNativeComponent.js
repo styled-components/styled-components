@@ -185,7 +185,8 @@ export default (InlineStyle: Function) => {
     const isClass = !isTag(target);
     const isTargetStyledComp = isStyledComponent(target);
 
-    const WrappedStyledNativeComponent = React.forwardRef<*, *>((props, ref) => (
+    // $FlowFixMe
+    const WrappedStyledNativeComponent = React.forwardRef((props, ref) => (
       <ParentComponent
         {...props}
         forwardedComponent={WrappedStyledNativeComponent}

@@ -23,7 +23,7 @@ import once from '../utils/once';
 import { ThemeContext } from './ThemeProvider';
 import { useStyleSheet } from './StyleSheetManager';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
-import useCheckClassNameUsage from '../utils/useCheckClassNameUsage';
+// import useCheckClassNameUsage from '../utils/useCheckClassNameUsage';
 
 import type { Attrs, RuleSet, Target } from '../types';
 
@@ -47,14 +47,12 @@ function generateId(_ComponentStyle: Function, _displayName: string, parentCompo
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-function useResolvedAttrs<Config>(theme: any, props: Config, attrs: Attrs, utils) {
-  if (attrs.length === 0) {
-    return props;
-  }
-
+function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attrs: Attrs, utils) {
   // NOTE: can't memoize this
-  const resolvedAttrs = { ...props };
-  let consumedTheme = false;
+  // returns [context, resolvedAttrs]
+  // where resolvedAttrs is only the things injected by the attrs themselves
+  const context = { ...props, theme };
+  const resolvedAttrs = {};
   attrs.forEach(attrDef => {
     let resolvedAttrDef = attrDef;
     let attrDefWasFn = false;
@@ -62,11 +60,7 @@ function useResolvedAttrs<Config>(theme: any, props: Config, attrs: Attrs, utils
     let key;
 
     if (isFunction(resolvedAttrDef)) {
-      if (!consumedTheme) {
-        consumedTheme = true;
-        resolvedAttrs.theme = theme;
-      }
-      resolvedAttrDef = resolvedAttrDef(resolvedAttrs);
+      resolvedAttrDef = resolvedAttrDef(context);
       attrDefWasFn = true;
     }
 
@@ -80,12 +74,7 @@ function useResolvedAttrs<Config>(theme: any, props: Config, attrs: Attrs, utils
             utils.warnAttrsFnObjectKeyDeprecated(key);
           }
 
-          if (!consumedTheme) {
-            consumedTheme = true;
-            resolvedAttrs.theme = theme;
-          }
-
-          attr = attr(resolvedAttrs);
+          attr = attr(context);
 
           if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
             utils.warnNonStyledComponentAttrsObjectKey(key);
@@ -94,11 +83,12 @@ function useResolvedAttrs<Config>(theme: any, props: Config, attrs: Attrs, utils
       }
 
       resolvedAttrs[key] = attr;
+      context[key] = attr;
     }
     /* eslint-enable */
   });
 
-  return resolvedAttrs;
+  return [context, resolvedAttrs];
 }
 
 interface StyledComponentWrapperProperties {
@@ -203,30 +193,33 @@ function useStyledComponentImpl<Config: {}, Instance>(
   const theme = determineTheme((props: any), useContext(ThemeContext), defaultProps);
 
   const utils = useDeprecationWarnings(displayName);
-  const attrs = useResolvedAttrs(theme, props, componentAttrs, utils);
+  const [context, attrs] = useResolvedAttrs(theme, props, componentAttrs, utils);
 
   const generatedClassName = useInjectedStyle(
     componentStyle,
     componentAttrs.length > 0,
-    attrs,
+    context,
     utils,
     process.env.NODE_ENV !== 'production' ? forwardedComponent.warnTooManyClasses : (undefined: any)
   );
 
   // NOTE: this has to be called unconditionally due to the rules of hooks
   // it will just do nothing if it's not an in-browser development build
-  const refToForward = useCheckClassNameUsage(
-    forwardedRef,
-    target,
-    generatedClassName,
-    // $FlowFixMe
-    attrs.suppressClassNameWarning
-  );
+  // NOTE2: there is no (supported) way to know if the wrapped component actually can
+  // receive refs -- just passing refs will trigger warnings on any function component child :(
+  // -- this also means we can't keep doing this check unless StyledComponent is itself a class.
+  //
+  // const refToForward = useCheckClassNameUsage(
+  //   forwardedRef,
+  //   target,
+  //   generatedClassName,
+  //   attrs.suppressClassNameWarning
+  // );
+  const refToForward = forwardedRef;
 
   const elementToBeCreated: Target =
     // $FlowFixMe
     props.as || // eslint-disable-line react/prop-types
-    // $FlowFixMe
     attrs.as ||
     target;
   const isTargetTag = isTag(elementToBeCreated);
@@ -251,8 +244,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
   if (
     // $FlowFixMe
     props.style && // eslint-disable-line react/prop-types
-    // $FlowFixMe
-    attrs.style
+    attrs.style !== props.style // eslint-disable-line react/prop-types
   ) {
     // $FlowFixMe
     propsForElement.style = { ...attrs.style, ...props.style }; // eslint-disable-line react/prop-types
@@ -265,7 +257,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
       // $FlowFixMe
       props.className, // eslint-disable-line react/prop-types
       styledComponentId,
-      // $FlowFixMe
       attrs.className,
       generatedClassName
     )
@@ -274,7 +265,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
   // $FlowFixMe
   propsForElement.ref = refToForward;
 
-  useDebugValue(styledComponentId)
+  useDebugValue(styledComponentId);
 
   return createElement(elementToBeCreated, propsForElement);
 }

@@ -1,5 +1,5 @@
 // @flow
-import React, { useContext, type Element } from 'react';
+import React, { useContext, type Element, type Context } from 'react';
 import StyledError from '../utils/error';
 import isFunction from '../utils/isFunction';
 
@@ -10,7 +10,7 @@ type Props = {
   theme: Theme | ((outerTheme: Theme) => void),
 };
 
-export const ThemeContext = React.createContext<Theme | void>();
+export const ThemeContext: Context<Theme | void> = React.createContext();
 
 export const ThemeConsumer = ThemeContext.Consumer;
 

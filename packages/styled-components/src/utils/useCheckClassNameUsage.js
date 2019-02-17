@@ -34,7 +34,7 @@ function useDevelopmentCheckClassNameUsage(
   generatedClassName: string,
   suppressClassNameWarning: boolean
 ) {
-  const ownRefDefault = useRef<any>(null);
+  const ownRefDefault: { current: any } = useRef(null);
   const ownRef = suppressClassNameWarning ? null : ownRefDefault;
   const refToUse = useCombinedRefs(ref, ownRef);
 

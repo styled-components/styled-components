@@ -5,11 +5,16 @@ import determineTheme from '../utils/determineTheme';
 import getComponentName from '../utils/getComponentName';
 import hoistStatics from '../utils/hoist';
 
-export default <Config: { theme?: any }, Instance>(
-  Component: AbstractComponent<Config, Instance>
-  // eslint-disable-next-line no-undef
-): AbstractComponent<$Diff<Config, { theme?: any }> & { theme?: any }, Instance> => {
-  const WithTheme = React.forwardRef<Config, Instance>((props, ref) => {
+// NOTE: this would be the correct signature:
+// export default <Config: { theme?: any }, Instance>(
+//  Component: AbstractComponent<Config, Instance>
+// ): AbstractComponent<$Diff<Config, { theme?: any }> & { theme?: any }, Instance>
+//
+// but the old build system tooling doesn't support the syntax
+
+export default (Component: AbstractComponent<*, *>) => {
+  // $FlowFixMe This should be React.forwardRef<Config, Instance>
+  const WithTheme = React.forwardRef((props, ref) => {
     const theme = useContext(ThemeContext);
     // $FlowFixMe defaultProps isn't declared so it can be inferrable
     const { defaultProps } = Component;
