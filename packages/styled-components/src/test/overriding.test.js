@@ -81,7 +81,6 @@ describe('extending', () => {
         const Parent = setupParent();
         const Child = styled(Parent).attrs({as: 'h2'})``;
         const Grandson = styled(Child).attrs({as: 'h3'})``;
-        console.log
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);
