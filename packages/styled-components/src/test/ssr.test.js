@@ -2,7 +2,9 @@
  * @jest-environment node
  */
 // @flow
+import {shallow} from 'enzyme';
 import React from 'react';
+import renderHTML from 'react-render-html';
 import { renderToString, renderToNodeStream } from 'react-dom/server';
 import ServerStyleSheet from '../models/ServerStyleSheet';
 import { resetStyled, seedNextClassnames } from './utils';
@@ -352,6 +354,51 @@ describe('ssr', () => {
         expect(sheet.sealed).toBe(true);
         resolve();
       });
+    });
+  });
+
+  it('should not interleave style tags into textarea elements', () => {
+    const StyledTextArea = styled.textarea`
+      height: ${(props) => `${props.height}px`};
+    `;
+
+    const sheet = new ServerStyleSheet();
+
+    // Currently we cannot set the chunk size to read with react renderToNodeStream, so to ensure
+    // that multiple chunks are created, we initialize a large array of styled text areas.  We give
+    // each textarea a different style to ensure a large enough number of style tags are generated
+    // to be interleaved in the document
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
+        {new Array(500).fill(0).map((_, i) => (
+          <StyledTextArea className="test-textarea" value={`Textarea ${i}`} height={i} />
+        ))}
+      </React.Fragment>
+    );
+
+    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+
+    return new Promise((resolve, reject) => {
+      let received = '';
+
+      stream.on('data', (chunk) => {
+        received += chunk;
+      });
+
+      stream.on('end', () => {
+        const wrapper = shallow(
+          <div>{renderHTML(received)}</div>
+        );
+
+        wrapper.find('.test-textarea').forEach((node) => {
+          // The style tag should never be injected into a textarea.  This causes the style tag to
+          // render as text inside the textarea
+          expect(node.html().includes('style')).toBe(false);
+        });
+        resolve();
+      });
+
+      stream.on('error', reject);
     });
   });
 });
