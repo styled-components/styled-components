@@ -1,6 +1,6 @@
-import styled from 'styled-components';
+import styleable from 'styled-components';
 
-const View = styled.div`
+const View = styleable.div`
   align-items: stretch;
   border-width: 0;
   border-style: solid;

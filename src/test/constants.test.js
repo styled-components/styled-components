@@ -13,9 +13,9 @@ describe('constants', () => {
   describe('SC_ATTR', () => {
     function renderAndExpect(expectedAttr) {
       const SC_ATTR = require('../constants').SC_ATTR;
-      const styled = require('./utils').resetStyled();
+      const placeable = require('./utils').resetPlaceable();
 
-      const Comp = styled.div`
+      const Comp = placeable.div`
         color: blue;
       `;
 
@@ -45,9 +45,9 @@ describe('constants', () => {
   describe('DISABLE_SPEEDY', () => {
     function renderAndExpect(expectedDisableSpeedy, expectedCss) {
       const DISABLE_SPEEDY = require('../constants').DISABLE_SPEEDY;
-      const styled = require('./utils').resetStyled();
+      const placeable = require('./utils').resetPlaceable();
 
-      const Comp = styled.div`
+      const Comp = placeable.div`
         color: blue;
       `;
 

@@ -2,7 +2,7 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
-import { resetStyled, expectCSSMatches, seedNextClassnames } from './utils';
+import { resetPlaceable, expectCSSMatches, seedNextClassnames } from './utils';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 import keyframes from '../constructors/keyframes';
 import StyleSheet from '../models/StyleSheet';
@@ -13,17 +13,17 @@ const getStyleTags = () =>
     css: el.innerHTML.trim().replace(/\s+/gm, ' '),
   }));
 
-let styled;
+let placeable;
 
 describe('rehydration', () => {
   /**
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    styled = resetStyled();
+    placeable = resetPlaceable();
   });
 
-  describe('with existing styled components', () => {
+  describe('with existing placeable components', () => {
     beforeEach(() => {
       document.head.innerHTML = `
         <style ${SC_ATTR}="b" ${SC_VERSION_ATTR}="${__VERSION__}">
@@ -39,7 +39,7 @@ describe('rehydration', () => {
     });
 
     it('should append a new component like normal', () => {
-      const Comp = styled.div.withConfig({ componentId: 'ONE' })`
+      const Comp = placeable.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `;
       TestRenderer.create(<Comp />);
@@ -47,21 +47,21 @@ describe('rehydration', () => {
     });
 
     it('should reuse a componentId', () => {
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = placeable.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `;
       TestRenderer.create(<A />);
-      const B = styled.div.withConfig({ componentId: 'TWO' })``;
+      const B = placeable.div.withConfig({ componentId: 'TWO' })``;
       TestRenderer.create(<B />);
       expectCSSMatches('.b { color: red; } .a { color:blue; }');
     });
 
     it('should reuse a componentId and generated class', () => {
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = placeable.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `;
       TestRenderer.create(<A />);
-      const B = styled.div.withConfig({ componentId: 'TWO' })`
+      const B = placeable.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `;
       TestRenderer.create(<B />);
@@ -69,15 +69,15 @@ describe('rehydration', () => {
     });
 
     it('should reuse a componentId and inject new classes', () => {
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = placeable.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `;
       TestRenderer.create(<A />);
-      const B = styled.div.withConfig({ componentId: 'TWO' })`
+      const B = placeable.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `;
       TestRenderer.create(<B />);
-      const C = styled.div.withConfig({ componentId: 'TWO' })`
+      const C = placeable.div.withConfig({ componentId: 'TWO' })`
         color: green;
       `;
       TestRenderer.create(<C />);
@@ -85,7 +85,7 @@ describe('rehydration', () => {
     });
   });
 
-  describe('with styled components with props', () => {
+  describe('with placeable components with props', () => {
     beforeEach(() => {
       /* Hash 1323611362 is based on name TWO and contents color: red.
        * Change either and this will break. */
@@ -108,7 +108,7 @@ describe('rehydration', () => {
     });
 
     it('should not inject new styles for a component already rendered', () => {
-      const Comp = styled.div.withConfig({ componentId: 'ONE' })`
+      const Comp = placeable.div.withConfig({ componentId: 'ONE' })`
         color: ${props => props.color};
       `;
       TestRenderer.create(<Comp color="blue" />);
@@ -120,7 +120,7 @@ describe('rehydration', () => {
 
     it('should inject new styles for a new computed style of a component', () => {
       seedNextClassnames(['x']);
-      const Comp = styled.div.withConfig({ componentId: 'ONE' })`
+      const Comp = placeable.div.withConfig({ componentId: 'ONE' })`
         color: ${props => props.color};
       `;
       TestRenderer.create(<Comp color="green" />);
@@ -148,11 +148,11 @@ describe('rehydration', () => {
     });
 
     it('should generate new classes, even if they have the same name', () => {
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = placeable.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `;
       TestRenderer.create(<A />);
-      const B = styled.div.withConfig({ componentId: 'TWO' })`
+      const B = placeable.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `;
       TestRenderer.create(<B />);
@@ -196,7 +196,7 @@ describe('rehydration', () => {
       const Component = createGlobalStyle`
         body { color: tomato; }
       `;
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = placeable.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `;
       TestRenderer.create(<Component />);
@@ -265,11 +265,11 @@ describe('rehydration', () => {
         body { background: papayawhip; }
       `;
       TestRenderer.create(<Component2 />);
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = placeable.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `;
       TestRenderer.create(<A />);
-      const B = styled.div.withConfig({ componentId: 'TWO' })`
+      const B = placeable.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `;
       TestRenderer.create(<B />);
@@ -283,7 +283,7 @@ describe('rehydration', () => {
     });
 
     it('should still not change styles if rendered in a different order', () => {
-      const B = styled.div.withConfig({ componentId: 'TWO' })`
+      const B = placeable.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `;
       TestRenderer.create(<B />);
@@ -291,7 +291,7 @@ describe('rehydration', () => {
         body { background: papayawhip; }
       `;
       TestRenderer.create(<Component1 />);
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = placeable.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `;
       TestRenderer.create(<A />);
@@ -333,7 +333,7 @@ describe('rehydration', () => {
         from { opacity: 0; }
       `;
 
-      const A = styled.div`
+      const A = placeable.div`
         animation: ${fadeIn} 1s both;
       `;
       TestRenderer.create(<A />);
@@ -351,7 +351,7 @@ describe('rehydration', () => {
         from { opacity: 1; }
       `;
 
-      const A = styled.div`
+      const A = placeable.div`
         animation: ${fadeOut} 1s both;
       `;
       TestRenderer.create(<A />);
@@ -372,10 +372,10 @@ describe('rehydration', () => {
       const fadeOut = keyframes`
         from { opacity: 1; }
       `;
-      const A = styled.div`
+      const A = placeable.div`
         animation: ${fadeIn} 1s both;
       `;
-      const B = styled.div`
+      const B = placeable.div`
         animation: ${fadeOut} 1s both;
       `;
       /* Purposely rendering out of order to make sure the output looks right */
@@ -399,10 +399,10 @@ describe('rehydration', () => {
       const fadeOut = keyframes`
         from { opacity: 1; }
       `;
-      const A = styled.div`
+      const A = placeable.div`
         animation: ${props => props.animation} 1s both;
       `;
-      const B = styled.div`
+      const B = placeable.div`
         animation: ${props => props.animation} 1s both;
       `;
       /* Purposely rendering out of order to make sure the output looks right */

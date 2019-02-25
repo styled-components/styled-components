@@ -2,34 +2,34 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
-import { getCSS, resetStyled } from './utils';
+import { getCSS, resetPlaceable } from './utils';
 
-let styled;
+let placeable;
 
 describe('expanded api', () => {
   /**
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    styled = resetStyled();
+    placeable = resetPlaceable();
   });
 
   describe('displayName', () => {
     it('should be auto-generated if none passed', () => {
-      const Comp = styled.div``;
+      const Comp = placeable.div``;
       expect(Comp.displayName).toBe('styled.div');
     });
 
     it('should be attached if supplied', () => {
-      const Comp = styled.div.withConfig({ displayName: 'Comp' })``;
+      const Comp = placeable.div.withConfig({ displayName: 'Comp' })``;
       expect(Comp.displayName).toBe('Comp');
     });
   });
 
   describe('componentId', () => {
     it('should be generated as "sc" + hash', () => {
-      const Comp = styled.div``;
-      const Comp2 = styled.div``;
+      const Comp = placeable.div``;
+      const Comp2 = placeable.div``;
       expect(Comp.styledComponentId).toBe('sc-a');
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
       expect(Comp2.styledComponentId).toBe('sc-b');
@@ -37,8 +37,8 @@ describe('expanded api', () => {
     });
 
     it('should be generated from displayName + hash', () => {
-      const Comp = styled.div.withConfig({ displayName: 'Comp' })``;
-      const Comp2 = styled.div.withConfig({ displayName: 'Comp2' })``;
+      const Comp = placeable.div.withConfig({ displayName: 'Comp' })``;
+      const Comp2 = placeable.div.withConfig({ displayName: 'Comp2' })``;
       expect(Comp.styledComponentId).toBe('Comp-a');
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
       expect(Comp2.styledComponentId).toBe('Comp2-b');
@@ -46,8 +46,8 @@ describe('expanded api', () => {
     });
 
     it('should be attached if passed in', () => {
-      const Comp = styled.div.withConfig({ componentId: 'LOLOMG' })``;
-      const Comp2 = styled.div.withConfig({ componentId: 'OMGLOL' })``;
+      const Comp = placeable.div.withConfig({ componentId: 'LOLOMG' })``;
+      const Comp2 = placeable.div.withConfig({ componentId: 'OMGLOL' })``;
       expect(Comp.styledComponentId).toBe('LOLOMG');
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
       expect(Comp2.styledComponentId).toBe('OMGLOL');
@@ -55,11 +55,11 @@ describe('expanded api', () => {
     });
 
     it('should be combined with displayName if both passed in', () => {
-      const Comp = styled.div.withConfig({
+      const Comp = placeable.div.withConfig({
         displayName: 'Comp',
         componentId: 'LOLOMG',
       })``;
-      const Comp2 = styled.div.withConfig({
+      const Comp2 = placeable.div.withConfig({
         displayName: 'Comp2',
         componentId: 'OMGLOL',
       })``;
@@ -71,11 +71,11 @@ describe('expanded api', () => {
 
     it('should work with `.withComponent`', () => {
       const Dummy = props => <div {...props} />;
-      const Comp = styled.div.withConfig({
+      const Comp = placeable.div.withConfig({
         displayName: 'Comp',
         componentId: 'OMGLOL',
       })``.withComponent('h1');
-      const Comp2 = styled.div.withConfig({
+      const Comp2 = placeable.div.withConfig({
         displayName: 'Comp2',
         componentId: 'OMFG',
       })``.withComponent(Dummy);
@@ -88,7 +88,7 @@ describe('expanded api', () => {
 
   describe('chaining', () => {
     it('should merge the options strings', () => {
-      const Comp = styled.div
+      const Comp = placeable.div
         .withConfig({ componentId: 'id-1' })
         .withConfig({ displayName: 'dn-2' })``;
       expect(Comp.displayName).toBe('dn-2');
@@ -96,7 +96,7 @@ describe('expanded api', () => {
     });
 
     it('should keep the last value passed in when merging', () => {
-      const Comp = styled.div
+      const Comp = placeable.div
         .withConfig({ displayName: 'dn-2', componentId: 'id-3' })
         .withConfig({ displayName: 'dn-5', componentId: 'id-4' })``;
       expect(Comp.displayName).toBe('dn-5');
@@ -106,7 +106,7 @@ describe('expanded api', () => {
 
   describe('"as" prop', () => {
     it('changes the rendered element type', () => {
-      const Comp = styled.div`
+      const Comp = placeable.div`
         color: red;
       `;
 
@@ -114,7 +114,7 @@ describe('expanded api', () => {
     });
 
     it('changes the rendered element type when used with attrs', () => {
-      const Comp = styled.div.attrs({
+      const Comp = placeable.div.attrs({
         as: 'header',
       })`
         color: red;
@@ -124,7 +124,7 @@ describe('expanded api', () => {
     });
 
     it('prefers prop over attrs', () => {
-      const Comp = styled.div.attrs({
+      const Comp = placeable.div.attrs({
         as: 'header',
       })`
         color: red;
@@ -135,7 +135,7 @@ describe('expanded api', () => {
 
     it('works with custom components', () => {
       const Override = props => <figure {...props} />;
-      const Comp = styled.div`
+      const Comp = placeable.div`
         color: red;
       `;
 
@@ -143,16 +143,16 @@ describe('expanded api', () => {
     });
 
     it('transfers all styles that have been applied', () => {
-      const Comp = styled.div`
+      const Comp = placeable.div`
         background: blue;
         color: red;
       `;
 
-      const Comp2 = styled(Comp)`
+      const Comp2 = placeable(Comp)`
         color: green;
       `;
 
-      const Comp3 = styled(Comp2)`
+      const Comp3 = placeable(Comp2)`
         text-align: center;
       `;
 

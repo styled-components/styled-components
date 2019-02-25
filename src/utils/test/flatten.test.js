@@ -2,7 +2,7 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 import flatten from '../flatten';
-import styled from '../../constructors/styled';
+import placeable from '../../constructors/placeable';
 
 describe('flatten', () => {
   it('doesnt merge strings', () => {
@@ -119,7 +119,7 @@ describe('flatten', () => {
   it('throws if trying to interpolate a normal React component', () => {
     const Foo = ({ className }) => <div className={className}>hello there!</div>;
 
-    const Bar = styled.div`
+    const Bar = placeable.div`
       ${Foo}: {
         background-color: red;
       };
@@ -133,7 +133,7 @@ describe('flatten', () => {
   it('does not warn for regular functions', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const SvgIcon = styled.svg`
+    const SvgIcon = placeable.svg`
       vertical-align: middle;
       height: ${props => (props.height ? props.height : '22px')};
       width: ${props => (props.width ? props.width : '22px')};

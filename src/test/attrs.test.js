@@ -3,23 +3,23 @@ import React, { Component } from 'react';
 import TestRenderer from 'react-test-renderer';
 import ThemeProvider from '../models/ThemeProvider';
 
-import { resetStyled, expectCSSMatches } from './utils';
+import { resetPlaceable, expectCSSMatches } from './utils';
 
-let styled;
+let placeable;
 
 describe('attrs', () => {
   beforeEach(() => {
     jest.spyOn(console, 'warn');
-    styled = resetStyled();
+    placeable = resetPlaceable();
   });
 
   it('work fine with an empty object', () => {
-    const Comp = styled.div.attrs({})``;
+    const Comp = placeable.div.attrs({})``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('pass a simple attr', () => {
-    const Comp = styled.button.attrs({
+    const Comp = placeable.button.attrs({
       type: 'button',
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
@@ -39,7 +39,7 @@ describe('attrs', () => {
       </button>
     );
 
-    const Comp = styled(Button).attrs({
+    const Comp = placeable(Button).attrs({
       component: ReactComponent,
     })``;
 
@@ -48,7 +48,7 @@ describe('attrs', () => {
 
   it('call an attr function', () => {
     console.warn.mockImplementation(() => {});
-    const Comp = styled.button.attrs({
+    const Comp = placeable.button.attrs({
       as: () => 'div',
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
@@ -58,14 +58,14 @@ describe('attrs', () => {
   });
 
   it('pass a fn to attrs', () => {
-    const Comp = styled.button.attrs(props => ({
+    const Comp = placeable.button.attrs(props => ({
       as: props.renderAs,
     }))``;
     expect(TestRenderer.create(<Comp renderAs="div" />).toJSON()).toMatchSnapshot();
   });
 
   it('function form allows access to theme', () => {
-    const Comp = styled.button.attrs(props => ({
+    const Comp = placeable.button.attrs(props => ({
       'data-color': props.theme.color,
     }))``;
 
@@ -84,7 +84,7 @@ describe('attrs', () => {
   });
 
   it('defaultProps are merged into what function attrs receives', () => {
-    const Comp = styled.button.attrs(props => ({
+    const Comp = placeable.button.attrs(props => ({
       'data-color': props.theme.color,
     }))``;
 
@@ -103,7 +103,7 @@ describe('attrs', () => {
   });
 
   it('pass props to the attr function', () => {
-    const Comp = styled.button.attrs({
+    const Comp = placeable.button.attrs({
       type: props => (props.submit ? 'submit' : 'button'),
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
@@ -111,7 +111,7 @@ describe('attrs', () => {
   });
 
   it('should replace attrs with props', () => {
-    const Comp = styled.button.attrs({
+    const Comp = placeable.button.attrs({
       type: props => (props.submit ? 'submit' : 'button'),
       tabIndex: 0,
     })``;
@@ -121,14 +121,14 @@ describe('attrs', () => {
   });
 
   it('should merge className', () => {
-    const Comp = styled.div.attrs({
+    const Comp = placeable.div.attrs({
       className: 'meow nya',
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('should merge className even if its a function', () => {
-    const Comp = styled.div.attrs({
+    const Comp = placeable.div.attrs({
       className: props => `meow ${props.purr ? 'purr' : 'nya'}`,
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
@@ -136,7 +136,7 @@ describe('attrs', () => {
   });
 
   it('should work with data and aria attributes', () => {
-    const Comp = styled.div.attrs({
+    const Comp = placeable.div.attrs({
       'data-foo': 'bar',
       'aria-label': 'A simple FooBar',
     })``;
@@ -144,7 +144,7 @@ describe('attrs', () => {
   });
 
   it('merge attrs', () => {
-    const Comp = styled.button
+    const Comp = placeable.button
       .attrs({
         type: 'button',
         tabIndex: 0,
@@ -156,7 +156,7 @@ describe('attrs', () => {
   });
 
   it('merge fn attrs', () => {
-    const Comp = styled.button
+    const Comp = placeable.button
       .attrs(() => ({
         type: 'button',
         tabIndex: 0,
@@ -169,11 +169,11 @@ describe('attrs', () => {
   });
 
   it('merge attrs when inheriting SC', () => {
-    const Parent = styled.button.attrs({
+    const Parent = placeable.button.attrs({
       type: 'button',
       tabIndex: 0,
     })``;
-    const Child = styled(Parent).attrs({
+    const Child = placeable(Parent).attrs({
       type: 'submit',
     })``;
     expect(TestRenderer.create(<Child />).toJSON()).toMatchSnapshot();
@@ -181,7 +181,7 @@ describe('attrs', () => {
 
   it('pass attrs to style block', () => {
     /* Would be a React Router Link in real life */
-    const Comp = styled.a.attrs({
+    const Comp = placeable.a.attrs({
       href: '#',
       'data-active-class-name': '--is-active',
     })`
@@ -195,28 +195,28 @@ describe('attrs', () => {
   });
 
   it('should pass through children as a normal prop', () => {
-    const Comp = styled.div.attrs({
+    const Comp = placeable.div.attrs({
       children: 'Probably a bad idea',
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('should pass through complex children as well', () => {
-    const Comp = styled.div.attrs({
+    const Comp = placeable.div.attrs({
       children: <span>Probably a bad idea</span>,
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('should override children of course', () => {
-    const Comp = styled.div.attrs({
+    const Comp = placeable.div.attrs({
       children: <span>Amazing</span>,
     })``;
     expect(TestRenderer.create(<Comp>Something else</Comp>).toJSON()).toMatchSnapshot();
   });
 
   it('should shallow merge "style" prop + attr instead of overwriting', () => {
-    const Paragraph = styled.p.attrs({
+    const Paragraph = placeable.p.attrs({
       style: props => ({
         ...props.style,
         fontSize: `${props.fontScale}em`,
@@ -243,7 +243,7 @@ describe('attrs', () => {
       }
     }
 
-    const BlueText = styled(Text).attrs({
+    const BlueText = placeable(Text).attrs({
       style: () => ({
         color: 'blue',
       }),
@@ -253,11 +253,11 @@ describe('attrs', () => {
   });
 
   it('does not pass non html tags to HTML element', () => {
-    const Comp = styled.div`
+    const Comp = placeable.div`
       color: ${props => props.textColor};
     `;
 
-    const StyledComp = styled(Comp).attrs({
+    const StyledComp = placeable(Comp).attrs({
       textColor: 'red',
     })``;
     expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();
@@ -270,7 +270,7 @@ describe('attrs', () => {
 
     it('warns upon use of a Stateless Functional Component as a prop', () => {
       const Inner = () => <div />;
-      const Comp = styled.div.attrs({ component: Inner })``;
+      const Comp = placeable.div.attrs({ component: Inner })``;
 
       TestRenderer.create(<Comp />);
 
@@ -283,7 +283,7 @@ For example, { component: () => InnerComponent } instead of { component: InnerCo
     });
 
     it('warns for using fns as attrs object keys', () => {
-      const Comp = styled.div.attrs({ 'data-text-color': props => props.textColor })``;
+      const Comp = placeable.div.attrs({ 'data-text-color': props => props.textColor })``;
 
       TestRenderer.create(<Comp textColor="blue" />);
 

@@ -1,7 +1,7 @@
 // @flow
 import React from 'react';
 
-import styled, { css, keyframes, createGlobalStyle } from 'styled-components';
+import {placeable, css, keyframes, createGlobalStyle } from 'placed-components';
 
 import {
   LiveProvider as _LiveProvider,
@@ -29,7 +29,7 @@ const GlobalStyle = createGlobalStyle`
   }
 `;
 
-const Body = styled.main`
+const Body = placeable.main`
   width: 100vw;
   min-width: 100vw;
   min-height: 100vh;
@@ -39,19 +39,19 @@ const Body = styled.main`
   padding: 30px 20px;
 `;
 
-const Heading = styled.div`
+const Heading = placeable.div`
   text-align: center;
 `;
 
-const Title = styled.h1`
+const Title = placeable.h1`
   @media (max-width: 40.625em) {
     font-size: 26px;
   }
 `;
 
-const Subtitle = styled.p``;
+const Subtitle = placeable.p``;
 
-const Content = styled.div`
+const Content = placeable.div`
   width: 100%;
   max-width: 860px;
 
@@ -59,7 +59,7 @@ const Content = styled.div`
   margin-top: 60px;
 `;
 
-const Code = styled.span`
+const Code = placeable.span`
   white-space: pre;
   vertical-align: middle;
   font-family: monospace;
@@ -81,7 +81,7 @@ const LiveProvider = styled(_LiveProvider)`
   box-shadow: 3px 3px 18px rgba(66, 22, 93, 0.3);
 `;
 
-const LiveBlock = styled.div`
+const LiveBlock = placeable.div`
   flex-basis: 50%;
   width: 50%;
   max-width: 50%;

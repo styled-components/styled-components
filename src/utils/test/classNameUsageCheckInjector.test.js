@@ -2,18 +2,18 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { renderIntoDocument } from 'react-dom/test-utils';
-import { resetStyled } from '../../test/utils';
+import { resetPlaceable } from '../../test/utils';
 
-let styled;
+let placeable;
 
 describe('classNameUsageCheckInjector', () => {
   beforeEach(() => {
-    styled = resetStyled();
+    placeable = resetPlaceable();
   });
 
   it('should generate valid selectors', () => {
     const div = document.createElement('div');
-    const StyledDiv = styled.div``;
+    const StyledDiv = placeable.div``;
 
     // Avoid the console.warn
     jest.spyOn(div, 'querySelector').mockImplementationOnce(() => true);
@@ -32,7 +32,7 @@ describe('classNameUsageCheckInjector', () => {
 
   it('does not show a warning if suppressClassNameWarning is passed', () => {
     const Comp = () => <div />;
-    const StyledComp = styled(Comp)``;
+    const StyledComp = placeable(Comp)``;
 
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -48,9 +48,9 @@ describe('classNameUsageCheckInjector', () => {
 
   it('does not show duplicate warnings', () => {
     const Comp1 = () => <div />;
-    const StyledComp1 = styled(Comp1)``;
+    const StyledComp1 = placeable(Comp1)``;
     const Comp2 = () => <div />;
-    const StyledComp2 = styled(Comp2)``;
+    const StyledComp2 = placeable(Comp2)``;
 
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -67,12 +67,12 @@ describe('classNameUsageCheckInjector', () => {
     expect(console.warn.mock.calls.length).toEqual(2);
   });
 
-  it('does not warn for correct usage of styled(Comp)', () => {
+  it('does not warn for correct usage of placeable(Comp)', () => {
     const Comp1 = props => <div {...props} />;
-    const StyledComp1 = styled(Comp1)``;
+    const StyledComp1 = placeable(Comp1)``;
 
     const Comp2 = props => <div><Comp1 {...props} /></div>;
-    const StyledComp2 = styled(Comp2)``;
+    const StyledComp2 = placeable(Comp2)``;
 
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 

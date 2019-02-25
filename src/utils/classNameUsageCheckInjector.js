@@ -41,8 +41,9 @@ export default (target: Object) => {
       !classNames.every(className => node.classList && node.classList.contains(className)) &&
       !node.querySelector(selector)
     ) {
+      // eslint-disable-next-line no-console
       console.warn(
-        `It looks like you've wrapped styled() around your React component (${getComponentName(
+        `It looks like you've wrapped placeable() around your React component (${getComponentName(
           forwardTarget
         )}), but the className prop is not being passed down to a child. No styles will be rendered unless className is composed within your React component.`
       );

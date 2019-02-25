@@ -13,7 +13,7 @@ function assertStyledComponent(styledComponent) {
     throw new Error(
       `${styledComponent.displayName ||
         styledComponent.name ||
-        'Component'} is not a styled component.`
+        'Component'} is not a placeble component.`
     );
   }
 }

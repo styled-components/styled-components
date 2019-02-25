@@ -4,13 +4,13 @@ import React from 'react';
 import TestRenderer from 'react-test-renderer';
 import ThemeProvider from '../ThemeProvider';
 import withTheme from '../../hoc/withTheme';
-import { resetStyled } from '../../test/utils';
+import { resetPlaceable } from '../../test/utils';
 
-let styled;
+let placeable;
 
 describe('ThemeProvider', () => {
   beforeEach(() => {
-    styled = resetStyled();
+    placeable = resetPlaceable();
   });
 
   it('should not throw an error when no children are passed', () => {
@@ -34,7 +34,7 @@ describe('ThemeProvider', () => {
     const outerTheme = { main: 'black' };
     const innerTheme = { secondary: 'black' };
 
-    const MyDiv = styled.div``;
+    const MyDiv = placeable.div``;
     const MyDivWithTheme = withTheme(MyDiv);
 
     const wrapper = TestRenderer.create(
@@ -56,7 +56,7 @@ describe('ThemeProvider', () => {
     const outerTheme = { main: 'blue' };
     const innerTheme = { secondary: 'black' };
 
-    const MyDiv = styled.div``;
+    const MyDiv = placeable.div``;
     const MyDivWithTheme = withTheme(MyDiv);
 
     const wrapper = TestRenderer.create(
@@ -82,9 +82,9 @@ describe('ThemeProvider', () => {
       two: { main: 'blue', other: 'green' },
     };
 
-    const MyDivOne = withTheme(styled.div``);
+    const MyDivOne = withTheme(placeable.div``);
     const MyDivWithThemeOne = withTheme(MyDivOne);
-    const MyDivTwo = withTheme(styled.div``);
+    const MyDivTwo = withTheme(placeable.div``);
     const MyDivWithThemeTwo = withTheme(MyDivTwo);
 
     const wrapper = TestRenderer.create(
@@ -109,7 +109,7 @@ describe('ThemeProvider', () => {
     let actual;
     const expected = { themed: true, augmented: true, updated: true };
 
-    const MyDiv = styled.div``;
+    const MyDiv = placeable.div``;
     const MyDivWithTheme = withTheme(MyDiv);
 
     const getJSX = (givenTheme = theme) => (

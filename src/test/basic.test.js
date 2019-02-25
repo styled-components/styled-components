@@ -4,21 +4,21 @@ import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';
 
-import { resetStyled, expectCSSMatches } from './utils';
+import { resetPlaceable, expectCSSMatches } from './utils';
 import { find } from '../../test-utils';
 
-let styled;
+let placeable;
 
-describe('basic', () => {
+describe.only('basic', () => {
   /**
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    styled = resetStyled();
+    placeable = resetPlaceable();
   });
 
   it('should not throw an error when called with a valid element', () => {
-    expect(() => styled.div``).not.toThrowError();
+    expect(() => placeable.div``).not.toThrowError();
 
     const FunctionalComponent = () => <div />;
     class ClassComponent extends Component<*, *> {
@@ -29,7 +29,7 @@ describe('basic', () => {
     const validComps = ['div', FunctionalComponent, ClassComponent];
     validComps.forEach(comp => {
       expect(() => {
-        const Comp = styled(comp)``;
+        const Comp = placeable(comp)``;
         TestRenderer.create(<Comp />);
       }).not.toThrowError();
     });
@@ -55,7 +55,7 @@ describe('basic', () => {
     invalidComps.forEach(comp => {
       expect(() => {
         // $FlowInvalidInputTest
-        const Comp = styled(comp)``;
+        const Comp = placeable(comp)``;
         TestRenderer.create(<Comp />);
         // $FlowInvalidInputTest
       }).toThrow(`Cannot create styled-component for component: ${comp}`);
@@ -63,20 +63,20 @@ describe('basic', () => {
   });
 
   it('should not inject anything by default', () => {
-    styled.div``;
+    placeable.div``;
     expectCSSMatches('');
   });
 
   it('should inject styles', () => {
-    const Comp = styled.div`
+    const Comp = placeable.div`
       color: blue;
     `;
     TestRenderer.create(<Comp />);
     expectCSSMatches('.b { color:blue; }');
   });
 
-  it("should inject only once for a styled component, no matter how often it's mounted", () => {
-    const Comp = styled.div`
+  it("should inject only once for a placeable component, no matter how often it's mounted", () => {
+    const Comp = placeable.div`
       color: blue;
     `;
     TestRenderer.create(<Comp />);
@@ -84,35 +84,35 @@ describe('basic', () => {
     expectCSSMatches('.b { color:blue; }');
   });
 
-  it('Should have the correct styled(component) displayName', () => {
+  it('Should have the correct placeable(component) displayName', () => {
     const CompWithoutName = () => () => <div />;
 
-    const StyledTag = styled.div``;
+    const StyledTag = placeable.div``;
     expect(StyledTag.displayName).toBe('styled.div');
 
     const CompWithName = () => <div />;
     CompWithName.displayName = null;
-    const StyledCompWithName = styled(CompWithName)``;
+    const StyledCompWithName = placeable(CompWithName)``;
     expect(StyledCompWithName.displayName).toBe('Styled(CompWithName)');
 
     const CompWithDisplayName = CompWithoutName();
     CompWithDisplayName.displayName = 'displayName';
-    const StyledCompWithDisplayName = styled(CompWithDisplayName)``;
+    const StyledCompWithDisplayName = placeable(CompWithDisplayName)``;
     expect(StyledCompWithDisplayName.displayName).toBe('Styled(displayName)');
 
     const CompWithBoth = () => <div />;
     CompWithBoth.displayName = 'displayName';
-    const StyledCompWithBoth = styled(CompWithBoth)``;
+    const StyledCompWithBoth = placeable(CompWithBoth)``;
     expect(StyledCompWithBoth.displayName).toBe('Styled(displayName)');
 
     const CompWithNothing = CompWithoutName();
     CompWithNothing.displayName = null;
-    const StyledCompWithNothing = styled(CompWithNothing)``;
+    const StyledCompWithNothing = placeable(CompWithNothing)``;
     expect(StyledCompWithNothing.displayName).toBe('Styled(Component)');
   });
 
   it('should allow you to pass in style objects', () => {
-    const Comp = styled.div({
+    const Comp = placeable.div({
       color: 'blue',
     });
     TestRenderer.create(<Comp />);
@@ -120,7 +120,7 @@ describe('basic', () => {
   });
 
   it('should allow you to pass in a function returning a style object', () => {
-    const Comp = styled.div(({ color }) => ({
+    const Comp = placeable.div(({ color }) => ({
       color,
     }));
     TestRenderer.create(<Comp color="blue" />);
@@ -128,7 +128,7 @@ describe('basic', () => {
   });
 
   it('emits the correct selector when a StyledComponent is interpolated into a template string', () => {
-    const Comp = styled.div`
+    const Comp = placeable.div`
       color: red;
     `;
 
@@ -137,7 +137,7 @@ describe('basic', () => {
 
   it('works with the React 16.6 "memo" API', () => {
     const Comp = React.memo(props => <div {...props} />);
-    const StyledComp = styled(Comp)`
+    const StyledComp = placeable(Comp)`
       color: red;
     `;
 
@@ -146,7 +146,7 @@ describe('basic', () => {
   });
 
   it('does not filter outs custom props for uppercased string-like components', () => {
-    const Comp = styled('Comp')`
+    const Comp = placeable('Comp')`
       color: red;
     `;
     const wrapper = TestRenderer.create(<Comp customProp="abc" />);
@@ -154,7 +154,7 @@ describe('basic', () => {
   });
 
   it('creates a proper displayName for uppercased string-like components', () => {
-    const Comp = styled('Comp')`
+    const Comp = placeable('Comp')`
       color: red;
     `;
 
@@ -169,7 +169,7 @@ describe('basic', () => {
     }
 
     it('should pass the full className to the wrapped child', () => {
-      const OuterComponent = styled(InnerComponent)``;
+      const OuterComponent = placeable(InnerComponent)``;
 
       class Wrapper extends Component<*, *> {
         render() {
@@ -182,7 +182,7 @@ describe('basic', () => {
     });
 
     it('should pass the ref to the component', () => {
-      const Comp = styled.div``;
+      const Comp = placeable.div``;
 
       class Wrapper extends Component<*, *> {
         testRef: any = React.createRef();
@@ -202,14 +202,14 @@ describe('basic', () => {
       expect(wrapper.testRef.current).toBe(component);
     });
 
-    it('should pass the ref to the wrapped styled component', () => {
+    it('should pass the ref to the wrapped placeable component', () => {
       class InnerComponent extends React.Component {
         render() {
           return <div {...this.props} />;
         }
       }
 
-      const OuterComponent = styled(InnerComponent)``;
+      const OuterComponent = placeable(InnerComponent)``;
 
       class Wrapper extends Component<*, *> {
         testRef: any = React.createRef();
@@ -230,10 +230,10 @@ describe('basic', () => {
     });
 
     it('should respect the order of StyledComponent creation for CSS ordering', () => {
-      const FirstComponent = styled.div`
+      const FirstComponent = placeable.div`
         color: red;
       `;
-      const SecondComponent = styled.div`
+      const SecondComponent = placeable.div`
         color: blue;
       `;
 
@@ -245,7 +245,7 @@ describe('basic', () => {
     });
 
     it('handle media at-rules inside style rules', () => {
-      const Comp = styled.div`
+      const Comp = placeable.div`
         > * {
           @media (min-width: 500px) {
             color: pink;
@@ -258,17 +258,17 @@ describe('basic', () => {
     });
 
     it('should hoist non-react static properties', () => {
-      const InnerComponent = styled.div``;
+      const InnerComponent = placeable.div``;
       InnerComponent.foo = 'bar';
 
-      const OuterComponent = styled(InnerComponent)``;
+      const OuterComponent = placeable(InnerComponent)``;
 
       expect(OuterComponent).toHaveProperty('foo', 'bar');
     });
 
-    it('should not hoist styled component statics', () => {
-      const InnerComponent = styled.div``;
-      const OuterComponent = styled(InnerComponent)``;
+    it('should not hoist placeable component statics', () => {
+      const InnerComponent = placeable.div``;
+      const OuterComponent = placeable(InnerComponent)``;
 
       expect(OuterComponent.styledComponentId).not.toBe(InnerComponent.styledComponentId);
 
@@ -276,11 +276,11 @@ describe('basic', () => {
     });
 
     it('generates unique classnames when not using babel', () => {
-      const Named1 = styled.div.withConfig({ displayName: 'Name' })`
+      const Named1 = placeable.div.withConfig({ displayName: 'Name' })`
         color: blue;
       `;
 
-      const Named2 = styled.div.withConfig({ displayName: 'Name' })`
+      const Named2 = placeable.div.withConfig({ displayName: 'Name' })`
         color: red;
       `;
 
@@ -288,14 +288,14 @@ describe('basic', () => {
     });
 
     it('honors a passed componentId', () => {
-      const Named1 = styled.div.withConfig({
+      const Named1 = placeable.div.withConfig({
         componentId: 'foo',
         displayName: 'Name',
       })`
         color: blue;
       `;
 
-      const Named2 = styled.div.withConfig({
+      const Named2 = placeable.div.withConfig({
         componentId: 'bar',
         displayName: 'Name',
       })`
@@ -310,7 +310,7 @@ describe('basic', () => {
     // of the deprecation of findDOMNode; need to find an alternative
     it.skip('should work in StrictMode without warnings', () => {
       const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      const Comp = styled.div``;
+      const Comp = placeable.div``;
 
       TestRenderer.create(
         <StrictMode>
@@ -328,7 +328,7 @@ describe('basic', () => {
     });
 
     it('warns upon use of the removed "innerRef" prop', () => {
-      const Comp = styled.div``;
+      const Comp = placeable.div``;
       const ref = React.createRef();
 
       TestRenderer.create(<Comp innerRef={ref} />);
@@ -339,7 +339,7 @@ describe('basic', () => {
 
     it('does not warn for innerRef if using a custom component', () => {
       const InnerComp = props => <div {...props} />;
-      const Comp = styled(InnerComp)``;
+      const Comp = placeable(InnerComp)``;
       const ref = React.createRef();
 
       TestRenderer.create(<Comp innerRef={ref} />);
@@ -348,7 +348,7 @@ describe('basic', () => {
 
     it('warns when a wrapped React component does not consume className', () => {
       const Inner = () => <div />;
-      const Comp = styled(Inner)`
+      const Comp = placeable(Inner)`
         color: red;
       `;
 
@@ -359,7 +359,7 @@ describe('basic', () => {
       );
 
       expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-        `"It looks like you've wrapped styled() around your React component (Inner), but the className prop is not being passed down to a child. No styles will be rendered unless className is composed within your React component."`
+        `"It looks like you've wrapped placeable() around your React component (Inner), but the className prop is not being passed down to a child. No styles will be rendered unless className is composed within your React component."`
       );
     });
 
@@ -370,7 +370,7 @@ describe('basic', () => {
         </div>
       );
 
-      const Comp = styled(Inner)`
+      const Comp = placeable(Inner)`
         color: red;
       `;
 

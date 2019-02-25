@@ -3,7 +3,7 @@
  * This sets up our end-to-end test suite, which essentially makes sure
  * our public API works the way we promise/want
  */
-import styled from '../constructors/styled';
+import placeable from '../constructors/placeable';
 import StyleSheet from '../models/StyleSheet';
 import StyledError from '../utils/error';
 
@@ -21,7 +21,7 @@ jest.mock('../utils/generateAlphabeticName', () => input => {
 
 export const seedNextClassnames = (names: Array<string>) => (mockSeededClasses = names);
 
-export const resetStyled = (isServer: boolean = false) => {
+export const resetPlaceable = (isServer: boolean = false) => {
   if (!isServer) {
     if (!document.head) {
       throw new StyledError(9);
@@ -35,7 +35,7 @@ export const resetStyled = (isServer: boolean = false) => {
   mockInputs = {};
   if (typeof window !== 'undefined') window.scCGSHMRCache = {};
 
-  return styled;
+  return placeable;
 };
 
 export const stripComments = (str: string) => str.replace(/\/\*.*?\*\/\n?/g, '');

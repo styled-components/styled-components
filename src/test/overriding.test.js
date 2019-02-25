@@ -2,24 +2,24 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
-import { resetStyled, expectCSSMatches } from './utils';
+import { resetPlaceable, expectCSSMatches } from './utils';
 
-let styled;
+let placeable;
 
 describe('extending', () => {
   /**
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    styled = resetStyled();
+    placeable = resetPlaceable();
   });
 
   it('should let you use another component in a css rule', () => {
-    const Inner = styled.div`
+    const Inner = placeable.div`
       color: blue;
       font-weight: light;
     `;
-    const Outer = styled.div`
+    const Outer = placeable.div`
       padding: 1rem;
       > ${Inner} {
         font-weight: bold;
@@ -42,7 +42,7 @@ describe('extending', () => {
         secondary: 'blue',
         tertiary: 'green',
       }
-      const Parent = styled.h1`
+      const Parent = placeable.h1`
         position: relative;
         color: ${props => colors[props.color]};
       `;
@@ -63,8 +63,8 @@ describe('extending', () => {
 
     it('should override parents defaultProps', () => {
       const Parent = setupParent();
-      const Child = styled(Parent)``;
-      const Grandson = styled(Child)``;
+      const Child = placeable(Parent)``;
+      const Grandson = placeable(Child)``;
       addDefaultProps(Parent, Child, Grandson);
       TestRenderer.create(<Parent />);
       TestRenderer.create(<Child />);
@@ -79,8 +79,8 @@ describe('extending', () => {
     describe('when overriding with another component', () => {
       it('should override parents defaultProps', () => {
         const Parent = setupParent();
-        const Child = styled(Parent).attrs({as: 'h2'})``;
-        const Grandson = styled(Child).attrs({as: 'h3'})``;
+        const Child = placeable(Parent).attrs({as: 'h2'})``;
+        const Grandson = placeable(Child).attrs({as: 'h3'})``;
         console.log
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
@@ -94,8 +94,8 @@ describe('extending', () => {
       });
       it('should evaluate grandsons props', () => {
         const Parent = setupParent();
-        const Child = styled(Parent).attrs({as: 'h2'})``;
-        const Grandson = styled(Child).attrs({as: 'h3'})``;
+        const Child = placeable(Parent).attrs({as: 'h2'})``;
+        const Grandson = placeable(Child).attrs({as: 'h3'})``;
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);

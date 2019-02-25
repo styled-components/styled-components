@@ -3,19 +3,19 @@ import React, { Component } from 'react';
 import { renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';
 
-import { resetStyled, expectCSSMatches } from './utils';
+import { resetPlaceable, expectCSSMatches } from './utils';
 import ThemeProvider from '../models/ThemeProvider';
 import withTheme from '../hoc/withTheme';
 
-let styled;
+let placeable;
 
 describe('theming', () => {
   beforeEach(() => {
-    styled = resetStyled();
+    placeable = resetPlaceable();
   });
 
-  it('should inject props.theme into a styled component', () => {
-    const Comp = styled.div`
+  it('should inject props.theme into a placeable component', () => {
+    const Comp = placeable.div`
       color: ${props => props.theme.color};
     `;
     const theme = { color: 'black' };
@@ -27,8 +27,8 @@ describe('theming', () => {
     expectCSSMatches(`.b { color:${theme.color}; }`);
   });
 
-  it('should inject props.theme into a styled component multiple levels deep', () => {
-    const Comp = styled.div`
+  it('should inject props.theme into a placeable component multiple levels deep', () => {
+    const Comp = placeable.div`
       color: ${props => props.theme.color};
     `;
     const theme = { color: 'black' };
@@ -45,7 +45,7 @@ describe('theming', () => {
   });
 
   it('should properly allow a component to fallback to its default props when a theme is not provided', () => {
-    const Comp1 = styled.div`
+    const Comp1 = placeable.div`
       color: ${props => props.theme.test.color};
     `;
 
@@ -66,7 +66,7 @@ describe('theming', () => {
 
   // https://github.com/styled-components/styled-components/issues/344
   it('should use ThemeProvider theme instead of defaultProps theme', () => {
-    const Comp1 = styled.div`
+    const Comp1 = placeable.div`
       color: ${props => props.theme.test.color};
     `;
 
@@ -88,7 +88,7 @@ describe('theming', () => {
   });
 
   it('should properly allow a component to override the theme with a prop even if it is equal to defaultProps theme', () => {
-    const Comp1 = styled.div`
+    const Comp1 = placeable.div`
       color: ${props => props.theme.test.color};
     `;
 
@@ -110,7 +110,7 @@ describe('theming', () => {
   });
 
   it('should properly allow a component to override the theme with a prop', () => {
-    const Comp = styled.div`
+    const Comp = placeable.div`
       color: ${props => props.theme.color};
     `;
 
@@ -128,11 +128,11 @@ describe('theming', () => {
     expectCSSMatches(`.b { color:red; }`);
   });
 
-  it('should only inject props.theme into styled components within its child component tree', () => {
-    const Comp1 = styled.div`
+  it('should only inject props.theme into placeable components within its child component tree', () => {
+    const Comp1 = placeable.div`
       color: ${props => props.theme.color};
     `;
-    const Comp2 = styled.div`
+    const Comp2 = placeable.div`
       background: ${props => props.theme.color};
     `;
 
@@ -150,11 +150,11 @@ describe('theming', () => {
     expectCSSMatches(`.c { color:${theme.color}; }`);
   });
 
-  it('should inject props.theme into all styled components within the child component tree', () => {
-    const Comp1 = styled.div`
+  it('should inject props.theme into all placeable components within the child component tree', () => {
+    const Comp1 = placeable.div`
       color: ${props => props.theme.color};
     `;
-    const Comp2 = styled.div`
+    const Comp2 = placeable.div`
       background: ${props => props.theme.color};
     `;
     const theme = { color: 'black' };
@@ -172,7 +172,7 @@ describe('theming', () => {
   });
 
   it('should inject new CSS when the theme changes', () => {
-    const Comp = styled.div`
+    const Comp = placeable.div`
       color: ${props => props.theme.color};
     `;
     const originalTheme = { color: 'black' };
@@ -197,11 +197,11 @@ describe('theming', () => {
 
 describe('theming', () => {
   beforeEach(() => {
-    styled = resetStyled();
+    placeable = resetPlaceable();
   });
 
   it('should properly render with the same theme from default props on re-render', () => {
-    const Comp1 = styled.div`
+    const Comp1 = placeable.div`
       color: ${props => props.theme.color};
     `;
 
@@ -221,7 +221,7 @@ describe('theming', () => {
   });
 
   it('should properly update style if theme is changed', () => {
-    const Comp1 = styled.div`
+    const Comp1 = placeable.div`
       color: ${props => props.theme.color};
     `;
 
@@ -249,7 +249,7 @@ describe('theming', () => {
   });
 
   it('should properly update style if props used in styles is changed', () => {
-    const Comp1 = styled.div`
+    const Comp1 = placeable.div`
       color: ${props => props.theme.color};
       z-index: ${props => props.zIndex}px;
     `;
@@ -296,7 +296,7 @@ describe('theming', () => {
   });
 
   it('should change the classnames when the theme changes', () => {
-    const Comp = styled.div`
+    const Comp = placeable.div`
       color: ${props => props.theme.color};
     `;
 
@@ -361,7 +361,7 @@ describe('theming', () => {
 
   // https://github.com/styled-components/styled-components/issues/445
   it('should use ThemeProvider theme instead of defaultProps theme after initial render', () => {
-    const Text = styled.div`
+    const Text = placeable.div`
       color: ${props => props.theme.color};
     `;
 
@@ -483,7 +483,7 @@ describe('theming', () => {
       [Symbol.toStringTag]: 'Module',
     };
 
-    const Comp1 = styled.div`
+    const Comp1 = placeable.div`
       background-color: ${({ theme }) => theme.palette.white};
       color: ${({ theme }) => theme.palette.black};
     `;
@@ -510,7 +510,7 @@ describe('theming', () => {
 
     const theme = new Theme('2px');
 
-    const Comp1 = styled.div`
+    const Comp1 = placeable.div`
       border-radius: ${({ theme }) => theme.borderRadius};
     `;
 

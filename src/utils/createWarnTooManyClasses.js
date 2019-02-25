@@ -16,7 +16,7 @@ export default (displayName: string) => {
           `Over ${LIMIT} classes were generated for component ${displayName}. \n` +
             'Consider using the attrs method, together with a style object for frequently changed styles.\n' +
             'Example:\n' +
-            '  const Component = styled.div.attrs({\n' +
+            '  const Component = placeable.div.attrs({\n' +
             '    style: ({ background }) => ({\n' +
             '      background,\n' +
             '    }),\n' +

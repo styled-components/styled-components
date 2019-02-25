@@ -2,13 +2,13 @@
   "name": "styled-components",
   "version": "4.1.2",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
-  "main": "dist/styled-components.cjs.js",
-  "jsnext:main": "dist/styled-components.esm.js",
-  "module": "dist/styled-components.esm.js",
-  "react-native": "native/dist/styled-components.native.cjs.js",
+  "main": "dist/placed-components.cjs.js",
+  "jsnext:main": "dist/placed-components.esm.js",
+  "module": "dist/placed-components.esm.js",
+  "react-native": "native/dist/placed-components.native.cjs.js",
   "browser": {
-    "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js",
-    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
+    "./dist/styled-components.esm.js": "./dist/placed-components.browser.esm.js",
+    "./dist/styled-components.cjs.js": "./dist/placed-components.browser.cjs.js"
   },
   "sideEffects": false,
   "scripts": {
@@ -164,14 +164,10 @@
   },
   "bundlesize": [
     {
-      "path": "./dist/styled-components.min.js",
+      "path": "./dist/placed-components.min.js",
       "maxSize": "16kB"
     }
   ],
-  "collective": {
-    "type": "opencollective",
-    "url": "https://opencollective.com/styled-components"
-  },
   "husky": {
     "hooks": {
       "pre-commit": "flow check && lint-staged"

@@ -7,10 +7,10 @@ import TestRenderer from 'react-test-renderer';
 import StyleSheetManager from '../StyleSheetManager';
 import ServerStyleSheet from '../ServerStyleSheet';
 import StyleSheet from '../StyleSheet';
-import { resetStyled } from '../../test/utils';
+import { resetPlaceable } from '../../test/utils';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
 
-let styled;
+let placeable;
 let consoleError;
 
 const parallelWarning =
@@ -23,7 +23,7 @@ describe('StyleSheetManager', () => {
     document.body.innerHTML = '';
     document.head.innerHTML = '';
 
-    styled = resetStyled(true);
+    placeable = resetPlaceable(true);
 
     jest
       .spyOn(console, 'error')
@@ -32,7 +32,7 @@ describe('StyleSheetManager', () => {
 
   it('should use given stylesheet instance', () => {
     const sheet = new ServerStyleSheet();
-    const Title = styled.h1`
+    const Title = placeable.h1`
       color: palevioletred;
     `;
     renderToString(
@@ -46,7 +46,7 @@ describe('StyleSheetManager', () => {
   it('should render its child', () => {
     const target = document.head;
 
-    const Title = styled.h1`
+    const Title = placeable.h1`
       color: palevioletred;
     `;
     const renderedComp = TestRenderer.create(
@@ -60,7 +60,7 @@ describe('StyleSheetManager', () => {
 
   it('should append style to given target', () => {
     const target = document.body;
-    const Title = styled.h1`
+    const Title = placeable.h1`
       color: palevioletred;
     `;
     class Child extends React.Component {
@@ -90,7 +90,7 @@ describe('StyleSheetManager', () => {
     iframe.contentDocument.body.appendChild(app);
 
     const target = iframe.contentDocument.head;
-    const Title = styled.h1`
+    const Title = placeable.h1`
       color: palevioletred;
     `;
 
@@ -112,13 +112,13 @@ describe('StyleSheetManager', () => {
   });
 
   it('should apply styles to appropriate targets for nested StyleSheetManagers', () => {
-    const ONE = styled.h1`
+    const ONE = placeable.h1`
       color: red;
     `;
-    const TWO = styled.h2`
+    const TWO = placeable.h2`
       color: blue;
     `;
-    const THREE = styled.h3`
+    const THREE = placeable.h3`
       color: green;
     `;
 
@@ -142,7 +142,7 @@ describe('StyleSheetManager', () => {
 
   // https://github.com/styled-components/styled-components/issues/1634
   it('should inject styles into two parallel contexts', async () => {
-    const Title = styled.h1`
+    const Title = placeable.h1`
       color: palevioletred;
     `;
 
@@ -205,10 +205,10 @@ describe('StyleSheetManager', () => {
   describe('ssr', () => {
     it('should extract CSS outside the nested StyleSheetManager', () => {
       const sheet = new ServerStyleSheet();
-      const ONE = styled.h1`
+      const ONE = placeable.h1`
         color: red;
       `;
-      const TWO = styled.h2`
+      const TWO = placeable.h2`
         color: blue;
       `;
       class Wrapper extends React.Component {
@@ -247,11 +247,11 @@ describe('StyleSheetManager', () => {
     });
   });
 
-  it('should render styles in correct order when styled(StyledComponent) and StyleSheetManager is used', () => {
-    const Red = styled.div`
+  it('should render styles in correct order when placeable(StyledComponent) and StyleSheetManager is used', () => {
+    const Red = placeable.div`
       color: red;
     `;
-    const RedChangedToBlue = styled(Red)`
+    const RedChangedToBlue = placeable(Red)`
       color: blue;
     `;
     const sheet = new StyleSheet();

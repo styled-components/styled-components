@@ -7,7 +7,7 @@ import { Simulate } from 'react-dom/test-utils';
 import {
   expectCSSMatches,
   getCSS,
-  resetStyled,
+  resetPlaceable,
   stripComments,
   stripWhitespace,
 } from '../../test/utils';
@@ -387,7 +387,7 @@ function setup() {
       return ReactDOMServer.renderToString(comp);
     },
     cleanup() {
-      resetStyled();
+      resetPlaceable();
       document.body.removeChild(container);
     },
   };

@@ -3,13 +3,13 @@ import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
 import * as nonce from '../utils/nonce';
-import { resetStyled, expectCSSMatches } from './utils';
+import { resetPlaceable, expectCSSMatches } from './utils';
 import StyleSheet from '../models/StyleSheet';
 
 jest.mock('../utils/nonce');
 jest.spyOn(nonce, 'default').mockImplementation(() => 'foo');
 
-let styled;
+let placeable;
 
 describe('with styles', () => {
   /**
@@ -18,12 +18,12 @@ describe('with styles', () => {
   beforeEach(() => {
     // $FlowFixMe
     document.head.innerHTML = '';
-    styled = resetStyled();
+    placeable = resetPlaceable();
   });
 
   it('should append a style', () => {
     const rule = 'color: blue;';
-    const Comp = styled.div`
+    const Comp = placeable.div`
       ${rule};
     `;
     TestRenderer.create(<Comp />);
@@ -33,7 +33,7 @@ describe('with styles', () => {
   it('should append multiple styles', () => {
     const rule1 = 'color: blue;';
     const rule2 = 'background: red;';
-    const Comp = styled.div`
+    const Comp = placeable.div`
       ${rule1} ${rule2};
     `;
     TestRenderer.create(<Comp />);
@@ -41,7 +41,7 @@ describe('with styles', () => {
   });
 
   it('amperstand should refer to the static class when making a self-referential combo selector', () => {
-    const Comp = styled.div`
+    const Comp = placeable.div`
       background: red;
       color: ${p => p.color};
 
@@ -121,7 +121,7 @@ describe('with styles', () => {
     const rule1 = {
       backgroundColor: 'blue',
     };
-    const Comp = styled.div`
+    const Comp = placeable.div`
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
@@ -135,7 +135,7 @@ describe('with styles', () => {
         backgroundColor: 'red',
       },
     };
-    const Comp = styled.div`
+    const Comp = placeable.div`
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
@@ -151,7 +151,7 @@ describe('with styles', () => {
         color: 'green',
       },
     };
-    const Comp = styled.div`
+    const Comp = placeable.div`
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
@@ -165,7 +165,7 @@ describe('with styles', () => {
         color: 'green',
       },
     };
-    const Comp = styled.div`
+    const Comp = placeable.div`
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
@@ -179,7 +179,7 @@ describe('with styles', () => {
         color: 'white',
       },
     };
-    const Comp = styled.div`
+    const Comp = placeable.div`
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
@@ -193,7 +193,7 @@ describe('with styles', () => {
         color: 'white',
       },
     };
-    const Comp = styled.div`
+    const Comp = placeable.div`
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
@@ -203,10 +203,10 @@ describe('with styles', () => {
   it('should inject styles of multiple components', () => {
     const firstRule = 'background: blue;';
     const secondRule = 'background: red;';
-    const FirstComp = styled.div`
+    const FirstComp = placeable.div`
       ${firstRule};
     `;
-    const SecondComp = styled.div`
+    const SecondComp = placeable.div`
       ${secondRule};
     `;
 
@@ -219,10 +219,10 @@ describe('with styles', () => {
   it('should inject styles of multiple components based on creation, not rendering order', () => {
     const firstRule = 'content: "first rule";';
     const secondRule = 'content: "second rule";';
-    const FirstComp = styled.div`
+    const FirstComp = placeable.div`
       ${firstRule};
     `;
-    const SecondComp = styled.div`
+    const SecondComp = placeable.div`
       ${secondRule};
     `;
 
@@ -241,7 +241,7 @@ describe('with styles', () => {
     const comment = '// This is an invalid comment';
     const rule = 'color: blue;';
     // prettier-ignore
-    const Comp = styled.div`
+    const Comp = placeable.div`
       ${comment}
       ${rule}
     `
@@ -254,10 +254,10 @@ describe('with styles', () => {
   });
 
   it('should respect removed rules', () => {
-    const Heading = styled.h1`
+    const Heading = placeable.h1`
       color: red;
     `;
-    const Text = styled.span`
+    const Text = placeable.span`
       color: green;
     `;
 
@@ -277,7 +277,7 @@ describe('with styles', () => {
 
   it('should add a webpack nonce to the style tags if one is available in the global scope', () => {
     const rule = 'color: blue;';
-    const Comp = styled.div`
+    const Comp = placeable.div`
       ${rule};
     `;
     TestRenderer.create(<Comp />);

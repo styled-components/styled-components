@@ -67,4 +67,4 @@ It seems you are interpolating a keyframe declaration (%s) into an untagged stri
 
 ## 13
 
-%s is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.
+%s is not a placeable component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.

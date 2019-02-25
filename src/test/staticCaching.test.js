@@ -1,18 +1,18 @@
 // @flow
-import { resetStyled } from './utils';
+import { resetPlaceable } from './utils';
 
-let styled;
+let placeable;
 
 describe('static style caching', () => {
   beforeEach(() => {
-    styled = resetStyled();
+    placeable = resetPlaceable();
   });
 
   it('should mark styles without any functions as static', () => {
     const TOP_AS_NUMBER = 10;
     const FONT_SIZE_NUMBER = 14;
 
-    const Comp = styled.div`
+    const Comp = placeable.div`
       color: purple;
       font-size: ${FONT_SIZE_NUMBER}px
       position: absolute;
@@ -22,10 +22,10 @@ describe('static style caching', () => {
     expect(Comp.componentStyle.isStatic).toEqual(true);
   });
 
-  it('should mark styles with a nested styled component as static', () => {
-    const NestedComp = styled.div``;
+  it('should mark styles with a nested placeable component as static', () => {
+    const NestedComp = placeable.div``;
 
-    const Comp = styled.div`
+    const Comp = placeable.div`
       ${NestedComp} {
         color: purple;
       }
@@ -35,7 +35,7 @@ describe('static style caching', () => {
   });
 
   it('should mark styles with a dynamic style as not static', () => {
-    const Comp = styled.div`
+    const Comp = placeable.div`
       color: ${props => props.color};
     `;
 
@@ -43,7 +43,7 @@ describe('static style caching', () => {
   });
 
   it('should mark components with numeric attriutes as static', () => {
-    const Comp = styled.div.attrs({
+    const Comp = placeable.div.attrs({
       style: {
         color: 'purple',
       },
@@ -54,7 +54,7 @@ describe('static style caching', () => {
   });
 
   it('should mark components with dynamic attributes as not static', () => {
-    const Comp = styled.div.attrs({
+    const Comp = placeable.div.attrs({
       style: props => ({
         height: props.height,
       }),

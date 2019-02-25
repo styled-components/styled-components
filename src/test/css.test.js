@@ -2,17 +2,17 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
-import { resetStyled, expectCSSMatches } from './utils';
+import { resetPlaceable, expectCSSMatches } from './utils';
 
-let styled;
+let placeable;
 
 describe('css features', () => {
   beforeEach(() => {
-    styled = resetStyled();
+    placeable = resetPlaceable();
   });
 
   it('should add vendor prefixes in the right order', () => {
-    const Comp = styled.div`
+    const Comp = placeable.div`
       transition: opacity 0.3s;
     `;
     TestRenderer.create(<Comp />);
@@ -20,7 +20,7 @@ describe('css features', () => {
   });
 
   it('should add vendor prefixes for display', () => {
-    const Comp = styled.div`
+    const Comp = placeable.div`
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -34,7 +34,7 @@ describe('css features', () => {
   });
 
   it('should generate styles for nested media queries', () => {
-    const Comp = styled.div`
+    const Comp = placeable.div`
       @media (min-width: 10px) {
         @media (min-height: 20px) {
           color: red;
@@ -54,7 +54,7 @@ describe('css features', () => {
   });
 
   it('should pass through custom properties', () => {
-    const Comp = styled.div`
+    const Comp = placeable.div`
       --custom-prop: some-val;
     `;
     TestRenderer.create(<Comp />);

@@ -5,20 +5,20 @@
 import React from 'react';
 import { renderToString, renderToNodeStream } from 'react-dom/server';
 import ServerStyleSheet from '../models/ServerStyleSheet';
-import { resetStyled, seedNextClassnames } from './utils';
+import { resetPlaceable, seedNextClassnames } from './utils';
 import keyframes from '../constructors/keyframes';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 
 jest.mock('../utils/nonce');
 
-let styled;
+let placeable;
 
 describe('ssr', () => {
   beforeEach(() => {
     // eslint-disable-next-line
     require('../utils/nonce').mockReset();
 
-    styled = resetStyled(true);
+    placeable = resetPlaceable(true);
   });
 
   afterEach(() => {
@@ -26,7 +26,7 @@ describe('ssr', () => {
   });
 
   it('should extract the CSS in a simple case', () => {
-    const Heading = styled.h1`
+    const Heading = placeable.h1`
       color: red;
     `;
 
@@ -42,7 +42,7 @@ describe('ssr', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const Heading = styled.h1`
+    const Heading = placeable.h1`
       color: red;
     `;
 
@@ -62,10 +62,10 @@ describe('ssr', () => {
   });
 
   it('should not spill ServerStyleSheets into each other', () => {
-    const A = styled.h1`
+    const A = placeable.h1`
       color: red;
     `;
-    const B = styled.h1`
+    const B = placeable.h1`
       color: green;
     `;
 
@@ -90,7 +90,7 @@ describe('ssr', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const Heading = styled.h1`
+    const Heading = placeable.h1`
       color: red;
     `;
 
@@ -110,10 +110,10 @@ describe('ssr', () => {
   });
 
   it('should render CSS in the order the components were defined, not rendered', () => {
-    const ONE = styled.h1.withConfig({ componentId: 'ONE' })`
+    const ONE = placeable.h1.withConfig({ componentId: 'ONE' })`
       color: red;
     `;
-    const TWO = styled.h2.withConfig({ componentId: 'TWO' })`
+    const TWO = placeable.h2.withConfig({ componentId: 'TWO' })`
       color: blue;
     `;
 
@@ -136,10 +136,10 @@ describe('ssr', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const PageOne = styled.h1.withConfig({ componentId: 'PageOne' })`
+    const PageOne = placeable.h1.withConfig({ componentId: 'PageOne' })`
       color: red;
     `;
-    const PageTwo = styled.h2.withConfig({ componentId: 'PageTwo' })`
+    const PageTwo = placeable.h2.withConfig({ componentId: 'PageTwo' })`
       color: blue;
     `;
 
@@ -175,7 +175,7 @@ describe('ssr', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const Header = styled.h1.withConfig({ componentId: 'Header' })`
+    const Header = placeable.h1.withConfig({ componentId: 'Header' })`
       animation: ${props => props.animation} 1s both;
     `;
 
@@ -200,7 +200,7 @@ describe('ssr', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const Heading = styled.h1`
+    const Heading = placeable.h1`
       color: red;
     `;
 
@@ -231,7 +231,7 @@ describe('ssr', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const Heading = styled.h1`
+    const Heading = placeable.h1`
       color: red;
     `;
 
@@ -254,7 +254,7 @@ describe('ssr', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const Heading = styled.h1`
+    const Heading = placeable.h1`
       color: red;
     `;
 
@@ -288,19 +288,19 @@ describe('ssr', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const Heading = styled.h1`
+    const Heading = placeable.h1`
       color: red;
     `;
 
-    const Body = styled.div`
+    const Body = placeable.div`
       color: blue;
     `;
 
-    const SideBar = styled.div`
+    const SideBar = placeable.div`
       color: yellow;
     `;
 
-    const Footer = styled.div`
+    const Footer = placeable.div`
       color: green;
     `;
 

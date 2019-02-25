@@ -5,14 +5,14 @@ import TestRenderer from 'react-test-renderer';
 import css from '../css';
 import keyframes from '../keyframes';
 import Keyframes from '../../models/Keyframes';
-import { expectCSSMatches, getCSS, resetStyled } from '../../test/utils';
+import { expectCSSMatches, getCSS, resetPlaceable } from '../../test/utils';
 
 /**
  * Setup
  */
 describe('keyframes', () => {
   beforeEach(() => {
-    resetStyled();
+    resetPlaceable();
   });
 
   it('should return Keyframes instance', () => {
@@ -40,7 +40,7 @@ describe('keyframes', () => {
   });
 
   it('should insert the correct styles', () => {
-    const styled = resetStyled();
+    const placeable = resetPlaceable();
 
     const rules = `
       0% {
@@ -56,7 +56,7 @@ describe('keyframes', () => {
 
     expectCSSMatches('');
 
-    const Comp = styled.div`
+    const Comp = placeable.div`
       animation: ${animation} 2s linear infinite;
     `;
     TestRenderer.create(<Comp />);
@@ -88,7 +88,7 @@ describe('keyframes', () => {
   });
 
   it('should insert the correct styles when keyframes in props', () => {
-    const styled = resetStyled();
+    const placeable = resetPlaceable();
 
     const rules = `
       0% {
@@ -104,7 +104,7 @@ describe('keyframes', () => {
 
     expectCSSMatches('');
 
-    const Comp = styled.div`
+    const Comp = placeable.div`
       animation: ${props => props.animation} 2s linear infinite;
     `;
     TestRenderer.create(<Comp animation={animation} />);
@@ -136,7 +136,7 @@ describe('keyframes', () => {
   });
 
   it('should handle interpolations', () => {
-    const styled = resetStyled();
+    const placeable = resetPlaceable();
 
     const opacity = ['opacity: 0;', 'opacity: 1;'];
 
@@ -171,7 +171,7 @@ describe('keyframes', () => {
       }
     };
 
-    const Foo = styled.div`
+    const Foo = placeable.div`
       animation: ${props => (props.animation ? getAnimation(props.animation) : 'none')};
     `;
 
@@ -197,7 +197,7 @@ describe('keyframes', () => {
   });
 
   it('should throw an error when interpolated in a vanilla string', () => {
-    const styled = resetStyled();
+    const placeable = resetPlaceable();
 
     const animation = keyframes``;
 

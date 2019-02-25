@@ -1,6 +1,6 @@
 // @flow
 import React from 'react';
-import styled from '../../';
+import { placeable } from '../../';
 import isDerivedReactComponent from '../isDerivedReactComponent';
 
 describe('isDerivedReactComponent(something)', () => {
@@ -13,7 +13,7 @@ describe('isDerivedReactComponent(something)', () => {
   });
 
   it('returns false for everything else', () => {
-    [styled.div``, () => {}, 'foo', 1234, true, false].forEach(test =>
+    [placeable.div``, () => {}, 'foo', 1234, true, false].forEach(test =>
       expect(isDerivedReactComponent(test)).toBe(false)
     );
   });
