@@ -2,9 +2,9 @@
 import 'jest-styled-components';
 import React from 'react';
 import renderer from 'react-test-renderer';
-import styled from '..';
+import {placeable} from '..';
 
-const Button = styled.button`
+const Button = placeable.button`
   color: red;
 `;
 
