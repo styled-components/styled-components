@@ -20,7 +20,7 @@ export default class App extends Component {
     const currentBenchmarkName = Object.keys(props.tests)[0];
     this.state = {
       currentBenchmarkName,
-      currentLibraryName: 'styled-components',
+      currentLibraryName: 'placed-components',
       status: 'idle',
       results: []
     };

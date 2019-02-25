@@ -66,7 +66,7 @@ const createPlugins = () => [
   }),
 ];
 
-const createAlias = () => ({ 'styled-components': styledComponentsSrc, 'react-dom': reactDOM });
+const createAlias = () => ({ 'placed-components': styledComponentsSrc, 'react-dom': reactDOM });
 
 module.exports = [
   {

@@ -25,10 +25,10 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
     // generate new identifier
     let id;
     if (refName === 'default') {
-      id = addDefault(program, 'styled-components', { nameHint: 'styled' });
+      id = addDefault(program, 'placed-components', { nameHint: 'placed' });
       customImportName = id;
     } else {
-      id = addNamed(program, refName, 'styled-components', { nameHint: refName });
+      id = addNamed(program, refName, 'placed-components', { nameHint: refName });
     }
 
     // update references with the new identifiers

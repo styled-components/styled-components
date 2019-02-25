@@ -1,6 +1,6 @@
-/* global React, styled, render, css */
+/* global React, placeable, render, css */
 
-const Button = styled.button`
+const Button = placeable.button`
   font-size: 16px;
   border-radius: 5px;
   padding: 0.25em 1em;

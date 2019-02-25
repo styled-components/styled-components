@@ -1,5 +1,5 @@
 {
-  "name": "styled-components",
+  "name": "placed-components",
   "version": "4.1.2",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "main": "dist/placed-components.cjs.js",
@@ -55,6 +55,8 @@
     "css",
     "css-in-js",
     "styled-components",
+    "placed-components",
+    "layout",
     "babel-macro",
     "babel-macros",
     "styling"

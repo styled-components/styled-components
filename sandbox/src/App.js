@@ -71,7 +71,7 @@ const Code = placeable.span`
   border-radius: 0.2em;
 `;
 
-const LiveProvider = styled(_LiveProvider)`
+const LiveProvider = placeable(_LiveProvider)`
   display: flex;
   flex-wrap: wrap;
 
@@ -95,11 +95,11 @@ const LiveBlock = placeable.div`
   }
 `;
 
-const LiveEditor = styled(LiveBlock.withComponent(_LiveEditor))`
+const LiveEditor = placeable(LiveBlock.withComponent(_LiveEditor))`
   overflow: auto;
 `;
 
-const LivePreview = styled(LiveBlock.withComponent(_LivePreview))`
+const LivePreview = placeable(LiveBlock.withComponent(_LivePreview))`
   background-color: white;
   display: flex;
   flex-direction: row;
@@ -108,7 +108,7 @@ const LivePreview = styled(LiveBlock.withComponent(_LivePreview))`
   align-items: center;
 `;
 
-const LiveError = styled(_LiveError)`
+const LiveError = placeable(_LiveError)`
   flex-basis: 100%;
   background: #ff5555;
   color: #fff;
@@ -120,7 +120,7 @@ const App = () => (
     <GlobalStyle />
     <Heading>
       <Title>
-        Interactive sandbox for <Code>styled-components</Code>
+        Interactive sandbox for <Code>placed-components</Code>
       </Title>
       <Subtitle>
         Make changes to the <Code>./src</Code> and see them take effect in realtime!
@@ -129,7 +129,7 @@ const App = () => (
     <Content>
       <LiveProvider
         code={buttonExample}
-        scope={{ React, styled, css, createGlobalStyle, keyframes }}
+        scope={{ React, placeable, css, createGlobalStyle, keyframes }}
         noInline
       >
         <LiveEditor />

@@ -1,4 +1,4 @@
-import styleable from 'styled-components';
+import styleable from 'placed-components';
 
 const View = styleable.div`
   align-items: stretch;
