@@ -589,21 +589,21 @@
   version "0.7.0"
   resolved "https://registry.yarnpkg.com/@emotion/unitless/-/unitless-0.7.0.tgz#0a61bd5f1eaca67ded84260c3f26df71e27e3665"
 
-"@layout-css/properties@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@layout-css/properties/-/properties-0.0.1.tgz#2b19f93498e9fdde7b75b2c25c7e81a3ecf403f0"
-  integrity sha512-NwZnaKqMmiMdd2mnG+JbLcbU6wtdN2e+2Af04TJiRoPaWLWBeeiKJK2zqtndJRc4BVHzy2fB950pJk3sJJr3Rw==
+"@layout-css/properties@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@layout-css/properties/-/properties-0.0.2.tgz#e4302e7a7556919ef7ed9a2c36baeb225d3b5c17"
+  integrity sha512-KcUL4mg1j72ywcRy6itL8o2dSsQb1OsV7syMmImsM7zaccqJkyjy3DQc1mUgdhu4PN45tb+X0xgoFIKrQODSXQ==
   dependencies:
     lodash "^4.17.11"
 
-"@layout-css/validator@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@layout-css/validator/-/validator-0.0.1.tgz#fea80604be3f91c1843fae94ba4e722ddfa35c12"
-  integrity sha512-Eyp/gq3d1s8yyGHe2xN7W+l2BftoZCFHhsFv+kCgK3TmzmP7PeB8SP5mwh3H9bGTrM6tu2OozMTW36bX2AcYpg==
+"@layout-css/validator@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@layout-css/validator/-/validator-0.0.2.tgz#06d603bcc694e2bbc64d3c92a4321b53bf7788bc"
+  integrity sha512-yhopw+sVeIOD8RtpNDT4dtwaEyZsqsN5WcjkOL6M55t1cLSb/cqPTJ3UUw3qVmTzWEVBsQLwXRL5e+7VtHNc6g==
   dependencies:
-    "@layout-css/properties" "^0.0.1"
-    lodash "^4.17.11"
-    stylis "^3.5.4"
+    "@layout-css/properties" "^0.0.2"
+    lodash "^4.17.0"
+    stylis "^3.5.0"
 
 "@samverschueren/stream-to-observable@^0.3.0":
   version "0.3.0"
@@ -4931,7 +4931,7 @@ lodash@^4.13.1, lodash@^4.17.10, lodash@^4.17.4, lodash@^4.17.5, lodash@^4.3.0, 
   version "4.17.10"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.10.tgz#1b7793cf7259ea38fb3661d4d38b3260af8ae4e7"
 
-lodash@^4.17.11:
+lodash@^4.17.0, lodash@^4.17.11:
   version "4.17.11"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.11.tgz#b39ea6229ef607ecd89e2c8df12536891cac9b8d"
   integrity sha512-cQKh8igo5QUhZ7lg38DYWAxMvjSAKG0A8wGSVimP07SIUEK2UO+arSRKbRZWtelMtN5V0Hkwh5ryOto/SshYIg==
@@ -7289,11 +7289,6 @@ stylis-rule-sheet@^0.0.10:
 stylis@^3.5.0:
   version "3.5.3"
   resolved "https://registry.yarnpkg.com/stylis/-/stylis-3.5.3.tgz#99fdc46afba6af4deff570825994181a5e6ce546"
-
-stylis@^3.5.4:
-  version "3.5.4"
-  resolved "https://registry.yarnpkg.com/stylis/-/stylis-3.5.4.tgz#f665f25f5e299cf3d64654ab949a57c768b73fbe"
-  integrity sha512-8/3pSmthWM7lsPBKv7NXkzn2Uc9W7NotcwGNpJaa3k7WMM1XDCA4MgT5k/8BIexd5ydZdboXtU90XH9Ec4Bv/Q==
 
 supports-color@^2.0.0:
   version "2.0.0"
