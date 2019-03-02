@@ -149,11 +149,11 @@ describe('expanded api', () => {
       `;
 
       const Comp2 = placeable(Comp)`
-        color: green;
+        width: 200px;
       `;
 
       const Comp3 = placeable(Comp2)`
-        text-align: center;
+        height: 100px;
       `;
 
       expect(Comp.displayName).toMatchSnapshot();

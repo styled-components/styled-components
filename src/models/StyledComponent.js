@@ -12,6 +12,7 @@ import isFunction from '../utils/isFunction';
 import isTag from '../utils/isTag';
 import isDerivedReactComponent from '../utils/isDerivedReactComponent';
 import isStyledComponent from '../utils/isStyledComponent';
+import mostRestrictedComposition from '../utils/mostRestrictedComposition';
 import once from '../utils/once';
 import StyleSheet from './StyleSheet';
 import { ThemeConsumer, type Theme } from './ThemeProvider';
@@ -55,6 +56,10 @@ class StyledComponent extends Component<*> {
   warnNonStyledComponentAttrsObjectKey: Function;
 
   attrs = {};
+
+  allowComposition = 'layout';
+
+  allowStyles = 'appearance';
 
   constructor() {
     super();
@@ -238,6 +243,17 @@ class StyledComponent extends Component<*> {
   }
 }
 
+function wrapCompositionRules(rules: RuleSet, allow: string) {
+  if (allow === 'appearance') {
+    return rules;
+  }
+  if (allow === 'layout') {
+    // $FlowFixMe
+    return [`@supports layout{${rules[0]}}`];
+  }
+  return [];
+}
+
 export default function createStyledComponent(target: Target, options: Object, rules: RuleSet) {
   const isTargetStyledComp = isStyledComponent(target);
   const isClass = !isTag(target);
@@ -247,6 +263,7 @@ export default function createStyledComponent(target: Target, options: Object, r
     componentId = generateId(ComponentStyle, options.displayName, options.parentComponentId),
     ParentComponent = StyledComponent,
     attrs = EMPTY_ARRAY,
+    allowComposition = 'appearance',
   } = options;
 
   const styledComponentId =
@@ -261,11 +278,17 @@ export default function createStyledComponent(target: Target, options: Object, r
       ? Array.prototype.concat(target.attrs, attrs).filter(Boolean)
       : attrs;
 
+  const restrictedComposition = mostRestrictedComposition(
+    allowComposition,
+    // $FlowFixMe
+    target.allowComposition
+  );
+
   const componentStyle = new ComponentStyle(
     isTargetStyledComp
       ? // fold the underlying StyledComponent rules up (implicit extend)
         // $FlowFixMe
-        target.componentStyle.rules.concat(rules)
+        target.componentStyle.rules.concat(wrapCompositionRules(rules, restrictedComposition))
       : rules,
     finalAttrs,
     styledComponentId
@@ -281,6 +304,10 @@ export default function createStyledComponent(target: Target, options: Object, r
 
   // $FlowFixMe
   WrappedStyledComponent.attrs = finalAttrs;
+  // $FlowFixMe
+  WrappedStyledComponent.allowStyles = target.allowComposition;
+  // $FlowFixMe
+  WrappedStyledComponent.allowComposition = allowComposition;
   // $FlowFixMe
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;

@@ -6,5 +6,4 @@ import type { Target } from '../types';
 
 const styled = (tag: Target, options: Object) =>
   constructWithOptions(StyledComponent, tag, options);
-
 export default styled;

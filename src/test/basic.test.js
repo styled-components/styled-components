@@ -9,7 +9,7 @@ import { find } from '../../test-utils';
 
 let placeable;
 
-describe.only('basic', () => {
+describe('basic', () => {
   /**
    * Make sure the setup is the same for every test
    */

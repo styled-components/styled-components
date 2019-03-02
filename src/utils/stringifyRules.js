@@ -1,6 +1,7 @@
 // @flow
 import Stylis from 'stylis/stylis.min';
 import _insertRulePlugin from 'stylis-rule-sheet';
+import { isValidLayout } from '@layout-css/validator';
 import type { Interpolation } from '../types';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
@@ -24,6 +25,18 @@ const stylis = new Stylis({
   semicolon: false, // NOTE: This means "autocomplete missing semicolons"
 });
 
+const layoutAtRule = '@supports layout';
+
+function stripAtLayout(rule) {
+  if (rule.substring(0, layoutAtRule.length) === layoutAtRule) {
+    const layoutRule = rule.substr(layoutAtRule.length + 1, rule.length - layoutAtRule.length - 2);
+    if (isValidLayout(layoutRule)) {
+      return layoutRule;
+    }
+    return '';
+  }
+  return rule;
+}
 // Wrap `insertRulePlugin to build a list of rules,
 // and then make our own plugin to return the rules. This
 // makes it easier to hook into the existing SSR architecture
@@ -40,7 +53,7 @@ const returnRulesPlugin = context => {
 };
 
 const parseRulesPlugin = _insertRulePlugin(rule => {
-  parsingRules.push(rule);
+  parsingRules.push(stripAtLayout(rule));
 });
 
 let _componentId: string;

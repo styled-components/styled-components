@@ -8,6 +8,9 @@ const Button = placeable.button`
   background: transparent;
   color: palevioletred;
   border: 2px solid palevioletred;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   ${props =>
     props.primary &&
@@ -17,6 +20,10 @@ const Button = placeable.button`
     `};
 `;
 
-const content = [<Button>Normal Button</Button>, <Button primary>Primary Button</Button>];
+const Composed = placeable(Button)`
+  width: 80px;
+`;
+
+const content = [<Button>Normal Button</Button>, <Composed >Button Composed</Composed>];
 
 render(content);

@@ -248,16 +248,16 @@ describe('StyleSheetManager', () => {
   });
 
   it('should render styles in correct order when placeable(StyledComponent) and StyleSheetManager is used', () => {
-    const Red = placeable.div`
-      color: red;
+    const Narrow = placeable.div`
+      width: 10px;
     `;
-    const RedChangedToBlue = placeable(Red)`
-      color: blue;
+    const NarrowChangedToWide = placeable(Narrow)`
+      width: 222px;
     `;
     const sheet = new StyleSheet();
     const App = () => (
       <StyleSheetManager sheet={sheet}>
-        <RedChangedToBlue>I should be blue</RedChangedToBlue>
+        <NarrowChangedToWide>I should be 222px</NarrowChangedToWide>
       </StyleSheetManager>
     );
     const attachPoint = document.body.appendChild(document.createElement('div'));
@@ -267,10 +267,10 @@ describe('StyleSheetManager', () => {
     // it.
     const source = document.documentElement.outerHTML;
     // regex in case test is run against minified CSS in the future
-    const indexOfRedStyle = source.search('color:red');
-    const indexOfBlueStyle = source.search('color:blue');
-    expect(indexOfRedStyle).toBeGreaterThanOrEqual(0);
-    expect(indexOfBlueStyle).toBeGreaterThanOrEqual(0);
-    expect(indexOfBlueStyle).toBeGreaterThan(indexOfRedStyle);
+    const indexOfNarrowStyle = source.search('width:10px');
+    const indexOfWideStyle = source.search('width:222px');
+    expect(indexOfNarrowStyle).toBeGreaterThanOrEqual(0);
+    expect(indexOfWideStyle).toBeGreaterThanOrEqual(0);
+    expect(indexOfWideStyle).toBeGreaterThan(indexOfRedStyle);
   });
 });

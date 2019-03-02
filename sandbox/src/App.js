@@ -1,7 +1,7 @@
 // @flow
 import React from 'react';
 
-import {placeable, css, keyframes, createGlobalStyle } from 'placed-components';
+import {placeable, styleable, css, keyframes, createGlobalStyle } from 'placed-components';
 
 import {
   LiveProvider as _LiveProvider,
@@ -71,7 +71,7 @@ const Code = placeable.span`
   border-radius: 0.2em;
 `;
 
-const LiveProvider = placeable(_LiveProvider)`
+const LiveProvider = styleable(_LiveProvider)`
   display: flex;
   flex-wrap: wrap;
 
@@ -95,11 +95,11 @@ const LiveBlock = placeable.div`
   }
 `;
 
-const LiveEditor = placeable(LiveBlock.withComponent(_LiveEditor))`
+const LiveEditor = styleable(LiveBlock.withComponent(_LiveEditor))`
   overflow: auto;
 `;
 
-const LivePreview = placeable(LiveBlock.withComponent(_LivePreview))`
+const LivePreview = styleable(LiveBlock.withComponent(_LivePreview))`
   background-color: white;
   display: flex;
   flex-direction: row;
@@ -108,7 +108,7 @@ const LivePreview = placeable(LiveBlock.withComponent(_LivePreview))`
   align-items: center;
 `;
 
-const LiveError = placeable(_LiveError)`
+const LiveError = styleable(_LiveError)`
   flex-basis: 100%;
   background: #ff5555;
   color: #fff;
