@@ -56,19 +56,21 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
     if (executionContext) {
-      let shouldThrow = false;
+      if (process.env.NODE_ENV !== 'production') {
+        let shouldThrow = false;
 
-      try {
-        // eslint-disable-next-line new-cap
-        if (isElement(new chunk(executionContext))) {
-          shouldThrow = true;
+        try {
+          // eslint-disable-next-line new-cap
+          if (isElement(new chunk(executionContext))) {
+            shouldThrow = true;
+          }
+        } catch (e) {
+          /* */
         }
-      } catch (e) {
-        /* */
-      }
 
-      if (shouldThrow) {
-        throw new StyledError(13, getComponentName(chunk));
+        if (shouldThrow) {
+          throw new StyledError(13, getComponentName(chunk));
+        }
       }
 
       return flatten(chunk(executionContext), executionContext, styleSheet);
