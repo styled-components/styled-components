@@ -2,6 +2,7 @@
 import { isElement } from 'react-is';
 import getComponentName from './getComponentName';
 import isFunction from './isFunction';
+import isStatelessFunction from './isStatelessFunction';
 import isPlainObject from './isPlainObject';
 import isStyledComponent from './isStyledComponent';
 import Keyframes from '../models/Keyframes';
@@ -55,12 +56,13 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
 
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
-    if (executionContext) {
+    if (isStatelessFunction(chunk) && executionContext) {
       let shouldThrow = false;
 
+      const result = chunk(executionContext);
+
       try {
-        // eslint-disable-next-line new-cap
-        if (isElement(new chunk(executionContext))) {
+        if (isElement(result)) {
           shouldThrow = true;
         }
       } catch (e) {
@@ -71,7 +73,7 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
         throw new StyledError(13, getComponentName(chunk));
       }
 
-      return flatten(chunk(executionContext), executionContext, styleSheet);
+      return flatten(result, executionContext, styleSheet);
     } else return chunk;
   }
 
