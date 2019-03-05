@@ -127,6 +127,33 @@ describe('basic', () => {
     expectCSSMatches('.b { color:blue; }');
   });
 
+  it('should allow you to pass in multiple functions returning a style objects', () => {
+    const Comp = styled.div(
+      ({ color }) => ({ color }),
+      ({ color }) => ({ borderColor: color })
+    );
+    TestRenderer.create(<Comp color="blue" />);
+    expectCSSMatches('.b { color:blue; border-color:blue; }');
+  });
+
+  it('should allow you to pass in multiple style objects', () => {
+    const Comp = styled.div(
+      { color: 'blue' },
+      { borderColor: 'blue' }
+    );
+    TestRenderer.create(<Comp />);
+    expectCSSMatches('.b { color:blue; border-color:blue; }');
+  });
+
+  it('should allow you to pass in a combination functions and style objects', () => {
+    const Comp = styled.div(
+      ({ color }) => ({ color }),
+      { borderColor: 'blue' }
+    );
+    TestRenderer.create(<Comp color="blue" />);
+    expectCSSMatches('.b { color:blue; border-color:blue; }');
+  });
+
   it('emits the correct selector when a StyledComponent is interpolated into a template string', () => {
     const Comp = styled.div`
       color: red;
