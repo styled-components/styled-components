@@ -140,6 +140,17 @@ _styled.div.withConfig({
 "
 `;
 
+exports[`macro should work with multiple imports: should work with multiple imports 1`] = `
+"
+import styled, { css } from '../../macro'
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import { css as _css } from 'styled-components';
+import _styled from 'styled-components';
+"
+`;
+
 exports[`macro should work with require() to import styled-components: should work with require() to import styled-components 1`] = `
 "
 const styled = require('../../macro')
