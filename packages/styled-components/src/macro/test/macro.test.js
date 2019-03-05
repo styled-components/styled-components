@@ -67,6 +67,10 @@ styled(Hello)\`
 \`
 `;
 
+const multipleImportsExampleCode = `
+import styled, { css } from '../../macro'
+`
+
 const requireExampleCode = `
 const styled = require('../../macro')
 
@@ -112,6 +116,9 @@ pluginTester({
     },
     'should work with require() to import styled-components': {
       code: requireExampleCode
+    },
+    'should work with multiple imports': {
+      code: multipleImportsExampleCode
     },
     'should throw error when importing { UnknownImport }': {
       code: invalidExampleCode,
