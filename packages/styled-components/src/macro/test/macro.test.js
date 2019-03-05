@@ -79,8 +79,12 @@ styled.div\`
 \`
 `;
 
-const invalidExampleCode = `
-import { UnknownImport } from '../../macro'
+const withTypeImportExampleCode = `
+import { DefaultTheme } from '../../macro'
+`;
+
+const withTypeAndStandardImportExampleCode = `
+  import styled, { DefaultTheme } from '../../macro'
 `;
 
 pluginTester({
@@ -124,6 +128,12 @@ pluginTester({
       code: invalidExampleCode,
       error: true,
       snapshot: false,
+    },
+    'should work with types': {
+      code: withTypeImportExampleCode
+    },
+    'should work with types alongside import': {
+      code: withTypeAndStandardImportExampleCode
     },
     'should not add componentId with a config disabling ssr': {
       code: styledExampleCode,
