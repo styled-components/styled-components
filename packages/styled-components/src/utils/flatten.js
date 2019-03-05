@@ -57,19 +57,9 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
     if (isStatelessFunction(chunk) && executionContext) {
-      let shouldThrow = false;
-
       const result = chunk(executionContext);
 
-      try {
-        if (isElement(result)) {
-          shouldThrow = true;
-        }
-      } catch (e) {
-        /* */
-      }
-
-      if (shouldThrow) {
+      if (isElement(result)) {
         throw new StyledError(13, getComponentName(chunk));
       }
 
