@@ -8,7 +8,6 @@ import isStyledComponent from './isStyledComponent';
 import Keyframes from '../models/Keyframes';
 import hyphenate from './hyphenateStyleName';
 import addUnitIfNeeded from './addUnitIfNeeded';
-import StyledError from './error';
 
 /**
  * It's falsish not falsy because 0 is allowed.
@@ -59,8 +58,13 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
     if (isStatelessFunction(chunk) && executionContext) {
       const result = chunk(executionContext);
 
-      if (isElement(result)) {
-        throw new StyledError(13, getComponentName(chunk));
+      if (process.env.NODE_ENV !== 'production' && isElement(result)) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `${getComponentName(
+            chunk
+          )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
+        );
       }
 
       return flatten(result, executionContext, styleSheet);
