@@ -84,7 +84,7 @@ stylisSplitter.use([parseRulesPlugin, returnRulesPlugin]);
 
 export const splitByRules = (css: string): Array<string> => stylisSplitter('', css);
 
-export default function stringifyRules(
+export function stringifyRules(
   rules: Array<Interpolation>,
   selector: string,
   prefix: ?string,

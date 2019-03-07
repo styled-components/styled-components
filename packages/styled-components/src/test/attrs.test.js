@@ -1,9 +1,8 @@
 // @flow
 import React, { Component } from 'react';
 import TestRenderer from 'react-test-renderer';
-import ThemeProvider from '../models/ThemeProvider';
-
 import { resetStyled, expectCSSMatches } from './utils';
+import { ThemeProvider } from '../models';
 
 let styled;
 

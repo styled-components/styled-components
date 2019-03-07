@@ -1,5 +1,5 @@
 // @flow
-import escape from '../escape';
+import { escape } from "..";
 
 describe('escape', () => {
   it('replaces characters that could be part of CSS selectors', () => {

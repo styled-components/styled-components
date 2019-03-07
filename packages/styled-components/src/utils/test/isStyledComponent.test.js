@@ -1,7 +1,7 @@
 // @flow
 import React from 'react';
-import styled from '../../';
-import isStyledComponent from '../isStyledComponent';
+import styled from "../..";
+import { isStyledComponent } from "..";
 
 describe('isStyledComponent(something)', () => {
   it('returns true if using styled', () => {

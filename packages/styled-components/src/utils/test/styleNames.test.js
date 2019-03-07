@@ -1,12 +1,6 @@
 // @flow
 
-import {
-  addNameForId,
-  resetIdNames,
-  hasNameForId,
-  stringifyNames,
-  cloneNames,
-} from '../styleNames';
+import { addNameForId, resetIdNames, hasNameForId, stringifyNames, cloneNames } from "..";
 
 describe('styleNames', () => {
   describe('addNameForId', () => {

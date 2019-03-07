@@ -1,16 +1,12 @@
 // @flow
 import React from 'react';
 import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants';
-import GlobalStyle from '../models/GlobalStyle';
-import StyleSheet from '../models/StyleSheet';
-import { StyleSheetConsumer } from '../models/StyleSheetManager';
-import determineTheme from '../utils/determineTheme';
-import { ThemeConsumer, type Theme } from '../models/ThemeProvider';
+import { GlobalStyle, StyleSheet, StyleSheetConsumer, ThemeConsumer, type Theme } from '../models';
+import { determineTheme } from '../utils';
 // $FlowFixMe
-import hashStr from '../vendor/glamor/hash';
-import css from './css';
-
+import { hashStr } from '../vendor/glamor/hash';
 import type { Interpolation } from '../types';
+import { css } from './css';
 
 type GlobalStyleComponentPropsType = Object;
 
@@ -19,10 +15,7 @@ if (IS_BROWSER) {
   window.scCGSHMRCache = {};
 }
 
-export default function createGlobalStyle(
-  strings: Array<string>,
-  ...interpolations: Array<Interpolation>
-) {
+export function createGlobalStyle(strings: Array<string>, ...interpolations: Array<Interpolation>) {
   const rules = css(strings, ...interpolations);
   const id = `sc-global-${hashStr(JSON.stringify(rules))}`;
   const style = new GlobalStyle(rules, id);

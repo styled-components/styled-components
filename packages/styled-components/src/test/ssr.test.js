@@ -4,19 +4,19 @@
 // @flow
 import React from 'react';
 import { renderToString, renderToNodeStream } from 'react-dom/server';
-import ServerStyleSheet from '../models/ServerStyleSheet';
 import { resetStyled, seedNextClassnames } from './utils';
-import keyframes from '../constructors/keyframes';
-import createGlobalStyle from '../constructors/createGlobalStyle';
+import { ServerStyleSheet } from '../models';
+import { keyframes, createGlobalStyle } from '../constructors';
 
-jest.mock('../utils/nonce');
+jest.mock('../utils/nonce', () => ({
+  nonce: jest.fn(),
+}));
 
 let styled;
 
 describe('ssr', () => {
   beforeEach(() => {
-    // eslint-disable-next-line
-    require('../utils/nonce').mockReset();
+    jest.unmock();
 
     styled = resetStyled(true);
   });
@@ -85,7 +85,7 @@ describe('ssr', () => {
 
   it('should add a nonce to the stylesheet if webpack nonce is detected in the global scope', () => {
     // eslint-disable-next-line
-    require('../utils/nonce').mockImplementation(() => 'foo');
+    require('../utils/nonce').nonce.mockImplementationOnce(() => 'foo');
 
     const Component = createGlobalStyle`
       body { background: papayawhip; }
@@ -226,7 +226,7 @@ describe('ssr', () => {
 
   it('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
     // eslint-disable-next-line
-    require('../utils/nonce').mockImplementation(() => 'foo');
+    require('../utils/nonce').nonce.mockImplementationOnce(() => 'foo');
 
     const Component = createGlobalStyle`
       body { background: papayawhip; }

@@ -43,7 +43,7 @@ const {
 
 const { prototype: arrayPrototype } = Array;
 
-export default function hoistNonReactStatics(
+export function hoistNonReactStatics(
   targetComponent: any,
   sourceComponent: any,
   blacklist: ?Object

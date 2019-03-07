@@ -5,13 +5,15 @@
  */
 import React from 'react';
 import PropTypes from 'prop-types';
-import hoistNonReactStatics from '../hoist';
+import { hoistNonReactStatics } from '..';
 
 describe('hoist non react statics', () => {
   it('should hoist non react statics', () => {
     class Component extends React.Component {
       static displayName = 'Foo';
+
       static foo = 'bar';
+
       static propTypes = {
         on: PropTypes.bool.isRequired,
       };
@@ -38,6 +40,7 @@ describe('hoist non react statics', () => {
   it('should not hoist custom statics', () => {
     class Component extends React.Component {
       static displayName = 'Foo';
+
       static foo = 'bar';
 
       render() {
@@ -97,6 +100,7 @@ describe('hoist non react statics', () => {
   it('should hoist class statics', () => {
     class Component extends React.Component {
       static foo = 'bar';
+
       static test() {}
     }
 
@@ -145,11 +149,14 @@ describe('hoist non react statics', () => {
   it('should inherit static class properties', () => {
     class A extends React.Component {
       static test3 = 'A';
+
       static test4 = 'D';
+
       test5 = 'foo';
     }
     class B extends A {
       static test2 = 'B';
+
       static test4 = 'DD';
     }
     class C {
@@ -167,15 +174,20 @@ describe('hoist non react statics', () => {
   it('should inherit static class methods', () => {
     class A extends React.Component {
       static test3 = 'A';
+
       static test4 = 'D';
+
       static getMeta() {
         return {};
       }
+
       test5 = 'foo';
     }
     class B extends A {
       static test2 = 'B';
+
       static test4 = 'DD';
+
       static getMeta2() {
         return {};
       }
@@ -200,7 +212,9 @@ describe('hoist non react statics', () => {
     function logProps(Component) {
       class LogProps extends React.Component {
         static foo = 'foo';
+
         static render = 'bar';
+
         render() {
           const { forwardedRef, ...rest } = this.props;
           return <Component ref={forwardedRef} {...rest} foo="foo" bar="bar" />;

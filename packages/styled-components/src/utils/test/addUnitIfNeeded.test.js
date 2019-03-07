@@ -1,4 +1,4 @@
-import addUnitIfNeeded from '../addUnitIfNeeded';
+import { addUnitIfNeeded } from "..";
 
 it('adds a px prefix if needed for properties that require a unit', () => {
   [

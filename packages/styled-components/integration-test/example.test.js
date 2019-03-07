@@ -57,7 +57,6 @@ describe('example page', () => {
         req.continue();
       } else {
         throw new Error(req.url());
-        req.abort();
       }
     });
     await page.setRequestInterception(true);

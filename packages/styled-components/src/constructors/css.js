@@ -1,12 +1,8 @@
 // @flow
-import interleave from '../utils/interleave';
-import isPlainObject from '../utils/isPlainObject';
-import { EMPTY_ARRAY } from '../utils/empties';
-import isFunction from '../utils/isFunction';
-import flatten from '../utils/flatten';
+import { EMPTY_ARRAY, flatten, interleave, isFunction, isPlainObject } from '../utils';
 import type { Interpolation, RuleSet, Styles } from '../types';
 
-export default function css(styles: Styles, ...interpolations: Array<Interpolation>): RuleSet {
+export function css(styles: Styles, ...interpolations: Array<Interpolation>): RuleSet {
   if (isFunction(styles) || isPlainObject(styles)) {
     // $FlowFixMe
     return flatten(interleave(EMPTY_ARRAY, [styles, ...interpolations]));

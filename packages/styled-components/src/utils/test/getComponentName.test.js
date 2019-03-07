@@ -1,6 +1,6 @@
 // @flow
 import React from 'react';
-import getComponentName from '../getComponentName';
+import { getComponentName } from "..";
 
 describe('getComponentName', () => {
   let Test;

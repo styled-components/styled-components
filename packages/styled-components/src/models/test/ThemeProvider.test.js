@@ -2,9 +2,11 @@
 /* eslint-disable react/no-multi-comp */
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-import ThemeProvider from '../ThemeProvider';
-import withTheme from '../../hoc/withTheme';
+
 import { resetStyled } from '../../test/utils';
+import { withTheme } from '../../hoc';
+
+import { ThemeProvider } from '..';
 
 let styled;
 

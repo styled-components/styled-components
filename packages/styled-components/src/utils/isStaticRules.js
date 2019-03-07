@@ -1,6 +1,6 @@
 // @flow
-import isFunction from './isFunction';
-import isStyledComponent from './isStyledComponent';
+import { isFunction } from './isFunction';
+import { isStyledComponent } from './isStyledComponent';
 import type { Attrs, RuleSet } from '../types';
 
 function hasFunctionObjectKey(obj: Object): boolean {
@@ -14,7 +14,7 @@ function hasFunctionObjectKey(obj: Object): boolean {
   return false;
 }
 
-export default function isStaticRules(rules: RuleSet, attrs: Attrs): boolean {
+export function isStaticRules(rules: RuleSet, attrs: Attrs): boolean {
   for (let i = 0; i < rules.length; i += 1) {
     const rule = rules[i];
 

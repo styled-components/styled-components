@@ -2,7 +2,7 @@
 import { cloneElement } from 'react';
 import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR, SC_VERSION_ATTR, SC_STREAM_ATTR } from '../constants';
 import { makeTag, rehydrate, type Tag } from './StyleTags';
-import extractComps from '../utils/extractCompsFromCSS';
+import { extractCompsFromCSS } from '../utils';
 
 declare var __VERSION__: string;
 
@@ -21,7 +21,7 @@ if (IS_BROWSER) {
 let sheetRunningId = 0;
 let master;
 
-export default class StyleSheet {
+export class StyleSheet {
   id: number;
 
   forceServer: boolean;
@@ -105,7 +105,7 @@ export default class StyleSheet {
       }
 
       /* extract all components and their CSS */
-      extracted.push(...extractComps(el.textContent));
+      extracted.push(...extractCompsFromCSS(el.textContent));
 
       /* store original HTMLStyleElement */
       els.push(el);
@@ -134,7 +134,7 @@ export default class StyleSheet {
 
   /* retrieve a "master" instance of StyleSheet which is typically used when no other is available
    * The master StyleSheet is targeted by createGlobalStyle, keyframes, and components outside of any
-    * StyleSheetManager's context */
+   * StyleSheetManager's context */
   static get master(): StyleSheet {
     return master || (master = new StyleSheet().rehydrate());
   }

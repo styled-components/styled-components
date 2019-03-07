@@ -1,5 +1,5 @@
 // @flow
-import extractCompsFromCSS from '../extractCompsFromCSS';
+import { extractCompsFromCSS } from "..";
 
 describe('extractCompsFromCSS', () => {
   it('should work for null or empty', () => {

@@ -42,7 +42,7 @@ function format(...args) {
  * Create an error file out of errors.md for development and a simple web link to the full errors
  * in production mode.
  */
-export default class StyledComponentsError extends Error {
+export class StyledError extends Error {
   constructor(code: string | number, ...interpolations: Array<any>) {
     if (process.env.NODE_ENV === 'production') {
       super(

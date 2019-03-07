@@ -1,6 +1,6 @@
 // @flow
-import styled from '../styled';
-import domElements from '../../utils/domElements';
+import { styled } from "..";
+import { domElements } from '../../utils';
 
 describe('styled', () => {
   it('should have all valid HTML5 elements defined as properties', () => {

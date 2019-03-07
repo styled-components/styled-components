@@ -1,5 +1,5 @@
 // @flow
-import StyledError from '../error';
+import { StyledError } from "..";
 
 describe('development', () => {
   it('returns a rich error', () => {

@@ -1,8 +1,8 @@
 // @flow
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-import flatten from '../flatten';
-import styled from '../../constructors/styled';
+import { flatten } from "..";
+import { styled } from '../../constructors';
 
 describe('flatten', () => {
   it('doesnt merge strings', () => {

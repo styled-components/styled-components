@@ -1,5 +1,5 @@
 // @flow
-import determineTheme from '../determineTheme';
+import { determineTheme } from "..";
 
 const theme = { color: 'red' };
 const fallback = { color: 'blue' };

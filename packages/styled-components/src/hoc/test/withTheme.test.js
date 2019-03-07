@@ -1,8 +1,7 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
-import ThemeProvider from '../../models/ThemeProvider';
-import withTheme from '../withTheme';
+import { withTheme } from "..";
 
 describe('withTheme', () => {
   beforeEach(() => jest.spyOn(console, 'warn').mockImplementation(() => {}));

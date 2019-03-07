@@ -1,17 +1,17 @@
-const path = require('path');
-const exec = require('child_process').exec;
-const Express = require('express');
-const watch = require('node-watch');
-
 import fs from 'fs';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { ServerStyleSheet } from '..';
 import getExample from './example';
 
-const HTML = fs.readFileSync(__dirname + '/index.html').toString();
+const path = require('path');
+const exec = require('child_process').exec;
+const Express = require('express');
+const watch = require('node-watch');
 
-const srcPath = __dirname.split('/example')[0] + '/src';
+const HTML = fs.readFileSync(`${__dirname  }/index.html`).toString();
+
+const srcPath = `${__dirname.split('/example')[0]  }/src`;
 
 const hotBuild = () =>
   exec('npm run build:dist', (err, stdout, stderr) => {

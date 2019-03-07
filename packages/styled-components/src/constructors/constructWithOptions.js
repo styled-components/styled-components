@@ -1,12 +1,11 @@
 // @flow
 import { isValidElementType } from 'react-is';
-import css from './css';
-import StyledError from '../utils/error';
-import { EMPTY_OBJECT } from '../utils/empties';
+import { css } from './css';
+import { StyledError, EMPTY_OBJECT } from '../utils';
 
 import type { Target } from '../types';
 
-export default function constructWithOptions(
+export function constructWithOptions(
   componentConstructor: Function,
   tag: Target,
   options: Object = EMPTY_OBJECT

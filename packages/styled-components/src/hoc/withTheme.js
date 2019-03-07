@@ -1,11 +1,9 @@
 // @flow
 import React, { type ComponentType } from 'react';
-import { ThemeConsumer, type Theme } from '../models/ThemeProvider';
-import determineTheme from '../utils/determineTheme';
-import getComponentName from '../utils/getComponentName';
-import hoistStatics from '../utils/hoist';
+import { ThemeConsumer, type Theme } from '../models';
+import { determineTheme, getComponentName, hoistNonReactStatics } from '../utils';
 
-export default (Component: ComponentType<any>) => {
+export const withTheme = (Component: ComponentType<any>) => {
   const WithTheme = React.forwardRef((props, ref) => (
     <ThemeConsumer>
       {(theme?: Theme) => {
@@ -27,7 +25,7 @@ export default (Component: ComponentType<any>) => {
     </ThemeConsumer>
   ));
 
-  hoistStatics(WithTheme, Component);
+  hoistNonReactStatics(WithTheme, Component);
 
   WithTheme.displayName = `WithTheme(${getComponentName(Component)})`;
 

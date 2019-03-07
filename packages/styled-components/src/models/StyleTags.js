@@ -4,21 +4,21 @@
 
 import React, { type Element } from 'react';
 import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR, SC_VERSION_ATTR } from '../constants';
-import StyledError from '../utils/error';
-import { type ExtractedComp } from '../utils/extractCompsFromCSS';
-import { splitByRules } from '../utils/stringifyRules';
-import getNonce from '../utils/nonce';
-
 import {
+  StyledError,
+  type ExtractedComp,
+  splitByRules,
+  nonce as getNonce,
   type Names,
   addNameForId,
   resetIdNames,
   hasNameForId,
   stringifyNames,
   cloneNames,
-} from '../utils/styleNames';
-
-import { sheetForTag, safeInsertRule, deleteRules } from '../utils/insertRuleHelpers';
+  sheetForTag,
+  safeInsertRule,
+  deleteRules,
+} from '../utils';
 
 declare var __VERSION__: string;
 

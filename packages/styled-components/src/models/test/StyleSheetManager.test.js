@@ -4,11 +4,10 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { render } from 'react-dom';
 import TestRenderer from 'react-test-renderer';
-import StyleSheetManager from '../StyleSheetManager';
-import ServerStyleSheet from '../ServerStyleSheet';
-import StyleSheet from '../StyleSheet';
-import { resetStyled } from '../../test/utils';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
+import { resetStyled } from '../../test/utils';
+
+import { StyleSheetManager, ServerStyleSheet, StyleSheet } from '..';
 
 let styled;
 let consoleError;
@@ -157,6 +156,7 @@ describe('StyleSheetManager', () => {
         expect(styles.includes(`palevioletred`)).toEqual(true);
         this.props.resolve();
       }
+
       render() {
         return <Title />;
       }
@@ -164,7 +164,8 @@ describe('StyleSheetManager', () => {
 
     const div = document.body.appendChild(document.createElement('div'));
 
-    let promiseA, promiseB;
+    let promiseA;
+    let promiseB;
     promiseA = new Promise((resolveA, reject) => {
       promiseB = new Promise((resolveB, reject) => {
         try {
@@ -215,6 +216,7 @@ describe('StyleSheetManager', () => {
         state = {
           targetRef: null,
         };
+
         render() {
           return (
             <div

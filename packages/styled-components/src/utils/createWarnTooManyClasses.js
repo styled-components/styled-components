@@ -2,7 +2,7 @@
 
 const LIMIT = 200;
 
-export default (displayName: string) => {
+export const createWarnTooManyClasses = (displayName: string) => {
   let generatedClasses = {};
   let warningSeen = false;
 

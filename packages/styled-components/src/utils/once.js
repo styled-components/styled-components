@@ -1,6 +1,6 @@
 // @flow
 // Helper to call a given function, only once
-export default (cb: Function): Function => {
+export const once = (cb: Function): Function => {
   let called = false;
 
   return (...args) => {

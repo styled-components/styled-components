@@ -1,7 +1,7 @@
 // @flow
 import React from 'react';
-import styled from '../../';
-import isDerivedReactComponent from '../isDerivedReactComponent';
+import styled from "../..";
+import { isDerivedReactComponent } from "..";
 
 describe('isDerivedReactComponent(something)', () => {
   it('returns true for extended React.Component classes', () => {

@@ -4,8 +4,8 @@ import { renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';
 
 import { resetStyled, expectCSSMatches } from './utils';
-import ThemeProvider from '../models/ThemeProvider';
-import withTheme from '../hoc/withTheme';
+import { ThemeProvider } from '../models';
+import { withTheme } from '../hoc';
 
 let styled;
 
@@ -446,8 +446,8 @@ describe('theming', () => {
 
     jest
       .spyOn(console, 'warn')
-      .mockImplementation(
-        msg => (!msg.includes('You are not using a ThemeProvider') ? consoleWarn(msg) : null)
+      .mockImplementation(msg =>
+        !msg.includes('You are not using a ThemeProvider') ? consoleWarn(msg) : null
       );
 
     MyDivWithTheme.defaultProps = { theme };

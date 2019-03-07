@@ -1,14 +1,11 @@
 // @flow
 // $FlowFixMe
-import hashStr from '../vendor/glamor/hash';
-import flatten from '../utils/flatten';
-import generateAlphabeticName from '../utils/generateAlphabeticName';
-import stringifyRules from '../utils/stringifyRules';
-import isStaticRules from '../utils/isStaticRules';
-import StyleSheet from './StyleSheet';
+import { hashStr } from '../vendor/glamor/hash';
+import { flatten, generateAlphabeticName, stringifyRules, isStaticRules } from '../utils';
 import { IS_BROWSER } from '../constants';
-
 import type { Attrs, RuleSet } from '../types';
+
+import { StyleSheet } from './StyleSheet';
 
 const isHMREnabled =
   process.env.NODE_ENV !== 'production' && typeof module !== 'undefined' && module.hot;
@@ -20,7 +17,7 @@ const hasher = (str: string): string => generateAlphabeticName(hashStr(str));
  ComponentStyle is all the CSS-specific stuff, not
  the React-specific stuff.
  */
-export default class ComponentStyle {
+export class ComponentStyle {
   rules: RuleSet;
 
   componentId: string;
@@ -40,10 +37,10 @@ export default class ComponentStyle {
   }
 
   /*
-     * Flattens a rule set into valid CSS
-     * Hashes it, wraps the whole chunk in a .hash1234 {}
-     * Returns the hash to be injected on render()
-     * */
+   * Flattens a rule set into valid CSS
+   * Hashes it, wraps the whole chunk in a .hash1234 {}
+   * Returns the hash to be injected on render()
+   * */
   generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
     const { isStatic, componentId, lastClassName } = this;
     if (

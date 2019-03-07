@@ -2,12 +2,12 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
-import * as nonce from '../utils/nonce';
 import { resetStyled, expectCSSMatches } from './utils';
-import StyleSheet from '../models/StyleSheet';
+import * as nonce from '../utils/nonce';
+import { StyleSheet } from '../models';
 
 jest.mock('../utils/nonce');
-jest.spyOn(nonce, 'default').mockImplementation(() => 'foo');
+jest.spyOn(nonce, 'nonce').mockImplementation(() => 'foo');
 
 let styled;
 

@@ -1,7 +1,7 @@
 // @flow
 // Thanks to ReactDOMFactories for this handy list!
 
-export default [
+export const domElements = [
   'a',
   'abbr',
   'address',

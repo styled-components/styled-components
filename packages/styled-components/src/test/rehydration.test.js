@@ -3,9 +3,8 @@ import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
 import { resetStyled, expectCSSMatches, seedNextClassnames } from './utils';
-import createGlobalStyle from '../constructors/createGlobalStyle';
-import keyframes from '../constructors/keyframes';
-import StyleSheet from '../models/StyleSheet';
+import { createGlobalStyle, keyframes } from '../constructors';
+import { StyleSheet } from '../models';
 import { SC_ATTR, SC_VERSION_ATTR } from '../constants';
 
 const getStyleTags = () =>

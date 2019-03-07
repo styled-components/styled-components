@@ -4,13 +4,13 @@ import React from 'react';
 import stream from 'stream';
 
 import { IS_BROWSER, SC_STREAM_ATTR } from '../constants';
-import StyledError from '../utils/error';
-import StyleSheet from './StyleSheet';
-import StyleSheetManager from './StyleSheetManager';
+import { StyledError } from '../utils';
+import { StyleSheet } from './StyleSheet';
+import { StyleSheetManager } from './StyleSheetManager';
 
 declare var __SERVER__: boolean;
 
-export default class ServerStyleSheet {
+export class ServerStyleSheet {
   instance: StyleSheet;
 
   masterSheet: StyleSheet;

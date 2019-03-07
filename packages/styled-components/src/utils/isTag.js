@@ -1,7 +1,7 @@
 // @flow
 import type { Target } from '../types';
 
-export default function isTag(target: Target): boolean %checks {
+export function isTag(target: Target): boolean %checks {
   return (
     typeof target === 'string' &&
     (process.env.NODE_ENV !== 'production'

@@ -3,9 +3,9 @@
 import transformDeclPairs from 'css-to-react-native';
 
 // $FlowFixMe
-import hashStr from '../vendor/glamor/hash';
+import { hashStr } from '../vendor/glamor/hash';
 import type { RuleSet, StyleSheet } from '../types';
-import flatten from '../utils/flatten';
+import { flatten } from '../utils';
 // $FlowFixMe
 import parse from '../vendor/postcss-safe-parser/parse';
 
@@ -18,7 +18,7 @@ export const resetStyleCache = () => {
 /*
  InlineStyle takes arbitrary CSS and generates a flat object
  */
-export default (styleSheet: StyleSheet) => {
+export const createInlineStyle = (styleSheet: StyleSheet) => {
   class InlineStyle {
     rules: RuleSet;
 

@@ -1,18 +1,18 @@
 // @flow
 
 /* Import singletons */
-import isStyledComponent from './utils/isStyledComponent';
-import css from './constructors/css';
-import createGlobalStyle from './constructors/createGlobalStyle';
-import keyframes from './constructors/keyframes';
-import ServerStyleSheet from './models/ServerStyleSheet';
-import StyleSheetManager from './models/StyleSheetManager';
-
-/* Import components */
-import ThemeProvider, { ThemeContext, ThemeConsumer } from './models/ThemeProvider';
+import { isStyledComponent } from './utils';
+import { css, createGlobalStyle, keyframes } from './constructors';
+import {
+  ServerStyleSheet,
+  StyleSheetManager,
+  ThemeProvider,
+  ThemeContext,
+  ThemeConsumer,
+} from './models';
 
 /* Import Higher Order Components */
-import withTheme from './hoc/withTheme';
+import { withTheme } from './hoc';
 
 /* Warning if you've imported this file on React Native */
 if (

@@ -2,7 +2,7 @@
 import * as secondary from './base';
 
 /* Import singleton constructors */
-import styled from './constructors/styled';
+import { styled } from './constructors';
 
 /**
  * eliminates the need to do styled.default since the other APIs

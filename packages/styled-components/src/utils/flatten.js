@@ -1,13 +1,13 @@
 // @flow
 import { isElement } from 'react-is';
-import getComponentName from './getComponentName';
-import isFunction from './isFunction';
-import isPlainObject from './isPlainObject';
-import isStyledComponent from './isStyledComponent';
-import Keyframes from '../models/Keyframes';
-import hyphenate from './hyphenateStyleName';
-import addUnitIfNeeded from './addUnitIfNeeded';
-import StyledError from './error';
+import { Keyframes } from '../models';
+import { addUnitIfNeeded } from './addUnitIfNeeded';
+import { getComponentName } from './getComponentName';
+import { isFunction } from './isFunction';
+import { isPlainObject } from './isPlainObject';
+import { isStyledComponent } from './isStyledComponent';
+import { hyphenateStyleName } from './hyphenateStyleName';
+import { StyledError } from './error';
 
 /**
  * It's falsish not falsy because 0 is allowed.
@@ -19,7 +19,7 @@ export const objToCss = (obj: Object, prevKey?: string): string => {
     .filter(key => !isFalsish(obj[key]))
     .map(key => {
       if (isPlainObject(obj[key])) return objToCss(obj[key], key);
-      return `${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`;
+      return `${hyphenateStyleName(key)}: ${addUnitIfNeeded(key, obj[key])};`;
     })
     .join(' ');
   return prevKey
@@ -29,7 +29,7 @@ export const objToCss = (obj: Object, prevKey?: string): string => {
     : css;
 };
 
-export default function flatten(chunk: any, executionContext: ?Object, styleSheet: ?Object): any {
+export function flatten(chunk: any, executionContext: ?Object, styleSheet: ?Object): any {
   if (Array.isArray(chunk)) {
     const ruleSet = [];
 

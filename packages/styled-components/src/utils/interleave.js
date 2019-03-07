@@ -1,7 +1,7 @@
 // @flow
 import type { Interpolation } from '../types';
 
-export default (
+export const interleave = (
   strings: Array<string>,
   interpolations: Array<Interpolation>
 ): Array<Interpolation> => {

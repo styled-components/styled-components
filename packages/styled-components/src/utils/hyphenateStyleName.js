@@ -24,7 +24,7 @@ const msPattern = /^ms-/;
  * @param {string} string
  * @return {string}
  */
-export default function hyphenateStyleName(string: string): string {
+export function hyphenateStyleName(string: string): string {
   return string
     .replace(uppercasePattern, '-$1')
     .toLowerCase()

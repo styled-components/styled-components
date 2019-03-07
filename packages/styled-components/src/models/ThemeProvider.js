@@ -1,8 +1,7 @@
 // @flow
 import React, { createContext, Component, type Element } from 'react';
 import memoize from 'memoize-one';
-import StyledError from '../utils/error';
-import isFunction from '../utils/isFunction';
+import { StyledError, isFunction } from '../utils';
 
 export type Theme = { [key: string]: mixed };
 
@@ -18,7 +17,7 @@ export const ThemeConsumer = ThemeContext.Consumer;
 /**
  * Provide a theme to an entire react component tree via context
  */
-export default class ThemeProvider extends Component<Props> {
+export class ThemeProvider extends Component<Props> {
   getContext: (theme: Theme | ((outerTheme: Theme) => void), outerTheme?: Theme) => Theme;
 
   renderInner: Function;

@@ -5,7 +5,11 @@ type Props = {
   theme?: any,
 };
 
-export default (props: Props, fallbackTheme: any, defaultProps: any = EMPTY_OBJECT) => {
+export const determineTheme = (
+  props: Props,
+  fallbackTheme: any,
+  defaultProps: any = EMPTY_OBJECT
+) => {
   // Props should take precedence over ThemeProvider, which should take precedence over
   // defaultProps, but React automatically puts defaultProps on props.
 

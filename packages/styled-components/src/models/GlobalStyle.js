@@ -1,13 +1,10 @@
 // @flow
-import { EMPTY_ARRAY } from '../utils/empties';
-import flatten from '../utils/flatten';
-import isStaticRules from '../utils/isStaticRules';
-import stringifyRules from '../utils/stringifyRules';
-import StyleSheet from './StyleSheet';
+import { EMPTY_ARRAY, flatten, isStaticRules, stringifyRules } from '../utils';
+import { StyleSheet } from './StyleSheet';
 
 import type { RuleSet } from '../types';
 
-export default class GlobalStyle {
+export class GlobalStyle {
   componentId: string;
 
   isStatic: boolean;

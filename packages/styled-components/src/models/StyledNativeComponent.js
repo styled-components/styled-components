@@ -1,17 +1,19 @@
 // @flow
 import React, { createElement, Component } from 'react';
-import determineTheme from '../utils/determineTheme';
-import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
-import generateDisplayName from '../utils/generateDisplayName';
-import hoist from '../utils/hoist';
-import isFunction from '../utils/isFunction';
-import isTag from '../utils/isTag';
-import isDerivedReactComponent from '../utils/isDerivedReactComponent';
-import isStyledComponent from '../utils/isStyledComponent';
-import once from '../utils/once';
-import { ThemeConsumer } from './ThemeProvider';
+import {
+  EMPTY_ARRAY,
+  EMPTY_OBJECT,
+  determineTheme,
+  generateDisplayName,
+  isFunction,
+  isTag,
+  isDerivedReactComponent,
+  isStyledComponent,
+  once,
+  hoistNonReactStatics,
+} from '../utils';
+import { ThemeConsumer, type Theme } from './ThemeProvider';
 
-import type { Theme } from './ThemeProvider';
 import type { Attrs, RuleSet, Target } from '../types';
 
 // $FlowFixMe
@@ -174,7 +176,7 @@ class StyledNativeComponent extends Component<*, *> {
   }
 }
 
-export default (InlineStyle: Function) => {
+export const createInlineStyledNativeComponent = (InlineStyle: Function) => {
   const createStyledNativeComponent = (target: Target, options: Object, rules: RuleSet) => {
     const {
       attrs = EMPTY_ARRAY,
@@ -236,7 +238,7 @@ export default (InlineStyle: Function) => {
 
     if (isClass) {
       // $FlowFixMe
-      hoist(WrappedStyledNativeComponent, target, {
+      hoistNonReactStatics(WrappedStyledNativeComponent, target, {
         // all SC-specific things should not be hoisted
         attrs: true,
         displayName: true,

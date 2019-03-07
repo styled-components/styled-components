@@ -1,10 +1,10 @@
 // @flow
 import ReactDOM from 'react-dom';
-import getComponentName from './getComponentName';
+import { getComponentName } from './getComponentName';
 
 const didWarnAboutClassNameUsage = new Set();
 
-export default (target: Object) => {
+export const classNameUsageCheckInjector = (target: Object) => {
   let elementClassName = '';
 
   const targetCDM = target.componentDidMount;
@@ -41,6 +41,7 @@ export default (target: Object) => {
       !classNames.every(className => node.classList && node.classList.contains(className)) &&
       !node.querySelector(selector)
     ) {
+      /* eslint-disable-next-line no-console */
       console.warn(
         `It looks like you've wrapped styled() around your React component (${getComponentName(
           forwardTarget

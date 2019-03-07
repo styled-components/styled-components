@@ -1,26 +1,30 @@
 // @flow
 import validAttr from '@emotion/is-prop-valid';
 import React, { createElement, Component } from 'react';
-import ComponentStyle from './ComponentStyle';
-import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
-import determineTheme from '../utils/determineTheme';
-import escape from '../utils/escape';
-import generateDisplayName from '../utils/generateDisplayName';
-import getComponentName from '../utils/getComponentName';
-import hoist from '../utils/hoist';
-import isFunction from '../utils/isFunction';
-import isTag from '../utils/isTag';
-import isDerivedReactComponent from '../utils/isDerivedReactComponent';
-import isStyledComponent from '../utils/isStyledComponent';
-import once from '../utils/once';
-import StyleSheet from './StyleSheet';
-import { ThemeConsumer, type Theme } from './ThemeProvider';
-import { StyleSheetConsumer } from './StyleSheetManager';
-import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
-import classNameUsageCheckInjector from '../utils/classNameUsageCheckInjector';
 
 import type { Attrs, RuleSet, Target } from '../types';
 import { IS_BROWSER } from '../constants';
+
+import {
+  EMPTY_ARRAY,
+  EMPTY_OBJECT,
+  classNameUsageCheckInjector,
+  createWarnTooManyClasses,
+  determineTheme,
+  escape,
+  generateDisplayName,
+  getComponentName,
+  hoistNonReactStatics,
+  isFunction,
+  isTag,
+  isDerivedReactComponent,
+  isStyledComponent,
+  once,
+} from '../utils';
+import { ComponentStyle } from './ComponentStyle';
+import { StyleSheet } from './StyleSheet';
+import { ThemeConsumer, type Theme } from './ThemeProvider';
+import { StyleSheetConsumer } from './StyleSheetManager';
 
 const identifiers = {};
 
@@ -238,7 +242,7 @@ class StyledComponent extends Component<*> {
   }
 }
 
-export default function createStyledComponent(target: Target, options: Object, rules: RuleSet) {
+export function createStyledComponent(target: Target, options: Object, rules: RuleSet) {
   const isTargetStyledComp = isStyledComponent(target);
   const isClass = !isTag(target);
 
@@ -325,7 +329,7 @@ export default function createStyledComponent(target: Target, options: Object, r
   WrappedStyledComponent.toString = () => `.${WrappedStyledComponent.styledComponentId}`;
 
   if (isClass) {
-    hoist(WrappedStyledComponent, target, {
+    hoistNonReactStatics(WrappedStyledComponent, target, {
       // all SC-specific things should not be hoisted
       attrs: true,
       componentStyle: true,

@@ -1,5 +1,5 @@
 // @flow
-import interleave from '../interleave';
+import { interleave } from "..";
 
 describe('interleave', () => {
   it('blindly interleave', () => {

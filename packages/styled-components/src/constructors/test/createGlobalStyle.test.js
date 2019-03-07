@@ -12,12 +12,9 @@ import {
   stripWhitespace,
 } from '../../test/utils';
 
-import ThemeProvider from '../../models/ThemeProvider';
-import ServerStyleSheet from '../../models/ServerStyleSheet';
-import StyleSheetManager from '../../models/StyleSheetManager';
+import { ThemeProvider, ServerStyleSheet, StyleSheetManager } from '../../models';
 
-import createGlobalStyle from '../createGlobalStyle';
-import keyframes from '../keyframes';
+import { createGlobalStyle, keyframes } from '..';
 
 let context;
 

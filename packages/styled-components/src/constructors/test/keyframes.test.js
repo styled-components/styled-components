@@ -2,10 +2,11 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
-import css from '../css';
-import keyframes from '../keyframes';
-import Keyframes from '../../models/Keyframes';
 import { expectCSSMatches, getCSS, resetStyled } from '../../test/utils';
+
+import { css } from "..";
+import { keyframes } from '../keyframes';
+import { Keyframes } from '../../models';
 
 /**
  * Setup
@@ -36,7 +37,7 @@ describe('keyframes', () => {
         opacity: 1;
       }
     `.getName()
-    ).toMatchInlineSnapshot('"bcCCNc"');
+    ).toEqual('a');
   });
 
   it('should insert the correct styles', () => {
@@ -62,7 +63,7 @@ describe('keyframes', () => {
     TestRenderer.create(<Comp />);
 
     expectCSSMatches(`
-      .b {
+      .c {
         -webkit-animation: ${name} 2s linear infinite;
         animation: ${name} 2s linear infinite;
       }
@@ -110,7 +111,7 @@ describe('keyframes', () => {
     TestRenderer.create(<Comp animation={animation} />);
 
     expectCSSMatches(`
-      .b {
+      .c {
         -webkit-animation: ${name} 2s linear infinite;
         animation: ${name} 2s linear infinite;
       }
@@ -187,12 +188,12 @@ describe('keyframes', () => {
     TestRenderer.create(<App />);
 
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-"/* sc-component-id:sc-a */
-.b{-webkit-animation:none;animation:none;}.c{-webkit-animation:hNeMbn 1s linear;animation:hNeMbn 1s linear;, dHUfhi 1s linear;}.d{-webkit-animation:dHUfhi 1s linear;animation:dHUfhi 1s linear;}.e{-webkit-animation:hNeMbn 1s linear;animation:hNeMbn 1s linear;}
-/* sc-component-id:sc-keyframes-hNeMbn */
-@-webkit-keyframes hNeMbn{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}} @keyframes hNeMbn{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}}
-/* sc-component-id:sc-keyframes-dHUfhi */
-@-webkit-keyframes dHUfhi{from{opacity:0;}to{opacity:1;}} @keyframes dHUfhi{from{opacity:0;}to{opacity:1;}}"
+"/* sc-component-id:sc-c */
+.d{-webkit-animation:none;animation:none;}.e{-webkit-animation:b 1s linear;animation:b 1s linear;, a 1s linear;}.f{-webkit-animation:a 1s linear;animation:a 1s linear;}.g{-webkit-animation:b 1s linear;animation:b 1s linear;}
+/* sc-component-id:sc-keyframes-b */
+@-webkit-keyframes b{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}} @keyframes b{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}}
+/* sc-component-id:sc-keyframes-a */
+@-webkit-keyframes a{from{opacity:0;}to{opacity:1;}} @keyframes a{from{opacity:0;}to{opacity:1;}}"
 `);
   });
 

@@ -6,7 +6,7 @@ export type ExtractedComp = {
   cssFromDOM: string,
 };
 
-export default (maybeCSS: ?string): Array<ExtractedComp> => {
+export const extractCompsFromCSS = (maybeCSS: ?string): Array<ExtractedComp> => {
   const css = `${maybeCSS || ''}`; // Definitely a string, and a clone
   const existingComponents = [];
   css.replace(SC_COMPONENT_ID, (match, componentId, matchIndex) => {

@@ -1,6 +1,6 @@
 // @flow
 import React from 'react';
-import generateDisplayName from '../generateDisplayName';
+import { generateDisplayName } from "..";
 
 it('handles a string type', () => {
   expect(generateDisplayName('div')).toBe('styled.div');

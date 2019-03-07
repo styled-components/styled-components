@@ -1,4 +1,2 @@
 // @flow
-export default function isFunction(test: any): boolean {
-  return typeof test === 'function';
-}
+export const isFunction = (test: any): boolean => typeof test === 'function';

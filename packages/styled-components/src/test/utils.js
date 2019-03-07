@@ -3,21 +3,22 @@
  * This sets up our end-to-end test suite, which essentially makes sure
  * our public API works the way we promise/want
  */
-import styled from '../constructors/styled';
-import StyleSheet from '../models/StyleSheet';
-import StyledError from '../utils/error';
+import { styled } from '../constructors';
+import { StyledError } from '../utils';
+import { StyleSheet } from '../models';
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let mockIndex = 0;
 let mockInputs = {};
 let mockSeededClasses = [];
 
-jest.mock('../utils/generateAlphabeticName', () => input => {
-  const seed = mockSeededClasses.shift();
-  if (seed) return seed;
-
-  return mockInputs[input] || (mockInputs[input] = String.fromCodePoint(97 + mockIndex++));
-});
+jest.mock('../utils/generateAlphabeticName', () => ({
+  generateAlphabeticName: input => {
+    const seed = mockSeededClasses.shift();
+    if (seed) return seed;
+    return mockInputs[input] || (mockInputs[input] = String.fromCodePoint(97 + mockIndex++));
+  },
+}));
 
 export const seedNextClassnames = (names: Array<string>) => (mockSeededClasses = names);
 

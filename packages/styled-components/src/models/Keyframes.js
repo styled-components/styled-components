@@ -1,8 +1,8 @@
 // @flow
-import StyleSheet from './StyleSheet';
-import StyledError from '../utils/error';
+import { StyledError } from '../utils';
+import { StyleSheet } from './StyleSheet';
 
-export default class Keyframes {
+export class Keyframes {
   id: string;
 
   name: string;

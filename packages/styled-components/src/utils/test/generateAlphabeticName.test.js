@@ -1,5 +1,5 @@
 // @flow
-import generateAlphabeticName from '../generateAlphabeticName';
+import { generateAlphabeticName } from "..";
 
 describe('generateAlphabeticName', () => {
   it('should create alphabetic names for number input data', () => {
