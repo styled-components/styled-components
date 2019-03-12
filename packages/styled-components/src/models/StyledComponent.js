@@ -298,6 +298,31 @@ export default function createStyledComponent(target: Target, options: Object, r
   // $FlowFixMe
   WrappedStyledComponent.target = isTargetStyledComp ? target.target : target;
 
+  // fold defaultProps
+  // $FlowFixMe
+  WrappedStyledComponent._defaultProps = EMPTY_OBJECT;
+  // $FlowFixMe
+  Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
+    enumerable: true,
+    get() {
+      return this._defaultProps;
+    },
+    set(defaultProps) {
+      this._defaultProps = {
+        ...this._defaultProps,
+        ...defaultProps,
+        ...(this._defaultProps.style || defaultProps.style
+          ? {
+              style: {
+                ...(this._defaultProps.style || EMPTY_OBJECT),
+                ...(defaultProps.style || EMPTY_OBJECT),
+              },
+            }
+          : EMPTY_OBJECT),
+      };
+    },
+  });
+
   // $FlowFixMe
   WrappedStyledComponent.withComponent = function withComponent(tag: Target) {
     const { componentId: previousComponentId, ...optionsToCopy } = options;

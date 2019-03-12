@@ -297,6 +297,74 @@ describe('native', () => {
     });
   });
 
+  describe('defaultProps' , () => {
+    it('should extends parents defaultProps', () => {
+      const Parent = styled.Text({}, props => ({
+        color: props.color,
+        backgroundColor: props.backgroundColor,
+        borderColor: props.borderColor
+      }));
+      Parent.defaultProps = {
+        color: 'red',
+      };
+      const Child = styled(Parent)``;
+      Child.defaultProps = {
+        backgroundColor: 'blue',
+      };
+      const Grandson = styled(Child)``;
+      Grandson.defaultProps = {
+        borderColor: 'green',
+      };
+
+      const parentWrapper = TestRenderer.create(<Parent />);
+      const childWrapper = TestRenderer.create(<Child />);
+      const grandsonWrapper = TestRenderer.create(<Grandson />);
+
+      const parentText = parentWrapper.root.findByType('Text');
+      const childText = childWrapper.root.findByType('Text');
+      const grandsonText = grandsonWrapper.root.findByType('Text');
+
+      expect(parentText.props.style).toMatchObject([{
+        color: 'red'
+      }]);
+      expect(childText.props.style).toMatchObject([{
+        color: 'red',
+        backgroundColor: 'blue'
+      }]);
+      expect(grandsonText.props.style).toMatchObject([{
+        color: 'red',
+        backgroundColor: 'blue',
+        borderColor: 'green'
+      }]);
+    });
+
+    it('should extends parents default style', () => {
+      const Parent = styled.Text``;
+      Parent.defaultProps = {
+        style: { color: 'blue' },
+      };
+
+      const Child = styled(Parent)``;
+      Child.defaultProps = {
+        style: { backgroundColor: 'red' },
+      };
+
+      const parentWrapper = TestRenderer.create(<Parent />);
+      const childWrapper = TestRenderer.create(<Child />);
+
+      const parentText = parentWrapper.root.findByType('Text');
+      const childText = childWrapper.root.findByType('Text');
+
+      expect(parentText.props.style).toMatchObject([{}, {
+        color: 'blue',
+      }]);
+      expect(childText.props.style).toMatchObject([{}, {
+        color: 'blue',
+        backgroundColor: 'red',
+      }]);
+    });
+  })
+
   describe('expanded API', () => {
     it('should attach a displayName', () => {
       View.displayName = 'View';

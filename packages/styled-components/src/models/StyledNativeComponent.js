@@ -222,6 +222,32 @@ export default (InlineStyle: Function) => {
       ? // $FlowFixMe
         target.target
       : target;
+
+    // fold defaultProps
+    // $FlowFixMe
+    WrappedStyledNativeComponent._defaultProps = EMPTY_OBJECT;
+    // $FlowFixMe
+    Object.defineProperty(WrappedStyledNativeComponent, 'defaultProps', {
+      enumerable: true,
+      get() {
+        return this._defaultProps;
+      },
+      set(defaultProps) {
+        this._defaultProps = {
+          ...this._defaultProps,
+          ...defaultProps,
+          ...(this._defaultProps.style || defaultProps.style
+            ? {
+                style: {
+                  ...(this._defaultProps.style || EMPTY_OBJECT),
+                  ...(defaultProps.style || EMPTY_OBJECT),
+                },
+              }
+            : EMPTY_OBJECT),
+        };
+      },
+    });
+
     // $FlowFixMe
     WrappedStyledNativeComponent.withComponent = function withComponent(tag: Target) {
       const { displayName: _, componentId: __, ...optionsToCopy } = options;
