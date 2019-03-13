@@ -1,58 +1,6 @@
 // @flow
 
 /* eslint-disable import/no-unresolved */
-import {
-  ActivityIndicator,
-  ActivityIndicatorIOS,
-  ART,
-  Button,
-  DatePickerIOS,
-  DrawerLayoutAndroid,
-  Image,
-  ImageBackground,
-  ImageEditor,
-  ImageStore,
-  KeyboardAvoidingView,
-  ListView,
-  MapView,
-  Modal,
-  NavigatorIOS,
-  Picker,
-  PickerIOS,
-  ProgressBarAndroid,
-  ProgressViewIOS,
-  ScrollView,
-  SegmentedControlIOS,
-  Slider,
-  SliderIOS,
-  SnapshotViewIOS,
-  Switch,
-  RecyclerViewBackedScrollView,
-  RefreshControl,
-  SafeAreaView,
-  StatusBar,
-  SwipeableListView,
-  SwitchAndroid,
-  SwitchIOS,
-  TabBarIOS,
-  Text,
-  TextInput,
-  ToastAndroid,
-  ToolbarAndroid,
-  Touchable,
-  TouchableHighlight,
-  TouchableNativeFeedback,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-  ViewPagerAndroid,
-  WebView,
-  FlatList,
-  SectionList,
-  VirtualizedList,
-  StyleSheet
-} from 'react-native';
-
 import _InlineStyle from '../models/InlineStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
 
@@ -64,58 +12,9 @@ import isStyledComponent from '../utils/isStyledComponent';
 
 import type { Target } from '../types';
 
-const reactNative = {
-  ActivityIndicator,
-  ActivityIndicatorIOS,
-  ART,
-  Button,
-  DatePickerIOS,
-  DrawerLayoutAndroid,
-  Image,
-  ImageBackground,
-  ImageEditor,
-  ImageStore,
-  KeyboardAvoidingView,
-  ListView,
-  MapView,
-  Modal,
-  NavigatorIOS,
-  Picker,
-  PickerIOS,
-  ProgressBarAndroid,
-  ProgressViewIOS,
-  ScrollView,
-  SegmentedControlIOS,
-  Slider,
-  SliderIOS,
-  SnapshotViewIOS,
-  Switch,
-  RecyclerViewBackedScrollView,
-  RefreshControl,
-  SafeAreaView,
-  StatusBar,
-  SwipeableListView,
-  SwitchAndroid,
-  SwitchIOS,
-  TabBarIOS,
-  Text,
-  TextInput,
-  ToastAndroid,
-  ToolbarAndroid,
-  Touchable,
-  TouchableHighlight,
-  TouchableNativeFeedback,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-  ViewPagerAndroid,
-  WebView,
-  FlatList,
-  SectionList,
-  VirtualizedList
-};
+const reactNative = require('react-native');
 
-const InlineStyle = _InlineStyle(StyleSheet);
+const InlineStyle = _InlineStyle(reactNative.StyleSheet);
 const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
 const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag);
 
