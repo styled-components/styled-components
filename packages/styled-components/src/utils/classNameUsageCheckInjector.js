@@ -28,7 +28,7 @@ export default (target: Object) => {
     didWarnAboutClassNameUsage.add(forwardTarget);
 
     const classNames = elementClassName
-      .replace(/ +/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim()
       .split(' ');
     // eslint-disable-next-line react/no-find-dom-node
