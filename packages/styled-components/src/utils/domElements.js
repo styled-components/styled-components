@@ -127,6 +127,7 @@ export default [
   'image',
   'line',
   'linearGradient',
+  'marker',
   'mask',
   'path',
   'pattern',
