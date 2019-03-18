@@ -28,7 +28,7 @@ export default (target: Object) => {
     didWarnAboutClassNameUsage.add(forwardTarget);
 
     const classNames = elementClassName
-      .replace(/ +/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim()
       .split(' ');
     // eslint-disable-next-line react/no-find-dom-node
@@ -41,6 +41,7 @@ export default (target: Object) => {
       !classNames.every(className => node.classList && node.classList.contains(className)) &&
       !node.querySelector(selector)
     ) {
+      // eslint-disable-next-line no-console
       console.warn(
         `It looks like you've wrapped styled() around your React component (${getComponentName(
           forwardTarget

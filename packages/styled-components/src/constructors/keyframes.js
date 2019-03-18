@@ -20,6 +20,7 @@ export default function keyframes(
     typeof navigator !== 'undefined' &&
     navigator.product === 'ReactNative'
   ) {
+    // eslint-disable-next-line no-console
     console.warn(
       '`keyframes` cannot be used on ReactNative, only on the web. To do animation in ReactNative please use Animated.'
     );

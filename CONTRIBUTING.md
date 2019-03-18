@@ -148,7 +148,7 @@ a git hook is already present.
 [Core team members](./CORE_TEAM.md) have the responsibility of pushing new releases to npm. The release process is as follows:
 
 1. Make sure you have the latest changes and are on the master branch: `git checkout master && git pull origin master`
-2. Install all the dependecies by running `yarn` in the root folder. This will also install `lerna`.
+2. Install all the dependencies by running `yarn` in the root folder. This will also install `lerna`.
 3. Create a new branch based on the version number, for example `git checkout -b 3.4.1`
 4. Update the [CHANGELOG.md](./CHANGELOG.md) with the new version number, add a new Unreleased section at the top and edit the links at the bottom so everything is linked correctly
 5. Commit the Changelog changes with `git commit -m 'Update CHANGELOG'`

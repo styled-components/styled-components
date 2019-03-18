@@ -24,7 +24,6 @@ install: yarn --frozen-lockfile
 script:
   - node --version
   - yarn --version
-  - yarn build
   - yarn test
   - yarn flow
   - yarn lint

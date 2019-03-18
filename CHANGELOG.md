@@ -8,6 +8,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Reduced GC pressure when using component selector styles. (see [#2424](https://github.com/styled-components/styled-components/issues/2424)).
 
+- Add svg tag `marker` to domElements.js (see [#2389](https://github.com/styled-components/styled-components/pull/2389))
+
 - Make the `GlobalStyleComponent` created by `createGlobalStyle` call the base constructor with `props` (see [#2321](https://github.com/styled-components/styled-components/pull/2321)).
 
 - Move to Mono repository structure with lerna [@imbhargav5](https://github.com/imbhargav5) (see [#2326](https://github.com/styled-components/styled-components/pull/2326))
