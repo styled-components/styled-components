@@ -145,7 +145,8 @@ class StyledComponent extends Component<*> {
         this.warnInnerRef(displayName);
       }
 
-      if (key === 'forwardedComponent' || key === 'as') continue;
+      if (key === 'forwardedComponent' || key === 'as' || key === 'suppressClassNameWarning')
+        {continue;}
       else if (key === 'forwardedRef') propsForElement.ref = computedProps[key];
       else if (!isTargetTag || validAttr(key)) {
         // Don't pass through non HTML tags through to HTML elements

@@ -16,6 +16,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Expose `StyleSheetContext` and `StyleSheetConsumer` for you fancy babes doing wild stuff
 
+- Filter `suppressClassNameWarning` to not to pass down to the wrapped components [@taneba](https://github.com/taneba) (see [#2365](https://github.com/styled-components/styled-components/pull/2365))
+
 ## [v4.1.3] - 2018-12-17
 
 - Under the hood code cleanup of the Babel macro, by [@lucleray](https://github.com/lucleray) (see [#2286](https://github.com/styled-components/styled-components/pull/2286))

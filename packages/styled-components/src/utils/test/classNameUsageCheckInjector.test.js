@@ -10,7 +10,30 @@ describe('classNameUsageCheckInjector', () => {
   beforeEach(() => {
     styled = resetStyled();
   });
+  
+  it('should generate valid selectors when there are some line break in className', () => {
+    const div = document.createElement('div');
+    const Comp = props => <div {...props} />;
+    const StyledComp = styled(Comp)``;
 
+    // Avoid the console.warn
+    jest.spyOn(div, 'querySelector').mockImplementationOnce(() => true);
+    jest.spyOn(ReactDOM, 'findDOMNode').mockImplementationOnce(() => div);
+
+    renderIntoDocument(
+      <StyledComp
+        className="   foo
+        bar  "
+      />
+    );
+
+    const [selector] = div.querySelector.mock.calls[0];
+
+    // Css selectors should not have multiple dots after each other
+    expect(selector).not.toMatch(/\.{2,}/);
+    expect(selector).toMatch(/^\.foo\.bar\.sc-/);
+  });
+  
   it('should generate valid selectors', () => {
     const div = document.createElement('div');
     const StyledDiv = styled.div``;
