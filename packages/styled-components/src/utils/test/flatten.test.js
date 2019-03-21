@@ -117,6 +117,7 @@ describe('flatten', () => {
   });
 
   it('throws if trying to interpolate a normal React component', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Foo = ({ className }) => <div className={className}>hello there!</div>;
 
     const Bar = styled.div`
@@ -125,7 +126,9 @@ describe('flatten', () => {
       };
     `;
 
-    expect(() => TestRenderer.create(<Bar />)).toThrowErrorMatchingInlineSnapshot(
+    TestRenderer.create(<Bar />);
+
+    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
       `"Foo is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details."`
     );
   });
