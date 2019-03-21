@@ -12,8 +12,7 @@ type Props = {
   target?: HTMLElement,
 };
 
-const StyleSheetContext = createContext();
-
+export const StyleSheetContext = createContext();
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
 
 export default class StyleSheetManager extends Component<Props> {
