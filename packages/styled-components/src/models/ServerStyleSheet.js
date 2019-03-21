@@ -10,6 +10,8 @@ import StyleSheetManager from './StyleSheetManager';
 
 declare var __SERVER__: boolean;
 
+const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
+
 export default class ServerStyleSheet {
   instance: StyleSheet;
 
@@ -80,13 +82,25 @@ export default class ServerStyleSheet {
         /* force our StyleSheets to emit entirely new tags */
         instance.sealAllTags();
 
-        /* prepend style html to chunk */
-        this.push(html + chunk);
+        const renderedHtml = chunk.toString();
+
+        /* prepend style html to chunk, unless the start of the chunk is a closing tag in which case append right after that */
+        if (CLOSING_TAG_R.test(renderedHtml)) {
+          const endOfClosingTag = renderedHtml.indexOf('>');
+
+          this.push(
+            renderedHtml.slice(0, endOfClosingTag + 1) +
+              html +
+              renderedHtml.slice(endOfClosingTag + 1)
+          );
+        } else this.push(html + renderedHtml);
+
         callback();
       },
     });
 
     readableStream.on('end', () => this.seal());
+
     readableStream.on('error', err => {
       this.seal();
 

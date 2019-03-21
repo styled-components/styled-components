@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 // @flow
-import {shallow} from 'enzyme';
+import { shallow } from 'enzyme';
 import React from 'react';
 import renderHTML from 'react-render-html';
 import { renderToString, renderToNodeStream } from 'react-dom/server';
@@ -359,7 +359,7 @@ describe('ssr', () => {
 
   it('should not interleave style tags into textarea elements', () => {
     const StyledTextArea = styled.textarea`
-      height: ${(props) => `${props.height}px`};
+      height: ${props => `${props.height}px`};
     `;
 
     const sheet = new ServerStyleSheet();
@@ -371,7 +371,13 @@ describe('ssr', () => {
     const jsx = sheet.collectStyles(
       <React.Fragment>
         {new Array(500).fill(0).map((_, i) => (
-          <StyledTextArea className="test-textarea" value={`Textarea ${i}`} height={i} />
+          <StyledTextArea
+            key={i}
+            className="test-textarea"
+            onChange={() => {}}
+            value={`Textarea ${i}`}
+            height={i}
+          />
         ))}
       </React.Fragment>
     );
@@ -381,16 +387,14 @@ describe('ssr', () => {
     return new Promise((resolve, reject) => {
       let received = '';
 
-      stream.on('data', (chunk) => {
+      stream.on('data', chunk => {
         received += chunk;
       });
 
       stream.on('end', () => {
-        const wrapper = shallow(
-          <div>{renderHTML(received)}</div>
-        );
+        const wrapper = shallow(<div>{renderHTML(received)}</div>);
 
-        wrapper.find('.test-textarea').forEach((node) => {
+        wrapper.find('.test-textarea').forEach(node => {
           // The style tag should never be injected into a textarea.  This causes the style tag to
           // render as text inside the textarea
           expect(node.html().includes('style')).toBe(false);
