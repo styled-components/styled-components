@@ -2,9 +2,7 @@
  * @jest-environment node
  */
 // @flow
-import { shallow } from 'enzyme';
 import React from 'react';
-import renderHTML from 'react-render-html';
 import { renderToString, renderToNodeStream } from 'react-dom/server';
 import ServerStyleSheet from '../models/ServerStyleSheet';
 import { resetStyled, seedNextClassnames } from './utils';
@@ -392,13 +390,9 @@ describe('ssr', () => {
       });
 
       stream.on('end', () => {
-        const wrapper = shallow(<div>{renderHTML(received)}</div>);
+        const styleTagsInsideTextarea = received.match(/<\/style>[^<]*<\/textarea>/g);
 
-        wrapper.find('.test-textarea').forEach(node => {
-          // The style tag should never be injected into a textarea.  This causes the style tag to
-          // render as text inside the textarea
-          expect(node.html().includes('style')).toBe(false);
-        });
+        expect(styleTagsInsideTextarea).toBeNull();
         resolve();
       });
 

@@ -1,6 +1,3 @@
-import { configure } from 'enzyme';
-import Adapter from 'enzyme-adapter-react-16';
-
 // @flow
 const consoleError = console.error;
 
@@ -14,7 +11,7 @@ beforeEach(() => {
   // See: https://github.com/jsdom/jsdom/issues/2177
   // eslint-disable-next-line flowtype-errors/show-errors
   (console: any).error = message => {
-    if (!suppressedErrors.some((suppressedError) => message.includes(suppressedError))) {
+    if (!suppressedErrors.some(suppressedError => message.includes(suppressedError))) {
       consoleError(message);
     }
   };
@@ -24,5 +21,3 @@ afterEach(() => {
   // eslint-disable-next-line flowtype-errors/show-errors
   (console: any).error = consoleError;
 });
-
-configure({ adapter: new Adapter() });
