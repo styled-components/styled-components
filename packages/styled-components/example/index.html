@@ -19,6 +19,604 @@
   <script src="/styled-components.js"></script>
   <script type="text/babel" src="testFunctions.js"></script>
   <script type="text/babel">
+    // function to extract componentStyle from styled object
+    const rules = el => el.componentStyle.rules[0].toString();
+
+    /* All Tests (due to linting, all tests must be in same file as React and styled imports)*/
+    const SimpleStyle = () => {
+      const Element = styled.div`
+  color: white;
+  padding: 1em;
+  background-color: mediumseagreen;
+`;
+
+      return {
+        title: "styled.x",
+        code: `const Element = styled.div\`${rules(Element)}\`;`,
+        Result: () => <Element>Show basic styling</Element>,
+      };
+    }
+
+
+    const StaticInterpolation = () => {
+      const color = { text: "white", bg: "background" };
+      const Element = styled.div`
+        color: ${color.text};
+        ${color.bg}: mediumseagreen;              // This breaks syntax highlighting
+        padding: 1em;
+      `;
+
+      const code = `const color = { text: "white", bg: "background" };
+const Element = styled.div\`
+  color: \${color.text};
+  \${color.bg}: mediumseagreen;
+  padding: 1em;
+\`;`;
+
+      return {
+        title: "Static Interpolation",
+        code,
+        Result: () => <Element>Interpolate a property</Element>,
+      };
+    }
+
+
+    const PropsStyle = () => {
+      const Element = styled.div`
+        background: ${props =>
+          props.primary ? "mediumseagreen" : "papayawhip"
+        };
+        color: ${props =>
+          props.primary ? "white" : "palevioletred"
+        };
+        padding: 1em;
+      `;
+
+      const code = `const Element = styled.div\`
+  background: \${props =>
+    props.primary ? "mediumseagreen" : "papayawhip"
+  };
+  color: \${props =>
+    props.primary ? "white" : "palevioletred"
+  };
+\`;
+
+<Element>Normal</Element>
+<Element primary>Primary</Element>`;
+
+      const Result = () => (
+        <React.Fragment>
+          <Element>Normal</Element>
+          <Element primary>Primary</Element>
+        </React.Fragment>
+      );
+
+      return {
+        title: "Function Interpolation with Props",
+        code,
+        Result,
+      };
+    }
+
+
+    const ComponentInterpolation = () => {
+      const Wrapper = styled.div`
+        display: flex;
+        align-items: center;
+        padding: 1em;
+        background: papayawhip;
+      `;
+
+      const Box = styled.div`
+        width: 50%;
+        height: 64px;
+        margin-right: .5em;
+        ${Wrapper} & {
+          background: mediumseagreen;
+        }
+      `;
+
+      const code = `const Wrapper = styled.div\`
+  background: papayawhip;
+\`;
+
+const Box = styled.div\`
+  width: 50%; height: 64px;
+  \${Wrapper} & {
+    background: mediumseagreen;
+  }
+\`;`;
+
+      const Result = () => (
+        <Wrapper href="#">
+          <Box />
+          <div>&lt;- Green Box</div>
+        </Wrapper>
+      );
+
+      return {
+        title: "Component Interpolation",
+        code,
+        Result,
+      };
+    }
+
+
+    const ExtendedStyle = () => {
+      const Element = styled.div`
+        background: papayawhip;
+        padding: 1em;
+      `;
+
+      const TomatoElement = styled(Element)`
+        background: mediumseagreen;
+        color: white;
+      `;
+
+      const code = `const Element = styled.div\`
+  background: papayawhip;
+\`;
+
+const TomatoElement = styled(Element)\`
+  background: mediumseagreen;
+\`;
+
+<Element>Normal</Element>
+<TomatoElement>Extended</TomatoElement>`;
+
+      const Result = () => (
+        <React.Fragment>
+          <Element>Normal</Element>
+          <TomatoElement>Extended</TomatoElement>
+        </React.Fragment>
+      );
+
+      return {
+        title: "Extend Style",
+        code,
+        Result,
+      };
+    }
+
+
+    const PolymorphicStyle = () => {
+      const Button = styled.button`
+        font-size: 1em;
+        margin-bottom: .5em;
+        padding: 0.5em 1em;
+        border: 2px solid palevioletred;
+        border-radius: 3px;
+        text-align: center;
+      `;
+
+      const GreenButton = styled(Button)`
+        border-color: mediumseagreen;
+        background: mediumseagreen;
+        color: white;
+      `;
+
+      const code = `const Button = styled.button
+const GreenButton = styled(Button)
+
+<Button as="a" href="/">Button as link</Button>
+<GreenButton as="a" href="/">
+  GreenButton as link
+</GreenButton>
+`;
+
+      const Result = () => (
+        <React.Fragment>
+          <Button as="a" href="/">Button as link</Button>
+          <GreenButton as="a" href="/">GreenButton as link</GreenButton>
+        </React.Fragment>
+      );
+
+      return {
+        title: '"as" Polymorphic Prop',
+        code,
+        Result,
+      };
+    }
+
+
+    const CustomComponentStyle = () => {
+      const Link = ({ className, children }) => (
+        <a className={className} href="/">{children}</a>
+      );
+
+      const StyledLink = styled(Link)`
+        background: mediumseagreen;
+        color: white;
+        padding: 1em;
+      `;
+
+      const code =  `const Link = ({ className, children }) => (
+  <a className={className} href="/">{children}</a>
+);
+
+const StyledLink = styled(Link)\`
+  background: mediumseagreen;
+  color: white;
+\`;`;
+
+      const Result = () => (
+        <React.Fragment>
+          <Link>Unstyled, boring Link</Link>
+          <StyledLink>Styled, exciting Link</StyledLink>
+        </React.Fragment>
+      )
+
+      return {
+        title: "Styling Custom Components",
+        code,
+        Result,
+      };
+    }
+
+
+    const PassingHTMLProps = () => {
+      const Input = styled.input`
+        color: ${props => props.inputColor || "palevioletred"};
+        background: ${
+          props => props.inputColor === "white" ? "mediumseagreen" : "papayawhip"
+        };
+        padding: .5em 1em;
+        border: none;
+        border-radius: 3px;
+        font-size: 1em;
+        &:last-child {
+          margin-top: 1em;
+        }
+      `;
+
+      const code = `const Input = styled.input\`
+  color: \${
+    props => props.inputColor || "palevioletred"
+  };
+\`;
+
+<Input defaultValue="@probablyup" type="text" />
+<Input
+  type="text"
+  defaultValue="@geelen"
+  inputColor="white"
+/>`;
+
+      const Result = () => (
+        <React.Fragment>
+          <Input defaultValue="@probablyup" type="text" />
+          <Input defaultValue="@geelen" type="text" inputColor="white" />
+        </React.Fragment>
+      );
+
+      return {
+        title: "Passing HTML Props",
+        code,
+        Result,
+      };
+    }
+
+
+    const PseudoSelectorStyle = () => {
+      const Element = styled.button`
+  ::before { content: '🚀 '; }
+  :last-child {
+    background-color: mediumseagreen;
+    font-size: 1em; color: white;
+  }
+`;
+
+      return {
+        title: "Pseudo-selector Styling",
+        code: `const Element = styled.button\`${rules(Element)}\`;`,
+        Result: () => <Element>Hello World!</Element>,
+      };
+    }
+
+
+    const NestedStyle = () => {
+const Element = styled.div`
+  padding: .5em 1em;
+  & ~ & { /* <Element> sibling, not adjacent */
+    background: tomato;
+  }
+  & + & { /* <Element> next to <Element> */
+    background: mediumseagreen;
+  }
+  .other { /* child with ".something" */
+    background: orange;
+  }
+  &.something { /* <Element> with ".other" */
+    background: papayawhip;
+  }
+  .nested & { /* <Element> inside ".nested" */
+    border: 1px solid;
+  }
+`;
+
+      const code = `${rules(Element)}\`;
+
+<Element>Hello world!</Element>
+<Element>How ya doing?</Element>
+<Element className="something">The sun is shining...</Element>
+<div>Pretty nice day today.</div>
+<Element>Don't you think?</Element>
+<div className="nested"><Element>Splendid.</Element></div>
+<Element><div className="other">Mystery button</div></Element>`;
+
+      const Result = () => (
+        <React.Fragment>
+          <Element>Hello world!</Element>
+          <Element>How ya doing?</Element>
+          <Element className="something">The sun is shining...</Element>
+          <div>Pretty nice day today.</div>
+          <Element>Don't you think?</Element>
+          <div className="nested"><Element>Splendid.</Element></div>
+          <Element><div className="other">Mystery button</div></Element>
+        </React.Fragment>
+      )
+
+      return {
+        title: "Nesting Styles and Selectors",
+        code: `const Element = styled.div\`${code}`,
+        Result,
+      };
+    }
+
+
+    const GlobalStyle = () => {
+      const GlobalStyle = styled.createGlobalStyle`
+        span {
+          background: mediumseagreen;
+          color: white;
+          padding: 1em;
+        }
+      `;
+
+      const code = `const GlobalStyle = createGlobalStyle\`
+  span {
+    background: mediumseagreen;
+    color: white;
+  }
+\`;`;
+
+      const Result = () => (
+        <React.Fragment>
+          <GlobalStyle />
+          <span>createGlobalStyle makes this green</span>
+        </React.Fragment>
+      );
+
+      return {
+        title: "Global Style",
+        code,
+        Result,
+      };
+    }
+
+
+    const AttrsStyle = () => {
+      const Input = styled.input.attrs(({ bg }) => ({
+        type: "password",
+        background: bg || "white",
+      }))`
+        font-size: 1em;
+        border: 2px solid;
+        border-radius: 3px;
+        padding: .5em;
+        background: ${props => props.bg ? "mediumseagreen" : "white"};
+        border-color: ${props => props.bg ? "mediumseagreen" : "palevioletred"};
+        ::placeholder {
+          color: ${props => props.bg ? "white" : "palevioletred"};
+        }
+        &:last-child {
+          margin-top: 1em;
+        }
+      `;
+
+      const code = `const Input = styled.input.attrs(({ bg }) => ({
+  type: "password",
+  background: bg || "white",
+}))\`
+  background: \${props => props.bg};
+\`;
+
+<Input placeholder="Normal Input" />
+<Input placeholder="Green Input" bg="green" />`;
+
+      const Result = () => (
+        <React.Fragment>
+          <Input placeholder="Normal Input" />
+          <Input placeholder="Green Input" bg="green" />
+        </React.Fragment>
+      );
+
+      return {
+        title: "style.x.attrs",
+        code,
+        Result,
+      };
+    }
+
+
+    const KeyframeStyle = () => {
+      const color = styled.keyframes`
+        from {
+          background: mediumseagreen;
+        }
+        to {
+          background: mediumseagreen;
+        }
+      `;
+
+      const Color = styled.div`
+        animation: ${color} 2s linear infinite;
+        color: white;
+        padding: 1em;
+      `;
+
+      const code = `const color = keyframes\`
+  from { background: mediumseagreen; }
+  to { background: mediumseagreen; }
+\`;
+
+const color = styled.div\`
+  animation: \${color} 2s linear infinite;
+\`;`;
+
+      return {
+        title: "Keyframes Animation",
+        code,
+        Result: () => <Color>Keyframe locked green background</Color>,
+      };
+    }
+
+
+    const ThemeStyle = () => {
+      const Element = styled.div`
+        padding: 1em;
+        background: ${props => props.theme.main};
+        color: ${props => props.theme.main === "mediumseagreen" ? "white" : ""};
+      `;
+      Element.defaultProps = { theme: { main: "papayawhip" } };
+      const theme = { main: "mediumseagreen" };
+
+      const code = `const Element = styled.div\`
+  background: \${props => props.theme.main};
+\`;
+
+<Element>Normal</Element>
+<ThemeProvider theme={{ main: "mediumseagreen" }}>
+  <Element>Themed</Element>
+</ThemeProvider>`;
+
+      const Result = () => (
+        <React.Fragment>
+          <Element>Normal</Element>
+          <styled.ThemeProvider theme={theme}>
+            <Element>Themed</Element>
+          </styled.ThemeProvider>
+        </React.Fragment>
+      );
+
+      return {
+        title: "Theme Provider Styling",
+        code,
+        Result,
+      };
+    }
+
+
+    const WithThemeStyle = () => {
+      const Element = styled.div`
+        padding: 1em;
+        background: ${props => props.theme.main};
+        color: white;
+      `;
+      Element.defaultProps = { theme: { main: "palevioletred" } };
+
+      const MyComponent = props => (
+        <Element>
+          Theme:
+          {props.theme.main}
+        </Element>
+      );
+      const MyComponentWithTheme = styled.withTheme(MyComponent);
+
+      const code = `const MyComponent = props => (
+  <Element>Theme: {props.theme.main}</Element>
+)
+const MyComponentWithTheme = withTheme(MyComponent);
+
+<ThemeProvider theme={{ main: "mediumseagreen" }}>
+    <MyComponentWithTheme />
+</ThemeProvider>`;
+
+      const Result = () => (
+        <styled.ThemeProvider theme={{ main: "mediumseagreen" }}>
+          <MyComponentWithTheme />
+        </styled.ThemeProvider>
+      );
+
+      return {
+        title: "Using withTheme HOC",
+        code,
+        Result,
+      };
+    }
+
+
+    const CSSHelperStyle = () => {
+      const complexMixin = styled.css`
+        background: ${props => (props.whiteColor ? 'white' : 'mediumseagreen')};
+      `;
+
+      const Element = styled.div`
+        ${props => (props.complex ? complexMixin : 'color: red;')};
+        color: white;
+        padding: 1em;
+      `;
+
+      const code = `const complexMixin = css\`
+  background: \${props =>
+    props.whiteColor ? 'white' : 'mediumseagreen'
+  };
+\`;
+
+const Element = styled.div\`
+  \${props =>
+    props.complex ? complexMixin : 'color: red;'
+  };
+\`;`;
+
+      return {
+        title: "CSS Helper",
+        code,
+        Result: () => <Element complex>Complex mixin</Element>,
+      };
+    }
+
+
+    const MediaQueryStyle = () => {
+      const Element = styled.div`
+  background: palevioletred;
+  color: white;
+  padding: 1em
+  @media (max-width: 100000px) {
+    background: mediumseagreen;
+  }
+`;
+
+      return {
+        title: "Media Queries",
+        code: `const Element = styled.div\`${rules(Element)}\`;`,
+        Result: () => <Element>Background: mediumseagreen</Element>,
+      };
+    }
+
+
+    const components = [
+      SimpleStyle(),
+      StaticInterpolation(),
+      PropsStyle(),
+      ComponentInterpolation(),
+      ExtendedStyle(),
+      PolymorphicStyle(),
+      CustomComponentStyle(),
+      PassingHTMLProps(),
+      PseudoSelectorStyle(),
+      NestedStyle(),
+      GlobalStyle(),
+      AttrsStyle(),
+      KeyframeStyle(),
+      ThemeStyle(),
+      WithThemeStyle(),
+      CSSHelperStyle(),
+      MediaQueryStyle(),
+    ]
+
+
+    // Loop through and wrap all test functions
     class App extends React.Component {
       render() {
         return (
