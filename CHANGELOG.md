@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.2.0] - 2019-03-23
+
 - Reduced GC pressure when using component selector styles. (see [#2424](https://github.com/styled-components/styled-components/issues/2424)).
 
 - Add svg tag `marker` to domElements.js (see [#2389](https://github.com/styled-components/styled-components/pull/2389))
@@ -939,7 +941,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.1.3...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.2.0...master
+[v4.2.0]: https://github.com/styled-components/styled-components/compare/v4.1.3...v4.2.0
 [v4.1.3]: https://github.com/styled-components/styled-components/compare/v4.1.2...v4.1.3
 [v4.1.2]: https://github.com/styled-components/styled-components/compare/v4.1.1...v4.1.2
 [v4.1.1]: https://github.com/styled-components/styled-components/compare/v4.1.0...v4.1.1
