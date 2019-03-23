@@ -1,37 +1,33 @@
 import { toMatchImageSnapshot } from 'jest-image-snapshot';
 import puppeteer from 'puppeteer';
-import app from '../example/devServer.js';
+import app from '../example/devServer';
 
 expect.extend({ toMatchImageSnapshot });
 
 const PORT = 9000;
 
 const urlWhitelist = [
-  new RegExp(`http:\/\/localhost:${PORT}.*`),
-  /https:\/\/unpkg\.com\/react@[\d\.]+\/umd\/react\.production\.min\.js/,
-  /https:\/\/unpkg\.com\/react-dom@[\d\.]+\/umd\/react-dom\.production\.min\.js/,
-  /https:\/\/unpkg\.com\/react-dom@[\d\.]+\/umd\/react-dom-server\.browser\.production\.min\.js/,
-  /https:\/\/unpkg\.com\/babel-standalone@[\d\.]+\/babel\.min\.js/,
+  new RegExp(`http://localhost:${PORT}.*`),
+  /https:\/\/unpkg.com\/react@[\d.]+\/umd\/react.production.min.js/,
+  /https:\/\/unpkg.com\/react-dom@[\d.]+\/umd\/react-dom.production.min.js/,
+  /https:\/\/unpkg.com\/react-dom@[\d.]+\/umd\/react-dom-server.browser.production.min.js/,
+  /https:\/\/unpkg.com\/babel-standalone@[\d.]+\/babel.min.js/,
 ];
 
 const globalCss = `
   * {
-    -webkit-animation: unset !important;
-    animation: unset !important;
     font-family: 'Arial' !important;
     font-smooth: never !important;
   }
   pre, pre * {
     font-family: 'Courier' !important;
-  }
-  .hero-header {
-    min-height: auto !important;
+    font-size: .9rem;
   }
 `;
 
-function startServer(app, port) {
+function startServer(appServer, port) {
   return new Promise((resolve, reject) => {
-    const server = app.listen(port, error => {
+    const server = appServer.listen(port, error => {
       if (error) {
         reject(error);
       }
@@ -56,8 +52,8 @@ describe('example page', () => {
       if (urlWhitelist.find(regexp => req.url().match(regexp))) {
         req.continue();
       } else {
-        throw new Error(req.url());
         req.abort();
+        throw new Error(req.url());
       }
     });
     await page.setRequestInterception(true);
