@@ -18,6 +18,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Filter `suppressClassNameWarning` to not to pass down to the wrapped components [@taneba](https://github.com/taneba) (see [#2365](https://github.com/styled-components/styled-components/pull/2365))
 
+- Fix an edge case where React would break streaming inside `<textarea>` elements, which have special child behavior and aren't a suitable place to inject a style tag (see [#2413](https://github.com/styled-components/styled-components/pull/2413))
+
 ## [v4.1.3] - 2018-12-17
 
 - Under the hood code cleanup of the Babel macro, by [@lucleray](https://github.com/lucleray) (see [#2286](https://github.com/styled-components/styled-components/pull/2286))
