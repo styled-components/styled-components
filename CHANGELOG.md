@@ -14,6 +14,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Move to Mono repository structure with lerna [@imbhargav5](https://github.com/imbhargav5) (see [#2326](https://github.com/styled-components/styled-components/pull/2326))
 
+- Expose `StyleSheetContext` and `StyleSheetConsumer` for you fancy babes doing wild stuff
+
+- Filter `suppressClassNameWarning` to not to pass down to the wrapped components [@taneba](https://github.com/taneba) (see [#2365](https://github.com/styled-components/styled-components/pull/2365))
+
 - Fix an edge case where React would break streaming inside `<textarea>` elements, which have special child behavior and aren't a suitable place to inject a style tag (see [#2413](https://github.com/styled-components/styled-components/pull/2413))
 
 ## [v4.1.3] - 2018-12-17
