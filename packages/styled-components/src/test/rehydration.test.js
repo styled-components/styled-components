@@ -30,6 +30,7 @@ describe('rehydration', () => {
           /* sc-component-id: TWO */
           .b { color: red; }
         </style>
+        <meta name="later-head-contents" content="">
       `;
       StyleSheet.reset();
     });
@@ -82,6 +83,18 @@ describe('rehydration', () => {
       `;
       TestRenderer.create(<C />);
       expectCSSMatches('.b{ color: red; } .c{ color:green; } .a{ color:blue; }');
+    });
+
+    it('should insert new style tags immediately below existing ones', () => {
+      const Comp = styled.div.withConfig({ componentId: 'ONE' })`
+        color: blue;
+      `;
+      TestRenderer.create(<Comp />);
+
+      const meta = document.querySelector('meta[name="later-head-contents"]');
+
+      expect(meta.previousElementSibling.tagName).toEqual('STYLE');
+      expect(meta.nextElementSibling).toEqual(null);
     });
   });
 
