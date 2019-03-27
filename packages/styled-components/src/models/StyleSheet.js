@@ -111,13 +111,12 @@ export default class StyleSheet {
       els.push(el);
     }
 
-    /* abort rehydration if nothing was extracted */
     const extractedSize = extracted.length;
-    if (!extractedSize) return this;
-
+    
     /* create a tag to be used for rehydration */
-    const tag = this.makeTag(null);
-
+    const tag = this.makeTagAfter(els[els.length - 1]);
+    
+    /* rehydrate even if no rules were extracted, to remove old HTMLStyleElements */
     rehydrate(tag, els, extracted);
 
     /* reset capacity and adjust MAX_SIZE by the initial size of the rehydration */
@@ -187,8 +186,7 @@ export default class StyleSheet {
     });
   }
 
-  makeTag(tag: ?Tag<any>): Tag<any> {
-    const lastEl = tag ? tag.styleTag : null;
+  makeTagAfter(lastEl: ?HTMLStyleElement): Tag<any> {
     const insertBefore = false;
 
     return makeTag(this.target, lastEl, this.forceServer, insertBefore, this.getImportRuleTag);
@@ -226,7 +224,7 @@ export default class StyleSheet {
 
     if (this.capacity === 0) {
       this.capacity = MAX_SIZE;
-      tag = this.makeTag(tag);
+      tag = this.makeTagAfter(tag ? tag.styleTag : null);
       this.tags.push(tag);
     }
 
