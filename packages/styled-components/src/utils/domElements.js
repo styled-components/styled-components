@@ -116,6 +116,7 @@ export default [
   'var',
   'video',
   'wbr',
+  'detailsmenu',
 
   // SVG
   'circle',
