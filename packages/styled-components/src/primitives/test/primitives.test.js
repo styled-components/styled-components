@@ -357,6 +357,9 @@ For example, { component: () => InnerComponent } instead of { component: InnerCo
       expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
         `"Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is \\"data-text-color\\" on component \\"Styled(View)\\"."`
       );
+      expect(console.warn.mock.calls[0][1]).toEqual(
+        expect.stringMatching(/^\s+Error\s+at/)
+      );
     });
   });
 });
