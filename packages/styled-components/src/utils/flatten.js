@@ -15,12 +15,12 @@ import addUnitIfNeeded from './addUnitIfNeeded';
 const isFalsish = chunk => chunk === undefined || chunk === null || chunk === false || chunk === '';
 
 
-export const ObjectToArray = (obj: Object, prevKey?: string): any => {
+export const objToArray = (obj: Object, prevKey?: string): any => {
   const css = Object.keys(obj)
     .filter(key => !isFalsish(obj[key]))
     .map(key => {
       if (isPlainObject(obj[key])) {
-        return ObjectToArray(obj[key], key);
+        return objToArray(obj[key], key);
       }
       else if (isFunction(obj[key])) {
         return prevKey
@@ -60,7 +60,7 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
   }
 
   if (isPlainObject(chunk)) {
-    return flatten(ObjectToArray(chunk))
+    return flatten(objToArray(chunk))
   }
 
   /* Either execute or defer the function */
