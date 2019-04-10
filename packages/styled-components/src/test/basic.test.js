@@ -119,6 +119,27 @@ describe('basic', () => {
     expectCSSMatches('.b { color:blue; }');
   });
 
+  it('should allow you to pass in style object with a function', () => {
+    const Comp = styled.div({ color: ({color}) => color });
+    TestRenderer.create(<Comp color="blue" />);
+    expectCSSMatches('.b { color:blue; }');
+  });
+
+  it('should allow you to pass in style nested object', () => {
+    const Comp = styled.div({
+      span: {
+        small: {
+          color: 'blue',
+          fontFamily: 'sans-serif'
+        }
+      }
+    });
+    TestRenderer.create(<Comp color="blue" />);
+    // FIXME: This is a correct style but it's not optimal due to redunduncy
+    // should be => '.b span small{ color:blue; font-family: sans-serif; }'
+    expectCSSMatches('.b span small{ color:blue; } .b span small{ font-family:sans-serif; }');
+  });
+
   it('should allow you to pass in a function returning a style object', () => {
     const Comp = styled.div(({ color }) => ({
       color,
@@ -237,7 +258,7 @@ describe('basic', () => {
           return <OuterComponent suppressClassNameWarning />
         }
       }
-      
+
       const wrapper = TestRenderer.create(<Wrapper />);
       expect(wrapper.root.findByType(InnerComponent).props.suppressClassNameWarning).toBeUndefined();
     });

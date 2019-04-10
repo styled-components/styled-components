@@ -15,24 +15,26 @@ import addUnitIfNeeded from './addUnitIfNeeded';
 const isFalsish = chunk => chunk === undefined || chunk === null || chunk === false || chunk === '';
 
 
-export const objToArray = (obj: Object, prevKey?: string): any => {
+const objToCssArray = (obj: Object, prevKey?: string): Array<any> => {
   const css = Object.keys(obj)
     .filter(key => !isFalsish(obj[key]))
     .map(key => {
       if (isPlainObject(obj[key])) {
-        return objToArray(obj[key], key);
+        return prevKey
+          ? objToCssArray(obj[key], `${prevKey} ${key}`)
+          : objToCssArray(obj[key], `${key}`)
       }
       else if (isFunction(obj[key])) {
         return prevKey
           ? [`${prevKey}{ ${hyphenate(key)}:`, obj[key], '}']
-          : [obj[key]]
+          : [`${hyphenate(key)}:`, obj[key]]
       }
       return prevKey
-        ? `${prevKey} {${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};}`
-        : `${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`
+      ? `${prevKey} {${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};}`
+      : `${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`
     })
 
-  return css;
+    return css;
 };
 
 export default function flatten(chunk: any, executionContext: ?Object, styleSheet: ?Object): any {
@@ -59,8 +61,9 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
     return `.${chunk.styledComponentId}`;
   }
 
+  /* Handle objects */
   if (isPlainObject(chunk)) {
-    return flatten(objToArray(chunk))
+    return flatten(objToCssArray(chunk))
   }
 
   /* Either execute or defer the function */
@@ -88,6 +91,5 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
     } else return chunk;
   }
 
-  /* Handle objects */
   return chunk.toString();
 }
