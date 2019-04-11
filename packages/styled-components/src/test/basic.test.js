@@ -134,8 +134,21 @@ describe('basic', () => {
         }
       }
     });
-    TestRenderer.create(<Comp color="blue" />);
+    TestRenderer.create(<Comp />);
     expectCSSMatches('.b span small{ color:blue; font-family: sans-serif; }');
+  });
+
+  it('should allow you to pass in style nested object with a function', () => {
+    const Comp = styled.div({
+      span: {
+        small: {
+          color: ({color}) => color,
+          fontFamily: 'sans-serif'
+        }
+      }
+    });
+    TestRenderer.create(<Comp color="red" />);
+    expectCSSMatches('.b span small{ color:red; font-family: sans-serif; }');
   });
 
   it('should allow you to pass in a function returning a style object', () => {

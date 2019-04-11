@@ -15,7 +15,7 @@ import addUnitIfNeeded from './addUnitIfNeeded';
 const isFalsish = chunk => chunk === undefined || chunk === null || chunk === false || chunk === '';
 
 
-const objToCssArray = (obj: Object, prevKey?: string): Array<any> => {
+const objToCssArray = (obj: Object, prevKey?: string): Array<string | Function> => {
   const rules = []
   const keys = Object.keys(obj)
 
@@ -23,12 +23,12 @@ const objToCssArray = (obj: Object, prevKey?: string): Array<any> => {
     .forEach(key => {
       if (!isFalsish(obj[key])) {
         if (isPlainObject(obj[key])) {
-          rules.push(...objToCssArray(obj[key], `${key}`))
+          rules.push(...objToCssArray(obj[key], key))
 
           return rules
         }
         else if (isFunction(obj[key])) {
-          rules.push(`${hyphenate(key)}:`, obj[key])
+          rules.push(`${hyphenate(key)}:`, obj[key], ';')
 
           return rules
         }
