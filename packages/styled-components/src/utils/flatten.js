@@ -16,25 +16,30 @@ const isFalsish = chunk => chunk === undefined || chunk === null || chunk === fa
 
 
 const objToCssArray = (obj: Object, prevKey?: string): Array<any> => {
-  const css = Object.keys(obj)
-    .filter(key => !isFalsish(obj[key]))
-    .map(key => {
-      if (isPlainObject(obj[key])) {
-        return prevKey
-          ? objToCssArray(obj[key], `${prevKey} ${key}`)
-          : objToCssArray(obj[key], `${key}`)
+  const rules = []
+  const keys = Object.keys(obj)
+
+  keys
+    .forEach(key => {
+      if (!isFalsish(obj[key])) {
+        if (isPlainObject(obj[key])) {
+          rules.push(...objToCssArray(obj[key], `${key}`))
+
+          return rules
+        }
+        else if (isFunction(obj[key])) {
+          rules.push(`${hyphenate(key)}:`, obj[key])
+
+          return rules
+        }
+        rules.push(`${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`);
       }
-      else if (isFunction(obj[key])) {
-        return prevKey
-          ? [`${prevKey}{ ${hyphenate(key)}:`, obj[key], '}']
-          : [`${hyphenate(key)}:`, obj[key]]
-      }
-      return prevKey
-      ? `${prevKey} {${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};}`
-      : `${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`
+      return rules;
     })
 
-    return css;
+    return prevKey
+      ? [`${prevKey} {`, ...rules, '}']
+      : rules;
 };
 
 export default function flatten(chunk: any, executionContext: ?Object, styleSheet: ?Object): any {
@@ -63,7 +68,7 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
 
   /* Handle objects */
   if (isPlainObject(chunk)) {
-    return flatten(objToCssArray(chunk))
+    return objToCssArray(chunk)
   }
 
   /* Either execute or defer the function */

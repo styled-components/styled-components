@@ -87,7 +87,7 @@ describe(`createGlobalStyle`, () => {
       }
     })
     render(<Component1 theme={{ fonts: { heading: 'sans-serif' } }} />);
-    expectCSSMatches(`div,span h1 span{ font-family:sans-serif; }`);
+    expectCSSMatches(`div h1 span,span h1 span{ font-family:sans-serif; }`);
   });
 
   it(`supports theming`, () => {

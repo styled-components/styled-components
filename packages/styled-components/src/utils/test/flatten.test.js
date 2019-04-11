@@ -65,8 +65,12 @@ describe('flatten', () => {
     };
     const css = [
       'font-size: 14px;',
-      '@media screen and (min-width: 250px) {font-size: 16px;}',
-      '&:hover {font-weight: bold;}'
+      '@media screen and (min-width: 250px) {',
+      'font-size: 16px;',
+      '}',
+      '&:hover {',
+      'font-weight: bold;',
+      '}'
     ];
     // $FlowFixMe
     expect(flatten([obj])).toEqual(css);

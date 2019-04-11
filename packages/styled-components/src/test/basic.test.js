@@ -135,9 +135,7 @@ describe('basic', () => {
       }
     });
     TestRenderer.create(<Comp color="blue" />);
-    // FIXME: This is a correct style but it's not optimal due to redunduncy
-    // should be => '.b span small{ color:blue; font-family: sans-serif; }'
-    expectCSSMatches('.b span small{ color:blue; } .b span small{ font-family:sans-serif; }');
+    expectCSSMatches('.b span small{ color:blue; font-family: sans-serif; }');
   });
 
   it('should allow you to pass in a function returning a style object', () => {
