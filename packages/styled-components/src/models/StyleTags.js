@@ -255,6 +255,13 @@ const makeBrowserTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>)
     const importRules = [];
     const cssRulesSize = cssRules.length;
 
+    if (IS_BROWSER && !el.parentElement) {
+      const { head } = document;
+      if (head) {
+        head.appendChild(el);
+      }
+    }
+
     for (let i = 0; i < cssRulesSize; i += 1) {
       const rule = cssRules[i];
       let mayHaveImport = extractImport;
