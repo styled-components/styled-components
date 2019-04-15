@@ -57,6 +57,7 @@ describe('example page', () => {
         throw new Error(req.url());
       }
     });
+    page.on('pageerror', err => console.log(err))
     await page.setRequestInterception(true);
     await page.setViewport({ width: 1024, height: 768, deviceScaleFactor: 1 });
   });
