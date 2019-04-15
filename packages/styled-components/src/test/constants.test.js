@@ -40,6 +40,16 @@ describe('constants', () => {
 
       delete process.env.SC_ATTR;
     });
+
+    it('should work with REACT_APP_SC_ATTR', () => {
+      const REACT_APP_CUSTOM_SC_ATTR = 'data-custom-react_app-styled-components';
+      process.env.REACT_APP_SC_ATTR = REACT_APP_CUSTOM_SC_ATTR;
+      jest.resetModules();
+
+      renderAndExpect(REACT_APP_CUSTOM_SC_ATTR);
+
+      delete process.env.REACT_APP_SC_ATTR;
+    });
   });
 
   describe('DISABLE_SPEEDY', () => {

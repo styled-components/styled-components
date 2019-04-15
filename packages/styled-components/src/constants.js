@@ -1,7 +1,9 @@
 // @flow
 declare var SC_DISABLE_SPEEDY: ?boolean;
 
-export const SC_ATTR = (typeof process !== 'undefined' && process.env.SC_ATTR) || 'data-styled';
+export const SC_ATTR =
+  (typeof process !== 'undefined' && (process.env.REACT_APP_SC_ATTR || process.env.SC_ATTR)) ||
+  'data-styled';
 
 export const SC_VERSION_ATTR = 'data-styled-version';
 
