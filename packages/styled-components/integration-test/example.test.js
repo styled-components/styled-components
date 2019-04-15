@@ -18,6 +18,7 @@ const globalCss = `
   * {
     font-family: 'Arial' !important;
     font-smooth: never !important;
+    line-height: 1.15 !important;
   }
   pre, pre * {
     font-family: 'Courier' !important;
