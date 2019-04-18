@@ -1,7 +1,4 @@
 // @flow
-import React from 'react';
-import TestRenderer from 'react-test-renderer';
-
 import { expectCSSMatches } from './utils';
 import { SC_ATTR as DEFAULT_SC_ATTR } from '../constants';
 
@@ -12,6 +9,8 @@ describe('constants', () => {
 
   describe('SC_ATTR', () => {
     function renderAndExpect(expectedAttr) {
+      const React = require('react');
+      const TestRenderer = require('react-test-renderer');
       const SC_ATTR = require('../constants').SC_ATTR;
       const styled = require('./utils').resetStyled();
 
@@ -44,6 +43,8 @@ describe('constants', () => {
 
   describe('DISABLE_SPEEDY', () => {
     function renderAndExpect(expectedDisableSpeedy, expectedCss) {
+      const React = require('react');
+      const TestRenderer = require('react-test-renderer');
       const DISABLE_SPEEDY = require('../constants').DISABLE_SPEEDY;
       const styled = require('./utils').resetStyled();
 

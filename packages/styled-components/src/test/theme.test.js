@@ -446,8 +446,8 @@ describe('theming', () => {
 
     jest
       .spyOn(console, 'warn')
-      .mockImplementation(
-        msg => (!msg.includes('You are not using a ThemeProvider') ? consoleWarn(msg) : null)
+      .mockImplementation(msg =>
+        !msg.includes('You are not using a ThemeProvider') ? consoleWarn(msg) : null
       );
 
     MyDivWithTheme.defaultProps = { theme };
@@ -525,34 +525,46 @@ describe('theming', () => {
 
   it('should not allow the theme to be null', () => {
     expect(() => {
+      // HACK: work around the problem without changing the snapshots
+      // these tests need to be changed to use error boundaries instead
+      const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       TestRenderer.create(
         // $FlowInvalidInputTest
         <ThemeProvider theme={null}>
           <div />
         </ThemeProvider>
       );
+      expect(mock).toHaveBeenCalledTimes(1);
     }).toThrowErrorMatchingSnapshot();
   });
 
   it('should not allow the theme to be an array', () => {
     expect(() => {
+      // HACK: work around the problem without changing the snapshots
+      // these tests need to be changed to use error boundaries instead
+      const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       TestRenderer.create(
         // $FlowInvalidInputTest
         <ThemeProvider theme={['a', 'b', 'c']}>
           <div />
         </ThemeProvider>
       );
+      expect(mock).toHaveBeenCalledTimes(1);
     }).toThrowErrorMatchingSnapshot();
   });
 
   it('should not allow the theme to be a non-object', () => {
     expect(() => {
+      // HACK: work around the problem without changing the snapshots
+      // these tests need to be changed to use error boundaries instead
+      const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       TestRenderer.create(
         // $FlowInvalidInputTest
         <ThemeProvider theme={42}>
           <div />
         </ThemeProvider>
       );
+      expect(mock).toHaveBeenCalledTimes(1);
     }).toThrowErrorMatchingSnapshot();
   });
 });

@@ -14,7 +14,9 @@ import { ThemeConsumer } from './ThemeProvider';
 import type { Theme } from './ThemeProvider';
 import type { Attrs, RuleSet, Target } from '../types';
 
-// $FlowFixMe
+// NOTE: no hooks available for react-native yet;
+// if the user makes use of ThemeProvider or StyleSheetManager things will break.
+
 class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
 
@@ -114,13 +116,11 @@ class StyledNativeComponent extends Component<*, *> {
       let key;
 
       if (isFunction(resolvedAttrDef)) {
-        // $FlowFixMe
         resolvedAttrDef = resolvedAttrDef(context);
         attrDefWasFn = true;
       }
 
       /* eslint-disable guard-for-in */
-      // $FlowFixMe
       for (key in resolvedAttrDef) {
         attr = resolvedAttrDef[key];
 
@@ -186,6 +186,7 @@ export default (InlineStyle: Function) => {
     const isClass = !isTag(target);
     const isTargetStyledComp = isStyledComponent(target);
 
+    // $FlowFixMe
     const WrappedStyledNativeComponent = React.forwardRef((props, ref) => (
       <ParentComponent
         {...props}
@@ -236,7 +237,6 @@ export default (InlineStyle: Function) => {
     };
 
     if (isClass) {
-      // $FlowFixMe
       hoist(WrappedStyledNativeComponent, target, {
         // all SC-specific things should not be hoisted
         attrs: true,
