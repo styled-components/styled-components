@@ -4,59 +4,35 @@ workflow:
     - flow
     - lint
     - build
-    - testWeb
-    - testNative
-    - testPrimitives
-    - testIntegration
+    - test-web
 tasks:
   install:
-    image: philpl/alpine-chrome-node:latest
+    image: node:10
     command:
       - yarn
     env:
-      - GOOGLE_CHROME_BINARY: "/usr/bin/chromium-browser"
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
-  testWeb:
-    image: philpl/alpine-chrome-node:latest
+  test-web:
+    image: node:10
+    cwd: ./packages/styled-components/
     command:
       - yarn
     args:
       - test:web
-  testNative:
-    image: philpl/alpine-chrome-node:latest
-    command:
-      - yarn
-    args:
-      - test:native
-  testPrimitives:
-    image: philpl/alpine-chrome-node:latest
-    command:
-      - yarn
-    args:
-      - test:primitives
-  testIntegration:
-    image: philpl/alpine-chrome-node:latest
-    command:
-      - yarn
-    args:
-      - test:integration
-    env:
-      - GOOGLE_CHROME_BINARY: "/usr/bin/chromium-browser"
-      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
   flow:
-    image: philpl/alpine-chrome-node:latest
+    image: node:10
     command:
       - yarn
     args:
       - flow
   lint:
-    image: philpl/alpine-chrome-node:latest
+    image: node:10
     command:
       - yarn
     args:
       - lint
   build:
-    image: philpl/alpine-chrome-node:latest
+    image: node:10
     command:
       - yarn
     args:
