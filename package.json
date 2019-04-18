@@ -5,7 +5,7 @@
     "build": "wsrun --exclude-missing build",
     "postbuild": "cp README.md packages/styled-components/",
     "dev": "wsrun --exclude-missing dev",
-    "flow": "wsrun --exclude-missing flow",
+    "flow": "flow check",
     "lint": "wsrun --exclude-missing lint",
     "test": "wsrun --exclude-missing test",
     "prepublishOnly": "run-s build test"
@@ -89,7 +89,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "wsrun --exclude-missing flow && lint-staged"
+      "pre-commit": "yarn flow && lint-staged"
     }
   }
 }
