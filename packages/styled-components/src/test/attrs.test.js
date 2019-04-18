@@ -110,7 +110,7 @@ describe('attrs', () => {
     expect(TestRenderer.create(<Comp submit />).toJSON()).toMatchSnapshot();
   });
 
-  it('should replace props with attrs', () => {
+  it('should replace attrs with props', () => {
     const Comp = styled.button.attrs({
       type: props => (props.submit ? 'submit' : 'button'),
       tabIndex: 0,
@@ -290,7 +290,6 @@ For example, { component: () => InnerComponent } instead of { component: InnerCo
       expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
         `"Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is \\"data-text-color\\" on component \\"styled.div\\"."`
       );
-      expect(console.warn.mock.calls[0][1]).toEqual(expect.stringMatching(/^\s+Error\s+at/));
     });
   });
 });
