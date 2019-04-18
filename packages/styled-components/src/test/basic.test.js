@@ -229,19 +229,6 @@ describe('basic', () => {
       expect(wrapper.testRef.current).toBe(innerComponent);
     });
 
-    it('should not pass the suppressClassNameWarning to the wrapped child', () => {
-      const OuterComponent = styled(InnerComponent)``;
-
-      class Wrapper extends Component<*, *> {
-        render() {
-          return <OuterComponent suppressClassNameWarning />
-        }
-      }
-      
-      const wrapper = TestRenderer.create(<Wrapper />);
-      expect(wrapper.root.findByType(InnerComponent).props.suppressClassNameWarning).toBeUndefined();
-    });
-
     it('should respect the order of StyledComponent creation for CSS ordering', () => {
       const FirstComponent = styled.div`
         color: red;
