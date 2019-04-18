@@ -44,6 +44,77 @@ _styled(Hello).withConfig({
 "
 `;
 
+exports[`macro should work with { ThemeProvider }: should work with { ThemeProvider } 1`] = `
+"
+import { ThemeProvider } from '../../macro'
+
+React.createComponent(
+  ThemeProvider,
+  { theme: { color: 'red' }},
+  'hello'
+)
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import { ThemeProvider as _ThemeProvider } from \\"styled-components\\";
+React.createComponent(_ThemeProvider, {
+  theme: {
+    color: 'red'
+  }
+}, 'hello');
+"
+`;
+
+exports[`macro should work with { createGlobalStyle }: should work with { createGlobalStyle } 1`] = `
+"
+import { createGlobalStyle } from '../../macro'
+
+createGlobalStyle\`
+  background: red;
+\`
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import { createGlobalStyle as _createGlobalStyle } from \\"styled-components\\";
+_createGlobalStyle\`
+  background: red;
+\`;
+"
+`;
+
+exports[`macro should work with { css }: should work with { css } 1`] = `
+"
+import { css } from '../../macro'
+
+css\`
+  color: \${props => (props.whiteColor ? 'white' : 'black')};
+\`
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import { css as _css } from \\"styled-components\\";
+
+_css([\\"color:\\", \\";\\"], props => props.whiteColor ? 'white' : 'black');
+"
+`;
+
+exports[`macro should work with { keyframes }: should work with { keyframes } 1`] = `
+"
+import { keyframes } from '../../macro'
+
+keyframes\`
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+\`
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import { keyframes as _keyframes } from \\"styled-components\\";
+
+_keyframes([\\"0%{opacity:0;}100%{opacity:1;}\\"]);
+"
+`;
+
 exports[`macro should work with custom import name: should work with custom import name 1`] = `
 "
 import myStyled from '../../macro'

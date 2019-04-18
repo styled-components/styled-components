@@ -1,10 +1,26 @@
 // @flow
-import { addDefault, addNamed } from '@babel/helper-module-imports';
-import traverse from '@babel/traverse';
-import { createMacro } from 'babel-plugin-macros';
+
+import { createMacro, MacroError } from 'babel-plugin-macros';
 import babelPlugin from 'babel-plugin-styled-components';
+import { addDefault, addNamed } from '@babel/helper-module-imports';
 
 function styledComponentsMacro({ references, state, babel: { types: t }, config = {} }) {
+  const allowedImports = [
+    'default',
+    'createGlobalStyle',
+    'css',
+    'isStyledComponent',
+    'keyframes',
+    'ServerStyleSheet',
+    'StyleSheetConsumer',
+    'StyleSheetContext',
+    'StyleSheetManager',
+    'ThemeConsumer',
+    'ThemeContext',
+    'ThemeProvider',
+    'withTheme'
+  ];
+
   const program = state.file.path;
 
   // FIRST STEP : replace `styled-components/macro` by `styled-components
@@ -12,6 +28,14 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
   // { default: [path, path], css: [path], ... }
   let customImportName;
   Object.keys(references).forEach(refName => {
+    if (!allowedImports.includes(refName)) {
+      throw new MacroError(
+        `Invalid import: ${refName}. You can only import ${allowedImports.join(
+          ', '
+        )} from 'styled-components/macro'.`
+      );
+    }
+
     // generate new identifier
     let id;
     if (refName === 'default') {
@@ -30,9 +54,9 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
 
   // SECOND STEP : apply babel-plugin-styled-components to the file
   const stateWithOpts = { ...state, opts: config, customImportName };
-  traverse(program.parent, babelPlugin({ types: t }).visitor, undefined, stateWithOpts);
+  program.traverse(babelPlugin({ types: t }).visitor, stateWithOpts);
 }
 
-const configName = 'styledComponents';
-
-export default createMacro(styledComponentsMacro, { configName });
+export default createMacro(styledComponentsMacro, {
+  configName: 'styledComponents'
+});
