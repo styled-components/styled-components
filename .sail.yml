@@ -8,7 +8,6 @@ workflow:
     - testNative
     - testPrimitives
     - testIntegration
-  - size
 tasks:
   install:
     image: philpl/alpine-chrome-node:latest
@@ -62,9 +61,3 @@ tasks:
       - yarn
     args:
       - build
-  size:
-    image: philpl/alpine-chrome-node:latest
-    command:
-      - yarn
-    args:
-      - size
