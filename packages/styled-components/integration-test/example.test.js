@@ -8,10 +8,10 @@ const PORT = 9000;
 
 const urlWhitelist = [
   new RegExp(`http:\/\/localhost:${PORT}.*`),
-  /https:\/\/unpkg\.com\/react@[\d\.]+\/umd\/react\.production\.min\.js/,
-  /https:\/\/unpkg\.com\/react-dom@[\d\.]+\/umd\/react-dom\.production\.min\.js/,
-  /https:\/\/unpkg\.com\/react-dom@[\d\.]+\/umd\/react-dom-server\.browser\.production\.min\.js/,
-  /https:\/\/unpkg\.com\/babel-standalone@[\d\.]+\/babel\.min\.js/,
+  /https:\/\/unpkg\.com\/react@[\d\.\-\w]+\/umd\/react\.production\.min\.js/,
+  /https:\/\/unpkg\.com\/react-dom@[\d\.\-\w]+\/umd\/react-dom\.production\.min\.js/,
+  /https:\/\/unpkg\.com\/react-dom@[\d\.\-\w]+\/umd\/react-dom-server\.browser\.production\.min\.js/,
+  /https:\/\/unpkg\.com\/babel-standalone@[\d\.\-\w]+\/babel\.min\.js/,
 ];
 
 const globalCss = `

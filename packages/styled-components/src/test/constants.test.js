@@ -1,8 +1,4 @@
 // @flow
-/* eslint-disable global-require */
-import React from 'react';
-import TestRenderer from 'react-test-renderer';
-
 import { expectCSSMatches } from './utils';
 import { SC_ATTR as DEFAULT_SC_ATTR } from '../constants';
 
@@ -13,7 +9,9 @@ describe('constants', () => {
 
   describe('SC_ATTR', () => {
     function renderAndExpect(expectedAttr) {
-      const { SC_ATTR } = require('../constants');
+      const React = require('react');
+      const TestRenderer = require('react-test-renderer');
+      const SC_ATTR = require('../constants').SC_ATTR;
       const styled = require('./utils').resetStyled();
 
       const Comp = styled.div`
@@ -41,21 +39,13 @@ describe('constants', () => {
 
       delete process.env.SC_ATTR;
     });
-
-    it('should work with REACT_APP_SC_ATTR', () => {
-      const REACT_APP_CUSTOM_SC_ATTR = 'data-custom-react_app-styled-components';
-      process.env.REACT_APP_SC_ATTR = REACT_APP_CUSTOM_SC_ATTR;
-      jest.resetModules();
-
-      renderAndExpect(REACT_APP_CUSTOM_SC_ATTR);
-
-      delete process.env.REACT_APP_SC_ATTR;
-    });
   });
 
   describe('DISABLE_SPEEDY', () => {
     function renderAndExpect(expectedDisableSpeedy, expectedCss) {
-      const { DISABLE_SPEEDY } = require('../constants');
+      const React = require('react');
+      const TestRenderer = require('react-test-renderer');
+      const DISABLE_SPEEDY = require('../constants').DISABLE_SPEEDY;
       const styled = require('./utils').resetStyled();
 
       const Comp = styled.div`
@@ -104,20 +94,6 @@ describe('constants', () => {
     it('should be true in development NODE_ENV', () => {
       process.env.NODE_ENV = 'development';
       renderAndExpect(true, '.b { color:blue; }');
-    });
-
-    it('should work with SC_DISABLE_SPEEDY environment variable', () => {
-      process.env.SC_DISABLE_SPEEDY = true;
-      renderAndExpect(true, '.b { color:blue; }');
-
-      delete process.env.SC_DISABLE_SPEEDY;
-    });
-
-    it('should work with REACT_APP_SC_DISABLE_SPEEDY environment variable', () => {
-      process.env.REACT_APP_SC_DISABLE_SPEEDY = true;
-      renderAndExpect(true, '.b { color:blue; }');
-
-      delete process.env.REACT_APP_SC_DISABLE_SPEEDY;
     });
   });
 });
