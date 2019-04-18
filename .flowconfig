@@ -1,4 +1,13 @@
 [ignore]
+
+<PROJECT_ROOT>/packages/sandbox/.*
+
+.*/node_modules/.cache/.*
+.*/node_modules/.*/__tests__/.*
+.*/node_modules/.*/test/.*
+.*/node_modules/@babel/.*
+.*/node_modules/babel[A-Za-z-]*/.*
+.*/node_modules/eslint[A-Za-z0-9-]*/.*
 .*/node_modules/flow-remove-types/.*
 .*/node_modules/react-native/.*
 .*/node_modules/rollup-plugin-flow/.*
@@ -8,7 +17,8 @@
 .*/node_modules/metro/.*
 .*/node_modules/metro-bundler/.*
 .*/node_modules/metro-source-map/.*
-.*/node_modules/babel-plugin-transform-react-remove-prop-types/.*
+.*/node_modules/puppeteer/.*
+
 .*/benchmarks/.*
 .*/dist/.*
 .*/lib/.*
@@ -18,6 +28,9 @@
 .*/example/.*
 .*/integration-test/.*
 .*/sandbox/.*
+
+[libs]
+packages/styled-components/flow-typed/
 
 [options]
 suppress_comment=.*\\$FlowFixMe
