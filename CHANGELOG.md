@@ -6,9 +6,21 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.2.0] - 2019-03-23
+
+- Reduced GC pressure when using component selector styles. (see [#2424](https://github.com/styled-components/styled-components/issues/2424)).
+
+- Add svg tag `marker` to domElements.js (see [#2389](https://github.com/styled-components/styled-components/pull/2389))
+
 - Make the `GlobalStyleComponent` created by `createGlobalStyle` call the base constructor with `props` (see [#2321](https://github.com/styled-components/styled-components/pull/2321)).
 
 - Move to Mono repository structure with lerna [@imbhargav5](https://github.com/imbhargav5) (see [#2326](https://github.com/styled-components/styled-components/pull/2326))
+
+- Expose `StyleSheetContext` and `StyleSheetConsumer` for you fancy babes doing wild stuff
+
+- Filter `suppressClassNameWarning` to not to pass down to the wrapped components [@taneba](https://github.com/taneba) (see [#2365](https://github.com/styled-components/styled-components/pull/2365))
+
+- Fix an edge case where React would break streaming inside `<textarea>` elements, which have special child behavior and aren't a suitable place to inject a style tag (see [#2413](https://github.com/styled-components/styled-components/pull/2413))
 
 ## [v4.1.3] - 2018-12-17
 
@@ -929,7 +941,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.1.3...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.2.0...master
+[v4.2.0]: https://github.com/styled-components/styled-components/compare/v4.1.3...v4.2.0
 [v4.1.3]: https://github.com/styled-components/styled-components/compare/v4.1.2...v4.1.3
 [v4.1.2]: https://github.com/styled-components/styled-components/compare/v4.1.1...v4.1.2
 [v4.1.1]: https://github.com/styled-components/styled-components/compare/v4.1.0...v4.1.1

@@ -11,6 +11,7 @@
     "lint": "lerna run lint --stream --parallel",
     "size": "lerna run size --stream --parallel",
     "test": "run-s test:*",
+    "prepare": "yarn bs && yarn build",
     "prepublishOnly": "yarn clean && yarn && yarn build && yarn test && cp README.md packages/styled-components",
     "publish": "lerna publish",
     "test:web": "jest -c scripts/jest/config.main.js",

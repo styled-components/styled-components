@@ -6,7 +6,11 @@ import css from './constructors/css';
 import createGlobalStyle from './constructors/createGlobalStyle';
 import keyframes from './constructors/keyframes';
 import ServerStyleSheet from './models/ServerStyleSheet';
-import StyleSheetManager from './models/StyleSheetManager';
+
+import StyleSheetManager, {
+  StyleSheetContext,
+  StyleSheetConsumer,
+} from './models/StyleSheetManager';
 
 /* Import components */
 import ThemeProvider, { ThemeContext, ThemeConsumer } from './models/ThemeProvider';
@@ -56,14 +60,16 @@ if (
 /* Export everything */
 export * from './secretInternals';
 export {
-  css,
-  keyframes,
   createGlobalStyle,
+  css,
   isStyledComponent,
+  keyframes,
+  ServerStyleSheet,
+  StyleSheetConsumer,
+  StyleSheetContext,
+  StyleSheetManager,
   ThemeConsumer,
   ThemeContext,
   ThemeProvider,
   withTheme,
-  ServerStyleSheet,
-  StyleSheetManager,
 };
