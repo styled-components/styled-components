@@ -50,8 +50,8 @@ const ThemeProviderExampleCode = `
 import { ThemeProvider } from '../../macro'
 
 React.createComponent(
-  ThemeProvider, 
-  { theme: { color: 'red' }}, 
+  ThemeProvider,
+  { theme: { color: 'red' }},
   'hello'
 )
 `;
@@ -83,16 +83,36 @@ pluginTester({
   title: 'macro',
   plugin,
   snapshot: true,
-  babelOptions: { filename: __filename },
+  babelOptions: {
+    babelrc: false,
+    filename: __filename
+  },
+  babel: require('@babel/core'),
   tests: {
-    'should work with styled': styledExampleCode,
-    'should work with custom import name': customStyledExampleCode,
-    'should work with { css }': cssExampleCode,
-    'should work with { keyframes }': keyframesExampleCode,
-    'should work with { createGlobalStyle }': createGlobalStyleExampleCode,
-    'should work with { ThemeProvider }': ThemeProviderExampleCode,
-    'should work when extending a component': extendsExampleCode,
-    'should work with require() to import styled-components': requireExampleCode,
+    'should work with styled': {
+      code: styledExampleCode
+    },
+    'should work with custom import name': {
+      code: customStyledExampleCode
+    },
+    'should work with { css }': {
+      code: cssExampleCode
+    },
+    'should work with { keyframes }': {
+      code: keyframesExampleCode
+    },
+    'should work with { createGlobalStyle }': {
+      code: createGlobalStyleExampleCode
+    },
+    'should work with { ThemeProvider }': {
+      code: ThemeProviderExampleCode
+    },
+    'should work when extending a component': {
+      code: extendsExampleCode
+    },
+    'should work with require() to import styled-components': {
+      code: requireExampleCode
+    },
     'should throw error when importing { UnknownImport }': {
       code: invalidExampleCode,
       error: true,

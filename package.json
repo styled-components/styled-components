@@ -7,13 +7,8 @@
     "dev": "wsrun --exclude-missing dev",
     "flow": "wsrun --exclude-missing flow",
     "lint": "wsrun --exclude-missing lint",
-    "size": "wsrun --exclude-missing size",
-    "test": "run-s test:*",
-    "prepublishOnly": "run-s build test",
-    "test:web": "jest -c scripts/jest/config.main.js",
-    "test:native": "jest -c scripts/jest/config.native.js",
-    "test:primitives": "jest -c scripts/jest/config.primitives.js",
-    "test:integration": "jest -c scripts/jest/config.integration.js --runInBand --forceExit"
+    "test": "wsrun --exclude-missing test",
+    "prepublishOnly": "run-s build test"
   },
   "author": "Glen Maddern",
   "license": "MIT",

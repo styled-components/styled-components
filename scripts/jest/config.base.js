@@ -1,3 +1,3 @@
 module.exports = {
-  rootDir: '../../packages/styled-components',
+  rootDir: process.cwd()
 };
