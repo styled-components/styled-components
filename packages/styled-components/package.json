@@ -62,24 +62,25 @@
     "@emotion/unitless": "^0.7.0",
     "babel-plugin-styled-components": ">= 1",
     "css-to-react-native": "^2.2.2",
-    "prop-types": "^15.5.4",
-    "react-is": "^16.8.0",
+    "prop-types": "^15.7.2",
     "stylis": "^3.5.0",
     "stylis-rule-sheet": "^0.0.10",
     "supports-color": "^5.5.0"
   },
   "peerDependencies": {
     "react": ">= 16.8.0",
-    "react-dom": ">= 16.8.0"
+    "react-dom": ">= 16.8.0",
+    "react-is": ">= 16.8.0"
   },
   "devDependencies": {
     "flow-bin": "^0.93.0",
-    "react": "^16.8.0",
-    "react-dom": "^16.8.0",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
     "react-frame-component": "^4.0.2",
+    "react-is": "^16.8.6",
     "react-native": "^0.56.0",
     "react-primitives": "^0.6.1",
-    "react-test-renderer": "^16.8.0"
+    "react-test-renderer": "^16.8.6"
   },
   "jest": {
     "testURL": "http://localhost",
