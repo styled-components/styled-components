@@ -1,12 +1,26 @@
 // @flow
+
 import { createMacro, MacroError } from 'babel-plugin-macros';
 import babelPlugin from 'babel-plugin-styled-components';
 import { addDefault, addNamed } from '@babel/helper-module-imports';
-import * as styled from '..';
-
-const allowedImports: Array<string> = Object.keys(styled).filter(helper => helper !== '__esModule');
 
 function styledComponentsMacro({ references, state, babel: { types: t }, config = {} }) {
+  const allowedImports = [
+    'default',
+    'createGlobalStyle',
+    'css',
+    'isStyledComponent',
+    'keyframes',
+    'ServerStyleSheet',
+    'StyleSheetConsumer',
+    'StyleSheetContext',
+    'StyleSheetManager',
+    'ThemeConsumer',
+    'ThemeContext',
+    'ThemeProvider',
+    'withTheme'
+  ];
+
   const program = state.file.path;
 
   // FIRST STEP : replace `styled-components/macro` by `styled-components
@@ -43,6 +57,6 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
   program.traverse(babelPlugin({ types: t }).visitor, stateWithOpts);
 }
 
-const configName = 'styledComponents';
-
-export default createMacro(styledComponentsMacro, { configName });
+export default createMacro(styledComponentsMacro, {
+  configName: 'styledComponents'
+});
