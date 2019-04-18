@@ -258,25 +258,25 @@ describe(`createGlobalStyle`, () => {
     render(<Comp />);
     const el = document.querySelector('[data-test-el]');
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-"/* sc-component-id:sc-global-3005254895 */
-body{background:palevioletred;}
-/* sc-component-id:sc-global-1591963405 */
-body{color:white;}"
-`); // should have both styles
+      "/* sc-component-id:sc-global-3005254895 */
+      body{background:palevioletred;}
+      /* sc-component-id:sc-global-1591963405 */
+      body{color:white;}"
+    `); // should have both styles
 
     Simulate.click(el);
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-"/* sc-component-id:sc-global-3005254895 */
-body{background:palevioletred;}
-/* sc-component-id:sc-global-1591963405 */"
-`); // should only have palevioletred
+      "/* sc-component-id:sc-global-3005254895 */
+      body{background:palevioletred;}
+      /* sc-component-id:sc-global-1591963405 */"
+    `); // should only have palevioletred
 
     Simulate.click(el);
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-"/* sc-component-id:sc-global-3005254895 */
-
-/* sc-component-id:sc-global-1591963405 */"
-`); // should be empty
+      "/* sc-component-id:sc-global-3005254895 */
+      
+      /* sc-component-id:sc-global-1591963405 */"
+    `); // should be empty
   });
 
   it(`removes styling injected for multiple instances of same <GlobalStyle> components correctly`, () => {
@@ -326,15 +326,15 @@ body{background:palevioletred;}
     render(<Comp />); // should be blue
     const el = document.querySelector('[data-test-el]');
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-"/* sc-component-id:sc-global-1846532150 */
-body{background:blue;}"
-`);
+      "/* sc-component-id:sc-global-1846532150 */
+      body{background:blue;}"
+    `);
 
     Simulate.click(el); // should be red
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-"/* sc-component-id:sc-global-1846532150 */
-body{background:red;}"
-`);
+      "/* sc-component-id:sc-global-1846532150 */
+      body{background:red;}"
+    `);
 
     Simulate.click(el); // should be empty
     expect(getCSS(document).trim()).toMatchInlineSnapshot(
@@ -393,11 +393,11 @@ body{background:red;}"
     );
 
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-"/* sc-component-id:sc-global-2592835591 */
-div{display:inline-block;-webkit-animation:a 2s linear infinite;animation:a 2s linear infinite;padding:2rem 1rem;font-size:1.2rem;}
-/* sc-component-id:sc-keyframes-a */
-@-webkit-keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}} @keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}}"
-`);
+      "/* sc-component-id:sc-global-1354462580 */
+      div{display:inline-block;-webkit-animation:a 2s linear infinite;animation:a 2s linear infinite;padding:2rem 1rem;font-size:1.2rem;}
+      /* sc-component-id:sc-keyframes-a */
+      @-webkit-keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}} @keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}}"
+    `);
   });
 
   it(`removes style tag in StyleSheetManager.target when unmounted after target detached and no other global styles`, () => {

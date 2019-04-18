@@ -23,7 +23,6 @@ script:
   - yarn test
   - yarn flow
   - yarn lint
-  - yarn size
 notifications:
   email:
     on_failure: change

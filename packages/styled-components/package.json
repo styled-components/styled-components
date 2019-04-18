@@ -14,9 +14,14 @@
   "scripts": {
     "build": "rollup -c",
     "prebuild": "rimraf dist",
-    "size": "bundlesize",
+    "postbuild": "bundlesize",
     "flow": "flow check",
     "flow:watch": "flow-watch",
+    "test": "run-s test:*",
+    "test:web": "jest -c ../../scripts/jest/config.main.js",
+    "test:native": "jest -c ../../scripts/jest/config.native.js",
+    "test:primitives": "jest -c ../../scripts/jest/config.primitives.js",
+    "test:integration": "jest -c ../../scripts/jest/config.integration.js --runInBand --forceExit",
     "format": "eslint ./**/*.js --fix",
     "lint": "eslint src",
     "prettier": "prettier */**/*.js --write",
@@ -80,28 +85,13 @@
     "react-is": "^16.8.6",
     "react-native": "^0.59.6",
     "react-primitives": "^0.8.0",
-    "react-test-renderer": "^16.8.6"
-  },
-  "jest": {
-    "testURL": "http://localhost",
-    "clearMocks": true,
-    "roots": [
-      "<rootDir>/src/"
-    ],
-    "setupFiles": [
-      "raf/polyfill",
-      "<rootDir>/src/test/globals.js"
-    ],
-    "setupTestFrameworkScriptFile": "<rootDir>/test-utils/setupTestFramework.js",
-    "testPathIgnorePatterns": [
-      "<rootDir>/src/native",
-      "<rootDir>/src/primitives"
-    ]
+    "react-test-renderer": "^16.8.6",
+    "npm-run-all": "^4.1.2"
   },
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "maxSize": "16kB"
+      "maxSize": "17kB"
     }
   ],
   "collective": {
