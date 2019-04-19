@@ -14,7 +14,7 @@
   "scripts": {
     "build": "rollup -c",
     "prebuild": "rimraf dist",
-    "postbuild": "bundlesize",
+    "postbuild": "npm run lint:size",
     "flow": "flow check",
     "flow:watch": "flow-watch",
     "test": "run-s test:*",
@@ -24,6 +24,7 @@
     "test:integration": "jest -c ../../scripts/jest/config.integration.js --runInBand --forceExit",
     "format": "eslint ./**/*.js --fix",
     "lint": "eslint src",
+    "lint:size": "bundlesize",
     "prettier": "prettier */**/*.js --write",
     "prepublishOnly": "run-s build",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
