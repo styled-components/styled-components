@@ -7,6 +7,7 @@
     "dev": "wsrun --exclude-missing dev",
     "flow": "flow check",
     "lint": "wsrun --exclude-missing lint",
+    "size": "wsrun --exclude-missing lint:size",
     "test": "wsrun --exclude-missing test",
     "prepublishOnly": "run-s build test"
   },
