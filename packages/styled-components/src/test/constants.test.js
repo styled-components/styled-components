@@ -74,6 +74,8 @@ describe('constants', () => {
     afterEach(() => {
       process.env.NODE_ENV = 'test';
       delete process.env.DISABLE_SPEEDY;
+      delete process.env.SC_DISABLE_SPEEDY;
+      delete process.env.REACT_APP_SC_DISABLE_SPEEDY;
     });
 
     it('should be false in production NODE_ENV when SC_DISABLE_SPEEDY is not set', () => {
@@ -92,6 +94,16 @@ describe('constants', () => {
 
     it('should be true in production NODE_ENV when window.SC_DISABLE_SPEEDY is set to true', () => {
       window.SC_DISABLE_SPEEDY = true;
+      renderAndExpect(true, '.b { color:blue; }');
+    });
+
+    it('should be true when SC_DISABLE_SPEEDY env is set to true', () => {
+      process.env.SC_DISABLE_SPEEDY = true;
+      renderAndExpect(true, '.b { color:blue; }');
+    });
+
+    it('should be true when REACT_APP_SC_DISABLE_SPEEDY env is set to true', () => {
+      process.env.REACT_APP_SC_DISABLE_SPEEDY = true;
       renderAndExpect(true, '.b { color:blue; }');
     });
 
