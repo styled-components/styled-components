@@ -19,7 +19,7 @@ const stylis = new Stylis({
   global: false,
   cascade: true,
   keyframe: false,
-  prefix: true,
+  prefix: process.env.STYLIS_SHOULD_PREFIX === undefined,
   compress: false,
   semicolon: false, // NOTE: This means "autocomplete missing semicolons"
 });
