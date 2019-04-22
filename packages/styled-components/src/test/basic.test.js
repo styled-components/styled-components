@@ -147,7 +147,7 @@ describe('basic', () => {
         }
       }
     });
-    TestRenderer.create(<Comp color="red" />);
+    TestRenderer.create(<Comp color='red' />);
     expectCSSMatches('.b span small{ color:red; font-family: sans-serif; }');
   });
 
@@ -155,7 +155,7 @@ describe('basic', () => {
     const Comp = styled.div(({ color }) => ({
       color,
     }));
-    TestRenderer.create(<Comp color="blue" />);
+    TestRenderer.create(<Comp color='blue' />);
     expectCSSMatches('.b { color:blue; }');
   });
 
@@ -173,7 +173,7 @@ describe('basic', () => {
       color: red;
     `;
 
-    TestRenderer.create(<StyledComp color="blue" />);
+    TestRenderer.create(<StyledComp color='blue' />);
     expectCSSMatches('.b { color:red; }');
   });
 
@@ -205,7 +205,7 @@ describe('basic', () => {
 
       class Wrapper extends Component<*, *> {
         render() {
-          return <OuterComponent className="test" />;
+          return <OuterComponent className='test' />;
         }
       }
 
