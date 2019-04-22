@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Ensure style tag is present in the head when calling insertRules on the browser tag. (see [#2498](https://github.com/styled-components/styled-components/pull/2498))
+
 ## [v4.2.0] - 2019-03-23
 
 - Reduced GC pressure when using component selector styles. (see [#2424](https://github.com/styled-components/styled-components/issues/2424)).
