@@ -247,9 +247,16 @@ export default function createStyledComponent(target: Target, options: Object, r
   const {
     displayName = generateDisplayName(target),
     componentId = generateId(ComponentStyle, options.displayName, options.parentComponentId),
-    ParentComponent = StyledComponent,
     attrs = EMPTY_ARRAY,
   } = options;
+
+  // Can not reuse the only one StyledComponent as ParentComponent
+  // because we need assign different `displayName` value to it
+  class ParentStyledComponent extends StyledComponent<*> {
+    static displayName = displayName;
+  }
+
+  const { ParentComponent = ParentStyledComponent } = options;
 
   const styledComponentId =
     options.displayName && options.componentId
@@ -277,10 +284,13 @@ export default function createStyledComponent(target: Target, options: Object, r
    * forwardRef creates a new interim component, which we'll take advantage of
    * instead of extending ParentComponent to create _another_ interim class
    */
-  const WrappedStyledComponent = React.forwardRef((props, ref) => (
-    <ParentComponent {...props} forwardedComponent={WrappedStyledComponent} forwardedRef={ref} />
-  ));
-
+  let WrappedStyledComponent
+  const ForwardRef = (props, ref) => (
+    <ParentStyledComponent {...props} forwardedComponent={WrappedStyledComponent} forwardedRef={ref} />
+  );
+  // Assign the `displayName` to ForwardRef to get the correct `ForwardRef(displayName)` in snapshots
+  ForwardRef.displayName = displayName;
+  WrappedStyledComponent = React.forwardRef(ForwardRef);
   // $FlowFixMe
   WrappedStyledComponent.attrs = finalAttrs;
   // $FlowFixMe
