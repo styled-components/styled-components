@@ -48,8 +48,3 @@ export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
 
   throw new TypeError(`CSSStyleSheet could not be found on HTMLStyleElement`);
 };
-
-/** Gets the stringified attributes for an SSR'd style tag */
-export const getAttributes = (): string => {
-  return `${SC_ATTR} ${SC_VERSION_ATTR}="${SC_VERSION}"`;
-};
