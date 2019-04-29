@@ -1,6 +1,6 @@
 // @flow
 
-import { type Tag, makeTag } from './Tag';
+import type { Tag } from './Tag';
 
 /** Group-aware Tag that sorts rules by indices */
 export interface GroupedTag {
@@ -12,11 +12,7 @@ export interface GroupedTag {
 }
 
 /** Create a GroupedTag with an underlying Tag implementation */
-export const makeGroupedTag = (
-  isServer: boolean,
-  target?: HTMLElement
-): GroupedTag => {
-  const tag = makeTag(isServer, target);
+export const makeGroupedTag = (tag: Tag): GroupedTag => {
   return new DefaultGroupedTag(tag);
 };
 
