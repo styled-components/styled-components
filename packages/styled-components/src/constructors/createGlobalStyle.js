@@ -5,8 +5,7 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet } from '../models/StyleSheetManager';
 import determineTheme from '../utils/determineTheme';
 import { ThemeContext } from '../models/ThemeProvider';
-// $FlowFixMe
-import hashStr from '../vendor/glamor/hash';
+import hasher from '../utils/hasher';
 import css from './css';
 
 import type { Interpolation } from '../types';
@@ -23,7 +22,7 @@ export default function createGlobalStyle(
   ...interpolations: Array<Interpolation>
 ) {
   const rules = css(strings, ...interpolations);
-  const styledComponentId = `sc-global-${hashStr(JSON.stringify(rules))}`;
+  const styledComponentId = `sc-global-${hasher(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle(rules, styledComponentId);
 
   function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
