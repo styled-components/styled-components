@@ -1,8 +1,7 @@
 // @flow
-// $FlowFixMe
-import hashStr from '../vendor/glamor/hash';
+
 import flatten from '../utils/flatten';
-import generateAlphabeticName from '../utils/generateAlphabeticName';
+import hasher from '../utils/hasher';
 import stringifyRules from '../utils/stringifyRules';
 import isStaticRules from '../utils/isStaticRules';
 import StyleSheet from './StyleSheet';
@@ -10,8 +9,8 @@ import { IS_BROWSER } from '../constants';
 
 import type { Attrs, RuleSet } from '../types';
 
-/* combines hashStr (murmurhash) and nameGenerator for convenience */
-const hasher = (str: string): string => generateAlphabeticName(hashStr(str));
+const isHMREnabled =
+  process.env.NODE_ENV !== 'production' && typeof module !== 'undefined' && module.hot;
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
@@ -28,7 +27,7 @@ export default class ComponentStyle {
 
   constructor(rules: RuleSet, attrs: Attrs, componentId: string) {
     this.rules = rules;
-    this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules, attrs);
+    this.isStatic = !isHMREnabled && isStaticRules(rules, attrs);
     this.componentId = componentId;
 
     if (!StyleSheet.master.hasId(componentId)) {
@@ -37,10 +36,10 @@ export default class ComponentStyle {
   }
 
   /*
-   * Flattens a rule set into valid CSS
-   * Hashes it, wraps the whole chunk in a .hash1234 {}
-   * Returns the hash to be injected on render()
-   * */
+     * Flattens a rule set into valid CSS
+     * Hashes it, wraps the whole chunk in a .hash1234 {}
+     * Returns the hash to be injected on render()
+     * */
   generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
     const { isStatic, componentId, lastClassName } = this;
     if (
@@ -64,9 +63,5 @@ export default class ComponentStyle {
 
     this.lastClassName = name;
     return name;
-  }
-
-  static generateName(str: string): string {
-    return hasher(str);
   }
 }
