@@ -5,7 +5,6 @@ import { type Tag, makeTag } from './Tag';
 import { type GroupedTag, makeGroupedTag } from './GroupedTag';
 import { getGroupForID } from './GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from './Rehydration';
-import { getAttributes } from './dom';
 
 let SHOULD_REHYDRATE = !IS_BROWSER;
 
@@ -15,13 +14,12 @@ export interface Sheet {
   groupedTag: GroupedTag;
   names: Map<string, Set<string>>;
   hasNameForID(id: string, name: string): boolean;
-  registerID(id: string): void;
   registerName(id: string, name: string): void;
   insertRules(id: string, name: string, rules: string[]): void;
+  clearNames(id: string): void;
   clearRules(id: string): void;
   clearTag(): void;
   toString(): string;
-  toHTML(): string;
 }
 
 class DefaultSheet implements Sheet {
@@ -31,64 +29,77 @@ class DefaultSheet implements Sheet {
   groupedTag: GroupedTag;
   names: Map<string, Set<string>>;
 
+  /** Register a group ID to give it an index */
+  static registerID(id: string): number {
+    return getGroupForID(id);
+  }
+
   constructor(isServer: boolean, target?: HTMLElement) {
-    this.isServer = isServer;
-    this.target = target;
     this.tag = makeTag(isServer, target);
     this.groupedTag = makeGroupedTag(this.tag);
     this.names = new Map();
 
+    // `isServer` and `target` are stored in case the tag
+    // needs to be recreated
+    this.isServer = isServer;
+    this.target = target;
+
+    // We rehydrate only once and use the sheet that is
+    // created first
     if (!isServer && SHOULD_REHYDRATE) {
       SHOULD_REHYDRATE = false;
       rehydrateSheet(this);
     }
   }
 
+  /** Check whether a name is known for caching */
   hasNameForID(id: string, name: string): boolean {
     return this.names.has(id) && (this.names.get(id): any).has(name);
   }
 
-  registerID(id: string) {
+  /** Mark a group's name as known for caching */
+  registerName(id: string, name: string) {
     getGroupForID(id);
+
     if (!this.names.has(id)) {
-      this.names.set(id, new Set());
+      const groupNames = new Set<string>();
+      groupNames.add(name);
+      this.names.set(id, groupNames);
+    } else {
+      (this.names.get(id): any).add(name);
     }
   }
 
-  registerName(id: string, name: string) {
-    this.registerID(id);
-    (this.names.get(id): any).add(name);
-  }
-
+  /** Insert new rules which also marks the name as known */
   insertRules(id: string, name: string, rules: string[]) {
-    const group = getGroupForID(id);
     this.registerName(id, name);
-    this.groupedTag.insertRules(group, rules);
+    this.groupedTag.insertRules(getGroupForID(id), rules);
   }
 
+  /** Clears all cached names for a given group ID */
+  clearNames(id: string) {
+    if (this.names.has(id)) {
+      (this.names.get(id): any).clear();
+    }
+  }
+
+  /** Clears all rules for a given group ID */
   clearRules(id: string) {
-    const group = getGroupForID(id);
-    this.registerID(id);
-    this.groupedTag.clearGroup(group);
-    (this.names.get(id): any).clear();
+    this.groupedTag.clearGroup(getGroupForID(id));
+    this.clearNames(id);
   }
 
+  /** Clears the entire tag which deletes all rules but not its names */
   clearTag() {
+    // NOTE: This does not clear the names, since it's only used during SSR
+    // so that we can continuously output only new rules
     this.tag = makeTag(this.isServer, this.target);
     this.groupedTag = makeGroupedTag(this.tag);
   }
 
+  /** Outputs the current sheet as a CSS string with markers for SSR */
   toString(): string {
     return outputSheet(this);
-  }
-
-  toHTML(): string {
-    const css = this.toString();
-    if (css === '') {
-      return '';
-    } else {
-      return `<style ${getAttributes()}>${css}</style>`;
-    }
   }
 }
 
