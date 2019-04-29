@@ -7,9 +7,8 @@ const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
   const { childNodes } = target;
 
   for (let i = childNodes.length; i >= 0; i--) {
-    const child = childNodes[i];
-
-    if (child.hasAttribute(SC_ATTR)) {
+    const child = ((childNodes[i]: any): HTMLElement);
+    if (child.getAttribute(SC_ATTR)) {
       return ((child: any): HTMLStyleElement);
     }
   }
@@ -29,7 +28,7 @@ export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
   style.setAttribute(SC_VERSION_ATTR, SC_VERSION);
   parent.insertBefore(style, nextSibling);
 
-  return element;
+  return style;
 };
 
 /** Get the CSSStyleSheet instance for a given style element */
@@ -52,5 +51,5 @@ export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
 
 /** Gets the stringified attributes for an SSR'd style tag */
 export const getAttributes = (): string => {
-  return `${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}"`
+  return `${SC_ATTR} ${SC_VERSION_ATTR}="${SC_VERSION}"`;
 };
