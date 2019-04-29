@@ -2,8 +2,7 @@
 /* eslint-disable import/no-unresolved */
 import transformDeclPairs from 'css-to-react-native';
 
-// $FlowFixMe
-import hashStr from '../vendor/glamor/hash';
+import hasher from '../utils/hasher';
 import type { RuleSet, StyleSheet } from '../types';
 import flatten from '../utils/flatten';
 // $FlowFixMe
@@ -29,7 +28,7 @@ export default (styleSheet: StyleSheet) => {
     generateStyleObject(executionContext: Object) {
       const flatCSS = flatten(this.rules, executionContext).join('');
 
-      const hash = hashStr(flatCSS);
+      const hash = hasher(flatCSS);
       if (!generated[hash]) {
         const root = parse(flatCSS);
         const declPairs = [];
