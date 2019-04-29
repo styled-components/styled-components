@@ -4,14 +4,32 @@ import { SC_ATTR, SC_VERSION_ATTR } from '../constants';
 
 declare var __VERSION__: string;
 
-/** Create a style element inside `target` or <head> */
+/** Find last style element if any inside target */
+const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
+  const { childNodes } = target;
+
+  for (let i = childNodes.length; i >= 0; i--) {
+    const child = childNodes[i];
+
+    if (child.hasAttribute(SC_ATTR)) {
+      return ((child: any): HTMLStyleElement);
+    }
+  }
+
+  return undefined;
+};
+
+/** Create a style element inside `target` or <head> after the last */
 export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
   const head = ((document.head: any): HTMLElement);
-  const element = document.createElement('style');
+  const parent = target || head;
+  const style = document.createElement('style');
+  const prevStyle = findLastStyleTag(parent);
+  const nextSibling = prevStyle !== undefined ? prevStyle.nextSibling : null;
 
-  el.setAttribute(SC_ATTR, '');
-  el.setAttribute(SC_VERSION_ATTR, __VERSION__);
-  (target || head).appendChild(element);
+  style.setAttribute(SC_ATTR, '');
+  style.setAttribute(SC_VERSION_ATTR, __VERSION__);
+  parent.insertBefore(style, nextSibling);
 
   return element;
 };
