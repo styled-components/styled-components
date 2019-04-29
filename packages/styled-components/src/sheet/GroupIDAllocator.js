@@ -1,6 +1,8 @@
 // @flow
 
 const groupIDRegister = new Map<string, number>();
+const reverseRegister = new Map<number, string>();
+
 let nextFreeGroup = 0;
 
 export const getGroupForID = (id: string): number => {
@@ -10,7 +12,12 @@ export const getGroupForID = (id: string): number => {
 
   const group = nextFreeGroupID++;
   groupIDRegister.set(id, group);
+  reverseRegister.set(group, id);
   return group;
+};
+
+export const getIDForGroup = (group: number): void | string => {
+  return reverseRegister.get(group);
 };
 
 export const setGroupForID = (id: string, group: number) => {
@@ -19,4 +26,5 @@ export const setGroupForID = (id: string, group: number) => {
   }
 
   groupIDRegister.set(id, group);
+  reverseRegister.set(group, id);
 };

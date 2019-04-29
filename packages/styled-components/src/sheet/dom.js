@@ -1,8 +1,6 @@
 // @flow
 
-import { SC_ATTR, SC_VERSION_ATTR } from '../constants';
-
-declare var __VERSION__: string;
+import { SC_ATTR, SC_VERSION_ATTR, SC_VERSION } from '../constants';
 
 /** Find last style element if any inside target */
 const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
@@ -28,7 +26,7 @@ export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
   const nextSibling = prevStyle !== undefined ? prevStyle.nextSibling : null;
 
   style.setAttribute(SC_ATTR, '');
-  style.setAttribute(SC_VERSION_ATTR, __VERSION__);
+  style.setAttribute(SC_VERSION_ATTR, SC_VERSION);
   parent.insertBefore(style, nextSibling);
 
   return element;
@@ -50,4 +48,9 @@ export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
   }
 
   throw new TypeError(`CSSStyleSheet could not be found on HTMLStyleElement`);
+};
+
+/** Gets the stringified attributes for an SSR'd style tag */
+export const getAttributes = (): string => {
+  return `${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}"`
 };
