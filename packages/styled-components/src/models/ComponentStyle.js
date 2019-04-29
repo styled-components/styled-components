@@ -1,8 +1,7 @@
 // @flow
-// $FlowFixMe
-import hashStr from '../vendor/glamor/hash';
+
 import flatten from '../utils/flatten';
-import generateAlphabeticName from '../utils/generateAlphabeticName';
+import hasher from '../utils/hasher';
 import stringifyRules from '../utils/stringifyRules';
 import isStaticRules from '../utils/isStaticRules';
 import StyleSheet from './StyleSheet';
@@ -12,9 +11,6 @@ import type { Attrs, RuleSet } from '../types';
 
 const isHMREnabled =
   process.env.NODE_ENV !== 'production' && typeof module !== 'undefined' && module.hot;
-
-/* combines hashStr (murmurhash) and nameGenerator for convenience */
-const hasher = (str: string): string => generateAlphabeticName(hashStr(str));
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
@@ -67,9 +63,5 @@ export default class ComponentStyle {
 
     this.lastClassName = name;
     return name;
-  }
-
-  static generateName(str: string): string {
-    return hasher(str);
   }
 }
