@@ -42,7 +42,7 @@ class DefaultGroupedTag implements GroupedTag {
     if (group >= this.groupSizes.length) {
       const oldBuffer = this.groupSizes;
       const oldSize = oldBuffer.length;
-      const newSize = ((group / BASE_SIZE | 0) + 1)
+      const newSize = ((group / BASE_SIZE) | 0) + 1;
 
       this.groupSizes = new Uint32Array(newSize);
       this.groupSizes.set(oldBuffer);

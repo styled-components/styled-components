@@ -13,10 +13,7 @@ export interface Tag {
 }
 
 /** Create a CSSStyleSheet-like tag depending on the environment */
-export const makeTag = (
-  isServer: boolean,
-  target?: HTMLElement
-): Tag => {
+export const makeTag = (isServer: boolean, target?: HTMLElement): Tag => {
   if (!IS_BROWSER) {
     return new VirtualTag(target);
   } else if (DISABLE_SPEEDY) {
