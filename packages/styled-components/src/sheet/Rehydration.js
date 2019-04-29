@@ -1,11 +1,11 @@
 // @flow
 
-import { SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
+import { SC_ATTR, SC_VERSION_ATTR, SC_VERSION } from '../constants';
 import { getIDForGroup, setGroupForID } from './GroupIDAllocator';
 import { getSheet } from './dom';
 import type { Sheet } from './Sheet';
 
-const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
+const SELECTOR = `style[${SC_ATTR}][${SC_VERSION_ATTR}="${SC_VERSION}"]`;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.(\\w+)\\[g="(\\d+)"\\]`, 'g');
 
 export const outputSheet = (sheet: Sheet) => {
@@ -15,16 +15,18 @@ export const outputSheet = (sheet: Sheet) => {
   let css = '';
   for (let group = 0; group < length; group++) {
     const id = getIDForGroup(group);
-    if (id === undefined) continue
+    if (id === undefined) continue;
 
-    const names = sheet.names.get(group);
+    const names = sheet.names.get(id);
     const rules = tag.getGroup(group);
     const selector = `${SC_ATTR}.${id}[g="${group}"]`;
 
     let content = '';
-    names.forEach(name => {
-      content += `${name},`;
-    });
+    if (names !== undefined) {
+      names.forEach(name => {
+        content += `${name},`;
+      });
+    }
 
     css += `${rules}\n${selector}{content:"${content}"}\n`;
   }
@@ -48,17 +50,17 @@ const rehydrateNamesFromContent = (sheet: Sheet, id: string, content: string) =>
 };
 
 const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
-  const { cssRules } = getSheet(node);
+  const { cssRules } = getSheet(style);
   const rules: string[] = [];
 
   for (let i = 0, l = cssRules.length; i < l; i++) {
-    const cssRule = cssRules[i];
+    const cssRule = (cssRules[i]: any);
     const marker = MARKER_RE.exec(cssRule.selectorText);
-
     if (marker !== null) {
       const id = marker[1];
       const group = parseInt(marker[2], 10) | 0;
-      rehydrateNamesFromContent(cssRule.style.content);
+      const content = cssRule.style.content;
+      rehydrateNamesFromContent(sheet, id, content);
       setGroupForID(id, group);
       sheet.groupedTag.insertRules(group, rules);
       rules.length = 0;

@@ -13,7 +13,7 @@ let SHOULD_REHYDRATE = !IS_BROWSER;
 export interface Sheet {
   tag: Tag;
   groupedTag: GroupedTag;
-  names: Map<number, Set<string>>;
+  names: Map<string, Set<string>>;
   hasNameForID(id: string, name: string): boolean;
   registerID(id: string): void;
   registerName(id: string, name: string): void;
@@ -29,7 +29,7 @@ class DefaultSheet implements Sheet {
   target: void | HTMLElement;
   tag: Tag;
   groupedTag: GroupedTag;
-  names: Map<number, Set<string>>;
+  names: Map<string, Set<string>>;
 
   constructor(isServer: boolean, target?: HTMLElement) {
     this.isServer = isServer;
@@ -45,19 +45,19 @@ class DefaultSheet implements Sheet {
   }
 
   hasNameForID(id: string, name: string): boolean {
-    return this.names.has(id) && this.names.get(id).has(name);
+    return this.names.has(id) && (this.names.get(id): any).has(name);
   }
 
   registerID(id: string) {
     getGroupForID(id);
     if (!this.names.has(id)) {
-      this.names.set(new Set());
+      this.names.set(id, new Set());
     }
   }
 
   registerName(id: string, name: string) {
     this.registerID(id);
-    this.names.get(id).add(name);
+    (this.names.get(id): any).add(name);
   }
 
   insertRules(id: string, name: string, rules: string[]) {
@@ -69,8 +69,8 @@ class DefaultSheet implements Sheet {
   clearRules(id: string) {
     const group = getGroupForID(id);
     this.registerID(id);
-    this.names.get(id).clear();
-    this.groupedTag.clearRules(group);
+    this.groupedTag.clearGroup(group);
+    (this.names.get(id): any).clear();
   }
 
   clearTag() {

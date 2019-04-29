@@ -1,3 +1,3 @@
 // @flow
 
-export { default as Sheet } from './Sheet';
+export { default } from './Sheet';
