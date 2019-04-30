@@ -42,7 +42,7 @@ class StyleSheet implements Sheet {
 
     // We rehydrate only once and use the sheet that is
     // created first
-    if (!isServer && SHOULD_REHYDRATE) {
+    if (!isServer && IS_BROWSER && SHOULD_REHYDRATE) {
       SHOULD_REHYDRATE = false;
       rehydrateSheet(this);
     }
