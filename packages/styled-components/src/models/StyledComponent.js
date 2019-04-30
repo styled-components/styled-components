@@ -253,7 +253,7 @@ export default function createStyledComponent(target: Target, options: Object, r
   // Can not reuse the only one StyledComponent as ParentComponent
   // because we need assign different `displayName` value to it
   class ParentStyledComponent extends StyledComponent<*> {
-    static displayName = displayName;
+    static displayName = `StyledComponent(${displayName})`;
   }
 
   const { ParentComponent = ParentStyledComponent } = options;
