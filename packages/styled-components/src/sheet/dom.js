@@ -7,8 +7,8 @@ const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
   const { childNodes } = target;
 
   for (let i = childNodes.length; i >= 0; i--) {
-    const child = ((childNodes[i]: any): HTMLElement);
-    if (child.getAttribute(SC_ATTR)) {
+    const child = ((childNodes[i]: any): ?HTMLElement);
+    if (child && child.nodeType === 1 && child.getAttribute(SC_ATTR)) {
       return ((child: any): HTMLStyleElement);
     }
   }
