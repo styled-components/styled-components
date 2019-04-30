@@ -4,7 +4,7 @@ import flatten from '../utils/flatten';
 import hasher from '../utils/hasher';
 import stringifyRules from '../utils/stringifyRules';
 import isStaticRules from '../utils/isStaticRules';
-import StyleSheet from './StyleSheet';
+import StyleSheet from '../sheet';
 import { IS_BROWSER } from '../constants';
 
 import type { Attrs, RuleSet } from '../types';
@@ -30,9 +30,9 @@ export default class ComponentStyle {
     this.isStatic = !isHMREnabled && isStaticRules(rules, attrs);
     this.componentId = componentId;
 
-    if (!StyleSheet.master.hasId(componentId)) {
-      StyleSheet.master.deferredInject(componentId, []);
-    }
+    // NOTE: This registers the componentId, which ensures a consistent order
+    // for this component's styles compared to others
+    StyleSheet.registerId(componentId);
   }
 
   /*
@@ -51,14 +51,12 @@ export default class ComponentStyle {
       return lastClassName;
     }
 
-    const flatCSS = flatten(this.rules, executionContext, styleSheet);
-    const name = hasher(this.componentId + flatCSS.join(''));
+    const flatRules = flatten(this.rules, executionContext, styleSheet);
+    const name = hasher(this.componentId + flatRules.join(''));
+
     if (!styleSheet.hasNameForId(componentId, name)) {
-      styleSheet.inject(
-        this.componentId,
-        stringifyRules(flatCSS, `.${name}`, undefined, componentId),
-        name
-      );
+      const css = stringifyRules(flatRules, `.${name}`, undefined, componentId);
+      styleSheet.insertRules(this.componentId, name, css);
     }
 
     this.lastClassName = name;
