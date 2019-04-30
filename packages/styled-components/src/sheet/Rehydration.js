@@ -9,7 +9,7 @@ const SELECTOR = `style[${SC_ATTR}][${SC_VERSION_ATTR}="${SC_VERSION}"]`;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.(\\w+)\\[g="(\\d+)"\\]`, 'g');
 
 export const outputSheet = (sheet: Sheet) => {
-  const tag = sheet.groupedTag;
+  const tag = sheet.getTag();
   const length = tag.length;
 
   let css = '';
@@ -62,7 +62,7 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
       const content = cssRule.style.content;
       rehydrateNamesFromContent(sheet, id, content);
       setGroupForId(id, group);
-      sheet.groupedTag.insertRules(group, rules);
+      sheet.getTag().insertRules(group, rules);
       rules.length = 0;
     } else {
       rules.push(cssRule.cssText);

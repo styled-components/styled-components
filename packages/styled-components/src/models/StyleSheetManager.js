@@ -14,20 +14,11 @@ type Props = {
 
 export const StyleSheetContext: Context<StyleSheet | void> = React.createContext();
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
+export const masterSheet: StyleSheet = new StyleSheet(false);
 
-let masterSheet: StyleSheet;
-
-export function getMasterStyleSheet(): StyleSheet {
-  return masterSheet || (masterSheet = new StyleSheet(false));
-}
-
-export function useStyleSheet() {
+export function useStyleSheet(): StyleSheet {
   const fromContext = useContext(StyleSheetContext);
-  if (fromContext === undefined) {
-    return getMasterStyleSheet();
-  }
-
-  return fromContext;
+  return fromContext !== undefined ? fromContext : masterSheet;
 }
 
 function useStyleSheetProvider(sheet?: StyleSheet, target?: HTMLElement) {
