@@ -24,11 +24,19 @@ export const outputSheet = (sheet: Sheet) => {
     let content = '';
     if (names !== undefined) {
       names.forEach(name => {
-        content += `${name},`;
+        if (name.length > 0) {
+          content += `${name},`;
+        }
       });
     }
 
-    css += `${rules}\n${selector}{content:"${content}"}\n`;
+    if (rules.length > 0) {
+      css += rules;
+      css += '\n';
+    }
+
+    css += selector;
+    css += `{content:"${content}"}\n`;
   }
 
   return css;
@@ -45,7 +53,10 @@ export const rehydrateSheet = (sheet: Sheet) => {
 const rehydrateNamesFromContent = (sheet: Sheet, id: string, content: string) => {
   const names = content.slice(1, -1).split(',');
   for (let i = 0, l = names.length; i < l; i++) {
-    sheet.registerName(id, names[i]);
+    const name = names[i];
+    if (name.length > 0) {
+      sheet.registerName(id, name);
+    }
   }
 };
 
@@ -60,13 +71,27 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
     if (marker !== null) {
       const group = parseInt(marker[1], 10) | 0;
       const id = marker[2];
-      const {content} = cssRule.style;
-      rehydrateNamesFromContent(sheet, id, content);
-      setGroupForId(id, group);
-      sheet.getTag().insertRules(group, rules);
+      const { content } = cssRule.style;
+
+      if (group !== 0) {
+        // Rehydrate componentId to group index mapping
+        setGroupForId(id, group);
+
+        // Rehydrate names and rules
+        if (content.length > 0 && rules.length > 0) {
+          rehydrateNamesFromContent(sheet, id, content);
+          sheet.getTag().insertRules(group, rules);
+        }
+      }
+
       rules.length = 0;
     } else {
       rules.push(cssRule.cssText);
     }
+  }
+
+  // Remove style tag once rehydration is complete
+  if (style.parentNode) {
+    style.parentNode.removeChild(style);
   }
 };

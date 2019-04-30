@@ -26,7 +26,9 @@ export const makeTag = (isServer: boolean, target?: HTMLElement): Tag => {
 /** A Tag that wraps CSSOM's CSSStyleSheet API directly */
 class SpeedyTag implements Tag {
   element: HTMLStyleElement;
+
   sheet: CSSStyleSheet;
+
   length: number;
 
   constructor(target?: HTMLElement) {
@@ -66,7 +68,9 @@ class SpeedyTag implements Tag {
 /** A Tag that emulates the CSSStyleSheet API but uses text nodes */
 class TextTag implements Tag {
   element: HTMLStyleElement;
+
   nodes: NodeList<Node>;
+
   length: number;
 
   constructor(target?: HTMLElement) {
@@ -104,6 +108,7 @@ class TextTag implements Tag {
 /** A completely virtual (server-side) Tag that doesn't manipulate the DOM */
 class VirtualTag implements Tag {
   rules: string[];
+
   length: number;
 
   constructor(_target?: HTMLElement) {
@@ -112,11 +117,12 @@ class VirtualTag implements Tag {
   }
 
   insertRule(index: number, rule: string): boolean {
-    if (index < 0 || index > this.length) {
-      return false;
-    } else {
+    if (index <= this.length && index >= 0) {
       this.rules.splice(index, 0, rule);
+      this.length++;
       return true;
+    } else {
+      return false;
     }
   }
 
