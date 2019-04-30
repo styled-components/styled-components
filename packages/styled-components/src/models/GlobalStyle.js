@@ -3,7 +3,7 @@ import { EMPTY_ARRAY } from '../utils/empties';
 import flatten from '../utils/flatten';
 import isStaticRules from '../utils/isStaticRules';
 import stringifyRules from '../utils/stringifyRules';
-import StyleSheet from './StyleSheet';
+import StyleSheet from '../sheet';
 
 import type { RuleSet } from '../types';
 
@@ -18,28 +18,24 @@ export default class GlobalStyle {
     this.rules = rules;
     this.componentId = componentId;
     this.isStatic = isStaticRules(rules, EMPTY_ARRAY);
-
-    if (!StyleSheet.master.hasId(componentId)) {
-      StyleSheet.master.deferredInject(componentId, []);
-    }
+    StyleSheet.registerId(componentId);
   }
 
   createStyles(executionContext: Object, styleSheet: StyleSheet) {
     const flatCSS = flatten(this.rules, executionContext, styleSheet);
     const css = stringifyRules(flatCSS, '');
+    const id = this.componentId;
 
-    styleSheet.inject(this.componentId, css);
+    // NOTE: We use the id as a name as well, since these rules never change
+    styleSheet.insertRules(id, id, css);
   }
 
   removeStyles(styleSheet: StyleSheet) {
-    const { componentId } = this;
-    if (styleSheet.hasId(componentId)) {
-      styleSheet.remove(componentId);
-    }
+    styleSheet.clearRules(this.componentId);
   }
 
-  // TODO: overwrite in-place instead of remove+create?
   renderStyles(executionContext: Object, styleSheet: StyleSheet) {
+    // NOTE: Remove old styles, then inject the new ones
     this.removeStyles(styleSheet);
     this.createStyles(executionContext, styleSheet);
   }

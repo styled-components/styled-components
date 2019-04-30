@@ -1,5 +1,6 @@
 // @flow
-import StyleSheet from './StyleSheet';
+
+import StyleSheet from '../sheet';
 import StyledError from '../utils/error';
 
 export default class Keyframes {
@@ -18,7 +19,7 @@ export default class Keyframes {
 
   inject = (styleSheet: StyleSheet) => {
     if (!styleSheet.hasNameForId(this.id, this.name)) {
-      styleSheet.inject(this.id, this.rules, this.name);
+      styleSheet.insertRules(this.id, this.name, this.rules);
     }
   };
 
