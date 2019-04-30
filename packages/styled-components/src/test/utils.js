@@ -4,7 +4,8 @@
  * our public API works the way we promise/want
  */
 import styled from '../constructors/styled';
-import StyleSheet from '../models/StyleSheet';
+import { masterSheet } from '../models/StyleSheetManager';
+import { resetGroupIds } from '../sheet/GroupIDAllocator';
 import StyledError from '../utils/error';
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
@@ -30,9 +31,12 @@ export const resetStyled = (isServer: boolean = false) => {
     document.head.innerHTML = '';
   }
 
-  StyleSheet.reset(isServer);
+  resetGroupIds();
+  masterSheet.names = new Map();
+  masterSheet.clearTag();
   mockIndex = 0;
   mockInputs = {};
+
   if (typeof window !== 'undefined') window.scCGSHMRCache = {};
 
   return styled;
