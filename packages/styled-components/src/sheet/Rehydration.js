@@ -19,16 +19,16 @@ export const outputSheet = (sheet: Sheet) => {
     if (id === undefined) continue;
 
     const names = sheet.names.get(id);
-    if (names === undefined) continue;
-
     const rules = tag.getGroup(group);
+    if (names === undefined || rules.length === 0) continue;
+
     const selector = `${SC_ATTR}.g${group}[id="${id}"]`;
 
     let content = '';
     if (names !== undefined) {
       names.forEach(name => {
         if (name.length > 0) {
-          content += `${name  },`;
+          content += `${name},`;
         }
       });
     }
