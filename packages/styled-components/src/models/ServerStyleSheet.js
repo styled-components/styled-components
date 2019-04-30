@@ -5,7 +5,6 @@ import React from 'react';
 
 import {
   IS_BROWSER,
-  SC_STREAM_ATTR,
   SC_ATTR,
   SC_VERSION_ATTR,
   SC_VERSION
@@ -22,6 +21,7 @@ const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 
 export default class ServerStyleSheet {
   sheet: StyleSheet;
+
   sealed: boolean;
 
   constructor() {

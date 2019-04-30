@@ -1,6 +1,6 @@
 // @flow
 
-import { SC_ATTR, SC_VERSION_ATTR, SC_VERSION } from '../constants';
+import { SC_ATTR, SC_ATTR_ACTIVE, SC_VERSION_ATTR, SC_VERSION } from '../constants';
 import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
 import { getSheet } from './dom';
 import type { Sheet } from './Sheet';
@@ -18,6 +18,8 @@ export const outputSheet = (sheet: Sheet) => {
     if (id === undefined) continue;
 
     const names = sheet.names.get(id);
+    if (names === undefined) continue;
+
     const rules = tag.getGroup(group);
     const selector = `${SC_ATTR}.g${group}[id="${id}"]`;
 
@@ -45,9 +47,16 @@ export const outputSheet = (sheet: Sheet) => {
 
 export const rehydrateSheet = (sheet: Sheet) => {
   const nodes = document.querySelectorAll(SELECTOR);
+
   for (let i = 0, l = nodes.length; i < l; i++) {
     const node = ((nodes[i]: any): HTMLStyleElement);
-    rehydrateSheetFromTag(sheet, node);
+    if (node && node.getAttribute(SC_ATTR) !== SC_ATTR_ACTIVE) {
+      rehydrateSheetFromTag(sheet, node);
+
+      if (node.parentNode) {
+        node.parentNode.removeChild(node);
+      }
+    }
   }
 };
 
@@ -86,10 +95,5 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
     } else {
       rules.push(cssRule.cssText);
     }
-  }
-
-  // Remove style tag once rehydration is complete
-  if (style.parentNode) {
-    style.parentNode.removeChild(style);
   }
 };
