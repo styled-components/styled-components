@@ -6,11 +6,11 @@ import { getSheet } from './dom';
 import type { Sheet } from './Sheet';
 
 const SELECTOR = `style[${SC_ATTR}][${SC_VERSION_ATTR}="${SC_VERSION}"]`;
-const MARKER_RE = new RegExp(`^${SC_ATTR}\\.(\\w+)\\[g="(\\d+)"\\]`, 'g');
+const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\]`, 'g');
 
 export const outputSheet = (sheet: Sheet) => {
   const tag = sheet.getTag();
-  const length = tag.length;
+  const {length} = tag;
 
   let css = '';
   for (let group = 0; group < length; group++) {
@@ -19,7 +19,7 @@ export const outputSheet = (sheet: Sheet) => {
 
     const names = sheet.names.get(id);
     const rules = tag.getGroup(group);
-    const selector = `${SC_ATTR}.${id}[g="${group}"]`;
+    const selector = `${SC_ATTR}.g${group}[id="${id}"]`;
 
     let content = '';
     if (names !== undefined) {
@@ -56,10 +56,11 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
   for (let i = 0, l = cssRules.length; i < l; i++) {
     const cssRule = (cssRules[i]: any);
     const marker = MARKER_RE.exec(cssRule.selectorText);
+
     if (marker !== null) {
-      const id = marker[1];
-      const group = parseInt(marker[2], 10) | 0;
-      const content = cssRule.style.content;
+      const group = parseInt(marker[1], 10) | 0;
+      const id = marker[2];
+      const {content} = cssRule.style;
       rehydrateNamesFromContent(sheet, id, content);
       setGroupForId(id, group);
       sheet.getTag().insertRules(group, rules);
