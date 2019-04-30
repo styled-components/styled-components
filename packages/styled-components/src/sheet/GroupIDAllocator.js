@@ -1,7 +1,7 @@
 // @flow
 
-const groupIDRegister = new Map<string, number>();
-const reverseRegister = new Map<number, string>();
+const groupIDRegister: Map<string, number> = new Map();
+const reverseRegister: Map<number, string> = new Map();
 
 let nextFreeGroup = 0;
 

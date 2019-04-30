@@ -62,7 +62,7 @@ class DefaultSheet implements Sheet {
     getGroupForId(id);
 
     if (!this.names.has(id)) {
-      const groupNames = new Set<string>();
+      const groupNames = new Set();
       groupNames.add(name);
       this.names.set(id, groupNames);
     } else {
