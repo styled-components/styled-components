@@ -1,6 +1,6 @@
 // @flow
 
-import { SC_ATTR, SC_VERSION_ATTR, SC_VERSION } from '../constants';
+import { SC_ATTR, SC_ATTR_ACTIVE, SC_VERSION_ATTR, SC_VERSION } from '../constants';
 
 const ELEMENT_TYPE = 1; /* Node.ELEMENT_TYPE */
 
@@ -13,7 +13,7 @@ const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
     if (
       child &&
       child.nodeType === ELEMENT_TYPE &&
-      child.getAttribute(SC_ATTR)
+      child.hasAttribute(SC_ATTR)
     ) {
       return ((child: any): HTMLStyleElement);
     }
@@ -30,7 +30,7 @@ export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
   const prevStyle = findLastStyleTag(parent);
   const nextSibling = prevStyle !== undefined ? prevStyle.nextSibling : null;
 
-  style.setAttribute(SC_ATTR, '');
+  style.setAttribute(SC_ATTR, SC_ATTR_ACTIVE);
   style.setAttribute(SC_VERSION_ATTR, SC_VERSION);
   parent.insertBefore(style, nextSibling);
 

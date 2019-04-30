@@ -6,7 +6,7 @@ import { type GroupedTag, makeGroupedTag } from './GroupedTag';
 import { getGroupForId } from './GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from './Rehydration';
 
-let SHOULD_REHYDRATE = !IS_BROWSER;
+let SHOULD_REHYDRATE = IS_BROWSER;
 
 /** Contains the main stylesheet logic for stringification and caching */
 export interface Sheet {
