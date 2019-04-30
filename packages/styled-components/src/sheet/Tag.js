@@ -57,7 +57,7 @@ class SpeedyTag implements Tag {
   }
 
   getRule(index: number): string {
-    if (index >= 0 && index < this.length) {
+    if (index < this.length) {
       return this.sheet.cssRules[index].cssText;
     } else {
       return '';
@@ -97,7 +97,7 @@ class TextTag implements Tag {
   }
 
   getRule(index: number): string {
-    if (index >= 0 && index < this.length) {
+    if (index < this.length) {
       return this.nodes[index].textContent;
     } else {
       return '';
@@ -117,7 +117,7 @@ class VirtualTag implements Tag {
   }
 
   insertRule(index: number, rule: string): boolean {
-    if (index <= this.length && index >= 0) {
+    if (index <= this.length) {
       this.rules.splice(index, 0, rule);
       this.length++;
       return true;
@@ -132,7 +132,7 @@ class VirtualTag implements Tag {
   }
 
   getRule(index: number): string {
-    if (index >= 0 && index < this.length) {
+    if (index < this.length) {
       return this.rules[index];
     } else {
       return '';

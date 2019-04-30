@@ -25,18 +25,19 @@ export const outputSheet = (sheet: Sheet) => {
     if (names !== undefined) {
       names.forEach(name => {
         if (name.length > 0) {
-          content += `${name},`;
+          content += `${name  },`;
         }
       });
     }
 
-    if (rules.length > 0) {
-      css += rules;
-      css += '\n';
+    // NOTE: It's easier to collect rules and have the marker
+    // after the actual rules to simplify the rehydration
+    css += rules + selector;
+    if (content.length > 0) {
+      css += `{content:"${content}"}\n`;
+    } else {
+      css += '{}\n';
     }
-
-    css += selector;
-    css += `{content:"${content}"}\n`;
   }
 
   return css;
@@ -76,12 +77,9 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
       if (group !== 0) {
         // Rehydrate componentId to group index mapping
         setGroupForId(id, group);
-
         // Rehydrate names and rules
-        if (content.length > 0 && rules.length > 0) {
-          rehydrateNamesFromContent(sheet, id, content);
-          sheet.getTag().insertRules(group, rules);
-        }
+        rehydrateNamesFromContent(sheet, id, content);
+        sheet.getTag().insertRules(group, rules);
       }
 
       rules.length = 0;
