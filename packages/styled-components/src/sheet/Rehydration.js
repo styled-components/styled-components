@@ -5,8 +5,9 @@ import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
 import { getSheet } from './dom';
 import type { Sheet } from './Sheet';
 
+const PLAIN_RULE_TYPE = 1;
 const SELECTOR = `style[${SC_ATTR}][${SC_VERSION_ATTR}="${SC_VERSION}"]`;
-const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\]`, 'g');
+const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\]`);
 
 export const outputSheet = (sheet: Sheet) => {
   const tag = sheet.getTag();
@@ -76,24 +77,29 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
 
   for (let i = 0, l = cssRules.length; i < l; i++) {
     const cssRule = (cssRules[i]: any);
-    const marker = MARKER_RE.exec(cssRule.selectorText);
 
-    if (marker !== null) {
-      const group = parseInt(marker[1], 10) | 0;
-      const id = marker[2];
-      const { content } = cssRule.style;
-
-      if (group !== 0) {
-        // Rehydrate componentId to group index mapping
-        setGroupForId(id, group);
-        // Rehydrate names and rules
-        rehydrateNamesFromContent(sheet, id, content);
-        sheet.getTag().insertRules(group, rules);
-      }
-
-      rules.length = 0;
-    } else {
+    if (cssRule.type !== PLAIN_RULE_TYPE) {
       rules.push(cssRule.cssText);
+    } else {
+      const marker = cssRule.selectorText.match(MARKER_RE);
+
+      if (marker !== null) {
+        const group = parseInt(marker[1], 10) | 0;
+        const id = marker[2];
+        const { content } = cssRule.style;
+
+        if (group !== 0) {
+          // Rehydrate componentId to group index mapping
+          setGroupForId(id, group);
+          // Rehydrate names and rules
+          rehydrateNamesFromContent(sheet, id, content);
+          sheet.getTag().insertRules(group, rules);
+        }
+
+        rules.length = 0;
+      } else {
+        rules.push(cssRule.cssText);
+      }
     }
   }
 };
