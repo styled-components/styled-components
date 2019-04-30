@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable no-underscore-dangle */
+
 import React from 'react';
-import stream, { type Readable } from 'stream';
 
 import {
   IS_BROWSER,
@@ -68,14 +68,16 @@ export default class ServerStyleSheet {
     return <style {...props} />;
   }
 
-  interleaveWithNodeStream(readableStream: Readable) {
+  interleaveWithNodeStream(input: any) {
     if (!__SERVER__ || IS_BROWSER) {
       throw new StyledError(3);
     }
 
+    const { Readable, Transform } = require('stream');
+    const readableStream: Readable = input;
     const { sheet, getStyleTags } = this;
 
-    const transformer = new stream.Transform({
+    const transformer = new Transform({
       transform: function appendStyleChunks(chunk, /* encoding */ _, callback) {
         // Get the chunk and retrieve the sheet's CSS as an HTML chunk,
         // then reset its rules so we get only new ones for the next chunk
