@@ -3,7 +3,7 @@
 import { IS_BROWSER } from '../constants';
 import { type Tag, makeTag } from './Tag';
 import { type GroupedTag, makeGroupedTag } from './GroupedTag';
-import { getGroupForID } from './GroupIDAllocator';
+import { getGroupForId } from './GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from './Rehydration';
 
 let SHOULD_REHYDRATE = !IS_BROWSER;
@@ -13,7 +13,7 @@ export interface Sheet {
   tag: Tag;
   groupedTag: GroupedTag;
   names: Map<string, Set<string>>;
-  hasNameForID(id: string, name: string): boolean;
+  hasNameForId(id: string, name: string): boolean;
   registerName(id: string, name: string): void;
   insertRules(id: string, name: string, rules: string[]): void;
   clearNames(id: string): void;
@@ -30,8 +30,8 @@ class DefaultSheet implements Sheet {
   names: Map<string, Set<string>>;
 
   /** Register a group ID to give it an index */
-  static registerID(id: string): number {
-    return getGroupForID(id);
+  static registerId(id: string): number {
+    return getGroupForId(id);
   }
 
   constructor(isServer: boolean, target?: HTMLElement) {
@@ -53,13 +53,13 @@ class DefaultSheet implements Sheet {
   }
 
   /** Check whether a name is known for caching */
-  hasNameForID(id: string, name: string): boolean {
+  hasNameForId(id: string, name: string): boolean {
     return this.names.has(id) && (this.names.get(id): any).has(name);
   }
 
   /** Mark a group's name as known for caching */
   registerName(id: string, name: string) {
-    getGroupForID(id);
+    getGroupForId(id);
 
     if (!this.names.has(id)) {
       const groupNames = new Set<string>();
@@ -73,7 +73,7 @@ class DefaultSheet implements Sheet {
   /** Insert new rules which also marks the name as known */
   insertRules(id: string, name: string, rules: string[]) {
     this.registerName(id, name);
-    this.groupedTag.insertRules(getGroupForID(id), rules);
+    this.groupedTag.insertRules(getGroupForId(id), rules);
   }
 
   /** Clears all cached names for a given group ID */
@@ -85,7 +85,7 @@ class DefaultSheet implements Sheet {
 
   /** Clears all rules for a given group ID */
   clearRules(id: string) {
-    this.groupedTag.clearGroup(getGroupForID(id));
+    this.groupedTag.clearGroup(getGroupForId(id));
     this.clearNames(id);
   }
 
