@@ -3,7 +3,7 @@
 const groupIDRegister: Map<string, number> = new Map();
 const reverseRegister: Map<number, string> = new Map();
 
-let nextFreeGroup = 0;
+let nextFreeGroup = 1;
 
 export const getGroupForId = (id: string): number => {
   if (groupIDRegister.has(id)) {

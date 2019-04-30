@@ -20,7 +20,9 @@ const BASE_SIZE = 1 << 8;
 
 class DefaultGroupedTag implements GroupedTag {
   groupSizes: Uint32Array;
+
   length: number;
+
   tag: Tag;
 
   constructor(tag: Tag) {
@@ -77,7 +79,7 @@ class DefaultGroupedTag implements GroupedTag {
 
   getGroup(group: number): string {
     let css = '';
-    if (group < this.length || this.groupSizes[group] === 0) {
+    if (group >= this.length || this.groupSizes[group] === 0) {
       return css;
     }
 
