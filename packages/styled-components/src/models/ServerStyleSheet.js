@@ -3,9 +3,17 @@
 import React from 'react';
 import stream, { type Readable } from 'stream';
 
-import { IS_BROWSER, SC_STREAM_ATTR } from '../constants';
+import {
+  IS_BROWSER,
+  SC_STREAM_ATTR,
+  SC_ATTR,
+  SC_VERSION_ATTR,
+  SC_VERSION
+} from '../constants';
+
 import StyledError from '../utils/error';
-import StyleSheet from './StyleSheet';
+import getNonce from '../utils/nonce';
+import StyleSheet from '../sheet';
 import StyleSheetManager from './StyleSheetManager';
 
 declare var __SERVER__: boolean;
@@ -13,30 +21,12 @@ declare var __SERVER__: boolean;
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 
 export default class ServerStyleSheet {
-  instance: StyleSheet;
-
-  masterSheet: StyleSheet;
-
+  sheet: StyleSheet;
   sealed: boolean;
 
   constructor() {
-    /* The master sheet might be reset, so keep a reference here */
-    this.masterSheet = StyleSheet.master;
-    this.instance = this.masterSheet.clone();
+    this.sheet = new StyleSheet(true);
     this.sealed = false;
-  }
-
-  /**
-   * Mark the ServerStyleSheet as being fully emitted and manually GC it from the
-   * StyleSheet singleton.
-   */
-  seal() {
-    if (!this.sealed) {
-      /* Remove sealed StyleSheets from the master sheet */
-      const index = this.masterSheet.clones.indexOf(this.instance);
-      this.masterSheet.clones.splice(index, 1);
-      this.sealed = true;
-    }
   }
 
   collectStyles(children: any) {
@@ -44,17 +34,38 @@ export default class ServerStyleSheet {
       throw new StyledError(2);
     }
 
-    return <StyleSheetManager sheet={this.instance}>{children}</StyleSheetManager>;
+    this.sealed = true;
+    return <StyleSheetManager sheet={this.sheet}>{children}</StyleSheetManager>;
   }
 
-  getStyleTags(): string {
-    this.seal();
-    return this.instance.toHTML();
+  getStyleTags = (): string => {
+    const css = this.sheet.toString();
+    const nonce = getNonce();
+    const attrs = [
+      nonce && `nonce="${nonce}"`,
+      SC_ATTR,
+      `${SC_VERSION_ATTR}="${SC_VERSION}"`
+    ];
+
+    const htmlAttr = attrs.filter(Boolean).join(' ');
+    return `<style ${htmlAttr}>${css}</style>`;
   }
 
-  getStyleElement() {
-    this.seal();
-    return this.instance.toReactElements();
+  getStyleElement = () => {
+    const props = {
+      [SC_ATTR]: '',
+      [SC_VERSION_ATTR]: SC_VERSION,
+      dangerouslySetInnerHTML: {
+        __html: this.sheet.toString()
+      }
+    };
+
+    const nonce = getNonce();
+    if (nonce) {
+      (props: any).nonce = nonce;
+    }
+
+    return <style {...props} />;
   }
 
   interleaveWithNodeStream(readableStream: Readable) {
@@ -62,48 +73,33 @@ export default class ServerStyleSheet {
       throw new StyledError(3);
     }
 
-    /* the tag index keeps track of which tags have already been emitted */
-    const { instance } = this;
-    let instanceTagIndex = 0;
-
-    const streamAttr = `${SC_STREAM_ATTR}="true"`;
+    const { sheet, getStyleTags } = this;
 
     const transformer = new stream.Transform({
       transform: function appendStyleChunks(chunk, /* encoding */ _, callback) {
-        const { tags } = instance;
-        let html = '';
-
-        /* retrieve html for each new style tag */
-        for (; instanceTagIndex < tags.length; instanceTagIndex += 1) {
-          const tag = tags[instanceTagIndex];
-          html += tag.toHTML(streamAttr);
-        }
-
-        /* force our StyleSheets to emit entirely new tags */
-        instance.sealAllTags();
-
+        // Get the chunk and retrieve the sheet's CSS as an HTML chunk,
+        // then reset its rules so we get only new ones for the next chunk
         const renderedHtml = chunk.toString();
+        const html = getStyleTags();
+        sheet.clearTag();
 
-        /* prepend style html to chunk, unless the start of the chunk is a closing tag in which case append right after that */
+        // prepend style html to chunk, unless the start of the chunk is a
+        // closing tag in which case append right after that
         if (CLOSING_TAG_R.test(renderedHtml)) {
-          const endOfClosingTag = renderedHtml.indexOf('>');
+          const endOfClosingTag = renderedHtml.indexOf('>') + 1;
+          const before = renderedHtml.slice(0, endOfClosingTag);
+          const after = renderedHtml.slice(endOfClosingTag);
 
-          this.push(
-            renderedHtml.slice(0, endOfClosingTag + 1) +
-              html +
-              renderedHtml.slice(endOfClosingTag + 1)
-          );
-        } else this.push(html + renderedHtml);
+          this.push(before + html + after);
+        } else {
+          this.push(html + renderedHtml);
+        }
 
         callback();
       },
     });
 
-    readableStream.on('end', () => this.seal());
-
     readableStream.on('error', err => {
-      this.seal();
-
       // forward the error to the transform stream
       transformer.emit('error', err);
     });
