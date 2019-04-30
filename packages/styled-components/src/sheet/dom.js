@@ -2,13 +2,19 @@
 
 import { SC_ATTR, SC_VERSION_ATTR, SC_VERSION } from '../constants';
 
+const ELEMENT_TYPE = 1; /* Node.ELEMENT_TYPE */
+
 /** Find last style element if any inside target */
 const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
   const { childNodes } = target;
 
   for (let i = childNodes.length; i >= 0; i--) {
     const child = ((childNodes[i]: any): ?HTMLElement);
-    if (child && child.nodeType === 1 && child.getAttribute(SC_ATTR)) {
+    if (
+      child &&
+      child.nodeType === ELEMENT_TYPE &&
+      child.getAttribute(SC_ATTR)
+    ) {
       return ((child: any): HTMLStyleElement);
     }
   }
