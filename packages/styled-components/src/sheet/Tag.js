@@ -76,7 +76,7 @@ class TextTag implements Tag {
   }
 
   insertRule(index: number, rule: string): boolean {
-    if (index < this.length && index >= 0) {
+    if (index <= this.length && index >= 0) {
       const node = document.createTextNode(rule);
       const refNode = this.nodes[index];
       this.element.insertBefore(node, refNode || null);
@@ -112,7 +112,7 @@ class VirtualTag implements Tag {
   }
 
   insertRule(index: number, rule: string): boolean {
-    if (index < 0 || (index >= this.length && this.length !== 0)) {
+    if (index < 0 || index > this.length) {
       return false;
     } else {
       this.rules.splice(index, 0, rule);
