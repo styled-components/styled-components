@@ -23,11 +23,11 @@ export default class ComponentStyle {
 
   isStatic: boolean;
 
-  lastClassName: ?string;
+  prevName: void | string;
 
   constructor(rules: RuleSet, attrs: Attrs, componentId: string) {
     this.rules = rules;
-    this.isStatic = !isHMREnabled && isStaticRules(rules, attrs);
+    this.isStatic = !isHMREnabled && IS_BROWSER && isStaticRules(rules, attrs);
     this.componentId = componentId;
 
     // NOTE: This registers the componentId, which ensures a consistent order
@@ -41,14 +41,14 @@ export default class ComponentStyle {
      * Returns the hash to be injected on render()
      * */
   generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
-    const { isStatic, componentId, lastClassName } = this;
+    const { isStatic, componentId, prevName } = this;
+
     if (
-      IS_BROWSER &&
       isStatic &&
-      typeof lastClassName === 'string' &&
-      styleSheet.hasNameForId(componentId, lastClassName)
+      prevName !== undefined &&
+      styleSheet.hasNameForId(componentId, prevName)
     ) {
-      return lastClassName;
+      return prevName;
     }
 
     const flatRules = flatten(this.rules, executionContext, styleSheet);
@@ -59,7 +59,6 @@ export default class ComponentStyle {
       styleSheet.insertRules(this.componentId, name, css);
     }
 
-    this.lastClassName = name;
-    return name;
+    return (this.prevName = name);
   }
 }
