@@ -1,9 +1,14 @@
 // @flow
 
-const groupIDRegister: Map<string, number> = new Map();
-const reverseRegister: Map<number, string> = new Map();
-
+let groupIDRegister: Map<string, number> = new Map();
+let reverseRegister: Map<number, string> = new Map();
 let nextFreeGroup = 1;
+
+export const resetGroupIds = () => {
+  groupIDRegister = new Map();
+  reverseRegister = new Map();
+  nextFreeGroup = 1;
+};
 
 export const getGroupForId = (id: string): number => {
   if (groupIDRegister.has(id)) {
