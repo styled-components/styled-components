@@ -5,7 +5,7 @@ const reverseRegister = new Map<number, string>();
 
 let nextFreeGroup = 0;
 
-export const getGroupForID = (id: string): number => {
+export const getGroupForId = (id: string): number => {
   if (groupIDRegister.has(id)) {
     return (groupIDRegister.get(id): any);
   }
@@ -16,11 +16,11 @@ export const getGroupForID = (id: string): number => {
   return group;
 };
 
-export const getIDForGroup = (group: number): void | string => {
+export const getIdForGroup = (group: number): void | string => {
   return reverseRegister.get(group);
 };
 
-export const setGroupForID = (id: string, group: number) => {
+export const setGroupForId = (id: string, group: number) => {
   if (group >= nextFreeGroup) {
     nextFreeGroup = group + 1;
   }

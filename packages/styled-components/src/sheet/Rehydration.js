@@ -1,7 +1,7 @@
 // @flow
 
 import { SC_ATTR, SC_VERSION_ATTR, SC_VERSION } from '../constants';
-import { getIDForGroup, setGroupForID } from './GroupIDAllocator';
+import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
 import { getSheet } from './dom';
 import type { Sheet } from './Sheet';
 
@@ -14,7 +14,7 @@ export const outputSheet = (sheet: Sheet) => {
 
   let css = '';
   for (let group = 0; group < length; group++) {
-    const id = getIDForGroup(group);
+    const id = getIdForGroup(group);
     if (id === undefined) continue;
 
     const names = sheet.names.get(id);
@@ -61,7 +61,7 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
       const group = parseInt(marker[2], 10) | 0;
       const content = cssRule.style.content;
       rehydrateNamesFromContent(sheet, id, content);
-      setGroupForID(id, group);
+      setGroupForId(id, group);
       sheet.groupedTag.insertRules(group, rules);
       rules.length = 0;
     } else {
