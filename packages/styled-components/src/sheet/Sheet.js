@@ -23,8 +23,11 @@ export interface Sheet {
 
 class StyleSheet implements Sheet {
   isServer: boolean;
+
   target: void | HTMLElement;
+
   tag: void | GroupedTag;
+
   names: Map<string, Set<string>>;
 
   /** Register a group ID to give it an index */
