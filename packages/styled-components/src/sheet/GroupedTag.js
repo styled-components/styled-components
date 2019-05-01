@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable no-use-before-define */
 
 import type { Tag } from './Tag';
 

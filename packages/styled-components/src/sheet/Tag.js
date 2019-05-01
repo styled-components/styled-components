@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable no-use-before-define */
 
 import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
 import { makeStyleTag, getSheet } from './dom';

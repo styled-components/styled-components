@@ -1,7 +1,8 @@
 // @flow
 
 import { IS_BROWSER } from '../constants';
-import { type Tag, makeTag } from './Tag';
+import type { Sheet } from './types';
+import { makeTag } from './Tag';
 import { type GroupedTag, makeGroupedTag } from './GroupedTag';
 import { getGroupForId } from './GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from './Rehydration';
@@ -9,18 +10,6 @@ import { outputSheet, rehydrateSheet } from './Rehydration';
 let SHOULD_REHYDRATE = IS_BROWSER;
 
 /** Contains the main stylesheet logic for stringification and caching */
-export interface Sheet {
-  names: Map<string, Set<string>>;
-  getTag(): GroupedTag;
-  hasNameForId(id: string, name: string): boolean;
-  registerName(id: string, name: string): void;
-  insertRules(id: string, name: string, rules: string[]): void;
-  clearNames(id: string): void;
-  clearRules(id: string): void;
-  clearTag(): void;
-  toString(): string;
-}
-
 class StyleSheet implements Sheet {
   isServer: boolean;
 
