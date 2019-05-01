@@ -33,6 +33,7 @@ tasks:
       - lint
   build:
     image: node:10
+    cwd: ./packages/styled-components/
     command:
       - yarn
     args:
