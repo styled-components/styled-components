@@ -3,8 +3,6 @@ import Stylis from 'stylis/stylis.min';
 import _insertRulePlugin from 'stylis-rule-sheet';
 import type { Interpolation } from '../types';
 
-const COMMENT_REGEX = /^\s*\/\/.*$/gm;
-
 const stylis = new Stylis({
   global: false,
   cascade: true,
@@ -71,14 +69,15 @@ const selfReferenceReplacementPlugin = (context, _, selectors) => {
 
 stylis.use([selfReferenceReplacementPlugin, parseRulesPlugin, returnRulesPlugin]);
 
+const COMMENT_REGEX = /^\s*\/\/.*$/gm;
+
 export default function stringifyRules(
-  rules: Array<Interpolation>,
+  css: string,
   selector: string,
   prefix: ?string,
   componentId: string = '&'
 ): Array<string> {
-  const flatCSS = rules.join('').replace(COMMENT_REGEX, ''); // replace JS comments
-
+  const flatCSS = css.replace(COMMENT_REGEX, '')
   const cssStr = selector && prefix ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS;
 
   // stylis has no concept of state to be passed to plugins

@@ -7,8 +7,6 @@ import Keyframes from '../models/Keyframes';
 
 import type { Interpolation, Styles } from '../types';
 
-const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '');
-
 export default function keyframes(
   strings: Styles,
   ...interpolations: Array<Interpolation>
@@ -25,7 +23,7 @@ export default function keyframes(
     );
   }
 
-  const rules = css(strings, ...interpolations);
-  const name = hasher(replaceWhitespace(JSON.stringify(rules)));
+  const rules = css(strings, ...interpolations).join('');
+  const name = hasher(rules);
   return new Keyframes(name, stringifyRules(rules, name, '@keyframes'));
 }
