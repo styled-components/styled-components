@@ -1,6 +1,7 @@
 [ignore]
 
 <PROJECT_ROOT>/packages/sandbox/.*
+<PROJECT_ROOT>/packages/benchmarks/.*
 
 .*/node_modules/.cache/.*
 .*/node_modules/.*/__tests__/.*

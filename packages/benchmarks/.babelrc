@@ -1,0 +1,6 @@
+{
+  "presets": ["../../babel-preset.js"],
+  "plugins": [
+    "babel-plugin-react-native-web"
+  ]
+}
