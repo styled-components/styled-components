@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable */
 
 import generateAlphabeticName from './generateAlphabeticName';
 

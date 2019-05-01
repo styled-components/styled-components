@@ -1,8 +1,7 @@
 // @flow
 
-import React, { useContext, useMemo, useDebugValue, type Node, type Context } from 'react';
+import React, { useContext, useMemo, type Node, type Context } from 'react';
 import PropTypes from 'prop-types';
-import ServerStyleSheet from './ServerStyleSheet';
 import StyleSheet from '../sheet';
 import StyledError from '../utils/error';
 

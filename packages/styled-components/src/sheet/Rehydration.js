@@ -3,7 +3,7 @@
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_VERSION_ATTR, SC_VERSION } from '../constants';
 import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
 import { getSheet } from './dom';
-import type { Sheet } from './Sheet';
+import type { Sheet } from './types';
 
 const PLAIN_RULE_TYPE = 1;
 const SELECTOR = `style[${SC_ATTR}][${SC_VERSION_ATTR}="${SC_VERSION}"]`;
@@ -46,21 +46,6 @@ export const outputSheet = (sheet: Sheet) => {
   return css;
 };
 
-export const rehydrateSheet = (sheet: Sheet) => {
-  const nodes = document.querySelectorAll(SELECTOR);
-
-  for (let i = 0, l = nodes.length; i < l; i++) {
-    const node = ((nodes[i]: any): HTMLStyleElement);
-    if (node && node.getAttribute(SC_ATTR) !== SC_ATTR_ACTIVE) {
-      rehydrateSheetFromTag(sheet, node);
-
-      if (node.parentNode) {
-        node.parentNode.removeChild(node);
-      }
-    }
-  }
-};
-
 const rehydrateNamesFromContent = (sheet: Sheet, id: string, content: string) => {
   const names = content.slice(1, -1).split(',');
   for (let i = 0, l = names.length; i < l; i++) {
@@ -99,6 +84,21 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
         rules.length = 0;
       } else {
         rules.push(cssRule.cssText);
+      }
+    }
+  }
+};
+
+export const rehydrateSheet = (sheet: Sheet) => {
+  const nodes = document.querySelectorAll(SELECTOR);
+
+  for (let i = 0, l = nodes.length; i < l; i++) {
+    const node = ((nodes[i]: any): HTMLStyleElement);
+    if (node && node.getAttribute(SC_ATTR) !== SC_ATTR_ACTIVE) {
+      rehydrateSheetFromTag(sheet, node);
+
+      if (node.parentNode) {
+        node.parentNode.removeChild(node);
       }
     }
   }

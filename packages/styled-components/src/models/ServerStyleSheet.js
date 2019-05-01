@@ -73,7 +73,9 @@ export default class ServerStyleSheet {
       throw new StyledError(3);
     }
 
+    // eslint-disable-next-line global-require
     const { Readable, Transform } = require('stream');
+
     const readableStream: Readable = input;
     const { sheet, getStyleTags } = this;
 
