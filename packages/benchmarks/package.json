@@ -1,0 +1,40 @@
+{
+  "name": "@styled-components/benchmarks",
+  "private": true,
+  "version": "0.8.6",
+  "scripts": {
+    "prebuild": "mkdir -p dist && cp index.html dist/",
+    "build": "webpack-cli --config webpack.config.js",
+    "start": "node run-headless.js"
+  },
+  "dependencies": {
+    "aphrodite": "^2.2.0",
+    "classnames": "^2.2.5",
+    "d3-scale-chromatic": "^1.2.0",
+    "emotion": "^9.2.6",
+    "fela": "^6.1.9",
+    "glamor": "2.20.40",
+    "radium": "^0.24.1",
+    "react": "^16.8.6",
+    "react-art": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "react-is": "^16.8.6",
+    "react-fela": "^7.3.1",
+    "react-jss": "^8.6.1",
+    "react-native-web": "^0.11.2",
+    "reactxp": "^1.3.3",
+    "styled-jsx": "^2.2.6",
+    "styletron-engine-atomic": "^1.0.8",
+    "styletron-react": "^4.3.5"
+  },
+  "devDependencies": {
+    "babel-plugin-react-native-web": "^0.11.2",
+    "babel-loader": "^8.0.5",
+    "css-loader": "^2.1.1",
+    "style-loader": "^0.23.1",
+    "webpack": "^4.30.0",
+    "webpack-bundle-analyzer": "^3.3.2",
+    "webpack-cli": "^3.3.0"
+  },
+  "sideEffects": false
+}

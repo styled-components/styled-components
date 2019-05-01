@@ -14,6 +14,9 @@ module.exports = {
     path: path.resolve(appDirectory, 'dist'),
     filename: 'bundle.js',
   },
+  performance: {
+    hints: false
+  },
   module: {
     rules: [
       {
@@ -28,7 +31,7 @@ module.exports = {
       },
       {
         test: /\.js$/,
-        include: [path.resolve(appDirectory, 'src'), path.resolve('..', 'src')],
+        include: [path.join(appDirectory, 'src')],
         use: {
           loader: 'babel-loader',
         },
@@ -46,9 +49,9 @@ module.exports = {
     }),
   ],
   resolve: {
+    symlinks: true,
     alias: {
-      'react-native': 'react-native-web',
-      'styled-components': path.resolve('../src'),
-    },
+      'react-native': 'react-native-web'
+    }
   },
 };
