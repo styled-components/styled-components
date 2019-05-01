@@ -36,7 +36,7 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
     for (let i = 0, len = chunk.length, result; i < len; i += 1) {
       result = flatten(chunk[i], executionContext, styleSheet);
 
-      if (result === null) continue;
+      if (result === '') continue;
       else if (Array.isArray(result)) ruleSet.push(...result);
       else ruleSet.push(result);
     }
@@ -45,7 +45,7 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
   }
 
   if (isFalsish(chunk)) {
-    return null;
+    return '';
   }
 
   /* Handle other components */
