@@ -1,7 +1,7 @@
 // @flow
 
 import flatten from '../utils/flatten';
-import hasher, { hash } from '../utils/hasher';
+import { hash } from '../utils/hasher';
 import generateName from '../utils/generateAlphabeticName';
 import stringifyRules from '../utils/stringifyRules';
 import isStaticRules from '../utils/isStaticRules';
@@ -79,7 +79,7 @@ export default class ComponentStyle {
       }
     }
 
-    const name = generateName(~dynamicHash + 1 | 0)
+    const name = generateName(dynamicHash)
     if (!styleSheet.hasNameForId(componentId, name)) {
       const cssFormatted = stringifyRules(css, `.${name}`, undefined, componentId);
       styleSheet.insertRules(this.componentId, name, cssFormatted);
