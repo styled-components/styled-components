@@ -5,16 +5,6 @@ import type { Interpolation } from '../types';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 
-// NOTE: This stylis instance is only used to split rules from SSR'd style tags
-const stylisSplitter = new Stylis({
-  global: false,
-  cascade: true,
-  keyframe: false,
-  prefix: false,
-  compress: false,
-  semicolon: true,
-});
-
 const stylis = new Stylis({
   global: false,
   cascade: true,
@@ -80,9 +70,6 @@ const selfReferenceReplacementPlugin = (context, _, selectors) => {
 };
 
 stylis.use([selfReferenceReplacementPlugin, parseRulesPlugin, returnRulesPlugin]);
-stylisSplitter.use([parseRulesPlugin, returnRulesPlugin]);
-
-export const splitByRules = (css: string): Array<string> => stylisSplitter('', css);
 
 export default function stringifyRules(
   rules: Array<Interpolation>,
