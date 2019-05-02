@@ -1,4 +1,5 @@
-import styled from 'styled-components';
+/* eslint-disable import/no-unresolved */
+import styled from 'styled-components-local';
 import View from './View';
 
 const Dot = styled(View)`
