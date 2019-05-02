@@ -9,7 +9,9 @@
     "lint": "wsrun --exclude-missing lint",
     "size": "wsrun --exclude-missing lint:size",
     "test": "wsrun --exclude-missing test",
-    "prepublishOnly": "run-s build test"
+    "prepublishOnly": "run-s build test",
+    "prebenchmark": "wsrun --stages --exclude-missing build",
+    "benchmark": "wsrun -p @styled-components/benchmarks --stages start"
   },
   "author": "Glen Maddern",
   "license": "MIT",
