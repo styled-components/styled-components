@@ -50,8 +50,7 @@ module.exports = {
   ],
   resolve: {
     alias: {
-      'react-native': 'react-native-web',
-      'styled-components-local': path.resolve(__dirname, '..', 'styled-components'),
+      'react-native': 'react-native-web'
     },
   },
 };
