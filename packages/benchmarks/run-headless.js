@@ -15,7 +15,7 @@ if (tracing) {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
   console.log('Opening benchmark app...');
-  await page.goto(`file://${path.join(__dirname, './dist/index.html')}`);
+  await page.goto(`file://${path.join(__dirname, './index.html')}`);
 
   console.log(
     'Running benchmarks... (this may take a minute or two; do not use your machine while these are running!)',
