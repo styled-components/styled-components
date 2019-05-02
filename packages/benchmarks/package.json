@@ -3,7 +3,6 @@
   "private": true,
   "version": "0.8.6",
   "scripts": {
-    "prebuild": "mkdir -p dist && cp index.html dist/",
     "build": "webpack-cli --config webpack.config.js",
     "start": "node run-headless.js"
   },
