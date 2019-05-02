@@ -46,9 +46,7 @@ export default class ComponentStyle {
     const { componentId } = this;
 
     if (this.isStatic) {
-      if (styleSheet.hasNameForId(componentId, componentId)) {
-        return componentId;
-      } else {
+      if (!styleSheet.hasNameForId(componentId, componentId)) {
         const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
         const cssStaticFormatted = stringifyRules(
           cssStatic,
@@ -58,34 +56,36 @@ export default class ComponentStyle {
         );
 
         styleSheet.insertRules(componentId, componentId, cssStaticFormatted);
-        return componentId;
       }
-    }
 
-    const { length } = this.rules;
+      return componentId;
+    } else {
+      const { length } = this.rules;
 
-    let i = 0;
-    let dynamicHash = this.baseHash;
-    let css = '';
+      let i = 0;
+      let dynamicHash = this.baseHash;
+      let css = '';
 
-    for (i = 0; i < length; i++) {
-      const partRule = this.rules[i];
-      if (typeof partRule === 'string') {
-        css += partRule;
-      } else {
-        const partChunk = flatten(partRule, executionContext, styleSheet);
-        const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
-        dynamicHash ^= hash(partString);
-        css += partString;
+      for (i = 0; i < length; i++) {
+        const partRule = this.rules[i];
+        if (typeof partRule === 'string') {
+          css += partRule;
+        } else {
+          const partChunk = flatten(partRule, executionContext, styleSheet);
+          const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
+          dynamicHash ^= hash(partString);
+          css += partString;
+        }
       }
-    }
 
-    const name = generateName(dynamicHash);
-    if (!styleSheet.hasNameForId(componentId, name)) {
-      const cssFormatted = stringifyRules(css, `.${name}`, undefined, componentId);
-      styleSheet.insertRules(componentId, name, cssFormatted);
-    }
+      const name = generateName(dynamicHash);
 
-    return name;
+      if (!styleSheet.hasNameForId(componentId, name)) {
+        const cssFormatted = stringifyRules(css, `.${name}`, undefined, componentId);
+        styleSheet.insertRules(componentId, name, cssFormatted);
+      }
+
+      return name;
+    }
   }
 }
