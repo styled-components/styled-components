@@ -66,11 +66,6 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
     return `.${chunk.styledComponentId}`;
   }
 
-  /* Handle objects */
-  if (isPlainObject(chunk)) {
-    return objToCssArray(chunk)
-  }
-
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
     if (isStatelessFunction(chunk) && executionContext) {
@@ -96,5 +91,6 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
     } else return chunk;
   }
 
-  return chunk.toString();
+  /* Handle objects */
+  return isPlainObject(chunk) ? objToCssArray(chunk) : chunk.toString();
 }
