@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "5.0.0-canary.0",
+  "version": "5.0.0-1.canary-sheet",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.esm.js",
@@ -77,14 +77,14 @@
   },
   "devDependencies": {
     "flow-bin": "^0.93.0",
+    "npm-run-all": "^4.1.2",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-frame-component": "^4.0.2",
     "react-is": "^16.8.6",
     "react-native": "^0.59.6",
     "react-primitives": "^0.8.0",
-    "react-test-renderer": "^16.8.6",
-    "npm-run-all": "^4.1.2"
+    "react-test-renderer": "^16.8.6"
   },
   "bundlesize": [
     {
