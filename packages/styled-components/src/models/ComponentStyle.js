@@ -38,14 +38,14 @@ export default class ComponentStyle {
   }
 
   /*
-     * Flattens a rule set into valid CSS
-     * Hashes it, wraps the whole chunk in a .hash1234 {}
-     * Returns the hash to be injected on render()
-     * */
+   * Flattens a rule set into valid CSS
+   * Hashes it, wraps the whole chunk in a .hash1234 {}
+   * Returns the hash to be injected on render()
+   * */
   generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
-    const { isStatic, componentId } = this;
+    const { componentId } = this;
 
-    if (isStatic) {
+    if (this.isStatic) {
       if (styleSheet.hasNameForId(componentId, componentId)) {
         return componentId;
       } else {
@@ -57,32 +57,33 @@ export default class ComponentStyle {
           componentId
         );
 
-        styleSheet.insertRules(this.componentId, componentId, cssStaticFormatted);
+        styleSheet.insertRules(componentId, componentId, cssStaticFormatted);
+        return componentId;
       }
     }
 
-    const {length} = this.rules
+    const { length } = this.rules;
 
-    let i = 0
-    let dynamicHash = this.baseHash
-    let css = ''
+    let i = 0;
+    let dynamicHash = this.baseHash;
+    let css = '';
 
     for (i = 0; i < length; i++) {
-      const partRule = this.rules[i]
+      const partRule = this.rules[i];
       if (typeof partRule === 'string') {
-        css += partRule
+        css += partRule;
       } else {
-        const partChunk = flatten(partRule, executionContext, styleSheet)
-        const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk
-        dynamicHash ^= hash(partString)
-        css += partString
+        const partChunk = flatten(partRule, executionContext, styleSheet);
+        const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
+        dynamicHash ^= hash(partString);
+        css += partString;
       }
     }
 
-    const name = generateName(dynamicHash)
+    const name = generateName(dynamicHash);
     if (!styleSheet.hasNameForId(componentId, name)) {
       const cssFormatted = stringifyRules(css, `.${name}`, undefined, componentId);
-      styleSheet.insertRules(this.componentId, name, cssFormatted);
+      styleSheet.insertRules(componentId, name, cssFormatted);
     }
 
     return name;
