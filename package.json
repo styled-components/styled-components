@@ -2,7 +2,7 @@
   "name": "styled-components-project",
   "private": true,
   "scripts": {
-    "build": "wsrun --exclude-missing build",
+    "build": "wsrun -p styled-components --exclude-missing build",
     "postbuild": "cp README.md packages/styled-components/",
     "dev": "wsrun --exclude-missing dev",
     "flow": "flow check",
