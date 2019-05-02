@@ -1,8 +1,8 @@
-/* eslint-disable react/prop-types */
+/* eslint-disable */
 
-import Benchmark from './Benchmark';
 import { Picker, StyleSheet, ScrollView, TouchableOpacity, View } from 'react-native';
 import React, { Component } from 'react';
+import Benchmark from './Benchmark';
 import Button from './Button';
 import { IconClear, IconEye } from './Icons';
 import ReportCard from './ReportCard';
@@ -20,9 +20,9 @@ export default class App extends Component {
     const currentBenchmarkName = Object.keys(props.tests)[0];
     this.state = {
       currentBenchmarkName,
-      currentLibraryName: 'styled-components',
+      currentLibraryName: 'styled-components-local',
       status: 'idle',
-      results: []
+      results: [],
     };
   }
 
@@ -135,12 +135,12 @@ export default class App extends Component {
                   <View ref={this._setBenchWrapperRef}>
                     <Benchmark
                       component={Component}
-                      forceLayout={true}
+                      forceLayout
                       getComponentProps={getComponentProps}
                       onComplete={this._createHandleComplete({
                         sampleCount,
                         benchmarkName: currentBenchmarkName,
-                        libraryName: currentLibraryName
+                        libraryName: currentLibraryName,
                       })}
                       ref={this._setBenchRef}
                       sampleCount={sampleCount}
@@ -187,7 +187,7 @@ export default class App extends Component {
     this._shouldHideBenchmark = !this._shouldHideBenchmark;
     if (this._benchWrapperRef) {
       this._benchWrapperRef.setNativeProps({
-        style: { opacity: this._shouldHideBenchmark ? 0 : 1 }
+        style: { opacity: this._shouldHideBenchmark ? 0 : 1 },
       });
     }
   };
@@ -200,10 +200,10 @@ export default class App extends Component {
             ...results,
             benchmarkName,
             libraryName,
-            libraryVersion: this.props.tests[benchmarkName][libraryName].version
-          }
+            libraryVersion: this.props.tests[benchmarkName][libraryName].version,
+          },
         ]),
-        status: 'complete'
+        status: 'complete',
       }),
       this._scrollToEnd
     );
@@ -243,29 +243,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    backgroundColor: 'black'
+    backgroundColor: 'black',
   },
   iconEye: {
     color: 'white',
-    height: 32
+    height: 32,
   },
   iconEyeContainer: {
     position: 'absolute',
     top: 10,
     right: 10,
-    zIndex: 1
+    zIndex: 1,
   },
   iconClearContainer: {
     height: '100%',
-    marginLeft: 5
+    marginLeft: 5,
   },
   grow: {
-    flex: 1
+    flex: 1,
   },
   listPanel: {
     flex: 1,
     width: '100%',
-    marginHorizontal: 'auto'
+    marginHorizontal: 'auto',
   },
   listBar: {
     padding: 5,
@@ -274,27 +274,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.fadedGray,
     borderBottomWidth: 1,
     borderBottomColor: colors.mediumGray,
-    justifyContent: 'flex-end'
+    justifyContent: 'flex-end',
   },
   pickers: {
-    flexDirection: 'row'
+    flexDirection: 'row',
   },
   pickerContainer: {
     flex: 1,
-    padding: 5
+    padding: 5,
   },
   pickerTitle: {
     fontSize: 12,
-    color: colors.deepGray
+    color: colors.deepGray,
   },
   picker: {
     ...StyleSheet.absoluteFillObject,
     appearance: 'none',
     opacity: 0,
-    width: '100%'
+    width: '100%',
   },
   button: {
     borderRadius: 0,
-    flex: 1
-  }
+    flex: 1,
+  },
 });
