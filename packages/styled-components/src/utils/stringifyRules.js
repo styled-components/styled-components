@@ -1,7 +1,6 @@
 // @flow
 import Stylis from 'stylis/stylis.min';
 import _insertRulePlugin from 'stylis-rule-sheet';
-import type { Interpolation } from '../types';
 
 const stylis = new Stylis({
   global: false,
@@ -77,7 +76,7 @@ export default function stringifyRules(
   prefix: ?string,
   componentId: string = '&'
 ): Array<string> {
-  const flatCSS = css.replace(COMMENT_REGEX, '')
+  const flatCSS = css.replace(COMMENT_REGEX, '');
   const cssStr = selector && prefix ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS;
 
   // stylis has no concept of state to be passed to plugins
