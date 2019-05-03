@@ -73,7 +73,7 @@ export default class ComponentStyle {
         } else {
           const partChunk = flatten(partRule, executionContext, styleSheet);
           const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
-          dynamicHash ^= hash(partString);
+          dynamicHash ^= hash(partString + i);
           css += partString;
         }
       }
