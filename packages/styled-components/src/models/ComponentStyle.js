@@ -1,7 +1,7 @@
 // @flow
 
 import flatten from '../utils/flatten';
-import { hash } from '../utils/hasher';
+import { hash, phash } from '../utils/hasher';
 import generateName from '../utils/generateAlphabeticName';
 import stringifyRules from '../utils/stringifyRules';
 import isStaticRules from '../utils/isStaticRules';
@@ -73,12 +73,12 @@ export default class ComponentStyle {
         } else {
           const partChunk = flatten(partRule, executionContext, styleSheet);
           const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
-          dynamicHash ^= hash(partString + i);
+          dynamicHash = phash(dynamicHash, partString + i);
           css += partString;
         }
       }
 
-      const name = generateName(dynamicHash);
+      const name = generateName(dynamicHash >>> 0);
 
       if (!styleSheet.hasNameForId(componentId, name)) {
         const cssFormatted = stringifyRules(css, `.${name}`, undefined, componentId);
