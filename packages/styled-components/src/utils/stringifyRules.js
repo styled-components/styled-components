@@ -1,19 +1,6 @@
 // @flow
 import Stylis from 'stylis/stylis.min';
 import _insertRulePlugin from 'stylis-rule-sheet';
-import type { Interpolation } from '../types';
-
-const COMMENT_REGEX = /^\s*\/\/.*$/gm;
-
-// NOTE: This stylis instance is only used to split rules from SSR'd style tags
-const stylisSplitter = new Stylis({
-  global: false,
-  cascade: true,
-  keyframe: false,
-  prefix: false,
-  compress: false,
-  semicolon: true,
-});
 
 const stylis = new Stylis({
   global: false,
@@ -80,18 +67,16 @@ const selfReferenceReplacementPlugin = (context, _, selectors) => {
 };
 
 stylis.use([selfReferenceReplacementPlugin, parseRulesPlugin, returnRulesPlugin]);
-stylisSplitter.use([parseRulesPlugin, returnRulesPlugin]);
 
-export const splitByRules = (css: string): Array<string> => stylisSplitter('', css);
+const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 
 export default function stringifyRules(
-  rules: Array<Interpolation>,
+  css: string,
   selector: string,
   prefix: ?string,
   componentId: string = '&'
 ): Array<string> {
-  const flatCSS = rules.join('').replace(COMMENT_REGEX, ''); // replace JS comments
-
+  const flatCSS = css.replace(COMMENT_REGEX, '');
   const cssStr = selector && prefix ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS;
 
   // stylis has no concept of state to be passed to plugins

@@ -15,7 +15,7 @@ module.exports = {
     filename: 'bundle.js',
   },
   performance: {
-    hints: false
+    hints: false,
   },
   module: {
     rules: [
@@ -49,9 +49,8 @@ module.exports = {
     }),
   ],
   resolve: {
-    symlinks: true,
     alias: {
       'react-native': 'react-native-web'
-    }
+    },
   },
 };

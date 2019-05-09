@@ -20,6 +20,7 @@ import isTag from '../utils/isTag';
 import isDerivedReactComponent from '../utils/isDerivedReactComponent';
 import isStyledComponent from '../utils/isStyledComponent';
 import once from '../utils/once';
+import hasher from '../utils/hasher';
 import { ThemeContext } from './ThemeProvider';
 import { useStyleSheet } from './StyleSheetManager';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
@@ -32,18 +33,12 @@ import type { Attrs, RuleSet, Target } from '../types';
 const identifiers = {};
 
 /* We depend on components having unique IDs */
-function generateId(_ComponentStyle: Function, _displayName: string, parentComponentId: string) {
-  const displayName = typeof _displayName !== 'string' ? 'sc' : escape(_displayName);
-
-  /**
-   * This ensures uniqueness if two components happen to share
-   * the same displayName.
-   */
-  const nr = (identifiers[displayName] || 0) + 1;
-  identifiers[displayName] = nr;
-
-  const componentId = `${displayName}-${_ComponentStyle.generateName(displayName + nr)}`;
-
+function generateId(displayName: string, parentComponentId: string) {
+  const name = typeof displayName !== 'string' ? 'sc' : escape(displayName);
+  // Ensure that no displayName can lead to duplicate componentIds
+  const nr = (identifiers[name] || 0) + 1;
+  identifiers[name] = nr;
+  const componentId = `${name}-${hasher(name + nr)}`;
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
@@ -280,7 +275,7 @@ export default function createStyledComponent(
 
   const {
     displayName = generateDisplayName(target),
-    componentId = generateId(ComponentStyle, options.displayName, options.parentComponentId),
+    componentId = generateId(options.displayName, options.parentComponentId),
     attrs = EMPTY_ARRAY,
   } = options;
 

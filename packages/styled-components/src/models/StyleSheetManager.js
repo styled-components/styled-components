@@ -1,27 +1,23 @@
 // @flow
 
-import React, { useContext, useMemo, useDebugValue, type Element, type Context } from 'react';
+import React, { useContext, useMemo, type Node, type Context } from 'react';
 import PropTypes from 'prop-types';
-import StyleSheet from './StyleSheet';
-import ServerStyleSheet from './ServerStyleSheet';
+import StyleSheet from '../sheet';
 import StyledError from '../utils/error';
 
 type Props = {
-  children?: Element<any>,
+  children?: Node,
   sheet?: StyleSheet,
   target?: HTMLElement,
 };
 
 export const StyleSheetContext: Context<StyleSheet | void> = React.createContext();
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
+export const masterSheet: StyleSheet = new StyleSheet(false);
 
-export function useStyleSheet() {
+export function useStyleSheet(): StyleSheet {
   const fromContext = useContext(StyleSheetContext);
-  // $FlowFixMe the type defs are wrong and forgot to add the second argument to it
-  useDebugValue(fromContext, (provided?: StyleSheet) =>
-    provided ? `sheet id ${provided.id}` : 'master'
-  );
-  return fromContext || StyleSheet.master;
+  return fromContext !== undefined ? fromContext : masterSheet;
 }
 
 function useStyleSheetProvider(sheet?: StyleSheet, target?: HTMLElement) {
@@ -29,7 +25,7 @@ function useStyleSheetProvider(sheet?: StyleSheet, target?: HTMLElement) {
     if (sheet) {
       return sheet;
     } else if (target) {
-      return new StyleSheet(target);
+      return new StyleSheet(false, target);
     } else {
       throw new StyledError(4);
     }
@@ -47,10 +43,7 @@ export default function StyleSheetManager(props: Props) {
 }
 
 StyleSheetManager.propTypes = {
-  sheet: PropTypes.oneOfType([
-    PropTypes.instanceOf(StyleSheet),
-    PropTypes.instanceOf(ServerStyleSheet),
-  ]),
+  sheet: PropTypes.instanceOf(StyleSheet),
   target: PropTypes.shape({
     appendChild: PropTypes.func.isRequired,
   }),

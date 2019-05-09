@@ -3,7 +3,6 @@
   "private": true,
   "version": "0.8.6",
   "scripts": {
-    "prebuild": "mkdir -p dist && cp index.html dist/",
     "build": "webpack-cli --config webpack.config.js",
     "start": "node run-headless.js"
   },
@@ -32,6 +31,7 @@
     "babel-loader": "^8.0.5",
     "babel-plugin-react-native-web": "^0.11.2",
     "css-loader": "^2.1.1",
+    "memoize-one": "^5.0.4",
     "style-loader": "^0.23.1",
     "webpack": "^4.30.0",
     "webpack-bundle-analyzer": "^3.3.2",

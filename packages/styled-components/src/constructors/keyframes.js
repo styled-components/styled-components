@@ -1,14 +1,11 @@
 // @flow
+
 import css from './css';
-import generateAlphabeticName from '../utils/generateAlphabeticName';
 import stringifyRules from '../utils/stringifyRules';
-// $FlowFixMe
-import hashStr from '../vendor/glamor/hash';
+import hasher from '../utils/hasher';
 import Keyframes from '../models/Keyframes';
 
 import type { Interpolation, Styles } from '../types';
-
-const replaceWhitespace = (str: string): string => str.replace(/\s|\\n/g, '');
 
 export default function keyframes(
   strings: Styles,
@@ -26,9 +23,7 @@ export default function keyframes(
     );
   }
 
-  const rules = css(strings, ...interpolations);
-
-  const name = generateAlphabeticName(hashStr(replaceWhitespace(JSON.stringify(rules))));
-
+  const rules = css(strings, ...interpolations).join('');
+  const name = hasher(rules);
   return new Keyframes(name, stringifyRules(rules, name, '@keyframes'));
 }
