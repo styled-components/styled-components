@@ -35,12 +35,7 @@ export const outputSheet = (sheet: Sheet) => {
 
     // NOTE: It's easier to collect rules and have the marker
     // after the actual rules to simplify the rehydration
-    css += rules + selector;
-    if (content.length > 0) {
-      css += `{content:"${content}"}\n`;
-    } else {
-      css += '{}\n';
-    }
+    css += `${rules}${selector}{content:"${content}"}\n`;
   }
 
   return css;
