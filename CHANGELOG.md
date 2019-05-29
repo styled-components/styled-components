@@ -6,56 +6,6 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-## [v4.4.1] - 2019-10-30
-
-- Fix `styled-components`'s `react-native` import for React Native Web, by [@fiberjw](https://github.com/fiberjw) (see [#2797](https://github.com/styled-components/styled-components/pull/2797))
-
-- Remove dev-time warning if referencing a theme prop without an outer `ThemeProvider`, the check for it isn't smart enough to handle cases with "or" or ternary fallbacks and creates undesirable noise in various third party integrations
-
-## [v4.4.0] - 2019-09-23
-
-- Fix to use `ownerDocument` instead of global `document`, by [@yamachig](https://github.com/yamachig) (see [#2721](https://github.com/styled-components/styled-components/pull/2721))
-
-- Backport fix for SSR classname mismatches in development mode for some environments like next.js (see [#2701](https://github.com/styled-components/styled-components/pull/2701))
-
-- Fix attrs not properly taking precedence over props
-
-- Backport fix where classnames are composed in the wrong order if custom class names are passed in (see [#2760](https://github.com/styled-components/styled-components/pull/2760))
-
-- Fix add check for style tag detached - sheet in the style tag is null in this case, by [@newying61](https://github.com/newying61) (see [#2707](https://github.com/styled-components/styled-components/pull/2707))
-
-## [v4.3.2] - 2019-06-19
-
-- Fix usage of the "css" prop with the styled-components babel macro (relevant to CRA 2.x users), by [@jamesknelson](http://github.com/jamesknelson) (see [#2633](https://github.com/styled-components/styled-components/issues/2633))
-
-## [v4.3.1] - 2019-06-06
-
-- Revert #2586; breaks rehydration in dev for certain runtimes like next.js
-
-## [v4.3.0] - 2019-06-05
-
-- Make it possible to initialize `SC_ATTR` and `SC_DISABLE_SPEEDY` via `REACT_APP_*` .env variables for easier integration with CRA applications (see [#2501](https://github.com/styled-components/styled-components/pull/2501))
-
-- Fix `theme` prop for styled native components, also fixes `theme` in
-  `defaultProps` for them.
-
-- Add "forwardedAs" prop to allow deeply passing a different "as" prop value to underlying components
-  when using `styled()` as a higher-order component
-
-- Implement defaultProps folding (see [#2597](https://github.com/styled-components/styled-components/issues/2597))
-
-## [v4.2.1] - 2019-05-30
-
-- Remove className usage checker dev utility due to excessive false-positive noise in certain runtime environments like next.js and the related warning suppression prop (see [#2563](https://github.com/styled-components/styled-components/issues/2563)).
-
-- Attach displayName to forwardRef function as described in React docs (see [#2508](https://github.com/styled-components/styled-components/issues/2508)).
-
-- Compatibility with react-native-web 0.11 (see [#2453](https://github.com/styled-components/styled-components/issues/2453)).
-
-- Add stack trace to .attrs warning (see [#2486](https://github.com/styled-components/styled-components/issues/2486)).
-
-- Fix functions as values for object literals. (see [2489](https://github.com/styled-components/styled-components/pull/2489))
-
 - Remove validation in Babel macro, by [@mAAdhaTTah](http://github.com/mAAdhaTTah) (see [#2427](https://github.com/styled-components/styled-components/pull/2427))
 
 ## [v4.2.0] - 2019-03-23
@@ -993,13 +943,7 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.4.1...master
-[v4.4.1]: https://github.com/styled-components/styled-components/compare/v4.4.0...v4.4.1
-[v4.4.0]: https://github.com/styled-components/styled-components/compare/v4.3.2...v4.4.0
-[v4.3.2]: https://github.com/styled-components/styled-components/compare/v4.3.1...v4.3.2
-[v4.3.1]: https://github.com/styled-components/styled-components/compare/v4.3.0...v4.3.1
-[v4.3.0]: https://github.com/styled-components/styled-components/compare/v4.2.1...v4.3.0
-[v4.2.1]: https://github.com/styled-components/styled-components/compare/v4.2.0...v4.2.1
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.2.0...master
 [v4.2.0]: https://github.com/styled-components/styled-components/compare/v4.1.3...v4.2.0
 [v4.1.3]: https://github.com/styled-components/styled-components/compare/v4.1.2...v4.1.3
 [v4.1.2]: https://github.com/styled-components/styled-components/compare/v4.1.1...v4.1.2
