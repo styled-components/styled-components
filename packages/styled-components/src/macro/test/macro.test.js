@@ -1,4 +1,5 @@
 import cosmiconfigMock from 'cosmiconfig';
+import babel from '@babel/core';
 import pluginTester from 'babel-plugin-tester';
 import plugin from 'babel-plugin-macros';
 
@@ -69,7 +70,7 @@ styled(Hello)\`
 
 const multipleImportsExampleCode = `
 import styled, { css } from '../../macro'
-`
+`;
 
 const requireExampleCode = `
 const styled = require('../../macro')
@@ -93,47 +94,42 @@ pluginTester({
   snapshot: true,
   babelOptions: {
     babelrc: false,
-    filename: __filename
+    filename: __filename,
   },
-  babel: require('@babel/core'),
+  babel,
   tests: {
     'should work with styled': {
-      code: styledExampleCode
+      code: styledExampleCode,
     },
     'should work with custom import name': {
-      code: customStyledExampleCode
+      code: customStyledExampleCode,
     },
     'should work with { css }': {
-      code: cssExampleCode
+      code: cssExampleCode,
     },
     'should work with { keyframes }': {
-      code: keyframesExampleCode
+      code: keyframesExampleCode,
     },
     'should work with { createGlobalStyle }': {
-      code: createGlobalStyleExampleCode
+      code: createGlobalStyleExampleCode,
     },
     'should work with { ThemeProvider }': {
-      code: ThemeProviderExampleCode
+      code: ThemeProviderExampleCode,
     },
     'should work when extending a component': {
-      code: extendsExampleCode
+      code: extendsExampleCode,
     },
     'should work with require() to import styled-components': {
-      code: requireExampleCode
+      code: requireExampleCode,
     },
     'should work with multiple imports': {
-      code: multipleImportsExampleCode
-    },
-    'should throw error when importing { UnknownImport }': {
-      code: invalidExampleCode,
-      error: true,
-      snapshot: false,
+      code: multipleImportsExampleCode,
     },
     'should work with types': {
-      code: withTypeImportExampleCode
+      code: withTypeImportExampleCode,
     },
     'should work with types alongside import': {
-      code: withTypeAndStandardImportExampleCode
+      code: withTypeAndStandardImportExampleCode,
     },
     'should not add componentId with a config disabling ssr': {
       code: styledExampleCode,
