@@ -13,7 +13,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 - Compatibility with react-native-web 0.11 (see [#2453](https://github.com/styled-components/styled-components/issues/2453)).
 
 - Add stack trace to .attrs warning (see [#2486](https://github.com/styled-components/styled-components/issues/2486)).
+
 - Fix functions as values for object literals. (see [2489](https://github.com/styled-components/styled-components/pull/2489))
+
+- Remove validation in Babel macro, by [@mAAdhaTTah](http://github.com/mAAdhaTTah) (see [#2427](https://github.com/styled-components/styled-components/pull/2427))
 
 ## [v4.2.0] - 2019-03-23
 

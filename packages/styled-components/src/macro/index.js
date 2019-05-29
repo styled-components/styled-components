@@ -1,10 +1,7 @@
 // @flow
-import { createMacro, MacroError } from 'babel-plugin-macros';
+import { createMacro } from 'babel-plugin-macros';
 import babelPlugin from 'babel-plugin-styled-components';
 import { addDefault, addNamed } from '@babel/helper-module-imports';
-import * as styled from '..';
-
-const allowedImports: Array<string> = Object.keys(styled).filter(helper => helper !== '__esModule');
 
 function styledComponentsMacro({ references, state, babel: { types: t }, config = {} }) {
   const program = state.file.path;
@@ -14,14 +11,6 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
   // { default: [path, path], css: [path], ... }
   let customImportName;
   Object.keys(references).forEach(refName => {
-    if (!allowedImports.includes(refName)) {
-      throw new MacroError(
-        `Invalid import: ${refName}. You can only import ${allowedImports.join(
-          ', '
-        )} from 'styled-components/macro'.`
-      );
-    }
-
     // generate new identifier
     let id;
     if (refName === 'default') {
