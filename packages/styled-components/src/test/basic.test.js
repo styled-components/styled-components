@@ -119,11 +119,43 @@ describe('basic', () => {
     expectCSSMatches('.b { color:blue; }');
   });
 
+  it('should allow you to pass in style object with a function', () => {
+    const Comp = styled.div({ color: ({color}) => color });
+    TestRenderer.create(<Comp color="blue" />);
+    expectCSSMatches('.b { color:blue; }');
+  });
+
+  it('should allow you to pass in style nested object', () => {
+    const Comp = styled.div({
+      span: {
+        small: {
+          color: 'blue',
+          fontFamily: 'sans-serif'
+        }
+      }
+    });
+    TestRenderer.create(<Comp />);
+    expectCSSMatches('.b span small{ color:blue; font-family: sans-serif; }');
+  });
+
+  it('should allow you to pass in style nested object with a function', () => {
+    const Comp = styled.div({
+      span: {
+        small: {
+          color: ({color}) => color,
+          fontFamily: 'sans-serif'
+        }
+      }
+    });
+    TestRenderer.create(<Comp color='red' />);
+    expectCSSMatches('.b span small{ color:red; font-family: sans-serif; }');
+  });
+
   it('should allow you to pass in a function returning a style object', () => {
     const Comp = styled.div(({ color }) => ({
       color,
     }));
-    TestRenderer.create(<Comp color="blue" />);
+    TestRenderer.create(<Comp color='blue' />);
     expectCSSMatches('.b { color:blue; }');
   });
 
@@ -141,7 +173,7 @@ describe('basic', () => {
       color: red;
     `;
 
-    TestRenderer.create(<StyledComp color="blue" />);
+    TestRenderer.create(<StyledComp color='blue' />);
     expectCSSMatches('.b { color:red; }');
   });
 
@@ -173,7 +205,7 @@ describe('basic', () => {
 
       class Wrapper extends Component<*, *> {
         render() {
-          return <OuterComponent className="test" />;
+          return <OuterComponent className='test' />;
         }
       }
 
@@ -227,19 +259,6 @@ describe('basic', () => {
       const innerComponent = findRenderedComponentWithType(wrapper, InnerComponent);
 
       expect(wrapper.testRef.current).toBe(innerComponent);
-    });
-
-    it('should not pass the suppressClassNameWarning to the wrapped child', () => {
-      const OuterComponent = styled(InnerComponent)``;
-
-      class Wrapper extends Component<*, *> {
-        render() {
-          return <OuterComponent suppressClassNameWarning />
-        }
-      }
-      
-      const wrapper = TestRenderer.create(<Wrapper />);
-      expect(wrapper.root.findByType(InnerComponent).props.suppressClassNameWarning).toBeUndefined();
     });
 
     it('should respect the order of StyledComponent creation for CSS ordering', () => {
@@ -356,43 +375,6 @@ describe('basic', () => {
       const ref = React.createRef();
 
       TestRenderer.create(<Comp innerRef={ref} />);
-      expect(console.warn).not.toHaveBeenCalled();
-    });
-
-    it('warns when a wrapped React component does not consume className', () => {
-      const Inner = () => <div />;
-      const Comp = styled(Inner)`
-        color: red;
-      `;
-
-      renderIntoDocument(
-        <div>
-          <Comp />
-        </div>
-      );
-
-      expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-        `"It looks like you've wrapped styled() around your React component (Inner), but the className prop is not being passed down to a child. No styles will be rendered unless className is composed within your React component."`
-      );
-    });
-
-    it('does not warn if the className is consumed by a deeper child', () => {
-      const Inner = ({ className }) => (
-        <div>
-          <span className={className} />
-        </div>
-      );
-
-      const Comp = styled(Inner)`
-        color: red;
-      `;
-
-      renderIntoDocument(
-        <div>
-          <Comp />
-        </div>
-      );
-
       expect(console.warn).not.toHaveBeenCalled();
     });
   });

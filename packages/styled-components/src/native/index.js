@@ -1,7 +1,7 @@
 // @flow
 
 /* eslint-disable import/no-unresolved */
-import reactNative from 'react-native';
+import reactNative, { StyleSheet } from 'react-native';
 
 import _InlineStyle from '../models/InlineStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
@@ -14,7 +14,7 @@ import isStyledComponent from '../utils/isStyledComponent';
 
 import type { Target } from '../types';
 
-const InlineStyle = _InlineStyle(reactNative.StyleSheet);
+const InlineStyle = _InlineStyle(StyleSheet);
 const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
 const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag);
 

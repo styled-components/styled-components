@@ -37,13 +37,18 @@ describe('flatten', () => {
       WebkitFilter: 'blur(2px)',
       fontWeight: 500,
     };
-    const css = 'font-size: 14px; line-height: 15px; -webkit-filter: blur(2px); font-weight: 500;';
+    const css = [
+      'font-size: 14px;',
+      'line-height: 15px;',
+      '-webkit-filter: blur(2px);',
+      'font-weight: 500;'
+    ];
     // $FlowFixMe
-    expect(flatten([obj])).toEqual([css]);
+    expect(flatten([obj])).toEqual(css);
     // $FlowFixMe
     expect(flatten(['some:thing;', obj, 'something: else;'])).toEqual([
       'some:thing;',
-      css,
+      ...css,
       'something: else;',
     ]);
   });
@@ -58,14 +63,21 @@ describe('flatten', () => {
         fontWeight: 'bold',
       },
     };
-    const css =
-      'font-size: 14px; @media screen and (min-width: 250px) {\n  font-size: 16px;\n} &:hover {\n  font-weight: bold;\n}';
+    const css = [
+      'font-size: 14px;',
+      '@media screen and (min-width: 250px) {',
+      'font-size: 16px;',
+      '}',
+      '&:hover {',
+      'font-weight: bold;',
+      '}'
+    ];
     // $FlowFixMe
-    expect(flatten([obj])).toEqual([css]);
+    expect(flatten([obj])).toEqual(css);
     // $FlowFixMe
     expect(flatten(['some:thing;', obj, 'something: else;'])).toEqual([
       'some:thing;',
-      css,
+      ...css,
       'something: else;',
     ]);
   });

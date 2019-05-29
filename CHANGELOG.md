@@ -8,6 +8,18 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Restore ability to use placeholder `style` tags to specify SC stylesheets’ position in the DOM, by [@cpmsmith](https://github.com/cpmsmith) (see [#2463](https://github.com/styled-components/styled-components/pull/2463))
 
+- Remove className usage checker dev utility due to excessive false-positive noise in certain runtime environments like next.js and the related warning suppression prop (see [#2563](https://github.com/styled-components/styled-components/issues/2563)).
+
+- Attach displayName to forwardRef function as described in React docs (see [#2508](https://github.com/styled-components/styled-components/issues/2508)).
+
+- Compatibility with react-native-web 0.11 (see [#2453](https://github.com/styled-components/styled-components/issues/2453)).
+
+- Add stack trace to .attrs warning (see [#2486](https://github.com/styled-components/styled-components/issues/2486)).
+
+- Fix functions as values for object literals. (see [2489](https://github.com/styled-components/styled-components/pull/2489))
+
+- Remove validation in Babel macro, by [@mAAdhaTTah](http://github.com/mAAdhaTTah) (see [#2427](https://github.com/styled-components/styled-components/pull/2427))
+
 ## [v4.2.0] - 2019-03-23
 
 - Reduced GC pressure when using component selector styles. (see [#2424](https://github.com/styled-components/styled-components/issues/2424)).

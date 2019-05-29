@@ -17,10 +17,8 @@ import StyleSheet from './StyleSheet';
 import { ThemeConsumer, type Theme } from './ThemeProvider';
 import { StyleSheetConsumer } from './StyleSheetManager';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
-import classNameUsageCheckInjector from '../utils/classNameUsageCheckInjector';
 
 import type { Attrs, RuleSet, Target } from '../types';
-import { IS_BROWSER } from '../constants';
 
 const identifiers = {};
 
@@ -73,7 +71,8 @@ class StyledComponent extends Component<*> {
         (key, displayName): void =>
           // eslint-disable-next-line no-console
           console.warn(
-            `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`
+            `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`,
+            `\n ${new Error().stack}`
           )
       );
 
@@ -87,10 +86,6 @@ class StyledComponent extends Component<*> {
               `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
           )
       );
-    }
-
-    if (process.env.NODE_ENV !== 'production' && IS_BROWSER) {
-      classNameUsageCheckInjector(this);
     }
   }
 
@@ -145,9 +140,9 @@ class StyledComponent extends Component<*> {
         this.warnInnerRef(displayName);
       }
 
-      if (key === 'forwardedComponent' || key === 'as' || key === 'suppressClassNameWarning')
-        {continue;}
-      else if (key === 'forwardedRef') propsForElement.ref = computedProps[key];
+      if (key === 'forwardedComponent' || key === 'as') {
+        continue;
+      } else if (key === 'forwardedRef') propsForElement.ref = computedProps[key];
       else if (!isTargetTag || validAttr(key)) {
         // Don't pass through non HTML tags through to HTML elements
         propsForElement[key] = computedProps[key];
@@ -276,15 +271,18 @@ export default function createStyledComponent(target: Target, options: Object, r
    * forwardRef creates a new interim component, which we'll take advantage of
    * instead of extending ParentComponent to create _another_ interim class
    */
-  const WrappedStyledComponent = React.forwardRef((props, ref) => (
+  let WrappedStyledComponent;
+  const forwardRef = (props, ref) => (
     <ParentComponent {...props} forwardedComponent={WrappedStyledComponent} forwardedRef={ref} />
-  ));
+  );
+  forwardRef.displayName = displayName;
+  WrappedStyledComponent = React.forwardRef(forwardRef);
+  WrappedStyledComponent.displayName = displayName;
 
   // $FlowFixMe
   WrappedStyledComponent.attrs = finalAttrs;
   // $FlowFixMe
   WrappedStyledComponent.componentStyle = componentStyle;
-  WrappedStyledComponent.displayName = displayName;
 
   // $FlowFixMe
   WrappedStyledComponent.foldedComponentIds = isTargetStyledComp

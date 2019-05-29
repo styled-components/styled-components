@@ -41,7 +41,8 @@ class StyledNativeComponent extends Component<*, *> {
         (key, displayName): void =>
           // eslint-disable-next-line no-console
           console.warn(
-            `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`
+            `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`,
+            `\n ${(new Error()).stack}`
           )
       );
 

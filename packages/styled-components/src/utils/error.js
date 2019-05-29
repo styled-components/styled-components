@@ -46,8 +46,8 @@ export default class StyledComponentsError extends Error {
   constructor(code: string | number, ...interpolations: Array<any>) {
     if (process.env.NODE_ENV === 'production') {
       super(
-        `An error occurred. See https://github.com/styled-components/styled-components/blob/master/packages/styled-components/src/utils/errors.md#${code} for more information. ${
-          interpolations ? `Additional arguments: ${interpolations.join(', ')}` : ''
+        `An error occurred. See https://github.com/styled-components/styled-components/blob/master/packages/styled-components/src/utils/errors.md#${code} for more information.${
+          interpolations.length > 0 ? ` Additional arguments: ${interpolations.join(', ')}` : ''
         }`
       );
     } else {

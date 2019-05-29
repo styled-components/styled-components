@@ -25,6 +25,14 @@ Utilising [tagged template literals](https://www.styled-components.com/docs/adva
 
 _Supported by [Front End Center](https://frontend.center). Thank you for making this possible!_
 
+## v5
+
+Principal development of v5 has begun! Follow along on the [canary](https://github.com/styled-components/styled-components/tree/canary) branch and check out the current list of [roadmap items](https://github.com/styled-components/styled-components/issues/1934).
+
+We will be publishing alpha versions to `styled-components@canary` on NPM as we get closer to a beta release.
+
+Please keep in mind that all development of styled-components is driven by volunteer effort, so things will take as long as they take. We appreciate your enthusiasm and interest as new technologies and patterns emerge.
+
 ## [Docs](https://www.styled-components.com/docs)
 
 **See the documentation at [styled-components.com/docs](https://www.styled-components.com/docs)** for more information about using `styled-components`!

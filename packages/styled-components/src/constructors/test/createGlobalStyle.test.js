@@ -64,6 +64,32 @@ describe(`createGlobalStyle`, () => {
     expectCSSMatches(`div{color:orange;} `);
   });
 
+  it(`supports objects with a function`, () => {
+    const { render } = setup();
+    const Component = createGlobalStyle({
+      'h1, h2, h3, h4, h5, h6': {
+        fontFamily: ({theme}) => theme.fonts.heading,
+      },
+    })
+    render(<Component theme={{ fonts: { heading: 'sans-serif' } }} />);
+    expectCSSMatches(`h1,h2,h3,h4,h5,h6{ font-family:sans-serif; }`);
+  });
+
+  it(`supports nested objects with a function`, () => {
+    const { render } = setup();
+    const Component1 = createGlobalStyle({
+      'div, span': {
+        h1: {
+          span: {
+            fontFamily: ({theme}) => theme.fonts.heading
+          }
+        }
+      }
+    })
+    render(<Component1 theme={{ fonts: { heading: 'sans-serif' } }} />);
+    expectCSSMatches(`div h1 span,span h1 span{ font-family:sans-serif; }`);
+  });
+
   it(`supports theming`, () => {
     const { render } = setup();
     const Component = createGlobalStyle`div {color:${props => props.theme.color};} `;

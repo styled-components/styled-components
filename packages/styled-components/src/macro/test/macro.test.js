@@ -67,6 +67,10 @@ styled(Hello)\`
 \`
 `;
 
+const multipleImportsExampleCode = `
+import styled, { css } from '../../macro'
+`
+
 const requireExampleCode = `
 const styled = require('../../macro')
 
@@ -75,8 +79,12 @@ styled.div\`
 \`
 `;
 
-const invalidExampleCode = `
-import { UnknownImport } from '../../macro'
+const withTypeImportExampleCode = `
+import { DefaultTheme } from '../../macro'
+`;
+
+const withTypeAndStandardImportExampleCode = `
+  import styled, { DefaultTheme } from '../../macro'
 `;
 
 pluginTester({
@@ -92,12 +100,10 @@ pluginTester({
     'should work with { createGlobalStyle }': createGlobalStyleExampleCode,
     'should work with { ThemeProvider }': ThemeProviderExampleCode,
     'should work when extending a component': extendsExampleCode,
+    'should work with multiple imports': multipleImportsExampleCode,
     'should work with require() to import styled-components': requireExampleCode,
-    'should throw error when importing { UnknownImport }': {
-      code: invalidExampleCode,
-      error: true,
-      snapshot: false,
-    },
+    'should work with types': withTypeImportExampleCode,
+    'should work with types alongside import': withTypeAndStandardImportExampleCode,
     'should not add componentId with a config disabling ssr': {
       code: styledExampleCode,
       setup: () => {
