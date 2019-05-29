@@ -28,18 +28,11 @@ Utilising [tagged template literals](https://www.styled-components.com/docs/adva
 
 _Supported by [Front End Center](https://frontend.center). Thank you for making this possible!_
 
-## v5
+## Upgrading from v4
 
-styled-components v5 is now [officially in beta](https://medium.com/styled-components/announcing-styled-components-v5-beast-mode-389747abd987)! Try it out in your project today:
-
-```
-npm install styled-components@beta
-```
-
-Notes:
-
-- Make sure you're on a hooks-compatible version of react (>= 16.8 for react, react-dom, and react-is)
-- If you use jest-styled-components, upgrade to the beta of that as well! `npm install jest-styled-components@beta`
+1. Update `react`, `react-dom`, and `react-is` to latest versions to enable hooks support
+2. ??
+3. Profit!
 
 ## [Docs](https://www.styled-components.com/docs)
 
