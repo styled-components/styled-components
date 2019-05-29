@@ -24,7 +24,6 @@ import hasher from '../utils/hasher';
 import { ThemeContext } from './ThemeProvider';
 import { useStyleSheet } from './StyleSheetManager';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
-// import useCheckClassNameUsage from '../utils/useCheckClassNameUsage';
 
 import type { Attrs, RuleSet, Target } from '../types';
 
@@ -198,18 +197,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
     process.env.NODE_ENV !== 'production' ? forwardedComponent.warnTooManyClasses : (undefined: any)
   );
 
-  // NOTE: this has to be called unconditionally due to the rules of hooks
-  // it will just do nothing if it's not an in-browser development build
-  // NOTE2: there is no (supported) way to know if the wrapped component actually can
-  // receive refs -- just passing refs will trigger warnings on any function component child :(
-  // -- this also means we can't keep doing this check unless StyledComponent is itself a class.
-  //
-  // const refToForward = useCheckClassNameUsage(
-  //   forwardedRef,
-  //   target,
-  //   generatedClassName,
-  //   attrs.suppressClassNameWarning
-  // );
   const refToForward = forwardedRef;
 
   const elementToBeCreated: Target =
@@ -253,10 +240,11 @@ function useStyledComponentImpl<Config: {}, Instance>(
       props.className, // eslint-disable-line react/prop-types
       styledComponentId,
       attrs.className,
-      generatedClassName
+      generatedClassName !== styledComponentId ? generatedClassName : null
     )
     .filter(Boolean)
     .join(' ');
+
   // $FlowFixMe
   propsForElement.ref = refToForward;
 
