@@ -30,7 +30,9 @@
     "prettier": "prettier */**/*.js --write",
     "prepublishOnly": "npm run build",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
-    "postinstall": "node ./scripts/postinstall.js || exit 0"
+    "postinstall": "node ./scripts/postinstall.js || exit 0",
+    "storybook": "start-storybook -p 6006",
+    "chromatic": "CHROMATIC_APP_CODE=ytsverb0ead chromatic test"
   },
   "repository": {
     "type": "git",
@@ -79,6 +81,9 @@
     "react-is": ">= 16.8.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.4.5",
+    "@storybook/react": "^5.0.11",
+    "babel-loader": "^8.0.6",
     "flow-bin": "^0.93.0",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
@@ -87,6 +92,7 @@
     "react-native": "^0.59.8",
     "react-primitives": "^0.8.0",
     "react-test-renderer": "^16.8.6",
+    "storybook-chromatic": "^1.3.3",
     "stylis-rtl": "^1.0.1"
   },
   "bundlesize": [

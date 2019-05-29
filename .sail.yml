@@ -5,6 +5,7 @@ workflow:
     - lint
     - build
     - test
+    - chromatic
 tasks:
   install:
     image: node:10
@@ -19,6 +20,13 @@ tasks:
       - yarn
     args:
       - test
+  chromatic:
+    image: node:10
+    cwd: ./packages/styled-components/
+    command:
+      - yarn
+    args:
+      - chromatic
   flow:
     image: node:10
     command:
