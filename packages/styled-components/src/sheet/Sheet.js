@@ -1,6 +1,7 @@
 // @flow
 
 import { IS_BROWSER } from '../constants';
+import createStylisInstance from '../utils/stylis';
 import type { Sheet } from './types';
 import { makeTag } from './Tag';
 import { type GroupedTag, makeGroupedTag } from './GroupedTag';
@@ -12,6 +13,8 @@ let SHOULD_REHYDRATE = IS_BROWSER;
 /** Contains the main stylesheet logic for stringification and caching */
 class StyleSheet implements Sheet {
   isServer: boolean;
+
+  stringifier: Function;
 
   target: void | HTMLElement;
 
@@ -27,6 +30,7 @@ class StyleSheet implements Sheet {
   constructor(isServer: boolean, target?: HTMLElement) {
     this.names = new Map();
     this.isServer = isServer;
+    this.stringifier = createStylisInstance();
     this.target = target;
 
     // We rehydrate only once and use the sheet that is
