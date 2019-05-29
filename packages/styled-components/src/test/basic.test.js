@@ -119,11 +119,43 @@ describe('basic', () => {
     expectCSSMatches('.b { color:blue; }');
   });
 
+  it('should allow you to pass in style object with a function', () => {
+    const Comp = styled.div({ color: ({color}) => color });
+    TestRenderer.create(<Comp color="blue" />);
+    expectCSSMatches('.b { color:blue; }');
+  });
+
+  it('should allow you to pass in style nested object', () => {
+    const Comp = styled.div({
+      span: {
+        small: {
+          color: 'blue',
+          fontFamily: 'sans-serif'
+        }
+      }
+    });
+    TestRenderer.create(<Comp />);
+    expectCSSMatches('.b span small{ color:blue; font-family: sans-serif; }');
+  });
+
+  it('should allow you to pass in style nested object with a function', () => {
+    const Comp = styled.div({
+      span: {
+        small: {
+          color: ({color}) => color,
+          fontFamily: 'sans-serif'
+        }
+      }
+    });
+    TestRenderer.create(<Comp color='red' />);
+    expectCSSMatches('.b span small{ color:red; font-family: sans-serif; }');
+  });
+
   it('should allow you to pass in a function returning a style object', () => {
     const Comp = styled.div(({ color }) => ({
       color,
     }));
-    TestRenderer.create(<Comp color="blue" />);
+    TestRenderer.create(<Comp color='blue' />);
     expectCSSMatches('.b { color:blue; }');
   });
 
@@ -141,7 +173,7 @@ describe('basic', () => {
       color: red;
     `;
 
-    TestRenderer.create(<StyledComp color="blue" />);
+    TestRenderer.create(<StyledComp color='blue' />);
     expectCSSMatches('.b { color:red; }');
   });
 
@@ -173,7 +205,7 @@ describe('basic', () => {
 
       class Wrapper extends Component<*, *> {
         render() {
-          return <OuterComponent className="test" />;
+          return <OuterComponent className='test' />;
         }
       }
 
