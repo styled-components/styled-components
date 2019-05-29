@@ -304,6 +304,14 @@ describe('ssr', () => {
       color: green;
     `;
 
+    // These create a long chunk of (hopefully) uninterrupted HTML
+    const elements = new Array(100).fill(0).map((_, i) => (
+      <div key={i}>*************************</div>
+    ));
+
+    // This is the result of the above
+    const expectedElements = '<div>*************************</div>'.repeat(100);
+
     const sheet = new ServerStyleSheet();
     const jsx = sheet.collectStyles(
       <React.Fragment>
@@ -318,24 +326,24 @@ describe('ssr', () => {
         <Footer>Footer</Footer>
       </React.Fragment>
     );
-    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise((resolve, reject) => {
+    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+    const stream$ = new Promise((resolve, reject) => {
       let received = '';
 
       stream.on('data', chunk => {
         received += chunk;
       });
 
-      stream.on('end', () => {
-        expect(received).toMatchSnapshot();
-        expect(sheet.sealed).toBe(true);
-        expect(received).toMatch(/yellow/);
-        expect(received).toMatch(/green/);
-        resolve();
-      });
-
+      stream.on('end', () => resolve(received));
       stream.on('error', reject);
+    });
+
+    return stream$.then(received => {
+      expect(sheet.sealed).toBe(true);
+      expect(received.includes(expectedElements)).toBeTruthy();
+      expect(received).toMatch(/yellow/);
+      expect(received).toMatch(/green/);
     });
   });
 
