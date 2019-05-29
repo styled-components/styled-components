@@ -6,7 +6,7 @@ const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 
 export default function createStylisInstance(
   options: Object = EMPTY_OBJECT,
-  middlewares: Array<Function> = EMPTY_ARRAY
+  plugins: Array<Function> = EMPTY_ARRAY
 ) {
   const stylis = new Stylis({
     global: false,
@@ -75,7 +75,7 @@ export default function createStylisInstance(
     }
   };
 
-  stylis.use([...middlewares, selfReferenceReplacementPlugin, parseRulesPlugin, returnRulesPlugin]);
+  stylis.use([...plugins, selfReferenceReplacementPlugin, parseRulesPlugin, returnRulesPlugin]);
 
   return function stringifyRules(
     css: string,

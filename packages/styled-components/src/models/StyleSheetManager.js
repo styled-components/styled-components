@@ -8,8 +8,8 @@ import createStylisInstance from '../utils/stylis';
 type Props = {
   children?: Node,
   sheet?: StyleSheet,
-  stylisMiddlewares?: Array<Function>,
   stylisOptions?: Object,
+  stylusPlugins?: Array<Function>,
   target?: HTMLElement,
 };
 
@@ -37,8 +37,8 @@ function useStyleSheetProvider(sheet?: StyleSheet, target?: HTMLElement) {
 export default function StyleSheetManager(props: Props) {
   const sheet = useStyleSheetProvider(props.sheet, props.target);
 
-  if (props.stylisOptions || props.stylisMiddlewares) {
-    sheet.stringifier = createStylisInstance(props.stylisOptions, props.stylisMiddlewares);
+  if (props.stylisOptions || props.stylusPlugins) {
+    sheet.stringifier = createStylisInstance(props.stylisOptions, props.stylusPlugins);
   }
 
   return (
@@ -50,8 +50,8 @@ export default function StyleSheetManager(props: Props) {
 
 StyleSheetManager.propTypes = {
   sheet: PropTypes.instanceOf(StyleSheet),
-  stylisMiddlewares: PropTypes.arrayOf(PropTypes.func),
   stylisOptions: PropTypes.object,
+  stylusPlugins: PropTypes.arrayOf(PropTypes.func),
   target: PropTypes.shape({
     appendChild: PropTypes.func.isRequired,
   }),
