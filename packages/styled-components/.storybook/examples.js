@@ -380,7 +380,9 @@ const MediaQueryStyle = () => {
   const Element = styled.div`
     background: palevioletred;
     color: white;
-    padding: 1em @media (max-width: 100000px) {
+    padding: 1em;
+
+    @media (max-width: 100000px) {
       background: mediumseagreen;
     }
   `;
