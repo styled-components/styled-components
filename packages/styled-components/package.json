@@ -12,6 +12,7 @@
   },
   "sideEffects": false,
   "scripts": {
+    "storybook": "start-storybook -p 1234",
     "build": "rollup -c",
     "prebuild": "rimraf dist",
     "size": "bundlesize",
@@ -25,7 +26,8 @@
     "prebenchmarks": "yarn run build:benchmarks",
     "benchmarks": "node benchmarks/run-headless.js",
     "build:benchmarks": "(cd benchmarks && yarn && yarn run build)",
-    "postinstall": "node ./scripts/postinstall.js || exit 0"
+    "postinstall": "node ./scripts/postinstall.js || exit 0",
+    "chromatic": "CHROMATIC_APP_CODE=ytsverb0ead chromatic test"
   },
   "repository": {
     "type": "git",
@@ -74,12 +76,17 @@
     "react-dom": ">= 16.3.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.4.5",
+    "@storybook/core": "^5.0.11",
+    "@storybook/react": "^5.0.11",
+    "babel-loader": "^8.0.6",
     "react": "^16.6.1",
     "react-dom": "^16.6.1",
     "react-frame-component": "^4.0.2",
     "react-native": "^0.56.0",
     "react-primitives": "^0.6.1",
-    "react-test-renderer": "^16.6.1"
+    "react-test-renderer": "^16.6.1",
+    "storybook-chromatic": "^1.3.3"
   },
   "jest": {
     "testURL": "http://localhost",
