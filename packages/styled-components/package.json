@@ -12,7 +12,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "storybook": "start-storybook -p 1234",
+    "storybook": "start-storybook -p 6006",
     "build": "rollup -c",
     "prebuild": "rimraf dist",
     "size": "bundlesize",
@@ -77,6 +77,8 @@
   },
   "devDependencies": {
     "@babel/core": "^7.4.5",
+    "@emotion/core": "^10.0.10",
+    "@emotion/styled": "^10.0.11",
     "@storybook/core": "^5.0.11",
     "@storybook/react": "^5.0.11",
     "babel-loader": "^8.0.6",
