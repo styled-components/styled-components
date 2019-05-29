@@ -74,13 +74,10 @@ class StyledNativeComponent extends Component<*, *> {
 
           const { defaultProps, displayName, target } = forwardedComponent;
 
-          let generatedStyles;
-          if (theme !== undefined) {
-            const themeProp = determineTheme(this.props, theme, defaultProps);
-            generatedStyles = this.generateAndInjectStyles(themeProp, this.props);
-          } else {
-            generatedStyles = this.generateAndInjectStyles(theme || EMPTY_OBJECT, this.props);
-          }
+          const generatedStyles = this.generateAndInjectStyles(
+            determineTheme(this.props, theme, defaultProps) || EMPTY_OBJECT,
+            this.props,
+          );
 
           const propsForElement = {
             ...this.attrs,
