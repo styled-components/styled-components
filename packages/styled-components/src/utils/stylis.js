@@ -4,6 +4,13 @@ import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 
+export type Stringifier = (
+  css: string,
+  selector: string,
+  prefix: ?string,
+  componentId: string
+) => Array<string>;
+
 export default function createStylisInstance(
   options: Object = EMPTY_OBJECT,
   plugins: Array<Function> = EMPTY_ARRAY
@@ -77,12 +84,7 @@ export default function createStylisInstance(
 
   stylis.use([...plugins, selfReferenceReplacementPlugin, parseRulesPlugin, returnRulesPlugin]);
 
-  return function stringifyRules(
-    css: string,
-    selector: string,
-    prefix: ?string,
-    componentId: string = '&'
-  ): Array<string> {
+  return function stringifyRules(css, selector, prefix, componentId = '&'): Stringifier {
     const flatCSS = css.replace(COMMENT_REGEX, '');
     const cssStr = selector && prefix ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS;
 

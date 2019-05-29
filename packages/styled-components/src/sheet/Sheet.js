@@ -1,7 +1,7 @@
 // @flow
 
 import { IS_BROWSER } from '../constants';
-import createStylisInstance from '../utils/stylis';
+import createStylisInstance, { type Stringifier } from '../utils/stylis';
 import type { Sheet } from './types';
 import { makeTag } from './Tag';
 import { type GroupedTag, makeGroupedTag } from './GroupedTag';
@@ -14,13 +14,13 @@ let SHOULD_REHYDRATE = IS_BROWSER;
 class StyleSheet implements Sheet {
   isServer: boolean;
 
-  stringifier: Function;
+  names: Map<string, Set<string>>;
+
+  stringifier: Stringifier;
 
   target: void | HTMLElement;
 
   tag: void | GroupedTag;
-
-  names: Map<string, Set<string>>;
 
   /** Register a group ID to give it an index */
   static registerId(id: string): number {
