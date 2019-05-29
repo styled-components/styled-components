@@ -305,10 +305,15 @@ export default function createStyledComponent(
    * forwardRef creates a new interim component, which we'll take advantage of
    * instead of extending ParentComponent to create _another_ interim class
    */
+  let WrappedStyledComponent;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const forwardRef = (props, ref) => useStyledComponentImpl(WrappedStyledComponent, props, ref);
+
+  forwardRef.displayName = displayName;
+
   // $FlowFixMe this is a forced cast to merge it StyledComponentWrapperProperties
-  const WrappedStyledComponent: StyledComponentWrapper<*, *> = React.forwardRef((props, ref) =>
-    useStyledComponentImpl(WrappedStyledComponent, props, ref)
-  );
+  WrappedStyledComponent = (React.forwardRef(forwardRef): StyledComponentWrapper<*, *>);
 
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
