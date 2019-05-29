@@ -13,7 +13,6 @@ export const IS_BROWSER = typeof window !== 'undefined' && 'HTMLElement' in wind
 
 export const DISABLE_SPEEDY =
   (typeof SC_DISABLE_SPEEDY === 'boolean' && SC_DISABLE_SPEEDY) ||
-  (process.env.REACT_APP_SC_DISABLE_SPEEDY || process.env.SC_DISABLE_SPEEDY) ||
   process.env.NODE_ENV !== 'production';
 
 // Shared empty execution context when generating static styles
