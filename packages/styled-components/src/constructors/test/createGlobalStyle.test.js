@@ -1,8 +1,9 @@
 // @flow
 import React from 'react';
 import ReactDOM from 'react-dom';
+import ReactTestRenderer from 'react-test-renderer';
 import ReactDOMServer from 'react-dom/server';
-import { Simulate } from 'react-dom/test-utils';
+import { Simulate, act } from 'react-dom/test-utils';
 
 import {
   expectCSSMatches,
@@ -167,24 +168,27 @@ describe(`createGlobalStyle`, () => {
 
   it(`removes styling injected styling when unmounted`, () => {
     const { render } = setup();
-    const Component = createGlobalStyle`[data-test-remove]{color:grey;} `;
+    const ComponentA = createGlobalStyle`[data-test-remove]{color:grey;} `;
+    const ComponentB = createGlobalStyle`[data-test-keep]{color:blue;} `;
 
     class Comp extends React.Component {
-      state = {
-        styled: true,
-      };
-
-      componentDidMount() {
-        this.setState({ styled: false });
-      }
-
       render() {
-        return this.state.styled ? <Component /> : null;
+        return this.props.insert ? <ComponentA /> : <ComponentB />;
       }
     }
 
-    render(<Comp />);
-    expect(getCSS(document).trim()).not.toContain(`[data-test-remove]{color:grey;}`);
+    const renderer = ReactTestRenderer.create(<Comp insert={true} />);
+
+    act(() => {
+      expect(getCSS(document).trim()).toContain(`[data-test-remove]{color:grey;}`);
+      expect(getCSS(document).trim()).not.toContain(`[data-test-keep]{color:blue;}`);
+      renderer.update(<Comp insert={false} />);
+
+      act(() => {
+        expect(getCSS(document).trim()).not.toContain(`[data-test-remove]{color:grey;}`);
+        expect(getCSS(document).trim()).toContain(`[data-test-keep]{color:blue;}`);
+      });
+    });
   });
 
   it(`removes styling injected for multiple <GlobalStyle> components correctly`, () => {
@@ -247,7 +251,7 @@ describe(`createGlobalStyle`, () => {
     Simulate.click(el);
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`
       "/* sc-component-id:sc-global-3005254895 */
-      
+
       /* sc-component-id:sc-global-1591963405 */"
     `); // should be empty
   });
