@@ -14,8 +14,7 @@ import addUnitIfNeeded from './addUnitIfNeeded';
  */
 const isFalsish = chunk => chunk === undefined || chunk === null || chunk === false || chunk === '';
 
-
-const objToCssArray = (obj: Object, prevKey?: string): Array<string | Function> => {
+export const objToCssArray = (obj: Object, prevKey?: string): Array<string | Function> => {
   const rules = []
   const keys = Object.keys(obj)
 
