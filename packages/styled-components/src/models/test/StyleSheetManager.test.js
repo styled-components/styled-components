@@ -4,6 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { render } from 'react-dom';
 import TestRenderer from 'react-test-renderer';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
+import stylisRTLPlugin from 'stylis-rtl';
 import StyleSheetManager from '../StyleSheetManager';
 import ServerStyleSheet from '../ServerStyleSheet';
 import StyleSheet from '../../sheet';
@@ -228,5 +229,37 @@ describe('StyleSheetManager', () => {
     expect(indexOfRedStyle).toBeGreaterThanOrEqual(0);
     expect(indexOfBlueStyle).toBeGreaterThanOrEqual(0);
     expect(indexOfBlueStyle).toBeGreaterThan(indexOfRedStyle);
+  });
+
+  it('passing stylis options via StyleSheetManager works', () => {
+    const Test = styled.div`
+      display: flex;
+    `;
+
+    TestRenderer.create(
+      <StyleSheetManager stylisOptions={{ prefix: false }}>
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-a{display:flex;}</style>"`
+    );
+  });
+
+  it('passing stylis plugins via StyleSheetManager works', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    TestRenderer.create(
+      <StyleSheetManager stylusPlugins={[stylisRTLPlugin]}>
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-a{padding-right:5px;}</style>"`
+    );
   });
 });

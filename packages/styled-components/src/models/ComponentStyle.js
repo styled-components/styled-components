@@ -3,7 +3,6 @@
 import flatten from '../utils/flatten';
 import { hash, phash } from '../utils/hasher';
 import generateName from '../utils/generateAlphabeticName';
-import stringifyRules from '../utils/stringifyRules';
 import isStaticRules from '../utils/isStaticRules';
 import StyleSheet from '../sheet';
 import { IS_BROWSER } from '../constants';
@@ -48,7 +47,7 @@ export default class ComponentStyle {
     if (this.isStatic) {
       if (!styleSheet.hasNameForId(componentId, componentId)) {
         const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
-        const cssStaticFormatted = stringifyRules(
+        const cssStaticFormatted = styleSheet.stringifier(
           cssStatic,
           `.${componentId}`,
           undefined,
@@ -81,7 +80,7 @@ export default class ComponentStyle {
       const name = generateName(dynamicHash >>> 0);
 
       if (!styleSheet.hasNameForId(componentId, name)) {
-        const cssFormatted = stringifyRules(css, `.${name}`, undefined, componentId);
+        const cssFormatted = styleSheet.stringifier(css, `.${name}`, undefined, componentId);
         styleSheet.insertRules(componentId, name, cssFormatted);
       }
 
