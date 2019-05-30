@@ -119,9 +119,9 @@ describe('basic', () => {
     expectCSSMatches('.sc-a { color:blue; }');
   });
 
-    it('should allow you to pass in style object with a function', () => {
-    const Comp = styled.div({ color: ({color}) => color });
-    TestRenderer.create(<Comp color='blue' />);
+  it('should allow you to pass in style object with a function', () => {
+    const Comp = styled.div({ color: ({ color }) => color });
+    TestRenderer.create(<Comp color="blue" />);
     expectCSSMatches('.b { color:blue; }');
   });
 
@@ -130,24 +130,24 @@ describe('basic', () => {
       span: {
         small: {
           color: 'blue',
-          fontFamily: 'sans-serif'
-        }
-      }
+          fontFamily: 'sans-serif',
+        },
+      },
     });
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b span small{ color:blue; font-family: sans-serif; }');
+    expectCSSMatches('.sc-a span small{ color:blue; font-family: sans-serif; }');
   });
 
   it('should allow you to pass in style nested object with a function', () => {
     const Comp = styled.div({
       span: {
         small: {
-          color: ({color}) => color,
-          fontFamily: 'sans-serif'
-        }
-      }
+          color: ({ color }) => color,
+          fontFamily: 'sans-serif',
+        },
+      },
     });
-    TestRenderer.create(<Comp color='red' />);
+    TestRenderer.create(<Comp color="red" />);
     expectCSSMatches('.b span small{ color:red; font-family: sans-serif; }');
   });
 
@@ -205,7 +205,7 @@ describe('basic', () => {
 
       class Wrapper extends Component<*, *> {
         render() {
-          return <OuterComponent className='test' />;
+          return <OuterComponent className="test" />;
         }
       }
 
