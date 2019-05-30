@@ -25,7 +25,7 @@ export const makeTag = (isServer: boolean, target?: HTMLElement): Tag => {
 };
 
 /** A Tag that wraps CSSOM's CSSStyleSheet API directly */
-class SpeedyTag implements Tag {
+export class SpeedyTag implements Tag {
   element: HTMLStyleElement;
 
   sheet: CSSStyleSheet;
@@ -67,7 +67,7 @@ class SpeedyTag implements Tag {
 }
 
 /** A Tag that emulates the CSSStyleSheet API but uses text nodes */
-class TextTag implements Tag {
+export class TextTag implements Tag {
   element: HTMLStyleElement;
 
   nodes: NodeList<Node>;
@@ -107,7 +107,7 @@ class TextTag implements Tag {
 }
 
 /** A completely virtual (server-side) Tag that doesn't manipulate the DOM */
-class VirtualTag implements Tag {
+export class VirtualTag implements Tag {
   rules: string[];
 
   length: number;
