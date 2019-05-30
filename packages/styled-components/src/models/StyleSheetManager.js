@@ -2,7 +2,6 @@
 import React, { useContext, useMemo, type Node, type Context } from 'react';
 import PropTypes from 'prop-types';
 import StyleSheet from '../sheet';
-import StyledError from '../utils/error';
 import createStylisInstance from '../utils/stylis';
 
 type Props = {
@@ -22,7 +21,7 @@ export function useStyleSheet(): StyleSheet {
   return sheet !== undefined ? sheet : masterSheet;
 }
 
-function useStyleSheetProvider(sheet?: StyleSheet = masterSheet, target?: HTMLElement) {
+function useStyleSheetProvider(sheet?: StyleSheet, target?: HTMLElement) {
   return useMemo(
     () => {
       if (sheet) {
@@ -30,7 +29,7 @@ function useStyleSheetProvider(sheet?: StyleSheet = masterSheet, target?: HTMLEl
       } else if (target) {
         return new StyleSheet(false, target);
       } else {
-        throw new StyledError(4);
+        return masterSheet;
       }
     },
     [sheet, target]
