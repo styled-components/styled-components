@@ -74,6 +74,9 @@ export default function createStylisInstance(
    *
    * The second ampersand should be a reference to the static component class. stylis
    * has no knowledge of static class so we have to intelligently replace the base selector.
+   *
+   * https://github.com/thysultan/stylis.js#plugins <- more info about the context phase values
+   * "2" means this plugin is taking effect at the very end after all other processing is complete
    */
   const selfReferenceReplacementPlugin = (context, _, selectors) => {
     if (context === 2 && selectors.length && selectors[0].lastIndexOf(_selector) > 0) {
