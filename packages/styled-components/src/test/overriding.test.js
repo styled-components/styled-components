@@ -2,6 +2,7 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
+import StyleSheetManager from '../models/StyleSheetManager';
 import { resetStyled, expectCSSMatches } from './utils';
 
 // Disable isStaticRules optimisation since we're not
@@ -39,31 +40,30 @@ describe('extending', () => {
   });
 
   describe('inheritance', () => {
-
     const setupParent = () => {
       const colors = {
         primary: 'red',
         secondary: 'blue',
         tertiary: 'green',
-      }
+      };
       const Parent = styled.h1`
         position: relative;
         color: ${props => colors[props.color]};
       `;
       return Parent;
-    }
+    };
 
     const addDefaultProps = (Parent, Child, Grandson) => {
       Parent.defaultProps = {
         color: 'primary',
-      }
+      };
       Child.defaultProps = {
         color: 'secondary',
-      }
+      };
       Grandson.defaultProps = {
         color: 'tertiary',
-      }
-    }
+      };
+    };
 
     it('should override parents defaultProps', () => {
       const Parent = setupParent();
@@ -83,8 +83,8 @@ describe('extending', () => {
     describe('when overriding with another component', () => {
       it('should override parents defaultProps', () => {
         const Parent = setupParent();
-        const Child = styled(Parent).attrs({as: 'h2'})``;
-        const Grandson = styled(Child).attrs({as: 'h3'})``;
+        const Child = styled(Parent).attrs({ as: 'h2' })``;
+        const Grandson = styled(Child).attrs({ as: 'h3' })``;
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);
@@ -95,10 +95,11 @@ describe('extending', () => {
           .f{ position:relative; color:green; }
         `);
       });
+
       it('should evaluate grandsons props', () => {
         const Parent = setupParent();
-        const Child = styled(Parent).attrs({as: 'h2'})``;
-        const Grandson = styled(Child).attrs({as: 'h3'})``;
+        const Child = styled(Parent).attrs({ as: 'h2' })``;
+        const Grandson = styled(Child).attrs({ as: 'h3' })``;
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);
@@ -110,5 +111,27 @@ describe('extending', () => {
         `);
       });
     });
+  });
+});
+
+describe('passing stylis options via StyleSheetManager', () => {
+  beforeEach(() => {
+    styled = resetStyled();
+  });
+
+  it('disabling vendor prefixing works', () => {
+    const Test = styled.div`
+      display: flex;
+    `;
+
+    TestRenderer.create(
+      <StyleSheetManager stylisOptions={{ prefix: false }}>
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expectCSSMatches(`
+      .b{ display: flex; }
+    `);
   });
 });

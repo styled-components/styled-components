@@ -22,16 +22,19 @@ export function useStyleSheet(): StyleSheet {
   return sheet !== undefined ? sheet : masterSheet;
 }
 
-function useStyleSheetProvider(sheet?: StyleSheet, target?: HTMLElement) {
-  return useMemo(() => {
-    if (sheet) {
-      return sheet;
-    } else if (target) {
-      return new StyleSheet(false, target);
-    } else {
-      throw new StyledError(4);
-    }
-  }, [sheet, target]);
+function useStyleSheetProvider(sheet?: StyleSheet = masterSheet, target?: HTMLElement) {
+  return useMemo(
+    () => {
+      if (sheet) {
+        return sheet;
+      } else if (target) {
+        return new StyleSheet(false, target);
+      } else {
+        throw new StyledError(4);
+      }
+    },
+    [sheet, target]
+  );
 }
 
 export default function StyleSheetManager(props: Props) {
