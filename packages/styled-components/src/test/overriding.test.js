@@ -1,8 +1,6 @@
 // @flow
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-
-import StyleSheetManager from '../models/StyleSheetManager';
 import { resetStyled, expectCSSMatches } from './utils';
 
 // Disable isStaticRules optimisation since we're not
@@ -111,27 +109,5 @@ describe('extending', () => {
         `);
       });
     });
-  });
-});
-
-describe('passing stylis options via StyleSheetManager', () => {
-  beforeEach(() => {
-    styled = resetStyled();
-  });
-
-  it('disabling vendor prefixing works', () => {
-    const Test = styled.div`
-      display: flex;
-    `;
-
-    TestRenderer.create(
-      <StyleSheetManager stylisOptions={{ prefix: false }}>
-        <Test>Foo</Test>
-      </StyleSheetManager>
-    );
-
-    expectCSSMatches(`
-      .b{ display: flex; }
-    `);
   });
 });
