@@ -8,18 +8,18 @@ export default class Keyframes {
 
   name: string;
 
-  rules: Array<string>;
+  stringifyArgs: string[];
 
-  constructor(name: string, rules: Array<string>) {
+  constructor(name: string, stringifyArgs: string[]) {
     this.name = name;
-    this.rules = rules;
-
     this.id = `sc-keyframes-${name}`;
+
+    this.stringifyArgs = stringifyArgs;
   }
 
   inject = (styleSheet: StyleSheet) => {
     if (!styleSheet.hasNameForId(this.id, this.name)) {
-      styleSheet.insertRules(this.id, this.name, this.rules);
+      styleSheet.insertRules(this.id, this.name, styleSheet.stringifier(...this.stringifyArgs));
     }
   };
 

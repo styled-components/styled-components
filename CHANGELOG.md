@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Remove validation in Babel macro, by [@mAAdhaTTah](http://github.com/mAAdhaTTah) (see [#2427](https://github.com/styled-components/styled-components/pull/2427))
+
 ## [v4.2.0] - 2019-03-23
 
 - Reduced GC pressure when using component selector styles. (see [#2424](https://github.com/styled-components/styled-components/issues/2424)).

@@ -28,6 +28,12 @@ Utilising [tagged template literals](https://www.styled-components.com/docs/adva
 
 _Supported by [Front End Center](https://frontend.center). Thank you for making this possible!_
 
+## Upgrading from v4
+
+1. Update `react`, `react-dom`, and `react-is` to latest versions to enable hooks support
+2. ??
+3. Profit!
+
 ## [Docs](https://www.styled-components.com/docs)
 
 **See the documentation at [styled-components.com/docs](https://www.styled-components.com/docs)** for more information about using `styled-components`!

@@ -42,15 +42,7 @@ exports[`expanded api "as" prop transfers all styles that have been applied 6`] 
 />
 `;
 
-exports[`expanded api "as" prop transfers all styles that have been applied 7`] = `
-"
-/* sc-component-id:sc-a */
-.d{background:blue;color:red;}
-/* sc-component-id:sc-b */
-.e{background:blue;color:red;color:green;}
-/* sc-component-id:sc-c */
-.f{background:blue;color:red;color:green;text-align:center;}"
-`;
+exports[`expanded api "as" prop transfers all styles that have been applied 7`] = `".d{background:blue;color:red;}.e{background:blue;color:red;color:green;}.f{background:blue;color:red;color:green;text-align:center;}"`;
 
 exports[`expanded api "as" prop works with custom components 1`] = `
 <figure

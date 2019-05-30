@@ -1,7 +1,6 @@
 // @flow
 
 import css from './css';
-import stringifyRules from '../utils/stringifyRules';
 import hasher from '../utils/hasher';
 import Keyframes from '../models/Keyframes';
 
@@ -25,5 +24,5 @@ export default function keyframes(
 
   const rules = css(strings, ...interpolations).join('');
   const name = hasher(rules);
-  return new Keyframes(name, stringifyRules(rules, name, '@keyframes'));
+  return new Keyframes(name, [rules, name, '@keyframes']);
 }

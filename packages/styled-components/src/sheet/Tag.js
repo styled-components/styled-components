@@ -25,7 +25,7 @@ export const makeTag = (isServer: boolean, target?: HTMLElement): Tag => {
 };
 
 /** A Tag that wraps CSSOM's CSSStyleSheet API directly */
-class SpeedyTag implements Tag {
+export class SpeedyTag implements Tag {
   element: HTMLStyleElement;
 
   sheet: CSSStyleSheet;
@@ -58,8 +58,10 @@ class SpeedyTag implements Tag {
   }
 
   getRule(index: number): string {
-    if (index < this.length) {
-      return this.sheet.cssRules[index].cssText;
+    const rule = this.sheet.cssRules[index];
+    // Avoid IE11 quirk where cssText is inaccessible on some invalid rules
+    if (rule !== undefined && typeof rule.cssText === 'string') {
+      return rule.cssText;
     } else {
       return '';
     }
@@ -67,7 +69,7 @@ class SpeedyTag implements Tag {
 }
 
 /** A Tag that emulates the CSSStyleSheet API but uses text nodes */
-class TextTag implements Tag {
+export class TextTag implements Tag {
   element: HTMLStyleElement;
 
   nodes: NodeList<Node>;
@@ -107,7 +109,7 @@ class TextTag implements Tag {
 }
 
 /** A completely virtual (server-side) Tag that doesn't manipulate the DOM */
-class VirtualTag implements Tag {
+export class VirtualTag implements Tag {
   rules: string[];
 
   length: number;
