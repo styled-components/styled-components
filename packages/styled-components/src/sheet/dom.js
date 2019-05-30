@@ -1,6 +1,7 @@
 // @flow
 
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_VERSION_ATTR, SC_VERSION } from '../constants';
+import getNonce from '../utils/nonce';
 
 const ELEMENT_TYPE = 1; /* Node.ELEMENT_TYPE */
 
@@ -10,11 +11,7 @@ const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
 
   for (let i = childNodes.length; i >= 0; i--) {
     const child = ((childNodes[i]: any): ?HTMLElement);
-    if (
-      child &&
-      child.nodeType === ELEMENT_TYPE &&
-      child.hasAttribute(SC_ATTR)
-    ) {
+    if (child && child.nodeType === ELEMENT_TYPE && child.hasAttribute(SC_ATTR)) {
       return ((child: any): HTMLStyleElement);
     }
   }
@@ -32,6 +29,11 @@ export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
 
   style.setAttribute(SC_ATTR, SC_ATTR_ACTIVE);
   style.setAttribute(SC_VERSION_ATTR, SC_VERSION);
+
+  const nonce = getNonce();
+
+  if (nonce) style.setAttribute('nonce', nonce);
+
   parent.insertBefore(style, nextSibling);
 
   return style;

@@ -132,70 +132,6 @@ describe('ssr', () => {
     expect(css).toMatchSnapshot();
   });
 
-  it('should share global styles but keep renders separate', () => {
-    const Component = createGlobalStyle`
-      body { background: papayawhip; }
-    `;
-    const PageOne = styled.h1.withConfig({ componentId: 'PageOne' })`
-      color: red;
-    `;
-    const PageTwo = styled.h2.withConfig({ componentId: 'PageTwo' })`
-      color: blue;
-    `;
-
-    const sheetOne = new ServerStyleSheet();
-    const htmlOne = renderToString(
-      sheetOne.collectStyles(
-        <React.Fragment>
-          <Component />
-          <PageOne>Camera One!</PageOne>
-        </React.Fragment>
-      )
-    );
-    const cssOne = sheetOne.getStyleTags();
-
-    const sheetTwo = new ServerStyleSheet();
-    const htmlTwo = renderToString(
-      sheetTwo.collectStyles(
-        <React.Fragment>
-          <Component />
-          <PageTwo>Camera Two!</PageTwo>
-        </React.Fragment>
-      )
-    );
-    const cssTwo = sheetTwo.getStyleTags();
-
-    expect(htmlOne).toMatchSnapshot();
-    expect(cssOne).toMatchSnapshot();
-    expect(htmlTwo).toMatchSnapshot();
-    expect(cssTwo).toMatchSnapshot();
-  });
-
-  it('should dispatch global styles to each ServerStyleSheet', () => {
-    const Component = createGlobalStyle`
-      body { background: papayawhip; }
-    `;
-    const Header = styled.h1.withConfig({ componentId: 'Header' })`
-      animation: ${props => props.animation} 1s both;
-    `;
-
-    seedNextClassnames(['keyframe_0']);
-
-    const sheet = new ServerStyleSheet();
-    const html = renderToString(
-      sheet.collectStyles(
-        <React.Fragment>
-          <Component />
-          <Header animation={keyframes`0% { opacity: 0; }`} />
-        </React.Fragment>
-      )
-    );
-    const css = sheet.getStyleTags();
-
-    expect(html).toMatchSnapshot();
-    expect(css).toMatchSnapshot();
-  });
-
   it('should return a generated React style element', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
@@ -213,15 +149,11 @@ describe('ssr', () => {
         </React.Fragment>
       )
     );
-    const elements = sheet.getStyleElement();
+    const element = sheet.getStyleElement();
 
-    expect(elements).toHaveLength(1);
-
-    /* I know this looks pointless, but apparently I have the feeling we'll need this */
-    expect(elements[0].props.dangerouslySetInnerHTML).toBeDefined();
-    expect(elements[0].props.children).not.toBeDefined();
-
-    expect(elements[0].props).toMatchSnapshot();
+    expect(element.props.dangerouslySetInnerHTML).toBeDefined();
+    expect(element.props.children).not.toBeDefined();
+    expect(element.props).toMatchSnapshot();
   });
 
   it('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
@@ -244,10 +176,9 @@ describe('ssr', () => {
         </React.Fragment>
       )
     );
-    const elements = sheet.getStyleElement();
 
-    expect(elements).toHaveLength(1);
-    expect(elements[0].props.nonce).toBe('foo');
+    const element = sheet.getStyleElement();
+    expect(element.props.nonce).toBe('foo');
   });
 
   it('should interleave styles with rendered HTML when utilitizing streaming', () => {
@@ -304,6 +235,14 @@ describe('ssr', () => {
       color: green;
     `;
 
+    // These create a long chunk of (hopefully) uninterrupted HTML
+    const elements = new Array(100).fill(0).map((_, i) => (
+      <div key={i}>*************************</div>
+    ));
+
+    // This is the result of the above
+    const expectedElements = '<div>*************************</div>'.repeat(100);
+
     const sheet = new ServerStyleSheet();
     const jsx = sheet.collectStyles(
       <React.Fragment>
@@ -318,24 +257,24 @@ describe('ssr', () => {
         <Footer>Footer</Footer>
       </React.Fragment>
     );
-    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise((resolve, reject) => {
+    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+    const stream$ = new Promise((resolve, reject) => {
       let received = '';
 
       stream.on('data', chunk => {
         received += chunk;
       });
 
-      stream.on('end', () => {
-        expect(received).toMatchSnapshot();
-        expect(sheet.sealed).toBe(true);
-        expect(received).toMatch(/yellow/);
-        expect(received).toMatch(/green/);
-        resolve();
-      });
-
+      stream.on('end', () => resolve(received));
       stream.on('error', reject);
+    });
+
+    return stream$.then(received => {
+      expect(sheet.sealed).toBe(true);
+      expect(received.includes(expectedElements)).toBeTruthy();
+      expect(received).toMatch(/yellow/);
+      expect(received).toMatch(/green/);
     });
   });
 

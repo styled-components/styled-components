@@ -1,8 +1,9 @@
 // @flow
 import React from 'react';
 import ReactDOM from 'react-dom';
+import ReactTestRenderer from 'react-test-renderer';
 import ReactDOMServer from 'react-dom/server';
-import { Simulate } from 'react-dom/test-utils';
+import { Simulate, act } from 'react-dom/test-utils';
 
 import {
   expectCSSMatches,
@@ -53,8 +54,8 @@ describe(`createGlobalStyle`, () => {
     const style = container.querySelector('style');
 
     expect(html).toBe('');
-    expect(stripWhitespace(stripComments(style.textContent))).toBe(
-      '[data-test-inject]{ color:red; } '
+    expect(stripWhitespace(stripComments(style.textContent))).toMatchInlineSnapshot(
+      `"[data-test-inject]{ color:red; } data-styled.g1[id=\\"sc-global-a\\"]{ content:\\"sc-global-a,\\"} "`
     );
   });
 
@@ -194,24 +195,27 @@ describe(`createGlobalStyle`, () => {
 
   it(`removes styling injected styling when unmounted`, () => {
     const { render } = setup();
-    const Component = createGlobalStyle`[data-test-remove]{color:grey;} `;
+    const ComponentA = createGlobalStyle`[data-test-remove]{color:grey;} `;
+    const ComponentB = createGlobalStyle`[data-test-keep]{color:blue;} `;
 
     class Comp extends React.Component {
-      state = {
-        styled: true,
-      };
-
-      componentDidMount() {
-        this.setState({ styled: false });
-      }
-
       render() {
-        return this.state.styled ? <Component /> : null;
+        return this.props.insert ? <ComponentA /> : <ComponentB />;
       }
     }
 
-    render(<Comp />);
-    expect(getCSS(document).trim()).not.toContain(`[data-test-remove]{color:grey;}`);
+    const renderer = ReactTestRenderer.create(<Comp insert={true} />);
+
+    act(() => {
+      expect(getCSS(document).trim()).toContain(`[data-test-remove]{color:grey;}`);
+      expect(getCSS(document).trim()).not.toContain(`[data-test-keep]{color:blue;}`);
+      renderer.update(<Comp insert={false} />);
+
+      act(() => {
+        expect(getCSS(document).trim()).not.toContain(`[data-test-remove]{color:grey;}`);
+        expect(getCSS(document).trim()).toContain(`[data-test-keep]{color:blue;}`);
+      });
+    });
   });
 
   it(`removes styling injected for multiple <GlobalStyle> components correctly`, () => {
@@ -257,26 +261,15 @@ describe(`createGlobalStyle`, () => {
 
     render(<Comp />);
     const el = document.querySelector('[data-test-el]');
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-      "/* sc-component-id:sc-global-3005254895 */
-      body{background:palevioletred;}
-      /* sc-component-id:sc-global-1591963405 */
-      body{color:white;}"
-    `); // should have both styles
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(
+      `"body{background:palevioletred;}body{color:white;}"`
+    ); // should have both styles
 
     Simulate.click(el);
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-      "/* sc-component-id:sc-global-3005254895 */
-      body{background:palevioletred;}
-      /* sc-component-id:sc-global-1591963405 */"
-    `); // should only have palevioletred
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(`"body{background:palevioletred;}"`); // should only have palevioletred
 
     Simulate.click(el);
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-      "/* sc-component-id:sc-global-3005254895 */
-      
-      /* sc-component-id:sc-global-1591963405 */"
-    `); // should be empty
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(`""`); // should be empty
   });
 
   it(`removes styling injected for multiple instances of same <GlobalStyle> components correctly`, () => {
@@ -325,21 +318,13 @@ describe(`createGlobalStyle`, () => {
 
     render(<Comp />); // should be blue
     const el = document.querySelector('[data-test-el]');
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-      "/* sc-component-id:sc-global-1846532150 */
-      body{background:blue;}"
-    `);
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(`"body{background:blue;}"`);
 
     Simulate.click(el); // should be red
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-      "/* sc-component-id:sc-global-1846532150 */
-      body{background:red;}"
-    `);
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(`"body{background:red;}"`);
 
     Simulate.click(el); // should be empty
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(
-      `"/* sc-component-id:sc-global-1846532150 */"`
-    );
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(`""`);
   });
 
   it(`should warn when children are passed as props`, () => {
@@ -359,7 +344,7 @@ describe(`createGlobalStyle`, () => {
     );
 
     expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"The global style component sc-global-2176982909 was given child JSX. createGlobalStyle does not render children."`
+      `"The global style component sc-global-a was given child JSX. createGlobalStyle does not render children."`
     );
   });
 
@@ -392,12 +377,9 @@ describe(`createGlobalStyle`, () => {
       </div>
     );
 
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-      "/* sc-component-id:sc-global-1354462580 */
-      div{display:inline-block;-webkit-animation:a 2s linear infinite;animation:a 2s linear infinite;padding:2rem 1rem;font-size:1.2rem;}
-      /* sc-component-id:sc-keyframes-a */
-      @-webkit-keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}} @keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}}"
-    `);
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(
+      `"div{display:inline-block;-webkit-animation:a 2s linear infinite;animation:a 2s linear infinite;padding:2rem 1rem;font-size:1.2rem;}@-webkit-keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}}@keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}}"`
+    );
   });
 
   it(`removes style tag in StyleSheetManager.target when unmounted after target detached and no other global styles`, () => {

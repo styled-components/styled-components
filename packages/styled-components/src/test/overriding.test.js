@@ -4,6 +4,10 @@ import TestRenderer from 'react-test-renderer';
 
 import { resetStyled, expectCSSMatches } from './utils';
 
+// Disable isStaticRules optimisation since we're not
+// testing for ComponentStyle specifics here
+jest.mock('../utils/isStaticRules', () => () => false);
+
 let styled;
 
 describe('extending', () => {
