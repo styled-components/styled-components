@@ -2,7 +2,6 @@
 import { EMPTY_ARRAY } from '../utils/empties';
 import flatten from '../utils/flatten';
 import isStaticRules from '../utils/isStaticRules';
-import stringifyRules from '../utils/stringifyRules';
 import StyleSheet from '../sheet';
 
 import type { RuleSet } from '../types';
@@ -23,7 +22,7 @@ export default class GlobalStyle {
 
   createStyles(executionContext: Object, styleSheet: StyleSheet) {
     const flatCSS = flatten(this.rules, executionContext, styleSheet);
-    const css = stringifyRules(flatCSS.join(''), '');
+    const css = styleSheet.stringifier(flatCSS.join(''), '');
     const id = this.componentId;
 
     // NOTE: We use the id as a name as well, since these rules never change
