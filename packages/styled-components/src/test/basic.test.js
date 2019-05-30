@@ -72,7 +72,7 @@ describe('basic', () => {
       color: blue;
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { color:blue; }');
+    expectCSSMatches('.sc-a { color:blue; }');
   });
 
   it("should inject only once for a styled component, no matter how often it's mounted", () => {
@@ -81,7 +81,7 @@ describe('basic', () => {
     `;
     TestRenderer.create(<Comp />);
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { color:blue; }');
+    expectCSSMatches('.sc-a { color:blue; }');
   });
 
   it('Should have the correct styled(component) displayName', () => {
@@ -116,7 +116,7 @@ describe('basic', () => {
       color: 'blue',
     });
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { color:blue; }');
+    expectCSSMatches('.sc-a { color:blue; }');
   });
 
   it('should allow you to pass in a function returning a style object', () => {
@@ -142,7 +142,7 @@ describe('basic', () => {
     `;
 
     TestRenderer.create(<StyledComp color="blue" />);
-    expectCSSMatches('.b { color:red; }');
+    expectCSSMatches('.sc-a { color:red; }');
   });
 
   it('does not filter outs custom props for uppercased string-like components', () => {
@@ -178,7 +178,7 @@ describe('basic', () => {
       }
 
       const wrapper = TestRenderer.create(<Wrapper />);
-      expect(wrapper.root.findByType(InnerComponent).props.className).toBe('test sc-a b');
+      expect(wrapper.root.findByType(InnerComponent).props.className).toBe('test sc-a');
     });
 
     it('should pass the ref to the component', () => {
@@ -241,7 +241,7 @@ describe('basic', () => {
       TestRenderer.create(<SecondComponent />);
       TestRenderer.create(<FirstComponent />);
 
-      expectCSSMatches('.d { color:red; } .c { color:blue; }');
+      expectCSSMatches('.sc-a { color:red; } .sc-b { color:blue; }');
     });
 
     it('handle media at-rules inside style rules', () => {
@@ -254,7 +254,7 @@ describe('basic', () => {
       `;
 
       TestRenderer.create(<Comp />);
-      expectCSSMatches('@media (min-width:500px){ .b > *{ color:pink; } } ');
+      expectCSSMatches('@media (min-width:500px){ .sc-a > *{ color:pink; } } ');
     });
 
     it('should hoist non-react static properties', () => {
@@ -308,7 +308,7 @@ describe('basic', () => {
 
     // this no longer is possible in React 16.6 because
     // of the deprecation of findDOMNode; need to find an alternative
-    it.skip('should work in StrictMode without warnings', () => {
+    it('should work in StrictMode without warnings', () => {
       const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const Comp = styled.div``;
 
@@ -344,23 +344,6 @@ describe('basic', () => {
 
       TestRenderer.create(<Comp innerRef={ref} />);
       expect(console.warn).not.toHaveBeenCalled();
-    });
-
-    it.skip('warns when a wrapped React component does not consume className', () => {
-      const Inner = () => <div />;
-      const Comp = styled(Inner)`
-        color: red;
-      `;
-
-      renderIntoDocument(
-        <div>
-          <Comp />
-        </div>
-      );
-
-      expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-        `"It looks like you've wrapped styled() around your React component (Inner), but the className prop is not being passed down to a child. No styles will be rendered unless className is composed within your React component."`
-      );
     });
 
     it('does not warn if the className is consumed by a deeper child', () => {

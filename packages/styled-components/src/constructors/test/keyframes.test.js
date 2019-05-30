@@ -7,12 +7,15 @@ import keyframes from '../keyframes';
 import Keyframes from '../../models/Keyframes';
 import { expectCSSMatches, getCSS, resetStyled } from '../../test/utils';
 
-/**
- * Setup
- */
+// Disable isStaticRules optimisation since we're not
+// testing for ComponentStyle specifics here
+jest.mock('../../utils/isStaticRules', () => () => false);
+
+let styled;
+
 describe('keyframes', () => {
   beforeEach(() => {
-    resetStyled();
+    styled = resetStyled();
   });
 
   it('should return Keyframes instance', () => {
@@ -36,12 +39,10 @@ describe('keyframes', () => {
         opacity: 1;
       }
     `.getName()
-    ).toMatchInlineSnapshot('"bcCCNc"');
+    ).toMatchInlineSnapshot('"bYhwJh"', `"bYhwJh"`);
   });
 
   it('should insert the correct styles', () => {
-    const styled = resetStyled();
-
     const rules = `
       0% {
         opacity: 0;
@@ -62,7 +63,7 @@ describe('keyframes', () => {
     TestRenderer.create(<Comp />);
 
     expectCSSMatches(`
-      .b {
+      .a {
         -webkit-animation: ${name} 2s linear infinite;
         animation: ${name} 2s linear infinite;
       }
@@ -88,8 +89,6 @@ describe('keyframes', () => {
   });
 
   it('should insert the correct styles when keyframes in props', () => {
-    const styled = resetStyled();
-
     const rules = `
       0% {
         opacity: 0;
@@ -110,7 +109,7 @@ describe('keyframes', () => {
     TestRenderer.create(<Comp animation={animation} />);
 
     expectCSSMatches(`
-      .b {
+      .a {
         -webkit-animation: ${name} 2s linear infinite;
         animation: ${name} 2s linear infinite;
       }
@@ -136,8 +135,6 @@ describe('keyframes', () => {
   });
 
   it('should handle interpolations', () => {
-    const styled = resetStyled();
-
     const opacity = ['opacity: 0;', 'opacity: 1;'];
 
     const opacityAnimation = keyframes`
@@ -186,19 +183,12 @@ describe('keyframes', () => {
 
     TestRenderer.create(<App />);
 
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
-"/* sc-component-id:sc-a */
-.b{-webkit-animation:none;animation:none;}.c{-webkit-animation:hNeMbn 1s linear;animation:hNeMbn 1s linear;, dHUfhi 1s linear;}.d{-webkit-animation:dHUfhi 1s linear;animation:dHUfhi 1s linear;}.e{-webkit-animation:hNeMbn 1s linear;animation:hNeMbn 1s linear;}
-/* sc-component-id:sc-keyframes-hNeMbn */
-@-webkit-keyframes hNeMbn{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}} @keyframes hNeMbn{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}}
-/* sc-component-id:sc-keyframes-dHUfhi */
-@-webkit-keyframes dHUfhi{from{opacity:0;}to{opacity:1;}} @keyframes dHUfhi{from{opacity:0;}to{opacity:1;}}"
-`);
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(
+      `".a{-webkit-animation:none;animation:none;}.b{-webkit-animation:XnAcP 1s linear;animation:XnAcP 1s linear;, imRjSV 1s linear;}.c{-webkit-animation:imRjSV 1s linear;animation:imRjSV 1s linear;}.d{-webkit-animation:XnAcP 1s linear;animation:XnAcP 1s linear;}@-webkit-keyframes XnAcP{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}}@keyframes XnAcP{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}}@-webkit-keyframes imRjSV{from{opacity:0;}to{opacity:1;}}@keyframes imRjSV{from{opacity:0;}to{opacity:1;}}"`
+    );
   });
 
   it('should throw an error when interpolated in a vanilla string', () => {
-    const styled = resetStyled();
-
     const animation = keyframes``;
 
     expect(() => `animation-name: ${animation};`).toThrow();

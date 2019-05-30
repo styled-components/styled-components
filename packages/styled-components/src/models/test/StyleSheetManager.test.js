@@ -1,14 +1,13 @@
 // @flow
-/* eslint-disable react/no-multi-comp */
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { render } from 'react-dom';
 import TestRenderer from 'react-test-renderer';
+import Frame, { FrameContextConsumer } from 'react-frame-component';
 import StyleSheetManager from '../StyleSheetManager';
 import ServerStyleSheet from '../ServerStyleSheet';
-import StyleSheet from '../StyleSheet';
+import StyleSheet from '../../sheet';
 import { resetStyled } from '../../test/utils';
-import Frame, { FrameContextConsumer } from 'react-frame-component';
 
 let styled;
 let consoleError;
@@ -31,16 +30,16 @@ describe('StyleSheetManager', () => {
   });
 
   it('should use given stylesheet instance', () => {
-    const sheet = new ServerStyleSheet();
+    const serverStyles = new ServerStyleSheet();
     const Title = styled.h1`
       color: palevioletred;
     `;
     renderToString(
-      <StyleSheetManager sheet={sheet.instance}>
+      <StyleSheetManager sheet={serverStyles.sheet}>
         <Title />
       </StyleSheetManager>
     );
-    expect(sheet.getStyleTags().includes(`palevioletred`)).toEqual(true);
+    expect(serverStyles.getStyleTags().includes(`palevioletred`)).toEqual(true);
   });
 
   it('should render its child', () => {
@@ -157,6 +156,7 @@ describe('StyleSheetManager', () => {
         expect(styles.includes(`palevioletred`)).toEqual(true);
         this.props.resolve();
       }
+
       render() {
         return <Title />;
       }
@@ -164,7 +164,8 @@ describe('StyleSheetManager', () => {
 
     const div = document.body.appendChild(document.createElement('div'));
 
-    let promiseA, promiseB;
+    let promiseA;
+    let promiseB;
     promiseA = new Promise((resolveA, reject) => {
       promiseB = new Promise((resolveB, reject) => {
         try {
@@ -200,51 +201,6 @@ describe('StyleSheetManager', () => {
     });
     await Promise.all([promiseA, promiseB]);
     div.parentElement.removeChild(div);
-  });
-
-  describe('ssr', () => {
-    it('should extract CSS outside the nested StyleSheetManager', () => {
-      const sheet = new ServerStyleSheet();
-      const ONE = styled.h1`
-        color: red;
-      `;
-      const TWO = styled.h2`
-        color: blue;
-      `;
-      class Wrapper extends React.Component {
-        state = {
-          targetRef: null,
-        };
-        render() {
-          return (
-            <div
-              ref={el => {
-                this.setState({ targetRef: el });
-              }}
-            >
-              {this.state.targetRef && (
-                <StyleSheetManager target={this.state.targetRef}>
-                  <TWO />
-                </StyleSheetManager>
-              )}
-            </div>
-          );
-        }
-      }
-
-      const html = renderToString(
-        <StyleSheetManager sheet={sheet.instance}>
-          <div>
-            <ONE />
-            <Wrapper />
-          </div>
-        </StyleSheetManager>
-      );
-      const css = sheet.getStyleTags();
-
-      expect(html).toMatchSnapshot();
-      expect(css).toMatchSnapshot();
-    });
   });
 
   it('should render styles in correct order when styled(StyledComponent) and StyleSheetManager is used', () => {
