@@ -44,7 +44,7 @@ class StyledNativeComponent extends Component<*, *> {
           // eslint-disable-next-line no-console
           console.warn(
             `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`,
-            `\n ${(new Error()).stack}`
+            `\n ${new Error().stack}`
           )
       );
 
@@ -69,6 +69,7 @@ class StyledNativeComponent extends Component<*, *> {
             as: renderAs,
             forwardedComponent,
             forwardedRef,
+            innerAs,
             innerRef,
             style = [],
             ...props
@@ -91,6 +92,7 @@ class StyledNativeComponent extends Component<*, *> {
           };
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
+          if (innerAs) propsForElement.as = innerAs;
 
           if (process.env.NODE_ENV !== 'production' && innerRef) {
             this.warnInnerRef(displayName);
