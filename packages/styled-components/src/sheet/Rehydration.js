@@ -58,7 +58,10 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
   for (let i = 0, l = cssRules.length; i < l; i++) {
     const cssRule = (cssRules[i]: any);
 
-    if (cssRule.type !== PLAIN_RULE_TYPE) {
+    if (typeof cssRule.cssText !== 'string') {
+      // Avoid IE11 quirk where cssText is inaccessible on some invalid rules
+      continue;
+    } else if (cssRule.type !== PLAIN_RULE_TYPE) {
       rules.push(cssRule.cssText);
     } else {
       const marker = cssRule.selectorText.match(MARKER_RE);
