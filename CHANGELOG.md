@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.2.1] - 2019-05-30
+
 - Remove className usage checker dev utility due to excessive false-positive noise in certain runtime environments like next.js and the related warning suppression prop (see [#2563](https://github.com/styled-components/styled-components/issues/2563)).
 
 - Attach displayName to forwardRef function as described in React docs (see [#2508](https://github.com/styled-components/styled-components/issues/2508)).
@@ -953,7 +955,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.2.0...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.2.1...master
+[v4.2.1]: https://github.com/styled-components/styled-components/compare/v4.2.0...v4.2.1
 [v4.2.0]: https://github.com/styled-components/styled-components/compare/v4.1.3...v4.2.0
 [v4.1.3]: https://github.com/styled-components/styled-components/compare/v4.1.2...v4.1.3
 [v4.1.2]: https://github.com/styled-components/styled-components/compare/v4.1.1...v4.1.2
