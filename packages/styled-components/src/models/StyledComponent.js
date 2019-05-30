@@ -113,11 +113,11 @@ function useInjectedStyle<T>(
     ? componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet)
     : componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet);
 
+  useDebugValue(className);
+
   if (process.env.NODE_ENV !== 'production' && !isStatic && warnTooManyClasses) {
     warnTooManyClasses(className);
   }
-
-  useDebugValue(className);
 
   return className;
 }
@@ -181,6 +181,8 @@ function useStyledComponentImpl<Config: {}, Instance>(
     target,
   } = forwardedComponent;
 
+  useDebugValue(styledComponentId);
+
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
@@ -206,17 +208,20 @@ function useStyledComponentImpl<Config: {}, Instance>(
     target;
   const isTargetTag = isTag(elementToBeCreated);
 
-  const computedProps = attrs !== props ? { ...attrs, ...props } : props;
-  const shouldFilterProps = 'as' in computedProps || isTargetTag;
-  const propsForElement = shouldFilterProps ? {} : { ...computedProps };
+  const computedProps: Object = attrs !== props ? { ...attrs, ...props } : props;
+  const shouldFilterProps = 'as' in computedProps || 'innerAs' in computedProps || isTargetTag;
+  const propsForElement: Object = shouldFilterProps ? {} : { ...computedProps };
 
   if (process.env.NODE_ENV !== 'production' && 'innerRef' in computedProps && isTargetTag) {
     utils.warnInnerRef();
   }
+
   if (shouldFilterProps) {
     // eslint-disable-next-line guard-for-in
     for (const key in computedProps) {
-      if (key !== 'as' && (!isTargetTag || validAttr(key))) {
+      if (key === 'innerAs') {
+        propsForElement.as = computedProps[key];
+      } else if (key !== 'as' && key !== 'innerAs' && (!isTargetTag || validAttr(key))) {
         // Don't pass through non HTML tags through to HTML elements
         propsForElement[key] = computedProps[key];
       }
@@ -228,11 +233,9 @@ function useStyledComponentImpl<Config: {}, Instance>(
     props.style && // eslint-disable-line react/prop-types
     attrs.style !== props.style // eslint-disable-line react/prop-types
   ) {
-    // $FlowFixMe
     propsForElement.style = { ...attrs.style, ...props.style }; // eslint-disable-line react/prop-types
   }
 
-  // $FlowFixMe
   propsForElement.className = Array.prototype
     .concat(
       foldedComponentIds,
@@ -245,10 +248,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
     .filter(Boolean)
     .join(' ');
 
-  // $FlowFixMe
   propsForElement.ref = refToForward;
-
-  useDebugValue(styledComponentId);
 
   return createElement(elementToBeCreated, propsForElement);
 }
