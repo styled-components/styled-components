@@ -58,8 +58,10 @@ export class SpeedyTag implements Tag {
   }
 
   getRule(index: number): string {
-    if (index < this.length) {
-      return this.sheet.cssRules[index].cssText;
+    const rule = this.sheet.cssRules[index];
+    // Avoid IE11 quirk where cssText is inaccessible on some invalid rules
+    if (rule !== undefined && typeof rule.cssText === 'string') {
+      return rule.cssText;
     } else {
       return '';
     }
