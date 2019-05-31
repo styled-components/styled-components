@@ -184,7 +184,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme = determineTheme((props: any), useContext(ThemeContext), defaultProps);
+  const theme = determineTheme((props: any), useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
 
   const utils = useDeprecationWarnings(displayName);
   const [context, attrs] = useResolvedAttrs(theme, props, componentAttrs, utils);

@@ -6,6 +6,9 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Fix `theme` prop for styled native components, also fixes `theme` in
+  `defaultProps` for them.
+
 - Remove validation in Babel macro, by [@mAAdhaTTah](http://github.com/mAAdhaTTah) (see [#2427](https://github.com/styled-components/styled-components/pull/2427))
 
 ## [v4.2.0] - 2019-03-23
