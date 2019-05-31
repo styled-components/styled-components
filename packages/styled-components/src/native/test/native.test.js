@@ -295,6 +295,37 @@ describe('native', () => {
         style: [{}],
       });
     });
+
+    it('theme prop works', () => {
+      const Comp = styled.Text`
+        color: ${({theme}) => theme.myColor};
+      `;
+
+      const wrapper = TestRenderer.create(
+        <Comp theme={{myColor: 'red'}}>Something else</Comp>
+      );
+      const text = wrapper.root.findByType('Text');
+
+      expect(text.props.style).toMatchObject(
+        [{"color": "red"}],
+      );
+    });
+
+    it('theme in defaultProps works', () => {
+      const Comp = styled.Text`
+        color: ${({theme}) => theme.myColor};
+      `;
+      Comp.defaultProps = {theme: {myColor: 'red'}}
+
+      const wrapper = TestRenderer.create(
+        <Comp>Something else</Comp>
+      );
+      const text = wrapper.root.findByType('Text');
+
+      expect(text.props.style).toMatchObject(
+        [{"color": "red"}],
+      );
+    });
   });
 
   describe('expanded API', () => {

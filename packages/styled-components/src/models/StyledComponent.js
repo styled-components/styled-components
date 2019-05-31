@@ -115,14 +115,9 @@ class StyledComponent extends Component<*> {
     let generatedClassName;
     if (componentStyle.isStatic) {
       generatedClassName = this.generateAndInjectStyles(EMPTY_OBJECT, this.props);
-    } else if (theme !== undefined) {
-      generatedClassName = this.generateAndInjectStyles(
-        determineTheme(this.props, theme, defaultProps),
-        this.props
-      );
     } else {
       generatedClassName = this.generateAndInjectStyles(
-        this.props.theme || EMPTY_OBJECT,
+        determineTheme(this.props, theme, defaultProps) || EMPTY_OBJECT,
         this.props
       );
     }
