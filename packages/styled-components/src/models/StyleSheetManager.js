@@ -24,20 +24,24 @@ export function useStyleSheet(): StyleSheet {
 export default function StyleSheetManager(props: Props) {
   const sheet = useMemo(
     () => {
+      let usedSheet;
+
       if (props.sheet) {
-        return props.sheet;
+        usedSheet = props.sheet;
       } else if (props.target) {
-        return new StyleSheet(false, props.target);
+        usedSheet = new StyleSheet(false, props.target);
       } else {
-        return masterSheet;
+        usedSheet = masterSheet;
       }
+
+      if (props.stylisOptions || props.stylusPlugins) {
+        usedSheet.stringifier = createStylisInstance(props.stylisOptions, props.stylusPlugins);
+      }
+
+      return usedSheet;
     },
     [props.sheet, props.target]
   );
-
-  if (props.stylisOptions || props.stylusPlugins) {
-    sheet.stringifier = createStylisInstance(props.stylisOptions, props.stylusPlugins);
-  }
 
   return (
     <StyleSheetContext.Provider value={sheet}>
