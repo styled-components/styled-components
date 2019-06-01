@@ -35,9 +35,9 @@ const identifiers = {};
 function generateId(displayName: string, parentComponentId: string) {
   const name = typeof displayName !== 'string' ? 'sc' : escape(displayName);
   // Ensure that no displayName can lead to duplicate componentIds
-  const nr = (identifiers[name] || 0) + 1;
-  identifiers[name] = nr;
-  const componentId = `${name}-${hasher(name + nr)}`;
+  identifiers[name] = (identifiers[name] || 0) + 1;
+
+  const componentId = `${name}-${hasher(name + identifiers[name])}`;
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
