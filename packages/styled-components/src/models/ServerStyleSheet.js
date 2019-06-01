@@ -2,9 +2,7 @@
 /* eslint-disable no-underscore-dangle */
 
 import React from 'react';
-
 import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
-
 import StyledError from '../utils/error';
 import getNonce from '../utils/nonce';
 import StyleSheet from '../sheet';
@@ -29,7 +27,8 @@ export default class ServerStyleSheet {
       throw new StyledError(2);
     }
 
-    this.sealed = true;
+    this.seal();
+
     return <StyleSheetManager sheet={this.sheet}>{children}</StyleSheetManager>;
   }
 
@@ -37,8 +36,8 @@ export default class ServerStyleSheet {
     const css = this.sheet.toString();
     const nonce = getNonce();
     const attrs = [nonce && `nonce="${nonce}"`, SC_ATTR, `${SC_ATTR_VERSION}="${SC_VERSION}"`];
-
     const htmlAttr = attrs.filter(Boolean).join(' ');
+
     return `<style ${htmlAttr}>${css}</style>`;
   };
 
@@ -101,4 +100,8 @@ export default class ServerStyleSheet {
 
     return readableStream.pipe(transformer);
   }
+
+  seal = () => {
+    this.sealed = true;
+  };
 }

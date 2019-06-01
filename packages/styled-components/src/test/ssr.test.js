@@ -284,7 +284,7 @@ describe('ssr', () => {
     const jsx = sheet.collectStyles(null);
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
       stream.on('data', () => {});
 
       stream.on('error', err => {
