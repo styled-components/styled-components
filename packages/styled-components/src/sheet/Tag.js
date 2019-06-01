@@ -32,7 +32,7 @@ export class CSSOMTag implements Tag {
   length: number;
 
   constructor(target?: HTMLElement) {
-    const element = (this.element = makeStyleTag(true, target));
+    const element = (this.element = makeStyleTag(target));
 
     // Avoid Edge bug where empty style elements don't create sheets
     element.appendChild(document.createTextNode(''));
@@ -76,7 +76,7 @@ export class TextTag implements Tag {
   length: number;
 
   constructor(target?: HTMLElement) {
-    const element = (this.element = makeStyleTag(false, target));
+    const element = (this.element = makeStyleTag(target));
     this.nodes = element.childNodes;
     this.length = 0;
   }
