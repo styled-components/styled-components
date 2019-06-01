@@ -109,6 +109,7 @@ function useInjectedStyle<T>(
   // statically styled-components don't need to build an execution context object,
   // and shouldn't be increasing the number of class names
   const isStatic = componentStyle.isStatic && !hasAttrs;
+
   const className = isStatic
     ? componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet)
     : componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet);
@@ -167,7 +168,7 @@ const useDeprecationWarnings =
 
 function useStyledComponentImpl<Config: {}, Instance>(
   forwardedComponent: StyledComponentWrapper<Config, Instance>,
-  props: Config,
+  props: Object,
   forwardedRef: Ref<any>
 ) {
   const {
@@ -184,7 +185,8 @@ function useStyledComponentImpl<Config: {}, Instance>(
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme = determineTheme((props: any), useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
+  const theme =
+    determineTheme((props: any), useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
 
   const utils = useDeprecationWarnings(displayName);
   const [context, attrs] = useResolvedAttrs(theme, props, componentAttrs, utils);
@@ -200,12 +202,11 @@ function useStyledComponentImpl<Config: {}, Instance>(
   const refToForward = forwardedRef;
 
   const elementToBeCreated: Target =
-    // $FlowFixMe
     props.as || // eslint-disable-line react/prop-types
     attrs.as ||
     target;
-  const isTargetTag = isTag(elementToBeCreated);
 
+  const isTargetTag = isTag(elementToBeCreated);
   const computedProps = attrs !== props ? { ...attrs, ...props } : props;
   const shouldFilterProps = 'as' in computedProps || isTargetTag;
   const propsForElement = shouldFilterProps ? {} : { ...computedProps };
@@ -213,6 +214,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
   if (process.env.NODE_ENV !== 'production' && 'innerRef' in computedProps && isTargetTag) {
     utils.warnInnerRef();
   }
+
   if (shouldFilterProps) {
     // eslint-disable-next-line guard-for-in
     for (const key in computedProps) {
@@ -224,19 +226,15 @@ function useStyledComponentImpl<Config: {}, Instance>(
   }
 
   if (
-    // $FlowFixMe
     props.style && // eslint-disable-line react/prop-types
     attrs.style !== props.style // eslint-disable-line react/prop-types
   ) {
-    // $FlowFixMe
     propsForElement.style = { ...attrs.style, ...props.style }; // eslint-disable-line react/prop-types
   }
 
-  // $FlowFixMe
   propsForElement.className = Array.prototype
     .concat(
       foldedComponentIds,
-      // $FlowFixMe
       props.className, // eslint-disable-line react/prop-types
       styledComponentId,
       attrs.className,
@@ -245,7 +243,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
     .filter(Boolean)
     .join(' ');
 
-  // $FlowFixMe
   propsForElement.ref = refToForward;
 
   useDebugValue(styledComponentId);
