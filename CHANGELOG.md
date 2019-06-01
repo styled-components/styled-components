@@ -9,6 +9,9 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 - Fix `theme` prop for styled native components, also fixes `theme` in
   `defaultProps` for them.
 
+- Add "forwardedAs" prop to allow deeply passing a different "as" prop value to underlying components
+  when using `styled()` as a higher-order component
+
 ## [v4.2.1] - 2019-05-30
 
 - Remove className usage checker dev utility due to excessive false-positive noise in certain runtime environments like next.js and the related warning suppression prop (see [#2563](https://github.com/styled-components/styled-components/issues/2563)).

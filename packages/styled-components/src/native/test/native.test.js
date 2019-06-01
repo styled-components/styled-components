@@ -1,5 +1,5 @@
 // @flow
-import 'react-native';
+/* eslint-disable react/prop-types */
 import { Text, View } from 'react-native';
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -117,6 +117,18 @@ describe('native', () => {
     wrapper.update(<Comp opacity={0.9} />);
 
     expect(wrapper.root.findByType('View').props.style).toEqual([{ paddingTop: 5, opacity: 0.9 }]);
+  });
+
+  it('should pass "forwardedAs" to the underlying component as "as" if used', () => {
+    const Comp = ({ as: Component = View, ...props }) => <Component {...props} />;
+
+    const Comp2 = styled(Comp)`
+      background: red;
+    `;
+
+    const wrapper = TestRenderer.create(<Comp2 forwardedAs={Text} />);
+
+    expect(wrapper.root.findByType('Text')).not.toBeUndefined();
   });
 
   describe('attrs', () => {
@@ -298,33 +310,25 @@ describe('native', () => {
 
     it('theme prop works', () => {
       const Comp = styled.Text`
-        color: ${({theme}) => theme.myColor};
+        color: ${({ theme }) => theme.myColor};
       `;
 
-      const wrapper = TestRenderer.create(
-        <Comp theme={{myColor: 'red'}}>Something else</Comp>
-      );
+      const wrapper = TestRenderer.create(<Comp theme={{ myColor: 'red' }}>Something else</Comp>);
       const text = wrapper.root.findByType('Text');
 
-      expect(text.props.style).toMatchObject(
-        [{"color": "red"}],
-      );
+      expect(text.props.style).toMatchObject([{ color: 'red' }]);
     });
 
     it('theme in defaultProps works', () => {
       const Comp = styled.Text`
-        color: ${({theme}) => theme.myColor};
+        color: ${({ theme }) => theme.myColor};
       `;
-      Comp.defaultProps = {theme: {myColor: 'red'}}
+      Comp.defaultProps = { theme: { myColor: 'red' } };
 
-      const wrapper = TestRenderer.create(
-        <Comp>Something else</Comp>
-      );
+      const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
       const text = wrapper.root.findByType('Text');
 
-      expect(text.props.style).toMatchObject(
-        [{"color": "red"}],
-      );
+      expect(text.props.style).toMatchObject([{ color: 'red' }]);
     });
   });
 
@@ -421,9 +425,7 @@ For example, { component: () => InnerComponent } instead of { component: InnerCo
       expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
         `"Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is \\"data-text-color\\" on component \\"Styled(View)\\"."`
       );
-      expect(console.warn.mock.calls[0][1]).toEqual(
-        expect.stringMatching(/^\s+Error\s+at/)
-      );
+      expect(console.warn.mock.calls[0][1]).toEqual(expect.stringMatching(/^\s+Error\s+at/));
     });
   });
 });
