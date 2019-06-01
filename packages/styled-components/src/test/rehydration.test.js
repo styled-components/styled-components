@@ -7,7 +7,7 @@ import createGlobalStyle from '../constructors/createGlobalStyle';
 import keyframes from '../constructors/keyframes';
 import { masterSheet } from '../models/StyleSheetManager';
 import { rehydrateSheet } from '../sheet/Rehydration';
-import { SC_ATTR, SC_VERSION_ATTR } from '../constants';
+import { SC_ATTR, SC_ATTR_VERSION } from '../constants';
 
 /* NOTE:
    Sometimes we add an empty function interpolation into some
@@ -40,7 +40,7 @@ describe('rehydration', () => {
   describe('with existing styled components', () => {
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           .b { color: red; }
           ${SC_ATTR}.g1[id="TWO"]{content: "b,"}
         </style>
@@ -98,7 +98,7 @@ describe('rehydration', () => {
       `;
       TestRenderer.create(<B />);
       const C = styled.div.withConfig({ componentId: 'TWO' })`
-        color: ${() => 'green'}
+        color: ${() => 'green'};
       `;
       TestRenderer.create(<C />);
       expectCSSMatches('.b{ color: red; } .c{ color:green; } .a{ color:blue; }');
@@ -110,7 +110,7 @@ describe('rehydration', () => {
       /* Hash 1323611362 is based on name TWO and contents color: red.
        * Change either and this will break. */
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           .a { color: blue; }
           ${SC_ATTR}.g1[id="ONE"]{content: "a,"}
           .b { color: red; }
@@ -176,11 +176,11 @@ describe('rehydration', () => {
        * derived from "body { background: papayawhip; }" so be careful
        * changing it. */
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           body { background: papayawhip; }
           ${SC_ATTR}.g1[id="sc-global-557410406"]{content: "sc-global-557410406,"}
         </style>
-        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           .a { color: red; }
           ${SC_ATTR}.g2[id="TWO"]{content: "a,"}
         </style>
@@ -218,15 +218,14 @@ describe('rehydration', () => {
         'body { background: papayawhip; } .a { color: red; } body { color:tomato; } .b { color:blue; }'
       );
 
-      expect(getStyleTags()).toEqual(
-        [
-          {
-            css: 'body {background: papayawhip;}'
-              + '.a {color: red;}'
-              + 'body{color:tomato;}.b{color:blue;}'
-          }
-        ]
-      );
+      expect(getStyleTags()).toEqual([
+        {
+          css:
+            'body {background: papayawhip;}' +
+            '.a {color: red;}' +
+            'body{color:tomato;}.b{color:blue;}',
+        },
+      ]);
     });
   });
 
@@ -234,7 +233,7 @@ describe('rehydration', () => {
     let styleTags;
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           html { font-size: 16px; }
           ${SC_ATTR}.g1[id="sc-global-a"]{content: "sc-global-a,"}
           body { background: papayawhip; }
@@ -315,7 +314,7 @@ describe('rehydration', () => {
   describe('with keyframes', () => {
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
           ${SC_ATTR}.g1[id="sc-keyframes-keyframe_880"]{content: "keyframe_880,"}
         </style>

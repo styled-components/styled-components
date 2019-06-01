@@ -1,6 +1,6 @@
 // @flow
 
-import { SC_ATTR, SC_ATTR_ACTIVE, SC_VERSION_ATTR, SC_VERSION } from '../constants';
+import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import getNonce from '../utils/nonce';
 
 const ELEMENT_TYPE = 1; /* Node.ELEMENT_TYPE */
@@ -28,7 +28,7 @@ export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
   const nextSibling = prevStyle !== undefined ? prevStyle.nextSibling : null;
 
   style.setAttribute(SC_ATTR, SC_ATTR_ACTIVE);
-  style.setAttribute(SC_VERSION_ATTR, SC_VERSION);
+  style.setAttribute(SC_ATTR_VERSION, SC_VERSION);
 
   const nonce = getNonce();
 
