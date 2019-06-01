@@ -5,7 +5,7 @@ declare var __VERSION__: string;
 
 export const SC_ATTR = (typeof process !== 'undefined' && process.env.SC_ATTR) || 'data-styled';
 export const SC_ATTR_ACTIVE = 'active';
-export const SC_VERSION_ATTR = 'data-styled-version';
+export const SC_ATTR_VERSION = 'data-styled-version';
 export const SC_VERSION = __VERSION__;
 
 export const IS_BROWSER = typeof window !== 'undefined' && 'HTMLElement' in window;

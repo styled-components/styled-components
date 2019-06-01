@@ -3,12 +3,7 @@
 
 import React from 'react';
 
-import {
-  IS_BROWSER,
-  SC_ATTR,
-  SC_VERSION_ATTR,
-  SC_VERSION
-} from '../constants';
+import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 
 import StyledError from '../utils/error';
 import getNonce from '../utils/nonce';
@@ -41,23 +36,19 @@ export default class ServerStyleSheet {
   getStyleTags = (): string => {
     const css = this.sheet.toString();
     const nonce = getNonce();
-    const attrs = [
-      nonce && `nonce="${nonce}"`,
-      SC_ATTR,
-      `${SC_VERSION_ATTR}="${SC_VERSION}"`
-    ];
+    const attrs = [nonce && `nonce="${nonce}"`, SC_ATTR, `${SC_ATTR_VERSION}="${SC_VERSION}"`];
 
     const htmlAttr = attrs.filter(Boolean).join(' ');
     return `<style ${htmlAttr}>${css}</style>`;
-  }
+  };
 
   getStyleElement = () => {
     const props = {
       [SC_ATTR]: '',
-      [SC_VERSION_ATTR]: SC_VERSION,
+      [SC_ATTR_VERSION]: SC_VERSION,
       dangerouslySetInnerHTML: {
-        __html: this.sheet.toString()
-      }
+        __html: this.sheet.toString(),
+      },
     };
 
     const nonce = getNonce();
@@ -66,7 +57,7 @@ export default class ServerStyleSheet {
     }
 
     return <style {...props} />;
-  }
+  };
 
   interleaveWithNodeStream(input: any) {
     if (!__SERVER__ || IS_BROWSER) {

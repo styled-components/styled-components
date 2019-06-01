@@ -1,6 +1,6 @@
 // @flow
 
-import { SC_ATTR, SC_ATTR_ACTIVE, SC_VERSION_ATTR, SC_VERSION } from '../../constants';
+import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../../constants';
 import * as GroupIDAllocator from '../GroupIDAllocator';
 import StyleSheet from '../Sheet';
 import { outputSheet, rehydrateSheet } from '../Rehydration';
@@ -21,13 +21,15 @@ describe('outputSheet', () => {
     sheet.insertRules('idA', 'nameA', ['.a {}']);
     sheet.insertRules('idB', 'nameB', ['.b {}']);
 
-    const output = outputSheet(sheet).trim().split('\n');
+    const output = outputSheet(sheet)
+      .trim()
+      .split('\n');
 
     expect(output).toEqual([
       '.a {}',
       `${SC_ATTR}.g11[id="idA"]{content:"nameA,"}`,
       '.b {}',
-      `${SC_ATTR}.g22[id="idB"]{content:"nameB,"}`
+      `${SC_ATTR}.g22[id="idB"]{content:"nameB,"}`,
     ]);
   });
 });
@@ -35,7 +37,7 @@ describe('outputSheet', () => {
 describe('rehydrateSheet', () => {
   it('rehydrates sheets correctly', () => {
     document.head.innerHTML = `
-      <style ${SC_ATTR} ${SC_VERSION_ATTR}="${SC_VERSION}">
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
         .a {}
         ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}
         ${SC_ATTR}.g33[id="empty"]{content:""}
@@ -43,7 +45,7 @@ describe('rehydrateSheet', () => {
     `;
 
     document.body.innerHTML = `
-      <style ${SC_ATTR} ${SC_VERSION_ATTR}="${SC_VERSION}">
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
         .b {}
         ${SC_ATTR}.g22[id="idB"]{content:"nameB,"}
       </style>
@@ -77,7 +79,7 @@ describe('rehydrateSheet', () => {
 
   it('ignores active style elements', () => {
     document.head.innerHTML = `
-      <style ${SC_ATTR}="${SC_ATTR_ACTIVE}" ${SC_VERSION_ATTR}="${SC_VERSION}">
+      <style ${SC_ATTR}="${SC_ATTR_ACTIVE}" ${SC_ATTR_VERSION}="${SC_VERSION}">
         .a {}
         ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}
       </style>
