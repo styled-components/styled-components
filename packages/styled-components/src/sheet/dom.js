@@ -1,6 +1,6 @@
 // @flow
 
-import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_MODE, SC_ATTR_VERSION, SC_VERSION } from '../constants';
+import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import getNonce from '../utils/nonce';
 
 const ELEMENT_TYPE = 1; /* Node.ELEMENT_TYPE */
@@ -20,7 +20,7 @@ const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
 };
 
 /** Create a style element inside `target` or <head> after the last */
-export const makeStyleTag = (useCSSOM: boolean, target?: HTMLElement): HTMLStyleElement => {
+export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
   const head = ((document.head: any): HTMLElement);
   const parent = target || head;
   const style = document.createElement('style');
@@ -29,7 +29,6 @@ export const makeStyleTag = (useCSSOM: boolean, target?: HTMLElement): HTMLStyle
 
   style.setAttribute(SC_ATTR, SC_ATTR_ACTIVE);
   style.setAttribute(SC_ATTR_VERSION, SC_VERSION);
-  style.setAttribute(SC_ATTR_MODE, useCSSOM ? 'cssom' : 'text');
 
   const nonce = getNonce();
 
