@@ -68,8 +68,8 @@ class StyledNativeComponent extends Component<*, *> {
           const {
             as: renderAs,
             forwardedComponent,
+            forwardedAs,
             forwardedRef,
-            innerAs,
             innerRef,
             style = [],
             ...props
@@ -92,7 +92,7 @@ class StyledNativeComponent extends Component<*, *> {
           };
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
-          if (innerAs) propsForElement.as = innerAs;
+          if (forwardedAs) propsForElement.as = forwardedAs;
 
           if (process.env.NODE_ENV !== 'production' && innerRef) {
             this.warnInnerRef(displayName);

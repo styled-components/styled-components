@@ -209,7 +209,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
   const isTargetTag = isTag(elementToBeCreated);
 
   const computedProps: Object = attrs !== props ? { ...attrs, ...props } : props;
-  const shouldFilterProps = 'as' in computedProps || 'innerAs' in computedProps || isTargetTag;
+  const shouldFilterProps = isTargetTag || 'as' in computedProps || 'forwardedAs' in computedProps;
   const propsForElement: Object = shouldFilterProps ? {} : { ...computedProps };
 
   if (process.env.NODE_ENV !== 'production' && 'innerRef' in computedProps && isTargetTag) {
@@ -219,9 +219,9 @@ function useStyledComponentImpl<Config: {}, Instance>(
   if (shouldFilterProps) {
     // eslint-disable-next-line guard-for-in
     for (const key in computedProps) {
-      if (key === 'innerAs') {
+      if (key === 'forwardedAs') {
         propsForElement.as = computedProps[key];
-      } else if (key !== 'as' && key !== 'innerAs' && (!isTargetTag || validAttr(key))) {
+      } else if (key !== 'as' && key !== 'forwardedAs' && (!isTargetTag || validAttr(key))) {
         // Don't pass through non HTML tags through to HTML elements
         propsForElement[key] = computedProps[key];
       }

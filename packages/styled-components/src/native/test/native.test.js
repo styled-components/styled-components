@@ -120,14 +120,14 @@ describe('native', () => {
     expect(wrapper.root.findByType('View').props.style).toEqual([{ paddingTop: 5, opacity: 0.9 }]);
   });
 
-  it('should forward the "as" prop if "innerAs" is used', () => {
+  it('should forward the "as" prop if "forwardedAs" is used', () => {
     const Comp = ({ as: Component = View, ...props }) => <Component {...props} />;
 
     const Comp2 = styled(Comp)`
       background: red;
     `;
 
-    const wrapper = TestRenderer.create(<Comp2 innerAs={Text} />);
+    const wrapper = TestRenderer.create(<Comp2 forwardedAs={Text} />);
 
     expect(wrapper.root.findByType('Text')).not.toBeUndefined();
   });

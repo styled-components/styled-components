@@ -8,7 +8,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Remove validation in Babel macro, by [@mAAdhaTTah](http://github.com/mAAdhaTTah) (see [#2427](https://github.com/styled-components/styled-components/pull/2427))
 
-- Add "innerAs" prop to allow deeply passing a different "as" prop value to underlying components when using `styled()` as a higher-order component
+- Add "forwardedAs" prop to allow deeply passing a different "as" prop value to underlying components when using `styled()` as a higher-order component
 
 ## [v4.2.0] - 2019-03-23
 

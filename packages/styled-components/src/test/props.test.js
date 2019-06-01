@@ -42,17 +42,19 @@ describe('props', () => {
     expectCSSMatches('.b { border-width:0; }');
   });
 
-  it('should forward the "as" prop if "innerAs" is used', () => {
+  it('should forward the "as" prop if "forwardedAs" is used', () => {
     const Comp = ({ as: Component = 'div', ...props }) => <Component {...props} />;
 
     const Comp2 = styled(Comp)`
       background: red;
     `;
 
-    expect(TestRenderer.create(<Comp2 innerAs="button" />).toJSON()).toMatchInlineSnapshot(`
+    expect(TestRenderer.create(<Comp2 forwardedAs="button" />).toJSON()).toMatchInlineSnapshot(`
       <button
         className="sc-a"
       />
     `);
+
+    expectCSSMatches('.sc-a { background: red; }');
   });
 });
