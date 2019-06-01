@@ -1,6 +1,6 @@
 // @flow
 
-import { type Tag, SpeedyTag, TextTag, VirtualTag } from '../Tag';
+import { type Tag, CSSOMTag, TextTag, VirtualTag } from '../Tag';
 
 const describeTag = (TagClass: Class<Tag>) => {
   it('inserts and retrieves rules at indices', () => {
@@ -26,11 +26,11 @@ const describeTag = (TagClass: Class<Tag>) => {
   });
 };
 
-describe('SpeedyTag', () => {
-  describeTag(SpeedyTag);
+describe('CSSOMTag', () => {
+  describeTag(CSSOMTag);
 
   it('contains an empty TextNode to prevent an Edge quirk', () => {
-    const tag = new SpeedyTag();
+    const tag = new CSSOMTag();
     const { childNodes } = tag.element;
     expect(childNodes.length).toBe(1);
     expect(childNodes[0].nodeName).toBe('#text');

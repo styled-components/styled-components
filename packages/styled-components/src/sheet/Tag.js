@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable no-use-before-define */
 
-import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
+import { IS_BROWSER } from '../constants';
 import { makeStyleTag, getSheet } from './dom';
 
 /** CSSStyleSheet-like Tag abstraction for CSS rules */
@@ -14,18 +14,17 @@ export interface Tag {
 }
 
 /** Create a CSSStyleSheet-like tag depending on the environment */
-export const makeTag = (isServer: boolean, target?: HTMLElement): Tag => {
+export const makeTag = (isServer: boolean, useCSSOM: boolean, target?: HTMLElement): Tag => {
   if (!IS_BROWSER) {
     return new VirtualTag(target);
-  } else if (DISABLE_SPEEDY) {
-    return new TextTag(target);
+  } else if (useCSSOM) {
+    return new CSSOMTag(target);
   } else {
-    return new SpeedyTag(target);
+    return new TextTag(target);
   }
 };
 
-/** A Tag that wraps CSSOM's CSSStyleSheet API directly */
-export class SpeedyTag implements Tag {
+export class CSSOMTag implements Tag {
   element: HTMLStyleElement;
 
   sheet: CSSStyleSheet;
@@ -33,7 +32,7 @@ export class SpeedyTag implements Tag {
   length: number;
 
   constructor(target?: HTMLElement) {
-    const element = (this.element = makeStyleTag(target));
+    const element = (this.element = makeStyleTag(true, target));
 
     // Avoid Edge bug where empty style elements don't create sheets
     element.appendChild(document.createTextNode(''));
@@ -77,7 +76,7 @@ export class TextTag implements Tag {
   length: number;
 
   constructor(target?: HTMLElement) {
-    const element = (this.element = makeStyleTag(target));
+    const element = (this.element = makeStyleTag(false, target));
     this.nodes = element.childNodes;
     this.length = 0;
   }

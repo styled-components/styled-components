@@ -6,6 +6,7 @@ import createStylisInstance from '../utils/stylis';
 
 type Props = {
   children?: Node,
+  disableCSSOMInjection?: boolean,
   sheet?: StyleSheet,
   stylisOptions?: Object,
   stylusPlugins?: Array<Function>,
@@ -34,13 +35,28 @@ export default function StyleSheetManager(props: Props) {
         sheet = masterSheet;
       }
 
+      if (props.disableCSSOMInjection) {
+        if (sheet === masterSheet) {
+          sheet = new StyleSheet(false);
+          sheet.useCSSOM = false;
+        } else {
+          sheet.useCSSOM = false;
+        }
+      }
+
       if (props.stylisOptions || props.stylusPlugins) {
         sheet.stringifier = createStylisInstance(props.stylisOptions, props.stylusPlugins);
       }
 
       return sheet;
     },
-    [props.sheet, props.target]
+    [
+      props.disableCSSOMInjection,
+      props.sheet,
+      props.stylisOptions,
+      props.stylusPlugins,
+      props.target,
+    ]
   );
 
   return (
@@ -51,6 +67,7 @@ export default function StyleSheetManager(props: Props) {
 }
 
 StyleSheetManager.propTypes = {
+  disableCSSOMInjection: PropTypes.bool,
   sheet: PropTypes.instanceOf(StyleSheet),
   stylisOptions: PropTypes.object,
   stylusPlugins: PropTypes.arrayOf(PropTypes.func),
