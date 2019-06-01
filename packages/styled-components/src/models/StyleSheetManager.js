@@ -17,34 +17,34 @@ export const StyleSheetConsumer = StyleSheetContext.Consumer;
 export const masterSheet: StyleSheet = new StyleSheet(false);
 
 export function useStyleSheet(): StyleSheet {
-  const sheet = useContext(StyleSheetContext);
-  return sheet !== undefined ? sheet : masterSheet;
+  return useContext(StyleSheetContext) || masterSheet;
 }
 
 export default function StyleSheetManager(props: Props) {
-  const sheet = useMemo(
+  const styleSheet = useMemo(
     () => {
-      let usedSheet;
+      let sheet;
 
       if (props.sheet) {
-        usedSheet = props.sheet;
+        // eslint-disable-next-line prefer-destructuring
+        sheet = props.sheet;
       } else if (props.target) {
-        usedSheet = new StyleSheet(false, props.target);
+        sheet = new StyleSheet(false, props.target);
       } else {
-        usedSheet = masterSheet;
+        sheet = masterSheet;
       }
 
       if (props.stylisOptions || props.stylusPlugins) {
-        usedSheet.stringifier = createStylisInstance(props.stylisOptions, props.stylusPlugins);
+        sheet.stringifier = createStylisInstance(props.stylisOptions, props.stylusPlugins);
       }
 
-      return usedSheet;
+      return sheet;
     },
     [props.sheet, props.target]
   );
 
   return (
-    <StyleSheetContext.Provider value={sheet}>
+    <StyleSheetContext.Provider value={styleSheet}>
       {process.env.NODE_ENV !== 'production' ? React.Children.only(props.children) : props.children}
     </StyleSheetContext.Provider>
   );
