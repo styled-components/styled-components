@@ -47,6 +47,7 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
   // where resolvedAttrs is only the things injected by the attrs themselves
   const context = { ...props, theme };
   const resolvedAttrs = {};
+
   attrs.forEach(attrDef => {
     let resolvedAttrDef = attrDef;
     let attrDefWasFn = false;
@@ -102,7 +103,7 @@ function useInjectedStyle<T>(
   hasAttrs: boolean,
   resolvedAttrs: T,
   utils,
-  warnTooManyClasses: $Call<typeof createWarnTooManyClasses, string>
+  warnTooManyClasses?: $Call<typeof createWarnTooManyClasses, string>
 ) {
   const styleSheet = useStyleSheet();
 
@@ -159,12 +160,11 @@ function useDevelopmentDeprecationWarnings(
   return useState(() => developmentDeprecationWarningsFactory(displayName))[0];
 }
 
-const useDeprecationWarnings =
+const useDeprecationWarnings: Function =
   process.env.NODE_ENV !== 'production'
     ? useDevelopmentDeprecationWarnings
     : // NOTE: return value must only be accessed in non-production, of course
-      // $FlowFixMe
-      (() => {}: typeof useDevelopmentDeprecationWarnings);
+      () => {};
 
 function useStyledComponentImpl<Config: {}, Instance>(
   forwardedComponent: StyledComponentWrapper<Config, Instance>,
@@ -185,8 +185,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme =
-    determineTheme((props: any), useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
+  const theme = determineTheme(props, useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
 
   const utils = useDeprecationWarnings(displayName);
   const [context, attrs] = useResolvedAttrs(theme, props, componentAttrs, utils);
@@ -196,7 +195,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
     componentAttrs.length > 0,
     context,
     utils,
-    process.env.NODE_ENV !== 'production' ? forwardedComponent.warnTooManyClasses : (undefined: any)
+    process.env.NODE_ENV !== 'production' ? forwardedComponent.warnTooManyClasses : undefined
   );
 
   const refToForward = forwardedRef;
