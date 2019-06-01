@@ -21,23 +21,19 @@ export function useStyleSheet(): StyleSheet {
   return sheet !== undefined ? sheet : masterSheet;
 }
 
-function useStyleSheetProvider(sheet?: StyleSheet, target?: HTMLElement) {
-  return useMemo(
+export default function StyleSheetManager(props: Props) {
+  const sheet = useMemo(
     () => {
-      if (sheet) {
-        return sheet;
-      } else if (target) {
-        return new StyleSheet(false, target);
+      if (props.sheet) {
+        return props.sheet;
+      } else if (props.target) {
+        return new StyleSheet(false, props.target);
       } else {
         return masterSheet;
       }
     },
-    [sheet, target]
+    [props.sheet, props.target]
   );
-}
-
-export default function StyleSheetManager(props: Props) {
-  const sheet = useStyleSheetProvider(props.sheet, props.target);
 
   if (props.stylisOptions || props.stylusPlugins) {
     sheet.stringifier = createStylisInstance(props.stylisOptions, props.stylusPlugins);
