@@ -1,6 +1,6 @@
 // @flow
 
-import { IS_BROWSER } from '../constants';
+import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
 import createStylisInstance, { type Stringifier } from '../utils/stylis';
 import type { Sheet } from './types';
 import { makeTag } from './Tag';
@@ -22,6 +22,8 @@ class StyleSheet implements Sheet {
 
   tag: void | GroupedTag;
 
+  useCSSOM: boolean;
+
   /** Register a group ID to give it an index */
   static registerId(id: string): number {
     return getGroupForId(id);
@@ -32,6 +34,7 @@ class StyleSheet implements Sheet {
     this.isServer = isServer;
     this.stringifier = createStylisInstance();
     this.target = target;
+    this.useCSSOM = !DISABLE_SPEEDY;
 
     // We rehydrate only once and use the sheet that is
     // created first
@@ -44,7 +47,7 @@ class StyleSheet implements Sheet {
   /** Lazily initialises a GroupedTag for when it's actually needed */
   getTag(): GroupedTag {
     if (this.tag === undefined) {
-      const tag = makeTag(this.isServer, this.target);
+      const tag = makeTag(this.isServer, this.useCSSOM, this.target);
       this.tag = makeGroupedTag(tag);
     }
 

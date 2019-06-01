@@ -8,7 +8,7 @@ import stylisRTLPlugin from 'stylis-rtl';
 import StyleSheetManager from '../StyleSheetManager';
 import ServerStyleSheet from '../ServerStyleSheet';
 import StyleSheet from '../../sheet';
-import { resetStyled } from '../../test/utils';
+import { expectCSSMatches, resetStyled } from '../../test/utils';
 
 let styled;
 let consoleError;
@@ -243,7 +243,7 @@ describe('StyleSheetManager', () => {
     );
 
     expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-a{display:flex;}</style>"`
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\" data-styled-injection-mode=\\"text\\">.sc-a{display:flex;}</style>"`
     );
   });
 
@@ -259,7 +259,40 @@ describe('StyleSheetManager', () => {
     );
 
     expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-a{padding-right:5px;}</style>"`
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\" data-styled-injection-mode=\\"text\\">.sc-a{padding-right:5px;}</style>"`
+    );
+  });
+
+  it('nested StyleSheetManager with different injection modes works', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    const Test2 = styled.div`
+      background: red;
+    `;
+
+    const outerSheet = new StyleSheet(false);
+
+    outerSheet.useCSSOM = true;
+
+    TestRenderer.create(
+      <StyleSheetManager sheet={outerSheet}>
+        <div>
+          <Test>Foo</Test>
+          <StyleSheetManager disableCSSOMInjection>
+            <Test2>Bar</Test2>
+          </StyleSheetManager>
+        </div>
+      </StyleSheetManager>
+    );
+
+    expect(outerSheet.getTag().tag.getRule(0)).toMatchInlineSnapshot(
+      `".sc-a {padding-left: 5px;}"`
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\" data-styled-injection-mode=\\"cssom\\"></style><style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\" data-styled-injection-mode=\\"text\\">.sc-b{background:red;}</style>"`
     );
   });
 });
