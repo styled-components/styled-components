@@ -115,11 +115,11 @@ function useInjectedStyle<T>(
     ? componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet)
     : componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet);
 
+  useDebugValue(className);
+
   if (process.env.NODE_ENV !== 'production' && !isStatic && warnTooManyClasses) {
     warnTooManyClasses(className);
   }
-
-  useDebugValue(className);
 
   return className;
 }
@@ -182,6 +182,8 @@ function useStyledComponentImpl<Config: {}, Instance>(
     target,
   } = forwardedComponent;
 
+  useDebugValue(styledComponentId);
+
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
@@ -207,7 +209,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
 
   const isTargetTag = isTag(elementToBeCreated);
   const computedProps = attrs !== props ? { ...attrs, ...props } : props;
-  const shouldFilterProps = 'as' in computedProps || isTargetTag;
+  const shouldFilterProps = isTargetTag || 'as' in computedProps || 'forwardedAs' in computedProps;
   const propsForElement = shouldFilterProps ? {} : { ...computedProps };
 
   if (process.env.NODE_ENV !== 'production' && 'innerRef' in computedProps && isTargetTag) {
@@ -217,7 +219,9 @@ function useStyledComponentImpl<Config: {}, Instance>(
   if (shouldFilterProps) {
     // eslint-disable-next-line guard-for-in
     for (const key in computedProps) {
-      if (key !== 'as' && (!isTargetTag || validAttr(key))) {
+      if (key === 'forwardedAs') {
+        propsForElement.as = computedProps[key];
+      } else if (key !== 'as' && key !== 'forwardedAs' && (!isTargetTag || validAttr(key))) {
         // Don't pass through non HTML tags through to HTML elements
         propsForElement[key] = computedProps[key];
       }
@@ -243,8 +247,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
     .join(' ');
 
   propsForElement.ref = refToForward;
-
-  useDebugValue(styledComponentId);
 
   return createElement(elementToBeCreated, propsForElement);
 }
