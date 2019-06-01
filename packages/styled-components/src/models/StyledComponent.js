@@ -115,14 +115,9 @@ class StyledComponent extends Component<*> {
     let generatedClassName;
     if (componentStyle.isStatic) {
       generatedClassName = this.generateAndInjectStyles(EMPTY_OBJECT, this.props);
-    } else if (theme !== undefined) {
-      generatedClassName = this.generateAndInjectStyles(
-        determineTheme(this.props, theme, defaultProps),
-        this.props
-      );
     } else {
       generatedClassName = this.generateAndInjectStyles(
-        this.props.theme || EMPTY_OBJECT,
+        determineTheme(this.props, theme, defaultProps) || EMPTY_OBJECT,
         this.props
       );
     }
@@ -143,6 +138,7 @@ class StyledComponent extends Component<*> {
       if (key === 'forwardedComponent' || key === 'as') {
         continue;
       } else if (key === 'forwardedRef') propsForElement.ref = computedProps[key];
+      else if (key === 'forwardedAs') propsForElement.as = computedProps[key];
       else if (!isTargetTag || validAttr(key)) {
         // Don't pass through non HTML tags through to HTML elements
         propsForElement[key] = computedProps[key];
