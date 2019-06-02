@@ -1,16 +1,7 @@
 // @flow
 /* eslint-disable no-use-before-define */
 
-import type { Tag } from './Tag';
-
-/** Group-aware Tag that sorts rules by indices */
-export interface GroupedTag {
-  constructor(tag: Tag): void;
-  insertRules(group: number, rules: string[]): void;
-  clearGroup(group: number): void;
-  getGroup(group: number): string;
-  length: number;
-}
+import type { GroupedTag, Tag } from './types';
 
 /** Create a GroupedTag with an underlying Tag implementation */
 export const makeGroupedTag = (tag: Tag): GroupedTag => {

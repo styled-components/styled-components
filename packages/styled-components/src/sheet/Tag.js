@@ -2,18 +2,10 @@
 /* eslint-disable no-use-before-define */
 
 import { makeStyleTag, getSheet } from './dom';
-
-/** CSSStyleSheet-like Tag abstraction for CSS rules */
-export interface Tag {
-  constructor(target?: HTMLElement): void;
-  insertRule(index: number, rule: string): boolean;
-  deleteRule(index: number): void;
-  getRule(index: number): string;
-  length: number;
-}
+import type { SheetOptions, Tag } from './types';
 
 /** Create a CSSStyleSheet-like tag depending on the environment */
-export const makeTag = ({ isServer, useCSSOMInjection, target }: Object): Tag => {
+export const makeTag = ({ isServer, useCSSOMInjection, target }: SheetOptions): Tag => {
   if (isServer) {
     return new VirtualTag(target);
   } else if (useCSSOMInjection) {

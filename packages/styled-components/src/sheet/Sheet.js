@@ -1,9 +1,9 @@
 // @flow
 import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
 import createStylisInstance from '../utils/stylis';
-import type { Sheet, SheetOptions } from './types';
+import type { GroupedTag, Sheet, SheetOptions } from './types';
 import { makeTag } from './Tag';
-import { type GroupedTag, makeGroupedTag } from './GroupedTag';
+import { makeGroupedTag } from './GroupedTag';
 import { getGroupForId } from './GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from './Rehydration';
 
