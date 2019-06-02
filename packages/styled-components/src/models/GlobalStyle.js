@@ -22,7 +22,7 @@ export default class GlobalStyle {
 
   createStyles(executionContext: Object, styleSheet: StyleSheet) {
     const flatCSS = flatten(this.rules, executionContext, styleSheet);
-    const css = styleSheet.stringifier(flatCSS.join(''), '');
+    const css = styleSheet.options.stringifier(flatCSS.join(''), '');
     const id = this.componentId;
 
     // NOTE: We use the id as a name as well, since these rules never change

@@ -1,17 +1,17 @@
 // @flow
 
-import { SC_ATTR, SC_ATTR_ACTIVE, SC_VERSION_ATTR, SC_VERSION } from '../constants';
+import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
 import { getSheet } from './dom';
 import type { Sheet } from './types';
 
 const PLAIN_RULE_TYPE = 1;
-const SELECTOR = `style[${SC_ATTR}][${SC_VERSION_ATTR}="${SC_VERSION}"]`;
+const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\]`);
 
 export const outputSheet = (sheet: Sheet) => {
   const tag = sheet.getTag();
-  const {length} = tag;
+  const { length } = tag;
 
   let css = '';
   for (let group = 0; group < length; group++) {

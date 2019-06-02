@@ -35,9 +35,9 @@ const identifiers = {};
 function generateId(displayName: string, parentComponentId: string) {
   const name = typeof displayName !== 'string' ? 'sc' : escape(displayName);
   // Ensure that no displayName can lead to duplicate componentIds
-  const nr = (identifiers[name] || 0) + 1;
-  identifiers[name] = nr;
-  const componentId = `${name}-${hasher(name + nr)}`;
+  identifiers[name] = (identifiers[name] || 0) + 1;
+
+  const componentId = `${name}-${hasher(name + identifiers[name])}`;
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
@@ -47,6 +47,7 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
   // where resolvedAttrs is only the things injected by the attrs themselves
   const context = { ...props, theme };
   const resolvedAttrs = {};
+
   attrs.forEach(attrDef => {
     let resolvedAttrDef = attrDef;
     let attrDefWasFn = false;
@@ -102,13 +103,14 @@ function useInjectedStyle<T>(
   hasAttrs: boolean,
   resolvedAttrs: T,
   utils,
-  warnTooManyClasses: $Call<typeof createWarnTooManyClasses, string>
+  warnTooManyClasses?: $Call<typeof createWarnTooManyClasses, string>
 ) {
   const styleSheet = useStyleSheet();
 
   // statically styled-components don't need to build an execution context object,
   // and shouldn't be increasing the number of class names
   const isStatic = componentStyle.isStatic && !hasAttrs;
+
   const className = isStatic
     ? componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet)
     : componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet);
@@ -158,16 +160,15 @@ function useDevelopmentDeprecationWarnings(
   return useState(() => developmentDeprecationWarningsFactory(displayName))[0];
 }
 
-const useDeprecationWarnings =
+const useDeprecationWarnings: Function =
   process.env.NODE_ENV !== 'production'
     ? useDevelopmentDeprecationWarnings
     : // NOTE: return value must only be accessed in non-production, of course
-      // $FlowFixMe
-      (() => {}: typeof useDevelopmentDeprecationWarnings);
+      () => {};
 
 function useStyledComponentImpl<Config: {}, Instance>(
   forwardedComponent: StyledComponentWrapper<Config, Instance>,
-  props: Config,
+  props: Object,
   forwardedRef: Ref<any>
 ) {
   const {
@@ -186,7 +187,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme = determineTheme((props: any), useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
+  const theme = determineTheme(props, useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
 
   const utils = useDeprecationWarnings(displayName);
   const [context, attrs] = useResolvedAttrs(theme, props, componentAttrs, utils);
@@ -196,21 +197,20 @@ function useStyledComponentImpl<Config: {}, Instance>(
     componentAttrs.length > 0,
     context,
     utils,
-    process.env.NODE_ENV !== 'production' ? forwardedComponent.warnTooManyClasses : (undefined: any)
+    process.env.NODE_ENV !== 'production' ? forwardedComponent.warnTooManyClasses : undefined
   );
 
   const refToForward = forwardedRef;
 
   const elementToBeCreated: Target =
-    // $FlowFixMe
     props.as || // eslint-disable-line react/prop-types
     attrs.as ||
     target;
-  const isTargetTag = isTag(elementToBeCreated);
 
-  const computedProps: Object = attrs !== props ? { ...attrs, ...props } : props;
+  const isTargetTag = isTag(elementToBeCreated);
+  const computedProps = attrs !== props ? { ...attrs, ...props } : props;
   const shouldFilterProps = isTargetTag || 'as' in computedProps || 'forwardedAs' in computedProps;
-  const propsForElement: Object = shouldFilterProps ? {} : { ...computedProps };
+  const propsForElement = shouldFilterProps ? {} : { ...computedProps };
 
   if (process.env.NODE_ENV !== 'production' && 'innerRef' in computedProps && isTargetTag) {
     utils.warnInnerRef();
@@ -229,7 +229,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
   }
 
   if (
-    // $FlowFixMe
     props.style && // eslint-disable-line react/prop-types
     attrs.style !== props.style // eslint-disable-line react/prop-types
   ) {
@@ -239,7 +238,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
   propsForElement.className = Array.prototype
     .concat(
       foldedComponentIds,
-      // $FlowFixMe
       props.className, // eslint-disable-line react/prop-types
       styledComponentId,
       attrs.className,

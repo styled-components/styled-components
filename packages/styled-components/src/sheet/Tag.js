@@ -1,31 +1,21 @@
 // @flow
 /* eslint-disable no-use-before-define */
 
-import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
 import { makeStyleTag, getSheet } from './dom';
-
-/** CSSStyleSheet-like Tag abstraction for CSS rules */
-export interface Tag {
-  constructor(target?: HTMLElement): void;
-  insertRule(index: number, rule: string): boolean;
-  deleteRule(index: number): void;
-  getRule(index: number): string;
-  length: number;
-}
+import type { SheetOptions, Tag } from './types';
 
 /** Create a CSSStyleSheet-like tag depending on the environment */
-export const makeTag = (isServer: boolean, target?: HTMLElement): Tag => {
-  if (!IS_BROWSER) {
+export const makeTag = ({ isServer, useCSSOMInjection, target }: SheetOptions): Tag => {
+  if (isServer) {
     return new VirtualTag(target);
-  } else if (DISABLE_SPEEDY) {
-    return new TextTag(target);
+  } else if (useCSSOMInjection) {
+    return new CSSOMTag(target);
   } else {
-    return new SpeedyTag(target);
+    return new TextTag(target);
   }
 };
 
-/** A Tag that wraps CSSOM's CSSStyleSheet API directly */
-export class SpeedyTag implements Tag {
+export class CSSOMTag implements Tag {
   element: HTMLStyleElement;
 
   sheet: CSSStyleSheet;

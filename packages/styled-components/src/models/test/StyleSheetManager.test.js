@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable react/prop-types */
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { render } from 'react-dom';
@@ -165,10 +166,10 @@ describe('StyleSheetManager', () => {
 
     const div = document.body.appendChild(document.createElement('div'));
 
-    let promiseA;
     let promiseB;
-    promiseA = new Promise((resolveA, reject) => {
-      promiseB = new Promise((resolveB, reject) => {
+
+    const promiseA = new Promise((resolveA, reject) => {
+      promiseB = new Promise(resolveB => {
         try {
           // Render two iframes. each iframe should have the styles for the child injected into their head
           render(
@@ -247,19 +248,102 @@ describe('StyleSheetManager', () => {
     );
   });
 
+  it('StyleSheetManager warns if you try to dynamically change the stylis options', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Test = styled.div`
+      display: flex;
+    `;
+
+    const wrapper = TestRenderer.create(
+      <StyleSheetManager stylisOptions={{ prefix: false }}>
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expect(console.warn).not.toHaveBeenCalled();
+
+    wrapper.update(
+      <StyleSheetManager stylisOptions={{ prefix: true }}>
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
+      `"stylisOptions are frozen on initial mount of StyleSheetManager. Changing this prop dynamically will have no effect."`
+    );
+  });
+
   it('passing stylis plugins via StyleSheetManager works', () => {
     const Test = styled.div`
       padding-left: 5px;
     `;
 
     TestRenderer.create(
-      <StyleSheetManager stylusPlugins={[stylisRTLPlugin]}>
+      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
         <Test>Foo</Test>
       </StyleSheetManager>
     );
 
     expect(document.head.innerHTML).toMatchInlineSnapshot(
       `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-a{padding-right:5px;}</style>"`
+    );
+  });
+
+  it('StyleSheetManager warns if you try to dynamically change the stylis plugins', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Test = styled.div`
+      display: flex;
+    `;
+
+    const wrapper = TestRenderer.create(
+      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expect(console.warn).not.toHaveBeenCalled();
+
+    wrapper.update(
+      <StyleSheetManager stylisPlugins={[]}>
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
+      `"stylisPlugins are frozen on initial mount of StyleSheetManager. Changing this prop dynamically will have no effect."`
+    );
+  });
+
+  it('nested StyleSheetManager with different injection modes works', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    const Test2 = styled.div`
+      background: red;
+    `;
+
+    const outerSheet = new StyleSheet({ useCSSOMInjection: true });
+
+    TestRenderer.create(
+      <StyleSheetManager sheet={outerSheet}>
+        <div>
+          <Test>Foo</Test>
+          <StyleSheetManager disableCSSOMInjection>
+            <Test2>Bar</Test2>
+          </StyleSheetManager>
+        </div>
+      </StyleSheetManager>
+    );
+
+    expect(outerSheet.getTag().tag.getRule(0)).toMatchInlineSnapshot(
+      `".sc-a {padding-left: 5px;}"`
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\"></style><style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-b{background:red;}</style>"`
     );
   });
 });
