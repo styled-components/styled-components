@@ -5,6 +5,7 @@ import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/tes
 import TestRenderer from 'react-test-renderer';
 
 import { resetStyled, expectCSSMatches } from './utils';
+import hoistStatics from '../utils/hoist';
 import { find } from '../../test-utils';
 
 let styled;
@@ -63,6 +64,7 @@ describe('basic', () => {
   });
 
   it('should not inject anything by default', () => {
+    // eslint-disable-next-line no-unused-expressions
     styled.div``;
     expectCSSMatches('');
   });
@@ -120,7 +122,7 @@ describe('basic', () => {
   });
 
   it('should allow you to pass in style object with a function', () => {
-    const Comp = styled.div({ color: ({color}) => color });
+    const Comp = styled.div({ color: ({ color }) => color });
     TestRenderer.create(<Comp color="blue" />);
     expectCSSMatches('.b { color:blue; }');
   });
@@ -130,9 +132,9 @@ describe('basic', () => {
       span: {
         small: {
           color: 'blue',
-          fontFamily: 'sans-serif'
-        }
-      }
+          fontFamily: 'sans-serif',
+        },
+      },
     });
     TestRenderer.create(<Comp />);
     expectCSSMatches('.b span small{ color:blue; font-family: sans-serif; }');
@@ -142,12 +144,12 @@ describe('basic', () => {
     const Comp = styled.div({
       span: {
         small: {
-          color: ({color}) => color,
-          fontFamily: 'sans-serif'
-        }
-      }
+          color: ({ color }) => color,
+          fontFamily: 'sans-serif',
+        },
+      },
     });
-    TestRenderer.create(<Comp color='red' />);
+    TestRenderer.create(<Comp color="red" />);
     expectCSSMatches('.b span small{ color:red; font-family: sans-serif; }');
   });
 
@@ -155,7 +157,7 @@ describe('basic', () => {
     const Comp = styled.div(({ color }) => ({
       color,
     }));
-    TestRenderer.create(<Comp color='blue' />);
+    TestRenderer.create(<Comp color="blue" />);
     expectCSSMatches('.b { color:blue; }');
   });
 
@@ -173,7 +175,7 @@ describe('basic', () => {
       color: red;
     `;
 
-    TestRenderer.create(<StyledComp color='blue' />);
+    TestRenderer.create(<StyledComp color="blue" />);
     expectCSSMatches('.b { color:red; }');
   });
 
@@ -205,7 +207,7 @@ describe('basic', () => {
 
       class Wrapper extends Component<*, *> {
         render() {
-          return <OuterComponent className='test' />;
+          return <OuterComponent className="test" />;
         }
       }
 
@@ -229,19 +231,21 @@ describe('basic', () => {
       }
 
       const wrapper = renderIntoDocument(<Wrapper />);
+
+      // eslint-disable-next-line react/no-find-dom-node
       const component = find(findDOMNode(wrapper), Comp);
 
       expect(wrapper.testRef.current).toBe(component);
     });
 
     it('should pass the ref to the wrapped styled component', () => {
-      class InnerComponent extends React.Component {
+      class Inner extends React.Component {
         render() {
           return <div {...this.props} />;
         }
       }
 
-      const OuterComponent = styled(InnerComponent)``;
+      const Outer = styled(Inner)``;
 
       class Wrapper extends Component<*, *> {
         testRef: any = React.createRef();
@@ -249,14 +253,14 @@ describe('basic', () => {
         render() {
           return (
             <div>
-              <OuterComponent ref={this.testRef} />
+              <Outer ref={this.testRef} />
             </div>
           );
         }
       }
 
       const wrapper = renderIntoDocument(<Wrapper />);
-      const innerComponent = findRenderedComponentWithType(wrapper, InnerComponent);
+      const innerComponent = findRenderedComponentWithType(wrapper, Inner);
 
       expect(wrapper.testRef.current).toBe(innerComponent);
     });
@@ -290,21 +294,51 @@ describe('basic', () => {
     });
 
     it('should hoist non-react static properties', () => {
-      const InnerComponent = styled.div``;
-      InnerComponent.foo = 'bar';
+      const Inner = styled.div``;
+      Inner.foo = 'bar';
 
-      const OuterComponent = styled(InnerComponent)``;
+      const Outer = styled(Inner)``;
 
-      expect(OuterComponent).toHaveProperty('foo', 'bar');
+      expect(Outer).toHaveProperty('foo', 'bar');
     });
 
     it('should not hoist styled component statics', () => {
-      const InnerComponent = styled.div``;
-      const OuterComponent = styled(InnerComponent)``;
+      const Inner = styled.div``;
+      const Outer = styled(Inner)``;
 
-      expect(OuterComponent.styledComponentId).not.toBe(InnerComponent.styledComponentId);
+      expect(Outer.styledComponentId).not.toBe(Inner.styledComponentId);
+      expect(Outer.componentStyle).not.toEqual(Inner.componentStyle);
+    });
 
-      expect(OuterComponent.componentStyle).not.toEqual(InnerComponent.componentStyle);
+    it('should not fold components if there is an interim HOC', () => {
+      function withSomething(WrappedComponent) {
+        function WithSomething(props) {
+          return <WrappedComponent {...props} />;
+        }
+
+        hoistStatics(WithSomething, WrappedComponent);
+
+        return WithSomething;
+      }
+
+      const Inner = withSomething(
+        styled.div`
+          color: red;
+        `
+      );
+
+      const Outer = styled(Inner)`
+        color: green;
+      `;
+
+      const rendered = TestRenderer.create(<Outer />);
+
+      expectCSSMatches(`.d {color: red;} .c {color: green;}`);
+      expect(rendered.toJSON()).toMatchInlineSnapshot(`
+<div
+  className="sc-b c sc-a d"
+/>
+`);
     });
 
     it('generates unique classnames when not using babel', () => {
@@ -338,9 +372,7 @@ describe('basic', () => {
       expect(Named2.styledComponentId).toBe('Name-bar');
     });
 
-    // this no longer is possible in React 16.6 because
-    // of the deprecation of findDOMNode; need to find an alternative
-    it.skip('should work in StrictMode without warnings', () => {
+    it('should work in StrictMode without warnings', () => {
       const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const Comp = styled.div``;
 
