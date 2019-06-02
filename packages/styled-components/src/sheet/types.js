@@ -1,7 +1,24 @@
 // @flow
 
 import { type Stringifier } from '../utils/stylis';
-import { type GroupedTag } from './GroupedTag';
+
+/** CSSStyleSheet-like Tag abstraction for CSS rules */
+export interface Tag {
+  constructor(target?: HTMLElement): void;
+  insertRule(index: number, rule: string): boolean;
+  deleteRule(index: number): void;
+  getRule(index: number): string;
+  length: number;
+}
+
+/** Group-aware Tag that sorts rules by indices */
+export interface GroupedTag {
+  constructor(tag: Tag): void;
+  insertRules(group: number, rules: string[]): void;
+  clearGroup(group: number): void;
+  getGroup(group: number): string;
+  length: number;
+}
 
 export type SheetOptions = {
   isServer: boolean,
