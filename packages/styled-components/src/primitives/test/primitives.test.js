@@ -1,6 +1,5 @@
 // @flow
 import React from 'react';
-import 'react-primitives';
 import { Text, View } from 'react-primitives';
 import TestRenderer from 'react-test-renderer';
 
@@ -344,11 +343,11 @@ describe('primitives', () => {
       TestRenderer.create(<Comp />);
 
       expect(console.warn.mock.calls[1][0]).toMatchInlineSnapshot(`
-"It looks like you've used a non styled-component as the value for the \\"component\\" prop in an object-form attrs constructor of \\"Styled(Component)\\".
-You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))
-To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)
-For example, { component: () => InnerComponent } instead of { component: InnerComponent }"
-`);
+        "It looks like you've used a non styled-component as the value for the \\"component\\" prop in an object-form attrs constructor of \\"Styled(Text)\\".
+        You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))
+        To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)
+        For example, { component: () => InnerComponent } instead of { component: InnerComponent }"
+      `);
     });
 
     it('warns for using fns as attrs object keys', () => {

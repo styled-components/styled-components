@@ -5,8 +5,7 @@
 import React from 'react';
 import { renderToString, renderToNodeStream } from 'react-dom/server';
 import ServerStyleSheet from '../models/ServerStyleSheet';
-import { resetStyled, seedNextClassnames } from './utils';
-import keyframes from '../constructors/keyframes';
+import { resetStyled } from './utils';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 
 jest.mock('../utils/nonce');
@@ -15,6 +14,8 @@ let styled;
 
 describe('ssr', () => {
   beforeEach(() => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+
     // eslint-disable-next-line
     require('../utils/nonce').mockReset();
 
@@ -236,9 +237,9 @@ describe('ssr', () => {
     `;
 
     // These create a long chunk of (hopefully) uninterrupted HTML
-    const elements = new Array(100).fill(0).map((_, i) => (
-      <div key={i}>*************************</div>
-    ));
+    const elements = new Array(100)
+      .fill(0)
+      .map((_, i) => <div key={i}>*************************</div>);
 
     // This is the result of the above
     const expectedElements = '<div>*************************</div>'.repeat(100);

@@ -1,9 +1,6 @@
-const baseConfig = require('./config.base');
+const nativeConfig = require('./config.native');
 
-module.exports = Object.assign({}, baseConfig, {
-  testRegex: 'src/primitives/test/.*.js$',
+module.exports = Object.assign({}, nativeConfig, {
   moduleFileExtensions: ['ios.js', 'js'],
-  preset: 'react-native',
-  testURL: 'http://localhost',
-  testEnvironment: 'jsdom',
+  testRegex: 'src/primitives/test/.*.js$',
 });
