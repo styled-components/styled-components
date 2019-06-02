@@ -241,11 +241,15 @@ export default (InlineStyle: Function) => {
         attrs: true,
         displayName: true,
         inlineStyle: true,
+        self: true,
         styledComponentId: true,
         target: true,
         withComponent: true,
       });
     }
+
+    // $FlowFixMe
+    WrappedStyledNativeComponent.self = WrappedStyledNativeComponent;
 
     return WrappedStyledNativeComponent;
   };
