@@ -6,11 +6,13 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Fix components being folded inappropriately when an interim HOC is present (see [#2586](https://github.com/styled-components/styled-components/issues/2586))
+
 - Fix `theme` prop for styled native components, also fixes `theme` in
-  `defaultProps` for them.
+  `defaultProps` for them (see [#2576](https://github.com/styled-components/styled-components/issues/2576))
 
 - Add "forwardedAs" prop to allow deeply passing a different "as" prop value to underlying components
-  when using `styled()` as a higher-order component
+  when using `styled()` as a higher-order component (see [#2580](https://github.com/styled-components/styled-components/issues/2580))
 
 ## [v4.2.1] - 2019-05-30
 
