@@ -3,3 +3,4 @@ dist
 .DS_Store
 *.log
 package-lock.json
+**/styled-components/src/utils/errors.js
