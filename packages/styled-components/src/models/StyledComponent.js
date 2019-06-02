@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable react/prop-types */
 import validAttr from '@emotion/is-prop-valid';
 import React, {
   createElement,
@@ -80,7 +81,7 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
       resolvedAttrs[key] = attr;
       context[key] = attr;
     }
-    /* eslint-enable */
+    /* eslint-enable guard-for-in */
   });
 
   return [context, resolvedAttrs];
@@ -202,10 +203,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
 
   const refToForward = forwardedRef;
 
-  const elementToBeCreated: Target =
-    props.as || // eslint-disable-line react/prop-types
-    attrs.as ||
-    target;
+  const elementToBeCreated: Target = props.as || attrs.as || target;
 
   const isTargetTag = isTag(elementToBeCreated);
   const computedProps = attrs !== props ? { ...attrs, ...props } : props;
@@ -228,17 +226,14 @@ function useStyledComponentImpl<Config: {}, Instance>(
     }
   }
 
-  if (
-    props.style && // eslint-disable-line react/prop-types
-    attrs.style !== props.style // eslint-disable-line react/prop-types
-  ) {
-    propsForElement.style = { ...attrs.style, ...props.style }; // eslint-disable-line react/prop-types
+  if (props.style && attrs.style !== props.style) {
+    propsForElement.style = { ...attrs.style, ...props.style };
   }
 
   propsForElement.className = Array.prototype
     .concat(
       foldedComponentIds,
-      props.className, // eslint-disable-line react/prop-types
+      props.className,
       styledComponentId,
       attrs.className,
       generatedClassName !== styledComponentId ? generatedClassName : null
