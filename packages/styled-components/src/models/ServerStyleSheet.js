@@ -20,7 +20,7 @@ export default class ServerStyleSheet {
   sealed: boolean;
 
   constructor() {
-    this.sheet = new StyleSheet(true);
+    this.sheet = new StyleSheet({ isServer: true });
     this.sealed = false;
   }
 

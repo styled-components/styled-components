@@ -11,7 +11,7 @@ beforeEach(() => {
 
 describe('outputSheet', () => {
   it('outputs sheets correctly', () => {
-    const sheet = new StyleSheet(true /* isServer */);
+    const sheet = new StyleSheet({ isServer: true });
 
     // Make the group numbers a little more arbitrary
     GroupIDAllocator.setGroupForId('idA', 11);
@@ -56,7 +56,7 @@ describe('rehydrateSheet', () => {
     expect(styleHead.parentElement).toBe(document.head);
     expect(styleBody.parentElement).toBe(document.body);
 
-    const sheet = new StyleSheet(true /* isServer */);
+    const sheet = new StyleSheet({ isServer: true });
     rehydrateSheet(sheet);
 
     // Adds ID to Group mapping to GroupIDAllocator
@@ -87,7 +87,7 @@ describe('rehydrateSheet', () => {
 
     const styleHead = document.head.querySelector('style');
     expect(styleHead.parentElement).toBe(document.head);
-    const sheet = new StyleSheet(true /* isServer */);
+    const sheet = new StyleSheet({ isServer: true });
     rehydrateSheet(sheet);
     expect(GroupIDAllocator.getIdForGroup(11)).toBe(undefined);
     expect(sheet.hasNameForId('idA', 'nameA')).toBe(false);
