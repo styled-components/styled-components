@@ -66,6 +66,7 @@
     "babel-plugin-styled-components": ">= 1",
     "css-to-react-native": "^2.2.2",
     "prop-types": "^15.7.2",
+    "shallowequal": "^1.1.0",
     "stylis": "^3.5.0",
     "stylis-rule-sheet": "^0.0.10",
     "supports-color": "^5.5.0"
