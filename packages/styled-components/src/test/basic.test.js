@@ -334,7 +334,7 @@ describe('basic', () => {
 
       const rendered = TestRenderer.create(<Outer />);
 
-      expectCSSMatches(`.sc-b {color: red;} .sc-a {color: green;}`);
+      expectCSSMatches(`.sc-a {color: red;} .sc-b {color: green;}`);
       expect(rendered.toJSON()).toMatchInlineSnapshot(`
 <div
   className="sc-b sc-a"

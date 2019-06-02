@@ -349,11 +349,15 @@ export default function createStyledComponent(
       componentStyle: true,
       displayName: true,
       foldedComponentIds: true,
+      self: true,
       styledComponentId: true,
       target: true,
       withComponent: true,
     });
   }
+
+  // $FlowFixMe
+  WrappedStyledComponent.self = WrappedStyledComponent;
 
   return WrappedStyledComponent;
 }
