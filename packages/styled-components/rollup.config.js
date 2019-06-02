@@ -37,7 +37,7 @@ const commonPlugins = [
   nodeResolve(),
   babel({
     configFile: require.resolve('../../babel.config.js'),
-    exclude: ['node_modules/**', '../../node_modules/**']
+    exclude: ['node_modules/**', '../../node_modules/**'],
   }),
   commonjs({
     ignoreGlobal: true,
@@ -68,7 +68,7 @@ const configBase = {
   plugins: commonPlugins,
 };
 
-const globals = { react: 'React', 'react-dom': 'ReactDOM' };
+const globals = { react: 'React', 'react-dom': 'ReactDOM', 'react-is': 'ReactIs' };
 
 const standaloneBaseConfig = {
   ...configBase,
