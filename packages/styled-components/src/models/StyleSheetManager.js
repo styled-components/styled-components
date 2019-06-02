@@ -1,6 +1,7 @@
 // @flow
 import React, { useContext, useMemo, useState, type Node, type Context } from 'react';
 import PropTypes from 'prop-types';
+import shallowequal from 'shallowequal';
 import StyleSheet from '../sheet';
 import createStylisInstance from '../utils/stylis';
 
@@ -33,14 +34,14 @@ export default function StyleSheetManager(props: Props) {
   });
 
   if (process.env.NODE_ENV !== 'production') {
-    if (JSON.stringify(stylisOptions) !== JSON.stringify(props.stylisOptions)) {
+    if (!shallowequal(stylisOptions, props.stylisOptions)) {
       // eslint-disable-next-line no-console
       console.warn(
         'stylisOptions are frozen on initial mount of StyleSheetManager. Changing this prop dynamically will have no effect.'
       );
     }
 
-    if (JSON.stringify(stylisPlugins) !== JSON.stringify(props.stylisPlugins)) {
+    if (!shallowequal(stylisPlugins, props.stylisPlugins)) {
       // eslint-disable-next-line no-console
       console.warn(
         'stylisPlugins are frozen on initial mount of StyleSheetManager. Changing this prop dynamically will have no effect.'
