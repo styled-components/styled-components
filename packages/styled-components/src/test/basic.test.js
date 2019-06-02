@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable react/prop-types, no-console */
 import React, { Component, StrictMode } from 'react';
 import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
@@ -63,6 +64,7 @@ describe('basic', () => {
   });
 
   it('should not inject anything by default', () => {
+    // eslint-disable-next-line no-unused-expressions
     styled.div``;
     expectCSSMatches('');
   });
@@ -229,19 +231,21 @@ describe('basic', () => {
       }
 
       const wrapper = renderIntoDocument(<Wrapper />);
+
+      // eslint-disable-next-line react/no-find-dom-node
       const component = find(findDOMNode(wrapper), Comp);
 
       expect(wrapper.testRef.current).toBe(component);
     });
 
     it('should pass the ref to the wrapped styled component', () => {
-      class InnerComponent extends React.Component {
+      class Inner extends React.Component {
         render() {
           return <div {...this.props} />;
         }
       }
 
-      const OuterComponent = styled(InnerComponent)``;
+      const Outer = styled(Inner)``;
 
       class Wrapper extends Component<*, *> {
         testRef: any = React.createRef();
@@ -249,14 +253,14 @@ describe('basic', () => {
         render() {
           return (
             <div>
-              <OuterComponent ref={this.testRef} />
+              <Outer ref={this.testRef} />
             </div>
           );
         }
       }
 
       const wrapper = renderIntoDocument(<Wrapper />);
-      const innerComponent = findRenderedComponentWithType(wrapper, InnerComponent);
+      const innerComponent = findRenderedComponentWithType(wrapper, Inner);
 
       expect(wrapper.testRef.current).toBe(innerComponent);
     });
@@ -290,21 +294,20 @@ describe('basic', () => {
     });
 
     it('should hoist non-react static properties', () => {
-      const InnerComponent = styled.div``;
-      InnerComponent.foo = 'bar';
+      const Inner = styled.div``;
+      Inner.foo = 'bar';
 
-      const OuterComponent = styled(InnerComponent)``;
+      const Outer = styled(Inner)``;
 
-      expect(OuterComponent).toHaveProperty('foo', 'bar');
+      expect(Outer).toHaveProperty('foo', 'bar');
     });
 
     it('should not hoist styled component statics', () => {
-      const InnerComponent = styled.div``;
-      const OuterComponent = styled(InnerComponent)``;
+      const Inner = styled.div``;
+      const Outer = styled(Inner)``;
 
-      expect(OuterComponent.styledComponentId).not.toBe(InnerComponent.styledComponentId);
-
-      expect(OuterComponent.componentStyle).not.toEqual(InnerComponent.componentStyle);
+      expect(Outer.styledComponentId).not.toBe(Inner.styledComponentId);
+      expect(Outer.componentStyle).not.toEqual(Inner.componentStyle);
     });
 
     it('generates unique classnames when not using babel', () => {
