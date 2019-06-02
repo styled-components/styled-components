@@ -30,9 +30,10 @@ _Supported by [Front End Center](https://frontend.center). Thank you for making 
 
 ## Upgrading from v4
 
-1. Update `react`, `react-dom`, and `react-is` to latest versions to enable hooks support
-2. ??
-3. Profit!
+1. Update `react`, `react-dom`, and `react-is` to latest versions to enable hooks support; if you're using react-native, you need at least 0.59
+1. Make sure `prop-types` is installed in your project somewhere
+1. ??
+1. Profit!
 
 ## [Docs](https://www.styled-components.com/docs)
 
