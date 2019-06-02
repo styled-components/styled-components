@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable react/prop-types */
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { render } from 'react-dom';
@@ -8,7 +9,7 @@ import stylisRTLPlugin from 'stylis-rtl';
 import StyleSheetManager from '../StyleSheetManager';
 import ServerStyleSheet from '../ServerStyleSheet';
 import StyleSheet from '../../sheet';
-import { expectCSSMatches, resetStyled } from '../../test/utils';
+import { resetStyled } from '../../test/utils';
 
 let styled;
 let consoleError;
@@ -165,10 +166,10 @@ describe('StyleSheetManager', () => {
 
     const div = document.body.appendChild(document.createElement('div'));
 
-    let promiseA;
     let promiseB;
-    promiseA = new Promise((resolveA, reject) => {
-      promiseB = new Promise((resolveB, reject) => {
+
+    const promiseA = new Promise((resolveA, reject) => {
+      promiseB = new Promise(resolveB => {
         try {
           // Render two iframes. each iframe should have the styles for the child injected into their head
           render(
@@ -272,9 +273,7 @@ describe('StyleSheetManager', () => {
       background: red;
     `;
 
-    const outerSheet = new StyleSheet(false);
-
-    outerSheet.useCSSOM = true;
+    const outerSheet = new StyleSheet({ useCSSOMInjection: true });
 
     TestRenderer.create(
       <StyleSheetManager sheet={outerSheet}>

@@ -6,7 +6,7 @@ let sheet;
 let tag;
 
 beforeEach(() => {
-  sheet = new StyleSheet(true /* isServer */);
+  sheet = new StyleSheet({ isServer: true });
   tag = sheet.getTag().tag;
 });
 

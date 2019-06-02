@@ -19,7 +19,11 @@ export default class Keyframes {
 
   inject = (styleSheet: StyleSheet) => {
     if (!styleSheet.hasNameForId(this.id, this.name)) {
-      styleSheet.insertRules(this.id, this.name, styleSheet.stringifier(...this.stringifyArgs));
+      styleSheet.insertRules(
+        this.id,
+        this.name,
+        styleSheet.options.stringifier(...this.stringifyArgs)
+      );
     }
   };
 

@@ -15,7 +15,7 @@ type Props = {
 
 export const StyleSheetContext: Context<StyleSheet | void> = React.createContext();
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
-export const masterSheet: StyleSheet = new StyleSheet(false);
+export const masterSheet: StyleSheet = new StyleSheet();
 
 export function useStyleSheet(): StyleSheet {
   return useContext(StyleSheetContext) || masterSheet;
@@ -24,28 +24,23 @@ export function useStyleSheet(): StyleSheet {
 export default function StyleSheetManager(props: Props) {
   const styleSheet = useMemo(
     () => {
-      let sheet;
+      let sheet = masterSheet;
 
       if (props.sheet) {
         // eslint-disable-next-line prefer-destructuring
         sheet = props.sheet;
       } else if (props.target) {
-        sheet = new StyleSheet(false, props.target);
-      } else {
-        sheet = masterSheet;
+        sheet = sheet.reconstructWithOptions({ target: props.target });
       }
 
       if (props.disableCSSOMInjection) {
-        if (sheet === masterSheet) {
-          sheet = new StyleSheet(false);
-          sheet.useCSSOM = false;
-        } else {
-          sheet.useCSSOM = false;
-        }
+        sheet = sheet.reconstructWithOptions({ useCSSOMInjection: false });
       }
 
       if (props.stylisOptions || props.stylusPlugins) {
-        sheet.stringifier = createStylisInstance(props.stylisOptions, props.stylusPlugins);
+        sheet = sheet.reconstructWithOptions({
+          stringifier: createStylisInstance(props.stylisOptions, props.stylusPlugins),
+        });
       }
 
       return sheet;

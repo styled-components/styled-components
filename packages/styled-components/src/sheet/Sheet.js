@@ -1,8 +1,7 @@
 // @flow
-
 import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
-import createStylisInstance, { type Stringifier } from '../utils/stylis';
-import type { Sheet } from './types';
+import createStylisInstance from '../utils/stylis';
+import type { Sheet, SheetOptions } from './types';
 import { makeTag } from './Tag';
 import { type GroupedTag, makeGroupedTag } from './GroupedTag';
 import { getGroupForId } from './GroupIDAllocator';
@@ -10,48 +9,54 @@ import { outputSheet, rehydrateSheet } from './Rehydration';
 
 let SHOULD_REHYDRATE = IS_BROWSER;
 
-/** Contains the main stylesheet logic for stringification and caching */
-class StyleSheet implements Sheet {
-  isServer: boolean;
+type SheetConstructorArgs = {
+  isServer?: boolean,
+  useCSSOMInjection?: boolean,
+  target?: HTMLElement,
+};
 
+const defaultOptions = {
+  isServer: !IS_BROWSER,
+  stringifier: createStylisInstance(),
+  useCSSOMInjection: !DISABLE_SPEEDY,
+};
+
+/** Contains the main stylesheet logic for stringification and caching */
+export default class StyleSheet implements Sheet {
   names: Map<string, Set<string>>;
 
-  stringifier: Stringifier;
-
-  target: void | HTMLElement;
+  options: SheetOptions;
 
   tag: void | GroupedTag;
-
-  useCSSOM: boolean;
 
   /** Register a group ID to give it an index */
   static registerId(id: string): number {
     return getGroupForId(id);
   }
 
-  constructor(isServer: boolean, target?: HTMLElement) {
+  constructor(options: SheetConstructorArgs = defaultOptions) {
+    this.options = {
+      ...defaultOptions,
+      ...options,
+    };
+
     this.names = new Map();
-    this.isServer = isServer;
-    this.stringifier = createStylisInstance();
-    this.target = target;
-    this.useCSSOM = !DISABLE_SPEEDY;
 
     // We rehydrate only once and use the sheet that is
     // created first
-    if (!isServer && IS_BROWSER && SHOULD_REHYDRATE) {
+    if (!this.options.isServer && IS_BROWSER && SHOULD_REHYDRATE) {
       SHOULD_REHYDRATE = false;
       rehydrateSheet(this);
     }
   }
 
+  reconstructWithOptions(options: SheetConstructorArgs) {
+    return new StyleSheet({ ...this.options, ...options });
+  }
+
   /** Lazily initialises a GroupedTag for when it's actually needed */
   getTag(): GroupedTag {
-    if (this.tag === undefined) {
-      const tag = makeTag(this.isServer, this.useCSSOM, this.target);
-      this.tag = makeGroupedTag(tag);
-    }
-
-    return this.tag;
+    return this.tag || (this.tag = makeGroupedTag(makeTag(this.options)));
   }
 
   /** Check whether a name is known for caching */
@@ -103,5 +108,3 @@ class StyleSheet implements Sheet {
     return outputSheet(this);
   }
 }
-
-export default StyleSheet;

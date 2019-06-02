@@ -1,7 +1,6 @@
 // @flow
 /* eslint-disable no-use-before-define */
 
-import { IS_BROWSER } from '../constants';
 import { makeStyleTag, getSheet } from './dom';
 
 /** CSSStyleSheet-like Tag abstraction for CSS rules */
@@ -14,10 +13,10 @@ export interface Tag {
 }
 
 /** Create a CSSStyleSheet-like tag depending on the environment */
-export const makeTag = (isServer: boolean, useCSSOM: boolean, target?: HTMLElement): Tag => {
-  if (!IS_BROWSER) {
+export const makeTag = ({ isServer, useCSSOMInjection, target }: Object): Tag => {
+  if (isServer) {
     return new VirtualTag(target);
-  } else if (useCSSOM) {
+  } else if (useCSSOMInjection) {
     return new CSSOMTag(target);
   } else {
     return new TextTag(target);

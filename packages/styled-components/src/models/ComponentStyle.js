@@ -47,7 +47,7 @@ export default class ComponentStyle {
     if (this.isStatic) {
       if (!styleSheet.hasNameForId(componentId, componentId)) {
         const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
-        const cssStaticFormatted = styleSheet.stringifier(
+        const cssStaticFormatted = styleSheet.options.stringifier(
           cssStatic,
           `.${componentId}`,
           undefined,
@@ -80,7 +80,12 @@ export default class ComponentStyle {
       const name = generateName(dynamicHash >>> 0);
 
       if (!styleSheet.hasNameForId(componentId, name)) {
-        const cssFormatted = styleSheet.stringifier(css, `.${name}`, undefined, componentId);
+        const cssFormatted = styleSheet.options.stringifier(
+          css,
+          `.${name}`,
+          undefined,
+          componentId
+        );
         styleSheet.insertRules(componentId, name, cssFormatted);
       }
 
