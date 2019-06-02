@@ -6,6 +6,7 @@ import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/tes
 import TestRenderer from 'react-test-renderer';
 
 import { resetStyled, expectCSSMatches } from './utils';
+import hoistStatics from '../utils/hoist';
 import { find } from '../../test-utils';
 
 let styled;
@@ -308,6 +309,37 @@ describe('basic', () => {
 
       expect(Outer.styledComponentId).not.toBe(Inner.styledComponentId);
       expect(Outer.componentStyle).not.toEqual(Inner.componentStyle);
+    });
+
+    it('should not fold components if there is an interim HOC', () => {
+      function withSomething(WrappedComponent) {
+        function WithSomething(props) {
+          return <WrappedComponent {...props} />;
+        }
+
+        hoistStatics(WithSomething, WrappedComponent);
+
+        return WithSomething;
+      }
+
+      const Inner = withSomething(
+        styled.div`
+          color: red;
+        `
+      );
+
+      const Outer = styled(Inner)`
+        color: green;
+      `;
+
+      const rendered = TestRenderer.create(<Outer />);
+
+      expectCSSMatches(`.sc-b {color: red;} .sc-a {color: green;}`);
+      expect(rendered.toJSON()).toMatchInlineSnapshot(`
+<div
+  className="sc-b sc-a"
+/>
+`);
     });
 
     it('generates unique classnames when not using babel', () => {
