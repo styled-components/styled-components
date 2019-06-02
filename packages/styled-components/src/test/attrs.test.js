@@ -80,11 +80,11 @@ describe('attrs', () => {
         </ThemeProvider>
       ).toJSON()
     ).toMatchInlineSnapshot(`
-<button
-  className="sc-a b"
-  data-color="red"
-/>
-`);
+      <button
+        className="sc-a b"
+        data-color="red"
+      />
+    `);
   });
 
   it('defaultProps are merged into what function attrs receives', () => {
@@ -99,11 +99,11 @@ describe('attrs', () => {
     };
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
-<button
-  className="sc-a b"
-  data-color="red"
-/>
-`);
+      <button
+        className="sc-a b"
+        data-color="red"
+      />
+    `);
   });
 
   it('pass props to the attr function', () => {
@@ -225,7 +225,9 @@ describe('attrs', () => {
         ...props.style,
         fontSize: `${props.fontScale}em`,
       }),
-    })``;
+    })`
+      background: red;
+    `;
 
     class Text extends React.Component {
       state = {
@@ -251,9 +253,26 @@ describe('attrs', () => {
       style: () => ({
         color: 'blue',
       }),
-    })``;
+    })`
+      background: blue;
+    `;
 
-    expect(TestRenderer.create(<BlueText>Hello</BlueText>).toJSON()).toMatchSnapshot();
+    const rendered = TestRenderer.create(<BlueText>Hello</BlueText>);
+
+    expectCSSMatches(`.d {background: red;} .c {background: blue;}`);
+    expect(rendered.toJSON()).toMatchInlineSnapshot(`
+      <p
+        className="sc-a d sc-b c"
+        style={
+          Object {
+            "color": "blue",
+            "fontSize": "4em",
+          }
+        }
+      >
+        Hello
+      </p>
+    `);
   });
 
   it('does not pass non html tags to HTML element', () => {
@@ -279,11 +298,11 @@ describe('attrs', () => {
       TestRenderer.create(<Comp />);
 
       expect(console.warn.mock.calls[1][0]).toMatchInlineSnapshot(`
-"It looks like you've used a non styled-component as the value for the \\"component\\" prop in an object-form attrs constructor of \\"styled.div\\".
-You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))
-To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)
-For example, { component: () => InnerComponent } instead of { component: InnerComponent }"
-`);
+        "It looks like you've used a non styled-component as the value for the \\"component\\" prop in an object-form attrs constructor of \\"styled.div\\".
+        You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))
+        To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)
+        For example, { component: () => InnerComponent } instead of { component: InnerComponent }"
+      `);
     });
 
     it('warns for using fns as attrs object keys', () => {

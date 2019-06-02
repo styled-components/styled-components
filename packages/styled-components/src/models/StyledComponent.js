@@ -233,10 +233,10 @@ function useStyledComponentImpl<Config: {}, Instance>(
   propsForElement.className = Array.prototype
     .concat(
       foldedComponentIds,
-      props.className,
       styledComponentId,
-      attrs.className,
-      generatedClassName !== styledComponentId ? generatedClassName : null
+      generatedClassName !== styledComponentId ? generatedClassName : null,
+      props.className,
+      attrs.className
     )
     .filter(Boolean)
     .join(' ');

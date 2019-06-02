@@ -213,7 +213,7 @@ describe('basic', () => {
       }
 
       const wrapper = TestRenderer.create(<Wrapper />);
-      expect(wrapper.root.findByType(InnerComponent).props.className).toBe('test sc-a');
+      expect(wrapper.root.findByType(InnerComponent).props.className).toBe('sc-a test');
     });
 
     it('should pass the ref to the component', () => {
@@ -337,7 +337,7 @@ describe('basic', () => {
       expectCSSMatches(`.sc-a {color: red;} .sc-b {color: green;}`);
       expect(rendered.toJSON()).toMatchInlineSnapshot(`
 <div
-  className="sc-b sc-a"
+  className="sc-a sc-b"
 />
 `);
     });
