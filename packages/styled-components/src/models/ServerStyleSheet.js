@@ -27,12 +27,14 @@ export default class ServerStyleSheet {
       throw new StyledError(2);
     }
 
-    this.seal();
-
     return <StyleSheetManager sheet={this.sheet}>{children}</StyleSheetManager>;
   }
 
   getStyleTags = (): string => {
+    if (this.sealed) {
+      throw new StyledError(2);
+    }
+
     const css = this.sheet.toString();
     const nonce = getNonce();
     const attrs = [nonce && `nonce="${nonce}"`, SC_ATTR, `${SC_ATTR_VERSION}="${SC_VERSION}"`];
@@ -42,6 +44,10 @@ export default class ServerStyleSheet {
   };
 
   getStyleElement = () => {
+    if (this.sealed) {
+      throw new StyledError(2);
+    }
+
     const props = {
       [SC_ATTR]: '',
       [SC_ATTR_VERSION]: SC_VERSION,
@@ -61,7 +67,11 @@ export default class ServerStyleSheet {
   interleaveWithNodeStream(input: any) {
     if (!__SERVER__ || IS_BROWSER) {
       throw new StyledError(3);
+    } else if (this.sealed) {
+      throw new StyledError(2);
     }
+
+    this.seal();
 
     // eslint-disable-next-line global-require
     const { Readable, Transform } = require('stream');
