@@ -1,5 +1,5 @@
 // @flow
-import React, { useContext, useMemo, type Node, type Context } from 'react';
+import React, { useContext, useMemo, useState, type Node, type Context } from 'react';
 import PropTypes from 'prop-types';
 import StyleSheet from '../sheet';
 import createStylisInstance from '../utils/stylis';
@@ -22,6 +22,32 @@ export function useStyleSheet(): StyleSheet {
 }
 
 export default function StyleSheetManager(props: Props) {
+  /**
+   * freeze the stylis modification props on initial mount since they rely on
+   * reference equality for the useMemo dependencies array and devs will
+   * likely not store the reference themselves to avoid this issue
+   */
+  const [{ stylisOptions, stylisPlugins }] = useState({
+    stylisOptions: props.stylisOptions,
+    stylisPlugins: props.stylisPlugins,
+  });
+
+  if (process.env.NODE_ENV !== 'production') {
+    if (JSON.stringify(stylisOptions) !== JSON.stringify(props.stylisOptions)) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        'stylisOptions are frozen on initial mount of StyleSheetManager. Changing this prop dynamically will have no effect.'
+      );
+    }
+
+    if (JSON.stringify(stylisPlugins) !== JSON.stringify(props.stylisPlugins)) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        'stylisPlugins are frozen on initial mount of StyleSheetManager. Changing this prop dynamically will have no effect.'
+      );
+    }
+  }
+
   const styleSheet = useMemo(
     () => {
       let sheet = masterSheet;
@@ -37,21 +63,15 @@ export default function StyleSheetManager(props: Props) {
         sheet = sheet.reconstructWithOptions({ useCSSOMInjection: false });
       }
 
-      if (props.stylisOptions || props.stylisPlugins) {
+      if (stylisOptions || stylisPlugins) {
         sheet = sheet.reconstructWithOptions({
-          stringifier: createStylisInstance(props.stylisOptions, props.stylisPlugins),
+          stringifier: createStylisInstance(stylisOptions, stylisPlugins),
         });
       }
 
       return sheet;
     },
-    [
-      props.disableCSSOMInjection,
-      props.sheet,
-      props.stylisOptions,
-      props.stylisPlugins,
-      props.target,
-    ]
+    [props.disableCSSOMInjection, props.sheet, stylisOptions, stylisPlugins, props.target]
   );
 
   return (
