@@ -9,7 +9,7 @@ type Props = {
   disableCSSOMInjection?: boolean,
   sheet?: StyleSheet,
   stylisOptions?: Object,
-  stylusPlugins?: Array<Function>,
+  stylisPlugins?: Array<Function>,
   target?: HTMLElement,
 };
 
@@ -37,9 +37,9 @@ export default function StyleSheetManager(props: Props) {
         sheet = sheet.reconstructWithOptions({ useCSSOMInjection: false });
       }
 
-      if (props.stylisOptions || props.stylusPlugins) {
+      if (props.stylisOptions || props.stylisPlugins) {
         sheet = sheet.reconstructWithOptions({
-          stringifier: createStylisInstance(props.stylisOptions, props.stylusPlugins),
+          stringifier: createStylisInstance(props.stylisOptions, props.stylisPlugins),
         });
       }
 
@@ -49,7 +49,7 @@ export default function StyleSheetManager(props: Props) {
       props.disableCSSOMInjection,
       props.sheet,
       props.stylisOptions,
-      props.stylusPlugins,
+      props.stylisPlugins,
       props.target,
     ]
   );
@@ -65,7 +65,7 @@ StyleSheetManager.propTypes = {
   disableCSSOMInjection: PropTypes.bool,
   sheet: PropTypes.instanceOf(StyleSheet),
   stylisOptions: PropTypes.object,
-  stylusPlugins: PropTypes.arrayOf(PropTypes.func),
+  stylisPlugins: PropTypes.arrayOf(PropTypes.func),
   target: PropTypes.shape({
     appendChild: PropTypes.func.isRequired,
   }),

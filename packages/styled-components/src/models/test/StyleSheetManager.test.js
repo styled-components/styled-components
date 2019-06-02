@@ -254,7 +254,7 @@ describe('StyleSheetManager', () => {
     `;
 
     TestRenderer.create(
-      <StyleSheetManager stylusPlugins={[stylisRTLPlugin]}>
+      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
         <Test>Foo</Test>
       </StyleSheetManager>
     );
