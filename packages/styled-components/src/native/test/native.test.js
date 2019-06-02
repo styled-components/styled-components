@@ -1,6 +1,5 @@
 // @flow
-/* eslint-disable react/prop-types */
-import 'react-native';
+/* eslint-disable react/prop-types, no-console */
 import { Text, View } from 'react-native';
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -94,6 +93,7 @@ describe('native', () => {
     const oldConsoleWarn = console.warn;
     console.warn = jest.fn();
     try {
+      // eslint-disable-next-line no-unused-expressions
       styled.View`
         /* this is a comment */
       `;
@@ -277,7 +277,7 @@ describe('native', () => {
     });
 
     it('accepts a function', () => {
-      const Comp = styled.Text.attrs(props => ({
+      const Comp = styled.Text.attrs(() => ({
         children: <Text>Amazing</Text>,
       }))``;
 
@@ -311,33 +311,25 @@ describe('native', () => {
 
     it('theme prop works', () => {
       const Comp = styled.Text`
-        color: ${({theme}) => theme.myColor};
+        color: ${({ theme }) => theme.myColor};
       `;
 
-      const wrapper = TestRenderer.create(
-        <Comp theme={{myColor: 'red'}}>Something else</Comp>
-      );
+      const wrapper = TestRenderer.create(<Comp theme={{ myColor: 'red' }}>Something else</Comp>);
       const text = wrapper.root.findByType('Text');
 
-      expect(text.props.style).toMatchObject(
-        [{"color": "red"}],
-      );
+      expect(text.props.style).toMatchObject([{ color: 'red' }]);
     });
 
     it('theme in defaultProps works', () => {
       const Comp = styled.Text`
-        color: ${({theme}) => theme.myColor};
+        color: ${({ theme }) => theme.myColor};
       `;
-      Comp.defaultProps = {theme: {myColor: 'red'}}
+      Comp.defaultProps = { theme: { myColor: 'red' } };
 
-      const wrapper = TestRenderer.create(
-        <Comp>Something else</Comp>
-      );
+      const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
       const text = wrapper.root.findByType('Text');
 
-      expect(text.props.style).toMatchObject(
-        [{"color": "red"}],
-      );
+      expect(text.props.style).toMatchObject([{ color: 'red' }]);
     });
   });
 
@@ -419,11 +411,11 @@ describe('native', () => {
       TestRenderer.create(<Comp />);
 
       expect(console.warn.mock.calls[1][0]).toMatchInlineSnapshot(`
-"It looks like you've used a non styled-component as the value for the \\"component\\" prop in an object-form attrs constructor of \\"Styled(Component)\\".
-You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))
-To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)
-For example, { component: () => InnerComponent } instead of { component: InnerComponent }"
-`);
+        "It looks like you've used a non styled-component as the value for the \\"component\\" prop in an object-form attrs constructor of \\"Styled(Text)\\".
+        You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))
+        To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)
+        For example, { component: () => InnerComponent } instead of { component: InnerComponent }"
+      `);
     });
 
     it('warns for using fns as attrs object keys', () => {

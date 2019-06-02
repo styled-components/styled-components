@@ -4,7 +4,7 @@ workflow:
     - flow
     - lint
     - build
-    - test-web
+    - test
 tasks:
   install:
     image: node:10
@@ -12,13 +12,13 @@ tasks:
       - yarn
     env:
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
-  test-web:
+  test:
     image: node:10
     cwd: ./packages/styled-components/
     command:
       - yarn
     args:
-      - test:web
+      - test
   flow:
     image: node:10
     command:
