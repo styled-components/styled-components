@@ -4,6 +4,7 @@
   "scripts": {
     "build": "wsrun -p styled-components --exclude-missing build",
     "postbuild": "cp README.md packages/styled-components/",
+    "postinstall": "wsrun -p styled-components --stages generateErrors",
     "dev": "wsrun --exclude-missing dev",
     "flow": "flow check",
     "lint": "wsrun --exclude-missing lint",
