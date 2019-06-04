@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Make it possible to initialize `SC_ATTR` and `SC_DISABLE_SPEEDY` via `REACT_APP_*` .env variables for easier integration with CRA applications (see [#2501](https://github.com/styled-components/styled-components/pull/2501))
+
 - Fix components being folded inappropriately when an interim HOC is present (see [#2586](https://github.com/styled-components/styled-components/issues/2586))
 
 - Fix `theme` prop for styled native components, also fixes `theme` in
