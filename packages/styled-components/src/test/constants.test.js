@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable global-require */
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
@@ -12,7 +13,7 @@ describe('constants', () => {
 
   describe('SC_ATTR', () => {
     function renderAndExpect(expectedAttr) {
-      const SC_ATTR = require('../constants').SC_ATTR;
+      const { SC_ATTR } = require('../constants');
       const styled = require('./utils').resetStyled();
 
       const Comp = styled.div`
@@ -54,7 +55,7 @@ describe('constants', () => {
 
   describe('DISABLE_SPEEDY', () => {
     function renderAndExpect(expectedDisableSpeedy, expectedCss) {
-      const DISABLE_SPEEDY = require('../constants').DISABLE_SPEEDY;
+      const { DISABLE_SPEEDY } = require('../constants');
       const styled = require('./utils').resetStyled();
 
       const Comp = styled.div`
@@ -103,6 +104,20 @@ describe('constants', () => {
     it('should be true in development NODE_ENV', () => {
       process.env.NODE_ENV = 'development';
       renderAndExpect(true, '.b { color:blue; }');
+    });
+
+    it('should work with SC_DISABLE_SPEEDY environment variable', () => {
+      process.env.SC_DISABLE_SPEEDY = true;
+      renderAndExpect(true, '.b { color:blue; }');
+
+      delete process.env.SC_DISABLE_SPEEDY;
+    });
+
+    it('should work with REACT_APP_SC_DISABLE_SPEEDY environment variable', () => {
+      process.env.REACT_APP_SC_DISABLE_SPEEDY = true;
+      renderAndExpect(true, '.b { color:blue; }');
+
+      delete process.env.REACT_APP_SC_DISABLE_SPEEDY;
     });
   });
 });
