@@ -101,9 +101,7 @@ exports[`attrs should override children of course 1`] = `
 <div
   className="sc-a b"
 >
-  <span>
-    Amazing
-  </span>
+  Something else
 </div>
 `;
 
@@ -147,44 +145,6 @@ exports[`attrs should replace attrs with props 3`] = `
   tabIndex="-1"
   type="reset"
 />
-`;
-
-exports[`attrs should replace props with attrs 1`] = `
-<button
-  className="sc-a b"
-  tabIndex={0}
-  type="button"
-/>
-`;
-
-exports[`attrs should replace props with attrs 2`] = `
-<button
-  className="sc-a b"
-  tabIndex={0}
-  type="button"
-/>
-`;
-
-exports[`attrs should replace props with attrs 3`] = `
-<button
-  className="sc-a b"
-  tabIndex={0}
-  type="button"
-/>
-`;
-
-exports[`attrs should shallow merge "style" prop + attr instead of overwriting 1`] = `
-<p
-  className="sc-a d sc-b c"
-  style={
-    Object {
-      "color": "blue",
-      "fontSize": "4em",
-    }
-  }
->
-  Hello
-</p>
 `;
 
 exports[`attrs should work with data and aria attributes 1`] = `

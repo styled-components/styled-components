@@ -1,4 +1,4 @@
 // @flow
 export default function isStyledComponent(target: any): boolean %checks {
-  return target && typeof target.styledComponentId === 'string';
+  return target && typeof target.styledComponentId === 'string' && target.self === target;
 }

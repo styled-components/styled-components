@@ -79,7 +79,7 @@ class StyledNativeComponent extends Component<*, *> {
 
           const generatedStyles = this.generateAndInjectStyles(
             determineTheme(this.props, theme, defaultProps) || EMPTY_OBJECT,
-            this.props,
+            this.props
           );
 
           const propsForElement = {
@@ -246,6 +246,9 @@ export default (InlineStyle: Function) => {
         withComponent: true,
       });
     }
+
+    // $FlowFixMe
+    WrappedStyledNativeComponent.self = WrappedStyledNativeComponent;
 
     return WrappedStyledNativeComponent;
   };
