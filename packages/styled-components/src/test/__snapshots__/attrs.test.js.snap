@@ -125,6 +125,30 @@ exports[`attrs should pass through complex children as well 1`] = `
 </div>
 `;
 
+exports[`attrs should replace attrs with props 1`] = `
+<button
+  className="sc-a b"
+  tabIndex={0}
+  type="button"
+/>
+`;
+
+exports[`attrs should replace attrs with props 2`] = `
+<button
+  className="sc-a b"
+  tabIndex={0}
+  type="reset"
+/>
+`;
+
+exports[`attrs should replace attrs with props 3`] = `
+<button
+  className="sc-a b"
+  tabIndex="-1"
+  type="reset"
+/>
+`;
+
 exports[`attrs should replace props with attrs 1`] = `
 <button
   className="sc-a b"
