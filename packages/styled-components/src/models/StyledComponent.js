@@ -1,6 +1,7 @@
 // @flow
 /* eslint-disable react/prop-types */
 import validAttr from '@emotion/is-prop-valid';
+import merge from 'merge-anything';
 import React, {
   createElement,
   useContext,
@@ -329,6 +330,18 @@ export default function createStyledComponent(
 
     return createStyledComponent(tag, newOptions, rules);
   };
+
+  // $FlowFixMe
+  Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
+    get() {
+      return this._foldedDefaultProps;
+    },
+
+    set(obj) {
+      // $FlowFixMe
+      this._foldedDefaultProps = isTargetStyledComp ? merge(target.defaultProps, obj) : obj;
+    },
+  });
 
   if (process.env.NODE_ENV !== 'production') {
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName);
