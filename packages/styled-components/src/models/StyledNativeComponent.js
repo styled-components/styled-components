@@ -1,4 +1,5 @@
 // @flow
+import merge from 'merge-anything';
 import React, { createElement, Component } from 'react';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
@@ -14,7 +15,6 @@ import { ThemeConsumer } from './ThemeProvider';
 import type { Theme } from './ThemeProvider';
 import type { Attrs, RuleSet, Target } from '../types';
 
-// $FlowFixMe
 class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
 
@@ -113,13 +113,11 @@ class StyledNativeComponent extends Component<*, *> {
       let key;
 
       if (isFunction(resolvedAttrDef)) {
-        // $FlowFixMe
         resolvedAttrDef = resolvedAttrDef(context);
         attrDefWasFn = true;
       }
 
       /* eslint-disable guard-for-in */
-      // $FlowFixMe
       for (key in resolvedAttrDef) {
         attr = resolvedAttrDef[key];
 
@@ -185,6 +183,7 @@ export default (InlineStyle: Function) => {
     const isClass = !isTag(target);
     const isTargetStyledComp = isStyledComponent(target);
 
+    // $FlowFixMe
     const WrappedStyledNativeComponent = React.forwardRef((props, ref) => (
       <ParentComponent
         {...props}
@@ -217,11 +216,13 @@ export default (InlineStyle: Function) => {
 
     // $FlowFixMe
     WrappedStyledNativeComponent.styledComponentId = 'StyledNativeComponent';
+
     // $FlowFixMe
     WrappedStyledNativeComponent.target = isTargetStyledComp
       ? // $FlowFixMe
         target.target
       : target;
+
     // $FlowFixMe
     WrappedStyledNativeComponent.withComponent = function withComponent(tag: Target) {
       const { displayName: _, componentId: __, ...optionsToCopy } = options;
@@ -234,8 +235,19 @@ export default (InlineStyle: Function) => {
       return createStyledNativeComponent(tag, newOptions, rules);
     };
 
+    // $FlowFixMe
+    Object.defineProperty(WrappedStyledNativeComponent, 'defaultProps', {
+      get() {
+        return this._foldedDefaultProps;
+      },
+
+      set(obj) {
+        // $FlowFixMe
+        this._foldedDefaultProps = isTargetStyledComp ? merge(target.defaultProps, obj) : obj;
+      },
+    });
+
     if (isClass) {
-      // $FlowFixMe
       hoist(WrappedStyledNativeComponent, target, {
         // all SC-specific things should not be hoisted
         attrs: true,

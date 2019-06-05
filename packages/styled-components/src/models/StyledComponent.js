@@ -1,5 +1,6 @@
 // @flow
 import validAttr from '@emotion/is-prop-valid';
+import merge from 'merge-anything';
 import React, { createElement, Component } from 'react';
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
@@ -310,6 +311,18 @@ export default function createStyledComponent(target: Target, options: Object, r
 
     return createStyledComponent(tag, newOptions, rules);
   };
+
+  // $FlowFixMe
+  Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
+    get() {
+      return this._foldedDefaultProps;
+    },
+
+    set(obj) {
+      // $FlowFixMe
+      this._foldedDefaultProps = isTargetStyledComp ? merge(target.defaultProps, obj) : obj;
+    },
+  });
 
   if (process.env.NODE_ENV !== 'production') {
     // $FlowFixMe
