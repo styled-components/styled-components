@@ -10,7 +10,6 @@ import sourceMaps from 'rollup-plugin-sourcemaps';
 import pkg from './package.json';
 
 // rollup-plugin-ignore stopped working, so we'll just remove the import lines 😐
-const propTypeIgnore = { "import PropTypes from 'prop-types';": "'';" };
 const streamIgnore = { "import stream from 'stream';": "'';" };
 
 const cjs = {
@@ -52,7 +51,6 @@ const commonPlugins = [
 
 const prodPlugins = [
   replace({
-    ...propTypeIgnore,
     'process.env.NODE_ENV': JSON.stringify('production'),
   }),
   terser({
