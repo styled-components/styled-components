@@ -3,17 +3,6 @@ import isFunction from './isFunction';
 import isStyledComponent from './isStyledComponent';
 import type { Attrs, RuleSet } from '../types';
 
-function hasFunctionObjectKey(obj: Object): boolean {
-  // eslint-disable-next-line guard-for-in, no-restricted-syntax
-  for (const key in obj) {
-    if (isFunction(obj[key])) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 export default function isStaticRules(rules: RuleSet, attrs: Attrs): boolean {
   for (let i = 0; i < rules.length; i += 1) {
     const rule = rules[i];
@@ -27,8 +16,6 @@ export default function isStaticRules(rules: RuleSet, attrs: Attrs): boolean {
       return false;
     }
   }
-
-  if (attrs.some(x => isFunction(x) || hasFunctionObjectKey(x))) return false;
 
   return true;
 }
