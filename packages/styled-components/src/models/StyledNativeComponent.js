@@ -7,9 +7,7 @@ import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isTag from '../utils/isTag';
-import isDerivedReactComponent from '../utils/isDerivedReactComponent';
 import isStyledComponent from '../utils/isStyledComponent';
-import once from '../utils/once';
 import { ThemeConsumer } from './ThemeProvider';
 
 import type { Theme } from './ThemeProvider';
@@ -21,46 +19,7 @@ import type { Attrs, RuleSet, Target } from '../types';
 class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
 
-  warnInnerRef: Function;
-
-  warnAttrsFnObjectKeyDeprecated: Function;
-
-  warnNonStyledComponentAttrsObjectKey: Function;
-
   attrs = {};
-
-  constructor(props) {
-    super(props);
-
-    if (process.env.NODE_ENV !== 'production') {
-      this.warnInnerRef = once(displayName =>
-        // eslint-disable-next-line no-console
-        console.warn(
-          `The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component. "innerRef" was detected on component "${displayName}".`
-        )
-      );
-
-      this.warnAttrsFnObjectKeyDeprecated = once(
-        (key, displayName): void =>
-          // eslint-disable-next-line no-console
-          console.warn(
-            `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`,
-            `\n ${new Error().stack}`
-          )
-      );
-
-      this.warnNonStyledComponentAttrsObjectKey = once(
-        (key, displayName): void =>
-          // eslint-disable-next-line no-console
-          console.warn(
-            `It looks like you've used a non styled-component as the value for the "${key}" prop in an object-form attrs constructor of "${displayName}".\n` +
-              'You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))\n' +
-              "To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)\n" +
-              `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
-          )
-      );
-    }
-  }
 
   render() {
     return (
@@ -71,12 +30,11 @@ class StyledNativeComponent extends Component<*, *> {
             forwardedComponent,
             forwardedAs,
             forwardedRef,
-            innerRef,
             style = [],
             ...props
           } = this.props;
 
-          const { defaultProps, displayName, target } = forwardedComponent;
+          const { defaultProps, target } = forwardedComponent;
 
           const generatedStyles = this.generateAndInjectStyles(
             determineTheme(this.props, theme, defaultProps) || EMPTY_OBJECT,
@@ -91,10 +49,6 @@ class StyledNativeComponent extends Component<*, *> {
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
           if (forwardedAs) propsForElement.as = forwardedAs;
-
-          if (process.env.NODE_ENV !== 'production' && innerRef) {
-            this.warnInnerRef(displayName);
-          }
 
           return createElement(renderAs || target, propsForElement);
         }}
@@ -111,36 +65,16 @@ class StyledNativeComponent extends Component<*, *> {
 
     attrs.forEach(attrDef => {
       let resolvedAttrDef = attrDef;
-      let attrDefWasFn = false;
       let attr;
       let key;
 
       if (isFunction(resolvedAttrDef)) {
         resolvedAttrDef = resolvedAttrDef(context);
-        attrDefWasFn = true;
       }
 
       /* eslint-disable guard-for-in */
       for (key in resolvedAttrDef) {
         attr = resolvedAttrDef[key];
-
-        if (!attrDefWasFn) {
-          if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
-            if (process.env.NODE_ENV !== 'production') {
-              this.warnAttrsFnObjectKeyDeprecated(key, this.props.forwardedComponent.displayName);
-            }
-
-            attr = attr(context);
-
-            if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-              this.warnNonStyledComponentAttrsObjectKey(
-                key,
-                this.props.forwardedComponent.displayName
-              );
-            }
-          }
-        }
-
         this.attrs[key] = attr;
         context[key] = attr;
       }

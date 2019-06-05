@@ -118,9 +118,9 @@ describe('expanded api', () => {
     });
 
     it('changes the rendered element type when used with attrs', () => {
-      const Comp = styled.div.attrs({
+      const Comp = styled.div.attrs(() => ({
         as: 'header',
-      })`
+      }))`
         color: red;
       `;
 
@@ -128,9 +128,9 @@ describe('expanded api', () => {
     });
 
     it('prefers prop over attrs', () => {
-      const Comp = styled.div.attrs({
+      const Comp = styled.div.attrs(() => ({
         as: 'header',
-      })`
+      }))`
         color: red;
       `;
 

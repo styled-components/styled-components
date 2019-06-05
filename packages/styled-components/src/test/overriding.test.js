@@ -81,8 +81,8 @@ describe('extending', () => {
     describe('when overriding with another component', () => {
       it('should override parents defaultProps', () => {
         const Parent = setupParent();
-        const Child = styled(Parent).attrs({ as: 'h2' })``;
-        const Grandson = styled(Child).attrs({ as: 'h3' })``;
+        const Child = styled(Parent).attrs(() => ({ as: 'h2' }))``;
+        const Grandson = styled(Child).attrs(() => ({ as: 'h3' }))``;
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);
@@ -96,8 +96,8 @@ describe('extending', () => {
 
       it('should evaluate grandsons props', () => {
         const Parent = setupParent();
-        const Child = styled(Parent).attrs({ as: 'h2' })``;
-        const Grandson = styled(Child).attrs({ as: 'h3' })``;
+        const Child = styled(Parent).attrs(() => ({ as: 'h2' }))``;
+        const Grandson = styled(Child).attrs(() => ({ as: 'h3' }))``;
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);

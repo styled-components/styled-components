@@ -89,7 +89,7 @@ describe('primitives', () => {
 
   describe('attrs', () => {
     it('works fine with an empty object', () => {
-      const Comp = styled.View.attrs({})``;
+      const Comp = styled.View.attrs(() => ({}))``;
       const wrapper = TestRenderer.create(<Comp />);
       const view = wrapper.root.findByType('View');
 
@@ -99,9 +99,9 @@ describe('primitives', () => {
     });
 
     it('passes simple props on', () => {
-      const Comp = styled.View.attrs({
+      const Comp = styled.View.attrs(() => ({
         test: true,
-      })``;
+      }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
       const view = wrapper.root.findByType('View');
@@ -115,9 +115,9 @@ describe('primitives', () => {
     it('calls an attr-function with context', () => {
       jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const Comp = styled.View.attrs({
-        copy: props => props.test,
-      })``;
+      const Comp = styled.View.attrs(p => ({
+        copy: p.test,
+      }))``;
 
       const test = 'Put that cookie down!';
       const wrapper = TestRenderer.create(<Comp test={test} />);
@@ -131,13 +131,13 @@ describe('primitives', () => {
     });
 
     it('merges multiple calls', () => {
-      const Comp = styled.View.attrs({
+      const Comp = styled.View.attrs(() => ({
         first: 'first',
         test: '_',
-      }).attrs({
+      })).attrs(() => ({
         second: 'second',
         test: 'test',
-      })``;
+      }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
       const view = wrapper.root.findByType('View');
@@ -171,13 +171,13 @@ describe('primitives', () => {
     });
 
     it('merges attrs when inheriting SC', () => {
-      const Parent = styled.View.attrs({
+      const Parent = styled.View.attrs(() => ({
         first: 'first',
-      })``;
+      }))``;
 
-      const Child = styled(Parent).attrs({
+      const Child = styled(Parent).attrs(() => ({
         second: 'second',
-      })``;
+      }))``;
 
       const wrapper = TestRenderer.create(<Child />);
       const view = wrapper.root.findByType('View');
@@ -190,9 +190,9 @@ describe('primitives', () => {
     });
 
     it('should pass through children as a normal prop', () => {
-      const Comp = styled.Text.attrs({
+      const Comp = styled.Text.attrs(() => ({
         children: 'Probably a bad idea',
-      })``;
+      }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
       const text = wrapper.root.findByType('Text');
@@ -204,45 +204,44 @@ describe('primitives', () => {
     });
 
     it('should pass through complex children as well', () => {
-      const Comp = styled.Text.attrs({
-        children: <Text>Probably a bad idea</Text>,
-      })``;
+      const child = <Text>Probably a bad idea</Text>;
+      const Comp = styled.Text.attrs(() => ({
+        children: child,
+      }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
       const text = wrapper.root.findByType('Text');
 
       expect(text.props).toMatchObject({
-        children: <Text>Probably a bad idea</Text>,
+        children: child,
         style: [{}],
       });
     });
 
     it('should override children', () => {
-      const child = <Text>Amazing</Text>;
-      const Comp = styled.Text.attrs({
-        children: child,
-      })``;
-
-      const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
-      const text = wrapper.root.findByType('Text');
-
-      expect(text.props).toMatchObject({
-        children: child,
-        style: [{}],
-      });
-    });
-
-    it('accepts a function', () => {
-      const child = <Text>Amazing</Text>;
       const Comp = styled.Text.attrs(() => ({
-        children: child,
+        children: <Text>Amazing</Text>,
       }))``;
 
       const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
       const text = wrapper.root.findByType('Text');
 
       expect(text.props).toMatchObject({
-        children: child,
+        children: 'Something else',
+        style: [{}],
+      });
+    });
+
+    it('accepts a function', () => {
+      const Comp = styled.Text.attrs(() => ({
+        children: <Text>Amazing</Text>,
+      }))``;
+
+      const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
+      const text = wrapper.root.findByType('Text');
+
+      expect(text.props).toMatchObject({
+        children: 'Something else',
         style: [{}],
       });
     });
@@ -314,51 +313,6 @@ describe('primitives', () => {
 
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
       expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot();
-    });
-  });
-
-  describe('warnings', () => {
-    beforeEach(() => {
-      jest.spyOn(console, 'warn').mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      console.warn.mockClear();
-    });
-
-    it('warns upon use of the removed "innerRef" prop', () => {
-      const Comp = styled.View``;
-      const ref = React.createRef();
-
-      TestRenderer.create(<Comp innerRef={ref} />);
-      expect(console.warn).toHaveBeenCalledWith(
-        expect.stringContaining('The "innerRef" API has been removed')
-      );
-    });
-
-    it('warns upon use of a Stateless Functional Component as a prop for attrs', () => {
-      const Inner = () => <Text />;
-      const Comp = styled.Text.attrs({ component: Inner })``;
-
-      TestRenderer.create(<Comp />);
-
-      expect(console.warn.mock.calls[1][0]).toMatchInlineSnapshot(`
-        "It looks like you've used a non styled-component as the value for the \\"component\\" prop in an object-form attrs constructor of \\"Styled(Text)\\".
-        You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))
-        To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)
-        For example, { component: () => InnerComponent } instead of { component: InnerComponent }"
-      `);
-    });
-
-    it('warns for using fns as attrs object keys', () => {
-      const Comp = styled.View.attrs({ 'data-text-color': props => props.textColor })``;
-
-      TestRenderer.create(<Comp textColor="blue" />);
-
-      expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-        `"Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is \\"data-text-color\\" on component \\"Styled(View)\\"."`
-      );
-      expect(console.warn.mock.calls[0][1]).toEqual(expect.stringMatching(/^\s+Error\s+at/));
     });
   });
 });

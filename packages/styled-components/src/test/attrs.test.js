@@ -18,14 +18,14 @@ describe('attrs', () => {
   });
 
   it('work fine with an empty object', () => {
-    const Comp = styled.div.attrs({})``;
+    const Comp = styled.div.attrs(() => ({}))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('pass a simple attr', () => {
-    const Comp = styled.button.attrs({
+    const Comp = styled.button.attrs(() => ({
       type: 'button',
-    })``;
+    }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
@@ -43,22 +43,23 @@ describe('attrs', () => {
       </button>
     );
 
-    const Comp = styled(Button).attrs({
+    const Comp = styled(Button).attrs(() => ({
       component: ReactComponent,
-    })``;
+    }))``;
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('call an attr function', () => {
-    console.warn.mockImplementation(() => {});
-    const Comp = styled.button.attrs({
-      as: () => 'div',
-    })``;
+    const stub = jest.fn(() => 'div');
+
+    const Comp = styled.button.attrs(() => ({
+      as: stub,
+    }))``;
+
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
 
-    // deprecation message for fn as attrs object key
-    expect(console.warn).toHaveBeenCalled();
+    expect(stub).toHaveBeenCalled();
   });
 
   it('pass a fn to attrs', () => {
@@ -107,59 +108,48 @@ describe('attrs', () => {
   });
 
   it('pass props to the attr function', () => {
-    const Comp = styled.button.attrs({
-      type: props => (props.submit ? 'submit' : 'button'),
-    })``;
+    const Comp = styled.button.attrs(p => ({
+      type: p.submit ? 'submit' : 'button',
+    }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
     expect(TestRenderer.create(<Comp submit />).toJSON()).toMatchSnapshot();
   });
 
   it('should replace attrs with props', () => {
-    const Comp = styled.button.attrs({
-      type: props => (props.submit ? 'submit' : 'button'),
+    const Comp = styled.button.attrs(p => ({
+      type: p.submit ? 'submit' : 'button',
       tabIndex: 0,
-    })``;
+    }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
     expect(TestRenderer.create(<Comp type="reset" />).toJSON()).toMatchSnapshot();
     expect(TestRenderer.create(<Comp type="reset" tabIndex="-1" />).toJSON()).toMatchSnapshot();
   });
 
   it('should merge className', () => {
-    const Comp = styled.div.attrs({
+    const Comp = styled.div.attrs(p => ({
       className: 'meow nya',
-    })``;
+    }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('should merge className even if its a function', () => {
-    const Comp = styled.div.attrs({
-      className: props => `meow ${props.purr ? 'purr' : 'nya'}`,
-    })``;
+    const Comp = styled.div.attrs(p => ({
+      className: `meow ${p.purr ? 'purr' : 'nya'}`,
+    }))``;
+
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
     expect(TestRenderer.create(<Comp purr />).toJSON()).toMatchSnapshot();
   });
 
   it('should work with data and aria attributes', () => {
-    const Comp = styled.div.attrs({
+    const Comp = styled.div.attrs(() => ({
       'data-foo': 'bar',
       'aria-label': 'A simple FooBar',
-    })``;
+    }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('merge attrs', () => {
-    const Comp = styled.button
-      .attrs({
-        type: 'button',
-        tabIndex: 0,
-      })
-      .attrs({
-        type: 'submit',
-      })``;
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-  });
-
-  it('merge fn attrs', () => {
     const Comp = styled.button
       .attrs(() => ({
         type: 'button',
@@ -168,27 +158,26 @@ describe('attrs', () => {
       .attrs(() => ({
         type: 'submit',
       }))``;
-
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('merge attrs when inheriting SC', () => {
-    const Parent = styled.button.attrs({
+    const Parent = styled.button.attrs(() => ({
       type: 'button',
       tabIndex: 0,
-    })``;
-    const Child = styled(Parent).attrs({
+    }))``;
+    const Child = styled(Parent).attrs(() => ({
       type: 'submit',
-    })``;
+    }))``;
     expect(TestRenderer.create(<Child />).toJSON()).toMatchSnapshot();
   });
 
   it('pass attrs to style block', () => {
     /* Would be a React Router Link in real life */
-    const Comp = styled.a.attrs({
+    const Comp = styled.a.attrs(() => ({
       href: '#',
       'data-active-class-name': '--is-active',
-    })`
+    }))`
       color: blue;
       &.${props => props['data-active-class-name']} {
         color: red;
@@ -199,33 +188,33 @@ describe('attrs', () => {
   });
 
   it('should pass through children as a normal prop', () => {
-    const Comp = styled.div.attrs({
+    const Comp = styled.div.attrs(() => ({
       children: 'Probably a bad idea',
-    })``;
+    }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('should pass through complex children as well', () => {
-    const Comp = styled.div.attrs({
+    const Comp = styled.div.attrs(() => ({
       children: <span>Probably a bad idea</span>,
-    })``;
+    }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('should override children of course', () => {
-    const Comp = styled.div.attrs({
+    const Comp = styled.div.attrs(() => ({
       children: <span>Amazing</span>,
-    })``;
+    }))``;
     expect(TestRenderer.create(<Comp>Something else</Comp>).toJSON()).toMatchSnapshot();
   });
 
   it('should shallow merge "style" prop + attr instead of overwriting', () => {
-    const Paragraph = styled.p.attrs({
-      style: props => ({
-        ...props.style,
-        fontSize: `${props.fontScale}em`,
-      }),
-    })`
+    const Paragraph = styled.p.attrs(p => ({
+      style: {
+        ...p.style,
+        fontSize: `${p.fontScale}em`,
+      },
+    }))`
       background: red;
     `;
 
@@ -249,11 +238,11 @@ describe('attrs', () => {
       }
     }
 
-    const BlueText = styled(Text).attrs({
-      style: () => ({
+    const BlueText = styled(Text).attrs(() => ({
+      style: {
         color: 'blue',
-      }),
-    })`
+      },
+    }))`
       background: blue;
     `;
 
@@ -280,39 +269,9 @@ describe('attrs', () => {
       color: ${props => props.textColor};
     `;
 
-    const StyledComp = styled(Comp).attrs({
+    const StyledComp = styled(Comp).attrs(() => ({
       textColor: 'red',
-    })``;
+    }))``;
     expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();
-  });
-
-  describe('warnings', () => {
-    beforeEach(() => {
-      jest.spyOn(console, 'warn').mockImplementation(() => {});
-    });
-
-    it('warns upon use of a Stateless Functional Component as a prop', () => {
-      const Inner = () => <div />;
-      const Comp = styled.div.attrs({ component: Inner })``;
-
-      TestRenderer.create(<Comp />);
-
-      expect(console.warn.mock.calls[1][0]).toMatchInlineSnapshot(`
-        "It looks like you've used a non styled-component as the value for the \\"component\\" prop in an object-form attrs constructor of \\"styled.div\\".
-        You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))
-        To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)
-        For example, { component: () => InnerComponent } instead of { component: InnerComponent }"
-      `);
-    });
-
-    it('warns for using fns as attrs object keys', () => {
-      const Comp = styled.div.attrs({ 'data-text-color': props => props.textColor })``;
-
-      TestRenderer.create(<Comp textColor="blue" />);
-
-      expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-        `"Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is \\"data-text-color\\" on component \\"styled.div\\"."`
-      );
-    });
   });
 });

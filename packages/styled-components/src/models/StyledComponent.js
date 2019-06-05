@@ -5,7 +5,6 @@ import merge from 'merge-anything';
 import React, {
   createElement,
   useContext,
-  useState,
   useDebugValue,
   type AbstractComponent,
   type Ref,
@@ -19,9 +18,7 @@ import getComponentName from '../utils/getComponentName';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isTag from '../utils/isTag';
-import isDerivedReactComponent from '../utils/isDerivedReactComponent';
 import isStyledComponent from '../utils/isStyledComponent';
-import once from '../utils/once';
 import hasher from '../utils/hasher';
 import { ThemeContext } from './ThemeProvider';
 import { useStyleSheet } from './StyleSheetManager';
@@ -43,7 +40,7 @@ function generateId(displayName: string, parentComponentId: string) {
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attrs: Attrs, utils) {
+function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attrs: Attrs) {
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
   // where resolvedAttrs is only the things injected by the attrs themselves
@@ -52,33 +49,16 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
 
   attrs.forEach(attrDef => {
     let resolvedAttrDef = attrDef;
-    let attrDefWasFn = false;
     let attr;
     let key;
 
     if (isFunction(resolvedAttrDef)) {
       resolvedAttrDef = resolvedAttrDef(context);
-      attrDefWasFn = true;
     }
 
     /* eslint-disable guard-for-in */
     for (key in resolvedAttrDef) {
       attr = resolvedAttrDef[key];
-
-      if (!attrDefWasFn) {
-        if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
-          if (process.env.NODE_ENV !== 'production') {
-            utils.warnAttrsFnObjectKeyDeprecated(key);
-          }
-
-          attr = attr(context);
-
-          if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-            utils.warnNonStyledComponentAttrsObjectKey(key);
-          }
-        }
-      }
-
       resolvedAttrs[key] = attr;
       context[key] = attr;
     }
@@ -104,7 +84,6 @@ function useInjectedStyle<T>(
   componentStyle: ComponentStyle,
   hasAttrs: boolean,
   resolvedAttrs: T,
-  utils,
   warnTooManyClasses?: $Call<typeof createWarnTooManyClasses, string>
 ) {
   const styleSheet = useStyleSheet();
@@ -126,48 +105,6 @@ function useInjectedStyle<T>(
   return className;
 }
 
-// TODO: convert these all to individual hooks, if possible
-function developmentDeprecationWarningsFactory(displayNameArg: ?string) {
-  const displayName = displayNameArg || 'Unknown';
-  return {
-    warnInnerRef: once(() =>
-      // eslint-disable-next-line no-console
-      console.warn(
-        `The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component. "innerRef" was detected on component "${displayName}".`
-      )
-    ),
-    warnAttrsFnObjectKeyDeprecated: once(
-      (key: string): void =>
-        // eslint-disable-next-line no-console
-        console.warn(
-          `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`
-        )
-    ),
-    warnNonStyledComponentAttrsObjectKey: once(
-      (key: string): void =>
-        // eslint-disable-next-line no-console
-        console.warn(
-          `It looks like you've used a non styled-component as the value for the "${key}" prop in an object-form attrs constructor of "${displayName}".\n` +
-            'You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))\n' +
-            "To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)\n" +
-            `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
-        )
-    ),
-  };
-}
-
-function useDevelopmentDeprecationWarnings(
-  displayName: ?string
-): $Call<typeof developmentDeprecationWarningsFactory, string> {
-  return useState(() => developmentDeprecationWarningsFactory(displayName))[0];
-}
-
-const useDeprecationWarnings: Function =
-  process.env.NODE_ENV !== 'production'
-    ? useDevelopmentDeprecationWarnings
-    : // NOTE: return value must only be accessed in non-production, of course
-      () => {};
-
 function useStyledComponentImpl<Config: {}, Instance>(
   forwardedComponent: StyledComponentWrapper<Config, Instance>,
   props: Object,
@@ -178,7 +115,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
     componentStyle,
     // $FlowFixMe
     defaultProps,
-    displayName,
     foldedComponentIds,
     styledComponentId,
     target,
@@ -191,14 +127,12 @@ function useStyledComponentImpl<Config: {}, Instance>(
   // should be an immutable value, but behave for now.
   const theme = determineTheme(props, useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
 
-  const utils = useDeprecationWarnings(displayName);
-  const [context, attrs] = useResolvedAttrs(theme, props, componentAttrs, utils);
+  const [context, attrs] = useResolvedAttrs(theme, props, componentAttrs);
 
   const generatedClassName = useInjectedStyle(
     componentStyle,
     componentAttrs.length > 0,
     context,
-    utils,
     process.env.NODE_ENV !== 'production' ? forwardedComponent.warnTooManyClasses : undefined
   );
 
@@ -210,10 +144,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
   const computedProps = attrs !== props ? { ...attrs, ...props } : props;
   const shouldFilterProps = isTargetTag || 'as' in computedProps || 'forwardedAs' in computedProps;
   const propsForElement = shouldFilterProps ? {} : { ...computedProps };
-
-  if (process.env.NODE_ENV !== 'production' && 'innerRef' in computedProps && isTargetTag) {
-    utils.warnInnerRef();
-  }
 
   if (shouldFilterProps) {
     // eslint-disable-next-line guard-for-in

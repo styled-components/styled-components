@@ -16,9 +16,9 @@ export default (displayName: string) => {
           `Over ${LIMIT} classes were generated for component ${displayName}. \n` +
             'Consider using the attrs method, together with a style object for frequently changed styles.\n' +
             'Example:\n' +
-            '  const Component = styled.div.attrs(props => ({\n' +
+            '  const Component = styled.div.attrs(p => ({\n' +
             '    style: {\n' +
-            '      background: props.background,\n' +
+            '      background: p.background,\n' +
             '    },\n' +
             '  }))`width: 100%;`\n\n' +
             '  <Component />'
