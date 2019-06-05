@@ -41,25 +41,4 @@ describe('static style caching', () => {
 
     expect(Comp.componentStyle.isStatic).toEqual(false);
   });
-
-  it('should mark components with numeric attriutes as static', () => {
-    const Comp = styled.div.attrs({
-      style: {
-        color: 'purple',
-      },
-      height: 100,
-    })``;
-
-    expect(Comp.componentStyle.isStatic).toEqual(true);
-  });
-
-  it('should mark components with dynamic attributes as not static', () => {
-    const Comp = styled.div.attrs({
-      style: props => ({
-        height: props.height,
-      }),
-    })``;
-
-    expect(Comp.componentStyle.isStatic).toEqual(false);
-  });
 });
