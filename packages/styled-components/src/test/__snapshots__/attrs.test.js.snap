@@ -1,10 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`attrs call an attr function 1`] = `
-<div
-  className="sc-a b"
-/>
-`;
+exports[`attrs call an attr function 1`] = `"div"`;
 
 exports[`attrs does not pass non html tags to HTML element 1`] = `
 <div
@@ -23,14 +19,6 @@ exports[`attrs merge attrs 1`] = `
 exports[`attrs merge attrs when inheriting SC 1`] = `
 <button
   className="sc-a sc-b c"
-  tabIndex={0}
-  type="submit"
-/>
-`;
-
-exports[`attrs merge fn attrs 1`] = `
-<button
-  className="sc-a b"
   tabIndex={0}
   type="submit"
 />
