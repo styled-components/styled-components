@@ -1,4 +1,4 @@
-// flow-typed signature: 5e8226914d622fc9fc585b8e38ca906e
+// flow-typed signature: cb7144378c0465941a011242ea5400ab
 // flow-typed version: <<STUB>>/babel-plugin-styled-components_v>= 1/flow_v0.82.0
 
 /**
@@ -78,6 +78,10 @@ declare module 'babel-plugin-styled-components/lib/visitors/templateLiterals/tra
   declare module.exports: any;
 }
 
+declare module 'babel-plugin-styled-components/lib/visitors/transpileCssProp' {
+  declare module.exports: any;
+}
+
 // Filename aliases
 declare module 'babel-plugin-styled-components/lib/css/placeholderUtils.js' {
   declare module.exports: $Exports<'babel-plugin-styled-components/lib/css/placeholderUtils'>;
@@ -120,4 +124,7 @@ declare module 'babel-plugin-styled-components/lib/visitors/templateLiterals/ind
 }
 declare module 'babel-plugin-styled-components/lib/visitors/templateLiterals/transpile.js' {
   declare module.exports: $Exports<'babel-plugin-styled-components/lib/visitors/templateLiterals/transpile'>;
+}
+declare module 'babel-plugin-styled-components/lib/visitors/transpileCssProp.js' {
+  declare module.exports: $Exports<'babel-plugin-styled-components/lib/visitors/transpileCssProp'>;
 }
