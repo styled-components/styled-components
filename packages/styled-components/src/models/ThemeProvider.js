@@ -5,16 +5,18 @@ import isFunction from '../utils/isFunction';
 
 export type Theme = { [key: string]: mixed };
 
+type ThemeArgument = Theme | ((outerTheme?: Theme) => Theme);
+
 type Props = {
   children?: Element<any>,
-  theme: Theme | ((outerTheme: Theme) => void),
+  theme: ThemeArgument,
 };
 
 export const ThemeContext: Context<Theme | void> = React.createContext();
 
 export const ThemeConsumer = ThemeContext.Consumer;
 
-function useMergedTheme(theme: Theme | ((outerTheme?: Theme) => Theme), outerTheme?: Theme): Theme {
+function useMergedTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
   if (isFunction(theme)) {
     const mergedTheme = theme(outerTheme);
 
@@ -40,6 +42,7 @@ function useMergedTheme(theme: Theme | ((outerTheme?: Theme) => Theme), outerThe
  */
 export default function ThemeProvider(props: Props) {
   const outerTheme = useContext(ThemeContext);
+
   // NOTE: can't really memoize with props.theme as that'd cause incorrect memoization when it's a function
   const themeContext = useMergedTheme(props.theme, outerTheme);
 

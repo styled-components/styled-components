@@ -30,9 +30,6 @@
 .*/integration-test/.*
 .*/sandbox/.*
 
-[libs]
-packages/styled-components/flow-typed/
-
 [options]
 suppress_comment=.*\\$FlowFixMe
 suppress_comment=.*\\$FlowInvalidInputTest
