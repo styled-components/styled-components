@@ -1,6 +1,5 @@
 // @flow
 import React, { useContext, useMemo, useState, type Node, type Context } from 'react';
-import PropTypes from 'prop-types';
 import shallowequal from 'shallowequal';
 import StyleSheet from '../sheet';
 import createStylisInstance from '../utils/stylis';
@@ -81,13 +80,3 @@ export default function StyleSheetManager(props: Props) {
     </StyleSheetContext.Provider>
   );
 }
-
-StyleSheetManager.propTypes = {
-  disableCSSOMInjection: PropTypes.bool,
-  sheet: PropTypes.instanceOf(StyleSheet),
-  stylisOptions: PropTypes.object,
-  stylisPlugins: PropTypes.arrayOf(PropTypes.func),
-  target: PropTypes.shape({
-    appendChild: PropTypes.func.isRequired,
-  }),
-};
