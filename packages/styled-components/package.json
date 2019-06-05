@@ -67,6 +67,7 @@
     "@emotion/unitless": "^0.7.0",
     "babel-plugin-styled-components": ">= 1",
     "css-to-react-native": "^2.2.2",
+    "merge-anything": "^2.2.4",
     "prop-types": "^15.7.2",
     "shallowequal": "^1.1.0",
     "stylis": "^3.5.0",

@@ -1,4 +1,5 @@
 // @flow
+import merge from 'merge-anything';
 import React, { createElement, Component } from 'react';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
@@ -234,6 +235,18 @@ export default (InlineStyle: Function) => {
 
       return createStyledNativeComponent(tag, newOptions, rules);
     };
+
+    // $FlowFixMe
+    Object.defineProperty(WrappedStyledNativeComponent, 'defaultProps', {
+      get() {
+        return this._foldedDefaultProps;
+      },
+
+      set(obj) {
+        // $FlowFixMe
+        this._foldedDefaultProps = isTargetStyledComp ? merge(target.defaultProps, obj) : obj;
+      },
+    });
 
     if (isClass) {
       hoist(WrappedStyledNativeComponent, target, {

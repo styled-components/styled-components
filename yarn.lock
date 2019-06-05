@@ -6393,6 +6393,11 @@ is-typedarray@~1.0.0:
   resolved "https://registry.yarnpkg.com/is-typedarray/-/is-typedarray-1.0.0.tgz#e479c80858df0c1b11ddda6940f96011fcda4a9a"
   integrity sha1-5HnICFjfDBsR3dppQPlgEfzaSpo=
 
+is-what@^3.1.1:
+  version "3.2.2"
+  resolved "https://registry.yarnpkg.com/is-what/-/is-what-3.2.2.tgz#5da48eb905ca2620142abf5867340b46fa9ea238"
+  integrity sha512-4tCMQr7lWLqe2wPKhMvIzvALEhadPrt2+IzW3tQj98Sf/WhXJlpspRDMaC5zpepvtefiDT2PloJaqRvg7PxhYA==
+
 is-windows@^1.0.0, is-windows@^1.0.1, is-windows@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/is-windows/-/is-windows-1.0.2.tgz#d1850eb9791ecd18e6182ce12a30f396634bb19d"
@@ -7563,6 +7568,13 @@ memorystream@^0.3.1:
   version "0.3.1"
   resolved "https://registry.yarnpkg.com/memorystream/-/memorystream-0.3.1.tgz#86d7090b30ce455d63fbae12dda51a47ddcaf9b2"
   integrity sha1-htcJCzDORV1j+64S3aUaR93K+bI=
+
+merge-anything@^2.2.4:
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/merge-anything/-/merge-anything-2.2.4.tgz#1445855716732fd96218ce636cd122c077e5f65c"
+  integrity sha512-A6Ip73ppCEPzD4XEVj28VOT0ec0ZrBLfMywQKZVFnHcxYZ7t9Y6bDrdsZ6a7u2HpuDXeynwcaaM1YV+5Cd1Nhw==
+  dependencies:
+    is-what "^3.1.1"
 
 merge-descriptors@1.0.1:
   version "1.0.1"
