@@ -209,7 +209,6 @@ export default function createStyledComponent(
         // $FlowFixMe
         target.componentStyle.rules.concat(rules)
       : rules,
-    finalAttrs,
     styledComponentId
   );
 
