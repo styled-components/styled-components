@@ -77,6 +77,43 @@ describe('native', () => {
     expect(view.props.style).toEqual([{ color: 'red', textAlign: 'left' }]);
   });
 
+  it('folds defaultProps', () => {
+    const Inner = styled.View``;
+
+    Inner.defaultProps = {
+      theme: {
+        fontSize: 12,
+      },
+      style: {
+        background: 'blue',
+        textAlign: 'center',
+      },
+    };
+
+    const Outer = styled(Inner)``;
+
+    Outer.defaultProps = {
+      theme: {
+        fontSize: 16,
+      },
+      style: {
+        background: 'silver',
+      },
+    };
+
+    expect(Outer.defaultProps).toMatchInlineSnapshot(`
+Object {
+  "style": Object {
+    "background": "silver",
+    "textAlign": "center",
+  },
+  "theme": Object {
+    "fontSize": 16,
+  },
+}
+`);
+  });
+
   it('should combine inline styles and the style prop', () => {
     const Comp = styled.View`
       padding-top: 10;

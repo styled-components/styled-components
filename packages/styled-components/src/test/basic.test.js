@@ -341,6 +341,43 @@ describe('basic', () => {
 `);
     });
 
+    it('folds defaultProps', () => {
+      const Inner = styled.div``;
+
+      Inner.defaultProps = {
+        theme: {
+          fontSize: 12,
+        },
+        style: {
+          background: 'blue',
+          textAlign: 'center',
+        },
+      };
+
+      const Outer = styled(Inner)``;
+
+      Outer.defaultProps = {
+        theme: {
+          fontSize: 16,
+        },
+        style: {
+          background: 'silver',
+        },
+      };
+
+      expect(Outer.defaultProps).toMatchInlineSnapshot(`
+Object {
+  "style": Object {
+    "background": "silver",
+    "textAlign": "center",
+  },
+  "theme": Object {
+    "fontSize": 16,
+  },
+}
+`);
+    });
+
     it('generates unique classnames when not using babel', () => {
       const Named1 = styled.div.withConfig({ displayName: 'Name' })`
         color: blue;
