@@ -10,7 +10,6 @@ import sourceMaps from 'rollup-plugin-sourcemaps';
 import pkg from './package.json';
 
 // rollup-plugin-ignore stopped working, so we'll just remove the import lines 😐
-const propTypeIgnore = { "import PropTypes from 'prop-types';": "'';" };
 const streamIgnore = { "import stream from 'stream';": "'';" };
 
 const cjs = {
@@ -37,7 +36,7 @@ const commonPlugins = [
   nodeResolve(),
   babel({
     configFile: require.resolve('../../babel.config.js'),
-    exclude: ['node_modules/**', '../../node_modules/**']
+    exclude: ['node_modules/**', '../../node_modules/**'],
   }),
   commonjs({
     ignoreGlobal: true,
@@ -52,7 +51,6 @@ const commonPlugins = [
 
 const prodPlugins = [
   replace({
-    ...propTypeIgnore,
     'process.env.NODE_ENV': JSON.stringify('production'),
   }),
   terser({
@@ -68,7 +66,7 @@ const configBase = {
   plugins: commonPlugins,
 };
 
-const globals = { react: 'React', 'react-dom': 'ReactDOM' };
+const globals = { react: 'React', 'react-dom': 'ReactDOM', 'react-is': 'ReactIs' };
 
 const standaloneBaseConfig = {
   ...configBase,
