@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.3.0] - 2019-06-05
+
 - Make it possible to initialize `SC_ATTR` and `SC_DISABLE_SPEEDY` via `REACT_APP_*` .env variables for easier integration with CRA applications (see [#2501](https://github.com/styled-components/styled-components/pull/2501))
 
 - Fix components being folded inappropriately when an interim HOC is present (see [#2586](https://github.com/styled-components/styled-components/issues/2586))
@@ -967,7 +969,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.2.1...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.3.0...master
+[v4.3.0]: https://github.com/styled-components/styled-components/compare/v4.2.1...v4.3.0
 [v4.2.1]: https://github.com/styled-components/styled-components/compare/v4.2.0...v4.2.1
 [v4.2.0]: https://github.com/styled-components/styled-components/compare/v4.1.3...v4.2.0
 [v4.1.3]: https://github.com/styled-components/styled-components/compare/v4.1.2...v4.1.3
