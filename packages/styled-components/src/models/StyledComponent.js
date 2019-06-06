@@ -339,17 +339,11 @@ export default function createStyledComponent(target: Target, options: Object, r
       componentStyle: true,
       displayName: true,
       foldedComponentIds: true,
-      self: true,
       styledComponentId: true,
       target: true,
       withComponent: true,
     });
   }
-
-  // used in isStyledComponent to detect if an interim HOC is present
-  // and prevent folding for that case
-  // $FlowFixMe
-  WrappedStyledComponent.self = WrappedStyledComponent;
 
   return WrappedStyledComponent;
 }

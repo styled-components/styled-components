@@ -1,6 +1,6 @@
 // @flow
 import React from 'react';
-import styled from '../..';
+import styled from '../../';
 import isStyledComponent from '../isStyledComponent';
 
 describe('isStyledComponent(something)', () => {
