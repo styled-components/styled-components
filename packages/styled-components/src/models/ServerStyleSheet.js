@@ -13,6 +13,8 @@ declare var __SERVER__: boolean;
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 
 export default class ServerStyleSheet {
+  isStreaming: boolean;
+
   sheet: StyleSheet;
 
   sealed: boolean;
@@ -21,6 +23,15 @@ export default class ServerStyleSheet {
     this.sheet = new StyleSheet({ isServer: true });
     this.sealed = false;
   }
+
+  _emitSheetCSS = (): string => {
+    const css = this.sheet.toString();
+    const nonce = getNonce();
+    const attrs = [nonce && `nonce="${nonce}"`, SC_ATTR, `${SC_ATTR_VERSION}="${SC_VERSION}"`];
+    const htmlAttr = attrs.filter(Boolean).join(' ');
+
+    return `<style ${htmlAttr}>${css}</style>`;
+  };
 
   collectStyles(children: any) {
     if (this.sealed) {
@@ -35,12 +46,7 @@ export default class ServerStyleSheet {
       throw new StyledError(2);
     }
 
-    const css = this.sheet.toString();
-    const nonce = getNonce();
-    const attrs = [nonce && `nonce="${nonce}"`, SC_ATTR, `${SC_ATTR_VERSION}="${SC_VERSION}"`];
-    const htmlAttr = attrs.filter(Boolean).join(' ');
-
-    return `<style ${htmlAttr}>${css}</style>`;
+    return this._emitSheetCSS();
   };
 
   getStyleElement = () => {
@@ -77,14 +83,15 @@ export default class ServerStyleSheet {
     const { Readable, Transform } = require('stream');
 
     const readableStream: Readable = input;
-    const { sheet, getStyleTags } = this;
+    const { sheet, _emitSheetCSS } = this;
 
     const transformer = new Transform({
       transform: function appendStyleChunks(chunk, /* encoding */ _, callback) {
         // Get the chunk and retrieve the sheet's CSS as an HTML chunk,
         // then reset its rules so we get only new ones for the next chunk
         const renderedHtml = chunk.toString();
-        const html = getStyleTags();
+        const html = _emitSheetCSS();
+
         sheet.clearTag();
 
         // prepend style html to chunk, unless the start of the chunk is a
