@@ -6,7 +6,9 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Revert #2586
+## [v4.3.1] - 2019-06-06
+
+- Revert #2586; breaks rehydration in dev for certain runtimes like next.js
 
 ## [v4.3.0] - 2019-06-05
 
@@ -969,7 +971,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.3.0...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.3.1...master
+[v4.3.1]: https://github.com/styled-components/styled-components/compare/v4.3.0...v4.3.1
 [v4.3.0]: https://github.com/styled-components/styled-components/compare/v4.2.1...v4.3.0
 [v4.2.1]: https://github.com/styled-components/styled-components/compare/v4.2.0...v4.2.1
 [v4.2.0]: https://github.com/styled-components/styled-components/compare/v4.1.3...v4.2.0
