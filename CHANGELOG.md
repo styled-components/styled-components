@@ -6,8 +6,6 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Remove validation in Babel macro, by [@mAAdhaTTah](http://github.com/mAAdhaTTah) (see [#2427](https://github.com/styled-components/styled-components/pull/2427))
-
 ## [v4.3.0] - 2019-06-05
 
 - Make it possible to initialize `SC_ATTR` and `SC_DISABLE_SPEEDY` via `REACT_APP_*` .env variables for easier integration with CRA applications (see [#2501](https://github.com/styled-components/styled-components/pull/2501))
