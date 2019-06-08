@@ -364,8 +364,5 @@ export default function createStyledComponent(
     });
   }
 
-  // $FlowFixMe
-  WrappedStyledComponent.self = WrappedStyledComponent;
-
   return WrappedStyledComponent;
 }

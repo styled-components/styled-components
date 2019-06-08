@@ -260,9 +260,6 @@ export default (InlineStyle: Function) => {
       });
     }
 
-    // $FlowFixMe
-    WrappedStyledNativeComponent.self = WrappedStyledNativeComponent;
-
     return WrappedStyledNativeComponent;
   };
 
