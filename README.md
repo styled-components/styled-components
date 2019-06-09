@@ -20,7 +20,7 @@
 <br />
 
 > ⚠️ **CANARY:** This is the `canary` branch of `styled-components`. It is published under the
-> `@canary` tag on npm and contains new features and changes for the next major version.
+> `@alpha` tag on npm and contains new features and changes for the next major version.
 
 Utilising [tagged template literals](https://www.styled-components.com/docs/advanced#tagged-template-literals) (a recent addition to JavaScript) and the [power of CSS](https://www.styled-components.com/docs/api#supported-css), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
@@ -30,9 +30,11 @@ _Supported by [Front End Center](https://frontend.center). Thank you for making 
 
 ## Upgrading from v4
 
-1. Update `react`, `react-dom`, and `react-is` to latest versions to enable hooks support
-2. ??
-3. Profit!
+1. `npm install styled-components@alpha react@^16.8 react-dom@^16.8 react-is@^16.8`
+1. ??
+1. Profit!
+
+> Note that integrations like `jest-styled-components` that make use of internals will need to be updated to work with v5 and likely will not work properly during the alpha/beta period.
 
 ## [Docs](https://www.styled-components.com/docs)
 
