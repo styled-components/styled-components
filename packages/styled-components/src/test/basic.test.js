@@ -120,7 +120,7 @@ describe('basic', () => {
   });
 
   it('should allow you to pass in style object with a function', () => {
-    const Comp = styled.div({ color: ({color}) => color });
+    const Comp = styled.div({ color: ({ color }) => color });
     TestRenderer.create(<Comp color="blue" />);
     expectCSSMatches('.b { color:blue; }');
   });
@@ -130,9 +130,9 @@ describe('basic', () => {
       span: {
         small: {
           color: 'blue',
-          fontFamily: 'sans-serif'
-        }
-      }
+          fontFamily: 'sans-serif',
+        },
+      },
     });
     TestRenderer.create(<Comp />);
     expectCSSMatches('.b span small{ color:blue; font-family: sans-serif; }');
@@ -142,12 +142,12 @@ describe('basic', () => {
     const Comp = styled.div({
       span: {
         small: {
-          color: ({color}) => color,
-          fontFamily: 'sans-serif'
-        }
-      }
+          color: ({ color }) => color,
+          fontFamily: 'sans-serif',
+        },
+      },
     });
-    TestRenderer.create(<Comp color='red' />);
+    TestRenderer.create(<Comp color="red" />);
     expectCSSMatches('.b span small{ color:red; font-family: sans-serif; }');
   });
 
@@ -155,8 +155,41 @@ describe('basic', () => {
     const Comp = styled.div(({ color }) => ({
       color,
     }));
-    TestRenderer.create(<Comp color='blue' />);
+    TestRenderer.create(<Comp color="blue" />);
     expectCSSMatches('.b { color:blue; }');
+  });
+
+  it('should allow you to pass a component selector in a style object', () => {
+    const InnerComp = styled.div`
+      color: red;
+    `;
+
+    const Comp = styled.div(({ textColor }) => ({
+      color: textColor,
+
+      [InnerComp]: {
+        color: 'turquoise',
+      },
+    }));
+
+    const tree = TestRenderer.create(
+      <Comp textColor="blue">
+        <InnerComp>Hi</InnerComp>
+      </Comp>
+    );
+
+    expect(tree.toJSON()).toMatchInlineSnapshot(`
+<div
+  className="sc-b c"
+>
+  <div
+    className="sc-a d"
+  >
+    Hi
+  </div>
+</div>
+`);
+    expectCSSMatches('.d{ color:red; } .c{ color:blue; } .c .sc-a{ color:turquoise; }');
   });
 
   it('emits the correct selector when a StyledComponent is interpolated into a template string', () => {
@@ -173,7 +206,7 @@ describe('basic', () => {
       color: red;
     `;
 
-    TestRenderer.create(<StyledComp color='blue' />);
+    TestRenderer.create(<StyledComp color="blue" />);
     expectCSSMatches('.b { color:red; }');
   });
 
@@ -205,7 +238,7 @@ describe('basic', () => {
 
       class Wrapper extends Component<*, *> {
         render() {
-          return <OuterComponent className='test' />;
+          return <OuterComponent className="test" />;
         }
       }
 
@@ -377,7 +410,7 @@ Object {
 
     // this no longer is possible in React 16.6 because
     // of the deprecation of findDOMNode; need to find an alternative
-    it.skip('should work in StrictMode without warnings', () => {
+    it('should work in StrictMode without warnings', () => {
       const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const Comp = styled.div``;
 
