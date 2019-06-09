@@ -67,7 +67,8 @@ export default class ServerStyleSheet {
       (props: any).nonce = nonce;
     }
 
-    return <style {...props} />;
+    // v4 returned an array for this fn, so we'll do the same for v5 for backward compat
+    return [<style {...props} key="sc-0-0" />];
   };
 
   interleaveWithNodeStream(input: any) {
