@@ -152,7 +152,7 @@ describe('ssr', () => {
       )
     );
 
-    const element = sheet.getStyleElement();
+    const [element] = sheet.getStyleElement();
 
     expect(element.props.dangerouslySetInnerHTML).toBeDefined();
     expect(element.props.children).not.toBeDefined();
@@ -181,7 +181,7 @@ describe('ssr', () => {
       )
     );
 
-    const element = sheet.getStyleElement();
+    const [element] = sheet.getStyleElement();
     expect(element.props.nonce).toBe('foo');
   });
 
