@@ -6,19 +6,35 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.3.1] - 2019-06-06
+
+- Revert #2586; breaks rehydration in dev for certain runtimes like next.js
+
 ## [v4.3.0] - 2019-06-05
 
 - Make it possible to initialize `SC_ATTR` and `SC_DISABLE_SPEEDY` via `REACT_APP_*` .env variables for easier integration with CRA applications (see [#2501](https://github.com/styled-components/styled-components/pull/2501))
 
-- Fix components being folded inappropriately when an interim HOC is present (see [#2586](https://github.com/styled-components/styled-components/issues/2586))
-
 - Fix `theme` prop for styled native components, also fixes `theme` in
-  `defaultProps` for them (see [#2576](https://github.com/styled-components/styled-components/issues/2576))
+  `defaultProps` for them.
 
 - Add "forwardedAs" prop to allow deeply passing a different "as" prop value to underlying components
-  when using `styled()` as a higher-order component (see [#2580](https://github.com/styled-components/styled-components/issues/2580))
+  when using `styled()` as a higher-order component
 
 - Implement defaultProps folding (see [#2597](https://github.com/styled-components/styled-components/issues/2597))
+
+## [v4.2.1] - 2019-05-30
+
+- Remove className usage checker dev utility due to excessive false-positive noise in certain runtime environments like next.js and the related warning suppression prop (see [#2563](https://github.com/styled-components/styled-components/issues/2563)).
+
+- Attach displayName to forwardRef function as described in React docs (see [#2508](https://github.com/styled-components/styled-components/issues/2508)).
+
+- Compatibility with react-native-web 0.11 (see [#2453](https://github.com/styled-components/styled-components/issues/2453)).
+
+- Add stack trace to .attrs warning (see [#2486](https://github.com/styled-components/styled-components/issues/2486)).
+
+- Fix functions as values for object literals. (see [2489](https://github.com/styled-components/styled-components/pull/2489))
+
+- Remove validation in Babel macro, by [@mAAdhaTTah](http://github.com/mAAdhaTTah) (see [#2427](https://github.com/styled-components/styled-components/pull/2427))
 
 ## [v4.2.0] - 2019-03-23
 
@@ -955,7 +971,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.3.0...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.3.1...master
+[v4.3.1]: https://github.com/styled-components/styled-components/compare/v4.3.0...v4.3.1
 [v4.3.0]: https://github.com/styled-components/styled-components/compare/v4.2.1...v4.3.0
 [v4.2.1]: https://github.com/styled-components/styled-components/compare/v4.2.0...v4.2.1
 [v4.2.0]: https://github.com/styled-components/styled-components/compare/v4.1.3...v4.2.0
