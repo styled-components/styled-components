@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Fix `css` template literal not composing properly inside a style object (see [#2612](https://github.com/styled-components/styled-components/pull/2612))
+
 ## [v4.3.1] - 2019-06-06
 
 - Revert #2586; breaks rehydration in dev for certain runtimes like next.js
