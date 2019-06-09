@@ -40,10 +40,10 @@ export default class ComponentStyle {
   }
 
   /*
-     * Flattens a rule set into valid CSS
-     * Hashes it, wraps the whole chunk in a .hash1234 {}
-     * Returns the hash to be injected on render()
-     * */
+   * Flattens a rule set into valid CSS
+   * Hashes it, wraps the whole chunk in a .hash1234 {}
+   * Returns the hash to be injected on render()
+   * */
   generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
     const { isStatic, componentId, lastClassName } = this;
     if (

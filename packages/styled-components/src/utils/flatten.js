@@ -9,40 +9,62 @@ import Keyframes from '../models/Keyframes';
 import hyphenate from './hyphenateStyleName';
 import addUnitIfNeeded from './addUnitIfNeeded';
 
+type ObjectToCSSArrayProps = {
+  chunk: Object,
+  executionContext?: Object,
+  prevKey?: string,
+  styleSheet?: Object,
+};
+
 /**
  * It's falsish not falsy because 0 is allowed.
  */
-const isFalsish = chunk => chunk === undefined || chunk === null || chunk === false || chunk === '';
+function isFalsish(chunk: any): boolean {
+  return chunk === undefined || chunk === null || chunk === false || chunk === '';
+}
 
+function objToCssArray(args: ObjectToCSSArrayProps): Array<string | Function> {
+  const rules = [];
+  const keys = Object.keys(args.chunk);
 
-const objToCssArray = (obj: Object, prevKey?: string): Array<string | Function> => {
-  const rules = []
-  const keys = Object.keys(obj)
+  keys.forEach(key => {
+    const value = args.chunk[key];
 
-  keys
-    .forEach(key => {
-      if (!isFalsish(obj[key])) {
-        if (isPlainObject(obj[key])) {
-          rules.push(...objToCssArray(obj[key], key))
+    if (!isFalsish(value)) {
+      if (Array.isArray(value) /* likely usage of `css` tagged template literal */) {
+        /* eslint-disable no-use-before-define */
+        return rules.push(
+          `${hyphenate(key)}: ${flatten(value, args.executionContext, args.styleSheet).join('')};`
+        );
+        /* eslint-enable no-use-before-define */
+      } else if (isPlainObject(value)) {
+        rules.push(...objToCssArray({ ...args, chunk: value, prevKey: key }));
 
-          return rules
-        }
-        else if (isFunction(obj[key])) {
-          rules.push(`${hyphenate(key)}:`, obj[key], ';')
+        return rules;
+      } else if (isFunction(value)) {
+        rules.push(`${hyphenate(key)}:`, value, ';');
 
-          return rules
-        }
-        rules.push(`${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`);
+        return rules;
       }
-      return rules;
-    })
 
-    return prevKey
-      ? [`${prevKey} {`, ...rules, '}']
-      : rules;
-};
+      rules.push(`${hyphenate(key)}: ${addUnitIfNeeded(key, value)};`);
+    }
 
-export default function flatten(chunk: any, executionContext: ?Object, styleSheet: ?Object): any {
+    return rules;
+  });
+
+  return args.prevKey ? [`${args.prevKey} {`, ...rules, '}'] : rules;
+}
+
+export default function flatten(
+  chunk: any,
+  executionContext: Object | void,
+  styleSheet: Object | void
+): any {
+  if (isFalsish(chunk)) {
+    return null;
+  }
+
   if (Array.isArray(chunk)) {
     const ruleSet = [];
 
@@ -55,10 +77,6 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
     }
 
     return ruleSet;
-  }
-
-  if (isFalsish(chunk)) {
-    return null;
   }
 
   /* Handle other components */
@@ -92,5 +110,7 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
   }
 
   /* Handle objects */
-  return isPlainObject(chunk) ? objToCssArray(chunk) : chunk.toString();
+  return isPlainObject(chunk)
+    ? objToCssArray({ chunk, executionContext, styleSheet })
+    : chunk.toString();
 }

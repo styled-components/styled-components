@@ -11,8 +11,10 @@ import { expectCSSMatches, getCSS, resetStyled } from '../../test/utils';
  * Setup
  */
 describe('keyframes', () => {
+  let styled;
+
   beforeEach(() => {
-    resetStyled();
+    styled = resetStyled();
   });
 
   it('should return Keyframes instance', () => {
@@ -40,8 +42,6 @@ describe('keyframes', () => {
   });
 
   it('should insert the correct styles', () => {
-    const styled = resetStyled();
-
     const rules = `
       0% {
         opacity: 0;
@@ -88,8 +88,6 @@ describe('keyframes', () => {
   });
 
   it('should insert the correct styles when keyframes in props', () => {
-    const styled = resetStyled();
-
     const rules = `
       0% {
         opacity: 0;
@@ -136,8 +134,6 @@ describe('keyframes', () => {
   });
 
   it('should handle interpolations', () => {
-    const styled = resetStyled();
-
     const opacity = ['opacity: 0;', 'opacity: 1;'];
 
     const opacityAnimation = keyframes`
@@ -197,10 +193,33 @@ describe('keyframes', () => {
   });
 
   it('should throw an error when interpolated in a vanilla string', () => {
-    const styled = resetStyled();
-
     const animation = keyframes``;
 
     expect(() => `animation-name: ${animation};`).toThrow();
+  });
+
+  it('should work inside an object-type style', () => {
+    const fadeToBlack = keyframes`
+      to {
+        background-color: black;
+      }
+    `;
+
+    const Box = styled.div(() => ({
+      width: 200,
+      height: 200,
+      backgroundColor: 'blue',
+      animation: css`
+        ${fadeToBlack} 1500ms ease both infinite;
+      `,
+    }));
+
+    expect(() => TestRenderer.create(<Box />)).not.toThrowError();
+    expect(getCSS(document).trim()).toMatchInlineSnapshot(`
+"/* sc-component-id:sc-a */
+.b{width:200px;height:200px;background-color:blue;-webkit-animation:ekBxmi 1500ms ease both infinite;animation:ekBxmi 1500ms ease both infinite;}
+/* sc-component-id:sc-keyframes-ekBxmi */
+@-webkit-keyframes ekBxmi{to{background-color:black;}} @keyframes ekBxmi{to{background-color:black;}}"
+`);
   });
 });
