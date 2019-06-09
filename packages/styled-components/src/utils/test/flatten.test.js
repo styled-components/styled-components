@@ -41,7 +41,7 @@ describe('flatten', () => {
       'font-size: 14px;',
       'line-height: 15px;',
       '-webkit-filter: blur(2px);',
-      'font-weight: 500;'
+      'font-weight: 500;',
     ];
     // $FlowFixMe
     expect(flatten([obj])).toEqual(css);
@@ -70,7 +70,7 @@ describe('flatten', () => {
       '}',
       '&:hover {',
       'font-weight: bold;',
-      '}'
+      '}',
     ];
     // $FlowFixMe
     expect(flatten([obj])).toEqual(css);

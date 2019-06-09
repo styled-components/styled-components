@@ -1,6 +1,5 @@
 // @flow
 /* eslint-disable flowtype/object-type-delimiter */
-/* eslint-disable react/prop-types */
 
 import React, { type Element } from 'react';
 import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR, SC_VERSION_ATTR } from '../constants';

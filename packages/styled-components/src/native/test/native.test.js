@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable react/prop-types */
 import { Text, View } from 'react-native';
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
