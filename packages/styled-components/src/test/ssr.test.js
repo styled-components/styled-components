@@ -142,7 +142,8 @@ describe('ssr', () => {
     `;
 
     const sheet = new ServerStyleSheet();
-    const html = renderToString(
+
+    renderToString(
       sheet.collectStyles(
         <React.Fragment>
           <Component />
@@ -150,6 +151,7 @@ describe('ssr', () => {
         </React.Fragment>
       )
     );
+
     const element = sheet.getStyleElement();
 
     expect(element.props.dangerouslySetInnerHTML).toBeDefined();
@@ -169,7 +171,8 @@ describe('ssr', () => {
     `;
 
     const sheet = new ServerStyleSheet();
-    const html = renderToString(
+
+    renderToString(
       sheet.collectStyles(
         <React.Fragment>
           <Heading>Hello SSR!</Heading>
@@ -236,11 +239,6 @@ describe('ssr', () => {
       color: green;
     `;
 
-    // These create a long chunk of (hopefully) uninterrupted HTML
-    const elements = new Array(100)
-      .fill(0)
-      .map((_, i) => <div key={i}>*************************</div>);
-
     // This is the result of the above
     const expectedElements = '<div>*************************</div>'.repeat(100);
 
@@ -284,7 +282,7 @@ describe('ssr', () => {
     const jsx = sheet.collectStyles(null);
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
       stream.on('data', () => {});
 
       stream.on('error', err => {
@@ -333,6 +331,143 @@ describe('ssr', () => {
         const styleTagsInsideTextarea = received.match(/<\/style>[^<]*<\/textarea>/g);
 
         expect(styleTagsInsideTextarea).toBeNull();
+        resolve();
+      });
+
+      stream.on('error', reject);
+    });
+  });
+
+  it('should throw if interleaveWithNodeStream is called twice', () => {
+    const Component = createGlobalStyle`
+      body { background: papayawhip; }
+    `;
+    const Heading = styled.h1`
+      color: red;
+    `;
+
+    const sheet = new ServerStyleSheet();
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
+        <Component />
+        <Heading>Hello SSR!</Heading>
+      </React.Fragment>
+    );
+
+    expect(() =>
+      sheet.interleaveWithNodeStream(sheet.interleaveWithNodeStream(renderToNodeStream(jsx)))
+    ).toThrowErrorMatchingSnapshot();
+  });
+
+  it('should throw if getStyleTags is called after interleaveWithNodeStream is called', () => {
+    const Component = createGlobalStyle`
+      body { background: papayawhip; }
+    `;
+    const Heading = styled.h1`
+      color: red;
+    `;
+
+    const sheet = new ServerStyleSheet();
+
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
+        <Component />
+        <Heading>Hello SSR!</Heading>
+      </React.Fragment>
+    );
+
+    sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+
+    expect(sheet.getStyleTags).toThrowErrorMatchingSnapshot();
+  });
+
+  it('should throw if getStyleElement is called after interleaveWithNodeStream is called', () => {
+    const Component = createGlobalStyle`
+      body { background: papayawhip; }
+    `;
+    const Heading = styled.h1`
+      color: red;
+    `;
+
+    const sheet = new ServerStyleSheet();
+
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
+        <Component />
+        <Heading>Hello SSR!</Heading>
+      </React.Fragment>
+    );
+
+    sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+
+    expect(sheet.getStyleElement).toThrowErrorMatchingSnapshot();
+  });
+
+  it('should throw if getStyleTags is called after streaming is complete', () => {
+    const Component = createGlobalStyle`
+      body { background: papayawhip; }
+    `;
+    const Heading = styled.h1`
+      color: red;
+    `;
+
+    const sheet = new ServerStyleSheet();
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
+        <Component />
+        <Heading>Hello SSR!</Heading>
+      </React.Fragment>
+    );
+    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+
+    return new Promise((resolve, reject) => {
+      let received = '';
+
+      stream.on('data', chunk => {
+        received += chunk;
+      });
+
+      stream.on('end', () => {
+        expect(received).toMatchSnapshot();
+        expect(sheet.sealed).toBe(true);
+        expect(sheet.getStyleTags).toThrowErrorMatchingSnapshot();
+
+        resolve();
+      });
+
+      stream.on('error', reject);
+    });
+  });
+
+  it('should throw if getStyleElement is called after streaming is complete', () => {
+    const Component = createGlobalStyle`
+      body { background: papayawhip; }
+    `;
+    const Heading = styled.h1`
+      color: red;
+    `;
+
+    const sheet = new ServerStyleSheet();
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
+        <Component />
+        <Heading>Hello SSR!</Heading>
+      </React.Fragment>
+    );
+    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+
+    return new Promise((resolve, reject) => {
+      let received = '';
+
+      stream.on('data', chunk => {
+        received += chunk;
+      });
+
+      stream.on('end', () => {
+        expect(received).toMatchSnapshot();
+        expect(sheet.sealed).toBe(true);
+        expect(sheet.getStyleElement).toThrowErrorMatchingSnapshot();
+
         resolve();
       });
 
