@@ -1,2 +1,1 @@
-import View from './View';
-export default View;
+export { default } from './View';

@@ -2,7 +2,7 @@
 import styled from './styled-components-v4.esm.js';
 import View from './View';
 
-const Dot = styled(View)`
+const Dot = styled(View).attrs(p => ({ style: { borderBottomColor: p.color } }))`
   position: absolute;
   cursor: pointer;
   width: 0;
@@ -11,12 +11,11 @@ const Dot = styled(View)`
   border-style: solid;
   border-top-width: 0;
   transform: translate(50%, 50%);
-  margin-left: ${props => `${props.x  }px`};
-  margin-top: ${props => `${props.y  }px`};
-  border-right-width: ${props => `${props.size / 2  }px`};
-  border-bottom-width: ${props => `${props.size / 2  }px`};
-  border-left-width: ${props => `${props.size / 2  }px`};
-  border-bottom-color: ${props => props.color};
+  margin-left: ${props => `${props.x}px`};
+  margin-top: ${props => `${props.y}px`};
+  border-right-width: ${props => `${props.size / 2}px`};
+  border-bottom-width: ${props => `${props.size / 2}px`};
+  border-left-width: ${props => `${props.size / 2}px`};
 `;
 
 export default Dot;
