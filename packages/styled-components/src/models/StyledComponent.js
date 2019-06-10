@@ -10,12 +10,14 @@ import React, {
   type AbstractComponent,
   type Ref,
 } from 'react';
+import invariant from 'tiny-invariant';
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
 import escape from '../utils/escape';
 import generateDisplayName from '../utils/generateDisplayName';
 import getComponentName from '../utils/getComponentName';
+import hasThemeReferences from '../utils/hasThemeReferences';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isTag from '../utils/isTag';
@@ -171,7 +173,8 @@ const useDeprecationWarnings: Function =
 function useStyledComponentImpl<Config: {}, Instance>(
   forwardedComponent: StyledComponentWrapper<Config, Instance>,
   props: Object,
-  forwardedRef: Ref<any>
+  forwardedRef: Ref<any>,
+  hasThemeRef: boolean
 ) {
   const {
     attrs: componentAttrs,
@@ -189,7 +192,15 @@ function useStyledComponentImpl<Config: {}, Instance>(
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme = determineTheme(props, useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
+  const nullableTheme = determineTheme(props, useContext(ThemeContext), defaultProps);
+  const theme = nullableTheme || EMPTY_OBJECT;
+
+  if (hasThemeRef && process.env.NODE_ENV !== 'production') {
+    invariant(
+      nullableTheme,
+      "You should not use a styled-component with the 'theme' prop outside <ThemeProvider>"
+    );
+  }
 
   const utils = useDeprecationWarnings(displayName);
   const [context, attrs] = useResolvedAttrs(theme, props, componentAttrs, utils);
@@ -289,8 +300,16 @@ export default function createStyledComponent(
    */
   let WrappedStyledComponent;
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const forwardRef = (props, ref) => useStyledComponentImpl(WrappedStyledComponent, props, ref);
+  // check if styles reference 'theme' prop
+  let hasThemeRef = false;
+  if (process.env.NODE_ENV !== 'production') {
+    hasThemeRef = hasThemeReferences(rules);
+  }
+
+  
+  const forwardRef = (props, ref) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useStyledComponentImpl(WrappedStyledComponent, props, ref, hasThemeRef);
 
   forwardRef.displayName = displayName;
 

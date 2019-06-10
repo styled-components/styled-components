@@ -137,6 +137,7 @@ describe('theming', () => {
     `;
 
     const theme = { color: 'black' };
+    const theme2 = { color: 'red' };
     TestRenderer.create(
       <div>
         <ThemeProvider theme={theme}>
@@ -144,10 +145,12 @@ describe('theming', () => {
             <Comp1 />
           </div>
         </ThemeProvider>
-        <Comp2 />
+        <ThemeProvider theme={theme2}>
+          <Comp2 />
+        </ThemeProvider>
       </div>
     );
-    expectCSSMatches(`.c { color:${theme.color}; }`);
+    expectCSSMatches(`.c { color:${theme.color}; } .d { background: ${theme2.color}; }`);
   });
 
   it('should inject props.theme into all styled components within the child component tree', () => {
