@@ -1,6 +1,4 @@
 {
   "presets": ["../../babel-preset.js"],
-  "plugins": [
-    "babel-plugin-react-native-web"
-  ]
+  "plugins": ["babel-plugin-react-native-web", ["styled-jsx/babel", { "optimizeForSpeed": true }]]
 }

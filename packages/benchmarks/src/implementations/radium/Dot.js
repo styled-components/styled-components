@@ -2,24 +2,6 @@
 import Radium from 'radium';
 import React from 'react';
 
-const Dot = ({ size, x, y, children, color }) => (
-  <div
-    style={[
-      styles.root,
-      {
-        borderBottomColor: color,
-        borderRightWidth: `${size / 2}px`,
-        borderBottomWidth: `${size / 2}px`,
-        borderLeftWidth: `${size / 2}px`,
-        marginLeft: `${x}px`,
-        marginTop: `${y}px`
-      }
-    ]}
-  >
-    {children}
-  </div>
-);
-
 const styles = {
   root: {
     position: 'absolute',
@@ -29,8 +11,24 @@ const styles = {
     borderColor: 'transparent',
     borderStyle: 'solid',
     borderTopWidth: 0,
-    transform: 'translate(50%, 50%)'
-  }
+    transform: 'translate(50%, 50%)',
+  },
 };
 
-export default Radium(Dot);
+export default Radium(({ size, x, y, children, color }) => (
+  <div
+    style={[
+      styles.root,
+      {
+        borderBottomColor: color,
+        borderRightWidth: `${size / 2}px`,
+        borderBottomWidth: `${size / 2}px`,
+        borderLeftWidth: `${size / 2}px`,
+        marginLeft: `${x}px`,
+        marginTop: `${y}px`,
+      },
+    ]}
+  >
+    {children}
+  </div>
+));

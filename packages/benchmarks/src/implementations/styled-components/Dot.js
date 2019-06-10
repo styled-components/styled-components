@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import View from './View';
 
-const Dot = styled(View)`
+export default styled(View).attrs(p => ({ style: { borderBottomColor: p.color } }))`
   position: absolute;
   cursor: pointer;
   width: 0;
@@ -15,7 +15,4 @@ const Dot = styled(View)`
   border-right-width: ${props => `${props.size / 2}px`};
   border-bottom-width: ${props => `${props.size / 2}px`};
   border-left-width: ${props => `${props.size / 2}px`};
-  border-bottom-color: ${props => props.color};
 `;
-
-export default Dot;

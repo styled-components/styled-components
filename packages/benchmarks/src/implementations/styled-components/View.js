@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-const View = styled.div`
+export default styled.div`
   align-items: stretch;
   border-width: 0;
   border-style: solid;
@@ -15,5 +15,3 @@ const View = styled.div`
   min-height: 0;
   min-width: 0;
 `;
-
-export default View;

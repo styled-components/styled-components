@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import classnames from 'classnames';
 import React from 'react';
-import View from './View';
+import { style } from './View';
 
 const getColor = color => {
   switch (color) {
@@ -22,25 +22,33 @@ const getColor = color => {
   }
 };
 
-const Box = props => {
-  const { className, children: styles } = (
-    <scope className={classnames('Box', props.fixed && 'fixed')}>
-      <style jsx>{`
-        .Box {
+export default ({ children, className, color, fixed, layout, outer, ...props }) => (
+  <div className={classnames(fixed && 'fixed', className)} {...props}>
+    {children}
+
+    <style jsx>{style}</style>
+
+    <style jsx>
+      {`
+        div {
           align-self: flex-start;
-          flex-direction: ${props.layout === 'column' ? 'column' : 'row'};
-          padding: ${props.outer ? '4px' : '0'};
-          background-color: ${getColor(props.color)};
         }
+
         .fixed {
           height: 6px;
           width: 6px;
         }
-      `}</style>
-    </scope>
-  ).props;
+      `}
+    </style>
 
-  return <View className={className}>{[props.children, styles]}</View>;
-};
-
-export default Box;
+    <style jsx>
+      {`
+        div {
+          flex-direction: ${layout === 'column' ? 'column' : 'row'};
+          padding: ${outer ? '4px' : '0'};
+          background-color: ${getColor(color)};
+        }
+      `}
+    </style>
+  </div>
+);
