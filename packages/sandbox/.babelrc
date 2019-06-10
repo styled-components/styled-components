@@ -1,11 +1,3 @@
 {
-  "presets": [
-    ["env", { "loose": true, "modules": false }],
-    "react"
-  ],
-  "plugins": [
-    "babel-plugin-styled-components",
-    "transform-object-rest-spread",
-    "transform-class-properties",
-  ]
+  "presets": ["../../babel-preset.js"]
 }
