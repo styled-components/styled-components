@@ -6,7 +6,7 @@
 import styled from '../constructors/styled';
 import { masterSheet } from '../models/StyleSheetManager';
 import { resetGroupIds } from '../sheet/GroupIDAllocator';
-import StyledError from '../utils/error';
+import throwStyledError from '../utils/error';
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let mockIndex = 0;
@@ -25,7 +25,7 @@ export const seedNextClassnames = (names: Array<string>) => (mockSeededClasses =
 export const resetStyled = (isServer: boolean = false) => {
   if (!isServer) {
     if (!document.head) {
-      throw new StyledError(9);
+      return throwStyledError(9);
     }
 
     document.head.innerHTML = '';

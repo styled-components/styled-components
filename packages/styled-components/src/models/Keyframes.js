@@ -1,7 +1,6 @@
 // @flow
-
 import StyleSheet from '../sheet';
-import StyledError from '../utils/error';
+import throwStyledError from '../utils/error';
 
 export default class Keyframes {
   id: string;
@@ -28,7 +27,7 @@ export default class Keyframes {
   };
 
   toString = () => {
-    throw new StyledError(12, String(this.name));
+    return throwStyledError(12, String(this.name));
   };
 
   getName() {

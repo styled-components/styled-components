@@ -25,16 +25,17 @@ function format(...args) {
  * Create an error file out of errors.md for development and a simple web link to the full errors
  * in production mode.
  */
-export default class StyledComponentsError extends Error {
-  constructor(code: string | number, ...interpolations: Array<any>) {
-    if (process.env.NODE_ENV === 'production') {
-      super(
-        `An error occurred. See https://github.com/styled-components/styled-components/blob/master/packages/styled-components/src/utils/errors.md#${code} for more information.${
-          interpolations.length > 0 ? ` Additional arguments: ${interpolations.join(', ')}` : ''
-        }`
-      );
-    } else {
-      super(format(ERRORS[code], ...interpolations).trim());
-    }
+export default function throwStyledComponentsError(
+  code: string | number,
+  ...interpolations: Array<any>
+) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      `An error occurred. See https://github.com/styled-components/styled-components/blob/master/packages/styled-components/src/utils/errors.md#${code} for more information.${
+        interpolations.length > 0 ? ` Additional arguments: ${interpolations.join(', ')}` : ''
+      }`
+    );
+  } else {
+    throw new Error(format(ERRORS[code], ...interpolations).trim());
   }
 }

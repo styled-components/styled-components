@@ -1,6 +1,6 @@
 // @flow
 import React, { useContext, type Element, type Context } from 'react';
-import StyledError from '../utils/error';
+import throwStyledError from '../utils/error';
 import isFunction from '../utils/isFunction';
 
 export type Theme = { [key: string]: mixed };
@@ -24,14 +24,14 @@ function useMergedTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
       process.env.NODE_ENV !== 'production' &&
       (mergedTheme === null || Array.isArray(mergedTheme) || typeof mergedTheme !== 'object')
     ) {
-      throw new StyledError(7);
+      return throwStyledError(7);
     }
 
     return mergedTheme;
   }
 
   if (theme === null || Array.isArray(theme) || typeof theme !== 'object') {
-    throw new StyledError(8);
+    return throwStyledError(8);
   }
 
   return outerTheme ? { ...outerTheme, ...theme } : theme;
