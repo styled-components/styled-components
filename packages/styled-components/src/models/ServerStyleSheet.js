@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
-import StyledError from '../utils/error';
+import throwStyledError from '../utils/error';
 import getNonce from '../utils/nonce';
 import StyleSheet from '../sheet';
 import StyleSheetManager from './StyleSheetManager';
@@ -35,7 +35,7 @@ export default class ServerStyleSheet {
 
   collectStyles(children: any) {
     if (this.sealed) {
-      throw new StyledError(2);
+      return throwStyledError(2);
     }
 
     return <StyleSheetManager sheet={this.sheet}>{children}</StyleSheetManager>;
@@ -43,7 +43,7 @@ export default class ServerStyleSheet {
 
   getStyleTags = (): string => {
     if (this.sealed) {
-      throw new StyledError(2);
+      return throwStyledError(2);
     }
 
     return this._emitSheetCSS();
@@ -51,7 +51,7 @@ export default class ServerStyleSheet {
 
   getStyleElement = () => {
     if (this.sealed) {
-      throw new StyledError(2);
+      return throwStyledError(2);
     }
 
     const props = {
@@ -73,9 +73,9 @@ export default class ServerStyleSheet {
 
   interleaveWithNodeStream(input: any) {
     if (!__SERVER__ || IS_BROWSER) {
-      throw new StyledError(3);
+      return throwStyledError(3);
     } else if (this.sealed) {
-      throw new StyledError(2);
+      return throwStyledError(2);
     }
 
     this.seal();
