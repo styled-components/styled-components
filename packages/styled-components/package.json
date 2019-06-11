@@ -93,7 +93,7 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "maxSize": "17kB"
+      "maxSize": "14kB"
     }
   ],
   "collective": {
