@@ -142,7 +142,7 @@ describe('expanded api', () => {
       expect(TestRenderer.create(<Comp as={Override} />).toJSON()).toMatchSnapshot();
     });
 
-    it.only('does not pass down non standard props to custom component', () => {
+    it('does not pass down non standard props to custom component', () => {
       const Override = props => <figure {...props} />;
       const Comp = styled.div`
         color: red;
