@@ -63,11 +63,11 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "@babel/helper-module-imports": "^7.0.0",
-    "@emotion/is-prop-valid": "^0.7.3",
+    "@emotion/is-prop-valid": "^0.8.1",
     "@emotion/unitless": "^0.7.0",
     "babel-plugin-styled-components": ">= 1",
     "css-to-react-native": "^2.2.2",
-    "merge-anything": "^2.2.4",
+    "merge-anything": "^2.2.5",
     "shallowequal": "^1.1.0",
     "stylis": "^3.5.0",
     "stylis-rule-sheet": "^0.0.10",
