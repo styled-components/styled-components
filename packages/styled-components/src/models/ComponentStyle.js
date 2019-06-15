@@ -5,7 +5,6 @@ import { hash, phash } from '../utils/hasher';
 import generateName from '../utils/generateAlphabeticName';
 import isStaticRules from '../utils/isStaticRules';
 import StyleSheet from '../sheet';
-import { IS_BROWSER } from '../constants';
 
 import type { RuleSet } from '../types';
 
@@ -27,7 +26,7 @@ export default class ComponentStyle {
 
   constructor(rules: RuleSet, componentId: string) {
     this.rules = rules;
-    this.isStatic = !isHMREnabled && IS_BROWSER && isStaticRules(rules);
+    this.isStatic = !isHMREnabled && isStaticRules(rules);
     this.componentId = componentId;
     this.baseHash = hash(componentId);
 
