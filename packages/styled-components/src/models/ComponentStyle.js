@@ -60,6 +60,7 @@ export default class ComponentStyle {
     } else {
       const { length } = this.rules;
 
+      let dynamicHash = this.baseHash;
       let i = 0;
       let css = '';
 
@@ -67,14 +68,16 @@ export default class ComponentStyle {
         const partRule = this.rules[i];
         if (typeof partRule === 'string') {
           css += partRule;
+
+          if (isHMREnabled) dynamicHash = phash(dynamicHash, partRule + i);
         } else {
           const partChunk = flatten(partRule, executionContext, styleSheet);
           const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
+          dynamicHash = phash(dynamicHash, partString + i);
           css += partString;
         }
       }
 
-      const dynamicHash = phash(this.baseHash, css);
       const name = generateName(dynamicHash >>> 0);
 
       if (!styleSheet.hasNameForId(componentId, name)) {
