@@ -61,7 +61,6 @@ export default class ComponentStyle {
       const { length } = this.rules;
 
       let i = 0;
-      let dynamicHash = this.baseHash;
       let css = '';
 
       for (i = 0; i < length; i++) {
@@ -71,11 +70,11 @@ export default class ComponentStyle {
         } else {
           const partChunk = flatten(partRule, executionContext, styleSheet);
           const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
-          dynamicHash = phash(dynamicHash, partString + i);
           css += partString;
         }
       }
 
+      const dynamicHash = phash(this.baseHash, css);
       const name = generateName(dynamicHash >>> 0);
 
       if (!styleSheet.hasNameForId(componentId, name)) {
