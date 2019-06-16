@@ -60,14 +60,16 @@ export default class ComponentStyle {
     } else {
       const { length } = this.rules;
 
-      let i = 0;
       let dynamicHash = this.baseHash;
+      let i = 0;
       let css = '';
 
       for (i = 0; i < length; i++) {
         const partRule = this.rules[i];
         if (typeof partRule === 'string') {
           css += partRule;
+
+          if (isHMREnabled) dynamicHash = phash(dynamicHash, partRule + i);
         } else {
           const partChunk = flatten(partRule, executionContext, styleSheet);
           const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
