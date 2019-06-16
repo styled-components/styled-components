@@ -6,6 +6,7 @@ import React, {
   createElement,
   useContext,
   useDebugValue,
+  useRef,
   type AbstractComponent,
   type Ref,
 } from 'react';
@@ -23,15 +24,16 @@ import hasher from '../utils/hasher';
 import { ThemeContext } from './ThemeProvider';
 import { useStyleSheet } from './StyleSheetManager';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
+import css from '../constructors/css';
 
-import type { Attrs, RuleSet, Target } from '../types';
+import type { Attrs, RuleSet, Target, Styles, Interpolation } from '../types';
 
 /* global $Call */
 
 const identifiers = {};
 
 /* We depend on components having unique IDs */
-function generateId(displayName: string, parentComponentId: string) {
+function generateId(displayName?: string, parentComponentId?: string) {
   const name = typeof displayName !== 'string' ? 'sc' : escape(displayName);
   // Ensure that no displayName can lead to duplicate componentIds
   identifiers[name] = (identifiers[name] || 0) + 1;
@@ -175,6 +177,21 @@ function useStyledComponentImpl<Config: {}, Instance>(
   propsForElement.ref = refToForward;
 
   return createElement(elementToBeCreated, propsForElement);
+}
+
+export function useStyle(styles: Styles, ...interpolations: Array<Interpolation>): string {
+  // We have to force interpolations to be functions because there's no way of knowing wether
+  // a prop is being interpolated. And if it is a prop but not a function, `generateAndInjectStyles`
+  // will fail to insert the new rule.
+  const rules = css(
+    isFunction(styles) ? styles : () => styles,
+    ...interpolations.map(i => (isFunction(i) ? i : (): Interpolation => i))
+  );
+  const id = useRef(generateId());
+  const componentStyle = new ComponentStyle(rules, id.current);
+  const theme = useContext(ThemeContext) || EMPTY_OBJECT;
+
+  return useInjectedStyle(componentStyle, false, { theme });
 }
 
 export default function createStyledComponent(

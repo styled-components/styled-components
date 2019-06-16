@@ -1,6 +1,6 @@
 // @flow
 import constructWithOptions from './constructWithOptions';
-import StyledComponent from '../models/StyledComponent';
+import StyledComponent, { useStyle } from '../models/StyledComponent';
 import domElements from '../utils/domElements';
 
 import type { Target } from '../types';
@@ -13,3 +13,4 @@ domElements.forEach(domElement => {
 });
 
 export default styled;
+export { useStyle };
