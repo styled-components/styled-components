@@ -1,6 +1,5 @@
 // @flow
 /* eslint-disable no-underscore-dangle */
-
 import React from 'react';
 import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import throwStyledError from '../utils/error';
@@ -71,6 +70,7 @@ export default class ServerStyleSheet {
     return [<style {...props} key="sc-0-0" />];
   };
 
+  // eslint-disable-next-line consistent-return
   interleaveWithNodeStream(input: any) {
     if (!__SERVER__ || IS_BROWSER) {
       return throwStyledError(3);
@@ -78,45 +78,47 @@ export default class ServerStyleSheet {
       return throwStyledError(2);
     }
 
-    this.seal();
+    if (__SERVER__) {
+      this.seal();
 
-    // eslint-disable-next-line global-require
-    const { Readable, Transform } = require('stream');
+      // eslint-disable-next-line global-require
+      const { Readable, Transform } = require('stream');
 
-    const readableStream: Readable = input;
-    const { sheet, _emitSheetCSS } = this;
+      const readableStream: Readable = input;
+      const { sheet, _emitSheetCSS } = this;
 
-    const transformer = new Transform({
-      transform: function appendStyleChunks(chunk, /* encoding */ _, callback) {
-        // Get the chunk and retrieve the sheet's CSS as an HTML chunk,
-        // then reset its rules so we get only new ones for the next chunk
-        const renderedHtml = chunk.toString();
-        const html = _emitSheetCSS();
+      const transformer = new Transform({
+        transform: function appendStyleChunks(chunk, /* encoding */ _, callback) {
+          // Get the chunk and retrieve the sheet's CSS as an HTML chunk,
+          // then reset its rules so we get only new ones for the next chunk
+          const renderedHtml = chunk.toString();
+          const html = _emitSheetCSS();
 
-        sheet.clearTag();
+          sheet.clearTag();
 
-        // prepend style html to chunk, unless the start of the chunk is a
-        // closing tag in which case append right after that
-        if (CLOSING_TAG_R.test(renderedHtml)) {
-          const endOfClosingTag = renderedHtml.indexOf('>') + 1;
-          const before = renderedHtml.slice(0, endOfClosingTag);
-          const after = renderedHtml.slice(endOfClosingTag);
+          // prepend style html to chunk, unless the start of the chunk is a
+          // closing tag in which case append right after that
+          if (CLOSING_TAG_R.test(renderedHtml)) {
+            const endOfClosingTag = renderedHtml.indexOf('>') + 1;
+            const before = renderedHtml.slice(0, endOfClosingTag);
+            const after = renderedHtml.slice(endOfClosingTag);
 
-          this.push(before + html + after);
-        } else {
-          this.push(html + renderedHtml);
-        }
+            this.push(before + html + after);
+          } else {
+            this.push(html + renderedHtml);
+          }
 
-        callback();
-      },
-    });
+          callback();
+        },
+      });
 
-    readableStream.on('error', err => {
-      // forward the error to the transform stream
-      transformer.emit('error', err);
-    });
+      readableStream.on('error', err => {
+        // forward the error to the transform stream
+        transformer.emit('error', err);
+      });
 
-    return readableStream.pipe(transformer);
+      return readableStream.pipe(transformer);
+    }
   }
 
   seal = () => {
