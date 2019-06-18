@@ -9,9 +9,6 @@ import { terser } from 'rollup-plugin-terser';
 import sourceMaps from 'rollup-plugin-sourcemaps';
 import pkg from './package.json';
 
-// rollup-plugin-ignore stopped working, so we'll just remove the import lines 😐
-const streamIgnore = { "import stream from 'stream';": "'';" };
-
 const cjs = {
   exports: 'named',
   format: 'cjs',
@@ -81,7 +78,6 @@ const standaloneBaseConfig = {
   external: Object.keys(globals),
   plugins: configBase.plugins.concat(
     replace({
-      ...streamIgnore,
       __SERVER__: JSON.stringify(false),
     })
   ),
@@ -126,7 +122,6 @@ const browserConfig = {
   ],
   plugins: configBase.plugins.concat(
     replace({
-      ...streamIgnore,
       __SERVER__: JSON.stringify(false),
     })
   ),
