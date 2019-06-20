@@ -50,8 +50,8 @@ const ThemeProviderExampleCode = `
 import { ThemeProvider } from '../../macro'
 
 React.createComponent(
-  ThemeProvider, 
-  { theme: { color: 'red' }}, 
+  ThemeProvider,
+  { theme: { color: 'red' }},
   'hello'
 )
 `;
@@ -69,7 +69,7 @@ styled(Hello)\`
 
 const multipleImportsExampleCode = `
 import styled, { css } from '../../macro'
-`
+`;
 
 const requireExampleCode = `
 const styled = require('../../macro')
@@ -87,11 +87,33 @@ const withTypeAndStandardImportExampleCode = `
   import styled, { DefaultTheme } from '../../macro'
 `;
 
+const cssPropExampleCode = `
+import styled from '../../macro'
+import React from 'react';
+
+function Foo() {
+  return <div css="color: red;" />;
+}
+`;
+
+const cssPropOverridingComponentExampleCode = `
+import React from 'react';
+import styled from '../../macro'
+
+const Thing = styled.div\`
+  color: blue;
+\`;
+
+function Foo() {
+  return <Thing css="color: red;" />;
+}
+`;
+
 pluginTester({
   title: 'macro',
   plugin,
   snapshot: true,
-  babelOptions: { filename: __filename },
+  babelOptions: { filename: __filename, presets: ['react'] },
   tests: {
     'should work with styled': styledExampleCode,
     'should work with custom import name': customStyledExampleCode,
@@ -118,5 +140,7 @@ pluginTester({
         }));
       },
     },
+    'should work with the css prop': cssPropExampleCode,
+    'should work with the css prop overriding an existing styled-component': cssPropOverridingComponentExampleCode,
   },
 });
