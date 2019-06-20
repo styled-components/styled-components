@@ -88,6 +88,25 @@ const withTypeAndStandardImportExampleCode = `
   import styled, { DefaultTheme } from '../../macro'
 `;
 
+const cssPropExampleCode = `
+import styled from '../../macro'
+import React from 'react';
+function Foo() {
+  return <div css="color: red;" />;
+}
+`;
+
+const cssPropOverridingComponentExampleCode = `
+import React from 'react';
+import styled from '../../macro'
+const Thing = styled.div\`
+  color: blue;
+\`;
+function Foo() {
+  return <Thing css="color: red;" />;
+}
+`;
+
 pluginTester({
   title: 'macro',
   plugin,
@@ -95,6 +114,7 @@ pluginTester({
   babelOptions: {
     babelrc: false,
     filename: __filename,
+    presets: ['@babel/react'],
   },
   babel,
   tests: {
@@ -144,6 +164,10 @@ pluginTester({
           }),
         }));
       },
+    },
+    'should work with the css prop': { code: cssPropExampleCode },
+    'should work with the css prop overriding an existing styled-component': {
+      code: cssPropOverridingComponentExampleCode,
     },
   },
 });
