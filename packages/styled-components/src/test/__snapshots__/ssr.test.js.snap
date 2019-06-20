@@ -1,30 +1,38 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 1`] = `"<h1 class=\\"sc-b\\">Hello SSR!</h1>"`;
+exports[`ssr production mode should not create dynamic classes for fully-static components 1`] = `"<h1 class=\\"sc-a\\">Hello SSR!</h1>"`;
+
+exports[`ssr production mode should not create dynamic classes for fully-static components 2`] = `
+"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-a{color:red;}
+data-styled.g1[id=\\"sc-a\\"]{content:\\"sc-a,\\"}
+</style>"
+`;
+
+exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 1`] = `"<h1 class=\\"sc-b c\\">Hello SSR!</h1>"`;
 
 exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 2`] = `
 "<style nonce=\\"foo\\" data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}
 data-styled.g1[id=\\"sc-global-a\\"]{content:\\"sc-global-a,\\"}
-.sc-b{color:red;}
-data-styled.g2[id=\\"sc-b\\"]{content:\\"sc-b,\\"}
+.c{color:red;}
+data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}
 </style>"
 `;
 
-exports[`ssr should extract both global and local CSS 1`] = `"<h1 class=\\"sc-b\\">Hello SSR!</h1>"`;
+exports[`ssr should extract both global and local CSS 1`] = `"<h1 class=\\"sc-b c\\">Hello SSR!</h1>"`;
 
 exports[`ssr should extract both global and local CSS 2`] = `
 "<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}
 data-styled.g1[id=\\"sc-global-a\\"]{content:\\"sc-global-a,\\"}
-.sc-b{color:red;}
-data-styled.g2[id=\\"sc-b\\"]{content:\\"sc-b,\\"}
+.c{color:red;}
+data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}
 </style>"
 `;
 
-exports[`ssr should extract the CSS in a simple case 1`] = `"<h1 class=\\"sc-a\\">Hello SSR!</h1>"`;
+exports[`ssr should extract the CSS in a simple case 1`] = `"<h1 class=\\"sc-a b\\">Hello SSR!</h1>"`;
 
 exports[`ssr should extract the CSS in a simple case 2`] = `
-"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-a{color:red;}
-data-styled.g1[id=\\"sc-a\\"]{content:\\"sc-a,\\"}
+"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.b{color:red;}
+data-styled.g1[id=\\"sc-a\\"]{content:\\"b,\\"}
 </style>"
 `;
 
@@ -33,18 +41,18 @@ exports[`ssr should handle errors while streaming 1`] = `[Invariant Violation: R
 exports[`ssr should interleave styles with rendered HTML when utilitizing streaming 1`] = `
 "<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}
 data-styled.g1[id=\\"sc-global-a\\"]{content:\\"sc-global-a,\\"}
-.sc-b{color:red;}
-data-styled.g2[id=\\"sc-b\\"]{content:\\"sc-b,\\"}
-</style><h1 class=\\"sc-b\\">Hello SSR!</h1>"
+.c{color:red;}
+data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}
+</style><h1 class=\\"sc-b c\\">Hello SSR!</h1>"
 `;
 
-exports[`ssr should render CSS in the order the components were defined, not rendered 1`] = `"<div><h2 class=\\"TWO\\"></h2><h1 class=\\"ONE\\"></h1></div>"`;
+exports[`ssr should render CSS in the order the components were defined, not rendered 1`] = `"<div><h2 class=\\"TWO a\\"></h2><h1 class=\\"ONE b\\"></h1></div>"`;
 
 exports[`ssr should render CSS in the order the components were defined, not rendered 2`] = `
-"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.ONE{color:red;}
-data-styled.g1[id=\\"ONE\\"]{content:\\"ONE,\\"}
-.TWO{color:blue;}
-data-styled.g2[id=\\"TWO\\"]{content:\\"TWO,\\"}
+"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.b{color:red;}
+data-styled.g1[id=\\"ONE\\"]{content:\\"b,\\"}
+.a{color:blue;}
+data-styled.g2[id=\\"TWO\\"]{content:\\"a,\\"}
 </style>"
 `;
 
@@ -53,8 +61,8 @@ Object {
   "dangerouslySetInnerHTML": Object {
     "__html": "body{background:papayawhip;}
 data-styled.g1[id=\\"sc-global-a\\"]{content:\\"sc-global-a,\\"}
-.sc-b{color:red;}
-data-styled.g2[id=\\"sc-b\\"]{content:\\"sc-b,\\"}
+.c{color:red;}
+data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}
 ",
   },
   "data-styled": "",
@@ -72,9 +80,9 @@ exports[`ssr should throw if getStyleElement is called after interleaveWithNodeS
 exports[`ssr should throw if getStyleElement is called after streaming is complete 1`] = `
 "<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}
 data-styled.g1[id=\\"sc-global-a\\"]{content:\\"sc-global-a,\\"}
-.sc-b{color:red;}
-data-styled.g2[id=\\"sc-b\\"]{content:\\"sc-b,\\"}
-</style><h1 class=\\"sc-b\\">Hello SSR!</h1>"
+.c{color:red;}
+data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}
+</style><h1 class=\\"sc-b c\\">Hello SSR!</h1>"
 `;
 
 exports[`ssr should throw if getStyleElement is called after streaming is complete 2`] = `
@@ -94,9 +102,9 @@ exports[`ssr should throw if getStyleTags is called after interleaveWithNodeStre
 exports[`ssr should throw if getStyleTags is called after streaming is complete 1`] = `
 "<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}
 data-styled.g1[id=\\"sc-global-a\\"]{content:\\"sc-global-a,\\"}
-.sc-b{color:red;}
-data-styled.g2[id=\\"sc-b\\"]{content:\\"sc-b,\\"}
-</style><h1 class=\\"sc-b\\">Hello SSR!</h1>"
+.c{color:red;}
+data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}
+</style><h1 class=\\"sc-b c\\">Hello SSR!</h1>"
 `;
 
 exports[`ssr should throw if getStyleTags is called after streaming is complete 2`] = `

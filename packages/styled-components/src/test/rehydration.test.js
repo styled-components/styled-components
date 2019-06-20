@@ -238,10 +238,10 @@ describe('rehydration', () => {
           ${SC_ATTR}.g1[id="sc-global-a"]{content: "sc-global-a,"}
           body { background: papayawhip; }
           ${SC_ATTR}.g2[id="sc-global-b"]{content: "sc-global-b,"}
-          .ONE { color: blue; }
-          ${SC_ATTR}.g3[id="ONE"]{content: "ONE,"}
-          .TWO { color: red; }
-          ${SC_ATTR}.g4[id="TWO"]{content: "TWO,"}
+          .c { color: blue; }
+          ${SC_ATTR}.g3[id="ONE"]{content: "c,"}
+          .d { color: red; }
+          ${SC_ATTR}.g4[id="TWO"]{content: "d,"}
         </style>
       `;
       styleTags = Array.from(document.querySelectorAll('style'));
@@ -253,8 +253,8 @@ describe('rehydration', () => {
       expectCSSMatches(`
         html { font-size: 16px; }
         body { background: papayawhip; }
-        .ONE { color: blue; }
-        .TWO { color: red; }
+        .c { color: blue; }
+        .d { color: red; }
       `);
     });
 
@@ -279,8 +279,8 @@ describe('rehydration', () => {
       expectCSSMatches(`
         html { font-size: 16px; }
         body { background: papayawhip; }
-        .ONE { color: blue; }
-        .TWO { color: red; }
+        .c { color: blue; }
+        .d { color: red; }
       `);
     });
 
@@ -305,8 +305,8 @@ describe('rehydration', () => {
       expectCSSMatches(`
         html { font-size: 16px; }
         body { background: papayawhip; }
-        .ONE { color: blue; }
-        .TWO { color: red; }
+        .c { color: blue; }
+        .d { color: red; }
       `);
     });
   });
