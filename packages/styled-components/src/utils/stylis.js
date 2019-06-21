@@ -1,4 +1,4 @@
-import Stylis from 'stylis/stylis.min';
+import Stylis from '@emotion/stylis';
 import _insertRulePlugin from 'stylis-rule-sheet';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 
@@ -11,21 +11,16 @@ export type Stringifier = (
   componentId: string
 ) => Array<string>;
 
-export default function createStylisInstance(
-  options: Object = EMPTY_OBJECT,
-  plugins: Array<Function> = EMPTY_ARRAY
-) {
-  const stylis = new Stylis({
-    global: false,
-    cascade: true,
-    keyframe: false,
-    prefix: true,
-    compress: false,
-    semicolon: false, // NOTE: This means "autocomplete missing semicolons"
+type StylisInstanceConstructorArgs = {
+  options?: Object,
+  plugins?: Array<Function>,
+};
 
-    // user-given overrides
-    ...options,
-  });
+export default function createStylisInstance({
+  options = EMPTY_OBJECT,
+  plugins = EMPTY_ARRAY,
+}: StylisInstanceConstructorArgs = EMPTY_OBJECT) {
+  const stylis = new Stylis(options);
 
   // Wrap `insertRulePlugin to build a list of rules,
   // and then make our own plugin to return the rules. This
