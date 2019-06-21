@@ -14,17 +14,17 @@ const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 export default class ServerStyleSheet {
   isStreaming: boolean;
 
-  sheet: StyleSheet;
+  instance: StyleSheet;
 
   sealed: boolean;
 
   constructor() {
-    this.sheet = new StyleSheet({ isServer: true });
+    this.instance = new StyleSheet({ isServer: true });
     this.sealed = false;
   }
 
   _emitSheetCSS = (): string => {
-    const css = this.sheet.toString();
+    const css = this.instance.toString();
     const nonce = getNonce();
     const attrs = [nonce && `nonce="${nonce}"`, SC_ATTR, `${SC_ATTR_VERSION}="${SC_VERSION}"`];
     const htmlAttr = attrs.filter(Boolean).join(' ');
@@ -37,7 +37,7 @@ export default class ServerStyleSheet {
       return throwStyledError(2);
     }
 
-    return <StyleSheetManager sheet={this.sheet}>{children}</StyleSheetManager>;
+    return <StyleSheetManager sheet={this.instance}>{children}</StyleSheetManager>;
   }
 
   getStyleTags = (): string => {
@@ -57,7 +57,7 @@ export default class ServerStyleSheet {
       [SC_ATTR]: '',
       [SC_ATTR_VERSION]: SC_VERSION,
       dangerouslySetInnerHTML: {
-        __html: this.sheet.toString(),
+        __html: this.instance.toString(),
       },
     };
 
@@ -85,7 +85,7 @@ export default class ServerStyleSheet {
       const { Readable, Transform } = require('stream');
 
       const readableStream: Readable = input;
-      const { sheet, _emitSheetCSS } = this;
+      const { instance: sheet, _emitSheetCSS } = this;
 
       const transformer = new Transform({
         transform: function appendStyleChunks(chunk, /* encoding */ _, callback) {

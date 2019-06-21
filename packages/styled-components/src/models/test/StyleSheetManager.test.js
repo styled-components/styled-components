@@ -37,7 +37,7 @@ describe('StyleSheetManager', () => {
       color: palevioletred;
     `;
     renderToString(
-      <StyleSheetManager sheet={serverStyles.sheet}>
+      <StyleSheetManager sheet={serverStyles.instance}>
         <Title />
       </StyleSheetManager>
     );
