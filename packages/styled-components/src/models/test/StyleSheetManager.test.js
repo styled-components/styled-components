@@ -232,13 +232,13 @@ describe('StyleSheetManager', () => {
     expect(indexOfBlueStyle).toBeGreaterThan(indexOfRedStyle);
   });
 
-  it('passing stylis options via StyleSheetManager works', () => {
+  it('passing disableVendorPrefixes to StyleSheetManager works', () => {
     const Test = styled.div`
       display: flex;
     `;
 
     TestRenderer.create(
-      <StyleSheetManager stylisOptions={{ prefix: false }}>
+      <StyleSheetManager disableVendorPrefixes>
         <Test>Foo</Test>
       </StyleSheetManager>
     );
@@ -248,7 +248,7 @@ describe('StyleSheetManager', () => {
     );
   });
 
-  it('StyleSheetManager warns if you try to dynamically change the stylis options', () => {
+  it('StyleSheetManager warns if you try to dynamically change disableVendorPrefixes', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     const Test = styled.div`
@@ -256,7 +256,7 @@ describe('StyleSheetManager', () => {
     `;
 
     const wrapper = TestRenderer.create(
-      <StyleSheetManager stylisOptions={{ prefix: false }}>
+      <StyleSheetManager disableVendorPrefixes>
         <Test>Foo</Test>
       </StyleSheetManager>
     );
@@ -264,13 +264,13 @@ describe('StyleSheetManager', () => {
     expect(console.warn).not.toHaveBeenCalled();
 
     wrapper.update(
-      <StyleSheetManager stylisOptions={{ prefix: true }}>
+      <StyleSheetManager disableVendorPrefixes={false}>
         <Test>Foo</Test>
       </StyleSheetManager>
     );
 
     expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"stylisOptions are frozen on initial mount of StyleSheetManager. Changing this prop dynamically will have no effect."`
+      `"disableVendorPrefixes is frozen on initial mount of StyleSheetManager. Changing this prop dynamically will have no effect."`
     );
   });
 
