@@ -1,6 +1,6 @@
 import Stylis from '@emotion/stylis';
 import _insertRulePlugin from 'stylis-rule-sheet';
-import { EMPTY_ARRAY } from './empties';
+import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 
@@ -11,8 +11,16 @@ export type Stringifier = (
   componentId: string
 ) => Array<string>;
 
-export default function createStylisInstance(plugins: Array<Function> = EMPTY_ARRAY) {
-  const stylis = new Stylis();
+type StylisInstanceConstructorArgs = {
+  options?: Object,
+  plugins?: Array<Function>,
+};
+
+export default function createStylisInstance({
+  options = EMPTY_OBJECT,
+  plugins = EMPTY_ARRAY,
+}: StylisInstanceConstructorArgs = EMPTY_OBJECT) {
+  const stylis = new Stylis(options);
 
   // Wrap `insertRulePlugin to build a list of rules,
   // and then make our own plugin to return the rules. This

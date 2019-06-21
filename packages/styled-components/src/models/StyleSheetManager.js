@@ -7,6 +7,7 @@ import createStylisInstance from '../utils/stylis';
 type Props = {
   children?: Node,
   disableCSSOMInjection?: boolean,
+  disableVendorPrefixes?: boolean,
   sheet?: StyleSheet,
   stylisPlugins?: Array<Function>,
   target?: HTMLElement,
@@ -26,11 +27,19 @@ export default function StyleSheetManager(props: Props) {
    * reference equality for the useMemo dependencies array and devs will
    * likely not store the reference themselves to avoid this issue
    */
-  const [{ stylisPlugins }] = useState({
+  const [{ disableVendorPrefixes, stylisPlugins }] = useState({
+    disableVendorPrefixes: props.disableVendorPrefixes,
     stylisPlugins: props.stylisPlugins,
   });
 
   if (process.env.NODE_ENV !== 'production') {
+    if (!shallowequal(disableVendorPrefixes, props.disableVendorPrefixes)) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        'disableVendorPrefixes is frozen on initial mount of StyleSheetManager. Changing this prop dynamically will have no effect.'
+      );
+    }
+
     if (!shallowequal(stylisPlugins, props.stylisPlugins)) {
       // eslint-disable-next-line no-console
       console.warn(
@@ -53,14 +62,23 @@ export default function StyleSheetManager(props: Props) {
       sheet = sheet.reconstructWithOptions({ useCSSOMInjection: false });
     }
 
-    if (stylisPlugins) {
+    if (disableVendorPrefixes || stylisPlugins) {
       sheet = sheet.reconstructWithOptions({
-        stringifier: createStylisInstance(stylisPlugins),
+        stringifier: createStylisInstance({
+          options: { prefix: !disableVendorPrefixes },
+          plugins: stylisPlugins,
+        }),
       });
     }
 
     return sheet;
-  }, [props.disableCSSOMInjection, props.sheet, stylisPlugins, props.target]);
+  }, [
+    props.disableCSSOMInjection,
+    props.sheet,
+    disableVendorPrefixes,
+    stylisPlugins,
+    props.target,
+  ]);
 
   return (
     <StyleSheetContext.Provider value={styleSheet}>
