@@ -285,6 +285,8 @@ describe('rehydration', () => {
     });
 
     it('should still not change styles if rendered in a different order', () => {
+      seedNextClassnames(['d', 'a', 'b', 'c']);
+
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `;
