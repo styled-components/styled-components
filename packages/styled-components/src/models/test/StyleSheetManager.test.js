@@ -232,48 +232,6 @@ describe('StyleSheetManager', () => {
     expect(indexOfBlueStyle).toBeGreaterThan(indexOfRedStyle);
   });
 
-  it('passing stylis options via StyleSheetManager works', () => {
-    const Test = styled.div`
-      display: flex;
-    `;
-
-    TestRenderer.create(
-      <StyleSheetManager stylisOptions={{ prefix: false }}>
-        <Test>Foo</Test>
-      </StyleSheetManager>
-    );
-
-    expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-a{display:flex;}</style>"`
-    );
-  });
-
-  it('StyleSheetManager warns if you try to dynamically change the stylis options', () => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-    const Test = styled.div`
-      display: flex;
-    `;
-
-    const wrapper = TestRenderer.create(
-      <StyleSheetManager stylisOptions={{ prefix: false }}>
-        <Test>Foo</Test>
-      </StyleSheetManager>
-    );
-
-    expect(console.warn).not.toHaveBeenCalled();
-
-    wrapper.update(
-      <StyleSheetManager stylisOptions={{ prefix: true }}>
-        <Test>Foo</Test>
-      </StyleSheetManager>
-    );
-
-    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"stylisOptions are frozen on initial mount of StyleSheetManager. Changing this prop dynamically will have no effect."`
-    );
-  });
-
   it('passing stylis plugins via StyleSheetManager works', () => {
     const Test = styled.div`
       padding-left: 5px;
