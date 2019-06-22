@@ -2,54 +2,53 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
+import { LIMIT } from '../utils/createWarnTooManyClasses';
 import { resetStyled } from './utils';
 
 let styled;
 
 describe('warn too many classes', () => {
-  const nativeWarn = console.warn;
-  let warnCallCount;
   /**
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    (console: any).warn = () => warnCallCount++;
-    warnCallCount = 0;
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
     styled = resetStyled();
-  });
-
-  afterEach(() => {
-    (console: any).warn = nativeWarn;
   });
 
   it('should warn once', () => {
     const Comp = styled.div`
       width: ${props => props.size};
     `;
-    for (let i = 0; i < 300; i++) {
+
+    for (let i = 0; i < LIMIT + 1; i++) {
       TestRenderer.create(<Comp size={i} />);
     }
-    expect(warnCallCount).toEqual(1);
+
+    expect(console.warn).toHaveBeenCalledTimes(1);
   });
 
-  it('should warn if number of classes is 200', () => {
+  it(`should warn if number of classes is ${LIMIT}`, () => {
     const Comp = styled.div`
       width: ${props => props.size};
     `;
-    for (let i = 0; i < 200; i++) {
+
+    for (let i = 0; i < LIMIT; i++) {
       TestRenderer.create(<Comp size={i} />);
     }
-    expect(warnCallCount).toEqual(1);
+
+    expect(console.warn).toHaveBeenCalledTimes(1);
   });
 
-  it('should not warn if number of classes is below 200', () => {
+  it(`should not warn if number of classes is below ${LIMIT}`, () => {
     const Comp = styled.div`
       width: ${props => props.size};
     `;
-    for (let i = 0; i < 199; i++) {
+
+    for (let i = 0; i < LIMIT - 1; i++) {
       TestRenderer.create(<Comp size={i} />);
     }
 
-    expect(warnCallCount).toEqual(0);
+    expect(console.warn).toHaveBeenCalledTimes(0);
   });
 });
