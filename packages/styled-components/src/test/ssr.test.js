@@ -22,10 +22,6 @@ describe('ssr', () => {
     styled = resetStyled(true);
   });
 
-  afterEach(() => {
-    process.env.NODE_ENV = 'test';
-  });
-
   it('should extract the CSS in a simple case', () => {
     const Heading = styled.h1`
       color: red;
@@ -472,6 +468,25 @@ describe('ssr', () => {
       });
 
       stream.on('error', reject);
+    });
+  });
+
+  describe('production mode', () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = 'production';
+    });
+
+    it('should not create dynamic classes for fully-static components', () => {
+      const Heading = styled.h1`
+        color: red;
+      `;
+
+      const sheet = new ServerStyleSheet();
+      const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>));
+      const css = sheet.getStyleTags();
+
+      expect(html).toMatchSnapshot();
+      expect(css).toMatchSnapshot();
     });
   });
 });

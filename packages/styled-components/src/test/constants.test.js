@@ -21,7 +21,7 @@ describe('constants', () => {
 
       TestRenderer.create(<Comp />);
 
-      expectCSSMatches('.sc-a { color:blue; }');
+      expectCSSMatches('.b { color:blue; }');
 
       expect(SC_ATTR).toEqual(expectedAttr);
       expect(document.head.querySelectorAll(`style[${SC_ATTR}]`)).toHaveLength(1);
@@ -99,12 +99,12 @@ describe('constants', () => {
 
     it('should be true in test NODE_ENV', () => {
       process.env.NODE_ENV = 'test';
-      renderAndExpect(true, '.sc-a { color:blue; }');
+      renderAndExpect(true, '.b { color:blue; }');
     });
 
     it('should be true in development NODE_ENV', () => {
       process.env.NODE_ENV = 'development';
-      renderAndExpect(true, '.sc-a { color:blue; }');
+      renderAndExpect(true, '.b { color:blue; }');
     });
 
     it('should work with SC_DISABLE_SPEEDY environment variable', () => {

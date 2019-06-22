@@ -8,9 +8,6 @@ import StyleSheet from '../sheet';
 
 import type { RuleSet } from '../types';
 
-const isHMREnabled =
-  process.env.NODE_ENV !== 'production' && typeof module !== 'undefined' && module.hot;
-
 /*
  ComponentStyle is all the CSS-specific stuff, not
  the React-specific stuff.
@@ -26,7 +23,7 @@ export default class ComponentStyle {
 
   constructor(rules: RuleSet, componentId: string) {
     this.rules = rules;
-    this.isStatic = !isHMREnabled && isStaticRules(rules);
+    this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules);
     this.componentId = componentId;
     this.baseHash = hash(componentId);
 
@@ -69,7 +66,7 @@ export default class ComponentStyle {
         if (typeof partRule === 'string') {
           css += partRule;
 
-          if (isHMREnabled) dynamicHash = phash(dynamicHash, partRule + i);
+          if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule + i);
         } else {
           const partChunk = flatten(partRule, executionContext, styleSheet);
           const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
