@@ -51,10 +51,10 @@ describe('props', () => {
 
     expect(TestRenderer.create(<Comp2 forwardedAs="button" />).toJSON()).toMatchInlineSnapshot(`
       <button
-        className="sc-a"
+        className="sc-a b"
       />
     `);
 
-    expectCSSMatches('.sc-a { background: red; }');
+    expectCSSMatches('.b { background: red; }');
   });
 });

@@ -244,7 +244,7 @@ describe('StyleSheetManager', () => {
     );
 
     expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-a{display:flex;}</style>"`
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{display:flex;}</style>"`
     );
   });
 
@@ -286,7 +286,7 @@ describe('StyleSheetManager', () => {
     );
 
     expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-a{padding-right:5px;}</style>"`
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}</style>"`
     );
   });
 
@@ -338,12 +338,10 @@ describe('StyleSheetManager', () => {
       </StyleSheetManager>
     );
 
-    expect(outerSheet.getTag().tag.getRule(0)).toMatchInlineSnapshot(
-      `".sc-a {padding-left: 5px;}"`
-    );
+    expect(outerSheet.getTag().tag.getRule(0)).toMatchInlineSnapshot(`".c {padding-left: 5px;}"`);
 
     expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\"></style><style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-b{background:red;}</style>"`
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\"></style><style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.d{background:red;}</style>"`
     );
   });
 });
