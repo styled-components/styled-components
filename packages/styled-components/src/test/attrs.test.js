@@ -18,11 +18,23 @@ describe('attrs', () => {
   });
 
   it('work fine with an empty object', () => {
+    const Comp = styled.div.attrs({})``;
+    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+  });
+
+  it('work fine with a function that returns an empty object', () => {
     const Comp = styled.div.attrs(() => ({}))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
-  it('pass a simple attr', () => {
+  it('pass a simple attr via object', () => {
+    const Comp = styled.button.attrs({
+      type: 'button',
+    })``;
+    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+  });
+
+  it('pass a simple attr via function with object return', () => {
     const Comp = styled.button.attrs(() => ({
       type: 'button',
     }))``;
@@ -50,23 +62,16 @@ describe('attrs', () => {
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
-  it('call an attr function', () => {
+  it('should not call a function passed to attrs as an object value', () => {
     const stub = jest.fn(() => 'div');
 
     const Comp = styled.button.attrs(() => ({
-      as: stub,
+      foo: stub,
     }))``;
 
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    TestRenderer.create(<Comp />);
 
-    expect(stub).toHaveBeenCalled();
-  });
-
-  it('pass a fn to attrs', () => {
-    const Comp = styled.button.attrs(props => ({
-      as: props.renderAs,
-    }))``;
-    expect(TestRenderer.create(<Comp renderAs="div" />).toJSON()).toMatchSnapshot();
+    expect(stub).not.toHaveBeenCalled();
   });
 
   it('function form allows access to theme', () => {
@@ -111,6 +116,7 @@ describe('attrs', () => {
     const Comp = styled.button.attrs(p => ({
       type: p.submit ? 'submit' : 'button',
     }))``;
+
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
     expect(TestRenderer.create(<Comp submit />).toJSON()).toMatchSnapshot();
   });
@@ -120,15 +126,17 @@ describe('attrs', () => {
       type: p.submit ? 'submit' : 'button',
       tabIndex: 0,
     }))``;
+
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
     expect(TestRenderer.create(<Comp type="reset" />).toJSON()).toMatchSnapshot();
     expect(TestRenderer.create(<Comp type="reset" tabIndex="-1" />).toJSON()).toMatchSnapshot();
   });
 
   it('should merge className', () => {
-    const Comp = styled.div.attrs(p => ({
+    const Comp = styled.div.attrs(() => ({
       className: 'meow nya',
     }))``;
+
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 

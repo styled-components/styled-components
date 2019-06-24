@@ -1,7 +1,5 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`attrs call an attr function 1`] = `"div"`;
-
 exports[`attrs does not pass non html tags to HTML element 1`] = `
 <div
   className="sc-a sc-b c"
@@ -32,13 +30,14 @@ exports[`attrs pass a React component 1`] = `
 </button>
 `;
 
-exports[`attrs pass a fn to attrs 1`] = `
-<div
+exports[`attrs pass a simple attr via function with object return 1`] = `
+<button
   className="sc-a b"
+  type="button"
 />
 `;
 
-exports[`attrs pass a simple attr 1`] = `
+exports[`attrs pass a simple attr via object 1`] = `
 <button
   className="sc-a b"
   type="button"
@@ -140,6 +139,12 @@ exports[`attrs should work with data and aria attributes 1`] = `
   aria-label="A simple FooBar"
   className="sc-a b"
   data-foo="bar"
+/>
+`;
+
+exports[`attrs work fine with a function that returns an empty object 1`] = `
+<div
+  className="sc-a b"
 />
 `;
 

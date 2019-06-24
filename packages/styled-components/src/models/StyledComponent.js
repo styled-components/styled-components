@@ -48,7 +48,6 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
 
   attrs.forEach(attrDef => {
     let resolvedAttrDef = attrDef;
-    let attr;
     let key;
 
     if (isFunction(resolvedAttrDef)) {
@@ -57,9 +56,7 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
 
     /* eslint-disable guard-for-in */
     for (key in resolvedAttrDef) {
-      attr = resolvedAttrDef[key];
-      resolvedAttrs[key] = attr;
-      context[key] = attr;
+      context[key] = resolvedAttrs[key] = resolvedAttrDef[key];
     }
     /* eslint-enable guard-for-in */
   });
