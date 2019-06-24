@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable react/prop-types */
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { render } from 'react-dom';

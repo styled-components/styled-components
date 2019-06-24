@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable react/prop-types */
 import validAttr from '@emotion/is-prop-valid';
 import merge from 'merge-anything';
 import React, {
