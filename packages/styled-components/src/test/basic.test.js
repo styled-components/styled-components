@@ -1,5 +1,5 @@
 // @flow
-/* eslint-disable react/prop-types, no-console */
+/* eslint-disable no-console */
 import React, { Component, StrictMode } from 'react';
 import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
