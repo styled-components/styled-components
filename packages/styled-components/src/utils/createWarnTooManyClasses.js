@@ -1,6 +1,6 @@
 // @flow
 
-export const LIMIT = 50;
+export const LIMIT = 200;
 
 export default (displayName: string) => {
   let generatedClasses = {};
