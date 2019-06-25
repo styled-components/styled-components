@@ -41,11 +41,8 @@ export default function createGlobalStyle(
     } else {
       const context = {
         ...props,
+        theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
       };
-
-      if (typeof theme !== 'undefined') {
-        context.theme = determineTheme(props, theme);
-      }
 
       globalStyle.renderStyles(context, styleSheet);
     }
