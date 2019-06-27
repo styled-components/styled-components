@@ -67,7 +67,6 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
 interface StyledComponentWrapperProperties {
   attrs: Attrs;
   componentStyle: ComponentStyle;
-  foldedComponentIds: Array<string>;
   target: Target;
   styledComponentId: string;
   warnTooManyClasses: $Call<typeof createWarnTooManyClasses, string>;
@@ -111,7 +110,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
     componentStyle,
     // $FlowFixMe
     defaultProps,
-    foldedComponentIds,
     styledComponentId,
     target,
   } = forwardedComponent;
@@ -159,7 +157,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
 
   propsForElement.className = Array.prototype
     .concat(
-      foldedComponentIds,
       styledComponentId,
       generatedClassName !== styledComponentId ? generatedClassName : null,
       props.className,
@@ -226,11 +223,6 @@ export default function createStyledComponent(
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
 
-  WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
-    ? // $FlowFixMe
-      Array.prototype.concat(target.foldedComponentIds, target.styledComponentId)
-    : EMPTY_ARRAY;
-
   WrappedStyledComponent.styledComponentId = styledComponentId;
 
   // fold the underlying StyledComponent target up since we folded the styles
@@ -281,7 +273,6 @@ export default function createStyledComponent(
       attrs: true,
       componentStyle: true,
       displayName: true,
-      foldedComponentIds: true,
       self: true,
       styledComponentId: true,
       target: true,
