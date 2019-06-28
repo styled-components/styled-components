@@ -44,7 +44,10 @@ export default class ComponentStyle {
     const { componentId } = this;
 
     if (this.isStatic) {
-      if (this.staticRulesId) return this.staticRulesId;
+      if (this.staticRulesId && styleSheet.hasNameForId(componentId, this.staticRulesId)) {
+        return this.staticRulesId;
+      }
+
       const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
       const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
 
@@ -57,8 +60,9 @@ export default class ComponentStyle {
         );
 
         styleSheet.insertRules(componentId, name, cssStaticFormatted);
-        this.staticRulesId = name;
       }
+
+      this.staticRulesId = name;
 
       return name;
     } else {
