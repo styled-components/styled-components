@@ -2,7 +2,7 @@
 
 exports[`attrs does not pass non html tags to HTML element 1`] = `
 <div
-  className="sc-b c"
+  className="sc-a sc-b c"
 />
 `;
 
@@ -16,7 +16,7 @@ exports[`attrs merge attrs 1`] = `
 
 exports[`attrs merge attrs when inheriting SC 1`] = `
 <button
-  className="sc-b c"
+  className="sc-a sc-b c"
   tabIndex={0}
   type="submit"
 />
