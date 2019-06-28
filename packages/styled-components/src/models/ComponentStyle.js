@@ -13,19 +13,19 @@ import type { RuleSet } from '../types';
  the React-specific stuff.
  */
 export default class ComponentStyle {
-  rules: RuleSet;
+  baseHash: number;
 
   componentId: string;
 
-  hasInjected: boolean;
-
   isStatic: boolean;
 
-  baseHash: number;
+  rules: RuleSet;
+
+  staticRulesId: string;
 
   constructor(rules: RuleSet, componentId: string) {
     this.rules = rules;
-    this.hasInjected = false;
+    this.staticRulesId = '';
     this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules);
     this.componentId = componentId;
     this.baseHash = hash(componentId);
@@ -43,9 +43,10 @@ export default class ComponentStyle {
   generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
     const { componentId } = this;
 
-    if (this.isStatic && !this.hasInjected) {
+    if (this.isStatic) {
+      if (this.staticRulesId) return this.staticRulesId;
       const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
-      const name = generateName(phash(this.baseHash, cssStatic + 1) >>> 0);
+      const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
 
       if (!styleSheet.hasNameForId(componentId, name)) {
         const cssStaticFormatted = styleSheet.options.stringifier(
@@ -55,8 +56,8 @@ export default class ComponentStyle {
           componentId
         );
 
-        styleSheet.insertRules(componentId, componentId, cssStaticFormatted);
-        this.hasInjected = true;
+        styleSheet.insertRules(componentId, name, cssStaticFormatted);
+        this.staticRulesId = name;
       }
 
       return name;
