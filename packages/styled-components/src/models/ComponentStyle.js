@@ -17,12 +17,15 @@ export default class ComponentStyle {
 
   componentId: string;
 
+  hasInjected: boolean;
+
   isStatic: boolean;
 
   baseHash: number;
 
   constructor(rules: RuleSet, componentId: string) {
     this.rules = rules;
+    this.hasInjected = false;
     this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules);
     this.componentId = componentId;
     this.baseHash = hash(componentId);
@@ -40,20 +43,23 @@ export default class ComponentStyle {
   generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
     const { componentId } = this;
 
-    if (this.isStatic) {
-      if (!styleSheet.hasNameForId(componentId, componentId)) {
-        const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
+    if (this.isStatic && !this.hasInjected) {
+      const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
+      const name = generateName(phash(this.baseHash, cssStatic + 1) >>> 0);
+
+      if (!styleSheet.hasNameForId(componentId, name)) {
         const cssStaticFormatted = styleSheet.options.stringifier(
           cssStatic,
-          `.${componentId}`,
+          `.${name}`,
           undefined,
           componentId
         );
 
         styleSheet.insertRules(componentId, componentId, cssStaticFormatted);
+        this.hasInjected = true;
       }
 
-      return componentId;
+      return name;
     } else {
       const { length } = this.rules;
 

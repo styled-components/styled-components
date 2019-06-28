@@ -242,6 +242,8 @@ export default function createStyledComponent(
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
 
+  // this static is used to preserve the cascade of static classes for component selector
+  // purposes; this is especially important with usage of the css prop
   WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
     ? // $FlowFixMe
       Array.prototype.concat(target.foldedComponentIds, target.styledComponentId)

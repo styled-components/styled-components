@@ -1,13 +1,5 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`ssr production mode should not create dynamic classes for fully-static components 1`] = `"<h1 class=\\"sc-a\\">Hello SSR!</h1>"`;
-
-exports[`ssr production mode should not create dynamic classes for fully-static components 2`] = `
-"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.sc-a{color:red;}
-data-styled.g1[id=\\"sc-a\\"]{content:\\"sc-a,\\"}
-</style>"
-`;
-
 exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 1`] = `"<h1 class=\\"sc-b c\\">Hello SSR!</h1>"`;
 
 exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 2`] = `
