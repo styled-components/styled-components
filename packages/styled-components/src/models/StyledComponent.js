@@ -134,7 +134,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
   );
 
   if (process.env.NODE_ENV !== 'production' && forwardedComponent.usesTheme && !theme) {
-    console.warn(
+    console.error(
       `Component ${
         // $FlowFixMe
         forwardedComponent.displayName

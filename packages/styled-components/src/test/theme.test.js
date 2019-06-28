@@ -11,7 +11,7 @@ let styled;
 
 describe('theming', () => {
   beforeEach(() => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     styled = resetStyled();
   });
 
@@ -569,8 +569,8 @@ describe('theming', () => {
     `;
 
     TestRenderer.create(<Comp />);
-    expect(console.warn).toHaveBeenCalledTimes(1);
-    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
+    expect(console.error).toHaveBeenCalledTimes(1);
+    expect(console.error.mock.calls[0][0]).toMatchInlineSnapshot(
       `"Component styled.div (.sc-a) uses \\"props.theme\\" in its styles but no theme was provided via prop or ThemeProvider."`
     );
 
@@ -581,13 +581,13 @@ describe('theming', () => {
     /* eslint-enable dot-notation */
 
     const wrapper = TestRenderer.create(<Comp2 />);
-    expect(console.warn).toHaveBeenCalledTimes(2);
-    expect(console.warn.mock.calls[1][0]).toMatchInlineSnapshot(
+    expect(console.error).toHaveBeenCalledTimes(2);
+    expect(console.error.mock.calls[1][0]).toMatchInlineSnapshot(
       `"Component styled.div (.sc-c) uses \\"props.theme\\" in its styles but no theme was provided via prop or ThemeProvider."`
     );
 
-    // should only warn once
+    // should only error once
     wrapper.update(<Comp2>Hi</Comp2>);
-    expect(console.warn).toHaveBeenCalledTimes(2);
+    expect(console.error).toHaveBeenCalledTimes(2);
   });
 });
