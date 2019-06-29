@@ -49,7 +49,7 @@ export default class ComponentStyle {
       }
 
       const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
-      const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
+      const name = generateName(phash(this.baseHash, cssStatic.length) >>> 0);
 
       if (!styleSheet.hasNameForId(componentId, name)) {
         const cssStaticFormatted = styleSheet.options.stringifier(
