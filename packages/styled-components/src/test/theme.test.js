@@ -11,6 +11,7 @@ let styled;
 
 describe('theming', () => {
   beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     styled = resetStyled();
   });
 
@@ -192,12 +193,6 @@ describe('theming', () => {
     theme = newTheme;
     renderComp();
     expectCSSMatches(`${initialCSS} .c { color:${newTheme.color}; }`);
-  });
-});
-
-describe('theming', () => {
-  beforeEach(() => {
-    styled = resetStyled();
   });
 
   it('should properly render with the same theme from default props on re-render', () => {
@@ -446,8 +441,8 @@ describe('theming', () => {
 
     jest
       .spyOn(console, 'warn')
-      .mockImplementation(
-        msg => (!msg.includes('You are not using a ThemeProvider') ? consoleWarn(msg) : null)
+      .mockImplementation(msg =>
+        !msg.includes('You are not using a ThemeProvider') ? consoleWarn(msg) : null
       );
 
     MyDivWithTheme.defaultProps = { theme };
@@ -554,5 +549,33 @@ describe('theming', () => {
         </ThemeProvider>
       );
     }).toThrowErrorMatchingSnapshot();
+  });
+
+  it('should warn when trying to access theme in interpolations without a provided theme', () => {
+    const Comp = styled.div`
+      color: ${props => props.theme.color};
+    `;
+
+    TestRenderer.create(<Comp />);
+    expect(console.error).toHaveBeenCalledTimes(1);
+    expect(console.error.mock.calls[0][0]).toMatchInlineSnapshot(
+      `"Component 'styled.div' (.sc-a) references the 'theme' prop in its styles but no theme was provided via prop or <ThemeProvider>."`
+    );
+
+    /* eslint-disable dot-notation */
+    const Comp2 = styled.div`
+      color: ${props => props.theme['color']};
+    `;
+    /* eslint-enable dot-notation */
+
+    const wrapper = TestRenderer.create(<Comp2 />);
+    expect(console.error).toHaveBeenCalledTimes(2);
+    expect(console.error.mock.calls[1][0]).toMatchInlineSnapshot(
+      `"Component 'styled.div' (.sc-c) references the 'theme' prop in its styles but no theme was provided via prop or <ThemeProvider>."`
+    );
+
+    // should only error once
+    wrapper.update(<Comp2>Hi</Comp2>);
+    expect(console.error).toHaveBeenCalledTimes(3);
   });
 });
