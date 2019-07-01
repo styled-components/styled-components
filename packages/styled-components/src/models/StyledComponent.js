@@ -69,6 +69,7 @@ interface StyledComponentWrapperProperties {
   attrs: Attrs;
   componentStyle: ComponentStyle;
   displayName: string;
+  foldedComponentIds: Array<string>;
   target: Target;
   styledComponentId: string;
   warnTooManyClasses: $Call<typeof createWarnTooManyClasses, string>;
@@ -113,6 +114,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
     componentStyle,
     // $FlowFixMe
     defaultProps,
+    foldedComponentIds,
     styledComponentId,
     target,
   } = forwardedComponent;
@@ -173,6 +175,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
 
   propsForElement.className = Array.prototype
     .concat(
+      foldedComponentIds,
       styledComponentId,
       generatedClassName !== styledComponentId ? generatedClassName : null,
       props.className,
@@ -239,6 +242,13 @@ export default function createStyledComponent(
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
 
+  // this static is used to preserve the cascade of static classes for component selector
+  // purposes; this is especially important with usage of the css prop
+  WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
+    ? // $FlowFixMe
+      Array.prototype.concat(target.foldedComponentIds, target.styledComponentId)
+    : EMPTY_ARRAY;
+
   WrappedStyledComponent.styledComponentId = styledComponentId;
 
   // fold the underlying StyledComponent target up since we folded the styles
@@ -293,6 +303,7 @@ export default function createStyledComponent(
       attrs: true,
       componentStyle: true,
       displayName: true,
+      foldedComponentIds: true,
       self: true,
       styledComponentId: true,
       target: true,
