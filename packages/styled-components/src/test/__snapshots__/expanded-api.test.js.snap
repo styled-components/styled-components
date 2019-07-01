@@ -18,6 +18,32 @@ exports[`expanded api "as" prop prefers prop over attrs 1`] = `
 />
 `;
 
+exports[`expanded api "as" prop transfers all styles that have been applied 1`] = `"styled.div"`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 2`] = `"Styled(styled.div)"`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 3`] = `"Styled(Styled(styled.div))"`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 4`] = `
+<div
+  className="sc-a d"
+/>
+`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 5`] = `
+<div
+  className="sc-a sc-b e"
+/>
+`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 6`] = `
+<span
+  className="sc-a sc-b sc-c f"
+/>
+`;
+
+exports[`expanded api "as" prop transfers all styles that have been applied 7`] = `".d{background:blue;color:red;}.e{background:blue;color:red;color:green;}.f{background:blue;color:red;color:green;text-align:center;}"`;
+
 exports[`expanded api "as" prop works with custom components 1`] = `
 <figure
   className="sc-a b"

@@ -291,19 +291,4 @@ describe('with styles', () => {
       expect(el.getAttribute('nonce')).toBe('foo');
     });
   });
-
-  describe('production mode', () => {
-    beforeEach(() => {
-      process.env.NODE_ENV = 'production';
-    });
-
-    it('should not generate a dynamic class for static rules', () => {
-      const rule = 'color: blue;';
-      const Comp = styled.div`
-        ${rule};
-      `;
-      TestRenderer.create(<Comp />);
-      expectCSSMatches('.sc-a { color:blue; }');
-    });
-  });
 });

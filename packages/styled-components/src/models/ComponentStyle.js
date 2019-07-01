@@ -13,16 +13,19 @@ import type { RuleSet } from '../types';
  the React-specific stuff.
  */
 export default class ComponentStyle {
-  rules: RuleSet;
+  baseHash: number;
 
   componentId: string;
 
   isStatic: boolean;
 
-  baseHash: number;
+  rules: RuleSet;
+
+  staticRulesId: string;
 
   constructor(rules: RuleSet, componentId: string) {
     this.rules = rules;
+    this.staticRulesId = '';
     this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules);
     this.componentId = componentId;
     this.baseHash = hash(componentId);
@@ -41,19 +44,27 @@ export default class ComponentStyle {
     const { componentId } = this;
 
     if (this.isStatic) {
-      if (!styleSheet.hasNameForId(componentId, componentId)) {
-        const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
+      if (this.staticRulesId && styleSheet.hasNameForId(componentId, this.staticRulesId)) {
+        return this.staticRulesId;
+      }
+
+      const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
+      const name = generateName(phash(this.baseHash, cssStatic.length) >>> 0);
+
+      if (!styleSheet.hasNameForId(componentId, name)) {
         const cssStaticFormatted = styleSheet.options.stringifier(
           cssStatic,
-          `.${componentId}`,
+          `.${name}`,
           undefined,
           componentId
         );
 
-        styleSheet.insertRules(componentId, componentId, cssStaticFormatted);
+        styleSheet.insertRules(componentId, name, cssStaticFormatted);
       }
 
-      return componentId;
+      this.staticRulesId = name;
+
+      return name;
     } else {
       const { length } = this.rules;
 

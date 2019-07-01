@@ -152,8 +152,6 @@ describe('expanded api', () => {
         color: red;
       `;
 
-      Comp.displayName = 'SomethingFun';
-
       const Comp2 = styled(Comp)`
         color: green;
       `;
@@ -162,31 +160,14 @@ describe('expanded api', () => {
         text-align: center;
       `;
 
-      expect(Comp.displayName).toMatchInlineSnapshot(`"SomethingFun"`);
-      expect(Comp2.displayName).toMatchInlineSnapshot(`"Styled(SomethingFun)"`);
-      expect(Comp3.displayName).toMatchInlineSnapshot(`"Styled(Styled(SomethingFun))"`);
+      expect(Comp.displayName).toMatchSnapshot();
+      expect(Comp2.displayName).toMatchSnapshot();
+      expect(Comp3.displayName).toMatchSnapshot();
+      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot();
+      expect(TestRenderer.create(<Comp3 as="span" />).toJSON()).toMatchSnapshot();
 
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
-                        <div
-                          className="sc-a d"
-                        />
-                  `);
-
-      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchInlineSnapshot(`
-                        <div
-                          className="sc-b e"
-                        />
-                  `);
-
-      expect(TestRenderer.create(<Comp3 as="span" />).toJSON()).toMatchInlineSnapshot(`
-                        <span
-                          className="sc-c f"
-                        />
-                  `);
-
-      expect(getCSS(document)).toMatchInlineSnapshot(
-        `".d{background:blue;color:red;}.e{background:blue;color:red;color:green;}.f{background:blue;color:red;color:green;text-align:center;}"`
-      );
+      expect(getCSS(document)).toMatchSnapshot();
     });
   });
 });
