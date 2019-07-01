@@ -27,6 +27,7 @@ import type { Attrs, RuleSet, Target } from '../types';
 
 /* global $Call */
 
+const THEME_PROP_R = /\.theme[.[]/;
 const identifiers = {};
 
 /* We depend on components having unique IDs */
@@ -67,9 +68,11 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
 interface StyledComponentWrapperProperties {
   attrs: Attrs;
   componentStyle: ComponentStyle;
+  displayName: string;
   target: Target;
   styledComponentId: string;
   warnTooManyClasses: $Call<typeof createWarnTooManyClasses, string>;
+  usesTheme: boolean;
 }
 
 type StyledComponentWrapper<Config, Instance> = AbstractComponent<Config, Instance> &
@@ -119,9 +122,9 @@ function useStyledComponentImpl<Config: {}, Instance>(
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme = determineTheme(props, useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
+  const theme = determineTheme(props, useContext(ThemeContext), defaultProps);
 
-  const [context, attrs] = useResolvedAttrs(theme, props, componentAttrs);
+  const [context, attrs] = useResolvedAttrs(theme || EMPTY_OBJECT, props, componentAttrs);
 
   const generatedClassName = useInjectedStyle(
     componentStyle,
@@ -129,6 +132,19 @@ function useStyledComponentImpl<Config: {}, Instance>(
     context,
     process.env.NODE_ENV !== 'production' ? forwardedComponent.warnTooManyClasses : undefined
   );
+
+  if (process.env.NODE_ENV !== 'production' && forwardedComponent.usesTheme && !theme) {
+    console.error(
+      `Component ${
+        // $FlowFixMe
+        forwardedComponent.displayName
+      } (.${styledComponentId}) uses "props.theme" in its styles but no theme was provided via prop or ThemeProvider.`
+    );
+
+    // cheap way to do "once" ;)
+    // eslint-disable-next-line no-param-reassign
+    forwardedComponent.usesTheme = false;
+  }
 
   const refToForward = forwardedRef;
 
@@ -261,6 +277,10 @@ export default function createStyledComponent(
   });
 
   if (process.env.NODE_ENV !== 'production') {
+    WrappedStyledComponent.usesTheme = componentStyle.rules.some(
+      x => isFunction(x) && THEME_PROP_R.test(x.toString())
+    );
+
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName);
   }
 
