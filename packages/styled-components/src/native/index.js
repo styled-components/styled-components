@@ -1,7 +1,8 @@
 // @flow
 
 /* eslint-disable import/no-unresolved */
-import reactNative, { StyleSheet } from 'react-native';
+import * as reactNative from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import _InlineStyle from '../models/InlineStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
