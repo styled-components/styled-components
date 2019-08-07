@@ -178,6 +178,8 @@ const makeSpeedyTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>):
   const removeRules = id => {
     const marker = markers[id];
     if (marker === undefined) return;
+    // $FlowFixMe
+    if (el.isConnected === false) return;
 
     const size = sizes[marker];
     const sheet = sheetForTag(el);
