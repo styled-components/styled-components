@@ -52,7 +52,7 @@ export default function ThemeProvider(props: Props) {
 
   return (
     <ThemeContext.Provider value={themeContext}>
-      {React.Children.only(props.children)}
+      {props.children}
     </ThemeContext.Provider>
   );
 }
