@@ -10,9 +10,6 @@ import { IS_BROWSER } from '../constants';
 
 import type { Attrs, RuleSet } from '../types';
 
-const isHMREnabled =
-  process.env.NODE_ENV !== 'production' && typeof module !== 'undefined' && module.hot;
-
 /* combines hashStr (murmurhash) and nameGenerator for convenience */
 const hasher = (str: string): string => generateAlphabeticName(hashStr(str));
 
@@ -31,7 +28,7 @@ export default class ComponentStyle {
 
   constructor(rules: RuleSet, attrs: Attrs, componentId: string) {
     this.rules = rules;
-    this.isStatic = !isHMREnabled && isStaticRules(rules, attrs);
+    this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules, attrs);
     this.componentId = componentId;
 
     if (!StyleSheet.master.hasId(componentId)) {
@@ -40,10 +37,10 @@ export default class ComponentStyle {
   }
 
   /*
-     * Flattens a rule set into valid CSS
-     * Hashes it, wraps the whole chunk in a .hash1234 {}
-     * Returns the hash to be injected on render()
-     * */
+   * Flattens a rule set into valid CSS
+   * Hashes it, wraps the whole chunk in a .hash1234 {}
+   * Returns the hash to be injected on render()
+   * */
   generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet) {
     const { isStatic, componentId, lastClassName } = this;
     if (
