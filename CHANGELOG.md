@@ -7,6 +7,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 ## Unreleased
 
 - Remove deprecated functionality (object-form `.attrs({})`)
+- Fix to use `ownerDocument` instead of global `document`, by [@yamachig](https://github.com/yamachig) (see [#2721](https://github.com/styled-components/styled-components/pull/2721))
 
 ## [v4.3.2] - 2019-06-19
 
