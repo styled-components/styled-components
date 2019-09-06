@@ -138,7 +138,7 @@ class StyledComponent extends Component<*> {
     const isTargetTag = isTag(elementToBeCreated);
 
     const propsForElement = {};
-    const computedProps = { ...this.attrs, ...this.props };
+    const computedProps = { ...this.props, ...this.attrs };
 
     let key;
     // eslint-disable-next-line guard-for-in

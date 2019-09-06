@@ -81,8 +81,8 @@ class StyledNativeComponent extends Component<*, *> {
           );
 
           const propsForElement = {
-            ...this.attrs,
             ...props,
+            ...this.attrs,
             style: [generatedStyles].concat(style),
           };
 
