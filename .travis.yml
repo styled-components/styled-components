@@ -1,15 +1,12 @@
 language: node_js
-dist: trusty
-sudo: required
+dist: bionic
 addons:
-  apt:
-    packages:
-      - libnss3
-      - google-chrome-beta
+  chrome: beta
 branches:
   only:
     - master
     - develop
+    - update-travis
 env:
   global:
     - GOOGLE_CHROME_BINARY="/usr/bin/google-chrome-beta"
