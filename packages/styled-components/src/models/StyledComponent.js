@@ -153,7 +153,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
   const elementToBeCreated: Target = props.as || attrs.as || target;
 
   const isTargetTag = isTag(elementToBeCreated);
-  const computedProps = attrs !== props ? { ...attrs, ...props } : props;
+  const computedProps = attrs !== props ? { ...props, ...attrs } : props;
   const shouldFilterProps = isTargetTag || 'as' in computedProps || 'forwardedAs' in computedProps;
   const propsForElement = shouldFilterProps ? {} : { ...computedProps };
 

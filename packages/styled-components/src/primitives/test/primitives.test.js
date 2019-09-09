@@ -219,29 +219,31 @@ describe('primitives', () => {
     });
 
     it('should override children', () => {
+      const child = <Text>Amazing</Text>;
       const Comp = styled.Text.attrs(() => ({
-        children: <Text>Amazing</Text>,
+        children: child,
       }))``;
 
       const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
       const text = wrapper.root.findByType('Text');
 
       expect(text.props).toMatchObject({
-        children: 'Something else',
+        children: child,
         style: [{}],
       });
     });
 
     it('accepts a function', () => {
+      const child = <Text>Amazing</Text>;
       const Comp = styled.Text.attrs(() => ({
-        children: <Text>Amazing</Text>,
+        children: child,
       }))``;
 
       const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
       const text = wrapper.root.findByType('Text');
 
       expect(text.props).toMatchObject({
-        children: 'Something else',
+        children: child,
         style: [{}],
       });
     });
