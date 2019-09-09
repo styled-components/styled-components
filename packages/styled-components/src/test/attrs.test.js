@@ -121,7 +121,7 @@ describe('attrs', () => {
     expect(TestRenderer.create(<Comp submit />).toJSON()).toMatchSnapshot();
   });
 
-  it('should replace attrs with props', () => {
+  it('should replace props with attrs', () => {
     const Comp = styled.button.attrs(p => ({
       type: p.submit ? 'submit' : 'button',
       tabIndex: 0,
