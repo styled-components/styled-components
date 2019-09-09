@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Fix to use `ownerDocument` instead of global `document`, by [@yamachig](https://github.com/yamachig) (see [#2721](https://github.com/styled-components/styled-components/pull/2721))
+
 - Backport fix for SSR classname mismatches in development mode for some environments like next.js (see [#2701](https://github.com/styled-components/styled-components/pull/2701))
 
 - Fix attrs not properly taking precedence over props
