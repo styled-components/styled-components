@@ -632,7 +632,16 @@
     lodash "^4.17.5"
     to-fast-properties "^2.0.0"
 
-"@babel/types@^7.0.0", "@babel/types@^7.2.2":
+"@babel/types@^7.0.0":
+  version "7.4.4"
+  resolved "https://registry.yarnpkg.com/@babel/types/-/types-7.4.4.tgz#8db9e9a629bb7c29370009b4b779ed93fe57d5f0"
+  integrity sha512-dOllgYdnEFOebhkKCjzSVFqw/PmmB8pH6RGOWkY4GsboQNd47b1fBThBSwlHAq9alF9vc1M3+6oqR47R50L0tQ==
+  dependencies:
+    esutils "^2.0.2"
+    lodash "^4.17.11"
+    to-fast-properties "^2.0.0"
+
+"@babel/types@^7.2.2":
   version "7.2.2"
   resolved "https://registry.yarnpkg.com/@babel/types/-/types-7.2.2.tgz#44e10fc24e33af524488b716cdaee5360ea8ed1e"
   integrity sha512-fKCuD6UFUMkR541eDWL+2ih/xFZBXPOg/7EQFeTluMDebfqR4jrpaCjLhkWlQS4hT6nRa2PMEgXKbRB5/H2fpg==
@@ -641,10 +650,10 @@
     lodash "^4.17.10"
     to-fast-properties "^2.0.0"
 
-"@emotion/is-prop-valid@^0.7.3":
-  version "0.7.3"
-  resolved "https://registry.yarnpkg.com/@emotion/is-prop-valid/-/is-prop-valid-0.7.3.tgz#a6bf4fa5387cbba59d44e698a4680f481a8da6cc"
-  integrity sha512-uxJqm/sqwXw3YPA5GXX365OBcJGFtxUVkB6WyezqFHlNe9jqUWH5ur2O2M8dGBz61kn1g3ZBlzUunFQXQIClhA==
+"@emotion/is-prop-valid@^0.8.1":
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/@emotion/is-prop-valid/-/is-prop-valid-0.8.1.tgz#6fb3ae2d24f07c8cd090f233e45771d9cd826d48"
+  integrity sha512-Wtaek/KGUP+HusWIa8DqtOR6U/Tl+QIdVkfJQHV3IT6ZImnJwklP5UVVPKZvkfljeFk3Q45CAPJ5N10gJ5XoLA==
   dependencies:
     "@emotion/memoize" "0.7.1"
 
@@ -2219,14 +2228,14 @@ babel-plugin-preval@^3.0.1:
     require-from-string "^2.0.2"
 
 "babel-plugin-styled-components@>= 1", babel-plugin-styled-components@^1.5.1:
-  version "1.10.0"
-  resolved "https://registry.yarnpkg.com/babel-plugin-styled-components/-/babel-plugin-styled-components-1.10.0.tgz#ff1f42ad2cc78c21f26b62266b8f564dbc862939"
-  integrity sha512-sQVKG8irFXx14ZfaK1bBePirfkacl3j8nZwSZK+ZjsbnadRHKQTbhXbe/RB1vT6Vgkz45E+V95LBq4KqdhZUNw==
+  version "1.10.1"
+  resolved "https://registry.yarnpkg.com/babel-plugin-styled-components/-/babel-plugin-styled-components-1.10.1.tgz#cc89ac5a13476ce675e13fbe53a826f9bb0ca4cd"
+  integrity sha512-F6R2TnPGNN6iuXCs0xQ+EsrunwNoWI55J5I8Pkd/+fzzbv1I4gFgTaZepMOVpLobYWU2XaLIm+73L0zD3CnOdQ==
   dependencies:
     "@babel/helper-annotate-as-pure" "^7.0.0"
     "@babel/helper-module-imports" "^7.0.0"
     babel-plugin-syntax-jsx "^6.18.0"
-    lodash "^4.17.10"
+    lodash "^4.17.11"
 
 babel-plugin-syntax-async-functions@^6.8.0:
   version "6.13.0"
@@ -6703,6 +6712,11 @@ is-utf8@^0.2.0:
   resolved "https://registry.yarnpkg.com/is-utf8/-/is-utf8-0.2.1.tgz#4b0da1442104d1b336340e80797e865cf39f7d72"
   integrity sha1-Sw2hRCEE0bM2NA6AeX6GXPOffXI=
 
+is-what@^3.1.1:
+  version "3.2.2"
+  resolved "https://registry.yarnpkg.com/is-what/-/is-what-3.2.2.tgz#5da48eb905ca2620142abf5867340b46fa9ea238"
+  integrity sha512-4tCMQr7lWLqe2wPKhMvIzvALEhadPrt2+IzW3tQj98Sf/WhXJlpspRDMaC5zpepvtefiDT2PloJaqRvg7PxhYA==
+
 is-windows@^1.0.0, is-windows@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/is-windows/-/is-windows-1.0.2.tgz#d1850eb9791ecd18e6182ce12a30f396634bb19d"
@@ -7992,6 +8006,13 @@ meow@^4.0.0:
     read-pkg-up "^3.0.0"
     redent "^2.0.0"
     trim-newlines "^2.0.0"
+
+merge-anything@^2.2.4:
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/merge-anything/-/merge-anything-2.2.4.tgz#1445855716732fd96218ce636cd122c077e5f65c"
+  integrity sha512-A6Ip73ppCEPzD4XEVj28VOT0ec0ZrBLfMywQKZVFnHcxYZ7t9Y6bDrdsZ6a7u2HpuDXeynwcaaM1YV+5Cd1Nhw==
+  dependencies:
+    is-what "^3.1.1"
 
 merge-descriptors@1.0.1:
   version "1.0.1"

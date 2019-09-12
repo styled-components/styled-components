@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "4.2.1",
+  "version": "4.3.2",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.esm.js",
@@ -58,11 +58,13 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "@babel/helper-module-imports": "^7.0.0",
-    "@emotion/is-prop-valid": "^0.7.3",
+    "@babel/traverse": "^7.0.0",
+    "@emotion/is-prop-valid": "^0.8.1",
     "@emotion/unitless": "^0.7.0",
     "babel-plugin-styled-components": ">= 1",
     "css-to-react-native": "^2.2.2",
     "memoize-one": "^5.0.0",
+    "merge-anything": "^2.2.4",
     "prop-types": "^15.5.4",
     "react-is": "^16.6.0",
     "stylis": "^3.5.0",
@@ -100,7 +102,7 @@
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "maxSize": "16kB"
+      "maxSize": "16.25kB"
     }
   ],
   "collective": {

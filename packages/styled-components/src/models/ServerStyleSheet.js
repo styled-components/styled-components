@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable no-underscore-dangle */
 import React from 'react';
-import stream from 'stream';
+import stream, { type Readable } from 'stream';
 
 import { IS_BROWSER, SC_STREAM_ATTR } from '../constants';
 import StyledError from '../utils/error';
@@ -57,7 +57,7 @@ export default class ServerStyleSheet {
     return this.instance.toReactElements();
   }
 
-  interleaveWithNodeStream(readableStream: stream.Readable) {
+  interleaveWithNodeStream(readableStream: Readable) {
     if (!__SERVER__ || IS_BROWSER) {
       throw new StyledError(3);
     }

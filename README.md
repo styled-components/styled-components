@@ -27,11 +27,16 @@ _Supported by [Front End Center](https://frontend.center). Thank you for making 
 
 ## v5
 
-Principal development of v5 has begun! Follow along on the [canary](https://github.com/styled-components/styled-components/tree/canary) branch and check out the current list of [roadmap items](https://github.com/styled-components/styled-components/issues/1934).
+styled-components v5 is now [officially in beta](https://medium.com/styled-components/announcing-styled-components-v5-beast-mode-389747abd987)! Try it out in your project today:
 
-We will be publishing alpha versions to `styled-components@canary` on NPM as we get closer to a beta release.
+```
+npm install styled-components@beta
+```
 
-Please keep in mind that all development of styled-components is driven by volunteer effort, so things will take as long as they take. We appreciate your enthusiasm and interest as new technologies and patterns emerge.
+Notes:
+
+- Make sure you're on a hooks-compatible version of react (>= 16.8 for react, react-dom, and react-is)
+- If you use jest-styled-components, upgrade to the beta of that as well! `npm install jest-styled-components@beta`
 
 ## [Docs](https://www.styled-components.com/docs)
 

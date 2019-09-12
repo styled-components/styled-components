@@ -77,6 +77,43 @@ describe('native', () => {
     expect(view.props.style).toEqual([{ color: 'red', textAlign: 'left' }]);
   });
 
+  it('folds defaultProps', () => {
+    const Inner = styled.View``;
+
+    Inner.defaultProps = {
+      theme: {
+        fontSize: 12,
+      },
+      style: {
+        background: 'blue',
+        textAlign: 'center',
+      },
+    };
+
+    const Outer = styled(Inner)``;
+
+    Outer.defaultProps = {
+      theme: {
+        fontSize: 16,
+      },
+      style: {
+        background: 'silver',
+      },
+    };
+
+    expect(Outer.defaultProps).toMatchInlineSnapshot(`
+Object {
+  "style": Object {
+    "background": "silver",
+    "textAlign": "center",
+  },
+  "theme": Object {
+    "fontSize": 16,
+  },
+}
+`);
+  });
+
   it('should combine inline styles and the style prop', () => {
     const Comp = styled.View`
       padding-top: 10;
@@ -262,29 +299,33 @@ describe('native', () => {
     });
 
     it('should override children', () => {
+      const child = <Text>Amazing</Text>;
+
       const Comp = styled.Text.attrs({
-        children: <Text>Amazing</Text>,
+        children: child,
       })``;
 
       const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
       const text = wrapper.root.findByType('Text');
 
       expect(text.props).toMatchObject({
-        children: 'Something else',
+        children: child,
         style: [{}],
       });
     });
 
     it('accepts a function', () => {
-      const Comp = styled.Text.attrs(props => ({
-        children: <Text>Amazing</Text>,
+      const child = <Text>Amazing</Text>;
+
+      const Comp = styled.Text.attrs(() => ({
+        children: child,
       }))``;
 
       const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
       const text = wrapper.root.findByType('Text');
 
       expect(text.props).toMatchObject({
-        children: 'Something else',
+        children: child,
         style: [{}],
       });
     });
