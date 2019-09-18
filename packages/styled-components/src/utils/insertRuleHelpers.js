@@ -12,9 +12,9 @@ export const sheetForTag = (tag: HTMLStyleElement): CSSStyleSheet => {
   if (tag.sheet) return tag.sheet;
 
   /* Firefox quirk requires us to step through all stylesheets to find one owned by the given tag */
-  const size = document.styleSheets.length;
+  const size = tag.ownerDocument.styleSheets.length;
   for (let i = 0; i < size; i += 1) {
-    const sheet = document.styleSheets[i];
+    const sheet = tag.ownerDocument.styleSheets[i];
     // $FlowFixMe
     if (sheet.ownerNode === tag) return sheet;
   }

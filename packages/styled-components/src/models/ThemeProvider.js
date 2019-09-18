@@ -40,7 +40,7 @@ export default class ThemeProvider extends Component<Props> {
 
     return (
       <ThemeContext.Provider value={context}>
-        {React.Children.only(this.props.children)}
+        {this.props.children}
       </ThemeContext.Provider>
     );
   }

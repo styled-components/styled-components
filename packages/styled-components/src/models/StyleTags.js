@@ -58,7 +58,11 @@ const addUpUntilIndex = (sizes: number[], index: number): number => {
 
 /* create a new style tag after lastEl */
 const makeStyleTag = (target: ?HTMLElement, tagEl: ?Node, insertBefore: ?boolean) => {
-  const el = document.createElement('style');
+  let targetDocument = document;
+  if(target) targetDocument = target.ownerDocument;
+  else if(tagEl) targetDocument = tagEl.ownerDocument;
+
+  const el = targetDocument.createElement('style');
   el.setAttribute(SC_ATTR, '');
   el.setAttribute(SC_VERSION_ATTR, __VERSION__);
 
@@ -68,7 +72,7 @@ const makeStyleTag = (target: ?HTMLElement, tagEl: ?Node, insertBefore: ?boolean
   }
 
   /* Work around insertRule quirk in EdgeHTML */
-  el.appendChild(document.createTextNode(''));
+  el.appendChild(targetDocument.createTextNode(''));
 
   if (target && !tagEl) {
     /* Append to target when no previous element was passed */
@@ -226,7 +230,7 @@ const makeSpeedyTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>):
   };
 };
 
-const makeTextNode = id => document.createTextNode(makeTextMarker(id));
+const makeTextNode = (targetDocument, id) => targetDocument.createTextNode(makeTextMarker(id));
 
 const makeBrowserTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>): Tag<Text> => {
   const names = (Object.create(null): Object);
@@ -243,7 +247,7 @@ const makeBrowserTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>)
       return prev;
     }
 
-    markers[id] = makeTextNode(id);
+    markers[id] = makeTextNode(el.ownerDocument, id);
     el.appendChild(markers[id]);
     names[id] = Object.create(null);
 
@@ -281,7 +285,7 @@ const makeBrowserTag = (el: HTMLStyleElement, getImportRuleTag: ?() => Tag<any>)
     if (marker === undefined) return;
 
     /* create new empty text node and replace the current one */
-    const newMarker = makeTextNode(id);
+    const newMarker = makeTextNode(el.ownerDocument, id);
     el.replaceChild(newMarker, marker);
     markers[id] = newMarker;
     resetIdNames(names, id);
