@@ -33,6 +33,10 @@ styled-components v5 is now [officially in beta](https://medium.com/styled-compo
 npm install styled-components@beta
 ```
 
+```
+yarn add styled-components@beta
+```
+
 Notes:
 
 - Make sure you're on a hooks-compatible version of react (>= 16.8 for react, react-dom, and react-is)
