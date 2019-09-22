@@ -12,6 +12,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Fix attrs not properly taking precedence over props
 
+- Backport fix where classnames are composed in the wrong order if custom class names are passed in (see [#2760](https://github.com/styled-components/styled-components/pull/2760))
+
 ## [v4.3.2] - 2019-06-19
 
 - Fix usage of the "css" prop with the styled-components babel macro (relevant to CRA 2.x users), by [@jamesknelson](http://github.com/jamesknelson) (see [#2633](https://github.com/styled-components/styled-components/issues/2633))
