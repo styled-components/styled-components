@@ -72,5 +72,6 @@ export default function createGlobalStyle(
     return null;
   }
 
-  return GlobalStyleComponent;
+  // $FlowFixMe
+  return React.memo(GlobalStyleComponent);
 }
