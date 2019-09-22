@@ -22,6 +22,25 @@ import keyframes from '../keyframes';
 
 let context;
 
+function setup() {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  return {
+    container,
+    render(comp) {
+      ReactDOM.render(comp, container);
+    },
+    renderToString(comp) {
+      return ReactDOMServer.renderToString(comp);
+    },
+    cleanup() {
+      resetStyled();
+      document.body.removeChild(container);
+    },
+  };
+}
+
 beforeEach(() => {
   context = setup();
 });
@@ -31,11 +50,6 @@ afterEach(() => {
 });
 
 describe(`createGlobalStyle`, () => {
-  it(`returns a function`, () => {
-    const Component = createGlobalStyle``;
-    expect(typeof Component).toBe('function');
-  });
-
   it(`injects global <style> when rendered`, () => {
     const { render } = context;
     const Component = createGlobalStyle`[data-test-inject]{color:red;} `;
@@ -59,14 +73,14 @@ describe(`createGlobalStyle`, () => {
   });
 
   it(`supports interpolation`, () => {
-    const { render } = setup();
+    const { render } = context;
     const Component = createGlobalStyle`div {color:${props => props.color};} `;
     render(<Component color="orange" />);
     expectCSSMatches(`div{color:orange;} `);
   });
 
   it(`supports theming`, () => {
-    const { render } = setup();
+    const { render } = context;
     const Component = createGlobalStyle`div {color:${props => props.theme.color};} `;
     render(
       <ThemeProvider theme={{ color: 'black' }}>
@@ -77,7 +91,7 @@ describe(`createGlobalStyle`, () => {
   });
 
   it(`updates theme correctly`, () => {
-    const { render } = setup();
+    const { render } = context;
     const Component = createGlobalStyle`div {color:${props => props.theme.color};} `;
     let update;
     class App extends React.Component {
@@ -140,7 +154,7 @@ describe(`createGlobalStyle`, () => {
   });
 
   it(`stringifies multiple rules correctly`, () => {
-    const { render } = setup();
+    const { render } = context;
     const Component = createGlobalStyle`
       div {
         color: ${props => props.fg};
@@ -152,7 +166,7 @@ describe(`createGlobalStyle`, () => {
   });
 
   it(`injects multiple <GlobalStyle> components correctly`, () => {
-    const { render } = setup();
+    const { render } = context;
 
     const A = createGlobalStyle`body { background: palevioletred; }`;
     const B = createGlobalStyle`body { color: white; }`;
@@ -167,7 +181,6 @@ describe(`createGlobalStyle`, () => {
   });
 
   it(`removes styling injected styling when unmounted`, () => {
-    const { render } = setup();
     const ComponentA = createGlobalStyle`[data-test-remove]{color:grey;} `;
     const ComponentB = createGlobalStyle`[data-test-keep]{color:blue;} `;
 
@@ -177,7 +190,7 @@ describe(`createGlobalStyle`, () => {
       }
     }
 
-    const renderer = ReactTestRenderer.create(<Comp insert={true} />);
+    const renderer = ReactTestRenderer.create(<Comp insert />);
 
     act(() => {
       expect(getCSS(document).trim()).toContain(`[data-test-remove]{color:grey;}`);
@@ -254,56 +267,20 @@ describe(`createGlobalStyle`, () => {
       body { background: ${props => props.bgColor}; }
     `;
 
-    class Comp extends React.Component {
-      state = {
-        a: true,
-        b: true,
-      };
-
-      onClick = () => {
-        if (this.state.a === true && this.state.b === true) {
-          this.setState({
-            a: true,
-            b: false,
-          });
-        } else if (this.state.a === true && this.state.b === false) {
-          this.setState({
-            a: false,
-            b: false,
-          });
-        } else {
-          this.setState({
-            a: true,
-            b: true,
-          });
-        }
-      };
-
-      render() {
-        return (
-          <div data-test-el onClick={this.onClick}>
-            {this.state.a ? <A bgColor="red" /> : null}
-            {this.state.b ? <A bgColor="blue" /> : null}
-          </div>
-        );
-      }
-    }
-
-    render(<Comp />); // should be blue
-    const el = document.querySelector('[data-test-el]');
+    render(<A bgColor="blue" />);
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`"body{background:blue;}"`);
 
-    Simulate.click(el); // should be red
+    render(<A bgColor="red" />);
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`"body{background:red;}"`);
 
-    Simulate.click(el); // should be empty
+    render(<A />);
     expect(getCSS(document).trim()).toMatchInlineSnapshot(`""`);
   });
 
   it(`should warn when children are passed as props`, () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const { render } = setup();
+    const { render } = context;
     const Component = createGlobalStyle`
       div {
         color: ${props => props.fg};
@@ -322,7 +299,7 @@ describe(`createGlobalStyle`, () => {
   });
 
   it('works with keyframes', () => {
-    const { render } = setup();
+    const { render } = context;
 
     const rotate360 = keyframes`
       from {
@@ -355,22 +332,3 @@ describe(`createGlobalStyle`, () => {
     );
   });
 });
-
-function setup() {
-  const container = document.createElement('div');
-  document.body.appendChild(container);
-
-  return {
-    container,
-    render(comp) {
-      ReactDOM.render(comp, container);
-    },
-    renderToString(comp) {
-      return ReactDOMServer.renderToString(comp);
-    },
-    cleanup() {
-      resetStyled();
-      document.body.removeChild(container);
-    },
-  };
-}
