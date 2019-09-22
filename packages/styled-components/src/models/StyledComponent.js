@@ -164,10 +164,10 @@ class StyledComponent extends Component<*> {
     propsForElement.className = Array.prototype
       .concat(
         foldedComponentIds,
-        this.props.className,
         styledComponentId,
-        this.attrs.className,
-        generatedClassName
+        generatedClassName !== styledComponentId ? generatedClassName : null,
+        this.props.className,
+        this.attrs.className
       )
       .filter(Boolean)
       .join(' ');

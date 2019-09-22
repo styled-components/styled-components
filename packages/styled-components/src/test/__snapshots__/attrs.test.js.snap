@@ -81,19 +81,19 @@ exports[`attrs pass props to the attr function 2`] = `
 
 exports[`attrs should merge className 1`] = `
 <div
-  className="sc-a meow nya b"
+  className="sc-a b meow nya"
 />
 `;
 
 exports[`attrs should merge className even if its a function 1`] = `
 <div
-  className="sc-a meow nya b"
+  className="sc-a b meow nya"
 />
 `;
 
 exports[`attrs should merge className even if its a function 2`] = `
 <div
-  className="sc-a meow purr b"
+  className="sc-a b meow purr"
 />
 `;
 
@@ -151,7 +151,7 @@ exports[`attrs should replace props with attrs 3`] = `
 
 exports[`attrs should shallow merge "style" prop + attr instead of overwriting 1`] = `
 <p
-  className="sc-b c sc-a d"
+  className="sc-a d sc-b c"
   style={
     Object {
       "color": "blue",
