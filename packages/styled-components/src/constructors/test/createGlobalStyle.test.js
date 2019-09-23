@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom';
 import ReactTestRenderer from 'react-test-renderer';
 import ReactDOMServer from 'react-dom/server';
 import { Simulate, act } from 'react-dom/test-utils';
+import * as constants from '../../constants';
 
 import {
   expectCSSMatches,
@@ -353,6 +354,53 @@ describe(`createGlobalStyle`, () => {
     expect(getCSS(document).trim()).toMatchInlineSnapshot(
       `"div{display:inline-block;-webkit-animation:a 2s linear infinite;animation:a 2s linear infinite;padding:2rem 1rem;font-size:1.2rem;}@-webkit-keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}}@keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}}"`
     );
+  });
+
+  it(`removes style tag in StyleSheetManager.target when unmounted after target detached and no other global styles`, () => {
+    // Set DISABLE_SPEEDY flag to false to force using speedy tag
+    const flag = constants.DISABLE_SPEEDY;
+    constants.DISABLE_SPEEDY = false;
+
+    // Create a clean container and window.scCGSHMRCache
+    window.scCGSHMRCache = {};
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    const styleContainer = document.createElement('div');
+    document.body.appendChild(styleContainer);
+
+    const Component = createGlobalStyle`[data-test-unmount-remove]{color:grey;} `;
+
+    class Comp extends React.Component {
+      render() {
+        return (
+          <div>
+            <StyleSheetManager target={styleContainer}>
+              <Component />
+            </StyleSheetManager>
+          </div>
+        );
+      }
+    }
+
+    ReactDOM.render(<Comp />, container);
+
+    // Check styles
+    const style = styleContainer.firstChild;
+    expect(style.sheet.cssRules[0].selectorText).toBe('[data-test-unmount-remove]');
+
+    // detach container and unmount react component
+    try {
+      document.body.removeChild(container);
+      document.body.removeChild(styleContainer);
+
+      ReactDOM.unmountComponentAtNode(container);
+    } catch(e) {
+      fail('should not throw exception');
+    }
+
+    // Reset DISABLE_SPEEDY flag
+    constants.DISABLE_SPEEDY = flag;
   });
 });
 
