@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.4.0] - 2019-09-23
+
 - Fix to use `ownerDocument` instead of global `document`, by [@yamachig](https://github.com/yamachig) (see [#2721](https://github.com/styled-components/styled-components/pull/2721))
 
 - Backport fix for SSR classname mismatches in development mode for some environments like next.js (see [#2701](https://github.com/styled-components/styled-components/pull/2701))
@@ -985,7 +987,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.3.2...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.4.0...master
+[v4.4.0]: https://github.com/styled-components/styled-components/compare/v4.3.2...v4.4.0
 [v4.3.2]: https://github.com/styled-components/styled-components/compare/v4.3.1...v4.3.2
 [v4.3.1]: https://github.com/styled-components/styled-components/compare/v4.3.0...v4.3.1
 [v4.3.0]: https://github.com/styled-components/styled-components/compare/v4.2.1...v4.3.0
