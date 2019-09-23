@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom';
 import ReactTestRenderer from 'react-test-renderer';
 import ReactDOMServer from 'react-dom/server';
 import { Simulate, act } from 'react-dom/test-utils';
+import * as constants from '../../constants';
 
 import {
   expectCSSMatches,
