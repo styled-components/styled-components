@@ -1,9 +1,10 @@
-
+// @flow
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
-import ThemeProvider, { useTheme } from '../ThemeProvider';
+import ThemeProvider from '../../models/ThemeProvider';
 import withTheme from '../../hoc/withTheme';
+import useTheme from '../useTheme';
 import { resetStyled } from '../../test/utils';
 
 let styled;
