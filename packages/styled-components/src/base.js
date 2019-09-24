@@ -18,6 +18,9 @@ import ThemeProvider, { ThemeContext, ThemeConsumer } from './models/ThemeProvid
 /* Import Higher Order Components */
 import withTheme from './hoc/withTheme';
 
+/* Import hooks */
+import useTheme from './hooks/useTheme';
+
 /* Warning if you've imported this file on React Native */
 if (
   process.env.NODE_ENV !== 'production' &&
@@ -63,5 +66,6 @@ export {
   ThemeConsumer,
   ThemeContext,
   ThemeProvider,
+  useTheme,
   withTheme,
 };

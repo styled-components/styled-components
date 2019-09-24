@@ -37,11 +37,6 @@ function useMergedTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
   return outerTheme ? { ...outerTheme, ...theme } : theme;
 }
 
-export const useTheme = () => {
-  const themeContext = useContext(ThemeContext);
-  return themeContext;
-}
-
 /**
  * Provide a theme to an entire react component tree via context
  */
