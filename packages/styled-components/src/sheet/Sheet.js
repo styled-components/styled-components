@@ -1,9 +1,9 @@
 // @flow
 import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
 import createStylisInstance from '../utils/stylis';
-import type { GroupedTag, Sheet, SheetOptions } from './types';
+import type { HoistedTag, Sheet, SheetOptions } from './types';
 import { makeTag } from './Tag';
-import { makeGroupedTag } from './GroupedTag';
+import { DefaultHoistedTag } from './HoistedTag';
 import { getGroupForId } from './GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from './Rehydration';
 
@@ -27,7 +27,7 @@ export default class StyleSheet implements Sheet {
 
   options: SheetOptions;
 
-  tag: void | GroupedTag;
+  tag: void | HoistedTag;
 
   /** Register a group ID to give it an index */
   static registerId(id: string): number {
@@ -54,9 +54,9 @@ export default class StyleSheet implements Sheet {
     return new StyleSheet({ ...this.options, ...options });
   }
 
-  /** Lazily initialises a GroupedTag for when it's actually needed */
-  getTag(): GroupedTag {
-    return this.tag || (this.tag = makeGroupedTag(makeTag(this.options)));
+  /** Lazily initialises a HoistingGroupedTag for when it's actually needed */
+  getTag(): HoistedTag {
+    return this.tag || (this.tag = new DefaultHoistedTag(makeTag(this.options)));
   }
 
   /** Check whether a name is known for caching */

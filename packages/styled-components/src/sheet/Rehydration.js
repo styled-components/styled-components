@@ -9,20 +9,20 @@ const PLAIN_RULE_TYPE = 1;
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\]`);
 
+// TODO: Maybe operate on GroupedTag, then add method, then also implement on HoistingGroupedTag
 export const outputSheet = (sheet: Sheet) => {
   const tag = sheet.getTag();
-  const { length } = tag;
+  const { hoistedTag, normalTag, length } = tag;
 
-  let css = '';
+  let hoistedOutput = '';
+  let normalOutput = '';
+
   for (let group = 0; group < length; group++) {
     const id = getIdForGroup(group);
     if (id === undefined) continue;
 
     const names = sheet.names.get(id);
-    const rules = tag.getGroup(group);
-    if (names === undefined || rules.length === 0) continue;
-
-    const selector = `${SC_ATTR}.g${group}[id="${id}"]`;
+    if (names === undefined) continue;
 
     let content = '';
     if (names !== undefined) {
@@ -33,12 +33,22 @@ export const outputSheet = (sheet: Sheet) => {
       });
     }
 
-    // NOTE: It's easier to collect rules and have the marker
-    // after the actual rules to simplify the rehydration
-    css += `${rules}${selector}{content:"${content}"}\n`;
+    const selector = `${SC_ATTR}.g${group}[id="${id}"]`;
+    const hoistedRules = hoistedTag.getGroup(group);
+    if (hoistedRules.length > 0) {
+      const body = content ? `content:"${content}"` : '';
+      hoistedOutput += `${hoistedRules}${selector}{${body}}\n`;
+      content = ''; // Prevent names from being added twice
+    }
+
+    const normalRules = normalTag.getGroup(group);
+    if (normalRules.length > 0) {
+      const body = content ? `content:"${content}"` : '';
+      normalOutput += `${normalRules}${selector}{${body}}\n`;
+    }
   }
 
-  return css;
+  return hoistedOutput + normalOutput;
 };
 
 const rehydrateNamesFromContent = (sheet: Sheet, id: string, content: string) => {
@@ -74,8 +84,12 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
         if (group !== 0) {
           // Rehydrate componentId to group index mapping
           setGroupForId(id, group);
+
           // Rehydrate names and rules
-          rehydrateNamesFromContent(sheet, id, content);
+          if (content) {
+            rehydrateNamesFromContent(sheet, id, content);
+          }
+
           sheet.getTag().insertRules(group, rules);
         }
 

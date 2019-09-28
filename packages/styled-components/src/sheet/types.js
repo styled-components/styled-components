@@ -4,7 +4,6 @@ import { type Stringifier } from '../utils/stylis';
 
 /** CSSStyleSheet-like Tag abstraction for CSS rules */
 export interface Tag {
-  constructor(target?: HTMLElement): void;
   insertRule(index: number, rule: string): boolean;
   deleteRule(index: number): void;
   getRule(index: number): string;
@@ -20,6 +19,11 @@ export interface GroupedTag {
   length: number;
 }
 
+export interface HoistedTag extends GroupedTag {
+  hoistedTag: GroupedTag;
+  normalTag: GroupedTag;
+}
+
 export type SheetOptions = {
   isServer: boolean,
   stringifier: Stringifier,
@@ -31,7 +35,7 @@ export interface Sheet {
   clearNames(id: string): void;
   clearRules(id: string): void;
   clearTag(): void;
-  getTag(): GroupedTag;
+  getTag(): HoistedTag;
   hasNameForId(id: string, name: string): boolean;
   insertRules(id: string, name: string, rules: string[]): void;
   options: SheetOptions;
