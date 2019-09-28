@@ -7,7 +7,7 @@ let tag;
 
 beforeEach(() => {
   sheet = new StyleSheet({ isServer: true });
-  tag = sheet.getTag().tag;
+  tag = sheet.getTag().normalTag.tag;
 });
 
 it('inserts rules correctly', () => {

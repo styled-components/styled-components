@@ -5,15 +5,6 @@ import type { GroupedTag, Tag } from './types';
 
 const BASE_SIZE = 1 << 8;
 
-const indexOfGroup = (groupSizes: Uint32Array, group: number): number => {
-  let index = 0;
-  for (let i = 0; i < group; i++) {
-    index += groupSizes[i];
-  }
-
-  return index;
-};
-
 export class DefaultGroupedTag implements GroupedTag {
   groupSizes: Uint32Array;
 
@@ -25,6 +16,15 @@ export class DefaultGroupedTag implements GroupedTag {
     this.groupSizes = new Uint32Array(BASE_SIZE);
     this.length = BASE_SIZE;
     this.tag = tag;
+  }
+
+  indexOfGroup(group: number): number {
+    let index = 0;
+    for (let i = 0; i < group; i++) {
+      index += this.groupSizes[i];
+    }
+
+    return index;
   }
 
   insertRules(group: number, rules: string[]): void {
@@ -42,7 +42,7 @@ export class DefaultGroupedTag implements GroupedTag {
       }
     }
 
-    const startIndex = indexOfGroup(this.groupSizes, group + 1);
+    const startIndex = this.indexOfGroup(group + 1);
     for (let i = 0, l = rules.length; i < l; i++) {
       if (this.tag.insertRule(startIndex + i, rules[i])) {
         this.groupSizes[group]++;
@@ -53,7 +53,7 @@ export class DefaultGroupedTag implements GroupedTag {
   clearGroup(group: number): void {
     if (group < this.length) {
       const length = this.groupSizes[group];
-      const startIndex = indexOfGroup(this.groupSizes, group);
+      const startIndex = this.indexOfGroup(group);
       const endIndex = startIndex + length;
 
       this.groupSizes[group] = 0;
@@ -71,7 +71,7 @@ export class DefaultGroupedTag implements GroupedTag {
     }
 
     const length = this.groupSizes[group];
-    const startIndex = indexOfGroup(this.groupSizes, group);
+    const startIndex = this.indexOfGroup(group);
     const endIndex = startIndex + length;
 
     for (let i = startIndex; i < endIndex; i++) {

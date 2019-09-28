@@ -68,7 +68,7 @@ describe('rehydrateSheet', () => {
     expect(sheet.hasNameForId('empty', 'empty')).toBe(false);
     expect(sheet.hasNameForId('idB', 'nameB')).toBe(true);
     // Populates the underlying tag
-    expect(sheet.getTag().tag.length).toBe(2);
+    expect(sheet.getTag().normalTag.tag.length).toBe(2);
     expect(sheet.getTag().getGroup(11)).toBe('.a {}\n');
     expect(sheet.getTag().getGroup(22)).toBe('.b {}\n');
     expect(sheet.getTag().getGroup(33)).toBe('');
@@ -91,7 +91,7 @@ describe('rehydrateSheet', () => {
     rehydrateSheet(sheet);
     expect(GroupIDAllocator.getIdForGroup(11)).toBe(undefined);
     expect(sheet.hasNameForId('idA', 'nameA')).toBe(false);
-    expect(sheet.getTag().tag.length).toBe(0);
+    expect(sheet.getTag().normalTag.tag.length).toBe(0);
     expect(styleHead.parentElement).toBe(document.head);
   });
 });

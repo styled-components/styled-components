@@ -1,14 +1,14 @@
 // @flow
 
 import { VirtualTag } from '../Tag';
-import { makeGroupedTag } from '../GroupedTag';
+import { DefaultGroupedTag } from '../GroupedTag';
 
 let tag;
 let groupedTag;
 
 beforeEach(() => {
   tag = new VirtualTag();
-  groupedTag = makeGroupedTag(tag);
+  groupedTag = new DefaultGroupedTag(tag);
 });
 
 it('inserts and retrieves rules by groups correctly', () => {

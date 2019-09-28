@@ -337,7 +337,7 @@ describe('StyleSheetManager', () => {
       </StyleSheetManager>
     );
 
-    expect(outerSheet.getTag().tag.getRule(0)).toMatchInlineSnapshot(`".c {padding-left: 5px;}"`);
+    expect(outerSheet.getTag().normalTag.tag.getRule(0)).toMatchInlineSnapshot(`".c {padding-left: 5px;}"`);
 
     expect(document.head.innerHTML).toMatchInlineSnapshot(
       `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\"></style><style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.d{background:red;}</style>"`
