@@ -4,105 +4,6 @@ import { VirtualTag } from '../Tag';
 import { WindowedTag } from '../WindowedTag';
 import { DefaultGroupedTag } from '../GroupedTag';
 
-describe('WindowedTag acts like a tag', () => {
-  let virtualTag;
-  let tag;
-  beforeEach(() => {
-    virtualTag = new VirtualTag();
-    tag = new WindowedTag(virtualTag);
-  });
-
-  /*
-   * Copy/Pasted from Tag.test.js since it requires different setup than the tags tested there
-   */
-  it('inserts and retrieves rules at indices', () => {
-    expect(tag.insertRule(0, '.b {}')).toBe(true);
-    expect(tag.insertRule(0, '.a {}')).toBe(true);
-    expect(tag.insertRule(2, '.c {}')).toBe(true);
-    expect(tag.insertRule(99, '.x {}')).toBe(false);
-    expect(tag.getRule(0)).toBe('.a {}');
-    expect(tag.getRule(1)).toBe('.b {}');
-    expect(tag.getRule(2)).toBe('.c {}');
-    expect(tag.getRule(3)).toBe('');
-    expect(tag.length).toBe(3);
-  });
-
-  it('deletes rules that have been inserted', () => {
-    expect(tag.insertRule(0, '.b {}')).toBe(true);
-    expect(tag.length).toBe(1);
-    tag.deleteRule(0);
-    expect(tag.length).toBe(0);
-    expect(tag.getRule(0)).toBe('');
-  });
-});
-
-describe('WindowedTag used in a GroupedTag', () => {
-  /*
-   * Tests copied from GroupedTag.test.js to allow for using a WindowedTag
-   */
-  let tag;
-  let groupedTag;
-  beforeEach(() => {
-    tag = new WindowedTag(new VirtualTag());
-    groupedTag = new DefaultGroupedTag(tag);
-  });
-
-  it('inserts and retrieves rules by groups correctly', () => {
-    groupedTag.insertRules(2, ['.g2-a {}', '.g2-b {}']);
-
-    // Insert out of order into the right group
-    groupedTag.insertRules(1, ['.g1-a {}', '.g1-b {}']);
-
-    groupedTag.insertRules(2, ['.g2-c {}', '.g2-d {}']);
-
-    expect(groupedTag.length).toBeGreaterThan(2);
-    expect(tag.length).toBe(6);
-
-    // Expect groups to contain inserted rules
-    expect(groupedTag.getGroup(0)).toBe('');
-    expect(groupedTag.getGroup(1)).toBe('.g1-a {}\n.g1-b {}\n');
-    expect(groupedTag.getGroup(2)).toBe('.g2-a {}\n.g2-b {}\n.g2-c {}\n.g2-d {}\n');
-
-    // Check some rules in the tag as well
-    expect(tag.getRule(3)).toBe('.g2-b {}');
-    expect(tag.getRule(0)).toBe('.g1-a {}');
-
-    // And the indices for sizes: [0, 2, 4, 0, ...]
-    expect(groupedTag.indexOfGroup(0)).toBe(0);
-    expect(groupedTag.indexOfGroup(1)).toBe(0);
-    expect(groupedTag.indexOfGroup(2)).toBe(2);
-    expect(groupedTag.indexOfGroup(3)).toBe(6);
-    expect(groupedTag.indexOfGroup(4)).toBe(6);
-  });
-
-  it('inserts and deletes groups correctly', () => {
-    groupedTag.insertRules(1, ['.g1-a {}']);
-    expect(tag.length).toBe(1);
-    expect(groupedTag.getGroup(1)).not.toBe('');
-    groupedTag.clearGroup(1);
-    expect(tag.length).toBe(0);
-    expect(groupedTag.getGroup(1)).toBe('');
-
-    // Noop test for non-existent group
-    groupedTag.clearGroup(0);
-    expect(tag.length).toBe(0);
-  });
-
-  it('does supports large group numbers', () => {
-    const baseSize = groupedTag.length;
-    const group = 1 << 10;
-    groupedTag.insertRules(group, ['.test {}']);
-
-    // We expect the internal buffer to have grown beyond its initial size
-    expect(groupedTag.length).toBeGreaterThan(baseSize);
-
-    expect(groupedTag.length).toBeGreaterThan(group);
-    expect(tag.length).toBe(1);
-    expect(groupedTag.indexOfGroup(group)).toBe(0);
-    expect(groupedTag.getGroup(group)).toBe('.test {}\n');
-  });
-});
-
 describe('WindowedTag uses a sliding window', () => {
   beforeEach(() => {});
 
@@ -177,7 +78,6 @@ describe('WindowedTag uses a sliding window', () => {
     // The current implementation allows windows to "bleed" if you request an offset that lands in another window
     expect(windowedTag1.getRule(3)).toBe('.a-second {}');
 
-    // Insertions into the windowedTag2
     expect(windowedTag2.getRule(0)).toBe('.a-second {}');
     expect(windowedTag2.getRule(1)).toBe('.b-second {}');
     expect(windowedTag2.getRule(2)).toBe('.c-second {}');
@@ -188,5 +88,87 @@ describe('WindowedTag uses a sliding window', () => {
     expect(virtualTag.getRule(2)).toBe('.c {}');
     expect(virtualTag.getRule(5)).toBe('.c-second {}');
     expect(virtualTag.length).toBe(6);
+  });
+
+  it('deletes rules that have been inserted one window at a time', () => {
+    const virtualTag = new VirtualTag();
+    const windowedTag1 = new WindowedTag(virtualTag);
+    const windowedTag2 = new WindowedTag(virtualTag);
+    expect(windowedTag1.insertRule(0, '.b {}')).toBe(true);
+    expect(windowedTag1.length).toBe(1);
+    expect(virtualTag.length).toBe(1);
+    expect(windowedTag2.insertRule(0, '.b-second {}')).toBe(true);
+    expect(windowedTag2.length).toBe(1);
+    expect(virtualTag.length).toBe(2);
+    windowedTag1.deleteRule(0);
+    expect(virtualTag.length).toBe(1);
+    expect(virtualTag.getRule(0)).toBe('.b-second {}');
+    windowedTag2.deleteRule(0);
+    expect(virtualTag.length).toBe(0);
+    expect(virtualTag.getRule(0)).toBe('');
+  });
+
+  it('handles interleaving additions and deletes', () => {
+    const virtualTag = new VirtualTag();
+    const windowedTag1 = new WindowedTag(virtualTag);
+    const windowedTag2 = new WindowedTag(virtualTag);
+    expect(windowedTag1.insertRule(0, '.b {}')).toBe(true);
+    expect(windowedTag2.insertRule(0, '.b-second {}')).toBe(true);
+    expect(windowedTag1.insertRule(0, '.a {}')).toBe(true);
+    expect(windowedTag1.length).toBe(2);
+    expect(windowedTag2.length).toBe(1);
+    // Check some rules in the tag
+    expect(virtualTag.getRule(2)).toBe('.b-second {}');
+    expect(virtualTag.length).toBe(3);
+
+    // Delete the second rule added to the first window
+    windowedTag1.deleteRule(1); // This should delete the '.b' rule since '.a' was put in before it
+    expect(windowedTag1.length).toBe(1);
+    expect(windowedTag1.getRule(0)).toBe('.a {}');
+    expect(windowedTag2.length).toBe(1);
+    expect(windowedTag2.getRule(0)).toBe('.b-second {}');
+
+    // Delete the first rule added to the first window
+    windowedTag1.deleteRule(0);
+    expect(windowedTag1.length).toBe(0);
+    //We still bleed, and that should be okay
+    expect(windowedTag1.getRule(0)).toBe('.b-second {}');
+    expect(windowedTag2.length).toBe(1);
+    expect(windowedTag2.getRule(0)).toBe('.b-second {}');
+
+    // Add some more rules to the two tags
+    expect(windowedTag2.insertRule(0, '.a-second {}')).toBe(true);
+    // Note that this is inserted at 0 instead of 2 like the earlier test since we deleted rules
+    // If you inserted at a number greater than offset + length you'd have the windows intermingling rules
+    expect(windowedTag1.insertRule(0, '.c {}')).toBe(true);
+    expect(windowedTag2.insertRule(2, '.c-second {}')).toBe(true);
+
+    expect(windowedTag1.getRule(0)).toBe('.c {}');
+    expect(windowedTag1.length).toBe(1);
+
+    expect(windowedTag2.getRule(0)).toBe('.a-second {}');
+    expect(windowedTag2.getRule(1)).toBe('.b-second {}');
+    expect(windowedTag2.getRule(2)).toBe('.c-second {}');
+    expect(windowedTag2.getRule(3)).toBe('');
+    expect(windowedTag2.length).toBe(3);
+
+    // Check some rules in the tag
+    expect(virtualTag.getRule(2)).toBe('.b-second {}');
+    expect(virtualTag.getRule(5)).toBe('');
+    expect(virtualTag.length).toBe(4);
+
+    // Delete the middle '.b-second' rule
+    windowedTag2.deleteRule(1);
+    // Validate the virtualTag and both windowedTags look right
+    expect(virtualTag.length).toBe(3);
+    expect(virtualTag.getRule(0)).toBe('.c {}');
+    expect(virtualTag.getRule(1)).toBe('.a-second {}');
+    expect(virtualTag.getRule(2)).toBe('.c-second {}');
+    expect(virtualTag.getRule(3)).toBe('');
+    expect(windowedTag1.getRule(0)).toBe('.c {}');
+    expect(windowedTag1.length).toBe(1);
+    expect(windowedTag2.getRule(0)).toBe('.a-second {}');
+    expect(windowedTag2.getRule(1)).toBe('.c-second {}');
+    expect(windowedTag2.length).toBe(2);
   });
 });
