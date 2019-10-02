@@ -11,6 +11,9 @@ export class DefaultHoistedTag implements HoistedTag {
 
   normalTag: GroupedTag;
 
+  /*
+  The number of Groups in the tag
+  */
   length: number;
 
   constructor(tag: Tag) {
@@ -34,6 +37,8 @@ export class DefaultHoistedTag implements HoistedTag {
 
     this.normalTag.insertRules(group, normalRules);
     this.hoistedTag.insertRules(group, hoistedRules);
+    // We just use the normalTag length
+    // since the normalTag and hoistedTag have the same groups
     this.length = this.normalTag.length;
   }
 
