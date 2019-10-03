@@ -136,6 +136,7 @@ class StyledComponent extends Component<*> {
 
     const elementToBeCreated = this.props.as || this.attrs.as || target;
     const isTargetTag = isTag(elementToBeCreated);
+    const { shouldForwardProps } = this.props;
 
     const propsForElement = {};
     const computedProps = { ...this.props, ...this.attrs };
@@ -147,11 +148,11 @@ class StyledComponent extends Component<*> {
         this.warnInnerRef(displayName);
       }
 
-      if (key === 'forwardedComponent' || key === 'as') {
+      if (key === 'forwardedComponent' || key === 'as' || key === 'shouldForwardProps') {
         continue;
       } else if (key === 'forwardedRef') propsForElement.ref = computedProps[key];
       else if (key === 'forwardedAs') propsForElement.as = computedProps[key];
-      else if (!isTargetTag || validAttr(key)) {
+      else if (!isTargetTag || shouldForwardProps || validAttr(key)) {
         // Don't pass through non HTML tags through to HTML elements
         propsForElement[key] = computedProps[key];
       }
