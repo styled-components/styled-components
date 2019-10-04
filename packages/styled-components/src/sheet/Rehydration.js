@@ -6,18 +6,19 @@ import { getSheet } from './dom';
 import type { Sheet } from './types';
 
 const PLAIN_RULE_TYPE = 1;
+const IMPORT_RULE_TYPE = 3;
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\]`);
 
 // TODO: Maybe operate on GroupedTag, then add method, then also implement on HoistingGroupedTag
 export const outputSheet = (sheet: Sheet) => {
-  const tag = sheet.getTag();
-  const { hoistedTag, normalTag, length } = tag;
+  const hoistedTag = sheet.getTag();
+  const { groups } = hoistedTag;
 
   let hoistedOutput = '';
   let normalOutput = '';
 
-  for (let group = 0; group < length; group++) {
+  for (let group = 0; group < groups; group++) {
     const id = getIdForGroup(group);
     if (id === undefined) continue;
 
@@ -34,20 +35,17 @@ export const outputSheet = (sheet: Sheet) => {
     }
 
     const selector = `${SC_ATTR}.g${group}[id="${id}"]`;
-    const hoistedRules = hoistedTag.getGroup(group);
-    if (hoistedRules.length > 0) {
+    const { hoisted, normal } = hoistedTag.getHoistedAndNormalGroups(group);
+    if (hoisted.length > 0) {
+      hoistedOutput += `${hoisted}`;
+    }
+
+    if (normal.length > 0) {
       const body = content ? `content:"${content}"` : '';
-      hoistedOutput += `${hoistedRules}${selector}{${body}}\n`;
+      normalOutput += `${normal}${selector}{${body}}\n`;
       content = ''; // Prevent names from being added twice
     }
-
-    const normalRules = normalTag.getGroup(group);
-    if (normalRules.length > 0) {
-      const body = content ? `content:"${content}"` : '';
-      normalOutput += `${normalRules}${selector}{${body}}\n`;
-    }
   }
-
   return hoistedOutput + normalOutput;
 };
 
@@ -67,9 +65,11 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
 
   for (let i = 0, l = cssRules.length; i < l; i++) {
     const cssRule = (cssRules[i]: any);
-
     if (typeof cssRule.cssText !== 'string') {
       // Avoid IE11 quirk where cssText is inaccessible on some invalid rules
+      continue;
+    } else if (cssRule.type === IMPORT_RULE_TYPE) {
+      // Skip trying to keep track of import rules and let them get added later
       continue;
     } else if (cssRule.type !== PLAIN_RULE_TYPE) {
       rules.push(cssRule.cssText);
@@ -103,7 +103,7 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
 
 export const rehydrateSheet = (sheet: Sheet) => {
   let targetDocument = document;
-  if(sheet.options.target) targetDocument = sheet.options.target.ownerDocument;
+  if (sheet.options.target) targetDocument = sheet.options.target.ownerDocument;
   const nodes = targetDocument.querySelectorAll(SELECTOR);
 
   for (let i = 0, l = nodes.length; i < l; i++) {

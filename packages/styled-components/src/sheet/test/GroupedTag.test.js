@@ -18,7 +18,7 @@ const describeGroupedTag = makeTagAndGroupedTag => {
 
     groupedTag.insertRules(2, ['.g2-c {}', '.g2-d {}']);
 
-    expect(groupedTag.length).toBeGreaterThan(2);
+    expect(groupedTag.groups).toBeGreaterThan(2);
     expect(tag.length).toBe(6);
 
     // Expect groups to contain inserted rules
@@ -52,14 +52,14 @@ const describeGroupedTag = makeTagAndGroupedTag => {
   });
 
   it('does supports large group numbers', () => {
-    const baseSize = groupedTag.length;
+    const baseSize = groupedTag.groups;
     const group = 1 << 10;
     groupedTag.insertRules(group, ['.test {}']);
 
     // We expect the internal buffer to have grown beyond its initial size
-    expect(groupedTag.length).toBeGreaterThan(baseSize);
+    expect(groupedTag.groups).toBeGreaterThan(baseSize);
 
-    expect(groupedTag.length).toBeGreaterThan(group);
+    expect(groupedTag.groups).toBeGreaterThan(group);
     expect(tag.length).toBe(1);
     expect(groupedTag.indexOfGroup(group)).toBe(0);
     expect(groupedTag.getGroup(group)).toBe('.test {}\n');
