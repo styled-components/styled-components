@@ -26,9 +26,15 @@ describe('Works like a groupedTag if there are no hoisted rules', () => {
     expect(tag.length).toBe(6);
 
     // Expect groups to contain inserted rules
-    expect(hoistingTag.getGroup(0)).toBe('');
-    expect(hoistingTag.getGroup(1)).toBe('.g1-a {}\n.g1-b {}\n');
-    expect(hoistingTag.getGroup(2)).toBe('.g2-a {}\n.g2-b {}\n' + '.g2-c {}\n.g2-d {}\n');
+    expect(hoistingTag.getHoistedAndNormalGroups(0)).toEqual({ hoisted: '', normal: '' });
+    expect(hoistingTag.getHoistedAndNormalGroups(1)).toEqual({
+      hoisted: '',
+      normal: '.g1-a {}\n.g1-b {}\n',
+    });
+    expect(hoistingTag.getHoistedAndNormalGroups(2)).toEqual({
+      hoisted: '',
+      normal: '.g2-a {}\n.g2-b {}\n' + '.g2-c {}\n.g2-d {}\n',
+    });
 
     // Check some rules in the tag as well
     expect(tag.getRule(3)).toBe('.g2-b {}');
@@ -50,10 +56,10 @@ describe('Works like a groupedTag if there are no hoisted rules', () => {
   it('inserts and deletes groups correctly', () => {
     hoistingTag.insertRules(1, ['.g1-a {}']);
     expect(tag.length).toBe(1);
-    expect(hoistingTag.getGroup(1)).not.toBe('');
+    expect(hoistingTag.getHoistedAndNormalGroups(1).normal).not.toBe('');
     hoistingTag.clearGroup(1);
     expect(tag.length).toBe(0);
-    expect(hoistingTag.getGroup(1)).toBe('');
+    expect(hoistingTag.getHoistedAndNormalGroups(1).normal).toBe('');
 
     // Noop test for non-existent group
     hoistingTag.clearGroup(0);
@@ -71,7 +77,7 @@ describe('Works like a groupedTag if there are no hoisted rules', () => {
     expect(hoistingTag.groups).toBeGreaterThan(group);
     expect(tag.length).toBe(1);
     expect(hoistingTag.normalTag.indexOfGroup(group)).toBe(0);
-    expect(hoistingTag.getGroup(group)).toBe('.test {}\n');
+    expect(hoistingTag.getHoistedAndNormalGroups(group).normal).toBe('.test {}\n');
   });
 });
 
@@ -95,11 +101,12 @@ describe('Hoisting @import rules', () => {
     expect(tag.length).toBe(4);
 
     // Expect groups to contain inserted rules
-    expect(hoistingTag.getGroup(0)).toBe('');
-    expect(hoistingTag.getGroup(1)).toBe('');
-    expect(hoistingTag.getGroup(2)).toBe(
-      '@import url("");\n' + '.g2-a {}\n.g2-b {}\n@font-face { font-family: "test", src: url("")}\n'
-    );
+    expect(hoistingTag.getHoistedAndNormalGroups(0)).toEqual({ hoisted: '', normal: '' });
+    expect(hoistingTag.getHoistedAndNormalGroups(1)).toEqual({ hoisted: '', normal: '' });
+    expect(hoistingTag.getHoistedAndNormalGroups(2)).toEqual({
+      hoisted: '@import url("");\n',
+      normal: '.g2-a {}\n.g2-b {}\n@font-face { font-family: "test", src: url("")}\n',
+    });
 
     // Check some rules in the tag as well
     expect(tag.getRule(2)).toBe('.g2-b {}');
@@ -141,18 +148,18 @@ describe('Hoisting @import rules', () => {
     expect(tag.length).toBe(12);
 
     // Expect groups to contain inserted hoisted & normal rules
-    expect(hoistingTag.getGroup(0)).toBe(
-      '@import url("0");\n' +
-        '.g0-a {}\n.g0-b {}\n@font-face { font-family: "test", src: url("0")}\n'
-    );
-    expect(hoistingTag.getGroup(1)).toBe(
-      '@import url("1");\n' +
-        '.g1-a {}\n.g1-b {}\n@font-face { font-family: "test", src: url("1")}\n'
-    );
-    expect(hoistingTag.getGroup(2)).toBe(
-      '@import url("2");\n' +
-        '.g2-a {}\n.g2-b {}\n@font-face { font-family: "test", src: url("2")}\n'
-    );
+    expect(hoistingTag.getHoistedAndNormalGroups(0)).toEqual({
+      hoisted: '@import url("0");\n',
+      normal: '.g0-a {}\n.g0-b {}\n@font-face { font-family: "test", src: url("0")}\n',
+    });
+    expect(hoistingTag.getHoistedAndNormalGroups(1)).toEqual({
+      hoisted: '@import url("1");\n',
+      normal: '.g1-a {}\n.g1-b {}\n@font-face { font-family: "test", src: url("1")}\n',
+    });
+    expect(hoistingTag.getHoistedAndNormalGroups(2)).toEqual({
+      hoisted: '@import url("2");\n',
+      normal: '.g2-a {}\n.g2-b {}\n@font-face { font-family: "test", src: url("2")}\n',
+    });
 
     // Expect tag to have hoisted rules in right order then normal rules
 

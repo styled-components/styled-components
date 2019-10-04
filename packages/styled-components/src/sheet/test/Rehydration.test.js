@@ -99,9 +99,15 @@ describe('rehydrateSheet', () => {
     expect(sheet.hasNameForId('idB', 'nameB')).toBe(true);
     // Populates the underlying tag
     expect(sheet.getTag().normalTag.tag.length).toBe(2);
-    expect(sheet.getTag().getGroup(11)).toBe('.a {}\n');
-    expect(sheet.getTag().getGroup(22)).toBe('.b {}\n');
-    expect(sheet.getTag().getGroup(33)).toBe('');
+    expect(sheet.getTag().getHoistedAndNormalGroups(11)).toEqual({
+      hoisted: '',
+      normal: '.a {}\n',
+    });
+    expect(sheet.getTag().getHoistedAndNormalGroups(22)).toEqual({
+      hoisted: '',
+      normal: '.b {}\n',
+    });
+    expect(sheet.getTag().getHoistedAndNormalGroups(33)).toEqual({ hoisted: '', normal: '' });
     // Removes the old tags
     expect(styleHead.parentElement).toBe(null);
     expect(styleBody.parentElement).toBe(null);
