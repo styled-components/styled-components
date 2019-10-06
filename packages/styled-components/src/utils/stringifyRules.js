@@ -90,7 +90,10 @@ export default function stringifyRules(
   prefix: ?string,
   componentId: string = '&'
 ): Array<string> {
-  const flatCSS = rules.join('').replace(COMMENT_REGEX, ''); // replace JS comments
+  let flatCSS = rules.join('').replace(COMMENT_REGEX, ''); // replace JS comments
+  if (flatCSS.indexOf('/*') !== -1 && flatCSS.split('/*').length !== flatCSS.split('*/').length) {
+    flatCSS += '*/'; // simplest / fastest way to not cause crashes due to unterminated css comments
+  }
 
   const cssStr = selector && prefix ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS;
 

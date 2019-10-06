@@ -40,7 +40,7 @@ describe('with styles', () => {
     expectCSSMatches('.b { color:blue; background:red; }');
   });
 
-  it('amperstand should refer to the static class when making a self-referential combo selector', () => {
+  it('ampersand should refer to the static class when making a self-referential combo selector', () => {
     const Comp = styled.div`
       background: red;
       color: ${p => p.color};
@@ -314,5 +314,19 @@ describe('with styles', () => {
 
     expect(masterCss).toEqual(inspectTag(cloneA));
     expect(masterCss).toEqual(inspectTag(cloneB));
+  });
+
+  it('should strip unterminated css comments in the styles', () => {
+    const Comp = styled.div`
+      /* unterminated comment
+    `;
+    TestRenderer.create(<Comp />);
+    expectCSSMatches(``);
+    const Comp2 = styled.div`
+      color: red
+      /* unterminated comment
+    `;
+    TestRenderer.create(<Comp2 />);
+    expectCSSMatches('.d{ color:red; } ');
   });
 });
