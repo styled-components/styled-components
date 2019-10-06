@@ -323,10 +323,16 @@ describe('with styles', () => {
     TestRenderer.create(<Comp />);
     expectCSSMatches(``);
     const Comp2 = styled.div`
-      color: red
       /* unterminated comment
+      color: red
     `;
     TestRenderer.create(<Comp2 />);
-    expectCSSMatches('.d{ color:red; } ');
+    expectCSSMatches('');
+    const Comp3 = styled.div`
+        color: red
+        /* unterminated comment
+      `;
+    TestRenderer.create(<Comp3 />);
+    expectCSSMatches('.f{ color:red; } ');
   });
 });
