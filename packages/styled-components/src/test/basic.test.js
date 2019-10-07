@@ -389,6 +389,17 @@ Object {
 
       expect(spy).not.toHaveBeenCalled();
     });
+
+    it('Should allow selection by data props', () => {
+      const Comp = styled.div`
+        color: red;
+      `;
+
+      const output = TestRenderer.create(<Comp data-cy="custom-data" />);
+      const selection = output.root.findAllByProps({ 'data-cy': 'custom-data' });
+      
+      expect(selection.length).toEqual(1);
+    });
   });
 
   describe('warnings', () => {
