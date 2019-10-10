@@ -42,4 +42,3 @@ https://codesandbox.io/s/styled-components-base-wd3de
 ## Expected Behavior
 
 ## Actual Behavior
-
