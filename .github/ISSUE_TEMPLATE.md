@@ -35,8 +35,7 @@ Please keep it product-centric.
 ## Reproduction
 
 <!-- If you can't reproduce your bug, make sure to add details on how you've set up your project -->
-https://www.webpackbin.com/bins/-KeeZCr0xKfutOfOujxN
-https://codesandbox.io/s/rkmNRByE4
+https://codesandbox.io/s/styled-components-base-wd3de
 
 ## Steps to reproduce
 
