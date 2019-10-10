@@ -35,7 +35,7 @@ Please keep it product-centric.
 ## Reproduction
 
 <!-- If you can't reproduce your bug, make sure to add details on how you've set up your project -->
-https://codesandbox.io/s/styled-components-base-wd3de
+https://codesandbox.io/s/styled-components-base-gc367
 
 ## Steps to reproduce
 
