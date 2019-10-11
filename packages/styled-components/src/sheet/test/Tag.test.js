@@ -1,10 +1,11 @@
 // @flow
 
 import { type Tag, CSSOMTag, TextTag, VirtualTag } from '../Tag';
+import { WindowedTag } from '../WindowedTag';
 
-const describeTag = (TagClass: Class<Tag>) => {
+const describeTag = (TagClass: Class<Tag>, TagToWindow: Class<Tag>) => {
   it('inserts and retrieves rules at indices', () => {
-    const tag = new TagClass();
+    const tag = TagToWindow ? new TagClass(new TagToWindow()) : new TagClass();
     expect(tag.insertRule(0, '.b {}')).toBe(true);
     expect(tag.insertRule(0, '.a {}')).toBe(true);
     expect(tag.insertRule(2, '.c {}')).toBe(true);
@@ -17,7 +18,7 @@ const describeTag = (TagClass: Class<Tag>) => {
   });
 
   it('deletes rules that have been inserted', () => {
-    const tag = new TagClass();
+    const tag = TagToWindow ? new TagClass(new TagToWindow()) : new TagClass();
     expect(tag.insertRule(0, '.b {}')).toBe(true);
     expect(tag.length).toBe(1);
     tag.deleteRule(0);
@@ -43,4 +44,10 @@ describe('TextTag', () => {
 
 describe('VirtualTag', () => {
   describeTag(VirtualTag);
+});
+
+describe('WindowedTag acts like a tag', () => {
+  describeTag(WindowedTag, CSSOMTag);
+  describeTag(WindowedTag, TextTag);
+  describeTag(WindowedTag, VirtualTag);
 });

@@ -16,12 +16,16 @@ export interface GroupedTag {
   insertRules(group: number, rules: string[]): void;
   clearGroup(group: number): void;
   getGroup(group: number): string;
-  length: number;
+  groups: number;
 }
 
-export interface HoistedTag extends GroupedTag {
-  hoistedTag: GroupedTag;
-  normalTag: GroupedTag;
+/** Group-aware Tag that hoists @import rules utilizing GroupedWindowedTags */
+export interface HoistedTag {
+  constructor(tag: Tag): void;
+  insertRules(group: number, rules: string[]): void;
+  clearGroup(group: number): void;
+  getHoistedAndNormalGroups(group: number): { hoisted: string, normal: string };
+  groups: number;
 }
 
 export type SheetOptions = {

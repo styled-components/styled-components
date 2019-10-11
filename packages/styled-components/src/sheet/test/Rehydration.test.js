@@ -32,12 +32,41 @@ describe('outputSheet', () => {
       `${SC_ATTR}.g22[id="idB"]{content:"nameB,"}`,
     ]);
   });
+
+  it('handles hoisting @import rules', () => {
+    const sheet = new StyleSheet({ isServer: true });
+
+    // Make the group numbers a little more arbitrary
+    GroupIDAllocator.setGroupForId('idA', 11);
+    GroupIDAllocator.setGroupForId('idB', 22);
+
+    // Insert some rules
+    sheet.insertRules('idA', 'nameA', ['.a {}', '@import url("")']);
+    sheet.insertRules('idB', 'nameB', [
+      '@font-face { font-family: "test", src: url("") }',
+      '.b {}',
+    ]);
+
+    const output = outputSheet(sheet)
+      .trim()
+      .split('\n');
+
+    expect(output).toEqual([
+      '@import url("")',
+      '.a {}',
+      `${SC_ATTR}.g11[id="idA"]{content:"nameA,"}`,
+      '@font-face { font-family: "test", src: url("") }',
+      '.b {}',
+      `${SC_ATTR}.g22[id="idB"]{content:"nameB,"}`,
+    ]);
+  });
 });
 
 describe('rehydrateSheet', () => {
-  it('rehydrates sheets correctly', () => {
+  it('rehydrates sheets correctly and skips/ignores @imports', () => {
     document.head.innerHTML = `
       <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
+        @import url("a");
         .a {}
         ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}
         ${SC_ATTR}.g33[id="empty"]{content:""}
@@ -46,6 +75,7 @@ describe('rehydrateSheet', () => {
 
     document.body.innerHTML = `
       <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
+        @import url("b");
         .b {}
         ${SC_ATTR}.g22[id="idB"]{content:"nameB,"}
       </style>
@@ -69,9 +99,15 @@ describe('rehydrateSheet', () => {
     expect(sheet.hasNameForId('idB', 'nameB')).toBe(true);
     // Populates the underlying tag
     expect(sheet.getTag().normalTag.tag.length).toBe(2);
-    expect(sheet.getTag().getGroup(11)).toBe('.a {}\n');
-    expect(sheet.getTag().getGroup(22)).toBe('.b {}\n');
-    expect(sheet.getTag().getGroup(33)).toBe('');
+    expect(sheet.getTag().getHoistedAndNormalGroups(11)).toEqual({
+      hoisted: '',
+      normal: '.a {}\n',
+    });
+    expect(sheet.getTag().getHoistedAndNormalGroups(22)).toEqual({
+      hoisted: '',
+      normal: '.b {}\n',
+    });
+    expect(sheet.getTag().getHoistedAndNormalGroups(33)).toEqual({ hoisted: '', normal: '' });
     // Removes the old tags
     expect(styleHead.parentElement).toBe(null);
     expect(styleBody.parentElement).toBe(null);

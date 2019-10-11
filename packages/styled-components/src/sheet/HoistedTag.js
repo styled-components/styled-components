@@ -4,19 +4,19 @@ import type { HoistedTag, GroupedTag, Tag } from './types';
 import { DefaultGroupedTag } from './GroupedTag';
 import { WindowedTag } from './WindowedTag';
 
-const hoistedRuleRe = /\s*@(font-face|import)/;
+const hoistedRuleRe = /\s*@import/;
 
 export class DefaultHoistedTag implements HoistedTag {
   hoistedTag: GroupedTag;
 
   normalTag: GroupedTag;
 
-  length: number;
+  groups: number;
 
   constructor(tag: Tag) {
     this.hoistedTag = new DefaultGroupedTag(new WindowedTag(tag));
     this.normalTag = new DefaultGroupedTag(new WindowedTag(tag));
-    this.length = 0;
+    this.groups = 0;
   }
 
   insertRules(group: number, rules: string[]): void {
@@ -34,17 +34,18 @@ export class DefaultHoistedTag implements HoistedTag {
 
     this.normalTag.insertRules(group, normalRules);
     this.hoistedTag.insertRules(group, hoistedRules);
-    this.length = this.normalTag.length;
+    // We just use the normalTag groups
+    // since the normalTag and hoistedTag have the same groups
+    this.groups = this.normalTag.groups;
   }
 
   clearGroup(group: number) {
     this.normalTag.clearGroup(group);
     this.hoistedTag.clearGroup(group);
-    this.length = this.normalTag.length;
+    this.groups = this.normalTag.groups;
   }
 
-  // TODO: Needs to be replaced to keep hoisted ordering
-  getGroup(group: number) {
-    return this.hoistedTag.getGroup(group) + this.normalTag.getGroup(group);
+  getHoistedAndNormalGroups(group: number) {
+    return { hoisted: this.hoistedTag.getGroup(group), normal: this.normalTag.getGroup(group) };
   }
 }

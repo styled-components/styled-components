@@ -8,13 +8,13 @@ const BASE_SIZE = 1 << 8;
 export class DefaultGroupedTag implements GroupedTag {
   groupSizes: Uint32Array;
 
-  length: number;
+  groups: number;
 
   tag: Tag;
 
   constructor(tag: Tag) {
     this.groupSizes = new Uint32Array(BASE_SIZE);
-    this.length = BASE_SIZE;
+    this.groups = BASE_SIZE;
     this.tag = tag;
   }
 
@@ -35,7 +35,7 @@ export class DefaultGroupedTag implements GroupedTag {
 
       this.groupSizes = new Uint32Array(newSize);
       this.groupSizes.set(oldBuffer);
-      this.length = newSize;
+      this.groups = newSize;
 
       for (let i = oldSize; i < newSize; i++) {
         this.groupSizes[i] = 0;
@@ -51,10 +51,10 @@ export class DefaultGroupedTag implements GroupedTag {
   }
 
   clearGroup(group: number): void {
-    if (group < this.length) {
-      const length = this.groupSizes[group];
+    if (group < this.groups) {
+      const groupSize = this.groupSizes[group];
       const startIndex = this.indexOfGroup(group);
-      const endIndex = startIndex + length;
+      const endIndex = startIndex + groupSize;
 
       this.groupSizes[group] = 0;
 
@@ -66,13 +66,13 @@ export class DefaultGroupedTag implements GroupedTag {
 
   getGroup(group: number): string {
     let css = '';
-    if (group >= this.length || this.groupSizes[group] === 0) {
+    if (group >= this.groups || this.groupSizes[group] === 0) {
       return css;
     }
 
-    const length = this.groupSizes[group];
+    const groupSize = this.groupSizes[group];
     const startIndex = this.indexOfGroup(group);
-    const endIndex = startIndex + length;
+    const endIndex = startIndex + groupSize;
 
     for (let i = startIndex; i < endIndex; i++) {
       css += `${this.tag.getRule(i)}\n`;
