@@ -4,9 +4,7 @@ import { VirtualTag } from '../Tag';
 import { WindowedTag } from '../WindowedTag';
 import { DefaultGroupedTag } from '../GroupedTag';
 
-describe('WindowedTag uses a sliding window', () => {
-  beforeEach(() => {});
-
+describe('WindowedTag', () => {
   it('Correctly builds the linked list', () => {
     const virtualTag = new VirtualTag();
     const windowedTag1 = new WindowedTag(virtualTag);

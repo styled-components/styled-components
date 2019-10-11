@@ -3,18 +3,14 @@
 import { VirtualTag } from '../Tag';
 import { DefaultHoistedTag } from '../HoistedTag';
 
-describe('Works like a groupedTag if there are no hoisted rules', () => {
-  /* 
-  This set of tests is mostly copy/pasted from GroupedTag.test.js,
-  but since we need to dig into the normal/hoisted tags
-  it didn't make sense to try and reduce the duplication.
-   */
+describe('DefaultHoistedTag', () => {
   let hoistingTag, tag;
   beforeEach(() => {
     tag = new VirtualTag();
     hoistingTag = new DefaultHoistedTag(tag);
   });
-  it('inserts and retrieves rules by groups correctly', () => {
+  // Start GroupedTag tests for when there's no hoisted rules
+  it('inserts and retrieves normal rules by groups correctly', () => {
     hoistingTag.insertRules(2, ['.g2-a {}', '.g2-b {}']);
 
     // Insert out of order into the right group
@@ -53,7 +49,7 @@ describe('Works like a groupedTag if there are no hoisted rules', () => {
     expect(hoistingTag.hoistedTag.tag.length).toBe(0);
   });
 
-  it('inserts and deletes groups correctly', () => {
+  it('inserts and deletes groups with normal rules correctly', () => {
     hoistingTag.insertRules(1, ['.g1-a {}']);
     expect(tag.length).toBe(1);
     expect(hoistingTag.getHoistedAndNormalGroups(1).normal).not.toBe('');
@@ -79,14 +75,8 @@ describe('Works like a groupedTag if there are no hoisted rules', () => {
     expect(hoistingTag.normalTag.indexOfGroup(group)).toBe(0);
     expect(hoistingTag.getHoistedAndNormalGroups(group).normal).toBe('.test {}\n');
   });
-});
 
-describe('Hoisting @import rules', () => {
-  let hoistingTag, tag;
-  beforeEach(() => {
-    tag = new VirtualTag();
-    hoistingTag = new DefaultHoistedTag(tag);
-  });
+  // End GroupedTag tests, Start tests for hoisting @import rules
   it('should hoist @import rules to be first in a group', () => {
     // Insert some normal style rules
     hoistingTag.insertRules(2, ['.g2-a {}', '.g2-b {}']);
@@ -123,6 +113,7 @@ describe('Hoisting @import rules', () => {
     expect(hoistingTag.hoistedTag.getGroup(2)).toBe('@import url("");\n');
     expect(hoistingTag.hoistedTag.groups).toBeGreaterThan(2);
   });
+
   it('should hoist @import rules when interleaved in multiple groups', () => {
     // Insert some normal style rules
     hoistingTag.insertRules(2, ['.g2-a {}', '.g2-b {}']);

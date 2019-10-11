@@ -11,9 +11,6 @@ export class DefaultHoistedTag implements HoistedTag {
 
   normalTag: GroupedTag;
 
-  /*
-  The number of Groups in the tag
-  */
   groups: number;
 
   constructor(tag: Tag) {

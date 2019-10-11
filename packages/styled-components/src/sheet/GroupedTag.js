@@ -52,9 +52,9 @@ export class DefaultGroupedTag implements GroupedTag {
 
   clearGroup(group: number): void {
     if (group < this.groups) {
-      const numRules = this.groupSizes[group];
+      const groupSize = this.groupSizes[group];
       const startIndex = this.indexOfGroup(group);
-      const endIndex = startIndex + numRules;
+      const endIndex = startIndex + groupSize;
 
       this.groupSizes[group] = 0;
 
@@ -70,9 +70,9 @@ export class DefaultGroupedTag implements GroupedTag {
       return css;
     }
 
-    const numRules = this.groupSizes[group];
+    const groupSize = this.groupSizes[group];
     const startIndex = this.indexOfGroup(group);
-    const endIndex = startIndex + numRules;
+    const endIndex = startIndex + groupSize;
 
     for (let i = startIndex; i < endIndex; i++) {
       css += `${this.tag.getRule(i)}\n`;
