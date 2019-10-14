@@ -47,10 +47,11 @@ class DefaultGroupedTag implements GroupedTag {
       }
     }
 
-    const startIndex = this.indexOfGroup(group + 1);
+    let ruleIndex = this.indexOfGroup(group + 1);
     for (let i = 0, l = rules.length; i < l; i++) {
-      if (this.tag.insertRule(startIndex + i, rules[i])) {
+      if (this.tag.insertRule(ruleIndex, rules[i])) {
         this.groupSizes[group]++;
+        ruleIndex++;
       }
     }
   }

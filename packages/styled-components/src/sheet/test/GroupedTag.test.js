@@ -51,6 +51,20 @@ it('inserts and retrieves rules by groups correctly', () => {
   expect(groupedTag.indexOfGroup(4)).toBe(6);
 });
 
+it('inserts rules at correct indices if some rules are dropped', () => {
+  const tag = new VirtualTag();
+  const insertRule = jest.spyOn(tag, 'insertRule').mockImplementationOnce(() => false);
+  const groupedTag = makeGroupedTag(tag);
+
+  groupedTag.insertRules(1, [
+    '.skipped {}',
+    '.inserted {}'
+  ]);
+
+  expect(tag.length).toBe(1);
+  expect(groupedTag.getGroup(1)).toBe('.inserted {}\n');
+});
+
 it('inserts and deletes groups correctly', () => {
   groupedTag.insertRules(1, ['.g1-a {}']);
   expect(tag.length).toBe(1);
