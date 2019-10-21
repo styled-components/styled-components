@@ -28,7 +28,7 @@ export default class ComponentStyle {
 
   constructor(rules: RuleSet, attrs: Attrs, componentId: string) {
     this.rules = rules;
-    this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules, attrs);
+    this.isStatic = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'development' && isStaticRules(rules, attrs);
     this.componentId = componentId;
 
     if (!StyleSheet.master.hasId(componentId)) {
