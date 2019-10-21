@@ -21,11 +21,9 @@ const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
 
 /** Create a style element inside `target` or <head> after the last */
 export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
-  let targetDocument = document;
-  if(target) targetDocument = target.ownerDocument;
-  const head = ((targetDocument.head: any): HTMLElement);
+  const head = ((document.head: any): HTMLElement);
   const parent = target || head;
-  const style = targetDocument.createElement('style');
+  const style = document.createElement('style');
   const prevStyle = findLastStyleTag(parent);
   const nextSibling = prevStyle !== undefined ? prevStyle.nextSibling : null;
 

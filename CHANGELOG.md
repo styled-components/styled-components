@@ -8,8 +8,6 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Remove deprecated functionality (object-form `.attrs({})`)
 
-- Fix to use `ownerDocument` instead of global `document`, by [@yamachig](https://github.com/yamachig) (see [#2721](https://github.com/styled-components/styled-components/pull/2721))
-
 - Fix attrs not taking precedence over props when overriding a given prop
 
 ## [v4.3.2] - 2019-06-19

@@ -88,9 +88,7 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
 };
 
 export const rehydrateSheet = (sheet: Sheet) => {
-  let targetDocument = document;
-  if(sheet.options.target) targetDocument = sheet.options.target.ownerDocument;
-  const nodes = targetDocument.querySelectorAll(SELECTOR);
+  const nodes = document.querySelectorAll(SELECTOR);
 
   for (let i = 0, l = nodes.length; i < l; i++) {
     const node = ((nodes[i]: any): HTMLStyleElement);
