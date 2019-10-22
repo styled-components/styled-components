@@ -17,6 +17,10 @@ export const ThemeContext: Context<Theme | void> = React.createContext();
 export const ThemeConsumer = ThemeContext.Consumer;
 
 function useMergedTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
+  if (!theme) {
+    return throwStyledError(14);
+  }
+
   if (isFunction(theme)) {
     const mergedTheme = theme(outerTheme);
 
@@ -30,7 +34,7 @@ function useMergedTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
     return mergedTheme;
   }
 
-  if (theme === null || Array.isArray(theme) || typeof theme !== 'object') {
+  if (Array.isArray(theme) || typeof theme !== 'object') {
     return throwStyledError(8);
   }
 
