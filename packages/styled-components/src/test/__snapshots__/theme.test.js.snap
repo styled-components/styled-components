@@ -4,4 +4,4 @@ exports[`theming should not allow the theme to be a non-object 1`] = `"ThemeProv
 
 exports[`theming should not allow the theme to be an array 1`] = `"ThemeProvider: Please make your \\"theme\\" prop an object."`;
 
-exports[`theming should not allow the theme to be null 1`] = `"ThemeProvider: Please make your \\"theme\\" prop an object."`;
+exports[`theming should not allow the theme to be null 1`] = `"ThemeProvider: \\"theme\\" prop is required."`;

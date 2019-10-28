@@ -71,4 +71,4 @@ It seems you are interpolating a keyframe declaration (%s) into an untagged stri
 
 ## 14
 
-Theme Provider: "theme" prop is required.
+ThemeProvider: "theme" prop is required.
