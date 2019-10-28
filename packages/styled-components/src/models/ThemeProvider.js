@@ -47,7 +47,7 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
 export default function ThemeProvider(props: Props) {
   const outerTheme = useContext(ThemeContext);
   const themeContext = useMemo(() => mergeTheme(props.theme, outerTheme), [
-    isFunction(props.theme) ? props.theme.toString() : props.theme,
+    props.theme,
     outerTheme,
   ]);
 
