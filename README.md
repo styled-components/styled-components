@@ -35,7 +35,7 @@ Utilising [Object](https://www.styled-components.com/docs/advanced#style-objects
 Equivalent to:
 ```JSX
   const Button = styled.button`
-    color: 'grey'
+    color: grey;
   `
 ```
 
