@@ -21,7 +21,6 @@ import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 
 import type { Attrs, RuleSet, Target } from '../types';
 
-const THEME_PROP_REGEX = /\.theme[.[]/;
 const identifiers = {};
 
 /* We depend on components having unique IDs */
@@ -112,26 +111,16 @@ class StyledComponent extends Component<*> {
       foldedComponentIds,
       styledComponentId,
       target,
-      usesTheme,
     } = this.props.forwardedComponent;
 
     let generatedClassName;
-    let rawTheme;
-
     if (componentStyle.isStatic) {
       generatedClassName = this.generateAndInjectStyles(EMPTY_OBJECT, this.props);
     } else {
-      rawTheme = determineTheme(this.props, theme, defaultProps);
-      generatedClassName = this.generateAndInjectStyles(rawTheme || EMPTY_OBJECT, this.props);
-
-      if (process.env.NODE_ENV !== 'production' && usesTheme && !rawTheme) {
-        console.error(
-          `Component '${
-            // $FlowFixMe
-            displayName
-          }' (.${styledComponentId}) references the 'theme' prop in its styles but no theme was provided via prop or <ThemeProvider>.`
-        );
-      }
+      generatedClassName = this.generateAndInjectStyles(
+        determineTheme(this.props, theme, defaultProps) || EMPTY_OBJECT,
+        this.props
+      );
     }
 
     const elementToBeCreated = this.props.as || this.attrs.as || target;
@@ -336,11 +325,6 @@ export default function createStyledComponent(target: Target, options: Object, r
   });
 
   if (process.env.NODE_ENV !== 'production') {
-    // $FlowFixMe
-    WrappedStyledComponent.usesTheme = componentStyle.rules.some(
-      x => isFunction(x) && THEME_PROP_REGEX.test(x.toString())
-    );
-
     // $FlowFixMe
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName);
   }
