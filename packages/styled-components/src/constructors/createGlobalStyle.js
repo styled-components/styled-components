@@ -1,5 +1,5 @@
 // @flow
-import React, { useContext, useEffect, useMemo } from 'react';
+import React, { useContext, useEffect, useRef } from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet } from '../models/StyleSheetManager';
@@ -24,7 +24,11 @@ export default function createGlobalStyle(
   function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
     const styleSheet = useStyleSheet();
     const theme = useContext(ThemeContext);
-    const instance = useMemo(() => String(++count), []);
+    const instanceRef = useRef(null);
+
+    if (instanceRef.current === null) instanceRef.current = String(++count);
+
+    const instance = instanceRef.current;
 
     if (process.env.NODE_ENV !== 'production' && React.Children.count(props.children)) {
       // eslint-disable-next-line no-console
