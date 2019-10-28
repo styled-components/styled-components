@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Fix `styled-components`'s `react-native` import for React Native Web, by [@fiberjw](https://github.com/fiberjw) (see [#2797](https://github.com/styled-components/styled-components/pull/2797))
+
 ## [v4.4.0] - 2019-09-23
 
 - Fix to use `ownerDocument` instead of global `document`, by [@yamachig](https://github.com/yamachig) (see [#2721](https://github.com/styled-components/styled-components/pull/2721))

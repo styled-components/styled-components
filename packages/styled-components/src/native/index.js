@@ -1,8 +1,5 @@
 // @flow
 
-/* eslint-disable import/no-unresolved */
-import reactNative, { StyleSheet } from 'react-native';
-
 import _InlineStyle from '../models/InlineStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
 
@@ -13,6 +10,10 @@ import withTheme from '../hoc/withTheme';
 import isStyledComponent from '../utils/isStyledComponent';
 
 import type { Target } from '../types';
+
+const reactNative = require('react-native');
+
+const { StyleSheet } = reactNative;
 
 const InlineStyle = _InlineStyle(StyleSheet);
 const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
