@@ -7115,7 +7115,7 @@ memorystream@^0.3.1:
   resolved "https://registry.yarnpkg.com/memorystream/-/memorystream-0.3.1.tgz#86d7090b30ce455d63fbae12dda51a47ddcaf9b2"
   integrity sha1-htcJCzDORV1j+64S3aUaR93K+bI=
 
-merge-anything@^2.2.5:
+merge-anything@~2.2.5:
   version "2.2.5"
   resolved "https://registry.yarnpkg.com/merge-anything/-/merge-anything-2.2.5.tgz#37ef13f36359ee64f09c657d2cef45f7e29493f9"
   integrity sha512-WgZGR7EQ1D8pyh57uKBbkPhUCJZLGdMzbDaxL4MDTJSGsvtpGdm8myr6DDtgJwT46xiFBlHqxbveDRpFBWlKWQ==
