@@ -18,7 +18,7 @@ export default class GlobalStyle {
     this.isStatic = isStaticRules(rules);
   }
 
-  createStyles(instance: string, executionContext: Object, styleSheet: StyleSheet) {
+  createStyles(instance: number, executionContext: Object, styleSheet: StyleSheet) {
     const flatCSS = flatten(this.rules, executionContext, styleSheet);
     const css = styleSheet.options.stringifier(flatCSS.join(''), '');
     const id = this.componentId + instance;
@@ -27,11 +27,11 @@ export default class GlobalStyle {
     styleSheet.insertRules(id, id, css);
   }
 
-  removeStyles(instance: string, styleSheet: StyleSheet) {
+  removeStyles(instance: number, styleSheet: StyleSheet) {
     styleSheet.clearRules(this.componentId + instance);
   }
 
-  renderStyles(instance: string, executionContext: Object, styleSheet: StyleSheet) {
+  renderStyles(instance: number, executionContext: Object, styleSheet: StyleSheet) {
     StyleSheet.registerId(this.componentId + instance);
 
     // NOTE: Remove old styles, then inject the new ones

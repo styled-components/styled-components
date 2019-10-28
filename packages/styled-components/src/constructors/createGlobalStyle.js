@@ -26,7 +26,7 @@ export default function createGlobalStyle(
     const theme = useContext(ThemeContext);
     const instanceRef = useRef(null);
 
-    if (instanceRef.current === null) instanceRef.current = String(++count);
+    if (instanceRef.current === null) instanceRef.current = ++count;
 
     const instance = instanceRef.current;
 
