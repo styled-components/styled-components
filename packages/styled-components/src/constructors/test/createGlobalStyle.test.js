@@ -70,7 +70,7 @@ describe(`createGlobalStyle`, () => {
 
     expect(html).toBe('');
     expect(stripWhitespace(stripComments(style.textContent))).toMatchInlineSnapshot(
-      `"[data-test-inject]{ color:red; } data-styled.g1[id=\\"sc-global-a\\"]{ content:\\"sc-global-a,\\"} "`
+      `"[data-test-inject]{ color:red; } data-styled.g1[id=\\"sc-global-a1\\"]{ content:\\"sc-global-a1,\\"} "`
     );
   });
 
@@ -399,7 +399,7 @@ describe(`createGlobalStyle`, () => {
       document.body.removeChild(styleContainer);
 
       ReactDOM.unmountComponentAtNode(container);
-    } catch(e) {
+    } catch (e) {
       fail('should not throw exception');
     }
 
