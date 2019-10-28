@@ -1,6 +1,6 @@
 // @flow
-import React, { useContext, useEffect } from 'react';
-import { IS_BROWSER, STATIC_EXECUTION_CONTEXT } from '../constants';
+import React, { useContext, useEffect, useRef } from 'react';
+import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet } from '../models/StyleSheetManager';
 import determineTheme from '../utils/determineTheme';
@@ -12,11 +12,6 @@ import type { Interpolation } from '../types';
 
 type GlobalStyleComponentPropsType = Object;
 
-// place our cache into shared context so it'll persist between HMRs
-if (IS_BROWSER) {
-  window.scCGSHMRCache = {};
-}
-
 export default function createGlobalStyle(
   strings: Array<string>,
   ...interpolations: Array<Interpolation>
@@ -24,10 +19,16 @@ export default function createGlobalStyle(
   const rules = css(strings, ...interpolations);
   const styledComponentId = `sc-global-${hasher(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle(rules, styledComponentId);
+  let count = 0;
 
   function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
     const styleSheet = useStyleSheet();
     const theme = useContext(ThemeContext);
+    const instanceRef = useRef(null);
+
+    if (instanceRef.current === null) instanceRef.current = ++count;
+
+    const instance = instanceRef.current;
 
     if (process.env.NODE_ENV !== 'production' && React.Children.count(props.children)) {
       // eslint-disable-next-line no-console
@@ -37,37 +38,17 @@ export default function createGlobalStyle(
     }
 
     if (globalStyle.isStatic) {
-      globalStyle.renderStyles(STATIC_EXECUTION_CONTEXT, styleSheet);
+      globalStyle.renderStyles(instance, STATIC_EXECUTION_CONTEXT, styleSheet);
     } else {
       const context = {
         ...props,
         theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
       };
 
-      globalStyle.renderStyles(context, styleSheet);
+      globalStyle.renderStyles(instance, context, styleSheet);
     }
 
-    useEffect(() => {
-      if (IS_BROWSER) {
-        window.scCGSHMRCache[styledComponentId] =
-          (window.scCGSHMRCache[styledComponentId] || 0) + 1;
-
-        return () => {
-          if (window.scCGSHMRCache[styledComponentId]) {
-            window.scCGSHMRCache[styledComponentId] -= 1;
-          }
-          /**
-           * Depending on the order "render" is called this can cause the styles to be lost
-           * until the next render pass of the remaining instance, which may
-           * not be immediate.
-           */
-          if (window.scCGSHMRCache[styledComponentId] === 0) {
-            globalStyle.removeStyles(styleSheet);
-          }
-        };
-      }
-      return undefined;
-    }, []);
+    useEffect(() => () => globalStyle.removeStyles(instance, styleSheet), []);
 
     return null;
   }

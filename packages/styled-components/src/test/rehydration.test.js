@@ -207,44 +207,37 @@ describe('rehydration', () => {
       const Component = createGlobalStyle`
         body { color: tomato; }
       `;
+
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
         ${() => ''}
       `;
+
       TestRenderer.create(<Component />);
       TestRenderer.create(<A />);
 
+      // although `<Component />` is rendered before `<A />`, the global style isn't registered until render time
+      // compared to typical component styles which are registered at creation time
       expectCSSMatches(
-        'body { background: papayawhip; } .a { color: red; } body { color:tomato; } .b { color:blue; }'
+        'body { background: papayawhip; } .a { color: red; } .b { color:blue; } body { color:tomato; }'
       );
-
-      expect(getStyleTags()).toEqual([
-        {
-          css:
-            'body {background: papayawhip;}' +
-            '.a {color: red;}' +
-            'body{color:tomato;}.b{color:blue;}',
-        },
-      ]);
     });
   });
 
   describe('with all styles already rendered', () => {
-    let styleTags;
     beforeEach(() => {
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           html { font-size: 16px; }
-          ${SC_ATTR}.g1[id="sc-global-a"]{content: "sc-global-a,"}
+          ${SC_ATTR}.g1[id="sc-global-a1"]{content: "sc-global-a1,"}
           body { background: papayawhip; }
-          ${SC_ATTR}.g2[id="sc-global-b"]{content: "sc-global-b,"}
+          ${SC_ATTR}.g2[id="sc-global-b1"]{content: "sc-global-b1,"}
           .c { color: blue; }
           ${SC_ATTR}.g3[id="ONE"]{content: "c,"}
           .d { color: red; }
           ${SC_ATTR}.g4[id="TWO"]{content: "d,"}
         </style>
       `;
-      styleTags = Array.from(document.querySelectorAll('style'));
 
       resetSheet(masterSheet);
     });

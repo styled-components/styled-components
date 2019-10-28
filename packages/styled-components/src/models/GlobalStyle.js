@@ -16,25 +16,26 @@ export default class GlobalStyle {
     this.rules = rules;
     this.componentId = componentId;
     this.isStatic = isStaticRules(rules);
-    StyleSheet.registerId(componentId);
   }
 
-  createStyles(executionContext: Object, styleSheet: StyleSheet) {
+  createStyles(instance: number, executionContext: Object, styleSheet: StyleSheet) {
     const flatCSS = flatten(this.rules, executionContext, styleSheet);
     const css = styleSheet.options.stringifier(flatCSS.join(''), '');
-    const id = this.componentId;
+    const id = this.componentId + instance;
 
     // NOTE: We use the id as a name as well, since these rules never change
     styleSheet.insertRules(id, id, css);
   }
 
-  removeStyles(styleSheet: StyleSheet) {
-    styleSheet.clearRules(this.componentId);
+  removeStyles(instance: number, styleSheet: StyleSheet) {
+    styleSheet.clearRules(this.componentId + instance);
   }
 
-  renderStyles(executionContext: Object, styleSheet: StyleSheet) {
+  renderStyles(instance: number, executionContext: Object, styleSheet: StyleSheet) {
+    StyleSheet.registerId(this.componentId + instance);
+
     // NOTE: Remove old styles, then inject the new ones
-    this.removeStyles(styleSheet);
-    this.createStyles(executionContext, styleSheet);
+    this.removeStyles(instance, styleSheet);
+    this.createStyles(instance, executionContext, styleSheet);
   }
 }
