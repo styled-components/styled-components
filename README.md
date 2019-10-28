@@ -24,16 +24,22 @@
 
 Utilising [tagged template literals](https://www.styled-components.com/docs/advanced#tagged-template-literals) (a recent addition to JavaScript) and the [power of CSS](https://www.styled-components.com/docs/api#supported-css), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
-Utilising [Object](https://www.styled-components.com/docs/advanced#style-objects) in
-`styled-components` allows you to use object instead of string in writing your CSS code. This helps in gradually moving to styled-components from existing style objects.
+```jsx
+  const Button = styled.button`
+    color: grey;
+  `
+```
 
-```JSX
+Alternatively, you may use [style objects](https://www.styled-components.com/docs/advanced#style-objects). This allows for easy porting of CSS from inline styles, while still supporting the more advanced styled-components capabilities like component selectors and media queries.
+
+```jsx
   const Button = styled.button({
     color: 'grey'
   })
 ```
+
 Equivalent to:
-```JSX
+```jsx
   const Button = styled.button`
     color: grey;
   `
