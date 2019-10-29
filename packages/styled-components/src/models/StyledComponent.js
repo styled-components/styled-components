@@ -1,6 +1,6 @@
 // @flow
 import validAttr from '@emotion/is-prop-valid';
-import merge from 'merge-anything';
+import merge from 'mixin-deep';
 import React, {
   createElement,
   useContext,
@@ -282,7 +282,7 @@ export default function createStyledComponent(
 
     set(obj) {
       // $FlowFixMe
-      this._foldedDefaultProps = isTargetStyledComp ? merge(target.defaultProps, obj) : obj;
+      this._foldedDefaultProps = isTargetStyledComp ? merge({}, target.defaultProps, obj) : obj;
     },
   });
 

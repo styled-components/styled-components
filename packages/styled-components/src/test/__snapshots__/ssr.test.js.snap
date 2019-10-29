@@ -3,20 +3,20 @@
 exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 1`] = `"<h1 class=\\"sc-b c\\">Hello SSR!</h1>"`;
 
 exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 2`] = `
-"<style nonce=\\"foo\\" data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}
-data-styled.g1[id=\\"sc-global-a\\"]{content:\\"sc-global-a,\\"}
-.c{color:red;}
-data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}
+"<style nonce=\\"foo\\" data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.c{color:red;}
+data-styled.g1[id=\\"sc-b\\"]{content:\\"c,\\"}
+body{background:papayawhip;}
+data-styled.g2[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}
 </style>"
 `;
 
 exports[`ssr should extract both global and local CSS 1`] = `"<h1 class=\\"sc-b c\\">Hello SSR!</h1>"`;
 
 exports[`ssr should extract both global and local CSS 2`] = `
-"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}
-data-styled.g1[id=\\"sc-global-a\\"]{content:\\"sc-global-a,\\"}
-.c{color:red;}
-data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}
+"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.c{color:red;}
+data-styled.g1[id=\\"sc-b\\"]{content:\\"c,\\"}
+body{background:papayawhip;}
+data-styled.g2[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}
 </style>"
 `;
 
@@ -31,10 +31,10 @@ data-styled.g1[id=\\"sc-a\\"]{content:\\"b,\\"}
 exports[`ssr should handle errors while streaming 1`] = `[Invariant Violation: React.Children.only expected to receive a single React element child.]`;
 
 exports[`ssr should interleave styles with rendered HTML when utilitizing streaming 1`] = `
-"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}
-data-styled.g1[id=\\"sc-global-a\\"]{content:\\"sc-global-a,\\"}
-.c{color:red;}
-data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}
+"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.c{color:red;}
+data-styled.g1[id=\\"sc-b\\"]{content:\\"c,\\"}
+body{background:papayawhip;}
+data-styled.g2[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}
 </style><h1 class=\\"sc-b c\\">Hello SSR!</h1>"
 `;
 
@@ -51,10 +51,10 @@ data-styled.g2[id=\\"TWO\\"]{content:\\"a,\\"}
 exports[`ssr should return a generated React style element 1`] = `
 Object {
   "dangerouslySetInnerHTML": Object {
-    "__html": "body{background:papayawhip;}
-data-styled.g1[id=\\"sc-global-a\\"]{content:\\"sc-global-a,\\"}
-.c{color:red;}
-data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}
+    "__html": ".c{color:red;}
+data-styled.g1[id=\\"sc-b\\"]{content:\\"c,\\"}
+body{background:papayawhip;}
+data-styled.g2[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}
 ",
   },
   "data-styled": "",
@@ -70,10 +70,10 @@ exports[`ssr should throw if getStyleElement is called after interleaveWithNodeS
 `;
 
 exports[`ssr should throw if getStyleElement is called after streaming is complete 1`] = `
-"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}
-data-styled.g1[id=\\"sc-global-a\\"]{content:\\"sc-global-a,\\"}
-.c{color:red;}
-data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}
+"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.c{color:red;}
+data-styled.g1[id=\\"sc-b\\"]{content:\\"c,\\"}
+body{background:papayawhip;}
+data-styled.g2[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}
 </style><h1 class=\\"sc-b c\\">Hello SSR!</h1>"
 `;
 
@@ -92,10 +92,10 @@ exports[`ssr should throw if getStyleTags is called after interleaveWithNodeStre
 `;
 
 exports[`ssr should throw if getStyleTags is called after streaming is complete 1`] = `
-"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}
-data-styled.g1[id=\\"sc-global-a\\"]{content:\\"sc-global-a,\\"}
-.c{color:red;}
-data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}
+"<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.c{color:red;}
+data-styled.g1[id=\\"sc-b\\"]{content:\\"c,\\"}
+body{background:papayawhip;}
+data-styled.g2[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}
 </style><h1 class=\\"sc-b c\\">Hello SSR!</h1>"
 `;
 

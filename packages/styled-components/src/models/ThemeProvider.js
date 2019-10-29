@@ -1,5 +1,5 @@
 // @flow
-import React, { useContext, type Element, type Context } from 'react';
+import React, { useContext, useMemo, type Element, type Context } from 'react';
 import throwStyledError from '../utils/error';
 import isFunction from '../utils/isFunction';
 
@@ -16,7 +16,7 @@ export const ThemeContext: Context<Theme | void> = React.createContext();
 
 export const ThemeConsumer = ThemeContext.Consumer;
 
-function useMergedTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
+function mergeTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
   if (!theme) {
     return throwStyledError(14);
   }
@@ -46,17 +46,14 @@ function useMergedTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
  */
 export default function ThemeProvider(props: Props) {
   const outerTheme = useContext(ThemeContext);
-
-  // NOTE: can't really memoize with props.theme as that'd cause incorrect memoization when it's a function
-  const themeContext = useMergedTheme(props.theme, outerTheme);
+  const themeContext = useMemo(() => mergeTheme(props.theme, outerTheme), [
+    props.theme,
+    outerTheme,
+  ]);
 
   if (!props.children) {
     return null;
   }
 
-  return (
-    <ThemeContext.Provider value={themeContext}>
-      {props.children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={themeContext}>{props.children}</ThemeContext.Provider>;
 }
