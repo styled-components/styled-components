@@ -1,8 +1,7 @@
 // @flow
 /* eslint-disable no-bitwise */
 
-const LOWER_D_R = /([Aa])d/g;
-const UPPER_D_R = /([Aa])D/g;
+const AD_REPLACER_R = /(a)(d)/gi;
 
 /* This is the "capacity" of our alphabet i.e. 2x26 for all letters plus their capitalised
  * counterparts */
@@ -22,7 +21,5 @@ export default function generateAlphabeticName(code: number): string {
     name = getAlphabeticChar(x % charsLength) + name;
   }
 
-  return (getAlphabeticChar(x % charsLength) + name)
-    .replace(LOWER_D_R, '$1-')
-    .replace(UPPER_D_R, '$1_');
+  return (getAlphabeticChar(x % charsLength) + name).replace(AD_REPLACER_R, '$1-$2');
 }
