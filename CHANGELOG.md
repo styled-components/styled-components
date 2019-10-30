@@ -14,6 +14,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
   - Removed support for unitless line height in font shorthand
 
+- Replace `merge-anything` with `mixin-deep` to save some bytes (this is what handles merging of `defaultProps` between folded styled components)
+
 - Fix certain adblockers messing up styling by purposefully not emitting the substring "ad" (case-insensitive) when generating dynamic class names
 
 ## [v4.3.2] - 2019-06-19
