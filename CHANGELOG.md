@@ -11,7 +11,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 - Fix attrs not taking precedence over props when overriding a given prop
 
 - (ReactNative) upgrade css-to-react-native to v3 ([changelog](https://github.com/styled-components/css-to-react-native/releases/tag/v3.0.0))
+
   - Removed support for unitless line height in font shorthand
+
+- Fix certain adblockers messing up styling by purposefully not emitting the substring "ad" (case-insensitive) when generating dynamic class names
 
 ## [v4.3.2] - 2019-06-19
 
