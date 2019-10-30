@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "4.4.0",
+  "version": "4.4.1",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.esm.js",

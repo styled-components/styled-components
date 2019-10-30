@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v4.4.1] - 2019-10-30
+
 - Fix `styled-components`'s `react-native` import for React Native Web, by [@fiberjw](https://github.com/fiberjw) (see [#2797](https://github.com/styled-components/styled-components/pull/2797))
 
 - Remove dev-time warning if referencing a theme prop without an outer `ThemeProvider`, the check for it isn't smart enough to handle cases with "or" or ternary fallbacks and creates undesirable noise in various third party integrations
@@ -991,7 +993,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.4.0...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v4.4.1...master
+[v4.4.1]: https://github.com/styled-components/styled-components/compare/v4.4.0...v4.4.1
 [v4.4.0]: https://github.com/styled-components/styled-components/compare/v4.3.2...v4.4.0
 [v4.3.2]: https://github.com/styled-components/styled-components/compare/v4.3.1...v4.3.2
 [v4.3.1]: https://github.com/styled-components/styled-components/compare/v4.3.0...v4.3.1
