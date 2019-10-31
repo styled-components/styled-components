@@ -1,6 +1,6 @@
 // @flow
-import merge from 'mixin-deep';
 import React, { createElement, Component } from 'react';
+import merge from '../utils/mixinDeep';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import generateDisplayName from '../utils/generateDisplayName';
