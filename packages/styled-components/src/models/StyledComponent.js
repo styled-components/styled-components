@@ -1,6 +1,5 @@
 // @flow
 import validAttr from '@emotion/is-prop-valid';
-import merge from 'mixin-deep';
 import React, {
   createElement,
   useContext,
@@ -8,6 +7,7 @@ import React, {
   type AbstractComponent,
   type Ref,
 } from 'react';
+import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
