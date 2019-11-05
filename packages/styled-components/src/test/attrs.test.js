@@ -86,11 +86,11 @@ describe('attrs', () => {
         </ThemeProvider>
       ).toJSON()
     ).toMatchInlineSnapshot(`
-      <button
-        className="sc-a b"
-        data-color="red"
-      />
-    `);
+            <button
+              className="sc-a b"
+              data-color="red"
+            />
+        `);
   });
 
   it('defaultProps are merged into what function attrs receives', () => {
@@ -105,11 +105,11 @@ describe('attrs', () => {
     };
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
-      <button
-        className="sc-a b"
-        data-color="red"
-      />
-    `);
+            <button
+              className="sc-a b"
+              data-color="red"
+            />
+        `);
   });
 
   it('pass props to the attr function', () => {
@@ -138,6 +138,20 @@ describe('attrs', () => {
     }))``;
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+  });
+
+  it('should merge className from folded attrs', () => {
+    const Inner = styled.div.attrs({ className: 'foo' })``;
+
+    const Comp = styled(Inner).attrs(() => ({
+      className: 'meow nya',
+    }))``;
+
+    expect(TestRenderer.create(<Comp className="something" />).toJSON()).toMatchInlineSnapshot(`
+      <div
+        className="sc-a sc-b c something foo meow nya"
+      />
+    `);
   });
 
   it('should merge className even if its a function', () => {
@@ -258,18 +272,18 @@ describe('attrs', () => {
 
     expectCSSMatches(`.d {background: red;} .c {background: blue;}`);
     expect(rendered.toJSON()).toMatchInlineSnapshot(`
-      <p
-        className="sc-a d sc-b c"
-        style={
-          Object {
-            "color": "blue",
-            "fontSize": "4em",
-          }
-        }
-      >
-        Hello
-      </p>
-    `);
+            <p
+              className="sc-a d sc-b c"
+              style={
+                Object {
+                  "color": "blue",
+                  "fontSize": "4em",
+                }
+              }
+            >
+              Hello
+            </p>
+        `);
   });
 
   it('does not pass non html tags to HTML element', () => {
