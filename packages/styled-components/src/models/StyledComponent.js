@@ -57,7 +57,10 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
 
     /* eslint-disable guard-for-in */
     for (key in resolvedAttrDef) {
-      context[key] = resolvedAttrs[key] = resolvedAttrDef[key];
+      context[key] = resolvedAttrs[key] =
+        key === 'className'
+          ? [resolvedAttrs[key], resolvedAttrDef[key]].filter(Boolean).join(' ')
+          : resolvedAttrDef[key];
     }
     /* eslint-enable guard-for-in */
   });
