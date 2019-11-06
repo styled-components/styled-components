@@ -86,11 +86,11 @@ describe('attrs', () => {
         </ThemeProvider>
       ).toJSON()
     ).toMatchInlineSnapshot(`
-      <button
-        className="sc-a b"
-        data-color="red"
-      />
-    `);
+            <button
+              className="sc-a b"
+              data-color="red"
+            />
+        `);
   });
 
   it('defaultProps are merged into what function attrs receives', () => {
@@ -105,11 +105,11 @@ describe('attrs', () => {
     };
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
-      <button
-        className="sc-a b"
-        data-color="red"
-      />
-    `);
+            <button
+              className="sc-a b"
+              data-color="red"
+            />
+        `);
   });
 
   it('pass props to the attr function', () => {
@@ -147,6 +147,26 @@ describe('attrs', () => {
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
     expect(TestRenderer.create(<Comp purr />).toJSON()).toMatchSnapshot();
+  });
+
+  it('should merge style', () => {
+    const Comp = styled.div.attrs(() => ({
+      style: { color: 'red', background: 'blue' },
+    }))``;
+
+    expect(TestRenderer.create(<Comp style={{ color: 'green', borderStyle: 'dotted' }} />).toJSON())
+      .toMatchInlineSnapshot(`
+      <div
+        className="sc-a b"
+        style={
+          Object {
+            "background": "blue",
+            "borderStyle": "dotted",
+            "color": "red",
+          }
+        }
+      />
+    `);
   });
 
   it('should work with data and aria attributes', () => {
@@ -258,18 +278,18 @@ describe('attrs', () => {
 
     expectCSSMatches(`.d {background: red;} .c {background: blue;}`);
     expect(rendered.toJSON()).toMatchInlineSnapshot(`
-      <p
-        className="sc-a d sc-b c"
-        style={
-          Object {
-            "color": "blue",
-            "fontSize": "4em",
-          }
-        }
-      >
-        Hello
-      </p>
-    `);
+            <p
+              className="sc-a d sc-b c"
+              style={
+                Object {
+                  "color": "blue",
+                  "fontSize": "4em",
+                }
+              }
+            >
+              Hello
+            </p>
+        `);
   });
 
   it('does not pass non html tags to HTML element', () => {
