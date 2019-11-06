@@ -150,7 +150,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
 
   const refToForward = forwardedRef;
 
-  const elementToBeCreated: Target = props.as || attrs.as || target;
+  const elementToBeCreated: Target = attrs.as || props.as || target;
 
   const isTargetTag = isTag(elementToBeCreated);
   const computedProps = attrs !== props ? { ...props, ...attrs } : props;
@@ -170,7 +170,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
   }
 
   if (props.style && attrs.style !== props.style) {
-    propsForElement.style = { ...attrs.style, ...props.style };
+    propsForElement.style = { ...props.style, ...attrs.style };
   }
 
   propsForElement.className = Array.prototype

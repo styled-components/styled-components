@@ -127,14 +127,18 @@ describe('expanded api', () => {
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
     });
 
-    it('prefers prop over attrs', () => {
+    it('prefers attrs over props', () => {
       const Comp = styled.div.attrs(() => ({
         as: 'header',
       }))`
         color: red;
       `;
 
-      expect(TestRenderer.create(<Comp as="span" />).toJSON()).toMatchSnapshot();
+      expect(TestRenderer.create(<Comp as="span" />).toJSON()).toMatchInlineSnapshot(`
+        <header
+          className="sc-a b"
+        />
+      `);
     });
 
     it('works with custom components', () => {
