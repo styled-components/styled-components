@@ -27,7 +27,6 @@ import type { Attrs, RuleSet, Target } from '../types';
 
 /* global $Call */
 
-const THEME_PROP_R = /\.theme[.[]/;
 const identifiers = {};
 
 /* We depend on components having unique IDs */
@@ -73,7 +72,6 @@ interface StyledComponentWrapperProperties {
   target: Target;
   styledComponentId: string;
   warnTooManyClasses: $Call<typeof createWarnTooManyClasses, string>;
-  usesTheme: boolean;
 }
 
 type StyledComponentWrapper<Config, Instance> = AbstractComponent<Config, Instance> &
@@ -134,19 +132,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
     context,
     process.env.NODE_ENV !== 'production' ? forwardedComponent.warnTooManyClasses : undefined
   );
-
-  if (process.env.NODE_ENV !== 'production' && forwardedComponent.usesTheme && !theme) {
-    console.error(
-      `Component ${
-        // $FlowFixMe
-        forwardedComponent.displayName
-      } (.${styledComponentId}) uses "props.theme" in its styles but no theme was provided via prop or ThemeProvider.`
-    );
-
-    // cheap way to do "once" ;)
-    // eslint-disable-next-line no-param-reassign
-    forwardedComponent.usesTheme = false;
-  }
 
   const refToForward = forwardedRef;
 
@@ -287,10 +272,6 @@ export default function createStyledComponent(
   });
 
   if (process.env.NODE_ENV !== 'production') {
-    WrappedStyledComponent.usesTheme = componentStyle.rules.some(
-      x => isFunction(x) && THEME_PROP_R.test(x.toString())
-    );
-
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName);
   }
 
