@@ -163,6 +163,26 @@ describe('attrs', () => {
     expect(TestRenderer.create(<Comp purr />).toJSON()).toMatchSnapshot();
   });
 
+  it('should merge style', () => {
+    const Comp = styled.div.attrs(() => ({
+      style: { color: 'red', background: 'blue' },
+    }))``;
+
+    expect(TestRenderer.create(<Comp style={{ color: 'green', borderStyle: 'dotted' }} />).toJSON())
+      .toMatchInlineSnapshot(`
+      <div
+        className="sc-a b"
+        style={
+          Object {
+            "background": "blue",
+            "borderStyle": "dotted",
+            "color": "red",
+          }
+        }
+      />
+    `);
+  });
+
   it('should work with data and aria attributes', () => {
     const Comp = styled.div.attrs(() => ({
       'data-foo': 'bar',

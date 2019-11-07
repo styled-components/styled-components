@@ -12,12 +12,6 @@ exports[`expanded api "as" prop changes the rendered element type when used with
 />
 `;
 
-exports[`expanded api "as" prop prefers prop over attrs 1`] = `
-<span
-  className="sc-a b"
-/>
-`;
-
 exports[`expanded api "as" prop transfers all styles that have been applied 1`] = `"styled.div"`;
 
 exports[`expanded api "as" prop transfers all styles that have been applied 2`] = `"Styled(styled.div)"`;
