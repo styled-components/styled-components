@@ -140,6 +140,20 @@ describe('attrs', () => {
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
+  it('should merge className from folded attrs', () => {
+    const Inner = styled.div.attrs({ className: 'foo' })``;
+
+    const Comp = styled(Inner).attrs(() => ({
+      className: 'meow nya',
+    }))``;
+
+    expect(TestRenderer.create(<Comp className="something" />).toJSON()).toMatchInlineSnapshot(`
+      <div
+        className="sc-a sc-b c something foo meow nya"
+      />
+    `);
+  });
+
   it('should merge className even if its a function', () => {
     const Comp = styled.div.attrs(p => ({
       className: `meow ${p.purr ? 'purr' : 'nya'}`,
