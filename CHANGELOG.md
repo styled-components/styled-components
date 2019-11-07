@@ -18,6 +18,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Fix certain adblockers messing up styling by purposefully not emitting the substring "ad" (case-insensitive) when generating dynamic class names
 
+- Fix regressed behavior between v3 and v4 where className was not correctly aggregated between folded `.attrs` invocations
+
 ## [v4.3.2] - 2019-06-19
 
 - Fix usage of the "css" prop with the styled-components babel macro (relevant to CRA 2.x users), by [@jamesknelson](http://github.com/jamesknelson) (see [#2633](https://github.com/styled-components/styled-components/issues/2633))

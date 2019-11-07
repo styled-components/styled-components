@@ -14,11 +14,12 @@ import determineTheme from '../utils/determineTheme';
 import escape from '../utils/escape';
 import generateDisplayName from '../utils/generateDisplayName';
 import getComponentName from '../utils/getComponentName';
+import hasher from '../utils/hasher';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
-import isTag from '../utils/isTag';
 import isStyledComponent from '../utils/isStyledComponent';
-import hasher from '../utils/hasher';
+import isTag from '../utils/isTag';
+import joinStrings from '../utils/joinStrings';
 import { ThemeContext } from './ThemeProvider';
 import { useStyleSheet } from './StyleSheetManager';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
@@ -56,7 +57,10 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
 
     /* eslint-disable guard-for-in */
     for (key in resolvedAttrDef) {
-      context[key] = resolvedAttrs[key] = resolvedAttrDef[key];
+      context[key] = resolvedAttrs[key] =
+        key === 'className'
+          ? joinStrings(resolvedAttrs[key], resolvedAttrDef[key])
+          : resolvedAttrDef[key];
     }
     /* eslint-enable guard-for-in */
   });
