@@ -4,7 +4,6 @@ import ReactDOM from 'react-dom';
 import ReactTestRenderer from 'react-test-renderer';
 import ReactDOMServer from 'react-dom/server';
 import { Simulate, act } from 'react-dom/test-utils';
-import * as constants from '../../constants';
 
 import {
   expectCSSMatches,
@@ -85,9 +84,9 @@ describe(`createGlobalStyle`, () => {
     const { render } = setup();
     const Component = createGlobalStyle({
       'h1, h2, h3, h4, h5, h6': {
-        fontFamily: ({theme}) => theme.fonts.heading,
+        fontFamily: ({ theme }) => theme.fonts.heading,
       },
-    })
+    });
     render(<Component theme={{ fonts: { heading: 'sans-serif' } }} />);
     expectCSSMatches(`h1,h2,h3,h4,h5,h6{ font-family:sans-serif; }`);
   });
@@ -98,11 +97,11 @@ describe(`createGlobalStyle`, () => {
       'div, span': {
         h1: {
           span: {
-            fontFamily: ({theme}) => theme.fonts.heading
-          }
-        }
-      }
-    })
+            fontFamily: ({ theme }) => theme.fonts.heading,
+          },
+        },
+      },
+    });
     render(<Component1 theme={{ fonts: { heading: 'sans-serif' } }} />);
     expectCSSMatches(`div h1 span,span h1 span{ font-family:sans-serif; }`);
   });
