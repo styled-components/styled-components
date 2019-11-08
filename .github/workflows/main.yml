@@ -11,4 +11,4 @@ jobs:
         with:
           organization: styled-components
         env:
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          ACCESS_TOKEN: ${{ secrets.ORG_ADMIN_ACCESS_TOKEN }}
