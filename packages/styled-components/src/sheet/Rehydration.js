@@ -2,11 +2,10 @@
 
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
-import { getSheet } from './dom';
 import type { Sheet } from './types';
 
-const PLAIN_RULE_TYPE = 1;
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
+const RULE_RE = /(?:\s*)?(.*?){((?:{[^}]*}|(?!{).*?)*?)}/g;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\]`);
 
 export const outputSheet = (sheet: Sheet) => {
@@ -42,47 +41,43 @@ export const outputSheet = (sheet: Sheet) => {
 };
 
 const rehydrateNamesFromContent = (sheet: Sheet, id: string, content: string) => {
-  const names = content.slice(1, -1).split(',');
+  const names = content.split(',');
+  let name;
+
   for (let i = 0, l = names.length; i < l; i++) {
-    const name = names[i];
-    if (name.length > 0) {
+    // eslint-disable-next-line
+    if ((name = names[i])) {
       sheet.registerName(id, name);
     }
   }
 };
 
 const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
-  const { cssRules } = getSheet(style);
+  const rawHTML = style.innerHTML;
   const rules: string[] = [];
+  let parts;
 
-  for (let i = 0, l = cssRules.length; i < l; i++) {
-    const cssRule = (cssRules[i]: any);
+  // parts = [match, selector, content]
+  // eslint-disable-next-line no-cond-assign
+  while ((parts = RULE_RE.exec(rawHTML))) {
+    const marker = parts[1].match(MARKER_RE);
 
-    if (typeof cssRule.cssText !== 'string') {
-      // Avoid IE11 quirk where cssText is inaccessible on some invalid rules
-      continue;
-    } else if (cssRule.type !== PLAIN_RULE_TYPE) {
-      rules.push(cssRule.cssText);
-    } else {
-      const marker = cssRule.selectorText.match(MARKER_RE);
+    if (marker) {
+      const group = parseInt(marker[1], 10) | 0;
+      const id = marker[2];
 
-      if (marker !== null) {
-        const group = parseInt(marker[1], 10) | 0;
-        const id = marker[2];
-        const { content } = cssRule.style;
-
-        if (group !== 0) {
-          // Rehydrate componentId to group index mapping
-          setGroupForId(id, group);
-          // Rehydrate names and rules
-          rehydrateNamesFromContent(sheet, id, content);
-          sheet.getTag().insertRules(group, rules);
-        }
-
-        rules.length = 0;
-      } else {
-        rules.push(cssRule.cssText);
+      if (group !== 0) {
+        // Rehydrate componentId to group index mapping
+        setGroupForId(id, group);
+        // Rehydrate names and rules
+        // looks like: data-styled.g11[id="idA"]{content:"nameA,"}
+        rehydrateNamesFromContent(sheet, id, parts[2].split('"')[1]);
+        sheet.getTag().insertRules(group, rules);
       }
+
+      rules.length = 0;
+    } else {
+      rules.push(parts[0].trim());
     }
   }
 };
