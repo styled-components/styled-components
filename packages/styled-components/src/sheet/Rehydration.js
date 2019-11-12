@@ -57,10 +57,10 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
   const rules: string[] = [];
   let parts;
 
-  /* eslint-disable */
+  // parts = [match, selector, content]
+  // eslint-disable-next-line no-cond-assign
   while ((parts = RULE_RE.exec(rawHTML))) {
-    const [match, selector, content] = (parts: Array<string>);
-    const marker = selector.match(MARKER_RE);
+    const marker = parts[1].match(MARKER_RE);
 
     if (marker) {
       const group = parseInt(marker[1], 10) | 0;
@@ -71,16 +71,15 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
         setGroupForId(id, group);
         // Rehydrate names and rules
         // looks like: data-styled.g11[id="idA"]{content:"nameA,"}
-        rehydrateNamesFromContent(sheet, id, content.split('"')[1]);
+        rehydrateNamesFromContent(sheet, id, parts[2].split('"')[1]);
         sheet.getTag().insertRules(group, rules);
       }
 
       rules.length = 0;
     } else {
-      rules.push(match.trim());
+      rules.push(parts[0].trim());
     }
   }
-  /* eslint-enable */
 };
 
 export const rehydrateSheet = (sheet: Sheet) => {
