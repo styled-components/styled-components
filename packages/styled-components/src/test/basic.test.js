@@ -231,6 +231,18 @@ describe('basic', () => {
     expect(Comp.displayName).toBe('Styled(Comp)');
   });
 
+  it('works with custom elements (use class instead of className)', () => {
+    const Comp = styled('custom-element')`
+      color: red;
+    `;
+
+    expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
+      <custom-element
+        class="sc-a b"
+      />
+    `);
+  });
+
   describe('jsdom tests', () => {
     class InnerComponent extends Component<*, *> {
       render() {

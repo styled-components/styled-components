@@ -158,6 +158,8 @@ Read the [v5 release announcement](https://medium.com/styled-components/announci
 
 * Fix regressed behavior between v3 and v4 where className was not correctly aggregated between folded `.attrs` invocations
 
+- Fix support for styling custom elements (https://github.com/styled-components/styled-components/pull/2819)
+
 ## [v4.4.1] - 2019-10-30
 
 - Fix `styled-components`'s `react-native` import for React Native Web, by [@fiberjw](https://github.com/fiberjw) (see [#2797](https://github.com/styled-components/styled-components/pull/2797))

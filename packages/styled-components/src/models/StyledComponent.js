@@ -14,6 +14,7 @@ import type {
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
+import domElements from '../utils/domElements';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
@@ -154,9 +155,11 @@ function useStyledComponentImpl(
     propsForElement.style = { ...props.style, ...attrs.style };
   }
 
-  propsForElement.className = Array.prototype
+  propsForElement[
+    // handle custom elements which React doesn't properly alias
+    isTargetTag && domElements.indexOf(elementToBeCreated) === -1 ? 'class' : 'className'
+  ] = foldedComponentIds
     .concat(
-      foldedComponentIds,
       styledComponentId,
       generatedClassName !== styledComponentId ? generatedClassName : null,
       props.className,
