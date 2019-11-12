@@ -6,7 +6,19 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Remove deprecated functionality (object-form `.attrs({})`)
+- Remove deprecated attrs "subfunction" syntax variant
+
+  ```js
+  styled.div.attrs({ color: p => p.color });
+  ```
+
+  should become
+
+  ```js
+  styled.div.attrs(p => ({ color: p.color }));
+  ```
+
+  You can still pass objects to `attrs` but individual properties shouldn't have functions that receive props anymore.
 
 - Fix attrs not taking precedence over props when overriding a given prop
 
