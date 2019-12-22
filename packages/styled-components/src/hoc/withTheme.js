@@ -1,9 +1,9 @@
 // @flow
 import React, { useContext, type AbstractComponent } from 'react';
+import hoistStatics from 'hoist-non-react-statics';
 import { ThemeContext } from '../models/ThemeProvider';
 import determineTheme from '../utils/determineTheme';
 import getComponentName from '../utils/getComponentName';
-import hoistStatics from '../utils/hoist';
 
 // NOTE: this would be the correct signature:
 // export default <Config: { theme?: any }, Instance>(

@@ -1,12 +1,11 @@
 // @flow
 /* eslint-disable no-console */
+import hoist from 'hoist-non-react-statics';
 import React, { Component, StrictMode } from 'react';
 import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';
-
 import { resetStyled, expectCSSMatches } from './utils';
-import hoistStatics from '../utils/hoist';
 import { find } from '../../test-utils';
 
 let styled;

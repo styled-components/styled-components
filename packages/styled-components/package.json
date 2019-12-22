@@ -69,6 +69,7 @@
     "@emotion/unitless": "^0.7.4",
     "babel-plugin-styled-components": ">= 1",
     "css-to-react-native": "^3.0.0",
+    "hoist-non-react-statics": "^3.0.0",
     "shallowequal": "^1.1.0",
     "stylis-rule-sheet": "^0.0.10",
     "supports-color": "^5.5.0"
