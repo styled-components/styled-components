@@ -7,6 +7,7 @@ import React, {
   type AbstractComponent,
   type Ref,
 } from 'react';
+import hoist from 'hoist-non-react-statics';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
@@ -15,7 +16,6 @@ import escape from '../utils/escape';
 import generateDisplayName from '../utils/generateDisplayName';
 import getComponentName from '../utils/getComponentName';
 import hasher from '../utils/hasher';
-import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
@@ -283,7 +283,7 @@ export default function createStyledComponent(
   WrappedStyledComponent.toString = () => `.${WrappedStyledComponent.styledComponentId}`;
 
   if (isCompositeComponent) {
-    hoist(WrappedStyledComponent, target, {
+    hoist(WrappedStyledComponent, (target: any), {
       // all SC-specific things should not be hoisted
       attrs: true,
       componentStyle: true,

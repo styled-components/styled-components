@@ -1,10 +1,10 @@
 // @flow
 import React, { createElement, Component } from 'react';
+import hoist from 'hoist-non-react-statics';
 import merge from '../utils/mixinDeep';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import generateDisplayName from '../utils/generateDisplayName';
-import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isTag from '../utils/isTag';
 import isStyledComponent from '../utils/isStyledComponent';
@@ -183,7 +183,7 @@ export default (InlineStyle: Function) => {
     });
 
     if (isClass) {
-      hoist(WrappedStyledNativeComponent, target, {
+      hoist(WrappedStyledNativeComponent, (target: any), {
         // all SC-specific things should not be hoisted
         attrs: true,
         displayName: true,
