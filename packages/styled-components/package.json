@@ -29,8 +29,7 @@
     "lint:size": "bundlesize",
     "prettier": "prettier */**/*.js --write",
     "prepublishOnly": "npm run build",
-    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
-    "postinstall": "node ./scripts/postinstall.js || exit 0"
+    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js"
   },
   "repository": {
     "type": "git",
@@ -98,6 +97,10 @@
     }
   ],
   "collective": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/styled-components"
+  },
+  "funding": {
     "type": "opencollective",
     "url": "https://opencollective.com/styled-components"
   }
