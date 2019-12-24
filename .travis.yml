@@ -6,6 +6,7 @@ branches:
   only:
     - master
     - canary
+    - v5
 env:
   global:
     - GOOGLE_CHROME_BINARY="/usr/bin/google-chrome-beta"
