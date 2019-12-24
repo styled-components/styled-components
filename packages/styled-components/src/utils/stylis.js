@@ -1,15 +1,9 @@
 import Stylis from '@emotion/stylis';
 import _insertRulePlugin from 'stylis-rule-sheet';
+import { type Stringifier } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
-
-export type Stringifier = (
-  css: string,
-  selector: string,
-  prefix: ?string,
-  componentId: string
-) => Array<string>;
 
 type StylisInstanceConstructorArgs = {
   options?: Object,
@@ -82,7 +76,7 @@ export default function createStylisInstance({
 
   stylis.use([...plugins, selfReferenceReplacementPlugin, parseRulesPlugin, returnRulesPlugin]);
 
-  return function stringifyRules(css, selector, prefix, componentId = '&'): Stringifier {
+  function stringifyRules(css, selector, prefix, componentId = '&'): Stringifier {
     const flatCSS = css.replace(COMMENT_REGEX, '');
     const cssStr = selector && prefix ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS;
 
@@ -94,5 +88,11 @@ export default function createStylisInstance({
     _selectorRegexp = new RegExp(`\\${_selector}\\b`, 'g');
 
     return stylis(prefix || !selector ? '' : selector, cssStr);
-  };
+  }
+
+  // stringifying the function bodies is suboptimal, but some plugins
+  // are anonymous functions so there is no name to use as a token
+  stringifyRules.signature = plugins.join('');
+
+  return stringifyRules;
 }

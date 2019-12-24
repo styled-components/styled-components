@@ -2,7 +2,7 @@
 import React, { useContext, useEffect, useRef } from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
-import { useStyleSheet } from '../models/StyleSheetManager';
+import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
 import determineTheme from '../utils/determineTheme';
 import { ThemeContext } from '../models/ThemeProvider';
 import hasher from '../utils/hasher';
@@ -23,6 +23,7 @@ export default function createGlobalStyle(
 
   function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
     const styleSheet = useStyleSheet();
+    const stylis = useStylis();
     const theme = useContext(ThemeContext);
     const instanceRef = useRef(null);
 
@@ -38,14 +39,14 @@ export default function createGlobalStyle(
     }
 
     if (globalStyle.isStatic) {
-      globalStyle.renderStyles(instance, STATIC_EXECUTION_CONTEXT, styleSheet);
+      globalStyle.renderStyles(instance, STATIC_EXECUTION_CONTEXT, styleSheet, stylis);
     } else {
       const context = {
         ...props,
         theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
       };
 
-      globalStyle.renderStyles(instance, context, styleSheet);
+      globalStyle.renderStyles(instance, context, styleSheet, stylis);
     }
 
     useEffect(() => () => globalStyle.removeStyles(instance, styleSheet), []);

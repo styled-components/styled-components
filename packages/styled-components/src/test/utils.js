@@ -37,8 +37,6 @@ export const resetStyled = (isServer: boolean = false) => {
   mockIndex = 0;
   mockInputs = {};
 
-  if (typeof window !== 'undefined') window.scCGSHMRCache = {};
-
   return styled;
 };
 

@@ -2,7 +2,7 @@
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { render } from 'react-dom';
-import TestRenderer from 'react-test-renderer';
+import TestRenderer, { act } from 'react-test-renderer';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
 import stylisRTLPlugin from 'stylis-rtl';
 import StyleSheetManager from '../StyleSheetManager';
@@ -247,32 +247,6 @@ describe('StyleSheetManager', () => {
     );
   });
 
-  it('StyleSheetManager warns if you try to dynamically change disableVendorPrefixes', () => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-    const Test = styled.div`
-      display: flex;
-    `;
-
-    const wrapper = TestRenderer.create(
-      <StyleSheetManager disableVendorPrefixes>
-        <Test>Foo</Test>
-      </StyleSheetManager>
-    );
-
-    expect(console.warn).not.toHaveBeenCalled();
-
-    wrapper.update(
-      <StyleSheetManager disableVendorPrefixes={false}>
-        <Test>Foo</Test>
-      </StyleSheetManager>
-    );
-
-    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"disableVendorPrefixes is frozen on initial mount of StyleSheetManager. Changing this prop dynamically will have no effect."`
-    );
-  });
-
   it('passing stylis plugins via StyleSheetManager works', () => {
     const Test = styled.div`
       padding-left: 5px;
@@ -289,11 +263,9 @@ describe('StyleSheetManager', () => {
     );
   });
 
-  it('StyleSheetManager warns if you try to dynamically change the stylis plugins', () => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
-
+  it('changing stylis plugins via StyleSheetManager works', () => {
     const Test = styled.div`
-      display: flex;
+      padding-left: 5px;
     `;
 
     const wrapper = TestRenderer.create(
@@ -302,17 +274,59 @@ describe('StyleSheetManager', () => {
       </StyleSheetManager>
     );
 
-    expect(console.warn).not.toHaveBeenCalled();
-
-    wrapper.update(
-      <StyleSheetManager stylisPlugins={[]}>
-        <Test>Foo</Test>
-      </StyleSheetManager>
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}</style>"`
     );
 
-    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"stylisPlugins are frozen on initial mount of StyleSheetManager. Changing this prop dynamically will have no effect."`
+    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
+      <div
+        className="sc-a b"
+      >
+        Foo
+      </div>
+    `);
+
+    act(() => {
+      wrapper.update(
+        <StyleSheetManager>
+          <Test>Foo</Test>
+        </StyleSheetManager>
+      );
+    });
+
+    // note that the old styles are not removed since the condition may appear where they're used again
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}.c{padding-left:5px;}</style>"`
     );
+
+    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
+      <div
+        className="sc-a c"
+      >
+        Foo
+      </div>
+    `);
+
+    act(() => {
+      wrapper.update(
+        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+          <Test>Foo</Test>
+        </StyleSheetManager>
+      );
+    });
+
+    // no new dynamic classes are added, reusing the prior one
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}.c{padding-left:5px;}</style>"`
+    );
+
+    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
+      <div
+        className="sc-a b"
+      >
+        Foo
+      </div>
+    `);
   });
 
   it('nested StyleSheetManager with different injection modes works', () => {

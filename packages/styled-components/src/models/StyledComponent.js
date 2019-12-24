@@ -21,7 +21,7 @@ import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import joinStrings from '../utils/joinStrings';
 import { ThemeContext } from './ThemeProvider';
-import { useStyleSheet } from './StyleSheetManager';
+import { useStyleSheet, useStylis } from './StyleSheetManager';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 
 import type { Attrs, RuleSet, Target } from '../types';
@@ -88,14 +88,15 @@ function useInjectedStyle<T>(
   warnTooManyClasses?: $Call<typeof createWarnTooManyClasses, string>
 ) {
   const styleSheet = useStyleSheet();
+  const stylis = useStylis();
 
   // statically styled-components don't need to build an execution context object,
   // and shouldn't be increasing the number of class names
   const isStatic = componentStyle.isStatic && !hasAttrs;
 
   const className = isStatic
-    ? componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet)
-    : componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet);
+    ? componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet, stylis)
+    : componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet, stylis);
 
   useDebugValue(className);
 
