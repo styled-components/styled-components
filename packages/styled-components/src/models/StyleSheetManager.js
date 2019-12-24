@@ -22,6 +22,8 @@ export function useStyleSheet(): StyleSheet {
 }
 
 export default function StyleSheetManager(props: Props) {
+  const contextStylesheet = useStyleSheet();
+
   /**
    * freeze the stylis modification props on initial mount since they rely on
    * reference equality for the useMemo dependencies array and devs will
@@ -49,7 +51,7 @@ export default function StyleSheetManager(props: Props) {
   }
 
   const styleSheet = useMemo(() => {
-    let sheet = masterSheet;
+    let sheet = contextStylesheet;
 
     if (props.sheet) {
       // eslint-disable-next-line prefer-destructuring
