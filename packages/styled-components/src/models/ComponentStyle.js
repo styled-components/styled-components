@@ -1,7 +1,7 @@
 // @flow
 
 import flatten from '../utils/flatten';
-import { hash, phash } from '../utils/hasher';
+import { hash, phash } from '../utils/hash';
 import generateName from '../utils/generateAlphabeticName';
 import isStaticRules from '../utils/isStaticRules';
 import StyleSheet from '../sheet';

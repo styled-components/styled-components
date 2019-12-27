@@ -15,7 +15,7 @@ import determineTheme from '../utils/determineTheme';
 import escape from '../utils/escape';
 import generateDisplayName from '../utils/generateDisplayName';
 import getComponentName from '../utils/getComponentName';
-import hasher from '../utils/hasher';
+import generateComponentId from '../utils/generateComponentId';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
@@ -36,7 +36,7 @@ function generateId(displayName: string, parentComponentId: string) {
   // Ensure that no displayName can lead to duplicate componentIds
   identifiers[name] = (identifiers[name] || 0) + 1;
 
-  const componentId = `${name}-${hasher(name + identifiers[name])}`;
+  const componentId = `${name}-${generateComponentId(name + identifiers[name])}`;
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 

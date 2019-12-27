@@ -5,7 +5,7 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
 import determineTheme from '../utils/determineTheme';
 import { ThemeContext } from '../models/ThemeProvider';
-import hasher from '../utils/hasher';
+import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
 import type { Interpolation } from '../types';
@@ -17,7 +17,7 @@ export default function createGlobalStyle(
   ...interpolations: Array<Interpolation>
 ) {
   const rules = css(strings, ...interpolations);
-  const styledComponentId = `sc-global-${hasher(JSON.stringify(rules))}`;
+  const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle(rules, styledComponentId);
   let count = 0;
 

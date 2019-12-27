@@ -2,6 +2,7 @@ import Stylis from '@emotion/stylis';
 import _insertRulePlugin from 'stylis-rule-sheet';
 import { type Stringifier } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
+import { hash, phash } from './hash';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 
