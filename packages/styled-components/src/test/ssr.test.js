@@ -478,6 +478,8 @@ describe('ssr', () => {
       padding-left: 5px;
     `;
 
+    Object.defineProperty(stylisRTLPlugin, 'name', { value: 'rtl' });
+
     const sheet = new ServerStyleSheet();
     const html = renderToString(
       sheet.collectStyles(

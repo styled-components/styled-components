@@ -20,6 +20,8 @@ describe('StyleSheetManager', () => {
 
     jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    Object.defineProperty(stylisRTLPlugin, 'name', { value: 'rtl' });
   });
 
   it('should use given stylesheet instance', () => {
@@ -255,34 +257,20 @@ describe('StyleSheetManager', () => {
     );
   });
 
-  it('a warning is emitted if unnamed stylis plugins are provided', () => {
+  it('an error is emitted if unnamed stylis plugins are provided', () => {
     const Test = styled.div`
       padding-left: 5px;
     `;
 
-    TestRenderer.create(
-      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
-        <Test>Foo</Test>
-      </StyleSheetManager>
-    );
+    Object.defineProperty(stylisRTLPlugin, 'name', { value: undefined });
 
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('stylisPlugins'));
-  });
-
-  it('a warning is not emitted if named stylis plugins are provided', () => {
-    const Test = styled.div`
-      padding-left: 5px;
-    `;
-
-    Object.defineProperty(stylisRTLPlugin, 'name', { value: 'rtl' });
-
-    TestRenderer.create(
-      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
-        <Test>Foo</Test>
-      </StyleSheetManager>
-    );
-
-    expect(console.warn).not.toHaveBeenCalledWith(expect.stringContaining('stylisPlugins'));
+    expect(() =>
+      TestRenderer.create(
+        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+          <Test>Foo</Test>
+        </StyleSheetManager>
+      )
+    ).toThrowError();
   });
 
   it('changing stylis plugins via StyleSheetManager works', () => {
