@@ -98,11 +98,7 @@ export default function createStylisInstance({
         throwStyledError(15);
       }
 
-      // hashing the function bodies is suboptimal, but some plugins
-      // are anonymous functions so there is no name to use as a token
-      const target = plugin.name || plugin.toString();
-
-      return !acc ? hash(target) : phash(acc, target);
+      return !acc ? hash(plugin.name) : phash(acc, plugin.name);
     }, '')
     .toString();
 
