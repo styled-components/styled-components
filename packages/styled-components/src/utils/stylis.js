@@ -91,9 +91,11 @@ export default function createStylisInstance({
     return stylis(prefix || !selector ? '' : selector, cssStr);
   }
 
-  // stringifying the function bodies is suboptimal, but some plugins
+  // hashing the function bodies is suboptimal, but some plugins
   // are anonymous functions so there is no name to use as a token
-  stringifyRules.signature = plugins.join('');
+  stringifyRules.hash = plugins
+    .reduce((acc, plugin) => (!acc ? hash(plugin.toString()) : phash(acc, plugin.toString())), '')
+    .toString();
 
   return stringifyRules;
 }

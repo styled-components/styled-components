@@ -44,7 +44,7 @@ export default class ComponentStyle {
     const { componentId } = this;
 
     // force dynamic classnames if user-supplied stylis plugins are in use
-    if (this.isStatic && !stylis.signature) {
+    if (this.isStatic && !stylis.hash) {
       if (this.staticRulesId && styleSheet.hasNameForId(componentId, this.staticRulesId)) {
         return this.staticRulesId;
       }
@@ -63,7 +63,7 @@ export default class ComponentStyle {
       return name;
     } else {
       const { length } = this.rules;
-      let dynamicHash = phash(this.baseHash, stylis.signature);
+      let dynamicHash = phash(this.baseHash, stylis.hash);
       let css = '';
 
       for (let i = 0; i < length; i++) {

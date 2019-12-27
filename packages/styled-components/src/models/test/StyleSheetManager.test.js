@@ -279,12 +279,12 @@ describe('StyleSheetManager', () => {
     );
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-      <div
-        className="sc-a b"
-      >
-        Foo
-      </div>
-    `);
+            <div
+              className="sc-a b"
+            >
+              Foo
+            </div>
+        `);
 
     act(() => {
       wrapper.update(
@@ -300,12 +300,12 @@ describe('StyleSheetManager', () => {
     );
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-      <div
-        className="sc-a c"
-      >
-        Foo
-      </div>
-    `);
+            <div
+              className="sc-a c"
+            >
+              Foo
+            </div>
+        `);
 
     act(() => {
       wrapper.update(
@@ -321,10 +321,44 @@ describe('StyleSheetManager', () => {
     );
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-      <div
-        className="sc-a b"
-      >
-        Foo
+            <div
+              className="sc-a b"
+            >
+              Foo
+            </div>
+        `);
+  });
+
+  it('subtrees with different stylis configs should not conflict', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    const wrapper = TestRenderer.create(
+      <div>
+        <Test>Bar</Test>
+        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+          <Test>Foo</Test>
+        </StyleSheetManager>
+      </div>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-left:5px;}.c{padding-right:5px;}</style>"`
+    );
+
+    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
+      <div>
+        <div
+          className="sc-a b"
+        >
+          Bar
+        </div>
+        <div
+          className="sc-a c"
+        >
+          Foo
+        </div>
       </div>
     `);
   });

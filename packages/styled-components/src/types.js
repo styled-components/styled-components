@@ -33,5 +33,5 @@ export type Flattener = (
 
 export type Stringifier = {
   (rules: string, selector: string, prefix: ?string, componentId: ?string): Array<string>,
-  signature: string,
+  hash: string,
 };
