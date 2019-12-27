@@ -21,6 +21,9 @@ import withTheme from './hoc/withTheme';
 /* Import hooks */
 import useTheme from './hooks/useTheme';
 
+declare var __VERSION__: string;
+const version = __VERSION__;
+
 /* Warning if you've imported this file on React Native */
 if (
   process.env.NODE_ENV !== 'production' &&
@@ -67,5 +70,6 @@ export {
   ThemeContext,
   ThemeProvider,
   useTheme,
+  version,
   withTheme,
 };
