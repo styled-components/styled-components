@@ -11,23 +11,15 @@ import StyleSheet from '../../sheet';
 import { resetStyled } from '../../test/utils';
 
 let styled;
-let consoleError;
-
-const parallelWarning =
-  'Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.';
-
 describe('StyleSheetManager', () => {
-  consoleError = console.error;
-
   beforeEach(() => {
     document.body.innerHTML = '';
     document.head.innerHTML = '';
 
     styled = resetStyled(true);
 
-    jest
-      .spyOn(console, 'error')
-      .mockImplementation(msg => (msg !== parallelWarning ? consoleError(msg) : null));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   it('should use given stylesheet instance', () => {
@@ -261,6 +253,36 @@ describe('StyleSheetManager', () => {
     expect(document.head.innerHTML).toMatchInlineSnapshot(
       `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}</style>"`
     );
+  });
+
+  it('a warning is emitted if unnamed stylis plugins are provided', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    TestRenderer.create(
+      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('stylisPlugins'));
+  });
+
+  it('a warning is not emitted if named stylis plugins are provided', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    Object.defineProperty(stylisRTLPlugin, 'name', { value: 'rtl' });
+
+    TestRenderer.create(
+      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expect(console.warn).not.toHaveBeenCalledWith(expect.stringContaining('stylisPlugins'));
   });
 
   it('changing stylis plugins via StyleSheetManager works', () => {

@@ -94,7 +94,17 @@ export default function createStylisInstance({
   // hashing the function bodies is suboptimal, but some plugins
   // are anonymous functions so there is no name to use as a token
   stringifyRules.hash = plugins
-    .reduce((acc, plugin) => (!acc ? hash(plugin.toString()) : phash(acc, plugin.toString())), '')
+    .reduce((acc, plugin) => {
+      if (process.env.NODE_ENV !== 'production' && !plugin.name) {
+        console.warn(
+          '[styled-components] A stylis plugin has been supplied that is not named. We need a name for each plugin to be able to prevent styling collisions between different stylis configurations within the same app. Before you pass your plugin to <StyleSheetManager stylisPlugins={[]}>, please make sure each plugin is uniquely-named (Object.defineProperty(importedPlugin, "name", { value: "some-unique-name" });).'
+        );
+      }
+
+      const target = plugin.name || plugin.toString();
+
+      return !acc ? hash(target) : phash(acc, target);
+    }, '')
     .toString();
 
   return stringifyRules;
