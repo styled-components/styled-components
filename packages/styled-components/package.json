@@ -87,8 +87,7 @@
     "react-is": "^16.8.6",
     "react-native": "^0.59.8",
     "react-primitives": "^0.8.0",
-    "react-test-renderer": "^16.8.6",
-    "stylis-rtl": "^1.0.1"
+    "react-test-renderer": "^16.8.6"
   },
   "bundlesize": [
     {

@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { render } from 'react-dom';
 import TestRenderer, { act } from 'react-test-renderer';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
-import stylisRTLPlugin from 'stylis-rtl';
+import stylisRTLPlugin from 'stylis-plugin-rtl';
 import StyleSheetManager from '../StyleSheetManager';
 import ServerStyleSheet from '../ServerStyleSheet';
 import StyleSheet from '../../sheet';
@@ -20,8 +20,6 @@ describe('StyleSheetManager', () => {
 
     jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-    Object.defineProperty(stylisRTLPlugin, 'name', { value: 'rtl' });
   });
 
   it('should use given stylesheet instance', () => {
@@ -262,6 +260,7 @@ describe('StyleSheetManager', () => {
       padding-left: 5px;
     `;
 
+    const cachedName = stylisRTLPlugin.name;
     Object.defineProperty(stylisRTLPlugin, 'name', { value: undefined });
 
     expect(() =>
@@ -271,6 +270,8 @@ describe('StyleSheetManager', () => {
         </StyleSheetManager>
       )
     ).toThrowError();
+
+    Object.defineProperty(stylisRTLPlugin, 'name', { value: cachedName });
   });
 
   it('changing stylis plugins via StyleSheetManager works', () => {

@@ -4,7 +4,7 @@
 // @flow
 import React from 'react';
 import { renderToString, renderToNodeStream } from 'react-dom/server';
-import stylisRTLPlugin from 'stylis-rtl';
+import stylisRTLPlugin from 'stylis-plugin-rtl';
 import ServerStyleSheet from '../models/ServerStyleSheet';
 import { resetStyled } from './utils';
 import createGlobalStyle from '../constructors/createGlobalStyle';
@@ -477,8 +477,6 @@ describe('ssr', () => {
     const Heading = styled.h1`
       padding-left: 5px;
     `;
-
-    Object.defineProperty(stylisRTLPlugin, 'name', { value: 'rtl' });
 
     const sheet = new ServerStyleSheet();
     const html = renderToString(
