@@ -3,7 +3,7 @@ import _insertRulePlugin from 'stylis-rule-sheet';
 import { type Stringifier } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
-import { phash } from './hash';
+import { phash, SEED } from './hash';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 
@@ -99,7 +99,7 @@ export default function createStylisInstance({
       }
 
       return phash(acc, plugin.name);
-    }, 0)
+    }, SEED)
     .toString();
 
   return stringifyRules;
