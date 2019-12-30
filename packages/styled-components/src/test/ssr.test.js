@@ -4,9 +4,11 @@
 // @flow
 import React from 'react';
 import { renderToString, renderToNodeStream } from 'react-dom/server';
+import stylisRTLPlugin from 'stylis-plugin-rtl';
 import ServerStyleSheet from '../models/ServerStyleSheet';
 import { resetStyled } from './utils';
 import createGlobalStyle from '../constructors/createGlobalStyle';
+import StyleSheetManager from '../models/StyleSheetManager';
 
 jest.mock('../utils/nonce');
 
@@ -469,5 +471,28 @@ describe('ssr', () => {
 
       stream.on('error', reject);
     });
+  });
+
+  it('should work with stylesheet manager and passed stylis plugins', () => {
+    const Heading = styled.h1`
+      padding-left: 5px;
+    `;
+
+    const sheet = new ServerStyleSheet();
+    const html = renderToString(
+      sheet.collectStyles(
+        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+          <Heading>Hello SSR!</Heading>
+        </StyleSheetManager>
+      )
+    );
+    const css = sheet.getStyleTags();
+
+    expect(html).toMatchInlineSnapshot(`"<h1 class=\\"sc-a b\\">Hello SSR!</h1>"`);
+    expect(css).toMatchInlineSnapshot(`
+      "<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}
+      data-styled.g1[id=\\"sc-a\\"]{content:\\"b,\\"}
+      </style>"
+    `);
   });
 });

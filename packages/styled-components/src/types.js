@@ -31,8 +31,7 @@ export type Flattener = (
   styleSheet: ?Object
 ) => Array<Interpolation>;
 
-export type Stringifier = (
-  rules: Array<Interpolation>,
-  selector: ?string,
-  prefix: ?string
-) => Array<string>;
+export type Stringifier = {
+  (rules: string, selector: string, prefix: ?string, componentId: ?string): Array<string>,
+  hash: string,
+};

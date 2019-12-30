@@ -3,7 +3,7 @@ import flatten from '../utils/flatten';
 import isStaticRules from '../utils/isStaticRules';
 import StyleSheet from '../sheet';
 
-import type { RuleSet } from '../types';
+import type { RuleSet, Stringifier } from '../types';
 
 export default class GlobalStyle {
   componentId: string;
@@ -18,9 +18,14 @@ export default class GlobalStyle {
     this.isStatic = isStaticRules(rules);
   }
 
-  createStyles(instance: number, executionContext: Object, styleSheet: StyleSheet) {
+  createStyles(
+    instance: number,
+    executionContext: Object,
+    styleSheet: StyleSheet,
+    stylis: Stringifier
+  ) {
     const flatCSS = flatten(this.rules, executionContext, styleSheet);
-    const css = styleSheet.options.stringifier(flatCSS.join(''), '');
+    const css = stylis(flatCSS.join(''), '');
     const id = this.componentId + instance;
 
     // NOTE: We use the id as a name as well, since these rules never change
@@ -31,11 +36,16 @@ export default class GlobalStyle {
     styleSheet.clearRules(this.componentId + instance);
   }
 
-  renderStyles(instance: number, executionContext: Object, styleSheet: StyleSheet) {
+  renderStyles(
+    instance: number,
+    executionContext: Object,
+    styleSheet: StyleSheet,
+    stylis: Stringifier
+  ) {
     StyleSheet.registerId(this.componentId + instance);
 
     // NOTE: Remove old styles, then inject the new ones
     this.removeStyles(instance, styleSheet);
-    this.createStyles(instance, executionContext, styleSheet);
+    this.createStyles(instance, executionContext, styleSheet, stylis);
   }
 }

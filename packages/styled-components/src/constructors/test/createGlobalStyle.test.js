@@ -364,8 +364,6 @@ describe(`createGlobalStyle`, () => {
     const flag = constants.DISABLE_SPEEDY;
     constants.DISABLE_SPEEDY = false;
 
-    // Create a clean container and window.scCGSHMRCache
-    window.scCGSHMRCache = {};
     const container = document.createElement('div');
     document.body.appendChild(container);
 

@@ -1,7 +1,7 @@
 // @flow
 
 import css from './css';
-import hasher from '../utils/hasher';
+import generateComponentId from '../utils/generateComponentId';
 import Keyframes from '../models/Keyframes';
 
 import type { Interpolation, Styles } from '../types';
@@ -23,6 +23,6 @@ export default function keyframes(
   }
 
   const rules = css(strings, ...interpolations).join('');
-  const name = hasher(rules);
+  const name = generateComponentId(rules);
   return new Keyframes(name, [rules, name, '@keyframes']);
 }

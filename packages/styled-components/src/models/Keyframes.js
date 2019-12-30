@@ -1,6 +1,7 @@
 // @flow
 import StyleSheet from '../sheet';
 import throwStyledError from '../utils/error';
+import { masterStylis } from './StyleSheetManager';
 
 export default class Keyframes {
   id: string;
@@ -18,11 +19,7 @@ export default class Keyframes {
 
   inject = (styleSheet: StyleSheet) => {
     if (!styleSheet.hasNameForId(this.id, this.name)) {
-      styleSheet.insertRules(
-        this.id,
-        this.name,
-        styleSheet.options.stringifier(...this.stringifyArgs)
-      );
+      styleSheet.insertRules(this.id, this.name, masterStylis(...this.stringifyArgs));
     }
   };
 

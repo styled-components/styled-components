@@ -1,6 +1,5 @@
 // @flow
 import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
-import createStylisInstance from '../utils/stylis';
 import type { GroupedTag, Sheet, SheetOptions } from './types';
 import { makeTag } from './Tag';
 import { makeGroupedTag } from './GroupedTag';
@@ -17,7 +16,6 @@ type SheetConstructorArgs = {
 
 const defaultOptions = {
   isServer: !IS_BROWSER,
-  stringifier: createStylisInstance(),
   useCSSOMInjection: !DISABLE_SPEEDY,
 };
 

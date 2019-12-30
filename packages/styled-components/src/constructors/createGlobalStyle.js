@@ -2,10 +2,10 @@
 import React, { useContext, useEffect, useRef } from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
-import { useStyleSheet } from '../models/StyleSheetManager';
+import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
 import determineTheme from '../utils/determineTheme';
 import { ThemeContext } from '../models/ThemeProvider';
-import hasher from '../utils/hasher';
+import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
 import type { Interpolation } from '../types';
@@ -17,12 +17,13 @@ export default function createGlobalStyle(
   ...interpolations: Array<Interpolation>
 ) {
   const rules = css(strings, ...interpolations);
-  const styledComponentId = `sc-global-${hasher(JSON.stringify(rules))}`;
+  const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle(rules, styledComponentId);
   let count = 0;
 
   function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
     const styleSheet = useStyleSheet();
+    const stylis = useStylis();
     const theme = useContext(ThemeContext);
     const instanceRef = useRef(null);
 
@@ -38,14 +39,14 @@ export default function createGlobalStyle(
     }
 
     if (globalStyle.isStatic) {
-      globalStyle.renderStyles(instance, STATIC_EXECUTION_CONTEXT, styleSheet);
+      globalStyle.renderStyles(instance, STATIC_EXECUTION_CONTEXT, styleSheet, stylis);
     } else {
       const context = {
         ...props,
         theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
       };
 
-      globalStyle.renderStyles(instance, context, styleSheet);
+      globalStyle.renderStyles(instance, context, styleSheet, stylis);
     }
 
     useEffect(() => () => globalStyle.removeStyles(instance, styleSheet), []);
