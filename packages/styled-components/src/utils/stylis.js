@@ -1,9 +1,9 @@
 import Stylis from '@emotion/stylis';
-import _insertRulePlugin from 'stylis-rule-sheet';
 import { type Stringifier } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
 import { phash, SEED } from './hash';
+import insertRulePlugin from './stylisPluginInsertRule';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 
@@ -33,7 +33,7 @@ export default function createStylisInstance({
     }
   };
 
-  const parseRulesPlugin = _insertRulePlugin(rule => {
+  const parseRulesPlugin = insertRulePlugin(rule => {
     parsingRules.push(rule);
   });
 
