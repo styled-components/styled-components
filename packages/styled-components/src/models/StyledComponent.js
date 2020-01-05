@@ -276,7 +276,8 @@ export default function createStyledComponent(
   });
 
   if (process.env.NODE_ENV !== 'production') {
-    WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName);
+    // $FlowFixMe
+    WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName, styledComponentId);
   }
 
   // $FlowFixMe
