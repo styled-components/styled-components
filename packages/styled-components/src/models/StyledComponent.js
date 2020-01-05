@@ -326,7 +326,7 @@ export default function createStyledComponent(target: Target, options: Object, r
 
   if (process.env.NODE_ENV !== 'production') {
     // $FlowFixMe
-    WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName);
+    WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName, styledComponentId);
   }
 
   // $FlowFixMe
