@@ -75,7 +75,7 @@ interface StyledComponentWrapperProperties {
   foldedComponentIds: Array<string>;
   target: Target;
   styledComponentId: string;
-  warnTooManyClasses: $Call<typeof createWarnTooManyClasses, string>;
+  warnTooManyClasses: $Call<typeof createWarnTooManyClasses, string, string>;
 }
 
 type StyledComponentWrapper<Config, Instance> = AbstractComponent<Config, Instance> &
@@ -85,7 +85,7 @@ function useInjectedStyle<T>(
   componentStyle: ComponentStyle,
   hasAttrs: boolean,
   resolvedAttrs: T,
-  warnTooManyClasses?: $Call<typeof createWarnTooManyClasses, string>
+  warnTooManyClasses?: $Call<typeof createWarnTooManyClasses, string, string>
 ) {
   const styleSheet = useStyleSheet();
   const stylis = useStylis();
@@ -277,7 +277,10 @@ export default function createStyledComponent(
   });
 
   if (process.env.NODE_ENV !== 'production') {
-    WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(displayName);
+    WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(
+      displayName,
+      styledComponentId
+    );
   }
 
   // $FlowFixMe
