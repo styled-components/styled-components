@@ -5,7 +5,7 @@ import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
 import type { Sheet } from './types';
 
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
-const RULE_RE = /(?:\s*)?(.*?){((?:{[^}]*}|(?!{).*?)*?)}/g;
+const RULE_RE = /(?:\s*)?(.*?){((?:{[^}]*}|(?!{).*?)*)}/g;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\]`);
 
 export const outputSheet = (sheet: Sheet) => {
