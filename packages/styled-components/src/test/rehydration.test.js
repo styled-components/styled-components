@@ -24,6 +24,7 @@ const getStyleTags = () =>
 let styled;
 
 const resetSheet = sheet => {
+  sheet.gs = {};
   sheet.names = new Map();
   sheet.clearTag();
   rehydrateSheet(sheet);

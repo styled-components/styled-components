@@ -20,7 +20,6 @@ export default function createGlobalStyle(
   const rules = css(strings, ...interpolations);
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle(rules, styledComponentId);
-  let count = 0;
 
   function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
     const styleSheet = useStyleSheet();
@@ -28,7 +27,9 @@ export default function createGlobalStyle(
     const theme = useContext(ThemeContext);
     const instanceRef = useRef(null);
 
-    if (instanceRef.current === null) instanceRef.current = ++count;
+    if (instanceRef.current === null) {
+      instanceRef.current = styleSheet.allocateGSInstance(styledComponentId);
+    }
 
     const instance = instanceRef.current;
 
