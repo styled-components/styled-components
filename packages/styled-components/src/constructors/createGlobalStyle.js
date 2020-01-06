@@ -5,6 +5,7 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
 import determineTheme from '../utils/determineTheme';
 import { ThemeContext } from '../models/ThemeProvider';
+import { EMPTY_ARRAY } from '../utils/empties';
 import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
@@ -49,7 +50,7 @@ export default function createGlobalStyle(
       globalStyle.renderStyles(instance, context, styleSheet, stylis);
     }
 
-    useEffect(() => () => globalStyle.removeStyles(instance, styleSheet), []);
+    useEffect(() => () => globalStyle.removeStyles(instance, styleSheet), EMPTY_ARRAY);
 
     return null;
   }
