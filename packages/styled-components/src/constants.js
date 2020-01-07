@@ -18,11 +18,11 @@ function isSpeedyDisabled() {
     return SC_DISABLE_SPEEDY;
   }
   if (typeof process !== 'undefined') {
-    if (typeof process.env.REACT_APP_SC_DISABLE_SPEEDY !== 'undefined') {
-      return process.env.REACT_APP_SC_DISABLE_SPEEDY && process.env.REACT_APP_SC_DISABLE_SPEEDY.toLowerCase() === 'true';
+    if (process.env.REACT_APP_SC_DISABLE_SPEEDY) {
+      return process.env.REACT_APP_SC_DISABLE_SPEEDY.toLowerCase() === 'true';
     }
-    if (typeof process.env.SC_DISABLE_SPEEDY !== 'undefined') {
-      return process.env.SC_DISABLE_SPEEDY && process.env.SC_DISABLE_SPEEDY.toLowerCase() === 'true';
+    if (process.env.SC_DISABLE_SPEEDY) {
+      return process.env.SC_DISABLE_SPEEDY.toLowerCase() === 'true';
     }
 
     return process.env.NODE_ENV !== 'production';
