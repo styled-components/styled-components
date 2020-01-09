@@ -3,7 +3,7 @@
 /* eslint-disable react/prop-types */
 
 import React, { type Element } from 'react';
-import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR, SC_VERSION_ATTR } from '../constants';
+import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR, SC_VERSION_ATTR, SC_INSTANCE_ATTR, SC_INSTANCE_ID } from '../constants';
 import StyledError from '../utils/error';
 import { type ExtractedComp } from '../utils/extractCompsFromCSS';
 import { splitByRules } from '../utils/stringifyRules';
@@ -65,6 +65,7 @@ const makeStyleTag = (target: ?HTMLElement, tagEl: ?Node, insertBefore: ?boolean
   const el = targetDocument.createElement('style');
   el.setAttribute(SC_ATTR, '');
   el.setAttribute(SC_VERSION_ATTR, __VERSION__);
+  el.setAttribute(SC_INSTANCE_ATTR, SC_INSTANCE_ID);
 
   const nonce = getNonce();
   if (nonce) {
@@ -96,6 +97,7 @@ const wrapAsHtmlTag = (css: () => string, names: Names) => (additionalAttrs: ?st
     nonce && `nonce="${nonce}"`,
     `${SC_ATTR}="${stringifyNames(names)}"`,
     `${SC_VERSION_ATTR}="${__VERSION__}"`,
+    `${SC_INSTANCE_ATTR}="${SC_INSTANCE_ID}"`,
     additionalAttrs,
   ];
 
@@ -108,6 +110,7 @@ const wrapAsElement = (css: () => string, names: Names) => () => {
   const props = {
     [SC_ATTR]: stringifyNames(names),
     [SC_VERSION_ATTR]: __VERSION__,
+    [SC_INSTANCE_ATTR]: SC_INSTANCE_ID,
   };
 
   const nonce = getNonce();

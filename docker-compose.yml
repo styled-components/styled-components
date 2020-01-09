@@ -1,0 +1,19 @@
+version: '3'
+services:
+  build:
+    build: .
+    image: intellihr/styled-components:latest
+
+  local:
+    image: intellihr/styled-components:latest
+    expose:
+      - 3000
+    command: bash
+
+  test:
+    image: intellihr/styled-components:latest
+    command: yarn test
+
+  publish:
+    image: intellihr/styled-components:latest
+    command: yarn publish

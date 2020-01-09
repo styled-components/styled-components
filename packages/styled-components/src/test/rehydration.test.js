@@ -6,7 +6,7 @@ import { resetStyled, expectCSSMatches, seedNextClassnames } from './utils';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 import keyframes from '../constructors/keyframes';
 import StyleSheet from '../models/StyleSheet';
-import { SC_ATTR, SC_VERSION_ATTR } from '../constants';
+import { SC_ATTR, SC_VERSION_ATTR, SC_INSTANCE_ATTR, SC_INSTANCE_ID } from '../constants';
 
 const getStyleTags = () =>
   Array.from(document.querySelectorAll('style')).map(el => ({
@@ -26,7 +26,7 @@ describe('rehydration', () => {
   describe('with existing styled components', () => {
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR}="b" ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR}="b" ${SC_VERSION_ATTR}="${__VERSION__}" ${SC_INSTANCE_ATTR}="${SC_INSTANCE_ID}">
           /* sc-component-id: TWO */
           .b { color: red; }
         </style>
@@ -90,7 +90,7 @@ describe('rehydration', () => {
       /* Hash 1323611362 is based on name TWO and contents color: red.
        * Change either and this will break. */
       document.head.innerHTML = `
-        <style ${SC_ATTR}='a b' ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR}='a b' ${SC_VERSION_ATTR}="${__VERSION__}" ${SC_INSTANCE_ATTR}="${SC_INSTANCE_ID}">
           /* sc-component-id: ONE */
           .a { color: blue; }
           /* sc-component-id: TWO */
@@ -166,11 +166,11 @@ describe('rehydration', () => {
        * derived from "body { background: papayawhip; }" so be careful
        * changing it. */
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}" ${SC_INSTANCE_ATTR}="${SC_INSTANCE_ID}">
           /* sc-component-id: sc-global-557410406 */
           body { background: papayawhip; }
         </style>
-        <style ${SC_ATTR}='b' ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR}='b' ${SC_VERSION_ATTR}="${__VERSION__}" ${SC_INSTANCE_ATTR}="${SC_INSTANCE_ID}">
           /* sc-component-id: TWO */
           .b { color: red; }
         </style>
@@ -230,13 +230,13 @@ describe('rehydration', () => {
     let styleTags;
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}" ${SC_INSTANCE_ATTR}="${SC_INSTANCE_ID}">
            /* sc-component-id: sc-global-1455077013 */
           html { font-size: 16px; }
            /* sc-component-id: sc-global-557410406 */
           body { background: papayawhip; }
         </style>
-        <style ${SC_ATTR}='a b' ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR}='a b' ${SC_VERSION_ATTR}="${__VERSION__}" ${SC_INSTANCE_ATTR}="${SC_INSTANCE_ID}">
           /* sc-component-id: ONE */
           .a { color: blue; }
           /* sc-component-id: TWO */
@@ -312,7 +312,7 @@ describe('rehydration', () => {
   describe('with keyframes', () => {
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR}='keyframe_880' ${SC_VERSION_ATTR}="${__VERSION__}">
+        <style ${SC_ATTR}='keyframe_880' ${SC_VERSION_ATTR}="${__VERSION__}" ${SC_INSTANCE_ATTR}="${SC_INSTANCE_ID}">
           /* sc-component-id: sc-keyframes-keyframe_880 */
           @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
         </style>

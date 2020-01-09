@@ -10,6 +10,12 @@ import StyleSheet from '../StyleSheet';
 import { resetStyled } from '../../test/utils';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
 
+jest.mock('uuid/v4', () => {
+  return () => {
+    return '00000000-0000-0000-0000-000000000000';
+  };
+});
+
 let styled;
 let consoleError;
 

@@ -1,10 +1,8 @@
 // @flow
 import { cloneElement } from 'react';
-import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR, SC_VERSION_ATTR, SC_STREAM_ATTR } from '../constants';
+import { IS_BROWSER, DISABLE_SPEEDY, SC_ATTR, SC_INSTANCE_ATTR, SC_INSTANCE_ID, SC_STREAM_ATTR } from '../constants';
 import { makeTag, rehydrate, type Tag } from './StyleTags';
 import extractComps from '../utils/extractCompsFromCSS';
-
-declare var __VERSION__: string;
 
 const SPLIT_REGEX = /\s+/;
 
@@ -80,7 +78,7 @@ export default class StyleSheet {
 
     /* retrieve all of our SSR style elements from the DOM */
     const nodes: NodeList<HTMLStyleElement> = (document.querySelectorAll(
-      `style[${SC_ATTR}][${SC_VERSION_ATTR}="${__VERSION__}"]`
+      `style[${SC_ATTR}][${SC_INSTANCE_ATTR}="${SC_INSTANCE_ID}"]`
     ): any);
 
     const nodesSize = nodes.length;

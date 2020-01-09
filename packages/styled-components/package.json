@@ -1,5 +1,5 @@
 {
-  "name": "styled-components",
+  "name": "@intellihr/styled-components",
   "version": "4.4.1",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "main": "dist/styled-components.cjs.js",
@@ -11,6 +11,9 @@
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
   },
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "rollup -c",
     "prebuild": "rimraf dist",
@@ -29,7 +32,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/styled-components/styled-components.git"
+    "url": "git+https://github.com/intellihr/styled-components.git"
   },
   "files": [
     "CODE_OF_CONDUCT.md",
@@ -53,7 +56,7 @@
   "author": "Glen Maddern",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/styled-components/styled-components/issues"
+    "url": "https://github.com/intellihr/styled-components/issues"
   },
   "homepage": "https://styled-components.com",
   "dependencies": {
@@ -69,7 +72,8 @@
     "react-is": "^16.6.0",
     "stylis": "^3.5.0",
     "stylis-rule-sheet": "^0.0.10",
-    "supports-color": "^5.5.0"
+    "supports-color": "^5.5.0",
+    "uuid": "^3.3.3"
   },
   "peerDependencies": {
     "react": ">= 16.3.0",

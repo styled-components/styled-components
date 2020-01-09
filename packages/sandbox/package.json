@@ -1,5 +1,5 @@
 {
-  "name": "sandbox",
+  "name": "@intellihr/sandbox",
   "version": "4.2.0",
   "main": "server/index.js",
   "private": true,

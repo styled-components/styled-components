@@ -9,6 +9,11 @@ import { resetStyled, seedNextClassnames } from './utils';
 import keyframes from '../constructors/keyframes';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 
+jest.mock('uuid/v4', () => {
+  return () => {
+    return '00000000-0000-0000-0000-000000000000';
+  };
+});
 jest.mock('../utils/nonce');
 
 let styled;

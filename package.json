@@ -1,5 +1,5 @@
 {
-  "name": "styled-components-project",
+  "name": "@intellihr/styled-components-project",
   "private": true,
   "version": "4.1.3",
   "scripts": {
@@ -13,14 +13,14 @@
     "test": "run-s test:*",
     "prepare": "yarn bs && yarn build",
     "prepublishOnly": "yarn clean && yarn && yarn build && yarn test && cp README.md packages/styled-components",
-    "publish": "lerna publish",
+    "publish": "lerna version prerelease && lerna publish",
     "test:web": "jest -c scripts/jest/config.main.js",
     "test:web:watch": "yarn test:web -- --watch",
     "test:native": "jest -c scripts/jest/config.native.js",
     "test:native:watch": "yarn test:native -- --watch",
     "test:primitives": "jest -c scripts/jest/config.primitives.js",
     "test:primitives:watch": "yarn test:primitives -- --watch",
-    "test:integration": "jest -c scripts/jest/config.integration.js --runInBand --forceExit"
+    "disabled:test:integration": "jest -c scripts/jest/config.integration.js --runInBand --forceExit"
   },
   "author": "Glen Maddern",
   "license": "MIT",

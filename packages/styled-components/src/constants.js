@@ -1,4 +1,6 @@
 // @flow
+import uuidv4 from 'uuid/v4';
+
 declare var SC_DISABLE_SPEEDY: ?boolean;
 
 export const SC_ATTR =
@@ -6,6 +8,10 @@ export const SC_ATTR =
   'data-styled';
 
 export const SC_VERSION_ATTR = 'data-styled-version';
+
+export const SC_INSTANCE_ATTR = 'data-styled-instance';
+
+export const SC_INSTANCE_ID = uuidv4();
 
 export const SC_STREAM_ATTR = 'data-styled-streamed';
 
