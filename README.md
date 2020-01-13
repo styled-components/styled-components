@@ -49,11 +49,11 @@ _Supported by [Front End Center](https://frontend.center). Thank you for making 
 
 ## Upgrading from v4
 
-1. `npm install styled-components@beta react@^16.8 react-dom@^16.8 react-is@^16.8`
+1. `npm install styled-components@^5.0.0 react@^16.8 react-dom@^16.8 react-is@^16.8`
 1. ??
 1. Profit!
 
-> Note that integrations like `jest-styled-components` that make use of internals will need to be updated to work with v5 and likely will not work properly during the alpha/beta period.
+> If you use jest-styled-components, make sure you update that too.
 
 ## [Docs](https://www.styled-components.com/docs)
 
