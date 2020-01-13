@@ -5,14 +5,15 @@ addons:
 branches:
   only:
     - master
-    - develop
+    - canary
+    - v5
 env:
   global:
     - GOOGLE_CHROME_BINARY="/usr/bin/google-chrome-beta"
     - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
 node_js:
-  - '8'
-  - '10'
+  - "8"
+  - "10"
 before_install:
   - curl -o- -L https://yarnpkg.com/install.sh | bash
   - export PATH="$HOME/.yarn/bin:$PATH"
@@ -23,7 +24,7 @@ script:
   - yarn test
   - yarn flow
   - yarn lint
-  - yarn size
+  - yarn build
 notifications:
   email:
     on_failure: change

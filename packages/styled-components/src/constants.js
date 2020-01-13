@@ -1,13 +1,15 @@
 // @flow
+
 declare var SC_DISABLE_SPEEDY: ?boolean;
+declare var __VERSION__: string;
 
 export const SC_ATTR =
   (typeof process !== 'undefined' && (process.env.REACT_APP_SC_ATTR || process.env.SC_ATTR)) ||
   'data-styled';
 
-export const SC_VERSION_ATTR = 'data-styled-version';
-
-export const SC_STREAM_ATTR = 'data-styled-streamed';
+export const SC_ATTR_ACTIVE = 'active';
+export const SC_ATTR_VERSION = 'data-styled-version';
+export const SC_VERSION = __VERSION__;
 
 export const IS_BROWSER = typeof window !== 'undefined' && 'HTMLElement' in window;
 

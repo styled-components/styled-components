@@ -4,8 +4,9 @@
  * our public API works the way we promise/want
  */
 import styled from '../constructors/styled';
-import StyleSheet from '../models/StyleSheet';
-import StyledError from '../utils/error';
+import { masterSheet } from '../models/StyleSheetManager';
+import { resetGroupIds } from '../sheet/GroupIDAllocator';
+import throwStyledError from '../utils/error';
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let mockIndex = 0;
@@ -24,16 +25,17 @@ export const seedNextClassnames = (names: Array<string>) => (mockSeededClasses =
 export const resetStyled = (isServer: boolean = false) => {
   if (!isServer) {
     if (!document.head) {
-      throw new StyledError(9);
+      return throwStyledError(9);
     }
 
     document.head.innerHTML = '';
   }
 
-  StyleSheet.reset(isServer);
+  resetGroupIds();
+  masterSheet.names = new Map();
+  masterSheet.clearTag();
   mockIndex = 0;
   mockInputs = {};
-  if (typeof window !== 'undefined') window.scCGSHMRCache = {};
 
   return styled;
 };

@@ -1,8 +1,11 @@
 // @flow
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-
 import { resetStyled, expectCSSMatches } from './utils';
+
+// Disable isStaticRules optimisation since we're not
+// testing for ComponentStyle specifics here
+jest.mock('../utils/isStaticRules', () => () => false);
 
 let styled;
 
@@ -35,31 +38,30 @@ describe('extending', () => {
   });
 
   describe('inheritance', () => {
-
     const setupParent = () => {
       const colors = {
         primary: 'red',
         secondary: 'blue',
         tertiary: 'green',
-      }
+      };
       const Parent = styled.h1`
         position: relative;
         color: ${props => colors[props.color]};
       `;
       return Parent;
-    }
+    };
 
     const addDefaultProps = (Parent, Child, Grandson) => {
       Parent.defaultProps = {
         color: 'primary',
-      }
+      };
       Child.defaultProps = {
         color: 'secondary',
-      }
+      };
       Grandson.defaultProps = {
         color: 'tertiary',
-      }
-    }
+      };
+    };
 
     it('should override parents defaultProps', () => {
       const Parent = setupParent();
@@ -79,8 +81,8 @@ describe('extending', () => {
     describe('when overriding with another component', () => {
       it('should override parents defaultProps', () => {
         const Parent = setupParent();
-        const Child = styled(Parent).attrs({as: 'h2'})``;
-        const Grandson = styled(Child).attrs({as: 'h3'})``;
+        const Child = styled(Parent).attrs(() => ({ as: 'h2' }))``;
+        const Grandson = styled(Child).attrs(() => ({ as: 'h3' }))``;
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);
@@ -91,10 +93,11 @@ describe('extending', () => {
           .f{ position:relative; color:green; }
         `);
       });
+
       it('should evaluate grandsons props', () => {
         const Parent = setupParent();
-        const Child = styled(Parent).attrs({as: 'h2'})``;
-        const Grandson = styled(Child).attrs({as: 'h3'})``;
+        const Child = styled(Parent).attrs(() => ({ as: 'h2' }))``;
+        const Grandson = styled(Child).attrs(() => ({ as: 'h3' }))``;
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);

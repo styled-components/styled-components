@@ -18,6 +18,13 @@ import ThemeProvider, { ThemeContext, ThemeConsumer } from './models/ThemeProvid
 /* Import Higher Order Components */
 import withTheme from './hoc/withTheme';
 
+/* Import hooks */
+import useTheme from './hooks/useTheme';
+
+/* Define bundle version for export */
+declare var __VERSION__: string;
+const version = __VERSION__;
+
 /* Warning if you've imported this file on React Native */
 if (
   process.env.NODE_ENV !== 'production' &&
@@ -33,23 +40,15 @@ if (
 }
 
 /* Warning if there are several instances of styled-components */
-if (
-  process.env.NODE_ENV !== 'production' &&
-  process.env.NODE_ENV !== 'test' &&
-  typeof window !== 'undefined' &&
-  typeof navigator !== 'undefined' &&
-  typeof navigator.userAgent === 'string' &&
-  navigator.userAgent.indexOf('Node.js') === -1 &&
-  navigator.userAgent.indexOf('jsdom') === -1
-) {
+if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
   window['__styled-components-init__'] = window['__styled-components-init__'] || 0;
 
   if (window['__styled-components-init__'] === 1) {
     // eslint-disable-next-line no-console
     console.warn(
       "It looks like there are several instances of 'styled-components' initialized in this application. " +
-        'This may cause dynamic styles not rendering properly, errors happening during rehydration process ' +
-        'and makes your application bigger without a good reason.\n\n' +
+        'This may cause dynamic styles not rendering properly, errors happening during rehydration process, ' +
+        'missing theme prop, and makes your application bigger without a good reason.\n\n' +
         'See https://s-c.sh/2BAXzed for more info.'
     );
   }
@@ -71,5 +70,7 @@ export {
   ThemeConsumer,
   ThemeContext,
   ThemeProvider,
+  useTheme,
+  version,
   withTheme,
 };

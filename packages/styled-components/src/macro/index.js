@@ -33,6 +33,6 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
   traverse(program.parent, babelPlugin({ types: t }).visitor, undefined, stateWithOpts);
 }
 
-const configName = 'styledComponents';
-
-export default createMacro(styledComponentsMacro, { configName });
+export default createMacro(styledComponentsMacro, {
+  configName: 'styledComponents',
+});

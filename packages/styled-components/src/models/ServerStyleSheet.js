@@ -1,11 +1,10 @@
 // @flow
 /* eslint-disable no-underscore-dangle */
 import React from 'react';
-import stream, { type Readable } from 'stream';
-
-import { IS_BROWSER, SC_STREAM_ATTR } from '../constants';
-import StyledError from '../utils/error';
-import StyleSheet from './StyleSheet';
+import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
+import throwStyledError from '../utils/error';
+import getNonce from '../utils/nonce';
+import StyleSheet from '../sheet';
 import StyleSheetManager from './StyleSheetManager';
 
 declare var __SERVER__: boolean;
@@ -13,101 +12,116 @@ declare var __SERVER__: boolean;
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 
 export default class ServerStyleSheet {
-  instance: StyleSheet;
+  isStreaming: boolean;
 
-  masterSheet: StyleSheet;
+  instance: StyleSheet;
 
   sealed: boolean;
 
   constructor() {
-    /* The master sheet might be reset, so keep a reference here */
-    this.masterSheet = StyleSheet.master;
-    this.instance = this.masterSheet.clone();
+    this.instance = new StyleSheet({ isServer: true });
     this.sealed = false;
   }
 
-  /**
-   * Mark the ServerStyleSheet as being fully emitted and manually GC it from the
-   * StyleSheet singleton.
-   */
-  seal() {
-    if (!this.sealed) {
-      /* Remove sealed StyleSheets from the master sheet */
-      const index = this.masterSheet.clones.indexOf(this.instance);
-      this.masterSheet.clones.splice(index, 1);
-      this.sealed = true;
-    }
-  }
+  _emitSheetCSS = (): string => {
+    const css = this.instance.toString();
+    const nonce = getNonce();
+    const attrs = [nonce && `nonce="${nonce}"`, SC_ATTR, `${SC_ATTR_VERSION}="${SC_VERSION}"`];
+    const htmlAttr = attrs.filter(Boolean).join(' ');
+
+    return `<style ${htmlAttr}>${css}</style>`;
+  };
 
   collectStyles(children: any) {
     if (this.sealed) {
-      throw new StyledError(2);
+      return throwStyledError(2);
     }
 
     return <StyleSheetManager sheet={this.instance}>{children}</StyleSheetManager>;
   }
 
-  getStyleTags(): string {
-    this.seal();
-    return this.instance.toHTML();
-  }
-
-  getStyleElement() {
-    this.seal();
-    return this.instance.toReactElements();
-  }
-
-  interleaveWithNodeStream(readableStream: Readable) {
-    if (!__SERVER__ || IS_BROWSER) {
-      throw new StyledError(3);
+  getStyleTags = (): string => {
+    if (this.sealed) {
+      return throwStyledError(2);
     }
 
-    /* the tag index keeps track of which tags have already been emitted */
-    const { instance } = this;
-    let instanceTagIndex = 0;
+    return this._emitSheetCSS();
+  };
 
-    const streamAttr = `${SC_STREAM_ATTR}="true"`;
+  getStyleElement = () => {
+    if (this.sealed) {
+      return throwStyledError(2);
+    }
 
-    const transformer = new stream.Transform({
-      transform: function appendStyleChunks(chunk, /* encoding */ _, callback) {
-        const { tags } = instance;
-        let html = '';
-
-        /* retrieve html for each new style tag */
-        for (; instanceTagIndex < tags.length; instanceTagIndex += 1) {
-          const tag = tags[instanceTagIndex];
-          html += tag.toHTML(streamAttr);
-        }
-
-        /* force our StyleSheets to emit entirely new tags */
-        instance.sealAllTags();
-
-        const renderedHtml = chunk.toString();
-
-        /* prepend style html to chunk, unless the start of the chunk is a closing tag in which case append right after that */
-        if (CLOSING_TAG_R.test(renderedHtml)) {
-          const endOfClosingTag = renderedHtml.indexOf('>');
-
-          this.push(
-            renderedHtml.slice(0, endOfClosingTag + 1) +
-              html +
-              renderedHtml.slice(endOfClosingTag + 1)
-          );
-        } else this.push(html + renderedHtml);
-
-        callback();
+    const props = {
+      [SC_ATTR]: '',
+      [SC_ATTR_VERSION]: SC_VERSION,
+      dangerouslySetInnerHTML: {
+        __html: this.instance.toString(),
       },
-    });
+    };
 
-    readableStream.on('end', () => this.seal());
+    const nonce = getNonce();
+    if (nonce) {
+      (props: any).nonce = nonce;
+    }
 
-    readableStream.on('error', err => {
+    // v4 returned an array for this fn, so we'll do the same for v5 for backward compat
+    return [<style {...props} key="sc-0-0" />];
+  };
+
+  // eslint-disable-next-line consistent-return
+  interleaveWithNodeStream(input: any) {
+    if (!__SERVER__ || IS_BROWSER) {
+      return throwStyledError(3);
+    } else if (this.sealed) {
+      return throwStyledError(2);
+    }
+
+    if (__SERVER__) {
       this.seal();
 
-      // forward the error to the transform stream
-      transformer.emit('error', err);
-    });
+      // eslint-disable-next-line global-require
+      const { Readable, Transform } = require('stream');
 
-    return readableStream.pipe(transformer);
+      const readableStream: Readable = input;
+      const { instance: sheet, _emitSheetCSS } = this;
+
+      const transformer = new Transform({
+        transform: function appendStyleChunks(chunk, /* encoding */ _, callback) {
+          // Get the chunk and retrieve the sheet's CSS as an HTML chunk,
+          // then reset its rules so we get only new ones for the next chunk
+          const renderedHtml = chunk.toString();
+          const html = _emitSheetCSS();
+
+          sheet.clearTag();
+
+          // prepend style html to chunk, unless the start of the chunk is a
+          // closing tag in which case append right after that
+          if (CLOSING_TAG_R.test(renderedHtml)) {
+            const endOfClosingTag = renderedHtml.indexOf('>') + 1;
+            const before = renderedHtml.slice(0, endOfClosingTag);
+            const after = renderedHtml.slice(endOfClosingTag);
+
+            this.push(before + html + after);
+          } else {
+            this.push(html + renderedHtml);
+          }
+
+          callback();
+        },
+      });
+
+      readableStream.on('error', err => {
+        // forward the error to the transform stream
+        transformer.emit('error', err);
+      });
+
+      return readableStream.pipe(transformer);
+    }
   }
+
+  seal = () => {
+    this.sealed = true;
+  };
 }

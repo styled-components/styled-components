@@ -21,22 +21,39 @@
 
 Utilising [tagged template literals](https://www.styled-components.com/docs/advanced#tagged-template-literals) (a recent addition to JavaScript) and the [power of CSS](https://www.styled-components.com/docs/api#supported-css), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
+```jsx
+const Button = styled.button`
+  color: grey;
+`;
+```
+
+Alternatively, you may use [style objects](https://www.styled-components.com/docs/advanced#style-objects). This allows for easy porting of CSS from inline styles, while still supporting the more advanced styled-components capabilities like component selectors and media queries.
+
+```jsx
+const Button = styled.button({
+  color: 'grey',
+});
+```
+
+Equivalent to:
+
+```jsx
+const Button = styled.button`
+  color: grey;
+`;
+```
+
 `styled-components` is compatible with both React (for web) and React Native – meaning it's the perfect choice even for truly universal apps! See the [documentation about React Native](https://www.styled-components.com/docs/basics#react-native) for more information.
 
 _Supported by [Front End Center](https://frontend.center). Thank you for making this possible!_
 
-## v5
+## Upgrading from v4
 
-styled-components v5 is now [officially in beta](https://medium.com/styled-components/announcing-styled-components-v5-beast-mode-389747abd987)! Try it out in your project today:
+1. `npm install styled-components@beta react@^16.8 react-dom@^16.8 react-is@^16.8`
+1. ??
+1. Profit!
 
-```
-npm install styled-components@beta
-```
-
-Notes:
-
-- Make sure you're on a hooks-compatible version of react (>= 16.8 for react, react-dom, and react-is)
-- If you use jest-styled-components, upgrade to the beta of that as well! `npm install jest-styled-components@beta`
+> Note that integrations like `jest-styled-components` that make use of internals will need to be updated to work with v5 and likely will not work properly during the alpha/beta period.
 
 ## [Docs](https://www.styled-components.com/docs)
 

@@ -1,42 +1,11 @@
 {
-  "parser": "babel-eslint",
-  "extends": ["airbnb", "prettier"],
+  "extends": ["../../.eslintrc.json"],
   "globals": {
     "__SERVER__": true,
     "__VERSION__": true
   },
-  "plugins": ["prettier"],
-  "rules": {
-    "class-methods-use-this": 0,
-    "curly": [2, "multi-line"],
-    "import/no-extraneous-dependencies": 0,
-    "no-confusing-arrow": 0,
-    "no-continue": 0,
-    "no-duplicate-imports": 0,
-    "no-else-return": 0,
-    "no-prototype-builtins": 0,
-    "no-underscore-dangle": 0,
-    "no-unused-vars": [2],
-    "react/destructuring-assignment": 0,
-    "react/jsx-filename-extension": 0,
-    "react/no-multi-comp": 0,
-    "react/prefer-stateless-function": 0,
-    "react/require-default-props": 0,
-    "react/sort-comp": 0,
-    "symbol-description": 0,
-    "no-restricted-syntax": ["error", "ForOfStatement", "LabeledStatement", "WithStatement"],
-    "no-return-assign": 0
-  },
   "env": {
     "jest": true,
     "browser": true
-  },
-  "parserOptions": {
-    "ecmaVersion": 7,
-    "sourceType": "module",
-    "ecmaFeatures": {
-      "impliedStrict": true,
-      "jsx": true
-    }
   }
 }

@@ -3,4 +3,8 @@
 
 declare var __webpack_nonce__: string;
 
-export default () => (typeof __webpack_nonce__ !== 'undefined' ? __webpack_nonce__ : null);
+const getNonce = () => {
+  return typeof __webpack_nonce__ !== 'undefined' ? __webpack_nonce__ : null;
+};
+
+export default getNonce;

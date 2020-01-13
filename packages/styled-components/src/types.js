@@ -1,7 +1,7 @@
 // @flow
 import type { ComponentType } from 'react';
 
-export type Attrs = Array<Function | Object>;
+export type Attrs = Array<Function>;
 
 export type Interpolation =
   | ((executionContext: Object) => Interpolation)
@@ -31,8 +31,7 @@ export type Flattener = (
   styleSheet: ?Object
 ) => Array<Interpolation>;
 
-export type Stringifier = (
-  rules: Array<Interpolation>,
-  selector: ?string,
-  prefix: ?string
-) => Array<string>;
+export type Stringifier = {
+  (rules: string, selector: string, prefix: ?string, componentId: ?string): Array<string>,
+  hash: string,
+};

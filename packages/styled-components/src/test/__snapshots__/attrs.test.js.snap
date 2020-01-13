@@ -1,11 +1,5 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`attrs call an attr function 1`] = `
-<div
-  className="sc-a b"
-/>
-`;
-
 exports[`attrs does not pass non html tags to HTML element 1`] = `
 <div
   className="sc-a sc-b c"
@@ -28,14 +22,6 @@ exports[`attrs merge attrs when inheriting SC 1`] = `
 />
 `;
 
-exports[`attrs merge fn attrs 1`] = `
-<button
-  className="sc-a b"
-  tabIndex={0}
-  type="submit"
-/>
-`;
-
 exports[`attrs pass a React component 1`] = `
 <button>
   <p>
@@ -44,13 +30,14 @@ exports[`attrs pass a React component 1`] = `
 </button>
 `;
 
-exports[`attrs pass a fn to attrs 1`] = `
-<div
+exports[`attrs pass a simple attr via function with object return 1`] = `
+<button
   className="sc-a b"
+  type="button"
 />
 `;
 
-exports[`attrs pass a simple attr 1`] = `
+exports[`attrs pass a simple attr via object 1`] = `
 <button
   className="sc-a b"
   type="button"
@@ -149,25 +136,17 @@ exports[`attrs should replace props with attrs 3`] = `
 />
 `;
 
-exports[`attrs should shallow merge "style" prop + attr instead of overwriting 1`] = `
-<p
-  className="sc-a d sc-b c"
-  style={
-    Object {
-      "color": "blue",
-      "fontSize": "4em",
-    }
-  }
->
-  Hello
-</p>
-`;
-
 exports[`attrs should work with data and aria attributes 1`] = `
 <div
   aria-label="A simple FooBar"
   className="sc-a b"
   data-foo="bar"
+/>
+`;
+
+exports[`attrs work fine with a function that returns an empty object 1`] = `
+<div
+  className="sc-a b"
 />
 `;
 

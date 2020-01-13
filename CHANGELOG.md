@@ -6,6 +6,32 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Remove deprecated attrs "subfunction" syntax variant
+
+  ```js
+  styled.div.attrs({ color: p => p.color });
+  ```
+
+  should become
+
+  ```js
+  styled.div.attrs(p => ({ color: p.color }));
+  ```
+
+  You can still pass objects to `attrs` but individual properties shouldn't have functions that receive props anymore.
+
+- Fix attrs not taking precedence over props when overriding a given prop
+
+- (ReactNative) upgrade css-to-react-native to v3 ([changelog](https://github.com/styled-components/css-to-react-native/releases/tag/v3.0.0))
+
+  - Removed support for unitless line height in font shorthand
+
+- Replace `merge-anything` with `mixin-deep` to save some bytes (this is what handles merging of `defaultProps` between folded styled components); this is inlined into since the library is written in IE-incompatible syntax
+
+- Fix certain adblockers messing up styling by purposefully not emitting the substring "ad" (case-insensitive) when generating dynamic class names
+
+- Fix regressed behavior between v3 and v4 where className was not correctly aggregated between folded `.attrs` invocations
+
 ## [v4.4.1] - 2019-10-30
 
 - Fix `styled-components`'s `react-native` import for React Native Web, by [@fiberjw](https://github.com/fiberjw) (see [#2797](https://github.com/styled-components/styled-components/pull/2797))

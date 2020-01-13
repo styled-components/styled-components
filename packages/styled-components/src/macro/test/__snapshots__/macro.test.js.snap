@@ -10,12 +10,12 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from 'styled-components';
-
+import _styled from \\"styled-components\\";
 
 _styled.div.withConfig({
-  displayName: 'macrotest'
-})(['background:', ';'], p => p.error ? 'red' : 'green');
+  displayName: \\"macrotest\\",
+  componentId: \\"sc-11gvsec-0\\"
+})([\\"background:\\", \\";\\"], p => p.error ? 'red' : 'green');
 "
 `;
 
@@ -32,16 +32,15 @@ styled(Hello)\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from 'styled-components';
+import _styled from \\"styled-components\\";
 import React from 'react';
-
 
 const Hello = () => React.createComponent(div, null, 'hello');
 
 _styled(Hello).withConfig({
-  displayName: 'macrotest',
-  componentId: 'sc-11gvsec-0'
-})(['background:red;']);
+  displayName: \\"macrotest\\",
+  componentId: \\"sc-11gvsec-0\\"
+})([\\"background:red;\\"]);
 "
 `;
 
@@ -57,10 +56,12 @@ React.createComponent(
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { ThemeProvider as _ThemeProvider } from 'styled-components';
-
-
-React.createComponent(_ThemeProvider, { theme: { color: 'red' } }, 'hello');
+import { ThemeProvider as _ThemeProvider } from \\"styled-components\\";
+React.createComponent(_ThemeProvider, {
+  theme: {
+    color: 'red'
+  }
+}, 'hello');
 "
 `;
 
@@ -74,9 +75,7 @@ createGlobalStyle\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { createGlobalStyle as _createGlobalStyle } from 'styled-components';
-
-
+import { createGlobalStyle as _createGlobalStyle } from \\"styled-components\\";
 _createGlobalStyle\`
   background: red;
 \`;
@@ -93,10 +92,9 @@ css\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { css as _css } from 'styled-components';
+import { css as _css } from \\"styled-components\\";
 
-
-_css(['color:', ';'], props => props.whiteColor ? 'white' : 'black');
+_css([\\"color:\\", \\";\\"], props => props.whiteColor ? 'white' : 'black');
 "
 `;
 
@@ -111,10 +109,9 @@ keyframes\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { keyframes as _keyframes } from 'styled-components';
+import { keyframes as _keyframes } from \\"styled-components\\";
 
-
-_keyframes(['0%{opacity:0;}100%{opacity:1;}']);
+_keyframes([\\"0%{opacity:0;}100%{opacity:1;}\\"]);
 "
 `;
 
@@ -129,14 +126,13 @@ myStyled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from 'styled-components';
-
+import _styled from \\"styled-components\\";
 import styled from 'another-package';
 
 _styled.div.withConfig({
-  displayName: 'macrotest',
-  componentId: 'sc-11gvsec-0'
-})(['background:', ';'], p => p.error ? 'red' : 'green');
+  displayName: \\"macrotest\\",
+  componentId: \\"sc-11gvsec-0\\"
+})([\\"background:\\", \\";\\"], p => p.error ? 'red' : 'green');
 "
 `;
 
@@ -146,8 +142,8 @@ import styled, { css } from '../../macro'
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { css as _css } from 'styled-components';
-import _styled from 'styled-components';
+import { css as _css } from \\"styled-components\\";
+import _styled from \\"styled-components\\";
 "
 `;
 
@@ -161,13 +157,12 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from 'styled-components';
-
+import _styled from \\"styled-components\\";
 
 _styled.div.withConfig({
-  displayName: 'macrotest',
-  componentId: 'sc-11gvsec-0'
-})(['background:red;']);
+  displayName: \\"macrotest\\",
+  componentId: \\"sc-11gvsec-0\\"
+})([\\"background:red;\\"]);
 "
 `;
 
@@ -181,13 +176,12 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from 'styled-components';
-
+import _styled from \\"styled-components\\";
 
 _styled.div.withConfig({
-  displayName: 'macrotest',
-  componentId: 'sc-11gvsec-0'
-})(['background:', ';'], p => p.error ? 'red' : 'green');
+  displayName: \\"macrotest\\",
+  componentId: \\"sc-11gvsec-0\\"
+})([\\"background:\\", \\";\\"], p => p.error ? 'red' : 'green');
 "
 `;
 
@@ -195,35 +189,32 @@ exports[`macro should work with the css prop overriding an existing styled-compo
 "
 import React from 'react';
 import styled from '../../macro'
-
 const Thing = styled.div\`
   color: blue;
 \`;
-
 function Foo() {
   return <Thing css=\\"color: red;\\" />;
 }
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled2 from 'styled-components';
-import _styled from 'styled-components';
+import _styled2 from \\"styled-components\\";
+import _styled from \\"styled-components\\";
 import React from 'react';
 
-
 const Thing = _styled.div.withConfig({
-  displayName: 'macrotest__Thing',
-  componentId: 'sc-11gvsec-0'
-})(['color:blue;']);
+  displayName: \\"macrotest__Thing\\",
+  componentId: \\"sc-11gvsec-0\\"
+})([\\"color:blue;\\"]);
 
 function Foo() {
   return React.createElement(_StyledThing, null);
 }
 
 var _StyledThing = _styled(Thing).withConfig({
-  displayName: 'macrotest___StyledThing',
-  componentId: 'sc-11gvsec-1'
-})(['color:red;']);
+  displayName: \\"macrotest___StyledThing\\",
+  componentId: \\"sc-11gvsec-1\\"
+})([\\"color:red;\\"]);
 "
 `;
 
@@ -231,16 +222,14 @@ exports[`macro should work with the css prop: should work with the css prop 1`] 
 "
 import styled from '../../macro'
 import React from 'react';
-
 function Foo() {
   return <div css=\\"color: red;\\" />;
 }
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled2 from 'styled-components';
-import _styled from 'styled-components';
-
+import _styled2 from \\"styled-components\\";
+import _styled from \\"styled-components\\";
 import React from 'react';
 
 function Foo() {
@@ -248,9 +237,9 @@ function Foo() {
 }
 
 var _StyledDiv = _styled.div.withConfig({
-  displayName: 'macrotest___StyledDiv',
-  componentId: 'sc-11gvsec-0'
-})(['color:red;']);
+  displayName: \\"macrotest___StyledDiv\\",
+  componentId: \\"sc-11gvsec-0\\"
+})([\\"color:red;\\"]);
 "
 `;
 
@@ -260,8 +249,8 @@ import styled, { DefaultTheme } from '../../macro'
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { DefaultTheme as _DefaultTheme } from 'styled-components';
-import _styled from 'styled-components';
+import { DefaultTheme as _DefaultTheme } from \\"styled-components\\";
+import _styled from \\"styled-components\\";
 "
 `;
 
@@ -271,6 +260,6 @@ import { DefaultTheme } from '../../macro'
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { DefaultTheme as _DefaultTheme } from 'styled-components';
+import { DefaultTheme as _DefaultTheme } from \\"styled-components\\";
 "
 `;

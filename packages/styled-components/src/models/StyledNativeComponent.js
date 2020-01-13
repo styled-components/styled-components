@@ -1,63 +1,25 @@
 // @flow
-import merge from 'merge-anything';
 import React, { createElement, Component } from 'react';
+import hoist from 'hoist-non-react-statics';
+import merge from '../utils/mixinDeep';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import generateDisplayName from '../utils/generateDisplayName';
-import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isTag from '../utils/isTag';
-import isDerivedReactComponent from '../utils/isDerivedReactComponent';
 import isStyledComponent from '../utils/isStyledComponent';
-import once from '../utils/once';
 import { ThemeConsumer } from './ThemeProvider';
 
 import type { Theme } from './ThemeProvider';
 import type { Attrs, RuleSet, Target } from '../types';
 
+// NOTE: no hooks available for react-native yet;
+// if the user makes use of ThemeProvider or StyleSheetManager things will break.
+
 class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
 
-  warnInnerRef: Function;
-
-  warnAttrsFnObjectKeyDeprecated: Function;
-
-  warnNonStyledComponentAttrsObjectKey: Function;
-
   attrs = {};
-
-  constructor(props) {
-    super(props);
-
-    if (process.env.NODE_ENV !== 'production') {
-      this.warnInnerRef = once(displayName =>
-        // eslint-disable-next-line no-console
-        console.warn(
-          `The "innerRef" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use "ref" instead like a typical component. "innerRef" was detected on component "${displayName}".`
-        )
-      );
-
-      this.warnAttrsFnObjectKeyDeprecated = once(
-        (key, displayName): void =>
-          // eslint-disable-next-line no-console
-          console.warn(
-            `Functions as object-form attrs({}) keys are now deprecated and will be removed in a future version of styled-components. Switch to the new attrs(props => ({})) syntax instead for easier and more powerful composition. The attrs key in question is "${key}" on component "${displayName}".`,
-            `\n ${new Error().stack}`
-          )
-      );
-
-      this.warnNonStyledComponentAttrsObjectKey = once(
-        (key, displayName): void =>
-          // eslint-disable-next-line no-console
-          console.warn(
-            `It looks like you've used a non styled-component as the value for the "${key}" prop in an object-form attrs constructor of "${displayName}".\n` +
-              'You should use the new function-form attrs constructor which avoids this issue: attrs(props => ({ yourStuff }))\n' +
-              "To continue using the deprecated object syntax, you'll need to wrap your component prop in a function to make it available inside the styled component (you'll still get the deprecation warning though.)\n" +
-              `For example, { ${key}: () => InnerComponent } instead of { ${key}: InnerComponent }`
-          )
-      );
-    }
-  }
 
   render() {
     return (
@@ -65,15 +27,14 @@ class StyledNativeComponent extends Component<*, *> {
         {(theme?: Theme) => {
           const {
             as: renderAs,
-            forwardedAs,
             forwardedComponent,
+            forwardedAs,
             forwardedRef,
-            innerRef,
             style = [],
             ...props
           } = this.props;
 
-          const { defaultProps, displayName, target } = forwardedComponent;
+          const { defaultProps, target } = forwardedComponent;
 
           const generatedStyles = this.generateAndInjectStyles(
             determineTheme(this.props, theme, defaultProps) || EMPTY_OBJECT,
@@ -86,12 +47,8 @@ class StyledNativeComponent extends Component<*, *> {
             style: [generatedStyles].concat(style),
           };
 
-          if (forwardedAs) propsForElement.as = forwardedAs;
           if (forwardedRef) propsForElement.ref = forwardedRef;
-
-          if (process.env.NODE_ENV !== 'production' && innerRef) {
-            this.warnInnerRef(displayName);
-          }
+          if (forwardedAs) propsForElement.as = forwardedAs;
 
           return createElement(renderAs || target, propsForElement);
         }}
@@ -108,36 +65,16 @@ class StyledNativeComponent extends Component<*, *> {
 
     attrs.forEach(attrDef => {
       let resolvedAttrDef = attrDef;
-      let attrDefWasFn = false;
       let attr;
       let key;
 
       if (isFunction(resolvedAttrDef)) {
         resolvedAttrDef = resolvedAttrDef(context);
-        attrDefWasFn = true;
       }
 
       /* eslint-disable guard-for-in */
       for (key in resolvedAttrDef) {
         attr = resolvedAttrDef[key];
-
-        if (!attrDefWasFn) {
-          if (isFunction(attr) && !isDerivedReactComponent(attr) && !isStyledComponent(attr)) {
-            if (process.env.NODE_ENV !== 'production') {
-              this.warnAttrsFnObjectKeyDeprecated(key, this.props.forwardedComponent.displayName);
-            }
-
-            attr = attr(context);
-
-            if (process.env.NODE_ENV !== 'production' && React.isValidElement(attr)) {
-              this.warnNonStyledComponentAttrsObjectKey(
-                key,
-                this.props.forwardedComponent.displayName
-              );
-            }
-          }
-        }
-
         this.attrs[key] = attr;
         context[key] = attr;
       }
@@ -216,13 +153,11 @@ export default (InlineStyle: Function) => {
 
     // $FlowFixMe
     WrappedStyledNativeComponent.styledComponentId = 'StyledNativeComponent';
-
     // $FlowFixMe
     WrappedStyledNativeComponent.target = isTargetStyledComp
       ? // $FlowFixMe
         target.target
       : target;
-
     // $FlowFixMe
     WrappedStyledNativeComponent.withComponent = function withComponent(tag: Target) {
       const { displayName: _, componentId: __, ...optionsToCopy } = options;
@@ -243,12 +178,12 @@ export default (InlineStyle: Function) => {
 
       set(obj) {
         // $FlowFixMe
-        this._foldedDefaultProps = isTargetStyledComp ? merge(target.defaultProps, obj) : obj;
+        this._foldedDefaultProps = isTargetStyledComp ? merge({}, target.defaultProps, obj) : obj;
       },
     });
 
     if (isClass) {
-      hoist(WrappedStyledNativeComponent, target, {
+      hoist(WrappedStyledNativeComponent, (target: any), {
         // all SC-specific things should not be hoisted
         attrs: true,
         displayName: true,

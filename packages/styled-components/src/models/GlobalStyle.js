@@ -1,11 +1,9 @@
 // @flow
-import { EMPTY_ARRAY } from '../utils/empties';
 import flatten from '../utils/flatten';
 import isStaticRules from '../utils/isStaticRules';
-import stringifyRules from '../utils/stringifyRules';
-import StyleSheet from './StyleSheet';
+import StyleSheet from '../sheet';
 
-import type { RuleSet } from '../types';
+import type { RuleSet, Stringifier } from '../types';
 
 export default class GlobalStyle {
   componentId: string;
@@ -17,30 +15,37 @@ export default class GlobalStyle {
   constructor(rules: RuleSet, componentId: string) {
     this.rules = rules;
     this.componentId = componentId;
-    this.isStatic = isStaticRules(rules, EMPTY_ARRAY);
-
-    if (!StyleSheet.master.hasId(componentId)) {
-      StyleSheet.master.deferredInject(componentId, []);
-    }
+    this.isStatic = isStaticRules(rules);
   }
 
-  createStyles(executionContext: Object, styleSheet: StyleSheet) {
+  createStyles(
+    instance: number,
+    executionContext: Object,
+    styleSheet: StyleSheet,
+    stylis: Stringifier
+  ) {
     const flatCSS = flatten(this.rules, executionContext, styleSheet);
-    const css = stringifyRules(flatCSS, '');
+    const css = stylis(flatCSS.join(''), '');
+    const id = this.componentId + instance;
 
-    styleSheet.inject(this.componentId, css);
+    // NOTE: We use the id as a name as well, since these rules never change
+    styleSheet.insertRules(id, id, css);
   }
 
-  removeStyles(styleSheet: StyleSheet) {
-    const { componentId } = this;
-    if (styleSheet.hasId(componentId)) {
-      styleSheet.remove(componentId);
-    }
+  removeStyles(instance: number, styleSheet: StyleSheet) {
+    styleSheet.clearRules(this.componentId + instance);
   }
 
-  // TODO: overwrite in-place instead of remove+create?
-  renderStyles(executionContext: Object, styleSheet: StyleSheet) {
-    this.removeStyles(styleSheet);
-    this.createStyles(executionContext, styleSheet);
+  renderStyles(
+    instance: number,
+    executionContext: Object,
+    styleSheet: StyleSheet,
+    stylis: Stringifier
+  ) {
+    StyleSheet.registerId(this.componentId + instance);
+
+    // NOTE: Remove old styles, then inject the new ones
+    this.removeStyles(instance, styleSheet);
+    this.createStyles(instance, executionContext, styleSheet, stylis);
   }
 }

@@ -9,10 +9,6 @@ import { terser } from 'rollup-plugin-terser';
 import sourceMaps from 'rollup-plugin-sourcemaps';
 import pkg from './package.json';
 
-// rollup-plugin-ignore stopped working, so we'll just remove the import lines 😐
-const propTypeIgnore = { "import PropTypes from 'prop-types';": "'';" };
-const streamIgnore = { "import stream from 'stream';": "'';" };
-
 const cjs = {
   exports: 'named',
   format: 'cjs',
@@ -36,8 +32,8 @@ const commonPlugins = [
   json(),
   nodeResolve(),
   babel({
+    configFile: require.resolve('../../babel.config.js'),
     exclude: ['node_modules/**', '../../node_modules/**'],
-    plugins: ['external-helpers'],
   }),
   commonjs({
     ignoreGlobal: true,
@@ -52,7 +48,6 @@ const commonPlugins = [
 
 const prodPlugins = [
   replace({
-    ...propTypeIgnore,
     'process.env.NODE_ENV': JSON.stringify('production'),
   }),
   terser({
@@ -68,7 +63,7 @@ const configBase = {
   plugins: commonPlugins,
 };
 
-const globals = { react: 'React', 'react-dom': 'ReactDOM' };
+const globals = { react: 'React', 'react-dom': 'ReactDOM', 'react-is': 'ReactIs' };
 
 const standaloneBaseConfig = {
   ...configBase,
@@ -83,7 +78,6 @@ const standaloneBaseConfig = {
   external: Object.keys(globals),
   plugins: configBase.plugins.concat(
     replace({
-      ...streamIgnore,
       __SERVER__: JSON.stringify(false),
     })
   ),
@@ -128,7 +122,6 @@ const browserConfig = {
   ],
   plugins: configBase.plugins.concat(
     replace({
-      ...streamIgnore,
       __SERVER__: JSON.stringify(false),
     })
   ),

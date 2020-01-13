@@ -8,22 +8,40 @@ describe('static style caching', () => {
     styled = resetStyled();
   });
 
-  it('should mark styles with a dynamic style as not static', () => {
-    const Comp = styled.div`
-      color: ${props => props.color};
-    `;
+  describe('non-production modes', () => {
+    it('should mark styles without any functions as not static', () => {
+      const TOP_AS_NUMBER = 10;
+      const FONT_SIZE_NUMBER = 14;
 
-    expect(Comp.componentStyle.isStatic).toEqual(false);
-  });
+      const Comp = styled.div`
+        color: purple;
+        font-size: ${FONT_SIZE_NUMBER}px
+        position: absolute;
+        top: ${TOP_AS_NUMBER}
+      `;
 
-  it('should mark components with dynamic attributes as not static', () => {
-    const Comp = styled.div.attrs({
-      style: props => ({
-        height: props.height,
-      }),
-    })``;
+      expect(Comp.componentStyle.isStatic).toEqual(false);
+    });
 
-    expect(Comp.componentStyle.isStatic).toEqual(false);
+    it('should mark styles with a nested styled component as not static', () => {
+      const NestedComp = styled.div``;
+
+      const Comp = styled.div`
+        ${NestedComp} {
+          color: purple;
+        }
+      `;
+
+      expect(Comp.componentStyle.isStatic).toEqual(false);
+    });
+
+    it('should mark styles with a dynamic style as not not static', () => {
+      const Comp = styled.div`
+        color: ${props => props.color};
+      `;
+
+      expect(Comp.componentStyle.isStatic).toEqual(false);
+    });
   });
 
   describe('production mode', () => {
@@ -57,15 +75,12 @@ describe('static style caching', () => {
       expect(Comp.componentStyle.isStatic).toEqual(true);
     });
 
-    it('should mark components with numeric attributes as static', () => {
-      const Comp = styled.div.attrs({
-        style: {
-          color: 'purple',
-        },
-        height: 100,
-      })``;
+    it('should mark styles with a dynamic style as not static', () => {
+      const Comp = styled.div`
+        color: ${props => props.color};
+      `;
 
-      expect(Comp.componentStyle.isStatic).toEqual(true);
+      expect(Comp.componentStyle.isStatic).toEqual(false);
     });
   });
 });

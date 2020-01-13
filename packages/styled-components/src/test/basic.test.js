@@ -1,9 +1,10 @@
 // @flow
+/* eslint-disable no-console */
+import hoist from 'hoist-non-react-statics';
 import React, { Component, StrictMode } from 'react';
 import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';
-
 import { resetStyled, expectCSSMatches } from './utils';
 import { find } from '../../test-utils';
 
@@ -63,6 +64,7 @@ describe('basic', () => {
   });
 
   it('should not inject anything by default', () => {
+    // eslint-disable-next-line no-unused-expressions
     styled.div``;
     expectCSSMatches('');
   });
@@ -229,19 +231,21 @@ describe('basic', () => {
       }
 
       const wrapper = renderIntoDocument(<Wrapper />);
+
+      // eslint-disable-next-line react/no-find-dom-node
       const component = find(findDOMNode(wrapper), Comp);
 
       expect(wrapper.testRef.current).toBe(component);
     });
 
     it('should pass the ref to the wrapped styled component', () => {
-      class InnerComponent extends React.Component {
+      class Inner extends React.Component {
         render() {
           return <div {...this.props} />;
         }
       }
 
-      const OuterComponent = styled(InnerComponent)``;
+      const Outer = styled(Inner)``;
 
       class Wrapper extends Component<*, *> {
         testRef: any = React.createRef();
@@ -249,14 +253,14 @@ describe('basic', () => {
         render() {
           return (
             <div>
-              <OuterComponent ref={this.testRef} />
+              <Outer ref={this.testRef} />
             </div>
           );
         }
       }
 
       const wrapper = renderIntoDocument(<Wrapper />);
-      const innerComponent = findRenderedComponentWithType(wrapper, InnerComponent);
+      const innerComponent = findRenderedComponentWithType(wrapper, Inner);
 
       expect(wrapper.testRef.current).toBe(innerComponent);
     });
@@ -290,21 +294,52 @@ describe('basic', () => {
     });
 
     it('should hoist non-react static properties', () => {
-      const InnerComponent = styled.div``;
-      InnerComponent.foo = 'bar';
+      const Inner = styled.div``;
+      Inner.foo = 'bar';
 
-      const OuterComponent = styled(InnerComponent)``;
+      const Outer = styled(Inner)``;
 
-      expect(OuterComponent).toHaveProperty('foo', 'bar');
+      expect(Outer).toHaveProperty('foo', 'bar');
     });
 
     it('should not hoist styled component statics', () => {
-      const InnerComponent = styled.div``;
-      const OuterComponent = styled(InnerComponent)``;
+      const Inner = styled.div``;
+      const Outer = styled(Inner)``;
 
-      expect(OuterComponent.styledComponentId).not.toBe(InnerComponent.styledComponentId);
+      expect(Outer.styledComponentId).not.toBe(Inner.styledComponentId);
+      expect(Outer.componentStyle).not.toEqual(Inner.componentStyle);
+    });
 
-      expect(OuterComponent.componentStyle).not.toEqual(InnerComponent.componentStyle);
+    // muting this test until we can fix it in a way that doesn't break HMR / rehydration
+    it.skip('should not fold components if there is an interim HOC', () => {
+      function withSomething(WrappedComponent) {
+        function WithSomething(props) {
+          return <WrappedComponent {...props} />;
+        }
+
+        hoistStatics(WithSomething, WrappedComponent);
+
+        return WithSomething;
+      }
+
+      const Inner = withSomething(
+        styled.div`
+          color: red;
+        `
+      );
+
+      const Outer = styled(Inner)`
+        color: green;
+      `;
+
+      const rendered = TestRenderer.create(<Outer />);
+
+      expectCSSMatches(`.sc-a {color: red;} .sc-b {color: green;}`);
+      expect(rendered.toJSON()).toMatchInlineSnapshot(`
+<div
+  className="sc-a sc-b"
+/>
+`);
     });
 
     it('folds defaultProps', () => {
@@ -377,7 +412,7 @@ Object {
 
     // this no longer is possible in React 16.6 because
     // of the deprecation of findDOMNode; need to find an alternative
-    it.skip('should work in StrictMode without warnings', () => {
+    it('should work in StrictMode without warnings', () => {
       const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const Comp = styled.div``;
 
@@ -396,22 +431,32 @@ Object {
       jest.spyOn(console, 'warn').mockImplementation(() => {});
     });
 
-    it('warns upon use of the removed "innerRef" prop', () => {
-      const Comp = styled.div``;
-      const ref = React.createRef();
-
-      TestRenderer.create(<Comp innerRef={ref} />);
-      expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
-        `"The \\"innerRef\\" API has been removed in styled-components v4 in favor of React 16 ref forwarding, use \\"ref\\" instead like a typical component. \\"innerRef\\" was detected on component \\"styled.div\\"."`
-      );
-    });
-
     it('does not warn for innerRef if using a custom component', () => {
       const InnerComp = props => <div {...props} />;
       const Comp = styled(InnerComp)``;
       const ref = React.createRef();
 
       TestRenderer.create(<Comp innerRef={ref} />);
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('does not warn if the className is consumed by a deeper child', () => {
+      const Inner = ({ className }) => (
+        <div>
+          <span className={className} />
+        </div>
+      );
+
+      const Comp = styled(Inner)`
+        color: red;
+      `;
+
+      renderIntoDocument(
+        <div>
+          <Comp />
+        </div>
+      );
+
       expect(console.warn).not.toHaveBeenCalled();
     });
   });

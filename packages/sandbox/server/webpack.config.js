@@ -1,3 +1,4 @@
+const path = require('path');
 const webpack = require('webpack');
 const WriteFilePlugin = require('write-file-webpack-plugin');
 
@@ -11,7 +12,6 @@ const {
   serverApp,
   clientApp,
   styledComponentsSrc,
-  reactDOM,
 } = SANDBOX_PATHS;
 
 const createOutput = () => ({
@@ -48,7 +48,7 @@ const createRules = () => [
   {
     test: ifNotExample,
     include: [appSrc, styledComponentsSrc],
-    use: [{ loader: 'babel-loader' }],
+    use: [{ loader: 'babel-loader', options: { configFile: path.join(__dirname, '../.babelrc') } }],
   },
 ];
 
@@ -64,7 +64,9 @@ const createPlugins = () => [
   }),
 ];
 
-const createAlias = () => ({ 'styled-components': styledComponentsSrc, 'react-dom': reactDOM });
+const createAlias = () => ({
+  'styled-components': styledComponentsSrc,
+});
 
 module.exports = [
   {

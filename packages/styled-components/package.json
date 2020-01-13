@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "4.4.1",
+  "version": "5.0.0-rc.3",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.esm.js",
@@ -12,20 +12,24 @@
   },
   "sideEffects": false,
   "scripts": {
+    "generateErrors": "node scripts/generateErrorMap.js",
+    "prebuild": "rimraf dist && npm run generateErrors",
     "build": "rollup -c",
-    "prebuild": "rimraf dist",
-    "size": "bundlesize",
+    "postbuild": "npm run lint:size",
     "flow": "flow check",
     "flow:watch": "flow-watch",
+    "pretest": "npm run generateErrors",
+    "test": "npm run test:web && npm run test:native && npm run test:primitives",
+    "test:web": "jest -c ../../scripts/jest/config.main.js",
+    "test:native": "jest -c ../../scripts/jest/config.native.js",
+    "test:primitives": "jest -c ../../scripts/jest/config.primitives.js",
+    "test:integration": "jest -c ../../scripts/jest/config.integration.js --runInBand --forceExit",
     "format": "eslint ./**/*.js --fix",
     "lint": "eslint src",
+    "lint:size": "bundlesize",
     "prettier": "prettier */**/*.js --write",
-    "prepublishOnly": "run-s build",
-    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js",
-    "prebenchmarks": "yarn run build:benchmarks",
-    "benchmarks": "node benchmarks/run-headless.js",
-    "build:benchmarks": "(cd benchmarks && yarn && yarn run build)",
-    "postinstall": "node ./scripts/postinstall.js || exit 0"
+    "prepublishOnly": "npm run build",
+    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js"
   },
   "repository": {
     "type": "git",
@@ -58,54 +62,44 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "@babel/helper-module-imports": "^7.0.0",
-    "@babel/traverse": "^7.0.0",
-    "@emotion/is-prop-valid": "^0.8.1",
-    "@emotion/unitless": "^0.7.0",
+    "@babel/traverse": "^7.4.5",
+    "@emotion/is-prop-valid": "^0.8.3",
+    "@emotion/stylis": "^0.8.4",
+    "@emotion/unitless": "^0.7.4",
     "babel-plugin-styled-components": ">= 1",
-    "css-to-react-native": "^2.2.2",
-    "memoize-one": "^5.0.0",
-    "merge-anything": "^2.2.4",
-    "prop-types": "^15.5.4",
-    "react-is": "^16.6.0",
-    "stylis": "^3.5.0",
-    "stylis-rule-sheet": "^0.0.10",
+    "css-to-react-native": "^3.0.0",
+    "hoist-non-react-statics": "^3.0.0",
+    "shallowequal": "^1.1.0",
     "supports-color": "^5.5.0"
   },
   "peerDependencies": {
-    "react": ">= 16.3.0",
-    "react-dom": ">= 16.3.0"
+    "react": ">= 16.8.0",
+    "react-dom": ">= 16.8.0",
+    "react-is": ">= 16.8.0"
   },
   "devDependencies": {
-    "react": "^16.6.1",
-    "react-dom": "^16.6.1",
+    "flow-bin": "^0.100.0",
+    "prop-types": "^15.7.2",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
     "react-frame-component": "^4.0.2",
-    "react-native": "^0.56.0",
-    "react-primitives": "^0.6.1",
-    "react-test-renderer": "^16.6.1"
-  },
-  "jest": {
-    "testURL": "http://localhost",
-    "clearMocks": true,
-    "roots": [
-      "<rootDir>/src/"
-    ],
-    "setupFiles": [
-      "raf/polyfill",
-      "<rootDir>/src/test/globals.js"
-    ],
-    "setupTestFrameworkScriptFile": "<rootDir>/test-utils/setupTestFramework.js",
-    "testPathIgnorePatterns": [
-      "<rootDir>/src/native",
-      "<rootDir>/src/primitives"
-    ]
+    "react-is": "^16.8.6",
+    "react-native": "^0.59.8",
+    "react-primitives": "^0.8.0",
+    "react-test-renderer": "^16.8.6",
+    "stylis-plugin-rtl": "^1.0.0"
   },
   "bundlesize": [
     {
       "path": "./dist/styled-components.min.js",
-      "maxSize": "16.25kB"
+      "maxSize": "14kB"
     }
   ],
   "collective": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/styled-components"
+  },
+  "funding": {
     "type": "opencollective",
     "url": "https://opencollective.com/styled-components"
   }
