@@ -5,6 +5,7 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
 import determineTheme from '../utils/determineTheme';
 import { ThemeContext } from '../models/ThemeProvider';
+import { EMPTY_ARRAY } from '../utils/empties';
 import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
@@ -19,7 +20,6 @@ export default function createGlobalStyle(
   const rules = css(strings, ...interpolations);
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle(rules, styledComponentId);
-  let count = 0;
 
   function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
     const styleSheet = useStyleSheet();
@@ -27,7 +27,9 @@ export default function createGlobalStyle(
     const theme = useContext(ThemeContext);
     const instanceRef = useRef(null);
 
-    if (instanceRef.current === null) instanceRef.current = ++count;
+    if (instanceRef.current === null) {
+      instanceRef.current = styleSheet.allocateGSInstance(styledComponentId);
+    }
 
     const instance = instanceRef.current;
 
@@ -49,7 +51,7 @@ export default function createGlobalStyle(
       globalStyle.renderStyles(instance, context, styleSheet, stylis);
     }
 
-    useEffect(() => () => globalStyle.removeStyles(instance, styleSheet), []);
+    useEffect(() => () => globalStyle.removeStyles(instance, styleSheet), EMPTY_ARRAY);
 
     return null;
   }
