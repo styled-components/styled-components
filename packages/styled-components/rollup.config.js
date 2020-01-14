@@ -44,14 +44,14 @@ const commonPlugins = [
   replace({
     __VERSION__: JSON.stringify(pkg.version),
   }),
+  terser({
+    sourcemap: true,
+  }),
 ];
 
 const prodPlugins = [
   replace({
     'process.env.NODE_ENV': JSON.stringify('production'),
-  }),
-  terser({
-    sourcemap: true,
   }),
 ];
 
