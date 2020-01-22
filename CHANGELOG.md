@@ -6,7 +6,24 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Remove deprecated attrs "subfunction" syntax variant
+## [v5.0.0] - 2020-01-13
+
+Read the [v5 release announcement](https://medium.com/styled-components/announcing-styled-components-v5-beast-mode-389747abd987)!
+
+- 19% smaller bundle size
+- 18% faster client-side mounting
+- 17% faster updating of dynamic styles
+- 45% faster server-side rendering
+- RTL support
+
+**NOTE: At this time we recommend not using `@import` inside of `createGlobalStyle`. We're working on better behavior for this functionality but it just doesn't really work at the moment and it's better if you just embed these imports in your HTML index file, etc.**
+
+- `StyleSheetManager` enhancements
+  - you can now supply stylis plugins like [stylis-plugin-rtl](https://www.npmjs.com/package/stylis-plugin-rtl); `<StyleSheetManager stylisPlugins={[]}>...</StyleSheetManager>`
+  - `disableVendorPrefixes` removes autoprefixing if you don't need legacy browser support; `<StyleSheetManager disableVendorPrefixes>...</StyleSheetManager>`
+  - `disableCSSOMInjection` forces using the slower injection mode if other integrations in your runtime environment can't parse CSSOM-injected styles; `<StyleSheetManager disableCSSOMInjection>...</StyleSheetManager>`
+
+* Remove deprecated attrs "subfunction" syntax variant
 
   ```js
   styled.div.attrs({ color: p => p.color });
@@ -20,17 +37,17 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
   You can still pass objects to `attrs` but individual properties shouldn't have functions that receive props anymore.
 
-- Fix attrs not taking precedence over props when overriding a given prop
+* Fix attrs not taking precedence over props when overriding a given prop
 
-- (ReactNative) upgrade css-to-react-native to v3 ([changelog](https://github.com/styled-components/css-to-react-native/releases/tag/v3.0.0))
+* (ReactNative) upgrade css-to-react-native to v3 ([changelog](https://github.com/styled-components/css-to-react-native/releases/tag/v3.0.0))
 
   - Removed support for unitless line height in font shorthand
 
-- Replace `merge-anything` with `mixin-deep` to save some bytes (this is what handles merging of `defaultProps` between folded styled components); this is inlined into since the library is written in IE-incompatible syntax
+* Replace `merge-anything` with `mixin-deep` to save some bytes (this is what handles merging of `defaultProps` between folded styled components); this is inlined into since the library is written in IE-incompatible syntax
 
-- Fix certain adblockers messing up styling by purposefully not emitting the substring "ad" (case-insensitive) when generating dynamic class names
+* Fix certain adblockers messing up styling by purposefully not emitting the substring "ad" (case-insensitive) when generating dynamic class names
 
-- Fix regressed behavior between v3 and v4 where className was not correctly aggregated between folded `.attrs` invocations
+* Fix regressed behavior between v3 and v4 where className was not correctly aggregated between folded `.attrs` invocations
 
 ## [v4.4.1] - 2019-10-30
 
@@ -1019,7 +1036,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.4.1...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.0.0...master
+[v5.0.0]: https://github.com/styled-components/styled-components/compare/v4.4.1...v5.0.0
 [v4.4.1]: https://github.com/styled-components/styled-components/compare/v4.4.0...v4.4.1
 [v4.4.0]: https://github.com/styled-components/styled-components/compare/v4.3.2...v4.4.0
 [v4.3.2]: https://github.com/styled-components/styled-components/compare/v4.3.1...v4.3.2
