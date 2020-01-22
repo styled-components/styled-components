@@ -9,6 +9,7 @@ export const SEED = 5381 | 0;
 export const phash = (h: number, x: string): number => {
   for (let i = 0, l = x.length; i < l; i++) {
     h = (h << 5) + h + x.charCodeAt(i);
+    h &= 4294967295;
   }
 
   return h;
