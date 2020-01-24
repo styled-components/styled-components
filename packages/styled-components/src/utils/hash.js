@@ -7,8 +7,10 @@ export const SEED = 5381;
 // version of djb2 where we pretend that we're still looping over
 // the same string
 export const phash = (h: number, x: string): number => {
-  for (let i = 0, l = x.length; i < l; i++) {
-    h = (h << 5) + h + x.charCodeAt(i);
+  let i = x.length;
+
+  while (i) {
+    h = (h * 33) ^ x.charCodeAt(--i);
   }
 
   return h;
