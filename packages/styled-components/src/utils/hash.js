@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable */
 
-export const SEED = 5381 | 0;
+export const SEED = 5381;
 
 // When we have separate strings it's useful to run a progressive
 // version of djb2 where we pretend that we're still looping over
@@ -9,7 +9,6 @@ export const SEED = 5381 | 0;
 export const phash = (h: number, x: string): number => {
   for (let i = 0, l = x.length; i < l; i++) {
     h = (h << 5) + h + x.charCodeAt(i);
-    h &= 4294967295;
   }
 
   return h;
@@ -17,5 +16,5 @@ export const phash = (h: number, x: string): number => {
 
 // This is a djb2 hashing function
 export const hash = (x: string): number => {
-  return phash(SEED, x) >>> 0;
+  return phash(SEED, x);
 };
