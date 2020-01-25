@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Added useTheme hook to named exports for react native  
+
 ## [v5.0.0] - 2020-01-13
 
 Read the [v5 release announcement](https://medium.com/styled-components/announcing-styled-components-v5-beast-mode-389747abd987)!
