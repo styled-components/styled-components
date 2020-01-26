@@ -28,7 +28,7 @@ data-styled.g1[id=\\"sc-a\\"]{content:\\"b,\\"}
 </style>"
 `;
 
-exports[`ssr should handle errors while streaming 1`] = `[Invariant Violation: React.Children.only expected to receive a single React element child.]`;
+exports[`ssr should handle errors while streaming 1`] = `[Error: React.Children.only expected to receive a single React element child.]`;
 
 exports[`ssr should interleave styles with rendered HTML when utilitizing streaming 1`] = `
 "<style data-styled data-styled-version=\\"JEST_MOCK_VERSION\\">.c{color:red;}

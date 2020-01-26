@@ -207,14 +207,14 @@ const Thing = _styled.div.withConfig({
   componentId: \\"sc-11gvsec-0\\"
 })([\\"color:blue;\\"]);
 
-function Foo() {
-  return React.createElement(_StyledThing, null);
-}
-
 var _StyledThing = _styled(Thing).withConfig({
   displayName: \\"macrotest___StyledThing\\",
   componentId: \\"sc-11gvsec-1\\"
 })([\\"color:red;\\"]);
+
+function Foo() {
+  return React.createElement(_StyledThing, null);
+}
 "
 `;
 
@@ -232,14 +232,14 @@ import _styled2 from \\"styled-components\\";
 import _styled from \\"styled-components\\";
 import React from 'react';
 
-function Foo() {
-  return React.createElement(_StyledDiv, null);
-}
-
-var _StyledDiv = _styled.div.withConfig({
+var _StyledDiv = _styled(\\"div\\").withConfig({
   displayName: \\"macrotest___StyledDiv\\",
   componentId: \\"sc-11gvsec-0\\"
 })([\\"color:red;\\"]);
+
+function Foo() {
+  return React.createElement(_StyledDiv, null);
+}
 "
 `;
 
