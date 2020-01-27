@@ -26,7 +26,7 @@ export default class ServerStyleSheet {
   _emitSheetCSS = (): string => {
     const css = this.instance.toString();
     const nonce = getNonce();
-    const attrs = [nonce && `nonce="${nonce}"`, SC_ATTR, `${SC_ATTR_VERSION}="${SC_VERSION}"`];
+    const attrs = [nonce && `nonce="${nonce}"`, `${SC_ATTR}="true"`, `${SC_ATTR_VERSION}="${SC_VERSION}"`];
     const htmlAttr = attrs.filter(Boolean).join(' ');
 
     return `<style ${htmlAttr}>${css}</style>`;
