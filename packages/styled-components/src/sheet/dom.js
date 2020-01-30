@@ -2,6 +2,7 @@
 
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import getNonce from '../utils/nonce';
+import throwStyledError from '../utils/error';
 
 const ELEMENT_TYPE = 1; /* Node.ELEMENT_TYPE */
 
@@ -54,5 +55,6 @@ export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
     }
   }
 
-  throw new TypeError(`CSSStyleSheet could not be found on HTMLStyleElement`);
+  throwStyledError(17);
+  return (undefined: any);
 };
