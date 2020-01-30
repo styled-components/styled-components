@@ -39,11 +39,11 @@ class DefaultGroupedTag implements GroupedTag {
       const oldSize = oldBuffer.length;
 
       let newSize = oldSize;
-      while (group >= newSize && newSize > 0)
-        {newSize <<= 1;}
-
-      if (newSize < 0) {
-        throwStyledError(13, `${group}`);
+      while (group >= newSize) {
+        newSize <<= 1;
+        if (newSize < 0) {
+          throwStyledError(16, `${group}`);
+        }
       }
 
       this.groupSizes = new Uint32Array(newSize);
