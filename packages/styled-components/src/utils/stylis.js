@@ -92,15 +92,17 @@ export default function createStylisInstance({
     return stylis(prefix || !selector ? '' : selector, cssStr);
   }
 
-  stringifyRules.hash = plugins
-    .reduce((acc, plugin) => {
-      if (!plugin.name) {
-        throwStyledError(15);
-      }
+  stringifyRules.hash = plugins.length
+    ? plugins
+        .reduce((acc, plugin) => {
+          if (!plugin.name) {
+            throwStyledError(15);
+          }
 
-      return phash(acc, plugin.name);
-    }, SEED)
-    .toString();
+          return phash(acc, plugin.name);
+        }, SEED)
+        .toString()
+    : '';
 
   return stringifyRules;
 }

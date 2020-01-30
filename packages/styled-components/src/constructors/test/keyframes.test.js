@@ -39,7 +39,7 @@ describe('keyframes', () => {
         opacity: 1;
       }
     `.getName()
-    ).toMatchInlineSnapshot('"bYhwJh"', `"bYhwJh"`);
+    ).toMatchInlineSnapshot(`"jgzmJZ"`);
   });
 
   it('should insert the correct styles', () => {
@@ -184,7 +184,7 @@ describe('keyframes', () => {
     TestRenderer.create(<App />);
 
     expect(getCSS(document).trim()).toMatchInlineSnapshot(
-      `".a{-webkit-animation:none;animation:none;}.b{-webkit-animation:XnAcP 1s linear;animation:XnAcP 1s linear;, imRjSV 1s linear;}.c{-webkit-animation:imRjSV 1s linear;animation:imRjSV 1s linear;}.d{-webkit-animation:XnAcP 1s linear;animation:XnAcP 1s linear;}@-webkit-keyframes XnAcP{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}}@keyframes XnAcP{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}}@-webkit-keyframes imRjSV{from{opacity:0;}to{opacity:1;}}@keyframes imRjSV{from{opacity:0;}to{opacity:1;}}"`
+      `".a{-webkit-animation:none;animation:none;}.b{-webkit-animation:cMaiLV 1s linear;animation:cMaiLV 1s linear;, itcuFx 1s linear;}.c{-webkit-animation:itcuFx 1s linear;animation:itcuFx 1s linear;}.d{-webkit-animation:cMaiLV 1s linear;animation:cMaiLV 1s linear;}@-webkit-keyframes cMaiLV{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}}@keyframes cMaiLV{from{-webkit-transform:translateX(-10px);-ms-transform:translateX(-10px);transform:translateX(-10px);}to{-webkit-transform:none;-ms-transform:none;transform:none;}}@-webkit-keyframes itcuFx{from{opacity:0;}to{opacity:1;}}@keyframes itcuFx{from{opacity:0;}to{opacity:1;}}"`
     );
   });
 
