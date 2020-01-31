@@ -325,6 +325,20 @@ describe(`createGlobalStyle`, () => {
     );
   });
 
+  it(`should warn when @import is used`, () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { render } = context;
+    const Component = createGlobalStyle`
+      @import url("something.css")
+    `;
+    render(<Component />);
+
+    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
+      `"Please do not use @import CSS syntax in createGlobalStyle at this time, as the CSSOM APIs we use in production do not handle it well. Instead, we recommend using a library such as react-helmet to inject a typical <link> meta tag to the stylesheet, or simply embedding it manually in your index.html <head> section for a simpler app."`
+    );
+  });
+
   it('works with keyframes', () => {
     const { render } = context;
 
