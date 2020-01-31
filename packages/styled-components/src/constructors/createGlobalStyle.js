@@ -40,6 +40,15 @@ export default function createGlobalStyle(
       );
     }
 
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      rules.some(rule => typeof rule === 'string' && rule.indexOf('@import') !== -1)
+    ) {
+      console.warn(
+        `Please do not use @import CSS syntax in createGlobalStyle at this time, as the CSSOM APIs we use in production do not handle it well. Instead, we recommend using a library such as react-helmet to inject a typical <link> meta tag to the stylesheet, or simply embedding it manually in your index.html <head> section for a simpler app.`
+      );
+    }
+
     if (globalStyle.isStatic) {
       globalStyle.renderStyles(instance, STATIC_EXECUTION_CONTEXT, styleSheet, stylis);
     } else {
