@@ -6,7 +6,11 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Added useTheme hook to named exports for react native  
+- Added useTheme hook to named exports for react native
+
+- Performance enhancements
+  - Refactored hashing function that is a bit faster in benchmarks
+  - Fixed a bitwise math issue that was causing SSR performance degradations due to how we allocate typed arrays under the hood
 
 ## [v5.0.0] - 2020-01-13
 
