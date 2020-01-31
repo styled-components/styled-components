@@ -11,6 +11,7 @@ import hoist from 'hoist-non-react-statics';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
+import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import escape from '../utils/escape';
 import generateDisplayName from '../utils/generateDisplayName';
@@ -277,6 +278,8 @@ export default function createStyledComponent(
   });
 
   if (process.env.NODE_ENV !== 'production') {
+    checkDynamicCreation(displayName, styledComponentId);
+
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(
       displayName,
       styledComponentId
