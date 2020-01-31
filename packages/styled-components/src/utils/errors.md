@@ -80,3 +80,14 @@ A stylis plugin has been supplied that is not named. We need a name for each plu
 ```js
 Object.defineProperty(importedPlugin, 'name', { value: 'some-unique-name' });
 ```
+
+## 16
+
+Reached the limit of how many styled components may be created at group %s.
+You may only create up to 1,073,741,824 components. If you're creating components dynamically,
+as for instance in your render method then you may be running into this limitation.
+
+## 17
+
+CSSStyleSheet could not be found on HTMLStyleElement.
+Has styled-components' style tag been unmounted or altered by another script?

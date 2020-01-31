@@ -91,3 +91,11 @@ it('does supports large group numbers', () => {
   expect(groupedTag.indexOfGroup(group)).toBe(0);
   expect(groupedTag.getGroup(group)).toBe('.test {}\n');
 });
+
+it('throws when the upper group limit is reached', () => {
+  const group = Math.pow(2, 31) + 1; // This can't be converted to an SMI to prevent cutoff
+
+  expect(() => {
+    groupedTag.insertRules(group, ['.test {}']);
+  }).toThrowError(/reached the limit/i);
+});

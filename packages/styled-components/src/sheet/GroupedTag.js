@@ -2,13 +2,14 @@
 /* eslint-disable no-use-before-define */
 
 import type { GroupedTag, Tag } from './types';
+import throwStyledError from '../utils/error';
 
 /** Create a GroupedTag with an underlying Tag implementation */
 export const makeGroupedTag = (tag: Tag): GroupedTag => {
   return new DefaultGroupedTag(tag);
 };
 
-const BASE_SIZE = 1 << 8;
+const BASE_SIZE = 1 << 9;
 
 class DefaultGroupedTag implements GroupedTag {
   groupSizes: Uint32Array;
@@ -36,7 +37,14 @@ class DefaultGroupedTag implements GroupedTag {
     if (group >= this.groupSizes.length) {
       const oldBuffer = this.groupSizes;
       const oldSize = oldBuffer.length;
-      const newSize = BASE_SIZE << ((group / BASE_SIZE) | 0);
+
+      let newSize = oldSize;
+      while (group >= newSize) {
+        newSize <<= 1;
+        if (newSize < 0) {
+          throwStyledError(16, `${group}`);
+        }
+      }
 
       this.groupSizes = new Uint32Array(newSize);
       this.groupSizes.set(oldBuffer);
