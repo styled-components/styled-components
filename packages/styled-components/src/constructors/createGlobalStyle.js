@@ -3,6 +3,7 @@ import React, { useContext, useEffect, useRef } from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
+import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import { ThemeContext } from '../models/ThemeProvider';
 import { EMPTY_ARRAY } from '../utils/empties';
@@ -20,6 +21,10 @@ export default function createGlobalStyle(
   const rules = css(strings, ...interpolations);
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle(rules, styledComponentId);
+
+  if (process.env.NODE_ENV !== 'production') {
+    checkDynamicCreation(styledComponentId);
+  }
 
   function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
     const styleSheet = useStyleSheet();
