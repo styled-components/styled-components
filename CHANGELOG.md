@@ -6,11 +6,18 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v5.0.1] - 2020-02-04
+
 - Added useTheme hook to named exports for react native
 
 - Performance enhancements
+
   - Refactored hashing function that is a bit faster in benchmarks
   - Fixed a bitwise math issue that was causing SSR performance degradations due to how we allocate typed arrays under the hood
+
+- Added some helpful new dev-time warnings for antipatterns
+  - Recommending against usage of css `@import` inside `createGlobalStyle` and what to do instead
+  - Catching and warning against dynamic creation of styled-components inside other component render paths
 
 ## [v5.0.0] - 2020-01-13
 
@@ -1042,7 +1049,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v5.0.0...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.0.1...master
+[v5.0.1]: https://github.com/styled-components/styled-components/compare/v5.0.0...v5.0.1
 [v5.0.0]: https://github.com/styled-components/styled-components/compare/v4.4.1...v5.0.0
 [v4.4.1]: https://github.com/styled-components/styled-components/compare/v4.4.0...v4.4.1
 [v4.4.0]: https://github.com/styled-components/styled-components/compare/v4.3.2...v4.4.0
