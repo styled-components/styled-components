@@ -36,7 +36,7 @@ Read the [v5 release announcement](https://medium.com/styled-components/announci
   - `disableVendorPrefixes` removes autoprefixing if you don't need legacy browser support; `<StyleSheetManager disableVendorPrefixes>...</StyleSheetManager>`
   - `disableCSSOMInjection` forces using the slower injection mode if other integrations in your runtime environment can't parse CSSOM-injected styles; `<StyleSheetManager disableCSSOMInjection>...</StyleSheetManager>`
 
-* Remove deprecated attrs "subfunction" syntax variant
+* **Remove deprecated attrs "subfunction" syntax variant**
 
   ```js
   styled.div.attrs({ color: p => p.color });
