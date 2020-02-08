@@ -140,7 +140,6 @@ Object {
       console.warn = oldConsoleWarn;
     }
   });
-
   // https://github.com/styled-components/styled-components/issues/1266
   it('should update when props change', () => {
     const Comp = styled.View`
@@ -167,6 +166,26 @@ Object {
     const wrapper = TestRenderer.create(<Comp2 forwardedAs={Text} />);
 
     expect(wrapper.root.findByType('Text')).not.toBeUndefined();
+  });
+
+  it('should handle comments', () => {
+    const Comp = styled.View`
+      /* background: red */
+      background: green;
+    `;
+
+    expect(
+      TestRenderer.create(<Comp />).root.findByType('View').props.style
+    ).toEqual([{ backgroundColor: 'green' }]);
+
+    const Comp2 = styled.View`
+      // background: red;
+      background: green;
+    `;
+
+    expect(
+      TestRenderer.create(<Comp2 />).root.findByType('View').props.style
+    ).toEqual([{ backgroundColor: 'green' }]);
   });
 
   describe('attrs', () => {
