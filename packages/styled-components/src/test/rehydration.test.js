@@ -42,8 +42,8 @@ describe('rehydration', () => {
     beforeEach(() => {
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
-          .b { color: red; }
-          ${SC_ATTR}.g1[id="TWO"]{content: "b,"}
+          .b { color: red; }/*!sc*/
+          ${SC_ATTR}.g1[id="TWO"]{content: "b,"}/*!sc*/
         </style>
       `;
 
@@ -112,10 +112,10 @@ describe('rehydration', () => {
        * Change either and this will break. */
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
-          .a { color: blue; }
-          ${SC_ATTR}.g1[id="ONE"]{content: "a,"}
-          .b { color: red; }
-          ${SC_ATTR}.g2[id="TWO"]{content: "b,"}
+          .a { color: blue; }/*!sc*/
+          ${SC_ATTR}.g1[id="ONE"]{content: "a,"}/*!sc*/
+          .b { color: red; }/*!sc*/
+          ${SC_ATTR}.g2[id="TWO"]{content: "b,"}/*!sc*/
         </style>
       `;
 
@@ -158,8 +158,8 @@ describe('rehydration', () => {
       /* Same css as before, but without the data attributes we ignore it */
       document.head.innerHTML = `
         <style>
-          .b { color: red; }
-          ${SC_ATTR}.g2[id="TWO"]{content: "b,"}
+          .b { color: red; }/*!sc*/
+          ${SC_ATTR}.g2[id="TWO"]{content: "b,"}/*!sc*/
         </style>
       `;
 
@@ -178,12 +178,12 @@ describe('rehydration', () => {
        * changing it. */
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
-          body { background: papayawhip; }
-          ${SC_ATTR}.g1[id="sc-global-557410406"]{content: "sc-global-557410406,"}
+          body { background: papayawhip; }/*!sc*/
+          ${SC_ATTR}.g1[id="sc-global-557410406"]{content: "sc-global-557410406,"}/*!sc*/
         </style>
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
-          .a { color: red; }
-          ${SC_ATTR}.g2[id="TWO"]{content: "a,"}
+          .a { color: red; }/*!sc*/
+          ${SC_ATTR}.g2[id="TWO"]{content: "a,"}/*!sc*/
         </style>
       `;
 
@@ -229,14 +229,14 @@ describe('rehydration', () => {
     beforeEach(() => {
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
-          html { font-size: 16px; }
-          ${SC_ATTR}.g1[id="sc-global-a1"]{content: "sc-global-a1,"}
-          body { background: papayawhip; }
-          ${SC_ATTR}.g2[id="sc-global-b1"]{content: "sc-global-b1,"}
-          .c { color: blue; }
-          ${SC_ATTR}.g3[id="ONE"]{content: "c,"}
-          .d { color: red; }
-          ${SC_ATTR}.g4[id="TWO"]{content: "d,"}
+          html { font-size: 16px; }/*!sc*/
+          ${SC_ATTR}.g1[id="sc-global-a1"]{content: "sc-global-a1,"}/*!sc*/
+          body { background: papayawhip; }/*!sc*/
+          ${SC_ATTR}.g2[id="sc-global-b1"]{content: "sc-global-b1,"}/*!sc*/
+          .c { color: blue; }/*!sc*/
+          ${SC_ATTR}.g3[id="ONE"]{content: "c,"}/*!sc*/
+          .d { color: red; }/*!sc*/
+          ${SC_ATTR}.g4[id="TWO"]{content: "d,"}/*!sc*/
         </style>
       `;
 
@@ -311,8 +311,8 @@ describe('rehydration', () => {
     beforeEach(() => {
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
-          @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
-          ${SC_ATTR}.g1[id="sc-keyframes-keyframe_880"]{content: "keyframe_880,"}
+          @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}/*!sc*/
+          ${SC_ATTR}.g1[id="sc-keyframes-keyframe_880"]{content: "keyframe_880,"}/*!sc*/
         </style>
       `;
 

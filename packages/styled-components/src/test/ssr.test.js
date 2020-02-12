@@ -491,8 +491,7 @@ describe('ssr', () => {
     expect(html).toMatchInlineSnapshot(`"<h1 class=\\"sc-a b\\">Hello SSR!</h1>"`);
     expect(css).toMatchInlineSnapshot(`
       "<style data-styled=\\"true\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}
-      data-styled.g1[id=\\"sc-a\\"]{content:\\"b,\\"}
-      </style>"
+      /*!sc*/data-styled.g1[id=\\"sc-a\\"]{content:\\"b,\\"}/*!sc*/</style>"
     `);
   });
 });
