@@ -5,7 +5,7 @@ import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
 import type { Sheet } from './types';
 
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
-const RULE_RE = /(?:\s*)?(.*?){((?:{[^}]*}|(?!{).*?)*)}/g;
+const RULE_RE = /([^{]*){((?:[^{}]+(?:{[^}]*})?)*)}/g;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\]`);
 
 export const outputSheet = (sheet: Sheet) => {
@@ -60,7 +60,7 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
   // parts = [match, selector, content]
   // eslint-disable-next-line no-cond-assign
   while ((parts = RULE_RE.exec(rawHTML))) {
-    const marker = parts[1].match(MARKER_RE);
+    const marker = parts[1].trim().match(MARKER_RE);
 
     if (marker) {
       const group = parseInt(marker[1], 10) | 0;

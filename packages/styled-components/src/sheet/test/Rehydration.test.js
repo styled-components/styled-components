@@ -94,4 +94,19 @@ describe('rehydrateSheet', () => {
     expect(sheet.getTag().tag.length).toBe(0);
     expect(styleHead.parentElement).toBe(document.head);
   });
+
+  it('tolerates long, malformed CSS', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
+        {xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          }
+        .rule {}
+        ${SC_ATTR}.g1[id="idA"]{content:""}
+      </style>
+    `;
+
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
+  });
 });
