@@ -6,7 +6,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Fix extremely slow rehydration after SSR for malformed CSS (see [#3018](https://github.com/styled-components/styled-components/pull/3018))
+- Fix slow SSR Rehydration for malformed CSS and increase fault-tolerance (see [#3018](https://github.com/styled-components/styled-components/pull/3018))
 
 ## [v5.0.1] - 2020-02-04
 
