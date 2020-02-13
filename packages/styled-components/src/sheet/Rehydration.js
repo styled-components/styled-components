@@ -1,10 +1,9 @@
 // @flow
 
-import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../constants';
+import { SPLITTER, SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
 import type { Sheet } from './types';
 
-const SPLITTER = '/*!sc*/';
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\].*?"([^"]*)`);
 
@@ -34,7 +33,7 @@ export const outputSheet = (sheet: Sheet) => {
 
     // NOTE: It's easier to collect rules and have the marker
     // after the actual rules to simplify the rehydration
-    css += `${rules}${SPLITTER}${selector}{content:"${content}"}${SPLITTER}`;
+    css += `${rules}${selector}{content:"${content}"}${SPLITTER}\n`;
   }
 
   return css;
@@ -53,13 +52,12 @@ const rehydrateNamesFromContent = (sheet: Sheet, id: string, content: string) =>
 };
 
 const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
-  const rawHTML = style.innerHTML;
+  const parts = style.innerHTML.split(SPLITTER);
   const rules: string[] = [];
-  const parts = rawHTML.split(SPLITTER);
 
-  parts.forEach(part => {
-    const marker = part.trim().match(MARKER_RE);
-
+  for (let i = 0, l = parts.length; i < l; i++) {
+    const part = parts[i].trim();
+    const marker = part.match(MARKER_RE);
     if (marker) {
       const group = parseInt(marker[1], 10) | 0;
       const id = marker[2];
@@ -75,9 +73,9 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
 
       rules.length = 0;
     } else {
-      rules.push(part.trim());
+      rules.push(part);
     }
-  });
+  }
 };
 
 export const rehydrateSheet = (sheet: Sheet) => {

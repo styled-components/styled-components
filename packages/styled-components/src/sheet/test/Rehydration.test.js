@@ -27,12 +27,13 @@ describe('outputSheet', () => {
 
     expect(output).toMatchInlineSnapshot(`
       Array [
-        ".a {}
-      ",
-        "data-styled.g11[id=\\"idA\\"]{content:\\"nameA,\\"}",
-        ".b {}
-      ",
-        "data-styled.g22[id=\\"idB\\"]{content:\\"nameB,\\"}",
+        ".a {}",
+        "
+      data-styled.g11[id=\\"idA\\"]{content:\\"nameA,\\"}",
+        "
+      .b {}",
+        "
+      data-styled.g22[id=\\"idB\\"]{content:\\"nameB,\\"}",
         "",
       ]
     `);
@@ -74,8 +75,8 @@ describe('rehydrateSheet', () => {
     expect(sheet.hasNameForId('idB', 'nameB')).toBe(true);
     // Populates the underlying tag
     expect(sheet.getTag().tag.length).toBe(2);
-    expect(sheet.getTag().getGroup(11)).toBe('.a {}\n');
-    expect(sheet.getTag().getGroup(22)).toBe('.b {}\n');
+    expect(sheet.getTag().getGroup(11)).toBe('.a {}/*!sc*/\n');
+    expect(sheet.getTag().getGroup(22)).toBe('.b {}/*!sc*/\n');
     expect(sheet.getTag().getGroup(33)).toBe('');
     // Removes the old tags
     expect(styleHead.parentElement).toBe(null);
