@@ -57,7 +57,10 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
 
   for (let i = 0, l = parts.length; i < l; i++) {
     const part = parts[i].trim();
+    if (!part) continue;
+
     const marker = part.match(MARKER_RE);
+
     if (marker) {
       const group = parseInt(marker[1], 10) | 0;
       const id = marker[2];
