@@ -33,7 +33,7 @@ export const outputSheet = (sheet: Sheet) => {
 
     // NOTE: It's easier to collect rules and have the marker
     // after the actual rules to simplify the rehydration
-    css += `${rules}${selector}{content:"${content}"}${SPLITTER}\n`;
+    css += `${rules}${selector}{content:"${content}"}${SPLITTER}`;
   }
 
   return css;

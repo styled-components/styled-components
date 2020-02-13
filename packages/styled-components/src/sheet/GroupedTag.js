@@ -90,7 +90,7 @@ class DefaultGroupedTag implements GroupedTag {
     const endIndex = startIndex + length;
 
     for (let i = startIndex; i < endIndex; i++) {
-      css += `${this.tag.getRule(i)}${SPLITTER}\n`;
+      css += `${this.tag.getRule(i)}${SPLITTER}`;
     }
 
     return css;
