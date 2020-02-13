@@ -24,7 +24,10 @@ class StyledNativeComponent extends Component<*, *> {
 
   attrs = {};
 
-  generateStyles = memoize((...styles) => styles, isDeepEqual);
+  generateStyles = memoize(
+    (generatedStyles, style) => [generatedStyles].concat(style),
+    isDeepEqual
+  );
 
   render() {
     return (
