@@ -1,5 +1,8 @@
 // @flow
 import React, { createElement, Component } from 'react';
+// $FlowFixMe
+import memoize from 'memoize-one';
+import isDeepEqual from 'lodash.isequal';
 import hoist from 'hoist-non-react-statics';
 import merge from '../utils/mixinDeep';
 import determineTheme from '../utils/determineTheme';
@@ -20,6 +23,8 @@ class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
 
   attrs = {};
+
+  generateStyles = memoize((...styles) => styles, isDeepEqual);
 
   render() {
     return (
@@ -44,7 +49,7 @@ class StyledNativeComponent extends Component<*, *> {
           const propsForElement = {
             ...props,
             ...this.attrs,
-            style: [generatedStyles].concat(style),
+            style: this.generateStyles(generatedStyles, style),
           };
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
