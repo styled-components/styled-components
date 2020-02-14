@@ -75,7 +75,7 @@ interface StyledComponentWrapperProperties {
   displayName: string;
   foldedComponentIds: Array<string>;
   target: Target;
-  shouldForwardProp: Function;
+  shouldForwardProp: ?(prop: string) => boolean;
   styledComponentId: string;
   warnTooManyClasses: $Call<typeof createWarnTooManyClasses, string, string>;
 }
@@ -147,25 +147,16 @@ function useStyledComponentImpl<Config: {}, Instance>(
 
   const isTargetTag = isTag(elementToBeCreated);
   const computedProps = attrs !== props ? { ...props, ...attrs } : props;
-  const shouldFilterProps = shouldForwardProp || isTargetTag || 'as' in computedProps || 'forwardedAs' in computedProps;
-  const propsForElement = shouldFilterProps ? {} : { ...computedProps };
+  const shouldFilterProps = 'as' in computedProps || 'forwardedAs' in computedProps;
+  const propFilterFn = shouldForwardProp || (isTargetTag && validAttr);
+  const propsForElement = propFilterFn || shouldFilterProps ? {} : { ...computedProps };
 
-  // use explicit `shouldForwardProp` function if one is set, otherwise
-  // if no explicit `shouldForwardProp` set then
-  //   if we're on a tag, use `validAttr`
-  //     i.e. Don't pass through non HTML tags through to HTML elements
-  // else (we're on a component - pass through all by default)
-  //   () => true
-  const shouldReallyForwardProp = shouldForwardProp || (
-    isTargetTag ? validAttr : () => true
-  );
-
-  if (shouldFilterProps) {
+  if (shouldFilterProps || propFilterFn) {
     // eslint-disable-next-line guard-for-in
     for (const key in computedProps) {
       if (key === 'forwardedAs') {
         propsForElement.as = computedProps[key];
-      } else if (key !== 'as' && key !== 'forwardedAs' && (shouldReallyForwardProp(key))) {
+      } else if (key !== 'as' && key !== 'forwardedAs' && (!propFilterFn || propFilterFn(key))) {
         // Don't pass through non HTML tags through to HTML elements
         propsForElement[key] = computedProps[key];
       }
@@ -190,20 +181,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
   propsForElement.ref = refToForward;
 
   return createElement(elementToBeCreated, propsForElement);
-}
-
-function getShouldForwardProp(options, target, isTargetStyledComp) {
-  // $FlowFixMe
-  if (isTargetStyledComp && target.shouldForwardProp) {
-    if (options.shouldForwardProp) {
-      // compose nested shouldForwardProp calls
-      // $FlowFixMe
-      return prop => target.shouldForwardProp(prop) && options.shouldForwardProp(prop);
-    }
-    return target.shouldForwardProp;
-  }
-
-  return options.shouldForwardProp;
 }
 
 export default function createStyledComponent(
@@ -232,6 +209,17 @@ export default function createStyledComponent(
       ? Array.prototype.concat(target.attrs, attrs).filter(Boolean)
       : attrs;
 
+  let { shouldForwardProp } = options;
+  // $FlowFixMe
+  if (isTargetStyledComp && target.shouldForwardProp) {
+    if (shouldForwardProp) {
+      // compose nested shouldForwardProp calls
+      // $FlowFixMe
+      shouldForwardProp = prop => target.shouldForwardProp(prop) && options.shouldForwardProp(prop);
+    }
+    ({ shouldForwardProp } = target);
+  }
+
   const componentStyle = new ComponentStyle(
     isTargetStyledComp
       ? // fold the underlying StyledComponent rules up (implicit extend)
@@ -258,7 +246,7 @@ export default function createStyledComponent(
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
-  WrappedStyledComponent.shouldForwardProp = getShouldForwardProp(options, target, isTargetStyledComp);
+  WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
 
   // this static is used to preserve the cascade of static classes for component selector
   // purposes; this is especially important with usage of the css prop
