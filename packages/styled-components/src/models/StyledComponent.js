@@ -156,7 +156,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
     for (const key in computedProps) {
       if (key === 'forwardedAs') {
         propsForElement.as = computedProps[key];
-      } else if (key !== 'as' && key !== 'forwardedAs' && (!propFilterFn || propFilterFn(key))) {
+      } else if (key !== 'as' && (!propFilterFn || propFilterFn(key))) {
         // Don't pass through non HTML tags through to HTML elements
         propsForElement[key] = computedProps[key];
       }
@@ -209,15 +209,18 @@ export default function createStyledComponent(
       ? Array.prototype.concat(target.attrs, attrs).filter(Boolean)
       : attrs;
 
-  let { shouldForwardProp } = options;
+  // eslint-disable-next-line prefer-destructuring
+  let shouldForwardProp = options.shouldForwardProp;
   // $FlowFixMe
   if (isTargetStyledComp && target.shouldForwardProp) {
     if (shouldForwardProp) {
       // compose nested shouldForwardProp calls
       // $FlowFixMe
       shouldForwardProp = prop => target.shouldForwardProp(prop) && options.shouldForwardProp(prop);
+    } else {
+      // eslint-disable-next-line prefer-destructuring
+      shouldForwardProp = target.shouldForwardProp
     }
-    ({ shouldForwardProp } = target);
   }
 
   const componentStyle = new ComponentStyle(
