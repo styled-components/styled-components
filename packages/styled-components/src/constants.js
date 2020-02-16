@@ -19,10 +19,10 @@ function isSpeedyDisabled() {
   }
   if (typeof process !== 'undefined') {
     if (process.env.REACT_APP_SC_DISABLE_SPEEDY) {
-      return process.env.REACT_APP_SC_DISABLE_SPEEDY.toLowerCase() === 'true';
+      return process.env.REACT_APP_SC_DISABLE_SPEEDY === 'true';
     }
     if (process.env.SC_DISABLE_SPEEDY) {
-      return process.env.SC_DISABLE_SPEEDY.toLowerCase() === 'true';
+      return process.env.SC_DISABLE_SPEEDY === 'true';
     }
 
     return process.env.NODE_ENV !== 'production';
