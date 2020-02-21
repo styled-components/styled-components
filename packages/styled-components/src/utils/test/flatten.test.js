@@ -129,7 +129,7 @@ describe('flatten', () => {
   });
 
   it('throws if trying to interpolate a normal React component', () => {
-    jest.spyOn(console, 'err0r').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     const Foo = ({ className }) => <div className={className}>hello there!</div>;
 
     const Bar = styled.div`
