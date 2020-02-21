@@ -145,8 +145,8 @@ describe('flatten', () => {
     );
   });
 
-  it('does not warn for regular functions', () => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  it('does not error for regular functions', () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
 
     const SvgIcon = styled.svg`
       vertical-align: middle;
@@ -164,6 +164,6 @@ describe('flatten', () => {
       )
     ).not.toThrowError();
 
-    expect(console.warn).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
   });
 });
