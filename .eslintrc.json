@@ -1,0 +1,46 @@
+{
+  "parser": "babel-eslint",
+  "extends": ["airbnb", "prettier"],
+  "plugins": ["prettier", "react-hooks"],
+  "rules": {
+    "react-hooks/rules-of-hooks": "error",
+    "class-methods-use-this": 0,
+    "curly": [2, "multi-line"],
+    "import/no-cycle": "error",
+    "import/no-extraneous-dependencies": 0,
+    "import/prefer-default-export": 0,
+    "no-confusing-arrow": 0,
+    "no-continue": 0,
+    "no-duplicate-imports": 0,
+    "no-else-return": 0,
+    "no-prototype-builtins": 0,
+    "no-underscore-dangle": 0,
+    "no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "ignoreRestSiblings": true }
+    ],
+    "react/button-has-type": 0,
+    "react/destructuring-assignment": 0,
+    "react/forbid-prop-types": 0,
+    "react/jsx-filename-extension": 0,
+    "react/no-multi-comp": 0,
+    "react/prefer-stateless-function": 0,
+    "react/prop-types": 0,
+    "react/require-default-props": 0,
+    "react/sort-comp": 0,
+    "symbol-description": 0,
+    "no-restricted-syntax": ["error", "ForOfStatement", "LabeledStatement", "WithStatement"],
+    "no-return-assign": 0,
+    "no-bitwise": 0,
+    "no-plusplus": 0,
+    "no-multi-assign": 0
+  },
+  "parserOptions": {
+    "ecmaVersion": 7,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "impliedStrict": true,
+      "jsx": true
+    }
+  }
+}

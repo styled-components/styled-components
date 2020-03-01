@@ -68,3 +68,26 @@ It seems you are interpolating a keyframe declaration (%s) into an untagged stri
 ## 13
 
 %s is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.
+
+## 14
+
+ThemeProvider: "theme" prop is required.
+
+## 15
+
+A stylis plugin has been supplied that is not named. We need a name for each plugin to be able to prevent styling collisions between different stylis configurations within the same app. Before you pass your plugin to `<StyleSheetManager stylisPlugins={[]}>`, please make sure each plugin is uniquely-named, e.g.
+
+```js
+Object.defineProperty(importedPlugin, 'name', { value: 'some-unique-name' });
+```
+
+## 16
+
+Reached the limit of how many styled components may be created at group %s.
+You may only create up to 1,073,741,824 components. If you're creating components dynamically,
+as for instance in your render method then you may be running into this limitation.
+
+## 17
+
+CSSStyleSheet could not be found on HTMLStyleElement.
+Has styled-components' style tag been unmounted or altered by another script?

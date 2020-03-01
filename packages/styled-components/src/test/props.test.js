@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable react/prop-types */
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
@@ -42,7 +41,7 @@ describe('props', () => {
     expectCSSMatches('.b { border-width:0; }');
   });
 
-  it('should pass "forwardedAs" to the underlying component as "as" if used', () => {
+  it('should forward the "as" prop if "forwardedAs" is used', () => {
     const Comp = ({ as: Component = 'div', ...props }) => <Component {...props} />;
 
     const Comp2 = styled(Comp)`
@@ -50,10 +49,10 @@ describe('props', () => {
     `;
 
     expect(TestRenderer.create(<Comp2 forwardedAs="button" />).toJSON()).toMatchInlineSnapshot(`
-<button
-  className="sc-a b"
-/>
-`);
+      <button
+        className="sc-a b"
+      />
+    `);
 
     expectCSSMatches('.b { background: red; }');
   });

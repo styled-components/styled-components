@@ -1,3 +1,7 @@
+const path = require('path');
+
 module.exports = {
-  rootDir: '../../packages/styled-components',
+  clearMocks: true,
+  rootDir: path.join(__dirname, '../..'),
+  testURL: 'http://localhost',
 };

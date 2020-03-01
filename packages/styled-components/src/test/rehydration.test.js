@@ -5,8 +5,16 @@ import TestRenderer from 'react-test-renderer';
 import { resetStyled, expectCSSMatches, seedNextClassnames } from './utils';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 import keyframes from '../constructors/keyframes';
-import StyleSheet from '../models/StyleSheet';
-import { SC_ATTR, SC_VERSION_ATTR } from '../constants';
+import { masterSheet } from '../models/StyleSheetManager';
+import { rehydrateSheet } from '../sheet/Rehydration';
+import { SC_ATTR, SC_ATTR_VERSION } from '../constants';
+
+/* NOTE:
+   Sometimes we add an empty function interpolation into some
+   styled-components to skip the static optimisation in
+   ComponentStyle. This will look like this:
+   ${() => ''}
+   */
 
 const getStyleTags = () =>
   Array.from(document.querySelectorAll('style')).map(el => ({
@@ -14,6 +22,13 @@ const getStyleTags = () =>
   }));
 
 let styled;
+
+const resetSheet = sheet => {
+  sheet.gs = {};
+  sheet.names = new Map();
+  sheet.clearTag();
+  rehydrateSheet(sheet);
+};
 
 describe('rehydration', () => {
   /**
@@ -26,12 +41,13 @@ describe('rehydration', () => {
   describe('with existing styled components', () => {
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR}="b" ${SC_VERSION_ATTR}="${__VERSION__}">
-          /* sc-component-id: TWO */
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           .b { color: red; }
+          ${SC_ATTR}.g1[id="TWO"]{content: "b,"}
         </style>
       `;
-      StyleSheet.reset();
+
+      resetSheet(masterSheet);
     });
 
     it('should preserve the styles', () => {
@@ -41,6 +57,7 @@ describe('rehydration', () => {
     it('should append a new component like normal', () => {
       const Comp = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
+        ${() => ''}
       `;
       TestRenderer.create(<Comp />);
       expectCSSMatches('.b { color: red; } .a { color:blue; }');
@@ -49,6 +66,7 @@ describe('rehydration', () => {
     it('should reuse a componentId', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
+        ${() => ''}
       `;
       TestRenderer.create(<A />);
       const B = styled.div.withConfig({ componentId: 'TWO' })``;
@@ -59,10 +77,12 @@ describe('rehydration', () => {
     it('should reuse a componentId and generated class', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
+        ${() => ''}
       `;
       TestRenderer.create(<A />);
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
+        ${() => ''}
       `;
       TestRenderer.create(<B />);
       expectCSSMatches('.b { color: red; } .a { color:blue; }');
@@ -71,14 +91,15 @@ describe('rehydration', () => {
     it('should reuse a componentId and inject new classes', () => {
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
+        ${() => ''}
       `;
       TestRenderer.create(<A />);
       const B = styled.div.withConfig({ componentId: 'TWO' })`
-        color: red;
+        color: ${() => 'red'};
       `;
       TestRenderer.create(<B />);
       const C = styled.div.withConfig({ componentId: 'TWO' })`
-        color: green;
+        color: ${() => 'green'};
       `;
       TestRenderer.create(<C />);
       expectCSSMatches('.b{ color: red; } .c{ color:green; } .a{ color:blue; }');
@@ -90,14 +111,15 @@ describe('rehydration', () => {
       /* Hash 1323611362 is based on name TWO and contents color: red.
        * Change either and this will break. */
       document.head.innerHTML = `
-        <style ${SC_ATTR}='a b' ${SC_VERSION_ATTR}="${__VERSION__}">
-          /* sc-component-id: ONE */
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           .a { color: blue; }
-          /* sc-component-id: TWO */
+          ${SC_ATTR}.g1[id="ONE"]{content: "a,"}
           .b { color: red; }
+          ${SC_ATTR}.g2[id="TWO"]{content: "b,"}
         </style>
       `;
-      StyleSheet.reset();
+
+      resetSheet(masterSheet);
     });
 
     it('should preserve the styles', () => {
@@ -136,27 +158,16 @@ describe('rehydration', () => {
       /* Same css as before, but without the data attributes we ignore it */
       document.head.innerHTML = `
         <style>
-          /* sc-component-id: TWO */
           .b { color: red; }
+          ${SC_ATTR}.g2[id="TWO"]{content: "b,"}
         </style>
       `;
-      StyleSheet.reset();
+
+      resetSheet(masterSheet);
     });
 
     it('should leave the existing styles there', () => {
-      expectCSSMatches('.b { color: red; }');
-    });
-
-    it('should generate new classes, even if they have the same name', () => {
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
-        color: blue;
-      `;
-      TestRenderer.create(<A />);
-      const B = styled.div.withConfig({ componentId: 'TWO' })`
-        color: red;
-      `;
-      TestRenderer.create(<B />);
-      expectCSSMatches('.b { color: red; } .a { color:blue; } .b { color:red; } ');
+      expectCSSMatches('.b { color: red; } data-styled.g2[id="TWO"]{content:"b,"}');
     });
   });
 
@@ -166,20 +177,21 @@ describe('rehydration', () => {
        * derived from "body { background: papayawhip; }" so be careful
        * changing it. */
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
-          /* sc-component-id: sc-global-557410406 */
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           body { background: papayawhip; }
+          ${SC_ATTR}.g1[id="sc-global-557410406"]{content: "sc-global-557410406,"}
         </style>
-        <style ${SC_ATTR}='b' ${SC_VERSION_ATTR}="${__VERSION__}">
-          /* sc-component-id: TWO */
-          .b { color: red; }
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
+          .a { color: red; }
+          ${SC_ATTR}.g2[id="TWO"]{content: "a,"}
         </style>
       `;
-      StyleSheet.reset();
+
+      resetSheet(masterSheet);
     });
 
     it('should leave the existing styles there', () => {
-      expectCSSMatches('body { background: papayawhip; } .b { color: red; }');
+      expectCSSMatches('body { background: papayawhip; } .a { color: red; }');
     });
 
     it('should inject new global styles at the end', () => {
@@ -188,7 +200,7 @@ describe('rehydration', () => {
       `;
       TestRenderer.create(<Component />);
       expectCSSMatches(
-        'body { background: papayawhip; } .b { color: red; } body { color:tomato; }'
+        'body { background: papayawhip; } .a { color: red; } body { color:tomato; }'
       );
     });
 
@@ -196,63 +208,47 @@ describe('rehydration', () => {
       const Component = createGlobalStyle`
         body { color: tomato; }
       `;
+
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
+        ${() => ''}
       `;
+
       TestRenderer.create(<Component />);
       TestRenderer.create(<A />);
 
+      // although `<Component />` is rendered before `<A />`, the global style isn't registered until render time
+      // compared to typical component styles which are registered at creation time
       expectCSSMatches(
-        'body { background: papayawhip; } .b { color: red; } body { color:tomato; } .a { color:blue; }'
-      );
-      expect(getStyleTags()).toEqual(
-        [
-          {
-            css: '/* sc-component-id: sc-global-557410406 */ body{background:papayawhip;} ',
-          },
-          { css: '/* sc-component-id: TWO */ .b{color:red;} ' },
-          {
-            css: '/* sc-component-id: sc-global-2299393384 */ body{color:tomato;} ',
-          },
-          { css: '/* sc-component-id: ONE */ .a{color:blue;}' },
-        ].reduce(
-          (acc, { css }) => {
-            acc[0].css += css;
-            return acc;
-          },
-          [{ css: '' }]
-        )
+        'body { background: papayawhip; } .a { color: red; } .b { color:blue; } body { color:tomato; }'
       );
     });
   });
 
   describe('with all styles already rendered', () => {
-    let styleTags;
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR} ${SC_VERSION_ATTR}="${__VERSION__}">
-           /* sc-component-id: sc-global-1455077013 */
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           html { font-size: 16px; }
-           /* sc-component-id: sc-global-557410406 */
+          ${SC_ATTR}.g1[id="sc-global-a1"]{content: "sc-global-a1,"}
           body { background: papayawhip; }
-        </style>
-        <style ${SC_ATTR}='a b' ${SC_VERSION_ATTR}="${__VERSION__}">
-          /* sc-component-id: ONE */
-          .a { color: blue; }
-          /* sc-component-id: TWO */
-          .b { color: red; }
+          ${SC_ATTR}.g2[id="sc-global-b1"]{content: "sc-global-b1,"}
+          .c { color: blue; }
+          ${SC_ATTR}.g3[id="ONE"]{content: "c,"}
+          .d { color: red; }
+          ${SC_ATTR}.g4[id="TWO"]{content: "d,"}
         </style>
       `;
-      styleTags = Array.from(document.querySelectorAll('style'));
-      StyleSheet.reset();
+
+      resetSheet(masterSheet);
     });
 
     it('should not touch existing styles', () => {
       expectCSSMatches(`
         html { font-size: 16px; }
         body { background: papayawhip; }
-        .a { color: blue; }
-        .b { color: red; }
+        .c { color: blue; }
+        .d { color: red; }
       `);
     });
 
@@ -277,34 +273,36 @@ describe('rehydration', () => {
       expectCSSMatches(`
         html { font-size: 16px; }
         body { background: papayawhip; }
-        .a { color: blue; }
-        .b { color: red; }
+        .c { color: blue; }
+        .d { color: red; }
       `);
     });
 
     it('should still not change styles if rendered in a different order', () => {
+      seedNextClassnames(['d', 'a', 'b', 'c']);
+
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `;
       TestRenderer.create(<B />);
       const Component1 = createGlobalStyle`
-        body { background: papayawhip; }
+        html { font-size: 16px; }
       `;
       TestRenderer.create(<Component1 />);
+      const Component2 = createGlobalStyle`
+        body { background: papayawhip; }
+      `;
+      TestRenderer.create(<Component2 />);
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `;
       TestRenderer.create(<A />);
-      const Component2 = createGlobalStyle`
-        html { font-size: 16px; }
-      `;
-      TestRenderer.create(<Component2 />);
 
       expectCSSMatches(`
         html { font-size: 16px; }
         body { background: papayawhip; }
-        .a { color: blue; }
-        .b { color: red; }
+        .c { color: blue; }
+        .d { color: red; }
       `);
     });
   });
@@ -312,12 +310,13 @@ describe('rehydration', () => {
   describe('with keyframes', () => {
     beforeEach(() => {
       document.head.innerHTML = `
-        <style ${SC_ATTR}='keyframe_880' ${SC_VERSION_ATTR}="${__VERSION__}">
-          /* sc-component-id: sc-keyframes-keyframe_880 */
+        <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}
+          ${SC_ATTR}.g1[id="sc-keyframes-keyframe_880"]{content: "keyframe_880,"}
         </style>
       `;
-      StyleSheet.reset();
+
+      resetSheet(masterSheet);
     });
 
     it('should not touch existing styles', () => {
@@ -335,7 +334,9 @@ describe('rehydration', () => {
 
       const A = styled.div`
         animation: ${fadeIn} 1s both;
+        ${() => ''}
       `;
+
       TestRenderer.create(<A />);
 
       expectCSSMatches(`
@@ -353,7 +354,9 @@ describe('rehydration', () => {
 
       const A = styled.div`
         animation: ${fadeOut} 1s both;
+        ${() => ''}
       `;
+
       TestRenderer.create(<A />);
 
       expectCSSMatches(`
@@ -374,9 +377,11 @@ describe('rehydration', () => {
       `;
       const A = styled.div`
         animation: ${fadeIn} 1s both;
+        ${() => ''}
       `;
       const B = styled.div`
         animation: ${fadeOut} 1s both;
+        ${() => ''}
       `;
       /* Purposely rendering out of order to make sure the output looks right */
       TestRenderer.create(<B />);

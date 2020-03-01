@@ -1,56 +1,75 @@
 // @flow
-import React, { createContext, Component, type Element } from 'react';
-import PropTypes from 'prop-types';
-import memoize from 'memoize-one';
-import StyleSheet from './StyleSheet';
-import ServerStyleSheet from './ServerStyleSheet';
-import StyledError from '../utils/error';
+import React, { useContext, useEffect, useMemo, useState, type Node, type Context } from 'react';
+import shallowequal from 'shallowequal';
+import StyleSheet from '../sheet';
+import createStylisInstance, { type Stringifier } from '../utils/stylis';
 
 type Props = {
-  children?: Element<any>,
+  children?: Node,
+  disableCSSOMInjection?: boolean,
+  disableVendorPrefixes?: boolean,
   sheet?: StyleSheet,
+  stylisPlugins?: Array<Function>,
   target?: HTMLElement,
 };
 
-export const StyleSheetContext = createContext();
+export const StyleSheetContext: Context<StyleSheet | void> = React.createContext();
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
+export const StylisContext: Context<Stringifier | void> = React.createContext();
+export const StylisConsumer = StylisContext.Consumer;
 
-export default class StyleSheetManager extends Component<Props> {
-  static propTypes = {
-    sheet: PropTypes.oneOfType([
-      PropTypes.instanceOf(StyleSheet),
-      PropTypes.instanceOf(ServerStyleSheet),
-    ]),
+export const masterSheet: StyleSheet = new StyleSheet();
+export const masterStylis: Stringifier = createStylisInstance();
 
-    target: PropTypes.shape({
-      appendChild: PropTypes.func.isRequired,
-    }),
-  };
+export function useStyleSheet(): StyleSheet {
+  return useContext(StyleSheetContext) || masterSheet;
+}
 
-  getContext: (sheet: ?StyleSheet, target: ?HTMLElement) => StyleSheet;
+export function useStylis(): Stringifier {
+  return useContext(StylisContext) || masterStylis;
+}
 
-  constructor(props: Props) {
-    super(props);
-    this.getContext = memoize(this.getContext);
-  }
+export default function StyleSheetManager(props: Props) {
+  const [plugins, setPlugins] = useState(props.stylisPlugins);
+  const contextStyleSheet = useStyleSheet();
 
-  getContext(sheet: ?StyleSheet, target: ?HTMLElement) {
-    if (sheet) {
-      return sheet;
-    } else if (target) {
-      return new StyleSheet(target);
-    } else {
-      throw new StyledError(4);
+  const styleSheet = useMemo(() => {
+    let sheet = contextStyleSheet;
+
+    if (props.sheet) {
+      // eslint-disable-next-line prefer-destructuring
+      sheet = props.sheet;
+    } else if (props.target) {
+      sheet = sheet.reconstructWithOptions({ target: props.target });
     }
-  }
 
-  render() {
-    const { children, sheet, target } = this.props;
+    if (props.disableCSSOMInjection) {
+      sheet = sheet.reconstructWithOptions({ useCSSOMInjection: false });
+    }
 
-    return (
-      <StyleSheetContext.Provider value={this.getContext(sheet, target)}>
-        {process.env.NODE_ENV !== 'production' ? React.Children.only(children) : children}
-      </StyleSheetContext.Provider>
-    );
-  }
+    return sheet;
+  }, [props.disableCSSOMInjection, props.sheet, props.target]);
+
+  const stylis = useMemo(
+    () =>
+      createStylisInstance({
+        options: { prefix: !props.disableVendorPrefixes },
+        plugins,
+      }),
+    [props.disableVendorPrefixes, plugins]
+  );
+
+  useEffect(() => {
+    if (!shallowequal(plugins, props.stylisPlugins)) setPlugins(props.stylisPlugins);
+  }, [props.stylisPlugins]);
+
+  return (
+    <StyleSheetContext.Provider value={styleSheet}>
+      <StylisContext.Provider value={stylis}>
+        {process.env.NODE_ENV !== 'production'
+          ? React.Children.only(props.children)
+          : props.children}
+      </StylisContext.Provider>
+    </StyleSheetContext.Provider>
+  );
 }

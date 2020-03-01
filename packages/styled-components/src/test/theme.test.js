@@ -520,62 +520,46 @@ describe('theming', () => {
 
   it('should not allow the theme to be null', () => {
     expect(() => {
+      // HACK: work around the problem without changing the snapshots
+      // these tests need to be changed to use error boundaries instead
+      const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       TestRenderer.create(
         // $FlowInvalidInputTest
         <ThemeProvider theme={null}>
           <div />
         </ThemeProvider>
       );
+      expect(mock).toHaveBeenCalledTimes(1);
     }).toThrowErrorMatchingSnapshot();
   });
 
   it('should not allow the theme to be an array', () => {
     expect(() => {
+      // HACK: work around the problem without changing the snapshots
+      // these tests need to be changed to use error boundaries instead
+      const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       TestRenderer.create(
         // $FlowInvalidInputTest
         <ThemeProvider theme={['a', 'b', 'c']}>
           <div />
         </ThemeProvider>
       );
+      expect(mock).toHaveBeenCalledTimes(1);
     }).toThrowErrorMatchingSnapshot();
   });
 
   it('should not allow the theme to be a non-object', () => {
     expect(() => {
+      // HACK: work around the problem without changing the snapshots
+      // these tests need to be changed to use error boundaries instead
+      const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       TestRenderer.create(
         // $FlowInvalidInputTest
         <ThemeProvider theme={42}>
           <div />
         </ThemeProvider>
       );
+      expect(mock).toHaveBeenCalledTimes(1);
     }).toThrowErrorMatchingSnapshot();
-  });
-
-  it('should warn when trying to access theme in interpolations without a provided theme', () => {
-    const Comp = styled.div`
-      color: ${props => props.theme.color};
-    `;
-
-    TestRenderer.create(<Comp />);
-    expect(console.error).toHaveBeenCalledTimes(1);
-    expect(console.error.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"Component 'styled.div' (.sc-a) references the 'theme' prop in its styles but no theme was provided via prop or <ThemeProvider>."`
-    );
-
-    /* eslint-disable dot-notation */
-    const Comp2 = styled.div`
-      color: ${props => props.theme['color']};
-    `;
-    /* eslint-enable dot-notation */
-
-    const wrapper = TestRenderer.create(<Comp2 />);
-    expect(console.error).toHaveBeenCalledTimes(2);
-    expect(console.error.mock.calls[1][0]).toMatchInlineSnapshot(
-      `"Component 'styled.div' (.sc-c) references the 'theme' prop in its styles but no theme was provided via prop or <ThemeProvider>."`
-    );
-
-    // should only error once
-    wrapper.update(<Comp2>Hi</Comp2>);
-    expect(console.error).toHaveBeenCalledTimes(3);
   });
 });

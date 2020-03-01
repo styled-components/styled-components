@@ -1,46 +1,38 @@
 // @flow
-/* eslint-disable react/no-multi-comp */
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { render } from 'react-dom';
-import TestRenderer from 'react-test-renderer';
+import TestRenderer, { act } from 'react-test-renderer';
+import Frame, { FrameContextConsumer } from 'react-frame-component';
+import stylisRTLPlugin from 'stylis-plugin-rtl';
 import StyleSheetManager from '../StyleSheetManager';
 import ServerStyleSheet from '../ServerStyleSheet';
-import StyleSheet from '../StyleSheet';
+import StyleSheet from '../../sheet';
 import { resetStyled } from '../../test/utils';
-import Frame, { FrameContextConsumer } from 'react-frame-component';
 
 let styled;
-let consoleError;
-
-const parallelWarning =
-  'Warning: Detected multiple renderers concurrently rendering the same context provider. This is currently unsupported.';
-
 describe('StyleSheetManager', () => {
-  consoleError = console.error;
-
   beforeEach(() => {
     document.body.innerHTML = '';
     document.head.innerHTML = '';
 
     styled = resetStyled(true);
 
-    jest
-      .spyOn(console, 'error')
-      .mockImplementation(msg => (msg !== parallelWarning ? consoleError(msg) : null));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   it('should use given stylesheet instance', () => {
-    const sheet = new ServerStyleSheet();
+    const serverStyles = new ServerStyleSheet();
     const Title = styled.h1`
       color: palevioletred;
     `;
     renderToString(
-      <StyleSheetManager sheet={sheet.instance}>
+      <StyleSheetManager sheet={serverStyles.instance}>
         <Title />
       </StyleSheetManager>
     );
-    expect(sheet.getStyleTags().includes(`palevioletred`)).toEqual(true);
+    expect(serverStyles.getStyleTags().includes(`palevioletred`)).toEqual(true);
   });
 
   it('should render its child', () => {
@@ -157,6 +149,7 @@ describe('StyleSheetManager', () => {
         expect(styles.includes(`palevioletred`)).toEqual(true);
         this.props.resolve();
       }
+
       render() {
         return <Title />;
       }
@@ -164,9 +157,10 @@ describe('StyleSheetManager', () => {
 
     const div = document.body.appendChild(document.createElement('div'));
 
-    let promiseA, promiseB;
-    promiseA = new Promise((resolveA, reject) => {
-      promiseB = new Promise((resolveB, reject) => {
+    let promiseB;
+
+    const promiseA = new Promise((resolveA, reject) => {
+      promiseB = new Promise(resolveB => {
         try {
           // Render two iframes. each iframe should have the styles for the child injected into their head
           render(
@@ -202,51 +196,6 @@ describe('StyleSheetManager', () => {
     div.parentElement.removeChild(div);
   });
 
-  describe('ssr', () => {
-    it('should extract CSS outside the nested StyleSheetManager', () => {
-      const sheet = new ServerStyleSheet();
-      const ONE = styled.h1`
-        color: red;
-      `;
-      const TWO = styled.h2`
-        color: blue;
-      `;
-      class Wrapper extends React.Component {
-        state = {
-          targetRef: null,
-        };
-        render() {
-          return (
-            <div
-              ref={el => {
-                this.setState({ targetRef: el });
-              }}
-            >
-              {this.state.targetRef && (
-                <StyleSheetManager target={this.state.targetRef}>
-                  <TWO />
-                </StyleSheetManager>
-              )}
-            </div>
-          );
-        }
-      }
-
-      const html = renderToString(
-        <StyleSheetManager sheet={sheet.instance}>
-          <div>
-            <ONE />
-            <Wrapper />
-          </div>
-        </StyleSheetManager>
-      );
-      const css = sheet.getStyleTags();
-
-      expect(html).toMatchSnapshot();
-      expect(css).toMatchSnapshot();
-    });
-  });
-
   it('should render styles in correct order when styled(StyledComponent) and StyleSheetManager is used', () => {
     const Red = styled.div`
       color: red;
@@ -272,5 +221,185 @@ describe('StyleSheetManager', () => {
     expect(indexOfRedStyle).toBeGreaterThanOrEqual(0);
     expect(indexOfBlueStyle).toBeGreaterThanOrEqual(0);
     expect(indexOfBlueStyle).toBeGreaterThan(indexOfRedStyle);
+  });
+
+  it('passing disableVendorPrefixes to StyleSheetManager works', () => {
+    const Test = styled.div`
+      display: flex;
+    `;
+
+    TestRenderer.create(
+      <StyleSheetManager disableVendorPrefixes>
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{display:flex;}</style>"`
+    );
+  });
+
+  it('passing stylis plugins via StyleSheetManager works', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    TestRenderer.create(
+      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}</style>"`
+    );
+  });
+
+  it('an error is emitted if unnamed stylis plugins are provided', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    const cachedName = stylisRTLPlugin.name;
+    Object.defineProperty(stylisRTLPlugin, 'name', { value: undefined });
+
+    expect(() =>
+      TestRenderer.create(
+        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+          <Test>Foo</Test>
+        </StyleSheetManager>
+      )
+    ).toThrowError();
+
+    Object.defineProperty(stylisRTLPlugin, 'name', { value: cachedName });
+  });
+
+  it('changing stylis plugins via StyleSheetManager works', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    const wrapper = TestRenderer.create(
+      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}</style>"`
+    );
+
+    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
+            <div
+              className="sc-a b"
+            >
+              Foo
+            </div>
+        `);
+
+    act(() => {
+      wrapper.update(
+        <StyleSheetManager>
+          <Test>Foo</Test>
+        </StyleSheetManager>
+      );
+    });
+
+    // note that the old styles are not removed since the condition may appear where they're used again
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}.c{padding-left:5px;}</style>"`
+    );
+
+    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
+            <div
+              className="sc-a c"
+            >
+              Foo
+            </div>
+        `);
+
+    act(() => {
+      wrapper.update(
+        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+          <Test>Foo</Test>
+        </StyleSheetManager>
+      );
+    });
+
+    // no new dynamic classes are added, reusing the prior one
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}.c{padding-left:5px;}</style>"`
+    );
+
+    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
+            <div
+              className="sc-a b"
+            >
+              Foo
+            </div>
+        `);
+  });
+
+  it('subtrees with different stylis configs should not conflict', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    const wrapper = TestRenderer.create(
+      <div>
+        <Test>Bar</Test>
+        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+          <Test>Foo</Test>
+        </StyleSheetManager>
+      </div>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-left:5px;}.c{padding-right:5px;}</style>"`
+    );
+
+    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
+      <div>
+        <div
+          className="sc-a b"
+        >
+          Bar
+        </div>
+        <div
+          className="sc-a c"
+        >
+          Foo
+        </div>
+      </div>
+    `);
+  });
+
+  it('nested StyleSheetManager with different injection modes works', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    const Test2 = styled.div`
+      background: red;
+    `;
+
+    const outerSheet = new StyleSheet({ useCSSOMInjection: true });
+
+    TestRenderer.create(
+      <StyleSheetManager sheet={outerSheet}>
+        <div>
+          <Test>Foo</Test>
+          <StyleSheetManager disableCSSOMInjection>
+            <Test2>Bar</Test2>
+          </StyleSheetManager>
+        </div>
+      </StyleSheetManager>
+    );
+
+    expect(outerSheet.getTag().tag.getRule(0)).toMatchInlineSnapshot(`".c {padding-left: 5px;}"`);
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(
+      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\"></style><style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.d{background:red;}</style>"`
+    );
   });
 });

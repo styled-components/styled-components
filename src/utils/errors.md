@@ -1,4 +1,4 @@
-**DO NOT REMOVE ERRORS OR MAKE NEW ONES OUT OF SEQUENCE, ALWAYS ADD TO THE END.**
+**DO NOT EDIT, THIS IS HERE FOR LEGACY PURPOSES PRIOR TO THE MONOREPO SETUP. NOW AT PACKAGES/STYLED-COMPONENTS/SRC/UTILS/ERRORS.MD**
 
 ## 1
 
@@ -6,10 +6,11 @@ Cannot create styled-component for component: %s.
 
 ## 2
 
-Can't collect styles once you've consumed a `ServerStyleSheet`'s styles! `ServerStyleSheet` is a one off instance for each server-side render cycle.
+Can't call method, once `interleaveWithNodeStream` is used, since it
+will split the underlying styles into multiple parts.
 
-- Are you trying to reuse it across renders?
-- Are you accidentally calling collectStyles twice?
+- Are you trying to call `interleaveWithNodeStream` twice?
+- Are you calling `getStyleTags`, `getStyleElement`, or `collectStyles` after it?
 
 ## 3
 

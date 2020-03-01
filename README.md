@@ -12,7 +12,7 @@
   <br />
   <a href="https://www.npmjs.com/package/styled-components"><img src="https://www.styled-components.com/proxy/downloads.svg" alt="downloads: 600k/month"></a>
   <a href="#backers" alt="sponsors on Open Collective"><img src="https://opencollective.com/styled-components/backers/badge.svg" /></a> <a href="#sponsors" alt="Sponsors on Open Collective"><img src="https://opencollective.com/styled-components/sponsors/badge.svg" /></a> <a href="https://spectrum.chat/styled-components"><img src="https://withspectrum.github.io/badge/badge.svg" alt="Join the community on Spectrum"></a>
-  <img src="https://www.styled-components.com/proxy/size.svg" alt="gzip size">
+  <a href="https://bundlephobia.com/result?p=styled-components" title="styled-components latest minified+gzip size"><img src="https://badgen.net/bundlephobia/minzip/styled-components" alt="gzip size"></a>
   <a href="#alternative-installation-methods"><img src="https://img.shields.io/badge/module%20formats-umd%2C%20cjs%2C%20esm-green.svg" alt="module formats: umd, cjs, esm"></a>
 </div>
 
@@ -21,22 +21,39 @@
 
 Utilising [tagged template literals](https://www.styled-components.com/docs/advanced#tagged-template-literals) (a recent addition to JavaScript) and the [power of CSS](https://www.styled-components.com/docs/api#supported-css), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
+```jsx
+const Button = styled.button`
+  color: grey;
+`;
+```
+
+Alternatively, you may use [style objects](https://www.styled-components.com/docs/advanced#style-objects). This allows for easy porting of CSS from inline styles, while still supporting the more advanced styled-components capabilities like component selectors and media queries.
+
+```jsx
+const Button = styled.button({
+  color: 'grey',
+});
+```
+
+Equivalent to:
+
+```jsx
+const Button = styled.button`
+  color: grey;
+`;
+```
+
 `styled-components` is compatible with both React (for web) and React Native – meaning it's the perfect choice even for truly universal apps! See the [documentation about React Native](https://www.styled-components.com/docs/basics#react-native) for more information.
 
 _Supported by [Front End Center](https://frontend.center). Thank you for making this possible!_
 
-## v5
+## Upgrading from v4
 
-styled-components v5 is now [officially in beta](https://medium.com/styled-components/announcing-styled-components-v5-beast-mode-389747abd987)! Try it out in your project today:
+1. `npm install styled-components@^5.0.0 react@^16.8 react-dom@^16.8 react-is@^16.8`
+1. ??
+1. Profit!
 
-```
-npm install styled-components@beta
-```
-
-Notes:
-
-- Make sure you're on a hooks-compatible version of react (>= 16.8 for react, react-dom, and react-is)
-- If you use jest-styled-components, upgrade to the beta of that as well! `npm install jest-styled-components@beta`
+> If you use jest-styled-components, make sure you update that too.
 
 ## [Docs](https://www.styled-components.com/docs)
 

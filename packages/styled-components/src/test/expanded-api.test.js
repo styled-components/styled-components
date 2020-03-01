@@ -4,6 +4,10 @@ import TestRenderer from 'react-test-renderer';
 
 import { getCSS, resetStyled } from './utils';
 
+// Disable isStaticRules optimisation since we're not
+// testing for ComponentStyle specifics here
+jest.mock('../utils/isStaticRules', () => () => false);
+
 let styled;
 
 describe('expanded api', () => {
@@ -114,23 +118,27 @@ describe('expanded api', () => {
     });
 
     it('changes the rendered element type when used with attrs', () => {
-      const Comp = styled.div.attrs({
+      const Comp = styled.div.attrs(() => ({
         as: 'header',
-      })`
+      }))`
         color: red;
       `;
 
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
     });
 
-    it('prefers prop over attrs', () => {
-      const Comp = styled.div.attrs({
+    it('prefers attrs over props', () => {
+      const Comp = styled.div.attrs(() => ({
         as: 'header',
-      })`
+      }))`
         color: red;
       `;
 
-      expect(TestRenderer.create(<Comp as="span" />).toJSON()).toMatchSnapshot();
+      expect(TestRenderer.create(<Comp as="span" />).toJSON()).toMatchInlineSnapshot(`
+        <header
+          className="sc-a b"
+        />
+      `);
     });
 
     it('works with custom components', () => {
