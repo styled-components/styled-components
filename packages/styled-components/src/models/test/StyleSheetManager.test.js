@@ -1,5 +1,5 @@
 // @flow
-import React from 'react';
+import * as React from 'react';
 import { renderToString } from 'react-dom/server';
 import { render } from 'react-dom';
 import TestRenderer, { act } from 'react-test-renderer';

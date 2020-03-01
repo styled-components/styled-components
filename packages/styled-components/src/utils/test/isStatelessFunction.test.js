@@ -1,5 +1,8 @@
 // @flow
-import React, { Component } from 'react';
+/* eslint-disable import/no-duplicates */
+import * as React from 'react';
+import { Component } from 'react';
+/* eslint-enable import/no-duplicates */
 import styled from '../../';
 import isStatelessFunction from '../isStatelessFunction';
 

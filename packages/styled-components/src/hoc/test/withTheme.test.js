@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import TestRenderer from 'react-test-renderer';
 
 import ThemeProvider from '../../models/ThemeProvider';

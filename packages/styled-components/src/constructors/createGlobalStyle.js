@@ -1,5 +1,9 @@
 // @flow
-import React, { useContext, useEffect, useRef } from 'react';
+/* eslint-disable import/no-duplicates */
+import * as React from 'react';
+import { useContext, useEffect, useRef } from 'react';
+/* eslint-enable import/no-duplicates */
+
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';

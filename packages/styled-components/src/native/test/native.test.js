@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable no-console */
 import { Text, View } from 'react-native';
-import React from 'react';
+import * as React from 'react';
 import TestRenderer from 'react-test-renderer';
 
 import styled, { ThemeProvider } from '../index';

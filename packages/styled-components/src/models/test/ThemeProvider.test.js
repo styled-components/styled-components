@@ -1,6 +1,6 @@
 // @flow
 /* eslint-disable react/no-multi-comp */
-import React from 'react';
+import * as React from 'react';
 import TestRenderer from 'react-test-renderer';
 import ThemeProvider from '../ThemeProvider';
 import withTheme from '../../hoc/withTheme';

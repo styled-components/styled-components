@@ -1,12 +1,17 @@
 // @flow
 import validAttr from '@emotion/is-prop-valid';
-import React, {
+
+/* eslint-disable import/no-duplicates */
+import * as React from 'react';
+import {
   createElement,
   useContext,
   useDebugValue,
   type AbstractComponent,
   type Ref,
 } from 'react';
+/* eslint-enable import/no-duplicates */
+
 import hoist from 'hoist-non-react-statics';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';

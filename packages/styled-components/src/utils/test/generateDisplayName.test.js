@@ -1,5 +1,5 @@
 // @flow
-import React from 'react';
+import * as React from 'react';
 import generateDisplayName from '../generateDisplayName';
 
 it('handles a string type', () => {

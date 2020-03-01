@@ -1,5 +1,9 @@
 // @flow
-import React, { useContext, useEffect, useMemo, useState, type Node, type Context } from 'react';
+/* eslint-disable import/no-duplicates */
+import * as React from 'react';
+import { useContext, useEffect, useMemo, useState, type Node, type Context } from 'react';
+/* eslint-disable import/no-duplicates */
+
 import shallowequal from 'shallowequal';
 import StyleSheet from '../sheet';
 import createStylisInstance, { type Stringifier } from '../utils/stylis';

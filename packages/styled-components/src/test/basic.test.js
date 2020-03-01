@@ -1,7 +1,10 @@
 // @flow
-/* eslint-disable no-console */
+/* eslint-disable no-console, import/no-duplicates */
 import hoist from 'hoist-non-react-statics';
-import React, { Component, StrictMode } from 'react';
+import * as React from 'react';
+import { Component, StrictMode } from 'react';
+/* eslint-disable import/no-duplicates */
+
 import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';

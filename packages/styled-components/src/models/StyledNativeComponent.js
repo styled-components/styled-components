@@ -1,5 +1,6 @@
 // @flow
-import React, { createElement, Component } from 'react';
+import * as React from 'react';
+import { createElement, Component } from 'react';
 import hoist from 'hoist-non-react-statics';
 import merge from '../utils/mixinDeep';
 import determineTheme from '../utils/determineTheme';

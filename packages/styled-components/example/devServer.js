@@ -1,5 +1,5 @@
 import fs from 'fs';
-import React from 'react';
+import * as React from 'react';
 import {
   renderToString,
   renderToNodeStream

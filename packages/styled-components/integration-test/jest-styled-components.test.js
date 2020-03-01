@@ -1,6 +1,6 @@
 // @flow
 import 'jest-styled-components';
-import React from 'react';
+import * as React from 'react';
 import renderer from 'react-test-renderer';
 import styled from '..';
 

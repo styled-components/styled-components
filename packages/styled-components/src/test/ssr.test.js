@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 // @flow
-import React from 'react';
+import * as React from 'react';
 import { renderToString, renderToNodeStream } from 'react-dom/server';
 import stylisRTLPlugin from 'stylis-plugin-rtl';
 import ServerStyleSheet from '../models/ServerStyleSheet';

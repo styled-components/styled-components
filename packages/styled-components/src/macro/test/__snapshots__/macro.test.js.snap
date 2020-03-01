@@ -33,8 +33,7 @@ styled(Hello)\`
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import _styled from \\"styled-components\\";
-import React from 'react';
-
+import * as React from 'react';
 const Hello = () => React.createComponent(div, null, 'hello');
 
 _styled(Hello).withConfig({
@@ -187,7 +186,7 @@ _styled.div.withConfig({
 
 exports[`macro should work with the css prop overriding an existing styled-component: should work with the css prop overriding an existing styled-component 1`] = `
 "
-import React from 'react';
+import * as React from 'react';
 import styled from '../../macro'
 const Thing = styled.div\`
   color: blue;
@@ -200,8 +199,7 @@ function Foo() {
 
 import _styled2 from \\"styled-components\\";
 import _styled from \\"styled-components\\";
-import React from 'react';
-
+import * as React from 'react';
 const Thing = _styled.div.withConfig({
   displayName: \\"macrotest__Thing\\",
   componentId: \\"sc-11gvsec-0\\"
@@ -221,7 +219,7 @@ function Foo() {
 exports[`macro should work with the css prop: should work with the css prop 1`] = `
 "
 import styled from '../../macro'
-import React from 'react';
+import * as React from 'react';
 function Foo() {
   return <div css=\\"color: red;\\" />;
 }
@@ -230,8 +228,7 @@ function Foo() {
 
 import _styled2 from \\"styled-components\\";
 import _styled from \\"styled-components\\";
-import React from 'react';
-
+import * as React from 'react';
 var _StyledDiv = _styled(\\"div\\").withConfig({
   displayName: \\"macrotest___StyledDiv\\",
   componentId: \\"sc-11gvsec-0\\"

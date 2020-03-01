@@ -90,14 +90,14 @@ const withTypeAndStandardImportExampleCode = `
 
 const cssPropExampleCode = `
 import styled from '../../macro'
-import React from 'react';
+import * as React from 'react';
 function Foo() {
   return <div css="color: red;" />;
 }
 `;
 
 const cssPropOverridingComponentExampleCode = `
-import React from 'react';
+import * as React from 'react';
 import styled from '../../macro'
 const Thing = styled.div\`
   color: blue;

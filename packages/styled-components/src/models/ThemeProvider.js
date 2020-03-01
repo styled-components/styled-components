@@ -1,5 +1,8 @@
 // @flow
-import React, { useContext, useMemo, type Element, type Context } from 'react';
+/* eslint-disable import/no-duplicates */
+import * as React from 'react';
+import { useContext, useMemo, type Element, type Context } from 'react';
+/* eslint-enable import/no-duplicates */
 import throwStyledError from '../utils/error';
 import isFunction from '../utils/isFunction';
 

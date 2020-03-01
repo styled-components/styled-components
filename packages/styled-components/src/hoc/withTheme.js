@@ -1,5 +1,8 @@
 // @flow
-import React, { useContext, type AbstractComponent } from 'react';
+// eslint-disable-next-line import/no-duplicates
+import * as React from 'react';
+// eslint-disable-next-line import/no-duplicates
+import { useContext, type AbstractComponent } from 'react';
 import hoistStatics from 'hoist-non-react-statics';
 import { ThemeContext } from '../models/ThemeProvider';
 import determineTheme from '../utils/determineTheme';

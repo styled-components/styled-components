@@ -1,6 +1,6 @@
 // @flow
 /* eslint-disable no-underscore-dangle */
-import React from 'react';
+import * as React from 'react';
 import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import throwStyledError from '../utils/error';
 import getNonce from '../utils/nonce';
