@@ -423,5 +423,27 @@ Object {
       expect(view.props).toHaveProperty('foo');
       expect(view.props.style).toEqual([{ color: 'red' }]);
     });
+
+    it('should omit transient props', () => {
+      const Comp = styled.Text`
+        color: ${p => p.$color};
+      `;
+
+      expect(TestRenderer.create(<Comp $color="red" />).toJSON()).toMatchSnapshot();
+    });
+
+    it('should prefer transient $as over as', () => {
+      const OtherText = props => <Text {...props} foo />;
+
+      const Comp = styled.Text`
+        color: red;
+      `;
+
+      const wrapper = TestRenderer.create(<Comp $as="View" as={OtherText} />);
+      const view = wrapper.root.findByType('View');
+
+      expect(view.props.style).toEqual([{ color: 'red' }]);
+      expect(() => wrapper.root.findByType('Text')).toThrowError();
+    });
   });
 });
