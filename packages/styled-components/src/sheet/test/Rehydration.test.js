@@ -29,11 +29,11 @@ describe('outputSheet', () => {
       Array [
         ".a {}",
         "
-      data-styled.g11[id=\\"idA\\"]{content:\\"nameA,\\"}",
+      ${SC_ATTR}.g11[id=\\"idA\\"]{content:\\"nameA,\\"}",
         "
       .b {}",
         "
-      data-styled.g22[id=\\"idB\\"]{content:\\"nameB,\\"}",
+      ${SC_ATTR}.g22[id=\\"idB\\"]{content:\\"nameB,\\"}",
         "",
       ]
     `);
