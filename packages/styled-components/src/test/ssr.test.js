@@ -109,10 +109,10 @@ describe('ssr', () => {
   });
 
   it('should render CSS in the order the components were defined, not rendered', () => {
-    const ONE = styled.h1.withConfig({ componentId: 'ONE' })`
+    const ONE = styled('h1', { componentId: 'ONE' })`
       color: red;
     `;
-    const TWO = styled.h2.withConfig({ componentId: 'TWO' })`
+    const TWO = styled('h2', { componentId: 'TWO' })`
       color: blue;
     `;
 

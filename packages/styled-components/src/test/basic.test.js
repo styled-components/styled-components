@@ -380,11 +380,11 @@ Object {
     });
 
     it('generates unique classnames when not using babel', () => {
-      const Named1 = styled.div.withConfig({ displayName: 'Name' })`
+      const Named1 = styled('div', { displayName: 'Name' })`
         color: blue;
       `;
 
-      const Named2 = styled.div.withConfig({ displayName: 'Name' })`
+      const Named2 = styled('div', { displayName: 'Name' })`
         color: red;
       `;
 
@@ -392,14 +392,14 @@ Object {
     });
 
     it('honors a passed componentId', () => {
-      const Named1 = styled.div.withConfig({
+      const Named1 = styled('div', {
         componentId: 'foo',
         displayName: 'Name',
       })`
         color: blue;
       `;
 
-      const Named2 = styled.div.withConfig({
+      const Named2 = styled('div', {
         componentId: 'bar',
         displayName: 'Name',
       })`

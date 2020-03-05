@@ -274,16 +274,8 @@ describe('primitives', () => {
       const Comp = styled.View``;
       expect(Comp.displayName).toBe('Styled(View)');
 
-      const CompTwo = styled.View.withConfig({ displayName: 'Test' })``;
+      const CompTwo = styled('View', { displayName: 'Test' })``;
       expect(CompTwo.displayName).toBe('Test');
-    });
-
-    it('should allow multiple calls to be chained', () => {
-      const Comp = styled.View.withConfig({ displayName: 'Test1' }).withConfig({
-        displayName: 'Test2',
-      })``;
-
-      expect(Comp.displayName).toBe('Test2');
     });
 
     it('"as" prop should change the rendered element without affecting the styling', () => {
@@ -303,12 +295,12 @@ describe('primitives', () => {
     it('withComponent should work', () => {
       const Dummy = props => <View {...props} />;
 
-      const Comp = styled.View.withConfig({
+      const Comp = styled('View', {
         displayName: 'Comp',
         componentId: 'OMGLOL',
       })``.withComponent(Text);
 
-      const Comp2 = styled.View.withConfig({
+      const Comp2 = styled('View', {
         displayName: 'Comp2',
         componentId: 'OMFG',
       })``.withComponent(Dummy);

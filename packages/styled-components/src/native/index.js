@@ -17,7 +17,8 @@ const reactNative = require('react-native');
 
 const InlineStyle = _InlineStyle(reactNative.StyleSheet);
 const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
-const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag);
+const styled = (tag: Target, options: ?Object) =>
+  constructWithOptions(StyledNativeComponent, tag, options);
 
 /* React native lazy-requires each of these modules for some reason, so let's
  *  assume it's for a good reason and not eagerly load them all */

@@ -23,7 +23,7 @@ describe('warns on dynamic creation', () => {
         color: palevioletred;
       `;
 
-      return <Inner />
+      return <Inner />;
     };
 
     TestRenderer.create(<Outer />);
@@ -33,14 +33,14 @@ describe('warns on dynamic creation', () => {
 
   it('should warn only once for a given ID', () => {
     const Outer = () => {
-      const Inner = styled.div.withConfig({
+      const Inner = styled('div', {
         displayName: 'Inner',
         componentId: 'Inner',
       })`
         color: palevioletred;
       `;
 
-      return <Inner />
+      return <Inner />;
     };
 
     TestRenderer.create(<Outer />);

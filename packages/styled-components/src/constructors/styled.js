@@ -5,7 +5,8 @@ import domElements from '../utils/domElements';
 
 import type { Target } from '../types';
 
-const styled = (tag: Target) => constructWithOptions(StyledComponent, tag);
+const styled = (tag: Target, options: ?Object) =>
+  constructWithOptions(StyledComponent, tag, options);
 
 // Shorthands for all valid HTML Elements
 domElements.forEach(domElement => {

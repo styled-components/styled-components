@@ -55,7 +55,7 @@ describe('rehydration', () => {
     });
 
     it('should append a new component like normal', () => {
-      const Comp = styled.div.withConfig({ componentId: 'ONE' })`
+      const Comp = styled('div', { componentId: 'ONE' })`
         color: blue;
         ${() => ''}
       `;
@@ -64,23 +64,23 @@ describe('rehydration', () => {
     });
 
     it('should reuse a componentId', () => {
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = styled('div', { componentId: 'ONE' })`
         color: blue;
         ${() => ''}
       `;
       TestRenderer.create(<A />);
-      const B = styled.div.withConfig({ componentId: 'TWO' })``;
+      const B = styled('div', { componentId: 'TWO' })``;
       TestRenderer.create(<B />);
       expectCSSMatches('.b { color: red; } .a { color:blue; }');
     });
 
     it('should reuse a componentId and generated class', () => {
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = styled('div', { componentId: 'ONE' })`
         color: blue;
         ${() => ''}
       `;
       TestRenderer.create(<A />);
-      const B = styled.div.withConfig({ componentId: 'TWO' })`
+      const B = styled('div', { componentId: 'TWO' })`
         color: red;
         ${() => ''}
       `;
@@ -89,16 +89,16 @@ describe('rehydration', () => {
     });
 
     it('should reuse a componentId and inject new classes', () => {
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = styled('div', { componentId: 'ONE' })`
         color: blue;
         ${() => ''}
       `;
       TestRenderer.create(<A />);
-      const B = styled.div.withConfig({ componentId: 'TWO' })`
+      const B = styled('div', { componentId: 'TWO' })`
         color: ${() => 'red'};
       `;
       TestRenderer.create(<B />);
-      const C = styled.div.withConfig({ componentId: 'TWO' })`
+      const C = styled('div', { componentId: 'TWO' })`
         color: ${() => 'green'};
       `;
       TestRenderer.create(<C />);
@@ -130,7 +130,7 @@ describe('rehydration', () => {
     });
 
     it('should not inject new styles for a component already rendered', () => {
-      const Comp = styled.div.withConfig({ componentId: 'ONE' })`
+      const Comp = styled('div', { componentId: 'ONE' })`
         color: ${props => props.color};
       `;
       TestRenderer.create(<Comp color="blue" />);
@@ -142,7 +142,7 @@ describe('rehydration', () => {
 
     it('should inject new styles for a new computed style of a component', () => {
       seedNextClassnames(['x']);
-      const Comp = styled.div.withConfig({ componentId: 'ONE' })`
+      const Comp = styled('div', { componentId: 'ONE' })`
         color: ${props => props.color};
       `;
       TestRenderer.create(<Comp color="green" />);
@@ -209,7 +209,7 @@ describe('rehydration', () => {
         body { color: tomato; }
       `;
 
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = styled('div', { componentId: 'ONE' })`
         color: blue;
         ${() => ''}
       `;
@@ -261,11 +261,11 @@ describe('rehydration', () => {
         body { background: papayawhip; }
       `;
       TestRenderer.create(<Component2 />);
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = styled('div', { componentId: 'ONE' })`
         color: blue;
       `;
       TestRenderer.create(<A />);
-      const B = styled.div.withConfig({ componentId: 'TWO' })`
+      const B = styled('div', { componentId: 'TWO' })`
         color: red;
       `;
       TestRenderer.create(<B />);
@@ -281,7 +281,7 @@ describe('rehydration', () => {
     it('should still not change styles if rendered in a different order', () => {
       seedNextClassnames(['d', 'a', 'b', 'c']);
 
-      const B = styled.div.withConfig({ componentId: 'TWO' })`
+      const B = styled('div', { componentId: 'TWO' })`
         color: red;
       `;
       TestRenderer.create(<B />);
@@ -293,7 +293,7 @@ describe('rehydration', () => {
         body { background: papayawhip; }
       `;
       TestRenderer.create(<Component2 />);
-      const A = styled.div.withConfig({ componentId: 'ONE' })`
+      const A = styled('div', { componentId: 'ONE' })`
         color: blue;
       `;
       TestRenderer.create(<A />);

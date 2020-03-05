@@ -44,18 +44,6 @@ exports[`expanded api "as" prop works with custom components 1`] = `
 />
 `;
 
-exports[`expanded api chaining should keep the last value passed in when merging 1`] = `
-<div
-  className="dn-5-id-4 a"
-/>
-`;
-
-exports[`expanded api chaining should merge the options strings 1`] = `
-<div
-  className="dn-2-id-1 a"
-/>
-`;
-
 exports[`expanded api componentId should be attached if passed in 1`] = `
 <div
   className="LOLOMG a"
