@@ -2,6 +2,7 @@
 /* eslint-disable no-use-before-define */
 
 import type { GroupedTag, Tag } from './types';
+import { SPLITTER } from '../constants';
 import throwStyledError from '../utils/error';
 
 /** Create a GroupedTag with an underlying Tag implementation */
@@ -89,7 +90,7 @@ class DefaultGroupedTag implements GroupedTag {
     const endIndex = startIndex + length;
 
     for (let i = startIndex; i < endIndex; i++) {
-      css += `${this.tag.getRule(i)}\n`;
+      css += `${this.tag.getRule(i)}${SPLITTER}`;
     }
 
     return css;

@@ -23,14 +23,20 @@ describe('outputSheet', () => {
 
     const output = outputSheet(sheet)
       .trim()
-      .split('\n');
+      .split('/*!sc*/');
 
-    expect(output).toEqual([
-      '.a {}',
-      `${SC_ATTR}.g11[id="idA"]{content:"nameA,"}`,
-      '.b {}',
-      `${SC_ATTR}.g22[id="idB"]{content:"nameB,"}`,
-    ]);
+    expect(output).toMatchInlineSnapshot(`
+      Array [
+        ".a {}",
+        "
+      ${SC_ATTR}.g11[id=\\"idA\\"]{content:\\"nameA,\\"}",
+        "
+      .b {}",
+        "
+      ${SC_ATTR}.g22[id=\\"idB\\"]{content:\\"nameB,\\"}",
+        "",
+      ]
+    `);
   });
 });
 
@@ -38,16 +44,16 @@ describe('rehydrateSheet', () => {
   it('rehydrates sheets correctly', () => {
     document.head.innerHTML = `
       <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
-        .a {}
-        ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}
-        ${SC_ATTR}.g33[id="empty"]{content:""}
+        .a {}/*!sc*/
+        ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}/*!sc*/
+        ${SC_ATTR}.g33[id="empty"]{content:""}/*!sc*/
       </style>
     `;
 
     document.body.innerHTML = `
       <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
-        .b {}
-        ${SC_ATTR}.g22[id="idB"]{content:"nameB,"}
+        .b {}/*!sc*/
+        ${SC_ATTR}.g22[id="idB"]{content:"nameB,"}/*!sc*/
       </style>
     `;
 
@@ -69,8 +75,8 @@ describe('rehydrateSheet', () => {
     expect(sheet.hasNameForId('idB', 'nameB')).toBe(true);
     // Populates the underlying tag
     expect(sheet.getTag().tag.length).toBe(2);
-    expect(sheet.getTag().getGroup(11)).toBe('.a {}\n');
-    expect(sheet.getTag().getGroup(22)).toBe('.b {}\n');
+    expect(sheet.getTag().getGroup(11)).toBe('.a {}/*!sc*/\n');
+    expect(sheet.getTag().getGroup(22)).toBe('.b {}/*!sc*/\n');
     expect(sheet.getTag().getGroup(33)).toBe('');
     // Removes the old tags
     expect(styleHead.parentElement).toBe(null);
@@ -80,8 +86,8 @@ describe('rehydrateSheet', () => {
   it('ignores active style elements', () => {
     document.head.innerHTML = `
       <style ${SC_ATTR}="${SC_ATTR_ACTIVE}" ${SC_ATTR_VERSION}="${SC_VERSION}">
-        .a {}
-        ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}
+        .a {}/*!sc*/
+        ${SC_ATTR}.g11[id="idA"]{content:"nameA,"}/*!sc*/
       </style>
     `;
 
@@ -93,5 +99,20 @@ describe('rehydrateSheet', () => {
     expect(sheet.hasNameForId('idA', 'nameA')).toBe(false);
     expect(sheet.getTag().tag.length).toBe(0);
     expect(styleHead.parentElement).toBe(document.head);
+  });
+
+  it('tolerates long, malformed CSS', () => {
+    document.head.innerHTML = `
+      <style ${SC_ATTR} ${SC_ATTR_VERSION}="${SC_VERSION}">
+        {xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          }
+        .rule {}/*!sc*/
+        ${SC_ATTR}.g1[id="idA"]{content:""}/*!sc*/
+      </style>
+    `;
+
+    const sheet = new StyleSheet({ isServer: true });
+    rehydrateSheet(sheet);
   });
 });

@@ -33,10 +33,10 @@ it('inserts and retrieves rules by groups correctly', () => {
 
   // Expect groups to contain inserted rules
   expect(groupedTag.getGroup(0)).toBe('');
-  expect(groupedTag.getGroup(1)).toBe('.g1-a {}\n.g1-b {}\n');
+  expect(groupedTag.getGroup(1)).toBe('.g1-a {}/*!sc*/\n.g1-b {}/*!sc*/\n');
   expect(groupedTag.getGroup(2)).toBe(
-    '.g2-a {}\n.g2-b {}\n' +
-    '.g2-c {}\n.g2-d {}\n'
+    '.g2-a {}/*!sc*/\n.g2-b {}/*!sc*/\n' +
+    '.g2-c {}/*!sc*/\n.g2-d {}/*!sc*/\n'
   );
 
   // Check some rules in the tag as well
@@ -62,7 +62,7 @@ it('inserts rules at correct indices if some rules are dropped', () => {
   ]);
 
   expect(tag.length).toBe(1);
-  expect(groupedTag.getGroup(1)).toBe('.inserted {}\n');
+  expect(groupedTag.getGroup(1)).toBe('.inserted {}/*!sc*/\n');
 });
 
 it('inserts and deletes groups correctly', () => {
@@ -89,7 +89,7 @@ it('does supports large group numbers', () => {
   expect(groupedTag.length).toBeGreaterThan(group);
   expect(tag.length).toBe(1);
   expect(groupedTag.indexOfGroup(group)).toBe(0);
-  expect(groupedTag.getGroup(group)).toBe('.test {}\n');
+  expect(groupedTag.getGroup(group)).toBe('.test {}/*!sc*/\n');
 });
 
 it('throws when the upper group limit is reached', () => {
