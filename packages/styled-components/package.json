@@ -63,7 +63,7 @@
   "dependencies": {
     "@babel/helper-module-imports": "^7.0.0",
     "@babel/traverse": "^7.4.5",
-    "@emotion/is-prop-valid": "^0.8.3",
+    "@emotion/is-prop-valid": "^0.8.8",
     "@emotion/stylis": "^0.8.4",
     "@emotion/unitless": "^0.7.4",
     "babel-plugin-styled-components": ">= 1",
