@@ -10,9 +10,8 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from \\"styled-components\\";
-
-_styled.div.withConfig({
+import styled from \\"styled-components\\";
+styled.div.withConfig({
   displayName: \\"macrotest\\",
   componentId: \\"sc-11gvsec-0\\"
 })([\\"background:\\", \\";\\"], p => p.error ? 'red' : 'green');
@@ -32,12 +31,12 @@ styled(Hello)\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from \\"styled-components\\";
+import styled from \\"styled-components\\";
 import React from 'react';
 
 const Hello = () => React.createComponent(div, null, 'hello');
 
-_styled(Hello).withConfig({
+styled(Hello).withConfig({
   displayName: \\"macrotest\\",
   componentId: \\"sc-11gvsec-0\\"
 })([\\"background:red;\\"]);
@@ -56,8 +55,8 @@ React.createComponent(
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { ThemeProvider as _ThemeProvider } from \\"styled-components\\";
-React.createComponent(_ThemeProvider, {
+import { ThemeProvider } from \\"styled-components\\";
+React.createComponent(ThemeProvider, {
   theme: {
     color: 'red'
   }
@@ -75,8 +74,8 @@ createGlobalStyle\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { createGlobalStyle as _createGlobalStyle } from \\"styled-components\\";
-_createGlobalStyle\`
+import { createGlobalStyle } from \\"styled-components\\";
+createGlobalStyle\`
   background: red;
 \`;
 "
@@ -92,9 +91,8 @@ css\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { css as _css } from \\"styled-components\\";
-
-_css([\\"color:\\", \\";\\"], props => props.whiteColor ? 'white' : 'black');
+import { css } from \\"styled-components\\";
+css([\\"color:\\", \\";\\"], props => props.whiteColor ? 'white' : 'black');
 "
 `;
 
@@ -109,9 +107,8 @@ keyframes\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { keyframes as _keyframes } from \\"styled-components\\";
-
-_keyframes([\\"0%{opacity:0;}100%{opacity:1;}\\"]);
+import { keyframes } from \\"styled-components\\";
+keyframes([\\"0%{opacity:0;}100%{opacity:1;}\\"]);
 "
 `;
 
@@ -126,24 +123,23 @@ myStyled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from \\"styled-components\\";
+import myStyled from \\"styled-components\\";
 import styled from 'another-package';
-
-_styled.div.withConfig({
-  displayName: \\"macrotest\\",
-  componentId: \\"sc-11gvsec-0\\"
-})([\\"background:\\", \\";\\"], p => p.error ? 'red' : 'green');
+myStyled.div\`
+  background: \${p => p.error ? 'red' : 'green'};
+\`;
 "
 `;
 
 exports[`macro should work with multiple imports: should work with multiple imports 1`] = `
 "
 import styled, { css } from '../../macro'
+export { styled, css }
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { css as _css } from \\"styled-components\\";
-import _styled from \\"styled-components\\";
+import styled, { css } from \\"styled-components\\";
+export { styled, css };
 "
 `;
 
@@ -157,9 +153,8 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from \\"styled-components\\";
-
-_styled.div.withConfig({
+import styled from \\"styled-components\\";
+styled.div.withConfig({
   displayName: \\"macrotest\\",
   componentId: \\"sc-11gvsec-0\\"
 })([\\"background:red;\\"]);
@@ -176,9 +171,8 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from \\"styled-components\\";
-
-_styled.div.withConfig({
+import styled from \\"styled-components\\";
+styled.div.withConfig({
   displayName: \\"macrotest\\",
   componentId: \\"sc-11gvsec-0\\"
 })([\\"background:\\", \\";\\"], p => p.error ? 'red' : 'green');
@@ -187,27 +181,26 @@ _styled.div.withConfig({
 
 exports[`macro should work with the css prop overriding an existing styled-component: should work with the css prop overriding an existing styled-component 1`] = `
 "
-import React from 'react';
+import React from 'react'
 import styled from '../../macro'
 const Thing = styled.div\`
   color: blue;
 \`;
 function Foo() {
-  return <Thing css=\\"color: red;\\" />;
+  return <Thing css=\\"color: red;\\" />
 }
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled2 from \\"styled-components\\";
 import _styled from \\"styled-components\\";
+import styled from \\"styled-components\\";
 import React from 'react';
-
-const Thing = _styled.div.withConfig({
+const Thing = styled.div.withConfig({
   displayName: \\"macrotest__Thing\\",
   componentId: \\"sc-11gvsec-0\\"
 })([\\"color:blue;\\"]);
 
-var _StyledThing = _styled(Thing).withConfig({
+var _StyledThing = styled(Thing).withConfig({
   displayName: \\"macrotest___StyledThing\\",
   componentId: \\"sc-11gvsec-1\\"
 })([\\"color:red;\\"]);
@@ -218,18 +211,114 @@ function Foo() {
 "
 `;
 
-exports[`macro should work with the css prop: should work with the css prop 1`] = `
+exports[`macro should work with the css prop with a dynamic css helper: should work with the css prop with a dynamic css helper 1`] = `
 "
-import styled from '../../macro'
+import React from 'react'
+import { css } from '../../macro'
+const padding = '10px'
+function Foo(props) {
+  return <div css={css\`
+    color: \${props.color};
+    font-size: \${p => p.theme.fontSize};
+    padding: \${padding};
+  \`} />
+}
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import _styled from \\"styled-components\\";
+import { css } from \\"styled-components\\";
 import React from 'react';
+const padding = '10px';
+
+var _StyledDiv = _styled(\\"div\\").withConfig({
+  displayName: \\"macrotest___StyledDiv\\",
+  componentId: \\"sc-11gvsec-0\\"
+})([\\"color:\\", \\";font-size:\\", \\";padding:\\", \\";\\"], p => p._css, p => p.theme.fontSize, padding);
+
+function Foo(props) {
+  return React.createElement(_StyledDiv, {
+    _css: props.color
+  });
+}
+"
+`;
+
+exports[`macro should work with the css prop with a static css helper: should work with the css prop with a static css helper 1`] = `
+"
+import React from 'react'
+import { css } from '../../macro'
 function Foo() {
-  return <div css=\\"color: red;\\" />;
+  return <div css={css\`color: red;\`} />
+}
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import _styled from \\"styled-components\\";
+import { css } from \\"styled-components\\";
+import React from 'react';
+
+var _StyledDiv = _styled(\\"div\\").withConfig({
+  displayName: \\"macrotest___StyledDiv\\",
+  componentId: \\"sc-11gvsec-0\\"
+})([\\"color:red;\\"]);
+
+function Foo() {
+  return React.createElement(_StyledDiv, null);
+}
+"
+`;
+
+exports[`macro should work with the css prop with css helpers on multiple components: should work with the css prop with css helpers on multiple components 1`] = `
+"
+import React from 'react'
+import { css } from '../../macro'
+function Foo() {
+  return <div css={css\`color: red;\`} />
+}
+function Bar() {
+  return <div css={css\`color: green;\`} />
 }
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import _styled2 from \\"styled-components\\";
 import _styled from \\"styled-components\\";
+import { css } from \\"styled-components\\";
+import React from 'react';
+
+var _StyledDiv = _styled(\\"div\\").withConfig({
+  displayName: \\"macrotest___StyledDiv\\",
+  componentId: \\"sc-11gvsec-0\\"
+})([\\"color:red;\\"]);
+
+function Foo() {
+  return React.createElement(_StyledDiv, null);
+}
+
+var _StyledDiv2 = _styled(\\"div\\").withConfig({
+  displayName: \\"macrotest___StyledDiv2\\",
+  componentId: \\"sc-11gvsec-1\\"
+})([\\"color:green;\\"]);
+
+function Bar() {
+  return React.createElement(_StyledDiv2, null);
+}
+"
+`;
+
+exports[`macro should work with the css prop: should work with the css prop 1`] = `
+"
+import styled from '../../macro'
+import React from 'react'
+function Foo() {
+  return <div css=\\"color: red;\\" />
+}
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import _styled from \\"styled-components\\";
+import \\"styled-components\\";
 import React from 'react';
 
 var _StyledDiv = _styled(\\"div\\").withConfig({
@@ -246,20 +335,23 @@ function Foo() {
 exports[`macro should work with types alongside import: should work with types alongside import 1`] = `
 "
 import styled, { DefaultTheme } from '../../macro'
+export { styled, DefaultTheme }
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { DefaultTheme as _DefaultTheme } from \\"styled-components\\";
-import _styled from \\"styled-components\\";
+import styled, { DefaultTheme } from \\"styled-components\\";
+export { styled, DefaultTheme };
 "
 `;
 
 exports[`macro should work with types: should work with types 1`] = `
 "
 import { DefaultTheme } from '../../macro'
+export { DefaultTheme }
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { DefaultTheme as _DefaultTheme } from \\"styled-components\\";
+import { DefaultTheme } from \\"styled-components\\";
+export { DefaultTheme };
 "
 `;
