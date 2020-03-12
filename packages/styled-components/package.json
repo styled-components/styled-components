@@ -20,6 +20,7 @@
     "flow:watch": "flow-watch",
     "pretest": "npm run generateErrors",
     "test": "npm run test:web && npm run test:native && npm run test:primitives",
+    "pretest:web": "npm run build",
     "test:web": "jest -c ../../scripts/jest/config.main.js",
     "test:native": "jest -c ../../scripts/jest/config.native.js",
     "test:primitives": "jest -c ../../scripts/jest/config.primitives.js",

@@ -6,7 +6,7 @@ import React from 'react';
 import { renderToString, renderToNodeStream } from 'react-dom/server';
 import stylisRTLPlugin from 'stylis-plugin-rtl';
 import ofStream from 'stream-to-promise';
-import ServerStyleSheet from '../models/ServerStyleSheet';
+import { ServerStyleSheet } from '../../dist/styled-components.esm';
 import { resetStyled } from './utils';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 import StyleSheetManager from '../models/StyleSheetManager';
