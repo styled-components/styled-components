@@ -5,6 +5,7 @@
 import React from 'react';
 import { renderToString, renderToNodeStream } from 'react-dom/server';
 import stylisRTLPlugin from 'stylis-plugin-rtl';
+import ofStream from 'stream-to-promise';
 import ServerStyleSheet from '../models/ServerStyleSheet';
 import { resetStyled } from './utils';
 import createGlobalStyle from '../constructors/createGlobalStyle';
@@ -13,6 +14,10 @@ import StyleSheetManager from '../models/StyleSheetManager';
 jest.mock('../utils/nonce');
 
 let styled;
+
+function bufferToString(buffer: Buffer): string {
+  return buffer.toString();
+}
 
 describe('ssr', () => {
   beforeEach(() => {
@@ -200,21 +205,12 @@ describe('ssr', () => {
     );
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise((resolve, reject) => {
-      let received = '';
-
-      stream.on('data', chunk => {
-        received += chunk;
-      });
-
-      stream.on('end', () => {
+    return ofStream(stream)
+      .then(bufferToString)
+      .then(received => {
         expect(received).toMatchSnapshot();
         expect(sheet.sealed).toBe(true);
-        resolve();
       });
-
-      stream.on('error', reject);
-    });
   });
 
   it('should interleave styles with rendered HTML when chunked streaming', () => {
@@ -256,23 +252,15 @@ describe('ssr', () => {
     );
 
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
-    const stream$ = new Promise((resolve, reject) => {
-      let received = '';
 
-      stream.on('data', chunk => {
-        received += chunk;
+    return ofStream(stream)
+      .then(bufferToString)
+      .then(received => {
+        expect(sheet.sealed).toBe(true);
+        expect(received.includes(expectedElements)).toBeTruthy();
+        expect(received).toMatch(/yellow/);
+        expect(received).toMatch(/green/);
       });
-
-      stream.on('end', () => resolve(received));
-      stream.on('error', reject);
-    });
-
-    return stream$.then(received => {
-      expect(sheet.sealed).toBe(true);
-      expect(received.includes(expectedElements)).toBeTruthy();
-      expect(received).toMatch(/yellow/);
-      expect(received).toMatch(/green/);
-    });
   });
 
   it('should handle errors while streaming', () => {
@@ -280,14 +268,9 @@ describe('ssr', () => {
     const jsx = sheet.collectStyles(null);
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise(resolve => {
-      stream.on('data', () => {});
-
-      stream.on('error', err => {
-        expect(err).toMatchSnapshot();
-        expect(sheet.sealed).toBe(true);
-        resolve();
-      });
+    return ofStream(stream).catch(err => {
+      expect(err).toMatchSnapshot();
+      expect(sheet.sealed).toBe(true);
     });
   });
 
@@ -318,22 +301,13 @@ describe('ssr', () => {
 
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise((resolve, reject) => {
-      let received = '';
-
-      stream.on('data', chunk => {
-        received += chunk;
-      });
-
-      stream.on('end', () => {
+    return ofStream(stream)
+      .then(bufferToString)
+      .then(received => {
         const styleTagsInsideTextarea = received.match(/<\/style>[^<]*<\/textarea>/g);
 
         expect(styleTagsInsideTextarea).toBeNull();
-        resolve();
       });
-
-      stream.on('error', reject);
-    });
   });
 
   it('should throw if interleaveWithNodeStream is called twice', () => {
@@ -418,23 +392,13 @@ describe('ssr', () => {
     );
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise((resolve, reject) => {
-      let received = '';
-
-      stream.on('data', chunk => {
-        received += chunk;
-      });
-
-      stream.on('end', () => {
+    return ofStream(stream)
+      .then(bufferToString)
+      .then(received => {
         expect(received).toMatchSnapshot();
         expect(sheet.sealed).toBe(true);
         expect(sheet.getStyleTags).toThrowErrorMatchingSnapshot();
-
-        resolve();
       });
-
-      stream.on('error', reject);
-    });
   });
 
   it('should throw if getStyleElement is called after streaming is complete', () => {
@@ -454,23 +418,13 @@ describe('ssr', () => {
     );
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise((resolve, reject) => {
-      let received = '';
-
-      stream.on('data', chunk => {
-        received += chunk;
-      });
-
-      stream.on('end', () => {
+    return ofStream(stream)
+      .then(bufferToString)
+      .then(received => {
         expect(received).toMatchSnapshot();
         expect(sheet.sealed).toBe(true);
         expect(sheet.getStyleElement).toThrowErrorMatchingSnapshot();
-
-        resolve();
       });
-
-      stream.on('error', reject);
-    });
   });
 
   it('should work with stylesheet manager and passed stylis plugins', () => {

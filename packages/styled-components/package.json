@@ -87,6 +87,7 @@
     "react-native": "^0.59.8",
     "react-primitives": "^0.8.0",
     "react-test-renderer": "^16.8.6",
+    "stream-to-promise": "^2.2.0",
     "stylis-plugin-rtl": "^1.0.0"
   },
   "bundlesize": [
