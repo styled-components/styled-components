@@ -5,6 +5,7 @@ import { makeTag } from './Tag';
 import { makeGroupedTag } from './GroupedTag';
 import { getGroupForId } from './GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from './Rehydration';
+import type {Realm} from "../types";
 
 let SHOULD_REHYDRATE = IS_BROWSER;
 
@@ -49,6 +50,7 @@ export default class StyleSheet implements Sheet {
 
     this.gs = globalStyles;
     this.names = new Map(names);
+    this.realms = new Map();
 
     // We rehydrate only once and use the sheet that is created first
     if (!this.options.isServer && IS_BROWSER && SHOULD_REHYDRATE) {

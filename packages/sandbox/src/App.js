@@ -11,6 +11,7 @@ import {
 } from 'react-live';
 
 import buttonExample from './Button.example';
+import {Example} from "./theming/example";
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -136,6 +137,8 @@ const App = () => (
         <LivePreview />
         <LiveError />
       </LiveProvider>
+
+      <Example/>
     </Content>
   </Body>
 );

@@ -29,6 +29,7 @@ export default class GlobalStyle {
     const id = this.componentId + instance;
 
     // NOTE: We use the id as a name as well, since these rules never change
+
     styleSheet.insertRules(id, id, css);
   }
 

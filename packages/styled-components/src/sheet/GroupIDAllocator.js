@@ -1,6 +1,7 @@
 // @flow
 
 import throwStyledError from '../utils/error';
+import type {Realm} from "../types";
 
 const MAX_SMI = 1 << 31 - 1;
 
@@ -29,6 +30,7 @@ export const getGroupForId = (id: string): number => {
 
   groupIDRegister.set(id, group);
   reverseRegister.set(group, id);
+
   return group;
 };
 

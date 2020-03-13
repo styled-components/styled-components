@@ -89,10 +89,5 @@
     "ignore": [
       "**/test/*.js"
     ]
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "yarn flow && lint-staged"
-    }
   }
 }

@@ -6,7 +6,7 @@ import generateName from '../utils/generateAlphabeticName';
 import isStaticRules from '../utils/isStaticRules';
 import StyleSheet from '../sheet';
 
-import type { RuleSet, Stringifier } from '../types';
+import type {Realm, RuleSet, Stringifier} from '../types';
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
@@ -23,12 +23,15 @@ export default class ComponentStyle {
 
   staticRulesId: string;
 
-  constructor(rules: RuleSet, componentId: string) {
+  realm: Realm;
+
+  constructor(rules: RuleSet, componentId: string, realm: Realm) {
     this.rules = rules;
     this.staticRulesId = '';
     this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules);
     this.componentId = componentId;
     this.baseHash = hash(componentId);
+    this.realm = realm;
 
     // NOTE: This registers the componentId, which ensures a consistent order
     // for this component's styles compared to others
@@ -84,6 +87,7 @@ export default class ComponentStyle {
 
       if (!styleSheet.hasNameForId(componentId, name)) {
         const cssFormatted = stylis(css, `.${name}`, undefined, componentId);
+
         styleSheet.insertRules(componentId, name, cssFormatted);
       }
 

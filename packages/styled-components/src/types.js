@@ -35,3 +35,8 @@ export type Stringifier = {
   (rules: string, selector: string, prefix: ?string, componentId: ?string): Array<string>,
   hash: string,
 };
+
+export type Realm = {
+  name: string,
+  default: boolean
+};
