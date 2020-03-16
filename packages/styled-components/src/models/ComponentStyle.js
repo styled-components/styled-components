@@ -39,9 +39,9 @@ export default class ComponentStyle {
     StyleSheet.registerId(componentId);
   }
 
-  produceDynamicCssRules(executionContext: Object, styleSheet: StyleSheet, stylis: Stringifier, rules: RuleSet, baseHash = null) {
+  produceDynamicCssRules(executionContext: Object, styleSheet: StyleSheet, stylis: Stringifier, rules: RuleSet, buildHash: boolean = false, baseHash: number = 0) {
     const { length } = rules;
-    let dynamicHash = baseHash ? phash(baseHash, stylis.hash) : null;
+    let dynamicHash = buildHash ? phash(baseHash, stylis.hash) : 0;
     let css = '';
 
     for (let i = 0; i < length; i++) {
@@ -49,11 +49,11 @@ export default class ComponentStyle {
       if (typeof partRule === 'string') {
         css += partRule;
 
-        if (process.env.NODE_ENV !== 'production' && baseHash) dynamicHash = phash(dynamicHash, partRule + i);
+        if (process.env.NODE_ENV !== 'production' && buildHash) dynamicHash = phash(dynamicHash, partRule + i);
       } else {
         const partChunk = flatten(partRule, executionContext, styleSheet);
         const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
-        if (baseHash) dynamicHash = phash(dynamicHash, partString + i);
+        if (buildHash) dynamicHash = phash(dynamicHash, partString + i);
         css += partString;
       }
     }
@@ -88,7 +88,7 @@ export default class ComponentStyle {
 
       return name;
     } else {
-      const [css, dynamicHash] = this.produceDynamicCssRules(executionContext, styleSheet, stylis, this.rules, this.baseHash);
+      const [css, dynamicHash] = this.produceDynamicCssRules(executionContext, styleSheet, stylis, this.rules, true, this.baseHash);
 
       const name = generateName(dynamicHash >>> 0);
 
@@ -100,12 +100,12 @@ export default class ComponentStyle {
 
       if (this.realmRules) {
         this.realmRules.forEach((rules, realm) => {
-          const realScopeName = `${realm}_${name}`;
-          if (!styleSheet.hasNameForId(componentId, realScopeName)) {
+          const realmScopeName = `${realm}_${name}`;
+          if (!styleSheet.hasNameForId(componentId, realmScopeName)) {
             const [realmCss] = this.produceDynamicCssRules(executionContext, styleSheet, stylis, rules);
             const cssFormatted = stylis(realmCss, `.${realm} .${name}`, undefined, componentId);
 
-            styleSheet.insertRules(componentId, realScopeName, cssFormatted);
+            styleSheet.insertRules(componentId, realmScopeName, cssFormatted);
           }
         });
       }

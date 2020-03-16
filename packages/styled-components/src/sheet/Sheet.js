@@ -49,7 +49,6 @@ export default class StyleSheet implements Sheet {
 
     this.gs = globalStyles;
     this.names = new Map(names);
-    this.realms = new Map();
 
     // We rehydrate only once and use the sheet that is created first
     if (!this.options.isServer && IS_BROWSER && SHOULD_REHYDRATE) {
