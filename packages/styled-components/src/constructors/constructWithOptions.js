@@ -4,13 +4,13 @@ import css from './css';
 import throwStyledError from '../utils/error';
 import { EMPTY_OBJECT } from '../utils/empties';
 
-import type {Realm, Target} from '../types';
+import type {RealmScope, Target} from '../types';
 
 export default function constructWithOptions(
   componentConstructor: Function,
   tag: Target,
   options: Object = EMPTY_OBJECT,
-  realm: Realm | null = null
+  realm: RealmScope | null = null
 ) {
   if (!isValidElementType(tag)) {
     return throwStyledError(1, String(tag));

@@ -1,16 +1,14 @@
 // @flow
 import React, {useState} from 'react';
 
-import styled, { css, keyframes, createGlobalStyle } from 'styled-components';
+import styled, {createGlobalStyle} from 'styled-components';
 
 import {
-  LiveProvider as _LiveProvider,
   LiveEditor as _LiveEditor,
   LiveError as _LiveError,
   LivePreview as _LivePreview,
+  LiveProvider as _LiveProvider,
 } from 'react-live';
-
-import buttonExample from './Button.example';
 import {Example} from "./theming/example";
 import {realmA, realmB} from "./theming/realms";
 
@@ -130,13 +128,13 @@ for (let i = 0; i < a; i++) {
 
 const App = () => {
 
-  const [realm, setRealm] = useState(realmA.name);
+  const [realm, setRealm] = useState(realmA);
 
   function toggle() {
-    if (realm === realmA.name) {
-      setRealm(realmB.name);
+    if (realm === realmA) {
+      setRealm(realmB);
     } else {
-      setRealm(realmA.name);
+      setRealm(realmA);
     }
   }
 

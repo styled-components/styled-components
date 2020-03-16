@@ -21,6 +21,8 @@ import withTheme from './hoc/withTheme';
 /* Import hooks */
 import useTheme from './hooks/useTheme';
 
+import Realm from './models/Realm';
+
 /* Define bundle version for export */
 declare var __VERSION__: string;
 const version = __VERSION__;
@@ -77,4 +79,5 @@ export {
   useTheme,
   version,
   withTheme,
+  Realm
 };

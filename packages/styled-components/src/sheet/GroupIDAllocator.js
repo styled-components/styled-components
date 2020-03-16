@@ -1,7 +1,6 @@
 // @flow
 
 import throwStyledError from '../utils/error';
-import type {Realm} from "../types";
 
 const MAX_SMI = 1 << 31 - 1;
 

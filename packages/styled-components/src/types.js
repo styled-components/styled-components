@@ -36,7 +36,4 @@ export type Stringifier = {
   hash: string,
 };
 
-export type Realm = {
-  name: string,
-  default: boolean
-};
+export type RealmScope = string;

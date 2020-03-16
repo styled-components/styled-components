@@ -6,7 +6,7 @@ import generateName from '../utils/generateAlphabeticName';
 import isStaticRules from '../utils/isStaticRules';
 import StyleSheet from '../sheet';
 
-import type {Realm, RuleSet, Stringifier} from '../types';
+import type {RealmScope, RuleSet, Stringifier} from '../types';
 
 /*
  ComponentStyle is all the CSS-specific stuff, not
@@ -21,7 +21,7 @@ export default class ComponentStyle {
 
   rules: RuleSet;
 
-  realmRules: Map<Realm, RuleSet>;
+  realmRules: Map<RealmScope, RuleSet>;
 
   staticRulesId: string;
 
@@ -100,10 +100,10 @@ export default class ComponentStyle {
 
       if (this.realmRules) {
         this.realmRules.forEach((rules, realm) => {
-          const realScopeName = `${realm.name}_${name}`;
+          const realScopeName = `${realm}_${name}`;
           if (!styleSheet.hasNameForId(componentId, realScopeName)) {
             const [realmCss] = this.produceDynamicCssRules(executionContext, styleSheet, stylis, rules);
-            const cssFormatted = stylis(realmCss, `.${realm.name} .${name}`, undefined, componentId);
+            const cssFormatted = stylis(realmCss, `.${realm} .${name}`, undefined, componentId);
 
             styleSheet.insertRules(componentId, realScopeName, cssFormatted);
           }
@@ -114,9 +114,9 @@ export default class ComponentStyle {
     }
   }
 
-  addRealmRuleSet(realm: Realm, rules: RuleSet) {
+  addRealmRuleSet(realm: RealmScope, rules: RuleSet) {
     if (!this.realmRules) {
-      this.realmRules = new Map<Realm, RuleSet>();
+      this.realmRules = new Map<RealmScope, RuleSet>();
     }
 
     this.realmRules.set(realm, rules);

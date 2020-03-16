@@ -1,2 +1,4 @@
-export const realmA = { name: 'testeroni', default: false };
-export const realmB = { name: 'testerali', default: false };
+import {Realm} from 'styled-components';
+
+export const realmA = Realm('testeroni');
+export const realmB = Realm('testerali');

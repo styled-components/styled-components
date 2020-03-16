@@ -25,7 +25,7 @@ import { ThemeContext } from './ThemeProvider';
 import { useStyleSheet, useStylis } from './StyleSheetManager';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 
-import type {Attrs, Realm, RuleSet, Target} from '../types';
+import type {Attrs, RealmScope, RuleSet, Target} from '../types';
 
 /* global $Call */
 
@@ -185,7 +185,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
 
 function addRealmStyleToComponent(
   target: StyledComponentWrapper<*, *>,
-  realm: Realm,
+  realm: RealmScope,
   rules: RuleSet,
 ) {
   target.componentStyle.addRealmRuleSet(realm, rules);
@@ -195,7 +195,7 @@ export default function createStyledComponent(
   target: Target | StyledComponentWrapper<*, *>,
   options: Object,
   rules: RuleSet,
-  realm: Realm
+  realm: RealmScope
 ) {
   const isTargetStyledComp = isStyledComponent(target);
   const isCompositeComponent = !isTag(target);
