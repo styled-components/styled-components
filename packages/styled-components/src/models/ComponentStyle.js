@@ -21,21 +21,44 @@ export default class ComponentStyle {
 
   rules: RuleSet;
 
+  realmRules: Map<Realm, RuleSet>;
+
   staticRulesId: string;
 
-  realm: Realm;
+  name: string;
 
-  constructor(rules: RuleSet, componentId: string, realm: Realm) {
+  constructor(rules: RuleSet, componentId: string) {
     this.rules = rules;
     this.staticRulesId = '';
     this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules);
     this.componentId = componentId;
     this.baseHash = hash(componentId);
-    this.realm = realm;
 
     // NOTE: This registers the componentId, which ensures a consistent order
     // for this component's styles compared to others
     StyleSheet.registerId(componentId);
+  }
+
+  produceDynamicCssRules(executionContext: Object, styleSheet: StyleSheet, stylis: Stringifier, rules: RuleSet, baseHash = null) {
+    const { length } = rules;
+    let dynamicHash = baseHash ? phash(baseHash, stylis.hash) : null;
+    let css = '';
+
+    for (let i = 0; i < length; i++) {
+      const partRule = rules[i];
+      if (typeof partRule === 'string') {
+        css += partRule;
+
+        if (process.env.NODE_ENV !== 'production' && baseHash) dynamicHash = phash(dynamicHash, partRule + i);
+      } else {
+        const partChunk = flatten(partRule, executionContext, styleSheet);
+        const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
+        if (baseHash) dynamicHash = phash(dynamicHash, partString + i);
+        css += partString;
+      }
+    }
+
+    return [css, dynamicHash];
   }
 
   /*
@@ -65,23 +88,7 @@ export default class ComponentStyle {
 
       return name;
     } else {
-      const { length } = this.rules;
-      let dynamicHash = phash(this.baseHash, stylis.hash);
-      let css = '';
-
-      for (let i = 0; i < length; i++) {
-        const partRule = this.rules[i];
-        if (typeof partRule === 'string') {
-          css += partRule;
-
-          if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule + i);
-        } else {
-          const partChunk = flatten(partRule, executionContext, styleSheet);
-          const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
-          dynamicHash = phash(dynamicHash, partString + i);
-          css += partString;
-        }
-      }
+      const [css, dynamicHash] = this.produceDynamicCssRules(executionContext, styleSheet, stylis, this.rules, this.baseHash);
 
       const name = generateName(dynamicHash >>> 0);
 
@@ -91,7 +98,27 @@ export default class ComponentStyle {
         styleSheet.insertRules(componentId, name, cssFormatted);
       }
 
+      if (this.realmRules) {
+        this.realmRules.forEach((rules, realm) => {
+          const realScopeName = `${realm.name}_${name}`;
+          if (!styleSheet.hasNameForId(componentId, realScopeName)) {
+            const [realmCss] = this.produceDynamicCssRules(executionContext, styleSheet, stylis, rules);
+            const cssFormatted = stylis(realmCss, `.${realm.name} .${name}`, undefined, componentId);
+
+            styleSheet.insertRules(componentId, realScopeName, cssFormatted);
+          }
+        });
+      }
+
       return name;
     }
+  }
+
+  addRealmRuleSet(realm: Realm, rules: RuleSet) {
+    if (!this.realmRules) {
+      this.realmRules = new Map<Realm, RuleSet>();
+    }
+
+    this.realmRules.set(realm, rules);
   }
 }

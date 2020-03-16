@@ -1,23 +1,31 @@
 import React from 'react';
-import styled, { css, realmed, keyframes, createGlobalStyle } from 'styled-components';
-
-const testRealm = { name: 'testeroni', default: false };
+import styled from 'styled-components';
+import {realmA, realmB} from "./realms";
 
 const Base = styled.div`
 
   display: block;
-  width: 500px;
-  height: 200px;
+  width: 50px;
+  height: 20px;
   background-color: black;
 
 `;
 
-realmed(Base, testRealm)`
+styled(Base, realmA)`
 
   display: block;
-  width: 500px;
-  height: 200px;
+  width: 50px;
+  height: 20px;
   background-color: white;
+
+`;
+
+styled(Base, realmB)`
+
+  display: block;
+  width: 50px;
+  height: 20px;
+  background-color: red;
 
 `;
 

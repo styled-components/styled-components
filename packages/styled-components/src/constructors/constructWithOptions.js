@@ -22,14 +22,14 @@ export default function constructWithOptions(
 
   /* If config methods are called, wrap up a new template function and merge options */
   templateFunction.withConfig = config =>
-    constructWithOptions(componentConstructor, tag, { ...options, ...config });
+    constructWithOptions(componentConstructor, tag, { ...options, ...config }, realm);
 
   /* Modify/inject new props at runtime */
   templateFunction.attrs = attrs =>
     constructWithOptions(componentConstructor, tag, {
       ...options,
       attrs: Array.prototype.concat(options.attrs, attrs).filter(Boolean),
-    });
+    }, realm);
 
   return templateFunction;
 }

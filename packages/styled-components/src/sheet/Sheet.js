@@ -5,7 +5,6 @@ import { makeTag } from './Tag';
 import { makeGroupedTag } from './GroupedTag';
 import { getGroupForId } from './GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from './Rehydration';
-import type {Realm} from "../types";
 
 let SHOULD_REHYDRATE = IS_BROWSER;
 

@@ -72,7 +72,6 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
 interface StyledComponentWrapperProperties {
   attrs: Attrs;
   componentStyle: ComponentStyle;
-  realmedStyles: Map<string, ComponentStyle>;
   displayName: string;
   foldedComponentIds: Array<string>;
   target: Target;
@@ -184,6 +183,14 @@ function useStyledComponentImpl<Config: {}, Instance>(
   return createElement(elementToBeCreated, propsForElement);
 }
 
+function addRealmStyleToComponent(
+  target: StyledComponentWrapper<*, *>,
+  realm: Realm,
+  rules: RuleSet,
+) {
+  target.componentStyle.addRealmRuleSet(realm, rules);
+}
+
 export default function createStyledComponent(
   target: Target | StyledComponentWrapper<*, *>,
   options: Object,
@@ -192,6 +199,12 @@ export default function createStyledComponent(
 ) {
   const isTargetStyledComp = isStyledComponent(target);
   const isCompositeComponent = !isTag(target);
+
+  if (isTargetStyledComp && realm) {
+    addRealmStyleToComponent(target, realm, rules);
+
+    return target;
+  }
 
   const {
     displayName = generateDisplayName(target),
@@ -231,22 +244,8 @@ export default function createStyledComponent(
         // $FlowFixMe
       target.componentStyle.rules.concat(rules)
       : rules,
-    styledComponentId,
-    realm
+    styledComponentId
   );
-
-  if (realm && isTargetStyledComp) {
-    console.log('www');
-    console.log(isTargetStyledComp);
-    console.log(target.styledComponentId);
-
-    if (target.realmedStyles.get(realm.name)) {
-      throw new Error('Realm style is already defined for this component');
-    }
-
-
-    target.realmedStyles.set(realm.name, componentStyle);
-  }
 
   /**
    * forwardRef creates a new interim component, which we'll take advantage of
@@ -266,7 +265,6 @@ export default function createStyledComponent(
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
   WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
-  WrappedStyledComponent.realmedStyles = new Map<string, ComponentStyle>();
 
   // this static is used to preserve the cascade of static classes for component selector
   // purposes; this is especially important with usage of the css prop

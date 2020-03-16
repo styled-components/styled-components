@@ -3,7 +3,6 @@
 /* Import singletons */
 import isStyledComponent from './utils/isStyledComponent';
 import css from './constructors/css';
-import realmed from './constructors/realmed';
 import createGlobalStyle from './constructors/createGlobalStyle';
 import keyframes from './constructors/keyframes';
 import ServerStyleSheet from './models/ServerStyleSheet';
@@ -66,7 +65,6 @@ export * from './secretInternals';
 export {
   createGlobalStyle,
   css,
-  realmed,
   isStyledComponent,
   keyframes,
   ServerStyleSheet,

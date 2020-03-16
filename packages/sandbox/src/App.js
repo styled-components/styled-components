@@ -1,5 +1,5 @@
 // @flow
-import React from 'react';
+import React, {useState} from 'react';
 
 import styled, { css, keyframes, createGlobalStyle } from 'styled-components';
 
@@ -12,6 +12,7 @@ import {
 
 import buttonExample from './Button.example';
 import {Example} from "./theming/example";
+import {realmA, realmB} from "./theming/realms";
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -116,31 +117,36 @@ const LiveError = styled(_LiveError)`
   padding: 0.5rem;
 `;
 
-const App = () => (
-  <Body>
-    <GlobalStyle />
-    <Heading>
-      <Title>
-        Interactive sandbox for <Code>styled-components</Code>
-      </Title>
-      <Subtitle>
-        Make changes to the <Code>./src</Code> and see them take effect in realtime!
-      </Subtitle>
-    </Heading>
-    <Content>
-      <LiveProvider
-        code={buttonExample}
-        scope={{ React, styled, css, createGlobalStyle, keyframes }}
-        noInline
-      >
-        <LiveEditor />
-        <LivePreview />
-        <LiveError />
-      </LiveProvider>
+const Wrapper = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+`;
 
-      <Example/>
-    </Content>
+const a = 1000;
+const mass = [];
+for (let i = 0; i < a; i++) {
+  mass.push(1);
+}
+
+const App = () => {
+
+  const [realm, setRealm] = useState(realmA.name);
+
+  function toggle() {
+    if (realm === realmA.name) {
+      setRealm(realmB.name);
+    } else {
+      setRealm(realmA.name);
+    }
+  }
+
+  return <Body>
+    <button onClick={toggle}>toggle</button>
+    <Wrapper className={realm}>
+      {mass.map(() => <Example/>)}
+    </Wrapper>
   </Body>
-);
+    ;
+};
 
 export default App;
