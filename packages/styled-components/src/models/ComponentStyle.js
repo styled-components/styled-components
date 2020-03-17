@@ -116,7 +116,7 @@ export default class ComponentStyle {
 
   addRealmRuleSet(realm: RealmScope, rules: RuleSet) {
     if (!this.realmRules) {
-      this.realmRules = new Map<RealmScope, RuleSet>();
+      this.realmRules = new Map();
     }
 
     this.realmRules.set(realm, rules);
