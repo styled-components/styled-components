@@ -75,7 +75,7 @@ interface StyledComponentWrapperProperties {
   displayName: string;
   foldedComponentIds: Array<string>;
   target: Target;
-  shouldForwardProp: ?(prop: string) => boolean;
+  shouldForwardProp: ?(prop: string, isValidAttr: (prop: string) => boolean) => boolean;
   styledComponentId: string;
   warnTooManyClasses: $Call<typeof createWarnTooManyClasses, string, string>;
 }
@@ -120,6 +120,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
     // $FlowFixMe
     defaultProps,
     foldedComponentIds,
+    // $FlowFixMe
     shouldForwardProp,
     styledComponentId,
     target,
@@ -155,7 +156,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
     if (key[0] === '$' || key === 'as') continue;
     else if (key === 'forwardedAs') {
       propsForElement.as = computedProps[key];
-    } else if (!propFilterFn || propFilterFn(key)) {
+    } else if (!propFilterFn || propFilterFn(key, validAttr)) {
       // Don't pass through non HTML tags through to HTML elements
       propsForElement[key] = computedProps[key];
     }
@@ -209,12 +210,14 @@ export default function createStyledComponent(
 
   // eslint-disable-next-line prefer-destructuring
   let shouldForwardProp = options.shouldForwardProp;
+
   // $FlowFixMe
   if (isTargetStyledComp && target.shouldForwardProp) {
     if (shouldForwardProp) {
       // compose nested shouldForwardProp calls
-      // $FlowFixMe
-      shouldForwardProp = prop => target.shouldForwardProp(prop) && options.shouldForwardProp(prop);
+      shouldForwardProp = (prop, filterFn) =>
+        // $FlowFixMe
+        target.shouldForwardProp(prop, filterFn) && options.shouldForwardProp(prop, filterFn);
     } else {
       // eslint-disable-next-line prefer-destructuring
       shouldForwardProp = target.shouldForwardProp;
