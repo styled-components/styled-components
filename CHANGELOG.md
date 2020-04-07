@@ -6,7 +6,69 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## New Functionality
+
+- Add `shouldForwardProp` API (almost the same as emotion's, just a slightly different usage pattern); https://github.com/styled-components/styled-components/pull/3006
+
+  Sometimes when composing multiple higher-order components together, it's possible to get into scenarios when multiple layers consume props by the same name. In the past we've introduced various workarounds for popular props like `"as"` but this power-user API allows for more granular customization of what props are passed down to descendant component children when using the `styled()` HOC wrapper.
+
+  When combined with other APIs like `.attrs()` this becomes a very powerful constellation of abilities.
+
+  Here's how you use it:
+
+  ```jsx
+  const Comp = styled('div').withConfig({
+    shouldForwardProp: (prop, defaultValidatorFn) => !['filterThis'].includes(prop),
+  })`
+    color: red;
+  `;
+
+  render(<Comp filterThis="abc" passThru="def" />);
+
+  # Renders: <div className="[generated]" passThru="def"></div>
+  ```
+
+  The second argument `defaultValidatorFn` is what we use internally to validate props based on known HTML attributes. It's provided so you can filter exactly what props you don't wish to pass and then fall-back to the default filtering mechanism if desired.
+
+  Other methods on the `styled` HOC like `.attrs` can be chained after `withConfig()`, and before opening your template literal:
+
+  ```jsx
+  const Comp = styled('div').withConfig({
+    shouldForwardProp: (prop, defaultValidatorFn) => !['filterThis'].includes(prop),
+  }).attrs({ className: 'foo' })`
+    color: red;
+  `;
+
+  render(<Comp filterThis="abc" passThru="def" />);
+
+  # Renders: <div className="[generated] foo" passThru="def"></div>
+  ```
+
+  Thanks @stevesims and all that contributed!
+
+- Add "transient props" API; https://github.com/styled-components/styled-components/pull/3052
+
+  Think of [_transient props_](https://medium.com/@probablyup/introducing-transient-props-f35fd5203e0c) as a lightweight, but complementary API to `shouldForwardProp`. Because styled-components allows any kind of prop to be used for styling (a trait shared by most CSS-in-JS libraries, but not the third party library ecosystem in general), adding a filter for every possible prop you might use can get cumbersome.
+
+  _Transient props_ are a new pattern to pass props that are explicitly consumed only by styled components and are not meant to be passed down to deeper component layers. Here's how you use them:
+
+  ```jsx
+  const Comp = styled.div`
+    color: ${props => props.$fg || 'black'};
+  `;
+
+  render(<Comp $fg="red">I'm red!</Comp>);
+  ```
+
+  Note the dollar sign (`$`) prefix on the prop; this marks it as _transient_ and styled-components knows not to add it to the rendered DOM element or pass it further down the component hierarchy.
+
+## Bugfixes
+
 - Fix slow SSR Rehydration for malformed CSS and increase fault-tolerance (see [#3018](https://github.com/styled-components/styled-components/pull/3018))
+
+- Change isPlainObject (internal method) to support objects created in a different context (see [#3068](https://github.com/styled-components/styled-components/pull/3068)) thanks @keeganstreet!
+
+- Add support for the `<video disablePictureInPicture>` (see [#3058](https://github.com/styled-components/styled-components/pull/3058)) thanks @egdbear!
 
 ## [v5.0.1] - 2020-02-04
 
