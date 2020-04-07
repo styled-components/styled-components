@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v5.1.0] - 2020-04-07
+
 ## New Functionality
 
 - Add `shouldForwardProp` API (almost the same as emotion's, just a slightly different usage pattern); https://github.com/styled-components/styled-components/pull/3006
@@ -1113,7 +1115,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v5.0.1...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.1.0...master
+[v5.1.0]: https://github.com/styled-components/styled-components/compare/v5.0.1...v5.1.0
 [v5.0.1]: https://github.com/styled-components/styled-components/compare/v5.0.0...v5.0.1
 [v5.0.0]: https://github.com/styled-components/styled-components/compare/v4.4.1...v5.0.0
 [v4.4.1]: https://github.com/styled-components/styled-components/compare/v4.4.0...v4.4.1
