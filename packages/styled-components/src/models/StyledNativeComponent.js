@@ -1,6 +1,7 @@
 // @flow
-import React, { createElement, Component } from 'react';
+import React, { createContext, createElement, Component } from 'react';
 import hoist from 'hoist-non-react-statics';
+import { Dimensions } from 'react-native';
 import merge from '../utils/mixinDeep';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
@@ -16,13 +17,103 @@ import type { Attrs, RuleSet, Target } from '../types';
 // NOTE: no hooks available for react-native yet;
 // if the user makes use of ThemeProvider or StyleSheetManager things will break.
 
+const FontSizeContext = createContext(16)
+
 // Validator defaults to true if not in HTML/DOM env
 const validAttr = () => true;
+
+/** HOC that will apply the screen size to the styles defined with vmin, vmax, vw, vh units */
+const withScreenSize = Comp => ({vstyles = {}, generatedStyles = {}, ...props}) => {
+  const [ size, setSize ] = React.useState(Dimensions.get('window'))
+  const sizeListener = React.useCallback(() => setSize(Dimensions.get('window')), [])
+  React.useEffect(() => {
+    Dimensions.addEventListener('change', sizeListener)
+    return () => Dimensions.removeEventListener('change', sizeListener)
+  }, [])
+  const { vmin = [], vmax = [], vw = [], vh = [] } = vstyles
+  const styles = {...generatedStyles}
+  const { width, height } = size
+  vmin.forEach(key => styles[key]*=Math.min(width, height)/100)
+  vmax.forEach(key => styles[key]*=Math.max(width, height)/100)
+  vw.forEach(key => styles[key]*=width/100)
+  vh.forEach(key => styles[key]*=height/100)
+  return <Comp generatedStyles={styles} {...props} />
+}
+
+/** HOC that will apply the font size to the styles defined with em units */
+const withFontSize = Comp => ({ generatedStyles = {}, emStyles = [], ...props }) => {
+  return (
+    <FontSizeContext.Consumer>
+      {fontSize => {
+        const styles = {...generatedStyles}
+        emStyles.forEach(key => styles[key]*=fontSize)
+        return <Comp generatedStyles={styles} {...props} />
+      }}
+    </FontSizeContext.Consumer>
+  )
+}
+
+const withFontSizeUpdate = Comp => ({ generatedStyles = {}, fontSizeInEm = false, ...props}) => {
+  // If the font size is expressed with em units, we need to read the current font size value
+  return fontSizeInEm ? (
+    <FontSizeContext.Consumer>
+      {fontSizeValue => (
+        <FontSizeContext.Provider value={generatedStyles.fontSize * fontSizeValue}>
+          {/* We set the font size to 1 as it is relative to the value that we just took into account. */}
+          <Comp generatedStyles={{...generatedStyles, fontSize: 1}} {...props} />
+        </FontSizeContext.Provider>
+      )}
+    </FontSizeContext.Consumer>
+  ) : (
+    <FontSizeContext.Provider value={generatedStyles.fontSize}>
+      <Comp generatedStyles={generatedStyles} {...props} />
+    </FontSizeContext.Provider>
+  )
+}
+
+const StyledComponent = ({ attrs, forwardedComponent, forwardedRef, forwardedAs, generatedStyles, style = [], elementToBeRendered, ...props }) => {
+  const { shouldForwardProp } = forwardedComponent
+  const isTargetTag = isTag(elementToBeRendered);
+  const computedProps = attrs !== props ? { ...props, ...attrs } : props;
+  const propFilterFn = shouldForwardProp || (isTargetTag && validAttr);
+  const propsForElement = {};
+
+  for (const key in computedProps) {
+    if (key[0] === '$' || key === 'as') continue;
+    else if (key === 'forwardedAs') {
+      propsForElement.as = props[key];
+    } else if (!propFilterFn || propFilterFn(key, validAttr)) {
+      // Don't pass through filtered tags through to native elements
+      propsForElement[key] = computedProps[key];
+    }
+  }
+
+  propsForElement.style = [generatedStyles].concat(style);
+
+  if (forwardedRef) propsForElement.ref = forwardedRef;
+  if (forwardedAs) propsForElement.as = forwardedAs;
+
+  return createElement(elementToBeRendered, propsForElement)
+}
 
 class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
 
   attrs = {};
+
+  emStyles: String[] = [];
+
+  vhStyles: String[] = [];
+
+  vwStyles: String[] = [];
+
+  remStyles: String[] = [];
+
+  vmaxStyles: String[] = [];
+
+  vminStyles: String[] = [];
+
+  fontSizeInEm: boolean = false;
 
   render() {
     return (
@@ -32,43 +123,42 @@ class StyledNativeComponent extends Component<*, *> {
             $as: transientAsProp,
             as: renderAs,
             forwardedComponent,
-            forwardedAs,
-            forwardedRef,
-            style = [],
             ...props
           } = this.props;
 
-          const { defaultProps, target, shouldForwardProp } = forwardedComponent;
+          const { defaultProps, target } = forwardedComponent;
           const elementToBeRendered =
             this.attrs.$as || this.attrs.as || transientAsProp || renderAs || target;
 
-          const generatedStyles = this.generateAndInjectStyles(
+          const generatedStyles = {...this.generateAndInjectStyles(
             determineTheme(this.props, theme, defaultProps) || EMPTY_OBJECT,
             this.props
-          );
+          )};
+          
+          let FinalComponent = StyledComponent
 
-          const isTargetTag = isTag(elementToBeRendered);
-          const computedProps = this.attrs !== props ? { ...props, ...this.attrs } : props;
-          const propFilterFn = shouldForwardProp || (isTargetTag && validAttr);
-          const propsForElement = {};
-          let key;
+          // Apply rem units if needed
+          this.remStyles.forEach(key => generatedStyles[key]*=16)
 
-          for (key in computedProps) {
-            if (key[0] === '$' || key === 'as') continue;
-            else if (key === 'forwardedAs') {
-              propsForElement.as = props[key];
-            } else if (!propFilterFn || propFilterFn(key, validAttr)) {
-              // Don't pass through filtered tags through to native elements
-              propsForElement[key] = computedProps[key];
-            }
+          // Apply vmin, vmax, vw, vh units if needed
+          const vstyles = (this.vminStyles.length || this.vmaxStyles.length || this.vwStyles.length || this.vhStyles.length)
+            ? { vw: this.vwStyles, vh: this.vhStyles, vmin: this.vminStyles, vmax: this.vmaxStyles }
+            : undefined
+          if(vstyles) {
+            FinalComponent = withScreenSize(FinalComponent)
           }
 
-          propsForElement.style = [generatedStyles].concat(style);
+          // Apply em units
+          if(this.emStyles.length) {
+            FinalComponent = withFontSize(FinalComponent)
+          }
 
-          if (forwardedRef) propsForElement.ref = forwardedRef;
-          if (forwardedAs) propsForElement.as = forwardedAs;
+          // Apply fontSize changes
+          if(generatedStyles.fontSize) {
+            FinalComponent = withFontSizeUpdate(FinalComponent)
+          }
 
-          return createElement(elementToBeRendered, propsForElement);
+          return <FinalComponent vstyles={vstyles} forwardedComponent={forwardedComponent} emStyles={this.emStyles.length ? this.emStyles : undefined} fontSizeInEm={this.fontSizeInEm || undefined} elementToBeRendered={elementToBeRendered} {...props} attrs={this.attrs} generatedStyles={generatedStyles} />
         }}
       </ThemeConsumer>
     );
@@ -110,8 +200,18 @@ class StyledNativeComponent extends Component<*, *> {
       props,
       props.forwardedComponent.attrs
     );
+    // We need to be warned when special units are being detected within the style
+    const specialUnits = ['em', 'rem', 'vw', 'vh', 'vmin', 'vmax']
+    const unitsInformation = { fontSizeInEm: false }
+    specialUnits.forEach(unit => unitsInformation[unit] = [])// initialize the special units lists
 
-    return inlineStyle.generateStyleObject(executionContext);
+    const generatedStyle = inlineStyle.generateStyleObject(executionContext, unitsInformation);
+
+    // Transfer back the units informations to the current component
+    Object.keys(unitsInformation).forEach(key => this[`${key}Styles`] = unitsInformation[key])
+    this.fontSizeInEm = unitsInformation.fontSizeInEm
+
+    return generatedStyle
   }
 
   setNativeProps(nativeProps: Object) {

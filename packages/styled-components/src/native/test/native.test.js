@@ -1,6 +1,6 @@
 // @flow
 /* eslint-disable no-console */
-import { Text, View } from 'react-native';
+import { Text, View, Dimensions } from 'react-native';
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
@@ -532,4 +532,45 @@ Object {
       expect(() => wrapper.root.findByType('Text')).toThrowError();
     });
   });
+
+  describe('extended CSS support', () => {
+    it('should handle vh, vw, vmin, vmax and rem units', () => {
+      const Comp = styled(View)`
+        width: 10vmin;
+        height: 10vmax;
+        padding: 10vw 10vh;
+        border: 1rem solid black;
+      `;
+
+      const { width, height } = Dimensions.get('window')
+      const vw = width / 10
+      const vh = height / 10
+      const vmin = Math.min(vw, vh)
+      const vmax = Math.max(vw, vh)
+
+      const wrapper = TestRenderer.create(<Comp />);
+      const view = wrapper.root.findByType('View');
+      expect(view.props.style).toEqual([{
+        width: vmin, height: vmax,
+        paddingTop: vw, paddingBottom: vw, paddingLeft: vh, paddingRight: vh,
+        borderColor: 'black', borderStyle: 'solid', borderWidth: 16
+      }]);
+    });
+    it('should handle em units', () => {
+      const Comp = styled(View)`
+        width: 10em;
+        font-size: 2em;
+      `;
+      const Child = styled(Text)`
+        width: 10em;
+        font-size: 2em;
+      `;
+
+      const wrapper = TestRenderer.create(<Comp><Child>test</Child></Comp>);
+      const view = wrapper.root.findByType('View')
+      const text = wrapper.root.findByType('Text')
+      expect(view.props.style).toEqual([{ fontSize: 16*2, width: 16*2*10 }]);
+      expect(text.props.style).toEqual([{ fontSize: 16*4, width: 16*4*10 }]);
+    });
+  })
 });
