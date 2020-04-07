@@ -38,7 +38,7 @@ const commonPlugins = [
   commonjs({
     ignoreGlobal: true,
     namedExports: {
-      'react-is': ['isElement', 'isValidElementType', 'ForwardRef'],
+      'react-is': ['isElement', 'isValidElementType', 'ForwardRef', 'typeof'],
     },
   }),
   replace({
