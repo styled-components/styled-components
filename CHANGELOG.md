@@ -8,7 +8,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## [v5.1.0] - 2020-04-07
 
-## New Functionality
+### New Functionality
 
 - Add `shouldForwardProp` API (almost the same as emotion's, just a slightly different usage pattern); https://github.com/styled-components/styled-components/pull/3006
 
@@ -64,7 +64,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
   Note the dollar sign (`$`) prefix on the prop; this marks it as _transient_ and styled-components knows not to add it to the rendered DOM element or pass it further down the component hierarchy.
 
-## Bugfixes
+### Bugfixes
 
 - Fix slow SSR Rehydration for malformed CSS and increase fault-tolerance (see [#3018](https://github.com/styled-components/styled-components/pull/3018))
 
