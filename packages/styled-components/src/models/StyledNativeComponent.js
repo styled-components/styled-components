@@ -26,6 +26,7 @@ class StyledNativeComponent extends Component<*, *> {
       <ThemeConsumer>
         {(theme?: Theme) => {
           const {
+            $as: transientAsProp,
             as: renderAs,
             forwardedComponent,
             forwardedAs,
@@ -35,22 +36,31 @@ class StyledNativeComponent extends Component<*, *> {
           } = this.props;
 
           const { defaultProps, target } = forwardedComponent;
+          const elementToBeRendered =
+            this.attrs.$as || this.attrs.as || transientAsProp || renderAs || target;
 
           const generatedStyles = this.generateAndInjectStyles(
             determineTheme(this.props, theme, defaultProps) || EMPTY_OBJECT,
             this.props
           );
 
-          const propsForElement = {
-            ...props,
-            ...this.attrs,
-            style: [generatedStyles].concat(style),
-          };
+          const propsForElement = {};
+          let key;
+
+          for (key in props) {
+            if (key[0] !== '$') propsForElement[key] = props[key];
+          }
+
+          for (key in this.attrs) {
+            if (key[0] !== '$') propsForElement[key] = this.attrs[key];
+          }
+
+          propsForElement.style = [generatedStyles].concat(style);
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
           if (forwardedAs) propsForElement.as = forwardedAs;
 
-          return createElement(renderAs || target, propsForElement);
+          return createElement(elementToBeRendered, propsForElement);
         }}
       </ThemeConsumer>
     );

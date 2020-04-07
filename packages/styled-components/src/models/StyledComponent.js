@@ -143,23 +143,21 @@ function useStyledComponentImpl<Config: {}, Instance>(
 
   const refToForward = forwardedRef;
 
-  const elementToBeCreated: Target = attrs.as || props.as || target;
+  const elementToBeCreated: Target = attrs.$as || props.$as || attrs.as || props.as || target;
 
   const isTargetTag = isTag(elementToBeCreated);
   const computedProps = attrs !== props ? { ...props, ...attrs } : props;
-  const shouldFilterProps = 'as' in computedProps || 'forwardedAs' in computedProps;
   const propFilterFn = shouldForwardProp || (isTargetTag && validAttr);
-  const propsForElement = propFilterFn || shouldFilterProps ? {} : { ...computedProps };
+  const propsForElement = {};
 
-  if (shouldFilterProps || propFilterFn) {
-    // eslint-disable-next-line guard-for-in
-    for (const key in computedProps) {
-      if (key === 'forwardedAs') {
-        propsForElement.as = computedProps[key];
-      } else if (key !== 'as' && (!propFilterFn || propFilterFn(key))) {
-        // Don't pass through non HTML tags through to HTML elements
-        propsForElement[key] = computedProps[key];
-      }
+  // eslint-disable-next-line guard-for-in
+  for (const key in computedProps) {
+    if (key[0] === '$' || key === 'as') continue;
+    else if (key === 'forwardedAs') {
+      propsForElement.as = computedProps[key];
+    } else if (!propFilterFn || propFilterFn(key)) {
+      // Don't pass through non HTML tags through to HTML elements
+      propsForElement[key] = computedProps[key];
     }
   }
 
@@ -219,7 +217,7 @@ export default function createStyledComponent(
       shouldForwardProp = prop => target.shouldForwardProp(prop) && options.shouldForwardProp(prop);
     } else {
       // eslint-disable-next-line prefer-destructuring
-      shouldForwardProp = target.shouldForwardProp
+      shouldForwardProp = target.shouldForwardProp;
     }
   }
 
