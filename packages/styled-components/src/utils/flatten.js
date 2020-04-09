@@ -14,31 +14,34 @@ import addUnitIfNeeded from './addUnitIfNeeded';
  */
 const isFalsish = chunk => chunk === undefined || chunk === null || chunk === false || chunk === '';
 
-export const objToCssArray = (obj: Object, prevKey?: string): Array<string | Function> => {
-  const rules = []
-  const keys = Object.keys(obj)
+/**
+ * Reduces over the object converting into a template string args array.
+ */
+export const objToCssArray = (
+  obj: Object,
+  styleSheet: ?Object,
+  executionContext: ?Object,
+  prevKey?: string
+): Array<string | Function> => {
+  const rules = Object.keys(obj).reduce((acc, key) => {
+    const val = obj[key];
+    if (isFalsish(val)) return acc;
 
-  keys
-    .forEach(key => {
-      if (!isFalsish(obj[key])) {
-        if (isPlainObject(obj[key])) {
-          rules.push(...objToCssArray(obj[key], key))
-
-          return rules
-        }
-        else if (isFunction(obj[key])) {
-          rules.push(`${hyphenate(key)}:`, obj[key], ';')
-
-          return rules
-        }
-        rules.push(`${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`);
-      }
-      return rules;
-    })
-
-    return prevKey
-      ? [`${prevKey} {`, ...rules, '}']
-      : rules;
+    if (isPlainObject(val)) {
+      return acc.concat(objToCssArray(val, styleSheet, executionContext, key));
+    } else if (isFunction(val)) {
+      return acc.concat(`${hyphenate(key)}:`, val, ';');
+    } else if (Array.isArray(val) && val.isCss) {
+      return acc.concat(
+        `${hyphenate(key)}:`,
+        // eslint-disable-next-line no-use-before-define
+        flatten(val, executionContext, styleSheet),
+        prevKey ? ';}' : ';'
+      );
+    }
+    return acc.concat(`${hyphenate(key)}: ${addUnitIfNeeded(key, val)};`);
+  }, []);
+  return prevKey ? [`${prevKey} {`, ...rules, '}'] : rules;
 };
 
 export default function flatten(chunk: any, executionContext: ?Object, styleSheet: ?Object): any {
@@ -69,7 +72,6 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
   if (isFunction(chunk)) {
     if (isStatelessFunction(chunk) && executionContext) {
       const result = chunk(executionContext);
-
       if (process.env.NODE_ENV !== 'production' && isElement(result)) {
         // eslint-disable-next-line no-console
         console.warn(
@@ -91,5 +93,7 @@ export default function flatten(chunk: any, executionContext: ?Object, styleShee
   }
 
   /* Handle objects */
-  return isPlainObject(chunk) ? objToCssArray(chunk) : chunk.toString();
+  return isPlainObject(chunk)
+    ? objToCssArray(chunk, styleSheet, executionContext)
+    : chunk.toString();
 }

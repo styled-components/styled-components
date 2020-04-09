@@ -83,7 +83,7 @@ export default function createStylisInstance({
     const cssStr = selector && prefix ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS;
 
     // stylis has no concept of state to be passed to plugins
-    // but since JS is single=threaded, we can rely on that to ensure
+    // but since JS is single-threaded, we can rely on that to ensure
     // these properties stay in sync with the current stylis run
     _componentId = componentId;
     _selector = selector;
