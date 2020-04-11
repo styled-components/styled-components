@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Added `useTheme` hook to named exports for react-primitives entrypoint (related PR: (#2982)[https://github.com/styled-components/styled-components/pull/2982]).
+
 ## [v5.1.0] - 2020-04-07
 
 ### New Functionality
