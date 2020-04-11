@@ -1,4 +1,5 @@
 // @flow
+import validAttr from '@emotion/is-prop-valid';
 import React, { createElement, Component } from 'react';
 import hoist from 'hoist-non-react-statics';
 import merge from '../utils/mixinDeep';
@@ -35,7 +36,7 @@ class StyledNativeComponent extends Component<*, *> {
             ...props
           } = this.props;
 
-          const { defaultProps, target } = forwardedComponent;
+          const { defaultProps, target, shouldForwardProp } = forwardedComponent;
           const elementToBeRendered =
             this.attrs.$as || this.attrs.as || transientAsProp || renderAs || target;
 
@@ -44,15 +45,20 @@ class StyledNativeComponent extends Component<*, *> {
             this.props
           );
 
+          const isTargetTag = isTag(elementToBeRendered);
+          const computedProps = this.attrs !== props ? { ...props, ...this.attrs } : props;
+          const propFilterFn = shouldForwardProp || (isTargetTag && validAttr);
           const propsForElement = {};
           let key;
 
-          for (key in props) {
-            if (key[0] !== '$') propsForElement[key] = props[key];
-          }
-
-          for (key in this.attrs) {
-            if (key[0] !== '$') propsForElement[key] = this.attrs[key];
+          for (key in computedProps) {
+            if (key[0] === '$' || key === 'as') continue;
+            else if (key === 'forwardedAs') {
+              propsForElement.as = props[key];
+            } else if (!propFilterFn || propFilterFn(key, validAttr)) {
+              // Don't pass through non HTML tags through to HTML elements
+              propsForElement[key] = computedProps[key];
+            }
           }
 
           propsForElement.style = [generatedStyles].concat(style);
@@ -145,6 +151,22 @@ export default (InlineStyle: Function) => {
         ? Array.prototype.concat(target.attrs, attrs).filter(Boolean)
         : attrs;
 
+    // eslint-disable-next-line prefer-destructuring
+    let shouldForwardProp = options.shouldForwardProp;
+
+    // $FlowFixMe
+    if (isTargetStyledComp && target.shouldForwardProp) {
+      if (shouldForwardProp) {
+        // compose nested shouldForwardProp calls
+        shouldForwardProp = (prop, filterFn) =>
+          // $FlowFixMe
+          target.shouldForwardProp(prop, filterFn) && options.shouldForwardProp(prop, filterFn);
+      } else {
+        // eslint-disable-next-line prefer-destructuring
+        shouldForwardProp = target.shouldForwardProp;
+      }
+    }
+
     /**
      * forwardRef creates a new interim component, which we'll take advantage of
      * instead of extending ParentComponent to create _another_ interim class
@@ -154,6 +176,9 @@ export default (InlineStyle: Function) => {
     WrappedStyledNativeComponent.attrs = finalAttrs;
 
     WrappedStyledNativeComponent.displayName = displayName;
+
+    // $FlowFixMe
+    WrappedStyledNativeComponent.shouldForwardProp = shouldForwardProp;
 
     // $FlowFixMe
     WrappedStyledNativeComponent.inlineStyle = new InlineStyle(
@@ -197,6 +222,7 @@ export default (InlineStyle: Function) => {
         // all SC-specific things should not be hoisted
         attrs: true,
         displayName: true,
+        shouldForwardProp: true,
         inlineStyle: true,
         styledComponentId: true,
         target: true,

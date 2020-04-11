@@ -183,7 +183,7 @@ Object {
     });
 
     it('passes simple props on', () => {
-      const Comp = styled.View.attrs(p => ({
+      const Comp = styled.View.attrs(() => ({
         test: true,
       }))``;
 
@@ -430,6 +430,92 @@ Object {
       `;
 
       expect(TestRenderer.create(<Comp $color="red" />).toJSON()).toMatchSnapshot();
+    });
+
+    it('allows for custom prop filtering for elements', () => {
+      const Comp = styled('View').withConfig({
+        shouldForwardProp: prop => !['filterThis'].includes(prop)
+      })`
+      color: red;
+    `;
+      const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
+      const { props } = wrapper.root.findByType('View');
+      expect(props.style).toEqual([{ color: 'red' }]);
+      expect(props.passThru).toBe('def');
+      expect(props.filterThis).toBeUndefined();
+    });
+
+    it('allows custom prop filtering for components', () => {
+      const InnerComp = props => <View {...props} />
+      const Comp = styled(InnerComp).withConfig({
+        shouldForwardProp: prop => !['filterThis'].includes(prop)
+      })`
+        color: red;
+      `;
+      const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
+      const { props } = wrapper.root.findByType('View');
+      expect(props.style).toEqual([{ color: 'red' }]);
+      expect(props.passThru).toBe('def');
+      expect(props.filterThis).toBeUndefined();
+    });
+
+    it('composes shouldForwardProp on composed styled components', () => {
+      const StyledView = styled.View.withConfig({
+        shouldForwardProp: prop => prop === 'passThru'
+      })`
+        color: red;
+      `;
+      const ComposedView = styled(StyledView).withConfig({
+        shouldForwardProp: () => true
+      })``;
+      const wrapper = TestRenderer.create(<ComposedView filterThis passThru />);
+      const { props } = wrapper.root.findByType('View');
+      expect(props.passThru).toBeDefined();
+      expect(props.filterThis).toBeUndefined();
+    });
+
+    it('should filter out props when using "as" to a custom component', () => {
+      const AsComp = props => <View {...props} />
+      const Comp = styled.View.withConfig({
+        shouldForwardProp: prop => !['filterThis'].includes(prop)
+      })`
+        color: red;
+      `;
+      const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
+      const { props } = wrapper.root.findByType(AsComp);
+
+      expect(props.style).toEqual([{ color: 'red' }]);
+      expect(props.passThru).toBe('def');
+      expect(props.filterThis).toBeUndefined();
+    });
+
+    it('can set computed styles based on props that are being filtered out', () => {
+      const AsComp = props => <View {...props} />
+      const Comp = styled.View.withConfig({
+        shouldForwardProp: prop => !['filterThis'].includes(prop)
+      })`
+        color: ${props => props.filterThis === 'abc' ? 'red' : undefined};
+      `;
+      const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
+      const { props } = wrapper.root.findByType(AsComp);
+
+      expect(props.style).toEqual([{ color: 'red' }]);
+      expect(props.passThru).toBe('def');
+      expect(props.filterThis).toBeUndefined();
+    });
+
+    it('should filter our props when using "as" to a different element', () => {
+      const Comp = styled.View.withConfig({
+        shouldForwardProp: prop => !['filterThis'].includes(prop)
+      })`
+        color: red;
+      `;
+      const wrapper = TestRenderer.create(<Comp as="a" filterThis="abc" passThru="def" />);
+      const { props } = wrapper.root.findByType("a");
+
+      expect(props.style).toEqual([{ color: 'red' }]);
+      expect(props.passThru).toBe('def');
+      expect(props.filterThis).toBeUndefined();
     });
 
     it('should prefer transient $as over as', () => {

@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Implement `shouldForwardProp` API for native and primitive platforms (see [#3093](https://github.com/styled-components/styled-components/issues/3093))
+
 ## [v5.1.0] - 2020-04-07
 
 ### New Functionality
