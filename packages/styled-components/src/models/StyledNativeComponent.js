@@ -1,5 +1,4 @@
 // @flow
-import validAttr from '@emotion/is-prop-valid';
 import React, { createElement, Component } from 'react';
 import hoist from 'hoist-non-react-statics';
 import merge from '../utils/mixinDeep';
@@ -16,6 +15,9 @@ import type { Attrs, RuleSet, Target } from '../types';
 
 // NOTE: no hooks available for react-native yet;
 // if the user makes use of ThemeProvider or StyleSheetManager things will break.
+
+// Validator defaults to true if not in HTML/DOM env
+const validAttr = () => true;
 
 class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
@@ -56,7 +58,7 @@ class StyledNativeComponent extends Component<*, *> {
             else if (key === 'forwardedAs') {
               propsForElement.as = props[key];
             } else if (!propFilterFn || propFilterFn(key, validAttr)) {
-              // Don't pass through non HTML tags through to HTML elements
+              // Don't pass through filtered tags through to native elements
               propsForElement[key] = computedProps[key];
             }
           }
