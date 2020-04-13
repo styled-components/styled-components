@@ -7,6 +7,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 ## Unreleased
 
 - Implement `shouldForwardProp` API for native and primitive platforms (see [#3093](https://github.com/styled-components/styled-components/issues/3093))
+- Added `useTheme` hook to named exports for react-primitives entrypoint (related PR: (#2982)[https://github.com/styled-components/styled-components/pull/2982]).
 
 ## [v5.1.0] - 2020-04-07
 
