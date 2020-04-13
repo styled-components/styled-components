@@ -8,6 +8,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ### Bugfixes
 
+- Added `useTheme` hook to named exports for react-primitives entrypoint (see [#2982](https://github.com/styled-components/styled-components/pull/2982)) thanks @jladuval!
 - Escape every CSS ident character necessary when converting component display names to class names (see [#3102](https://github.com/styled-components/styled-components/pull/3102)) thanks @kripod!
 
 ## [v5.1.0] - 2020-04-07
