@@ -1,4 +1,3 @@
-// @flow
 import React, { createContext, createElement, Component } from 'react';
 import hoist from 'hoist-non-react-statics';
 import { Dimensions } from 'react-native';

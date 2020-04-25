@@ -1,4 +1,3 @@
-// @flow
 /* eslint-disable import/no-unresolved */
 import transformDeclPairs from 'css-to-react-native';
 
