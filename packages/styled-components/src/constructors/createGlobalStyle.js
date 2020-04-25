@@ -30,13 +30,6 @@ export default function createGlobalStyle(
     const styleSheet = useStyleSheet();
     const stylis = useStylis();
     const theme = useContext(ThemeContext);
-    const instanceRef = useRef(null);
-
-    if (instanceRef.current === null) {
-      instanceRef.current = styleSheet.allocateGSInstance(styledComponentId);
-    }
-
-    const instance = instanceRef.current;
 
     if (process.env.NODE_ENV !== 'production' && React.Children.count(props.children)) {
       // eslint-disable-next-line no-console
@@ -54,18 +47,40 @@ export default function createGlobalStyle(
       );
     }
 
-    if (globalStyle.isStatic) {
-      globalStyle.renderStyles(instance, STATIC_EXECUTION_CONTEXT, styleSheet, stylis);
-    } else {
-      const context = {
-        ...props,
-        theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
-      };
+    const instanceRef = useRef(null);
 
-      globalStyle.renderStyles(instance, context, styleSheet, stylis);
+    function renderStyles() {
+      if (instanceRef.current === null) {
+        instanceRef.current = styleSheet.allocateGSInstance(styledComponentId);
+      }
+
+      const instance = instanceRef.current;
+
+      if (globalStyle.isStatic) {
+        globalStyle.renderStyles(instance, STATIC_EXECUTION_CONTEXT, styleSheet, stylis);
+      } else {
+        const context = {
+          ...props,
+          theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
+        };
+
+        globalStyle.renderStyles(instance, context, styleSheet, stylis);
+      }
     }
 
-    useEffect(() => () => globalStyle.removeStyles(instance, styleSheet), EMPTY_ARRAY);
+    if (typeof window !== 'undefined' && window.document && window.document.createElement) {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      useEffect(renderStyles);
+    } else {
+      // Server-side rendering
+      renderStyles();
+    }
+
+    useEffect(() => () => {
+      if (instanceRef.current !== null) {
+        globalStyle.removeStyles(instanceRef.current, styleSheet);
+      }
+    }, EMPTY_ARRAY);
 
     return null;
   }

@@ -172,6 +172,8 @@ describe('rehydration', () => {
   });
 
   describe('with global styles', () => {
+    const { createElement } = window.document;
+
     beforeEach(() => {
       /* Adding a non-local stylesheet with a hash 557410406 which is
        * derived from "body { background: papayawhip; }" so be careful
@@ -188,6 +190,12 @@ describe('rehydration', () => {
       `;
 
       resetSheet(masterSheet);
+
+      window.document.createElement = undefined;
+    });
+
+    afterEach(() => {
+      window.document.createElement = createElement;
     });
 
     it('should leave the existing styles there', () => {

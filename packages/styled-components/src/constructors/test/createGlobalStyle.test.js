@@ -30,7 +30,9 @@ function setup() {
   return {
     container,
     render(comp) {
-      ReactDOM.render(comp, container);
+      act(() => {
+        ReactDOM.render(comp, container);
+      });
     },
     renderToString(comp) {
       return ReactDOMServer.renderToString(comp);
@@ -59,15 +61,22 @@ describe(`createGlobalStyle`, () => {
   });
 
   it(`injects global <style> when rendered to string`, () => {
+    const documentSpy = jest.spyOn(window, 'document', 'get');
+    documentSpy.mockImplementation(() => undefined);
+
     const sheet = new ServerStyleSheet();
-    const Component = createGlobalStyle`[data-test-inject]{color:red;} `;
-    const html = context.renderToString(sheet.collectStyles(<Component />));
+    try {
+      const Component = createGlobalStyle`[data-test-inject]{color:red;} `;
+      const html = context.renderToString(sheet.collectStyles(<Component />));
+      expect(html).toBe('');
+    } finally {
+      documentSpy.mockRestore();
+    }
 
     const container = document.createElement('div');
     container.innerHTML = sheet.getStyleTags();
     const style = container.querySelector('style');
 
-    expect(html).toBe('');
     expect(stripWhitespace(stripComments(style.textContent))).toMatchInlineSnapshot(
       `"[data-test-inject]{ color:red; } data-styled.g1[id=\\"sc-global-a1\\"]{ content:\\"sc-global-a1,\\"} "`
     );
@@ -142,7 +151,9 @@ describe(`createGlobalStyle`, () => {
     render(<App />);
     expectCSSMatches(`div{color:grey;} `);
 
-    update({ color: 'red' });
+    act(() => {
+      update({ color: 'red' });
+    });
     expectCSSMatches(`div{color:red;} `);
   });
 
@@ -217,18 +228,21 @@ describe(`createGlobalStyle`, () => {
       }
     }
 
-    const renderer = ReactTestRenderer.create(<Comp insert />);
+    let renderer;
 
-    act(() => {
-      expect(getCSS(document).trim()).toContain(`[data-test-remove]{color:grey;}`);
-      expect(getCSS(document).trim()).not.toContain(`[data-test-keep]{color:blue;}`);
-      renderer.update(<Comp insert={false} />);
-
-      act(() => {
-        expect(getCSS(document).trim()).not.toContain(`[data-test-remove]{color:grey;}`);
-        expect(getCSS(document).trim()).toContain(`[data-test-keep]{color:blue;}`);
-      });
+    ReactTestRenderer.act(() => {
+      renderer = ReactTestRenderer.create(<Comp insert />);
     });
+
+    expect(getCSS(document).trim()).toContain(`[data-test-remove]{color:grey;}`);
+    expect(getCSS(document).trim()).not.toContain(`[data-test-keep]{color:blue;}`);
+
+    ReactTestRenderer.act(() => {
+      renderer.update(<Comp insert={false} />);
+    });
+
+    expect(getCSS(document).trim()).not.toContain(`[data-test-remove]{color:grey;}`);
+    expect(getCSS(document).trim()).toContain(`[data-test-keep]{color:blue;}`);
   });
 
   it(`removes styling injected for multiple <GlobalStyle> components correctly`, () => {
@@ -398,7 +412,9 @@ describe(`createGlobalStyle`, () => {
       }
     }
 
-    ReactDOM.render(<Comp />, container);
+    act(() => {
+      ReactDOM.render(<Comp />, container);
+    });
 
     // Check styles
     const style = styleContainer.firstChild;
@@ -416,5 +432,12 @@ describe(`createGlobalStyle`, () => {
 
     // Reset DISABLE_SPEEDY flag
     constants.DISABLE_SPEEDY = flag;
+  });
+
+  it(`doesn't duplicate global styles when rendered inside React.StrictMode component`, () => {
+    const { render } = context;
+    const Component = createGlobalStyle`[data-test-inject]{color:red;} `;
+    render(<React.StrictMode><Component /></React.StrictMode>);
+    expectCSSMatches(`[data-test-inject]{color:red;} `);
   });
 });
