@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 import { Text, View, Dimensions } from 'react-native';
 import React from 'react';
-import TestRenderer from 'react-test-renderer';
+import TestRenderer, { act } from 'react-test-renderer';
 
 import styled, { ThemeProvider } from '../index';
 
@@ -572,5 +572,47 @@ Object {
       expect(view.props.style).toEqual([{ fontSize: 16*2, width: 16*2*10 }]);
       expect(text.props.style).toEqual([{ fontSize: 16*4, width: 16*4*10 }]);
     });
+    it.only('should handle window resizing', async () => {
+      const Comp = styled(View)`
+        width: 10vw;
+        padding: 10vw 10vw;
+        border: 10vw solid black;
+      `;
+
+      const { width, height } = Dimensions.get('window')
+      const vw = width / 10
+
+      // Mock Dimensions object to emulate a resize
+      const listeners = []
+      const oldDimensions = {...Dimensions}
+      Dimensions.addEventListener = (type, listener) => console.log('added') || type==='change' && listeners.push(listener)
+      Dimensions.removeEventListener = (type, listener) => console.log('removed') || type==='change' && listeners.splice(listeners.indexOf(listener), 1)
+      Dimensions.get = () => ({ width, height })
+
+      // Check that the new Dimension object is working as expected
+      const wrapper = TestRenderer.create(<Comp />);
+      const view = wrapper.root.findByType('View');
+      expect(view.props.style).toEqual([{
+        width: vw,
+        paddingTop: vw, paddingBottom: vw, paddingLeft: vw, paddingRight: vw,
+        borderColor: 'black', borderStyle: 'solid', borderWidth: vw
+      }]);
+      await act(async () => {})// We wait for the useEffect to happen
+      expect(listeners.length).toBe(1);// Ensure that the resizeListener got added
+
+      // Emulate a resize
+      Dimensions.get = () => ({ width: 200, height })
+      listeners.forEach(listener => listener())
+      // Check that resizing the component works as espected
+      const updatedView = wrapper.root.findByType('View');
+      expect(updatedView.props.style).toEqual([{
+        width: 20,
+        paddingTop: 20, paddingBottom: 20, paddingLeft: 20, paddingRight: 20,
+        borderColor: 'black', borderStyle: 'solid', borderWidth: 20
+      }]);
+
+      // restore original Dimensions object
+      Object.assign(Dimensions, oldDimensions)
+    })
   })
 });

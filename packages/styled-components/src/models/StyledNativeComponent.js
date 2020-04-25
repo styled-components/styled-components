@@ -24,11 +24,14 @@ const validAttr = () => true;
 /** HOC that will apply the screen size to the styles defined with vmin, vmax, vw, vh units */
 const withScreenSize = Comp => ({vstyles = {}, generatedStyles = {}, ...props}) => {
   const [ size, setSize ] = React.useState(Dimensions.get('window'))
-  const sizeListener = React.useCallback(() => setSize(Dimensions.get('window')), [])
   React.useEffect(() => {
+    const sizeListener = () => {
+      const { width, height } = Dimensions.get('window')
+      setSize({ width, height })
+    }
     Dimensions.addEventListener('change', sizeListener)
     return () => Dimensions.removeEventListener('change', sizeListener)
-  }, [])
+  }, [setSize])
   const { vmin = [], vmax = [], vw = [], vh = [] } = vstyles
   const styles = {...generatedStyles}
   const { width, height } = size
