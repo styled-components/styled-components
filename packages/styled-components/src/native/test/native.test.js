@@ -572,7 +572,7 @@ Object {
       expect(view.props.style).toEqual([{ fontSize: 16*2, width: 16*2*10 }]);
       expect(text.props.style).toEqual([{ fontSize: 16*4, width: 16*4*10 }]);
     });
-    it.only('should handle window resizing', async () => {
+    it('should handle window resizing', async () => {
       const Comp = styled(View)`
         width: 10vw;
         padding: 10vw 10vw;
@@ -610,6 +610,10 @@ Object {
         paddingTop: 20, paddingBottom: 20, paddingLeft: 20, paddingRight: 20,
         borderColor: 'black', borderStyle: 'solid', borderWidth: 20
       }]);
+
+      // Ensure that the listener has been removed
+      wrapper.unmount()
+      expect(listeners.length).toBe(0)
 
       // restore original Dimensions object
       Object.assign(Dimensions, oldDimensions)
