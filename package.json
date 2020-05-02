@@ -39,6 +39,7 @@
     "babel-plugin-macros": "^2.5.1",
     "babel-plugin-tester": "^6.0.1",
     "babel-plugin-transform-react-remove-prop-types": "0.4.24",
+    "bundlesize2": "^0.0.20",
     "cross-env": "^5.1.3",
     "eslint": "^5.16.0",
     "eslint-config-airbnb": "^17.1.0",
