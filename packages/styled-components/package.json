@@ -26,7 +26,7 @@
     "test:integration": "jest -c ../../scripts/jest/config.integration.js --runInBand --forceExit",
     "format": "eslint ./**/*.js --fix",
     "lint": "eslint src",
-    "lint:size": "bundlesize",
+    "lint:size": "npx bundlesize2",
     "prettier": "prettier */**/*.js --write",
     "prepublishOnly": "npm run build",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js"
