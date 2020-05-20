@@ -18,6 +18,8 @@ const reactNative = require('react-native');
 const InlineStyle = _InlineStyle(reactNative.StyleSheet);
 const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
 const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag);
+const StyledNativeMemoComponent = _StyledNativeComponent(InlineStyle, true);
+const styledMemo = (tag: Target) => constructWithOptions(StyledNativeMemoComponent, tag);
 
 /* React native lazy-requires each of these modules for some reason, so let's
  *  assume it's for a good reason and not eagerly load them all */
@@ -41,5 +43,5 @@ aliases.split(/\s+/m).forEach(alias =>
   })
 );
 
-export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
+export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme, styledMemo };
 export default styled;

@@ -1,6 +1,8 @@
 // @flow
 import React, { createElement, Component } from 'react';
 import hoist from 'hoist-non-react-statics';
+import memoizeOne from 'memoize-one';
+import isEqual from 'react-fast-compare';
 import merge from '../utils/mixinDeep';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
@@ -35,6 +37,7 @@ class StyledNativeComponent extends Component<*, *> {
             forwardedAs,
             forwardedRef,
             style = [],
+            __scIsMemo,
             ...props
           } = this.props;
 
@@ -63,7 +66,7 @@ class StyledNativeComponent extends Component<*, *> {
             }
           }
 
-          propsForElement.style = [generatedStyles].concat(style);
+          propsForElement.style = __scIsMemo ? this.getStyles(generatedStyles, style) : this.getMemoStyles(generatedStyles, style);
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
           if (forwardedAs) propsForElement.as = forwardedAs;
@@ -114,6 +117,12 @@ class StyledNativeComponent extends Component<*, *> {
     return inlineStyle.generateStyleObject(executionContext);
   }
 
+  getStyles(generatedStyles, style) {
+    return [generatedStyles].concat(style);
+  }
+
+  getMemoStyles = memoizeOne((generatedStyles, style) => [generatedStyles].concat(style), isEqual);
+
   setNativeProps(nativeProps: Object) {
     if (this.root !== undefined) {
       // $FlowFixMe
@@ -127,7 +136,7 @@ class StyledNativeComponent extends Component<*, *> {
   }
 }
 
-export default (InlineStyle: Function) => {
+export default (InlineStyle: Function, isMemo: boolean = false) => {
   const createStyledNativeComponent = (target: Target, options: Object, rules: RuleSet) => {
     const {
       attrs = EMPTY_ARRAY,
@@ -142,6 +151,7 @@ export default (InlineStyle: Function) => {
     const WrappedStyledNativeComponent = React.forwardRef((props, ref) => (
       <ParentComponent
         {...props}
+        __scIsMemo={isMemo}
         forwardedComponent={WrappedStyledNativeComponent}
         forwardedRef={ref}
       />

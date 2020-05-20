@@ -69,6 +69,8 @@
     "babel-plugin-styled-components": ">= 1",
     "css-to-react-native": "^3.0.0",
     "hoist-non-react-statics": "^3.0.0",
+    "memoize-one": "^5.1.1",
+    "react-fast-compare": "^3.1.1",
     "shallowequal": "^1.1.0",
     "supports-color": "^5.5.0"
   },
