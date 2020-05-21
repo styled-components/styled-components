@@ -11,6 +11,7 @@ import isFunction from '../utils/isFunction';
 import isTag from '../utils/isTag';
 import isStyledComponent from '../utils/isStyledComponent';
 import { ThemeConsumer } from './ThemeProvider';
+import isElementTypeMemo from '../utils/isElementTypeMemo';
 
 import type { Theme } from './ThemeProvider';
 import type { Attrs, RuleSet, Target } from '../types';
@@ -37,7 +38,6 @@ class StyledNativeComponent extends Component<*, *> {
             forwardedAs,
             forwardedRef,
             style = [],
-            __scIsMemo,
             ...props
           } = this.props;
 
@@ -66,7 +66,10 @@ class StyledNativeComponent extends Component<*, *> {
             }
           }
 
-          propsForElement.style = __scIsMemo ? this.getStyles(generatedStyles, style) : this.getMemoStyles(generatedStyles, style);
+          const isTargetMemo = !isTargetTag && isElementTypeMemo(elementToBeRendered);
+          propsForElement.style = isTargetMemo
+            ? this.getMemoStyles(generatedStyles, style)
+            : this.getStyles(generatedStyles, style);
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
           if (forwardedAs) propsForElement.as = forwardedAs;
@@ -136,7 +139,7 @@ class StyledNativeComponent extends Component<*, *> {
   }
 }
 
-export default (InlineStyle: Function, isMemo: boolean = false) => {
+export default (InlineStyle: Function) => {
   const createStyledNativeComponent = (target: Target, options: Object, rules: RuleSet) => {
     const {
       attrs = EMPTY_ARRAY,
@@ -151,7 +154,6 @@ export default (InlineStyle: Function, isMemo: boolean = false) => {
     const WrappedStyledNativeComponent = React.forwardRef((props, ref) => (
       <ParentComponent
         {...props}
-        __scIsMemo={isMemo}
         forwardedComponent={WrappedStyledNativeComponent}
         forwardedRef={ref}
       />

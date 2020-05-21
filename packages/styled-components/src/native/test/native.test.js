@@ -169,6 +169,41 @@ Object {
     expect(wrapper.root.findByType('Text')).not.toBeUndefined();
   });
 
+  describe('style prop reference stability on custom components', () => {
+    it('should not optimize non-React.memo components', () => {
+      const styleCache = [];
+      const CustomComponent = ({ style }) => {
+        styleCache.push(style);
+        return null;
+      };
+      const Comp = styled(CustomComponent)`
+        margin: 16px;
+      `;
+
+      const wrapper = TestRenderer.create(<Comp />);
+      wrapper.update(<Comp />);
+
+      expect(styleCache.length).toBe(2);
+      expect(styleCache[0]).not.toBe(styleCache[1]);
+    });
+
+    it('should not cause React.memo(CustomComponent) to re-render', () => {
+      const styleCache = [];
+      const CustomComponent = React.memo(({ style }) => {
+        styleCache.push(style);
+        return null;
+      });
+      const Comp = styled(CustomComponent)`
+        margin: 16px;
+      `;
+
+      const wrapper = TestRenderer.create(<Comp />);
+      wrapper.update(<Comp />);
+
+      expect(styleCache.length).toBe(1);
+    });
+  });
+
   describe('attrs', () => {
     beforeEach(() => jest.spyOn(console, 'warn').mockImplementation(() => {}));
 
