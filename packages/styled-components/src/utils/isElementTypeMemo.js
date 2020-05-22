@@ -6,7 +6,7 @@ const hasSymbol = typeof Symbol === 'function' && Symbol.for;
 const TypeOfReactMemo = hasSymbol
   ? Symbol.for('react.memo')
   : // $FlowFixMe — accessing impl detail (see https://github.com/facebook/react/issues/12882#issuecomment-440227651)
-    typeof React.memo === 'function' && React.memo((props: any) => null)['$$typeof'];
+    typeof React.memo === 'function' && React.memo(() => null).$$typeof;
 
 /**
  * Determines whether an element type is the result of `React.memo`.
@@ -14,5 +14,5 @@ const TypeOfReactMemo = hasSymbol
  * This fn is in lieu of the currently unmerged https://github.com/facebook/react/pull/15349
  */
 export default function isElementTypeMemo(test: any): boolean %checks {
-  return TypeOfReactMemo && test && test['$$typeof'] === TypeOfReactMemo;
+  return TypeOfReactMemo && test && test.$$typeof === TypeOfReactMemo;
 }
