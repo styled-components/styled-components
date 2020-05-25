@@ -6,7 +6,12 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Implement `shouldForwardProp` API for native and primitive platforms (see [#3093](https://github.com/styled-components/styled-components/pull/3107))
+## [v5.1.1] - 2020-04-07
+
+### New Functionality
+
+- Implement `shouldForwardProp` API for native and primitive platforms, which was previously missing in [v5.1.0] (see [#3093](https://github.com/styled-components/styled-components/pull/3107))
+  This has been released under a patch bump instead of a minor, since it's only been missing from Native-support.
 
 ### Bugfixes
 
@@ -1123,6 +1128,7 @@ _v3.3.1 was skipped due to a bad deploy._
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
 [unreleased]: https://github.com/styled-components/styled-components/compare/v5.1.0...master
+[v5.1.1]: https://github.com/styled-components/styled-components/compare/v5.1.0...v5.1.1
 [v5.1.0]: https://github.com/styled-components/styled-components/compare/v5.0.1...v5.1.0
 [v5.0.1]: https://github.com/styled-components/styled-components/compare/v5.0.0...v5.0.1
 [v5.0.0]: https://github.com/styled-components/styled-components/compare/v4.4.1...v5.0.0
