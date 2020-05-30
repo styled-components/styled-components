@@ -40,7 +40,7 @@ export default function StyleSheetManager(props: Props) {
       // eslint-disable-next-line prefer-destructuring
       sheet = props.sheet;
     } else if (props.target) {
-      sheet = sheet.reconstructWithOptions({ target: props.target });
+      sheet = sheet.reconstructWithOptions({ target: props.target }, false);
     }
 
     if (props.disableCSSOMInjection) {
