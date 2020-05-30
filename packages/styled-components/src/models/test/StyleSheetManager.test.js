@@ -165,6 +165,7 @@ describe('StyleSheetManager', () => {
           // Render two iframes. each iframe should have the styles for the child injected into their head
           render(
             <div>
+              <Title />
               <Frame>
                 <FrameContextConsumer>
                   {({ document }) => (
