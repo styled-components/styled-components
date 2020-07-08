@@ -34,6 +34,18 @@ export class CSSOMTag implements Tag {
 
   insertRule(index: number, rule: string): boolean {
     try {
+
+       /**
+       * There is an error when using qiankun to build front-end microservices, 
+       * which occurs when switching sub-applications, 
+       * resulting in the loss of css styles of newly added styled-components components on some pages.
+       * this.element.sheet.cssRules and this.sheet.cssRules are not the same pointer application
+       * 
+       */
+      if (this.element.sheet.cssRules !== this.sheet.cssRules) {
+        this.element.sheet.insertRule(rule, index);
+      }
+
       this.sheet.insertRule(rule, index);
       this.length++;
       return true;
