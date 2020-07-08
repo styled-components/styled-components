@@ -14,6 +14,8 @@ import type { Interpolation } from '../types';
 
 type GlobalStyleComponentPropsType = Object;
 
+const seen = new Set();
+
 export default function createGlobalStyle(
   strings: Array<string>,
   ...interpolations: Array<Interpolation>
@@ -24,6 +26,11 @@ export default function createGlobalStyle(
 
   if (process.env.NODE_ENV !== 'production') {
     checkDynamicCreation(styledComponentId);
+    if (seen.has(styledComponentId)) {
+      // eslint-disable-next-line no-console
+      console.error('The global style component id should be unique, try to add more information for your rules.')
+    }
+    seen.add(styledComponentId);
   }
 
   function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
