@@ -42,7 +42,7 @@ export class CSSOMTag implements Tag {
        * this.element.sheet.cssRules and this.sheet.cssRules are not the same pointer application
        * 
        */
-      if (this.element.sheet.cssRules !== this.sheet.cssRules) {
+      if (this.element.sheet !== this.sheet) {
         this.element.sheet.insertRule(rule, index);
       }
 
