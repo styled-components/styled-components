@@ -94,5 +94,8 @@
     "hooks": {
       "pre-commit": "yarn flow && lint-staged"
     }
+  },
+  "engines": {
+    "node": ">=8"
   }
 }
