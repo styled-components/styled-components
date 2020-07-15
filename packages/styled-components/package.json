@@ -114,5 +114,8 @@
   "funding": {
     "type": "opencollective",
     "url": "https://opencollective.com/styled-components"
+  },
+  "engines": {
+    "node": ">=8"
   }
 }
