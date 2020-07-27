@@ -165,7 +165,6 @@ describe('StyleSheetManager', () => {
           // Render two iframes. each iframe should have the styles for the child injected into their head
           render(
             <div>
-              <Title />
               <Frame>
                 <FrameContextConsumer>
                   {({ document }) => (
@@ -194,6 +193,62 @@ describe('StyleSheetManager', () => {
       });
     });
     await Promise.all([promiseA, promiseB]);
+    div.parentElement.removeChild(div);
+  });
+
+  // https://github.com/styled-components/styled-components/issues/2973
+  it('should inject common styles into both the main document and a child frame', async () => {
+    const CommonTitle = styled.h1`
+      color: palevioletred;
+    `;
+
+    // Injects the stylesheet into the document available via context
+    const SheetInjector = ({ children, target }) => (
+      <StyleSheetManager target={target}>{children}</StyleSheetManager>
+    );
+
+    class Main extends React.Component {
+      componentDidMount() {
+        const styles = this.props.document.querySelector('style').textContent;
+        expect(styles.includes('palevioletred')).toEqual(true);
+      }
+
+      render() {
+        return this.props.children;
+      }
+    }
+
+    class Child extends React.Component {
+      componentDidMount() {
+        const styles = this.props.document.querySelector('style').textContent;
+        expect(styles.includes(`palevioletred`)).toEqual(true);
+      }
+
+      render() {
+        return <CommonTitle />;
+      }
+    }
+
+    const div = document.body.appendChild(document.createElement('div'));
+
+    render(
+      <Main document={document}>
+        <div>
+          <CommonTitle />
+          <Frame>
+            <FrameContextConsumer>
+              {({ document }) => (
+                <SheetInjector target={document.head}>
+                  <Child document={document} />
+                </SheetInjector>
+              )}
+            </FrameContextConsumer>
+          </Frame>
+        </div>
+      </Main>,
+      div
+    );
+
     div.parentElement.removeChild(div);
   });
 
