@@ -27,6 +27,7 @@ script:
   - yarn flow
   - yarn lint
   - yarn build
+  - bash <(curl -s https://codecov.io/bash)
 notifications:
   email:
     on_failure: change
