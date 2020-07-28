@@ -15,7 +15,6 @@ import generateDisplayName from '../utils/generateDisplayName';
 import getComponentName from '../utils/getComponentName';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
-import isTag from '../utils/isTag';
 import merge from '../utils/mixinDeep';
 import { ThemeContext } from './ThemeProvider';
 
@@ -103,9 +102,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
 
   const elementToBeCreated: Target = attrs.$as || props.$as || attrs.as || props.as || target;
 
-  const isTargetTag = isTag(elementToBeCreated);
   const computedProps = attrs !== props ? { ...props, ...attrs } : props;
-  const propFilterFn = shouldForwardProp || (isTargetTag && validAttr);
   const propsForElement = {};
 
   // eslint-disable-next-line guard-for-in
@@ -113,8 +110,7 @@ function useStyledComponentImpl<Config: {}, Instance>(
     if (key[0] === '$' || key === 'as') continue;
     else if (key === 'forwardedAs') {
       propsForElement.as = computedProps[key];
-    } else if (!propFilterFn || propFilterFn(key, validAttr)) {
-      // Don't pass through non HTML tags through to HTML elements
+    } else if (!shouldForwardProp || shouldForwardProp(key, validAttr)) {
       propsForElement[key] = computedProps[key];
     }
   }
@@ -129,7 +125,6 @@ function useStyledComponentImpl<Config: {}, Instance>(
 export default (InlineStyle: Function) => {
   const createStyledNativeComponent = (target: Target, options: Object, rules: RuleSet) => {
     const isTargetStyledComp = isStyledComponent(target);
-    const isCompositeComponent = !isTag(target);
 
     const {
       displayName = generateDisplayName(target),
@@ -145,9 +140,7 @@ export default (InlineStyle: Function) => {
     // fold the underlying StyledComponent attrs up (implicit extend)
     const finalAttrs =
       // $FlowFixMe
-      isTargetStyledComp && target.attrs
-        ? Array.prototype.concat(target.attrs, attrs).filter(Boolean)
-        : attrs;
+      isTargetStyledComp && target.attrs ? target.attrs.concat(attrs).filter(Boolean) : attrs;
 
     // eslint-disable-next-line prefer-destructuring
     let shouldForwardProp = options.shouldForwardProp;
@@ -191,7 +184,7 @@ export default (InlineStyle: Function) => {
     // purposes; this is especially important with usage of the css prop
     WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
       ? // $FlowFixMe
-        Array.prototype.concat(target.foldedComponentIds, target.styledComponentId)
+        target.foldedComponentIds.concat(target.styledComponentId)
       : EMPTY_ARRAY;
 
     WrappedStyledComponent.styledComponentId = styledComponentId;
@@ -207,8 +200,7 @@ export default (InlineStyle: Function) => {
       const { componentId: previousComponentId, ...optionsToCopy } = options;
 
       const newComponentId =
-        previousComponentId &&
-        `${previousComponentId}-${isTag(tag) ? tag : escape(getComponentName(tag))}`;
+        previousComponentId && `${previousComponentId}-${escape(getComponentName(tag))}`;
 
       const newOptions = {
         ...optionsToCopy,
@@ -234,20 +226,18 @@ export default (InlineStyle: Function) => {
     // $FlowFixMe
     WrappedStyledComponent.toString = () => `.${WrappedStyledComponent.styledComponentId}`;
 
-    if (isCompositeComponent) {
-      hoist(WrappedStyledComponent, (target: any), {
-        // all SC-specific things should not be hoisted
-        attrs: true,
-        inlineStyle: true,
-        displayName: true,
-        foldedComponentIds: true,
-        shouldForwardProp: true,
-        self: true,
-        styledComponentId: true,
-        target: true,
-        withComponent: true,
-      });
-    }
+    hoist(WrappedStyledComponent, (target: any), {
+      // all SC-specific things should not be hoisted
+      attrs: true,
+      inlineStyle: true,
+      displayName: true,
+      foldedComponentIds: true,
+      shouldForwardProp: true,
+      self: true,
+      styledComponentId: true,
+      target: true,
+      withComponent: true,
+    });
 
     return WrappedStyledComponent;
   };
