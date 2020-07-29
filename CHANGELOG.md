@@ -6,6 +6,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+### Bugfixes
+
+- Make sure `StyleSheetManager` renders all styles in iframe / child windows (see [#3159](https://github.com/styled-components/styled-components/pull/3159)) thanks @eramdam!
+
 ## [v5.1.1] - 2020-04-07
 
 ### New Functionality

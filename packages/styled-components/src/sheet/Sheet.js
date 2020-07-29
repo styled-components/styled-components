@@ -57,8 +57,12 @@ export default class StyleSheet implements Sheet {
     }
   }
 
-  reconstructWithOptions(options: SheetConstructorArgs) {
-    return new StyleSheet({ ...this.options, ...options }, this.gs, this.names);
+  reconstructWithOptions(options: SheetConstructorArgs, withNames?: boolean = true) {
+    return new StyleSheet(
+      { ...this.options, ...options },
+      this.gs,
+      (withNames && this.names) || undefined
+    );
   }
 
   allocateGSInstance(id: string) {
