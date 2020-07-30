@@ -1,12 +1,6 @@
 // @flow
 import hoist from 'hoist-non-react-statics';
-import React, {
-  createElement,
-  useContext,
-  useDebugValue,
-  type AbstractComponent,
-  type Ref,
-} from 'react';
+import React, { createElement, useContext, type AbstractComponent, type Ref } from 'react';
 import type { Attrs, RuleSet, Target } from '../types';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
@@ -59,7 +53,6 @@ interface StyledComponentWrapperProperties {
   attrs: Attrs;
   inlineStyle: Function;
   displayName: string;
-  foldedComponentIds: Array<string>;
   target: Target;
   shouldForwardProp: ?(prop: string, isValidAttr: (prop: string) => boolean) => boolean;
   styledComponentId: string;
@@ -83,11 +76,8 @@ function useStyledComponentImpl<Config: {}, Instance>(
     defaultProps,
     // $FlowFixMe
     shouldForwardProp,
-    styledComponentId,
     target,
   } = forwardedComponent;
-
-  useDebugValue(styledComponentId);
 
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
@@ -180,13 +170,6 @@ export default (InlineStyle: Function) => {
     WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
 
-    // this static is used to preserve the cascade of static classes for component selector
-    // purposes; this is especially important with usage of the css prop
-    WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
-      ? // $FlowFixMe
-        target.foldedComponentIds.concat(target.styledComponentId)
-      : EMPTY_ARRAY;
-
     WrappedStyledComponent.styledComponentId = styledComponentId;
 
     // fold the underlying StyledComponent target up since we folded the styles
@@ -231,7 +214,6 @@ export default (InlineStyle: Function) => {
       attrs: true,
       inlineStyle: true,
       displayName: true,
-      foldedComponentIds: true,
       shouldForwardProp: true,
       self: true,
       styledComponentId: true,
