@@ -1,5 +1,5 @@
 // @flow
-import React, { useContext, useEffect, useRef } from 'react';
+import React, { useContext, useEffect, useLayoutEffect, useRef } from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
@@ -13,6 +13,8 @@ import css from './css';
 import type { Interpolation } from '../types';
 
 type GlobalStyleComponentPropsType = Object;
+
+declare var __SERVER__: boolean;
 
 export default function createGlobalStyle(
   strings: Array<string>,
@@ -49,7 +51,7 @@ export default function createGlobalStyle(
 
     const instanceRef = useRef(null);
 
-    function renderStyles() {
+    function renderGlobalStyles() {
       if (instanceRef.current === null) {
         instanceRef.current = styleSheet.allocateGSInstance(styledComponentId);
       }
@@ -68,16 +70,13 @@ export default function createGlobalStyle(
       }
     }
 
-    if (typeof window !== 'undefined' && window.document && window.document.createElement) {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      useEffect(renderStyles);
-    } else {
-      // Server-side rendering
-      renderStyles();
+    useLayoutEffect(renderGlobalStyles);
+    if (__SERVER__) {
+      renderGlobalStyles();
     }
 
     useEffect(() => () => {
-      if (instanceRef.current !== null) {
+      if (instanceRef.current) {
         globalStyle.removeStyles(instanceRef.current, styleSheet);
       }
     }, EMPTY_ARRAY);
