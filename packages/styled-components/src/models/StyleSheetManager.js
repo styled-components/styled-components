@@ -37,8 +37,7 @@ export default function StyleSheetManager(props: Props) {
     let sheet = contextStyleSheet;
 
     if (props.sheet) {
-      // eslint-disable-next-line prefer-destructuring
-      sheet = props.sheet;
+      sheet = props.sheet.reconstructWithOptions({});
     } else if (props.target) {
       sheet = sheet.reconstructWithOptions({ target: props.target }, false);
     }
