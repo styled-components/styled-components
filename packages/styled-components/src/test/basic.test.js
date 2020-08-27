@@ -1,6 +1,6 @@
 // @flow
 /* eslint-disable no-console */
-import hoist from 'hoist-non-react-statics';
+import hoistStatics from 'hoist-non-react-statics';
 import React, { Component, StrictMode } from 'react';
 import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
