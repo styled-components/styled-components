@@ -92,7 +92,8 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "yarn flow && lint-staged"
+      "pre-commit": "lint-staged",
+      "pre-push": "yarn flow"
     }
   },
   "engines": {
