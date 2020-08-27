@@ -30,11 +30,7 @@ export default function createGlobalStyle(
     const styleSheet = useStyleSheet();
     const stylis = useStylis();
     const theme = useContext(ThemeContext);
-    const instanceRef = useRef(null);
-
-    if (instanceRef.current === null) {
-      instanceRef.current = styleSheet.allocateGSInstance(styledComponentId);
-    }
+    const instanceRef = useRef(styleSheet.allocateGSInstance(styledComponentId));
 
     const instance = instanceRef.current;
 

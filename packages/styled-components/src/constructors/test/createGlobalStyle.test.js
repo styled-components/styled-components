@@ -16,7 +16,7 @@ import {
 import ThemeProvider from '../../models/ThemeProvider';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
 import StyleSheetManager from '../../models/StyleSheetManager';
-
+import StyleSheet from '../../sheet';
 import createGlobalStyle from '../createGlobalStyle';
 import keyframes from '../keyframes';
 import * as constants from '../../constants';
@@ -144,6 +144,49 @@ describe(`createGlobalStyle`, () => {
 
     update({ color: 'red' });
     expectCSSMatches(`div{color:red;} `);
+  });
+
+  it('should work in StrictMode without warnings', () => {
+    const { render } = context;
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const Comp = createGlobalStyle`
+      html {
+        color: red;
+      }
+    `;
+
+    act(() => {
+      render(
+        <React.StrictMode>
+          <Comp />
+        </React.StrictMode>
+      );
+    });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it.skip('should not inject twice in StrictMode', () => {
+    jest.spyOn(StyleSheet, 'registerId');
+
+    const { render } = context;
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const Comp = createGlobalStyle`
+      html {
+        color: red;
+      }
+    `;
+
+    act(() => {
+      render(
+        <React.StrictMode>
+          <Comp />
+        </React.StrictMode>
+      );
+    });
+
+    expect(spy).not.toHaveBeenCalled();
+    expect(StyleSheet.registerId).toHaveBeenCalledTimes(1);
   });
 
   it(`renders to StyleSheetManager.target`, () => {
@@ -330,7 +373,7 @@ describe(`createGlobalStyle`, () => {
 
     const { render } = context;
     const Component = createGlobalStyle`
-      @import url("something.css")
+      @import url("something.css");
     `;
     render(<Component />);
 
