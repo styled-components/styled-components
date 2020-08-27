@@ -27,5 +27,8 @@
     "react-dom": "^16.8.6",
     "react-is": "^16.8.6",
     "react-live": "^1.11.0"
+  },
+  "engines": {
+    "node": ">=8"
   }
 }
