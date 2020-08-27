@@ -1,5 +1,4 @@
 node_modules
-benchmarks/**/*.js
 dist/**/*.js
 src/decls/**/*.js
 src/vendor/**/*.js
@@ -8,4 +7,3 @@ src/test/utils.js
 example/
 flow-typed
 lib/
-sandbox/**/*.js
