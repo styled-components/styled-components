@@ -1,14 +1,12 @@
 {
   "parser": "babel-eslint",
-  "extends": ["airbnb", "prettier"],
-  "plugins": ["prettier", "react-hooks"],
+  "extends": ["eslint:recommended", "plugin:import/errors", "plugin:react/recommended", "prettier"],
+  "plugins": ["flowtype", "prettier", "react-hooks"],
   "rules": {
     "react-hooks/rules-of-hooks": "error",
     "class-methods-use-this": 0,
     "curly": [2, "multi-line"],
-    "import/no-cycle": "error",
-    "import/no-extraneous-dependencies": 0,
-    "import/prefer-default-export": 0,
+    "import/namespace": [2, {"allowComputed": true}],
     "no-confusing-arrow": 0,
     "no-continue": 0,
     "no-duplicate-imports": 0,
@@ -36,11 +34,21 @@
     "no-multi-assign": 0
   },
   "parserOptions": {
-    "ecmaVersion": 7,
     "sourceType": "module",
     "ecmaFeatures": {
       "impliedStrict": true,
       "jsx": true
+    }
+  },
+  "env": {
+    "browser": true,
+    "es6": true,
+    "jest": true,
+    "node": true
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
     }
   }
 }
