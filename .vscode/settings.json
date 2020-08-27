@@ -1,0 +1,4 @@
+{
+  "javascript.validate.enable": false,
+  "prettier.useEditorConfig": true
+}
