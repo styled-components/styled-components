@@ -6,9 +6,13 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-### Bugfixes
-
 - Make sure `StyleSheetManager` renders all styles in iframe / child windows (see [#3159](https://github.com/styled-components/styled-components/pull/3159)) thanks @eramdam!
+
+- Rework how components self-reference in extension scenarios (see [#3236](https://github.com/styled-components/styled-components/pull/3236)); should fix a bunch of subtle bugs around patterns like `& + &`
+
+  - we also no longer emit dynamic classNames for empty rulesets, so some className churn may occur in snapshots
+
+- Add "engines" to package.json (currently set to Node 10, the oldest supported LTS distribution)
 
 ## [v5.1.1] - 2020-04-07
 
