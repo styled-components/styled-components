@@ -225,12 +225,9 @@ export default function createStyledComponent(
   }
 
   const componentStyle = new ComponentStyle(
-    isTargetStyledComp
-      ? // fold the underlying StyledComponent rules up (implicit extend)
-        // $FlowFixMe
-        target.componentStyle.rules.concat(rules)
-      : rules,
-    styledComponentId
+    rules,
+    styledComponentId,
+    isTargetStyledComp ? ((target: Object).componentStyle: ComponentStyle) : undefined
   );
 
   /**

@@ -37,6 +37,37 @@ describe('extending', () => {
     `);
   });
 
+  it('folded components should not duplicate styles', () => {
+    const Inner = styled.div`
+      color: blue;
+
+      & + & {
+        color: green;
+      }
+    `;
+
+    const Outer = styled(Inner)`
+      padding: 1rem;
+    `;
+
+    TestRenderer.create(<Inner />);
+
+    const tree = TestRenderer.create(<Outer />);
+
+    expectCSSMatches(`
+      .c { color:blue; }
+      .sc-a + .sc-a { color:green; }
+      .d { padding:1rem; }
+    `);
+
+    // ensure both static classes are applied and dynamic classes are also present
+    expect(tree.toJSON()).toMatchInlineSnapshot(`
+      <div
+        className="sc-a sc-b c d"
+      />
+    `);
+  });
+
   describe('inheritance', () => {
     const setupParent = () => {
       const colors = {
@@ -99,13 +130,29 @@ describe('extending', () => {
         const Child = styled(Parent).attrs(() => ({ as: 'h2' }))``;
         const Grandson = styled(Child).attrs(() => ({ as: 'h3' }))``;
         addDefaultProps(Parent, Child, Grandson);
-        TestRenderer.create(<Parent />);
-        TestRenderer.create(<Child />);
-        TestRenderer.create(<Grandson color="primary" />);
+
+        expect(TestRenderer.create(<Parent />).toJSON()).toMatchInlineSnapshot(`
+          <h1
+            className="sc-a d"
+            color="primary"
+          />
+        `);
+        expect(TestRenderer.create(<Child />).toJSON()).toMatchInlineSnapshot(`
+          <h2
+            className="sc-a sc-b e"
+            color="secondary"
+          />
+        `);
+
+        expect(TestRenderer.create(<Grandson color="primary" />).toJSON()).toMatchInlineSnapshot(`
+          <h3
+            className="sc-a sc-b sc-c d"
+            color="primary"
+          />
+        `);
         expectCSSMatches(`
           .d{ position:relative; color:red; }
           .e{ position:relative; color:blue; }
-          .f{ position:relative; color:red; }
         `);
       });
     });

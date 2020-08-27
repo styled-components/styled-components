@@ -8,12 +8,13 @@ import StyleSheet from '../sheet';
 
 import type { RuleSet, Stringifier } from '../types';
 
-/*
- ComponentStyle is all the CSS-specific stuff, not
- the React-specific stuff.
+/**
+ * ComponentStyle is all the CSS-specific stuff, not the React-specific stuff.
  */
 export default class ComponentStyle {
   baseHash: number;
+
+  baseStyle: ?ComponentStyle;
 
   componentId: string;
 
@@ -23,12 +24,13 @@ export default class ComponentStyle {
 
   staticRulesId: string;
 
-  constructor(rules: RuleSet, componentId: string) {
+  constructor(rules: RuleSet, componentId: string, baseStyle?: ComponentStyle) {
     this.rules = rules;
     this.staticRulesId = '';
     this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules);
     this.componentId = componentId;
     this.baseHash = hash(componentId);
+    this.baseStyle = baseStyle;
 
     // NOTE: This registers the componentId, which ensures a consistent order
     // for this component's styles compared to others
@@ -43,24 +45,29 @@ export default class ComponentStyle {
   generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet, stylis: Stringifier) {
     const { componentId } = this;
 
+    const names = [];
+
+    if (this.baseStyle) {
+      names.push(this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis));
+    }
+
     // force dynamic classnames if user-supplied stylis plugins are in use
     if (this.isStatic && !stylis.hash) {
       if (this.staticRulesId && styleSheet.hasNameForId(componentId, this.staticRulesId)) {
-        return this.staticRulesId;
+        names.push(this.staticRulesId);
+      } else {
+        const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
+        const name = generateName(phash(this.baseHash, cssStatic.length) >>> 0);
+
+        if (!styleSheet.hasNameForId(componentId, name)) {
+          const cssStaticFormatted = stylis(cssStatic, `.${name}`, undefined, componentId);
+
+          styleSheet.insertRules(componentId, name, cssStaticFormatted);
+        }
+
+        names.push(name);
+        this.staticRulesId = name;
       }
-
-      const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
-      const name = generateName(phash(this.baseHash, cssStatic.length) >>> 0);
-
-      if (!styleSheet.hasNameForId(componentId, name)) {
-        const cssStaticFormatted = stylis(cssStatic, `.${name}`, undefined, componentId);
-
-        styleSheet.insertRules(componentId, name, cssStaticFormatted);
-      }
-
-      this.staticRulesId = name;
-
-      return name;
     } else {
       const { length } = this.rules;
       let dynamicHash = phash(this.baseHash, stylis.hash);
@@ -68,11 +75,12 @@ export default class ComponentStyle {
 
       for (let i = 0; i < length; i++) {
         const partRule = this.rules[i];
+
         if (typeof partRule === 'string') {
           css += partRule;
 
           if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule + i);
-        } else {
+        } else if (partRule) {
           const partChunk = flatten(partRule, executionContext, styleSheet);
           const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
           dynamicHash = phash(dynamicHash, partString + i);
@@ -80,14 +88,18 @@ export default class ComponentStyle {
         }
       }
 
-      const name = generateName(dynamicHash >>> 0);
+      if (css) {
+        const name = generateName(dynamicHash >>> 0);
 
-      if (!styleSheet.hasNameForId(componentId, name)) {
-        const cssFormatted = stylis(css, `.${name}`, undefined, componentId);
-        styleSheet.insertRules(componentId, name, cssFormatted);
+        if (!styleSheet.hasNameForId(componentId, name)) {
+          const cssFormatted = stylis(css, `.${name}`, undefined, componentId);
+          styleSheet.insertRules(componentId, name, cssFormatted);
+        }
+
+        names.push(name);
       }
-
-      return name;
     }
+
+    return names.join(' ');
   }
 }
