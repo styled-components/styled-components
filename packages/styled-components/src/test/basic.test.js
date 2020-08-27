@@ -212,7 +212,7 @@ describe('basic', () => {
       }
 
       const wrapper = TestRenderer.create(<Wrapper />);
-      expect(wrapper.root.findByType(InnerComponent).props.className).toBe('sc-a b test');
+      expect(wrapper.root.findByType(InnerComponent).props.className).toBe('sc-a test');
     });
 
     it('should pass the ref to the component', () => {

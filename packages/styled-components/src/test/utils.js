@@ -77,3 +77,17 @@ export const expectCSSMatches = (
     return css;
   }
 };
+
+export const getRenderedCSS = (
+  _expectation: string,
+  opts: { ignoreWhitespace: boolean } = { ignoreWhitespace: true }
+) => {
+  let css = getCSS(document);
+
+  if (opts.ignoreWhitespace) {
+    css = stripWhitespace(stripComments(css));
+  }
+
+  // make the individual lines easier to read
+  return css.replace(/} /g, '}\n');
+};

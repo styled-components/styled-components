@@ -3,7 +3,7 @@ import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
 import * as nonce from '../utils/nonce';
-import { resetStyled, expectCSSMatches } from './utils';
+import { resetStyled, expectCSSMatches, getRenderedCSS } from './utils';
 import { masterSheet } from '../models/StyleSheetManager';
 
 jest.mock('../utils/nonce');
@@ -91,29 +91,30 @@ describe('with styles', () => {
         <Comp color="red" />
       </React.Fragment>
     );
-    expectCSSMatches(`
-      .b{ background:red; color:white; }
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b{ background:red; color:white; }
       .b.b.b{ border:1px solid red; }
       .b[disabled]{ color:red; }
       .b[disabled] + .sc-a[disabled]{ margin-bottom:4px; }
       .b[disabled] > .sc-a[disabled]{ margin-top:4px; }
-      .b + .sc-a{ margin-left:4px; }
-      .b + .sc-a ~ .sc-a{ background:black; }
-      .b ~ .sc-a{ margin-right:4px; }
-      .b > .sc-a{ margin-top:4px; }
-      .foo .b{ color:silver; }
-      .foo > .b{ color:green; }
+      .sc-a + .sc-a{ margin-left:4px; }
+      .sc-a + .sc-a ~ .sc-a{ background:black; }
+      .sc-a ~ .sc-a{ margin-right:4px; }
+      .sc-a > .sc-a{ margin-top:4px; }
+      .foo .sc-a{ color:silver; }
+      .foo > .sc-a{ color:green; }
       .c{ background:red; color:red; }
       .c.c.c{ border:1px solid red; }
       .c[disabled]{ color:red; }
       .c[disabled] + .sc-a[disabled]{ margin-bottom:4px; }
       .c[disabled] > .sc-a[disabled]{ margin-top:4px; }
-      .c + .sc-a{ margin-left:4px; }
-      .c + .sc-a ~ .sc-a{ background:black; }
-      .c ~ .sc-a{ margin-right:4px; }
-      .c > .sc-a{ margin-top:4px; }
-      .foo .c{ color:silver; }
-      .foo > .c{ color:green; }
+      .sc-a + .sc-a{ margin-left:4px; }
+      .sc-a + .sc-a ~ .sc-a{ background:black; }
+      .sc-a ~ .sc-a{ margin-right:4px; }
+      .sc-a > .sc-a{ margin-top:4px; }
+      .foo .sc-a{ color:silver; }
+      .foo > .sc-a{ color:green; }
+      "
     `);
   });
 
@@ -197,7 +198,7 @@ describe('with styles', () => {
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { background-color:blue; } html.something .b { color:white; }');
+    expectCSSMatches('.b { background-color:blue; } html.something .sc-a { color:white; }');
   });
 
   it('should inject styles of multiple components', () => {

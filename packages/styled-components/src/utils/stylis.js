@@ -6,6 +6,7 @@ import { phash, SEED } from './hash';
 import insertRulePlugin from './stylisPluginInsertRule';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
+const COMPLEX_SELECTOR_PREFIX = [':', '[', '.', '#'];
 
 type StylisInstanceConstructorArgs = {
   options?: Object,
@@ -40,15 +41,14 @@ export default function createStylisInstance({
   let _componentId: string;
   let _selector: string;
   let _selectorRegexp: RegExp;
+  let _consecutiveSelfRefRegExp: RegExp;
 
   const selfReferenceReplacer = (match, offset, string) => {
     if (
-      // the first self-ref is always untouched
-      offset > 0 &&
-      // there should be at least two self-refs to do a replacement (.b > .b)
-      string.slice(0, offset).indexOf(_selector) !== -1 &&
+      // do not replace the first occurrence if it is complex (has a modifier)
+      (offset === 0 ? !COMPLEX_SELECTOR_PREFIX.includes(string[_selector.length]) : true) &&
       // no consecutive self refs (.b.b); that is a precedence boost and treated differently
-      string.slice(offset - _selector.length, offset) !== _selector
+      !string.match(_consecutiveSelfRefRegExp)
     ) {
       return `.${_componentId}`;
     }
@@ -83,11 +83,12 @@ export default function createStylisInstance({
     const cssStr = selector && prefix ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS;
 
     // stylis has no concept of state to be passed to plugins
-    // but since JS is single=threaded, we can rely on that to ensure
+    // but since JS is single-threaded, we can rely on that to ensure
     // these properties stay in sync with the current stylis run
     _componentId = componentId;
     _selector = selector;
     _selectorRegexp = new RegExp(`\\${_selector}\\b`, 'g');
+    _consecutiveSelfRefRegExp = new RegExp(`(\\${_selector}\\b){2,}`);
 
     return stylis(prefix || !selector ? '' : selector, cssStr);
   }

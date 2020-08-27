@@ -86,11 +86,11 @@ describe('attrs', () => {
         </ThemeProvider>
       ).toJSON()
     ).toMatchInlineSnapshot(`
-            <button
-              className="sc-a b"
-              data-color="red"
-            />
-        `);
+      <button
+        className="sc-a"
+        data-color="red"
+      />
+    `);
   });
 
   it('defaultProps are merged into what function attrs receives', () => {
@@ -105,11 +105,11 @@ describe('attrs', () => {
     };
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
-            <button
-              className="sc-a b"
-              data-color="red"
-            />
-        `);
+      <button
+        className="sc-a"
+        data-color="red"
+      />
+    `);
   });
 
   it('pass props to the attr function', () => {
@@ -149,7 +149,7 @@ describe('attrs', () => {
 
     expect(TestRenderer.create(<Comp className="something" />).toJSON()).toMatchInlineSnapshot(`
       <div
-        className="sc-a sc-b c something foo meow nya"
+        className="sc-a sc-b something foo meow nya"
       />
     `);
   });
@@ -171,7 +171,7 @@ describe('attrs', () => {
     expect(TestRenderer.create(<Comp style={{ color: 'green', borderStyle: 'dotted' }} />).toJSON())
       .toMatchInlineSnapshot(`
       <div
-        className="sc-a b"
+        className="sc-a"
         style={
           Object {
             "background": "blue",
