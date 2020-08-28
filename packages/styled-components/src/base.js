@@ -6,6 +6,7 @@ import css from './constructors/css';
 import createGlobalStyle from './constructors/createGlobalStyle';
 import keyframes from './constructors/keyframes';
 import ServerStyleSheet from './models/ServerStyleSheet';
+import { SC_VERSION } from './constants';
 
 import StyleSheetManager, {
   StyleSheetContext,
@@ -20,10 +21,6 @@ import withTheme from './hoc/withTheme';
 
 /* Import hooks */
 import useTheme from './hooks/useTheme';
-
-/* Define bundle version for export */
-declare var __VERSION__: string;
-const version = __VERSION__;
 
 /* Warning if you've imported this file on React Native */
 if (
@@ -75,6 +72,6 @@ export {
   ThemeContext,
   ThemeProvider,
   useTheme,
-  version,
+  SC_VERSION as version,
   withTheme,
 };

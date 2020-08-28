@@ -1,5 +1,5 @@
 // @flow
-
+import { SC_VERSION } from '../constants';
 import flatten from '../utils/flatten';
 import { hash, phash } from '../utils/hash';
 import generateName from '../utils/generateAlphabeticName';
@@ -29,7 +29,7 @@ export default class ComponentStyle {
     this.staticRulesId = '';
     this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules);
     this.componentId = componentId;
-    this.baseHash = hash(componentId);
+    this.baseHash = hash(SC_VERSION + componentId);
     this.baseStyle = baseStyle;
 
     // NOTE: This registers the componentId, which ensures a consistent order
