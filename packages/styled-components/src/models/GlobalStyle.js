@@ -24,7 +24,7 @@ export default class GlobalStyle {
     styleSheet: StyleSheet,
     stylis: Stringifier
   ) {
-    const flatCSS = flatten(this.rules, executionContext, styleSheet);
+    const flatCSS = flatten(this.rules, executionContext, styleSheet, stylis);
     const css = stylis(flatCSS.join(''), '');
     const id = this.componentId + instance;
 

@@ -24,5 +24,5 @@ export default function keyframes(
 
   const rules = css(strings, ...interpolations).join('');
   const name = generateComponentId(rules);
-  return new Keyframes(name, [rules, name, '@keyframes']);
+  return new Keyframes(name, rules);
 }

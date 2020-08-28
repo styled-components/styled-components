@@ -60,7 +60,7 @@ export default class ComponentStyle {
       if (this.staticRulesId && styleSheet.hasNameForId(componentId, this.staticRulesId)) {
         names.push(this.staticRulesId);
       } else {
-        const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
+        const cssStatic = flatten(this.rules, executionContext, styleSheet, stylis).join('');
         const name = generateName(phash(this.baseHash, cssStatic.length) >>> 0);
 
         if (!styleSheet.hasNameForId(componentId, name)) {
@@ -85,7 +85,7 @@ export default class ComponentStyle {
 
           if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule + i);
         } else if (partRule) {
-          const partChunk = flatten(partRule, executionContext, styleSheet);
+          const partChunk = flatten(partRule, executionContext, styleSheet, stylis);
           const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
           dynamicHash = phash(dynamicHash, partString + i);
           css += partString;

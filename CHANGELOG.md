@@ -14,6 +14,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Add "engines" to package.json (currently set to Node 10, the oldest supported LTS distribution)
 
+- Fix `keyframes` not receiving a modified stylis instance when using something like `stylis-plugin-rtl`
+
 ## [v5.1.1] - 2020-04-07
 
 ### New Functionality

@@ -45,7 +45,7 @@ export const stripComments = (str: string) => str.replace(/\/\*.*?\*\/\n?/g, '')
 export const stripWhitespace = (str: string) =>
   str
     .trim()
-    .replace(/([;\{\}])/g, '$1  ')
+    .replace(/([;{}])/g, '$1  ')
     .replace(/\s+/g, ' ');
 
 export const getCSS = (scope: Document | HTMLElement) =>

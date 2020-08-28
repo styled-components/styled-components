@@ -1,11 +1,13 @@
 // @flow
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
+import stylisRTLPlugin from 'stylis-plugin-rtl';
 
 import css from '../css';
 import keyframes from '../keyframes';
 import Keyframes from '../../models/Keyframes';
-import { expectCSSMatches, getCSS, resetStyled } from '../../test/utils';
+import StyleSheetManager from '../../models/StyleSheetManager';
+import { expectCSSMatches, getCSS, getRenderedCSS, resetStyled } from '../../test/utils';
 
 // Disable isStaticRules optimisation since we're not
 // testing for ComponentStyle specifics here
@@ -192,5 +194,85 @@ describe('keyframes', () => {
     const animation = keyframes``;
 
     expect(() => `animation-name: ${animation};`).toThrow();
+  });
+
+  it('should use the local stylis instance', () => {
+    const rules = `
+      0% {
+        left: 0%;
+      }
+      100% {
+        left: 100%;
+      }
+    `;
+
+    const animation = keyframes`${rules}`;
+
+    expectCSSMatches('');
+
+    const Comp = styled.div`
+      animation: ${animation} 2s linear infinite;
+    `;
+    TestRenderer.create(
+      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+        <Comp />
+      </StyleSheetManager>
+    );
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a{ -webkit-animation:dpYZkx-1567285458 2s linear infinite; animation:dpYZkx-1567285458 2s linear infinite; }
+      @-webkit-keyframes dpYZkx-1567285458{ 0%{ right:0%; }
+      100%{ right:100%; }
+      }
+      @keyframes dpYZkx-1567285458{ 0%{ right:0%; }
+      100%{ right:100%; }
+      }
+      "
+    `);
+  });
+
+  it('should reinject if used in different stylis contexts', () => {
+    const rules = `
+      0% {
+        left: 0%;
+      }
+      100% {
+        left: 100%;
+      }
+    `;
+
+    const animation = keyframes`${rules}`;
+
+    expectCSSMatches('');
+
+    const Comp = styled.div`
+      animation: ${animation} 2s linear infinite;
+    `;
+    TestRenderer.create(
+      <>
+        <Comp />
+        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+          <Comp />
+        </StyleSheetManager>
+      </>
+    );
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a{ -webkit-animation:dpYZkx 2s linear infinite; animation:dpYZkx 2s linear infinite; }
+      .b{ -webkit-animation:dpYZkx-1567285458 2s linear infinite; animation:dpYZkx-1567285458 2s linear infinite; }
+      @-webkit-keyframes dpYZkx{ 0%{ left:0%; }
+      100%{ left:100%; }
+      }
+      @keyframes dpYZkx{ 0%{ left:0%; }
+      100%{ left:100%; }
+      }
+      @-webkit-keyframes dpYZkx-1567285458{ 0%{ right:0%; }
+      100%{ right:100%; }
+      }
+      @keyframes dpYZkx-1567285458{ 0%{ right:0%; }
+      100%{ right:100%; }
+      }
+      "
+    `);
   });
 });
