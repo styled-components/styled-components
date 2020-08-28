@@ -159,7 +159,7 @@ describe('keyframes', () => {
         );
       } else {
         return css`
-          ${animation === 'slide' ? slideAnimation : opacityAnimation} 1s linear;
+          ${animation === 'slide' ? slideAnimation : opacityAnimation} 1s linear
         `;
       }
     };

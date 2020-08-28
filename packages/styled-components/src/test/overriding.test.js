@@ -30,6 +30,7 @@ describe('extending', () => {
     `;
     TestRenderer.create(<Inner />);
     TestRenderer.create(<Outer />);
+
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
         color: blue;
@@ -41,6 +42,7 @@ describe('extending', () => {
       .d > .sc-a {
         font-weight: bold;
       }"
+
     `);
   });
 
@@ -71,6 +73,7 @@ describe('extending', () => {
       .d {
         padding: 1rem;
       }"
+
     `);
 
     // ensure both static classes are applied and dynamic classes are also present
@@ -115,6 +118,7 @@ describe('extending', () => {
       TestRenderer.create(<Parent />);
       TestRenderer.create(<Child />);
       TestRenderer.create(<Grandson />);
+
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".d {
           position: relative;
@@ -128,6 +132,7 @@ describe('extending', () => {
           position: relative;
           color: green;
         }"
+
       `);
     });
 
@@ -140,6 +145,7 @@ describe('extending', () => {
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);
         TestRenderer.create(<Grandson />);
+
         expect(getRenderedCSS()).toMatchInlineSnapshot(`
           ".d {
             position: relative;
@@ -153,6 +159,7 @@ describe('extending', () => {
             position: relative;
             color: green;
           }"
+
         `);
       });
 
@@ -190,6 +197,7 @@ describe('extending', () => {
             position: relative;
             color: blue;
           }"
+
         `);
       });
     });

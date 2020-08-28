@@ -29,6 +29,6 @@ export type Flattener = (
 ) => Interpolation[];
 
 export type Stringifier = {
-  (rules: string, selector: string, prefix: ?string, componentId: ?string): string[],
+  (rules: string, selector: string, prefix: ?string, componentId: ?string): string,
   hash: string,
 };

@@ -66,6 +66,7 @@ describe('basic', () => {
   it('should not inject anything by default', () => {
     // eslint-disable-next-line no-unused-expressions
     styled.div``;
+
     expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
   });
 
@@ -78,6 +79,7 @@ describe('basic', () => {
       ".b {
         color: blue;
       }"
+
     `);
   });
 
@@ -91,6 +93,7 @@ describe('basic', () => {
       ".b {
         color: blue;
       }"
+
     `);
   });
 
@@ -130,6 +133,7 @@ describe('basic', () => {
       ".b {
         color: blue;
       }"
+
     `);
   });
 
@@ -140,6 +144,7 @@ describe('basic', () => {
       ".b {
         color: blue;
       }"
+
     `);
   });
 
@@ -158,6 +163,7 @@ describe('basic', () => {
         color: blue;
         font-family: sans-serif;
       }"
+
     `);
   });
 
@@ -176,6 +182,7 @@ describe('basic', () => {
         color: red;
         font-family: sans-serif;
       }"
+
     `);
   });
 
@@ -188,6 +195,7 @@ describe('basic', () => {
       ".b {
         color: blue;
       }"
+
     `);
   });
 
@@ -211,6 +219,7 @@ describe('basic', () => {
       ".b {
         color: red;
       }"
+
     `);
   });
 
@@ -319,6 +328,7 @@ describe('basic', () => {
         .c {
           color: blue;
         }"
+
       `);
     });
 
@@ -338,6 +348,7 @@ describe('basic', () => {
             color: pink;
           }
         }"
+
       `);
     });
 
