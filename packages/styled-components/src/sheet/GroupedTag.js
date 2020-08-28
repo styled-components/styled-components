@@ -68,7 +68,6 @@ class DefaultGroupedTag implements GroupedTag {
     } else {
       if (this.tag.insertRule(ruleIndex, rules)) {
         this.groupSizes[group]++;
-        ruleIndex++;
       }
     }
   }
