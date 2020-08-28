@@ -106,7 +106,8 @@ function useInjectedStyle<T>(
     ? componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet, stylis)
     : componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet, stylis);
 
-  useDebugValue(className);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  if (process.env.NODE_ENV !== 'production') useDebugValue(className);
 
   if (process.env.NODE_ENV !== 'production' && !isStatic && warnTooManyClasses) {
     warnTooManyClasses(className);
@@ -132,7 +133,8 @@ function useStyledComponentImpl<Config: {}, Instance>(
     target,
   } = forwardedComponent;
 
-  useDebugValue(styledComponentId);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  if (process.env.NODE_ENV !== 'production') useDebugValue(styledComponentId);
 
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
