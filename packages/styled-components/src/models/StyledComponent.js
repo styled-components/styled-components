@@ -8,6 +8,7 @@ import React, {
   type Ref,
 } from 'react';
 import hoist from 'hoist-non-react-statics';
+import { SC_VERSION } from '../constants';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
@@ -37,7 +38,12 @@ function generateId(displayName: string, parentComponentId: string) {
   // Ensure that no displayName can lead to duplicate componentIds
   identifiers[name] = (identifiers[name] || 0) + 1;
 
-  const componentId = `${name}-${generateComponentId(name + identifiers[name])}`;
+  const componentId = `${name}-${generateComponentId(
+    // SC_VERSION gives us isolation between multiple runtimes on the page at once
+    // this is improved further with use of the babel plugin "namespace" feature
+    SC_VERSION + name + identifiers[name]
+  )}`;
+
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 

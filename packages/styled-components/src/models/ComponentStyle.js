@@ -29,7 +29,11 @@ export default class ComponentStyle {
     this.staticRulesId = '';
     this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules);
     this.componentId = componentId;
+
+    // SC_VERSION gives us isolation between multiple runtimes on the page at once
+    // this is improved further with use of the babel plugin "namespace" feature
     this.baseHash = hash(SC_VERSION + componentId);
+
     this.baseStyle = baseStyle;
 
     // NOTE: This registers the componentId, which ensures a consistent order
