@@ -1,5 +1,4 @@
 // @flow
-
 /* Import singletons */
 import isStyledComponent from './utils/isStyledComponent';
 import css from './constructors/css';
@@ -22,6 +21,8 @@ import withTheme from './hoc/withTheme';
 /* Import hooks */
 import useTheme from './hooks/useTheme';
 
+declare var __SERVER__: boolean;
+
 /* Warning if you've imported this file on React Native */
 if (
   process.env.NODE_ENV !== 'production' &&
@@ -37,11 +38,7 @@ if (
 }
 
 /* Warning if there are several instances of styled-components */
-if (
-  process.env.NODE_ENV !== 'production' &&
-  process.env.NODE_ENV !== 'test' &&
-  typeof window !== 'undefined'
-) {
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test' && !__SERVER__) {
   window['__styled-components-init__'] = window['__styled-components-init__'] || 0;
 
   if (window['__styled-components-init__'] === 1) {

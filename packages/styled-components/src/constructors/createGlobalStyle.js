@@ -10,6 +10,8 @@ import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
+declare var __SERVER__: boolean;
+
 type GlobalStyleComponentPropsType = Object;
 
 export default function createGlobalStyle(
@@ -49,7 +51,7 @@ export default function createGlobalStyle(
       );
     }
 
-    if (typeof window === 'undefined') {
+    if (__SERVER__) {
       renderStyles(instance, props, styleSheet, theme, stylis);
     } else {
       // this conditional is fine because it is compiled away for the relevant builds during minification,
