@@ -104,7 +104,7 @@
     "rollup": "^1.13.1",
     "rollup-plugin-babel": "^4.3.2",
     "rollup-plugin-terser": "^5.0.0",
-    "stylis-plugin-rtl": "^2.0.0-test.3"
+    "stylis-plugin-rtl": "^2.0.0"
   },
   "bundlewatch": {
     "files": [

@@ -10413,10 +10413,10 @@ styletron-standard@^3.0.4:
     "@rtsao/csstype" "2.6.5-forked.0"
     inline-style-prefixer "^5.1.0"
 
-stylis-plugin-rtl@^2.0.0-test.3:
-  version "2.0.0-test.3"
-  resolved "https://registry.yarnpkg.com/stylis-plugin-rtl/-/stylis-plugin-rtl-2.0.0-test.3.tgz#e0cf75cc61a3ecace7986d263e2363f1a8dccbd5"
-  integrity sha512-MqGo6hHj7cdo/812eFPXb1qO5/BV5EbkhbH/DXdHNDj8Znhy7eyjak+J6QiIV79tzV77RbudGklSGDBIYfHfbA==
+stylis-plugin-rtl@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/stylis-plugin-rtl/-/stylis-plugin-rtl-2.0.0.tgz#5f43fb2fd6220577210b89b339b49f15aedc6b7b"
+  integrity sha512-8Hz94K25hLhZHIYzLYwXU/Qh4Xio1M+CXd4A40G1fzXwxw1kNyAVNcLPPwkL6ywMQry87WoS2XisR1ZqQZfqoQ==
   dependencies:
     cssjanus "^2.0.1"
 
