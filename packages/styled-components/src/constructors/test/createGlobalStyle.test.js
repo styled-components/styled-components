@@ -2,74 +2,48 @@
 // @flow
 import React from 'react';
 import ReactDOM from 'react-dom';
-import ReactDOMServer from 'react-dom/server';
 import { act, Simulate } from 'react-dom/test-utils';
 import ReactTestRenderer from 'react-test-renderer';
 import * as constants from '../../constants';
-import ServerStyleSheet from '../../models/ServerStyleSheet';
 import StyleSheetManager from '../../models/StyleSheetManager';
 import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
-import {
-  expectCSSMatches,
-  getCSS,
-  resetStyled,
-  stripComments,
-  stripWhitespace,
-} from '../../test/utils';
+import { expectCSSMatches, getCSS, resetStyled } from '../../test/utils';
 import createGlobalStyle from '../createGlobalStyle';
 import keyframes from '../keyframes';
 
-let context;
-
-function setup() {
-  const container = document.createElement('div');
-  document.body.appendChild(container);
-
-  return {
-    container,
-    render(comp) {
-      ReactDOM.render(comp, container);
-    },
-    renderToString(comp) {
-      return ReactDOMServer.renderToString(comp);
-    },
-    cleanup() {
-      resetStyled();
-      document.body.removeChild(container);
-    },
-  };
-}
-
-beforeEach(() => {
-  context = setup();
-});
-
-afterEach(() => {
-  context.cleanup();
-});
-
 describe(`createGlobalStyle`, () => {
+  let context;
+
+  function setup() {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    return {
+      container,
+      render(comp) {
+        ReactDOM.render(comp, container);
+      },
+      cleanup() {
+        resetStyled();
+        document.body.removeChild(container);
+      },
+    };
+  }
+
+  beforeEach(() => {
+    context = setup();
+  });
+
+  afterEach(() => {
+    context.cleanup();
+  });
+
   it(`injects global <style> when rendered`, () => {
     const { render } = context;
     const Component = createGlobalStyle`[data-test-inject]{color:red;} `;
     render(<Component />);
     expectCSSMatches(`[data-test-inject]{color:red;} `);
-  });
-
-  it(`injects global <style> when rendered to string`, () => {
-    const sheet = new ServerStyleSheet();
-    const Component = createGlobalStyle`[data-test-inject]{color:red;} `;
-    const html = context.renderToString(sheet.collectStyles(<Component />));
-
-    const container = document.createElement('div');
-    container.innerHTML = sheet.getStyleTags();
-    const style = container.querySelector('style');
-
-    expect(html).toBe('');
-    expect(stripWhitespace(stripComments(style.textContent))).toMatchInlineSnapshot(
-      `"[data-test-inject]{ color:red; } data-styled.g1[id=\\"sc-global-a1\\"]{ content:\\"sc-global-a1,\\"} "`
-    );
   });
 
   it(`supports interpolation`, () => {
@@ -165,7 +139,7 @@ describe(`createGlobalStyle`, () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it.skip('should not inject twice in StrictMode', () => {
+  it('should not inject twice in StrictMode', () => {
     jest.spyOn(StyleSheet, 'registerId');
 
     const { render } = context;
