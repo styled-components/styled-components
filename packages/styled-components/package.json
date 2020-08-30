@@ -28,7 +28,7 @@
     "test:integration": "jest -c ../../scripts/jest/config.integration.js --runInBand --forceExit",
     "format": "eslint ./**/*.js --fix",
     "lint": "eslint src",
-    "lint:size": "bundlesize",
+    "lint:size": "bundlewatch",
     "prettier": "prettier */**/*.js --write",
     "prepublishOnly": "npm run build",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js"
@@ -106,12 +106,14 @@
     "rollup-plugin-terser": "^5.0.0",
     "stylis-plugin-rtl": "^1.0.0"
   },
-  "bundlesize": [
-    {
-      "path": "./dist/styled-components.min.js",
-      "maxSize": "14kB"
-    }
-  ],
+  "bundlewatch": {
+    "files": [
+      {
+        "path": "./dist/styled-components.min.js",
+        "maxSize": "13kB"
+      }
+    ]
+  },
   "collective": {
     "type": "opencollective",
     "url": "https://opencollective.com/styled-components"
