@@ -3617,6 +3617,13 @@ diff-sequences@^24.9.0:
   resolved "https://registry.yarnpkg.com/diff-sequences/-/diff-sequences-24.9.0.tgz#5715d6244e2aa65f48bba0bc972db0b0b11e95b5"
   integrity sha512-Dj6Wk3tWyTE+Fo1rW8v0Xhwk80um6yFYKbuAxc9c3EZxIHFDYwbi34Uk42u1CdnIiVorvt4RmlSDjIPyzGC2ew==
 
+diffable-html@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/diffable-html/-/diffable-html-4.0.0.tgz#eb44a189785115bacd04829f31658fcd3c0ce590"
+  integrity sha512-keJdgy2qBkdrrnwP1YE6e834d4Y+mV0aRFzk8w7WzyAJVbQVfcJltSmUWB3r/NOoO/0jt7RdJlvy5ioyqvmQcw==
+  dependencies:
+    htmlparser2 "^3.9.2"
+
 diffie-hellman@^5.0.0:
   version "5.0.3"
   resolved "https://registry.yarnpkg.com/diffie-hellman/-/diffie-hellman-5.0.3.tgz#40e8ee98f55a2149607146921c63e1ae5f3d2875"
@@ -5358,7 +5365,7 @@ html-escaper@^2.0.0:
   resolved "https://registry.yarnpkg.com/html-escaper/-/html-escaper-2.0.2.tgz#dfd60027da36a36dfcbe236262c00a5822681453"
   integrity sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==
 
-htmlparser2@^3.3.0:
+htmlparser2@^3.3.0, htmlparser2@^3.9.2:
   version "3.10.1"
   resolved "https://registry.yarnpkg.com/htmlparser2/-/htmlparser2-3.10.1.tgz#bd679dc3f59897b6a34bb10749c855bb53a9392f"
   integrity sha512-IgieNijUMbkDovyoKObU1DUhm1iwNYE/fuifEoEHfd1oZKZDaONBSkal7Y01shxsM49R4XaMdGez3WnF9UfiCQ==
@@ -6397,6 +6404,13 @@ jest-runtime@^24.9.0:
     slash "^2.0.0"
     strip-bom "^3.0.0"
     yargs "^13.3.0"
+
+jest-serializer-html@^7.0.0:
+  version "7.0.0"
+  resolved "https://registry.yarnpkg.com/jest-serializer-html/-/jest-serializer-html-7.0.0.tgz#9db553a69dea3498412a44c80d74a3770ff62936"
+  integrity sha512-o3S2j/5yA9emV8+QRHqJ41SznW5cZ1PXIAk+aSToJffdhuaiSoDsa4IgqV8lNOHPp4cP0LNT7k5KjXjD+l6SGg==
+  dependencies:
+    diffable-html "^4.0.0"
 
 jest-serializer@24.0.0-alpha.6:
   version "24.0.0-alpha.6"

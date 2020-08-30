@@ -488,11 +488,18 @@ describe('ssr', () => {
     );
     const css = sheet.getStyleTags();
 
-    expect(html).toMatchInlineSnapshot(`"<h1 class=\\"sc-a b\\">Hello SSR!</h1>"`);
+    expect(html).toMatchInlineSnapshot(`
+      <h1 class="sc-a b">
+        Hello SSR!
+      </h1>
+    `);
     expect(css).toMatchInlineSnapshot(`
-      "<style data-styled=\\"true\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}/*!sc*/
-      data-styled.g1[id=\\"sc-a\\"]{content:\\"b,\\"}/*!sc*/
-      </style>"
+      <style data-styled="true"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .b{padding-right:5px;}/*!sc*/
+      data-styled.g1[id="sc-a"]{content:"b,"}/*!sc*/
+      </style>
     `);
   });
 });
