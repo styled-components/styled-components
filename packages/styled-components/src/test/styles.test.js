@@ -168,7 +168,6 @@ describe('with styles', () => {
       .foo > .sc-a {
         color: green;
       }"
-
     `);
   });
 

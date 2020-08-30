@@ -79,7 +79,6 @@ describe('basic', () => {
       ".b {
         color: blue;
       }"
-
     `);
   });
 
@@ -93,7 +92,6 @@ describe('basic', () => {
       ".b {
         color: blue;
       }"
-
     `);
   });
 
@@ -133,7 +131,6 @@ describe('basic', () => {
       ".b {
         color: blue;
       }"
-
     `);
   });
 
@@ -144,7 +141,6 @@ describe('basic', () => {
       ".b {
         color: blue;
       }"
-
     `);
   });
 
@@ -163,7 +159,6 @@ describe('basic', () => {
         color: blue;
         font-family: sans-serif;
       }"
-
     `);
   });
 
@@ -182,7 +177,6 @@ describe('basic', () => {
         color: red;
         font-family: sans-serif;
       }"
-
     `);
   });
 
@@ -195,7 +189,6 @@ describe('basic', () => {
       ".b {
         color: blue;
       }"
-
     `);
   });
 
@@ -219,7 +212,6 @@ describe('basic', () => {
       ".b {
         color: red;
       }"
-
     `);
   });
 
@@ -328,7 +320,6 @@ describe('basic', () => {
         .c {
           color: blue;
         }"
-
       `);
     });
 
@@ -348,7 +339,6 @@ describe('basic', () => {
             color: pink;
           }
         }"
-
       `);
     });
 

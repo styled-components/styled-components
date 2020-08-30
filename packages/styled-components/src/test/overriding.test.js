@@ -42,7 +42,6 @@ describe('extending', () => {
       .d > .sc-a {
         font-weight: bold;
       }"
-
     `);
   });
 
@@ -73,7 +72,6 @@ describe('extending', () => {
       .d {
         padding: 1rem;
       }"
-
     `);
 
     // ensure both static classes are applied and dynamic classes are also present
@@ -132,7 +130,6 @@ describe('extending', () => {
           position: relative;
           color: green;
         }"
-
       `);
     });
 
@@ -159,7 +156,6 @@ describe('extending', () => {
             position: relative;
             color: green;
           }"
-
         `);
       });
 
@@ -197,7 +193,6 @@ describe('extending', () => {
             position: relative;
             color: blue;
           }"
-
         `);
       });
     });
