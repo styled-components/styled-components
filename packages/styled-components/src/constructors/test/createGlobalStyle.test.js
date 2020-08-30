@@ -484,4 +484,22 @@ describe(`createGlobalStyle`, () => {
     // Reset DISABLE_SPEEDY flag
     constants.DISABLE_SPEEDY = flag;
   });
+
+  it(`injects multiple global styles in definition order, not composition order`, () => {
+    const { render } = context;
+    const GlobalStyleOne = createGlobalStyle`[data-test-inject]{color:red;} `;
+    const GlobalStyleTwo = createGlobalStyle`[data-test-inject]{color:green;} `;
+    render(
+      <>
+        <GlobalStyleTwo />
+        <GlobalStyleOne />
+      </>
+    );
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "[data-test-inject]{ color:red; }
+      [data-test-inject]{ color:green; }
+      "
+    `);
+  });
 });
