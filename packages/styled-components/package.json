@@ -10,7 +10,9 @@
     "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js",
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/base.js"
+  ],
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
     "prebuild": "rimraf dist && npm run generateErrors",
