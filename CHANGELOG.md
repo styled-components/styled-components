@@ -10,11 +10,13 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Rework how components self-reference in extension scenarios (see [#3236](https://github.com/styled-components/styled-components/pull/3236)); should fix a bunch of subtle bugs around patterns like `& + &`
 
+- Fix `keyframes` not receiving a modified stylis instance when using something like `stylis-plugin-rtl` (see [#3239](https://github.com/styled-components/styled-components/pull/3239))
+
+- Big performance gain for components using [style objects](https://styled-components.com/docs/advanced#style-objects) (see [#3239](https://github.com/styled-components/styled-components/pull/3239))
+
   - we also no longer emit dynamic classNames for empty rulesets, so some className churn may occur in snapshots
 
-- Add "engines" to package.json (currently set to Node 10, the oldest supported LTS distribution)
-
-- Fix `keyframes` not receiving a modified stylis instance when using something like `stylis-plugin-rtl`
+- Add "engines" to package.json (currently set to Node 10, the oldest supported LTS distribution) (see [#3201](https://github.com/styled-components/styled-components/pull/3201)) thanks @MichaelDeBoey!
 
 ## [v5.1.1] - 2020-04-07
 
