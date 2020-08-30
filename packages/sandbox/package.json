@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "babel-loader": "^8.0.5",
-    "babel-plugin-styled-components": "^1.5.1",
+    "babel-plugin-styled-components": "^1.11.1",
     "eslint": "^5.16.0",
     "eslint-loader": "^2.1.2",
     "micro": "^9.3.3",
