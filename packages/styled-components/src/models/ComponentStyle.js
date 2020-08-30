@@ -1,12 +1,13 @@
 // @flow
 import { SC_VERSION } from '../constants';
-import flatten from '../utils/flatten';
-import { hash, phash } from '../utils/hash';
-import generateName from '../utils/generateAlphabeticName';
-import isStaticRules from '../utils/isStaticRules';
 import StyleSheet from '../sheet';
-
 import type { RuleSet, Stringifier } from '../types';
+import flatten from '../utils/flatten';
+import generateName from '../utils/generateAlphabeticName';
+import { hash, phash } from '../utils/hash';
+import isStaticRules from '../utils/isStaticRules';
+
+const SEED = hash(SC_VERSION);
 
 /**
  * ComponentStyle is all the CSS-specific stuff, not the React-specific stuff.
@@ -32,7 +33,7 @@ export default class ComponentStyle {
 
     // SC_VERSION gives us isolation between multiple runtimes on the page at once
     // this is improved further with use of the babel plugin "namespace" feature
-    this.baseHash = hash(SC_VERSION + componentId);
+    this.baseHash = phash(SEED, componentId);
 
     this.baseStyle = baseStyle;
 
