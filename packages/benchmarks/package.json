@@ -23,6 +23,7 @@
     "react-jss": "^8.6.1",
     "react-native-web": "^0.11.4",
     "reactxp": "^1.3.3",
+    "styled-components-v5": "npm:styled-components",
     "styled-jsx": "^3.2.1",
     "styletron-engine-atomic": "^1.3.0",
     "styletron-react": "^5.1.2"
@@ -31,8 +32,8 @@
     "babel-loader": "^8.0.6",
     "babel-plugin-react-native-web": "^0.11.4",
     "css-loader": "^2.1.1",
-    "merge-anything": "^2.2.5",
     "memoize-one": "^5.0.4",
+    "merge-anything": "^2.2.5",
     "style-loader": "^0.23.1",
     "webpack": "^4.33.0",
     "webpack-bundle-analyzer": "^3.3.2",

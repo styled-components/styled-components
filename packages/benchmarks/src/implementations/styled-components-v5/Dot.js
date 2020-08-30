@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import styled from './styled-components-v5.esm.js';
+import styled from 'styled-components-v5';
 import View from './View';
 
 const Dot = styled(View).attrs(p => ({ style: { borderBottomColor: p.color } }))`

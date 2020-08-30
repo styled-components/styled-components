@@ -1,4 +1,4 @@
-import styled from './styled-components-v5.esm.js';
+import styled from 'styled-components-v5';
 
 const View = styled.div`
   align-items: stretch;

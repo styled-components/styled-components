@@ -1,4 +1,4 @@
-import styled from './styled-components-v5.esm.js';
+import styled from 'styled-components-v5';
 import View from './View';
 
 const getColor = color => {
