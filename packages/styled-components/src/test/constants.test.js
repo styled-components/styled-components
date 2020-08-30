@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable global-require */
-import { expectCSSMatches } from './utils';
 import { SC_ATTR as DEFAULT_SC_ATTR } from '../constants';
+import { expectCSSMatches } from './utils';
 
 describe('constants', () => {
   afterEach(() => {

@@ -1,8 +1,7 @@
 // @flow
 import React, { Fragment } from 'react';
 import TestRenderer from 'react-test-renderer';
-
-import { resetStyled, expectCSSMatches } from './utils';
+import { getRenderedCSS, resetStyled } from './utils';
 
 let styled;
 
@@ -16,7 +15,11 @@ describe('props', () => {
       color: ${props => props.fg || 'black'};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { color:black; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: black;
+      }"
+    `);
   });
 
   it('should execute interpolations and inject props', () => {
@@ -24,7 +27,11 @@ describe('props', () => {
       color: ${props => props.fg || 'black'};
     `;
     TestRenderer.create(<Comp fg="red" />);
-    expectCSSMatches('.b { color:red; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: red;
+      }"
+    `);
   });
 
   it('should ignore non-0 falsy object interpolations', () => {
@@ -38,7 +45,11 @@ describe('props', () => {
       })};
     `;
     TestRenderer.create(<Comp fg="red" />);
-    expectCSSMatches('.b { border-width:0; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        border-width: 0;
+      }"
+    `);
   });
 
   it('should filter out props prefixed with dollar sign (transient props)', () => {
@@ -63,7 +74,14 @@ describe('props', () => {
         />,
       ]
     `);
-    expectCSSMatches('.b { color:red; }.c { color:black; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: red;
+      }
+      .c {
+        color: black;
+      }"
+    `);
   });
 
   it('"$as" should take precedence over "as"', () => {
@@ -90,7 +108,11 @@ describe('props', () => {
       />
     `);
 
-    expectCSSMatches('.b { background: red; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        background: red;
+      }"
+    `);
   });
 
   describe('shouldForwardProp', () => {
@@ -104,7 +126,11 @@ describe('props', () => {
       `;
       const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
       const { props } = wrapper.root.findByType('div');
-      expectCSSMatches('.b { color:red; }');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          color: red;
+        }"
+      `);
       expect(props.passThru).toBe('def');
       expect(props.filterThis).toBeUndefined();
     });
@@ -118,7 +144,11 @@ describe('props', () => {
       `;
       const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
       const { props } = wrapper.root.findByType('div');
-      expectCSSMatches('.b { color:red; }');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          color: red;
+        }"
+      `);
       expect(props.passThru).toBe('def');
       expect(props.filterThis).toBeUndefined();
     });
@@ -151,7 +181,14 @@ describe('props', () => {
           <Div2 color="green" id="test-2" />
         </Fragment>
       );
-      expectCSSMatches('.c { background-color:red; }.d { background-color: green; }');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".c {
+          background-color: red;
+        }
+        .d {
+          background-color: green;
+        }"
+      `);
       expect(wrapper.toJSON()).toMatchSnapshot();
     });
 
@@ -164,7 +201,11 @@ describe('props', () => {
       `;
       const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
       const { props } = wrapper.root.findByType(AsComp);
-      expectCSSMatches('.b { color:red; }');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          color: red;
+        }"
+      `);
       expect(props.passThru).toBe('def');
       expect(props.filterThis).toBeUndefined();
     });
@@ -178,7 +219,11 @@ describe('props', () => {
       `;
       const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
       const { props } = wrapper.root.findByType(AsComp);
-      expectCSSMatches('.b { color:red; }');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          color: red;
+        }"
+      `);
       expect(props.passThru).toBe('def');
       expect(props.filterThis).toBeUndefined();
     });
@@ -191,7 +236,11 @@ describe('props', () => {
       `;
       const wrapper = TestRenderer.create(<Comp as="a" filterThis="abc" passThru="def" />);
       const { props } = wrapper.root.findByType('a');
-      expectCSSMatches('.b { color:red; }');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          color: red;
+        }"
+      `);
       expect(props.passThru).toBe('def');
       expect(props.filterThis).toBeUndefined();
     });

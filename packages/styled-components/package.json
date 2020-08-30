@@ -92,6 +92,7 @@
     "eslint-plugin-react": "^7.20.6",
     "flow-bin": "^0.100.0",
     "jest-serializer-html": "^7.0.0",
+    "js-beautify": "^1.13.0",
     "prop-types": "^15.7.2",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",

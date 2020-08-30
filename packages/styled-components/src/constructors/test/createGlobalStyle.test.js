@@ -44,8 +44,9 @@ describe(`createGlobalStyle`, () => {
     const Component = createGlobalStyle`[data-test-inject]{color:red;} `;
     render(<Component />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "[data-test-inject]{ color:red; }
-      "
+      "[data-test-inject] {
+        color: red;
+      }"
     `);
   });
 
@@ -54,8 +55,9 @@ describe(`createGlobalStyle`, () => {
     const Component = createGlobalStyle`div {color:${props => props.color};} `;
     render(<Component color="orange" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "div{ color:orange; }
-      "
+      "div {
+        color: orange;
+      }"
     `);
   });
 
@@ -68,8 +70,9 @@ describe(`createGlobalStyle`, () => {
     });
     render(<Component theme={{ fonts: { heading: 'sans-serif' } }} />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "h1,h2,h3,h4,h5,h6{ font-family:sans-serif; }
-      "
+      "h1, h2, h3, h4, h5, h6 {
+        font-family: sans-serif;
+      }"
     `);
   });
 
@@ -86,8 +89,9 @@ describe(`createGlobalStyle`, () => {
     });
     render(<Component1 theme={{ fonts: { heading: 'sans-serif' } }} />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "div h1 span,span h1 span{ font-family:sans-serif; }
-      "
+      "div h1 span, span h1 span {
+        font-family: sans-serif;
+      }"
     `);
   });
 
@@ -100,8 +104,9 @@ describe(`createGlobalStyle`, () => {
       </ThemeProvider>
     );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "div{ color:black; }
-      "
+      "div {
+        color: black;
+      }"
     `);
   });
 
@@ -129,14 +134,16 @@ describe(`createGlobalStyle`, () => {
     }
     render(<App />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "div{ color:grey; }
-      "
+      "div {
+        color: grey;
+      }"
     `);
 
     update({ color: 'red' });
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "div{ color:red; }
-      "
+      "div {
+        color: red;
+      }"
     `);
   });
 
@@ -210,9 +217,12 @@ describe(`createGlobalStyle`, () => {
     );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "[data-test-add]{ color:red; }
-      [data-test-add]{ background:yellow; }
-      "
+      "[data-test-add] {
+        color: red;
+      }
+      [data-test-add] {
+        background: yellow;
+      }"
     `);
   });
 
@@ -226,8 +236,10 @@ describe(`createGlobalStyle`, () => {
     `;
     render(<Component fg="red" bg="green" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "div{ color:red; background:green; }
-      "
+      "div {
+        color: red;
+        background: green;
+      }"
     `);
   });
 
@@ -244,9 +256,12 @@ describe(`createGlobalStyle`, () => {
       </React.Fragment>
     );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "body{ background:palevioletred; }
-      body{ color:white; }
-      "
+      "body {
+        background: palevioletred;
+      }
+      body {
+        color: white;
+      }"
     `);
   });
 
@@ -264,8 +279,9 @@ describe(`createGlobalStyle`, () => {
 
     ReactTestRenderer.act(() => {
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "[data-test-remove]{ color:grey; }
-        "
+        "[data-test-remove] {
+          color: grey;
+        }"
       `);
 
       renderer.update(<Comp insert={false} />);
@@ -273,8 +289,9 @@ describe(`createGlobalStyle`, () => {
 
     ReactTestRenderer.act(() => {
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "[data-test-keep]{ color:blue; }
-        "
+        "[data-test-keep] {
+          color: blue;
+        }"
       `);
     });
   });
@@ -323,15 +340,19 @@ describe(`createGlobalStyle`, () => {
     render(<Comp />);
     const el = document.querySelector('[data-test-el]');
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "body{ background:palevioletred; }
-      body{ color:white; }
-      "
+      "body {
+        background: palevioletred;
+      }
+      body {
+        color: white;
+      }"
     `); // should have both styles
 
     Simulate.click(el);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "body{ background:palevioletred; }
-      "
+      "body {
+        background: palevioletred;
+      }"
     `); // should only have palevioletred
 
     Simulate.click(el);
@@ -349,14 +370,16 @@ describe(`createGlobalStyle`, () => {
 
     render(<A bgColor="blue" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "body{ background:blue; }
-      "
+      "body {
+        background: blue;
+      }"
     `);
 
     render(<A bgColor="red" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "body{ background:red; }
-      "
+      "body {
+        background: red;
+      }"
     `);
 
     render(<A />);
@@ -428,14 +451,37 @@ describe(`createGlobalStyle`, () => {
     );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "div{ display:inline-block; -webkit-animation:a 2s linear infinite; animation:a 2s linear infinite; padding:2rem 1rem; font-size:1.2rem; }
-      @-webkit-keyframes a{ from{ -webkit-transform:rotate(0deg); -ms-transform:rotate(0deg); transform:rotate(0deg); }
-      to{ -webkit-transform:rotate(360deg); -ms-transform:rotate(360deg); transform:rotate(360deg); }
+      "div {
+        display: inline-block;
+        -webkit-animation: a 2s linear infinite;
+        animation: a 2s linear infinite;
+        padding: 2rem 1rem;
+        font-size: 1.2rem;
       }
-      @keyframes a{ from{ -webkit-transform:rotate(0deg); -ms-transform:rotate(0deg); transform:rotate(0deg); }
-      to{ -webkit-transform:rotate(360deg); -ms-transform:rotate(360deg); transform:rotate(360deg); }
+      @-webkit-keyframes a {
+        from {
+          -webkit-transform: rotate(0deg);
+          -ms-transform: rotate(0deg);
+          transform: rotate(0deg);
+        }
+        to {
+          -webkit-transform: rotate(360deg);
+          -ms-transform: rotate(360deg);
+          transform: rotate(360deg);
+        }
       }
-      "
+      @keyframes a {
+        from {
+          -webkit-transform: rotate(0deg);
+          -ms-transform: rotate(0deg);
+          transform: rotate(0deg);
+        }
+        to {
+          -webkit-transform: rotate(360deg);
+          -ms-transform: rotate(360deg);
+          transform: rotate(360deg);
+        }
+      }"
     `);
   });
 
@@ -497,9 +543,12 @@ describe(`createGlobalStyle`, () => {
     );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "[data-test-inject]{ color:red; }
-      [data-test-inject]{ color:green; }
-      "
+      "[data-test-inject] {
+        color: red;
+      }
+      [data-test-inject] {
+        color: green;
+      }"
     `);
   });
 });
