@@ -32,6 +32,7 @@ export const resetStyled = (isServer: boolean = false) => {
   }
 
   resetGroupIds();
+  masterSheet.gs = {};
   masterSheet.names = new Map();
   masterSheet.clearTag();
   mockIndex = 0;

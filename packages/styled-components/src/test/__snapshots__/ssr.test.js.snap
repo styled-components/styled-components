@@ -3,20 +3,20 @@
 exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 1`] = `"<h1 class=\\"sc-b c\\">Hello SSR!</h1>"`;
 
 exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 2`] = `
-"<style nonce=\\"foo\\" data-styled=\\"true\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.c{color:red;}/*!sc*/
-data-styled.g1[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
-body{background:papayawhip;}/*!sc*/
-data-styled.g2[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+"<style nonce=\\"foo\\" data-styled=\\"true\\" data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}/*!sc*/
+data-styled.g1[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+.c{color:red;}/*!sc*/
+data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
 </style>"
 `;
 
 exports[`ssr should extract both global and local CSS 1`] = `"<h1 class=\\"sc-b c\\">Hello SSR!</h1>"`;
 
 exports[`ssr should extract both global and local CSS 2`] = `
-"<style data-styled=\\"true\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.c{color:red;}/*!sc*/
-data-styled.g1[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
-body{background:papayawhip;}/*!sc*/
-data-styled.g2[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+"<style data-styled=\\"true\\" data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}/*!sc*/
+data-styled.g1[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+.c{color:red;}/*!sc*/
+data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
 </style>"
 `;
 
@@ -31,10 +31,10 @@ data-styled.g1[id=\\"sc-a\\"]{content:\\"b,\\"}/*!sc*/
 exports[`ssr should handle errors while streaming 1`] = `[Error: React.Children.only expected to receive a single React element child.]`;
 
 exports[`ssr should interleave styles with rendered HTML when utilitizing streaming 1`] = `
-"<style data-styled=\\"true\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.c{color:red;}/*!sc*/
-data-styled.g1[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
-body{background:papayawhip;}/*!sc*/
-data-styled.g2[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+"<style data-styled=\\"true\\" data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}/*!sc*/
+data-styled.g1[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+.c{color:red;}/*!sc*/
+data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
 </style><h1 class=\\"sc-b c\\">Hello SSR!</h1>"
 `;
 
@@ -51,10 +51,10 @@ data-styled.g2[id=\\"TWO\\"]{content:\\"a,\\"}/*!sc*/
 exports[`ssr should return a generated React style element 1`] = `
 Object {
   "dangerouslySetInnerHTML": Object {
-    "__html": ".c{color:red;}/*!sc*/
-data-styled.g1[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
-body{background:papayawhip;}/*!sc*/
-data-styled.g2[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+    "__html": "body{background:papayawhip;}/*!sc*/
+data-styled.g1[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+.c{color:red;}/*!sc*/
+data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
 ",
   },
   "data-styled": "",
@@ -70,10 +70,10 @@ exports[`ssr should throw if getStyleElement is called after interleaveWithNodeS
 `;
 
 exports[`ssr should throw if getStyleElement is called after streaming is complete 1`] = `
-"<style data-styled=\\"true\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.c{color:red;}/*!sc*/
-data-styled.g1[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
-body{background:papayawhip;}/*!sc*/
-data-styled.g2[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+"<style data-styled=\\"true\\" data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}/*!sc*/
+data-styled.g1[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+.c{color:red;}/*!sc*/
+data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
 </style><h1 class=\\"sc-b c\\">Hello SSR!</h1>"
 `;
 
@@ -92,10 +92,10 @@ exports[`ssr should throw if getStyleTags is called after interleaveWithNodeStre
 `;
 
 exports[`ssr should throw if getStyleTags is called after streaming is complete 1`] = `
-"<style data-styled=\\"true\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.c{color:red;}/*!sc*/
-data-styled.g1[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
-body{background:papayawhip;}/*!sc*/
-data-styled.g2[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+"<style data-styled=\\"true\\" data-styled-version=\\"JEST_MOCK_VERSION\\">body{background:papayawhip;}/*!sc*/
+data-styled.g1[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+.c{color:red;}/*!sc*/
+data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
 </style><h1 class=\\"sc-b c\\">Hello SSR!</h1>"
 `;
 

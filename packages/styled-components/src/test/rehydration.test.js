@@ -220,7 +220,7 @@ describe('rehydration', () => {
       // although `<Component />` is rendered before `<A />`, the global style isn't registered until render time
       // compared to typical component styles which are registered at creation time
       expectCSSMatches(
-        'body { background: papayawhip; } .a { color: red; } .b { color:blue; } body { color:tomato; }'
+        'body { background: papayawhip; } .a { color: red; } body { color:tomato; } .b { color:blue; }'
       );
     });
   });
