@@ -8,6 +8,7 @@ import React, {
   type Ref,
 } from 'react';
 import hoist from 'hoist-non-react-statics';
+import { SC_VERSION } from '../constants';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
@@ -37,7 +38,12 @@ function generateId(displayName: string, parentComponentId: string) {
   // Ensure that no displayName can lead to duplicate componentIds
   identifiers[name] = (identifiers[name] || 0) + 1;
 
-  const componentId = `${name}-${generateComponentId(name + identifiers[name])}`;
+  const componentId = `${name}-${generateComponentId(
+    // SC_VERSION gives us isolation between multiple runtimes on the page at once
+    // this is improved further with use of the babel plugin "namespace" feature
+    SC_VERSION + name + identifiers[name]
+  )}`;
+
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
@@ -100,7 +106,8 @@ function useInjectedStyle<T>(
     ? componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet, stylis)
     : componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet, stylis);
 
-  useDebugValue(className);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  if (process.env.NODE_ENV !== 'production') useDebugValue(className);
 
   if (process.env.NODE_ENV !== 'production' && !isStatic && warnTooManyClasses) {
     warnTooManyClasses(className);
@@ -126,7 +133,8 @@ function useStyledComponentImpl<Config: {}, Instance>(
     target,
   } = forwardedComponent;
 
-  useDebugValue(styledComponentId);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  if (process.env.NODE_ENV !== 'production') useDebugValue(styledComponentId);
 
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it

@@ -1,8 +1,7 @@
 // @flow
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-
-import { getCSS, resetStyled } from './utils';
+import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
 // testing for ComponentStyle specifics here
@@ -183,9 +182,18 @@ describe('expanded api', () => {
         />
       `);
 
-      expect(getCSS(document)).toMatchInlineSnapshot(
-        `".d{background:blue;color:red;}.e{color:green;}.f{text-align:center;}"`
-      );
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".d {
+          background: blue;
+          color: red;
+        }
+        .e {
+          color: green;
+        }
+        .f {
+          text-align: center;
+        }"
+      `);
     });
   });
 });

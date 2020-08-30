@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "5.1.1",
+  "version": "5.2.0-test.10",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.esm.js",
@@ -10,7 +10,9 @@
     "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js",
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/base.js"
+  ],
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
     "prebuild": "rimraf dist && npm run generateErrors",
@@ -89,6 +91,8 @@
     "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-react": "^7.20.6",
     "flow-bin": "^0.100.0",
+    "jest-serializer-html": "^7.0.0",
+    "js-beautify": "^1.13.0",
     "prop-types": "^15.7.2",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",

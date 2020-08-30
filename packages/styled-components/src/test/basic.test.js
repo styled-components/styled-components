@@ -1,11 +1,11 @@
 // @flow
 /* eslint-disable no-console */
-import hoist from 'hoist-non-react-statics';
+import hoistStatics from 'hoist-non-react-statics';
 import React, { Component, StrictMode } from 'react';
 import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';
-import { resetStyled, expectCSSMatches } from './utils';
+import { resetStyled, getRenderedCSS } from './utils';
 import { find } from '../../test-utils';
 
 let styled;
@@ -48,9 +48,9 @@ describe('basic', () => {
       null,
       123,
       [],
-      <div />,
-      <FunctionalComponent />,
-      <ClassComponent />,
+      <div key="1" />,
+      <FunctionalComponent key="2" />,
+      <ClassComponent key="3" />,
     ];
 
     invalidComps.forEach(comp => {
@@ -66,7 +66,7 @@ describe('basic', () => {
   it('should not inject anything by default', () => {
     // eslint-disable-next-line no-unused-expressions
     styled.div``;
-    expectCSSMatches('');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
   });
 
   it('should inject styles', () => {
@@ -74,7 +74,11 @@ describe('basic', () => {
       color: blue;
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { color:blue; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+      }"
+    `);
   });
 
   it("should inject only once for a styled component, no matter how often it's mounted", () => {
@@ -83,7 +87,11 @@ describe('basic', () => {
     `;
     TestRenderer.create(<Comp />);
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { color:blue; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+      }"
+    `);
   });
 
   it('Should have the correct styled(component) displayName', () => {
@@ -118,13 +126,21 @@ describe('basic', () => {
       color: 'blue',
     });
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { color:blue; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+      }"
+    `);
   });
 
   it('should allow you to pass in style object with a function', () => {
     const Comp = styled.div({ color: ({ color }) => color });
     TestRenderer.create(<Comp color="blue" />);
-    expectCSSMatches('.b { color:blue; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+      }"
+    `);
   });
 
   it('should allow you to pass in style nested object', () => {
@@ -137,7 +153,12 @@ describe('basic', () => {
       },
     });
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b span small{ color:blue; font-family: sans-serif; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b span small {
+        color: blue;
+        font-family: sans-serif;
+      }"
+    `);
   });
 
   it('should allow you to pass in style nested object with a function', () => {
@@ -150,7 +171,12 @@ describe('basic', () => {
       },
     });
     TestRenderer.create(<Comp color="red" />);
-    expectCSSMatches('.b span small{ color:red; font-family: sans-serif; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b span small {
+        color: red;
+        font-family: sans-serif;
+      }"
+    `);
   });
 
   it('should allow you to pass in a function returning a style object', () => {
@@ -158,7 +184,11 @@ describe('basic', () => {
       color,
     }));
     TestRenderer.create(<Comp color="blue" />);
-    expectCSSMatches('.b { color:blue; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+      }"
+    `);
   });
 
   it('emits the correct selector when a StyledComponent is interpolated into a template string', () => {
@@ -170,13 +200,18 @@ describe('basic', () => {
   });
 
   it('works with the React 16.6 "memo" API', () => {
+    // eslint-disable-next-line react/display-name
     const Comp = React.memo(props => <div {...props} />);
     const StyledComp = styled(Comp)`
       color: red;
     `;
 
     TestRenderer.create(<StyledComp color="blue" />);
-    expectCSSMatches('.b { color:red; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: red;
+      }"
+    `);
   });
 
   it('does not filter outs custom props for uppercased string-like components', () => {
@@ -277,7 +312,14 @@ describe('basic', () => {
       TestRenderer.create(<SecondComponent />);
       TestRenderer.create(<FirstComponent />);
 
-      expectCSSMatches('.d { color:red; } .c { color:blue; }');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".d {
+          color: red;
+        }
+        .c {
+          color: blue;
+        }"
+      `);
     });
 
     it('handle media at-rules inside style rules', () => {
@@ -290,7 +332,13 @@ describe('basic', () => {
       `;
 
       TestRenderer.create(<Comp />);
-      expectCSSMatches('@media (min-width:500px){ .b > *{ color:pink; } } ');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "@media (min-width:500px) {
+          .b > * {
+            color: pink;
+          }
+        }"
+      `);
     });
 
     it('should hoist non-react static properties', () => {
@@ -310,8 +358,7 @@ describe('basic', () => {
       expect(Outer.componentStyle).not.toEqual(Inner.componentStyle);
     });
 
-    // muting this test until we can fix it in a way that doesn't break HMR / rehydration
-    it.skip('should not fold components if there is an interim HOC', () => {
+    it('should not fold components if there is an interim HOC', () => {
       function withSomething(WrappedComponent) {
         function WithSomething(props) {
           return <WrappedComponent {...props} />;
@@ -334,12 +381,19 @@ describe('basic', () => {
 
       const rendered = TestRenderer.create(<Outer />);
 
-      expectCSSMatches(`.sc-a {color: red;} .sc-b {color: green;}`);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".c {
+          color: red;
+        }
+        .d {
+          color: green;
+        }"
+      `);
       expect(rendered.toJSON()).toMatchInlineSnapshot(`
-<div
-  className="sc-a sc-b"
-/>
-`);
+        <div
+          className="sc-a sc-b c d"
+        />
+      `);
     });
 
     it('folds defaultProps', () => {
@@ -367,16 +421,16 @@ describe('basic', () => {
       };
 
       expect(Outer.defaultProps).toMatchInlineSnapshot(`
-Object {
-  "style": Object {
-    "background": "silver",
-    "textAlign": "center",
-  },
-  "theme": Object {
-    "fontSize": 16,
-  },
-}
-`);
+        Object {
+          "style": Object {
+            "background": "silver",
+            "textAlign": "center",
+          },
+          "theme": Object {
+            "fontSize": 16,
+          },
+        }
+      `);
     });
 
     it('generates unique classnames when not using babel', () => {

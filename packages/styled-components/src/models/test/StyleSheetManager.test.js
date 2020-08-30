@@ -290,9 +290,13 @@ describe('StyleSheetManager', () => {
       </StyleSheetManager>
     );
 
-    expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{display:flex;}</style>"`
-    );
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .b{display:flex;}
+      </style>
+    `);
   });
 
   it('passing stylis plugins via StyleSheetManager works', () => {
@@ -306,9 +310,13 @@ describe('StyleSheetManager', () => {
       </StyleSheetManager>
     );
 
-    expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}</style>"`
-    );
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .b{padding-right:5px;}
+      </style>
+    `);
   });
 
   it('an error is emitted if unnamed stylis plugins are provided', () => {
@@ -341,9 +349,13 @@ describe('StyleSheetManager', () => {
       </StyleSheetManager>
     );
 
-    expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}</style>"`
-    );
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .b{padding-right:5px;}
+      </style>
+    `);
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
             <div
@@ -362,9 +374,13 @@ describe('StyleSheetManager', () => {
     });
 
     // note that the old styles are not removed since the condition may appear where they're used again
-    expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}.c{padding-left:5px;}</style>"`
-    );
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .b{padding-right:5px;}.c{padding-left:5px;}
+      </style>
+    `);
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
             <div
@@ -383,9 +399,13 @@ describe('StyleSheetManager', () => {
     });
 
     // no new dynamic classes are added, reusing the prior one
-    expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-right:5px;}.c{padding-left:5px;}</style>"`
-    );
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .b{padding-right:5px;}.c{padding-left:5px;}
+      </style>
+    `);
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
             <div
@@ -410,9 +430,13 @@ describe('StyleSheetManager', () => {
       </div>
     );
 
-    expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.b{padding-left:5px;}.c{padding-right:5px;}</style>"`
-    );
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .b{padding-left:5px;}.c{padding-right:5px;}
+      </style>
+    `);
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
       <div>
@@ -454,8 +478,16 @@ describe('StyleSheetManager', () => {
 
     expect(outerSheet.getTag().tag.getRule(0)).toMatchInlineSnapshot(`".c {padding-left: 5px;}"`);
 
-    expect(document.head.innerHTML).toMatchInlineSnapshot(
-      `"<style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\"></style><style data-styled=\\"active\\" data-styled-version=\\"JEST_MOCK_VERSION\\">.d{background:red;}</style>"`
-    );
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+      </style>
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .d{background:red;}
+      </style>
+    `);
   });
 });

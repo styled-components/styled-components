@@ -1,11 +1,11 @@
 // @flow
-
 /* Import singletons */
 import isStyledComponent from './utils/isStyledComponent';
 import css from './constructors/css';
 import createGlobalStyle from './constructors/createGlobalStyle';
 import keyframes from './constructors/keyframes';
 import ServerStyleSheet from './models/ServerStyleSheet';
+import { SC_VERSION } from './constants';
 
 import StyleSheetManager, {
   StyleSheetContext,
@@ -21,9 +21,7 @@ import withTheme from './hoc/withTheme';
 /* Import hooks */
 import useTheme from './hooks/useTheme';
 
-/* Define bundle version for export */
-declare var __VERSION__: string;
-const version = __VERSION__;
+declare var __SERVER__: boolean;
 
 /* Warning if you've imported this file on React Native */
 if (
@@ -40,11 +38,7 @@ if (
 }
 
 /* Warning if there are several instances of styled-components */
-if (
-  process.env.NODE_ENV !== 'production' &&
-  process.env.NODE_ENV !== 'test' &&
-  typeof window !== 'undefined'
-) {
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test' && !__SERVER__) {
   window['__styled-components-init__'] = window['__styled-components-init__'] || 0;
 
   if (window['__styled-components-init__'] === 1) {
@@ -75,6 +69,6 @@ export {
   ThemeContext,
   ThemeProvider,
   useTheme,
-  version,
+  SC_VERSION as version,
   withTheme,
 };

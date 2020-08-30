@@ -9,6 +9,6 @@ exports[`development returns a rich error 1`] = `
 - Are you accidentally calling collectStyles twice?"
 `;
 
-exports[`production returns an error link 1`] = `"An error occurred. See https://github.com/styled-components/styled-components/blob/master/packages/styled-components/src/utils/errors.md#2 for more information."`;
+exports[`production returns an error link 1`] = `"An error occurred. See https://git.io/JUIaE#2 for more information."`;
 
-exports[`production returns an error link with interpolations if given 1`] = `"An error occurred. See https://github.com/styled-components/styled-components/blob/master/packages/styled-components/src/utils/errors.md#1 for more information. Additional arguments: foo"`;
+exports[`production returns an error link with interpolations if given 1`] = `"An error occurred. See https://git.io/JUIaE#1 for more information. Args: foo"`;

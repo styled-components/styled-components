@@ -2,8 +2,7 @@
 import React, { Component } from 'react';
 import TestRenderer from 'react-test-renderer';
 import ThemeProvider from '../models/ThemeProvider';
-
-import { resetStyled, expectCSSMatches } from './utils';
+import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
 // testing for ComponentStyle specifics here
@@ -226,7 +225,14 @@ describe('attrs', () => {
       }
     `;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-    expectCSSMatches('.b { color:blue; } .b.--is-active { color:red; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+      }
+      .b.--is-active {
+        color: red;
+      }"
+    `);
   });
 
   it('should pass through children as a normal prop', () => {
@@ -290,7 +296,14 @@ describe('attrs', () => {
 
     const rendered = TestRenderer.create(<BlueText>Hello</BlueText>);
 
-    expectCSSMatches(`.d {background: red;} .c {background: blue;}`);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".d {
+        background: red;
+      }
+      .c {
+        background: blue;
+      }"
+    `);
     expect(rendered.toJSON()).toMatchInlineSnapshot(`
             <p
               className="sc-a d sc-b c"

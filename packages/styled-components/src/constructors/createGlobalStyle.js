@@ -1,16 +1,16 @@
 // @flow
-import React, { useContext, useEffect, useRef } from 'react';
+import React, { useContext, useLayoutEffect, useRef } from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
+import { ThemeContext } from '../models/ThemeProvider';
+import type { Interpolation } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
-import { ThemeContext } from '../models/ThemeProvider';
-import { EMPTY_ARRAY } from '../utils/empties';
 import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
-import type { Interpolation } from '../types';
+declare var __SERVER__: boolean;
 
 type GlobalStyleComponentPropsType = Object;
 
@@ -30,11 +30,7 @@ export default function createGlobalStyle(
     const styleSheet = useStyleSheet();
     const stylis = useStylis();
     const theme = useContext(ThemeContext);
-    const instanceRef = useRef(null);
-
-    if (instanceRef.current === null) {
-      instanceRef.current = styleSheet.allocateGSInstance(styledComponentId);
-    }
+    const instanceRef = useRef(styleSheet.allocateGSInstance(styledComponentId));
 
     const instance = instanceRef.current;
 
@@ -55,6 +51,22 @@ export default function createGlobalStyle(
       );
     }
 
+    if (__SERVER__) {
+      renderStyles(instance, props, styleSheet, theme, stylis);
+    } else {
+      // this conditional is fine because it is compiled away for the relevant builds during minification,
+      // resulting in a single unguarded hook call
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      useLayoutEffect(() => {
+        renderStyles(instance, props, styleSheet, theme, stylis);
+        return () => globalStyle.removeStyles(instance, styleSheet);
+      }, [instance, props, styleSheet, theme, stylis]);
+    }
+
+    return null;
+  }
+
+  function renderStyles(instance, props, styleSheet, theme, stylis) {
     if (globalStyle.isStatic) {
       globalStyle.renderStyles(instance, STATIC_EXECUTION_CONTEXT, styleSheet, stylis);
     } else {
@@ -65,10 +77,6 @@ export default function createGlobalStyle(
 
       globalStyle.renderStyles(instance, context, styleSheet, stylis);
     }
-
-    useEffect(() => () => globalStyle.removeStyles(instance, styleSheet), EMPTY_ARRAY);
-
-    return null;
   }
 
   // $FlowFixMe

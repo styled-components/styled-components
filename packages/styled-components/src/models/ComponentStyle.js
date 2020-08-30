@@ -1,12 +1,13 @@
 // @flow
-
-import flatten from '../utils/flatten';
-import { hash, phash } from '../utils/hash';
-import generateName from '../utils/generateAlphabeticName';
-import isStaticRules from '../utils/isStaticRules';
+import { SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
-
 import type { RuleSet, Stringifier } from '../types';
+import flatten from '../utils/flatten';
+import generateName from '../utils/generateAlphabeticName';
+import { hash, phash } from '../utils/hash';
+import isStaticRules from '../utils/isStaticRules';
+
+const SEED = hash(SC_VERSION);
 
 /**
  * ComponentStyle is all the CSS-specific stuff, not the React-specific stuff.
@@ -29,7 +30,11 @@ export default class ComponentStyle {
     this.staticRulesId = '';
     this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules);
     this.componentId = componentId;
-    this.baseHash = hash(componentId);
+
+    // SC_VERSION gives us isolation between multiple runtimes on the page at once
+    // this is improved further with use of the babel plugin "namespace" feature
+    this.baseHash = phash(SEED, componentId);
+
     this.baseStyle = baseStyle;
 
     // NOTE: This registers the componentId, which ensures a consistent order
@@ -56,7 +61,7 @@ export default class ComponentStyle {
       if (this.staticRulesId && styleSheet.hasNameForId(componentId, this.staticRulesId)) {
         names.push(this.staticRulesId);
       } else {
-        const cssStatic = flatten(this.rules, executionContext, styleSheet).join('');
+        const cssStatic = flatten(this.rules, executionContext, styleSheet, stylis).join('');
         const name = generateName(phash(this.baseHash, cssStatic.length) >>> 0);
 
         if (!styleSheet.hasNameForId(componentId, name)) {
@@ -81,7 +86,7 @@ export default class ComponentStyle {
 
           if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule + i);
         } else if (partRule) {
-          const partChunk = flatten(partRule, executionContext, styleSheet);
+          const partChunk = flatten(partRule, executionContext, styleSheet, stylis);
           const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
           dynamicHash = phash(dynamicHash, partString + i);
           css += partString;
