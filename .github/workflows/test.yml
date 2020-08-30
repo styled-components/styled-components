@@ -58,5 +58,5 @@ jobs:
           BUNDLEWATCH_GITHUB_TOKEN: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}
           CI_BRANCH: ${{ steps.extract_branch.outputs.branch }}
           CI_COMMIT_SHA: ${{ github.sha }}
-          CI_REPO_NAME: ${{ github.repository }}
+          CI_REPO_NAME: ${{ github.event.repository.name }}
           CI_REPO_OWNER: ${{ github.repository_owner }}
