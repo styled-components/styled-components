@@ -36,8 +36,13 @@ jobs:
       - run: yarn --pure-lockfile
 
       - name: Jest
-        run: |
-          yarn test
-          yarn flow
-          yarn lint
-          yarn build
+        run: yarn test
+
+      - name: Flow
+        run: yarn flow
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Lint
+        run: yarn build
