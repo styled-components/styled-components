@@ -14,7 +14,9 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Big performance gain for components using [style objects](https://styled-components.com/docs/advanced#style-objects) (see [#3239](https://github.com/styled-components/styled-components/pull/3239))
 
-  - we also no longer emit dynamic classNames for empty rulesets, so some className churn may occur in snapshots
+- We no longer emit dynamic classNames for empty rulesets, so some className churn may occur in snapshots
+
+- Preallocate global style placement to ensure cGS is consistently inserted at the top of the stylesheet; note that this is done in _runtime order_ so, if you have multiple cGS that have overlapping styles, ensure they're defined in code in the sequence you would want them injected (see [#3239](https://github.com/styled-components/styled-components/pull/3239))
 
 - Add "engines" to package.json (currently set to Node 10, the oldest supported LTS distribution) (see [#3201](https://github.com/styled-components/styled-components/pull/3201)) thanks @MichaelDeBoey!
 
