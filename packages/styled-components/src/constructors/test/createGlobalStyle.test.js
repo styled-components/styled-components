@@ -1,10 +1,15 @@
+/* eslint-disable no-console, import/namespace */
 // @flow
 import React from 'react';
 import ReactDOM from 'react-dom';
-import ReactTestRenderer from 'react-test-renderer';
 import ReactDOMServer from 'react-dom/server';
-import { Simulate, act } from 'react-dom/test-utils';
-
+import { act, Simulate } from 'react-dom/test-utils';
+import ReactTestRenderer from 'react-test-renderer';
+import * as constants from '../../constants';
+import ServerStyleSheet from '../../models/ServerStyleSheet';
+import StyleSheetManager from '../../models/StyleSheetManager';
+import ThemeProvider from '../../models/ThemeProvider';
+import StyleSheet from '../../sheet';
 import {
   expectCSSMatches,
   getCSS,
@@ -12,14 +17,8 @@ import {
   stripComments,
   stripWhitespace,
 } from '../../test/utils';
-
-import ThemeProvider from '../../models/ThemeProvider';
-import ServerStyleSheet from '../../models/ServerStyleSheet';
-import StyleSheetManager from '../../models/StyleSheetManager';
-import StyleSheet from '../../sheet';
 import createGlobalStyle from '../createGlobalStyle';
 import keyframes from '../keyframes';
-import * as constants from '../../constants';
 
 let context;
 
@@ -262,15 +261,15 @@ describe(`createGlobalStyle`, () => {
 
     const renderer = ReactTestRenderer.create(<Comp insert />);
 
-    act(() => {
+    ReactTestRenderer.act(() => {
       expect(getCSS(document).trim()).toContain(`[data-test-remove]{color:grey;}`);
       expect(getCSS(document).trim()).not.toContain(`[data-test-keep]{color:blue;}`);
       renderer.update(<Comp insert={false} />);
+    });
 
-      act(() => {
-        expect(getCSS(document).trim()).not.toContain(`[data-test-remove]{color:grey;}`);
-        expect(getCSS(document).trim()).toContain(`[data-test-keep]{color:blue;}`);
-      });
+    ReactTestRenderer.act(() => {
+      expect(getCSS(document).trim()).not.toContain(`[data-test-remove]{color:grey;}`);
+      expect(getCSS(document).trim()).toContain(`[data-test-keep]{color:blue;}`);
     });
   });
 
@@ -454,6 +453,7 @@ describe(`createGlobalStyle`, () => {
 
       ReactDOM.unmountComponentAtNode(container);
     } catch (e) {
+      // eslint-disable-next-line no-undef
       fail('should not throw exception');
     }
 
