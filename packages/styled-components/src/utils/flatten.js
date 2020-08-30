@@ -17,23 +17,18 @@ const isFalsish = chunk => chunk === undefined || chunk === null || chunk === fa
 
 export const objToCssArray = (obj: Object, prevKey?: string): Array<string | Function> => {
   const rules = [];
-  const keys = Object.keys(obj);
 
-  keys.forEach(key => {
-    if (!isFalsish(obj[key])) {
-      if (isPlainObject(obj[key])) {
-        rules.push(...objToCssArray(obj[key], key));
+  for (const key in obj) {
+    if (!obj.hasOwnProperty(key) || isFalsish(obj[key])) continue;
 
-        return rules;
-      } else if (isFunction(obj[key])) {
-        rules.push(`${hyphenate(key)}:`, obj[key], ';');
-
-        return rules;
-      }
+    if (isPlainObject(obj[key])) {
+      rules.push(...objToCssArray(obj[key], key));
+    } else if (isFunction(obj[key])) {
+      rules.push(`${hyphenate(key)}:`, obj[key], ';');
+    } else {
       rules.push(`${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`);
     }
-    return rules;
-  });
+  }
 
   return prevKey ? [`${prevKey} {`, ...rules, '}'] : rules;
 };
