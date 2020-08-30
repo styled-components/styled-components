@@ -8,7 +8,7 @@ import * as constants from '../../constants';
 import StyleSheetManager from '../../models/StyleSheetManager';
 import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
-import { expectCSSMatches, getCSS, resetStyled } from '../../test/utils';
+import { getRenderedCSS, resetStyled } from '../../test/utils';
 import createGlobalStyle from '../createGlobalStyle';
 import keyframes from '../keyframes';
 
@@ -43,14 +43,20 @@ describe(`createGlobalStyle`, () => {
     const { render } = context;
     const Component = createGlobalStyle`[data-test-inject]{color:red;} `;
     render(<Component />);
-    expectCSSMatches(`[data-test-inject]{color:red;} `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "[data-test-inject]{ color:red; }
+      "
+    `);
   });
 
   it(`supports interpolation`, () => {
     const { render } = context;
     const Component = createGlobalStyle`div {color:${props => props.color};} `;
     render(<Component color="orange" />);
-    expectCSSMatches(`div{color:orange;} `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "div{ color:orange; }
+      "
+    `);
   });
 
   it(`supports objects with a function`, () => {
@@ -61,7 +67,10 @@ describe(`createGlobalStyle`, () => {
       },
     });
     render(<Component theme={{ fonts: { heading: 'sans-serif' } }} />);
-    expectCSSMatches(`h1,h2,h3,h4,h5,h6{ font-family:sans-serif; }`);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "h1,h2,h3,h4,h5,h6{ font-family:sans-serif; }
+      "
+    `);
   });
 
   it(`supports nested objects with a function`, () => {
@@ -76,7 +85,10 @@ describe(`createGlobalStyle`, () => {
       },
     });
     render(<Component1 theme={{ fonts: { heading: 'sans-serif' } }} />);
-    expectCSSMatches(`div h1 span,span h1 span{ font-family:sans-serif; }`);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "div h1 span,span h1 span{ font-family:sans-serif; }
+      "
+    `);
   });
 
   it(`supports theming`, () => {
@@ -87,7 +99,10 @@ describe(`createGlobalStyle`, () => {
         <Component />
       </ThemeProvider>
     );
-    expectCSSMatches(`div{color:black;} `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "div{ color:black; }
+      "
+    `);
   });
 
   it(`updates theme correctly`, () => {
@@ -113,10 +128,16 @@ describe(`createGlobalStyle`, () => {
       }
     }
     render(<App />);
-    expectCSSMatches(`div{color:grey;} `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "div{ color:grey; }
+      "
+    `);
 
     update({ color: 'red' });
-    expectCSSMatches(`div{color:red;} `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "div{ color:red; }
+      "
+    `);
   });
 
   it('should work in StrictMode without warnings', () => {
@@ -188,12 +209,11 @@ describe(`createGlobalStyle`, () => {
       </React.Fragment>
     );
 
-    setTimeout(() => {
-      expectCSSMatches(`
-        [data-test-add]{color:red;}
-        [data-test-add]{background:yellow;}
-      `);
-    });
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "[data-test-add]{ color:red; }
+      [data-test-add]{ background:yellow; }
+      "
+    `);
   });
 
   it(`stringifies multiple rules correctly`, () => {
@@ -205,7 +225,10 @@ describe(`createGlobalStyle`, () => {
       }
     `;
     render(<Component fg="red" bg="green" />);
-    expectCSSMatches(`div{color:red;background:green;} `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "div{ color:red; background:green; }
+      "
+    `);
   });
 
   it(`injects multiple <GlobalStyle> components correctly`, () => {
@@ -220,7 +243,11 @@ describe(`createGlobalStyle`, () => {
         <B />
       </React.Fragment>
     );
-    expectCSSMatches(`body{background:palevioletred;} body{color:white;}`);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body{ background:palevioletred; }
+      body{ color:white; }
+      "
+    `);
   });
 
   it(`removes styling injected styling when unmounted`, () => {
@@ -236,14 +263,19 @@ describe(`createGlobalStyle`, () => {
     const renderer = ReactTestRenderer.create(<Comp insert />);
 
     ReactTestRenderer.act(() => {
-      expect(getCSS(document).trim()).toContain(`[data-test-remove]{color:grey;}`);
-      expect(getCSS(document).trim()).not.toContain(`[data-test-keep]{color:blue;}`);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "[data-test-remove]{ color:grey; }
+        "
+      `);
+
       renderer.update(<Comp insert={false} />);
     });
 
     ReactTestRenderer.act(() => {
-      expect(getCSS(document).trim()).not.toContain(`[data-test-remove]{color:grey;}`);
-      expect(getCSS(document).trim()).toContain(`[data-test-keep]{color:blue;}`);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "[data-test-keep]{ color:blue; }
+        "
+      `);
     });
   });
 
@@ -290,15 +322,20 @@ describe(`createGlobalStyle`, () => {
 
     render(<Comp />);
     const el = document.querySelector('[data-test-el]');
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(
-      `"body{background:palevioletred;}body{color:white;}"`
-    ); // should have both styles
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body{ background:palevioletred; }
+      body{ color:white; }
+      "
+    `); // should have both styles
 
     Simulate.click(el);
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(`"body{background:palevioletred;}"`); // should only have palevioletred
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body{ background:palevioletred; }
+      "
+    `); // should only have palevioletred
 
     Simulate.click(el);
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(`""`); // should be empty
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`""`); // should be empty
   });
 
   it(`removes styling injected for multiple instances of same <GlobalStyle> components correctly`, () => {
@@ -311,13 +348,19 @@ describe(`createGlobalStyle`, () => {
     `;
 
     render(<A bgColor="blue" />);
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(`"body{background:blue;}"`);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body{ background:blue; }
+      "
+    `);
 
     render(<A bgColor="red" />);
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(`"body{background:red;}"`);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body{ background:red; }
+      "
+    `);
 
     render(<A />);
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(`""`);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
   });
 
   it(`should warn when children are passed as props`, () => {
@@ -384,9 +427,16 @@ describe(`createGlobalStyle`, () => {
       </div>
     );
 
-    expect(getCSS(document).trim()).toMatchInlineSnapshot(
-      `"div{display:inline-block;-webkit-animation:a 2s linear infinite;animation:a 2s linear infinite;padding:2rem 1rem;font-size:1.2rem;}@-webkit-keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}}@keyframes a{from{-webkit-transform:rotate(0deg);-ms-transform:rotate(0deg);transform:rotate(0deg);}to{-webkit-transform:rotate(360deg);-ms-transform:rotate(360deg);transform:rotate(360deg);}}"`
-    );
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "div{ display:inline-block; -webkit-animation:a 2s linear infinite; animation:a 2s linear infinite; padding:2rem 1rem; font-size:1.2rem; }
+      @-webkit-keyframes a{ from{ -webkit-transform:rotate(0deg); -ms-transform:rotate(0deg); transform:rotate(0deg); }
+      to{ -webkit-transform:rotate(360deg); -ms-transform:rotate(360deg); transform:rotate(360deg); }
+      }
+      @keyframes a{ from{ -webkit-transform:rotate(0deg); -ms-transform:rotate(0deg); transform:rotate(0deg); }
+      to{ -webkit-transform:rotate(360deg); -ms-transform:rotate(360deg); transform:rotate(360deg); }
+      }
+      "
+    `);
   });
 
   it(`removes style tag in StyleSheetManager.target when unmounted after target detached and no other global styles`, () => {
