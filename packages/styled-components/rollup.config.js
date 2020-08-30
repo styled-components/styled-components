@@ -116,6 +116,7 @@ const serverConfig = {
   ],
   plugins: configBase.plugins.concat(
     replace({
+      window: false,
       __SERVER__: JSON.stringify(true),
     }),
     minifierPlugin
