@@ -1,0 +1,60 @@
+name: test
+
+on:
+  push:
+    branches:
+      - "*"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["10", "12", "14"]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
+      - name: Setup node
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - uses: actions/cache@v2
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - run: yarn --pure-lockfile
+
+      - name: Jest
+        run: yarn test
+
+      - name: Flow
+        run: yarn flow
+        if: matrix.node == '10'
+
+      - name: Lint
+        run: yarn lint
+        if: matrix.node == '10'
+
+      - name: Build
+        run: yarn build
+        if: matrix.node == '10'
+        env:
+          BUNDLEWATCH_GITHUB_TOKEN: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}
+          CI_BRANCH: ${{ steps.extract_branch.outputs.branch }}
+          CI_COMMIT_SHA: ${{ github.sha }}
+          CI_REPO_NAME: ${{ github.event.repository.name }}
+          CI_REPO_OWNER: ${{ github.repository_owner }}
