@@ -1,26 +1,48 @@
-// flow-typed signature: 066c92e9ccb5f0711df8d73cbca837d6
-// flow-typed version: 9e32affdbd/prettier_v1.x.x/flow_>=v0.56.x
+// flow-typed signature: a18c145fa181510ba16b10d17fc3a5a8
+// flow-typed version: 01acbe56d4/prettier_v1.x.x/flow_>=v0.104.x
 
 declare module "prettier" {
-  declare export type AST = Object;
-  declare export type Doc = Object;
-  declare export type FastPath = Object;
+  declare export type AST = { [key: string]: any, ... };
+  declare export type Doc = {
+    [key: string]: any,
+    ...
+  };
+  declare export type FastPath<T = any> = {
+    stack: any[],
+    getName(): null | string | number | Symbol,
+    getValue(): T,
+    getNode(count?: number): null | T,
+    getParentNode(count?: number): null | T,
+    call<U>(callback: (path: FastPath<T>) => U, ...names: Array<string | number | Symbol>): U,
+    each(callback: (path: FastPath<T>) => void, ...names: Array<string | number | Symbol>): void,
+    map<U>(callback: (path: FastPath<T>, index: number) => U, ...names: Array<string | number | Symbol>): U[],
+    ...
+  };
 
   declare export type PrettierParserName =
-    | "babylon"
+    | "babylon" // deprecated
+    | "babel"
+    | "babel-flow"
     | "flow"
     | "typescript"
-    | "postcss"
+    | "postcss" // deprecated
     | "css"
     | "less"
     | "scss"
     | "json"
+    | "json5"
+    | "json-stringify"
     | "graphql"
     | "markdown"
-    | "vue";
+    | "vue"
+    | "html"
+    | "angular"
+    | "mdx"
+    | "yaml";
 
   declare export type PrettierParser = {
-    [name: PrettierParserName]: (text: string, options?: Object) => AST
+    [name: PrettierParserName]: (text: string, options?: { [key: string]: any, ... }) => AST,
+    ...
   };
 
   declare export type CustomParser = (
@@ -51,31 +73,51 @@ declare module "prettier" {
 
   declare export type Plugin = {
     languages: SupportLanguage,
-    parsers: { [parserName: string]: Parser },
-    printers: { [astFormat: string]: Printer }
+    parsers: { [parserName: string]: Parser, ... },
+    printers: { [astFormat: string]: Printer, ... },
+    options?: SupportOption[],
+    ...
   };
 
   declare export type Parser = {
     parse: (
       text: string,
-      parsers: { [parserName: string]: Parser },
-      options: Object
+      parsers: { [parserName: string]: Parser, ... },
+      options: { [key: string]: any, ... }
     ) => AST,
-    astFormat: string
+    astFormat: string,
+    hasPragma?: (text: string) => boolean,
+    locStart: (node: any) => number,
+    locEnd: (node: any) => number,
+    preprocess?: (text: string, options: { [key: string]: any, ... }) => string,
+    ...
   };
 
   declare export type Printer = {
     print: (
-      path: FastPath,
-      options: Object,
-      print: (path: FastPath) => Doc
+      path: FastPath<>,
+      options: { [key: string]: any, ... },
+      print: (path: FastPath<>) => Doc
     ) => Doc,
     embed: (
-      path: FastPath,
-      print: (path: FastPath) => Doc,
-      textToDoc: (text: string, options: Object) => Doc,
-      options: Object
-    ) => ?Doc
+      path: FastPath<>,
+      print: (path: FastPath<>) => Doc,
+      textToDoc: (text: string, options: { [key: string]: any, ... }) => Doc,
+      options: { [key: string]: any, ... }
+    ) => ?Doc,
+    insertPragma?: (text: string) => string,
+    massageAstNode?: (node: any, newNode: any, parent: any) => any,
+    hasPrettierIgnore?: (path: FastPath<>) => boolean,
+    canAttachComment?: (node: any) => boolean,
+    willPrintOwnComments?: (path: FastPath<>) => boolean,
+    printComments?: (path: FastPath<>, print: (path: FastPath<>) => Doc, options: { [key: string]: any, ... }, needsSemi: boolean) => Doc,
+    handleComments?: {
+      ownLine?: (commentNode: any, text: string, options: { [key: string]: any, ... }, ast: any, isLastComment: boolean) => boolean,
+      endOfLine?: (commentNode: any, text: string, options: { [key: string]: any, ... }, ast: any, isLastComment: boolean) => boolean,
+      remaining?: (commentNode: any, text: string, options: { [key: string]: any, ... }, ast: any, isLastComment: boolean) => boolean,
+      ...
+    },
+    ...
   };
 
   declare export type CursorOptions = {|
@@ -121,7 +163,8 @@ declare module "prettier" {
     extensions: Array<string>,
     filenames?: Array<string>,
     linguistLanguageId: number,
-    vscodeLanguageIds: Array<string>
+    vscodeLanguageIds: Array<string>,
+    ...
   };
 
   declare export type SupportOption = {|
@@ -161,6 +204,11 @@ declare module "prettier" {
     languages: Array<SupportLanguage>,
     options: Array<SupportOption>
   |};
+                                                             
+  declare export type FileInfo = {|
+    ignored: boolean,
+    inferredParser: PrettierParserName | null,
+  |};                                                          
 
   declare export type Prettier = {|
     format: (source: string, options?: Options) => string,
@@ -168,10 +216,12 @@ declare module "prettier" {
     formatWithCursor: (source: string, options: CursorOptions) => CursorResult,
     resolveConfig: {
       (filePath: string, options?: ResolveConfigOptions): Promise<?Options>,
-      sync(filePath: string, options?: ResolveConfigOptions): ?Options
+      sync(filePath: string, options?: ResolveConfigOptions): ?Options,
+      ...
     },
     clearConfigCache: () => void,
-    getSupportInfo: (version?: string) => SupportInfo
+    getSupportInfo: (version?: string) => SupportInfo,
+    getFileInfo: (filePath: string) => Promise<FileInfo>
   |};
 
   declare export default Prettier;

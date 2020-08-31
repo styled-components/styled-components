@@ -3,7 +3,7 @@
 declare var SC_DISABLE_SPEEDY: ?boolean;
 declare var __VERSION__: string;
 
-export const SC_ATTR =
+export const SC_ATTR: string =
   (typeof process !== 'undefined' && (process.env.REACT_APP_SC_ATTR || process.env.SC_ATTR)) ||
   'data-styled';
 

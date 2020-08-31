@@ -1,8 +1,9 @@
 // @flow
-import React, { useContext, useEffect, useMemo, useState, type Node, type Context } from 'react';
+import React, { type Context, type Node, useContext, useEffect, useMemo, useState } from 'react';
 import shallowequal from 'shallowequal';
 import StyleSheet from '../sheet';
-import createStylisInstance, { type Stringifier } from '../utils/stylis';
+import type { Stringifier } from '../types';
+import createStylisInstance from '../utils/stylis';
 
 type Props = {
   children?: Node,

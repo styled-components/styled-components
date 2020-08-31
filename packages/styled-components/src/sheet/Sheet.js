@@ -1,10 +1,11 @@
 // @flow
 import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
-import type { GroupedTag, Sheet, SheetOptions } from './types';
-import { makeTag } from './Tag';
+import { EMPTY_OBJECT } from '../utils/empties';
 import { makeGroupedTag } from './GroupedTag';
 import { getGroupForId } from './GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from './Rehydration';
+import { makeTag } from './Tag';
+import type { GroupedTag, Sheet, SheetOptions } from './types';
 
 let SHOULD_REHYDRATE = IS_BROWSER;
 
@@ -17,7 +18,7 @@ type SheetConstructorArgs = {
 type GlobalStylesAllocationMap = { [key: string]: number };
 type NamesAllocationMap = Map<string, Set<string>>;
 
-const defaultOptions = {
+const defaultOptions: SheetOptions = {
   isServer: !IS_BROWSER,
   useCSSOMInjection: !DISABLE_SPEEDY,
 };
@@ -38,7 +39,7 @@ export default class StyleSheet implements Sheet {
   }
 
   constructor(
-    options: SheetConstructorArgs = defaultOptions,
+    options: SheetConstructorArgs = EMPTY_OBJECT,
     globalStyles?: GlobalStylesAllocationMap = {},
     names?: NamesAllocationMap
   ) {

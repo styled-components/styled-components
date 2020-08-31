@@ -1,7 +1,7 @@
 // @flow
-import type { Target } from '../types';
+import type { IStyledComponent, Target } from '../types';
 
-export default function isTag(target: Target): boolean %checks {
+export default function isTag(target: Target | IStyledComponent): boolean %checks {
   return (
     typeof target === 'string' &&
     (process.env.NODE_ENV !== 'production'
