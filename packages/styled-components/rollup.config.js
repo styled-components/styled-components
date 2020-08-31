@@ -53,6 +53,9 @@ const commonPlugins = [
 
 // this should always be last
 const minifierPlugin = terser({
+  compress: {
+    passes: 2,
+  },
   sourcemap: true,
 });
 
@@ -116,7 +119,7 @@ const serverConfig = {
   ],
   plugins: configBase.plugins.concat(
     replace({
-      window: false,
+      window: undefined,
       __SERVER__: JSON.stringify(true),
     }),
     minifierPlugin
