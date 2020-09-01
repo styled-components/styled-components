@@ -1,13 +1,7 @@
 // @flow
 import validAttr from '@emotion/is-prop-valid';
 import hoist from 'hoist-non-react-statics';
-import React, {
-  type ComponentType,
-  createElement,
-  type Ref,
-  useContext,
-  useDebugValue,
-} from 'react';
+import React, { createElement, type Ref, useContext, useDebugValue } from 'react';
 import { SC_VERSION } from '../constants';
 import type {
   Attrs,
@@ -177,7 +171,7 @@ function useStyledComponentImpl(
 }
 
 export default function createStyledComponent(
-  target: Target | IStyledComponent,
+  target: $PropertyType<IStyledComponent, 'target'>,
   options: {
     attrs?: Attrs,
     componentId: string,
@@ -210,7 +204,7 @@ export default function createStyledComponent(
   // eslint-disable-next-line prefer-destructuring
   let shouldForwardProp = options.shouldForwardProp;
 
-  if (isTargetStyledComp && ((target: any): IStyledComponent).shouldForwardProp) {
+  if (isTargetStyledComp && target.shouldForwardProp) {
     if (options.shouldForwardProp) {
       // compose nested shouldForwardProp calls
       shouldForwardProp = (prop, filterFn) =>
@@ -310,9 +304,9 @@ export default function createStyledComponent(
   if (isCompositeComponent) {
     hoist<
       IStyledStatics,
-      ComponentType<any> | IStyledComponent,
+      $PropertyType<IStyledComponent, 'target'>,
       { [key: $Keys<IStyledStatics>]: true }
-    >(WrappedStyledComponent, ((target: any): ComponentType<any> | IStyledComponent), {
+    >(WrappedStyledComponent, ((target: any): $PropertyType<IStyledComponent, 'target'>), {
       // all SC-specific things should not be hoisted
       attrs: true,
       componentStyle: true,

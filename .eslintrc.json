@@ -53,6 +53,7 @@
   },
   "globals": {
     "$Call": true,
-    "$Keys": true
+    "$Keys": true,
+    "$PropertyType": true
   }
 }

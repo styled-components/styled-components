@@ -209,6 +209,11 @@
   resolved "https://registry.yarnpkg.com/@babel/helper-plugin-utils/-/helper-plugin-utils-7.8.3.tgz#9ea293be19babc0f52ff8ca88b34c3611b208670"
   integrity sha512-j+fq49Xds2smCUNYmEHF9kGNkhbet6yVIBp4e6oeQpH1RUs/Ir06xUKzDjDkGcaaokPiTNs2JBWHjaE4csUkZQ==
 
+"@babel/helper-plugin-utils@^7.10.4":
+  version "7.10.4"
+  resolved "https://registry.yarnpkg.com/@babel/helper-plugin-utils/-/helper-plugin-utils-7.10.4.tgz#2f75a831269d4f677de49986dff59927533cf375"
+  integrity sha512-O4KCvQA6lLiMU9l2eawBPMf1xPP8xPfB3iEQw150hOVTqj/rfXz0ThTb4HEzqQfs2Bmo5Ay8BzxfzVtBrr9dVg==
+
 "@babel/helper-regex@^7.8.3":
   version "7.8.3"
   resolved "https://registry.yarnpkg.com/@babel/helper-regex/-/helper-regex-7.8.3.tgz#139772607d51b93f23effe72105b319d2a4c6965"
@@ -421,6 +426,13 @@
   dependencies:
     "@babel/helper-plugin-utils" "^7.8.3"
 
+"@babel/plugin-syntax-flow@^7.10.4":
+  version "7.10.4"
+  resolved "https://registry.yarnpkg.com/@babel/plugin-syntax-flow/-/plugin-syntax-flow-7.10.4.tgz#53351dd7ae01995e567d04ce42af1a6e0ba846a6"
+  integrity sha512-yxQsX1dJixF4qEEdzVbst3SZQ58Nrooz8NV9Z9GL4byTE25BvJgl5lf0RECUf0fh28rZBb/RYTWn/eeKwCMrZQ==
+  dependencies:
+    "@babel/helper-plugin-utils" "^7.10.4"
+
 "@babel/plugin-syntax-json-strings@^7.8.0":
   version "7.8.3"
   resolved "https://registry.yarnpkg.com/@babel/plugin-syntax-json-strings/-/plugin-syntax-json-strings-7.8.3.tgz#01ca21b668cd8218c9e640cb6dd88c5412b2c96a"
@@ -566,13 +578,21 @@
     "@babel/helper-builder-binary-assignment-operator-visitor" "^7.8.3"
     "@babel/helper-plugin-utils" "^7.8.3"
 
-"@babel/plugin-transform-flow-strip-types@^7.0.0", "@babel/plugin-transform-flow-strip-types@^7.9.0":
+"@babel/plugin-transform-flow-strip-types@^7.0.0":
   version "7.9.0"
   resolved "https://registry.yarnpkg.com/@babel/plugin-transform-flow-strip-types/-/plugin-transform-flow-strip-types-7.9.0.tgz#8a3538aa40434e000b8f44a3c5c9ac7229bd2392"
   integrity sha512-7Qfg0lKQhEHs93FChxVLAvhBshOPQDtJUTVHr/ZwQNRccCm4O9D79r9tVSoV8iNwjP1YgfD+e/fgHcPkN1qEQg==
   dependencies:
     "@babel/helper-plugin-utils" "^7.8.3"
     "@babel/plugin-syntax-flow" "^7.8.3"
+
+"@babel/plugin-transform-flow-strip-types@^7.10.4":
+  version "7.10.4"
+  resolved "https://registry.yarnpkg.com/@babel/plugin-transform-flow-strip-types/-/plugin-transform-flow-strip-types-7.10.4.tgz#c497957f09e86e3df7296271e9eb642876bf7788"
+  integrity sha512-XTadyuqNst88UWBTdLjM+wEY7BFnY2sYtPyAidfC7M/QaZnSuIZpMvLxqGT7phAcnGyWh/XQFLKcGf04CnvxSQ==
+  dependencies:
+    "@babel/helper-plugin-utils" "^7.10.4"
+    "@babel/plugin-syntax-flow" "^7.10.4"
 
 "@babel/plugin-transform-for-of@^7.0.0", "@babel/plugin-transform-for-of@^7.9.0":
   version "7.9.0"
@@ -871,12 +891,12 @@
     semver "^5.5.0"
 
 "@babel/preset-flow@^7.0.0":
-  version "7.9.0"
-  resolved "https://registry.yarnpkg.com/@babel/preset-flow/-/preset-flow-7.9.0.tgz#fee847c3e090b0b2d9227c1949e4da1d1379280d"
-  integrity sha512-88uSmlshIrlmPkNkEcx3UpSZ6b8n0UGBq0/0ZMZCF/uxAW0XIAUuDHBhIOAh0pvweafH4RxOwi/H3rWhtqOYPA==
+  version "7.10.4"
+  resolved "https://registry.yarnpkg.com/@babel/preset-flow/-/preset-flow-7.10.4.tgz#e0d9c72f8cb02d1633f6a5b7b16763aa2edf659f"
+  integrity sha512-XI6l1CptQCOBv+ZKYwynyswhtOKwpZZp5n0LG1QKCo8erRhqjoQV6nvx61Eg30JHpysWQSBwA2AWRU3pBbSY5g==
   dependencies:
-    "@babel/helper-plugin-utils" "^7.8.3"
-    "@babel/plugin-transform-flow-strip-types" "^7.9.0"
+    "@babel/helper-plugin-utils" "^7.10.4"
+    "@babel/plugin-transform-flow-strip-types" "^7.10.4"
 
 "@babel/preset-modules@^0.1.3":
   version "0.1.3"
@@ -2271,11 +2291,6 @@ babel-preset-jest@^24.9.0:
   dependencies:
     "@babel/plugin-syntax-object-rest-spread" "^7.0.0"
     babel-plugin-jest-hoist "^24.9.0"
-
-babylon@^6.15.0:
-  version "6.18.0"
-  resolved "https://registry.yarnpkg.com/babylon/-/babylon-6.18.0.tgz#af2f3b88fa6f5c1e4c634d1a0f8eac4f55b395e3"
-  integrity sha512-q/UEjfGJ2Cm3oKV71DJz9d25TPnq5rhBVL2Q4fA5wcC3jcrdn7+SssEybFIxwAvvP+YCsCYNKughoF33GxgycQ==
 
 balanced-match@^1.0.0:
   version "1.0.0"
@@ -4902,12 +4917,18 @@ flow-bin@^0.132.0:
   resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.132.0.tgz#8bf80a79630db24bd1422dc2cc4b5e97f97ccb98"
   integrity sha512-S1g/vnAyNaLUdajmuUHCMl30qqye12gS6mr4LVyswf1k+JDF4efs6SfKmptuvnpitF3LGCVf0TIffChP8ljwnw==
 
-flow-remove-types@^1.1.0:
-  version "1.2.3"
-  resolved "https://registry.yarnpkg.com/flow-remove-types/-/flow-remove-types-1.2.3.tgz#6131aefc7da43364bb8b479758c9dec7735d1a18"
-  integrity sha512-ypq/U3V+t9atYiOuSJd40tekCra03EHKoRsiK/wXGrsZimuum0kdwVY7Yv0HTaoXgHW1WiayomYd+Q3kkvPl9Q==
+flow-parser@^0.119.1:
+  version "0.119.1"
+  resolved "https://registry.yarnpkg.com/flow-parser/-/flow-parser-0.119.1.tgz#c120c402e164c7e9379a8d84b2c838adaaa0e610"
+  integrity sha512-yFd4z6ZBXq//TJo/gtSzGKhz6wEVeI2m+6JB25JzXuRAOhM5Ze4xFkc3FSIStbYjrAx4H1IUiUTI/yy30oKp8A==
+
+flow-remove-types@~2.119.1:
+  version "2.119.1"
+  resolved "https://registry.yarnpkg.com/flow-remove-types/-/flow-remove-types-2.119.1.tgz#0bcf21d1b9e4092056f02f8924fd74dbedb4751e"
+  integrity sha512-PjPcdfyizk8/+IQL8pKInPkneRVzkJSV7Eqgl/8oHIWtEdQMkqrioxwSc1H38zIRzyALpgSdvcDvFHY28FUqLQ==
   dependencies:
-    babylon "^6.15.0"
+    flow-parser "^0.119.1"
+    pirates "^3.0.2"
     vlq "^0.2.1"
 
 flow-watch@^2.0.0:
@@ -8651,6 +8672,13 @@ pinkie@^2.0.0:
   resolved "https://registry.yarnpkg.com/pinkie/-/pinkie-2.0.4.tgz#72556b80cfa0d48a974e80e77248e80ed4f7f870"
   integrity sha1-clVrgM+g1IqXToDnckjoDtT3+HA=
 
+pirates@^3.0.2:
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/pirates/-/pirates-3.0.2.tgz#7e6f85413fd9161ab4e12b539b06010d85954bb9"
+  integrity sha512-c5CgUJq6H2k6MJz72Ak1F5sN9n9wlSlJyEnwvpm9/y3WB4E3pHBDT2c6PEiS1vyJvq2bUxUAIu0EGf8Cx4Ic7Q==
+  dependencies:
+    node-modules-regexp "^1.0.0"
+
 pirates@^4.0.0, pirates@^4.0.1:
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/pirates/-/pirates-4.0.1.tgz#643a92caf894566f91b2b986d2c66950a8e2fb87"
@@ -9757,12 +9785,11 @@ rollup-plugin-commonjs@^10.0.0:
     resolve "^1.11.0"
     rollup-pluginutils "^2.8.1"
 
-rollup-plugin-flow@^1.1.1:
+"rollup-plugin-flow@github:probablyup/rollup-plugin-flow#breaking-update-flow-remove-types":
   version "1.1.1"
-  resolved "https://registry.yarnpkg.com/rollup-plugin-flow/-/rollup-plugin-flow-1.1.1.tgz#6ce568f1dd559666b77ab76b4bae251407528db6"
-  integrity sha1-bOVo8d1Vlma3erdrS64lFAdSjbY=
+  resolved "https://codeload.github.com/probablyup/rollup-plugin-flow/tar.gz/c17a8b2020a127b0339ccc0d76511f94bfd38b22"
   dependencies:
-    flow-remove-types "^1.1.0"
+    flow-remove-types "~2.119.1"
     rollup-pluginutils "^1.5.1"
 
 rollup-plugin-json@^4.0.0:
