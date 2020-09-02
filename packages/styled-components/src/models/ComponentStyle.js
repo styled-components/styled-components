@@ -28,7 +28,9 @@ export default class ComponentStyle {
   constructor(rules: RuleSet, componentId: string, baseStyle?: ComponentStyle) {
     this.rules = rules;
     this.staticRulesId = '';
-    this.isStatic = process.env.NODE_ENV === 'production' && isStaticRules(rules);
+    this.isStatic = process.env.NODE_ENV === 'production' &&
+      (baseStyle === undefined || baseStyle.isStatic) &&
+      isStaticRules(rules);
     this.componentId = componentId;
 
     // SC_VERSION gives us isolation between multiple runtimes on the page at once

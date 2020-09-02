@@ -42,6 +42,18 @@ describe('static style caching', () => {
 
       expect(Comp.componentStyle.isStatic).toEqual(false);
     });
+
+    it('should mark a static style wrapping a dynamic style as not static', () => {
+      const Inner = styled.div`
+        color: ${props => props.color};
+      `;
+
+      const Outer = styled(Inner)`
+        padding: 5px;
+      `;
+
+      expect(Outer.componentStyle.isStatic).toEqual(false);
+    });
   });
 
   describe('production mode', () => {
@@ -81,6 +93,18 @@ describe('static style caching', () => {
       `;
 
       expect(Comp.componentStyle.isStatic).toEqual(false);
+    });
+
+    it('should mark a static style wrapping a dynamic style as not static', () => {
+      const Inner = styled.div`
+        color: ${props => props.color};
+      `;
+
+      const Outer = styled(Inner)`
+        padding: 5px;
+      `;
+
+      expect(Outer.componentStyle.isStatic).toEqual(false);
     });
   });
 });
