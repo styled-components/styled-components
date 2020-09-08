@@ -6,7 +6,7 @@
  */
 
 const uppercaseCheck = /([A-Z])/;
-const uppercasePattern = new RegExp(uppercaseCheck, 'g');
+const uppercasePattern = /([A-Z])/g;
 const msPattern = /^ms-/;
 const prefixAndLowerCase = (char: string): string => `-${char.toLowerCase()}`;
 
