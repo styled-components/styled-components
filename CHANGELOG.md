@@ -22,6 +22,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Allow `DISABLE_SPEEDY` to be set to `false` to enable speedy mode in non-production environments (see [#3289](https://github.com/styled-components/styled-components/pull/3289)) thanks @FastFedora!
 
+- Enable new style rules can be inserted in the middle of existing sheet when rendering on client after rehydrate. `GroupIDAllocator` is now changed to find `nextFreeGroup` by checking `reverseRegister`, instead of setting it to the end of existing groups. (see [#3233](https://github.com/styled-components/styled-components/pull/3233)) thanks @mu29!
+
 ## [v5.1.1] - 2020-04-07
 
 ### New Functionality
