@@ -6,7 +6,7 @@
     "react-hooks/rules-of-hooks": "error",
     "class-methods-use-this": 0,
     "curly": [2, "multi-line"],
-    "import/namespace": [2, {"allowComputed": true}],
+    "import/namespace": [2, { "allowComputed": true }],
     "no-confusing-arrow": 0,
     "no-continue": 0,
     "no-duplicate-imports": 0,
@@ -50,5 +50,10 @@
     "react": {
       "version": "detect"
     }
+  },
+  "globals": {
+    "$Call": true,
+    "$Keys": true,
+    "$PropertyType": true
   }
 }
