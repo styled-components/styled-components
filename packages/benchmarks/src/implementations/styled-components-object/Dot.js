@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled from 'styled-components-v5';
 import View from './View';
 
 export default styled(View).attrs(p => ({ style: { borderBottomColor: p.color } }))(p => ({

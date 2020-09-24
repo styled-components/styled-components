@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled from 'styled-components-v5';
 
 export default styled.div`
   align-items: stretch;
