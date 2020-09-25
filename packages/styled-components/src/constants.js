@@ -14,22 +14,13 @@ export const SPLITTER = '/*!sc*/\n';
 
 export const IS_BROWSER = typeof window !== 'undefined' && 'HTMLElement' in window;
 
-function hasEnvValue(name) {
-  return typeof process !== 'undefined' && typeof process.env[name] !== 'undefined' &&
-    process.env[name] !== '';
-}
-
-function getEnvValue(name) {
-  return process.env[name] === 'false' ? false : process.env[name];
-}
-
 export const DISABLE_SPEEDY =
   Boolean(typeof SC_DISABLE_SPEEDY === 'boolean'
     ? SC_DISABLE_SPEEDY
-    : (hasEnvValue('REACT_APP_SC_DISABLE_SPEEDY')
-      ? getEnvValue('REACT_APP_SC_DISABLE_SPEEDY')
-      : (hasEnvValue('SC_DISABLE_SPEEDY')
-        ? getEnvValue('SC_DISABLE_SPEEDY')
+    : (typeof process !== 'undefined' && typeof process.env.REACT_APP_SC_DISABLE_SPEEDY !== 'undefined' && process.env.REACT_APP_SC_DISABLE_SPEEDY !== ''
+      ? process.env.REACT_APP_SC_DISABLE_SPEEDY === 'false' ? false : process.env.REACT_APP_SC_DISABLE_SPEEDY
+      : (typeof process !== 'undefined' && typeof process.env.SC_DISABLE_SPEEDY !== 'undefined' && process.env.SC_DISABLE_SPEEDY !== ''
+        ? process.env.SC_DISABLE_SPEEDY === 'false' ? false : process.env.SC_DISABLE_SPEEDY
         : process.env.NODE_ENV !== 'production'
       )
     ));
