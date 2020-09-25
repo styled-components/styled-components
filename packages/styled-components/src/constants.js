@@ -24,7 +24,7 @@ function getEnvValue(name) {
 }
 
 export const DISABLE_SPEEDY =
-  typeof SC_DISABLE_SPEEDY === 'boolean'
+  Boolean(typeof SC_DISABLE_SPEEDY === 'boolean'
     ? SC_DISABLE_SPEEDY
     : (hasEnvValue('REACT_APP_SC_DISABLE_SPEEDY')
       ? getEnvValue('REACT_APP_SC_DISABLE_SPEEDY')
@@ -32,7 +32,7 @@ export const DISABLE_SPEEDY =
         ? getEnvValue('SC_DISABLE_SPEEDY')
         : process.env.NODE_ENV !== 'production'
       )
-    );
+    ));
 
 // Shared empty execution context when generating static styles
 export const STATIC_EXECUTION_CONTEXT = {};
