@@ -23,6 +23,7 @@
     "react-jss": "^8.6.1",
     "react-native-web": "^0.11.4",
     "reactxp": "^1.3.3",
+    "styled-components": "link:../styled-components",
     "styled-components-v5": "npm:styled-components",
     "styled-jsx": "^3.2.1",
     "styletron-engine-atomic": "^1.3.0",

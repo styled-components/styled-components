@@ -10637,6 +10637,10 @@ style-loader@^0.23.1:
     shallowequal "^1.1.0"
     supports-color "^5.5.0"
 
+"styled-components@link:../styled-components":
+  version "0.0.0"
+  uid ""
+
 styled-jsx@^3.2.1:
   version "3.2.5"
   resolved "https://registry.yarnpkg.com/styled-jsx/-/styled-jsx-3.2.5.tgz#0172a3e13a0d6d8bf09167dcaf32cf7102d932ca"
