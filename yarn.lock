@@ -10637,9 +10637,19 @@ style-loader@^0.23.1:
     shallowequal "^1.1.0"
     supports-color "^5.5.0"
 
-"styled-components@link:../styled-components":
-  version "0.0.0"
-  uid ""
+"styled-components@link:packages/styled-components":
+  version "5.2.0"
+  dependencies:
+    "@babel/helper-module-imports" "^7.0.0"
+    "@babel/traverse" "^7.4.5"
+    "@emotion/is-prop-valid" "^0.8.8"
+    "@emotion/stylis" "^0.8.4"
+    "@emotion/unitless" "^0.7.4"
+    babel-plugin-styled-components ">= 1"
+    css-to-react-native "^3.0.0"
+    hoist-non-react-statics "^3.0.0"
+    shallowequal "^1.1.0"
+    supports-color "^5.5.0"
 
 styled-jsx@^3.2.1:
   version "3.2.5"
