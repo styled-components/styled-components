@@ -45,8 +45,8 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test' && 
     // eslint-disable-next-line no-console
     console.warn(
       "It looks like there are several instances of 'styled-components' initialized in this application. " +
-        'This may cause dynamic styles not rendering properly, errors happening during rehydration process, ' +
-        'missing theme prop, and makes your application bigger without a good reason.\n\n' +
+        'This may cause dynamic styles to not render properly, errors during the rehydration process, ' +
+        'a missing theme prop, and makes your application bigger without good reason.\n\n' +
         'See https://s-c.sh/2BAXzed for more info.'
     );
   }
