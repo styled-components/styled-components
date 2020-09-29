@@ -1,7 +1,15 @@
 // @flow
 import hoist from 'hoist-non-react-statics';
-import React, { createElement, useContext, type AbstractComponent, type Ref } from 'react';
-import type { Attrs, RuleSet, Target } from '../types';
+import React, { createElement, useContext, type Ref } from 'react';
+import type {
+  Attrs,
+  IInlineStyle,
+  IStyledNativeComponent,
+  IStyledNativeStatics,
+  RuleSet,
+  ShouldForwardProp,
+  Target,
+} from '../types';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import generateComponentId from '../utils/generateComponentId';
@@ -15,7 +23,7 @@ import { ThemeContext } from './ThemeProvider';
 const identifiers = {};
 
 /* We depend on components having unique IDs */
-function generateId(displayName: string, parentComponentId: string) {
+function generateId(displayName?: string, parentComponentId?: string) {
   const name = typeof displayName !== 'string' ? 'sc' : escape(displayName);
   // Ensure that no displayName can lead to duplicate componentIds
   identifiers[name] = (identifiers[name] || 0) + 1;
@@ -49,32 +57,18 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
   return [context, resolvedAttrs];
 }
 
-interface StyledComponentWrapperProperties {
-  attrs: Attrs;
-  inlineStyle: Function;
-  displayName: string;
-  target: Target;
-  shouldForwardProp: ?(prop: string, isValidAttr: (prop: string) => boolean) => boolean;
-  styledComponentId: string;
-}
-
-type StyledComponentWrapper<Config, Instance> = AbstractComponent<Config, Instance> &
-  StyledComponentWrapperProperties;
-
 // Validator defaults to true if not in HTML/DOM env
 const validAttr = () => true;
 
-function useStyledComponentImpl<Config: {}, Instance>(
-  forwardedComponent: StyledComponentWrapper<Config, Instance>,
+function useStyledComponentImpl(
+  forwardedComponent: IStyledNativeComponent,
   props: Object,
   forwardedRef: Ref<any>
 ) {
   const {
     attrs: componentAttrs,
     inlineStyle,
-    // $FlowFixMe
     defaultProps,
-    // $FlowFixMe
     shouldForwardProp,
     target,
   } = forwardedComponent;
@@ -112,8 +106,18 @@ function useStyledComponentImpl<Config: {}, Instance>(
   return createElement(elementToBeCreated, propsForElement);
 }
 
-export default (InlineStyle: Function) => {
-  const createStyledNativeComponent = (target: Target, options: Object, rules: RuleSet) => {
+export default (InlineStyle: Class<IInlineStyle>) => {
+  const createStyledNativeComponent = (
+    target: $PropertyType<IStyledNativeComponent, 'target'>,
+    options: {
+      attrs?: Attrs,
+      componentId: string,
+      displayName?: string,
+      parentComponentId?: string,
+      shouldForwardProp?: ShouldForwardProp,
+    },
+    rules: RuleSet
+  ) => {
     const isTargetStyledComp = isStyledComponent(target);
 
     const {
@@ -129,22 +133,24 @@ export default (InlineStyle: Function) => {
 
     // fold the underlying StyledComponent attrs up (implicit extend)
     const finalAttrs =
-      // $FlowFixMe
-      isTargetStyledComp && target.attrs ? target.attrs.concat(attrs).filter(Boolean) : attrs;
+      isTargetStyledComp && ((target: any): IStyledNativeComponent).attrs
+        ? ((target: any): IStyledNativeComponent).attrs.concat(attrs).filter(Boolean)
+        : attrs;
 
     // eslint-disable-next-line prefer-destructuring
     let shouldForwardProp = options.shouldForwardProp;
 
-    // $FlowFixMe
     if (isTargetStyledComp && target.shouldForwardProp) {
-      if (shouldForwardProp) {
+      if (options.shouldForwardProp) {
         // compose nested shouldForwardProp calls
         shouldForwardProp = (prop, filterFn) =>
-          // $FlowFixMe
-          target.shouldForwardProp(prop, filterFn) && options.shouldForwardProp(prop, filterFn);
+          ((((target: any): IStyledNativeComponent).shouldForwardProp: any): ShouldForwardProp)(
+            prop,
+            filterFn
+          ) && ((options.shouldForwardProp: any): ShouldForwardProp)(prop, filterFn);
       } else {
         // eslint-disable-next-line prefer-destructuring
-        shouldForwardProp = target.shouldForwardProp;
+        shouldForwardProp = ((target: any): IStyledNativeComponent).shouldForwardProp;
       }
     }
 
@@ -152,20 +158,20 @@ export default (InlineStyle: Function) => {
      * forwardRef creates a new interim component, which we'll take advantage of
      * instead of extending ParentComponent to create _another_ interim class
      */
-    let WrappedStyledComponent;
+    let WrappedStyledComponent: IStyledNativeComponent;
 
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const forwardRef = (props, ref) => useStyledComponentImpl(WrappedStyledComponent, props, ref);
 
     forwardRef.displayName = displayName;
 
-    // $FlowFixMe this is a forced cast to merge it StyledComponentWrapperProperties
-    WrappedStyledComponent = (React.forwardRef(forwardRef): StyledComponentWrapper<*, *>);
+    WrappedStyledComponent = ((React.forwardRef(forwardRef): any): IStyledNativeComponent);
 
     WrappedStyledComponent.attrs = finalAttrs;
     WrappedStyledComponent.inlineStyle = new InlineStyle(
-      // $FlowFixMe
-      isTargetStyledComp ? target.inlineStyle.rules.concat(rules) : rules
+      isTargetStyledComp
+        ? ((target: any): IStyledNativeComponent).inlineStyle.rules.concat(rules)
+        : rules
     );
     WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
@@ -174,11 +180,9 @@ export default (InlineStyle: Function) => {
 
     // fold the underlying StyledComponent target up since we folded the styles
     WrappedStyledComponent.target = isTargetStyledComp
-      ? // $FlowFixMe
-        target.target
+      ? ((target: any): IStyledNativeComponent).target
       : target;
 
-    // $FlowFixMe
     WrappedStyledComponent.withComponent = function withComponent(tag: Target) {
       const { componentId: previousComponentId, ...optionsToCopy } = options;
 
@@ -194,28 +198,28 @@ export default (InlineStyle: Function) => {
       return createStyledNativeComponent(tag, newOptions, rules);
     };
 
-    // $FlowFixMe
     Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
       get() {
         return this._foldedDefaultProps;
       },
 
       set(obj) {
-        // $FlowFixMe
-        this._foldedDefaultProps = isTargetStyledComp ? merge({}, target.defaultProps, obj) : obj;
+        this._foldedDefaultProps = isTargetStyledComp
+          ? merge({}, ((target: any): IStyledNativeComponent).defaultProps, obj)
+          : obj;
       },
     });
 
-    // $FlowFixMe
-    WrappedStyledComponent.toString = () => `.${WrappedStyledComponent.styledComponentId}`;
-
-    hoist(WrappedStyledComponent, (target: any), {
+    hoist<
+      IStyledNativeStatics,
+      $PropertyType<IStyledNativeComponent, 'target'>,
+      { [key: $Keys<IStyledNativeStatics>]: true }
+    >(WrappedStyledComponent, ((target: any): $PropertyType<IStyledNativeComponent, 'target'>), {
       // all SC-specific things should not be hoisted
       attrs: true,
       inlineStyle: true,
       displayName: true,
       shouldForwardProp: true,
-      self: true,
       styledComponentId: true,
       target: true,
       withComponent: true,

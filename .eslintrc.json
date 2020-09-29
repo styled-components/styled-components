@@ -54,6 +54,7 @@
   "globals": {
     "$Call": true,
     "$Keys": true,
-    "$PropertyType": true
+    "$PropertyType": true,
+    "Class": true
   }
 }

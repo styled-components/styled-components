@@ -1,8 +1,10 @@
 // @flow
-import type { IStyledComponent } from '../types';
+import type { IStyledComponent, IStyledNativeComponent } from '../types';
 
 export default function getComponentName(
-  target: $PropertyType<IStyledComponent, 'target'>
+  target:
+    | $PropertyType<IStyledComponent, 'target'>
+    | $PropertyType<IStyledNativeComponent, 'target'>
 ): string {
   return (
     (process.env.NODE_ENV !== 'production' ? typeof target === 'string' && target : false) ||
