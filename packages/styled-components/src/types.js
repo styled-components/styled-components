@@ -72,5 +72,4 @@ export interface IStyledNativeStatics {
 
 export interface IStyledNativeComponent extends Component<*>, IStyledNativeStatics {
   defaultProps?: Object;
-  toString: () => string;
 }
