@@ -31,7 +31,7 @@ Please keep it product-centric.
 <!-- BUG TEMPLATE -->
 ## Environment
 <!-- Please run this command inside your project and paste its contents here (it automatically copies to your clipboard) -->
-`npx envinfo --system --binaries --npmPackages styled-components,babel-plugin-styled-components --markdown --clipboard`
+`npx envinfo --system --binaries --npmPackages styled-components,babel-plugin-styled-components --markdown | npx clipboard-cli`
 
 ## Reproduction
 
