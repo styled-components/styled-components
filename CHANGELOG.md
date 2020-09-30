@@ -20,6 +20,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Add "engines" to package.json (currently set to Node 10, the oldest supported LTS distribution) (see [#3201](https://github.com/styled-components/styled-components/pull/3201)) thanks @MichaelDeBoey!
 
+- Allow `DISABLE_SPEEDY` to be set to `false` to enable speedy mode in non-production environments (see [#3289](https://github.com/styled-components/styled-components/pull/3289)) thanks @FastFedora!
+
 ## [v5.1.1] - 2020-04-07
 
 ### New Functionality
