@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "christian-kohler.path-intellisense",
+    "dbaeumer.vscode-eslint",
+    "flowtype.flow-for-vscode",
+    "jpoissonnier.vscode-styled-components"
+  ]
+}

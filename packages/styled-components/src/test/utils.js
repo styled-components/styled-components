@@ -3,6 +3,7 @@
  * This sets up our end-to-end test suite, which essentially makes sure
  * our public API works the way we promise/want
  */
+import beautify from 'js-beautify';
 import styled from '../constructors/styled';
 import { masterSheet } from '../models/StyleSheetManager';
 import { resetGroupIds } from '../sheet/GroupIDAllocator';
@@ -32,6 +33,7 @@ export const resetStyled = (isServer: boolean = false) => {
   }
 
   resetGroupIds();
+  masterSheet.gs = {};
   masterSheet.names = new Map();
   masterSheet.clearTag();
   mockIndex = 0;
@@ -45,7 +47,7 @@ export const stripComments = (str: string) => str.replace(/\/\*.*?\*\/\n?/g, '')
 export const stripWhitespace = (str: string) =>
   str
     .trim()
-    .replace(/([;\{\}])/g, '$1  ')
+    .replace(/([;{}])/g, '$1  ')
     .replace(/\s+/g, ' ');
 
 export const getCSS = (scope: Document | HTMLElement) =>
@@ -76,4 +78,14 @@ export const expectCSSMatches = (
     expect(css).toEqual(expectation);
     return css;
   }
+};
+
+export const getRenderedCSS = () => {
+  // diff-optimized
+  return beautify.css(stripComments(getCSS(document)), {
+    indent_size: 2,
+    newline_between_rules: false,
+    selector_separator_newline: false,
+    space_around_combinator: true,
+  });
 };

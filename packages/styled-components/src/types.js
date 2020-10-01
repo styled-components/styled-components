@@ -1,5 +1,7 @@
 // @flow
-import type { ComponentType } from 'react';
+import type { Component, ComponentType } from 'react';
+import ComponentStyle from './models/ComponentStyle';
+import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
 export type Attrs = Array<Function>;
 
@@ -7,31 +9,47 @@ export type Interpolation =
   | ((executionContext: Object) => Interpolation)
   | string
   | ComponentType<*>
-  | Array<Interpolation>;
+  | Interpolation[];
 
-export type RuleSet = Array<Interpolation>;
+export type RuleSet = Interpolation[];
 
-export type Styles = Array<string> | Object | ((executionContext: Object) => Interpolation);
+export type Styles = string[] | Object | ((executionContext: Object) => Interpolation);
 
 export type Target = string | ComponentType<*>;
 
 export type NameGenerator = (hash: number) => string;
 
-export type CSSConstructor = (
-  strings: Array<string>,
-  ...interpolations: Array<Interpolation>
-) => RuleSet;
+export type CSSConstructor = (strings: string[], ...interpolations: Interpolation[]) => RuleSet;
 export type StyleSheet = {
   create: Function,
 };
 
 export type Flattener = (
-  chunks: Array<Interpolation>,
+  chunks: Interpolation[],
   executionContext: ?Object,
   styleSheet: ?Object
-) => Array<Interpolation>;
+) => Interpolation[];
 
 export type Stringifier = {
-  (rules: string, selector: string, prefix: ?string, componentId: ?string): Array<string>,
+  (rules: string, selector: string, prefix: ?string, componentId: ?string): string[],
   hash: string,
 };
+
+export type ShouldForwardProp = (prop: string, isValidAttr: (prop: string) => boolean) => boolean;
+
+export interface IStyledStatics {
+  attrs: Attrs;
+  componentStyle: ComponentStyle;
+  displayName: string; // this is here because we want the uppermost displayName retained in a folding scenario
+  foldedComponentIds: Array<string>;
+  target: Target | IStyledComponent;
+  shouldForwardProp?: ShouldForwardProp;
+  styledComponentId: string;
+  warnTooManyClasses?: $Call<typeof createWarnTooManyClasses, string, string>;
+  withComponent: (tag: Target) => IStyledComponent;
+}
+
+export interface IStyledComponent extends Component<*>, IStyledStatics {
+  defaultProps?: Object;
+  toString: () => string;
+}

@@ -2,8 +2,7 @@
 import React, { Component } from 'react';
 import TestRenderer from 'react-test-renderer';
 import ThemeProvider from '../models/ThemeProvider';
-
-import { resetStyled, expectCSSMatches } from './utils';
+import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
 // testing for ComponentStyle specifics here
@@ -86,11 +85,11 @@ describe('attrs', () => {
         </ThemeProvider>
       ).toJSON()
     ).toMatchInlineSnapshot(`
-            <button
-              className="sc-a b"
-              data-color="red"
-            />
-        `);
+      <button
+        className="sc-a"
+        data-color="red"
+      />
+    `);
   });
 
   it('defaultProps are merged into what function attrs receives', () => {
@@ -105,11 +104,11 @@ describe('attrs', () => {
     };
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
-            <button
-              className="sc-a b"
-              data-color="red"
-            />
-        `);
+      <button
+        className="sc-a"
+        data-color="red"
+      />
+    `);
   });
 
   it('pass props to the attr function', () => {
@@ -149,7 +148,7 @@ describe('attrs', () => {
 
     expect(TestRenderer.create(<Comp className="something" />).toJSON()).toMatchInlineSnapshot(`
       <div
-        className="sc-a sc-b c something foo meow nya"
+        className="sc-a sc-b something foo meow nya"
       />
     `);
   });
@@ -171,7 +170,7 @@ describe('attrs', () => {
     expect(TestRenderer.create(<Comp style={{ color: 'green', borderStyle: 'dotted' }} />).toJSON())
       .toMatchInlineSnapshot(`
       <div
-        className="sc-a b"
+        className="sc-a"
         style={
           Object {
             "background": "blue",
@@ -226,7 +225,14 @@ describe('attrs', () => {
       }
     `;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-    expectCSSMatches('.b { color:blue; } .b.--is-active { color:red; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+      }
+      .b.--is-active {
+        color: red;
+      }"
+    `);
   });
 
   it('should pass through children as a normal prop', () => {
@@ -290,7 +296,14 @@ describe('attrs', () => {
 
     const rendered = TestRenderer.create(<BlueText>Hello</BlueText>);
 
-    expectCSSMatches(`.d {background: red;} .c {background: blue;}`);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".d {
+        background: red;
+      }
+      .c {
+        background: blue;
+      }"
+    `);
     expect(rendered.toJSON()).toMatchInlineSnapshot(`
             <p
               className="sc-a d sc-b c"

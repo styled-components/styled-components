@@ -4,3 +4,4 @@ dist
 *.log
 package-lock.json
 **/styled-components/src/utils/errors.js
+coverage

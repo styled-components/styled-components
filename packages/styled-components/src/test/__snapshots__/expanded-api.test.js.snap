@@ -12,32 +12,6 @@ exports[`expanded api "as" prop changes the rendered element type when used with
 />
 `;
 
-exports[`expanded api "as" prop transfers all styles that have been applied 1`] = `"styled.div"`;
-
-exports[`expanded api "as" prop transfers all styles that have been applied 2`] = `"Styled(styled.div)"`;
-
-exports[`expanded api "as" prop transfers all styles that have been applied 3`] = `"Styled(Styled(styled.div))"`;
-
-exports[`expanded api "as" prop transfers all styles that have been applied 4`] = `
-<div
-  className="sc-a d"
-/>
-`;
-
-exports[`expanded api "as" prop transfers all styles that have been applied 5`] = `
-<div
-  className="sc-a sc-b e"
-/>
-`;
-
-exports[`expanded api "as" prop transfers all styles that have been applied 6`] = `
-<span
-  className="sc-a sc-b sc-c f"
-/>
-`;
-
-exports[`expanded api "as" prop transfers all styles that have been applied 7`] = `".d{background:blue;color:red;}.e{background:blue;color:red;color:green;}.f{background:blue;color:red;color:green;text-align:center;}"`;
-
 exports[`expanded api "as" prop works with custom components 1`] = `
 <figure
   className="sc-a b"
@@ -46,72 +20,72 @@ exports[`expanded api "as" prop works with custom components 1`] = `
 
 exports[`expanded api chaining should keep the last value passed in when merging 1`] = `
 <div
-  className="dn-5-id-4 a"
+  className="dn-5-id-4"
 />
 `;
 
 exports[`expanded api chaining should merge the options strings 1`] = `
 <div
-  className="dn-2-id-1 a"
+  className="dn-2-id-1"
 />
 `;
 
 exports[`expanded api componentId should be attached if passed in 1`] = `
 <div
-  className="LOLOMG a"
+  className="LOLOMG"
 />
 `;
 
 exports[`expanded api componentId should be attached if passed in 2`] = `
 <div
-  className="OMGLOL b"
+  className="OMGLOL"
 />
 `;
 
 exports[`expanded api componentId should be combined with displayName if both passed in 1`] = `
 <div
-  className="Comp-LOLOMG a"
+  className="Comp-LOLOMG"
 />
 `;
 
 exports[`expanded api componentId should be combined with displayName if both passed in 2`] = `
 <div
-  className="Comp2-OMGLOL b"
+  className="Comp2-OMGLOL"
 />
 `;
 
 exports[`expanded api componentId should be generated as "sc" + hash 1`] = `
 <div
-  className="sc-a c"
+  className="sc-a"
 />
 `;
 
 exports[`expanded api componentId should be generated as "sc" + hash 2`] = `
 <div
-  className="sc-b d"
+  className="sc-b"
 />
 `;
 
 exports[`expanded api componentId should be generated from displayName + hash 1`] = `
 <div
-  className="Comp-a c"
+  className="Comp-a"
 />
 `;
 
 exports[`expanded api componentId should be generated from displayName + hash 2`] = `
 <div
-  className="Comp2-b d"
+  className="Comp2-b"
 />
 `;
 
 exports[`expanded api componentId should work with \`.withComponent\` 1`] = `
 <h1
-  className="Comp-OMGLOL-h1 a"
+  className="Comp-OMGLOL-h1"
 />
 `;
 
 exports[`expanded api componentId should work with \`.withComponent\` 2`] = `
 <div
-  className="Comp2-OMFG-Dummy b"
+  className="Comp2-OMFG-Dummy"
 />
 `;

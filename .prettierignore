@@ -1,4 +1,3 @@
-*.json
 *.yml
 dist
 flow-typed

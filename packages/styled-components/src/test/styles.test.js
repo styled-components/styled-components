@@ -1,10 +1,9 @@
 // @flow
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-
-import * as nonce from '../utils/nonce';
-import { resetStyled, expectCSSMatches } from './utils';
 import { masterSheet } from '../models/StyleSheetManager';
+import * as nonce from '../utils/nonce';
+import { getRenderedCSS, resetStyled } from './utils';
 
 jest.mock('../utils/nonce');
 jest.spyOn(nonce, 'default').mockImplementation(() => 'foo');
@@ -27,7 +26,11 @@ describe('with styles', () => {
       ${rule};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { color:blue; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+      }"
+    `);
   });
 
   it('should append multiple styles', () => {
@@ -37,7 +40,12 @@ describe('with styles', () => {
       ${rule1} ${rule2};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { color:blue; background:red; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+        background: red;
+      }"
+    `);
   });
 
   it('amperstand should refer to the static class when making a self-referential combo selector', () => {
@@ -91,29 +99,75 @@ describe('with styles', () => {
         <Comp color="red" />
       </React.Fragment>
     );
-    expectCSSMatches(`
-      .b{ background:red; color:white; }
-      .b.b.b{ border:1px solid red; }
-      .b[disabled]{ color:red; }
-      .b[disabled] + .sc-a[disabled]{ margin-bottom:4px; }
-      .b[disabled] > .sc-a[disabled]{ margin-top:4px; }
-      .b + .sc-a{ margin-left:4px; }
-      .b + .sc-a ~ .sc-a{ background:black; }
-      .b ~ .sc-a{ margin-right:4px; }
-      .b > .sc-a{ margin-top:4px; }
-      .foo .b{ color:silver; }
-      .foo > .b{ color:green; }
-      .c{ background:red; color:red; }
-      .c.c.c{ border:1px solid red; }
-      .c[disabled]{ color:red; }
-      .c[disabled] + .sc-a[disabled]{ margin-bottom:4px; }
-      .c[disabled] > .sc-a[disabled]{ margin-top:4px; }
-      .c + .sc-a{ margin-left:4px; }
-      .c + .sc-a ~ .sc-a{ background:black; }
-      .c ~ .sc-a{ margin-right:4px; }
-      .c > .sc-a{ margin-top:4px; }
-      .foo .c{ color:silver; }
-      .foo > .c{ color:green; }
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        background: red;
+        color: white;
+      }
+      .b.b.b {
+        border: 1px solid red;
+      }
+      .b[disabled] {
+        color: red;
+      }
+      .b[disabled] + .sc-a[disabled] {
+        margin-bottom: 4px;
+      }
+      .b[disabled] > .sc-a[disabled] {
+        margin-top: 4px;
+      }
+      .sc-a + .sc-a {
+        margin-left: 4px;
+      }
+      .sc-a + .sc-a ~ .sc-a {
+        background: black;
+      }
+      .sc-a ~ .sc-a {
+        margin-right: 4px;
+      }
+      .sc-a > .sc-a {
+        margin-top: 4px;
+      }
+      .foo .sc-a {
+        color: silver;
+      }
+      .foo > .sc-a {
+        color: green;
+      }
+      .c {
+        background: red;
+        color: red;
+      }
+      .c.c.c {
+        border: 1px solid red;
+      }
+      .c[disabled] {
+        color: red;
+      }
+      .c[disabled] + .sc-a[disabled] {
+        margin-bottom: 4px;
+      }
+      .c[disabled] > .sc-a[disabled] {
+        margin-top: 4px;
+      }
+      .sc-a + .sc-a {
+        margin-left: 4px;
+      }
+      .sc-a + .sc-a ~ .sc-a {
+        background: black;
+      }
+      .sc-a ~ .sc-a {
+        margin-right: 4px;
+      }
+      .sc-a > .sc-a {
+        margin-top: 4px;
+      }
+      .foo .sc-a {
+        color: silver;
+      }
+      .foo > .sc-a {
+        color: green;
+      }"
     `);
   });
 
@@ -125,7 +179,11 @@ describe('with styles', () => {
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { background-color:blue; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        background-color: blue;
+      }"
+    `);
   });
 
   it('should handle inline style objects with media queries', () => {
@@ -139,9 +197,16 @@ describe('with styles', () => {
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches(
-      '.b { background-color:blue; } @media screen and (min-width:250px) { .b { background-color:red; } }'
-    );
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        background-color: blue;
+      }
+      @media screen and (min-width:250px) {
+        .b {
+          background-color: red;
+        }
+      }"
+    `);
   });
 
   it('should handle inline style objects with pseudo selectors', () => {
@@ -155,7 +220,14 @@ describe('with styles', () => {
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { background-color:blue; } .b:hover { color:green; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        background-color: blue;
+      }
+      .b:hover {
+        color: green;
+      }"
+    `);
   });
 
   it('should handle inline style objects with pseudo selectors', () => {
@@ -169,7 +241,14 @@ describe('with styles', () => {
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { background-color:blue; } .b:hover { color:green; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        background-color: blue;
+      }
+      .b:hover {
+        color: green;
+      }"
+    `);
   });
 
   it('should handle inline style objects with nesting', () => {
@@ -183,7 +262,14 @@ describe('with styles', () => {
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { background-color:blue; } .b > h1 { color:white; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        background-color: blue;
+      }
+      .b > h1 {
+        color: white;
+      }"
+    `);
   });
 
   it('should handle inline style objects with contextual selectors', () => {
@@ -197,7 +283,14 @@ describe('with styles', () => {
       ${rule1};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches('.b { background-color:blue; } html.something .b { color:white; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        background-color: blue;
+      }
+      html.something .sc-a {
+        color: white;
+      }"
+    `);
   });
 
   it('should inject styles of multiple components', () => {
@@ -213,7 +306,14 @@ describe('with styles', () => {
     TestRenderer.create(<FirstComp />);
     TestRenderer.create(<SecondComp />);
 
-    expectCSSMatches('.c { background:blue; } .d { background:red; }');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".c {
+        background: blue;
+      }
+      .d {
+        background: red;
+      }"
+    `);
   });
 
   it('should inject styles of multiple components based on creation, not rendering order', () => {
@@ -231,10 +331,14 @@ describe('with styles', () => {
     TestRenderer.create(<FirstComp />);
 
     // Classes _do_ get generated in the order of rendering but that's ok
-    expectCSSMatches(`
-        .d { content:"first rule"; }
-        .c { content:"second rule"; }
-      `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".d {
+        content: \\"first rule\\";
+      }
+      .c {
+        content: \\"second rule\\";
+      }"
+    `);
   });
 
   it('should strip a JS-style (invalid) comment in the styles', () => {
@@ -246,11 +350,11 @@ describe('with styles', () => {
       ${rule}
     `
     TestRenderer.create(<Comp />);
-    expectCSSMatches(`
-        .b {
-          color:blue;
-        }
-      `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+      }"
+    `);
   });
 
   it('should respect removed rules', () => {
@@ -268,11 +372,11 @@ describe('with styles', () => {
     );
     masterSheet.clearRules(Text.styledComponentId);
 
-    expectCSSMatches(`
-        .c {
-          color:red;
-        }
-      `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".c {
+        color: red;
+      }"
+    `);
   });
 
   it('should add a webpack nonce to the style tags if one is available in the global scope', () => {
@@ -281,11 +385,11 @@ describe('with styles', () => {
       ${rule};
     `;
     TestRenderer.create(<Comp />);
-    expectCSSMatches(`
-        .b {
-          color:blue;
-        }
-      `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: blue;
+      }"
+    `);
 
     Array.from(document.querySelectorAll('style')).forEach(el => {
       expect(el.getAttribute('nonce')).toBe('foo');

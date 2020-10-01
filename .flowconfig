@@ -29,7 +29,3 @@
 .*/example/.*
 .*/integration-test/.*
 .*/sandbox/.*
-
-[options]
-suppress_comment=.*\\$FlowFixMe
-suppress_comment=.*\\$FlowInvalidInputTest

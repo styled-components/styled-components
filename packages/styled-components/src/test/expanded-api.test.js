@@ -1,8 +1,7 @@
 // @flow
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-
-import { getCSS, resetStyled } from './utils';
+import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
 // testing for ComponentStyle specifics here
@@ -164,14 +163,37 @@ describe('expanded api', () => {
         text-align: center;
       `;
 
-      expect(Comp.displayName).toMatchSnapshot();
-      expect(Comp2.displayName).toMatchSnapshot();
-      expect(Comp3.displayName).toMatchSnapshot();
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot();
-      expect(TestRenderer.create(<Comp3 as="span" />).toJSON()).toMatchSnapshot();
+      expect(Comp.displayName).toMatchInlineSnapshot(`"styled.div"`);
+      expect(Comp2.displayName).toMatchInlineSnapshot(`"Styled(styled.div)"`);
+      expect(Comp3.displayName).toMatchInlineSnapshot(`"Styled(Styled(styled.div))"`);
+      expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
+        <div
+          className="sc-a d"
+        />
+      `);
+      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchInlineSnapshot(`
+        <div
+          className="sc-a sc-b d e"
+        />
+      `);
+      expect(TestRenderer.create(<Comp3 as="span" />).toJSON()).toMatchInlineSnapshot(`
+        <span
+          className="sc-a sc-b sc-c d e f"
+        />
+      `);
 
-      expect(getCSS(document)).toMatchSnapshot();
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".d {
+          background: blue;
+          color: red;
+        }
+        .e {
+          color: green;
+        }
+        .f {
+          text-align: center;
+        }"
+      `);
     });
   });
 });

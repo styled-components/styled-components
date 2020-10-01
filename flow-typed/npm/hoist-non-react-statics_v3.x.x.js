@@ -72,14 +72,9 @@ declare module 'hoist-non-react-statics' {
     C
   >;
 
-  /*
-    TP - target component props
-    T - target component statics
-    S - source component statics
-  */
-  declare function hoistNonReactStatics<TP, T, S, C: { [key: string]: true, ... }>(
-    TargetComponent: React$ComponentType<TP> & T,
-    SourceComponent: React$ComponentType<any> & S,
+  declare function hoistNonReactStatics<T, S, C = { [key: string]: true, ... }>(
+    TargetComponent: T,
+    SourceComponent: S,
     customStatics?: C
   ): React$ComponentType<TP> & $HoistedStatics<S, C> & T;
 

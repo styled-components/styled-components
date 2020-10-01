@@ -1,9 +1,8 @@
 // @flow
+import StyleSheet from '../sheet';
+import type { RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import isStaticRules from '../utils/isStaticRules';
-import StyleSheet from '../sheet';
-
-import type { RuleSet, Stringifier } from '../types';
 
 export default class GlobalStyle {
   componentId: string;
@@ -16,6 +15,10 @@ export default class GlobalStyle {
     this.rules = rules;
     this.componentId = componentId;
     this.isStatic = isStaticRules(rules);
+
+    // pre-register the first instance to ensure global styles
+    // load before component ones
+    StyleSheet.registerId(this.componentId + 1);
   }
 
   createStyles(
@@ -24,7 +27,7 @@ export default class GlobalStyle {
     styleSheet: StyleSheet,
     stylis: Stringifier
   ) {
-    const flatCSS = flatten(this.rules, executionContext, styleSheet);
+    const flatCSS = flatten(this.rules, executionContext, styleSheet, stylis);
     const css = stylis(flatCSS.join(''), '');
     const id = this.componentId + instance;
 
@@ -42,7 +45,7 @@ export default class GlobalStyle {
     styleSheet: StyleSheet,
     stylis: Stringifier
   ) {
-    StyleSheet.registerId(this.componentId + instance);
+    if (instance > 2) StyleSheet.registerId(this.componentId + instance);
 
     // NOTE: Remove old styles, then inject the new ones
     this.removeStyles(instance, styleSheet);

@@ -206,7 +206,7 @@ var _StyledThing = styled(Thing).withConfig({
 })([\\"color:red;\\"]);
 
 function Foo() {
-  return React.createElement(_StyledThing, null);
+  return /*#__PURE__*/React.createElement(_StyledThing, null);
 }
 "
 `;
@@ -327,7 +327,7 @@ var _StyledDiv = _styled(\\"div\\").withConfig({
 })([\\"color:red;\\"]);
 
 function Foo() {
-  return React.createElement(_StyledDiv, null);
+  return /*#__PURE__*/React.createElement(_StyledDiv, null);
 }
 "
 `;

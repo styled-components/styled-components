@@ -1,5 +1,17 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`native expanded API should omit transient props 1`] = `
+<Text
+  style={
+    Array [
+      Object {
+        "color": "red",
+      },
+    ]
+  }
+/>
+`;
+
 exports[`native expanded API withComponent should work 1`] = `
 <Text
   style={

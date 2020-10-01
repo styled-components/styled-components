@@ -1,5 +1,6 @@
 // @flow
 import StyleSheet from '../sheet';
+import { type Stringifier } from '../types';
 import throwStyledError from '../utils/error';
 import { masterStylis } from './StyleSheetManager';
 
@@ -8,18 +9,23 @@ export default class Keyframes {
 
   name: string;
 
-  stringifyArgs: string[];
+  rules: string;
 
-  constructor(name: string, stringifyArgs: string[]) {
+  constructor(name: string, rules: string) {
     this.name = name;
     this.id = `sc-keyframes-${name}`;
-
-    this.stringifyArgs = stringifyArgs;
+    this.rules = rules;
   }
 
-  inject = (styleSheet: StyleSheet) => {
-    if (!styleSheet.hasNameForId(this.id, this.name)) {
-      styleSheet.insertRules(this.id, this.name, masterStylis(...this.stringifyArgs));
+  inject = (styleSheet: StyleSheet, stylisInstance: Stringifier = masterStylis) => {
+    const resolvedName = this.name + stylisInstance.hash;
+
+    if (!styleSheet.hasNameForId(this.id, resolvedName)) {
+      styleSheet.insertRules(
+        this.id,
+        resolvedName,
+        stylisInstance(this.rules, resolvedName, '@keyframes')
+      );
     }
   };
 
@@ -27,7 +33,7 @@ export default class Keyframes {
     return throwStyledError(12, String(this.name));
   };
 
-  getName() {
-    return this.name;
+  getName(stylisInstance: Stringifier = masterStylis) {
+    return this.name + stylisInstance.hash;
   }
 }

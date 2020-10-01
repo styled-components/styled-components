@@ -27,7 +27,7 @@ const aliases = `ActivityIndicator ActivityIndicatorIOS ART Button DatePickerIOS
  SliderIOS SnapshotViewIOS Switch RecyclerViewBackedScrollView RefreshControl SafeAreaView StatusBar
  SwipeableListView SwitchAndroid SwitchIOS TabBarIOS Text TextInput ToastAndroid ToolbarAndroid
  Touchable TouchableHighlight TouchableNativeFeedback TouchableOpacity TouchableWithoutFeedback
- View ViewPagerAndroid WebView FlatList SectionList VirtualizedList`;
+ View ViewPagerAndroid WebView FlatList SectionList VirtualizedList Pressable`;
 
 /* Define a getter for each alias which simply gets the reactNative component
  * and passes it to styled */

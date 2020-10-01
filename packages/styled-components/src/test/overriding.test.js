@@ -1,7 +1,7 @@
 // @flow
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-import { resetStyled, expectCSSMatches } from './utils';
+import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
 // testing for ComponentStyle specifics here
@@ -30,10 +30,54 @@ describe('extending', () => {
     `;
     TestRenderer.create(<Inner />);
     TestRenderer.create(<Outer />);
-    expectCSSMatches(`
-      .c { color:blue; font-weight:light; }
-      .d { padding:1rem; }
-      .d > .sc-a { font-weight:bold; }
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".c {
+        color: blue;
+        font-weight: light;
+      }
+      .d {
+        padding: 1rem;
+      }
+      .d > .sc-a {
+        font-weight: bold;
+      }"
+    `);
+  });
+
+  it('folded components should not duplicate styles', () => {
+    const Inner = styled.div`
+      color: blue;
+
+      & + & {
+        color: green;
+      }
+    `;
+
+    const Outer = styled(Inner)`
+      padding: 1rem;
+    `;
+
+    TestRenderer.create(<Inner />);
+
+    const tree = TestRenderer.create(<Outer />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".c {
+        color: blue;
+      }
+      .sc-a + .sc-a {
+        color: green;
+      }
+      .d {
+        padding: 1rem;
+      }"
+    `);
+
+    // ensure both static classes are applied and dynamic classes are also present
+    expect(tree.toJSON()).toMatchInlineSnapshot(`
+      <div
+        className="sc-a sc-b c d"
+      />
     `);
   });
 
@@ -71,10 +115,19 @@ describe('extending', () => {
       TestRenderer.create(<Parent />);
       TestRenderer.create(<Child />);
       TestRenderer.create(<Grandson />);
-      expectCSSMatches(`
-        .d{ position:relative; color:red; }
-        .e{ position:relative; color:blue; }
-        .f{ position:relative; color:green; }
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".d {
+          position: relative;
+          color: red;
+        }
+        .e {
+          position: relative;
+          color: blue;
+        }
+        .f {
+          position: relative;
+          color: green;
+        }"
       `);
     });
 
@@ -87,10 +140,19 @@ describe('extending', () => {
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);
         TestRenderer.create(<Grandson />);
-        expectCSSMatches(`
-          .d{ position:relative; color:red; }
-          .e{ position:relative; color:blue; }
-          .f{ position:relative; color:green; }
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          ".d {
+            position: relative;
+            color: red;
+          }
+          .e {
+            position: relative;
+            color: blue;
+          }
+          .f {
+            position: relative;
+            color: green;
+          }"
         `);
       });
 
@@ -99,13 +161,35 @@ describe('extending', () => {
         const Child = styled(Parent).attrs(() => ({ as: 'h2' }))``;
         const Grandson = styled(Child).attrs(() => ({ as: 'h3' }))``;
         addDefaultProps(Parent, Child, Grandson);
-        TestRenderer.create(<Parent />);
-        TestRenderer.create(<Child />);
-        TestRenderer.create(<Grandson color="primary" />);
-        expectCSSMatches(`
-          .d{ position:relative; color:red; }
-          .e{ position:relative; color:blue; }
-          .f{ position:relative; color:red; }
+
+        expect(TestRenderer.create(<Parent />).toJSON()).toMatchInlineSnapshot(`
+          <h1
+            className="sc-a d"
+            color="primary"
+          />
+        `);
+        expect(TestRenderer.create(<Child />).toJSON()).toMatchInlineSnapshot(`
+          <h2
+            className="sc-a sc-b e"
+            color="secondary"
+          />
+        `);
+
+        expect(TestRenderer.create(<Grandson color="primary" />).toJSON()).toMatchInlineSnapshot(`
+          <h3
+            className="sc-a sc-b sc-c d"
+            color="primary"
+          />
+        `);
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          ".d {
+            position: relative;
+            color: red;
+          }
+          .e {
+            position: relative;
+            color: blue;
+          }"
         `);
       });
     });
