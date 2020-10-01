@@ -237,7 +237,7 @@ var _StyledDiv = _styled(\\"div\\").withConfig({
 })([\\"color:\\", \\";font-size:\\", \\";padding:\\", \\";\\"], p => p._css, p => p.theme.fontSize, padding);
 
 function Foo(props) {
-  return React.createElement(_StyledDiv, {
+  return /*#__PURE__*/React.createElement(_StyledDiv, {
     _css: props.color
   });
 }
@@ -264,7 +264,7 @@ var _StyledDiv = _styled(\\"div\\").withConfig({
 })([\\"color:red;\\"]);
 
 function Foo() {
-  return React.createElement(_StyledDiv, null);
+  return /*#__PURE__*/React.createElement(_StyledDiv, null);
 }
 "
 `;
@@ -293,7 +293,7 @@ var _StyledDiv = _styled(\\"div\\").withConfig({
 })([\\"color:red;\\"]);
 
 function Foo() {
-  return React.createElement(_StyledDiv, null);
+  return /*#__PURE__*/React.createElement(_StyledDiv, null);
 }
 
 var _StyledDiv2 = _styled(\\"div\\").withConfig({
@@ -302,7 +302,7 @@ var _StyledDiv2 = _styled(\\"div\\").withConfig({
 })([\\"color:green;\\"]);
 
 function Bar() {
-  return React.createElement(_StyledDiv2, null);
+  return /*#__PURE__*/React.createElement(_StyledDiv2, null);
 }
 "
 `;
