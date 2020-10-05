@@ -52,6 +52,8 @@ function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attr
   const context = { ...props, theme };
   const resolvedAttrs = {};
 
+  // .attrs are applied from the innermost styled component to the outermost. so each wrapper *overrides*
+  // nested uses of .attrs. for more info, see: https://styled-components.com/docs/basics#overriding-attrs
   attrs.forEach(attrDef => {
     let resolvedAttrDef = attrDef;
     let key;
