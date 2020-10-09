@@ -6,12 +6,15 @@ import babelPlugin from 'babel-plugin-styled-components';
 
 function styledComponentsMacro({ references, state, babel: { types: t }, config = {} }) {
   const program = state.file.path;
+  const refNames = Object.keys(references);
 
   // FIRST STEP : replace `styled-components/macro` by `styled-components
   // references looks like this
   // { default: [path, path], css: [path], ... }
   let customImportName;
-  Object.keys(references).forEach(refName => {
+  
+  for (let i = 0; i < refNames.length; i += 1) {
+    const refName = refNames[i];
     // generate new identifier
     let id;
     if (refName === 'default') {
@@ -26,7 +29,7 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
       // eslint-disable-next-line no-param-reassign
       referencePath.node.name = id.name;
     });
-  });
+  }
 
   // SECOND STEP : apply babel-plugin-styled-components to the file
   const stateWithOpts = { ...state, opts: config, customImportName };

@@ -29,6 +29,7 @@ import { useStyleSheet, useStylis } from './StyleSheetManager';
 import { ThemeContext } from './ThemeProvider';
 
 const identifiers = {};
+const isEnvDevelopment = process.env.NODE_ENV !== 'production';
 
 /* We depend on components having unique IDs */
 function generateId(displayName?: string, parentComponentId?: string) {
@@ -87,9 +88,9 @@ function useInjectedStyle<T>(
     : componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet, stylis);
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  if (process.env.NODE_ENV !== 'production') useDebugValue(className);
+  if (isEnvDevelopment) useDebugValue(className);
 
-  if (process.env.NODE_ENV !== 'production' && !isStatic && warnTooManyClasses) {
+  if (isEnvDevelopment && !isStatic && warnTooManyClasses) {
     warnTooManyClasses(className);
   }
 
@@ -113,7 +114,7 @@ function useStyledComponentImpl(
   } = forwardedComponent;
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  if (process.env.NODE_ENV !== 'production') useDebugValue(styledComponentId);
+  if (isEnvDevelopment) useDebugValue(styledComponentId);
 
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
@@ -126,7 +127,7 @@ function useStyledComponentImpl(
     componentStyle,
     isStatic,
     context,
-    process.env.NODE_ENV !== 'production' ? forwardedComponent.warnTooManyClasses : undefined
+    isEnvDevelopment ? forwardedComponent.warnTooManyClasses : undefined
   );
 
   const refToForward = forwardedRef;
@@ -290,7 +291,7 @@ export default function createStyledComponent(
     },
   });
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (isEnvDevelopment) {
     checkDynamicCreation(displayName, styledComponentId);
 
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(

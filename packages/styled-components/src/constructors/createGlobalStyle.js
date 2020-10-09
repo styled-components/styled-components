@@ -14,6 +14,8 @@ declare var __SERVER__: boolean;
 
 type GlobalStyleComponentPropsType = Object;
 
+const isEnvDevelopment = process.env.NODE_ENV !== 'production';
+
 export default function createGlobalStyle(
   strings: Array<string>,
   ...interpolations: Array<Interpolation>
@@ -22,7 +24,7 @@ export default function createGlobalStyle(
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle(rules, styledComponentId);
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (isEnvDevelopment) {
     checkDynamicCreation(styledComponentId);
   }
 
@@ -34,7 +36,7 @@ export default function createGlobalStyle(
 
     const instance = instanceRef.current;
 
-    if (process.env.NODE_ENV !== 'production' && React.Children.count(props.children)) {
+    if (isEnvDevelopment && React.Children.count(props.children)) {
       // eslint-disable-next-line no-console
       console.warn(
         `The global style component ${styledComponentId} was given child JSX. createGlobalStyle does not render children.`
@@ -42,7 +44,7 @@ export default function createGlobalStyle(
     }
 
     if (
-      process.env.NODE_ENV !== 'production' &&
+      isEnvDevelopment &&
       rules.some(rule => typeof rule === 'string' && rule.indexOf('@import') !== -1)
     ) {
       // eslint-disable-next-line no-console
@@ -67,16 +69,12 @@ export default function createGlobalStyle(
   }
 
   function renderStyles(instance, props, styleSheet, theme, stylis) {
-    if (globalStyle.isStatic) {
-      globalStyle.renderStyles(instance, STATIC_EXECUTION_CONTEXT, styleSheet, stylis);
-    } else {
-      const context = {
-        ...props,
-        theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
-      };
+    const context = globalStyle.isStatic ? STATIC_EXECUTION_CONTEXT : {
+      ...props,
+      theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
+    };
 
-      globalStyle.renderStyles(instance, context, styleSheet, stylis);
-    }
+    globalStyle.renderStyles(instance, context, styleSheet, stylis);
   }
 
   // $FlowFixMe

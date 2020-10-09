@@ -8,6 +8,7 @@ import { hash, phash } from '../utils/hash';
 import isStaticRules from '../utils/isStaticRules';
 
 const SEED = hash(SC_VERSION);
+const isEnvProduction = process.env.NODE_ENV === 'production';
 
 /**
  * ComponentStyle is all the CSS-specific stuff, not the React-specific stuff.
@@ -28,7 +29,7 @@ export default class ComponentStyle {
   constructor(rules: RuleSet, componentId: string, baseStyle?: ComponentStyle) {
     this.rules = rules;
     this.staticRulesId = '';
-    this.isStatic = process.env.NODE_ENV === 'production' &&
+    this.isStatic = isEnvProduction &&
       (baseStyle === undefined || baseStyle.isStatic) &&
       isStaticRules(rules);
     this.componentId = componentId;
@@ -86,7 +87,7 @@ export default class ComponentStyle {
         if (typeof partRule === 'string') {
           css += partRule;
 
-          if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule + i);
+          if (!isEnvProduction) dynamicHash = phash(dynamicHash, partRule + i);
         } else if (partRule) {
           const partChunk = flatten(partRule, executionContext, styleSheet, stylis);
           const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;

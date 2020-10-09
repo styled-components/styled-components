@@ -81,8 +81,8 @@ class StyledNativeComponent extends Component<*, *> {
 
     this.attrs = {};
 
-    attrs.forEach(attrDef => {
-      let resolvedAttrDef = attrDef;
+    for (let i = 0; i < attrs.length; i += 1) {
+      let resolvedAttrDef = attrs[i];
       let attr;
       let key;
 
@@ -97,7 +97,7 @@ class StyledNativeComponent extends Component<*, *> {
         context[key] = attr;
       }
       /* eslint-enable */
-    });
+    }
 
     return context;
   }

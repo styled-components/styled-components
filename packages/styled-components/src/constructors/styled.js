@@ -8,8 +8,8 @@ import type { Target } from '../types';
 const styled = (tag: Target) => constructWithOptions(StyledComponent, tag);
 
 // Shorthands for all valid HTML Elements
-domElements.forEach(domElement => {
-  styled[domElement] = styled(domElement);
-});
+for (let i = 0; i < domElements.length; i += 1) {
+  styled[domElements[i]] = styled(domElements[i]);
+}
 
 export default styled;
