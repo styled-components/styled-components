@@ -30,8 +30,7 @@
     "lint": "eslint src",
     "lint:size": "bundlewatch",
     "prettier": "prettier */**/*.js --write",
-    "prepublishOnly": "npm run build",
-    "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js"
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",

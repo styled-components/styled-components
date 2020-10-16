@@ -4866,7 +4866,7 @@ expect@^26.5.3:
     jest-message-util "^26.5.2"
     jest-regex-util "^26.0.0"
 
-express@^4.16.3, express@^4.16.4:
+express@^4.16.3:
   version "4.17.1"
   resolved "https://registry.yarnpkg.com/express/-/express-4.17.1.tgz#4491fc38605cf51f8629d39c2b5d026f98a4c134"
   integrity sha512-mHJ9O79RqluphRrcw2X/GTh3k9tVv8YcoyY4Kkh4WDMUYKRZUq0h1o0w2rrrxBqM7VoeUVqgb27xlEMXTnYt4g==
@@ -8332,11 +8332,6 @@ node-stream-zip@^1.9.1:
   version "1.11.3"
   resolved "https://registry.yarnpkg.com/node-stream-zip/-/node-stream-zip-1.11.3.tgz#223892620b4889bce9782b256a76682631c507be"
   integrity sha512-GY+9LxkQuIT3O7K8BTdHVGKFcBYBy2vAVcTBtkKpu+OlBef/NSb6VuIWSyLiVDfmLMkggHeRJZN0F3W0GWU/uw==
-
-node-watch@^0.5.0:
-  version "0.5.9"
-  resolved "https://registry.yarnpkg.com/node-watch/-/node-watch-0.5.9.tgz#da108bf9b5b28652ed1845523a30485c029a0b1c"
-  integrity sha512-W0SgGKaB9qSCfFfNj2uQZ/5BlVumaNHjVCAPdEoXrkEJ3ynSf/806LEz1rbDFbJ4+PL9G8IxRkJJTvZndd5D9g==
 
 nodemon@^2.0.3:
   version "2.0.5"
