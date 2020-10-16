@@ -12,7 +12,7 @@ export interface Tag {
 /** Group-aware Tag that sorts rules by indices */
 export interface GroupedTag {
   constructor(tag: Tag): void;
-  insertRules(group: number, rules: string[]): void;
+  insertRules(group: number, rules: string | string[]): void;
   clearGroup(group: number): void;
   getGroup(group: number): string;
   length: number;
@@ -31,7 +31,7 @@ export interface Sheet {
   clearTag(): void;
   getTag(): GroupedTag;
   hasNameForId(id: string, name: string): boolean;
-  insertRules(id: string, name: string, rules: string[]): void;
+  insertRules(id: string, name: string, rules: string | string[]): void;
   options: SheetOptions;
   names: Map<string, Set<string>>;
   registerName(id: string, name: string): void;

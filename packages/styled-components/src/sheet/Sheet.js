@@ -94,7 +94,7 @@ export default class StyleSheet implements Sheet {
   }
 
   /** Insert new rules which also marks the name as known */
-  insertRules(id: string, name: string, rules: string[]) {
+  insertRules(id: string, name: string, rules: string | string[]) {
     this.registerName(id, name);
     this.getTag().insertRules(getGroupForId(id), rules);
   }

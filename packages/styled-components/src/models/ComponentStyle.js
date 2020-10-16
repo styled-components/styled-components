@@ -68,7 +68,6 @@ export default class ComponentStyle {
 
         if (!styleSheet.hasNameForId(componentId, name)) {
           const cssStaticFormatted = stylis(cssStatic, `.${name}`, undefined, componentId);
-
           styleSheet.insertRules(componentId, name, cssStaticFormatted);
         }
 

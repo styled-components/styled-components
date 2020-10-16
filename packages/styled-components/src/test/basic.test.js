@@ -66,6 +66,7 @@ describe('basic', () => {
   it('should not inject anything by default', () => {
     // eslint-disable-next-line no-unused-expressions
     styled.div``;
+
     expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
   });
 

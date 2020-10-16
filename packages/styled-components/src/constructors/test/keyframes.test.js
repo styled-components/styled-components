@@ -159,7 +159,7 @@ describe('keyframes', () => {
         );
       } else {
         return css`
-          ${animation === 'slide' ? slideAnimation : opacityAnimation} 1s linear;
+          ${animation === 'slide' ? slideAnimation : opacityAnimation} 1s linear
         `;
       }
     };
@@ -185,9 +185,8 @@ describe('keyframes', () => {
         animation: none;
       }
       .b {
-        -webkit-animation: cMaiLV 1s linear;
-        animation: cMaiLV 1s linear;
-        , itcuFx 1s linear;
+        -webkit-animation: cMaiLV 1s linear, itcuFx 1s linear;
+        animation: cMaiLV 1s linear, itcuFx 1s linear;
       }
       .c {
         -webkit-animation: itcuFx 1s linear;
@@ -200,11 +199,13 @@ describe('keyframes', () => {
       @-webkit-keyframes cMaiLV {
         from {
           -webkit-transform: translateX(-10px);
+          -moz-transform: translateX(-10px);
           -ms-transform: translateX(-10px);
           transform: translateX(-10px);
         }
         to {
           -webkit-transform: none;
+          -moz-transform: none;
           -ms-transform: none;
           transform: none;
         }
@@ -212,11 +213,13 @@ describe('keyframes', () => {
       @keyframes cMaiLV {
         from {
           -webkit-transform: translateX(-10px);
+          -moz-transform: translateX(-10px);
           -ms-transform: translateX(-10px);
           transform: translateX(-10px);
         }
         to {
           -webkit-transform: none;
+          -moz-transform: none;
           -ms-transform: none;
           transform: none;
         }
