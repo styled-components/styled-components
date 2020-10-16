@@ -38,7 +38,7 @@
     "babel-plugin-macros": "^2.5.1",
     "babel-plugin-tester": "^10.0.0",
     "babel-plugin-transform-react-remove-prop-types": "0.4.24",
-    "bundlewatch": "^0.2.7",
+    "bundlewatch": "^0.3.1",
     "eslint": "^7.11.0",
     "eslint-config-airbnb": "^18.2.0",
     "eslint-config-prettier": "^6.12.0",
