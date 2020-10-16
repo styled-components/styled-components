@@ -20,9 +20,6 @@
     "url": "https://github.com/styled-components/styled-components/issues"
   },
   "homepage": "https://styled-components.com",
-  "resolutions": {
-    "babel-core": "^7.0.0-bridge.0"
-  },
   "devDependencies": {
     "@babel/cli": "^7.0.0",
     "@babel/core": "^7.0.0",
@@ -57,7 +54,7 @@
     "prettier": "^2.1.2",
     "puppeteer": "^1.10.0",
     "raf": "^3.4.1",
-    "rimraf": "^2.6.1",
+    "rimraf": "^3.0.2",
     "rollup": "^1.13.1",
     "rollup-plugin-babel": "^4.3.2",
     "rollup-plugin-commonjs": "^10.0.0",

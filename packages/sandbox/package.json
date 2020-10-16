@@ -15,7 +15,7 @@
     "micro": "^9.3.3",
     "micro-dev": "^3.0.0",
     "raw-loader": "^2.0.0",
-    "strip-ansi": "^5.2.0",
+    "strip-ansi": "^6.0.0",
     "webpack": "^4.30.0",
     "webpack-dev-middleware": "^3.6.2",
     "webpack-hot-middleware": "^2.24.3",
