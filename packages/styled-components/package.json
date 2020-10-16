@@ -72,7 +72,7 @@
     "hoist-non-react-statics": "^3.0.0",
     "shallowequal": "^1.1.0",
     "stylis": "^4.0.2",
-    "supports-color": "^5.5.0"
+    "supports-color": "^7.2.0"
   },
   "peerDependencies": {
     "react": ">= 16.8.0",
