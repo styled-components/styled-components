@@ -23,7 +23,7 @@ describe('warns on dynamic creation', () => {
         color: palevioletred;
       `;
 
-      return <Inner />
+      return <Inner />;
     };
 
     TestRenderer.create(<Outer />);
@@ -40,7 +40,7 @@ describe('warns on dynamic creation', () => {
         color: palevioletred;
       `;
 
-      return <Inner />
+      return <Inner />;
     };
 
     TestRenderer.create(<Outer />);
