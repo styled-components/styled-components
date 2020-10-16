@@ -98,7 +98,7 @@
     "react-dom": "^16.8.6",
     "react-frame-component": "^4.0.2",
     "react-is": "^16.8.6",
-    "react-native": "^0.59.8",
+    "react-native": "^0.63.3",
     "react-primitives": "^0.8.0",
     "react-test-renderer": "^16.8.6",
     "rollup": "^1.13.1",
