@@ -1,30 +1,32 @@
-import { compile, middleware, prefixer, RULESET, serialize, stringify } from "stylis";
-import { Stringifier } from "../types";
-import { EMPTY_ARRAY, EMPTY_OBJECT } from "./empties";
-import throwStyledError from "./error";
-import { phash, SEED } from "./hash";
+import { compile, middleware, prefixer, RULESET, serialize, stringify } from 'stylis';
+import { Stringifier } from '../types';
+import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
+import throwStyledError from './error';
+import { phash, SEED } from './hash';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 const COMPLEX_SELECTOR_PREFIX = [':', '[', '.', '#'];
 
 type StylisInstanceConstructorArgs = {
-  options?: {prefix?: boolean;};
-  plugins?: Array<Function>;
+  options?: { prefix?: boolean };
+  plugins?: stylis.Middleware[];
 };
 
 export default function createStylisInstance({
   options = EMPTY_OBJECT,
-  plugins = EMPTY_ARRAY
+  plugins = (EMPTY_ARRAY as unknown) as stylis.Middleware[],
 }: StylisInstanceConstructorArgs = EMPTY_OBJECT) {
   let _componentId: string;
   let _selector: string;
   let _selectorRegexp: RegExp;
   let _consecutiveSelfRefRegExp: RegExp;
 
-  const selfReferenceReplacer = (match, offset, string) => {
-    if ( // do not replace the first occurrence if it is complex (has a modifier)
-    (offset === 0 ? !COMPLEX_SELECTOR_PREFIX.includes(string[_selector.length]) : true) && // no consecutive self refs (.b.b); that is a precedence boost and treated differently
-    !string.match(_consecutiveSelfRefRegExp)) {
+  const selfReferenceReplacer: Parameters<String['replace']>[1] = (match, offset, string) => {
+    if (
+      // do not replace the first occurrence if it is complex (has a modifier)
+      (offset === 0 ? !COMPLEX_SELECTOR_PREFIX.includes(string[_selector.length]) : true) && // no consecutive self refs (.b.b); that is a precedence boost and treated differently
+      !string.match(_consecutiveSelfRefRegExp)
+    ) {
       return `.${_componentId}`;
     }
 
@@ -44,13 +46,19 @@ export default function createStylisInstance({
    * https://github.com/thysultan/stylis.js/tree/v3.5.4#plugins <- more info about the context phase values
    * "2" means this plugin is taking effect at the very end after all other processing is complete
    */
-  const selfReferenceReplacementPlugin = element => {
+  const selfReferenceReplacementPlugin: stylis.Middleware = element => {
     if (element.type === RULESET && element.value.includes('&')) {
+      // @ts-ignore
       element.props[0] = element.props[0].replace(_selectorRegexp, selfReferenceReplacer);
     }
   };
 
-  function stringifyRules(css, selector = '', prefix = '', componentId = '&'): Stringifier {
+  const stringifyRules: Stringifier = (
+    css: string,
+    selector = '',
+    prefix = '',
+    componentId = '&'
+  ) => {
     let flatCSS = css.replace(COMMENT_REGEX, '');
 
     // stylis has no concept of state to be passed to plugins
@@ -69,16 +77,23 @@ export default function createStylisInstance({
 
     middlewares.push(selfReferenceReplacementPlugin, stringify);
 
-    return serialize(compile(prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS), middleware(middlewares));
-  }
+    return serialize(
+      compile(prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS),
+      middleware(middlewares)
+    );
+  };
 
-  stringifyRules.hash = plugins.length ? plugins.reduce((acc, plugin) => {
-    if (!plugin.name) {
-      throwStyledError(15);
-    }
+  stringifyRules.hash = plugins.length
+    ? plugins
+        .reduce((acc, plugin) => {
+          if (!plugin.name) {
+            throwStyledError(15);
+          }
 
-    return phash(acc, plugin.name);
-  }, SEED).toString() : '';
+          return phash(acc, plugin.name);
+        }, SEED)
+        .toString()
+    : '';
 
   return stringifyRules;
 }

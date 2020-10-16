@@ -1,11 +1,10 @@
-
-import { DISABLE_SPEEDY, IS_BROWSER } from "../constants";
-import { EMPTY_OBJECT } from "../utils/empties";
-import { makeGroupedTag } from "./GroupedTag";
-import { getGroupForId } from "./GroupIDAllocator";
-import { outputSheet, rehydrateSheet } from "./Rehydration";
-import { makeTag } from "./Tag";
-import { GroupedTag, Sheet, SheetOptions } from "./types";
+import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
+import { EMPTY_OBJECT } from '../utils/empties';
+import { makeGroupedTag } from './GroupedTag';
+import { getGroupForId } from './GroupIDAllocator';
+import { outputSheet, rehydrateSheet } from './Rehydration';
+import { makeTag } from './Tag';
+import { GroupedTag, Sheet, SheetOptions } from './types';
 
 let SHOULD_REHYDRATE = IS_BROWSER;
 
@@ -22,33 +21,33 @@ type NamesAllocationMap = Map<string, Set<string>>;
 
 const defaultOptions: SheetOptions = {
   isServer: !IS_BROWSER,
-  useCSSOMInjection: !DISABLE_SPEEDY
+  useCSSOMInjection: !DISABLE_SPEEDY,
 };
 
 /** Contains the main stylesheet logic for stringification and caching */
 export default class StyleSheet implements Sheet {
-
   gs: GlobalStylesAllocationMap;
-
   names: NamesAllocationMap;
-
   options: SheetOptions;
-
-  tag: void | GroupedTag;
+  tag?: GroupedTag;
 
   /** Register a group ID to give it an index */
   static registerId(id: string): number {
     return getGroupForId(id);
   }
 
-  constructor(options: SheetConstructorArgs = EMPTY_OBJECT, globalStyles?: GlobalStylesAllocationMap = {}, names?: NamesAllocationMap) {
+  constructor(
+    options: SheetConstructorArgs = EMPTY_OBJECT,
+    globalStyles: GlobalStylesAllocationMap = {},
+    names?: NamesAllocationMap
+  ) {
     this.options = {
       ...defaultOptions,
-      ...options
+      ...options,
     };
 
     this.gs = globalStyles;
-    this.names = new Map(names);
+    this.names = new Map(names as NamesAllocationMap);
 
     // We rehydrate only once and use the sheet that is created first
     if (!this.options.isServer && IS_BROWSER && SHOULD_REHYDRATE) {
@@ -57,12 +56,16 @@ export default class StyleSheet implements Sheet {
     }
   }
 
-  reconstructWithOptions(options: SheetConstructorArgs, withNames?: boolean = true) {
-    return new StyleSheet({ ...this.options, ...options }, this.gs, (withNames && this.names) || undefined);
+  reconstructWithOptions(options: SheetConstructorArgs, withNames: boolean = true) {
+    return new StyleSheet(
+      { ...this.options, ...options },
+      this.gs,
+      (withNames && this.names) || undefined
+    );
   }
 
   allocateGSInstance(id: string) {
-    return this.gs[id] = (this.gs[id] || 0) + 1;
+    return (this.gs[id] = (this.gs[id] || 0) + 1);
   }
 
   /** Lazily initialises a GroupedTag for when it's actually needed */
@@ -80,7 +83,7 @@ export default class StyleSheet implements Sheet {
     getGroupForId(id);
 
     if (!this.names.has(id)) {
-      const groupNames = new Set();
+      const groupNames = new Set<string>();
       groupNames.add(name);
       this.names.set(id, groupNames);
     } else {

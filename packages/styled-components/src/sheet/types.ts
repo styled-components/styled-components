@@ -1,17 +1,21 @@
-
+export interface TagConstructor {
+  new (target?: HTMLElement): Tag;
+}
 
 /** CSSStyleSheet-like Tag abstraction for CSS rules */
 export interface Tag {
-  constructor(target?: HTMLElement): void;
   insertRule(index: number, rule: string): boolean;
   deleteRule(index: number): void;
   getRule(index: number): string;
   length: number;
 }
 
+export interface GroupedTagConstructor {
+  new (tag: Tag): GroupedTag;
+}
+
 /** Group-aware Tag that sorts rules by indices */
 export interface GroupedTag {
-  constructor(tag: Tag): void;
   insertRules(group: number, rules: string | string[]): void;
   clearGroup(group: number): void;
   getGroup(group: number): string;

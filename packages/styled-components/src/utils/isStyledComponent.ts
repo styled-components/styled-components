@@ -1,4 +1,3 @@
-
-export default function isStyledComponent(target: any): boolean {
-  return target && typeof target.styledComponentId === 'string';
+export default function isStyledComponent(target: any) {
+  return typeof target !== 'string' && 'styledComponentId' in target;
 }

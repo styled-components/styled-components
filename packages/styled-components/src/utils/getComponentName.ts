@@ -1,9 +1,10 @@
-import { $PropertyType } from "utility-types";
+import { StyledTarget } from '../types';
 
-import { IStyledComponent, IStyledNativeComponent } from "../types";
-
-export default function getComponentName(target: $PropertyType<IStyledComponent, "target"> | $PropertyType<IStyledNativeComponent, "target">): string {
-  return ((process.env.NODE_ENV !== 'production' ? typeof target === 'string' && target : false) || // $FlowFixMe
-  target.displayName || // $FlowFixMe
-  target.name || 'Component');
+export default function getComponentName(target: StyledTarget) {
+  return (
+    (process.env.NODE_ENV !== 'production' ? typeof target === 'string' && target : false) ||
+    (target as Exclude<StyledTarget, string>).displayName ||
+    (target as Function).name ||
+    'Component'
+  );
 }

@@ -1,6 +1,4 @@
-
-
-import { useRef } from "react";
+import { useRef } from 'react';
 
 const invalidHookCallRe = /invalid hook call/i;
 const seen = new Set();
@@ -8,7 +6,10 @@ const seen = new Set();
 export const checkDynamicCreation = (displayName: string, componentId?: string) => {
   if (process.env.NODE_ENV !== 'production') {
     const parsedIdString = componentId ? ` with the id of "${componentId}"` : '';
-    const message = `The component ${displayName}${parsedIdString} has been created dynamically.\n` + "You may see this warning because you've called styled inside another component.\n" + 'To resolve this only create new StyledComponents outside of any render method and function component.';
+    const message =
+      `The component ${displayName}${parsedIdString} has been created dynamically.\n` +
+      "You may see this warning because you've called styled inside another component.\n" +
+      'To resolve this only create new StyledComponents outside of any render method and function component.';
 
     try {
       // We purposefully call `useRef` outside of a component and expect it to throw

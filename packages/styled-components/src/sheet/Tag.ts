@@ -1,16 +1,8 @@
-
-
-/* eslint-disable no-use-before-define */
-
-import { makeStyleTag, getSheet } from "./dom";
-import { SheetOptions, Tag } from "./types";
+import { makeStyleTag, getSheet } from './dom';
+import { SheetOptions, Tag, TagConstructor } from './types';
 
 /** Create a CSSStyleSheet-like tag depending on the environment */
-export const makeTag = ({
-  isServer,
-  useCSSOMInjection,
-  target
-}: SheetOptions): Tag => {
+export const makeTag = ({ isServer, useCSSOMInjection, target }: SheetOptions) => {
   if (isServer) {
     return new VirtualTag(target);
   } else if (useCSSOMInjection) {
@@ -20,8 +12,7 @@ export const makeTag = ({
   }
 };
 
-export class CSSOMTag implements Tag {
-
+export const CSSOMTag: TagConstructor = class CSSOMTag implements Tag {
   element: HTMLStyleElement;
 
   sheet: CSSStyleSheet;
@@ -29,7 +20,7 @@ export class CSSOMTag implements Tag {
   length: number;
 
   constructor(target?: HTMLElement) {
-    const element = this.element = makeStyleTag(target);
+    const element = (this.element = makeStyleTag(target));
 
     // Avoid Edge bug where empty style elements don't create sheets
     element.appendChild(document.createTextNode(''));
@@ -62,24 +53,21 @@ export class CSSOMTag implements Tag {
       return '';
     }
   }
-}
+};
 
 /** A Tag that emulates the CSSStyleSheet API but uses text nodes */
-export class TextTag implements Tag {
-
+export const TextTag: TagConstructor = class TextTag implements Tag {
   element: HTMLStyleElement;
-
-  nodes: NodeList<Node>;
-
+  nodes: NodeListOf<Node>;
   length: number;
 
   constructor(target?: HTMLElement) {
-    const element = this.element = makeStyleTag(target);
+    const element = (this.element = makeStyleTag(target));
     this.nodes = element.childNodes;
     this.length = 0;
   }
 
-  insertRule(index: number, rule: string): boolean {
+  insertRule(index: number, rule: string) {
     if (index <= this.length && index >= 0) {
       const node = document.createTextNode(rule);
       const refNode = this.nodes[index];
@@ -91,23 +79,22 @@ export class TextTag implements Tag {
     }
   }
 
-  deleteRule(index: number): void {
+  deleteRule(index: number) {
     this.element.removeChild(this.nodes[index]);
     this.length--;
   }
 
-  getRule(index: number): string {
+  getRule(index: number) {
     if (index < this.length) {
-      return this.nodes[index].textContent;
+      return this.nodes[index].textContent as string;
     } else {
       return '';
     }
   }
-}
+};
 
 /** A completely virtual (server-side) Tag that doesn't manipulate the DOM */
-export class VirtualTag implements Tag {
-
+export const VirtualTag: TagConstructor = class VirtualTag implements Tag {
   rules: string[];
 
   length: number;
@@ -117,7 +104,7 @@ export class VirtualTag implements Tag {
     this.length = 0;
   }
 
-  insertRule(index: number, rule: string): boolean {
+  insertRule(index: number, rule: string) {
     if (index <= this.length) {
       this.rules.splice(index, 0, rule);
       this.length++;
@@ -127,16 +114,16 @@ export class VirtualTag implements Tag {
     }
   }
 
-  deleteRule(index: number): void {
+  deleteRule(index: number) {
     this.rules.splice(index, 1);
     this.length--;
   }
 
-  getRule(index: number): string {
+  getRule(index: number) {
     if (index < this.length) {
       return this.rules[index];
     } else {
       return '';
     }
   }
-}
+};

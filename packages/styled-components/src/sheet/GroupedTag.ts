@@ -1,24 +1,17 @@
-
-
-/* eslint-disable no-use-before-define */
-
-import { GroupedTag, Tag } from "./types";
-import { SPLITTER } from "../constants";
-import throwStyledError from "../utils/error";
+import { SPLITTER } from '../constants';
+import styledError from '../utils/error';
+import { GroupedTag, GroupedTagConstructor, Tag } from './types';
 
 /** Create a GroupedTag with an underlying Tag implementation */
-export const makeGroupedTag = (tag: Tag): GroupedTag => {
+export const makeGroupedTag = (tag: Tag) => {
   return new DefaultGroupedTag(tag);
 };
 
 const BASE_SIZE = 1 << 9;
 
-class DefaultGroupedTag implements GroupedTag {
-
+const DefaultGroupedTag: GroupedTagConstructor = class DefaultGroupedTag implements GroupedTag {
   groupSizes: Uint32Array;
-
   length: number;
-
   tag: Tag;
 
   constructor(tag: Tag) {
@@ -27,7 +20,7 @@ class DefaultGroupedTag implements GroupedTag {
     this.tag = tag;
   }
 
-  indexOfGroup(group: number): number {
+  indexOfGroup(group: number) {
     let index = 0;
     for (let i = 0; i < group; i++) {
       index += this.groupSizes[i];
@@ -36,7 +29,7 @@ class DefaultGroupedTag implements GroupedTag {
     return index;
   }
 
-  insertRules(group: number, rules: string | string[]): void {
+  insertRules(group: number, rules: string | string[]) {
     if (group >= this.groupSizes.length) {
       const oldBuffer = this.groupSizes;
       const oldSize = oldBuffer.length;
@@ -45,7 +38,7 @@ class DefaultGroupedTag implements GroupedTag {
       while (group >= newSize) {
         newSize <<= 1;
         if (newSize < 0) {
-          throwStyledError(16, `${group}`);
+          throw styledError(16, `${group}`);
         }
       }
 
@@ -74,7 +67,7 @@ class DefaultGroupedTag implements GroupedTag {
     }
   }
 
-  clearGroup(group: number): void {
+  clearGroup(group: number) {
     if (group < this.length) {
       const length = this.groupSizes[group];
       const startIndex = this.indexOfGroup(group);
@@ -88,7 +81,7 @@ class DefaultGroupedTag implements GroupedTag {
     }
   }
 
-  getGroup(group: number): string {
+  getGroup(group: number) {
     let css = '';
     if (group >= this.length || this.groupSizes[group] === 0) {
       return css;
@@ -104,4 +97,4 @@ class DefaultGroupedTag implements GroupedTag {
 
     return css;
   }
-}
+};

@@ -1,23 +1,18 @@
-
-
 /* eslint-disable no-underscore-dangle */
-import React from "react";
-import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from "../constants";
-import throwStyledError from "../utils/error";
-import getNonce from "../utils/nonce";
-import StyleSheet from "../sheet";
-import StyleSheetManager from "./StyleSheetManager";
+import React from 'react';
+import { Readable } from 'stream';
+import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
+import StyleSheet from '../sheet';
+import styledError from '../utils/error';
+import getNonce from '../utils/nonce';
+import StyleSheetManager from './StyleSheetManager';
 
 declare var __SERVER__: boolean;
 
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 
 export default class ServerStyleSheet {
-
-  isStreaming: boolean;
-
   instance: StyleSheet;
-
   sealed: boolean;
 
   constructor() {
@@ -28,7 +23,11 @@ export default class ServerStyleSheet {
   _emitSheetCSS = (): string => {
     const css = this.instance.toString();
     const nonce = getNonce();
-    const attrs = [nonce && `nonce="${nonce}"`, `${SC_ATTR}="true"`, `${SC_ATTR_VERSION}="${SC_VERSION}"`];
+    const attrs = [
+      nonce && `nonce="${nonce}"`,
+      `${SC_ATTR}="true"`,
+      `${SC_ATTR_VERSION}="${SC_VERSION}"`,
+    ];
     const htmlAttr = attrs.filter(Boolean).join(' ');
 
     return `<style ${htmlAttr}>${css}</style>`;
@@ -36,7 +35,7 @@ export default class ServerStyleSheet {
 
   collectStyles(children: any) {
     if (this.sealed) {
-      return throwStyledError(2);
+      throw styledError(2);
     }
 
     return <StyleSheetManager sheet={this.instance}>{children}</StyleSheetManager>;
@@ -44,7 +43,7 @@ export default class ServerStyleSheet {
 
   getStyleTags = (): string => {
     if (this.sealed) {
-      return throwStyledError(2);
+      throw styledError(2);
     }
 
     return this._emitSheetCSS();
@@ -52,15 +51,15 @@ export default class ServerStyleSheet {
 
   getStyleElement = () => {
     if (this.sealed) {
-      return throwStyledError(2);
+      throw styledError(2);
     }
 
     const props = {
       [SC_ATTR]: '',
       [SC_ATTR_VERSION]: SC_VERSION,
       dangerouslySetInnerHTML: {
-        __html: this.instance.toString()
-      }
+        __html: this.instance.toString(),
+      },
     };
 
     const nonce = getNonce();
@@ -73,32 +72,29 @@ export default class ServerStyleSheet {
   };
 
   // eslint-disable-next-line consistent-return
-  interleaveWithNodeStream(input: any) {
+  interleaveWithNodeStream(input: Readable) {
     if (!__SERVER__ || IS_BROWSER) {
-      return throwStyledError(3);
+      throw styledError(3);
     } else if (this.sealed) {
-      return throwStyledError(2);
+      throw styledError(2);
     }
 
     if (__SERVER__) {
       this.seal();
 
       // eslint-disable-next-line global-require
-      const {
-        Readable,
-        Transform
-      } = require('stream');
+      const { Transform } = require('stream');
 
       const readableStream: Readable = input;
-      const {
-        instance: sheet,
-        _emitSheetCSS
-      } = this;
+      const { instance: sheet, _emitSheetCSS } = this;
 
       const transformer = new Transform({
-        transform: function appendStyleChunks(chunk,
-        /* encoding */
-        _, callback) {
+        transform: function appendStyleChunks(
+          chunk: string,
+          /* encoding */
+          _: string,
+          callback: Function
+        ) {
           // Get the chunk and retrieve the sheet's CSS as an HTML chunk,
           // then reset its rules so we get only new ones for the next chunk
           const renderedHtml = chunk.toString();
@@ -119,7 +115,7 @@ export default class ServerStyleSheet {
           }
 
           callback();
-        }
+        },
       });
 
       readableStream.on('error', err => {

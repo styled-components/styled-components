@@ -1,4 +1,4 @@
-/* eslint-disable */
+import { ExtensibleObject } from '../types';
 
 /**
   mixin-deep; https://github.com/jonschlinkert/mixin-deep
@@ -26,15 +26,17 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   THE SOFTWARE.
 */
-const isObject = val => {
-  return (typeof val === 'function' || (typeof val === 'object' && val !== null && !Array.isArray(val)));
+const isObject = (val: any) => {
+  return (
+    typeof val === 'function' || (typeof val === 'object' && val !== null && !Array.isArray(val))
+  );
 };
 
-const isValidKey = key => {
+const isValidKey = (key: string) => {
   return key !== '__proto__' && key !== 'constructor' && key !== 'prototype';
 };
 
-function mixin(target, val, key) {
+function mixin(target: ExtensibleObject, val: any, key: string) {
   const obj = target[key];
   if (isObject(val) && isObject(obj)) {
     mixinDeep(obj, val);
@@ -43,7 +45,7 @@ function mixin(target, val, key) {
   }
 }
 
-export default function mixinDeep(target, ...rest) {
+export default function mixinDeep(target: ExtensibleObject, ...rest: ExtensibleObject[]) {
   for (const obj of rest) {
     if (isObject(obj)) {
       for (const key in obj) {

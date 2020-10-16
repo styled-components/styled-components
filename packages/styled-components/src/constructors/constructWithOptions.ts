@@ -1,6 +1,6 @@
 import { isValidElementType } from 'react-is';
 import css from './css';
-import throwStyledError from '../utils/error';
+import styledError from '../utils/error';
 import { EMPTY_OBJECT } from '../utils/empties';
 
 import { Target } from '../types';
@@ -11,7 +11,7 @@ export default function constructWithOptions(
   options = EMPTY_OBJECT
 ) {
   if (!isValidElementType(tag)) {
-    return throwStyledError(1, String(tag));
+    throw styledError(1, String(tag));
   }
 
   /* This is callable directly as a template function */

@@ -1,17 +1,13 @@
-
-
-import { SPLITTER, SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from "../constants";
-import { getIdForGroup, setGroupForId } from "./GroupIDAllocator";
-import { Sheet } from "./types";
+import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION, SPLITTER } from '../constants';
+import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
+import { Sheet } from './types';
 
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
 const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\].*?"([^"]*)`);
 
 export const outputSheet = (sheet: Sheet) => {
   const tag = sheet.getTag();
-  const {
-    length
-  } = tag;
+  const { length } = tag;
 
   let css = '';
   for (let group = 0; group < length; group++) {
@@ -47,7 +43,7 @@ const rehydrateNamesFromContent = (sheet: Sheet, id: string, content: string) =>
 
   for (let i = 0, l = names.length; i < l; i++) {
     // eslint-disable-next-line
-    if (name = names[i]) {
+    if ((name = names[i])) {
       sheet.registerName(id, name);
     }
   }
@@ -87,7 +83,7 @@ export const rehydrateSheet = (sheet: Sheet) => {
   const nodes = document.querySelectorAll(SELECTOR);
 
   for (let i = 0, l = nodes.length; i < l; i++) {
-    const node = ((nodes[i] as any) as HTMLStyleElement);
+    const node = (nodes[i] as any) as HTMLStyleElement;
     if (node && node.getAttribute(SC_ATTR) !== SC_ATTR_ACTIVE) {
       rehydrateSheetFromTag(sheet, node);
 

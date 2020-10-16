@@ -1,40 +1,44 @@
-
-import React, { useContext, useMemo, Element, Context } from "react";
-import throwStyledError from "../utils/error";
-import isFunction from "../utils/isFunction";
+import React, { useContext, useMemo } from 'react';
+import styledError from '../utils/error';
+import isFunction from '../utils/isFunction';
 
 export type Theme = {
   [key: string]: unknown;
 };
 
-type ThemeArgument = Theme | ((outerTheme?: Theme) => Theme);
+type ThemeFn = (outerTheme?: Theme) => Theme;
+type ThemeArgument = Theme | ThemeFn;
 
 type Props = {
-  children?: Element<any>;
+  children?: React.ReactChild;
   theme: ThemeArgument;
 };
 
-export const ThemeContext: Context<Theme | void> = React.createContext();
+export const ThemeContext = React.createContext<Theme>({});
 
 export const ThemeConsumer = ThemeContext.Consumer;
 
 function mergeTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
   if (!theme) {
-    return throwStyledError(14);
+    throw styledError(14);
   }
 
   if (isFunction(theme)) {
-    const mergedTheme = theme(outerTheme);
+    const themeFn = theme as ThemeFn;
+    const mergedTheme = themeFn(outerTheme);
 
-    if (process.env.NODE_ENV !== 'production' && (mergedTheme === null || Array.isArray(mergedTheme) || typeof mergedTheme !== 'object')) {
-      return throwStyledError(7);
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      (mergedTheme === null || Array.isArray(mergedTheme) || typeof mergedTheme !== 'object')
+    ) {
+      throw styledError(7);
     }
 
     return mergedTheme;
   }
 
   if (Array.isArray(theme) || typeof theme !== 'object') {
-    return throwStyledError(8);
+    throw styledError(8);
   }
 
   return outerTheme ? { ...outerTheme, ...theme } : theme;
@@ -45,7 +49,10 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
  */
 export default function ThemeProvider(props: Props) {
   const outerTheme = useContext(ThemeContext);
-  const themeContext = useMemo(() => mergeTheme(props.theme, outerTheme), [props.theme, outerTheme]);
+  const themeContext = useMemo(() => mergeTheme(props.theme, outerTheme), [
+    props.theme,
+    outerTheme,
+  ]);
 
   if (!props.children) {
     return null;

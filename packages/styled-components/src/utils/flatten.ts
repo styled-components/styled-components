@@ -1,21 +1,25 @@
-
-import { isElement } from "react-is";
-import getComponentName from "./getComponentName";
-import isFunction from "./isFunction";
-import isStatelessFunction from "./isStatelessFunction";
-import isPlainObject from "./isPlainObject";
-import isStyledComponent from "./isStyledComponent";
-import Keyframes from "../models/Keyframes";
-import hyphenate from "./hyphenateStyleName";
-import addUnitIfNeeded from "./addUnitIfNeeded";
-import { Stringifier } from "../types";
+import { isElement } from 'react-is';
+import Keyframes from '../models/Keyframes';
+import StyleSheet from '../sheet';
+import { ExtensibleObject, Interpolation, IStyledComponent, Stringifier } from '../types';
+import addUnitIfNeeded from './addUnitIfNeeded';
+import getComponentName from './getComponentName';
+import hyphenate from './hyphenateStyleName';
+import isFunction from './isFunction';
+import isPlainObject from './isPlainObject';
+import isStatelessFunction from './isStatelessFunction';
+import isStyledComponent from './isStyledComponent';
 
 /**
  * It's falsish not falsy because 0 is allowed.
  */
-const isFalsish = chunk => chunk === undefined || chunk === null || chunk === false || chunk === '';
+const isFalsish = (chunk: any) =>
+  chunk === undefined || chunk === null || chunk === false || chunk === '';
 
-export const objToCssArray = (obj: Object, prevKey?: string): Array<string | Function> => {
+export const objToCssArray = (
+  obj: ExtensibleObject,
+  prevKey?: string
+): Array<string | Function> => {
   const rules = [];
 
   for (const key in obj) {
@@ -33,14 +37,21 @@ export const objToCssArray = (obj: Object, prevKey?: string): Array<string | Fun
   return prevKey ? [`${prevKey} {`, ...rules, '}'] : rules;
 };
 
-export default function flatten(chunk: any, executionContext: Object | null | undefined, styleSheet: Object | null | undefined, stylisInstance: Stringifier | null | undefined): any {
+export default function flatten(
+  chunk: Interpolation,
+  executionContext?: ExtensibleObject,
+  styleSheet?: StyleSheet,
+  stylisInstance?: Stringifier
+): any {
   if (Array.isArray(chunk)) {
     const ruleSet = [];
 
     for (let i = 0, len = chunk.length, result; i < len; i += 1) {
       result = flatten(chunk[i], executionContext, styleSheet, stylisInstance);
 
-      if (result === '') continue;else if (Array.isArray(result)) ruleSet.push(...result);else ruleSet.push(result);
+      if (result === '') continue;
+      else if (Array.isArray(result)) ruleSet.push(...result);
+      else ruleSet.push(result);
     }
 
     return ruleSet;
@@ -52,17 +63,22 @@ export default function flatten(chunk: any, executionContext: Object | null | un
 
   /* Handle other components */
   if (isStyledComponent(chunk)) {
-    return `.${chunk.styledComponentId}`;
+    return `.${(chunk as IStyledComponent).styledComponentId}`;
   }
 
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
     if (isStatelessFunction(chunk) && executionContext) {
-      const result = chunk(executionContext);
+      const chunkFn = chunk as Function;
+      const result = chunkFn(executionContext);
 
       if (process.env.NODE_ENV !== 'production' && isElement(result)) {
         // eslint-disable-next-line no-console
-        console.error(`${getComponentName(chunk)} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`);
+        console.error(
+          `${getComponentName(
+            chunkFn as React.ComponentType<any>
+          )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
+        );
       }
 
       return flatten(result, executionContext, styleSheet, stylisInstance);
@@ -77,5 +93,5 @@ export default function flatten(chunk: any, executionContext: Object | null | un
   }
 
   /* Handle objects */
-  return isPlainObject(chunk) ? objToCssArray(chunk) : chunk.toString();
+  return isPlainObject(chunk) ? objToCssArray(chunk as ExtensibleObject) : chunk.toString();
 }

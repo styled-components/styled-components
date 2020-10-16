@@ -3,3 +3,7 @@ declare global {
     '__styled-components-init__'?: number;
   }
 }
+
+declare module '@emotion/unitless' {
+  export default {} as { [key: string]: boolean };
+}

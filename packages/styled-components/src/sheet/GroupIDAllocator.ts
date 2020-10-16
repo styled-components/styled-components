@@ -1,8 +1,6 @@
+import styledError from '../utils/error';
 
-
-import throwStyledError from "../utils/error";
-
-const MAX_SMI = 1 << 31 - 1;
+const MAX_SMI = 1 << (31 - 1);
 
 let groupIDRegister: Map<string, number> = new Map();
 let reverseRegister: Map<number, string> = new Map();
@@ -16,7 +14,7 @@ export const resetGroupIds = () => {
 
 export const getGroupForId = (id: string): number => {
   if (groupIDRegister.has(id)) {
-    return (groupIDRegister.get(id) as any);
+    return groupIDRegister.get(id) as any;
   }
 
   while (reverseRegister.has(nextFreeGroup)) {
@@ -26,7 +24,7 @@ export const getGroupForId = (id: string): number => {
   const group = nextFreeGroup++;
 
   if (process.env.NODE_ENV !== 'production' && ((group | 0) < 0 || group > MAX_SMI)) {
-    throwStyledError(16, `${group}`);
+    throw styledError(16, `${group}`);
   }
 
   groupIDRegister.set(id, group);

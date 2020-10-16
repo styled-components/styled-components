@@ -11,6 +11,8 @@ export type Attrs = (props: ExtensibleObject) => ExtensibleObject | ExtensibleOb
 export type Interpolation =
   | ((executionContext: ExtensibleObject) => Interpolation)
   | string
+  | Keyframe
+  | IStyledComponent
   | ComponentType<any>
   | Interpolation[];
 
@@ -33,9 +35,10 @@ export type Flattener = (
   styleSheet: Object | null | undefined
 ) => Interpolation[];
 
-export type Stringifier = {
+export interface Stringifier {
+  (css: string, selector: string, prefix: string, componentId?: string): string;
   hash: string;
-};
+}
 
 export type ShouldForwardProp = (prop: string, isValidAttr: (prop: string) => boolean) => boolean;
 
@@ -76,3 +79,5 @@ export interface IStyledNativeStatics {
 export interface IStyledNativeComponent extends Component<any>, IStyledNativeStatics {
   defaultProps?: Object;
 }
+
+export type StyledTarget = IStyledComponent['target'] | IStyledNativeComponent['target'];
