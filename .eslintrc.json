@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/eslintrc.json",
   "parser": "babel-eslint",
   "extends": ["eslint:recommended", "plugin:import/errors", "plugin:react/recommended", "prettier"],
-  "plugins": ["flowtype", "prettier", "react-hooks"],
+  "plugins": ["prettier", "react-hooks"],
   "rules": {
     "react-hooks/rules-of-hooks": "error",
     "class-methods-use-this": 0,

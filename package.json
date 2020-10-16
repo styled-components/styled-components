@@ -6,7 +6,6 @@
     "postbuild": "cp README.md packages/styled-components/",
     "postinstall": "wsrun -p styled-components --stages generateErrors",
     "dev": "wsrun --exclude-missing dev",
-    "flow": "flow check",
     "lint": "wsrun --exclude-missing lint",
     "size": "wsrun --exclude-missing lint:size",
     "test": "wsrun --exclude-missing test",
@@ -27,7 +26,6 @@
     "@babel/plugin-proposal-class-properties": "^7.0.0",
     "@babel/plugin-proposal-object-rest-spread": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
-    "@babel/preset-flow": "^7.0.0",
     "@babel/preset-react": "^7.0.0",
     "babel-eslint": "^10.0.1",
     "babel-jest": "^26.5.2",
@@ -44,8 +42,6 @@
     "eslint-plugin-prettier": "^3.0.0",
     "eslint-plugin-react": "^7.12.4",
     "eslint-plugin-react-hooks": "^4.1.2",
-    "flow-bin": "^0.132.0",
-    "flow-watch": "^2.0.0",
     "husky": "^4.3.0",
     "jest": "^26.5.3",
     "jest-image-snapshot": "^4.2.0",
@@ -58,7 +54,6 @@
     "rollup": "^1.13.1",
     "rollup-plugin-babel": "^4.3.2",
     "rollup-plugin-commonjs": "^10.0.0",
-    "rollup-plugin-flow": "github:probablyup/rollup-plugin-flow#breaking-update-flow-remove-types",
     "rollup-plugin-json": "^4.0.0",
     "rollup-plugin-node-resolve": "^5.0.1",
     "rollup-plugin-replace": "^2.2.0",
@@ -78,8 +73,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged",
-      "pre-push": "yarn flow"
+      "pre-commit": "lint-staged"
     }
   },
   "engines": {

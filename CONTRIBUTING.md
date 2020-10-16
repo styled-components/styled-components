@@ -66,7 +66,7 @@ Here is a quick guide to doing code contributions to the library.
 
 5. Make your changes and commit: `git add` and `git commit`
 
-6. Make sure that the tests still pass: `yarn test` and `yarn run flow` (for the type checks)
+6. Make sure that the tests still pass: `yarn test` and `yarn lint` (for the type checks)
 
 7. Push your branch: `git push -u origin your-branch-name`
 

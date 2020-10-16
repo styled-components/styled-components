@@ -5,3 +5,4 @@ dist
 package-lock.json
 **/styled-components/src/utils/errors.js
 coverage
+flow-typed
