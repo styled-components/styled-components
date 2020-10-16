@@ -1,17 +1,12 @@
-
-
-/* eslint-disable import/no-unresolved */
-import _InlineStyle from "../models/InlineStyle";
-import _StyledNativeComponent from "../models/StyledNativeComponent";
-
-import css from "../constructors/css";
-import constructWithOptions from "../constructors/constructWithOptions";
-import ThemeProvider, { ThemeConsumer, ThemeContext } from "../models/ThemeProvider";
-import withTheme from "../hoc/withTheme";
-import useTheme from "../hooks/useTheme";
-import isStyledComponent from "../utils/isStyledComponent";
-
-import { Target } from "../types";
+import constructWithOptions from '../constructors/constructWithOptions';
+import css from '../constructors/css';
+import withTheme from '../hoc/withTheme';
+import useTheme from '../hooks/useTheme';
+import _InlineStyle from '../models/InlineStyle';
+import _StyledNativeComponent from '../models/StyledNativeComponent';
+import ThemeProvider, { ThemeConsumer, ThemeContext } from '../models/ThemeProvider';
+import { Target } from '../types';
+import isStyledComponent from '../utils/isStyledComponent';
 
 const reactNative = require('react-native');
 
@@ -31,13 +26,15 @@ const aliases = `ActivityIndicator ActivityIndicatorIOS ART Button DatePickerIOS
 
 /* Define a getter for each alias which simply gets the reactNative component
  * and passes it to styled */
-aliases.split(/\s+/m).forEach(alias => Object.defineProperty(styled, alias, {
-  enumerable: true,
-  configurable: false,
-  get() {
-    return styled(reactNative[alias]);
-  }
-}));
+aliases.split(/\s+/m).forEach(alias =>
+  Object.defineProperty(styled, alias, {
+    enumerable: true,
+    configurable: false,
+    get() {
+      return styled(reactNative[alias]);
+    },
+  })
+);
 
 export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
 export default styled;

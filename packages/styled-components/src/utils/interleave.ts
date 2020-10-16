@@ -1,6 +1,9 @@
 import { Interpolation } from '../types';
 
-export default (strings: string[], interpolations: Interpolation[]): Interpolation[] => {
+export default function interleave(
+  strings: string[],
+  interpolations: Interpolation[]
+): Interpolation[] {
   const result: Interpolation[] = [strings[0]];
 
   for (let i = 0, len = interpolations.length; i < len; i += 1) {
@@ -8,4 +11,4 @@ export default (strings: string[], interpolations: Interpolation[]): Interpolati
   }
 
   return result;
-};
+}

@@ -60,8 +60,11 @@ export interface IStyledComponent extends Component<any>, IStyledStatics {
   toString: () => string;
 }
 
+export interface IInlineStyleConstructor {
+  new (rules: RuleSet): IInlineStyle;
+}
+
 export interface IInlineStyle {
-  constructor(rules: RuleSet): void;
   rules: RuleSet;
   generateStyleObject(executionContext: Object): Object;
 }

@@ -1,15 +1,16 @@
+import transformDeclPairs from 'css-to-react-native';
+import { parse } from 'postcss';
+import {
+  ExtensibleObject,
+  IInlineStyle,
+  IInlineStyleConstructor,
+  RuleSet,
+  StyleSheet,
+} from '../types';
+import flatten from '../utils/flatten';
+import generateComponentId from '../utils/generateComponentId';
 
-
-/* eslint-disable import/no-unresolved */
-import transformDeclPairs from "css-to-react-native";
-
-import generateComponentId from "../utils/generateComponentId";
-import { RuleSet, StyleSheet, IInlineStyle } from "../types";
-import flatten from "../utils/flatten";
-
-import parse from "../vendor/postcss-safe-parser/parse";
-
-let generated = {};
+let generated: ExtensibleObject = {};
 
 export const resetStyleCache = () => {
   generated = {};
@@ -18,9 +19,8 @@ export const resetStyleCache = () => {
 /*
  InlineStyle takes arbitrary CSS and generates a flat object
  */
-export default ((styleSheet: StyleSheet) => {
-  class InlineStyle implements IInlineStyle {
-
+export default function makeInlineStyleClass(styleSheet: StyleSheet) {
+  const InlineStyle: IInlineStyleConstructor = class InlineStyle implements IInlineStyle {
     rules: RuleSet;
 
     constructor(rules: RuleSet) {
@@ -28,12 +28,14 @@ export default ((styleSheet: StyleSheet) => {
     }
 
     generateStyleObject(executionContext: Object) {
-      const flatCSS = flatten(this.rules, executionContext).join('');
-
+      // keyframes, functions, and component selectors are not allowed for React Native
+      const flatCSS = (flatten(this.rules, executionContext) as string[]).join('');
       const hash = generateComponentId(flatCSS);
+
       if (!generated[hash]) {
         const root = parse(flatCSS);
-        const declPairs = [];
+        const declPairs: [string, string][] = [];
+
         root.each(node => {
           if (node.type === 'decl') {
             declPairs.push([node.prop, node.value]);
@@ -46,15 +48,22 @@ export default ((styleSheet: StyleSheet) => {
         // components (but does for View). It is almost impossible to tell whether we'll have
         // support, so we'll just disable multiple values here.
         // https://github.com/styled-components/css-to-react-native/issues/11
-        const styleObject = transformDeclPairs(declPairs, ['borderRadius', 'borderWidth', 'borderColor', 'borderStyle']);
+        const styleObject = transformDeclPairs(declPairs, [
+          'borderRadius',
+          'borderWidth',
+          'borderColor',
+          'borderStyle',
+        ]);
+
         const styles = styleSheet.create({
-          generated: styleObject
+          generated: styleObject,
         });
+
         generated[hash] = styles.generated;
       }
       return generated[hash];
     }
-  }
+  };
 
   return InlineStyle;
-});
+}

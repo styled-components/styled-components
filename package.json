@@ -32,6 +32,8 @@
     "@types/react": "^16.9.52",
     "@types/react-dom": "^16.9.8",
     "@types/react-is": "^16.7.1",
+    "@types/react-primitives": "^0.6.2",
+    "@types/shallowequal": "^1.1.1",
     "@types/stylis": "^4.0.0",
     "babel-eslint": "^10.0.1",
     "babel-jest": "^26.5.2",

@@ -1,19 +1,26 @@
-import { Interpolation, RuleSet, Styles } from '../types';
+import { ExtensibleObject, Interpolation, Styles } from '../types';
 import { EMPTY_ARRAY } from '../utils/empties';
 import flatten from '../utils/flatten';
 import interleave from '../utils/interleave';
 import isFunction from '../utils/isFunction';
 import isPlainObject from '../utils/isPlainObject';
 
-export default function css(styles: Styles, ...interpolations: Array<Interpolation>): RuleSet {
+export default function css(styles: Styles, ...interpolations: Array<Interpolation>) {
   if (isFunction(styles) || isPlainObject(styles)) {
-    return flatten(interleave(EMPTY_ARRAY, [styles, ...interpolations]));
+    const styleFunctionOrObject = styles as Function | ExtensibleObject;
+
+    return flatten(interleave(EMPTY_ARRAY as string[], [styleFunctionOrObject, ...interpolations]));
   }
 
-  if (interpolations.length === 0 && styles.length === 1 && typeof styles[0] === 'string') {
-    return styles;
+  const styleStringArray = styles as string[];
+
+  if (
+    interpolations.length === 0 &&
+    styleStringArray.length === 1 &&
+    typeof styleStringArray[0] === 'string'
+  ) {
+    return styleStringArray;
   }
 
-  // $FlowFixMe
-  return flatten(interleave(styles, interpolations));
+  return flatten(interleave(styleStringArray, interpolations));
 }
