@@ -53,3 +53,23 @@ export interface IStyledComponent extends Component<*>, IStyledStatics {
   defaultProps?: Object;
   toString: () => string;
 }
+
+export interface IInlineStyle {
+  constructor(rules: RuleSet): void;
+  rules: RuleSet;
+  generateStyleObject(executionContext: Object): Object;
+}
+
+export interface IStyledNativeStatics {
+  attrs: Attrs;
+  inlineStyle: IInlineStyle;
+  displayName: string;
+  target: Target | IStyledNativeComponent;
+  shouldForwardProp?: ShouldForwardProp;
+  styledComponentId: string;
+  withComponent: (tag: Target) => IStyledNativeComponent;
+}
+
+export interface IStyledNativeComponent extends Component<*>, IStyledNativeStatics {
+  defaultProps?: Object;
+}
