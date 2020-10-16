@@ -6,6 +6,12 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Use `class` instead of `className` for unidentified DOM elements (better support for styling web components)
+
+- Upgrade to stylis v4
+
+## [v5.2.0] - 2020-09-04
+
 - Make sure `StyleSheetManager` renders all styles in iframe / child windows (see [#3159](https://github.com/styled-components/styled-components/pull/3159)) thanks @eramdam!
 
 - Rework how components self-reference in extension scenarios (see [#3236](https://github.com/styled-components/styled-components/pull/3236)); should fix a bunch of subtle bugs around patterns like `& + &`
@@ -1147,7 +1153,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v5.1.0...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.2.0...master
+[v5.2.0]: https://github.com/styled-components/styled-components/compare/v5.1.0...v5.2.0
 [v5.1.1]: https://github.com/styled-components/styled-components/compare/v5.1.0...v5.1.1
 [v5.1.0]: https://github.com/styled-components/styled-components/compare/v5.0.1...v5.1.0
 [v5.0.1]: https://github.com/styled-components/styled-components/compare/v5.0.0...v5.0.1
