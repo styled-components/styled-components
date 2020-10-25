@@ -1,11 +1,10 @@
-
-import { SC_VERSION } from "../constants";
-import StyleSheet from "../sheet";
-import { RuleSet, Stringifier } from "../types";
-import flatten from "../utils/flatten";
-import generateName from "../utils/generateAlphabeticName";
-import { hash, phash } from "../utils/hash";
-import isStaticRules from "../utils/isStaticRules";
+import { SC_VERSION } from '../constants';
+import StyleSheet from '../sheet';
+import { RuleSet, Stringifier } from '../types';
+import flatten from '../utils/flatten';
+import generateName from '../utils/generateAlphabeticName';
+import { hash, phash } from '../utils/hash';
+import isStaticRules from '../utils/isStaticRules';
 
 const SEED = hash(SC_VERSION);
 
@@ -13,7 +12,6 @@ const SEED = hash(SC_VERSION);
  * ComponentStyle is all the CSS-specific stuff, not the React-specific stuff.
  */
 export default class ComponentStyle {
-
   baseHash: number;
 
   baseStyle: ComponentStyle | null | undefined;
@@ -29,7 +27,10 @@ export default class ComponentStyle {
   constructor(rules: RuleSet, componentId: string, baseStyle?: ComponentStyle) {
     this.rules = rules;
     this.staticRulesId = '';
-    this.isStatic = process.env.NODE_ENV === 'production' && (baseStyle === undefined || baseStyle.isStatic) && isStaticRules(rules);
+    this.isStatic =
+      process.env.NODE_ENV === 'production' &&
+      (baseStyle === undefined || baseStyle.isStatic) &&
+      isStaticRules(rules);
     this.componentId = componentId;
 
     // SC_VERSION gives us isolation between multiple runtimes on the page at once
@@ -48,10 +49,12 @@ export default class ComponentStyle {
    * Hashes it, wraps the whole chunk in a .hash1234 {}
    * Returns the hash to be injected on render()
    * */
-  generateAndInjectStyles(executionContext: Object, styleSheet: StyleSheet, stylis: Stringifier) {
-    const {
-      componentId
-    } = this;
+  generateAndInjectStyles(
+    executionContext: Object,
+    styleSheet: StyleSheet,
+    stylis: Stringifier
+  ): string {
+    const { componentId } = this;
 
     const names = [];
 
@@ -65,7 +68,7 @@ export default class ComponentStyle {
         names.push(this.staticRulesId);
       } else {
         const cssStatic = flatten(this.rules, executionContext, styleSheet, stylis).join('');
-        const name = generateName(phash(this.baseHash, cssStatic.length) >>> 0);
+        const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
 
         if (!styleSheet.hasNameForId(componentId, name)) {
           const cssStaticFormatted = stylis(cssStatic, `.${name}`, undefined, componentId);
@@ -76,9 +79,7 @@ export default class ComponentStyle {
         this.staticRulesId = name;
       }
     } else {
-      const {
-        length
-      } = this.rules;
+      const { length } = this.rules;
       let dynamicHash = phash(this.baseHash, stylis.hash);
       let css = '';
 

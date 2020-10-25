@@ -12,6 +12,7 @@ module.exports = () => ({
       },
     ],
     '@babel/preset-react',
+    '@babel/preset-typescript',
   ],
   plugins: [
     ['babel-plugin-transform-react-remove-prop-types', { mode: 'unsafe-wrap' }],

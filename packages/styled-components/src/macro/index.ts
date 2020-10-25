@@ -1,17 +1,9 @@
+import { addDefault, addNamed } from '@babel/helper-module-imports';
+import traverse from '@babel/traverse';
+import { createMacro } from 'babel-plugin-macros';
+import babelPlugin from 'babel-plugin-styled-components';
 
-import { addDefault, addNamed } from "@babel/helper-module-imports";
-import traverse from "@babel/traverse";
-import { createMacro } from "babel-plugin-macros";
-import babelPlugin from "babel-plugin-styled-components";
-
-function styledComponentsMacro({
-  references,
-  state,
-  babel: {
-    types: t
-  },
-  config = {}
-}) {
+function styledComponentsMacro({ references, state, babel: { types: t }, config = {} }) {
   const program = state.file.path;
 
   // FIRST STEP : replace `styled-components/macro` by `styled-components
@@ -41,5 +33,5 @@ function styledComponentsMacro({
 }
 
 export default createMacro(styledComponentsMacro, {
-  configName: 'styledComponents'
+  configName: 'styledComponents',
 });

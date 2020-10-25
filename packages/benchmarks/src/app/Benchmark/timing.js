@@ -1,5 +1,3 @@
-// @flow
-
 const NS_PER_MS = 1e6;
 const MS_PER_S = 1e3;
 

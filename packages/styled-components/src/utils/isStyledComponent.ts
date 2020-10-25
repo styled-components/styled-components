@@ -1,3 +1,5 @@
-export default function isStyledComponent(target: any) {
-  return typeof target !== 'string' && 'styledComponentId' in target;
+import { IStyledComponent } from '../types';
+
+export default function isStyledComponent(target: any): target is IStyledComponent {
+  return typeof target === 'object' && 'styledComponentId' in target;
 }

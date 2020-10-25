@@ -1,13 +1,12 @@
-
-import React from "react";
-import TestRenderer from "react-test-renderer";
-import { getRenderedCSS, resetStyled } from "./utils";
+import React from 'react';
+import TestRenderer from 'react-test-renderer';
+import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
 // testing for ComponentStyle specifics here
 jest.mock('../utils/isStaticRules', () => () => false);
 
-let styled;
+let styled: ReturnType<typeof resetStyled>;
 
 describe('css features', () => {
   beforeEach(() => {

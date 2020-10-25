@@ -1,15 +1,15 @@
-// @flow
 import validAttr from '@emotion/is-prop-valid';
 import hoist from 'hoist-non-react-statics';
-import React, { createElement, type Ref, useContext, useDebugValue } from 'react';
+import React, { createElement, Ref, useContext, useDebugValue } from 'react';
 import { SC_VERSION } from '../constants';
 import type {
   Attrs,
+  ExtensibleObject,
   IStyledComponent,
   IStyledStatics,
   RuleSet,
   ShouldForwardProp,
-  Target,
+  WebTarget,
 } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
@@ -20,19 +20,18 @@ import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import getComponentName from '../utils/getComponentName';
-import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import joinStrings from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
 import { useStyleSheet, useStylis } from './StyleSheetManager';
-import { ThemeContext } from './ThemeProvider';
+import { Theme, ThemeContext } from './ThemeProvider';
 
-const identifiers = {};
+const identifiers: { [key: string]: number } = {};
 
 /* We depend on components having unique IDs */
-function generateId(displayName?: string, parentComponentId?: string) {
+function generateId(displayName?: string, parentComponentId?: string): string {
   const name = typeof displayName !== 'string' ? 'sc' : escape(displayName);
   // Ensure that no displayName can lead to duplicate componentIds
   identifiers[name] = (identifiers[name] || 0) + 1;
@@ -46,19 +45,19 @@ function generateId(displayName?: string, parentComponentId?: string) {
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attrs: Attrs) {
+function useResolvedAttrs(theme: Theme = EMPTY_OBJECT, props: ExtensibleObject, attrs: Attrs[]) {
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
   // where resolvedAttrs is only the things injected by the attrs themselves
-  const context = { ...props, theme };
-  const resolvedAttrs = {};
+  const context: ExtensibleObject & { theme: Theme } = { ...props, theme };
+  const resolvedAttrs: ExtensibleObject = {};
 
   attrs.forEach(attrDef => {
-    let resolvedAttrDef = attrDef;
+    let resolvedAttrDef: ExtensibleObject = attrDef;
     let key;
 
-    if (isFunction(resolvedAttrDef)) {
-      resolvedAttrDef = resolvedAttrDef(context);
+    if (typeof resolvedAttrDef === 'function') {
+      resolvedAttrDef = resolvedAttrDef(context) as Extract<Attrs, Function>;
     }
 
     /* eslint-disable guard-for-in */
@@ -78,7 +77,7 @@ function useInjectedStyle<T>(
   componentStyle: ComponentStyle,
   isStatic: boolean,
   resolvedAttrs: T,
-  warnTooManyClasses?: $Call<typeof createWarnTooManyClasses, string, string>
+  warnTooManyClasses?: ReturnType<typeof createWarnTooManyClasses>
 ) {
   const styleSheet = useStyleSheet();
   const stylis = useStylis();
@@ -99,7 +98,7 @@ function useInjectedStyle<T>(
 
 function useStyledComponentImpl(
   forwardedComponent: IStyledComponent,
-  props: Object,
+  props: ExtensibleObject,
   forwardedRef: Ref<any>,
   isStatic: boolean
 ) {
@@ -132,11 +131,11 @@ function useStyledComponentImpl(
 
   const refToForward = forwardedRef;
 
-  const elementToBeCreated: Target = attrs.$as || props.$as || attrs.as || props.as || target;
+  const elementToBeCreated: WebTarget = attrs.$as || props.$as || attrs.as || props.as || target;
 
   const isTargetTag = isTag(elementToBeCreated);
-  const computedProps = attrs !== props ? { ...props, ...attrs } : props;
-  const propsForElement = {};
+  const computedProps: ExtensibleObject = attrs !== props ? { ...props, ...attrs } : props;
+  const propsForElement: ExtensibleObject = {};
 
   // eslint-disable-next-line guard-for-in
   for (const key in computedProps) {
@@ -157,8 +156,12 @@ function useStyledComponentImpl(
 
   propsForElement[
     // handle custom elements which React doesn't properly alias
-    isTargetTag && domElements.indexOf(elementToBeCreated) === -1 ? 'class' : 'className'
-  ] = foldedComponentIds
+    isTargetTag &&
+    domElements.indexOf((elementToBeCreated as unknown) as Extract<typeof domElements, string>) ===
+      -1
+      ? 'class'
+      : 'className'
+  ] = (foldedComponentIds as any[])
     .concat(
       styledComponentId,
       generatedClassName !== styledComponentId ? generatedClassName : null,
@@ -174,17 +177,18 @@ function useStyledComponentImpl(
 }
 
 export default function createStyledComponent(
-  target: $PropertyType<IStyledComponent, 'target'>,
+  target: IStyledComponent['target'],
   options: {
-    attrs?: Attrs,
-    componentId: string,
-    displayName?: string,
-    parentComponentId?: string,
-    shouldForwardProp?: ShouldForwardProp,
+    attrs?: Attrs[];
+    componentId: string;
+    displayName?: string;
+    parentComponentId?: string;
+    shouldForwardProp?: ShouldForwardProp;
   },
   rules: RuleSet
 ) {
   const isTargetStyledComp = isStyledComponent(target);
+  const styledComponentTarget = target as IStyledComponent;
   const isCompositeComponent = !isTag(target);
 
   const {
@@ -200,31 +204,30 @@ export default function createStyledComponent(
 
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
-    isTargetStyledComp && ((target: any): IStyledComponent).attrs
-      ? ((target: any): IStyledComponent).attrs.concat(attrs).filter(Boolean)
-      : attrs;
+    isTargetStyledComp && styledComponentTarget.attrs
+      ? styledComponentTarget.attrs.concat((attrs as unknown) as Attrs[]).filter(Boolean)
+      : (attrs as Attrs[]);
 
-  // eslint-disable-next-line prefer-destructuring
-  let shouldForwardProp = options.shouldForwardProp;
+  let { shouldForwardProp } = options;
 
-  if (isTargetStyledComp && target.shouldForwardProp) {
+  if (isTargetStyledComp && styledComponentTarget.shouldForwardProp) {
+    const shouldForwardPropFn = styledComponentTarget.shouldForwardProp;
+
     if (options.shouldForwardProp) {
+      const passedShouldForwardPropFn = options.shouldForwardProp;
+
       // compose nested shouldForwardProp calls
       shouldForwardProp = (prop, filterFn) =>
-        ((((target: any): IStyledComponent).shouldForwardProp: any): ShouldForwardProp)(
-          prop,
-          filterFn
-        ) && ((options.shouldForwardProp: any): ShouldForwardProp)(prop, filterFn);
+        shouldForwardPropFn(prop, filterFn) && passedShouldForwardPropFn(prop, filterFn);
     } else {
-      // eslint-disable-next-line prefer-destructuring
-      shouldForwardProp = ((target: any): IStyledComponent).shouldForwardProp;
+      shouldForwardProp = shouldForwardPropFn;
     }
   }
 
   const componentStyle = new ComponentStyle(
     rules,
     styledComponentId,
-    isTargetStyledComp ? ((target: Object).componentStyle: ComponentStyle) : undefined
+    isTargetStyledComp ? (styledComponentTarget.componentStyle as ComponentStyle) : undefined
   );
 
   // statically styled-components don't need to build an execution context object,
@@ -237,13 +240,14 @@ export default function createStyledComponent(
    */
   let WrappedStyledComponent: IStyledComponent;
 
-  const forwardRef = (props, ref) =>
+  function forwardRef(props: ExtensibleObject, ref: Ref<any>) {
     // eslint-disable-next-line
-    useStyledComponentImpl(WrappedStyledComponent, props, ref, isStatic);
+    return useStyledComponentImpl(WrappedStyledComponent, props, ref, isStatic);
+  }
 
   forwardRef.displayName = displayName;
 
-  WrappedStyledComponent = ((React.forwardRef(forwardRef): any): IStyledComponent);
+  WrappedStyledComponent = (React.forwardRef(forwardRef) as unknown) as IStyledComponent;
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
@@ -252,19 +256,15 @@ export default function createStyledComponent(
   // this static is used to preserve the cascade of static classes for component selector
   // purposes; this is especially important with usage of the css prop
   WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
-    ? ((target: any): IStyledComponent).foldedComponentIds.concat(
-        ((target: any): IStyledComponent).styledComponentId
-      )
-    : EMPTY_ARRAY;
+    ? styledComponentTarget.foldedComponentIds.concat(styledComponentTarget.styledComponentId)
+    : (EMPTY_ARRAY as string[]);
 
   WrappedStyledComponent.styledComponentId = styledComponentId;
 
   // fold the underlying StyledComponent target up since we folded the styles
-  WrappedStyledComponent.target = isTargetStyledComp
-    ? ((target: any): IStyledComponent).target
-    : target;
+  WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
 
-  WrappedStyledComponent.withComponent = function withComponent(tag: Target) {
+  WrappedStyledComponent.withComponent = function withComponent(tag: WebTarget) {
     const { componentId: previousComponentId, ...optionsToCopy } = options;
 
     const newComponentId =
@@ -287,7 +287,7 @@ export default function createStyledComponent(
 
     set(obj) {
       this._foldedDefaultProps = isTargetStyledComp
-        ? merge({}, ((target: any): IStyledComponent).defaultProps, obj)
+        ? merge({}, styledComponentTarget.defaultProps, obj)
         : obj;
     },
   });
@@ -304,21 +304,23 @@ export default function createStyledComponent(
   WrappedStyledComponent.toString = () => `.${WrappedStyledComponent.styledComponentId}`;
 
   if (isCompositeComponent) {
-    hoist<
-      IStyledStatics,
-      $PropertyType<IStyledComponent, 'target'>,
-      { [key: $Keys<IStyledStatics>]: true }
-    >(WrappedStyledComponent, ((target: any): $PropertyType<IStyledComponent, 'target'>), {
-      // all SC-specific things should not be hoisted
-      attrs: true,
-      componentStyle: true,
-      displayName: true,
-      foldedComponentIds: true,
-      shouldForwardProp: true,
-      styledComponentId: true,
-      target: true,
-      withComponent: true,
-    });
+    const compositeComponentTarget = target as React.ComponentType<any>;
+
+    hoist<IStyledComponent, typeof compositeComponentTarget>(
+      WrappedStyledComponent,
+      compositeComponentTarget,
+      {
+        // all SC-specific things should not be hoisted
+        attrs: true,
+        componentStyle: true,
+        displayName: true,
+        foldedComponentIds: true,
+        shouldForwardProp: true,
+        styledComponentId: true,
+        target: true,
+        withComponent: true,
+      } as { [key in keyof IStyledStatics]: boolean }
+    );
   }
 
   return WrappedStyledComponent;

@@ -1,15 +1,11 @@
-// @flow
 import React from 'react';
-
-import styled, { css, keyframes, createGlobalStyle } from 'styled-components';
-
 import {
-  LiveProvider as _LiveProvider,
   LiveEditor as _LiveEditor,
   LiveError as _LiveError,
   LivePreview as _LivePreview,
+  LiveProvider as _LiveProvider,
 } from 'react-live';
-
+import styled, { createGlobalStyle, css, keyframes } from 'styled-components';
 import buttonExample from './Button.example';
 
 const GlobalStyle = createGlobalStyle`

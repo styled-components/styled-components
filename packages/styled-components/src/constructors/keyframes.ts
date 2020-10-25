@@ -20,7 +20,7 @@ export default function keyframes(
     );
   }
 
-  const rules = css(strings, ...interpolations).join('');
+  const rules = (css(strings, ...interpolations) as string[]).join('');
   const name = generateComponentId(rules);
   return new Keyframes(name, rules);
 }

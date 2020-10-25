@@ -1,5 +1,3 @@
-// @flow
-
 function assertElement(element) {
   if (!(element instanceof HTMLElement)) {
     throw new Error('Must pass a DOM element to find/findAll(element, styledComponent)"');
@@ -11,9 +9,9 @@ function assertStyledComponent(styledComponent) {
     !(styledComponent.styledComponentId && typeof styledComponent.styledComponentId === 'string')
   ) {
     throw new Error(
-      `${styledComponent.displayName ||
-        styledComponent.name ||
-        'Component'} is not a styled component.`
+      `${
+        styledComponent.displayName || styledComponent.name || 'Component'
+      } is not a styled component.`
     );
   }
 }

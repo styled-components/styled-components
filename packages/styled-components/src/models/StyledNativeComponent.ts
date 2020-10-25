@@ -1,50 +1,36 @@
-// @flow
 import hoist from 'hoist-non-react-statics';
-import React, { createElement, useContext, type Ref } from 'react';
+import React, { createElement, Ref, useContext } from 'react';
 import type {
   Attrs,
-  IInlineStyle,
+  ExtensibleObject,
+  IInlineStyleConstructor,
   IStyledNativeComponent,
   IStyledNativeStatics,
+  NativeTarget,
   RuleSet,
   ShouldForwardProp,
-  Target,
 } from '../types';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
-import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import getComponentName from '../utils/getComponentName';
-import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
-import { ThemeContext } from './ThemeProvider';
+import { Theme, ThemeContext } from './ThemeProvider';
 
-const identifiers = {};
-
-/* We depend on components having unique IDs */
-function generateId(displayName?: string, parentComponentId?: string) {
-  const name = typeof displayName !== 'string' ? 'sc' : escape(displayName);
-  // Ensure that no displayName can lead to duplicate componentIds
-  identifiers[name] = (identifiers[name] || 0) + 1;
-
-  const componentId = `${name}-${generateComponentId(name + identifiers[name])}`;
-  return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
-}
-
-function useResolvedAttrs<Config>(theme: any = EMPTY_OBJECT, props: Config, attrs: Attrs) {
+function useResolvedAttrs<Config>(theme: Theme = EMPTY_OBJECT, props: Config, attrs: Attrs[]) {
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
   // where resolvedAttrs is only the things injected by the attrs themselves
-  const context = { ...props, theme };
-  const resolvedAttrs = {};
+  const context: ExtensibleObject & { theme: Theme } = { ...props, theme };
+  const resolvedAttrs: ExtensibleObject = {};
 
   attrs.forEach(attrDef => {
-    let resolvedAttrDef = attrDef;
+    let resolvedAttrDef: ExtensibleObject = attrDef;
     let key;
 
-    if (isFunction(resolvedAttrDef)) {
-      resolvedAttrDef = resolvedAttrDef(context);
+    if (typeof resolvedAttrDef === 'function') {
+      resolvedAttrDef = resolvedAttrDef(context) as Extract<Attrs, Function>;
     }
 
     /* eslint-disable guard-for-in */
@@ -62,7 +48,7 @@ const validAttr = () => true;
 
 function useStyledComponentImpl(
   forwardedComponent: IStyledNativeComponent,
-  props: Object,
+  props: ExtensibleObject,
   forwardedRef: Ref<any>
 ) {
   const {
@@ -84,10 +70,10 @@ function useStyledComponentImpl(
 
   const refToForward = forwardedRef;
 
-  const elementToBeCreated: Target = attrs.$as || props.$as || attrs.as || props.as || target;
+  const elementToBeCreated: NativeTarget = attrs.$as || props.$as || attrs.as || props.as || target;
 
-  const computedProps = attrs !== props ? { ...props, ...attrs } : props;
-  const propsForElement = {};
+  const computedProps: ExtensibleObject = attrs !== props ? { ...props, ...attrs } : props;
+  const propsForElement: ExtensibleObject = {};
 
   // eslint-disable-next-line guard-for-in
   for (const key in computedProps) {
@@ -106,51 +92,43 @@ function useStyledComponentImpl(
   return createElement(elementToBeCreated, propsForElement);
 }
 
-export default (InlineStyle: Class<IInlineStyle>) => {
+export default (InlineStyle: IInlineStyleConstructor) => {
   const createStyledNativeComponent = (
-    target: $PropertyType<IStyledNativeComponent, 'target'>,
+    target: IStyledNativeComponent['target'],
     options: {
-      attrs?: Attrs,
-      componentId: string,
-      displayName?: string,
-      parentComponentId?: string,
-      shouldForwardProp?: ShouldForwardProp,
+      attrs?: Attrs[];
+      componentId: string;
+      displayName?: string;
+      parentComponentId?: string;
+      shouldForwardProp?: ShouldForwardProp;
     },
     rules: RuleSet
   ) => {
     const isTargetStyledComp = isStyledComponent(target);
+    const styledComponentTarget = target as IStyledNativeComponent;
 
-    const {
-      displayName = generateDisplayName(target),
-      componentId = generateId(options.displayName, options.parentComponentId),
-      attrs = EMPTY_ARRAY,
-    } = options;
-
-    const styledComponentId =
-      options.displayName && options.componentId
-        ? `${escape(options.displayName)}-${options.componentId}`
-        : options.componentId || componentId;
+    const { displayName = generateDisplayName(target), attrs = EMPTY_ARRAY } = options;
 
     // fold the underlying StyledComponent attrs up (implicit extend)
     const finalAttrs =
-      isTargetStyledComp && ((target: any): IStyledNativeComponent).attrs
-        ? ((target: any): IStyledNativeComponent).attrs.concat(attrs).filter(Boolean)
-        : attrs;
+      isTargetStyledComp && styledComponentTarget.attrs
+        ? styledComponentTarget.attrs.concat(attrs).filter(Boolean)
+        : (attrs as Attrs[]);
 
     // eslint-disable-next-line prefer-destructuring
     let shouldForwardProp = options.shouldForwardProp;
 
-    if (isTargetStyledComp && target.shouldForwardProp) {
+    if (isTargetStyledComp && styledComponentTarget.shouldForwardProp) {
+      const shouldForwardPropFn = styledComponentTarget.shouldForwardProp;
+
       if (options.shouldForwardProp) {
         // compose nested shouldForwardProp calls
         shouldForwardProp = (prop, filterFn) =>
-          ((((target: any): IStyledNativeComponent).shouldForwardProp: any): ShouldForwardProp)(
-            prop,
-            filterFn
-          ) && ((options.shouldForwardProp: any): ShouldForwardProp)(prop, filterFn);
+          shouldForwardPropFn(prop, filterFn) &&
+          (options.shouldForwardProp as ShouldForwardProp)(prop, filterFn);
       } else {
         // eslint-disable-next-line prefer-destructuring
-        shouldForwardProp = ((target: any): IStyledNativeComponent).shouldForwardProp;
+        shouldForwardProp = shouldForwardPropFn;
       }
     }
 
@@ -161,29 +139,26 @@ export default (InlineStyle: Class<IInlineStyle>) => {
     let WrappedStyledComponent: IStyledNativeComponent;
 
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const forwardRef = (props, ref) => useStyledComponentImpl(WrappedStyledComponent, props, ref);
+    const forwardRef = (props: ExtensibleObject, ref: React.Ref<any>) =>
+      useStyledComponentImpl(WrappedStyledComponent, props, ref);
 
     forwardRef.displayName = displayName;
 
-    WrappedStyledComponent = ((React.forwardRef(forwardRef): any): IStyledNativeComponent);
+    WrappedStyledComponent = (React.forwardRef(forwardRef) as unknown) as IStyledNativeComponent;
 
     WrappedStyledComponent.attrs = finalAttrs;
     WrappedStyledComponent.inlineStyle = new InlineStyle(
-      isTargetStyledComp
-        ? ((target: any): IStyledNativeComponent).inlineStyle.rules.concat(rules)
-        : rules
+      isTargetStyledComp ? styledComponentTarget.inlineStyle.rules.concat(rules) : rules
     );
     WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
 
-    WrappedStyledComponent.styledComponentId = styledComponentId;
-
     // fold the underlying StyledComponent target up since we folded the styles
-    WrappedStyledComponent.target = isTargetStyledComp
-      ? ((target: any): IStyledNativeComponent).target
-      : target;
+    WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
 
-    WrappedStyledComponent.withComponent = function withComponent(tag: Target) {
+    WrappedStyledComponent.withComponent = function withComponent(
+      tag: IStyledNativeComponent['target']
+    ) {
       const { componentId: previousComponentId, ...optionsToCopy } = options;
 
       const newComponentId =
@@ -205,25 +180,20 @@ export default (InlineStyle: Class<IInlineStyle>) => {
 
       set(obj) {
         this._foldedDefaultProps = isTargetStyledComp
-          ? merge({}, ((target: any): IStyledNativeComponent).defaultProps, obj)
+          ? merge({}, styledComponentTarget.defaultProps, obj)
           : obj;
       },
     });
 
-    hoist<
-      IStyledNativeStatics,
-      $PropertyType<IStyledNativeComponent, 'target'>,
-      { [key: $Keys<IStyledNativeStatics>]: true }
-    >(WrappedStyledComponent, ((target: any): $PropertyType<IStyledNativeComponent, 'target'>), {
+    hoist<IStyledNativeComponent, typeof target>(WrappedStyledComponent, target, {
       // all SC-specific things should not be hoisted
       attrs: true,
       inlineStyle: true,
       displayName: true,
       shouldForwardProp: true,
-      styledComponentId: true,
       target: true,
       withComponent: true,
-    });
+    } as { [key in keyof IStyledNativeStatics]: boolean });
 
     return WrappedStyledComponent;
   };

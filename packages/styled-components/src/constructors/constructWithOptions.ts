@@ -1,30 +1,39 @@
 import { isValidElementType } from 'react-is';
-import css from './css';
-import styledError from '../utils/error';
+import { Attrs, Interpolation, StyledObject, WebTarget } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
+import styledError from '../utils/error';
+import css from './css';
 
-import { Target } from '../types';
+type Options = {
+  attrs?: Attrs[];
+  componentId?: string;
+  displayName?: string;
+};
 
-export default function constructWithOptions(
-  componentConstructor: Function,
-  tag: Target,
-  options = EMPTY_OBJECT
-) {
+export default function constructWithOptions<
+  Constructor extends (...args: any[]) => React.ComponentType<any>
+>(componentConstructor: Constructor, tag: WebTarget, options: Options = EMPTY_OBJECT) {
   if (!isValidElementType(tag)) {
-    throw styledError(1, String(tag));
+    throw styledError(1, tag);
   }
 
   /* This is callable directly as a template function */
-  // $FlowFixMe: Not typed to avoid destructuring arguments
-  const templateFunction = (...args) => componentConstructor(tag, options, css(...args));
+  const templateFunction = (
+    initialStyles: TemplateStringsArray | StyledObject,
+    ...interpolations: Interpolation[]
+  ) =>
+    componentConstructor(tag, options, css(initialStyles, ...interpolations)) as ReturnType<
+      Constructor
+    >;
 
-  /* If config methods are called, wrap up a new template function and merge options */
-  templateFunction.withConfig = config =>
-    constructWithOptions(componentConstructor, tag, { ...options, ...config });
+  /**
+   * If config methods are called, wrap up a new template function and merge options */
+  templateFunction.withConfig = (config: Options) =>
+    constructWithOptions<Constructor>(componentConstructor, tag, { ...options, ...config });
 
   /* Modify/inject new props at runtime */
-  templateFunction.attrs = attrs =>
-    constructWithOptions(componentConstructor, tag, {
+  templateFunction.attrs = (attrs: Attr) =>
+    constructWithOptions<Constructor>(componentConstructor, tag, {
       ...options,
       attrs: Array.prototype.concat(options.attrs, attrs).filter(Boolean),
     });

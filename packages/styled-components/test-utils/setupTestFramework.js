@@ -1,4 +1,3 @@
-// @flow
 const consoleError = console.error;
 
 const suppressedErrors = [
@@ -9,8 +8,7 @@ const suppressedErrors = [
 beforeEach(() => {
   // Suppress errors from JSDOM CSS parser
   // See: https://github.com/jsdom/jsdom/issues/2177
-  // eslint-disable-next-line flowtype-errors/show-errors
-  (console: any).error = message => {
+  console.error = message => {
     if (!suppressedErrors.some(suppressedError => message.includes(suppressedError))) {
       consoleError(message);
     }
@@ -18,6 +16,5 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  // eslint-disable-next-line flowtype-errors/show-errors
-  (console: any).error = consoleError;
+  console.error = consoleError;
 });

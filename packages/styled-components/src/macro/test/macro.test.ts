@@ -1,9 +1,9 @@
-import cosmiconfigMock from "cosmiconfig";
-import babel from "@babel/core";
-import pluginTester from "babel-plugin-tester";
-import plugin from "babel-plugin-macros";
+import babel from '@babel/core';
+import plugin from 'babel-plugin-macros';
+import pluginTester from 'babel-plugin-tester';
+import cosmiconfigMock from 'cosmiconfig';
 
-jest.mock('cosmiconfig', () => jest.fn(jest.requireActual('cosmiconfig')));
+jest.mock('cosmiconfig', () => jest.fn<Function, any[]>(jest.requireActual('cosmiconfig')));
 
 const styledExampleCode = `
 import styled from '../../macro'
@@ -114,60 +114,60 @@ pluginTester({
   babelOptions: {
     babelrc: false,
     filename: __filename,
-    presets: ['@babel/react']
+    presets: ['@babel/preset-react', '@babel/preset-typescript'],
   },
   babel,
   tests: {
     'should work with styled': {
-      code: styledExampleCode
+      code: styledExampleCode,
     },
     'should work with custom import name': {
-      code: customStyledExampleCode
+      code: customStyledExampleCode,
     },
     'should work with { css }': {
-      code: cssExampleCode
+      code: cssExampleCode,
     },
     'should work with { keyframes }': {
-      code: keyframesExampleCode
+      code: keyframesExampleCode,
     },
     'should work with { createGlobalStyle }': {
-      code: createGlobalStyleExampleCode
+      code: createGlobalStyleExampleCode,
     },
     'should work with { ThemeProvider }': {
-      code: ThemeProviderExampleCode
+      code: ThemeProviderExampleCode,
     },
     'should work when extending a component': {
-      code: extendsExampleCode
+      code: extendsExampleCode,
     },
     'should work with require() to import styled-components': {
-      code: requireExampleCode
+      code: requireExampleCode,
     },
     'should work with multiple imports': {
-      code: multipleImportsExampleCode
+      code: multipleImportsExampleCode,
     },
     'should work with types': {
-      code: withTypeImportExampleCode
+      code: withTypeImportExampleCode,
     },
     'should work with types alongside import': {
-      code: withTypeAndStandardImportExampleCode
+      code: withTypeAndStandardImportExampleCode,
     },
     'should not add componentId with a config disabling ssr': {
       code: styledExampleCode,
       setup: () => {
-        cosmiconfigMock.mockImplementationOnce(() => ({
+        (cosmiconfigMock as jest.MockedFunction<any>).mockImplementationOnce(() => ({
           searchSync: () => ({
             config: {
               styledComponents: {
-                ssr: false
-              }
-            }
-          })
+                ssr: false,
+              },
+            },
+          }),
         }));
-      }
+      },
     },
     'should work with the css prop': { code: cssPropExampleCode },
     'should work with the css prop overriding an existing styled-component': {
-      code: cssPropOverridingComponentExampleCode
-    }
-  }
+      code: cssPropOverridingComponentExampleCode,
+    },
+  },
 });

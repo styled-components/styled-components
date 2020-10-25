@@ -1,13 +1,7 @@
 import { isElement } from 'react-is';
 import Keyframes from '../models/Keyframes';
 import StyleSheet from '../sheet';
-import {
-  ExtensibleObject,
-  Interpolation,
-  IStyledComponent,
-  IStyledNativeComponent,
-  Stringifier,
-} from '../types';
+import { ExtensibleObject, Interpolation, IStyledComponent, RuleSet, Stringifier } from '../types';
 import addUnitIfNeeded from './addUnitIfNeeded';
 import getComponentName from './getComponentName';
 import hyphenate from './hyphenateStyleName';
@@ -40,21 +34,14 @@ export const objToCssArray = (obj: ExtensibleObject, prevKey?: string): string[]
   return prevKey ? [`${prevKey} {`, ...rules, '}'] : rules;
 };
 
-type FlattenResult =
-  | string
-  | string[]
-  | Keyframes
-  | IStyledComponent
-  | (string | Keyframes | IStyledComponent)[];
-
 export default function flatten(
   chunk: Interpolation,
   executionContext?: ExtensibleObject,
   styleSheet?: StyleSheet,
   stylisInstance?: Stringifier
-): FlattenResult {
+): RuleSet {
   if (Array.isArray(chunk)) {
-    const ruleSet: Exclude<FlattenResult, Array<any>>[] = [];
+    const ruleSet: RuleSet = [];
 
     for (let i = 0, len = chunk.length, result; i < len; i += 1) {
       result = flatten(chunk[i], executionContext, styleSheet, stylisInstance);

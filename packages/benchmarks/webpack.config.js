@@ -1,4 +1,3 @@
-// @flow
 const webpack = require('webpack');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const path = require('path');
@@ -50,7 +49,7 @@ module.exports = {
   ],
   resolve: {
     alias: {
-      'react-native': 'react-native-web'
+      'react-native': 'react-native-web',
     },
   },
 };

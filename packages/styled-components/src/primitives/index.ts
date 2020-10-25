@@ -6,12 +6,12 @@ import useTheme from '../hooks/useTheme';
 import _InlineStyle from '../models/InlineStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
 import ThemeProvider, { ThemeConsumer, ThemeContext } from '../models/ThemeProvider';
-import { Target } from '../types';
+import { WebTarget } from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
 
 const InlineStyle = _InlineStyle(reactPrimitives.StyleSheet);
 const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
-const styled = (tag: Target) => constructWithOptions(StyledNativeComponent, tag);
+const styled = (tag: WebTarget) => constructWithOptions(StyledNativeComponent, tag);
 
 type Primitives = keyof typeof reactPrimitives;
 

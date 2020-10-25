@@ -16,8 +16,8 @@ export const resetStyleCache = () => {
   generated = {};
 };
 
-/*
- InlineStyle takes arbitrary CSS and generates a flat object
+/**
+ * InlineStyle takes arbitrary CSS and generates a flat object
  */
 export default function makeInlineStyleClass(styleSheet: StyleSheet) {
   const InlineStyle: IInlineStyleConstructor = class InlineStyle implements IInlineStyle {

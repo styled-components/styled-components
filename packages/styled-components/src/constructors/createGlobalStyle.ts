@@ -2,16 +2,15 @@ import React, { useContext, useLayoutEffect, useRef } from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
-import { ThemeContext } from '../models/ThemeProvider';
-import { Interpolation } from '../types';
+import { Theme, ThemeContext } from '../models/ThemeProvider';
+import StyleSheet from '../sheet';
+import { ExtensibleObject, Interpolation, Stringifier } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
 declare var __SERVER__: boolean;
-
-type GlobalStyleComponentPropsType = Object;
 
 export default function createGlobalStyle(
   strings: Array<string>,
@@ -25,7 +24,7 @@ export default function createGlobalStyle(
     checkDynamicCreation(styledComponentId);
   }
 
-  function GlobalStyleComponent(props: GlobalStyleComponentPropsType) {
+  const GlobalStyleComponent: React.ComponentType<ExtensibleObject> = props => {
     const styleSheet = useStyleSheet();
     const stylis = useStylis();
     const theme = useContext(ThemeContext);
@@ -63,9 +62,15 @@ export default function createGlobalStyle(
     }
 
     return null;
-  }
+  };
 
-  function renderStyles(instance, props, styleSheet, theme, stylis) {
+  function renderStyles(
+    instance: number,
+    props: ExtensibleObject,
+    styleSheet: StyleSheet,
+    theme: Theme,
+    stylis: Stringifier
+  ) {
     if (globalStyle.isStatic) {
       globalStyle.renderStyles(instance, STATIC_EXECUTION_CONTEXT, styleSheet, stylis);
     } else {
@@ -78,6 +83,5 @@ export default function createGlobalStyle(
     }
   }
 
-  // $FlowFixMe
   return React.memo(GlobalStyleComponent);
 }

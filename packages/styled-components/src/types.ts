@@ -1,6 +1,10 @@
-import { Component, ComponentType } from 'react';
+import { ComponentType, ForwardRefExoticComponent } from 'react';
+import { StyleProp } from 'react-native';
+import constructWithOptions from './constructors/constructWithOptions';
 import ComponentStyle from './models/ComponentStyle';
+import { Theme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
+import * as CSS from 'csstype';
 
 export type ExtensibleObject = {
   [key: string]: any;
@@ -20,7 +24,8 @@ export type RuleSet = Interpolation[];
 
 export type Styles = string[] | Object | ((executionContext: ExtensibleObject) => Interpolation);
 
-export type Target = string | ComponentType<any>;
+export type WebTarget = string | ComponentType<any>;
+export type NativeTarget = ComponentType<any>;
 
 export type NameGenerator = (hash: number) => string;
 
@@ -36,28 +41,46 @@ export type Flattener = (
 ) => Interpolation[];
 
 export interface Stringifier {
-  (css: string, selector: string, prefix: string, componentId?: string): string;
+  (css: string, selector?: string, prefix?: string, componentId?: string): string;
   hash: string;
 }
 
 export type ShouldForwardProp = (prop: string, isValidAttr: (prop: string) => boolean) => boolean;
 
-export interface IStyledStatics {
-  attrs: Attrs;
-  componentStyle: ComponentStyle;
-  displayName: string;
-  // this is here because we want the uppermost displayName retained in a folding scenario
-  foldedComponentIds: Array<string>;
-  target: Target | IStyledComponent;
+interface CommonStatics {
+  attrs: Attrs[];
+  target: any;
   shouldForwardProp?: ShouldForwardProp;
-  styledComponentId: string;
-  warnTooManyClasses?: ReturnType<typeof createWarnTooManyClasses>;
-  withComponent: (tag: Target) => IStyledComponent;
+  withComponent: any;
 }
 
-export interface IStyledComponent extends Component<any>, IStyledStatics {
+export interface IStyledStatics extends CommonStatics {
+  componentStyle: ComponentStyle;
+  // this is here because we want the uppermost displayName retained in a folding scenario
+  foldedComponentIds: Array<string>;
+  target: WebTarget | IStyledComponent;
+  styledComponentId: string;
+  warnTooManyClasses?: ReturnType<typeof createWarnTooManyClasses>;
+  withComponent: (tag: WebTarget) => IStyledComponent;
+}
+
+export interface IStyledComponent
+  extends ForwardRefExoticComponent<ExtensibleObject & { theme?: Theme }>,
+    IStyledStatics {
   defaultProps?: Object;
   toString: () => string;
+}
+
+export interface IStyledNativeStatics extends CommonStatics {
+  inlineStyle: InstanceType<IInlineStyleConstructor>;
+  target: NativeTarget | IStyledNativeComponent;
+  withComponent: (tag: NativeTarget) => IStyledNativeComponent;
+}
+
+export interface IStyledNativeComponent
+  extends ForwardRefExoticComponent<ExtensibleObject & { theme?: Theme }>,
+    IStyledNativeStatics {
+  defaultProps?: Object;
 }
 
 export interface IInlineStyleConstructor {
@@ -69,18 +92,18 @@ export interface IInlineStyle {
   generateStyleObject(executionContext: Object): Object;
 }
 
-export interface IStyledNativeStatics {
-  attrs: Attrs;
-  inlineStyle: IInlineStyle;
-  displayName: string;
-  target: Target | IStyledNativeComponent;
-  shouldForwardProp?: ShouldForwardProp;
-  styledComponentId: string;
-  withComponent: (tag: Target) => IStyledNativeComponent;
-}
-
-export interface IStyledNativeComponent extends Component<any>, IStyledNativeStatics {
-  defaultProps?: Object;
-}
-
 export type StyledTarget = IStyledComponent['target'] | IStyledNativeComponent['target'];
+
+export type StyledTemplateFunction = ReturnType<typeof constructWithOptions>;
+
+type StyledElementShortcuts = {
+  [key in keyof JSX.IntrinsicElements]?: StyledTemplateFunction;
+};
+
+export interface Styled extends StyledElementShortcuts {
+  (tag: WebTarget): StyledTemplateFunction;
+}
+
+export type StyledObject = CSS.Properties & {
+  [key: string]: StyledObject;
+};

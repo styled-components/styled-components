@@ -45,7 +45,7 @@ function mixin(target: ExtensibleObject, val: any, key: string) {
   }
 }
 
-export default function mixinDeep(target: ExtensibleObject, ...rest: ExtensibleObject[]) {
+export default function mixinDeep(target: ExtensibleObject, ...rest: any[]) {
   for (const obj of rest) {
     if (isObject(obj)) {
       for (const key in obj) {
