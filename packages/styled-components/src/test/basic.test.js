@@ -95,6 +95,7 @@ describe('basic', () => {
   });
 
   it('Should have the correct styled(component) displayName', () => {
+    // eslint-disable-next-line react/display-name
     const CompWithoutName = () => () => <div />;
 
     const StyledTag = styled.div``;

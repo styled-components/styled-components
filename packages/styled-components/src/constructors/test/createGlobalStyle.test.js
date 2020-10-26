@@ -488,6 +488,7 @@ describe(`createGlobalStyle`, () => {
   it(`removes style tag in StyleSheetManager.target when unmounted after target detached and no other global styles`, () => {
     // Set DISABLE_SPEEDY flag to false to force using speedy tag
     const flag = constants.DISABLE_SPEEDY;
+    // eslint-disable-next-line no-import-assign
     constants.DISABLE_SPEEDY = false;
 
     const container = document.createElement('div');
@@ -528,6 +529,7 @@ describe(`createGlobalStyle`, () => {
     }
 
     // Reset DISABLE_SPEEDY flag
+    // eslint-disable-next-line no-import-assign
     constants.DISABLE_SPEEDY = flag;
   });
 

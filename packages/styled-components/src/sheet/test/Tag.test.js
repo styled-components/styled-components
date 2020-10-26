@@ -14,6 +14,15 @@ const describeTag = (TagClass: Class<Tag>) => {
     expect(tag.getRule(2)).toBe('.c {}');
     expect(tag.getRule(3)).toBe('');
     expect(tag.length).toBe(3);
+
+    const rules = [
+      '.x {}',
+      '.y {}',
+      '.z {}'
+    ];
+    expect(tag.insertRules(99, rules)).toBe(0);
+    expect(tag.insertRules(2, rules)).toBe(3);
+    expect(tag.length).toBe(6);
   });
 
   it('deletes rules that have been inserted', () => {

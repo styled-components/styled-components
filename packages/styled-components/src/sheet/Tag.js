@@ -15,6 +15,24 @@ export const makeTag = ({ isServer, useCSSOMInjection, target }: SheetOptions): 
   }
 };
 
+function insertRulesIntoTag(
+  startRuleIndex: number,
+  rules: string[],
+  tag: Tag
+): number {
+  let inserted = 0
+  let ruleIndex = startRuleIndex
+
+  for (let i = 0, l = rules.length; i < l; i++) {
+    if (tag.insertRule(ruleIndex, rules[i])) {
+      inserted++
+      ruleIndex++;
+    }
+  }
+
+  return inserted
+}
+
 export class CSSOMTag implements Tag {
   element: HTMLStyleElement;
 
@@ -40,6 +58,10 @@ export class CSSOMTag implements Tag {
     } catch (_error) {
       return false;
     }
+  }
+
+  insertRules(startRuleIndex: number, rules: string[]) {
+    return insertRulesIntoTag(startRuleIndex, rules, this)
   }
 
   deleteRule(index: number): void {
@@ -84,6 +106,23 @@ export class TextTag implements Tag {
     }
   }
 
+  insertRules(startRuleIndex: number, rules: string[]): number {
+    if (startRuleIndex > this.length || startRuleIndex < 0) {
+      return 0;
+    }
+    
+    const fragment = document.createDocumentFragment();
+    for (let i = 0, l = rules.length; i < l; i++) {
+      const node = document.createTextNode(rules[i]);
+      fragment.appendChild(node);
+    }
+
+    const refNode = this.nodes[startRuleIndex];
+    this.element.insertBefore(fragment, refNode || null);
+    this.length += rules.length;
+    return rules.length;
+  }
+
   deleteRule(index: number): void {
     this.element.removeChild(this.nodes[index]);
     this.length--;
@@ -117,6 +156,10 @@ export class VirtualTag implements Tag {
     } else {
       return false;
     }
+  }
+
+  insertRules(startRuleIndex: number, rules: string[]) {
+    return insertRulesIntoTag(startRuleIndex, rules, this)
   }
 
   deleteRule(index: number): void {
