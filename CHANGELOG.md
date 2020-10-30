@@ -8,7 +8,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## [v5.2.1] - 2020-10-30
 
-- Tweak server-side build settings to resolve an issue with jest-dom being able to pick up generated styles (see [#3308](https://github.com/styled-components/styled-components/pull/3308)) thanks @Lazyuki
+- Tweak server-side build settings to resolve an issue with jest-dom not being able to pick up generated styles (see [#3308](https://github.com/styled-components/styled-components/pull/3308)) thanks @Lazyuki
 
 ## [v5.2.0] - 2020-09-07
 
