@@ -1,15 +1,13 @@
-
-
 /* eslint-disable no-console */
 import hoistStatics from "hoist-non-react-statics";
 import React, { Component, StrictMode } from "react";
 import { findDOMNode } from "react-dom";
 import { findRenderedComponentWithType, renderIntoDocument } from "react-dom/test-utils";
 import TestRenderer from "react-test-renderer";
-import { resetStyled, getRenderedCSS } from "./utils";
 import { find } from "../../test-utils";
+import { getRenderedCSS, resetStyled } from "./utils";
 
-let styled;
+let styled: ReturnType<typeof resetStyled>;
 
 describe('basic', () => {
   /**

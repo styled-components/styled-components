@@ -12,7 +12,7 @@ import StyleSheetManager from "../models/StyleSheetManager";
 
 jest.mock('../utils/nonce');
 
-let styled;
+let styled: ReturnType<typeof resetStyled>;
 
 describe('ssr', () => {
   beforeEach(() => {

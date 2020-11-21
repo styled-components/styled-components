@@ -1,5 +1,4 @@
+import styled from './constructors/styled';
 
-import styled from "./constructors/styled";
-
-export * from "./base";
+export * from './base';
 export { styled as default };

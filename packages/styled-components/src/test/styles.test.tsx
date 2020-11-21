@@ -8,7 +8,7 @@ import { getRenderedCSS, resetStyled } from "./utils";
 jest.mock('../utils/nonce');
 jest.spyOn(nonce, 'default').mockImplementation(() => 'foo');
 
-let styled;
+let styled: ReturnType<typeof resetStyled>;
 
 describe('with styles', () => {
   /**

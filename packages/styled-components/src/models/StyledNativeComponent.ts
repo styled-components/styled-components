@@ -26,12 +26,8 @@ function useResolvedAttrs<Config>(theme: Theme = EMPTY_OBJECT, props: Config, at
   const resolvedAttrs: ExtensibleObject = {};
 
   attrs.forEach(attrDef => {
-    let resolvedAttrDef: ExtensibleObject = attrDef;
+    let resolvedAttrDef = typeof attrDef === 'function' ? attrDef(context) : attrDef;
     let key;
-
-    if (typeof resolvedAttrDef === 'function') {
-      resolvedAttrDef = resolvedAttrDef(context) as Extract<Attrs, Function>;
-    }
 
     /* eslint-disable guard-for-in */
     for (key in resolvedAttrDef) {

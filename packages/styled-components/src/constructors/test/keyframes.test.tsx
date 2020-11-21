@@ -13,7 +13,7 @@ import { getRenderedCSS, resetStyled } from "../../test/utils";
 // testing for ComponentStyle specifics here
 jest.mock('../../utils/isStaticRules', () => () => false);
 
-let styled;
+let styled: ReturnType<typeof resetStyled>;
 
 describe('keyframes', () => {
   beforeEach(() => {

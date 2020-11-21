@@ -1,16 +1,17 @@
 
 import React from "react";
-import { renderToString } from "react-dom/server";
 import { render } from "react-dom";
-import TestRenderer, { act } from "react-test-renderer";
+import { renderToString } from "react-dom/server";
 import Frame, { FrameContextConsumer } from "react-frame-component";
+import TestRenderer, { act } from "react-test-renderer";
 import stylisRTLPlugin from "stylis-plugin-rtl";
-import StyleSheetManager from "../StyleSheetManager";
-import ServerStyleSheet from "../ServerStyleSheet";
 import StyleSheet from "../../sheet";
 import { resetStyled } from "../../test/utils";
+import ServerStyleSheet from "../ServerStyleSheet";
+import StyleSheetManager from "../StyleSheetManager";
 
-let styled;
+let styled: ReturnType<typeof resetStyled>;
+
 describe('StyleSheetManager', () => {
   beforeEach(() => {
     document.body.innerHTML = '';

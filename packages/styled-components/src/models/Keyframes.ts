@@ -1,13 +1,11 @@
 import StyleSheet from '../sheet';
-import { Stringifier } from '../types';
+import { Keyframes as KeyframesType, Stringifier } from '../types';
 import styledError from '../utils/error';
 import { masterStylis } from './StyleSheetManager';
 
-export default class Keyframes {
+export default class Keyframes implements KeyframesType {
   id: string;
-
   name: string;
-
   rules: string;
 
   constructor(name: string, rules: string) {

@@ -1,26 +1,14 @@
 
-import React, { useContext, AbstractComponent } from "react";
 import hoistStatics from "hoist-non-react-statics";
+import React, { ComponentType, useContext } from "react";
 import { ThemeContext } from "../models/ThemeProvider";
 import determineTheme from "../utils/determineTheme";
 import getComponentName from "../utils/getComponentName";
 
-// NOTE: this would be the correct signature:
-// export default <Config: { theme?: any }, Instance>(
-//  Component: AbstractComponent<Config, Instance>
-// ): AbstractComponent<$Diff<Config, { theme?: any }> & { theme?: any }, Instance>
-//
-// but the old build system tooling doesn't support the syntax
-
-export default ((Component: AbstractComponent<any, any>) => {
-  // $FlowFixMe This should be React.forwardRef<Config, Instance>
+export default function withTheme (Component: ComponentType<any>) {
   const WithTheme = React.forwardRef((props, ref) => {
     const theme = useContext(ThemeContext);
-    // $FlowFixMe defaultProps isn't declared so it can be inferrable
-    const {
-      defaultProps
-    } = Component;
-    const themeProp = determineTheme(props, theme, defaultProps);
+    const themeProp = determineTheme(props, theme, Component.defaultProps);
 
     if (process.env.NODE_ENV !== 'production' && themeProp === undefined) {
       // eslint-disable-next-line no-console
@@ -35,4 +23,4 @@ export default ((Component: AbstractComponent<any, any>) => {
   WithTheme.displayName = `WithTheme(${getComponentName(Component)})`;
 
   return WithTheme;
-});
+}

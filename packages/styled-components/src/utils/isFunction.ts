@@ -1,3 +1,3 @@
-export default function isFunction(test: any) {
+export default function isFunction(test: any): boolean {
   return typeof test === 'function';
 }

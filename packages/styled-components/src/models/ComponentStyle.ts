@@ -13,15 +13,10 @@ const SEED = hash(SC_VERSION);
  */
 export default class ComponentStyle {
   baseHash: number;
-
   baseStyle: ComponentStyle | null | undefined;
-
   componentId: string;
-
   isStatic: boolean;
-
   rules: RuleSet;
-
   staticRulesId: string;
 
   constructor(rules: RuleSet, componentId: string, baseStyle?: ComponentStyle) {
@@ -67,7 +62,12 @@ export default class ComponentStyle {
       if (this.staticRulesId && styleSheet.hasNameForId(componentId, this.staticRulesId)) {
         names.push(this.staticRulesId);
       } else {
-        const cssStatic = flatten(this.rules, executionContext, styleSheet, stylis).join('');
+        const cssStatic = (flatten(
+          this.rules,
+          executionContext,
+          styleSheet,
+          stylis
+        ) as string[]).join('');
         const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
 
         if (!styleSheet.hasNameForId(componentId, name)) {
@@ -91,7 +91,9 @@ export default class ComponentStyle {
 
           if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule + i);
         } else if (partRule) {
-          const partChunk = flatten(partRule, executionContext, styleSheet, stylis);
+          const partChunk = flatten(partRule, executionContext, styleSheet, stylis) as
+            | string
+            | string[];
           const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
           dynamicHash = phash(dynamicHash, partString + i);
           css += partString;

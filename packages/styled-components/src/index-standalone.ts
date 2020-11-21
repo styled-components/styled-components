@@ -1,8 +1,7 @@
-
-import * as secondary from "./base";
+import * as secondary from './base';
 
 /* Import singleton constructors */
-import styled from "./constructors/styled";
+import styled from './constructors/styled';
 
 /**
  * eliminates the need to do styled.default since the other APIs
@@ -10,6 +9,7 @@ import styled from "./constructors/styled";
  * */
 // eslint-disable-next-line guard-for-in
 for (const key in secondary) {
+  // @ts-ignore
   styled[key] = secondary[key];
 }
 

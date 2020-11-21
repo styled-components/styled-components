@@ -1,7 +1,7 @@
 
 import { resetStyled } from "./utils";
 
-let styled;
+let styled: ReturnType<typeof resetStyled>;
 
 describe('static style caching', () => {
   beforeEach(() => {

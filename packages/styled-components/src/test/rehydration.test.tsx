@@ -14,7 +14,7 @@ import { SC_ATTR, SC_ATTR_VERSION } from "../constants";
    ComponentStyle. This will look like this:
    ${() => ''}
    */
-let styled;
+let styled: ReturnType<typeof resetStyled>;
 
 const resetSheet = sheet => {
   sheet.gs = {};

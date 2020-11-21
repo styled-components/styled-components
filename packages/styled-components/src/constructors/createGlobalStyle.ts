@@ -4,7 +4,7 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
 import { Theme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
-import { ExtensibleObject, Interpolation, Stringifier } from '../types';
+import { ExtensibleObject, Interpolation, RuleSet, Stringifier } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
@@ -16,7 +16,7 @@ export default function createGlobalStyle(
   strings: Array<string>,
   ...interpolations: Array<Interpolation>
 ) {
-  const rules = css(strings, ...interpolations);
+  const rules = css(strings, ...interpolations) as RuleSet;
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle(rules, styledComponentId);
 
@@ -68,7 +68,7 @@ export default function createGlobalStyle(
     instance: number,
     props: ExtensibleObject,
     styleSheet: StyleSheet,
-    theme: Theme,
+    theme: Theme | undefined,
     stylis: Stringifier
   ) {
     if (globalStyle.isStatic) {

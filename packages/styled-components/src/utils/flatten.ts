@@ -34,12 +34,13 @@ export const objToCssArray = (obj: ExtensibleObject, prevKey?: string): string[]
   return prevKey ? [`${prevKey} {`, ...rules, '}'] : rules;
 };
 
+// TODO: use overloads to make this type less crazy
 export default function flatten(
   chunk: Interpolation,
   executionContext?: ExtensibleObject,
   styleSheet?: StyleSheet,
   stylisInstance?: Stringifier
-): RuleSet {
+): RuleSet | string | IStyledComponent | Keyframes {
   if (Array.isArray(chunk)) {
     const ruleSet: RuleSet = [];
 

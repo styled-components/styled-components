@@ -1,6 +1,6 @@
 import { typeOf } from 'react-is';
 
-export default function isPlainObject(x: any) {
+export default function isPlainObject(x: any): boolean {
   return (
     x !== null &&
     typeof x === 'object' &&

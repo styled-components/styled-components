@@ -3,7 +3,7 @@ import React, { Fragment } from "react";
 import TestRenderer from "react-test-renderer";
 import { getRenderedCSS, resetStyled } from "./utils";
 
-let styled;
+let styled: ReturnType<typeof resetStyled>;
 
 describe('props', () => {
   beforeEach(() => {

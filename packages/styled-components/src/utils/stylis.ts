@@ -12,10 +12,12 @@ type StylisInstanceConstructorArgs = {
   plugins?: stylis.Middleware[];
 };
 
-export default function createStylisInstance({
-  options = EMPTY_OBJECT,
-  plugins = (EMPTY_ARRAY as unknown) as stylis.Middleware[],
-}: StylisInstanceConstructorArgs = EMPTY_OBJECT) {
+export default function createStylisInstance(
+  {
+    options = EMPTY_OBJECT as Object,
+    plugins = (EMPTY_ARRAY as unknown) as stylis.Middleware[],
+  }: StylisInstanceConstructorArgs = EMPTY_OBJECT as Object
+) {
   let _componentId: string;
   let _selector: string;
   let _selectorRegexp: RegExp;

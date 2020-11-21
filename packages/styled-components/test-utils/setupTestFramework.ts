@@ -8,7 +8,7 @@ const suppressedErrors = [
 beforeEach(() => {
   // Suppress errors from JSDOM CSS parser
   // See: https://github.com/jsdom/jsdom/issues/2177
-  console.error = message => {
+  console.error = (message: any) => {
     if (!suppressedErrors.some(suppressedError => message.includes(suppressedError))) {
       consoleError(message);
     }

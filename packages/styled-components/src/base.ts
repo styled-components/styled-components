@@ -22,6 +22,12 @@ import useTheme from './hooks/useTheme';
 
 declare var __SERVER__: boolean;
 
+declare global {
+  interface Window {
+    '__styled-components-init__'?: number;
+  }
+}
+
 /* Warning if you've imported this file on React Native */
 if (
   process.env.NODE_ENV !== 'production' &&
@@ -38,7 +44,7 @@ if (
 
 /* Warning if there are several instances of styled-components */
 if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test' && !__SERVER__) {
-  window['__styled-components-init__'] = window['__styled-components-init__'] || 0;
+  window['__styled-components-init__'] ||= 0;
 
   if (window['__styled-components-init__'] === 1) {
     // eslint-disable-next-line no-console

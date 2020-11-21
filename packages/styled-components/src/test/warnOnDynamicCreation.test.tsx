@@ -1,12 +1,11 @@
+import React from 'react';
+import TestRenderer from 'react-test-renderer';
 
-import React from "react";
-import TestRenderer from "react-test-renderer";
-
-import { resetStyled } from "./utils";
+import { resetStyled } from './utils';
 
 describe('warns on dynamic creation', () => {
-  let warn;
-  let styled;
+  let warn: ReturnType<typeof jest.spyOn>;
+  let styled: ReturnType<typeof resetStyled>;
 
   beforeEach(() => {
     warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -35,7 +34,7 @@ describe('warns on dynamic creation', () => {
     const Outer = () => {
       const Inner = styled.div.withConfig({
         displayName: 'Inner',
-        componentId: 'Inner'
+        componentId: 'Inner',
       })`
         color: palevioletred;
       `;

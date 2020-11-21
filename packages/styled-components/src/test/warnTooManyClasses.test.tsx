@@ -1,11 +1,10 @@
+import React from 'react';
+import TestRenderer from 'react-test-renderer';
 
-import React from "react";
-import TestRenderer from "react-test-renderer";
+import { LIMIT } from '../utils/createWarnTooManyClasses';
+import { resetStyled } from './utils';
 
-import { LIMIT } from "../utils/createWarnTooManyClasses";
-import { resetStyled } from "./utils";
-
-let styled;
+let styled: ReturnType<typeof resetStyled>;
 
 describe('warn too many classes', () => {
   /**

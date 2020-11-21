@@ -14,7 +14,7 @@ type Props = {
   theme: ThemeArgument;
 };
 
-export const ThemeContext = React.createContext<Theme>({});
+export const ThemeContext = React.createContext<Theme | undefined>(undefined);
 
 export const ThemeConsumer = ThemeContext.Consumer;
 

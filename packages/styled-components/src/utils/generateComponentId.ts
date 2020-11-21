@@ -1,6 +1,6 @@
 import generateAlphabeticName from './generateAlphabeticName';
 import { hash } from './hash';
 
-export default (str: string) => {
+export default function generateComponentId(str: string) {
   return generateAlphabeticName(hash(str) >>> 0);
-};
+}

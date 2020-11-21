@@ -12,7 +12,7 @@ type Options = {
 
 export default function constructWithOptions<
   Constructor extends (...args: any[]) => React.ComponentType<any>
->(componentConstructor: Constructor, tag: WebTarget, options: Options = EMPTY_OBJECT) {
+>(componentConstructor: Constructor, tag: WebTarget, options: Options = EMPTY_OBJECT as Object) {
   if (!isValidElementType(tag)) {
     throw styledError(1, tag);
   }
@@ -22,9 +22,11 @@ export default function constructWithOptions<
     initialStyles: TemplateStringsArray | StyledObject,
     ...interpolations: Interpolation[]
   ) =>
-    componentConstructor(tag, options, css(initialStyles, ...interpolations)) as ReturnType<
-      Constructor
-    >;
+    componentConstructor(
+      tag,
+      options,
+      css(initialStyles, ...interpolations)
+    ) as ReturnType<Constructor>;
 
   /**
    * If config methods are called, wrap up a new template function and merge options */
@@ -32,7 +34,7 @@ export default function constructWithOptions<
     constructWithOptions<Constructor>(componentConstructor, tag, { ...options, ...config });
 
   /* Modify/inject new props at runtime */
-  templateFunction.attrs = (attrs: Attr) =>
+  templateFunction.attrs = (attrs: Attrs) =>
     constructWithOptions<Constructor>(componentConstructor, tag, {
       ...options,
       attrs: Array.prototype.concat(options.attrs, attrs).filter(Boolean),

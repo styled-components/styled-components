@@ -7,7 +7,7 @@ import withTheme from "../../hoc/withTheme";
 import useTheme from "../useTheme";
 import { resetStyled } from "../../test/utils";
 
-let styled;
+let styled: ReturnType<typeof resetStyled>;
 
 describe('useTheme', () => {
   beforeEach(() => {

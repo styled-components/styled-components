@@ -7,7 +7,7 @@ import { getRenderedCSS, resetStyled } from "./utils";
 // testing for ComponentStyle specifics here
 jest.mock('../utils/isStaticRules', () => () => false);
 
-let styled;
+let styled: ReturnType<typeof resetStyled>;
 
 describe('extending', () => {
   /**

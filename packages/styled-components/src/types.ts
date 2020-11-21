@@ -1,19 +1,20 @@
+import * as CSS from 'csstype';
 import { ComponentType, ForwardRefExoticComponent } from 'react';
-import { StyleProp } from 'react-native';
 import constructWithOptions from './constructors/constructWithOptions';
 import ComponentStyle from './models/ComponentStyle';
 import { Theme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
-import * as CSS from 'csstype';
 
 export type ExtensibleObject = {
   [key: string]: any;
+  theme?: any;
 };
 
 export type Attrs = (props: ExtensibleObject) => ExtensibleObject | ExtensibleObject;
 
 export type Interpolation =
   | ((executionContext: ExtensibleObject) => Interpolation)
+  | ExtensibleObject
   | string
   | Keyframe
   | IStyledComponent
@@ -34,11 +35,19 @@ export type StyleSheet = {
   create: Function;
 };
 
+export interface Keyframes {
+  id: string;
+  name: string;
+  rules: string;
+}
+
 export type Flattener = (
   chunks: Interpolation[],
   executionContext: Object | null | undefined,
   styleSheet: Object | null | undefined
 ) => Interpolation[];
+
+export type FlattenerResult = RuleSet | string | string[] | IStyledComponent | Keyframes;
 
 export interface Stringifier {
   (css: string, selector?: string, prefix?: string, componentId?: string): string;

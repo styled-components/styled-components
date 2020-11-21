@@ -6,7 +6,7 @@ import withTheme from "../hoc/withTheme";
 import ThemeProvider from "../models/ThemeProvider";
 import { getRenderedCSS, resetStyled } from "./utils";
 
-let styled;
+let styled: ReturnType<typeof resetStyled>;
 
 describe('theming', () => {
   beforeEach(() => {
