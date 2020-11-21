@@ -1,7 +1,6 @@
-
-import React from "react";
-import TestRenderer from "react-test-renderer";
-import { getRenderedCSS, resetStyled } from "./utils";
+import React from 'react';
+import TestRenderer from 'react-test-renderer';
+import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
 // testing for ComponentStyle specifics here
@@ -87,24 +86,30 @@ describe('extending', () => {
       const colors = {
         primary: 'red',
         secondary: 'blue',
-        tertiary: 'green'
+        tertiary: 'green',
       };
-      const Parent = styled.h1`
+
+      const Parent = styled.h1<{ color: keyof typeof colors }>`
         position: relative;
         color: ${props => colors[props.color]};
       `;
+
       return Parent;
     };
 
-    const addDefaultProps = (Parent, Child, Grandson) => {
+    const addDefaultProps = (
+      Parent: React.ComponentType<any>,
+      Child: React.ComponentType<any>,
+      Grandson: React.ComponentType<any>
+    ) => {
       Parent.defaultProps = {
-        color: 'primary'
+        color: 'primary',
       };
       Child.defaultProps = {
-        color: 'secondary'
+        color: 'secondary',
       };
       Grandson.defaultProps = {
-        color: 'tertiary'
+        color: 'tertiary',
       };
     };
 

@@ -1,10 +1,8 @@
+import { makeGroupedTag } from '../GroupedTag';
+import { VirtualTag } from '../Tag';
 
-
-import { VirtualTag } from "../Tag";
-import { makeGroupedTag } from "../GroupedTag";
-
-let tag;
-let groupedTag;
+let tag: InstanceType<typeof VirtualTag>;
+let groupedTag: ReturnType<typeof makeGroupedTag>;
 
 beforeEach(() => {
   tag = new VirtualTag();
@@ -25,7 +23,9 @@ it('inserts and retrieves rules by groups correctly', () => {
   // Expect groups to contain inserted rules
   expect(groupedTag.getGroup(0)).toBe('');
   expect(groupedTag.getGroup(1)).toBe('.g1-a {}/*!sc*/\n.g1-b {}/*!sc*/\n');
-  expect(groupedTag.getGroup(2)).toBe('.g2-a {}/*!sc*/\n.g2-b {}/*!sc*/\n' + '.g2-c {}/*!sc*/\n.g2-d {}/*!sc*/\n');
+  expect(groupedTag.getGroup(2)).toBe(
+    '.g2-a {}/*!sc*/\n.g2-b {}/*!sc*/\n' + '.g2-c {}/*!sc*/\n.g2-d {}/*!sc*/\n'
+  );
 
   // Check some rules in the tag as well
   expect(tag.getRule(3)).toBe('.g2-b {}');

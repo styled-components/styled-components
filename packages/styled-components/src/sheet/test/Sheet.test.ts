@@ -1,8 +1,6 @@
+import StyleSheet from '../Sheet';
 
-
-import StyleSheet from "../Sheet";
-
-let sheet;
+let sheet: InstanceType<typeof StyleSheet>;
 let tag;
 
 beforeEach(() => {

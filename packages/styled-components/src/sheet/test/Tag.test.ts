@@ -1,7 +1,6 @@
-import { Class } from "utility-types";
-
-
-import { Tag, CSSOMTag, TextTag, VirtualTag } from "../Tag";
+import { Class } from 'utility-types';
+import { CSSOMTag, TextTag, VirtualTag } from '../Tag';
+import { Tag } from '../types';
 
 const describeTag = (TagClass: Class<Tag>) => {
   it('inserts and retrieves rules at indices', () => {
@@ -32,9 +31,7 @@ describe('CSSOMTag', () => {
 
   it('contains an empty TextNode to prevent an Edge quirk', () => {
     const tag = new CSSOMTag();
-    const {
-      childNodes
-    } = tag.element;
+    const { childNodes } = tag.element;
     expect(childNodes.length).toBe(1);
     expect(childNodes[0].nodeName).toBe('#text');
   });

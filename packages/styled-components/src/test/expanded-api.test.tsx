@@ -1,7 +1,6 @@
-
-import React from "react";
-import TestRenderer from "react-test-renderer";
-import { getRenderedCSS, resetStyled } from "./utils";
+import React from 'react';
+import TestRenderer from 'react-test-renderer';
+import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
 // testing for ComponentStyle specifics here
@@ -60,11 +59,11 @@ describe('expanded api', () => {
     it('should be combined with displayName if both passed in', () => {
       const Comp = styled.div.withConfig({
         displayName: 'Comp',
-        componentId: 'LOLOMG'
+        componentId: 'LOLOMG',
       })``;
       const Comp2 = styled.div.withConfig({
         displayName: 'Comp2',
-        componentId: 'OMGLOL'
+        componentId: 'OMGLOL',
       })``;
       expect(Comp.styledComponentId).toBe('Comp-LOLOMG');
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
@@ -73,14 +72,14 @@ describe('expanded api', () => {
     });
 
     it('should work with `.withComponent`', () => {
-      const Dummy = props => <div {...props} />;
+      const Dummy: React.FC<any> = props => <div {...props} />;
       const Comp = styled.div.withConfig({
         displayName: 'Comp',
-        componentId: 'OMGLOL'
+        componentId: 'OMGLOL',
       })``.withComponent('h1');
       const Comp2 = styled.div.withConfig({
         displayName: 'Comp2',
-        componentId: 'OMFG'
+        componentId: 'OMFG',
       })``.withComponent(Dummy);
       expect(Comp.styledComponentId).toBe('Comp-OMGLOL-h1');
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
@@ -91,13 +90,17 @@ describe('expanded api', () => {
 
   describe('chaining', () => {
     it('should merge the options strings', () => {
-      const Comp = styled.div.withConfig({ componentId: 'id-1' }).withConfig({ displayName: 'dn-2' })``;
+      const Comp = styled.div
+        .withConfig({ componentId: 'id-1' })
+        .withConfig({ displayName: 'dn-2' })``;
       expect(Comp.displayName).toBe('dn-2');
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
     });
 
     it('should keep the last value passed in when merging', () => {
-      const Comp = styled.div.withConfig({ displayName: 'dn-2', componentId: 'id-3' }).withConfig({ displayName: 'dn-5', componentId: 'id-4' })``;
+      const Comp = styled.div
+        .withConfig({ displayName: 'dn-2', componentId: 'id-3' })
+        .withConfig({ displayName: 'dn-5', componentId: 'id-4' })``;
       expect(Comp.displayName).toBe('dn-5');
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
     });
@@ -114,7 +117,7 @@ describe('expanded api', () => {
 
     it('changes the rendered element type when used with attrs', () => {
       const Comp = styled.div.attrs(() => ({
-        as: 'header'
+        as: 'header',
       }))`
         color: red;
       `;
@@ -124,7 +127,7 @@ describe('expanded api', () => {
 
     it('prefers attrs over props', () => {
       const Comp = styled.div.attrs(() => ({
-        as: 'header'
+        as: 'header',
       }))`
         color: red;
       `;
@@ -137,7 +140,7 @@ describe('expanded api', () => {
     });
 
     it('works with custom components', () => {
-      const Override = props => <figure {...props} />;
+      const Override: React.FC<any> = props => <figure {...props} />;
       const Comp = styled.div`
         color: red;
       `;

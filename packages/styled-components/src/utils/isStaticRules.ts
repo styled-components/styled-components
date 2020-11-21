@@ -1,8 +1,8 @@
-import { FlattenerResult, IStyledComponent } from '../types';
+import { IStyledComponent, RuleSet } from '../types';
 import isFunction from './isFunction';
 import isStyledComponent from './isStyledComponent';
 
-export default function isStaticRules(rules: FlattenerResult) {
+export default function isStaticRules(rules: RuleSet) {
   for (let i = 0; i < rules.length; i += 1) {
     const rule = rules[i];
 

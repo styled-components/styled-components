@@ -83,8 +83,12 @@
     "@babel/plugin-proposal-object-rest-spread": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
     "@babel/preset-react": "^7.0.0",
+    "@types/babel-plugin-macros": "^2.8.4",
     "@types/enzyme": "^3.10.8",
     "@types/hoist-non-react-statics": "^3.3.1",
+    "@types/jest": "^26.0.15",
+    "@types/js-beautify": "^1.13.1",
+    "@types/node": "^14.14.9",
     "@types/react-frame-component": "^4.1.1",
     "babel-eslint": "^10.0.1",
     "eslint-plugin-import": "^2.22.0",
@@ -103,7 +107,8 @@
     "rollup": "^1.13.1",
     "rollup-plugin-babel": "^4.3.2",
     "rollup-plugin-terser": "^5.0.0",
-    "stylis-plugin-rtl": "^2.0.0"
+    "stylis-plugin-rtl": "^2.0.0",
+    "utility-types": "^3.10.0"
   },
   "bundlewatch": {
     "files": [

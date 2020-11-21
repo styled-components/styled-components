@@ -1,5 +1,5 @@
-import { makeStyleTag, getSheet } from './dom';
-import { SheetOptions, Tag, TagConstructor } from './types';
+import { getSheet, makeStyleTag } from './dom';
+import { SheetOptions, Tag } from './types';
 
 /** Create a CSSStyleSheet-like tag depending on the environment */
 export const makeTag = ({ isServer, useCSSOMInjection, target }: SheetOptions) => {
@@ -12,7 +12,7 @@ export const makeTag = ({ isServer, useCSSOMInjection, target }: SheetOptions) =
   }
 };
 
-export const CSSOMTag: TagConstructor = class CSSOMTag implements Tag {
+export const CSSOMTag = class CSSOMTag implements Tag {
   element: HTMLStyleElement;
 
   sheet: CSSStyleSheet;
@@ -56,7 +56,7 @@ export const CSSOMTag: TagConstructor = class CSSOMTag implements Tag {
 };
 
 /** A Tag that emulates the CSSStyleSheet API but uses text nodes */
-export const TextTag: TagConstructor = class TextTag implements Tag {
+export const TextTag = class TextTag implements Tag {
   element: HTMLStyleElement;
   nodes: NodeListOf<Node>;
   length: number;
@@ -94,7 +94,7 @@ export const TextTag: TagConstructor = class TextTag implements Tag {
 };
 
 /** A completely virtual (server-side) Tag that doesn't manipulate the DOM */
-export const VirtualTag: TagConstructor = class VirtualTag implements Tag {
+export const VirtualTag = class VirtualTag implements Tag {
   rules: string[];
 
   length: number;

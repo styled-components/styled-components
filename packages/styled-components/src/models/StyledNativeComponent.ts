@@ -5,9 +5,9 @@ import type {
   ExtensibleObject,
   IInlineStyleConstructor,
   IStyledNativeComponent,
+  IStyledNativeComponentFactory,
   IStyledNativeStatics,
   NativeTarget,
-  RuleSet,
   ShouldForwardProp,
 } from '../types';
 import determineTheme from '../utils/determineTheme';
@@ -89,17 +89,7 @@ function useStyledComponentImpl(
 }
 
 export default (InlineStyle: IInlineStyleConstructor) => {
-  const createStyledNativeComponent = (
-    target: IStyledNativeComponent['target'],
-    options: {
-      attrs?: Attrs[];
-      componentId: string;
-      displayName?: string;
-      parentComponentId?: string;
-      shouldForwardProp?: ShouldForwardProp;
-    },
-    rules: RuleSet
-  ) => {
+  const createStyledNativeComponent: IStyledNativeComponentFactory = (target, options, rules) => {
     const isTargetStyledComp = isStyledComponent(target);
     const styledComponentTarget = target as IStyledNativeComponent;
 

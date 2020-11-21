@@ -1,7 +1,3 @@
-export interface TagConstructor {
-  new (target?: HTMLElement): Tag;
-}
-
 /** CSSStyleSheet-like Tag abstraction for CSS rules */
 export interface Tag {
   insertRule(index: number, rule: string): boolean;
@@ -10,16 +6,14 @@ export interface Tag {
   length: number;
 }
 
-export interface GroupedTagConstructor {
-  new (tag: Tag): GroupedTag;
-}
-
 /** Group-aware Tag that sorts rules by indices */
 export interface GroupedTag {
-  insertRules(group: number, rules: string | string[]): void;
   clearGroup(group: number): void;
   getGroup(group: number): string;
+  groupSizes: Uint32Array;
+  insertRules(group: number, rules: string | string[]): void;
   length: number;
+  tag: Tag;
 }
 
 export type SheetOptions = {

@@ -1,7 +1,5 @@
-
-
-import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION } from "../../constants";
-import { makeStyleTag } from "../dom";
+import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION } from '../../constants';
+import { makeStyleTag } from '../dom';
 
 describe('makeStyleTag', () => {
   it('creates a style element with the SC attributes', () => {

@@ -1,10 +1,10 @@
 import createStyledComponent from '../models/StyledComponent';
-import { WebTarget } from '../types';
+import { IStyledComponentFactory, WebTarget } from '../types';
 import domElements from '../utils/domElements';
 import constructWithOptions from './constructWithOptions';
 
-const styled = (tag: WebTarget) =>
-  constructWithOptions<typeof createStyledComponent>(createStyledComponent, tag);
+const styled = <Props>(tag: WebTarget) =>
+  constructWithOptions<IStyledComponentFactory, Props>(createStyledComponent, tag);
 
 type BaseStyled = typeof styled;
 

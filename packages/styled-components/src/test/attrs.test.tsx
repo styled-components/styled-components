@@ -1,8 +1,7 @@
-
-import React, { Component } from "react";
-import TestRenderer from "react-test-renderer";
-import ThemeProvider from "../models/ThemeProvider";
-import { getRenderedCSS, resetStyled } from "./utils";
+import React, { Component, ComponentType } from 'react';
+import TestRenderer from 'react-test-renderer';
+import ThemeProvider from '../models/ThemeProvider';
+import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
 // testing for ComponentStyle specifics here
@@ -28,14 +27,14 @@ describe('attrs', () => {
 
   it('pass a simple attr via object', () => {
     const Comp = styled.button.attrs({
-      type: 'button'
+      type: 'button',
     })``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('pass a simple attr via function with object return', () => {
     const Comp = styled.button.attrs(() => ({
-      type: 'button'
+      type: 'button',
     }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
@@ -43,20 +42,19 @@ describe('attrs', () => {
   it('pass a React component', () => {
     // $FlowFixMe
     class ReactComponent extends Component {
-
       render() {
         return <p>React Component</p>;
       }
     }
 
-    const Button = ({
-      component: ChildComponent
-    }) => <button>
+    const Button = ({ component: ChildComponent }: { component: ComponentType<any> }) => (
+      <button>
         <ChildComponent />
-      </button>;
+      </button>
+    );
 
     const Comp = styled(Button).attrs(() => ({
-      component: ReactComponent
+      component: ReactComponent,
     }))``;
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
@@ -66,7 +64,7 @@ describe('attrs', () => {
     const stub = jest.fn(() => 'div');
 
     const Comp = styled.button.attrs(() => ({
-      foo: stub
+      foo: stub,
     }))``;
 
     TestRenderer.create(<Comp />);
@@ -76,12 +74,16 @@ describe('attrs', () => {
 
   it('function form allows access to theme', () => {
     const Comp = styled.button.attrs(props => ({
-      'data-color': props.theme.color
+      'data-color': props.theme!.color,
     }))``;
 
-    expect(TestRenderer.create(<ThemeProvider theme={{ color: 'red' }}>
+    expect(
+      TestRenderer.create(
+        <ThemeProvider theme={{ color: 'red' }}>
           <Comp />
-        </ThemeProvider>).toJSON()).toMatchInlineSnapshot(`
+        </ThemeProvider>
+      ).toJSON()
+    ).toMatchInlineSnapshot(`
       <button
         className="sc-a"
         data-color="red"
@@ -91,13 +93,13 @@ describe('attrs', () => {
 
   it('defaultProps are merged into what function attrs receives', () => {
     const Comp = styled.button.attrs(props => ({
-      'data-color': props.theme.color
+      'data-color': props.theme!.color,
     }))``;
 
     Comp.defaultProps = {
       theme: {
-        color: 'red'
-      }
+        color: 'red',
+      },
     };
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
@@ -110,7 +112,7 @@ describe('attrs', () => {
 
   it('pass props to the attr function', () => {
     const Comp = styled.button.attrs(p => ({
-      type: p.submit ? 'submit' : 'button'
+      type: p.submit ? 'submit' : 'button',
     }))``;
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
@@ -120,7 +122,7 @@ describe('attrs', () => {
   it('should replace props with attrs', () => {
     const Comp = styled.button.attrs(p => ({
       type: p.submit ? 'submit' : 'button',
-      tabIndex: 0
+      tabIndex: 0,
     }))``;
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
@@ -130,7 +132,7 @@ describe('attrs', () => {
 
   it('should merge className', () => {
     const Comp = styled.div.attrs(() => ({
-      className: 'meow nya'
+      className: 'meow nya',
     }))``;
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
@@ -140,7 +142,7 @@ describe('attrs', () => {
     const Inner = styled.div.attrs({ className: 'foo' })``;
 
     const Comp = styled(Inner).attrs(() => ({
-      className: 'meow nya'
+      className: 'meow nya',
     }))``;
 
     expect(TestRenderer.create(<Comp className="something" />).toJSON()).toMatchInlineSnapshot(`
@@ -152,7 +154,7 @@ describe('attrs', () => {
 
   it('should merge className even if its a function', () => {
     const Comp = styled.div.attrs(p => ({
-      className: `meow ${p.purr ? 'purr' : 'nya'}`
+      className: `meow ${p.purr ? 'purr' : 'nya'}`,
     }))``;
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
@@ -161,10 +163,11 @@ describe('attrs', () => {
 
   it('should merge style', () => {
     const Comp = styled.div.attrs(() => ({
-      style: { color: 'red', background: 'blue' }
+      style: { color: 'red', background: 'blue' },
     }))``;
 
-    expect(TestRenderer.create(<Comp style={{ color: 'green', borderStyle: 'dotted' }} />).toJSON()).toMatchInlineSnapshot(`
+    expect(TestRenderer.create(<Comp style={{ color: 'green', borderStyle: 'dotted' }} />).toJSON())
+      .toMatchInlineSnapshot(`
       <div
         className="sc-a"
         style={
@@ -181,28 +184,30 @@ describe('attrs', () => {
   it('should work with data and aria attributes', () => {
     const Comp = styled.div.attrs(() => ({
       'data-foo': 'bar',
-      'aria-label': 'A simple FooBar'
+      'aria-label': 'A simple FooBar',
     }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('merge attrs', () => {
-    const Comp = styled.button.attrs(() => ({
-      type: 'button',
-      tabIndex: 0
-    })).attrs(() => ({
-      type: 'submit'
-    }))``;
+    const Comp = styled.button
+      .attrs(() => ({
+        type: 'button',
+        tabIndex: 0,
+      }))
+      .attrs(() => ({
+        type: 'submit',
+      }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('merge attrs when inheriting SC', () => {
     const Parent = styled.button.attrs(() => ({
       type: 'button',
-      tabIndex: 0
+      tabIndex: 0,
     }))``;
     const Child = styled(Parent).attrs(() => ({
-      type: 'submit'
+      type: 'submit',
     }))``;
     expect(TestRenderer.create(<Child />).toJSON()).toMatchSnapshot();
   });
@@ -211,7 +216,7 @@ describe('attrs', () => {
     /* Would be a React Router Link in real life */
     const Comp = styled.a.attrs(() => ({
       href: '#',
-      'data-active-class-name': '--is-active'
+      'data-active-class-name': '--is-active',
     }))`
       color: blue;
       &.${props => props['data-active-class-name']} {
@@ -231,21 +236,21 @@ describe('attrs', () => {
 
   it('should pass through children as a normal prop', () => {
     const Comp = styled.div.attrs(() => ({
-      children: 'Probably a bad idea'
+      children: 'Probably a bad idea',
     }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('should pass through complex children as well', () => {
     const Comp = styled.div.attrs(() => ({
-      children: <span>Probably a bad idea</span>
+      children: <span>Probably a bad idea</span>,
     }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('should override children of course', () => {
     const Comp = styled.div.attrs(() => ({
-      children: <span>Amazing</span>
+      children: <span>Amazing</span>,
     }))``;
     expect(TestRenderer.create(<Comp>Something else</Comp>).toJSON()).toMatchSnapshot();
   });
@@ -254,31 +259,28 @@ describe('attrs', () => {
     const Paragraph = styled.p.attrs(p => ({
       style: {
         ...p.style,
-        fontSize: `${p.fontScale}em`
-      }
+        fontSize: `${p.fontScale}em`,
+      },
     }))`
       background: red;
     `;
 
     class Text extends React.Component {
-
       state = {
         // Assume that will be changed automatically
         // according to the dimensions of the container
-        fontScale: 4
+        fontScale: 4,
       };
 
       render() {
-        return <Paragraph className={this.props.className} style={this.props.style} fontScale={this.state.fontScale}>
-            {this.props.children}
-          </Paragraph>;
+        return <Paragraph fontScale={this.state.fontScale}>{this.props.children}</Paragraph>;
       }
     }
 
     const BlueText = styled(Text).attrs(() => ({
       style: {
-        color: 'blue'
-      }
+        color: 'blue',
+      },
     }))`
       background: blue;
     `;
@@ -309,13 +311,14 @@ describe('attrs', () => {
   });
 
   it('does not pass non html tags to HTML element', () => {
-    const Comp = styled.div`
+    const Comp = styled.div<{ textColor: string }>`
       color: ${props => props.textColor};
     `;
 
-    const StyledComp = styled(Comp).attrs(() => ({
-      textColor: 'red'
+    const StyledComp = styled<{ textColor: string }>(Comp).attrs(() => ({
+      textColor: 'red',
     }))``;
+
     expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();
   });
 });

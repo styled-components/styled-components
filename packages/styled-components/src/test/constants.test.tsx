@@ -1,8 +1,20 @@
-
-
 /* eslint-disable global-require */
-import { SC_ATTR as DEFAULT_SC_ATTR } from "../constants";
-import { expectCSSMatches } from "./utils";
+import { SC_ATTR as DEFAULT_SC_ATTR } from '../constants';
+import { expectCSSMatches } from './utils';
+
+declare global {
+  namespace NodeJS {
+    export interface ProcessEnv {
+      REACT_APP_SC_DISABLE_SPEEDY?: boolean | string;
+      SC_DISABLE_SPEEDY?: boolean | string;
+    }
+  }
+
+  interface Window {
+    REACT_APP_SC_DISABLE_SPEEDY?: boolean | string;
+    SC_DISABLE_SPEEDY?: boolean | string;
+  }
+}
 
 describe('constants', () => {
   afterEach(() => {
@@ -10,12 +22,10 @@ describe('constants', () => {
   });
 
   describe('SC_ATTR', () => {
-    function renderAndExpect(expectedAttr) {
+    function renderAndExpect(expectedAttr: string) {
       const React = require('react');
       const TestRenderer = require('react-test-renderer');
-      const {
-        SC_ATTR
-      } = require('../constants');
+      const { SC_ATTR } = require('../constants');
       const styled = require('./utils').resetStyled();
 
       const Comp = styled.div`
@@ -56,12 +66,10 @@ describe('constants', () => {
   });
 
   describe('DISABLE_SPEEDY', () => {
-    function renderAndExpect(expectedDisableSpeedy, expectedCss) {
+    function renderAndExpect(expectedDisableSpeedy: boolean, expectedCss: string) {
       const React = require('react');
       const TestRenderer = require('react-test-renderer');
-      const {
-        DISABLE_SPEEDY
-      } = require('../constants');
+      const { DISABLE_SPEEDY } = require('../constants');
       const styled = require('./utils').resetStyled();
 
       const Comp = styled.div`

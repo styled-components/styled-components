@@ -1,6 +1,6 @@
 import { SPLITTER } from '../constants';
 import styledError from '../utils/error';
-import { GroupedTag, GroupedTagConstructor, Tag } from './types';
+import { GroupedTag, Tag } from './types';
 
 /** Create a GroupedTag with an underlying Tag implementation */
 export const makeGroupedTag = (tag: Tag) => {
@@ -9,7 +9,7 @@ export const makeGroupedTag = (tag: Tag) => {
 
 const BASE_SIZE = 1 << 9;
 
-const DefaultGroupedTag: GroupedTagConstructor = class DefaultGroupedTag implements GroupedTag {
+const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
   groupSizes: Uint32Array;
   length: number;
   tag: Tag;

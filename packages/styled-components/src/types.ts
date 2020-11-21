@@ -1,28 +1,33 @@
-import * as CSS from 'csstype';
 import { ComponentType, ForwardRefExoticComponent } from 'react';
 import constructWithOptions from './constructors/constructWithOptions';
 import ComponentStyle from './models/ComponentStyle';
 import { Theme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
-export type ExtensibleObject = {
+export type BaseExtensibleObject = {
   [key: string]: any;
-  theme?: any;
 };
 
-export type Attrs = (props: ExtensibleObject) => ExtensibleObject | ExtensibleObject;
+export type ExtensibleObject = BaseExtensibleObject & {
+  theme?: Theme;
+};
 
-export type Interpolation =
-  | ((executionContext: ExtensibleObject) => Interpolation)
+export type StyleFunction<Props> = (
+  executionContext: Props & ExtensibleObject
+) => BaseExtensibleObject | string | number;
+
+// Do not add IStyledComponent to this union, it breaks prop function interpolation in TS
+export type Interpolation<Props extends Object = ExtensibleObject> =
+  | StyleFunction<Props>
   | ExtensibleObject
   | string
   | Keyframe
-  | IStyledComponent
-  | ComponentType<any>
-  | Interpolation[];
+  | Interpolation<Props>[];
 
+export type Attrs<Props = ExtensibleObject> =
+  | ExtensibleObject
+  | ((props: ExtensibleObject & Props) => ExtensibleObject);
 export type RuleSet = Interpolation[];
-
 export type Styles = string[] | Object | ((executionContext: ExtensibleObject) => Interpolation);
 
 export type WebTarget = string | ComponentType<any>;
@@ -56,7 +61,7 @@ export interface Stringifier {
 
 export type ShouldForwardProp = (prop: string, isValidAttr: (prop: string) => boolean) => boolean;
 
-interface CommonStatics {
+export interface CommonStatics {
   attrs: Attrs[];
   target: any;
   shouldForwardProp?: ShouldForwardProp;
@@ -74,11 +79,23 @@ export interface IStyledStatics extends CommonStatics {
 }
 
 export interface IStyledComponent
-  extends ForwardRefExoticComponent<ExtensibleObject & { theme?: Theme }>,
+  extends ForwardRefExoticComponent<ExtensibleObject>,
     IStyledStatics {
   defaultProps?: Object;
   toString: () => string;
 }
+
+export type IStyledComponentFactory = (
+  target: IStyledComponent['target'],
+  options: {
+    attrs?: Attrs[];
+    componentId: string;
+    displayName?: string;
+    parentComponentId?: string;
+    shouldForwardProp?: ShouldForwardProp;
+  },
+  rules: RuleSet
+) => IStyledComponent;
 
 export interface IStyledNativeStatics extends CommonStatics {
   inlineStyle: InstanceType<IInlineStyleConstructor>;
@@ -87,10 +104,22 @@ export interface IStyledNativeStatics extends CommonStatics {
 }
 
 export interface IStyledNativeComponent
-  extends ForwardRefExoticComponent<ExtensibleObject & { theme?: Theme }>,
+  extends ForwardRefExoticComponent<ExtensibleObject>,
     IStyledNativeStatics {
   defaultProps?: Object;
 }
+
+export type IStyledNativeComponentFactory = (
+  target: IStyledNativeComponent['target'],
+  options: {
+    attrs?: Attrs[];
+    componentId: string;
+    displayName?: string;
+    parentComponentId?: string;
+    shouldForwardProp?: ShouldForwardProp;
+  },
+  rules: RuleSet
+) => IStyledNativeComponent;
 
 export interface IInlineStyleConstructor {
   new (rules: RuleSet): IInlineStyle;
@@ -113,6 +142,11 @@ export interface Styled extends StyledElementShortcuts {
   (tag: WebTarget): StyledTemplateFunction;
 }
 
-export type StyledObject = CSS.Properties & {
-  [key: string]: StyledObject;
+type CSSValue = string | number;
+
+export type StyledObject = {
+  [key: string]: StyledObject | CSSValue | ((...any: any[]) => CSSValue);
+} & {
+  // uncomment when we can eventually override index signatures with more specific types
+  // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);
 };

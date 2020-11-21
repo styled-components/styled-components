@@ -1,7 +1,6 @@
-
-import React, { Fragment } from "react";
-import TestRenderer from "react-test-renderer";
-import { getRenderedCSS, resetStyled } from "./utils";
+import React, { Fragment } from 'react';
+import TestRenderer from 'react-test-renderer';
+import { getRenderedCSS, resetStyled } from './utils';
 
 let styled: ReturnType<typeof resetStyled>;
 
@@ -37,12 +36,12 @@ describe('props', () => {
   it('should ignore non-0 falsy object interpolations', () => {
     const Comp = styled.div`
       ${() => ({
-      borderWidth: 0,
-      colorA: null,
-      colorB: false,
-      colorC: undefined,
-      colorD: ''
-    })};
+        borderWidth: 0,
+        colorA: null,
+        colorB: false,
+        colorC: undefined,
+        colorD: '',
+      })};
     `;
     TestRenderer.create(<Comp fg="red" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -56,10 +55,14 @@ describe('props', () => {
     const Comp = styled(p => <div {...p} />)`
       color: ${props => props.$fg || 'black'};
     `;
-    expect(TestRenderer.create(<>
+    expect(
+      TestRenderer.create(
+        <>
           <Comp $fg="red" />
           <Comp fg="red" />
-        </>).toJSON()).toMatchInlineSnapshot(`
+        </>
+      ).toJSON()
+    ).toMatchInlineSnapshot(`
       Array [
         <div
           className="sc-a b"
@@ -92,10 +95,7 @@ describe('props', () => {
   });
 
   it('should forward the "as" prop if "forwardedAs" is used', () => {
-    const Comp = ({
-      as: Component = 'div',
-      ...props
-    }) => <Component {...props} />;
+    const Comp = ({ as: Component = 'div', ...props }) => <Component {...props} />;
 
     const Comp2 = styled(Comp)`
       background: red;
@@ -119,14 +119,12 @@ describe('props', () => {
 
     it('allows for custom prop filtering for elements', () => {
       const Comp = styled('div').withConfig({
-        shouldForwardProp: prop => !['filterThis'].includes(prop)
+        shouldForwardProp: prop => !['filterThis'].includes(prop),
       })`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
-      const {
-        props
-      } = wrapper.root.findByType('div');
+      const { props } = wrapper.root.findByType('div');
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
@@ -139,14 +137,12 @@ describe('props', () => {
     it('allows custom prop filtering for components', () => {
       const InnerComp = props => <div {...props} />;
       const Comp = styled(InnerComp).withConfig({
-        shouldForwardProp: prop => !['filterThis'].includes(prop)
+        shouldForwardProp: prop => !['filterThis'].includes(prop),
       })`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
-      const {
-        props
-      } = wrapper.root.findByType('div');
+      const { props } = wrapper.root.findByType('div');
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
@@ -158,34 +154,32 @@ describe('props', () => {
 
     it('composes shouldForwardProp on composed styled components', () => {
       const StyledDiv = styled('div').withConfig({
-        shouldForwardProp: prop => prop === 'passThru'
+        shouldForwardProp: prop => prop === 'passThru',
       })`
         color: red;
       `;
       const ComposedDiv = styled(StyledDiv).withConfig({
-        shouldForwardProp: () => true
+        shouldForwardProp: () => true,
       })``;
       const wrapper = TestRenderer.create(<ComposedDiv filterThis passThru />);
-      const {
-        props
-      } = wrapper.root.findByType('div');
+      const { props } = wrapper.root.findByType('div');
       expect(props.passThru).toBeDefined();
       expect(props.filterThis).toBeUndefined();
     });
 
     it('should inherit shouldForwardProp for wrapped styled components', () => {
       const Div1 = styled('div').withConfig({
-        shouldForwardProp: prop => prop !== 'color'
+        shouldForwardProp: prop => prop !== 'color',
       })`
-        background-color: ${({
-        color
-      }) => color};
+        background-color: ${({ color }) => color};
       `;
       const Div2 = styled(Div1)``;
-      const wrapper = TestRenderer.create(<Fragment>
+      const wrapper = TestRenderer.create(
+        <Fragment>
           <Div1 color="red" id="test-1" />
           <Div2 color="green" id="test-2" />
-        </Fragment>);
+        </Fragment>
+      );
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".c {
           background-color: red;
@@ -200,14 +194,12 @@ describe('props', () => {
     it('should filter out props when using "as" to a custom component', () => {
       const AsComp = props => <div {...props} />;
       const Comp = styled('div').withConfig({
-        shouldForwardProp: prop => !['filterThis'].includes(prop)
+        shouldForwardProp: prop => !['filterThis'].includes(prop),
       })`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
-      const {
-        props
-      } = wrapper.root.findByType(AsComp);
+      const { props } = wrapper.root.findByType(AsComp);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
@@ -220,14 +212,12 @@ describe('props', () => {
     it('can set computed styles based on props that are being filtered out', () => {
       const AsComp = props => <div {...props} />;
       const Comp = styled('div').withConfig({
-        shouldForwardProp: prop => !['filterThis'].includes(prop)
+        shouldForwardProp: prop => !['filterThis'].includes(prop),
       })`
-        color: ${props => props.filterThis === 'abc' ? 'red' : undefined};
+        color: ${props => (props.filterThis === 'abc' ? 'red' : undefined)};
       `;
       const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
-      const {
-        props
-      } = wrapper.root.findByType(AsComp);
+      const { props } = wrapper.root.findByType(AsComp);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
@@ -239,14 +229,12 @@ describe('props', () => {
 
     it('should filter our props when using "as" to a different element', () => {
       const Comp = styled('div').withConfig({
-        shouldForwardProp: prop => !['filterThis'].includes(prop)
+        shouldForwardProp: prop => !['filterThis'].includes(prop),
       })`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp as="a" filterThis="abc" passThru="def" />);
-      const {
-        props
-      } = wrapper.root.findByType('a');
+      const { props } = wrapper.root.findByType('a');
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
@@ -260,7 +248,7 @@ describe('props', () => {
       const stub = jest.fn();
 
       const Comp = styled('div').withConfig({
-        shouldForwardProp: stub
+        shouldForwardProp: stub,
       })`
         color: red;
       `;

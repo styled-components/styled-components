@@ -1,11 +1,11 @@
 /* eslint-disable no-console */
-import hoistStatics from "hoist-non-react-statics";
-import React, { Component, StrictMode } from "react";
-import { findDOMNode } from "react-dom";
-import { findRenderedComponentWithType, renderIntoDocument } from "react-dom/test-utils";
-import TestRenderer from "react-test-renderer";
-import { find } from "../../test-utils";
-import { getRenderedCSS, resetStyled } from "./utils";
+import hoistStatics from 'hoist-non-react-statics';
+import React, { Component, StrictMode } from 'react';
+import { findDOMNode } from 'react-dom';
+import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
+import TestRenderer from 'react-test-renderer';
+import { find } from '../../test-utils';
+import { getRenderedCSS, resetStyled } from './utils';
 
 let styled: ReturnType<typeof resetStyled>;
 
@@ -22,7 +22,6 @@ describe('basic', () => {
 
     const FunctionalComponent = () => <div />;
     class ClassComponent extends Component<any, any> {
-
       render() {
         return <div />;
       }
@@ -39,19 +38,25 @@ describe('basic', () => {
   it('should throw a meaningful error when called with an invalid element', () => {
     const FunctionalComponent = () => <div />;
     class ClassComponent extends Component<any, any> {
-
       render() {
         return <div />;
       }
     }
-    const invalidComps = [undefined, null, 123, [], <div key="1" />, <FunctionalComponent key="2" />, <ClassComponent key="3" />];
+    const invalidComps = [
+      undefined,
+      null,
+      123,
+      [],
+      <div key="1" />,
+      <FunctionalComponent key="2" />,
+      <ClassComponent key="3" />,
+    ];
 
     invalidComps.forEach(comp => {
       expect(() => {
-        // $FlowInvalidInputTest
+        // @ts-expect-error
         const Comp = styled(comp)``;
         TestRenderer.create(<Comp />);
-        // $FlowInvalidInputTest
       }).toThrow(`Cannot create styled-component for component: ${comp}`);
     });
   });
@@ -89,13 +94,13 @@ describe('basic', () => {
   });
 
   it('Should have the correct styled(component) displayName', () => {
-    const CompWithoutName = () => () => <div />;
+    const CompWithoutName = () => (() => <div />) as React.FC<any>;
 
     const StyledTag = styled.div``;
     expect(StyledTag.displayName).toBe('styled.div');
 
-    const CompWithName = () => <div />;
-    CompWithName.displayName = null;
+    const CompWithName: React.FC<any> = () => <div />;
+    CompWithName.displayName = undefined;
     const StyledCompWithName = styled(CompWithName)``;
     expect(StyledCompWithName.displayName).toBe('Styled(CompWithName)');
 
@@ -110,14 +115,14 @@ describe('basic', () => {
     expect(StyledCompWithBoth.displayName).toBe('Styled(displayName)');
 
     const CompWithNothing = CompWithoutName();
-    CompWithNothing.displayName = null;
+    CompWithNothing.displayName = undefined;
     const StyledCompWithNothing = styled(CompWithNothing)``;
     expect(StyledCompWithNothing.displayName).toBe('Styled(Component)');
   });
 
   it('should allow you to pass in style objects', () => {
     const Comp = styled.div({
-      color: 'blue'
+      color: 'blue',
     });
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -128,9 +133,7 @@ describe('basic', () => {
   });
 
   it('should allow you to pass in style object with a function', () => {
-    const Comp = styled.div({ color: ({
-        color
-      }) => color });
+    const Comp = styled.div({ color: ({ color }) => color });
     TestRenderer.create(<Comp color="blue" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
@@ -144,9 +147,9 @@ describe('basic', () => {
       span: {
         small: {
           color: 'blue',
-          fontFamily: 'sans-serif'
-        }
-      }
+          fontFamily: 'sans-serif',
+        },
+      },
     });
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -161,12 +164,10 @@ describe('basic', () => {
     const Comp = styled.div({
       span: {
         small: {
-          color: ({
-            color
-          }) => color,
-          fontFamily: 'sans-serif'
-        }
-      }
+          color: ({ color }) => color,
+          fontFamily: 'sans-serif',
+        },
+      },
     });
     TestRenderer.create(<Comp color="red" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -178,10 +179,8 @@ describe('basic', () => {
   });
 
   it('should allow you to pass in a function returning a style object', () => {
-    const Comp = styled.div(({
-      color
-    }) => ({
-      color
+    const Comp = styled.div(({ color }) => ({
+      color,
     }));
     TestRenderer.create(<Comp color="blue" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -219,7 +218,7 @@ describe('basic', () => {
       color: red;
     `;
     const wrapper = TestRenderer.create(<Comp customProp="abc" />);
-    expect(wrapper.root.findByType('Comp').props.customProp).toBe('abc');
+    expect(wrapper.root.findByType(Comp).props.customProp).toBe('abc');
   });
 
   it('creates a proper displayName for uppercased string-like components', () => {
@@ -244,7 +243,6 @@ describe('basic', () => {
 
   describe('jsdom tests', () => {
     class InnerComponent extends Component<any, any> {
-
       render() {
         return <div {...this.props} />;
       }
@@ -254,7 +252,6 @@ describe('basic', () => {
       const OuterComponent = styled(InnerComponent)``;
 
       class Wrapper extends Component<any, any> {
-
         render() {
           return <OuterComponent className="test" />;
         }
@@ -268,13 +265,14 @@ describe('basic', () => {
       const Comp = styled.div``;
 
       class Wrapper extends Component<any, any> {
-
         testRef: any = React.createRef();
 
         render() {
-          return <div>
+          return (
+            <div>
               <Comp ref={this.testRef} />
-            </div>;
+            </div>
+          );
         }
       }
 
@@ -288,7 +286,6 @@ describe('basic', () => {
 
     it('should pass the ref to the wrapped styled component', () => {
       class Inner extends React.Component {
-
         render() {
           return <div {...this.props} />;
         }
@@ -297,13 +294,14 @@ describe('basic', () => {
       const Outer = styled(Inner)``;
 
       class Wrapper extends Component<any, any> {
-
         testRef: any = React.createRef();
 
         render() {
-          return <div>
+          return (
+            <div>
               <Outer ref={this.testRef} />
-            </div>;
+            </div>
+          );
         }
       }
 
@@ -372,10 +370,10 @@ describe('basic', () => {
     });
 
     it('should not fold components if there is an interim HOC', () => {
-      function withSomething(WrappedComponent) {
-        function WithSomething(props) {
+      function withSomething(WrappedComponent: React.ComponentType<any>) {
+        const WithSomething: React.FC<any> = props => {
           return <WrappedComponent {...props} />;
-        }
+        };
 
         hoistStatics(WithSomething, WrappedComponent);
 
@@ -383,8 +381,8 @@ describe('basic', () => {
       }
 
       const Inner = withSomething(styled.div`
-          color: red;
-        `);
+        color: red;
+      `);
 
       const Outer = styled(Inner)`
         color: green;
@@ -412,23 +410,23 @@ describe('basic', () => {
 
       Inner.defaultProps = {
         theme: {
-          fontSize: 12
+          fontSize: 12,
         },
         style: {
           background: 'blue',
-          textAlign: 'center'
-        }
+          textAlign: 'center',
+        },
       };
 
       const Outer = styled(Inner)``;
 
       Outer.defaultProps = {
         theme: {
-          fontSize: 16
+          fontSize: 16,
         },
         style: {
-          background: 'silver'
-        }
+          background: 'silver',
+        },
       };
 
       expect(Outer.defaultProps).toMatchInlineSnapshot(`
@@ -459,14 +457,14 @@ describe('basic', () => {
     it('honors a passed componentId', () => {
       const Named1 = styled.div.withConfig({
         componentId: 'foo',
-        displayName: 'Name'
+        displayName: 'Name',
       })`
         color: blue;
       `;
 
       const Named2 = styled.div.withConfig({
         componentId: 'bar',
-        displayName: 'Name'
+        displayName: 'Name',
       })`
         color: red;
       `;
@@ -481,9 +479,11 @@ describe('basic', () => {
       const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const Comp = styled.div``;
 
-      TestRenderer.create(<StrictMode>
+      TestRenderer.create(
+        <StrictMode>
           <Comp />
-        </StrictMode>);
+        </StrictMode>
+      );
 
       expect(spy).not.toHaveBeenCalled();
     });
@@ -495,7 +495,7 @@ describe('basic', () => {
     });
 
     it('does not warn for innerRef if using a custom component', () => {
-      const InnerComp = props => <div {...props} />;
+      const InnerComp: React.FC<any> = props => <div {...props} />;
       const Comp = styled(InnerComp)``;
       const ref = React.createRef();
 
@@ -504,19 +504,21 @@ describe('basic', () => {
     });
 
     it('does not warn if the className is consumed by a deeper child', () => {
-      const Inner = ({
-        className
-      }) => <div>
+      const Inner: React.FC<any> = ({ className }) => (
+        <div>
           <span className={className} />
-        </div>;
+        </div>
+      );
 
       const Comp = styled(Inner)`
         color: red;
       `;
 
-      renderIntoDocument(<div>
+      renderIntoDocument(
+        <div>
           <Comp />
-        </div>);
+        </div>
+      );
 
       expect(console.warn).not.toHaveBeenCalled();
     });

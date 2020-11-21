@@ -1,6 +1,4 @@
-
-
-import * as GroupIDAllocator from "../GroupIDAllocator";
+import * as GroupIDAllocator from '../GroupIDAllocator';
 
 beforeEach(GroupIDAllocator.resetGroupIds);
 afterEach(GroupIDAllocator.resetGroupIds);

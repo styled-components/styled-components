@@ -1,9 +1,7 @@
-
-
-import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from "../../constants";
-import * as GroupIDAllocator from "../GroupIDAllocator";
-import StyleSheet from "../Sheet";
-import { outputSheet, rehydrateSheet } from "../Rehydration";
+import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../../constants';
+import * as GroupIDAllocator from '../GroupIDAllocator';
+import { outputSheet, rehydrateSheet } from '../Rehydration';
+import StyleSheet from '../Sheet';
 
 beforeEach(() => {
   GroupIDAllocator.resetGroupIds();
@@ -57,8 +55,8 @@ describe('rehydrateSheet', () => {
 
     const styleHead = document.head.querySelector('style');
     const styleBody = document.body.querySelector('style');
-    expect(styleHead.parentElement).toBe(document.head);
-    expect(styleBody.parentElement).toBe(document.body);
+    expect(styleHead!.parentElement).toBe(document.head);
+    expect(styleBody!.parentElement).toBe(document.body);
 
     const sheet = new StyleSheet({ isServer: true });
     rehydrateSheet(sheet);
@@ -77,8 +75,8 @@ describe('rehydrateSheet', () => {
     expect(sheet.getTag().getGroup(22)).toBe('.b {}/*!sc*/\n');
     expect(sheet.getTag().getGroup(33)).toBe('');
     // Removes the old tags
-    expect(styleHead.parentElement).toBe(null);
-    expect(styleBody.parentElement).toBe(null);
+    expect(styleHead!.parentElement).toBe(null);
+    expect(styleBody!.parentElement).toBe(null);
   });
 
   it('ignores active style elements', () => {
@@ -90,13 +88,13 @@ describe('rehydrateSheet', () => {
     `;
 
     const styleHead = document.head.querySelector('style');
-    expect(styleHead.parentElement).toBe(document.head);
+    expect(styleHead!.parentElement).toBe(document.head);
     const sheet = new StyleSheet({ isServer: true });
     rehydrateSheet(sheet);
     expect(GroupIDAllocator.getIdForGroup(11)).toBe(undefined);
     expect(sheet.hasNameForId('idA', 'nameA')).toBe(false);
     expect(sheet.getTag().tag.length).toBe(0);
-    expect(styleHead.parentElement).toBe(document.head);
+    expect(styleHead!.parentElement).toBe(document.head);
   });
 
   it('tolerates long, malformed CSS', () => {

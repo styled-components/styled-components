@@ -6,9 +6,8 @@ import type {
   Attrs,
   ExtensibleObject,
   IStyledComponent,
+  IStyledComponentFactory,
   IStyledStatics,
-  RuleSet,
-  ShouldForwardProp,
   WebTarget,
 } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
@@ -172,17 +171,7 @@ function useStyledComponentImpl(
   return createElement(elementToBeCreated, propsForElement);
 }
 
-export default function createStyledComponent(
-  target: IStyledComponent['target'],
-  options: {
-    attrs?: Attrs[];
-    componentId: string;
-    displayName?: string;
-    parentComponentId?: string;
-    shouldForwardProp?: ShouldForwardProp;
-  },
-  rules: RuleSet
-) {
+const createStyledComponent: IStyledComponentFactory = (target, options, rules) => {
   const isTargetStyledComp = isStyledComponent(target);
   const styledComponentTarget = target as IStyledComponent;
   const isCompositeComponent = !isTag(target);
@@ -320,4 +309,6 @@ export default function createStyledComponent(
   }
 
   return WrappedStyledComponent;
-}
+};
+
+export default createStyledComponent;

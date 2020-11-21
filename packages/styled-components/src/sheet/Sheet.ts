@@ -37,7 +37,7 @@ export default class StyleSheet implements Sheet {
   }
 
   constructor(
-    options: SheetConstructorArgs = EMPTY_OBJECT,
+    options: SheetConstructorArgs = EMPTY_OBJECT as Object,
     globalStyles: GlobalStylesAllocationMap = {},
     names?: NamesAllocationMap
   ) {
@@ -69,7 +69,7 @@ export default class StyleSheet implements Sheet {
   }
 
   /** Lazily initialises a GroupedTag for when it's actually needed */
-  getTag(): GroupedTag {
+  getTag() {
     return this.tag || (this.tag = makeGroupedTag(makeTag(this.options)));
   }
 
