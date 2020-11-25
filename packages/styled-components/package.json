@@ -69,6 +69,7 @@
     "babel-plugin-styled-components": ">= 1",
     "css-to-react-native": "^3.0.0",
     "hoist-non-react-statics": "^3.0.0",
+    "react-is": "^16.8.6",
     "shallowequal": "^1.1.0",
     "stylis": "^4.0.2",
     "supports-color": "^7.2.0"
@@ -96,7 +97,6 @@
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-frame-component": "^4.0.2",
-    "react-is": "^16.8.6",
     "react-native": "^0.63.3",
     "react-primitives": "^0.8.0",
     "react-test-renderer": "^16.8.6",
