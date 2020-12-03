@@ -31,7 +31,7 @@ export type Flattener = (
 ) => Interpolation[];
 
 export type Stringifier = {
-  (rules: string, selector: string, prefix: ?string, componentId: ?string): string[],
+  (rules: string, selector: string, prefix: ?string, componentId: ?string): string,
   hash: string,
 };
 
@@ -52,4 +52,24 @@ export interface IStyledStatics {
 export interface IStyledComponent extends Component<*>, IStyledStatics {
   defaultProps?: Object;
   toString: () => string;
+}
+
+export interface IInlineStyle {
+  constructor(rules: RuleSet): void;
+  rules: RuleSet;
+  generateStyleObject(executionContext: Object): Object;
+}
+
+export interface IStyledNativeStatics {
+  attrs: Attrs;
+  inlineStyle: IInlineStyle;
+  displayName: string;
+  target: Target | IStyledNativeComponent;
+  shouldForwardProp?: ShouldForwardProp;
+  styledComponentId: string;
+  withComponent: (tag: Target) => IStyledNativeComponent;
+}
+
+export interface IStyledNativeComponent extends Component<*>, IStyledNativeStatics {
+  defaultProps?: Object;
 }

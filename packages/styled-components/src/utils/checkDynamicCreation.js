@@ -10,7 +10,7 @@ export const checkDynamicCreation = (displayName: string, componentId?: string) 
     const parsedIdString = componentId ? ` with the id of "${componentId}"` : '';
     const message =
       `The component ${displayName}${parsedIdString} has been created dynamically.\n` +
-      'You may see this warning because you\'ve called styled inside another component.\n' +
+      "You may see this warning because you've called styled inside another component.\n" +
       'To resolve this only create new StyledComponents outside of any render method and function component.';
 
     try {

@@ -14,6 +14,7 @@ import type {
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
+import domElements from '../utils/domElements';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
@@ -155,9 +156,11 @@ function useStyledComponentImpl(
     propsForElement.style = { ...props.style, ...attrs.style };
   }
 
-  propsForElement.className = Array.prototype
+  propsForElement[
+    // handle custom elements which React doesn't properly alias
+    isTargetTag && domElements.indexOf(elementToBeCreated) === -1 ? 'class' : 'className'
+  ] = foldedComponentIds
     .concat(
-      foldedComponentIds,
       styledComponentId,
       generatedClassName !== styledComponentId ? generatedClassName : null,
       props.className,
@@ -199,7 +202,7 @@ export default function createStyledComponent(
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     isTargetStyledComp && ((target: any): IStyledComponent).attrs
-      ? Array.prototype.concat(((target: any): IStyledComponent).attrs, attrs).filter(Boolean)
+      ? ((target: any): IStyledComponent).attrs.concat(attrs).filter(Boolean)
       : attrs;
 
   // eslint-disable-next-line prefer-destructuring
@@ -250,8 +253,7 @@ export default function createStyledComponent(
   // this static is used to preserve the cascade of static classes for component selector
   // purposes; this is especially important with usage of the css prop
   WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
-    ? Array.prototype.concat(
-        ((target: any): IStyledComponent).foldedComponentIds,
+    ? ((target: any): IStyledComponent).foldedComponentIds.concat(
         ((target: any): IStyledComponent).styledComponentId
       )
     : EMPTY_ARRAY;

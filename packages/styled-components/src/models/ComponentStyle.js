@@ -28,7 +28,8 @@ export default class ComponentStyle {
   constructor(rules: RuleSet, componentId: string, baseStyle?: ComponentStyle) {
     this.rules = rules;
     this.staticRulesId = '';
-    this.isStatic = process.env.NODE_ENV === 'production' &&
+    this.isStatic =
+      process.env.NODE_ENV === 'production' &&
       (baseStyle === undefined || baseStyle.isStatic) &&
       isStaticRules(rules);
     this.componentId = componentId;
@@ -68,7 +69,6 @@ export default class ComponentStyle {
 
         if (!styleSheet.hasNameForId(componentId, name)) {
           const cssStaticFormatted = stylis(cssStatic, `.${name}`, undefined, componentId);
-
           styleSheet.insertRules(componentId, name, cssStaticFormatted);
         }
 

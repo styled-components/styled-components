@@ -3,7 +3,7 @@ import babel from '@babel/core';
 import pluginTester from 'babel-plugin-tester';
 import plugin from 'babel-plugin-macros';
 
-jest.mock('cosmiconfig', () => jest.fn(require.requireActual('cosmiconfig')));
+jest.mock('cosmiconfig', () => jest.fn(jest.requireActual('cosmiconfig')));
 
 const styledExampleCode = `
 import styled from '../../macro'

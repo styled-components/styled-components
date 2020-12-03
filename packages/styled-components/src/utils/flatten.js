@@ -69,7 +69,7 @@ export default function flatten(
 
       if (process.env.NODE_ENV !== 'production' && isElement(result)) {
         // eslint-disable-next-line no-console
-        console.warn(
+        console.error(
           `${getComponentName(
             chunk
           )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`

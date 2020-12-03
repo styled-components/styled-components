@@ -12,7 +12,7 @@ export default function css(styles: Styles, ...interpolations: Array<Interpolati
     return flatten(interleave(EMPTY_ARRAY, [styles, ...interpolations]));
   }
 
-  if(interpolations.length === 0 && styles.length === 1 && typeof styles[0] === "string") {
+  if (interpolations.length === 0 && styles.length === 1 && typeof styles[0] === 'string') {
     // $FlowFixMe
     return styles;
   }
