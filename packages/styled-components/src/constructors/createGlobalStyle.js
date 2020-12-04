@@ -14,7 +14,7 @@ declare var __SERVER__: boolean;
 
 type GlobalStyleComponentPropsType = Object;
 
-const isEnvDevelopment = process.env.NODE_ENV !== 'production';
+const isNotProduction = process.env.NODE_ENV !== 'production';
 
 export default function createGlobalStyle(
   strings: Array<string>,
@@ -24,7 +24,7 @@ export default function createGlobalStyle(
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle(rules, styledComponentId);
 
-  if (isEnvDevelopment) {
+  if (isNotProduction) {
     checkDynamicCreation(styledComponentId);
   }
 
@@ -36,7 +36,7 @@ export default function createGlobalStyle(
 
     const instance = instanceRef.current;
 
-    if (isEnvDevelopment && React.Children.count(props.children)) {
+    if (isNotProduction && React.Children.count(props.children)) {
       // eslint-disable-next-line no-console
       console.warn(
         `The global style component ${styledComponentId} was given child JSX. createGlobalStyle does not render children.`
@@ -44,7 +44,7 @@ export default function createGlobalStyle(
     }
 
     if (
-      isEnvDevelopment &&
+      isNotProduction &&
       rules.some(rule => typeof rule === 'string' && rule.indexOf('@import') !== -1)
     ) {
       // eslint-disable-next-line no-console
