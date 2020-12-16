@@ -24,7 +24,7 @@ export default function createStylisInstance({
   const selfReferenceReplacer = (match, offset, string) => {
     if (
       // do not replace the first occurrence if it is complex (has a modifier)
-      (offset === 0 ? !COMPLEX_SELECTOR_PREFIX.indexOf(string[_selector.length]) !== -1 : true) &&
+      (offset === 0 ? COMPLEX_SELECTOR_PREFIX.indexOf(string[_selector.length]) !== -1 : true) &&
       // no consecutive self refs (.b.b); that is a precedence boost and treated differently
       !string.match(_consecutiveSelfRefRegExp)
     ) {
