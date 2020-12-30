@@ -32,8 +32,8 @@ styled(Hello)\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import styled from 'styled-components';
 import React from 'react';
+import styled from 'styled-components';
 
 const Hello = () => React.createComponent(div, null, 'hello');
 
@@ -165,7 +165,8 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import styled from 'styled-components';
+const styled = require('styled-components');
+
 styled.div.withConfig({
   displayName: 'macrotest',
   componentId: 'sc-11gvsec-0',
@@ -207,8 +208,8 @@ function Foo() {
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import _styled from 'styled-components';
-import styled from 'styled-components';
 import React from 'react';
+import styled from 'styled-components';
 const Thing = styled.div.withConfig({
   displayName: 'macrotest__Thing',
   componentId: 'sc-11gvsec-0',
@@ -242,8 +243,8 @@ function Foo(props) {
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import _styled from 'styled-components';
-import { css } from 'styled-components';
 import React from 'react';
+import { css } from 'styled-components';
 const padding = '10px';
 
 var _StyledDiv = _styled('div').withConfig({
@@ -276,8 +277,8 @@ function Foo() {
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import _styled from 'styled-components';
-import { css } from 'styled-components';
 import React from 'react';
+import { css } from 'styled-components';
 
 var _StyledDiv = _styled('div').withConfig({
   displayName: 'macrotest___StyledDiv',
@@ -306,8 +307,8 @@ function Bar() {
 
 import _styled2 from 'styled-components';
 import _styled from 'styled-components';
-import { css } from 'styled-components';
 import React from 'react';
+import { css } from 'styled-components';
 
 var _StyledDiv = _styled('div').withConfig({
   displayName: 'macrotest___StyledDiv',
@@ -341,10 +342,10 @@ function Foo() {
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import _styled from 'styled-components';
-import 'styled-components';
+import styled from 'styled-components';
 import React from 'react';
 
-var _StyledDiv = _styled('div').withConfig({
+var _StyledDiv = styled('div').withConfig({
   displayName: 'macrotest___StyledDiv',
   componentId: 'sc-11gvsec-0',
 })(['color:red;']);
