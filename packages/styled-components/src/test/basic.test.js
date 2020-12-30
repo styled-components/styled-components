@@ -66,6 +66,7 @@ describe('basic', () => {
   it('should not inject anything by default', () => {
     // eslint-disable-next-line no-unused-expressions
     styled.div``;
+
     expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
   });
 
@@ -228,6 +229,18 @@ describe('basic', () => {
     `;
 
     expect(Comp.displayName).toBe('Styled(Comp)');
+  });
+
+  it('works with custom elements (use class instead of className)', () => {
+    const Comp = styled('custom-element')`
+      color: red;
+    `;
+
+    expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
+      <custom-element
+        class="sc-a b"
+      />
+    `);
   });
 
   describe('jsdom tests', () => {

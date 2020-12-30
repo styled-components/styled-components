@@ -154,10 +154,10 @@ describe('theming', () => {
 
   it('should only inject props.theme into styled components within its child component tree', () => {
     const Comp1 = styled.div`
-      color: ${props => props.theme.color};
+      color: ${props => props.theme.color || 'red'};
     `;
     const Comp2 = styled.div`
-      background: ${props => props.theme.color};
+      color: ${props => props.theme.color || 'red'};
     `;
 
     const theme = { color: 'black' };
@@ -174,6 +174,9 @@ describe('theming', () => {
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
         color: black;
+      }
+      .d {
+        color: red;
       }"
     `);
   });
@@ -547,6 +550,7 @@ describe('theming', () => {
     const theme = { color: 'red' };
     const newTheme = { color: 'blue' };
 
+    // eslint-disable-next-line no-console
     const consoleWarn = console.warn;
 
     jest

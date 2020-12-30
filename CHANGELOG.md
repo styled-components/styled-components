@@ -6,6 +6,12 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Use `class` instead of `className` for unidentified DOM elements (better support for styling web components)
+
+- Upgrade to stylis v4
+
+## [v5.2.0] - 2020-09-04
+
 - Make sure `StyleSheetManager` renders all styles in iframe / child windows (see [#3159](https://github.com/styled-components/styled-components/pull/3159)) thanks @eramdam!
 
 - Rework how components self-reference in extension scenarios (see [#3236](https://github.com/styled-components/styled-components/pull/3236)); should fix a bunch of subtle bugs around patterns like `& + &`
@@ -21,6 +27,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 - Add "engines" to package.json (currently set to Node 10, the oldest supported LTS distribution) (see [#3201](https://github.com/styled-components/styled-components/pull/3201)) thanks @MichaelDeBoey!
 
 - Allow `DISABLE_SPEEDY` to be set to `false` to enable speedy mode in non-production environments (see [#3289](https://github.com/styled-components/styled-components/pull/3289)) thanks @FastFedora!
+
+- Enable new style rules can be inserted in the middle of existing sheet when rendering on client after rehydrate. `GroupIDAllocator` is now changed to find `nextFreeGroup` by checking `reverseRegister`, instead of setting it to the end of existing groups. (see [#3233](https://github.com/styled-components/styled-components/pull/3233)) thanks @mu29!
 
 ## [v5.1.1] - 2020-04-07
 
@@ -155,6 +163,8 @@ Read the [v5 release announcement](https://medium.com/styled-components/announci
 * Fix certain adblockers messing up styling by purposefully not emitting the substring "ad" (case-insensitive) when generating dynamic class names
 
 * Fix regressed behavior between v3 and v4 where className was not correctly aggregated between folded `.attrs` invocations
+
+- Fix support for styling custom elements (https://github.com/styled-components/styled-components/pull/2819)
 
 ## [v4.4.1] - 2019-10-30
 
@@ -1143,7 +1153,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v5.1.0...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.2.0...master
+[v5.2.0]: https://github.com/styled-components/styled-components/compare/v5.1.0...v5.2.0
 [v5.1.1]: https://github.com/styled-components/styled-components/compare/v5.1.0...v5.1.1
 [v5.1.0]: https://github.com/styled-components/styled-components/compare/v5.0.1...v5.1.0
 [v5.0.1]: https://github.com/styled-components/styled-components/compare/v5.0.0...v5.0.1

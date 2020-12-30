@@ -129,7 +129,7 @@ describe('flatten', () => {
   });
 
   it('throws if trying to interpolate a normal React component', () => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     const Foo = ({ className }) => <div className={className}>hello there!</div>;
 
     const Bar = styled.div`
@@ -140,13 +140,13 @@ describe('flatten', () => {
 
     TestRenderer.create(<Bar />);
 
-    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
+    expect(console.error.mock.calls[0][0]).toMatchInlineSnapshot(
       `"Foo is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details."`
     );
   });
 
-  it('does not warn for regular functions', () => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  it('does not error for regular functions', () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
 
     const SvgIcon = styled.svg`
       vertical-align: middle;
@@ -164,6 +164,6 @@ describe('flatten', () => {
       )
     ).not.toThrowError();
 
-    expect(console.warn).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
   });
 });

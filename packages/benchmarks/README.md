@@ -4,14 +4,14 @@ Try the [benchmarks app](https://necolas.github.io/react-native-web/benchmarks) 
 
 To run the benchmarks locally:
 
-```
+```sh
 yarn benchmarks
 open ./packages/benchmarks/dist/index.html
 ```
 
 Develop against these benchmarks:
 
-```
+```sh
 yarn compile --watch
 yarn benchmarks --watch
 ```
@@ -51,11 +51,11 @@ MacBook Pro (13-inch, Early 2011); 2.3 GHz Intel Core i5; 8 GB 1333 MHz DDR3 RAM
 
 Typical render timings: mean ± standard deviations.
 
-| Implementation                        | Mount deep tree (ms) | Mount wide tree (ms) | Dynamic update (ms) |
-| :--- | ---: | ---: | ---: |
-| `css-modules`                         |     `30.19` `±04.84` |     `38.25` `±04.85` |                   - |
-| `react-native-web@0.4.0`              |     `36.40` `±04.98` |     `51.28` `±05.58` |    `19.36` `±02.56` |
-| `inline-styles`                       |     `64.12` `±07.69` |     `94.49` `±11.34` |    `09.84` `±02.36` |
+| Implementation           | Mount deep tree (ms) | Mount wide tree (ms) | Dynamic update (ms) |
+| :----------------------- | -------------------: | -------------------: | ------------------: |
+| `css-modules`            |     `30.19` `±04.84` |     `38.25` `±04.85` |                   - |
+| `react-native-web@0.4.0` |     `36.40` `±04.98` |     `51.28` `±05.58` |    `19.36` `±02.56` |
+| `inline-styles`          |     `64.12` `±07.69` |     `94.49` `±11.34` |    `09.84` `±02.36` |
 
 ### Moto G4
 
@@ -63,8 +63,8 @@ Moto G4 (Android 7); Octa-core (4x1.5 GHz & 4x1.2 Ghz); 2 GB RAM. Google Chrome 
 
 Typical render timings: mean ± standard deviations.
 
-| Implementation                        | Mount deep tree (ms) | Mount wide tree (ms) | Dynamic update (ms) |
-| :--- | ---: | ---: | ---: |
-| `css-modules`                         |     `98.24` `±20.26` |    `143.75` `±25.50` |                   - |
-| `react-native-web@0.4.0`              |    `131.46` `±18.96` |    `174.70` `±14.88` |    `60.87` `±06.32` |
-| `inline-styles`                       |    `184.58` `±26.23` |    `273.86` `±26.23` |    `30.28` `±07.44` |
+| Implementation           | Mount deep tree (ms) | Mount wide tree (ms) | Dynamic update (ms) |
+| :----------------------- | -------------------: | -------------------: | ------------------: |
+| `css-modules`            |     `98.24` `±20.26` |    `143.75` `±25.50` |                   - |
+| `react-native-web@0.4.0` |    `131.46` `±18.96` |    `174.70` `±14.88` |    `60.87` `±06.32` |
+| `inline-styles`          |    `184.58` `±26.23` |    `273.86` `±26.23` |    `30.28` `±07.44` |

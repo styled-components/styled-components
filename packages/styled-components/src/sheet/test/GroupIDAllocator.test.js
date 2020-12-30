@@ -22,17 +22,3 @@ it('creates continuous group IDs', () => {
   expect(GroupIDAllocator.getIdForGroup(99)).toBe('b');
   expect(GroupIDAllocator.getGroupForId('b')).toBe(99);
 });
-
-it('throws early if the group ID is too large', () => {
-  // Test for SMI overflow with SMIs
-  GroupIDAllocator.setGroupForId('a', Math.pow(2, 31));
-  expect(() => {
-    GroupIDAllocator.getGroupForId('b');
-  }).toThrowError(/reached the limit/i);
-
-  // Test for SMI overflow with regular integers
-  GroupIDAllocator.setGroupForId('a', Math.pow(2, 32));
-  expect(() => {
-    GroupIDAllocator.getGroupForId('b');
-  }).toThrowError(/reached the limit/i);
-});

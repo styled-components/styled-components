@@ -30,6 +30,7 @@ describe('extending', () => {
     `;
     TestRenderer.create(<Inner />);
     TestRenderer.create(<Outer />);
+
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
         color: blue;
@@ -115,6 +116,7 @@ describe('extending', () => {
       TestRenderer.create(<Parent />);
       TestRenderer.create(<Child />);
       TestRenderer.create(<Grandson />);
+
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".d {
           position: relative;
@@ -140,6 +142,7 @@ describe('extending', () => {
         TestRenderer.create(<Parent />);
         TestRenderer.create(<Child />);
         TestRenderer.create(<Grandson />);
+
         expect(getRenderedCSS()).toMatchInlineSnapshot(`
           ".d {
             position: relative;

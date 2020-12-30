@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`macro should not add componentId with a config disabling ssr: should not add componentId with a config disabling ssr 1`] = `
-"
+
 import styled from '../../macro'
 
 styled.div\`
@@ -10,16 +10,17 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import styled from \\"styled-components\\";
+import styled from 'styled-components';
 styled.div.withConfig({
-  displayName: \\"macrotest\\",
-  componentId: \\"sc-11gvsec-0\\"
-})([\\"background:\\", \\";\\"], p => p.error ? 'red' : 'green');
-"
+  displayName: 'macrotest',
+  componentId: 'sc-11gvsec-0',
+})(['background:', ';'], p => (p.error ? 'red' : 'green'));
+
+
 `;
 
 exports[`macro should work when extending a component: should work when extending a component 1`] = `
-"
+
 import React from 'react'
 import styled from '../../macro'
 
@@ -31,20 +32,21 @@ styled(Hello)\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import styled from \\"styled-components\\";
+import styled from 'styled-components';
 import React from 'react';
 
 const Hello = () => React.createComponent(div, null, 'hello');
 
 styled(Hello).withConfig({
-  displayName: \\"macrotest\\",
-  componentId: \\"sc-11gvsec-0\\"
-})([\\"background:red;\\"]);
-"
+  displayName: 'macrotest',
+  componentId: 'sc-11gvsec-0',
+})(['background:red;']);
+
+
 `;
 
 exports[`macro should work with { ThemeProvider }: should work with { ThemeProvider } 1`] = `
-"
+
 import { ThemeProvider } from '../../macro'
 
 React.createComponent(
@@ -55,17 +57,22 @@ React.createComponent(
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { ThemeProvider } from \\"styled-components\\";
-React.createComponent(ThemeProvider, {
-  theme: {
-    color: 'red'
-  }
-}, 'hello');
-"
+import { ThemeProvider } from 'styled-components';
+React.createComponent(
+  ThemeProvider,
+  {
+    theme: {
+      color: 'red',
+    },
+  },
+  'hello'
+);
+
+
 `;
 
 exports[`macro should work with { createGlobalStyle }: should work with { createGlobalStyle } 1`] = `
-"
+
 import { createGlobalStyle } from '../../macro'
 
 createGlobalStyle\`
@@ -74,15 +81,16 @@ createGlobalStyle\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { createGlobalStyle } from \\"styled-components\\";
+import { createGlobalStyle } from 'styled-components';
 createGlobalStyle\`
   background: red;
 \`;
-"
+
+
 `;
 
 exports[`macro should work with { css }: should work with { css } 1`] = `
-"
+
 import { css } from '../../macro'
 
 css\`
@@ -91,13 +99,14 @@ css\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { css } from \\"styled-components\\";
-css([\\"color:\\", \\";\\"], props => props.whiteColor ? 'white' : 'black');
-"
+import { css } from 'styled-components';
+css(['color:', ';'], props => (props.whiteColor ? 'white' : 'black'));
+
+
 `;
 
 exports[`macro should work with { keyframes }: should work with { keyframes } 1`] = `
-"
+
 import { keyframes } from '../../macro'
 
 keyframes\`
@@ -107,13 +116,14 @@ keyframes\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { keyframes } from \\"styled-components\\";
-keyframes([\\"0%{opacity:0;}100%{opacity:1;}\\"]);
-"
+import { keyframes } from 'styled-components';
+keyframes(['0%{opacity:0;}100%{opacity:1;}']);
+
+
 `;
 
 exports[`macro should work with custom import name: should work with custom import name 1`] = `
-"
+
 import myStyled from '../../macro'
 import styled from 'another-package'
 
@@ -123,28 +133,30 @@ myStyled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import myStyled from \\"styled-components\\";
+import myStyled from 'styled-components';
 import styled from 'another-package';
 myStyled.div\`
-  background: \${p => p.error ? 'red' : 'green'};
+  background: \${p => (p.error ? 'red' : 'green')};
 \`;
-"
+
+
 `;
 
 exports[`macro should work with multiple imports: should work with multiple imports 1`] = `
-"
+
 import styled, { css } from '../../macro'
 export { styled, css }
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import styled, { css } from \\"styled-components\\";
+import styled, { css } from 'styled-components';
 export { styled, css };
-"
+
+
 `;
 
 exports[`macro should work with require() to import styled-components: should work with require() to import styled-components 1`] = `
-"
+
 const styled = require('../../macro')
 
 styled.div\`
@@ -153,16 +165,17 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import styled from \\"styled-components\\";
+import styled from 'styled-components';
 styled.div.withConfig({
-  displayName: \\"macrotest\\",
-  componentId: \\"sc-11gvsec-0\\"
-})([\\"background:red;\\"]);
-"
+  displayName: 'macrotest',
+  componentId: 'sc-11gvsec-0',
+})(['background:red;']);
+
+
 `;
 
 exports[`macro should work with styled: should work with styled 1`] = `
-"
+
 import styled from '../../macro'
 
 styled.div\`
@@ -171,48 +184,50 @@ styled.div\`
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import styled from \\"styled-components\\";
+import styled from 'styled-components';
 styled.div.withConfig({
-  displayName: \\"macrotest\\",
-  componentId: \\"sc-11gvsec-0\\"
-})([\\"background:\\", \\";\\"], p => p.error ? 'red' : 'green');
-"
+  displayName: 'macrotest',
+  componentId: 'sc-11gvsec-0',
+})(['background:', ';'], p => (p.error ? 'red' : 'green'));
+
+
 `;
 
 exports[`macro should work with the css prop overriding an existing styled-component: should work with the css prop overriding an existing styled-component 1`] = `
-"
+
 import React from 'react'
 import styled from '../../macro'
 const Thing = styled.div\`
   color: blue;
 \`;
 function Foo() {
-  return <Thing css=\\"color: red;\\" />
+  return <Thing css="color: red;" />
 }
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from \\"styled-components\\";
-import styled from \\"styled-components\\";
+import _styled from 'styled-components';
+import styled from 'styled-components';
 import React from 'react';
 const Thing = styled.div.withConfig({
-  displayName: \\"macrotest__Thing\\",
-  componentId: \\"sc-11gvsec-0\\"
-})([\\"color:blue;\\"]);
+  displayName: 'macrotest__Thing',
+  componentId: 'sc-11gvsec-0',
+})(['color:blue;']);
 
 var _StyledThing = styled(Thing).withConfig({
-  displayName: \\"macrotest___StyledThing\\",
-  componentId: \\"sc-11gvsec-1\\"
-})([\\"color:red;\\"]);
+  displayName: 'macrotest___StyledThing',
+  componentId: 'sc-11gvsec-1',
+})(['color:red;']);
 
 function Foo() {
-  return /*#__PURE__*/React.createElement(_StyledThing, null);
+  return /*#__PURE__*/ React.createElement(_StyledThing, null);
 }
-"
+
+
 `;
 
 exports[`macro should work with the css prop with a dynamic css helper: should work with the css prop with a dynamic css helper 1`] = `
-"
+
 import React from 'react'
 import { css } from '../../macro'
 const padding = '10px'
@@ -226,26 +241,32 @@ function Foo(props) {
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from \\"styled-components\\";
-import { css } from \\"styled-components\\";
+import _styled from 'styled-components';
+import { css } from 'styled-components';
 import React from 'react';
 const padding = '10px';
 
-var _StyledDiv = _styled(\\"div\\").withConfig({
-  displayName: \\"macrotest___StyledDiv\\",
-  componentId: \\"sc-11gvsec-0\\"
-})([\\"color:\\", \\";font-size:\\", \\";padding:\\", \\";\\"], p => p._css, p => p.theme.fontSize, padding);
+var _StyledDiv = _styled('div').withConfig({
+  displayName: 'macrotest___StyledDiv',
+  componentId: 'sc-11gvsec-0',
+})(
+  ['color:', ';font-size:', ';padding:', ';'],
+  p => p._css,
+  p => p.theme.fontSize,
+  padding
+);
 
 function Foo(props) {
-  return /*#__PURE__*/React.createElement(_StyledDiv, {
-    _css: props.color
+  return /*#__PURE__*/ React.createElement(_StyledDiv, {
+    _css: props.color,
   });
 }
-"
+
+
 `;
 
 exports[`macro should work with the css prop with a static css helper: should work with the css prop with a static css helper 1`] = `
-"
+
 import React from 'react'
 import { css } from '../../macro'
 function Foo() {
@@ -254,23 +275,24 @@ function Foo() {
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from \\"styled-components\\";
-import { css } from \\"styled-components\\";
+import _styled from 'styled-components';
+import { css } from 'styled-components';
 import React from 'react';
 
-var _StyledDiv = _styled(\\"div\\").withConfig({
-  displayName: \\"macrotest___StyledDiv\\",
-  componentId: \\"sc-11gvsec-0\\"
-})([\\"color:red;\\"]);
+var _StyledDiv = _styled('div').withConfig({
+  displayName: 'macrotest___StyledDiv',
+  componentId: 'sc-11gvsec-0',
+})(['color:red;']);
 
 function Foo() {
-  return /*#__PURE__*/React.createElement(_StyledDiv, null);
+  return /*#__PURE__*/ React.createElement(_StyledDiv, null);
 }
-"
+
+
 `;
 
 exports[`macro should work with the css prop with css helpers on multiple components: should work with the css prop with css helpers on multiple components 1`] = `
-"
+
 import React from 'react'
 import { css } from '../../macro'
 function Foo() {
@@ -282,76 +304,80 @@ function Bar() {
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled2 from \\"styled-components\\";
-import _styled from \\"styled-components\\";
-import { css } from \\"styled-components\\";
+import _styled2 from 'styled-components';
+import _styled from 'styled-components';
+import { css } from 'styled-components';
 import React from 'react';
 
-var _StyledDiv = _styled(\\"div\\").withConfig({
-  displayName: \\"macrotest___StyledDiv\\",
-  componentId: \\"sc-11gvsec-0\\"
-})([\\"color:red;\\"]);
+var _StyledDiv = _styled('div').withConfig({
+  displayName: 'macrotest___StyledDiv',
+  componentId: 'sc-11gvsec-0',
+})(['color:red;']);
 
 function Foo() {
-  return /*#__PURE__*/React.createElement(_StyledDiv, null);
+  return /*#__PURE__*/ React.createElement(_StyledDiv, null);
 }
 
-var _StyledDiv2 = _styled(\\"div\\").withConfig({
-  displayName: \\"macrotest___StyledDiv2\\",
-  componentId: \\"sc-11gvsec-1\\"
-})([\\"color:green;\\"]);
+var _StyledDiv2 = _styled('div').withConfig({
+  displayName: 'macrotest___StyledDiv2',
+  componentId: 'sc-11gvsec-1',
+})(['color:green;']);
 
 function Bar() {
-  return /*#__PURE__*/React.createElement(_StyledDiv2, null);
+  return /*#__PURE__*/ React.createElement(_StyledDiv2, null);
 }
-"
+
+
 `;
 
 exports[`macro should work with the css prop: should work with the css prop 1`] = `
-"
+
 import styled from '../../macro'
 import React from 'react'
 function Foo() {
-  return <div css=\\"color: red;\\" />
+  return <div css="color: red;" />
 }
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled from \\"styled-components\\";
-import \\"styled-components\\";
+import _styled from 'styled-components';
+import 'styled-components';
 import React from 'react';
 
-var _StyledDiv = _styled(\\"div\\").withConfig({
-  displayName: \\"macrotest___StyledDiv\\",
-  componentId: \\"sc-11gvsec-0\\"
-})([\\"color:red;\\"]);
+var _StyledDiv = _styled('div').withConfig({
+  displayName: 'macrotest___StyledDiv',
+  componentId: 'sc-11gvsec-0',
+})(['color:red;']);
 
 function Foo() {
-  return /*#__PURE__*/React.createElement(_StyledDiv, null);
+  return /*#__PURE__*/ React.createElement(_StyledDiv, null);
 }
-"
+
+
 `;
 
 exports[`macro should work with types alongside import: should work with types alongside import 1`] = `
-"
+
 import styled, { DefaultTheme } from '../../macro'
 export { styled, DefaultTheme }
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import styled, { DefaultTheme } from \\"styled-components\\";
+import styled, { DefaultTheme } from 'styled-components';
 export { styled, DefaultTheme };
-"
+
+
 `;
 
 exports[`macro should work with types: should work with types 1`] = `
-"
+
 import { DefaultTheme } from '../../macro'
 export { DefaultTheme }
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import { DefaultTheme } from \\"styled-components\\";
+import { DefaultTheme } from 'styled-components';
 export { DefaultTheme };
-"
+
+
 `;

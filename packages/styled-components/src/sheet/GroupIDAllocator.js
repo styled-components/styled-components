@@ -2,7 +2,7 @@
 
 import throwStyledError from '../utils/error';
 
-const MAX_SMI = 1 << 31 - 1;
+const MAX_SMI = 1 << (31 - 1);
 
 let groupIDRegister: Map<string, number> = new Map();
 let reverseRegister: Map<number, string> = new Map();
@@ -19,11 +19,13 @@ export const getGroupForId = (id: string): number => {
     return (groupIDRegister.get(id): any);
   }
 
+  while (reverseRegister.has(nextFreeGroup)) {
+    nextFreeGroup++;
+  }
+
   const group = nextFreeGroup++;
-  if (
-    process.env.NODE_ENV !== 'production' &&
-    ((group | 0) < 0 || group > MAX_SMI)
-  ) {
+
+  if (process.env.NODE_ENV !== 'production' && ((group | 0) < 0 || group > MAX_SMI)) {
     throwStyledError(16, `${group}`);
   }
 
@@ -37,10 +39,6 @@ export const getIdForGroup = (group: number): void | string => {
 };
 
 export const setGroupForId = (id: string, group: number) => {
-  if (group >= nextFreeGroup) {
-    nextFreeGroup = group + 1;
-  }
-
   groupIDRegister.set(id, group);
   reverseRegister.set(group, id);
 };
