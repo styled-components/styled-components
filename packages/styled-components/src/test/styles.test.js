@@ -48,6 +48,35 @@ describe('with styles', () => {
     `);
   });
 
+  it('ampersand should refer to static class when using referenced comma separated selectors', () => {
+    const Outer = styled.div``
+    const Inner = styled.div`
+      ${Outer}:active &,
+      ${Outer}:focus & {
+        color: blue;
+      }
+
+      ${Outer}:active &&,
+      ${Outer}:focus && {
+        color: red;
+      }
+    `
+    TestRenderer.create(
+      <Outer>
+        <Inner />
+      </Outer>
+    );
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".sc-a:active .sc-b, .sc-a:focus .sc-b {
+        color: blue;
+      }
+      .sc-a:active .c.c, .sc-a:focus .c.c {
+        color: red;
+      }"
+    `);
+  })
+
   it('amperstand should refer to the static class when making a self-referential combo selector', () => {
     const Comp = styled.div`
       background: red;
