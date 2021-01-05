@@ -182,6 +182,15 @@ Object {
       });
     });
 
+    it('should pass "testID" prop to the native element when provided', () => {
+      const Comp = styled.View``;
+
+      const wrapper = TestRenderer.create(<Comp testID="for-some-test" />);
+      const view = wrapper.root.findByType('View');
+
+      expect(view.props.testID).toEqual('for-some-test');
+    });
+
     it('passes simple props on', () => {
       const Comp = styled.View.attrs(() => ({
         test: true,
