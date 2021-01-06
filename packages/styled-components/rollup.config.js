@@ -28,7 +28,44 @@ const esm = {
 const getCJS = override => ({ ...cjs, ...override });
 const getESM = override => ({ ...esm, ...override });
 
+/**
+ * Support external dependencies on CommonJS modules without relying on named export inference
+ * (works similarly to more recent versions of Rollup's commonjs plugin)
+ */
+const cjsExternalPlugin = ({ namedExports }, isExternal) => ({
+  name: 'cjs-external',
+  options(opts) {
+    const external = (isExternal = opts.external || []);
+    if (typeof isExternal !== 'function') {
+      isExternal = id => external.some(e => id.match(e));
+    }
+    opts.external = id => !(id in namedExports) && isExternal(id);
+  },
+  resolveId(id, importer) {
+    if (importer === id + '?cjs') {
+      return { id, external: isExternal(id) };
+    }
+    if (id in namedExports) {
+      return { id: id + '?cjs', external: false };
+    }
+  },
+  load(id) {
+    if (id.endsWith('?cjs')) {
+      id = id.slice(0, -4);
+      return `
+        import $ from ${JSON.stringify(id)};
+        export const ${namedExports[id].map(v => `${v}=$.${v}`)};
+      `;
+    }
+  },
+});
+
 const commonPlugins = [
+  cjsExternalPlugin({
+    namedExports: {
+      'react-is': ['isElement', 'isValidElementType', 'ForwardRef', 'typeOf'],
+    },
+  }),
   flow({
     // needed for sourcemaps to be properly generated
     pretty: true,
@@ -42,9 +79,6 @@ const commonPlugins = [
   }),
   commonjs({
     ignoreGlobal: true,
-    namedExports: {
-      'react-is': ['isElement', 'isValidElementType', 'ForwardRef', 'typeof'],
-    },
   }),
   replace({
     __VERSION__: JSON.stringify(pkg.version),
