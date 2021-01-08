@@ -128,6 +128,23 @@ describe('flatten', () => {
     expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'static', 'baz']);
   });
 
+  it('warns if trying to interpolate a normal React component', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const Foo = ({ className }) => <div className={className}>hello there!</div>;
+
+    const Bar = styled.div`
+      ${Foo}: {
+        background-color: red;
+      };
+    `;
+
+    TestRenderer.create(<Bar />);
+
+    expect(console.warn.mock.calls[0][0]).toMatchInlineSnapshot(
+      `"Foo is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details."`
+    );
+  });
+
   it('does not warn for regular functions', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
