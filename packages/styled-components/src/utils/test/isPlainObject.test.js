@@ -29,6 +29,10 @@ it('returns false for a React component', () => {
   expect(isPlainObject(Foo)).toEqual(false);
 });
 
+it('returns false for a React element', () => {
+  expect(isPlainObject(React.createElement('div'))).toEqual(false);
+});
+
 it('returns true for an object literal created in a different context', () => {
   const context = vm.createContext({});
   vm.runInContext('object = {};', context);
