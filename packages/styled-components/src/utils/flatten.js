@@ -1,4 +1,5 @@
 // @flow
+import getComponentName from './getComponentName';
 import isFunction from './isFunction';
 import isStatelessFunction from './isStatelessFunction';
 import isPlainObject from './isPlainObject';
@@ -62,9 +63,26 @@ export default function flatten(
 
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
-    return isStatelessFunction(chunk) && executionContext
-      ? flatten(chunk(executionContext), executionContext, styleSheet, stylisInstance)
-      : chunk;
+    if (isStatelessFunction(chunk) && executionContext) {
+      const result = chunk(executionContext);
+
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        typeof result === 'object' &&
+        !Array.isArray(result) &&
+        !(result instanceof Keyframes) &&
+        !isPlainObject(result)
+      ) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `${getComponentName(
+            chunk
+          )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
+        );
+      }
+
+      return flatten(result, executionContext, styleSheet, stylisInstance);
+    } else return chunk;
   }
 
   if (chunk instanceof Keyframes) {
