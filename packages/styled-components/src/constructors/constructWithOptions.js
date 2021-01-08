@@ -1,5 +1,4 @@
 // @flow
-import { isValidElementType } from 'react-is';
 import css from './css';
 import throwStyledError from '../utils/error';
 import { EMPTY_OBJECT } from '../utils/empties';
@@ -11,7 +10,11 @@ export default function constructWithOptions(
   tag: Target,
   options: Object = EMPTY_OBJECT
 ) {
-  if (!isValidElementType(tag)) {
+  // We trust that the tag is a valid component as long as it isn't nullish
+  // Typically the tag here is a string or function (i.e. class or pure function component)
+  // However a component may also be an object if it uses another utility, e.g. React.memo
+  // React will output an appropriate warning however if the `tag` isn't valid
+  if (tag == null) {
     return throwStyledError(1, String(tag));
   }
 
