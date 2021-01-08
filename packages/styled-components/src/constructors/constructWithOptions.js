@@ -10,11 +10,11 @@ export default function constructWithOptions(
   tag: Target,
   options: Object = EMPTY_OBJECT
 ) {
-  // We trust that the tag is a valid component as long as it isn't nullish
+  // We trust that the tag is a valid component as long as it isn't falsish
   // Typically the tag here is a string or function (i.e. class or pure function component)
   // However a component may also be an object if it uses another utility, e.g. React.memo
   // React will output an appropriate warning however if the `tag` isn't valid
-  if (tag == null) {
+  if (!tag) {
     return throwStyledError(1, String(tag));
   }
 
