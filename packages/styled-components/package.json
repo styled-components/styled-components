@@ -76,8 +76,7 @@
   },
   "peerDependencies": {
     "react": ">= 16.8.0",
-    "react-dom": ">= 16.8.0",
-    "react-is": ">= 16.8.0"
+    "react-dom": ">= 16.8.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.0.0",
@@ -97,7 +96,6 @@
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-frame-component": "^4.0.2",
-    "react-is": "^16.8.6",
     "react-native": "^0.59.8",
     "react-primitives": "^0.8.0",
     "react-test-renderer": "^16.8.6",
