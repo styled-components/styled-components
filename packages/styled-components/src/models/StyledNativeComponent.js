@@ -34,6 +34,7 @@ class StyledNativeComponent extends Component<*, *> {
             forwardedComponent,
             forwardedAs,
             forwardedRef,
+            testID,
             style = [],
             ...props
           } = this.props;
@@ -64,6 +65,7 @@ class StyledNativeComponent extends Component<*, *> {
           }
 
           propsForElement.style = [generatedStyles].concat(style);
+          propsForElement.testID = testID;
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
           if (forwardedAs) propsForElement.as = forwardedAs;
