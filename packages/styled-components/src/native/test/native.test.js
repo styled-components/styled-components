@@ -1,6 +1,6 @@
 // @flow
-/* eslint-disable no-console */
-import { Text, View } from 'react-native';
+/* eslint-disable no-console,import/named */
+import { Text, View, Pressable } from 'react-native';
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
@@ -40,9 +40,9 @@ describe('native', () => {
       null,
       123,
       [],
-      <View />,
-      <FunctionalComponent />,
-      <ClassComponent />,
+      <View key="a" />,
+      <FunctionalComponent key="b" />,
+      <ClassComponent key="c" />,
     ];
     invalidComps.forEach(comp => {
       expect(() => {
@@ -114,17 +114,51 @@ Object {
 `);
   });
 
-  it('should combine inline styles and the style prop', () => {
-    const Comp = styled.View`
-      padding-top: 10;
-    `;
+  describe('style',() => {
+    it('should combine inline styles and the style prop', () => {
+      const Comp = styled.View`
+        padding-top: 10;
+      `;
 
-    const style = { opacity: 0.9 };
-    const wrapper = TestRenderer.create(<Comp style={style} />);
-    const view = wrapper.root.findByType('View');
+      const style = { opacity: 0.9 };
+      const wrapper = TestRenderer.create(<Comp style={style} />);
+      const view = wrapper.root.findByType('View');
 
-    expect(view.props.style).toEqual([{ paddingTop: 10 }, style]);
-  });
+      expect(view.props.style).toEqual([{ paddingTop: 10 }, style]);
+    });
+
+    it('should allow style function prop when available as builtin', () => {
+      const Comp = styled.Pressable`
+        padding-top: 10;
+      `;
+
+      const style = (_) => ({ opacity: 0.9 });
+      const wrapper = TestRenderer.create(
+        <Comp style={style}>
+          <Text>test</Text>
+        </Comp>
+      );
+      const view = wrapper.root.findByType(Pressable);
+
+      expect(view.props.style()).toEqual([{ paddingTop: 10 }, style()]);
+    });
+
+    it('should allow style function prop when available as extended', () => {
+      const Comp = styled(Pressable)`
+        padding-top: 10;
+      `;
+
+      const style = (_) => ({ opacity: 0.9 });
+      const wrapper = TestRenderer.create(
+        <Comp style={style}>
+          <Text>test</Text>
+        </Comp>
+      );
+      const view = wrapper.root.findByType(Pressable);
+
+      expect(view.props.style()).toEqual([{ paddingTop: 10 }, style()]);
+    });
+  })
 
   it('should not console.warn if a comment is seen', () => {
     const oldConsoleWarn = console.warn;
