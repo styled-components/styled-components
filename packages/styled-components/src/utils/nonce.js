@@ -10,7 +10,8 @@ const getNonce = () => {
   if(IS_BROWSER) {
     const cspNonceMetaTag = document && document.head && document.head.querySelector("meta[property='csp-nonce']");
     if(cspNonceMetaTag) {
-      return cspNonceMetaTag && cspNonceMetaTag.textContent;
+      // $FlowIgnore[prop-missing]
+      return cspNonceMetaTag && cspNonceMetaTag.content;
     }
   }
   return typeof __webpack_nonce__ !== 'undefined' ? __webpack_nonce__ : null;
