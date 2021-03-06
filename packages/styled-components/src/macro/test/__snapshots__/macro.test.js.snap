@@ -13,8 +13,7 @@ styled.div\`
 import _styled from \\"styled-components\\";
 
 _styled.div.withConfig({
-  displayName: \\"macrotest\\",
-  componentId: \\"sc-11gvsec-0\\"
+  displayName: \\"macrotest\\"
 })([\\"background:\\", \\";\\"], p => p.error ? 'red' : 'green');
 "
 `;
