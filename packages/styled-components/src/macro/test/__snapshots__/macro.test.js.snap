@@ -20,6 +20,26 @@ _styled.div.withConfig({
 
 `;
 
+exports[`macro should use a custom import with importModuleName: should use a custom import with importModuleName 1`] = `
+
+import styled from '../../macro'
+
+styled.div\`
+  background: \${p => (p.error ? 'red' : 'green')};
+\`
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+import _styled from '@xstyled/styled-components';
+
+_styled.div.withConfig({
+  displayName: 'macrotest',
+  componentId: 'sc-11gvsec-0',
+})(['background:', ';'], p => (p.error ? 'red' : 'green'));
+
+
+`;
+
 exports[`macro should work when extending a component: should work when extending a component 1`] = `
 
 import React from 'react'
