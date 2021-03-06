@@ -4,7 +4,12 @@ import traverse from '@babel/traverse';
 import { createMacro } from 'babel-plugin-macros';
 import babelPlugin from 'babel-plugin-styled-components';
 
-function styledComponentsMacro({ references, state, babel: { types: t }, config = {} }) {
+function styledComponentsMacro({
+  references,
+  state,
+  babel: { types: t },
+  config: { importModuleName = 'styled-components', ...config } = {},
+}) {
   const program = state.file.path;
 
   // FIRST STEP : replace `styled-components/macro` by `styled-components
@@ -15,10 +20,10 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
     // generate new identifier
     let id;
     if (refName === 'default') {
-      id = addDefault(program, 'styled-components', { nameHint: 'styled' });
+      id = addDefault(program, importModuleName, { nameHint: 'styled' });
       customImportName = id;
     } else {
-      id = addNamed(program, refName, 'styled-components', { nameHint: refName });
+      id = addNamed(program, refName, importModuleName, { nameHint: refName });
     }
 
     // update references with the new identifiers
@@ -29,7 +34,14 @@ function styledComponentsMacro({ references, state, babel: { types: t }, config 
   });
 
   // SECOND STEP : apply babel-plugin-styled-components to the file
-  const stateWithOpts = { ...state, opts: config, customImportName };
+  const stateWithOpts = {
+    ...state,
+    opts: {
+      ...config,
+      topLevelImportPaths: (config.topLevelImportPaths || []).concat(importModuleName),
+    },
+    customImportName,
+  };
   traverse(program.parent, babelPlugin({ types: t }).visitor, undefined, stateWithOpts);
 }
 
