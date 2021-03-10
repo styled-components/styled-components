@@ -160,5 +160,13 @@ pluginTester({
     'should work with the css prop overriding an existing styled-component': {
       code: cssPropOverridingComponentExampleCode,
     },
+    'should use a custom import with importModuleName': {
+      code: styledExampleCode,
+      pluginOptions: {
+        styledComponents: {
+          importModuleName: '@xstyled/styled-components',
+        },
+      },
+    },
   },
 });

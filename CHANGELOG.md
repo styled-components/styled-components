@@ -10,6 +10,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Upgrade to stylis v4
 
+- Enable users of the babel macro to customize the styled-components import with `importModuleName` (see [#3422](https://github.com/styled-components/styled-components/pull/3422))
+
 ## [v5.2.0] - 2020-09-04
 
 - Make sure `StyleSheetManager` renders all styles in iframe / child windows (see [#3159](https://github.com/styled-components/styled-components/pull/3159)) thanks @eramdam!
