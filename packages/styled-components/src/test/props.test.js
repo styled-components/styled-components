@@ -245,7 +245,7 @@ describe('props', () => {
       expect(props.filterThis).toBeUndefined();
     });
 
-    it('passes the default prop filtering function for use if desired', () => {
+    it('passes the default prop filtering function and target element for use if desired', () => {
       const stub = jest.fn();
 
       const Comp = styled('div').withConfig({
@@ -256,7 +256,7 @@ describe('props', () => {
 
       TestRenderer.create(<Comp as="a" filterThis="abc" passThru="def" />);
 
-      expect(stub.mock.calls[0]).toEqual(['filterThis', expect.any(Function)]);
+      expect(stub.mock.calls[0]).toEqual(['filterThis', expect.any(Function), 'a']);
       expect(stub.mock.calls[0][1]('filterThis')).toBe(false);
       expect(stub.mock.calls[0][1]('id')).toBe(true);
     });
