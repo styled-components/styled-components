@@ -35,5 +35,5 @@ aliases.split(/\s+/m).forEach(alias =>
   })
 );
 
-export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
+export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme, styled };
 export default styled;
