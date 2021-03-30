@@ -5,10 +5,13 @@ All notable changes to this project will be documented in this file. If a contri
 _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/)._
 
 ## Unreleased
+## [v5.2.2] - 2021-03-30
 
 - For React Native based components, pass `testID` down to the native component if specified for an easier time testing. (see [#3365](https://github.com/styled-components/styled-components/pull/3365))
 
 - Enable users of the babel macro to customize the styled-components import with `importModuleName` (see [#3422](https://github.com/styled-components/styled-components/pull/3422))
+
+- [fix] COMPLEX_SELECTOR_PREFIX.includes wasn't transpiled (see [#3397](https://github.com/styled-components/styled-components/pull/3397))
 
 ## [v5.2.1] - 2020-10-30
 
@@ -1155,8 +1158,9 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v5.2.1...master
-[v5.2.1]: https://github.com/styled-components/styled-components/compare/v5.2.1...v5.2.1
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.2.2...master
+[v5.2.2]: https://github.com/styled-components/styled-components/compare/v5.2.1...v5.2.2
+[v5.2.1]: https://github.com/styled-components/styled-components/compare/v5.2.0...v5.2.1
 [v5.2.0]: https://github.com/styled-components/styled-components/compare/v5.1.1...v5.2.0
 [v5.1.1]: https://github.com/styled-components/styled-components/compare/v5.1.0...v5.1.1
 [v5.1.0]: https://github.com/styled-components/styled-components/compare/v5.0.1...v5.1.0
