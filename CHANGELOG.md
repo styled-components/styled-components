@@ -8,6 +8,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - For React Native based components, pass `testID` down to the native component if specified for an easier time testing. (see [#3365](https://github.com/styled-components/styled-components/pull/3365))
 
+- Enable users of the babel macro to customize the styled-components import with `importModuleName` (see [#3422](https://github.com/styled-components/styled-components/pull/3422))
+
 ## [v5.2.1] - 2020-10-30
 
 - Tweak server-side build settings to resolve an issue with jest-dom not being able to pick up generated styles (see [#3308](https://github.com/styled-components/styled-components/pull/3308)) thanks @Lazyuki
