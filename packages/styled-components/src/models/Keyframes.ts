@@ -14,7 +14,7 @@ export default class Keyframes implements KeyframesType {
     this.rules = rules;
   }
 
-  inject = (styleSheet: StyleSheet, stylisInstance: Stringifier = masterStylis) => {
+  inject = (styleSheet: StyleSheet, stylisInstance: Stringifier = masterStylis): void => {
     const resolvedName = this.name + stylisInstance.hash;
 
     if (!styleSheet.hasNameForId(this.id, resolvedName)) {
@@ -26,11 +26,11 @@ export default class Keyframes implements KeyframesType {
     }
   };
 
-  toString = () => {
+  toString = (): void => {
     throw styledError(12, String(this.name));
   };
 
-  getName(stylisInstance: Stringifier = masterStylis) {
+  getName(stylisInstance: Stringifier = masterStylis): string {
     return this.name + stylisInstance.hash;
   }
 }
