@@ -3,8 +3,6 @@ import plugin from 'babel-plugin-macros';
 import pluginTester from 'babel-plugin-tester';
 import cosmiconfigMock from 'cosmiconfig';
 
-jest.mock('cosmiconfig', () => jest.fn<Function, any[]>(jest.requireActual('cosmiconfig')));
-
 const styledExampleCode = `
 import styled from '../../macro'
 
@@ -153,21 +151,23 @@ pluginTester({
     },
     'should not add componentId with a config disabling ssr': {
       code: styledExampleCode,
-      setup: () => {
-        (cosmiconfigMock as jest.MockedFunction<any>).mockImplementationOnce(() => ({
-          searchSync: () => ({
-            config: {
-              styledComponents: {
-                ssr: false,
-              },
-            },
-          }),
-        }));
+      pluginOptions: {
+        styledComponents: {
+          ssr: false,
+        },
       },
     },
     'should work with the css prop': { code: cssPropExampleCode },
     'should work with the css prop overriding an existing styled-component': {
       code: cssPropOverridingComponentExampleCode,
+    },
+    'should use a custom import with importModuleName': {
+      code: styledExampleCode,
+      pluginOptions: {
+        styledComponents: {
+          importModuleName: '@xstyled/styled-components',
+        },
+      },
     },
   },
 });

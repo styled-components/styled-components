@@ -403,11 +403,7 @@ describe(`createGlobalStyle`, () => {
     `);
 
     render(<A />);
-    expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "body {
-        background: ;
-      }"
-    `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
   });
 
   it(`should warn when children are passed as props`, () => {

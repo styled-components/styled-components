@@ -45,8 +45,7 @@ export default function createStylisInstance(
    * The second ampersand should be a reference to the static component class. stylis
    * has no knowledge of static class so we have to intelligently replace the base selector.
    *
-   * https://github.com/thysultan/stylis.js/tree/v3.5.4#plugins <- more info about the context phase values
-   * "2" means this plugin is taking effect at the very end after all other processing is complete
+   * https://github.com/thysultan/stylis.js/tree/v4.0.2#abstract-syntax-structure
    */
   const selfReferenceReplacementPlugin: stylis.Middleware = element => {
     if (element.type === RULESET && element.value.includes('&')) {
