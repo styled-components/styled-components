@@ -52,7 +52,7 @@ function useResolvedAttrs(theme: Theme = EMPTY_OBJECT, props: ExtensibleObject, 
   const resolvedAttrs: ExtensibleObject = {};
 
   attrs.forEach(attrDef => {
-    let resolvedAttrDef = typeof attrDef === 'function' ? attrDef(context) : attrDef;
+    const resolvedAttrDef = typeof attrDef === 'function' ? attrDef(context) : attrDef;
     let key;
 
     /* eslint-disable guard-for-in */
@@ -94,7 +94,7 @@ function useInjectedStyle<T>(
 function useStyledComponentImpl(
   forwardedComponent: IStyledComponent,
   props: ExtensibleObject,
-  forwardedRef: Ref<any>,
+  forwardedRef: Ref,
   isStatic: boolean
 ) {
   const {
@@ -156,7 +156,7 @@ function useStyledComponentImpl(
       -1
       ? 'class'
       : 'className'
-  ] = (foldedComponentIds as any[])
+  ] = (foldedComponentIds as string[])
     .concat(
       styledComponentId,
       generatedClassName !== styledComponentId ? generatedClassName : null,
@@ -223,9 +223,9 @@ const createStyledComponent: IStyledComponentFactory = (target, options, rules) 
    * forwardRef creates a new interim component, which we'll take advantage of
    * instead of extending ParentComponent to create _another_ interim class
    */
-  let WrappedStyledComponent: IStyledComponent;
+  const WrappedStyledComponent: IStyledComponent;
 
-  function forwardRef(props: ExtensibleObject, ref: Ref<any>) {
+  function forwardRef(props: ExtensibleObject, ref: Ref) {
     // eslint-disable-next-line
     return useStyledComponentImpl(WrappedStyledComponent, props, ref, isStatic);
   }
