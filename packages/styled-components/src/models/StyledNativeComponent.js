@@ -94,7 +94,7 @@ function useStyledComponentImpl(
     if (key[0] === '$' || key === 'as') continue;
     else if (key === 'forwardedAs') {
       propsForElement.as = computedProps[key];
-    } else if (!shouldForwardProp || shouldForwardProp(key, validAttr)) {
+    } else if (!shouldForwardProp || shouldForwardProp(key, validAttr, elementToBeCreated)) {
       propsForElement[key] = computedProps[key];
     }
   }
@@ -143,11 +143,13 @@ export default (InlineStyle: Class<IInlineStyle>) => {
     if (isTargetStyledComp && target.shouldForwardProp) {
       if (options.shouldForwardProp) {
         // compose nested shouldForwardProp calls
-        shouldForwardProp = (prop, filterFn) =>
+        shouldForwardProp = (prop, filterFn, elementToBeCreated) =>
           ((((target: any): IStyledNativeComponent).shouldForwardProp: any): ShouldForwardProp)(
             prop,
-            filterFn
-          ) && ((options.shouldForwardProp: any): ShouldForwardProp)(prop, filterFn);
+            filterFn,
+            elementToBeCreated
+          ) &&
+          ((options.shouldForwardProp: any): ShouldForwardProp)(prop, filterFn, elementToBeCreated);
       } else {
         // eslint-disable-next-line prefer-destructuring
         shouldForwardProp = ((target: any): IStyledNativeComponent).shouldForwardProp;

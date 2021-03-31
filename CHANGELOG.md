@@ -10,7 +10,7 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Upgrade to stylis v4
 
-- Enable users of the babel macro to customize the styled-components import with `importModuleName` (see [#3422](https://github.com/styled-components/styled-components/pull/3422))
+- Pass `elementToBeCreated` as a third parameter to `shouldForwardProp` so that the user-specified function can decide whether to pass through props based on whether the created element will be a tag or another component. (see [#3436](https://github.com/styled-components/styled-components/pull/3436))
 
 ## [v5.2.2] - 2021-03-30
 

@@ -144,7 +144,11 @@ function useStyledComponentImpl(
     else if (key === 'forwardedAs') {
       propsForElement.as = computedProps[key];
     } else if (
-      shouldForwardProp ? shouldForwardProp(key, validAttr) : isTargetTag ? validAttr(key) : true
+      shouldForwardProp
+        ? shouldForwardProp(key, validAttr, elementToBeCreated)
+        : isTargetTag
+        ? validAttr(key)
+        : true
     ) {
       // Don't pass through non HTML tags through to HTML elements
       propsForElement[key] = computedProps[key];
@@ -210,11 +214,13 @@ export default function createStyledComponent(
   if (isTargetStyledComp && target.shouldForwardProp) {
     if (options.shouldForwardProp) {
       // compose nested shouldForwardProp calls
-      shouldForwardProp = (prop, filterFn) =>
+      shouldForwardProp = (prop, filterFn, elementToBeCreated) =>
         ((((target: any): IStyledComponent).shouldForwardProp: any): ShouldForwardProp)(
           prop,
-          filterFn
-        ) && ((options.shouldForwardProp: any): ShouldForwardProp)(prop, filterFn);
+          filterFn,
+          elementToBeCreated
+        ) &&
+        ((options.shouldForwardProp: any): ShouldForwardProp)(prop, filterFn, elementToBeCreated);
     } else {
       // eslint-disable-next-line prefer-destructuring
       shouldForwardProp = ((target: any): IStyledComponent).shouldForwardProp;
