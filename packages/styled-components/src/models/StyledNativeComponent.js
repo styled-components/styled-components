@@ -162,9 +162,10 @@ export default (InlineStyle: Function) => {
     if (isTargetStyledComp && target.shouldForwardProp) {
       if (shouldForwardProp) {
         // compose nested shouldForwardProp calls
-        shouldForwardProp = (prop, filterFn) =>
+        shouldForwardProp = (prop, filterFn, elementToBeCreated) =>
           // $FlowFixMe
-          target.shouldForwardProp(prop, filterFn) && options.shouldForwardProp(prop, filterFn);
+          target.shouldForwardProp(prop, filterFn, elementToBeCreated) &&
+          options.shouldForwardProp(prop, filterFn, elementToBeCreated);
       } else {
         // eslint-disable-next-line prefer-destructuring
         shouldForwardProp = target.shouldForwardProp;

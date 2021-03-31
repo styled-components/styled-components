@@ -35,7 +35,11 @@ export type Stringifier = {
   hash: string,
 };
 
-export type ShouldForwardProp = (prop: string, isValidAttr: (prop: string) => boolean) => boolean;
+export type ShouldForwardProp = (
+  prop: string,
+  isValidAttr: (prop: string) => boolean,
+  elementToBeCreated: Target
+) => boolean;
 
 export interface IStyledStatics {
   attrs: Attrs;
