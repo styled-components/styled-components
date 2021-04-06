@@ -2578,6 +2578,7 @@ var domElements = [
   'stop',
   'svg',
   'text',
+  'textPath',
   'tspan',
 ];
 
