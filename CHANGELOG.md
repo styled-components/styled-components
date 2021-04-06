@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file. If a contri
 _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/)._
 
 ## Unreleased
+
+- Pass `elementToBeCreated` as a third parameter to `shouldForwardProp` so that the user-specified function can decide whether to pass through props based on whether the created element will be a tag or another component. (see [#3436](https://github.com/styled-components/styled-components/pull/3436))
+
 ## [v5.2.3] - 2021-03-31
 
 - fix an issue with an unguarded window accessor in a SSR path ([see #3446](https://github.com/styled-components/styled-components/pull/3446))
