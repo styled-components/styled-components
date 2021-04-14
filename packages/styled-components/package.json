@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "5.2.1",
+  "version": "5.2.3",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.esm.js",
@@ -68,7 +68,7 @@
     "@emotion/is-prop-valid": "^0.8.8",
     "@emotion/stylis": "^0.8.4",
     "@emotion/unitless": "^0.7.4",
-    "babel-plugin-styled-components": ">= 1",
+    "babel-plugin-styled-components": ">= 1.12.0",
     "css-to-react-native": "^3.0.0",
     "hoist-non-react-statics": "^3.0.0",
     "shallowequal": "^1.1.0",
