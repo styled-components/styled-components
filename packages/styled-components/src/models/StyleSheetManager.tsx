@@ -29,7 +29,7 @@ export function useStylis(): Stringifier {
   return useContext(StylisContext) || masterStylis;
 }
 
-export default function StyleSheetManager(props: Props) {
+export default function StyleSheetManager(props: Props): JSX.Element {
   const [plugins, setPlugins] = useState(props.stylisPlugins);
   const contextStyleSheet = useStyleSheet();
 

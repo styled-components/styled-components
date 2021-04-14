@@ -9,6 +9,13 @@
   ],
   "plugins": ["prettier", "react-hooks", "@typescript-eslint"],
   "rules": {
+    "@typescript-eslint/ban-types": 0,
+    "@typescript-eslint/explicit-module-boundary-types": 0,
+    "@typescript-eslint/no-explicit-any": 0,
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "ignoreRestSiblings": true }
+    ],
     "react-hooks/rules-of-hooks": "error",
     "class-methods-use-this": 0,
     "curly": [2, "multi-line"],
@@ -18,10 +25,7 @@
     "no-else-return": 0,
     "no-prototype-builtins": 0,
     "no-underscore-dangle": 0,
-    "no-unused-vars": [
-      "error",
-      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "ignoreRestSiblings": true }
-    ],
+
     "react/button-has-type": 0,
     "react/destructuring-assignment": 0,
     "react/forbid-prop-types": 0,
@@ -36,7 +40,8 @@
     "no-return-assign": 0,
     "no-bitwise": 0,
     "no-plusplus": 0,
-    "no-multi-assign": 0
+    "no-multi-assign": 0,
+    "prefer-const": 0
   },
   "parserOptions": {
     "sourceType": "module",

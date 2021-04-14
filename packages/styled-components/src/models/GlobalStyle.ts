@@ -23,7 +23,7 @@ export default class GlobalStyle {
     executionContext: Object,
     styleSheet: StyleSheet,
     stylis: Stringifier
-  ) {
+  ): void {
     const flatCSS = flatten(this.rules, executionContext, styleSheet, stylis) as string[];
     const css = stylis(flatCSS.join(''), '');
     const id = this.componentId + instance;
@@ -32,7 +32,7 @@ export default class GlobalStyle {
     styleSheet.insertRules(id, id, css);
   }
 
-  removeStyles(instance: number, styleSheet: StyleSheet) {
+  removeStyles(instance: number, styleSheet: StyleSheet): void {
     styleSheet.clearRules(this.componentId + instance);
   }
 
@@ -41,7 +41,7 @@ export default class GlobalStyle {
     executionContext: Object,
     styleSheet: StyleSheet,
     stylis: Stringifier
-  ) {
+  ): void {
     if (instance > 2) StyleSheet.registerId(this.componentId + instance);
 
     // NOTE: Remove old styles, then inject the new ones

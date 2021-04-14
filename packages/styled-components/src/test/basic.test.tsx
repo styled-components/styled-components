@@ -391,16 +391,16 @@ describe('basic', () => {
       const rendered = TestRenderer.create(<Outer />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".c {
+        ".d {
           color: red;
         }
-        .d {
+        .c {
           color: green;
         }"
       `);
       expect(rendered.toJSON()).toMatchInlineSnapshot(`
         <div
-          className="sc-a sc-b c d"
+          className="sc-a d sc-b c"
         />
       `);
     });

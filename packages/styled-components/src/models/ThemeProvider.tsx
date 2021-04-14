@@ -47,7 +47,7 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
 /**
  * Provide a theme to an entire react component tree via context
  */
-export default function ThemeProvider(props: Props) {
+export default function ThemeProvider(props: Props): JSX.Element | null {
   const outerTheme = useContext(ThemeContext);
   const themeContext = useMemo(() => mergeTheme(props.theme, outerTheme), [
     props.theme,

@@ -94,7 +94,7 @@ function useInjectedStyle<T>(
 function useStyledComponentImpl(
   forwardedComponent: IStyledComponent,
   props: ExtensibleObject,
-  forwardedRef: Ref,
+  forwardedRef: Ref<Element>,
   isStatic: boolean
 ) {
   const {
@@ -159,7 +159,7 @@ function useStyledComponentImpl(
   ] = (foldedComponentIds as string[])
     .concat(
       styledComponentId,
-      generatedClassName !== styledComponentId ? generatedClassName : null,
+      (generatedClassName !== styledComponentId ? generatedClassName : null) as string,
       props.className,
       attrs.className
     )
@@ -223,9 +223,9 @@ const createStyledComponent: IStyledComponentFactory = (target, options, rules) 
    * forwardRef creates a new interim component, which we'll take advantage of
    * instead of extending ParentComponent to create _another_ interim class
    */
-  const WrappedStyledComponent: IStyledComponent;
+  let WrappedStyledComponent: IStyledComponent;
 
-  function forwardRef(props: ExtensibleObject, ref: Ref) {
+  function forwardRef(props: ExtensibleObject, ref: Ref<Element>) {
     // eslint-disable-next-line
     return useStyledComponentImpl(WrappedStyledComponent, props, ref, isStatic);
   }

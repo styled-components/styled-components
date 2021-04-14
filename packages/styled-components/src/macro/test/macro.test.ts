@@ -1,7 +1,6 @@
 import babel from '@babel/core';
 import plugin from 'babel-plugin-macros';
 import pluginTester from 'babel-plugin-tester';
-import cosmiconfigMock from 'cosmiconfig';
 
 const styledExampleCode = `
 import styled from '../../macro'

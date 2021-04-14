@@ -1,5 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 import React from 'react';
+import type * as streamInternal from 'stream';
 import { Readable } from 'stream';
 import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
@@ -7,7 +8,7 @@ import styledError from '../utils/error';
 import getNonce from '../utils/nonce';
 import StyleSheetManager from './StyleSheetManager';
 
-declare var __SERVER__: boolean;
+declare const __SERVER__: boolean;
 
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 
@@ -33,7 +34,7 @@ export default class ServerStyleSheet {
     return `<style ${htmlAttr}>${css}</style>`;
   };
 
-  collectStyles(children: any) {
+  collectStyles(children: any): JSX.Element {
     if (this.sealed) {
       throw styledError(2);
     }
@@ -72,7 +73,8 @@ export default class ServerStyleSheet {
   };
 
   // eslint-disable-next-line consistent-return
-  interleaveWithNodeStream(input: Readable) {
+  // @ts-expect-error alternate return types are not possible due to code transformation
+  interleaveWithNodeStream(input: Readable): streamInternal.Transform {
     if (!__SERVER__ || IS_BROWSER) {
       throw styledError(3);
     } else if (this.sealed) {
@@ -82,13 +84,13 @@ export default class ServerStyleSheet {
     if (__SERVER__) {
       this.seal();
 
-      // eslint-disable-next-line global-require
+      // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
       const { Transform } = require('stream');
 
       const readableStream: Readable = input;
       const { instance: sheet, _emitSheetCSS } = this;
 
-      const transformer = new Transform({
+      const transformer: streamInternal.Transform = new Transform({
         transform: function appendStyleChunks(
           chunk: string,
           /* encoding */
@@ -127,7 +129,7 @@ export default class ServerStyleSheet {
     }
   }
 
-  seal = () => {
+  seal = (): void => {
     this.sealed = true;
   };
 }

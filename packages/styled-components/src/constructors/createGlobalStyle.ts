@@ -10,7 +10,7 @@ import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
-declare var __SERVER__: boolean;
+declare const __SERVER__: boolean;
 
 export default function createGlobalStyle(
   strings: Array<string>,

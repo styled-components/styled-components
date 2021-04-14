@@ -12,14 +12,14 @@ import generateComponentId from '../utils/generateComponentId';
 
 let generated: ExtensibleObject = {};
 
-export const resetStyleCache = () => {
+export const resetStyleCache = (): void => {
   generated = {};
 };
 
 /**
  * InlineStyle takes arbitrary CSS and generates a flat object
  */
-export default function makeInlineStyleClass(styleSheet: StyleSheet) {
+export default function makeInlineStyleClass(styleSheet: StyleSheet): IInlineStyleConstructor {
   const InlineStyle: IInlineStyleConstructor = class InlineStyle implements IInlineStyle {
     rules: RuleSet;
 
@@ -27,7 +27,7 @@ export default function makeInlineStyleClass(styleSheet: StyleSheet) {
       this.rules = rules;
     }
 
-    generateStyleObject(executionContext: Object) {
+    generateStyleObject(executionContext: ExtensibleObject) {
       // keyframes, functions, and component selectors are not allowed for React Native
       const flatCSS = (flatten(this.rules, executionContext) as string[]).join('');
       const hash = generateComponentId(flatCSS);

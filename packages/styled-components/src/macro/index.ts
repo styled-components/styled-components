@@ -1,6 +1,7 @@
+import { types } from '@babel/core';
 import { addDefault, addNamed } from '@babel/helper-module-imports';
 import traverse from '@babel/traverse';
-import { createMacro } from 'babel-plugin-macros';
+import { createMacro, MacroParams } from 'babel-plugin-macros';
 import babelPlugin from 'babel-plugin-styled-components';
 
 function styledComponentsMacro({
@@ -8,7 +9,7 @@ function styledComponentsMacro({
   state,
   babel: { types: t },
   config: { importModuleName = 'styled-components', ...config } = {},
-}) {
+}: MacroParams) {
   const program = state.file.path;
 
   // FIRST STEP : replace `styled-components/macro` by `styled-components
@@ -17,7 +18,7 @@ function styledComponentsMacro({
   let customImportName;
   Object.keys(references).forEach(refName => {
     // generate new identifier
-    let id;
+    let id: types.Identifier;
     if (refName === 'default') {
       id = addDefault(program, importModuleName, { nameHint: 'styled' });
       customImportName = id;
@@ -28,7 +29,7 @@ function styledComponentsMacro({
     // update references with the new identifiers
     references[refName].forEach(referencePath => {
       // eslint-disable-next-line no-param-reassign
-      referencePath.node.name = id.name;
+      (referencePath.node as types.Identifier).name = id.name;
     });
   });
 

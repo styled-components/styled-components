@@ -273,7 +273,11 @@ describe('attrs', () => {
       };
 
       render() {
-        return <Paragraph fontScale={this.state.fontScale}>{this.props.children}</Paragraph>;
+        return (
+          <Paragraph fontScale={this.state.fontScale} {...this.props}>
+            {this.props.children}
+          </Paragraph>
+        );
       }
     }
 
