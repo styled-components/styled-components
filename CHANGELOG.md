@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Add to list of supported elements svg's textPath
+
 - Use `class` instead of `className` for unidentified DOM elements (better support for styling web components)
 
 - Upgrade to stylis v4
