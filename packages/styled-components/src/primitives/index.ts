@@ -13,8 +13,6 @@ const InlineStyle = _InlineStyle(reactPrimitives.StyleSheet);
 const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
 const styled = (tag: WebTarget) => constructWithOptions(StyledNativeComponent, tag);
 
-type Primitives = keyof typeof reactPrimitives;
-
 /* React native lazy-requires each of these modules for some reason, so let's
  *  assume it's for a good reason and not eagerly load them all */
 const aliases = ['Image', 'Text', 'Touchable', 'View'] as const;
@@ -32,4 +30,8 @@ aliases.forEach(alias =>
 );
 
 export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
-export default styled;
+
+export default styled as typeof styled &
+  {
+    [key in typeof aliases[number]]: ReturnType<typeof constructWithOptions>;
+  };

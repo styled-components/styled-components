@@ -1,9 +1,8 @@
-
-import React from "react";
-import { Text, View } from "react-primitives";
-import TestRenderer from "react-test-renderer";
-
-import styled, { ThemeProvider } from "../index";
+/* eslint-disable no-console, react/jsx-key, @typescript-eslint/no-empty-function */
+import React, { PropsWithChildren } from 'react';
+import { Text, View } from 'react-primitives';
+import TestRenderer from 'react-test-renderer';
+import styled, { ThemeProvider } from '../index';
 
 // NOTE: These tests are copy pasted from ../native/test/native.test.js
 
@@ -13,7 +12,6 @@ describe('primitives', () => {
 
     const FunctionalComponent = () => <View />;
     class ClassComponent extends React.Component {
-
       render() {
         return <View />;
       }
@@ -30,18 +28,24 @@ describe('primitives', () => {
   it('should throw a meaningful error when called with an invalid element', () => {
     const FunctionalComponent = () => <View />;
     class ClassComponent extends React.Component {
-
       render() {
         return <View />;
       }
     }
-    const invalidComps = [undefined, null, 123, [], <View />, <FunctionalComponent />, <ClassComponent />];
+    const invalidComps = [
+      undefined,
+      null,
+      123,
+      [],
+      <View />,
+      <FunctionalComponent />,
+      <ClassComponent />,
+    ];
     invalidComps.forEach(comp => {
       expect(() => {
-        // $FlowInvalidInputTest
+        // @ts-expect-error expected
         const Comp = styled(comp)``;
         TestRenderer.create(<Comp />);
-        // $FlowInvalidInputTest
       }).toThrow(`Cannot create styled-component for component: ${comp}`);
     });
   });
@@ -49,6 +53,7 @@ describe('primitives', () => {
   it('should generate inline styles', () => {
     const Comp = styled.View``;
     const wrapper = TestRenderer.create(<Comp />);
+    // @ts-expect-error valid input
     const view = wrapper.root.findByType('View');
 
     expect(view.props.style).toEqual([{}]);
@@ -64,6 +69,7 @@ describe('primitives', () => {
     `;
 
     const wrapper = TestRenderer.create(<Comp2 />);
+    // @ts-expect-error valid input
     const view = wrapper.root.findByType('Text');
 
     expect(view.props.style).toEqual([{ color: 'red', textAlign: 'left' }]);
@@ -76,6 +82,7 @@ describe('primitives', () => {
 
     const style = { opacity: 0.9 };
     const wrapper = TestRenderer.create(<Comp style={style} />);
+    // @ts-expect-error valid input
     const view = wrapper.root.findByType('View');
 
     expect(view.props.style).toEqual([{ paddingTop: 10 }, style]);
@@ -85,24 +92,26 @@ describe('primitives', () => {
     it('works fine with an empty object', () => {
       const Comp = styled.View.attrs(() => ({}))``;
       const wrapper = TestRenderer.create(<Comp />);
+      // @ts-expect-error valid input
       const view = wrapper.root.findByType('View');
 
       expect(view.props).toEqual({
-        style: [{}]
+        style: [{}],
       });
     });
 
     it('passes simple props on', () => {
       const Comp = styled.View.attrs(() => ({
-        test: true
+        test: true,
       }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
+      // @ts-expect-error valid input
       const view = wrapper.root.findByType('View');
 
       expect(view.props).toEqual({
         style: [{}],
-        test: true
+        test: true,
       });
     });
 
@@ -110,161 +119,174 @@ describe('primitives', () => {
       jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       const Comp = styled.View.attrs(p => ({
-        copy: p.test
+        copy: p.test,
       }))``;
 
       const test = 'Put that cookie down!';
       const wrapper = TestRenderer.create(<Comp test={test} />);
+      // @ts-expect-error valid input
       const view = wrapper.root.findByType('View');
 
       expect(view.props).toEqual({
         style: [{}],
         copy: test,
-        test
+        test,
       });
     });
 
     it('merges multiple calls', () => {
       const Comp = styled.View.attrs(() => ({
         first: 'first',
-        test: '_'
+        test: '_',
       })).attrs(() => ({
         second: 'second',
-        test: 'test'
+        test: 'test',
       }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
+      // @ts-expect-error valid input
       const view = wrapper.root.findByType('View');
 
       expect(view.props).toEqual({
         style: [{}],
         first: 'first',
         second: 'second',
-        test: 'test'
+        test: 'test',
       });
     });
 
     it('merges multiple fn calls', () => {
       const Comp = styled.View.attrs(() => ({
         first: 'first',
-        test: '_'
+        test: '_',
       })).attrs(() => ({
         second: 'second',
-        test: 'test'
+        test: 'test',
       }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
+      // @ts-expect-error valid input
       const view = wrapper.root.findByType('View');
 
       expect(view.props).toEqual({
         style: [{}],
         first: 'first',
         second: 'second',
-        test: 'test'
+        test: 'test',
       });
     });
 
     it('merges attrs when inheriting SC', () => {
       const Parent = styled.View.attrs(() => ({
-        first: 'first'
+        first: 'first',
       }))``;
 
       const Child = styled(Parent).attrs(() => ({
-        second: 'second'
+        second: 'second',
       }))``;
 
       const wrapper = TestRenderer.create(<Child />);
+      // @ts-expect-error valid input
       const view = wrapper.root.findByType('View');
 
       expect(view.props).toEqual({
         style: [{}],
         first: 'first',
-        second: 'second'
+        second: 'second',
       });
     });
 
     it('should pass through children as a normal prop', () => {
       const Comp = styled.Text.attrs(() => ({
-        children: 'Probably a bad idea'
+        children: 'Probably a bad idea',
       }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
+      // @ts-expect-error valid input
       const text = wrapper.root.findByType('Text');
 
       expect(text.props).toMatchObject({
         children: 'Probably a bad idea',
-        style: [{}]
+        style: [{}],
       });
     });
 
     it('should pass through complex children as well', () => {
       const child = <Text>Probably a bad idea</Text>;
       const Comp = styled.Text.attrs(() => ({
-        children: child
+        children: child,
       }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
+      // @ts-expect-error valid input
       const text = wrapper.root.findByType('Text');
 
       expect(text.props).toMatchObject({
         children: child,
-        style: [{}]
+        style: [{}],
       });
     });
 
     it('should override children', () => {
       const child = <Text>Amazing</Text>;
       const Comp = styled.Text.attrs(() => ({
-        children: child
+        children: child,
       }))``;
 
       const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
+      // @ts-expect-error valid input
       const text = wrapper.root.findByType('Text');
 
       expect(text.props).toMatchObject({
         children: child,
-        style: [{}]
+        style: [{}],
       });
     });
 
     it('accepts a function', () => {
       const child = <Text>Amazing</Text>;
       const Comp = styled.Text.attrs(() => ({
-        children: child
+        children: child,
       }))``;
 
       const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
+      // @ts-expect-error valid input
       const text = wrapper.root.findByType('Text');
 
       expect(text.props).toMatchObject({
         children: child,
-        style: [{}]
+        style: [{}],
       });
     });
 
     it('function form allows access to theme', () => {
       const Comp = styled.Text.attrs(props => ({
-        'data-color': props.theme.color
+        'data-color': props.theme.color,
       }))``;
 
-      const wrapper = TestRenderer.create(<ThemeProvider theme={{ color: 'red' }}>
+      const wrapper = TestRenderer.create(
+        <ThemeProvider theme={{ color: 'red' }}>
           <Comp>Something else</Comp>
-        </ThemeProvider>);
+        </ThemeProvider>
+      );
+
+      // @ts-expect-error valid input
       const text = wrapper.root.findByType('Text');
 
       expect(text.props).toMatchObject({
         children: 'Something else',
         'data-color': 'red',
-        style: [{}]
+        style: [{}],
       });
     });
   });
 
   describe('expanded API', () => {
     it('should attach a displayName', () => {
-      View.displayName = 'View';
-      const Comp = styled.View``;
-      expect(Comp.displayName).toBe('Styled(View)');
+      const Dummy = (props: PropsWithChildren<{}>) => <View {...props} />;
+      Dummy.displayName = 'Dummy';
+      const Comp = styled(Dummy)``;
+      expect(Comp.displayName).toBe('Styled(Dummy)');
 
       const CompTwo = styled.View.withConfig({ displayName: 'Test' })``;
       expect(CompTwo.displayName).toBe('Test');
@@ -272,20 +294,22 @@ describe('primitives', () => {
 
     it('should allow multiple calls to be chained', () => {
       const Comp = styled.View.withConfig({ displayName: 'Test1' }).withConfig({
-        displayName: 'Test2'
+        displayName: 'Test2',
       })``;
 
       expect(Comp.displayName).toBe('Test2');
     });
 
     it('"as" prop should change the rendered element without affecting the styling', () => {
-      const OtherText = props => <Text {...props} foo />;
+      // @ts-expect-error any prop can be passed
+      const OtherText = (props: PropsWithChildren<{}>) => <Text {...props} foo />;
 
       const Comp = styled.Text`
         color: red;
       `;
 
       const wrapper = TestRenderer.create(<Comp as={OtherText} />);
+      // @ts-expect-error valid input
       const view = wrapper.root.findByType('Text');
 
       expect(view.props).toHaveProperty('foo');
@@ -293,16 +317,16 @@ describe('primitives', () => {
     });
 
     it('withComponent should work', () => {
-      const Dummy = props => <View {...props} />;
+      const Dummy = (props: PropsWithChildren<{}>) => <View {...props} />;
 
       const Comp = styled.View.withConfig({
         displayName: 'Comp',
-        componentId: 'OMGLOL'
+        componentId: 'OMGLOL',
       })``.withComponent(Text);
 
       const Comp2 = styled.View.withConfig({
         displayName: 'Comp2',
-        componentId: 'OMFG'
+        componentId: 'OMFG',
       })``.withComponent(Dummy);
 
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();

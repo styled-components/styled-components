@@ -1,0 +1,21 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`primitives expanded API withComponent should work 1`] = `
+<Text
+  style={
+    Array [
+      Object {},
+    ]
+  }
+/>
+`;
+
+exports[`primitives expanded API withComponent should work 2`] = `
+<View
+  style={
+    Array [
+      Object {},
+    ]
+  }
+/>
+`;
