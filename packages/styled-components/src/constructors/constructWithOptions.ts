@@ -3,6 +3,7 @@ import {
   Attrs,
   Interpolation,
   IStyledComponentFactory,
+  ShouldForwardProp,
   StyledObject,
   StyleFunction,
   WebTarget,
@@ -15,6 +16,7 @@ type Options = {
   attrs?: Attrs[];
   componentId?: string;
   displayName?: string;
+  shouldForwardProp?: ShouldForwardProp;
 };
 
 export default function constructWithOptions<

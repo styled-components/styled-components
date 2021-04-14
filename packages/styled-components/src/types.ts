@@ -12,8 +12,12 @@ export type ExtensibleObject = BaseExtensibleObject & {
   theme?: Theme;
 };
 
+export type ExecutionContext = BaseExtensibleObject & {
+  theme: Theme;
+};
+
 export type StyleFunction<Props> = (
-  executionContext: Props & ExtensibleObject
+  executionContext: ExecutionContext & Props
 ) => BaseExtensibleObject | string | number;
 
 // Do not add IStyledComponent to this union, it breaks prop function interpolation in TS
@@ -26,7 +30,7 @@ export type Interpolation<Props extends Object = ExtensibleObject> =
 
 export type Attrs<Props = ExtensibleObject> =
   | ExtensibleObject
-  | ((props: ExtensibleObject & Props) => ExtensibleObject);
+  | ((props: ExecutionContext & Props) => ExtensibleObject);
 export type RuleSet = Interpolation[];
 export type Styles = string[] | Object | ((executionContext: ExtensibleObject) => Interpolation);
 
@@ -113,9 +117,7 @@ export type IStyledNativeComponentFactory = (
   target: IStyledNativeComponent['target'],
   options: {
     attrs?: Attrs[];
-    componentId: string;
     displayName?: string;
-    parentComponentId?: string;
     shouldForwardProp?: ShouldForwardProp;
   },
   rules: RuleSet

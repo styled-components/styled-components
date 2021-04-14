@@ -8,6 +8,7 @@ import ThemeProvider, { ThemeConsumer, ThemeContext } from '../models/ThemeProvi
 import { WebTarget } from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const reactNative = require('react-native');
 
 const InlineStyle = _InlineStyle(reactNative.StyleSheet);
@@ -16,17 +17,61 @@ const styled = (tag: WebTarget) => constructWithOptions(StyledNativeComponent, t
 
 /* React native lazy-requires each of these modules for some reason, so let's
  *  assume it's for a good reason and not eagerly load them all */
-const aliases = `ActivityIndicator ActivityIndicatorIOS ART Button DatePickerIOS DrawerLayoutAndroid
- Image ImageBackground ImageEditor ImageStore KeyboardAvoidingView ListView MapView Modal NavigatorIOS
- Picker PickerIOS ProgressBarAndroid ProgressViewIOS ScrollView SegmentedControlIOS Slider
- SliderIOS SnapshotViewIOS Switch RecyclerViewBackedScrollView RefreshControl SafeAreaView StatusBar
- SwipeableListView SwitchAndroid SwitchIOS TabBarIOS Text TextInput ToastAndroid ToolbarAndroid
- Touchable TouchableHighlight TouchableNativeFeedback TouchableOpacity TouchableWithoutFeedback
- View ViewPagerAndroid WebView FlatList SectionList VirtualizedList Pressable`;
+const aliases = [
+  'ActivityIndicator',
+  'ActivityIndicatorIOS',
+  'ART',
+  'Button',
+  'DatePickerIOS',
+  'DrawerLayoutAndroid',
+  'FlatList',
+  'Image',
+  'ImageBackground',
+  'ImageEditor',
+  'ImageStore',
+  'KeyboardAvoidingView',
+  'ListView',
+  'MapView',
+  'Modal',
+  'NavigatorIOS',
+  'Picker',
+  'PickerIOS',
+  'Pressable',
+  'ProgressBarAndroid',
+  'ProgressViewIOS',
+  'RecyclerViewBackedScrollView',
+  'RefreshControl',
+  'SafeAreaView',
+  'ScrollView',
+  'SectionList',
+  'SegmentedControlIOS',
+  'Slider',
+  'SliderIOS',
+  'SnapshotViewIOS',
+  'StatusBar',
+  'SwipeableListView',
+  'Switch',
+  'SwitchAndroid',
+  'SwitchIOS',
+  'TabBarIOS',
+  'Text',
+  'TextInput',
+  'ToastAndroid',
+  'ToolbarAndroid',
+  'Touchable',
+  'TouchableHighlight',
+  'TouchableNativeFeedback',
+  'TouchableOpacity',
+  'TouchableWithoutFeedback',
+  'View',
+  'ViewPagerAndroid',
+  'VirtualizedList',
+  'WebView',
+] as const;
 
 /* Define a getter for each alias which simply gets the reactNative component
  * and passes it to styled */
-aliases.split(/\s+/m).forEach(alias =>
+aliases.forEach(alias =>
   Object.defineProperty(styled, alias, {
     enumerable: true,
     configurable: false,
@@ -37,4 +82,8 @@ aliases.split(/\s+/m).forEach(alias =>
 );
 
 export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
-export default styled;
+
+export default styled as typeof styled &
+  {
+    [key in typeof aliases[number]]: ReturnType<typeof constructWithOptions>;
+  };

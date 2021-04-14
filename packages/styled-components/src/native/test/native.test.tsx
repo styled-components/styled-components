@@ -1,11 +1,8 @@
-
-
-/* eslint-disable no-console */
-import { Text, View } from "react-native";
-import React from "react";
-import TestRenderer from "react-test-renderer";
-
-import styled, { ThemeProvider } from "../index";
+/* eslint-disable no-console, react/jsx-key, @typescript-eslint/no-empty-function */
+import React, { PropsWithChildren } from 'react';
+import { Text, View } from 'react-native';
+import TestRenderer from 'react-test-renderer';
+import styled, { ThemeProvider } from '../';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
@@ -16,7 +13,6 @@ describe('native', () => {
 
     const FunctionalComponent = () => <View />;
     class ClassComponent extends React.Component {
-
       render() {
         return <View />;
       }
@@ -33,18 +29,24 @@ describe('native', () => {
   it('should throw a meaningful error when called with an invalid element', () => {
     const FunctionalComponent = () => <View />;
     class ClassComponent extends React.Component {
-
       render() {
         return <View />;
       }
     }
-    const invalidComps = [undefined, null, 123, [], <View />, <FunctionalComponent />, <ClassComponent />];
+    const invalidComps = [
+      undefined,
+      null,
+      123,
+      [],
+      <View />,
+      <FunctionalComponent />,
+      <ClassComponent />,
+    ];
     invalidComps.forEach(comp => {
       expect(() => {
-        // $FlowInvalidInputTest
+        // @ts-expect-error invalid input test
         const Comp = styled(comp)``;
         TestRenderer.create(<Comp />);
-        // $FlowInvalidInputTest
       }).toThrow(`Cannot create styled-component for component: ${comp}`);
     });
   });
@@ -52,7 +54,7 @@ describe('native', () => {
   it('should generate inline styles', () => {
     const Comp = styled.View``;
     const wrapper = TestRenderer.create(<Comp />);
-    const view = wrapper.root.findByType('View');
+    const view = wrapper.root.findByType(View);
 
     expect(view.props.style).toEqual([{}]);
   });
@@ -67,7 +69,7 @@ describe('native', () => {
     `;
 
     const wrapper = TestRenderer.create(<Comp2 />);
-    const view = wrapper.root.findByType('Text');
+    const view = wrapper.root.findByType(Text);
 
     expect(view.props.style).toEqual([{ color: 'red', textAlign: 'left' }]);
   });
@@ -77,36 +79,36 @@ describe('native', () => {
 
     Inner.defaultProps = {
       theme: {
-        fontSize: 12
+        fontSize: 12,
       },
       style: {
         background: 'blue',
-        textAlign: 'center'
-      }
+        textAlign: 'center',
+      },
     };
 
     const Outer = styled(Inner)``;
 
     Outer.defaultProps = {
       theme: {
-        fontSize: 16
+        fontSize: 16,
       },
       style: {
-        background: 'silver'
-      }
+        background: 'silver',
+      },
     };
 
     expect(Outer.defaultProps).toMatchInlineSnapshot(`
-Object {
-  "style": Object {
-    "background": "silver",
-    "textAlign": "center",
-  },
-  "theme": Object {
-    "fontSize": 16,
-  },
-}
-`);
+      Object {
+        "style": Object {
+          "background": "silver",
+          "textAlign": "center",
+        },
+        "theme": Object {
+          "fontSize": 16,
+        },
+      }
+    `);
   });
 
   it('should combine inline styles and the style prop', () => {
@@ -116,7 +118,7 @@ Object {
 
     const style = { opacity: 0.9 };
     const wrapper = TestRenderer.create(<Comp style={style} />);
-    const view = wrapper.root.findByType('View');
+    const view = wrapper.root.findByType(View);
 
     expect(view.props.style).toEqual([{ paddingTop: 10 }, style]);
   });
@@ -145,18 +147,15 @@ Object {
 
     const wrapper = TestRenderer.create(<Comp opacity={0.5} />);
 
-    expect(wrapper.root.findByType('View').props.style).toEqual([{ paddingTop: 5, opacity: 0.5 }]);
+    expect(wrapper.root.findByType(View).props.style).toEqual([{ paddingTop: 5, opacity: 0.5 }]);
 
     wrapper.update(<Comp opacity={0.9} />);
 
-    expect(wrapper.root.findByType('View').props.style).toEqual([{ paddingTop: 5, opacity: 0.9 }]);
+    expect(wrapper.root.findByType(View).props.style).toEqual([{ paddingTop: 5, opacity: 0.9 }]);
   });
 
   it('should forward the "as" prop if "forwardedAs" is used', () => {
-    const Comp = ({
-      as: Component = View,
-      ...props
-    }) => <Component {...props} />;
+    const Comp = ({ as: Component = View, ...props }) => <Component {...props} />;
 
     const Comp2 = styled(Comp)`
       background: red;
@@ -164,7 +163,7 @@ Object {
 
     const wrapper = TestRenderer.create(<Comp2 forwardedAs={Text} />);
 
-    expect(wrapper.root.findByType('Text')).not.toBeUndefined();
+    expect(wrapper.root.findByType(Text)).not.toBeUndefined();
   });
 
   describe('attrs', () => {
@@ -173,201 +172,199 @@ Object {
     it('works fine with an empty object', () => {
       const Comp = styled.View.attrs(() => ({}))``;
       const wrapper = TestRenderer.create(<Comp />);
-      const view = wrapper.root.findByType('View');
+      const view = wrapper.root.findByType(View);
 
       expect(view.props).toEqual({
-        style: [{}]
+        style: [{}],
       });
     });
 
     it('passes simple props on', () => {
       const Comp = styled.View.attrs(() => ({
-        test: true
+        test: true,
       }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
-      const view = wrapper.root.findByType('View');
+      const view = wrapper.root.findByType(View);
 
       expect(view.props).toEqual({
         style: [{}],
-        test: true
+        test: true,
       });
     });
 
     it('calls an attr-function with context', () => {
       const Comp = styled.View.attrs(p => ({
-        copy: p.test
+        copy: p.test,
       }))``;
 
       const test = 'Put that cookie down!';
       const wrapper = TestRenderer.create(<Comp test={test} />);
-      const view = wrapper.root.findByType('View');
+      const view = wrapper.root.findByType(View);
 
       expect(view.props).toEqual({
         style: [{}],
         copy: test,
-        test
+        test,
       });
     });
 
     it('merges multiple calls', () => {
       const Comp = styled.View.attrs(() => ({
         first: 'first',
-        test: '_'
+        test: '_',
       })).attrs(() => ({
         second: 'second',
-        test: 'test'
+        test: 'test',
       }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
-      const view = wrapper.root.findByType('View');
+      const view = wrapper.root.findByType(View);
 
       expect(view.props).toEqual({
         style: [{}],
         first: 'first',
         second: 'second',
-        test: 'test'
+        test: 'test',
       });
     });
 
     it('merges multiple fn calls', () => {
       const Comp = styled.View.attrs(() => ({
         first: 'first',
-        test: '_'
+        test: '_',
       })).attrs(() => ({
         second: 'second',
-        test: 'test'
+        test: 'test',
       }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
-      const view = wrapper.root.findByType('View');
+      const view = wrapper.root.findByType(View);
 
       expect(view.props).toEqual({
         style: [{}],
         first: 'first',
         second: 'second',
-        test: 'test'
+        test: 'test',
       });
     });
 
     it('merges attrs when inheriting SC', () => {
       const Parent = styled.View.attrs(() => ({
-        first: 'first'
+        first: 'first',
       }))``;
 
       const Child = styled(Parent).attrs(() => ({
-        second: 'second'
+        second: 'second',
       }))``;
 
       const wrapper = TestRenderer.create(<Child />);
-      const view = wrapper.root.findByType('View');
+      const view = wrapper.root.findByType(View);
 
       expect(view.props).toMatchObject({
         style: [{}],
         first: 'first',
-        second: 'second'
+        second: 'second',
       });
     });
 
     it('should pass through children as a normal prop', () => {
       const Comp = styled.Text.attrs(() => ({
-        children: 'Probably a bad idea'
+        children: 'Probably a bad idea',
       }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
-      const text = wrapper.root.findByType('Text');
+      const text = wrapper.root.findByType(Text);
 
       expect(text.props).toMatchObject({
         children: 'Probably a bad idea',
-        style: [{}]
+        style: [{}],
       });
     });
 
     it('should pass through complex children as well', () => {
       const child = <Text>Probably a bad idea</Text>;
       const Comp = styled.Text.attrs(() => ({
-        children: child
+        children: child,
       }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
-      const text = wrapper.root.findByType('Text');
+      const text = wrapper.root.findByType(Text);
 
       expect(text.props).toMatchObject({
         children: child,
-        style: [{}]
+        style: [{}],
       });
     });
 
     it('should override children', () => {
       const child = <Text>Amazing</Text>;
       const Comp = styled.Text.attrs(() => ({
-        children: child
+        children: child,
       }))``;
 
       const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
-      const text = wrapper.root.findByType('Text');
+      const text = wrapper.root.findByType(Text);
 
       expect(text.props).toMatchObject({
         children: child,
-        style: [{}]
+        style: [{}],
       });
     });
 
     it('accepts a function', () => {
       const child = <Text>Amazing</Text>;
       const Comp = styled.Text.attrs(() => ({
-        children: child
+        children: child,
       }))``;
 
       const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
-      const text = wrapper.root.findByType('Text');
+      const text = wrapper.root.findByType(Text);
 
       expect(text.props).toMatchObject({
         children: child,
-        style: [{}]
+        style: [{}],
       });
     });
 
     it('function form allows access to theme', () => {
       const Comp = styled.Text.attrs(props => ({
-        'data-color': props.theme.color
+        'data-color': props.theme.color,
       }))``;
 
-      const wrapper = TestRenderer.create(<ThemeProvider theme={{ color: 'red' }}>
+      const wrapper = TestRenderer.create(
+        <ThemeProvider theme={{ color: 'red' }}>
           <Comp>Something else</Comp>
-        </ThemeProvider>);
-      const text = wrapper.root.findByType('Text');
+        </ThemeProvider>
+      );
+      const text = wrapper.root.findByType(Text);
 
       expect(text.props).toMatchObject({
         children: 'Something else',
         'data-color': 'red',
-        style: [{}]
+        style: [{}],
       });
     });
 
     it('theme prop works', () => {
       const Comp = styled.Text`
-        color: ${({
-        theme
-      }) => theme.myColor};
+        color: ${({ theme }) => theme.myColor};
       `;
 
       const wrapper = TestRenderer.create(<Comp theme={{ myColor: 'red' }}>Something else</Comp>);
-      const text = wrapper.root.findByType('Text');
+      const text = wrapper.root.findByType(Text);
 
       expect(text.props.style).toMatchObject([{ color: 'red' }]);
     });
 
     it('theme in defaultProps works', () => {
       const Comp = styled.Text`
-        color: ${({
-        theme
-      }) => theme.myColor};
+        color: ${({ theme }) => theme.myColor};
       `;
       Comp.defaultProps = { theme: { myColor: 'red' } };
 
       const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
-      const text = wrapper.root.findByType('Text');
+      const text = wrapper.root.findByType(Text);
 
       expect(text.props.style).toMatchObject([{ color: 'red' }]);
     });
@@ -375,11 +372,12 @@ Object {
 
   describe('expanded API', () => {
     it('should attach a displayName', () => {
-      View.displayName = 'View';
+      const Dummy = (props: PropsWithChildren<{}>) => <View {...props} />;
+      Dummy.displayName = 'Dummy';
 
-      const Comp = styled(View)``;
+      const Comp = styled(Dummy)``;
 
-      expect(Comp.displayName).toBe('Styled(View)');
+      expect(Comp.displayName).toBe('Styled(Dummy)');
 
       const CompTwo = styled.View.withConfig({ displayName: 'Test' })``;
       expect(CompTwo.displayName).toBe('Test');
@@ -387,38 +385,53 @@ Object {
 
     it('should allow multiple calls to be chained', () => {
       const Comp = styled.View.withConfig({ displayName: 'Test1' }).withConfig({
-        displayName: 'Test2'
+        displayName: 'Test2',
       })``;
 
       expect(Comp.displayName).toBe('Test2');
     });
 
     it('withComponent should work', () => {
-      const Dummy = props => <View {...props} />;
+      const Dummy = (props: PropsWithChildren<{}>) => <View {...props} />;
 
       const Comp = styled.View.withConfig({
         displayName: 'Comp',
-        componentId: 'OMGLOL'
       })``.withComponent(Text);
 
       const Comp2 = styled.View.withConfig({
         displayName: 'Comp2',
-        componentId: 'OMFG'
       })``.withComponent(Dummy);
 
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot();
+      expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
+        <Text
+          style={
+            Array [
+              Object {},
+            ]
+          }
+        />
+      `);
+      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchInlineSnapshot(`
+        <View
+          style={
+            Array [
+              Object {},
+            ]
+          }
+        />
+      `);
     });
 
     it('"as" prop should change the rendered element without affecting the styling', () => {
-      const OtherText = props => <Text {...props} foo />;
+      // @ts-expect-error foo is expected later in the test
+      const OtherText = (props: PropsWithChildren<{}>) => <Text {...props} foo />;
 
       const Comp = styled.Text`
         color: red;
       `;
 
       const wrapper = TestRenderer.create(<Comp as={OtherText} />);
-      const view = wrapper.root.findByType('Text');
+      const view = wrapper.root.findByType(Text);
 
       expect(view.props).toHaveProperty('foo');
       expect(view.props.style).toEqual([{ color: 'red' }]);
@@ -429,35 +442,43 @@ Object {
         color: ${p => p.$color};
       `;
 
-      expect(TestRenderer.create(<Comp $color="red" />).toJSON()).toMatchSnapshot();
+      expect(TestRenderer.create(<Comp $color="red" />).toJSON()).toMatchInlineSnapshot(`
+        <Text
+          style={
+            Array [
+              Object {
+                "color": "red",
+              },
+            ]
+          }
+        />
+      `);
     });
 
     it('allows for custom prop filtering for elements', () => {
       const Comp = styled('View').withConfig({
-        shouldForwardProp: prop => !['filterThis'].includes(prop)
+        shouldForwardProp: prop => !['filterThis'].includes(prop),
       })`
-      color: red;
-    `;
+        color: red;
+      `;
       const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
-      const {
-        props
-      } = wrapper.root.findByType('View');
+      // @ts-expect-error bs error
+      const { props } = wrapper.root.findByType('View');
       expect(props.style).toEqual([{ color: 'red' }]);
       expect(props.passThru).toBe('def');
       expect(props.filterThis).toBeUndefined();
     });
 
     it('allows custom prop filtering for components', () => {
-      const InnerComp = props => <View {...props} />;
+      const InnerComp = (props: PropsWithChildren<{}>) => <View {...props} />;
       const Comp = styled(InnerComp).withConfig({
-        shouldForwardProp: prop => !['filterThis'].includes(prop)
+        shouldForwardProp: prop => !['filterThis'].includes(prop),
       })`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
-      const {
-        props
-      } = wrapper.root.findByType('View');
+      // @ts-expect-error bs error
+      const { props } = wrapper.root.findByType('View');
       expect(props.style).toEqual([{ color: 'red' }]);
       expect(props.passThru).toBe('def');
       expect(props.filterThis).toBeUndefined();
@@ -465,32 +486,28 @@ Object {
 
     it('composes shouldForwardProp on composed styled components', () => {
       const StyledView = styled.View.withConfig({
-        shouldForwardProp: prop => prop === 'passThru'
+        shouldForwardProp: prop => prop === 'passThru',
       })`
         color: red;
       `;
       const ComposedView = styled(StyledView).withConfig({
-        shouldForwardProp: () => true
+        shouldForwardProp: () => true,
       })``;
       const wrapper = TestRenderer.create(<ComposedView filterThis passThru />);
-      const {
-        props
-      } = wrapper.root.findByType('View');
+      const { props } = wrapper.root.findByType(View);
       expect(props.passThru).toBeDefined();
       expect(props.filterThis).toBeUndefined();
     });
 
     it('should filter out props when using "as" to a custom component', () => {
-      const AsComp = props => <View {...props} />;
+      const AsComp = (props: PropsWithChildren<{}>) => <View {...props} />;
       const Comp = styled.View.withConfig({
-        shouldForwardProp: prop => !['filterThis'].includes(prop)
+        shouldForwardProp: prop => !['filterThis'].includes(prop),
       })`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
-      const {
-        props
-      } = wrapper.root.findByType(AsComp);
+      const { props } = wrapper.root.findByType(AsComp);
 
       expect(props.style).toEqual([{ color: 'red' }]);
       expect(props.passThru).toBe('def');
@@ -498,16 +515,14 @@ Object {
     });
 
     it('can set computed styles based on props that are being filtered out', () => {
-      const AsComp = props => <View {...props} />;
+      const AsComp = (props: PropsWithChildren<{}>) => <View {...props} />;
       const Comp = styled.View.withConfig({
-        shouldForwardProp: prop => !['filterThis'].includes(prop)
+        shouldForwardProp: prop => !['filterThis'].includes(prop),
       })`
-        color: ${props => props.filterThis === 'abc' ? 'red' : undefined};
+        color: ${props => (props.filterThis === 'abc' ? 'red' : undefined)};
       `;
       const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
-      const {
-        props
-      } = wrapper.root.findByType(AsComp);
+      const { props } = wrapper.root.findByType(AsComp);
 
       expect(props.style).toEqual([{ color: 'red' }]);
       expect(props.passThru).toBe('def');
@@ -516,14 +531,12 @@ Object {
 
     it('should filter our props when using "as" to a different element', () => {
       const Comp = styled.View.withConfig({
-        shouldForwardProp: prop => !['filterThis'].includes(prop)
+        shouldForwardProp: prop => !['filterThis'].includes(prop),
       })`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp as="a" filterThis="abc" passThru="def" />);
-      const {
-        props
-      } = wrapper.root.findByType("a");
+      const { props } = wrapper.root.findByType('a');
 
       expect(props.style).toEqual([{ color: 'red' }]);
       expect(props.passThru).toBe('def');
@@ -531,17 +544,18 @@ Object {
     });
 
     it('should prefer transient $as over as', () => {
-      const OtherText = props => <Text {...props} foo />;
+      const OtherText = (props: PropsWithChildren<{}>) => <Text {...props} />;
 
       const Comp = styled.Text`
         color: red;
       `;
 
       const wrapper = TestRenderer.create(<Comp $as="View" as={OtherText} />);
+      // @ts-expect-error bs error
       const view = wrapper.root.findByType('View');
 
       expect(view.props.style).toEqual([{ color: 'red' }]);
-      expect(() => wrapper.root.findByType('Text')).toThrowError();
+      expect(() => wrapper.root.findByType(Text)).toThrowError();
     });
   });
 });

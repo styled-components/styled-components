@@ -13,7 +13,6 @@ import type {
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import generateDisplayName from '../utils/generateDisplayName';
-import getComponentName from '../utils/getComponentName';
 import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
 import { Theme, ThemeContext } from './ThemeProvider';
@@ -124,8 +123,8 @@ export default (InlineStyle: IInlineStyleConstructor) => {
      */
     let WrappedStyledComponent: IStyledNativeComponent;
 
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     const forwardRef = (props: ExtensibleObject, ref: React.Ref<any>) =>
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       useStyledComponentImpl(WrappedStyledComponent, props, ref);
 
     forwardRef.displayName = displayName;
@@ -139,21 +138,18 @@ export default (InlineStyle: IInlineStyleConstructor) => {
     WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
 
+    // @ts-expect-error we don't actually need this for anything other than detection of a styled-component
+    WrappedStyledComponent.styledComponentId = true;
+
     // fold the underlying StyledComponent target up since we folded the styles
     WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
 
     WrappedStyledComponent.withComponent = function withComponent(
       tag: IStyledNativeComponent['target']
     ) {
-      const { componentId: previousComponentId, ...optionsToCopy } = options;
-
-      const newComponentId =
-        previousComponentId && `${previousComponentId}-${escape(getComponentName(tag))}`;
-
       const newOptions = {
-        ...optionsToCopy,
+        ...options,
         attrs: finalAttrs,
-        componentId: newComponentId,
       };
 
       return createStyledNativeComponent(tag, newOptions, rules);
