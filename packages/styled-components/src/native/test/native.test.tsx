@@ -499,6 +499,31 @@ describe('native', () => {
       expect(props.filterThis).toBeUndefined();
     });
 
+    it('shouldForwardProp argument signature', () => {
+      const stub = jest.fn(() => true);
+      const StyledView = styled.View.withConfig({
+        shouldForwardProp: stub,
+      })`
+        color: red;
+      `;
+
+      TestRenderer.create(<StyledView something />);
+
+      expect(stub.mock.calls).toMatchInlineSnapshot(`
+        Array [
+          Array [
+            "something",
+            [Function],
+            [Function],
+          ],
+        ]
+      `);
+
+      // element being created
+      // @ts-expect-error bad types
+      expect(stub.mock.calls[0][2]).toEqual(View);
+    });
+
     it('should filter out props when using "as" to a custom component', () => {
       const AsComp = (props: PropsWithChildren<{}>) => <View {...props} />;
       const Comp = styled.View.withConfig({

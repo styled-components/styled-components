@@ -63,7 +63,11 @@ export interface Stringifier {
   hash: string;
 }
 
-export type ShouldForwardProp = (prop: string, isValidAttr: (prop: string) => boolean) => boolean;
+export type ShouldForwardProp = (
+  prop: string,
+  isValidAttr: (prop: string) => boolean,
+  elementToBeCreated?: WebTarget | NativeTarget
+) => boolean;
 
 export interface CommonStatics {
   attrs: Attrs[];

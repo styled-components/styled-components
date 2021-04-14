@@ -138,7 +138,11 @@ function useStyledComponentImpl(
     else if (key === 'forwardedAs') {
       propsForElement.as = computedProps[key];
     } else if (
-      shouldForwardProp ? shouldForwardProp(key, validAttr) : isTargetTag ? validAttr(key) : true
+      shouldForwardProp
+        ? shouldForwardProp(key, validAttr, elementToBeCreated)
+        : isTargetTag
+        ? validAttr(key)
+        : true
     ) {
       // Don't pass through non HTML tags through to HTML elements
       propsForElement[key] = computedProps[key];
@@ -202,8 +206,9 @@ const createStyledComponent: IStyledComponentFactory = (target, options, rules) 
       const passedShouldForwardPropFn = options.shouldForwardProp;
 
       // compose nested shouldForwardProp calls
-      shouldForwardProp = (prop, filterFn) =>
-        shouldForwardPropFn(prop, filterFn) && passedShouldForwardPropFn(prop, filterFn);
+      shouldForwardProp = (prop, filterFn, elementToBeCreated) =>
+        shouldForwardPropFn(prop, filterFn, elementToBeCreated) &&
+        passedShouldForwardPropFn(prop, filterFn, elementToBeCreated);
     } else {
       shouldForwardProp = shouldForwardPropFn;
     }

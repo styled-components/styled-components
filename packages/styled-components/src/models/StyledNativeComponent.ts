@@ -8,7 +8,6 @@ import type {
   IStyledNativeComponentFactory,
   IStyledNativeStatics,
   NativeTarget,
-  ShouldForwardProp,
 } from '../types';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
@@ -75,7 +74,7 @@ function useStyledComponentImpl(
     if (key[0] === '$' || key === 'as') continue;
     else if (key === 'forwardedAs') {
       propsForElement.as = computedProps[key];
-    } else if (!shouldForwardProp || shouldForwardProp(key, validAttr)) {
+    } else if (!shouldForwardProp || shouldForwardProp(key, validAttr, elementToBeCreated)) {
       propsForElement[key] = computedProps[key];
     }
   }
@@ -107,10 +106,12 @@ export default (InlineStyle: IInlineStyleConstructor) => {
       const shouldForwardPropFn = styledComponentTarget.shouldForwardProp;
 
       if (options.shouldForwardProp) {
+        const passedShouldForwardPropFn = options.shouldForwardProp;
+
         // compose nested shouldForwardProp calls
-        shouldForwardProp = (prop, filterFn) =>
-          shouldForwardPropFn(prop, filterFn) &&
-          (options.shouldForwardProp as ShouldForwardProp)(prop, filterFn);
+        shouldForwardProp = (prop, filterFn, elementToBeCreated) =>
+          shouldForwardPropFn(prop, filterFn, elementToBeCreated) &&
+          passedShouldForwardPropFn(prop, filterFn, elementToBeCreated);
       } else {
         // eslint-disable-next-line prefer-destructuring
         shouldForwardProp = shouldForwardPropFn;
