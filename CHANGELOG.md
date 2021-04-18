@@ -1167,7 +1167,7 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v5.2.2...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.2.2...main
 [v5.2.2]: https://github.com/styled-components/styled-components/compare/v5.2.1...v5.2.2
 [v5.2.1]: https://github.com/styled-components/styled-components/compare/v5.2.0...v5.2.1
 [v5.2.0]: https://github.com/styled-components/styled-components/compare/v5.1.1...v5.2.0

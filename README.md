@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://www.styled-components.com">
-    <img alt="styled-components" src="https://raw.githubusercontent.com/styled-components/brand/master/styled-components.png" height="150px" />
+    <img alt="styled-components" src="https://raw.githubusercontent.com/styled-components/brand/main/styled-components.png" height="150px" />
   </a>
 </div>
 
@@ -14,14 +14,14 @@
   <a href="#backers" alt="sponsors on Open Collective"><img src="https://opencollective.com/styled-components/backers/badge.svg" /></a> <a href="#sponsors" alt="Sponsors on Open Collective"><img src="https://opencollective.com/styled-components/sponsors/badge.svg" /></a> <a href="https://spectrum.chat/styled-components"><img src="https://withspectrum.github.io/badge/badge.svg" alt="Join the community on Spectrum"></a>
   <a href="https://bundlephobia.com/result?p=styled-components" title="styled-components latest minified+gzip size"><img src="https://badgen.net/bundlephobia/minzip/styled-components" alt="gzip size"></a>
   <a href="#alternative-installation-methods"><img src="https://img.shields.io/badge/module%20formats-umd%2C%20cjs%2C%20esm-green.svg" alt="module formats: umd, cjs, esm"></a>
-  <a href="https://codecov.io/gh/styled-components/styled-components"><img src="https://codecov.io/gh/styled-components/styled-components/coverage.svg?branch=master" alt="Code Coverage"></a>
+  <a href="https://codecov.io/gh/styled-components/styled-components"><img src="https://codecov.io/gh/styled-components/styled-components/coverage.svg?branch=main" alt="Code Coverage"></a>
 </div>
 
 ---
 
 ## Looking for v5?
 
-The `master` branch is under development of the upcoming v6 major version of styled-components. For changes targeting v5, please point your PRs at the `legacy-v5` branch.
+The `main` branch is under development of the upcoming v6 major version of styled-components. For changes targeting v5, please point your PRs at the `legacy-v5` branch.
 
 ---
 
@@ -125,7 +125,7 @@ const Title = styled.h1`
 `;
 ```
 
-If you wish to provide configuration options to the babel plugin similar to how you would in a `.babelrc`, [see this guide](https://github.com/kentcdodds/babel-plugin-macros/blob/master/other/docs/author.md#config-experimental). The config name is `"styledComponents"`.
+If you wish to provide configuration options to the babel plugin similar to how you would in a `.babelrc`, [see this guide](https://github.com/kentcdodds/babel-plugin-macros/blob/main/other/docs/author.md#config-experimental). The config name is `"styledComponents"`.
 
 ## Built with `styled-components`
 

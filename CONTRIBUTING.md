@@ -12,7 +12,7 @@ Everyone comes in with their own perspective on what a project could/should look
 
 ### Why do we give push access?
 
-It can be overwhelming to be offered the chance to wipe the source code for a project. Don't worry, we don't let you push to master. All code has to be reviewed by at least two contributors or one core team member, and we have the convention that someone other than the submitter has to merge non-trivial pull requests.
+It can be overwhelming to be offered the chance to wipe the source code for a project. Don't worry, we don't let you push to main. All code has to be reviewed by at least two contributors or one core team member, and we have the convention that someone other than the submitter has to merge non-trivial pull requests.
 
 **As an organization contributor, you can merge other people's pull requests, or other contributors can merge yours.** You likely won't be assigned a pull request, but you're welcome to jump in and take a code review on topics that interest you.
 
@@ -147,7 +147,7 @@ a git hook is already present.
 
 [Core team members](./CORE_TEAM.md) have the responsibility of pushing new releases to npm. The release process is as follows:
 
-1. Make sure you have the latest changes and are on the master branch: `git checkout master && git pull origin master`
+1. Make sure you have the latest changes and are on the main branch: `git checkout main && git pull origin main`
 2. Install all the dependencies by running `yarn` in the root folder. This will also install `lerna`.
 3. Create a new branch based on the version number, for example `git checkout -b 3.4.1`
 4. Update the [CHANGELOG.md](./CHANGELOG.md) with the new version number, add a new Unreleased section at the top and edit the links at the bottom so everything is linked correctly

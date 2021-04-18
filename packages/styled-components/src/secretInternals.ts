@@ -1,11 +1,9 @@
-
-
 /* eslint-disable */
 
-import StyleSheet from "./sheet";
-import { masterSheet } from "./models/StyleSheetManager";
+import { mainSheet } from './models/StyleSheetManager';
+import StyleSheet from './sheet';
 
 export const __PRIVATE__ = {
   StyleSheet,
-  masterSheet
+  mainSheet,
 };

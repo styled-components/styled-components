@@ -1,7 +1,7 @@
 import StyleSheet from '../sheet';
 import { Keyframes as KeyframesType, Stringifier } from '../types';
 import styledError from '../utils/error';
-import { masterStylis } from './StyleSheetManager';
+import { mainStylis } from './StyleSheetManager';
 
 export default class Keyframes implements KeyframesType {
   id: string;
@@ -14,7 +14,7 @@ export default class Keyframes implements KeyframesType {
     this.rules = rules;
   }
 
-  inject = (styleSheet: StyleSheet, stylisInstance: Stringifier = masterStylis): void => {
+  inject = (styleSheet: StyleSheet, stylisInstance: Stringifier = mainStylis): void => {
     const resolvedName = this.name + stylisInstance.hash;
 
     if (!styleSheet.hasNameForId(this.id, resolvedName)) {
@@ -30,7 +30,7 @@ export default class Keyframes implements KeyframesType {
     throw styledError(12, String(this.name));
   };
 
-  getName(stylisInstance: Stringifier = masterStylis): string {
+  getName(stylisInstance: Stringifier = mainStylis): string {
     return this.name + stylisInstance.hash;
   }
 }

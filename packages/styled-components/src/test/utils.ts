@@ -4,7 +4,7 @@
  */
 import beautify from 'js-beautify';
 import styled from '../constructors/styled';
-import { masterSheet } from '../models/StyleSheetManager';
+import { mainSheet } from '../models/StyleSheetManager';
 import { resetGroupIds } from '../sheet/GroupIDAllocator';
 import styledError from '../utils/error';
 
@@ -22,7 +22,7 @@ jest.mock('../utils/generateAlphabeticName', () => (input: string) => {
 
 export const seedNextClassnames = (names: string[]) => (mockSeededClasses = names);
 
-export const resetStyled = (isServer: boolean = false) => {
+export const resetStyled = (isServer = false) => {
   if (!isServer) {
     if (!document.head) {
       throw styledError(9);
@@ -32,9 +32,9 @@ export const resetStyled = (isServer: boolean = false) => {
   }
 
   resetGroupIds();
-  masterSheet.gs = {};
-  masterSheet.names = new Map();
-  masterSheet.clearTag();
+  mainSheet.gs = {};
+  mainSheet.names = new Map();
+  mainSheet.clearTag();
   mockIndex = 0;
   mockInputs = {};
 

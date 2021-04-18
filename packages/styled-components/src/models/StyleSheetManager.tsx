@@ -18,15 +18,15 @@ export const StyleSheetConsumer = StyleSheetContext.Consumer;
 export const StylisContext = React.createContext<Stringifier | void>(undefined);
 export const StylisConsumer = StylisContext.Consumer;
 
-export const masterSheet: StyleSheet = new StyleSheet();
-export const masterStylis: Stringifier = createStylisInstance();
+export const mainSheet: StyleSheet = new StyleSheet();
+export const mainStylis: Stringifier = createStylisInstance();
 
 export function useStyleSheet(): StyleSheet {
-  return useContext(StyleSheetContext) || masterSheet;
+  return useContext(StyleSheetContext) || mainSheet;
 }
 
 export function useStylis(): Stringifier {
-  return useContext(StylisContext) || masterStylis;
+  return useContext(StylisContext) || mainStylis;
 }
 
 export default function StyleSheetManager(props: Props): JSX.Element {

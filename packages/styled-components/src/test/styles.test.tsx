@@ -1,9 +1,8 @@
-
-import React from "react";
-import TestRenderer from "react-test-renderer";
-import { masterSheet } from "../models/StyleSheetManager";
-import * as nonce from "../utils/nonce";
-import { getRenderedCSS, resetStyled } from "./utils";
+import React from 'react';
+import TestRenderer from 'react-test-renderer';
+import { mainSheet } from '../models/StyleSheetManager';
+import * as nonce from '../utils/nonce';
+import { getRenderedCSS, resetStyled } from './utils';
 
 jest.mock('../utils/nonce');
 jest.spyOn(nonce, 'default').mockImplementation(() => 'foo');
@@ -93,10 +92,12 @@ describe('with styles', () => {
         color: green;
       }
     `;
-    TestRenderer.create(<React.Fragment>
+    TestRenderer.create(
+      <React.Fragment>
         <Comp color="white" />
         <Comp color="red" />
-      </React.Fragment>);
+      </React.Fragment>
+    );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         background: red;
@@ -171,7 +172,7 @@ describe('with styles', () => {
 
   it('should handle inline style objects', () => {
     const rule1 = {
-      backgroundColor: 'blue'
+      backgroundColor: 'blue',
     };
     const Comp = styled.div`
       ${rule1};
@@ -188,8 +189,8 @@ describe('with styles', () => {
     const rule1 = {
       backgroundColor: 'blue',
       '@media screen and (min-width: 250px)': {
-        backgroundColor: 'red'
-      }
+        backgroundColor: 'red',
+      },
     };
     const Comp = styled.div`
       ${rule1};
@@ -211,8 +212,8 @@ describe('with styles', () => {
     const rule1 = {
       backgroundColor: 'blue',
       '&:hover': {
-        color: 'green'
-      }
+        color: 'green',
+      },
     };
     const Comp = styled.div`
       ${rule1};
@@ -232,8 +233,8 @@ describe('with styles', () => {
     const rule1 = {
       backgroundColor: 'blue',
       '&:hover': {
-        color: 'green'
-      }
+        color: 'green',
+      },
     };
     const Comp = styled.div`
       ${rule1};
@@ -253,8 +254,8 @@ describe('with styles', () => {
     const rule1 = {
       backgroundColor: 'blue',
       '> h1': {
-        color: 'white'
-      }
+        color: 'white',
+      },
     };
     const Comp = styled.div`
       ${rule1};
@@ -274,8 +275,8 @@ describe('with styles', () => {
     const rule1 = {
       backgroundColor: 'blue',
       'html.something &': {
-        color: 'white'
-      }
+        color: 'white',
+      },
     };
     const Comp = styled.div`
       ${rule1};
@@ -363,10 +364,12 @@ describe('with styles', () => {
       color: green;
     `;
 
-    TestRenderer.create(<Heading>
+    TestRenderer.create(
+      <Heading>
         <Text />
-      </Heading>);
-    masterSheet.clearRules(Text.styledComponentId);
+      </Heading>
+    );
+    mainSheet.clearRules(Text.styledComponentId);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
