@@ -1,4 +1,4 @@
-/* eslint-disable global-require */
+/* eslint-disable global-require, @typescript-eslint/no-var-requires */
 import { SC_ATTR as DEFAULT_SC_ATTR } from '../constants';
 import { expectCSSMatches } from './utils';
 

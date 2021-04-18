@@ -11,7 +11,9 @@
   "rules": {
     "@typescript-eslint/ban-types": 0,
     "@typescript-eslint/explicit-module-boundary-types": 0,
+    "@typescript-eslint/no-empty-function": 0,
     "@typescript-eslint/no-explicit-any": 0,
+    "@typescript-eslint/no-namespace": 0,
     "@typescript-eslint/no-non-null-assertion": 0,
     "@typescript-eslint/no-unused-vars": [
       "error",
@@ -37,7 +39,7 @@
     "react/require-default-props": 0,
     "react/sort-comp": 0,
     "symbol-description": 0,
-    "no-restricted-syntax": ["error", "ForOfStatement", "LabeledStatement", "WithStatement"],
+    "no-restricted-syntax": ["error", "LabeledStatement", "WithStatement"],
     "no-return-assign": 0,
     "no-bitwise": 0,
     "no-plusplus": 0,

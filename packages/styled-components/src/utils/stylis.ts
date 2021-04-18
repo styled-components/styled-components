@@ -49,8 +49,8 @@ export default function createStylisInstance(
    */
   const selfReferenceReplacementPlugin: stylis.Middleware = element => {
     if (element.type === RULESET && element.value.includes('&')) {
-      // @ts-ignore
-      element.props[0] = element.props[0].replace(_selectorRegexp, selfReferenceReplacer);
+      const props = element.props as string[];
+      props[0] = props[0].replace(_selectorRegexp, selfReferenceReplacer);
     }
   };
 

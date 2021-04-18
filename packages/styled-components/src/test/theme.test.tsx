@@ -458,7 +458,7 @@ describe('theming', () => {
   it('should hoist static properties when using withTheme', () => {
     class MyComponent extends Component<any, any> {
 
-      static myStaticProperty: boolean = true;
+      static myStaticProperty = true;
     }
 
     const MyComponentWithTheme = withTheme(MyComponent);

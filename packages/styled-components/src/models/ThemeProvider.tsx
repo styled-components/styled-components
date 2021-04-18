@@ -3,10 +3,10 @@ import styledError from '../utils/error';
 import isFunction from '../utils/isFunction';
 
 export type Theme = {
-  [key: string]: unknown;
+  [key: string]: any;
 };
 
-type ThemeFn = (outerTheme?: Theme) => Theme;
+type ThemeFn = (outerTheme: Theme) => Theme;
 type ThemeArgument = Theme | ThemeFn;
 
 type Props = {

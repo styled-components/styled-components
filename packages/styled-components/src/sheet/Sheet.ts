@@ -56,7 +56,7 @@ export default class StyleSheet implements Sheet {
     }
   }
 
-  reconstructWithOptions(options: SheetConstructorArgs, withNames: boolean = true) {
+  reconstructWithOptions(options: SheetConstructorArgs, withNames = true) {
     return new StyleSheet(
       { ...this.options, ...options },
       this.gs,

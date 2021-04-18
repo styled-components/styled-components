@@ -5,7 +5,7 @@ import { Stringifier } from '../types';
 import createStylisInstance from '../utils/stylis';
 
 type Props = {
-  children?: Node;
+  children?: React.ReactChild;
   disableCSSOMInjection?: boolean;
   disableVendorPrefixes?: boolean;
   sheet?: StyleSheet;

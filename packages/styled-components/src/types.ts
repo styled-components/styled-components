@@ -21,18 +21,19 @@ export type StyleFunction<Props> = (
 ) => BaseExtensibleObject | string | number;
 
 // Do not add IStyledComponent to this union, it breaks prop function interpolation in TS
-export type Interpolation<Props extends Object = ExtensibleObject> =
+export type Interpolation<Props extends Object = ExecutionContext> =
   | StyleFunction<Props>
   | ExtensibleObject
   | string
   | Keyframe
   | Interpolation<Props>[];
 
-export type Attrs<Props = ExtensibleObject> =
+export type Attrs<Props = ExecutionContext> =
   | ExtensibleObject
-  | ((props: ExecutionContext & Props) => ExtensibleObject);
+  | ((props: ExecutionContext & Props) => ExecutionContext);
 export type RuleSet = Interpolation[];
-export type Styles = string[] | Object | ((executionContext: ExtensibleObject) => Interpolation);
+
+export type Styles = string[] | Object | ((executionContext: ExecutionContext) => Interpolation);
 
 export type WebTarget = string | ComponentType<any>;
 export type NativeTarget = ComponentType<any>;

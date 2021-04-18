@@ -1,23 +1,21 @@
 /**
  * @jest-environment node
  */
-
-
-/* eslint-disable no-console, import/namespace */
-import React from "react";
-import ReactDOMServer from "react-dom/server";
-import ServerStyleSheet from "../../models/ServerStyleSheet";
-import { stripComments, stripWhitespace } from "../../test/utils";
-import createGlobalStyle from "../createGlobalStyle";
+/* eslint-disable no-console */
+import React from 'react';
+import ReactDOMServer from 'react-dom/server';
+import ServerStyleSheet from '../../models/ServerStyleSheet';
+import { stripComments, stripWhitespace } from '../../test/utils';
+import createGlobalStyle from '../createGlobalStyle';
 
 describe(`createGlobalStyle`, () => {
-  let context;
+  let context: ReturnType<typeof setup>;
 
   function setup() {
     return {
-      renderToString(comp) {
+      renderToString(comp: JSX.Element) {
         return ReactDOMServer.renderToString(comp);
-      }
+      },
     };
   }
 
@@ -32,10 +30,12 @@ describe(`createGlobalStyle`, () => {
     const styles = stripOuterHTML(sheet.getStyleTags());
 
     expect(html).toBe('');
-    expect(stripWhitespace(stripComments(styles))).toMatchInlineSnapshot(`"[data-test-inject]{ color:red; } data-styled.g1[id=\\"sc-global-a1\\"]{ content:\\"sc-global-a1,\\"} "`);
+    expect(stripWhitespace(stripComments(styles))).toMatchInlineSnapshot(
+      `"[data-test-inject]{ color:red; } data-styled.g1[id=\\"sc-global-a1\\"]{ content:\\"sc-global-a1,\\"} "`
+    );
   });
 });
 
-function stripOuterHTML(html) {
+function stripOuterHTML(html: string) {
   return html.replace(/<[^>]*>([^<]*)<[^>]*>/g, '$1');
 }

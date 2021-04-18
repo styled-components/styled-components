@@ -12,6 +12,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Pass `elementToBeCreated` as a third parameter to `shouldForwardProp` so that the user-specified function can decide whether to pass through props based on whether the created element will be a tag or another component. (see [#3436](https://github.com/styled-components/styled-components/pull/3436))
 
+- Rename `masterSheet` in internals to `mainSheet`
+
 ## [v5.2.2] - 2021-03-30
 
 - For React Native based components, pass `testID` down to the native component if specified for an easier time testing. (see [#3365](https://github.com/styled-components/styled-components/pull/3365))

@@ -4,7 +4,7 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
 import { Theme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
-import { ExtensibleObject, Interpolation, RuleSet, Stringifier } from '../types';
+import { ExtensibleObject, Interpolation, RuleSet, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
@@ -13,7 +13,7 @@ import css from './css';
 declare const __SERVER__: boolean;
 
 export default function createGlobalStyle(
-  strings: Array<string>,
+  strings: Styles,
   ...interpolations: Array<Interpolation>
 ) {
   const rules = css(strings, ...interpolations) as RuleSet;

@@ -1,9 +1,9 @@
-
-import React from "react";
-import getComponentName from "../getComponentName";
+/* eslint-disable react/display-name */
+import React from 'react';
+import getComponentName from '../getComponentName';
 
 describe('getComponentName', () => {
-  let Test;
+  let Test: React.FC;
   beforeEach(() => {
     Test = () => <div />;
   });
@@ -20,7 +20,7 @@ describe('getComponentName', () => {
 
   it('ultimately falls back to "Component"', () => {
     Object.defineProperty(Test, 'name', {
-      value: ''
+      value: '',
     });
 
     expect(getComponentName(Test)).toEqual('Component');

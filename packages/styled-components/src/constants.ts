@@ -1,5 +1,5 @@
-declare var SC_DISABLE_SPEEDY: boolean | null | undefined;
-declare var __VERSION__: string;
+declare let SC_DISABLE_SPEEDY: boolean | null | undefined;
+declare let __VERSION__: string;
 
 export const SC_ATTR: string =
   (typeof process !== 'undefined' && (process.env.REACT_APP_SC_ATTR || process.env.SC_ATTR)) ||

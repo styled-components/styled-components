@@ -15,7 +15,7 @@ import { getRenderedCSS, resetStyled, seedNextClassnames } from './utils';
    */
 let styled: ReturnType<typeof resetStyled>;
 
-const resetSheet = sheet => {
+const resetSheet = (sheet: typeof mainSheet) => {
   sheet.gs = {};
   sheet.names = new Map();
   sheet.clearTag();

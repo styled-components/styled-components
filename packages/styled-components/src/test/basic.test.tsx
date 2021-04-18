@@ -54,7 +54,7 @@ describe('basic', () => {
 
     invalidComps.forEach(comp => {
       expect(() => {
-        // @ts-expect-error
+        // @ts-expect-error test assertion
         const Comp = styled(comp)``;
         TestRenderer.create(<Comp />);
       }).toThrow(`Cannot create styled-component for component: ${comp}`);
@@ -265,7 +265,7 @@ describe('basic', () => {
       const Comp = styled.div``;
 
       class Wrapper extends Component<any, any> {
-        testRef: any = React.createRef();
+        testRef = React.createRef<HTMLDivElement>();
 
         render() {
           return (
@@ -276,10 +276,10 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = renderIntoDocument(<Wrapper />);
+      const wrapper = renderIntoDocument<any, Wrapper>(<Wrapper />);
 
       // eslint-disable-next-line react/no-find-dom-node
-      const component = find(findDOMNode(wrapper), Comp);
+      const component = find(findDOMNode(wrapper) as Element, Comp);
 
       expect(wrapper.testRef.current).toBe(component);
     });
@@ -294,7 +294,7 @@ describe('basic', () => {
       const Outer = styled(Inner)``;
 
       class Wrapper extends Component<any, any> {
-        testRef: any = React.createRef();
+        testRef = React.createRef<HTMLDivElement>();
 
         render() {
           return (
@@ -305,7 +305,7 @@ describe('basic', () => {
         }
       }
 
-      const wrapper = renderIntoDocument(<Wrapper />);
+      const wrapper = renderIntoDocument<any, Wrapper>(<Wrapper />);
       const innerComponent = findRenderedComponentWithType(wrapper, Inner);
 
       expect(wrapper.testRef.current).toBe(innerComponent);

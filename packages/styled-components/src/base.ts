@@ -1,26 +1,22 @@
 /* Import singletons */
-import isStyledComponent from './utils/isStyledComponent';
-import css from './constructors/css';
-import createGlobalStyle from './constructors/createGlobalStyle';
-import keyframes from './constructors/keyframes';
-import ServerStyleSheet from './models/ServerStyleSheet';
 import { SC_VERSION } from './constants';
-
-import StyleSheetManager, {
-  StyleSheetContext,
-  StyleSheetConsumer,
-} from './models/StyleSheetManager';
-
-/* Import components */
-import ThemeProvider, { ThemeContext, ThemeConsumer } from './models/ThemeProvider';
-
+import createGlobalStyle from './constructors/createGlobalStyle';
+import css from './constructors/css';
+import keyframes from './constructors/keyframes';
 /* Import Higher Order Components */
 import withTheme from './hoc/withTheme';
-
 /* Import hooks */
 import useTheme from './hooks/useTheme';
+import ServerStyleSheet from './models/ServerStyleSheet';
+import StyleSheetManager, {
+  StyleSheetConsumer,
+  StyleSheetContext,
+} from './models/StyleSheetManager';
+/* Import components */
+import ThemeProvider, { ThemeConsumer, ThemeContext } from './models/ThemeProvider';
+import isStyledComponent from './utils/isStyledComponent';
 
-declare var __SERVER__: boolean;
+declare const __SERVER__: boolean;
 
 declare global {
   interface Window {

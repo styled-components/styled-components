@@ -1,11 +1,9 @@
-
-
 /* eslint-disable react/no-multi-comp */
-import React from "react";
-import TestRenderer from "react-test-renderer";
-import ThemeProvider from "../ThemeProvider";
-import withTheme from "../../hoc/withTheme";
-import { resetStyled } from "../../test/utils";
+import React from 'react';
+import TestRenderer from 'react-test-renderer';
+import withTheme from '../../hoc/withTheme';
+import { resetStyled } from '../../test/utils';
+import ThemeProvider from '../ThemeProvider';
 
 let styled: ReturnType<typeof resetStyled>;
 
@@ -24,7 +22,9 @@ describe('ThemeProvider', () => {
 
   it('should render its child', () => {
     const child = <p>Child!</p>;
-    const wrapper = TestRenderer.create(<ThemeProvider theme={{ main: 'black' }}>{child}</ThemeProvider>);
+    const wrapper = TestRenderer.create(
+      <ThemeProvider theme={{ main: 'black' }}>{child}</ThemeProvider>
+    );
 
     expect(wrapper.toJSON()).toMatchSnapshot();
   });
@@ -36,15 +36,17 @@ describe('ThemeProvider', () => {
     const MyDiv = styled.div``;
     const MyDivWithTheme = withTheme(MyDiv);
 
-    const wrapper = TestRenderer.create(<ThemeProvider theme={outerTheme}>
+    const wrapper = TestRenderer.create(
+      <ThemeProvider theme={outerTheme}>
         <ThemeProvider theme={innerTheme}>
           <MyDivWithTheme />
         </ThemeProvider>
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
 
     expect(wrapper.root.findByType(MyDiv).props.theme).toEqual({
       ...outerTheme,
-      ...innerTheme
+      ...innerTheme,
     });
   });
 
@@ -56,25 +58,27 @@ describe('ThemeProvider', () => {
     const MyDiv = styled.div``;
     const MyDivWithTheme = withTheme(MyDiv);
 
-    const wrapper = TestRenderer.create(<ThemeProvider theme={outerestTheme}>
+    const wrapper = TestRenderer.create(
+      <ThemeProvider theme={outerestTheme}>
         <ThemeProvider theme={outerTheme}>
           <ThemeProvider theme={innerTheme}>
             <MyDivWithTheme />
           </ThemeProvider>
         </ThemeProvider>
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
 
     expect(wrapper.root.findByType(MyDiv).props.theme).toEqual({
       ...outerestTheme,
       ...outerTheme,
-      ...innerTheme
+      ...innerTheme,
     });
   });
 
   it('should be able to render two independent themes', () => {
     const themes = {
       one: { main: 'black', secondary: 'red' },
-      two: { main: 'blue', other: 'green' }
+      two: { main: 'blue', other: 'green' },
     };
 
     const MyDivOne = withTheme(styled.div``);
@@ -82,14 +86,16 @@ describe('ThemeProvider', () => {
     const MyDivTwo = withTheme(styled.div``);
     const MyDivWithThemeTwo = withTheme(MyDivTwo);
 
-    const wrapper = TestRenderer.create(<div>
+    const wrapper = TestRenderer.create(
+      <div>
         <ThemeProvider theme={themes.one}>
           <MyDivWithThemeOne />
         </ThemeProvider>
         <ThemeProvider theme={themes.two}>
           <MyDivWithThemeTwo />
         </ThemeProvider>
-      </div>);
+      </div>
+    );
 
     expect(wrapper.root.findByType(MyDivOne).props.theme).toEqual(themes.one);
     expect(wrapper.root.findByType(MyDivTwo).props.theme).toEqual(themes.two);
@@ -97,19 +103,21 @@ describe('ThemeProvider', () => {
 
   it('ThemeProvider propagates theme updates through nested ThemeProviders', () => {
     const theme = { themed: true };
-    const augment = outerTheme => Object.assign({}, outerTheme, { augmented: true });
+    const augment = (outerTheme: typeof theme) =>
+      Object.assign({}, outerTheme, { augmented: true });
     const update = { updated: true };
-    let actual;
     const expected = { themed: true, augmented: true, updated: true };
 
     const MyDiv = styled.div``;
     const MyDivWithTheme = withTheme(MyDiv);
 
-    const getJSX = (givenTheme = theme) => <ThemeProvider theme={givenTheme}>
+    const getJSX = (givenTheme = theme) => (
+      <ThemeProvider theme={givenTheme}>
         <ThemeProvider theme={augment}>
           <MyDivWithTheme />
         </ThemeProvider>
-      </ThemeProvider>;
+      </ThemeProvider>
+    );
 
     const wrapper = TestRenderer.create(getJSX());
 

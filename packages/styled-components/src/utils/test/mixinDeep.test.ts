@@ -1,11 +1,17 @@
 /* ported from https://github.com/jonschlinkert/mixin-deep; thanks Jon! */
-import mixinDeep from "../mixinDeep";
+import mixinDeep from '../mixinDeep';
 
 it('should deeply mix the properties of object into the first object.', () => {
   expect(mixinDeep({ a: { aa: 'aa' } }, { a: { bb: 'bb' } }, { a: { cc: 'cc' } })).toEqual({
-    a: { aa: 'aa', bb: 'bb', cc: 'cc' }
+    a: { aa: 'aa', bb: 'bb', cc: 'cc' },
   });
-  expect(mixinDeep({ a: { aa: 'aa', dd: { ee: 'ff' } } }, { a: { bb: 'bb', dd: { gg: 'hh' } } }, { a: { cc: 'cc', dd: { ii: 'jj' } } })).toEqual({ a: { aa: 'aa', dd: { ee: 'ff', gg: 'hh', ii: 'jj' }, bb: 'bb', cc: 'cc' } });
+  expect(
+    mixinDeep(
+      { a: { aa: 'aa', dd: { ee: 'ff' } } },
+      { a: { bb: 'bb', dd: { gg: 'hh' } } },
+      { a: { cc: 'cc', dd: { ii: 'jj' } } }
+    )
+  ).toEqual({ a: { aa: 'aa', dd: { ee: 'ff', gg: 'hh', ii: 'jj' }, bb: 'bb', cc: 'cc' } });
 });
 
 it('should copy properties onto the first object', () => {
@@ -104,7 +110,7 @@ it('should mixin Dates', () => {
 });
 
 it('should not mixin objects created with custom constructor', () => {
-  function TestType() {}
+  class TestType {}
   const fixture = new TestType();
   const actual = mixinDeep(fixture);
   expect(actual).toEqual(fixture);

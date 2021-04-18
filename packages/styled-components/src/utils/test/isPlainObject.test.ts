@@ -26,7 +26,7 @@ it('returns false for an array', () => {
 });
 
 it('returns false for a React component', () => {
-  class Foo extends React.Component {};
+  class Foo extends React.Component {}
   expect(isPlainObject(Foo)).toEqual(false);
 });
 
