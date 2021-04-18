@@ -1,11 +1,11 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-import { SC_ATTR, SC_ATTR_VERSION } from '../constants';
+import { getRenderedCSS, resetStyled, seedNextClassnames } from './utils';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 import keyframes from '../constructors/keyframes';
 import { mainSheet } from '../models/StyleSheetManager';
 import { rehydrateSheet } from '../sheet/Rehydration';
-import { getRenderedCSS, resetStyled, seedNextClassnames } from './utils';
+import { SC_ATTR, SC_ATTR_VERSION } from '../constants';
 
 /* NOTE:
    Sometimes we add an empty function interpolation into some

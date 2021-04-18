@@ -2,12 +2,12 @@
 import React from "react";
 import TestRenderer from "react-test-renderer";
 import stylisRTLPlugin from "stylis-plugin-rtl";
-
 import css from "../css";
-import keyframes from "../keyframes";
 import Keyframes from "../../models/Keyframes";
+import keyframes from "../keyframes";
 import StyleSheetManager from "../../models/StyleSheetManager";
 import { getRenderedCSS, resetStyled } from "../../test/utils";
+
 
 // Disable isStaticRules optimisation since we're not
 // testing for ComponentStyle specifics here
