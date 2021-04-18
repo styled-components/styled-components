@@ -38,10 +38,6 @@ jobs:
       - name: Jest
         run: yarn test
 
-      - name: Flow
-        run: yarn flow
-        if: matrix.node == '10'
-
       - name: Lint
         run: yarn lint
         if: matrix.node == '10'

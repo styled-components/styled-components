@@ -1,4 +1,3 @@
-// @flow
 type ValuesType = Array<number>;
 
 export const getStdDev = (values: ValuesType): number => {

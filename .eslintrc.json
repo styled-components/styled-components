@@ -1,23 +1,32 @@
 {
   "$schema": "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/eslintrc.json",
-  "parser": "babel-eslint",
-  "extends": ["eslint:recommended", "plugin:import/errors", "plugin:react/recommended", "prettier"],
-  "plugins": ["flowtype", "prettier", "react-hooks"],
+  "parser": "@typescript-eslint/parser",
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:react/recommended",
+    "prettier"
+  ],
+  "plugins": ["prettier", "react-hooks", "@typescript-eslint"],
   "rules": {
+    "@typescript-eslint/ban-types": 0,
+    "@typescript-eslint/explicit-module-boundary-types": 0,
+    "@typescript-eslint/no-explicit-any": 0,
+    "@typescript-eslint/no-non-null-assertion": 0,
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "ignoreRestSiblings": true }
+    ],
     "react-hooks/rules-of-hooks": "error",
     "class-methods-use-this": 0,
     "curly": [2, "multi-line"],
-    "import/namespace": [2, { "allowComputed": true }],
     "no-confusing-arrow": 0,
     "no-continue": 0,
     "no-duplicate-imports": 0,
     "no-else-return": 0,
     "no-prototype-builtins": 0,
     "no-underscore-dangle": 0,
-    "no-unused-vars": [
-      "error",
-      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "ignoreRestSiblings": true }
-    ],
+
     "react/button-has-type": 0,
     "react/destructuring-assignment": 0,
     "react/forbid-prop-types": 0,
@@ -32,7 +41,8 @@
     "no-return-assign": 0,
     "no-bitwise": 0,
     "no-plusplus": 0,
-    "no-multi-assign": 0
+    "no-multi-assign": 0,
+    "prefer-const": 0
   },
   "parserOptions": {
     "sourceType": "module",
@@ -51,11 +61,5 @@
     "react": {
       "version": "detect"
     }
-  },
-  "globals": {
-    "$Call": true,
-    "$Keys": true,
-    "$PropertyType": true,
-    "Class": true
   }
 }
