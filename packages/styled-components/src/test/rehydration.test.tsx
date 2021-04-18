@@ -1,11 +1,11 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
+import { SC_ATTR, SC_ATTR_VERSION } from '../constants';
 import { getRenderedCSS, resetStyled, seedNextClassnames } from './utils';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 import keyframes from '../constructors/keyframes';
 import { mainSheet } from '../models/StyleSheetManager';
 import { rehydrateSheet } from '../sheet/Rehydration';
-import { SC_ATTR, SC_ATTR_VERSION } from '../constants';
 
 /* NOTE:
    Sometimes we add an empty function interpolation into some
@@ -14,13 +14,6 @@ import { SC_ATTR, SC_ATTR_VERSION } from '../constants';
    ${() => ''}
    */
 let styled: ReturnType<typeof resetStyled>;
-
-const resetSheet = (sheet: typeof mainSheet) => {
-  sheet.gs = {};
-  sheet.names = new Map();
-  sheet.clearTag();
-  rehydrateSheet(sheet);
-};
 
 describe('rehydration', () => {
   /**
@@ -39,7 +32,7 @@ describe('rehydration', () => {
         </style>
       `;
 
-      resetSheet(mainSheet);
+      rehydrateSheet(mainSheet);
     });
 
     it('should preserve the styles', () => {
@@ -146,7 +139,7 @@ describe('rehydration', () => {
         </style>
       `;
 
-      resetSheet(mainSheet);
+      rehydrateSheet(mainSheet);
     });
 
     it('should preserve the styles', () => {
@@ -205,7 +198,7 @@ describe('rehydration', () => {
         </style>
       `;
 
-      resetSheet(mainSheet);
+      rehydrateSheet(mainSheet);
     });
 
     it('should leave the existing styles there', () => {
@@ -236,7 +229,7 @@ describe('rehydration', () => {
         </style>
       `;
 
-      resetSheet(mainSheet);
+      rehydrateSheet(mainSheet);
     });
 
     it('should leave the existing styles there', () => {
@@ -315,7 +308,7 @@ describe('rehydration', () => {
         </style>
       `;
 
-      resetSheet(mainSheet);
+      rehydrateSheet(mainSheet);
     });
 
     it('should not touch existing styles', () => {
@@ -415,7 +408,7 @@ describe('rehydration', () => {
         </style>
       `;
 
-      resetSheet(mainSheet);
+      rehydrateSheet(mainSheet);
     });
 
     it('should not touch existing styles', () => {
