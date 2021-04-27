@@ -21,7 +21,7 @@ type NamesAllocationMap = Map<string, Set<string>>;
 const defaultOptions: SheetOptions = {
   isServer: !IS_BROWSER,
   useCSSOMInjection: !DISABLE_SPEEDY,
-  useMultipleStyles: false
+  useMultipleStyles: false,
 };
 
 /** Contains the main stylesheet logic for stringification and caching */
