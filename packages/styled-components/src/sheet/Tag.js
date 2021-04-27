@@ -32,6 +32,10 @@ export class CSSOMTag implements Tag {
     this.length = 0;
   }
 
+  destroy() {
+    this.element.remove()
+  }
+
   insertRule(index: number, rule: string): boolean {
     try {
       this.sheet.insertRule(rule, index);
@@ -72,6 +76,10 @@ export class TextTag implements Tag {
     this.length = 0;
   }
 
+  destroy() {
+    this.element.remove()
+  }
+
   insertRule(index: number, rule: string): boolean {
     if (index <= this.length && index >= 0) {
       const node = document.createTextNode(rule);
@@ -105,6 +113,11 @@ export class VirtualTag implements Tag {
   length: number;
 
   constructor(_target?: HTMLElement) {
+    this.rules = [];
+    this.length = 0;
+  }
+
+  destroy() {
     this.rules = [];
     this.length = 0;
   }

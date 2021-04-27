@@ -7,22 +7,24 @@ export interface Tag {
   deleteRule(index: number): void;
   getRule(index: number): string;
   length: number;
-}
-
-/** Group-aware Tag that sorts rules by indices */
-export interface GroupedTag {
-  constructor(tag: Tag): void;
-  insertRules(group: number, rules: string[]): void;
-  clearGroup(group: number): void;
-  getGroup(group: number): string;
-  length: number;
+  destroy(): void
 }
 
 export type SheetOptions = {
   isServer: boolean,
   target?: HTMLElement,
   useCSSOMInjection: boolean,
+  useMultipleStyles?: boolean
 };
+
+/** Group-aware Tag that sorts rules by indices */
+export interface GroupedTag {
+  constructor(tag: SheetOptions): void;
+  insertRules(group: number, rules: string[]): void;
+  clearGroup(group: number): void;
+  getGroup(group: number): string;
+  length: number;
+}
 
 export interface Sheet {
   allocateGSInstance(id: string): number;
