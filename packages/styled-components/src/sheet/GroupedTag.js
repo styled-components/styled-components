@@ -2,7 +2,7 @@
 /* eslint-disable no-use-before-define */
 
 import type { GroupedTag, SheetOptions, Tag } from './types';
-import { makeTag } from './Tag'
+import { makeTag } from './Tag';
 import { SPLITTER } from '../constants';
 import throwStyledError from '../utils/error';
 
@@ -104,25 +104,25 @@ class DefaultGroupedTag implements GroupedTag {
 
 class MultipleSheetsGroupedTag implements GroupedTag {
   tags: Map<number, Tag>;
-  length: number
-  options: SheetOptions
+  length: number;
+  options: SheetOptions;
 
   constructor(options: SheetOptions) {
-    this.options = options
-    this.tags = new Map()
-    this.length = 0
+    this.options = options;
+    this.tags = new Map();
+    this.length = 0;
   }
 
   insertRules(group: number, rules: string[]): void {
-    let tag = this.tags.get(group)
+    let tag = this.tags.get(group);
 
     if (!tag) {
-      tag = makeTag(this.options)
-      this.tags.set(group, tag)
-      this.length = this.tags.size
+      tag = makeTag(this.options);
+      this.tags.set(group, tag);
+      this.length = this.tags.size;
     }
 
-    let ruleIndex = 0
+    let ruleIndex = 0;
     for (let i = 0, l = rules.length; i < l; i++) {
       if (tag.insertRule(ruleIndex, rules[i])) {
         ruleIndex++;
@@ -131,17 +131,17 @@ class MultipleSheetsGroupedTag implements GroupedTag {
   }
 
   clearGroup(group: number): void {
-    const tag = this.tags.get(group)
+    const tag = this.tags.get(group);
     if (tag) {
-      tag.destroy()
+      tag.destroy();
     }
-    this.tags.delete(group)
+    this.tags.delete(group);
   }
 
   getGroup(group: number): string {
     let css = '';
-    const tag = this.tags.get(group)
-    if (!tag) return css
+    const tag = this.tags.get(group);
+    if (!tag) return css;
 
     for (let i = 0; i < tag.length; i++) {
       css += `${tag.getRule(i)}${SPLITTER}`;

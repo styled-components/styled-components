@@ -7,14 +7,14 @@ export interface Tag {
   deleteRule(index: number): void;
   getRule(index: number): string;
   length: number;
-  destroy(): void
+  destroy(): void;
 }
 
 export type SheetOptions = {
   isServer: boolean,
   target?: HTMLElement,
   useCSSOMInjection: boolean,
-  useMultipleStyles?: boolean
+  useMultipleStyles?: boolean,
 };
 
 /** Group-aware Tag that sorts rules by indices */

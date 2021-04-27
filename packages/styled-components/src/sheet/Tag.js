@@ -33,7 +33,7 @@ export class CSSOMTag implements Tag {
   }
 
   destroy() {
-    this.element.remove()
+    this.element.remove();
   }
 
   insertRule(index: number, rule: string): boolean {
@@ -77,7 +77,7 @@ export class TextTag implements Tag {
   }
 
   destroy() {
-    this.element.remove()
+    this.element.remove();
   }
 
   insertRule(index: number, rule: string): boolean {
