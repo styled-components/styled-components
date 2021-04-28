@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { ServerStyleSheet } from 'styled-components';
-import App from './App';
+import App from './AppWithManySheets';
 
 const sheet = new ServerStyleSheet();
 

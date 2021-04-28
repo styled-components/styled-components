@@ -1,7 +1,7 @@
 import React from 'react';
 import { hydrate } from 'react-dom';
 
-import App from './App';
+import App from './AppWithManySheets';
 
 const render = Component => {
   hydrate(<Component />, document.querySelector('#react-root'));
