@@ -1898,6 +1898,13 @@
     "@types/prop-types" "*"
     "@types/react" "*"
 
+"@types/react-native@^0.64.4":
+  version "0.64.4"
+  resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.64.4.tgz#9f11bef7dd5520801884829c73b19d75aa42e73c"
+  integrity sha512-VqnlmadGkD5usREvnuyVpWDS1W8f6cCz6MP5fZdgONsaZ9/Ijfb9Iq9MZ5O3bnW1OyJixDX9HtSp3COsFSLD8Q==
+  dependencies:
+    "@types/react" "*"
+
 "@types/react-primitives@^0.6.2":
   version "0.6.2"
   resolved "https://registry.yarnpkg.com/@types/react-primitives/-/react-primitives-0.6.2.tgz#c1490667968a42029ed6eb4555808e1542e9ccd8"
@@ -11058,7 +11065,7 @@ style-loader@^0.23.1:
     supports-color "^5.5.0"
 
 "styled-components@link:packages/styled-components":
-  version "5.2.0"
+  version "6.0.0-prealpha"
   dependencies:
     "@babel/helper-module-imports" "^7.0.0"
     "@babel/traverse" "^7.4.5"
