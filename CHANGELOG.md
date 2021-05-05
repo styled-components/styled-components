@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file. If a contri
 _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/)._
 
 ## Unreleased
+## [v5.3.0] - 2021-05-04
 
 - Pass `elementToBeCreated` as a third parameter to `shouldForwardProp` so that the user-specified function can decide whether to pass through props based on whether the created element will be a tag or another component. (see [#3436](https://github.com/styled-components/styled-components/pull/3436))
 
@@ -1169,7 +1170,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v5.2.3...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.3.0...master
+[v5.3.0]: https://github.com/styled-components/styled-components/compare/v5.2.3...v5.3.0
 [v5.2.3]: https://github.com/styled-components/styled-components/compare/v5.2.2...v5.2.3
 [v5.2.2]: https://github.com/styled-components/styled-components/compare/v5.2.1...v5.2.2
 [v5.2.1]: https://github.com/styled-components/styled-components/compare/v5.2.0...v5.2.1
