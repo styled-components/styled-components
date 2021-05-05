@@ -13,3 +13,4 @@ mount-wide-tree-trace.json
 update-dynamic-styles-trace.json
 package-lock.json
 README.md
+.rollup.cache

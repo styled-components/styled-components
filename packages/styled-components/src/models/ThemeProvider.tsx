@@ -6,7 +6,7 @@ export type Theme = {
   [key: string]: any;
 };
 
-type ThemeFn = (outerTheme: Theme) => Theme;
+type ThemeFn = (outerTheme?: Theme) => Theme;
 type ThemeArgument = Theme | ThemeFn;
 
 type Props = {
