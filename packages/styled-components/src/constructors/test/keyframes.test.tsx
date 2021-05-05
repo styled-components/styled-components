@@ -1,13 +1,11 @@
-
-import React from "react";
-import TestRenderer from "react-test-renderer";
-import stylisRTLPlugin from "stylis-plugin-rtl";
-import css from "../css";
-import Keyframes from "../../models/Keyframes";
-import keyframes from "../keyframes";
-import StyleSheetManager from "../../models/StyleSheetManager";
-import { getRenderedCSS, resetStyled } from "../../test/utils";
-
+import React from 'react';
+import TestRenderer from 'react-test-renderer';
+import stylisRTLPlugin from 'stylis-plugin-rtl';
+import Keyframes from '../../models/Keyframes';
+import StyleSheetManager from '../../models/StyleSheetManager';
+import { getRenderedCSS, resetStyled } from '../../test/utils';
+import css from '../css';
+import keyframes from '../keyframes';
 
 // Disable isStaticRules optimisation since we're not
 // testing for ComponentStyle specifics here
@@ -32,14 +30,16 @@ describe('keyframes', () => {
   });
 
   it('should return its name via .getName()', () => {
-    expect(keyframes`
+    expect(
+      keyframes`
       0% {
         opacity: 0;
       }
       100% {
         opacity: 1;
       }
-    `.getName()).toMatchInlineSnapshot(`"jgzmJZ"`);
+    `.getName()
+    ).toMatchInlineSnapshot(`"a"`);
   });
 
   it('should insert the correct styles', () => {
@@ -62,11 +62,11 @@ describe('keyframes', () => {
     TestRenderer.create(<Comp />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".a {
-        -webkit-animation: jgzmJZ 2s linear infinite;
-        animation: jgzmJZ 2s linear infinite;
+      ".c {
+        -webkit-animation: a 2s linear infinite;
+        animation: a 2s linear infinite;
       }
-      @-webkit-keyframes jgzmJZ {
+      @-webkit-keyframes a {
         0% {
           opacity: 0;
         }
@@ -74,7 +74,7 @@ describe('keyframes', () => {
           opacity: 1;
         }
       }
-      @keyframes jgzmJZ {
+      @keyframes a {
         0% {
           opacity: 0;
         }
@@ -105,11 +105,11 @@ describe('keyframes', () => {
     TestRenderer.create(<Comp animation={animation} />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".a {
-        -webkit-animation: jgzmJZ 2s linear infinite;
-        animation: jgzmJZ 2s linear infinite;
+      ".c {
+        -webkit-animation: a 2s linear infinite;
+        animation: a 2s linear infinite;
       }
-      @-webkit-keyframes jgzmJZ {
+      @-webkit-keyframes a {
         0% {
           opacity: 0;
         }
@@ -117,7 +117,7 @@ describe('keyframes', () => {
           opacity: 1;
         }
       }
-      @keyframes jgzmJZ {
+      @keyframes a {
         0% {
           opacity: 0;
         }
@@ -151,7 +151,13 @@ describe('keyframes', () => {
 
     const getAnimation = animation => {
       if (Array.isArray(animation)) {
-        return animation.reduce((ret, a, index) => css`${ret}${index > 0 ? ',' : ''} ${getAnimation(a)}`, '');
+        return animation.reduce(
+          (ret, a, index) =>
+            css`
+              ${ret}${index > 0 ? ',' : ''} ${getAnimation(a)}
+            `,
+          ''
+        );
       } else {
         return css`
           ${animation === 'slide' ? slideAnimation : opacityAnimation} 1s linear
@@ -160,36 +166,38 @@ describe('keyframes', () => {
     };
 
     const Foo = styled.div`
-      animation: ${props => props.animation ? getAnimation(props.animation) : 'none'};
+      animation: ${props => (props.animation ? getAnimation(props.animation) : 'none')};
     `;
 
-    const App = () => <React.Fragment>
+    const App = () => (
+      <React.Fragment>
         <Foo>hi</Foo>
         <Foo animation={['slide', 'fade']}>hi, I slide and fade.</Foo>
         <Foo animation="fade">hi I fade</Foo>
         <Foo animation="slide">hi I slide</Foo>
-      </React.Fragment>;
+      </React.Fragment>
+    );
 
     TestRenderer.create(<App />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".a {
+      ".d {
         -webkit-animation: none;
         animation: none;
       }
-      .b {
-        -webkit-animation: cMaiLV 1s linear, itcuFx 1s linear;
-        animation: cMaiLV 1s linear, itcuFx 1s linear;
+      .e {
+        -webkit-animation: b 1s linear, a 1s linear;
+        animation: b 1s linear, a 1s linear;
       }
-      .c {
-        -webkit-animation: itcuFx 1s linear;
-        animation: itcuFx 1s linear;
+      .f {
+        -webkit-animation: a 1s linear;
+        animation: a 1s linear;
       }
-      .d {
-        -webkit-animation: cMaiLV 1s linear;
-        animation: cMaiLV 1s linear;
+      .g {
+        -webkit-animation: b 1s linear;
+        animation: b 1s linear;
       }
-      @-webkit-keyframes cMaiLV {
+      @-webkit-keyframes b {
         from {
           -webkit-transform: translateX(-10px);
           -moz-transform: translateX(-10px);
@@ -203,7 +211,7 @@ describe('keyframes', () => {
           transform: none;
         }
       }
-      @keyframes cMaiLV {
+      @keyframes b {
         from {
           -webkit-transform: translateX(-10px);
           -moz-transform: translateX(-10px);
@@ -217,7 +225,7 @@ describe('keyframes', () => {
           transform: none;
         }
       }
-      @-webkit-keyframes itcuFx {
+      @-webkit-keyframes a {
         from {
           opacity: 0;
         }
@@ -225,7 +233,7 @@ describe('keyframes', () => {
           opacity: 1;
         }
       }
-      @keyframes itcuFx {
+      @keyframes a {
         from {
           opacity: 0;
         }
@@ -259,16 +267,18 @@ describe('keyframes', () => {
     const Comp = styled.div`
       animation: ${animation} 2s linear infinite;
     `;
-    TestRenderer.create(<StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+    TestRenderer.create(
+      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
         <Comp />
-      </StyleSheetManager>);
+      </StyleSheetManager>
+    );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".a {
-        -webkit-animation: dpYZkx-1567285458 2s linear infinite;
-        animation: dpYZkx-1567285458 2s linear infinite;
+      ".c {
+        -webkit-animation: a-1567285458 2s linear infinite;
+        animation: a-1567285458 2s linear infinite;
       }
-      @-webkit-keyframes dpYZkx-1567285458 {
+      @-webkit-keyframes a-1567285458 {
         0% {
           right: 0%;
         }
@@ -276,7 +286,7 @@ describe('keyframes', () => {
           right: 100%;
         }
       }
-      @keyframes dpYZkx-1567285458 {
+      @keyframes a-1567285458 {
         0% {
           right: 0%;
         }
@@ -304,23 +314,25 @@ describe('keyframes', () => {
     const Comp = styled.div`
       animation: ${animation} 2s linear infinite;
     `;
-    TestRenderer.create(<>
+    TestRenderer.create(
+      <>
         <Comp />
         <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
           <Comp />
         </StyleSheetManager>
-      </>);
+      </>
+    );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".a {
-        -webkit-animation: dpYZkx 2s linear infinite;
-        animation: dpYZkx 2s linear infinite;
+      ".c {
+        -webkit-animation: a 2s linear infinite;
+        animation: a 2s linear infinite;
       }
-      .b {
-        -webkit-animation: dpYZkx-1567285458 2s linear infinite;
-        animation: dpYZkx-1567285458 2s linear infinite;
+      .d {
+        -webkit-animation: a-1567285458 2s linear infinite;
+        animation: a-1567285458 2s linear infinite;
       }
-      @-webkit-keyframes dpYZkx {
+      @-webkit-keyframes a {
         0% {
           left: 0%;
         }
@@ -328,7 +340,7 @@ describe('keyframes', () => {
           left: 100%;
         }
       }
-      @keyframes dpYZkx {
+      @keyframes a {
         0% {
           left: 0%;
         }
@@ -336,7 +348,7 @@ describe('keyframes', () => {
           left: 100%;
         }
       }
-      @-webkit-keyframes dpYZkx-1567285458 {
+      @-webkit-keyframes a-1567285458 {
         0% {
           right: 0%;
         }
@@ -344,7 +356,7 @@ describe('keyframes', () => {
           right: 100%;
         }
       }
-      @keyframes dpYZkx-1567285458 {
+      @keyframes a-1567285458 {
         0% {
           right: 0%;
         }
