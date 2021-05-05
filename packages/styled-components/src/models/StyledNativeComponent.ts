@@ -79,7 +79,12 @@ function useStyledComponentImpl(
     }
   }
 
-  propsForElement.style = [generatedStyles].concat(props.style || []);
+  propsForElement.style =
+    typeof props.style === 'function'
+      ? (state: any) => {
+          return [generatedStyles].concat(props.style(state));
+        }
+      : [generatedStyles].concat(props.style || []);
 
   propsForElement.ref = refToForward;
 

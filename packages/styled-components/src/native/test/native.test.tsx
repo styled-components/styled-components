@@ -1,6 +1,6 @@
 /* eslint-disable no-console, react/jsx-key, @typescript-eslint/no-empty-function */
 import React, { PropsWithChildren } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider } from '../';
 
@@ -121,6 +121,38 @@ describe('native', () => {
     const view = wrapper.root.findByType(View);
 
     expect(view.props.style).toEqual([{ paddingTop: 10 }, style]);
+  });
+
+  it('should allow style function prop when available as builtin', () => {
+    const Comp = styled.Pressable`
+      padding-top: 10;
+    `;
+
+    const style = () => ({ opacity: 0.9 });
+    const wrapper = TestRenderer.create(
+      <Comp style={style}>
+        <Text>test</Text>
+      </Comp>
+    );
+    const view = wrapper.root.findByType(Pressable);
+
+    expect(view.props.style()).toEqual([{ paddingTop: 10 }, style()]);
+  });
+
+  it('should allow style function prop when available as extended', () => {
+    const Comp = styled(Pressable)`
+      padding-top: 10;
+    `;
+
+    const style = () => ({ opacity: 0.9 });
+    const wrapper = TestRenderer.create(
+      <Comp style={style}>
+        <Text>test</Text>
+      </Comp>
+    );
+    const view = wrapper.root.findByType(Pressable);
+
+    expect(view.props.style()).toEqual([{ paddingTop: 10 }, style()]);
   });
 
   it('should not console.warn if a comment is seen', () => {
