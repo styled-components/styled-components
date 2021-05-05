@@ -10,9 +10,13 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Upgrade to stylis v4
 
+- Rename `masterSheet` in internals to `mainSheet`
+
+## [v5.3.0] - 2021-05-04
+
 - Pass `elementToBeCreated` as a third parameter to `shouldForwardProp` so that the user-specified function can decide whether to pass through props based on whether the created element will be a tag or another component. (see [#3436](https://github.com/styled-components/styled-components/pull/3436))
 
-- Rename `masterSheet` in internals to `mainSheet`
+- Fix React Native components accepts function as style prop. (see [#3389](https://github.com/styled-components/styled-components/pull/3389))
 
 ## [v5.2.2] - 2021-03-30
 
@@ -1169,7 +1173,9 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v5.2.2...main
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.3.0...master
+[v5.3.0]: https://github.com/styled-components/styled-components/compare/v5.2.3...v5.3.0
+[v5.2.3]: https://github.com/styled-components/styled-components/compare/v5.2.2...v5.2.3
 [v5.2.2]: https://github.com/styled-components/styled-components/compare/v5.2.1...v5.2.2
 [v5.2.1]: https://github.com/styled-components/styled-components/compare/v5.2.0...v5.2.1
 [v5.2.0]: https://github.com/styled-components/styled-components/compare/v5.1.1...v5.2.0
