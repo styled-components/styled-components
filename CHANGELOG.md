@@ -12,6 +12,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## [v5.2.3] - 2021-03-31
 
+- Add textPath to list of supported elements
+
 - fix an issue with an unguarded window accessor in a SSR path ([see #3446](https://github.com/styled-components/styled-components/pull/3446))
 
 ## [v5.2.2] - 2021-03-30
