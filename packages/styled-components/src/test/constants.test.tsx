@@ -1,5 +1,5 @@
 /* eslint-disable global-require, @typescript-eslint/no-var-requires */
-import { SC_ATTR as DEFAULT_SC_ATTR } from '../constants';
+import { SC_ATTR as DEFAULT_SC_ATTR, SC_ATTR_ACTIVE as DEFAULT_SC_ATTR_ACTIVE } from '../constants';
 import { expectCSSMatches } from './utils';
 
 declare global {
@@ -171,6 +171,50 @@ describe('constants', () => {
       renderAndExpect(false, '');
 
       delete process.env.REACT_APP_SC_DISABLE_SPEEDY;
+    });
+  });
+  
+  describe('SC_ATTR_ACTIVE', () => {
+    function renderAndExpect(expectedAttr: string) {
+      const React = require('react');
+      const TestRenderer = require('react-test-renderer');
+      const { SC_ATTR_ACTIVE } = require('../constants');
+      const styled = require('./utils').resetStyled();
+
+      const Comp = styled.div`
+        color: blue;
+      `;
+
+      TestRenderer.create(<Comp />);
+
+      expectCSSMatches('.b { color:blue; }');
+
+      expect(SC_ATTR_ACTIVE).toEqual(expectedAttr);
+      expect(document.head.querySelectorAll(`style[${DEFAULT_SC_ATTR}]=${expectedAttr}`)).toHaveLength(1);
+    }
+
+    it('should work with default SC_ATTR_ACTIVE', () => {
+      renderAndExpect(DEFAULT_SC_ATTR_ACTIVE);
+    });
+
+    it('should work with custom SC_ATTR_ACTIVE', () => {
+      const CUSTOM_SC_ATTR_ACTIVE = 'custom-active-value';
+      process.env.SC_ATTR_ACTIVE = CUSTOM_SC_ATTR;
+      jest.resetModules();
+
+      renderAndExpect(CUSTOM_SC_ATTR_ACTIVE);
+
+      delete process.env.SC_ATTR_ACTIVE;
+    });
+
+    it('should work with REACT_APP_CUSTOM_SC_ATTR_ACTIVE', () => {
+      const REACT_APP_CUSTOM_SC_ATTR_ACTIVE = 'custom-active-value_react-app';
+      process.env.REACT_APP_SC_ATTR_ACTIVE = REACT_APP_CUSTOM_SC_ATTR_ACTIVE;
+      jest.resetModules();
+
+      renderAndExpect(REACT_APP_CUSTOM_SC_ATTR_ACTIVE);
+
+      delete process.env.REACT_APP_SC_ATTR_ACTIVE;
     });
   });
 });
