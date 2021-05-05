@@ -29,7 +29,7 @@ module.exports = {
         ],
       },
       {
-        test: /\.js$/,
+        test: /\.(js|tsx?)$/,
         include: [path.join(appDirectory, 'src')],
         use: {
           loader: 'babel-loader',

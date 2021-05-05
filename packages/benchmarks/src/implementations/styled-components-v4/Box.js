@@ -1,4 +1,4 @@
-import styled from './styled-components-v4.esm.js';
+import styled from 'styled-components-v4';
 import View from './View';
 
 const getColor = color => {
@@ -24,8 +24,9 @@ const Box = styled(View)`
   align-self: flex-start;
   flex-direction: ${props => (props.layout === 'column' ? 'column' : 'row')};
   padding: ${props => (props.outer ? '4px' : '0')};
-  ${props => props.fixed && 'height:6px;'} ${props =>
-  props.fixed && 'width:6px;'} background-color: ${props => getColor(props.color)};
+  ${props => props.fixed && 'height:6px;'}
+  ${props => props.fixed && 'width:6px;'}
+  background-color: ${props => getColor(props.color)};
 `;
 
 export default Box;

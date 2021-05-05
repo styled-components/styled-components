@@ -1,9 +1,9 @@
 /* eslint-disable react/prop-types */
-import Text from './Text';
+import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import React, { Fragment } from 'react';
+import Text from './Text';
 
-const fmt = (time: number) => {
+const fmt = time => {
   const i = Number(Math.round(time + 'e2') + 'e-2').toFixed(2);
   return 10 / i > 1 ? `0${i}` : i;
 };
@@ -18,7 +18,7 @@ class ReportCard extends React.PureComponent {
       meanLayout,
       meanScripting,
       stdDev,
-      libraryVersion
+      libraryVersion,
     } = this.props;
 
     const sampleCountText = sampleCount != null ? `(${sampleCount})` : '';
@@ -58,26 +58,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 5,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee'
+    borderBottomColor: '#eee',
   },
   bold: {
-    fontWeight: 'bold'
+    fontWeight: 'bold',
   },
   smallText: { fontSize: 12 },
   monoFont: {
-    fontFamily: 'monospace'
+    fontFamily: 'monospace',
   },
   centerText: {
     display: 'flex',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   left: {
-    width: '50%'
+    width: '50%',
   },
   right: {
     flex: 1,
-    alignItems: 'flex-end'
-  }
+    alignItems: 'flex-end',
+  },
 });
 
 export default ReportCard;
