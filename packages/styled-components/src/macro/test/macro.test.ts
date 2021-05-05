@@ -3,7 +3,7 @@ import plugin from 'babel-plugin-macros';
 import pluginTester from 'babel-plugin-tester';
 
 const styledExampleCode = `
-import styled from 'styled-components/macro'
+import styled from '../../macro'
 
 styled.div\`
   background: \${p => (p.error ? 'red' : 'green')};
@@ -11,7 +11,7 @@ styled.div\`
 `;
 
 const customStyledExampleCode = `
-import myStyled from 'styled-components/macro'
+import myStyled from '../../macro'
 import styled from 'another-package'
 
 myStyled.div\`
@@ -20,7 +20,7 @@ myStyled.div\`
 `;
 
 const cssExampleCode = `
-import { css } from 'styled-components/macro'
+import { css } from '../../macro'
 
 css\`
   color: \${props => (props.whiteColor ? 'white' : 'black')};
@@ -28,7 +28,7 @@ css\`
 `;
 
 const keyframesExampleCode = `
-import { keyframes } from 'styled-components/macro'
+import { keyframes } from '../../macro'
 
 keyframes\`
   0% { opacity: 0; }
@@ -37,7 +37,7 @@ keyframes\`
 `;
 
 const createGlobalStyleExampleCode = `
-import { createGlobalStyle } from 'styled-components/macro'
+import { createGlobalStyle } from '../../macro'
 
 createGlobalStyle\`
   background: red;
@@ -45,7 +45,7 @@ createGlobalStyle\`
 `;
 
 const ThemeProviderExampleCode = `
-import { ThemeProvider } from 'styled-components/macro'
+import { ThemeProvider } from '../../macro'
 
 React.createComponent(
   ThemeProvider,
@@ -56,7 +56,7 @@ React.createComponent(
 
 const extendsExampleCode = `
 import React from 'react'
-import styled from 'styled-components/macro'
+import styled from '../../macro'
 
 const Hello = () => React.createComponent(div, null, 'hello')
 
@@ -66,11 +66,11 @@ styled(Hello)\`
 `;
 
 const multipleImportsExampleCode = `
-import styled, { css } from 'styled-components/macro'
+import styled, { css } from '../../macro'
 `;
 
 const requireExampleCode = `
-const styled = require('styled-components/macro')
+const styled = require('../../macro')
 
 styled.div\`
   background: red;
@@ -78,15 +78,15 @@ styled.div\`
 `;
 
 const withTypeImportExampleCode = `
-import { DefaultTheme } from 'styled-components/macro'
+import { DefaultTheme } from '../../macro'
 `;
 
 const withTypeAndStandardImportExampleCode = `
-  import styled, { DefaultTheme } from 'styled-components/macro'
+  import styled, { DefaultTheme } from '../../macro'
 `;
 
 const cssPropExampleCode = `
-import styled from 'styled-components/macro'
+import styled from '../../macro'
 import React from 'react';
 function Foo() {
   return <div css="color: red;" />;
@@ -95,7 +95,7 @@ function Foo() {
 
 const cssPropOverridingComponentExampleCode = `
 import React from 'react';
-import styled from 'styled-components/macro'
+import styled from '../../macro'
 const Thing = styled.div\`
   color: blue;
 \`;

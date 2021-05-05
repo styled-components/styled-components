@@ -41,12 +41,11 @@ jobs:
         run: yarn lint
         if: matrix.node == '12'
 
-      - name: Build
-        run: yarn build
-        # temporarily always build until https://github.com/kentcdodds/babel-plugin-macros/pull/175 is available
-        # if: matrix.node == '12'
-        env:
-          BUNDLEWATCH_GITHUB_TOKEN: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}
-
       - name: Jest
         run: yarn test
+
+      - name: Build
+        run: yarn build
+        if: matrix.node == '12'
+        env:
+          BUNDLEWATCH_GITHUB_TOKEN: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}

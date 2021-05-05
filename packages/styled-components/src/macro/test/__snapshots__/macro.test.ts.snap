@@ -2,7 +2,7 @@
 
 exports[`macro should not add componentId with a config disabling ssr: should not add componentId with a config disabling ssr 1`] = `
 
-import styled from 'styled-components/macro'
+import styled from '../../macro'
 
 styled.div\`
   background: \${p => (p.error ? 'red' : 'green')};
@@ -21,7 +21,7 @@ _styled.div.withConfig({
 
 exports[`macro should use a custom import with importModuleName: should use a custom import with importModuleName 1`] = `
 
-import styled from 'styled-components/macro'
+import styled from '../../macro'
 
 styled.div\`
   background: \${p => (p.error ? 'red' : 'green')};
@@ -42,7 +42,7 @@ _styled.div.withConfig({
 exports[`macro should work when extending a component: should work when extending a component 1`] = `
 
 import React from 'react'
-import styled from 'styled-components/macro'
+import styled from '../../macro'
 
 const Hello = () => React.createComponent(div, null, 'hello')
 
@@ -67,7 +67,7 @@ _styled(Hello).withConfig({
 
 exports[`macro should work with { ThemeProvider }: should work with { ThemeProvider } 1`] = `
 
-import { ThemeProvider } from 'styled-components/macro'
+import { ThemeProvider } from '../../macro'
 
 React.createComponent(
   ThemeProvider,
@@ -93,7 +93,7 @@ React.createComponent(
 
 exports[`macro should work with { createGlobalStyle }: should work with { createGlobalStyle } 1`] = `
 
-import { createGlobalStyle } from 'styled-components/macro'
+import { createGlobalStyle } from '../../macro'
 
 createGlobalStyle\`
   background: red;
@@ -111,7 +111,7 @@ _createGlobalStyle\`
 
 exports[`macro should work with { css }: should work with { css } 1`] = `
 
-import { css } from 'styled-components/macro'
+import { css } from '../../macro'
 
 css\`
   color: \${props => (props.whiteColor ? 'white' : 'black')};
@@ -128,7 +128,7 @@ _css(['color:', ';'], props => (props.whiteColor ? 'white' : 'black'));
 
 exports[`macro should work with { keyframes }: should work with { keyframes } 1`] = `
 
-import { keyframes } from 'styled-components/macro'
+import { keyframes } from '../../macro'
 
 keyframes\`
   0% { opacity: 0; }
@@ -146,7 +146,7 @@ _keyframes(['0%{opacity:0;}100%{opacity:1;}']);
 
 exports[`macro should work with custom import name: should work with custom import name 1`] = `
 
-import myStyled from 'styled-components/macro'
+import myStyled from '../../macro'
 import styled from 'another-package'
 
 myStyled.div\`
@@ -167,7 +167,7 @@ _styled.div.withConfig({
 
 exports[`macro should work with multiple imports: should work with multiple imports 1`] = `
 
-import styled, { css } from 'styled-components/macro'
+import styled, { css } from '../../macro'
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
@@ -179,7 +179,7 @@ import _styled from 'styled-components';
 
 exports[`macro should work with require() to import styled-components: should work with require() to import styled-components 1`] = `
 
-const styled = require('styled-components/macro')
+const styled = require('../../macro')
 
 styled.div\`
   background: red;
@@ -199,7 +199,7 @@ _styled.div.withConfig({
 
 exports[`macro should work with styled: should work with styled 1`] = `
 
-import styled from 'styled-components/macro'
+import styled from '../../macro'
 
 styled.div\`
   background: \${p => (p.error ? 'red' : 'green')};
@@ -220,7 +220,7 @@ _styled.div.withConfig({
 exports[`macro should work with the css prop overriding an existing styled-component: should work with the css prop overriding an existing styled-component 1`] = `
 
 import React from 'react';
-import styled from 'styled-components/macro'
+import styled from '../../macro'
 const Thing = styled.div\`
   color: blue;
 \`;
@@ -253,7 +253,7 @@ function Foo() {
 
 exports[`macro should work with the css prop: should work with the css prop 1`] = `
 
-import styled from 'styled-components/macro'
+import styled from '../../macro'
 import React from 'react';
 function Foo() {
   return <div css="color: red;" />;
@@ -279,7 +279,7 @@ function Foo() {
 
 exports[`macro should work with types alongside import: should work with types alongside import 1`] = `
 
-import styled, { DefaultTheme } from 'styled-components/macro'
+import styled, { DefaultTheme } from '../../macro'
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
@@ -291,7 +291,7 @@ import _styled from 'styled-components';
 
 exports[`macro should work with types: should work with types 1`] = `
 
-import { DefaultTheme } from 'styled-components/macro'
+import { DefaultTheme } from '../../macro'
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
