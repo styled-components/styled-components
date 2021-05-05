@@ -60,11 +60,11 @@
   },
   "homepage": "https://styled-components.com",
   "dependencies": {
+    "@babel/core": "^7.0.0",
     "@babel/helper-module-imports": "^7.0.0",
     "@babel/traverse": "^7.4.5",
     "@emotion/is-prop-valid": "^1.1.0",
     "@emotion/unitless": "^0.7.4",
-    "babel-plugin-styled-components": ">= 1.12.0",
     "css-to-react-native": "^3.0.0",
     "hoist-non-react-statics": ">= 3.0.0",
     "shallowequal": "^1.1.0",
@@ -78,7 +78,6 @@
   },
   "devDependencies": {
     "@babel/cli": "^7.13.16",
-    "@babel/core": "^7.14.0",
     "@babel/plugin-external-helpers": "^7.12.13",
     "@babel/plugin-proposal-class-properties": "^7.13.0",
     "@babel/plugin-proposal-object-rest-spread": "^7.13.8",
@@ -95,6 +94,7 @@
     "@types/react-native": "^0.64.4",
     "babel-eslint": "^10.0.1",
     "babel-jest": "^26.6.3",
+    "bundlewatch": "^0.3.1",
     "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-react": "^7.20.6",
     "jest-serializer-html": "^7.0.0",
