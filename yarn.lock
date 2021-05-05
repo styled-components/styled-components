@@ -6057,10 +6057,10 @@ human-signals@^1.1.1:
   resolved "https://registry.yarnpkg.com/human-signals/-/human-signals-1.1.1.tgz#c5b1cd14f50aeae09ab6c59fe63ba3395fe4dfa3"
   integrity sha512-SEQu7vl8KjNL2eoGBLF3+wAjpsNfA9XMlXAYj/3EdaNfAlxKthD1xjEQfGOUhllCGGJVNY34bRr6lPINhNjyZw==
 
-husky@^4.3.0:
+husky-v4@^4.3.0:
   version "4.3.8"
-  resolved "https://registry.yarnpkg.com/husky/-/husky-4.3.8.tgz#31144060be963fd6850e5cc8f019a1dfe194296d"
-  integrity sha512-LCqqsB0PzJQ/AlCgfrfzRe3e3+NvmefAdKQhRYpxS4u6clblBoDdzzvHi8fmxKRzvMxPY/1WZWzomPZww0Anow==
+  resolved "https://registry.yarnpkg.com/husky-v4/-/husky-v4-4.3.8.tgz#af3be56a8b62b941371b5190e265f76dd1af2e57"
+  integrity sha512-M7A9u/t6BnT/qbDzKb7SdXhr8qLTGTkqZL6YLDDM20jfCdmpIMEuO384LvYXSBcgv50oIgNWI/IaO3g4A4ShjA==
   dependencies:
     chalk "^4.0.0"
     ci-info "^2.0.0"

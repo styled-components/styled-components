@@ -56,7 +56,7 @@
     "eslint-plugin-prettier": "^3.0.0",
     "eslint-plugin-react": "^7.12.4",
     "eslint-plugin-react-hooks": "^4.1.2",
-    "husky": "^4.3.0",
+    "husky-v4": "^4.3.0",
     "jest": "^26.5.3",
     "jest-image-snapshot": "^4.2.0",
     "lint-staged": "^10.4.0",
