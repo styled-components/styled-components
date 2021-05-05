@@ -64,7 +64,11 @@ class StyledNativeComponent extends Component<*, *> {
             }
           }
 
-          propsForElement.style = [generatedStyles].concat(style);
+          propsForElement.style = typeof style === 'function' ?
+          (state) => {
+            return [generatedStyles].concat(style(state))
+          }
+          : [generatedStyles].concat(style);
           propsForElement.testID = testID;
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
