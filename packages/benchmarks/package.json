@@ -30,7 +30,7 @@
     "styletron-react": "^5.1.2"
   },
   "devDependencies": {
-    "babel-loader": "^8.0.6",
+    "babel-loader": "^8.2.2",
     "babel-plugin-react-native-web": "^0.11.4",
     "css-loader": "^2.1.1",
     "memoize-one": "^5.0.4",

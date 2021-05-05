@@ -8,8 +8,8 @@
     "start": "cross-env NODE_ENV=development micro-dev --ignore=\"(src|.build)\""
   },
   "devDependencies": {
-    "babel-loader": "^8.0.5",
-    "babel-plugin-styled-components": "^1.5.1",
+    "babel-loader": "^8.2.2",
+    "babel-plugin-styled-components": "^1.12.0",
     "eslint": "^7.11.0",
     "eslint-loader": "^4.0.2",
     "micro": "^9.3.3",
