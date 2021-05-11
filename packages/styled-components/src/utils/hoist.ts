@@ -1,5 +1,10 @@
 import React from 'react';
-import { ForwardRef, isMemo, Memo } from 'react-is';
+
+const hasSymbol = typeof Symbol === 'function' && Symbol.for;
+
+// copied from react-is
+const REACT_MEMO_TYPE = hasSymbol ? Symbol.for('react.memo') : 0xead3;
+const REACT_FORWARD_REF_TYPE = hasSymbol ? Symbol.for('react.forward_ref') : 0xead0;
 
 /**
  * Adapted from hoist-non-react-statics to avoid the react-is dependency.
@@ -46,11 +51,18 @@ const MEMO_STATICS = {
 };
 
 const TYPE_STATICS = {
-  [ForwardRef]: FORWARD_REF_STATICS,
-  [Memo]: MEMO_STATICS,
+  [REACT_FORWARD_REF_TYPE]: FORWARD_REF_STATICS,
+  [REACT_MEMO_TYPE]: MEMO_STATICS,
 };
 
 type OmniComponent = React.ComponentType | React.ExoticComponent;
+
+// adapted from react-is
+function isMemo(object: OmniComponent | React.MemoExoticComponent<any>) {
+  const $$typeofType = 'type' in object && object.type.$$typeof;
+
+  return $$typeofType === REACT_MEMO_TYPE;
+}
 
 function getStatics(component: OmniComponent) {
   // React v16.11 and below

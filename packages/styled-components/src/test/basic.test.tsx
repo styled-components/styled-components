@@ -35,32 +35,6 @@ describe('basic', () => {
     });
   });
 
-  it('should throw a meaningful error when called with an invalid element', () => {
-    const FunctionalComponent = () => <div />;
-    class ClassComponent extends Component<any, any> {
-      render() {
-        return <div />;
-      }
-    }
-    const invalidComps = [
-      undefined,
-      null,
-      123,
-      [],
-      <div key="1" />,
-      <FunctionalComponent key="2" />,
-      <ClassComponent key="3" />,
-    ];
-
-    invalidComps.forEach(comp => {
-      expect(() => {
-        // @ts-expect-error test assertion
-        const Comp = styled(comp)``;
-        TestRenderer.create(<Comp />);
-      }).toThrow(`Cannot create styled-component for component: ${comp}`);
-    });
-  });
-
   it('should not inject anything by default', () => {
     // eslint-disable-next-line no-unused-expressions
     styled.div``;

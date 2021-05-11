@@ -33,9 +33,6 @@ const commonPlugins = [
   nodeResolve(),
   commonjs({
     ignoreGlobal: true,
-    namedExports: {
-      'react-is': ['isElement', 'isValidElementType', 'ForwardRef', 'typeof'],
-    },
   }),
   replace({
     __VERSION__: JSON.stringify(pkg.version),
@@ -57,7 +54,7 @@ const configBase = {
   plugins: commonPlugins,
 };
 
-const globals = { react: 'React', 'react-dom': 'ReactDOM', 'react-is': 'ReactIs' };
+const globals = { react: 'React', 'react-dom': 'ReactDOM' };
 
 const standaloneBaseConfig = {
   ...configBase,

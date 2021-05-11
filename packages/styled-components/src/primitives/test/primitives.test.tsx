@@ -25,31 +25,6 @@ describe('primitives', () => {
     });
   });
 
-  it('should throw a meaningful error when called with an invalid element', () => {
-    const FunctionalComponent = () => <View />;
-    class ClassComponent extends React.Component {
-      render() {
-        return <View />;
-      }
-    }
-    const invalidComps = [
-      undefined,
-      null,
-      123,
-      [],
-      <View />,
-      <FunctionalComponent />,
-      <ClassComponent />,
-    ];
-    invalidComps.forEach(comp => {
-      expect(() => {
-        // @ts-expect-error expected
-        const Comp = styled(comp)``;
-        TestRenderer.create(<Comp />);
-      }).toThrow(`Cannot create styled-component for component: ${comp}`);
-    });
-  });
-
   it('should generate inline styles', () => {
     const Comp = styled.View``;
     const wrapper = TestRenderer.create(<Comp />);

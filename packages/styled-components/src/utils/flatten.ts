@@ -1,4 +1,3 @@
-import { isElement } from 'react-is';
 import Keyframes from '../models/Keyframes';
 import StyleSheet from '../sheet';
 import { ExtensibleObject, Interpolation, IStyledComponent, RuleSet, Stringifier } from '../types';
@@ -70,7 +69,13 @@ export default function flatten(
       const chunkFn = chunk as Function;
       const result = chunkFn(executionContext);
 
-      if (process.env.NODE_ENV !== 'production' && isElement(result)) {
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        typeof result === 'object' &&
+        !Array.isArray(result) &&
+        !(result instanceof Keyframes) &&
+        !isPlainObject(result)
+      ) {
         // eslint-disable-next-line no-console
         console.error(
           `${getComponentName(

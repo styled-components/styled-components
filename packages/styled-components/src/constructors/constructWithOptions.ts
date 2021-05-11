@@ -1,4 +1,3 @@
-import { isValidElementType } from 'react-is';
 import {
   Attrs,
   Interpolation,
@@ -23,7 +22,11 @@ export default function constructWithOptions<
   Constructor extends Function = IStyledComponentFactory,
   OuterProps = undefined // used for styled<{}>().attrs() so attrs() gets the generic prop context
 >(componentConstructor: Constructor, tag: WebTarget, options: Options = EMPTY_OBJECT as Object) {
-  if (!isValidElementType(tag)) {
+  // We trust that the tag is a valid component as long as it isn't falsish
+  // Typically the tag here is a string or function (i.e. class or pure function component)
+  // However a component may also be an object if it uses another utility, e.g. React.memo
+  // React will output an appropriate warning however if the `tag` isn't valid
+  if (!tag) {
     throw styledError(1, tag);
   }
 
