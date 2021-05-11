@@ -65,7 +65,6 @@
     "@emotion/is-prop-valid": "^1.1.0",
     "@emotion/unitless": "^0.7.4",
     "css-to-react-native": "^3.0.0",
-    "hoist-non-react-statics": ">= 3.0.0",
     "shallowequal": "^1.1.0",
     "stylis": "^4.0.10"
   },
@@ -85,7 +84,6 @@
     "@rollup/plugin-typescript": "^8.2.1",
     "@types/babel-plugin-macros": "^2.8.4",
     "@types/enzyme": "^3.10.8",
-    "@types/hoist-non-react-statics": "^3.3.1",
     "@types/jest": "^26.0.15",
     "@types/js-beautify": "^1.13.1",
     "@types/node": "^14.14.9",

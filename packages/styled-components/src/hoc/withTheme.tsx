@@ -1,8 +1,8 @@
-import hoistStatics from 'hoist-non-react-statics';
 import React, { ComponentType, useContext } from 'react';
 import { ThemeContext } from '../models/ThemeProvider';
 import determineTheme from '../utils/determineTheme';
 import getComponentName from '../utils/getComponentName';
+import hoist from '../utils/hoist';
 
 export default function withTheme(Component: ComponentType<any>) {
   const WithTheme = React.forwardRef((props, ref) => {
@@ -21,7 +21,7 @@ export default function withTheme(Component: ComponentType<any>) {
     return <Component {...props} theme={themeProp} ref={ref} />;
   });
 
-  hoistStatics(WithTheme, Component);
+  hoist(WithTheme, Component);
 
   WithTheme.displayName = `WithTheme(${getComponentName(Component)})`;
 

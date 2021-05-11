@@ -1,5 +1,4 @@
 import validAttr from '@emotion/is-prop-valid';
-import hoist from 'hoist-non-react-statics';
 import React, { createElement, Ref, useContext, useDebugValue } from 'react';
 import { SC_VERSION } from '../constants';
 import type {
@@ -19,6 +18,7 @@ import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import getComponentName from '../utils/getComponentName';
+import hoist from '../utils/hoist';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import joinStrings from '../utils/joinStrings';
@@ -156,8 +156,7 @@ function useStyledComponentImpl(
   propsForElement[
     // handle custom elements which React doesn't properly alias
     isTargetTag &&
-    domElements.indexOf((elementToBeCreated as unknown) as Extract<typeof domElements, string>) ===
-      -1
+    domElements.indexOf(elementToBeCreated as unknown as Extract<typeof domElements, string>) === -1
       ? 'class'
       : 'className'
   ] = (foldedComponentIds as string[])
@@ -194,7 +193,7 @@ const createStyledComponent: IStyledComponentFactory = (target, options, rules) 
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     isTargetStyledComp && styledComponentTarget.attrs
-      ? styledComponentTarget.attrs.concat((attrs as unknown) as Attrs[]).filter(Boolean)
+      ? styledComponentTarget.attrs.concat(attrs as unknown as Attrs[]).filter(Boolean)
       : (attrs as Attrs[]);
 
   let { shouldForwardProp } = options;
@@ -237,7 +236,7 @@ const createStyledComponent: IStyledComponentFactory = (target, options, rules) 
 
   forwardRef.displayName = displayName;
 
-  WrappedStyledComponent = (React.forwardRef(forwardRef) as unknown) as IStyledComponent;
+  WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent;
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
@@ -309,7 +308,7 @@ const createStyledComponent: IStyledComponentFactory = (target, options, rules) 
         styledComponentId: true,
         target: true,
         withComponent: true,
-      } as { [key in keyof IStyledStatics]: boolean }
+      } as { [key in keyof IStyledStatics]: true }
     );
   }
 

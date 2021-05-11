@@ -1,4 +1,3 @@
-import hoist from 'hoist-non-react-statics';
 import React, { createElement, Ref, useContext } from 'react';
 import type {
   Attrs,
@@ -12,6 +11,7 @@ import type {
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import generateDisplayName from '../utils/generateDisplayName';
+import hoist from '../utils/hoist';
 import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
 import { Theme, ThemeContext } from './ThemeProvider';
@@ -135,7 +135,7 @@ export default (InlineStyle: IInlineStyleConstructor) => {
 
     forwardRef.displayName = displayName;
 
-    WrappedStyledComponent = (React.forwardRef(forwardRef) as unknown) as IStyledNativeComponent;
+    WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledNativeComponent;
 
     WrappedStyledComponent.attrs = finalAttrs;
     WrappedStyledComponent.inlineStyle = new InlineStyle(
@@ -181,7 +181,7 @@ export default (InlineStyle: IInlineStyleConstructor) => {
       shouldForwardProp: true,
       target: true,
       withComponent: true,
-    } as { [key in keyof IStyledNativeStatics]: boolean });
+    } as { [key in keyof IStyledNativeStatics]: true });
 
     return WrappedStyledComponent;
   };
