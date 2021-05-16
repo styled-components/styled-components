@@ -3,7 +3,7 @@ name: test
 on:
   push:
     branches:
-      - "master"
+      - "main"
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: ["10", "12", "14"]
+        node: ["12", "14", "16"]
     steps:
       - uses: actions/checkout@v2
 
@@ -28,26 +28,24 @@ jobs:
       - uses: actions/cache@v2
         id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
         with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          path: |
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+            **/.rollup.cache
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
 
       - run: yarn --pure-lockfile
 
+      - name: Lint
+        run: yarn lint
+        if: matrix.node == '12'
+
       - name: Jest
         run: yarn test
 
-      - name: Flow
-        run: yarn flow
-        if: matrix.node == '10'
-
-      - name: Lint
-        run: yarn lint
-        if: matrix.node == '10'
-
       - name: Build
         run: yarn build
-        if: matrix.node == '10'
+        if: matrix.node == '12'
         env:
           BUNDLEWATCH_GITHUB_TOKEN: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}

@@ -1,4 +1,7 @@
 {
-  "javascript.validate.enable": false,
-  "prettier.useEditorConfig": true
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true
+  },
+  "editor.formatOnSave": true
 }
