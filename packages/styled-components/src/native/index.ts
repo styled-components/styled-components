@@ -83,7 +83,8 @@ aliases.forEach(alias =>
 
 export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
 
-export default styled as typeof styled &
+const styledExport = styled as typeof styled &
   {
     [key in typeof aliases[number]]: ReturnType<typeof constructWithOptions>;
   };
+export { styledExport as default, styledExport as styled };
