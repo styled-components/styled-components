@@ -85,6 +85,112 @@ describe('keyframes', () => {
     `);
   });
 
+  it('should insert the correct styles for objects', () => {
+    const rules = `
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    `;
+
+    const animation = keyframes`${rules}`;
+    const name = animation.getName();
+
+    getRenderedCSS('');
+
+    const Comp = styled.div({
+      animation: css`
+        ${animation} 2s linear infinite
+      `,
+    });
+
+    TestRenderer.create(<Comp />);
+
+    getRenderedCSS(`
+      .a {
+        -webkit-animation: ${name} 2s linear infinite;
+        animation: ${name} 2s linear infinite;
+      }
+      @-webkit-keyframes ${name} {
+        0% {
+          opacity:0;
+        }
+        100% {
+          opacity:1;
+        }
+      }
+      @keyframes ${name} {
+        0% {
+          opacity:0;
+        }
+        100% {
+          opacity:1;
+        }
+      }
+    `);
+  });
+
+  it('should insert the correct styles for objects with nesting', () => {
+    const rules = `
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    `;
+
+    const animation = keyframes`${rules}`;
+
+    getRenderedCSS('');
+
+    const Comp = styled.div({
+      '@media(max-width: 700px)': {
+        animation: css`
+          ${animation} 2s linear infinite
+        `,
+        ':hover': {
+          animation: css`
+            ${animation} 10s linear infinite
+          `,
+        },
+      },
+    });
+
+    TestRenderer.create(<Comp />);
+
+    getRenderedCSS(`
+     @media(max-width: 700px) {
+      .a {
+        -webkit-animation: jgzmJZ 2s linear infinite;
+        animation: jgzmJZ 2s linear infinite;
+       }
+     }
+    .a:hover {
+      -webkit-animation: jgzmJZ 10s linear infinite;
+      animation: jgzmJZ 10s linear infinite;
+    }
+    @-webkit-keyframes jgzmJZ {
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+    @keyframes jgzmJZ {
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+    `);
+  });
+
   it('should insert the correct styles when keyframes in props', () => {
     const rules = `
       0% {
