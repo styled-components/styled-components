@@ -1,6 +1,8 @@
 // @flow
 /* eslint-disable no-bitwise */
 
+import { SC_CLASS_PREFIX } from "../constants";
+
 const AD_REPLACER_R = /(a)(d)/gi;
 
 /* This is the "capacity" of our alphabet i.e. 2x26 for all letters plus their capitalised
@@ -21,5 +23,5 @@ export default function generateAlphabeticName(code: number): string {
     name = getAlphabeticChar(x % charsLength) + name;
   }
 
-  return (getAlphabeticChar(x % charsLength) + name).replace(AD_REPLACER_R, '$1-$2');
+  return SC_CLASS_PREFIX + ((getAlphabeticChar(x % charsLength) + name).replace(AD_REPLACER_R, '$1-$2'));
 }

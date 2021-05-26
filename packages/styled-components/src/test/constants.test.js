@@ -34,7 +34,6 @@ describe('constants', () => {
     it('should work with custom SC_ATTR', () => {
       const CUSTOM_SC_ATTR = 'data-custom-styled-components';
       process.env.SC_ATTR = CUSTOM_SC_ATTR;
-      jest.resetModules();
 
       renderAndExpect(CUSTOM_SC_ATTR);
 
@@ -44,11 +43,52 @@ describe('constants', () => {
     it('should work with REACT_APP_SC_ATTR', () => {
       const REACT_APP_CUSTOM_SC_ATTR = 'data-custom-react_app-styled-components';
       process.env.REACT_APP_SC_ATTR = REACT_APP_CUSTOM_SC_ATTR;
-      jest.resetModules();
 
       renderAndExpect(REACT_APP_CUSTOM_SC_ATTR);
 
       delete process.env.REACT_APP_SC_ATTR;
+    });
+  });
+
+  describe('SC_CLASS_PREFIX', () => {
+    function renderAndExpect(expectedValue) {
+      const React = require('react');
+      const TestRenderer = require('react-test-renderer');
+      const { SC_CLASS_PREFIX } = require('../constants');
+      const styled = require('./utils').resetStyled();
+
+      const Comp = styled.div`
+        color: blue;
+      `;
+
+      TestRenderer.create(<Comp />);
+
+      expectCSSMatches('.b { color:blue; }');
+
+      expect(SC_CLASS_PREFIX).toEqual(expectedValue);
+    }
+
+    afterEach(() => {
+      delete process.env.SC_CLASS_PREFIX;
+      delete process.env.REACT_APP_SC_CLASS_PREFIX;
+    });
+
+    it('should be an empty string by default', () => {
+      renderAndExpect('');
+    });
+
+    it('should work with custom SC_CLASS_PREFIX', () => {
+      const customValue = 'custom_prefix_';
+      process.env.SC_CLASS_PREFIX = customValue;
+
+      renderAndExpect(customValue);
+    });
+
+    it('should work with REACT_APP_SC_CLASS_PREFIX', () => {
+      const customValue = 'react_custom_prefix_';
+      process.env.REACT_APP_SC_CLASS_PREFIX = customValue;
+
+      renderAndExpect(customValue);
     });
   });
 

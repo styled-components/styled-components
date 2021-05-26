@@ -7,6 +7,10 @@ export const SC_ATTR: string =
   (typeof process !== 'undefined' && (process.env.REACT_APP_SC_ATTR || process.env.SC_ATTR)) ||
   'data-styled';
 
+export const SC_CLASS_PREFIX: string =
+  (typeof process !== 'undefined' && (process.env.REACT_APP_SC_CLASS_PREFIX || process.env.SC_CLASS_PREFIX)) ||
+  '';
+
 export const SC_ATTR_ACTIVE = 'active';
 export const SC_ATTR_VERSION = 'data-styled-version';
 export const SC_VERSION = __VERSION__;

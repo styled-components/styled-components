@@ -18,4 +18,18 @@ describe('generateAlphabeticName', () => {
     expect(generateAlphabeticName(2733)).toMatchInlineSnapshot(`"a-D"`);
     expect(generateAlphabeticName(7390035)).toMatchInlineSnapshot(`"a-Da-d"`);
   });
+
+  describe('with SC_CLASS_PREFIX', () => {
+    beforeEach(() => {
+      jest.resetModules();
+    });
+
+    it.only('should concat SC_CLASS_PREFIX with generated alphabetic names', () => {
+      jest.doMock('../../constants', () => ({ SC_CLASS_PREFIX: 'custom-class-prefix_' }))
+      const generateAlphabeticName = require('../generateAlphabeticName');
+
+      expect(generateAlphabeticName(1000000000)).toEqual('custom-class-prefix_cGNYzm');
+      expect(generateAlphabeticName(2000000000)).toEqual('custom-class-prefix_fnBWYy');
+    });
+  })
 });
