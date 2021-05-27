@@ -24,7 +24,7 @@ describe('generateAlphabeticName', () => {
       jest.resetModules();
     });
 
-    it.only('should concat SC_CLASS_PREFIX with generated alphabetic names', () => {
+    it('should concat SC_CLASS_PREFIX with generated alphabetic names', () => {
       jest.doMock('../../constants', () => ({ SC_CLASS_PREFIX: 'custom-class-prefix_' }))
       const generateAlphabeticName = require('../generateAlphabeticName');
 
