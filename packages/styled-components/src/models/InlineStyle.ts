@@ -1,4 +1,5 @@
 import transformDeclPairs from 'css-to-react-native';
+import { DynamicColorIOS, PlatformColor } from 'react-native';
 import { parse } from 'postcss';
 import {
   ExtensibleObject,
@@ -15,6 +16,42 @@ let generated: ExtensibleObject = {};
 export const resetStyleCache = (): void => {
   generated = {};
 };
+
+const parseReactNativePlatformColors = (styles) => {
+  const colorPropNames = [
+    'backgroundColor',
+    'borderBottomColor',
+    'borderColor',
+    'borderLeftColor',
+    'borderRightColor',
+    'borderTopColor',
+    'borderStartColor',
+    'borderEndColor',
+    'color',
+    'shadowColor',
+    'textDecorationColor',
+    'tintColor',
+    'textShadowColor',
+    'overlayColor',
+  ];
+  for (let i = 0; i < colorPropNames.length; i++) {
+    const key = colorPropNames[i];
+    const val = styles[key];
+    if (val && val[0] === "'") {
+      try {
+        const colorObject = JSON.parse(val.substr(1, val.length - 2))
+        if (colorObject.dynamic) {
+          styles[key] = DynamicColorIOS(colorObject.dynamic);
+        } else if (colorObject.semantic) {
+          styles[key] = PlatformColor(colorObject.semantic);
+        }
+      } catch (err) {
+        // noop
+      }
+    }
+  }
+  return styles;
+}
 
 /**
  * InlineStyle takes arbitrary CSS and generates a flat object
@@ -54,6 +91,10 @@ export default function makeInlineStyleClass(styleSheet: StyleSheet): IInlineSty
           'borderColor',
           'borderStyle',
         ]);
+
+        // Parse RN PlatformColor and DynamicColor for iOS
+        // https://github.com/facebook/react-native/blob/master/Libraries/StyleSheet/PlatformColorValueTypes.ios.js
+        parseReactNativePlatformColors(styleObject);
 
         const styles = styleSheet.create({
           generated: styleObject,
