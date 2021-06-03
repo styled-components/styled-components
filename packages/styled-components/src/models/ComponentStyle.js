@@ -64,7 +64,7 @@ export default class ComponentStyle {
         names.push(this.staticRulesId);
       } else {
         const cssStatic = flatten(this.rules, executionContext, styleSheet, stylis).join('');
-        const name = generateName(phash(this.baseHash, cssStatic.length) >>> 0);
+        const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
 
         if (!styleSheet.hasNameForId(componentId, name)) {
           const cssStaticFormatted = stylis(cssStatic, `.${name}`, undefined, componentId);
