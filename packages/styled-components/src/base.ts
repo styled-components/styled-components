@@ -1,7 +1,7 @@
 /* Import singletons */
 import { SC_VERSION } from './constants';
 import createGlobalStyle from './constructors/createGlobalStyle';
-import css from './constructors/css';
+import css, { cssWithContext } from './constructors/css';
 import keyframes from './constructors/keyframes';
 /* Import Higher Order Components */
 import withTheme from './hoc/withTheme';
@@ -60,6 +60,7 @@ export * from './secretInternals';
 export {
   createGlobalStyle,
   css,
+  cssWithContext,
   isStyledComponent,
   keyframes,
   ServerStyleSheet,
