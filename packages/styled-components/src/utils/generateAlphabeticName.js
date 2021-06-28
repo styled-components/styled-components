@@ -23,5 +23,7 @@ export default function generateAlphabeticName(code: number): string {
     name = getAlphabeticChar(x % charsLength) + name;
   }
 
-  return SC_CLASS_PREFIX + ((getAlphabeticChar(x % charsLength) + name).replace(AD_REPLACER_R, '$1-$2'));
+  const prefix = SC_CLASS_PREFIX ? `${SC_CLASS_PREFIX}_` : '';
+
+  return prefix + ((getAlphabeticChar(x % charsLength) + name).replace(AD_REPLACER_R, '$1-$2'));
 }
