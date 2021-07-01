@@ -20,76 +20,12 @@
   },
   "homepage": "https://styled-components.com",
   "devDependencies": {
-    "@babel/cli": "^7.0.0",
-    "@babel/core": "^7.0.0",
-    "@babel/plugin-external-helpers": "^7.0.0",
-    "@babel/plugin-proposal-class-properties": "^7.0.0",
-    "@babel/plugin-proposal-object-rest-spread": "^7.0.0",
-    "@babel/preset-env": "^7.0.0",
-    "@babel/preset-react": "^7.0.0",
-    "@babel/preset-typescript": "^7.12.1",
-    "@types/babel-plugin-macros": "^2.8.3",
-    "@types/cosmiconfig": "^6.0.0",
-    "@types/jest": "^26.0.14",
-    "@types/js-beautify": "^1.11.0",
-    "@types/node": "^14.11.8",
-    "@types/react": "^16.9.52",
-    "@types/react-dom": "^16.9.8",
-    "@types/react-is": "^16.7.1",
-    "@types/react-primitives": "^0.6.2",
-    "@types/react-test-renderer": "^16.9.3",
-    "@types/shallowequal": "^1.1.1",
-    "@types/stylis": "^4.0.0",
-    "@typescript-eslint/eslint-plugin": "^4.20.0",
-    "@typescript-eslint/parser": "^4.20.0",
-    "babel-jest": "^26.5.2",
-    "babel-plugin-add-module-exports": "^1.0.2",
-    "babel-plugin-macros": "^3.1.0",
-    "babel-plugin-tester": "^10.0.0",
-    "babel-plugin-transform-react-remove-prop-types": "0.4.24",
-    "bundlewatch": "^0.3.1",
-    "csstype": "^3.0.4",
-    "eslint": "^7.23.0",
-    "eslint-config-airbnb": "^18.2.0",
-    "eslint-config-prettier": "^6.12.0",
-    "eslint-plugin-jsx-a11y": "^6.2.1",
-    "eslint-plugin-prettier": "^3.0.0",
-    "eslint-plugin-react": "^7.12.4",
-    "eslint-plugin-react-hooks": "^4.1.2",
-    "husky-v4": "^4.3.0",
-    "jest": "^26.5.3",
-    "jest-image-snapshot": "^4.2.0",
-    "lint-staged": "^10.4.0",
-    "npm-run-all": "^4.1.2",
-    "prettier": "^2.1.2",
-    "puppeteer": "^1.10.0",
-    "raf": "^3.4.1",
-    "rimraf": "^3.0.2",
-    "rollup": "^1.13.1",
-    "rollup-plugin-babel": "^4.3.2",
-    "rollup-plugin-commonjs": "^10.0.0",
-    "rollup-plugin-json": "^4.0.0",
-    "rollup-plugin-node-resolve": "^5.0.1",
-    "rollup-plugin-replace": "^2.2.0",
-    "rollup-plugin-sourcemaps": "^0.4.2",
-    "rollup-plugin-terser": "^5.0.0",
-    "typescript": "^4.2.3",
     "wsrun": "^5.0.2"
   },
   "workspaces": {
     "packages": [
       "packages/*"
     ]
-  },
-  "lint-staged": {
-    "*.js": [
-      "eslint --fix"
-    ]
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
   },
   "engines": {
     "node": ">=10"
