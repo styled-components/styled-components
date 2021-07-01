@@ -265,14 +265,14 @@ import _styled2 from 'styled-components';
 import _styled from 'styled-components';
 import React from 'react';
 
+function Foo() {
+  return /*#__PURE__*/ React.createElement(_StyledDiv, null);
+}
+
 var _StyledDiv = _styled('div').withConfig({
   displayName: 'macrotest___StyledDiv',
   componentId: 'sc-17fdca0-0',
 })(['color:red;']);
-
-function Foo() {
-  return /*#__PURE__*/ React.createElement(_StyledDiv, null);
-}
 
 
 `;
