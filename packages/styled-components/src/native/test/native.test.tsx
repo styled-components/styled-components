@@ -88,7 +88,7 @@ describe('native', () => {
 
   it('should combine inline styles and the style prop', () => {
     const Comp = styled.View`
-      padding-top: 10;
+      padding-top: 10px;
     `;
 
     const style = { opacity: 0.9 };
@@ -100,7 +100,7 @@ describe('native', () => {
 
   it('should allow style function prop when available as builtin', () => {
     const Comp = styled.Pressable`
-      padding-top: 10;
+      padding-top: 10px;
     `;
 
     const style = () => ({ opacity: 0.9 });
@@ -116,7 +116,7 @@ describe('native', () => {
 
   it('should allow style function prop when available as extended', () => {
     const Comp = styled(Pressable)`
-      padding-top: 10;
+      padding-top: 10px;
     `;
 
     const style = () => ({ opacity: 0.9 });

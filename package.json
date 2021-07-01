@@ -93,5 +93,8 @@
   },
   "engines": {
     "node": ">=10"
+  },
+  "resolutions": {
+    "@jest/create-cache-key-function": "^27.0.1"
   }
 }

@@ -6,5 +6,6 @@ module.exports = Object.assign({}, baseConfig, {
   roots: ['<rootDir>/src/'],
   setupFiles: ['raf/polyfill', '<rootDir>/src/test/globals.ts'],
   setupFilesAfterEnv: ['<rootDir>/test-utils/setupTestFramework.ts'],
+  testEnvironment: 'jsdom',
   testPathIgnorePatterns: ['<rootDir>/src/native', '<rootDir>/src/primitives'],
 });

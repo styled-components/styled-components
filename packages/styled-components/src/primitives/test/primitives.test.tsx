@@ -52,7 +52,7 @@ describe('primitives', () => {
 
   it('should combine inline styles and the style prop', () => {
     const Comp = styled.View`
-      padding-top: 10;
+      padding-top: 10px;
     `;
 
     const style = { opacity: 0.9 };
