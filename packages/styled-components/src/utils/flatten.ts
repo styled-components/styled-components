@@ -21,10 +21,10 @@ export const objToCssArray = (obj: ExtensibleObject, prevKey?: string): string[]
   for (const key in obj) {
     if (!obj.hasOwnProperty(key) || isFalsish(obj[key])) continue;
 
-    if (isPlainObject(obj[key])) {
-      rules.push(...objToCssArray(obj[key], key));
-    } else if (isFunction(obj[key])) {
+    if ((Array.isArray(obj[key]) && obj[key].isCss) || isFunction(obj[key])) {
       rules.push(`${hyphenate(key)}:`, obj[key], ';');
+    } else if (isPlainObject(obj[key])) {
+      rules.push(...objToCssArray(obj[key], key));
     } else {
       rules.push(`${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`);
     }

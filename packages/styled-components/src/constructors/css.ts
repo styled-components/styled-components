@@ -5,6 +5,18 @@ import interleave from '../utils/interleave';
 import isFunction from '../utils/isFunction';
 import isPlainObject from '../utils/isPlainObject';
 
+/**
+ * Used when flattening object styles to determine if we should
+ * expand an array of styles.
+ */
+const addTag = (arg: ReturnType<typeof flatten> & { isCss?: boolean }) => {
+  if (Array.isArray(arg)) {
+    // eslint-disable-next-line no-param-reassign
+    arg.isCss = true;
+  }
+  return arg;
+};
+
 export default function css(
   styles: Styles,
   ...interpolations: Array<Interpolation>
@@ -12,7 +24,9 @@ export default function css(
   if (isFunction(styles) || isPlainObject(styles)) {
     const styleFunctionOrObject = styles as Function | ExtensibleObject;
 
-    return flatten(interleave(EMPTY_ARRAY as string[], [styleFunctionOrObject, ...interpolations]));
+    return addTag(
+      flatten(interleave(EMPTY_ARRAY as string[], [styleFunctionOrObject, ...interpolations]))
+    );
   }
 
   const styleStringArray = styles as string[];
@@ -25,5 +39,5 @@ export default function css(
     return styleStringArray;
   }
 
-  return flatten(interleave(styleStringArray, interpolations));
+  return addTag(flatten(interleave(styleStringArray, interpolations)));
 }
