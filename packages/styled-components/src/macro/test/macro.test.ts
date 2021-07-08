@@ -153,7 +153,6 @@ pluginTester({
     },
     'should not add componentId with a config disabling ssr': {
       code: styledExampleCode,
-      // @ts-expect-error overriding test config
       pluginOptions: {
         styledComponents: {
           ssr: false,
