@@ -76,8 +76,8 @@
     "stylis": "^4.0.10"
   },
   "peerDependencies": {
-    "react": ">= 16.8.0",
-    "react-dom": ">= 16.8.0"
+    "react": ">= 17.0.2",
+    "react-dom": ">= 17.0.2"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^8.2.1",
