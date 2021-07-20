@@ -397,7 +397,7 @@ function stringifyRules(rules, selector, prefix) {
 /* eslint-disable camelcase, no-undef */
 
 var getNonce = function() {
-  return typeof __webpack_nonce__ !== 'undefined' ? __webpack_nonce__ : null;
+  return typeof window.__webpack_nonce__ !== 'undefined' ? window.__webpack_nonce__ : null;
 };
 
 //

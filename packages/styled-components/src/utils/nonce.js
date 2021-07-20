@@ -3,7 +3,7 @@
 
 import { IS_BROWSER } from '../constants';
 
-declare var __webpack_nonce__: string;
+declare var window: { __webpack_nonce__: string };
 
 const getNonce = () => {
   if (IS_BROWSER) {
@@ -14,7 +14,12 @@ const getNonce = () => {
       return cspNonceMetaTag && cspNonceMetaTag.content;
     }
   }
-  return typeof __webpack_nonce__ !== 'undefined' ? __webpack_nonce__ : null;
+  
+  return typeof window !== 'undefined'
+    ? typeof window.__webpack_nonce__ !== 'undefined'
+      ? window.__webpack_nonce__
+      : null
+    : null;
 };
 
 export default getNonce;

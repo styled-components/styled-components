@@ -64,7 +64,11 @@ class StyledNativeComponent extends Component<*, *> {
             }
           }
 
-          propsForElement.style = [generatedStyles].concat(style);
+          propsForElement.style = typeof style === 'function' ?
+          (state) => {
+            return [generatedStyles].concat(style(state))
+          }
+          : [generatedStyles].concat(style);
           propsForElement.testID = testID;
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
@@ -162,9 +166,10 @@ export default (InlineStyle: Function) => {
     if (isTargetStyledComp && target.shouldForwardProp) {
       if (shouldForwardProp) {
         // compose nested shouldForwardProp calls
-        shouldForwardProp = (prop, filterFn) =>
+        shouldForwardProp = (prop, filterFn, elementToBeCreated) =>
           // $FlowFixMe
-          target.shouldForwardProp(prop, filterFn) && options.shouldForwardProp(prop, filterFn);
+          target.shouldForwardProp(prop, filterFn, elementToBeCreated) &&
+          options.shouldForwardProp(prop, filterFn, elementToBeCreated);
       } else {
         // eslint-disable-next-line prefer-destructuring
         shouldForwardProp = target.shouldForwardProp;

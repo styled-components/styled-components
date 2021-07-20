@@ -138,5 +138,6 @@ export default [
   'stop',
   'svg',
   'text',
+  'textPath',
   'tspan',
 ];
