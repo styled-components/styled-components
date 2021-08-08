@@ -1,17 +1,16 @@
-/* eslint-disable flowtype/require-valid-file-annotation, no-console, import/extensions */
+import typescript from '@rollup/plugin-typescript';
+import commonjs from 'rollup-plugin-commonjs';
+import json from 'rollup-plugin-json';
 import nodeResolve from 'rollup-plugin-node-resolve';
 import replace from 'rollup-plugin-replace';
-import commonjs from 'rollup-plugin-commonjs';
-import babel from 'rollup-plugin-babel';
-import json from 'rollup-plugin-json';
-import flow from 'rollup-plugin-flow';
-import { terser } from 'rollup-plugin-terser';
 import sourceMaps from 'rollup-plugin-sourcemaps';
+import { terser } from 'rollup-plugin-terser';
 import pkg from './package.json';
 
-// rollup-plugin-ignore stopped working, so we'll just remove the import lines 😐
-const propTypeIgnore = { "import PropTypes from 'prop-types';": "'';" };
-const streamIgnore = { "import stream from 'stream';": "'';" };
+/**
+ * NODE_ENV explicit replacement is only needed for standalone packages, as webpack
+ * automatically will replace it otherwise in the downstream build.
+ */
 
 const cjs = {
   exports: 'named',
@@ -28,40 +27,27 @@ const getCJS = override => ({ ...cjs, ...override });
 const getESM = override => ({ ...esm, ...override });
 
 const commonPlugins = [
-  flow({
-    // needed for sourcemaps to be properly generated
-    pretty: true,
-  }),
+  typescript(),
   sourceMaps(),
   json(),
   nodeResolve(),
-  babel({
-    exclude: ['node_modules/**', '../../node_modules/**'],
-    plugins: ['external-helpers'],
-  }),
   commonjs({
     ignoreGlobal: true,
-    namedExports: {
-      'react-is': ['isElement', 'isValidElementType', 'ForwardRef'],
-    },
   }),
   replace({
     __VERSION__: JSON.stringify(pkg.version),
   }),
 ];
 
-const prodPlugins = [
-  replace({
-    ...propTypeIgnore,
-    'process.env.NODE_ENV': JSON.stringify('production'),
-  }),
-  terser({
-    sourcemap: true,
-  }),
-];
+// this should always be last
+const minifierPlugin = terser({
+  compress: {
+    passes: 2,
+  },
+});
 
 const configBase = {
-  input: './src/index.js',
+  input: './src/index.ts',
 
   // \0 is rollup convention for generated in memory modules
   external: id => !id.startsWith('\0') && !id.startsWith('.') && !id.startsWith('/'),
@@ -72,7 +58,7 @@ const globals = { react: 'React', 'react-dom': 'ReactDOM' };
 
 const standaloneBaseConfig = {
   ...configBase,
-  input: './src/index-standalone.js',
+  input: './src/index-standalone.ts',
   output: {
     file: 'dist/styled-components.js',
     format: 'umd',
@@ -83,7 +69,6 @@ const standaloneBaseConfig = {
   external: Object.keys(globals),
   plugins: configBase.plugins.concat(
     replace({
-      ...streamIgnore,
       __SERVER__: JSON.stringify(false),
     })
   ),
@@ -94,7 +79,8 @@ const standaloneConfig = {
   plugins: standaloneBaseConfig.plugins.concat(
     replace({
       'process.env.NODE_ENV': JSON.stringify('development'),
-    })
+    }),
+    minifierPlugin
   ),
 };
 
@@ -104,7 +90,12 @@ const standaloneProdConfig = {
     ...standaloneBaseConfig.output,
     file: 'dist/styled-components.min.js',
   },
-  plugins: standaloneBaseConfig.plugins.concat(prodPlugins),
+  plugins: standaloneBaseConfig.plugins.concat(
+    replace({
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    }),
+    minifierPlugin
+  ),
 };
 
 const serverConfig = {
@@ -115,8 +106,10 @@ const serverConfig = {
   ],
   plugins: configBase.plugins.concat(
     replace({
+      window: undefined,
       __SERVER__: JSON.stringify(true),
-    })
+    }),
+    minifierPlugin
   ),
 };
 
@@ -128,15 +121,15 @@ const browserConfig = {
   ],
   plugins: configBase.plugins.concat(
     replace({
-      ...streamIgnore,
       __SERVER__: JSON.stringify(false),
-    })
+    }),
+    minifierPlugin
   ),
 };
 
 const nativeConfig = {
   ...configBase,
-  input: './src/native/index.js',
+  input: './src/native/index.ts',
   output: [
     getCJS({
       file: 'native/dist/styled-components.native.cjs.js',
@@ -149,7 +142,7 @@ const nativeConfig = {
 
 const primitivesConfig = {
   ...configBase,
-  input: './src/primitives/index.js',
+  input: './src/primitives/index.ts',
   output: [
     getESM({ file: 'primitives/dist/styled-components-primitives.esm.js' }),
     getCJS({
@@ -164,11 +157,17 @@ const primitivesConfig = {
 };
 
 const macroConfig = Object.assign({}, configBase, {
-  input: './src/macro/index.js',
+  input: './src/macro/index.ts',
   output: [
     getESM({ file: 'dist/styled-components-macro.esm.js' }),
     getCJS({ file: 'dist/styled-components-macro.cjs.js' }),
   ],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(false),
+    }),
+    minifierPlugin
+  ),
 });
 
 export default [

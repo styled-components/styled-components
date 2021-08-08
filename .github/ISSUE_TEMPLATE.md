@@ -8,12 +8,13 @@ Thank you for contributing and please follow this guide before creating an issue
 - Check the docs: https://www.styled-components.com/docs
 - Look for/ask questions on stack overflow: https://stackoverflow.com/questions/ask?tags=styled-components
 - Start a thread on our Spectrum help channel: https://spectrum.chat/styled-components/help
+- Is this about Typescript? TS types are provided by DefinitelyTyped, all issues opened about TS will be closed and referred there.
 
 2. Think you found a bug?
 =============================
 - Consider submitting a PR with a failing test instead
 - Use the "BUG TEMPLATE" below to report a test
-- Don't forget to 👉PROVIDE A REPRODUCTION PLEASE😉 (Codesandbox/Webpackbin links are provided, repositories are ok)
+- Don't forget to 👉PROVIDE A REPRODUCTION PLEASE 😉 (Codesandbox links are provided and most useful, repositories are ok)
 - If you can't provide a reproduction, snippets of code can help, but are incomplete reports
 
 3. Do you have a feature request?
@@ -35,11 +36,10 @@ Please keep it product-centric.
 ## Reproduction
 
 <!-- If you can't reproduce your bug, make sure to add details on how you've set up your project -->
-https://codesandbox.io/s/styled-components-base-wd3de
+https://codesandbox.io/s/styled-components-base-gc367
 
 ## Steps to reproduce
 
 ## Expected Behavior
 
 ## Actual Behavior
-

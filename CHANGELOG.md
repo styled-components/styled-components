@@ -6,6 +6,186 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Use `class` instead of `className` for unidentified DOM elements (better support for styling web components)
+
+- Upgrade to stylis v4
+
+- Rename `masterSheet` in internals to `mainSheet`
+
+## [v5.3.0] - 2021-05-04
+
+- Pass `elementToBeCreated` as a third parameter to `shouldForwardProp` so that the user-specified function can decide whether to pass through props based on whether the created element will be a tag or another component. (see [#3436](https://github.com/styled-components/styled-components/pull/3436))
+
+- Fix React Native components accepts function as style prop. (see [#3389](https://github.com/styled-components/styled-components/pull/3389))
+
+## [v5.2.2] - 2021-03-30
+
+- For React Native based components, pass `testID` down to the native component if specified for an easier time testing. (see [#3365](https://github.com/styled-components/styled-components/pull/3365))
+
+- Enable users of the babel macro to customize the styled-components import with `importModuleName` (see [#3422](https://github.com/styled-components/styled-components/pull/3422))
+
+- [fix] COMPLEX_SELECTOR_PREFIX.includes wasn't transpiled (see [#3397](https://github.com/styled-components/styled-components/pull/3397))
+
+## [v5.2.1] - 2020-10-30
+
+- Tweak server-side build settings to resolve an issue with jest-dom not being able to pick up generated styles (see [#3308](https://github.com/styled-components/styled-components/pull/3308)) thanks @Lazyuki
+
+## [v5.2.0] - 2020-09-04
+
+- Make sure `StyleSheetManager` renders all styles in iframe / child windows (see [#3159](https://github.com/styled-components/styled-components/pull/3159)) thanks @eramdam!
+
+- Rework how components self-reference in extension scenarios (see [#3236](https://github.com/styled-components/styled-components/pull/3236)); should fix a bunch of subtle bugs around patterns like `& + &`
+
+- Fix `keyframes` not receiving a modified stylis instance when using something like `stylis-plugin-rtl` (see [#3239](https://github.com/styled-components/styled-components/pull/3239))
+
+- Big performance gain for components using [style objects](https://styled-components.com/docs/advanced#style-objects) (see [#3239](https://github.com/styled-components/styled-components/pull/3239))
+
+- We no longer emit dynamic classNames for empty rulesets, so some className churn may occur in snapshots
+
+- Preallocate global style placement to ensure cGS is consistently inserted at the top of the stylesheet; note that this is done in _runtime order_ so, if you have multiple cGS that have overlapping styles, ensure they're defined in code in the sequence you would want them injected (see [#3239](https://github.com/styled-components/styled-components/pull/3239))
+
+- Add "engines" to package.json (currently set to Node 10, the oldest supported LTS distribution) (see [#3201](https://github.com/styled-components/styled-components/pull/3201)) thanks @MichaelDeBoey!
+
+- Allow `DISABLE_SPEEDY` to be set to `false` to enable speedy mode in non-production environments (see [#3289](https://github.com/styled-components/styled-components/pull/3289)) thanks @FastFedora!
+
+- Enable new style rules can be inserted in the middle of existing sheet when rendering on client after rehydrate. `GroupIDAllocator` is now changed to find `nextFreeGroup` by checking `reverseRegister`, instead of setting it to the end of existing groups. (see [#3233](https://github.com/styled-components/styled-components/pull/3233)) thanks @mu29!
+
+## [v5.1.1] - 2020-04-07
+
+### New Functionality
+
+- Implement `shouldForwardProp` API for native and primitive platforms, which was previously missing in [v5.1.0] (see [#3093](https://github.com/styled-components/styled-components/pull/3107))
+  This has been released under a patch bump instead of a minor, since it's only been missing from Native-support.
+
+### Bugfixes
+
+- Added `useTheme` hook to named exports for react-primitives entrypoint (see [#2982](https://github.com/styled-components/styled-components/pull/2982)) thanks @jladuval!
+- Escape every CSS ident character necessary when converting component display names to class names (see [#3102](https://github.com/styled-components/styled-components/pull/3102)) thanks @kripod!
+
+## [v5.1.0] - 2020-04-07
+
+### New Functionality
+
+- Add `shouldForwardProp` API (almost the same as emotion's, just a slightly different usage pattern); https://github.com/styled-components/styled-components/pull/3006
+
+  Sometimes when composing multiple higher-order components together, it's possible to get into scenarios when multiple layers consume props by the same name. In the past we've introduced various workarounds for popular props like `"as"` but this power-user API allows for more granular customization of what props are passed down to descendant component children when using the `styled()` HOC wrapper.
+
+  When combined with other APIs like `.attrs()` this becomes a very powerful constellation of abilities.
+
+  Here's how you use it:
+
+  ```jsx
+  const Comp = styled('div').withConfig({
+    shouldForwardProp: (prop, defaultValidatorFn) => !['filterThis'].includes(prop),
+  })`
+    color: red;
+  `;
+
+  render(<Comp filterThis="abc" passThru="def" />);
+
+  # Renders: <div className="[generated]" passThru="def"></div>
+  ```
+
+  The second argument `defaultValidatorFn` is what we use internally to validate props based on known HTML attributes. It's provided so you can filter exactly what props you don't wish to pass and then fall-back to the default filtering mechanism if desired.
+
+  Other methods on the `styled` HOC like `.attrs` can be chained after `withConfig()`, and before opening your template literal:
+
+  ```jsx
+  const Comp = styled('div').withConfig({
+    shouldForwardProp: (prop, defaultValidatorFn) => !['filterThis'].includes(prop),
+  }).attrs({ className: 'foo' })`
+    color: red;
+  `;
+
+  render(<Comp filterThis="abc" passThru="def" />);
+
+  # Renders: <div className="[generated] foo" passThru="def"></div>
+  ```
+
+  Thanks @stevesims and all that contributed!
+
+- Add "transient props" API; https://github.com/styled-components/styled-components/pull/3052
+
+  Think of [_transient props_](https://medium.com/@probablyup/introducing-transient-props-f35fd5203e0c) as a lightweight, but complementary API to `shouldForwardProp`. Because styled-components allows any kind of prop to be used for styling (a trait shared by most CSS-in-JS libraries, but not the third party library ecosystem in general), adding a filter for every possible prop you might use can get cumbersome.
+
+  _Transient props_ are a new pattern to pass props that are explicitly consumed only by styled components and are not meant to be passed down to deeper component layers. Here's how you use them:
+
+  ```jsx
+  const Comp = styled.div`
+    color: ${props => props.$fg || 'black'};
+  `;
+
+  render(<Comp $fg="red">I'm red!</Comp>);
+  ```
+
+  Note the dollar sign (`$`) prefix on the prop; this marks it as _transient_ and styled-components knows not to add it to the rendered DOM element or pass it further down the component hierarchy.
+
+### Bugfixes
+
+- Fix slow SSR Rehydration for malformed CSS and increase fault-tolerance (see [#3018](https://github.com/styled-components/styled-components/pull/3018))
+
+- Change isPlainObject (internal method) to support objects created in a different context (see [#3068](https://github.com/styled-components/styled-components/pull/3068)) thanks @keeganstreet!
+
+- Add support for the `<video disablePictureInPicture>` (see [#3058](https://github.com/styled-components/styled-components/pull/3058)) thanks @egdbear!
+
+## [v5.0.1] - 2020-02-04
+
+- Added useTheme hook to named exports for react native
+
+- Performance enhancements
+
+  - Refactored hashing function that is a bit faster in benchmarks
+  - Fixed a bitwise math issue that was causing SSR performance degradations due to how we allocate typed arrays under the hood
+
+- Added some helpful new dev-time warnings for antipatterns
+  - Recommending against usage of css `@import` inside `createGlobalStyle` and what to do instead
+  - Catching and warning against dynamic creation of styled-components inside other component render paths
+
+## [v5.0.0] - 2020-01-13
+
+Read the [v5 release announcement](https://medium.com/styled-components/announcing-styled-components-v5-beast-mode-389747abd987)!
+
+- 19% smaller bundle size
+- 18% faster client-side mounting
+- 17% faster updating of dynamic styles
+- 45% faster server-side rendering
+- RTL support
+
+**NOTE: At this time we recommend not using `@import` inside of `createGlobalStyle`. We're working on better behavior for this functionality but it just doesn't really work at the moment and it's better if you just embed these imports in your HTML index file, etc.**
+
+- `StyleSheetManager` enhancements
+  - you can now supply stylis plugins like [stylis-plugin-rtl](https://www.npmjs.com/package/stylis-plugin-rtl); `<StyleSheetManager stylisPlugins={[]}>...</StyleSheetManager>`
+  - `disableVendorPrefixes` removes autoprefixing if you don't need legacy browser support; `<StyleSheetManager disableVendorPrefixes>...</StyleSheetManager>`
+  - `disableCSSOMInjection` forces using the slower injection mode if other integrations in your runtime environment can't parse CSSOM-injected styles; `<StyleSheetManager disableCSSOMInjection>...</StyleSheetManager>`
+
+* **Remove deprecated attrs "subfunction" syntax variant**
+
+  ```js
+  styled.div.attrs({ color: p => p.color });
+  ```
+
+  should become
+
+  ```js
+  styled.div.attrs(p => ({ color: p.color }));
+  ```
+
+  You can still pass objects to `attrs` but individual properties shouldn't have functions that receive props anymore.
+
+* Fix attrs not taking precedence over props when overriding a given prop
+
+* (ReactNative) upgrade css-to-react-native to v3 ([changelog](https://github.com/styled-components/css-to-react-native/releases/tag/v3.0.0))
+
+  - Removed support for unitless line height in font shorthand
+
+* Replace `merge-anything` with `mixin-deep` to save some bytes (this is what handles merging of `defaultProps` between folded styled components); this is inlined into since the library is written in IE-incompatible syntax
+
+* Fix certain adblockers messing up styling by purposefully not emitting the substring "ad" (case-insensitive) when generating dynamic class names
+
+* Fix regressed behavior between v3 and v4 where className was not correctly aggregated between folded `.attrs` invocations
+
+- Fix support for styling custom elements (https://github.com/styled-components/styled-components/pull/2819)
+
 ## [v4.4.1] - 2019-10-30
 
 - Fix `styled-components`'s `react-native` import for React Native Web, by [@fiberjw](https://github.com/fiberjw) (see [#2797](https://github.com/styled-components/styled-components/pull/2797))
@@ -993,7 +1173,16 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v4.4.1...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.3.0...master
+[v5.3.0]: https://github.com/styled-components/styled-components/compare/v5.2.3...v5.3.0
+[v5.2.3]: https://github.com/styled-components/styled-components/compare/v5.2.2...v5.2.3
+[v5.2.2]: https://github.com/styled-components/styled-components/compare/v5.2.1...v5.2.2
+[v5.2.1]: https://github.com/styled-components/styled-components/compare/v5.2.0...v5.2.1
+[v5.2.0]: https://github.com/styled-components/styled-components/compare/v5.1.1...v5.2.0
+[v5.1.1]: https://github.com/styled-components/styled-components/compare/v5.1.0...v5.1.1
+[v5.1.0]: https://github.com/styled-components/styled-components/compare/v5.0.1...v5.1.0
+[v5.0.1]: https://github.com/styled-components/styled-components/compare/v5.0.0...v5.0.1
+[v5.0.0]: https://github.com/styled-components/styled-components/compare/v4.4.1...v5.0.0
 [v4.4.1]: https://github.com/styled-components/styled-components/compare/v4.4.0...v4.4.1
 [v4.4.0]: https://github.com/styled-components/styled-components/compare/v4.3.2...v4.4.0
 [v4.3.2]: https://github.com/styled-components/styled-components/compare/v4.3.1...v4.3.2

@@ -1,3 +1,5 @@
+HELLO
+
 <div align="center">
   <a href="https://www.styled-components.com">
     <img alt="styled-components" src="https://raw.githubusercontent.com/styled-components/brand/master/styled-components.png" height="150px" />
@@ -11,32 +13,56 @@
   <br />
   <br />
   <a href="https://www.npmjs.com/package/styled-components"><img src="https://www.styled-components.com/proxy/downloads.svg" alt="downloads: 600k/month"></a>
-  <a href="#backers" alt="sponsors on Open Collective"><img src="https://opencollective.com/styled-components/backers/badge.svg" /></a> <a href="#sponsors" alt="Sponsors on Open Collective"><img src="https://opencollective.com/styled-components/sponsors/badge.svg" /></a> <a href="https://spectrum.chat/styled-components"><img src="https://withspectrum.github.io/badge/badge.svg" alt="Join the community on Spectrum"></a>
-  <img src="https://www.styled-components.com/proxy/size.svg" alt="gzip size">
+  <a href="#backers" alt="sponsors on Open Collective"><img src="https://opencollective.com/styled-components/backers/badge.svg" /></a> <a href="#sponsors" alt="Sponsors on Open Collective"><img src="https://opencollective.com/styled-components/sponsors/badge.svg" /></a> <a href="https://discord.gg/hfGUrbrxaU">
+        <img alt="Discord" src="https://img.shields.io/discord/818449605409767454?logo=discord" /></a>
+  <a href="https://bundlephobia.com/result?p=styled-components" title="styled-components latest minified+gzip size"><img src="https://badgen.net/bundlephobia/minzip/styled-components" alt="gzip size"></a>
   <a href="#alternative-installation-methods"><img src="https://img.shields.io/badge/module%20formats-umd%2C%20cjs%2C%20esm-green.svg" alt="module formats: umd, cjs, esm"></a>
+  <a href="https://codecov.io/gh/styled-components/styled-components"><img src="https://codecov.io/gh/styled-components/styled-components/coverage.svg?branch=main" alt="Code Coverage"></a>
 </div>
 
-<br />
-<br />
+---
+
+## Looking for v5?
+
+The `main` branch is under development of the upcoming v6 major version of styled-components. For changes targeting v5, please point your PRs at the `legacy-v5` branch.
+
+---
 
 Utilising [tagged template literals](https://www.styled-components.com/docs/advanced#tagged-template-literals) (a recent addition to JavaScript) and the [power of CSS](https://www.styled-components.com/docs/api#supported-css), `styled-components` allows you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
+
+```jsx
+const Button = styled.button`
+  color: grey;
+`;
+```
+
+Alternatively, you may use [style objects](https://www.styled-components.com/docs/advanced#style-objects). This allows for easy porting of CSS from inline styles, while still supporting the more advanced styled-components capabilities like component selectors and media queries.
+
+```jsx
+const Button = styled.button({
+  color: 'grey',
+});
+```
+
+Equivalent to:
+
+```jsx
+const Button = styled.button`
+  color: grey;
+`;
+```
 
 `styled-components` is compatible with both React (for web) and React Native – meaning it's the perfect choice even for truly universal apps! See the [documentation about React Native](https://www.styled-components.com/docs/basics#react-native) for more information.
 
 _Supported by [Front End Center](https://frontend.center). Thank you for making this possible!_
 
-## v5
+## Upgrading from v4
 
-styled-components v5 is now [officially in beta](https://medium.com/styled-components/announcing-styled-components-v5-beast-mode-389747abd987)! Try it out in your project today:
+1. `npm install styled-components@^5.0.0 react@^16.8 react-dom@^16.8 react-is@^16.8`
+1. ??
+1. Profit!
 
-```
-npm install styled-components@beta
-```
-
-Notes:
-
-- Make sure you're on a hooks-compatible version of react (>= 16.8 for react, react-dom, and react-is)
-- If you use jest-styled-components, upgrade to the beta of that as well! `npm install jest-styled-components@beta`
+> If you use jest-styled-components, make sure you update that too.
 
 ## [Docs](https://www.styled-components.com/docs)
 
@@ -102,7 +128,7 @@ const Title = styled.h1`
 `;
 ```
 
-If you wish to provide configuration options to the babel plugin similar to how you would in a `.babelrc`, [see this guide](https://github.com/kentcdodds/babel-plugin-macros/blob/master/other/docs/author.md#config-experimental). The config name is `"styledComponents"`.
+If you wish to provide configuration options to the babel plugin similar to how you would in a `.babelrc`, [see this guide](https://github.com/kentcdodds/babel-plugin-macros/blob/main/other/docs/author.md#config-experimental). The config name is `"styledComponents"`.
 
 ## Built with `styled-components`
 

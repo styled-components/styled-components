@@ -1,0 +1,91 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`expanded api "as" prop changes the rendered element type 1`] = `
+<span
+  className="sc-a b"
+/>
+`;
+
+exports[`expanded api "as" prop changes the rendered element type when used with attrs 1`] = `
+<header
+  className="sc-a b"
+/>
+`;
+
+exports[`expanded api "as" prop works with custom components 1`] = `
+<figure
+  className="sc-a b"
+/>
+`;
+
+exports[`expanded api chaining should keep the last value passed in when merging 1`] = `
+<div
+  className="dn-5-id-4"
+/>
+`;
+
+exports[`expanded api chaining should merge the options strings 1`] = `
+<div
+  className="dn-2-id-1"
+/>
+`;
+
+exports[`expanded api componentId should be attached if passed in 1`] = `
+<div
+  className="LOLOMG"
+/>
+`;
+
+exports[`expanded api componentId should be attached if passed in 2`] = `
+<div
+  className="OMGLOL"
+/>
+`;
+
+exports[`expanded api componentId should be combined with displayName if both passed in 1`] = `
+<div
+  className="Comp-LOLOMG"
+/>
+`;
+
+exports[`expanded api componentId should be combined with displayName if both passed in 2`] = `
+<div
+  className="Comp2-OMGLOL"
+/>
+`;
+
+exports[`expanded api componentId should be generated as "sc" + hash 1`] = `
+<div
+  className="sc-a"
+/>
+`;
+
+exports[`expanded api componentId should be generated as "sc" + hash 2`] = `
+<div
+  className="sc-b"
+/>
+`;
+
+exports[`expanded api componentId should be generated from displayName + hash 1`] = `
+<div
+  className="Comp-a"
+/>
+`;
+
+exports[`expanded api componentId should be generated from displayName + hash 2`] = `
+<div
+  className="Comp2-b"
+/>
+`;
+
+exports[`expanded api componentId should work with \`.withComponent\` 1`] = `
+<h1
+  className="Comp-OMGLOL-h1"
+/>
+`;
+
+exports[`expanded api componentId should work with \`.withComponent\` 2`] = `
+<div
+  className="Comp2-OMFG-Dummy"
+/>
+`;

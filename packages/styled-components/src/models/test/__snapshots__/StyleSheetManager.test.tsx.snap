@@ -1,0 +1,22 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`StyleSheetManager should apply styles to appropriate targets for nested StyleSheetManagers 1`] = `
+<style data-styled="active"
+       data-styled-version="JEST_MOCK_VERSION"
+>
+  .d{color:red;}
+</style>
+<style data-styled="active"
+       data-styled-version="JEST_MOCK_VERSION"
+>
+  .e{color:blue;}
+</style>
+`;
+
+exports[`StyleSheetManager should apply styles to appropriate targets for nested StyleSheetManagers 2`] = `
+<style data-styled="active"
+       data-styled-version="JEST_MOCK_VERSION"
+>
+  .f{color:green;}
+</style>
+`;

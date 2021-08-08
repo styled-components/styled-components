@@ -1,0 +1,14 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`props shouldForwardProp should inherit shouldForwardProp for wrapped styled components 2`] = `
+Array [
+  <div
+    className="sc-a c"
+    id="test-1"
+  />,
+  <div
+    className="sc-a sc-b d"
+    id="test-2"
+  />,
+]
+`;

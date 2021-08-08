@@ -1,0 +1,157 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`attrs does not pass non html tags to HTML element 1`] = `
+<div
+  className="sc-a sc-b c"
+/>
+`;
+
+exports[`attrs merge attrs 1`] = `
+<button
+  className="sc-a"
+  tabIndex={0}
+  type="submit"
+/>
+`;
+
+exports[`attrs merge attrs when inheriting SC 1`] = `
+<button
+  className="sc-a sc-b"
+  tabIndex={0}
+  type="submit"
+/>
+`;
+
+exports[`attrs pass a React component 1`] = `
+<button>
+  <p>
+    React Component
+  </p>
+</button>
+`;
+
+exports[`attrs pass a simple attr via function with object return 1`] = `
+<button
+  className="sc-a"
+  type="button"
+/>
+`;
+
+exports[`attrs pass a simple attr via object 1`] = `
+<button
+  className="sc-a"
+  type="button"
+/>
+`;
+
+exports[`attrs pass attrs to style block 1`] = `
+<a
+  className="sc-a b"
+  data-active-class-name="--is-active"
+  href="#"
+/>
+`;
+
+exports[`attrs pass props to the attr function 1`] = `
+<button
+  className="sc-a"
+  type="button"
+/>
+`;
+
+exports[`attrs pass props to the attr function 2`] = `
+<button
+  className="sc-a"
+  type="submit"
+/>
+`;
+
+exports[`attrs should merge className 1`] = `
+<div
+  className="sc-a meow nya"
+/>
+`;
+
+exports[`attrs should merge className even if its a function 1`] = `
+<div
+  className="sc-a meow nya"
+/>
+`;
+
+exports[`attrs should merge className even if its a function 2`] = `
+<div
+  className="sc-a meow purr"
+/>
+`;
+
+exports[`attrs should override children of course 1`] = `
+<div
+  className="sc-a"
+>
+  <span>
+    Amazing
+  </span>
+</div>
+`;
+
+exports[`attrs should pass through children as a normal prop 1`] = `
+<div
+  className="sc-a"
+>
+  Probably a bad idea
+</div>
+`;
+
+exports[`attrs should pass through complex children as well 1`] = `
+<div
+  className="sc-a"
+>
+  <span>
+    Probably a bad idea
+  </span>
+</div>
+`;
+
+exports[`attrs should replace props with attrs 1`] = `
+<button
+  className="sc-a"
+  tabIndex={0}
+  type="button"
+/>
+`;
+
+exports[`attrs should replace props with attrs 2`] = `
+<button
+  className="sc-a"
+  tabIndex={0}
+  type="button"
+/>
+`;
+
+exports[`attrs should replace props with attrs 3`] = `
+<button
+  className="sc-a"
+  tabIndex={0}
+  type="button"
+/>
+`;
+
+exports[`attrs should work with data and aria attributes 1`] = `
+<div
+  aria-label="A simple FooBar"
+  className="sc-a"
+  data-foo="bar"
+/>
+`;
+
+exports[`attrs work fine with a function that returns an empty object 1`] = `
+<div
+  className="sc-a"
+/>
+`;
+
+exports[`attrs work fine with an empty object 1`] = `
+<div
+  className="sc-a"
+/>
+`;

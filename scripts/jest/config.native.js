@@ -1,13 +1,12 @@
+// eslint-disable-next-line
 const baseConfig = require('./config.base');
 
-const copy = Object.assign({}, baseConfig);
-
-// react-native preset brings its own haste implementation
-delete copy.haste;
-
-module.exports = Object.assign(copy, {
-  testRegex: 'src/native/test/.*.js$',
+module.exports = Object.assign({}, baseConfig, {
   preset: 'react-native',
-  testURL: 'http://localhost',
-  testEnvironment: 'jsdom',
+  setupFiles: ['<rootDir>/packages/styled-components/src/test/globals.ts'],
+  testEnvironment: 'node',
+  testRegex: 'src/native/test/.*.tsx?$',
+  transform: {
+    '^.+\\.js$': '<rootDir>/node_modules/react-native/jest/preprocessor.js',
+  },
 });

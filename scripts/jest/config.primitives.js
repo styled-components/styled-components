@@ -1,9 +1,7 @@
-const baseConfig = require('./config.base');
+// eslint-disable-next-line
+const nativeConfig = require('./config.native');
 
-module.exports = Object.assign({}, baseConfig, {
-  testRegex: 'src/primitives/test/.*.js$',
-  moduleFileExtensions: ['ios.js', 'js'],
-  preset: 'react-native',
-  testURL: 'http://localhost',
-  testEnvironment: 'jsdom',
+module.exports = Object.assign({}, nativeConfig, {
+  moduleFileExtensions: ['ios.js', 'ios.ts', 'ios.tsx', 'js', 'ts', 'tsx'],
+  testRegex: 'src/primitives/test/.*.tsx?$',
 });
