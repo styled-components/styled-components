@@ -51,13 +51,15 @@ export default function createGlobalStyle(
       renderStyles(instance, props, styleSheet, theme, stylis);
     }
 
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useLayoutEffect(() => {
-      if (!styleSheet.server) {
-        renderStyles(instance, props, styleSheet, theme, stylis);
-        return () => globalStyle.removeStyles(instance, styleSheet);
-      }
-    }, [instance, props, styleSheet, theme, stylis]);
+    if (!__SERVER__) {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      useLayoutEffect(() => {
+        if (!styleSheet.server) {
+          renderStyles(instance, props, styleSheet, theme, stylis);
+          return () => globalStyle.removeStyles(instance, styleSheet);
+        }
+      }, [instance, props, styleSheet, theme, stylis]);
+    }
 
     return null;
   };
