@@ -18,7 +18,7 @@ export const outputSheet = (sheet: Sheet) => {
 
     const names = sheet.names.get(id);
     const rules = tag.getGroup(group);
-    if (names === undefined || rules.length === 0) continue;
+    if (!names || !rules || !names.size) continue;
 
     const selector = `${SC_ATTR}.g${group}[id="${id}"]`;
 
