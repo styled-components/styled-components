@@ -7,8 +7,6 @@ import getNonce from '../utils/nonce';
 import StyleSheet from '../sheet';
 import StyleSheetManager from './StyleSheetManager';
 
-declare var __SERVER__: boolean;
-
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 
 export default class ServerStyleSheet {
@@ -72,53 +70,55 @@ export default class ServerStyleSheet {
 
   // eslint-disable-next-line consistent-return
   interleaveWithNodeStream(input: any) {
-    if (!__SERVER__ || IS_BROWSER) {
-      return throwStyledError(3);
-    } else if (this.sealed) {
+    if (this.sealed) {
       return throwStyledError(2);
     }
 
-    if (__SERVER__) {
-      this.seal();
-
-      // eslint-disable-next-line global-require
-      const { Readable, Transform } = require('stream');
-
-      const readableStream: Readable = input;
-      const { instance: sheet, _emitSheetCSS } = this;
-
-      const transformer = new Transform({
-        transform: function appendStyleChunks(chunk, /* encoding */ _, callback) {
-          // Get the chunk and retrieve the sheet's CSS as an HTML chunk,
-          // then reset its rules so we get only new ones for the next chunk
-          const renderedHtml = chunk.toString();
-          const html = _emitSheetCSS();
-
-          sheet.clearTag();
-
-          // prepend style html to chunk, unless the start of the chunk is a
-          // closing tag in which case append right after that
-          if (CLOSING_TAG_R.test(renderedHtml)) {
-            const endOfClosingTag = renderedHtml.indexOf('>') + 1;
-            const before = renderedHtml.slice(0, endOfClosingTag);
-            const after = renderedHtml.slice(endOfClosingTag);
-
-            this.push(before + html + after);
-          } else {
-            this.push(html + renderedHtml);
-          }
-
-          callback();
-        },
-      });
-
-      readableStream.on('error', err => {
-        // forward the error to the transform stream
-        transformer.emit('error', err);
-      });
-
-      return readableStream.pipe(transformer);
+    let stream;
+    try {
+      // Indirect eval/require to guarantee no side-effects in module scope
+      // (optimization for minifiers)
+      stream = new Function('require', 'return require("stream")')(require);
+    } catch (_error) {
+      return throwStyledError(3);
     }
+
+    this.seal();
+    const { Readable, Transform } = stream;
+    const readableStream: Readable = input;
+    const { instance: sheet, _emitSheetCSS } = this;
+
+    const transformer = new Transform({
+      transform: function appendStyleChunks(chunk, /* encoding */ _, callback) {
+        // Get the chunk and retrieve the sheet's CSS as an HTML chunk,
+        // then reset its rules so we get only new ones for the next chunk
+        const renderedHtml = chunk.toString();
+        const html = _emitSheetCSS();
+
+        sheet.clearTag();
+
+        // prepend style html to chunk, unless the start of the chunk is a
+        // closing tag in which case append right after that
+        if (CLOSING_TAG_R.test(renderedHtml)) {
+          const endOfClosingTag = renderedHtml.indexOf('>') + 1;
+          const before = renderedHtml.slice(0, endOfClosingTag);
+          const after = renderedHtml.slice(endOfClosingTag);
+
+          this.push(before + html + after);
+        } else {
+          this.push(html + renderedHtml);
+        }
+
+        callback();
+      },
+    });
+
+    readableStream.on('error', err => {
+      // forward the error to the transform stream
+      transformer.emit('error', err);
+    });
+
+    return readableStream.pipe(transformer);
   }
 
   seal = () => {
