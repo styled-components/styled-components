@@ -18,7 +18,7 @@ export const outputSheet = (sheet: Sheet) => {
 
     const names = sheet.names.get(id);
     const rules = tag.getGroup(group);
-    if (names === undefined || rules.length === 0) continue;
+    if (!names || !rules || !names.size) continue;
 
     const selector = `${SC_ATTR}.g${group}[id="${id}"]`;
 
@@ -52,7 +52,7 @@ const rehydrateNamesFromContent = (sheet: Sheet, id: string, content: string) =>
 };
 
 const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
-  const parts = style.innerHTML.split(SPLITTER);
+  const parts = (style.innerHTML || '').split(SPLITTER);
   const rules: string[] = [];
 
   for (let i = 0, l = parts.length; i < l; i++) {

@@ -37,6 +37,18 @@ describe('ssr', () => {
     expect(css).toMatchSnapshot();
   });
 
+  it('should emit nothing when no styles were generated', () => {
+    styled.h1`
+      color: red;
+    `;
+
+    const sheet = new ServerStyleSheet();
+    renderToString(sheet.collectStyles(<div />));
+
+    const css = sheet.getStyleTags();
+    expect(css).toBe('');
+  });
+
   it('should extract both global and local CSS', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
