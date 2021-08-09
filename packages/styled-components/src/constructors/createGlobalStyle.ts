@@ -10,8 +10,6 @@ import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
-declare const __SERVER__: boolean;
-
 export default function createGlobalStyle(
   strings: Styles,
   ...interpolations: Array<Interpolation>
@@ -49,17 +47,17 @@ export default function createGlobalStyle(
       );
     }
 
-    if (__SERVER__) {
+    if (styleSheet.server) {
       renderStyles(instance, props, styleSheet, theme, stylis);
-    } else {
-      // this conditional is fine because it is compiled away for the relevant builds during minification,
-      // resulting in a single unguarded hook call
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      useLayoutEffect(() => {
+    }
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useLayoutEffect(() => {
+      if (!styleSheet.server) {
         renderStyles(instance, props, styleSheet, theme, stylis);
         return () => globalStyle.removeStyles(instance, styleSheet);
-      }, [instance, props, styleSheet, theme, stylis]);
-    }
+      }
+    }, [instance, props, styleSheet, theme, stylis]);
 
     return null;
   };
