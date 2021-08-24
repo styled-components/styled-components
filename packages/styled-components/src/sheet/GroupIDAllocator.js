@@ -42,6 +42,10 @@ export const getIdForGroup = (group: number): void | string => {
 };
 
 export const setGroupForId = (id: string, group: number) => {
+  if (group >= nextFreeGroup) {
+    nextFreeGroup = group + 1;
+  }
+
   groupIDRegister.set(id, group);
   reverseRegister.set(group, id);
 };
