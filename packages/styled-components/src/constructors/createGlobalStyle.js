@@ -51,15 +51,19 @@ export default function createGlobalStyle(
       );
     }
 
-    if (__SERVER__) {
+    if (styleSheet.server) {
       renderStyles(instance, props, styleSheet, theme, stylis);
-    } else {
+    }
+
+    if (!__SERVER__) {
       // this conditional is fine because it is compiled away for the relevant builds during minification,
       // resulting in a single unguarded hook call
       // eslint-disable-next-line react-hooks/rules-of-hooks
       useLayoutEffect(() => {
-        renderStyles(instance, props, styleSheet, theme, stylis);
-        return () => globalStyle.removeStyles(instance, styleSheet);
+        if (!styleSheet.server) {
+          renderStyles(instance, props, styleSheet, theme, stylis);
+          return () => globalStyle.removeStyles(instance, styleSheet);
+        }
       }, [instance, props, styleSheet, theme, stylis]);
     }
 

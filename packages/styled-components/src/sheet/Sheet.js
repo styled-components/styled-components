@@ -31,6 +31,8 @@ export default class StyleSheet implements Sheet {
 
   options: SheetOptions;
 
+  server: boolean;
+
   tag: void | GroupedTag;
 
   /** Register a group ID to give it an index */
@@ -50,9 +52,10 @@ export default class StyleSheet implements Sheet {
 
     this.gs = globalStyles;
     this.names = new Map(names);
+    this.server = !!options.isServer;
 
     // We rehydrate only once and use the sheet that is created first
-    if (!this.options.isServer && IS_BROWSER && SHOULD_REHYDRATE) {
+    if (!this.server && IS_BROWSER && SHOULD_REHYDRATE) {
       SHOULD_REHYDRATE = false;
       rehydrateSheet(this);
     }
