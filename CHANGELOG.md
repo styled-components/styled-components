@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file. If a contri
 _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/)._
 
 ## Unreleased
+
+## [v5.3.1] - 2021-08-24
+
+- Fix forced server-side mode not triggering global styles (See [#3566](https://github.com/styled-components/styled-components/pull/3566))
+
+- Fix SSR collisions caused by insufficient hash inputs and reordering of groups on the client, which is a regression in [v5.2.0] (See [#3563](https://github.com/styled-components/styled-components/pull/3563))
+
+- Fix dynamic creation React warning for React v18, backported to v5 by [@lynndylanhurley](https://github.com/lynndylanhurley) (See [#3564](https://github.com/styled-components/styled-components/pull/3564))
+
+- Add missing `typeof window` check when checking for duplicate instances of styled-components (See [#3553](https://github.com/styled-components/styled-components/pull/3553))
+
+- Prevent `ServerStyleSheet` from emitting empty style tags, which would cause issues in IE11 (See [#3555](https://github.com/styled-components/styled-components/pull/3555))
+
+- Support `css` tagged templates inside style objects, by [@roginfarrer](https://github.com/roginfarrer) and [@dvingo](https://github.com/dvingo) (See [#3469](https://github.com/styled-components/styled-components/pull/3469))
+
 ## [v5.3.0] - 2021-05-04
 
 - Pass `elementToBeCreated` as a third parameter to `shouldForwardProp` so that the user-specified function can decide whether to pass through props based on whether the created element will be a tag or another component. (see [#3436](https://github.com/styled-components/styled-components/pull/3436))
@@ -1170,7 +1185,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v5.3.0...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.3.1...master
+[v5.3.1]: https://github.com/styled-components/styled-components/compare/v5.3.0...v5.3.1
 [v5.3.0]: https://github.com/styled-components/styled-components/compare/v5.2.3...v5.3.0
 [v5.2.3]: https://github.com/styled-components/styled-components/compare/v5.2.2...v5.2.3
 [v5.2.2]: https://github.com/styled-components/styled-components/compare/v5.2.1...v5.2.2
