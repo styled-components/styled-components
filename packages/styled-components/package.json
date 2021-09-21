@@ -14,11 +14,11 @@
   ],
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
-    "prebuild": "rimraf dist && npm run generateErrors",
+    "prebuild": "rimraf dist && yarn generateErrors",
     "build": "rollup -c",
-    "postbuild": "npm run lint:size",
-    "pretest": "npm run generateErrors",
-    "test": "npm run test:web && npm run test:native && npm run test:primitives",
+    "postbuild": "yarn lint:size",
+    "pretest": "yarn generateErrors",
+    "test": "yarn test:web && yarn test:native && yarn test:primitives",
     "test:web": "jest -c jest.config.main.js",
     "test:native": "jest -c jest.config.native.js",
     "test:primitives": "jest -c jest.config.primitives.js",
@@ -27,7 +27,7 @@
     "lint": "eslint src",
     "lint:size": "bundlewatch",
     "prettier": "prettier src/** --write",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "yarn build"
   },
   "repository": {
     "type": "git",

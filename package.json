@@ -2,16 +2,13 @@
   "name": "styled-components-project",
   "private": true,
   "scripts": {
-    "build": "wsrun -p styled-components --exclude-missing build",
+    "build": "yarn workspace styled-components build",
     "postbuild": "cp README.md packages/styled-components/",
-    "postinstall": "wsrun -p styled-components --stages generateErrors",
-    "dev": "wsrun --exclude-missing dev",
-    "lint": "wsrun --exclude-missing lint",
-    "size": "wsrun --exclude-missing lint:size",
-    "test": "wsrun --exclude-missing test",
-    "prepublishOnly": "run-s build test",
-    "prebenchmark": "wsrun --stages --exclude-missing build",
-    "benchmark": "wsrun -p @styled-components/benchmarks --stages start"
+    "postinstall": "yarn workspace styled-components generateErrors",
+    "dev": "yarn workspace styled-components dev",
+    "lint": "yarn workspace styled-components lint",
+    "size": "yarn workspace styled-components lint:size",
+    "test": "yarn workspace styled-components test"
   },
   "author": "Glen Maddern",
   "license": "MIT",
@@ -19,9 +16,6 @@
     "url": "https://github.com/styled-components/styled-components/issues"
   },
   "homepage": "https://styled-components.com",
-  "devDependencies": {
-    "wsrun": "^5.0.2"
-  },
   "workspaces": {
     "packages": [
       "packages/*"
