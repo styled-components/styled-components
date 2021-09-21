@@ -15,20 +15,20 @@ export const checkDynamicCreation = (displayName: string, componentId?: string) 
     // React 17 and earlier throw an error
     // React 18 and above use console.error
 
-    const originalConsoleError = console.error
+    const originalConsoleError = console.error;
     try {
-      let didNotCallInvalidHook = true
+      let didNotCallInvalidHook = true;
       console.error = (consoleErrorMessage, ...consoleErrorArgs) => {
-      // The error here is expected, since we're expecting anything that uses `checkDynamicCreation` to
-      // be called outside of a React component.
+        // The error here is expected, since we're expecting anything that uses `checkDynamicCreation` to
+        // be called outside of a React component.
         if (invalidHookCallRe.test(consoleErrorMessage)) {
-          didNotCallInvalidHook = false
+          didNotCallInvalidHook = false;
           // This shouldn't happen, but resets `warningSeen` if we had this error happen intermittently
           seen.delete(message);
         } else {
           originalConsoleError(consoleErrorMessage, ...consoleErrorArgs);
         }
-      }
+      };
       // We purposefully call `useRef` outside of a component and expect it to throw
       // If it doesn't, then we're inside another component.
       // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -42,7 +42,7 @@ export const checkDynamicCreation = (displayName: string, componentId?: string) 
     } catch (error) {
       // The error here is expected, since we're expecting anything that uses `checkDynamicCreation` to
       // be called outside of a React component.
-      if (invalidHookCallRe.test(error.message)) {
+      if (invalidHookCallRe.test((error as Error).message)) {
         // This shouldn't happen, but resets `warningSeen` if we had this error happen intermittently
         seen.delete(message);
       }
