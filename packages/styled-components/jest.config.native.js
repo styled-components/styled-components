@@ -7,6 +7,6 @@ module.exports = Object.assign({}, baseConfig, {
   testEnvironment: 'node',
   testRegex: 'src/native/test/.*.tsx?$',
   transform: {
-    '^.+\\.js$': '<rootDir>/../../node_modules/react-native/jest/preprocessor.js',
+    '^.+\\.js$': '<rootDir>/node_modules/react-native/jest/preprocessor.js',
   },
 });
