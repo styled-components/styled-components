@@ -1,9 +1,8 @@
-const path = require('path');
-
 module.exports = {
   clearMocks: true,
   collectCoverage: !!process.env.PULL_REQUEST,
-  rootDir: path.join(__dirname, '../..'),
+  rootDir: '.',
   snapshotSerializers: ['jest-serializer-html'],
   testURL: 'http://localhost',
+  testPathIgnorePatterns: ['node_modules', 'dist'],
 };
