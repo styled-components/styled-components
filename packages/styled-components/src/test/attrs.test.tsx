@@ -84,10 +84,19 @@ describe('attrs', () => {
         </ThemeProvider>
       ).toJSON()
     ).toMatchInlineSnapshot(`
-      <button
-        className="sc-a"
-        data-color="red"
-      />
+      Array [
+        <style
+          dangerouslySetInnerHTML={
+            Object {
+              "__html": ":root{--sc-color: red;}",
+            }
+          }
+        />,
+        <button
+          className="sc-a"
+          data-color="red"
+        />,
+      ]
     `);
   });
 

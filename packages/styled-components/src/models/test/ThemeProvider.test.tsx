@@ -2,8 +2,8 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 import withTheme from '../../hoc/withTheme';
-import { resetStyled } from '../../test/utils';
-import ThemeProvider from '../ThemeProvider';
+import { expectCSSMatches, resetStyled } from '../../test/utils';
+import ThemeProvider, { cssvar, MQ_THEME_KEY } from '../ThemeProvider';
 
 let styled: ReturnType<typeof resetStyled>;
 
@@ -124,5 +124,84 @@ describe('ThemeProvider', () => {
     wrapper.update(getJSX(Object.assign({}, theme, update)));
 
     expect(wrapper.root.findByType(MyDiv).props.theme).toEqual(expected);
+  });
+
+  it('ThemeProvider emits the theme as CSS variables as well', () => {
+    const wrapper = TestRenderer.create(
+      <ThemeProvider
+        theme={{
+          [MQ_THEME_KEY]: { 'prefers-color-scheme: dark': { color: 'white' } },
+          color: 'red',
+          style: { background: 'blue' },
+        }}
+      >
+        <div />
+      </ThemeProvider>
+    );
+
+    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
+Array [
+  <style
+    dangerouslySetInnerHTML={
+      Object {
+        "__html": ":root{--sc-color: red;--sc-style-background: blue;}@media (prefers-color-scheme: dark){:root{--sc-color: white;}}
+",
+      }
+    }
+  />,
+  <div />,
+]
+`);
+  });
+
+  it('css variable synthesis emits media query variants properly', () => {
+    const wrapper = TestRenderer.create(
+      <ThemeProvider theme={{ color: 'red', style: { background: 'blue' } }}>
+        <div />
+      </ThemeProvider>
+    );
+
+    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
+  Array [
+    <style
+      dangerouslySetInnerHTML={
+        Object {
+          "__html": ":root{--sc-color: red;--sc-style-background: blue;}",
+        }
+      }
+    />,
+    <div />,
+  ]
+  `);
+  });
+
+  it('cssvar helper accesses theme properties correctly', () => {
+    const theme = { color: 'red', style: { background: 'blue' } };
+
+    const MyDiv = styled.div`
+      color: ${cssvar<typeof theme>('color')};
+    `;
+
+    const wrapper = TestRenderer.create(
+      <ThemeProvider theme={theme}>
+        <MyDiv />
+      </ThemeProvider>
+    );
+
+    expectCSSMatches('.b { color:var(--sc-color); }');
+    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
+Array [
+  <style
+    dangerouslySetInnerHTML={
+      Object {
+        "__html": ":root{--sc-color: red;--sc-style-background: blue;}",
+      }
+    }
+  />,
+  <div
+    className="sc-a b"
+  />,
+]
+`);
   });
 });

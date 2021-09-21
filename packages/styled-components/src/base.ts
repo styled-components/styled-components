@@ -13,7 +13,12 @@ import StyleSheetManager, {
   StyleSheetContext,
 } from './models/StyleSheetManager';
 /* Import components */
-import ThemeProvider, { ThemeConsumer, ThemeContext } from './models/ThemeProvider';
+import ThemeProvider, {
+  cssvar,
+  MQ_THEME_KEY,
+  ThemeConsumer,
+  ThemeContext,
+} from './models/ThemeProvider';
 import isStyledComponent from './utils/isStyledComponent';
 
 declare const __SERVER__: boolean;
@@ -64,8 +69,10 @@ export * from './secretInternals';
 export {
   createGlobalStyle,
   css,
+  cssvar,
   isStyledComponent,
   keyframes,
+  MQ_THEME_KEY,
   ServerStyleSheet,
   StyleSheetConsumer,
   StyleSheetContext,

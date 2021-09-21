@@ -1,7 +1,16 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`ThemeProvider should render its child 1`] = `
-<p>
-  Child!
-</p>
+Array [
+  <style
+    dangerouslySetInnerHTML={
+      Object {
+        "__html": ":root{--sc-main: black;}",
+      }
+    }
+  />,
+  <p>
+    Child!
+  </p>,
+]
 `;

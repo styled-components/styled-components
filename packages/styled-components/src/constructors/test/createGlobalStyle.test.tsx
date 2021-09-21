@@ -103,10 +103,13 @@ describe(`createGlobalStyle`, () => {
       </ThemeProvider>
     );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "div {
-        color: black;
-      }"
-    `);
+"div {
+  color: black;
+}
+:root {
+  --sc-color: black;
+}"
+`);
   });
 
   it(`updates theme correctly`, () => {
@@ -133,18 +136,24 @@ describe(`createGlobalStyle`, () => {
     }
     render(<App />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "div {
-        color: grey;
-      }"
-    `);
+"div {
+  color: grey;
+}
+:root {
+  --sc-color: grey;
+}"
+`);
 
     // @ts-expect-error TS not detecting construction during render
     update({ color: 'red' });
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "div {
-        color: red;
-      }"
-    `);
+"div {
+  color: red;
+}
+:root {
+  --sc-color: red;
+}"
+`);
   });
 
   it('should work in StrictMode without warnings', () => {

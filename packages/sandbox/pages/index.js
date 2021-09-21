@@ -1,6 +1,7 @@
 import React from 'react';
-import styled, { createGlobalStyle } from 'styled-components';
+import styled, { createGlobalStyle, ThemeProvider } from 'styled-components';
 import ButtonExample from '../src/Button.example';
+import theme from '../src/theme';
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -66,20 +67,22 @@ const Code = styled.span`
 `;
 
 const App = () => (
-  <Body>
-    <GlobalStyle />
-    <Heading>
-      <Title>
-        Interactive sandbox for <Code>styled-components</Code>
-      </Title>
-      <Subtitle>
-        Make changes to the files in <Code>./src</Code> and see them take effect in realtime!
-      </Subtitle>
-    </Heading>
-    <Content>
-      <ButtonExample />
-    </Content>
-  </Body>
+  <ThemeProvider theme={theme}>
+    <Body>
+      <GlobalStyle />
+      <Heading>
+        <Title>
+          Interactive sandbox for <Code>styled-components</Code>
+        </Title>
+        <Subtitle>
+          Make changes to the files in <Code>./src</Code> and see them take effect in realtime!
+        </Subtitle>
+      </Heading>
+      <Content>
+        <ButtonExample />
+      </Content>
+    </Body>
+  </ThemeProvider>
 );
 
 export default App;

@@ -1,4 +1,4 @@
-import styled, { css } from 'styled-components';
+import styled, { css, cssvar } from 'styled-components';
 
 const Button = styled.button`
   font-size: 16px;
@@ -6,14 +6,14 @@ const Button = styled.button`
   padding: 0.25em 1em;
   margin: 1em 1em;
   background: transparent;
-  color: palevioletred;
-  border: 2px solid palevioletred;
+  color: ${cssvar('buttonColor')};
+  border: 2px solid ${cssvar('buttonColor')};
   cursor: pointer;
 
   ${props =>
     props.primary &&
     css`
-      background: palevioletred;
+      background: ${cssvar('buttonColor')};
       color: white;
     `};
 `;
