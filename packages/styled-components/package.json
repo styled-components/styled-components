@@ -130,6 +130,7 @@
     "rollup-plugin-sourcemaps": "^0.6.3",
     "rollup-plugin-terser": "^7.0.2",
     "stylis-plugin-rtl": "^2.0.0",
+    "tslib": "^2.3.1",
     "typescript": "^4.4.3",
     "utility-types": "^3.10.0"
   },
