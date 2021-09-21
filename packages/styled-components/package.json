@@ -34,13 +34,13 @@
     "url": "git+https://github.com/styled-components/styled-components.git"
   },
   "files": [
+    "CHANGELOG.md",
     "CODE_OF_CONDUCT.md",
     "CONTRIBUTING.md",
     "LICENSE",
     "dist",
     "native",
     "primitives",
-    "scripts",
     "test-utils",
     "macro"
   ],
