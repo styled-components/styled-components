@@ -1,4 +1,4 @@
-/* global React, styled, render, css */
+import styled, { css } from 'styled-components';
 
 const Button = styled.button`
   font-size: 16px;
@@ -8,6 +8,7 @@ const Button = styled.button`
   background: transparent;
   color: palevioletred;
   border: 2px solid palevioletred;
+  cursor: pointer;
 
   ${props =>
     props.primary &&
@@ -17,6 +18,13 @@ const Button = styled.button`
     `};
 `;
 
-const content = [<Button>Normal Button</Button>, <Button primary>Primary Button</Button>];
-
-render(content);
+export default function ButtonExample() {
+  return (
+    <>
+      <Button onClick={() => alert('Clicked!')}>Normal Button</Button>
+      <Button primary onClick={() => alert('Clicked!')}>
+        Primary Button
+      </Button>
+    </>
+  );
+}

@@ -1,12 +1,6 @@
 import React from 'react';
-import {
-  LiveEditor as _LiveEditor,
-  LiveError as _LiveError,
-  LivePreview as _LivePreview,
-  LiveProvider as _LiveProvider,
-} from 'react-live';
-import styled, { createGlobalStyle, css, keyframes } from 'styled-components';
-import buttonExample from './Button.example';
+import styled, { createGlobalStyle } from 'styled-components';
+import ButtonExample from '../src/Button.example';
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -48,6 +42,10 @@ const Title = styled.h1`
 const Subtitle = styled.p``;
 
 const Content = styled.div`
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   max-width: 860px;
 
@@ -67,50 +65,6 @@ const Code = styled.span`
   border-radius: 0.2em;
 `;
 
-const LiveProvider = styled(_LiveProvider)`
-  display: flex;
-  flex-wrap: wrap;
-
-  border-radius: 3px;
-  overflow: hidden;
-
-  box-shadow: 3px 3px 18px rgba(66, 22, 93, 0.3);
-`;
-
-const LiveBlock = styled.div`
-  flex-basis: 50%;
-  width: 50%;
-  max-width: 50%;
-
-  padding: 0.5rem;
-
-  @media (max-width: 40.625em) {
-    flex-basis: auto;
-    width: 100%;
-    max-width: 100%;
-  }
-`;
-
-const LiveEditor = styled(LiveBlock.withComponent(_LiveEditor))`
-  overflow: auto;
-`;
-
-const LivePreview = styled(LiveBlock.withComponent(_LivePreview))`
-  background-color: white;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  flex-wrap: wrap;
-  align-items: center;
-`;
-
-const LiveError = styled(_LiveError)`
-  flex-basis: 100%;
-  background: #ff5555;
-  color: #fff;
-  padding: 0.5rem;
-`;
-
 const App = () => (
   <Body>
     <GlobalStyle />
@@ -119,19 +73,11 @@ const App = () => (
         Interactive sandbox for <Code>styled-components</Code>
       </Title>
       <Subtitle>
-        Make changes to the <Code>./src</Code> and see them take effect in realtime!
+        Make changes to the files in <Code>./src</Code> and see them take effect in realtime!
       </Subtitle>
     </Heading>
     <Content>
-      <LiveProvider
-        code={buttonExample}
-        scope={{ React, styled, css, createGlobalStyle, keyframes }}
-        noInline
-      >
-        <LiveEditor />
-        <LivePreview />
-        <LiveError />
-      </LiveProvider>
+      <ButtonExample />
     </Content>
   </Body>
 );
