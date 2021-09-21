@@ -1,5 +1,4 @@
-
-import determineTheme from "../determineTheme";
+import determineTheme from '../determineTheme';
 
 const theme = { color: 'red' };
 const fallback = { color: 'blue' };

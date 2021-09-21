@@ -1,6 +1,5 @@
-
-import styled from "../styled";
-import domElements from "../../utils/domElements";
+import styled from '../styled';
+import domElements from '../../utils/domElements';
 
 describe('styled', () => {
   it('should have all valid HTML5 elements defined as properties', () => {

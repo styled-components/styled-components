@@ -15,7 +15,7 @@ type StylisInstanceConstructorArgs = {
 export default function createStylisInstance(
   {
     options = EMPTY_OBJECT as Object,
-    plugins = (EMPTY_ARRAY as unknown) as stylis.Middleware[],
+    plugins = EMPTY_ARRAY as unknown as stylis.Middleware[],
   }: StylisInstanceConstructorArgs = EMPTY_OBJECT as Object
 ) {
   let _componentId: string;

@@ -49,10 +49,10 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
  */
 export default function ThemeProvider(props: Props): JSX.Element | null {
   const outerTheme = useContext(ThemeContext);
-  const themeContext = useMemo(() => mergeTheme(props.theme, outerTheme), [
-    props.theme,
-    outerTheme,
-  ]);
+  const themeContext = useMemo(
+    () => mergeTheme(props.theme, outerTheme),
+    [props.theme, outerTheme]
+  );
 
   if (!props.children) {
     return null;

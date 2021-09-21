@@ -1,4 +1,4 @@
-import joinStrings from "../joinStrings";
+import joinStrings from '../joinStrings';
 
 describe('joinStrings(string?, string?)', () => {
   it('joins the two strings with a space between', () => {

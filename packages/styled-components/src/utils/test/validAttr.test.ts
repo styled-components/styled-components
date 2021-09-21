@@ -1,5 +1,4 @@
-
-import validAttr from "@emotion/is-prop-valid";
+import validAttr from '@emotion/is-prop-valid';
 
 describe('validAttr', () => {
   it('should allow all the reactProps', () => {

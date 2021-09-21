@@ -2,13 +2,13 @@
  * @jest-environment node
  */
 
-import React from "react";
-import { renderToString, renderToNodeStream } from "react-dom/server";
-import stylisRTLPlugin from "stylis-plugin-rtl";
-import ServerStyleSheet from "../models/ServerStyleSheet";
-import { resetStyled } from "./utils";
-import createGlobalStyle from "../constructors/createGlobalStyle";
-import StyleSheetManager from "../models/StyleSheetManager";
+import React from 'react';
+import { renderToString, renderToNodeStream } from 'react-dom/server';
+import stylisRTLPlugin from 'stylis-plugin-rtl';
+import ServerStyleSheet from '../models/ServerStyleSheet';
+import { resetStyled } from './utils';
+import createGlobalStyle from '../constructors/createGlobalStyle';
+import StyleSheetManager from '../models/StyleSheetManager';
 
 jest.mock('../utils/nonce');
 
@@ -46,10 +46,14 @@ describe('ssr', () => {
     `;
 
     const sheet = new ServerStyleSheet();
-    const html = renderToString(sheet.collectStyles(<React.Fragment>
+    const html = renderToString(
+      sheet.collectStyles(
+        <React.Fragment>
           <Component />
           <Heading>Hello SSR!</Heading>
-        </React.Fragment>));
+        </React.Fragment>
+      )
+    );
     const css = sheet.getStyleTags();
 
     expect(html).toMatchSnapshot();
@@ -90,10 +94,14 @@ describe('ssr', () => {
     `;
 
     const sheet = new ServerStyleSheet();
-    const html = renderToString(sheet.collectStyles(<React.Fragment>
+    const html = renderToString(
+      sheet.collectStyles(
+        <React.Fragment>
           <Component />
           <Heading>Hello SSR!</Heading>
-        </React.Fragment>));
+        </React.Fragment>
+      )
+    );
     const css = sheet.getStyleTags();
 
     expect(html).toMatchSnapshot();
@@ -109,10 +117,14 @@ describe('ssr', () => {
     `;
 
     const sheet = new ServerStyleSheet();
-    const html = renderToString(sheet.collectStyles(<div>
+    const html = renderToString(
+      sheet.collectStyles(
+        <div>
           <TWO />
           <ONE />
-        </div>));
+        </div>
+      )
+    );
     const css = sheet.getStyleTags();
 
     expect(html).toMatchSnapshot();
@@ -129,10 +141,14 @@ describe('ssr', () => {
 
     const sheet = new ServerStyleSheet();
 
-    renderToString(sheet.collectStyles(<React.Fragment>
+    renderToString(
+      sheet.collectStyles(
+        <React.Fragment>
           <Component />
           <Heading>Hello SSR!</Heading>
-        </React.Fragment>));
+        </React.Fragment>
+      )
+    );
 
     const [element] = sheet.getStyleElement();
 
@@ -154,10 +170,14 @@ describe('ssr', () => {
 
     const sheet = new ServerStyleSheet();
 
-    renderToString(sheet.collectStyles(<React.Fragment>
+    renderToString(
+      sheet.collectStyles(
+        <React.Fragment>
           <Heading>Hello SSR!</Heading>
           <Component />
-        </React.Fragment>));
+        </React.Fragment>
+      )
+    );
 
     const [element] = sheet.getStyleElement();
     expect(element.props.nonce).toBe('foo');
@@ -172,10 +192,12 @@ describe('ssr', () => {
     `;
 
     const sheet = new ServerStyleSheet();
-    const jsx = sheet.collectStyles(<React.Fragment>
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
         <Component />
         <Heading>Hello SSR!</Heading>
-      </React.Fragment>);
+      </React.Fragment>
+    );
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
     return new Promise((resolve, reject) => {
@@ -219,15 +241,19 @@ describe('ssr', () => {
     const expectedElements = '<div>*************************</div>'.repeat(100);
 
     const sheet = new ServerStyleSheet();
-    const jsx = sheet.collectStyles(<React.Fragment>
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
         <Component />
         <Heading>Hello SSR!</Heading>
         <Body>
-          {new Array(1000).fill(0).map((_, i) => <div key={i}>*************************</div>)}
+          {new Array(1000).fill(0).map((_, i) => (
+            <div key={i}>*************************</div>
+          ))}
         </Body>
         <SideBar>SideBar</SideBar>
         <Footer>Footer</Footer>
-      </React.Fragment>);
+      </React.Fragment>
+    );
 
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
     const stream$ = new Promise((resolve, reject) => {
@@ -276,9 +302,19 @@ describe('ssr', () => {
     // that multiple chunks are created, we initialize a large array of styled text areas.  We give
     // each textarea a different style to ensure a large enough number of style tags are generated
     // to be interleaved in the document
-    const jsx = sheet.collectStyles(<React.Fragment>
-        {new Array(500).fill(0).map((_, i) => <StyledTextArea key={i} className="test-textarea" onChange={() => {}} value={`Textarea ${i}`} height={i} />)}
-      </React.Fragment>);
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
+        {new Array(500).fill(0).map((_, i) => (
+          <StyledTextArea
+            key={i}
+            className="test-textarea"
+            onChange={() => {}}
+            value={`Textarea ${i}`}
+            height={i}
+          />
+        ))}
+      </React.Fragment>
+    );
 
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
@@ -309,12 +345,16 @@ describe('ssr', () => {
     `;
 
     const sheet = new ServerStyleSheet();
-    const jsx = sheet.collectStyles(<React.Fragment>
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
         <Component />
         <Heading>Hello SSR!</Heading>
-      </React.Fragment>);
+      </React.Fragment>
+    );
 
-    expect(() => sheet.interleaveWithNodeStream(sheet.interleaveWithNodeStream(renderToNodeStream(jsx)))).toThrowErrorMatchingSnapshot();
+    expect(() =>
+      sheet.interleaveWithNodeStream(sheet.interleaveWithNodeStream(renderToNodeStream(jsx)))
+    ).toThrowErrorMatchingSnapshot();
   });
 
   it('should throw if getStyleTags is called after interleaveWithNodeStream is called', () => {
@@ -327,10 +367,12 @@ describe('ssr', () => {
 
     const sheet = new ServerStyleSheet();
 
-    const jsx = sheet.collectStyles(<React.Fragment>
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
         <Component />
         <Heading>Hello SSR!</Heading>
-      </React.Fragment>);
+      </React.Fragment>
+    );
 
     sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
@@ -347,10 +389,12 @@ describe('ssr', () => {
 
     const sheet = new ServerStyleSheet();
 
-    const jsx = sheet.collectStyles(<React.Fragment>
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
         <Component />
         <Heading>Hello SSR!</Heading>
-      </React.Fragment>);
+      </React.Fragment>
+    );
 
     sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
@@ -366,10 +410,12 @@ describe('ssr', () => {
     `;
 
     const sheet = new ServerStyleSheet();
-    const jsx = sheet.collectStyles(<React.Fragment>
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
         <Component />
         <Heading>Hello SSR!</Heading>
-      </React.Fragment>);
+      </React.Fragment>
+    );
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
     return new Promise((resolve, reject) => {
@@ -400,10 +446,12 @@ describe('ssr', () => {
     `;
 
     const sheet = new ServerStyleSheet();
-    const jsx = sheet.collectStyles(<React.Fragment>
+    const jsx = sheet.collectStyles(
+      <React.Fragment>
         <Component />
         <Heading>Hello SSR!</Heading>
-      </React.Fragment>);
+      </React.Fragment>
+    );
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
     return new Promise((resolve, reject) => {
@@ -431,9 +479,13 @@ describe('ssr', () => {
     `;
 
     const sheet = new ServerStyleSheet();
-    const html = renderToString(sheet.collectStyles(<StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+    const html = renderToString(
+      sheet.collectStyles(
+        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
           <Heading>Hello SSR!</Heading>
-        </StyleSheetManager>));
+        </StyleSheetManager>
+      )
+    );
     const css = sheet.getStyleTags();
 
     expect(html).toMatchInlineSnapshot(`

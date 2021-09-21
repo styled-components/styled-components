@@ -26,7 +26,7 @@
     "format": "eslint ./**/*.js --fix",
     "lint": "eslint src",
     "lint:size": "bundlewatch",
-    "prettier": "prettier */**/*.js --write",
+    "prettier": "prettier src/** --write",
     "prepublishOnly": "npm run build"
   },
   "repository": {

@@ -1,7 +1,6 @@
-
-import React from "react";
-import styled from "../../";
-import isStyledComponent from "../isStyledComponent";
+import React from 'react';
+import styled from '../../';
+import isStyledComponent from '../isStyledComponent';
 
 describe('isStyledComponent(something)', () => {
   it('returns true if using styled', () => {
@@ -10,6 +9,8 @@ describe('isStyledComponent(something)', () => {
   });
 
   it('returns false for everything else', () => {
-    [() => {}, class Foo extends React.Component {}, 'foo', 1234, true, false].forEach(test => expect(isStyledComponent(test)).toBe(false));
+    [() => {}, class Foo extends React.Component {}, 'foo', 1234, true, false].forEach(test =>
+      expect(isStyledComponent(test)).toBe(false)
+    );
   });
 });

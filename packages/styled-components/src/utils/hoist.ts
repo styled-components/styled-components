@@ -72,7 +72,7 @@ function getStatics(component: OmniComponent) {
 
   // React v16.12 and above
   return '$$typeof' in component
-    ? TYPE_STATICS[(component['$$typeof'] as unknown) as string]
+    ? TYPE_STATICS[component['$$typeof'] as unknown as string]
     : REACT_STATICS;
 }
 
@@ -123,7 +123,7 @@ export default function hoistNonReactStatics<
     const sourceStatics = getStatics(sourceComponent);
 
     for (let i = 0; i < keys.length; ++i) {
-      const key = (keys[i] as unknown) as string;
+      const key = keys[i] as unknown as string;
       if (
         !(key in KNOWN_STATICS) &&
         !(excludelist && excludelist[key]) &&

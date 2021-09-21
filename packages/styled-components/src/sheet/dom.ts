@@ -10,9 +10,9 @@ const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
   const { childNodes } = target;
 
   for (let i = childNodes.length; i >= 0; i--) {
-    const child = (childNodes[i] as any) as HTMLElement | null | undefined;
+    const child = childNodes[i] as any as HTMLElement | null | undefined;
     if (child && child.nodeType === ELEMENT_TYPE && child.hasAttribute(SC_ATTR)) {
-      return (child as any) as HTMLStyleElement;
+      return child as any as HTMLStyleElement;
     }
   }
 
@@ -21,7 +21,7 @@ const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
 
 /** Create a style element inside `target` or <head> after the last */
 export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
-  const head = (document.head as any) as HTMLElement;
+  const head = document.head as any as HTMLElement;
   const parent = target || head;
   const style = document.createElement('style');
   const prevStyle = findLastStyleTag(parent);
@@ -42,7 +42,7 @@ export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
 /** Get the CSSStyleSheet instance for a given style element */
 export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
   if (tag.sheet) {
-    return (tag.sheet as any) as CSSStyleSheet;
+    return tag.sheet as any as CSSStyleSheet;
   }
 
   // Avoid Firefox quirk where the style element might not have a sheet property
@@ -50,7 +50,7 @@ export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
   for (let i = 0, l = styleSheets.length; i < l; i++) {
     const sheet = styleSheets[i];
     if (sheet.ownerNode === tag) {
-      return (sheet as any) as CSSStyleSheet;
+      return sheet as any as CSSStyleSheet;
     }
   }
 

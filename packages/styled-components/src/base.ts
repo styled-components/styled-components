@@ -39,7 +39,11 @@ if (
 }
 
 /* Warning if there are several instances of styled-components */
-if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test' && typeof window !== 'undefined') {
+if (
+  process.env.NODE_ENV !== 'production' &&
+  process.env.NODE_ENV !== 'test' &&
+  typeof window !== 'undefined'
+) {
   window['__styled-components-init__'] ||= 0;
 
   if (window['__styled-components-init__'] === 1) {

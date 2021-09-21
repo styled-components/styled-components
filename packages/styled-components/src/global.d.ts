@@ -20,9 +20,7 @@ declare module '@emotion/unitless' {
 }
 
 declare module 'babel-plugin-styled-components' {
-  export default function ({
-    types: any,
-  }): {
+  export default function ({ types: any }): {
     inherits: any;
     visitor: any;
   };

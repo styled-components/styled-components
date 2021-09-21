@@ -62,12 +62,9 @@ export default class ComponentStyle {
       if (this.staticRulesId && styleSheet.hasNameForId(componentId, this.staticRulesId)) {
         names.push(this.staticRulesId);
       } else {
-        const cssStatic = (flatten(
-          this.rules,
-          executionContext,
-          styleSheet,
-          stylis
-        ) as string[]).join('');
+        const cssStatic = (
+          flatten(this.rules, executionContext, styleSheet, stylis) as string[]
+        ).join('');
         const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
 
         if (!styleSheet.hasNameForId(componentId, name)) {

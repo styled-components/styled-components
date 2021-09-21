@@ -83,7 +83,7 @@ export const rehydrateSheet = (sheet: Sheet) => {
   const nodes = document.querySelectorAll(SELECTOR);
 
   for (let i = 0, l = nodes.length; i < l; i++) {
-    const node = (nodes[i] as any) as HTMLStyleElement;
+    const node = nodes[i] as any as HTMLStyleElement;
     if (node && node.getAttribute(SC_ATTR) !== SC_ATTR_ACTIVE) {
       rehydrateSheetFromTag(sheet, node);
 

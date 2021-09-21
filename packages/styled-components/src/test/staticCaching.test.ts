@@ -1,5 +1,4 @@
-
-import { resetStyled } from "./utils";
+import { resetStyled } from './utils';
 
 let styled: ReturnType<typeof resetStyled>;
 

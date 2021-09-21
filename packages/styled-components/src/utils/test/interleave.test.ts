@@ -1,5 +1,4 @@
-
-import interleave from "../interleave";
+import interleave from '../interleave';
 
 describe('interleave', () => {
   it('blindly interleave', () => {
@@ -12,6 +11,14 @@ describe('interleave', () => {
     expect(interleave(['foo', 'bar'], [])).toEqual(['foo']);
     expect(interleave(['foo', 'bar', 'baz'], [1])).toEqual(['foo', 1, 'bar']);
     expect(interleave([], [1])).toEqual([undefined, 1, undefined]);
-    expect(interleave(['foo'], [1, 2, 3])).toEqual(['foo', 1, undefined, 2, undefined, 3, undefined]);
+    expect(interleave(['foo'], [1, 2, 3])).toEqual([
+      'foo',
+      1,
+      undefined,
+      2,
+      undefined,
+      3,
+      undefined,
+    ]);
   });
 });

@@ -8,10 +8,9 @@ const styled = <Props>(tag: WebTarget) =>
 
 type BaseStyled = typeof styled;
 
-const enhancedStyled = styled as BaseStyled &
-  {
-    [key in typeof domElements[number]]: ReturnType<BaseStyled>;
-  };
+const enhancedStyled = styled as BaseStyled & {
+  [key in typeof domElements[number]]: ReturnType<BaseStyled>;
+};
 
 // Shorthands for all valid HTML Elements
 domElements.forEach(domElement => {

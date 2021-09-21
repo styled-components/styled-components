@@ -1,5 +1,4 @@
-
-import escape from "../escape";
+import escape from '../escape';
 
 describe('escape', () => {
   it('replaces characters that could be part of CSS selectors', () => {

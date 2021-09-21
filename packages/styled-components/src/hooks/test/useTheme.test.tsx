@@ -1,11 +1,10 @@
+import React from 'react';
+import TestRenderer from 'react-test-renderer';
 
-import React from "react";
-import TestRenderer from "react-test-renderer";
-
-import ThemeProvider from "../../models/ThemeProvider";
-import withTheme from "../../hoc/withTheme";
-import useTheme from "../useTheme";
-import { resetStyled } from "../../test/utils";
+import ThemeProvider from '../../models/ThemeProvider';
+import withTheme from '../../hoc/withTheme';
+import useTheme from '../useTheme';
+import { resetStyled } from '../../test/utils';
 
 let styled: ReturnType<typeof resetStyled>;
 
@@ -24,14 +23,18 @@ describe('useTheme', () => {
       return <div theme={theme} />;
     };
 
-    const wrapper = TestRenderer.create(<div>
+    const wrapper = TestRenderer.create(
+      <div>
         <ThemeProvider theme={mainTheme}>
           <MyDivWithThemeOne />
           <MyDivWithThemeContext />
         </ThemeProvider>
-      </div>);
+      </div>
+    );
 
     expect(wrapper.root.findByType(MyDivOne).props.theme).toEqual(mainTheme);
-    expect(wrapper.root.findByType(MyDivWithThemeContext).children[0].props.theme).toEqual(mainTheme);
+    expect(wrapper.root.findByType(MyDivWithThemeContext).children[0].props.theme).toEqual(
+      mainTheme
+    );
   });
 });

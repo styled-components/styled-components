@@ -1,10 +1,9 @@
-
-import React, { Component } from "react";
-import { renderIntoDocument } from "react-dom/test-utils";
-import TestRenderer from "react-test-renderer";
-import withTheme from "../hoc/withTheme";
-import ThemeProvider from "../models/ThemeProvider";
-import { getRenderedCSS, resetStyled } from "./utils";
+import React, { Component } from 'react';
+import { renderIntoDocument } from 'react-dom/test-utils';
+import TestRenderer from 'react-test-renderer';
+import withTheme from '../hoc/withTheme';
+import ThemeProvider from '../models/ThemeProvider';
+import { getRenderedCSS, resetStyled } from './utils';
 
 let styled: ReturnType<typeof resetStyled>;
 
@@ -19,9 +18,11 @@ describe('theming', () => {
       color: ${props => props.theme.color};
     `;
     const theme = { color: 'black' };
-    TestRenderer.create(<ThemeProvider theme={theme}>
+    TestRenderer.create(
+      <ThemeProvider theme={theme}>
         <Comp />
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: black;
@@ -34,13 +35,15 @@ describe('theming', () => {
       color: ${props => props.theme.color};
     `;
     const theme = { color: 'black' };
-    TestRenderer.create(<ThemeProvider theme={theme}>
+    TestRenderer.create(
+      <ThemeProvider theme={theme}>
         <div>
           <div>
             <Comp />
           </div>
         </div>
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: black;
@@ -56,13 +59,15 @@ describe('theming', () => {
     Comp1.defaultProps = {
       theme: {
         test: {
-          color: 'purple'
-        }
-      }
+          color: 'purple',
+        },
+      },
     };
-    TestRenderer.create(<div>
+    TestRenderer.create(
+      <div>
         <Comp1 />
-      </div>);
+      </div>
+    );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: purple;
@@ -79,15 +84,17 @@ describe('theming', () => {
     Comp1.defaultProps = {
       theme: {
         test: {
-          color: 'purple'
-        }
-      }
+          color: 'purple',
+        },
+      },
     };
     const theme = { test: { color: 'green' } };
 
-    TestRenderer.create(<ThemeProvider theme={theme}>
+    TestRenderer.create(
+      <ThemeProvider theme={theme}>
         <Comp1 />
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: green;
@@ -103,15 +110,17 @@ describe('theming', () => {
     Comp1.defaultProps = {
       theme: {
         test: {
-          color: 'purple'
-        }
-      }
+          color: 'purple',
+        },
+      },
     };
     const theme = { test: { color: 'green' } };
 
-    TestRenderer.create(<ThemeProvider theme={theme}>
+    TestRenderer.create(
+      <ThemeProvider theme={theme}>
         <Comp1 theme={{ test: { color: 'purple' } }} />
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: purple;
@@ -125,14 +134,16 @@ describe('theming', () => {
     `;
 
     const theme = {
-      color: 'purple'
+      color: 'purple',
     };
 
-    TestRenderer.create(<div>
+    TestRenderer.create(
+      <div>
         <ThemeProvider theme={theme}>
           <Comp theme={{ color: 'red' }} />
         </ThemeProvider>
-      </div>);
+      </div>
+    );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: red;
@@ -149,14 +160,16 @@ describe('theming', () => {
     `;
 
     const theme = { color: 'black' };
-    TestRenderer.create(<div>
+    TestRenderer.create(
+      <div>
         <ThemeProvider theme={theme}>
           <div>
             <Comp1 />
           </div>
         </ThemeProvider>
         <Comp2 />
-      </div>);
+      </div>
+    );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
         color: black;
@@ -175,14 +188,16 @@ describe('theming', () => {
       background: ${props => props.theme.color};
     `;
     const theme = { color: 'black' };
-    TestRenderer.create(<ThemeProvider theme={theme}>
+    TestRenderer.create(
+      <ThemeProvider theme={theme}>
         <div>
           <div>
             <Comp1 />
           </div>
           <Comp2 />
         </div>
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
         color: black;
@@ -202,9 +217,11 @@ describe('theming', () => {
     let theme = originalTheme;
     // Force render the component
     const renderComp = () => {
-      TestRenderer.create(<ThemeProvider theme={theme}>
+      TestRenderer.create(
+        <ThemeProvider theme={theme}>
           <Comp />
-        </ThemeProvider>);
+        </ThemeProvider>
+      );
     };
     renderComp();
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -232,8 +249,8 @@ describe('theming', () => {
 
     Comp1.defaultProps = {
       theme: {
-        color: 'purple'
-      }
+        color: 'purple',
+      },
     };
 
     const jsx = <Comp1 />;
@@ -258,22 +275,30 @@ describe('theming', () => {
       color: ${props => props.theme.color};
     `;
 
-    const wrapper = TestRenderer.create(<ThemeProvider theme={{
-      color: 'purple'
-    }}>
+    const wrapper = TestRenderer.create(
+      <ThemeProvider
+        theme={{
+          color: 'purple',
+        }}
+      >
         <Comp1 />
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: purple;
       }"
     `);
 
-    wrapper.update(<ThemeProvider theme={{
-      color: 'pink'
-    }}>
+    wrapper.update(
+      <ThemeProvider
+        theme={{
+          color: 'pink',
+        }}
+      >
         <Comp1 />
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: purple;
@@ -291,14 +316,18 @@ describe('theming', () => {
     `;
 
     Comp1.defaultProps = {
-      zIndex: 0
+      zIndex: 0,
     };
 
-    const wrapper = TestRenderer.create(<ThemeProvider theme={{
-      color: 'purple'
-    }}>
+    const wrapper = TestRenderer.create(
+      <ThemeProvider
+        theme={{
+          color: 'purple',
+        }}
+      >
         <Comp1 />
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
@@ -307,11 +336,15 @@ describe('theming', () => {
       }"
     `);
 
-    wrapper.update(<ThemeProvider theme={{
-      color: 'pink'
-    }}>
+    wrapper.update(
+      <ThemeProvider
+        theme={{
+          color: 'pink',
+        }}
+      >
         <Comp1 />
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
@@ -325,11 +358,15 @@ describe('theming', () => {
     `);
 
     Comp1.defaultProps.zIndex = 1;
-    wrapper.update(<ThemeProvider theme={{
-      color: 'pink'
-    }}>
+    wrapper.update(
+      <ThemeProvider
+        theme={{
+          color: 'pink',
+        }}
+      >
         <Comp1 />
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: purple;
@@ -354,11 +391,11 @@ describe('theming', () => {
     const originalTheme = { color: 'black' };
     const newTheme = { color: 'blue' };
 
-    const Theme = ({
-      theme
-    }) => <ThemeProvider theme={theme}>
+    const Theme = ({ theme }) => (
+      <ThemeProvider theme={theme}>
         <Comp someProps={theme} />
-      </ThemeProvider>;
+      </ThemeProvider>
+    );
 
     const wrapper = TestRenderer.create(<Theme theme={originalTheme} />);
 
@@ -387,32 +424,30 @@ describe('theming', () => {
   it('should inject props.theme into a component that uses withTheme hoc', () => {
     const originalTheme = { color: 'black' };
 
-    const MyDiv = ({
-      theme
-    }) => <div>{theme.color}</div>;
+    const MyDiv = ({ theme }) => <div>{theme.color}</div>;
     const MyDivWithTheme = withTheme(MyDiv);
 
-    const wrapper = TestRenderer.create(<ThemeProvider theme={originalTheme}>
+    const wrapper = TestRenderer.create(
+      <ThemeProvider theme={originalTheme}>
         <MyDivWithTheme />
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
 
     expect(wrapper.root.findByType('div').props.children).toBe('black');
   });
 
   it('should properly update theme prop on hoc component when theme is changed', () => {
-    const MyDiv = ({
-      theme
-    }) => <div>{theme.color}</div>;
+    const MyDiv = ({ theme }) => <div>{theme.color}</div>;
     const MyDivWithTheme = withTheme(MyDiv);
 
     const originalTheme = { color: 'black' };
     const newTheme = { color: 'blue' };
 
-    const Theme = ({
-      theme
-    }) => <ThemeProvider theme={theme}>
+    const Theme = ({ theme }) => (
+      <ThemeProvider theme={theme}>
         <MyDivWithTheme />
-      </ThemeProvider>;
+      </ThemeProvider>
+    );
 
     const wrapper = TestRenderer.create(<Theme key="a" theme={originalTheme} />);
     expect(wrapper.root.findByType('div').props.children).toBe('black');
@@ -431,13 +466,15 @@ describe('theming', () => {
 
     Text.defaultProps = {
       theme: {
-        color: 'purple'
-      }
+        color: 'purple',
+      },
     };
 
-    const Theme = props => <ThemeProvider theme={{ color: 'green' }}>
+    const Theme = props => (
+      <ThemeProvider theme={{ color: 'green' }}>
         <Text {...props} />
-      </ThemeProvider>;
+      </ThemeProvider>
+    );
 
     const wrapper = TestRenderer.create(<Theme key="a" prop="foo" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -457,7 +494,6 @@ describe('theming', () => {
   // https://github.com/styled-components/styled-components/issues/596
   it('should hoist static properties when using withTheme', () => {
     class MyComponent extends Component<any, any> {
-
       static myStaticProperty = true;
     }
 
@@ -468,7 +504,6 @@ describe('theming', () => {
 
   it('should only pass the theme prop', () => {
     class Comp extends Component<any, any> {
-
       render() {
         return <div />;
       }
@@ -476,9 +511,11 @@ describe('theming', () => {
 
     const CompWithTheme = withTheme(Comp);
 
-    const wrapper = TestRenderer.create(<ThemeProvider theme={{}}>
+    const wrapper = TestRenderer.create(
+      <ThemeProvider theme={{}}>
         <CompWithTheme />
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
 
     const inner = wrapper.root.findByType(Comp);
 
@@ -488,7 +525,6 @@ describe('theming', () => {
 
   it('should forward refs', () => {
     class Comp extends Component<any, any> {
-
       render() {
         return <div {...this.props} />;
       }
@@ -497,18 +533,18 @@ describe('theming', () => {
     const CompWithTheme = withTheme(Comp);
     const ref = React.createRef();
 
-    renderIntoDocument(<ThemeProvider theme={{}}>
+    renderIntoDocument(
+      <ThemeProvider theme={{}}>
         <CompWithTheme ref={ref} />
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
 
     expect(ref.current).toBeInstanceOf(Comp);
   });
 
   // https://github.com/styled-components/styled-components/issues/1130
   it('should not break without a ThemeProvider if it has a defaultTheme', () => {
-    const MyDiv = ({
-      theme
-    }) => <div>{theme.color}</div>;
+    const MyDiv = ({ theme }) => <div>{theme.color}</div>;
     const MyDivWithTheme = withTheme(MyDiv);
     const theme = { color: 'red' };
     const newTheme = { color: 'blue' };
@@ -516,7 +552,11 @@ describe('theming', () => {
     // eslint-disable-next-line no-console
     const consoleWarn = console.warn;
 
-    jest.spyOn(console, 'warn').mockImplementation(msg => !msg.includes('You are not using a ThemeProvider') ? consoleWarn(msg) : null);
+    jest
+      .spyOn(console, 'warn')
+      .mockImplementation(msg =>
+        !msg.includes('You are not using a ThemeProvider') ? consoleWarn(msg) : null
+      );
 
     MyDivWithTheme.defaultProps = { theme };
 
@@ -543,27 +583,25 @@ describe('theming', () => {
         // Flow has limited support for Symbols and computed properties;
         // see <https://github.com/facebook/flow/issues/3258>.
         // $FlowFixMe
-        [Symbol.toStringTag]: 'Module'
+        [Symbol.toStringTag]: 'Module',
       },
       // Flow has limited support for Symbols and computed properties;
       // see <https://github.com/facebook/flow/issues/3258>.
       // $FlowFixMe
-      [Symbol.toStringTag]: 'Module'
+      [Symbol.toStringTag]: 'Module',
     };
 
     const Comp1 = styled.div`
-      background-color: ${({
-      theme
-    }) => theme.palette.white};
-      color: ${({
-      theme
-    }) => theme.palette.black};
+      background-color: ${({ theme }) => theme.palette.white};
+      color: ${({ theme }) => theme.palette.black};
     `;
 
     expect(() => {
-      TestRenderer.create(<ThemeProvider theme={theme}>
+      TestRenderer.create(
+        <ThemeProvider theme={theme}>
           <Comp1 />
-        </ThemeProvider>);
+        </ThemeProvider>
+      );
     }).not.toThrow('plain object');
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -576,7 +614,6 @@ describe('theming', () => {
 
   it('should allow other complex objects to be passed as themes', () => {
     class Theme {
-
       borderRadius: string;
 
       constructor(borderRadius) {
@@ -587,14 +624,14 @@ describe('theming', () => {
     const theme = new Theme('2px');
 
     const Comp1 = styled.div`
-      border-radius: ${({
-      theme
-    }) => theme.borderRadius};
+      border-radius: ${({ theme }) => theme.borderRadius};
     `;
 
-    TestRenderer.create(<ThemeProvider theme={theme}>
+    TestRenderer.create(
+      <ThemeProvider theme={theme}>
         <Comp1 />
-      </ThemeProvider>);
+      </ThemeProvider>
+    );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
@@ -608,10 +645,12 @@ describe('theming', () => {
       // HACK: work around the problem without changing the snapshots
       // these tests need to be changed to use error boundaries instead
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
-      TestRenderer.create( // $FlowInvalidInputTest
-      <ThemeProvider theme={null}>
+      TestRenderer.create(
+        // $FlowInvalidInputTest
+        <ThemeProvider theme={null}>
           <div />
-        </ThemeProvider>);
+        </ThemeProvider>
+      );
       expect(mock).toHaveBeenCalledTimes(1);
     }).toThrowErrorMatchingSnapshot();
   });
@@ -621,10 +660,12 @@ describe('theming', () => {
       // HACK: work around the problem without changing the snapshots
       // these tests need to be changed to use error boundaries instead
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
-      TestRenderer.create( // $FlowInvalidInputTest
-      <ThemeProvider theme={['a', 'b', 'c']}>
+      TestRenderer.create(
+        // $FlowInvalidInputTest
+        <ThemeProvider theme={['a', 'b', 'c']}>
           <div />
-        </ThemeProvider>);
+        </ThemeProvider>
+      );
       expect(mock).toHaveBeenCalledTimes(1);
     }).toThrowErrorMatchingSnapshot();
   });
@@ -634,10 +675,12 @@ describe('theming', () => {
       // HACK: work around the problem without changing the snapshots
       // these tests need to be changed to use error boundaries instead
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
-      TestRenderer.create( // $FlowInvalidInputTest
-      <ThemeProvider theme={42}>
+      TestRenderer.create(
+        // $FlowInvalidInputTest
+        <ThemeProvider theme={42}>
           <div />
-        </ThemeProvider>);
+        </ThemeProvider>
+      );
       expect(mock).toHaveBeenCalledTimes(1);
     }).toThrowErrorMatchingSnapshot();
   });
