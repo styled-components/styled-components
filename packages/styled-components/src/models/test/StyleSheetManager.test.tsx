@@ -143,7 +143,7 @@ describe('StyleSheetManager', () => {
       <StyleSheetManager target={target}>{children}</StyleSheetManager>
     );
 
-    class Child extends React.Component {
+    class Child extends React.Component<{ document: Document; resolve: Function }> {
       componentDidMount() {
         const styles = this.props.document.querySelector('style').textContent;
         expect(styles.includes(`palevioletred`)).toEqual(true);
@@ -207,7 +207,7 @@ describe('StyleSheetManager', () => {
       <StyleSheetManager target={target}>{children}</StyleSheetManager>
     );
 
-    class Main extends React.Component {
+    class Main extends React.Component<{ document: Document }> {
       componentDidMount() {
         const styles = this.props.document.querySelector('style').textContent;
         expect(styles.includes('palevioletred')).toEqual(true);
@@ -218,7 +218,7 @@ describe('StyleSheetManager', () => {
       }
     }
 
-    class Child extends React.Component {
+    class Child extends React.Component<{ document: Document }> {
       componentDidMount() {
         const styles = this.props.document.querySelector('style').textContent;
         expect(styles.includes(`palevioletred`)).toEqual(true);
