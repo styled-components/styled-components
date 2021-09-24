@@ -50,7 +50,7 @@ const rehydrateNamesFromContent = (sheet: Sheet, id: string, content: string) =>
 };
 
 const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
-  const parts = style.innerHTML.split(SPLITTER);
+  const parts = (style.textContent ?? '').split(SPLITTER);
   const rules: string[] = [];
 
   for (let i = 0, l = parts.length; i < l; i++) {
