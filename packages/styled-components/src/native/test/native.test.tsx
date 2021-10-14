@@ -173,6 +173,21 @@ describe('native', () => {
     expect(wrapper.root.findByType(Text)).not.toBeUndefined();
   });
 
+  it('should maintain stable style prop references', () => {
+    const Comp = ({ style, ...props }) => <Text style={style} {...props} />;
+
+    const Comp1 = styled(Comp)`
+      font-size: 12px;
+    `;
+
+    const wrapper1 = TestRenderer.create(<Comp1>123</Comp1>);
+    const originStyle = wrapper1.root.findByType(Text).props.style;
+    wrapper1.update(<Comp1>321</Comp1>);
+    const updatedStyle = wrapper1.root.findByType(Text).props.style;
+
+    expect(originStyle).toBe(updatedStyle);
+  });
+
   describe('attrs', () => {
     beforeEach(() => jest.spyOn(console, 'warn').mockImplementation(() => {}));
 
