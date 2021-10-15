@@ -23,6 +23,7 @@ class StyledNativeComponent extends Component<*, *> {
   root: ?Object;
 
   attrs = {};
+  previousStyle: ?any;
 
   render() {
     return (
@@ -69,6 +70,12 @@ class StyledNativeComponent extends Component<*, *> {
             return [generatedStyles].concat(style(state))
           }
           : [generatedStyles].concat(style);
+          if (isArrayEqual(propsForElement.style, this.previousStyle)) {
+            propsForElement.style = this.previousStyle
+          } else {
+            this.previousStyle = propsForElement.style
+          }
+          this.previousStyle = propsForElement.style
           propsForElement.testID = testID;
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
@@ -244,3 +251,10 @@ export default (InlineStyle: Function) => {
 
   return createStyledNativeComponent;
 };
+
+function isArrayEqual(a: any, b: any) {
+  if (!Array.isArray(a) || !Array.isArray(b)) {
+    return false;
+  }
+  return a.length === b.length && a.every((it, index) => it === b[index]);
+}
