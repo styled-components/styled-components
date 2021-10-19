@@ -4,9 +4,9 @@ import replace from 'rollup-plugin-replace';
 import commonjs from 'rollup-plugin-commonjs';
 import babel from 'rollup-plugin-babel';
 import json from 'rollup-plugin-json';
-import flow from 'rollup-plugin-flow';
 import { terser } from 'rollup-plugin-terser';
 import sourceMaps from 'rollup-plugin-sourcemaps';
+import flowRemoveTypes from 'flow-remove-types';
 import pkg from './package.json';
 
 /**
@@ -29,10 +29,12 @@ const getCJS = override => ({ ...cjs, ...override });
 const getESM = override => ({ ...esm, ...override });
 
 const commonPlugins = [
-  flow({
-    // needed for sourcemaps to be properly generated
-    pretty: true,
-  }),
+  {
+    transform: code => ({
+      code: flowRemoveTypes(code).toString(),
+      map: null,
+    }),
+  },
   sourceMaps(),
   json(),
   nodeResolve(),
