@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Rehydrate stylesheets from `textContent` rather than `innerHTML` to fix issue of selectors sometimes being HTML encoded (see [#3567](https://github.com/styled-components/styled-components/issues/3567)).
+
 ## [v5.3.1] - 2021-08-24
 
 - Fix forced server-side mode not triggering global styles (See [#3566](https://github.com/styled-components/styled-components/pull/3566))
