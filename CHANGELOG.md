@@ -6,11 +6,15 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-## [v5.3.2] - 2021-10-19
+## [v5.3.3] - 2021-10-19
 
 - Backport #3568 (Read from textContent rather than innerHTML during rehydrate) by [@keeganstreet](https://github.com/keeganstreet) (See [#3591](https://github.com/styled-components/styled-components/pull/3591))
 
 - Generate more complete sourcemaps by [@henryqdineen](https://github.com/henryqdineen) (See [#3597](https://github.com/styled-components/styled-components/pull/3597))
+
+## [v5.3.2] - 2021-10-19
+
+Skipped
 
 ## [v5.3.1] - 2021-08-24
 
@@ -1191,7 +1195,8 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v5.3.2...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.3.3...master
+[v5.3.3]: https://github.com/styled-components/styled-components/compare/v5.3.2...v5.3.3
 [v5.3.2]: https://github.com/styled-components/styled-components/compare/v5.3.1...v5.3.2
 [v5.3.1]: https://github.com/styled-components/styled-components/compare/v5.3.0...v5.3.1
 [v5.3.0]: https://github.com/styled-components/styled-components/compare/v5.2.3...v5.3.0
