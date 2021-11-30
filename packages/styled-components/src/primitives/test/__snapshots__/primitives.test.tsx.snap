@@ -2,20 +2,12 @@
 
 exports[`primitives expanded API withComponent should work 1`] = `
 <Text
-  style={
-    Array [
-      Object {},
-    ]
-  }
+  style={Object {}}
 />
 `;
 
 exports[`primitives expanded API withComponent should work 2`] = `
 <View
-  style={
-    Array [
-      Object {},
-    ]
-  }
+  style={Object {}}
 />
 `;

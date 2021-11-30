@@ -79,12 +79,15 @@ function useStyledComponentImpl(
     }
   }
 
-  propsForElement.style =
-    typeof props.style === 'function'
-      ? (state: any) => {
-          return [generatedStyles].concat(props.style(state));
-        }
-      : [generatedStyles].concat(props.style || []);
+  if (typeof props.style === 'function') {
+    propsForElement.style = (state: any) => {
+      return [generatedStyles].concat(props.style(state));
+    }
+  } else if (props.style == null) {
+    propsForElement.style = generatedStyles;
+  } else {
+    propsForElement.style = [generatedStyles].concat(props.style || []);
+  }
 
   propsForElement.ref = refToForward;
 
