@@ -14,6 +14,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 - Rename `masterSheet` in internals to `mainSheet`
 
+- Stabilize the identity of the style prop that is passed into components. This will help in styling PureComponent or React.memo components.
+
 ## [v5.3.0] - 2021-05-04
 
 - Pass `elementToBeCreated` as a third parameter to `shouldForwardProp` so that the user-specified function can decide whether to pass through props based on whether the created element will be a tag or another component. (see [#3436](https://github.com/styled-components/styled-components/pull/3436))

@@ -1,4 +1,4 @@
-import React, { createElement, Ref, useContext } from 'react';
+import React, { createElement, Ref, useContext, useMemo } from 'react';
 import type {
   Attrs,
   ExtensibleObject,
@@ -79,12 +79,17 @@ function useStyledComponentImpl(
     }
   }
 
-  propsForElement.style =
-    typeof props.style === 'function'
-      ? (state: any) => {
-          return [generatedStyles].concat(props.style(state));
-        }
-      : [generatedStyles].concat(props.style || []);
+  propsForElement.style = useMemo(() => {
+    if (typeof props.style === 'function') {
+      return (state: any) => {
+        return [generatedStyles].concat(props.style(state));
+      }
+    } else if (props.style == null) {
+      return generatedStyles;
+    } else {
+      return [generatedStyles].concat(props.style || []);
+    }
+  }, [props.style, generatedStyles]);
 
   propsForElement.ref = refToForward;
 
