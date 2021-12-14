@@ -27,7 +27,7 @@
     "lint": "eslint src",
     "lint:size": "bundlewatch",
     "prettier": "prettier src/** --write",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "cp ../../README.md . && yarn build"
   },
   "repository": {
     "type": "git",
