@@ -74,7 +74,7 @@
     "@emotion/unitless": "^0.7.4",
     "css-to-react-native": "^3.0.0",
     "shallowequal": "^1.1.0",
-    "stylis": "^4.0.10"
+    "stylis": "^4.0.13"
   },
   "peerDependencies": {
     "react": ">= 16.8.0",
