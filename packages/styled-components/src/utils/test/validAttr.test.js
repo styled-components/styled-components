@@ -134,6 +134,7 @@ describe('validAttr', () => {
     expect(validAttr('tabIndex')).toEqual(true);
     expect(validAttr('target')).toEqual(true);
     expect(validAttr('title')).toEqual(true);
+    expect(validAttr('translate')).toEqual(true);
     expect(validAttr('type')).toEqual(true);
     expect(validAttr('useMap')).toEqual(true);
     expect(validAttr('value')).toEqual(true);
