@@ -6,6 +6,8 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+- Add support for the `translate` attribute as a valid prop by [@ay4toh5i](https://github.com/ay4toh5i) (See [#3619](https://github.com/styled-components/styled-components/pull/3619))
+
 ## [v5.3.3] - 2021-10-19
 
 - Backport #3568 (Read from textContent rather than innerHTML during rehydrate) by [@keeganstreet](https://github.com/keeganstreet) (See [#3591](https://github.com/styled-components/styled-components/pull/3591))
