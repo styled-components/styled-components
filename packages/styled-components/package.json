@@ -68,7 +68,7 @@
     "@emotion/is-prop-valid": "^1.1.0",
     "@emotion/stylis": "^0.8.4",
     "@emotion/unitless": "^0.7.4",
-    "babel-plugin-styled-components": ">= 1.12.0",
+    "babel-plugin-styled-components": "^1.12.0",
     "css-to-react-native": "^3.0.0",
     "hoist-non-react-statics": "^3.0.0",
     "shallowequal": "^1.1.0",
