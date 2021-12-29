@@ -3,6 +3,7 @@ import { addDefault, addNamed } from '@babel/helper-module-imports';
 import traverse from '@babel/traverse';
 import { createMacro } from 'babel-plugin-macros';
 import babelPlugin from 'babel-plugin-styled-components';
+import escapeRegExp from 'lodash/escapeRegExp';
 
 function styledComponentsMacro({
   references,
@@ -38,7 +39,7 @@ function styledComponentsMacro({
     ...state,
     opts: {
       ...config,
-      topLevelImportPaths: (config.topLevelImportPaths || []).concat(importModuleName),
+      topLevelImportPaths: (config.topLevelImportPaths || []).concat(`$${escapeRegExp(importModuleName)}^`),
     },
     customImportName,
   };
