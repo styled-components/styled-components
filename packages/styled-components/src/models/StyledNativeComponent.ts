@@ -14,13 +14,17 @@ import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
-import { Theme, ThemeContext } from './ThemeProvider';
+import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
-function useResolvedAttrs<Config>(theme: Theme = EMPTY_OBJECT, props: Config, attrs: Attrs[]) {
+function useResolvedAttrs<Config>(
+  theme: DefaultTheme = EMPTY_OBJECT,
+  props: Config,
+  attrs: Attrs[]
+) {
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
   // where resolvedAttrs is only the things injected by the attrs themselves
-  const context: ExtensibleObject & { theme: Theme } = { ...props, theme };
+  const context: ExtensibleObject & { theme: DefaultTheme } = { ...props, theme };
   const resolvedAttrs: ExtensibleObject = {};
 
   attrs.forEach(attrDef => {
@@ -83,7 +87,7 @@ function useStyledComponentImpl(
     if (typeof props.style === 'function') {
       return (state: any) => {
         return [generatedStyles].concat(props.style(state));
-      }
+      };
     } else if (props.style == null) {
       return generatedStyles;
     } else {

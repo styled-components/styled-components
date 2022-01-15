@@ -25,7 +25,7 @@ import joinStrings from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
 import { useStyleSheet, useStylis } from './StyleSheetManager';
-import { Theme, ThemeContext } from './ThemeProvider';
+import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 const identifiers: { [key: string]: number } = {};
 
@@ -44,11 +44,15 @@ function generateId(displayName?: string, parentComponentId?: string): string {
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-function useResolvedAttrs(theme: Theme = EMPTY_OBJECT, props: ExtensibleObject, attrs: Attrs[]) {
+function useResolvedAttrs(
+  theme: DefaultTheme = EMPTY_OBJECT,
+  props: ExtensibleObject,
+  attrs: Attrs[]
+) {
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
   // where resolvedAttrs is only the things injected by the attrs themselves
-  const context: ExtensibleObject & { theme: Theme } = { ...props, theme };
+  const context: ExtensibleObject & { theme: DefaultTheme } = { ...props, theme };
   const resolvedAttrs: ExtensibleObject = {};
 
   attrs.forEach(attrDef => {

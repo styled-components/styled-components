@@ -1,7 +1,7 @@
 import { ComponentType, ForwardRefExoticComponent } from 'react';
 import constructWithOptions from './constructors/constructWithOptions';
 import ComponentStyle from './models/ComponentStyle';
-import { Theme } from './models/ThemeProvider';
+import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
 export type BaseExtensibleObject = {
@@ -9,11 +9,11 @@ export type BaseExtensibleObject = {
 };
 
 export type ExtensibleObject = BaseExtensibleObject & {
-  theme?: Theme;
+  theme?: DefaultTheme;
 };
 
 export type ExecutionContext = BaseExtensibleObject & {
-  theme: Theme;
+  theme: DefaultTheme;
 };
 
 export type StyleFunction<Props> = (

@@ -1,6 +1,6 @@
 import { useContext } from 'react';
-import { Theme, ThemeContext } from '../models/ThemeProvider';
+import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 
-const useTheme = (): Theme | undefined => useContext(ThemeContext);
+const useTheme = (): DefaultTheme | undefined => useContext(ThemeContext);
 
 export default useTheme;

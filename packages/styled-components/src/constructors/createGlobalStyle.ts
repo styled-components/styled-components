@@ -2,7 +2,7 @@ import React, { useContext, useLayoutEffect, useRef } from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
-import { Theme, ThemeContext } from '../models/ThemeProvider';
+import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
 import { ExtensibleObject, Interpolation, RuleSet, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
@@ -68,7 +68,7 @@ export default function createGlobalStyle(
     instance: number,
     props: ExtensibleObject,
     styleSheet: StyleSheet,
-    theme: Theme | undefined,
+    theme: DefaultTheme | undefined,
     stylis: Stringifier
   ) {
     if (globalStyle.isStatic) {
