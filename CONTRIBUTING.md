@@ -94,7 +94,7 @@ To use the sandbox, follow these steps:
 
 2. Install all the dependencies: `yarn install`. Since this repository uses `yarn` workspaces, avoid using `npm` where you can.
 
-3. Run `yarn start` to start sandbox server
+3. Run `yarn dev` to start sandbox server
 
 Now you should have the sandbox running on `localhost:3000`. The Sandbox supports client-side and server-side rendering.
 
@@ -117,7 +117,7 @@ We have three different benchmarks: mounting a deep tree, mounting a wide tree a
 To run the benchmarks run:
 
 ```sh
-cd packages/styled-components`
+cd packages/styled-components
 ```
 
 ```sh
