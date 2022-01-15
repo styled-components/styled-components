@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import React, { Component, StrictMode } from 'react';
+import React, { Component, CSSProperties, StrictMode } from 'react';
 import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';
@@ -26,7 +26,7 @@ describe('basic', () => {
         return <div />;
       }
     }
-    const validComps = ['div', FunctionalComponent, ClassComponent];
+    const validComps = ['div' as const, FunctionalComponent, ClassComponent];
     validComps.forEach(comp => {
       expect(() => {
         const Comp = styled(comp)``;
@@ -153,7 +153,7 @@ describe('basic', () => {
   });
 
   it('should allow you to pass in a function returning a style object', () => {
-    const Comp = styled.div(({ color }) => ({
+    const Comp = styled.div(({ color }: { color: CSSProperties['color'] }) => ({
       color,
     }));
     TestRenderer.create(<Comp color="blue" />);
@@ -188,7 +188,7 @@ describe('basic', () => {
   });
 
   it('does not filter outs custom props for uppercased string-like components', () => {
-    const Comp = styled('Comp')`
+    const Comp = styled('Comp')<{ customProp: string }>`
       color: red;
     `;
     const wrapper = TestRenderer.create(<Comp customProp="abc" />);
@@ -327,7 +327,7 @@ describe('basic', () => {
     });
 
     it('should hoist non-react static properties', () => {
-      const Inner = styled.div``;
+      const Inner = styled.div<{}, { foo: string }>``;
       Inner.foo = 'bar';
 
       const Outer = styled(Inner)``;

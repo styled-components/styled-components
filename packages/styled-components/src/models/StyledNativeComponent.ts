@@ -44,8 +44,8 @@ function useResolvedAttrs<Config>(
 // Validator defaults to true if not in HTML/DOM env
 const validAttr = () => true;
 
-function useStyledComponentImpl(
-  forwardedComponent: IStyledNativeComponent,
+function useStyledComponentImpl<Target extends NativeTarget>(
+  forwardedComponent: IStyledNativeComponent<Target>,
   props: ExtensibleObject,
   forwardedRef: Ref<any>
 ) {
@@ -100,10 +100,14 @@ function useStyledComponentImpl(
   return createElement(elementToBeCreated, propsForElement);
 }
 
-export default (InlineStyle: IInlineStyleConstructor) => {
-  const createStyledNativeComponent: IStyledNativeComponentFactory = (target, options, rules) => {
+export default <Target extends NativeTarget>(InlineStyle: IInlineStyleConstructor) => {
+  const createStyledNativeComponent: IStyledNativeComponentFactory<Target> = (
+    target,
+    options,
+    rules
+  ) => {
     const isTargetStyledComp = isStyledComponent(target);
-    const styledComponentTarget = target as IStyledNativeComponent;
+    const styledComponentTarget = target as IStyledNativeComponent<Target>;
 
     const { displayName = generateDisplayName(target), attrs = EMPTY_ARRAY } = options;
 
@@ -136,15 +140,17 @@ export default (InlineStyle: IInlineStyleConstructor) => {
      * forwardRef creates a new interim component, which we'll take advantage of
      * instead of extending ParentComponent to create _another_ interim class
      */
-    let WrappedStyledComponent: IStyledNativeComponent;
+    let WrappedStyledComponent: IStyledNativeComponent<Target>;
 
     const forwardRef = (props: ExtensibleObject, ref: React.Ref<any>) =>
       // eslint-disable-next-line react-hooks/rules-of-hooks
-      useStyledComponentImpl(WrappedStyledComponent, props, ref);
+      useStyledComponentImpl<Target>(WrappedStyledComponent, props, ref);
 
     forwardRef.displayName = displayName;
 
-    WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledNativeComponent;
+    WrappedStyledComponent = React.forwardRef(
+      forwardRef
+    ) as unknown as IStyledNativeComponent<Target>;
 
     WrappedStyledComponent.attrs = finalAttrs;
     WrappedStyledComponent.inlineStyle = new InlineStyle(
@@ -160,7 +166,7 @@ export default (InlineStyle: IInlineStyleConstructor) => {
     WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
 
     WrappedStyledComponent.withComponent = function withComponent(
-      tag: IStyledNativeComponent['target']
+      tag: IStyledNativeComponent<Target>['target']
     ) {
       const newOptions = {
         ...options,
@@ -182,7 +188,7 @@ export default (InlineStyle: IInlineStyleConstructor) => {
       },
     });
 
-    hoist<IStyledNativeComponent, typeof target>(WrappedStyledComponent, target, {
+    hoist<IStyledNativeComponent<Target>, typeof target>(WrappedStyledComponent, target, {
       // all SC-specific things should not be hoisted
       attrs: true,
       inlineStyle: true,
@@ -190,7 +196,7 @@ export default (InlineStyle: IInlineStyleConstructor) => {
       shouldForwardProp: true,
       target: true,
       withComponent: true,
-    } as { [key in keyof IStyledNativeStatics]: true });
+    } as { [key in keyof IStyledNativeStatics<Target>]: true });
 
     return WrappedStyledComponent;
   };

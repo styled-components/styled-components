@@ -22,7 +22,7 @@ describe('props', () => {
   });
 
   it('should execute interpolations and inject props', () => {
-    const Comp = styled.div`
+    const Comp = styled.div<{ fg: string }>`
       color: ${props => props.fg || 'black'};
     `;
     TestRenderer.create(<Comp fg="red" />);
@@ -34,11 +34,14 @@ describe('props', () => {
   });
 
   it('should ignore non-0 falsy object interpolations', () => {
-    const Comp = styled.div`
+    const Comp = styled.div<{ fg: string }>`
       ${() => ({
         borderWidth: 0,
+        // @ts-expect-error improper input
         colorA: null,
+        // @ts-expect-error improper input
         colorB: false,
+        // @ts-expect-error improper input
         colorC: undefined,
         colorD: '',
       })};
@@ -52,7 +55,7 @@ describe('props', () => {
   });
 
   it('should filter out props prefixed with dollar sign (transient props)', () => {
-    const Comp = styled(p => <div {...p} />)`
+    const Comp = styled(p => <div {...p} />)<{ $fg: string; fg: string }>`
       color: ${props => props.$fg || 'black'};
     `;
     expect(
@@ -118,7 +121,7 @@ describe('props', () => {
     // NB existing functionality (when `shouldForwardProp` is not set) is tested elsewhere
 
     it('allows for custom prop filtering for elements', () => {
-      const Comp = styled('div').withConfig({
+      const Comp = styled('div').withConfig<{ filterThis: string; passThru: string }>({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
       })`
         color: red;
@@ -153,7 +156,7 @@ describe('props', () => {
     });
 
     it('composes shouldForwardProp on composed styled components', () => {
-      const StyledDiv = styled('div').withConfig({
+      const StyledDiv = styled('div').withConfig<{ filterThis: boolean; passThru: boolean }>({
         shouldForwardProp: prop => prop === 'passThru',
       })`
         color: red;
@@ -168,7 +171,7 @@ describe('props', () => {
     });
 
     it('should inherit shouldForwardProp for wrapped styled components', () => {
-      const Div1 = styled('div').withConfig({
+      const Div1 = styled('div').withConfig<{ color: string }>({
         shouldForwardProp: prop => prop !== 'color',
       })`
         background-color: ${({ color }) => color};
@@ -228,7 +231,7 @@ describe('props', () => {
     });
 
     it('should filter our props when using "as" to a different element', () => {
-      const Comp = styled('div').withConfig({
+      const Comp = styled('div').withConfig<{ filterThis: string; passThru: string }>({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
       })`
         color: red;
@@ -247,7 +250,7 @@ describe('props', () => {
     it('passes the default prop filtering function and target element for use if desired', () => {
       const stub = jest.fn();
 
-      const Comp = styled('div').withConfig({
+      const Comp = styled('div').withConfig<{ filterThis: string; passThru: string }>({
         shouldForwardProp: stub,
       })`
         color: red;

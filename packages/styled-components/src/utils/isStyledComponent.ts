@@ -1,5 +1,3 @@
-import { IStyledComponent } from '../types';
-
-export default function isStyledComponent(target: any): target is IStyledComponent {
+export default function isStyledComponent(target: any) {
   return typeof target === 'object' && 'styledComponentId' in target;
 }

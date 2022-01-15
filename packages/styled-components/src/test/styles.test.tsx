@@ -14,7 +14,6 @@ describe('with styles', () => {
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
-    // $FlowFixMe
     document.head.innerHTML = '';
     styled = resetStyled();
   });

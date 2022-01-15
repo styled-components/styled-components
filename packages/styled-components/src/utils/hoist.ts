@@ -55,7 +55,7 @@ const TYPE_STATICS = {
   [REACT_MEMO_TYPE]: MEMO_STATICS,
 };
 
-type OmniComponent = React.ComponentType | React.ExoticComponent;
+type OmniComponent = React.ComponentType<any> | React.ExoticComponent;
 
 // adapted from react-is
 function isMemo(object: OmniComponent | React.MemoExoticComponent<any>) {

@@ -3,10 +3,13 @@ import React, { createElement, Ref, useContext, useDebugValue } from 'react';
 import { SC_VERSION } from '../constants';
 import type {
   Attrs,
+  BaseExtensibleObject,
+  ExecutionContext,
   ExtensibleObject,
   IStyledComponent,
-  IStyledComponentFactory,
   IStyledStatics,
+  RuleSet,
+  StyledOptions,
   WebTarget,
 } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
@@ -44,16 +47,16 @@ function generateId(displayName?: string, parentComponentId?: string): string {
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-function useResolvedAttrs(
+function useResolvedAttrs<Props = {}>(
   theme: DefaultTheme = EMPTY_OBJECT,
-  props: ExtensibleObject,
-  attrs: Attrs[]
+  props: ExtensibleObject & Props,
+  attrs: Attrs<Props>[]
 ) {
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
   // where resolvedAttrs is only the things injected by the attrs themselves
-  const context: ExtensibleObject & { theme: DefaultTheme } = { ...props, theme };
-  const resolvedAttrs: ExtensibleObject = {};
+  const context: ExecutionContext & Props = { theme, ...props };
+  const resolvedAttrs: BaseExtensibleObject = {};
 
   attrs.forEach(attrDef => {
     const resolvedAttrDef = typeof attrDef === 'function' ? attrDef(context) : attrDef;
@@ -61,6 +64,7 @@ function useResolvedAttrs(
 
     /* eslint-disable guard-for-in */
     for (key in resolvedAttrDef) {
+      // @ts-expect-error bad types
       context[key] = resolvedAttrs[key] =
         key === 'className'
           ? joinStrings(resolvedAttrs[key], resolvedAttrDef[key])
@@ -95,9 +99,9 @@ function useInjectedStyle<T>(
   return className;
 }
 
-function useStyledComponentImpl(
-  forwardedComponent: IStyledComponent,
-  props: ExtensibleObject,
+function useStyledComponentImpl<Target extends WebTarget, Props extends ExtensibleObject>(
+  forwardedComponent: IStyledComponent<Target, Props>,
+  props: Props,
   forwardedRef: Ref<Element>,
   isStatic: boolean
 ) {
@@ -119,7 +123,7 @@ function useStyledComponentImpl(
   // should be an immutable value, but behave for now.
   const theme = determineTheme(props, useContext(ThemeContext), defaultProps);
 
-  const [context, attrs] = useResolvedAttrs(theme || EMPTY_OBJECT, props, componentAttrs);
+  const [context, attrs] = useResolvedAttrs<Props>(theme || EMPTY_OBJECT, props, componentAttrs);
 
   const generatedClassName = useInjectedStyle(
     componentStyle,
@@ -178,9 +182,13 @@ function useStyledComponentImpl(
   return createElement(elementToBeCreated, propsForElement);
 }
 
-const createStyledComponent: IStyledComponentFactory = (target, options, rules) => {
+const createStyledComponent = <Target extends WebTarget, OuterProps = {}, Statics = undefined>(
+  target: Target,
+  options: StyledOptions<OuterProps>,
+  rules: RuleSet<OuterProps>
+) => {
   const isTargetStyledComp = isStyledComponent(target);
-  const styledComponentTarget = target as IStyledComponent;
+  const styledComponentTarget = target as IStyledComponent<Target, OuterProps>;
   const isCompositeComponent = !isTag(target);
 
   const {
@@ -197,8 +205,8 @@ const createStyledComponent: IStyledComponentFactory = (target, options, rules) 
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     isTargetStyledComp && styledComponentTarget.attrs
-      ? styledComponentTarget.attrs.concat(attrs as unknown as Attrs[]).filter(Boolean)
-      : (attrs as Attrs[]);
+      ? styledComponentTarget.attrs.concat(attrs as unknown as Attrs<OuterProps>[]).filter(Boolean)
+      : (attrs as Attrs<OuterProps>[]);
 
   let { shouldForwardProp } = options;
 
@@ -231,16 +239,20 @@ const createStyledComponent: IStyledComponentFactory = (target, options, rules) 
    * forwardRef creates a new interim component, which we'll take advantage of
    * instead of extending ParentComponent to create _another_ interim class
    */
-  let WrappedStyledComponent: IStyledComponent;
+  let WrappedStyledComponent: IStyledComponent<Target, OuterProps>;
 
-  function forwardRef(props: ExtensibleObject, ref: Ref<Element>) {
+  function forwardRef(props: ExtensibleObject & OuterProps, ref: Ref<Element>) {
     // eslint-disable-next-line
-    return useStyledComponentImpl(WrappedStyledComponent, props, ref, isStatic);
+    return useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref, isStatic);
   }
 
   forwardRef.displayName = displayName;
 
-  WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent;
+  WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
+    typeof target,
+    OuterProps
+  > &
+    Statics;
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
@@ -257,7 +269,10 @@ const createStyledComponent: IStyledComponentFactory = (target, options, rules) 
   // fold the underlying StyledComponent target up since we folded the styles
   WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
 
-  WrappedStyledComponent.withComponent = function withComponent(tag: WebTarget) {
+  WrappedStyledComponent.withComponent = function withComponent<
+    Target extends WebTarget,
+    Props = undefined
+  >(tag: Target) {
     const { componentId: previousComponentId, ...optionsToCopy } = options;
 
     const newComponentId =
@@ -268,9 +283,13 @@ const createStyledComponent: IStyledComponentFactory = (target, options, rules) 
       ...optionsToCopy,
       attrs: finalAttrs,
       componentId: newComponentId,
-    };
+    } as StyledOptions<OuterProps & Props>;
 
-    return createStyledComponent(tag, newOptions, rules);
+    return createStyledComponent<Target, OuterProps & Props, Statics>(
+      tag,
+      newOptions,
+      rules as RuleSet<OuterProps & Props>
+    );
   };
 
   Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
@@ -299,7 +318,7 @@ const createStyledComponent: IStyledComponentFactory = (target, options, rules) 
   if (isCompositeComponent) {
     const compositeComponentTarget = target as React.ComponentType<any>;
 
-    hoist<IStyledComponent, typeof compositeComponentTarget>(
+    hoist<typeof WrappedStyledComponent, typeof compositeComponentTarget>(
       WrappedStyledComponent,
       compositeComponentTarget,
       {
@@ -312,7 +331,7 @@ const createStyledComponent: IStyledComponentFactory = (target, options, rules) 
         styledComponentId: true,
         target: true,
         withComponent: true,
-      } as { [key in keyof IStyledStatics]: true }
+      } as { [key in keyof IStyledStatics<OuterProps>]: true }
     );
   }
 

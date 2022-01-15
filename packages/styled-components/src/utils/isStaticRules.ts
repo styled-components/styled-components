@@ -8,7 +8,7 @@ export default function isStaticRules(rules: RuleSet) {
 
     if (
       isFunction(rule) &&
-      !isStyledComponent(rule as IStyledComponent | React.ComponentType<any>)
+      !isStyledComponent(rule as IStyledComponent<any> | React.ComponentType<any>)
     ) {
       // functions are allowed to be static if they're just being
       // used to get the classname of a nested styled component

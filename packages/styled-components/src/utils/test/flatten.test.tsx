@@ -1,7 +1,7 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-import flatten from '../flatten';
 import styled from '../../constructors/styled';
+import flatten from '../flatten';
 
 describe('flatten', () => {
   it('doesnt merge strings', () => {
@@ -9,7 +9,7 @@ describe('flatten', () => {
   });
 
   it('drops nulls', () => {
-    // $FlowInvalidInputTest
+    // @ts-expect-error invalid input test
     expect(flatten(['foo', false, 'bar', undefined, 'baz', null])).toEqual(['foo', 'bar', 'baz']);
   });
 
@@ -25,7 +25,7 @@ describe('flatten', () => {
   });
 
   it('toStrings everything', () => {
-    // $FlowInvalidInputTest
+    // @ts-expect-error invalid input test
     expect(flatten([1, true])).toEqual(['1', 'true']);
   });
 
@@ -42,9 +42,7 @@ describe('flatten', () => {
       '-webkit-filter: blur(2px);',
       'font-weight: 500;',
     ];
-    // $FlowFixMe
     expect(flatten([obj])).toEqual(css);
-    // $FlowFixMe
     expect(flatten(['some:thing;', obj, 'something: else;'])).toEqual([
       'some:thing;',
       ...css,
@@ -71,9 +69,7 @@ describe('flatten', () => {
       'font-weight: bold;',
       '}',
     ];
-    // $FlowFixMe
     expect(flatten([obj])).toEqual(css);
-    // $FlowFixMe
     expect(flatten(['some:thing;', obj, 'something: else;'])).toEqual([
       'some:thing;',
       ...css,
@@ -87,7 +83,6 @@ describe('flatten', () => {
         return 'some: thing;';
       }
     }
-    // $FlowFixMe
     expect(flatten([new SomeClass()])).toEqual(['some: thing;']);
   });
 
@@ -112,13 +107,13 @@ describe('flatten', () => {
 
   it('executes functions', () => {
     const func = () => 'bar';
-    expect(flatten(['foo', func, 'baz'], { bool: true })).toEqual(['foo', 'bar', 'baz']);
+    expect(flatten(['foo', func, 'baz'], { bool: true, theme: {} })).toEqual(['foo', 'bar', 'baz']);
   });
 
   it('passes values to function', () => {
     const func = ({ bool }) => (bool ? 'bar' : 'baz');
-    expect(flatten(['foo', func], { bool: true })).toEqual(['foo', 'bar']);
-    expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'baz']);
+    expect(flatten(['foo', func], { bool: true, theme: {} })).toEqual(['foo', 'bar']);
+    expect(flatten(['foo', func], { bool: false, theme: {} })).toEqual(['foo', 'baz']);
   });
 
   it('recursively calls functions', () => {
@@ -132,6 +127,7 @@ describe('flatten', () => {
     const Foo = ({ className }) => <div className={className}>hello there!</div>;
 
     const Bar = styled.div`
+      // @ts-expect-error invalid input
       ${Foo}: {
         background-color: red;
       } ;
@@ -139,7 +135,7 @@ describe('flatten', () => {
 
     TestRenderer.create(<Bar />);
 
-    expect(console.error.mock.calls[0][0]).toMatchInlineSnapshot(
+    expect((console.error as jest.Mock<Console['warn']>).mock.calls[0][0]).toMatchInlineSnapshot(
       `"Foo is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details."`
     );
   });
@@ -149,8 +145,8 @@ describe('flatten', () => {
 
     const SvgIcon = styled.svg`
       vertical-align: middle;
-      height: ${props => (props.height ? props.height : '22px')};
-      width: ${props => (props.width ? props.width : '22px')};
+      height: ${props => (props.height ? `${props.height}px` : '22px')};
+      width: ${props => (props.width ? `${props.width}px` : '22px')};
       text-align: center;
       font-size: 40px;
     `;

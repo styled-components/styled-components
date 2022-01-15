@@ -138,7 +138,6 @@ describe(`createGlobalStyle`, () => {
       }"
     `);
 
-    // @ts-expect-error TS not detecting construction during render
     update({ color: 'red' });
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "div {
