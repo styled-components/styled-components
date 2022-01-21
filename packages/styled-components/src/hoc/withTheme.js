@@ -5,6 +5,8 @@ import { ThemeContext } from '../models/ThemeProvider';
 import determineTheme from '../utils/determineTheme';
 import getComponentName from '../utils/getComponentName';
 
+type WithThemeComponent = AbstractComponent<*, *> & { withTheme?: boolean };
+
 // NOTE: this would be the correct signature:
 // export default <Config: { theme?: any }, Instance>(
 //  Component: AbstractComponent<Config, Instance>
@@ -40,7 +42,7 @@ export default (Component: AbstractComponent<*, *>) => {
   // However, if the underlying component is folded up (see StyledComponent.js),
   // we cannot tell that it needs a theme as a prop without a mark.
   // So we mark WithTheme with withTheme flag.
-  WithTheme.withTheme = true;
+  ((WithTheme: any): WithThemeComponent).withTheme = true;
 
   return WithTheme;
 };
