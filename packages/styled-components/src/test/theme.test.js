@@ -681,4 +681,56 @@ describe('theming', () => {
       expect(mock).toHaveBeenCalledTimes(1);
     }).toThrowErrorMatchingSnapshot();
   });
+
+  // https://github.com/styled-components/styled-components/issues/3659
+  describe('withTheme() nested in styled() calls', () => {
+    it('should pass the theme to a styled component wrapped in a function', () => {
+      const Comp = ({ theme }) => JSON.stringify(theme);
+      const WithTheme = withTheme(styled(Comp)``);
+      const Wrapped = styled((props) => <WithTheme {...props} />)``;
+  
+      const theme = { color: 'black' };
+      
+      expect(
+        TestRenderer.create(
+          <ThemeProvider theme={theme}>
+            <Wrapped />
+          </ThemeProvider>
+        ).toJSON()
+      ).toMatchInlineSnapshot(`"{\\"color\\":\\"black\\"}"`);
+    });
+  
+    it('should pass the theme to a folded up styled component', () => {
+      const Comp = ({ theme }) => JSON.stringify(theme);
+      const WithTheme = withTheme(styled(Comp)``);
+      const Wrapped = styled(WithTheme)``;
+  
+      const theme = { color: 'black' };
+      
+      expect(
+        TestRenderer.create(
+          <ThemeProvider theme={theme}>
+            <Wrapped />
+          </ThemeProvider>
+        ).toJSON()
+      ).toMatchInlineSnapshot(`"{\\"color\\":\\"black\\"}"`);
+    });
+
+    it('should preserve withTheme mark on folding up', () => {
+      const Comp = ({ theme }) => JSON.stringify(theme);
+      expect(Comp.withTheme).toBeUndefined();
+      expect(styled(Comp)``.withTheme).toBe(false);
+      expect(withTheme(styled(Comp)``).withTheme).toBe(true);
+      expect(styled(withTheme(styled(Comp)``))``.withTheme).toBe(true);
+    });
+
+    it('should unset withTheme mark when an element is not folded up', () => {
+      const Comp = ({ theme }) => JSON.stringify(theme);
+      expect(Comp.withTheme).toBeUndefined();
+      expect(styled(Comp)``.withTheme).toBe(false);
+      const WithTheme = withTheme(styled(Comp)``);
+      expect(WithTheme.withTheme).toBe(true);
+      expect(styled((props) => <WithTheme {...props} />)``.withTheme).toBe(false);
+    });
+  });
 });

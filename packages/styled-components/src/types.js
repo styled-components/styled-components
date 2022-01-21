@@ -51,6 +51,7 @@ export interface IStyledStatics {
   styledComponentId: string;
   warnTooManyClasses?: $Call<typeof createWarnTooManyClasses, string, string>;
   withComponent: (tag: Target) => IStyledComponent;
+  withTheme?: boolean;
 }
 
 export interface IStyledComponent extends Component<*>, IStyledStatics {

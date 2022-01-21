@@ -35,6 +35,12 @@ export default (Component: AbstractComponent<*, *>) => {
   hoistStatics(WithTheme, Component);
 
   WithTheme.displayName = `WithTheme(${getComponentName(Component)})`;
+  
+  // The underlying component is expected to get a theme as a prop.
+  // However, if the underlying component is folded up (see StyledComponent.js),
+  // we cannot tell that it needs a theme as a prop without a mark.
+  // So we mark WithTheme with withTheme flag.
+  WithTheme.withTheme = true;
 
   return WithTheme;
 };

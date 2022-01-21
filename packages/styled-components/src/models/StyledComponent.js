@@ -110,6 +110,7 @@ function useStyledComponentImpl(
     shouldForwardProp,
     styledComponentId,
     target,
+    withTheme,
   } = forwardedComponent;
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -136,6 +137,11 @@ function useStyledComponentImpl(
   const isTargetTag = isTag(elementToBeCreated);
   const computedProps = attrs !== props ? { ...props, ...attrs } : props;
   const propsForElement = {};
+
+  // if the original component was themed via withTheme HOC, pass the theme
+  if (withTheme) {
+    propsForElement.theme = theme;
+  }
 
   // eslint-disable-next-line guard-for-in
   for (const key in computedProps) {
@@ -307,6 +313,8 @@ export default function createStyledComponent(
 
   WrappedStyledComponent.toString = () => `.${WrappedStyledComponent.styledComponentId}`;
 
+  WrappedStyledComponent.withTheme = isTargetStyledComp && ((target: any): IStyledComponent).withTheme;
+
   if (isCompositeComponent) {
     hoist<
       IStyledStatics,
@@ -322,6 +330,7 @@ export default function createStyledComponent(
       styledComponentId: true,
       target: true,
       withComponent: true,
+      withTheme: true,
     });
   }
 
