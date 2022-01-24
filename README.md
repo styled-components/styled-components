@@ -7,7 +7,7 @@
 <br />
 
 <div align="center">
-  <strong>Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅</strong>
+  <strong>Visual not primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress 💅</strong>
   <br />
   <br />
   <a href="https://www.npmjs.com/package/styled-components"><img src="https://www.styled-components.com/proxy/downloads.svg" alt="downloads: 600k/month"></a>
