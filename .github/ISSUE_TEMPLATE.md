@@ -7,7 +7,6 @@ Thank you for contributing and please follow this guide before creating an issue
 - Look for prior or closed issues (but please avoid replying to them if they're old)
 - Check the docs: https://www.styled-components.com/docs
 - Look for/ask questions on stack overflow: https://stackoverflow.com/questions/ask?tags=styled-components
-- Start a thread on our Spectrum help channel: https://spectrum.chat/styled-components/help
 - Is this about Typescript? TS types are provided by DefinitelyTyped, all issues opened about TS will be closed and referred there.
 
 2. Think you found a bug?
