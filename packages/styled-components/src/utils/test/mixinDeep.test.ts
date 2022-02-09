@@ -115,3 +115,14 @@ it('should not mixin objects created with custom constructor', () => {
   const actual = mixinDeep(fixture);
   expect(actual).toEqual(fixture);
 });
+
+it('should not fail on objects with cyclical prototypes', () => {
+  const Cyclical = function() {}
+  Cyclical.prototype.cycle = new Cyclical();
+
+  const cycle1 = new Cyclical();
+  const cycle2 = new Cyclical();
+
+  const actual = mixinDeep(cycle1, cycle2, { a: 1 });
+  expect(actual).toEqual(cycle1);
+});
