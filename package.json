@@ -5,7 +5,6 @@
     "build": "yarn workspace styled-components build",
     "postbuild": "cp README.md packages/styled-components/",
     "postinstall": "yarn workspace styled-components generateErrors",
-    "dev": "yarn workspace styled-components dev",
     "lint": "yarn workspace styled-components lint",
     "size": "yarn workspace styled-components lint:size",
     "test": "yarn workspace styled-components test"
