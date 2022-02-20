@@ -126,7 +126,7 @@ describe('attrs', () => {
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
     expect(TestRenderer.create(<Comp type="reset" />).toJSON()).toMatchSnapshot();
-    expect(TestRenderer.create(<Comp type="reset" tabIndex="-1" />).toJSON()).toMatchSnapshot();
+    expect(TestRenderer.create(<Comp type="reset" tabIndex={-1} />).toJSON()).toMatchSnapshot();
   });
 
   it('should merge className', () => {
@@ -318,10 +318,11 @@ describe('attrs', () => {
       color: ${props => props.textColor};
     `;
 
-    const StyledComp = styled<{ textColor: string }>(Comp).attrs(() => ({
+    const StyledComp = styled(Comp).attrs(() => ({
       textColor: 'red',
-    }))``;
+    }))<{ textColor: string }>``;
 
+    // @ts-expect-error missing required prop
     expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();
   });
 });

@@ -37,12 +37,15 @@ export type StyleFunction<Props> = (
   executionContext: ExecutionContext & Props
 ) => string | StyledObject | CSSConstructor<Props> | StyleFunction<Props>;
 
+// IStyledNativeComponent is not included here since we don't allow
+// component selectors for RN
 export type Interpolation<Props> =
   | StyleFunction<Props>
   | StyledObject
   | string
   | number
   | Keyframes
+  | IStyledComponent<any, any>
   | Interpolation<Props>[];
 
 export type Attrs<Props> =
@@ -199,10 +202,8 @@ export interface IInlineStyle<Props = undefined> {
 
 export type StyledTarget = WebTarget | NativeTarget;
 
-type CSSValue = string | number;
-
 export type StyledObject = {
-  [key: string]: Record<string, any> | CSSValue | StyleFunction<ExecutionContext>;
+  [key: string]: Record<string, any> | string | number | StyleFunction<ExecutionContext>;
 } & {
   // uncomment when we can eventually override index signatures with more specific types
   // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);

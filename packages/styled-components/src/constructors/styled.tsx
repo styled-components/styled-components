@@ -16,6 +16,7 @@ const enhancedStyled = baseStyled as typeof baseStyled & {
 
 // Shorthands for all valid HTML Elements
 domElements.forEach(domElement => {
+  // @ts-ignore
   enhancedStyled[domElement] = baseStyled(domElement);
 });
 

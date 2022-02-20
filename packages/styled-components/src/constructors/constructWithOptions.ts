@@ -18,12 +18,8 @@ export interface Styled<Target extends StyledTarget, OuterProps = {}, OuterStati
     initialStyles: Styles<OuterProps & Props>,
     ...interpolations: Interpolation<OuterProps & Props>[]
   ): IStyledComponent<Target, OuterProps & Props> & OuterStatics & Statics;
-  attrs<Props = OuterProps, Statics = {}>(
-    attrs: Attrs<OuterProps & Props>
-  ): Styled<Target, OuterProps & Props, OuterStatics & Statics>;
-  withConfig<Props = OuterProps, Statics = {}>(
-    config: StyledOptions<OuterProps & Props>
-  ): Styled<Target, OuterProps & Props, OuterStatics & Statics>;
+  attrs(attrs: Attrs<OuterProps>): Styled<Target, OuterProps, OuterStatics>;
+  withConfig(config: StyledOptions<OuterProps>): Styled<Target, OuterProps, OuterStatics>;
 }
 export interface Construct<
   Target extends StyledTarget,
@@ -33,14 +29,10 @@ export interface Construct<
   <Props = {}, Statics = {}>(
     componentConstructor: IStyledComponentFactory<Target, OuterProps & Props>,
     tag: Target,
-    options?: StyledOptions<OuterProps & Props>
+    options?: StyledOptions<OuterProps>
   ): Styled<Target, OuterProps & Props, OuterStatics & Statics>;
-  attrs<Props = {}, Statics = {}>(
-    attrs: Attrs<OuterProps & Props>
-  ): Construct<Target, OuterProps & Props, Statics>;
-  withConfig<Props = {}, Statics = {}>(
-    config: StyledOptions<OuterProps & Props>
-  ): Construct<Target, OuterProps & Props, OuterStatics & Statics>;
+  attrs(attrs: Attrs<OuterProps>): Construct<Target, OuterProps, OuterStatics>;
+  withConfig(config: StyledOptions<OuterProps>): Construct<Target, OuterProps, OuterStatics>;
 }
 
 export default function constructWithOptions<
@@ -72,29 +64,19 @@ export default function constructWithOptions<
     );
 
   /* Modify/inject new props at runtime */
-  templateFunction.attrs = <Props = {}, Statics = {}>(attrs: Attrs<OuterProps & Props>) =>
-    constructWithOptions<Target, OuterProps & Props, OuterStatics & Statics>(
-      componentConstructor,
-      tag,
-      {
-        ...options,
-        attrs: Array.prototype.concat(options.attrs, attrs).filter(Boolean),
-      }
-    );
+  templateFunction.attrs = (attrs: Attrs<OuterProps>) =>
+    constructWithOptions<Target, OuterProps, OuterStatics>(componentConstructor, tag, {
+      ...options,
+      attrs: Array.prototype.concat(options.attrs, attrs).filter(Boolean),
+    });
 
   /**
    * If config methods are called, wrap up a new template function and merge options */
-  templateFunction.withConfig = <Props = {}, Statics = {}>(
-    config: StyledOptions<OuterProps & Props>
-  ) =>
-    constructWithOptions<Target, OuterProps & Props, OuterStatics & Statics>(
-      componentConstructor,
-      tag,
-      {
-        ...options,
-        ...config,
-      } as StyledOptions<OuterProps & Props>
-    );
+  templateFunction.withConfig = (config: StyledOptions<OuterProps>) =>
+    constructWithOptions<Target, OuterProps, OuterStatics>(componentConstructor, tag, {
+      ...options,
+      ...config,
+    } as StyledOptions<OuterProps>);
 
   return templateFunction;
 }
