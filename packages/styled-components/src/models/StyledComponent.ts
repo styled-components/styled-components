@@ -55,7 +55,7 @@ function useResolvedAttrs<Props = {}>(
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
   // where resolvedAttrs is only the things injected by the attrs themselves
-  const context: ExecutionContext & Props = { theme, ...props };
+  const context: ExecutionContext & Props = { ...props, theme };
   const resolvedAttrs: BaseExtensibleObject = {};
 
   attrs.forEach(attrDef => {
