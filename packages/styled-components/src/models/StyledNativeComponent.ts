@@ -1,12 +1,16 @@
 import React, { createElement, Ref, useContext, useMemo } from 'react';
 import type {
   Attrs,
+  BaseExtensibleObject,
+  ExecutionContext,
   ExtensibleObject,
   IInlineStyleConstructor,
   IStyledNativeComponent,
   IStyledNativeComponentFactory,
   IStyledNativeStatics,
   NativeTarget,
+  RuleSet,
+  StyledNativeOptions,
 } from '../types';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
@@ -16,16 +20,16 @@ import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
-function useResolvedAttrs<Config>(
+function useResolvedAttrs<Props = {}>(
   theme: DefaultTheme = EMPTY_OBJECT,
-  props: Config,
-  attrs: Attrs[]
+  props: Props,
+  attrs: Attrs<Props>[]
 ) {
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
   // where resolvedAttrs is only the things injected by the attrs themselves
-  const context: ExtensibleObject & { theme: DefaultTheme } = { ...props, theme };
-  const resolvedAttrs: ExtensibleObject = {};
+  const context: ExecutionContext & Props = { ...props, theme };
+  const resolvedAttrs: BaseExtensibleObject = {};
 
   attrs.forEach(attrDef => {
     let resolvedAttrDef = typeof attrDef === 'function' ? attrDef(context) : attrDef;
@@ -33,6 +37,7 @@ function useResolvedAttrs<Config>(
 
     /* eslint-disable guard-for-in */
     for (key in resolvedAttrDef) {
+      // @ts-expect-error bad types
       context[key] = resolvedAttrs[key] = resolvedAttrDef[key];
     }
     /* eslint-enable guard-for-in */
@@ -44,9 +49,9 @@ function useResolvedAttrs<Config>(
 // Validator defaults to true if not in HTML/DOM env
 const validAttr = () => true;
 
-function useStyledComponentImpl<Target extends NativeTarget>(
-  forwardedComponent: IStyledNativeComponent<Target>,
-  props: ExtensibleObject,
+function useStyledComponentImpl<Target extends NativeTarget, Props extends ExtensibleObject>(
+  forwardedComponent: IStyledNativeComponent<Target, Props>,
+  props: Props,
   forwardedRef: Ref<any>
 ) {
   const {
@@ -100,14 +105,18 @@ function useStyledComponentImpl<Target extends NativeTarget>(
   return createElement(elementToBeCreated, propsForElement);
 }
 
-export default <Target extends NativeTarget>(InlineStyle: IInlineStyleConstructor) => {
-  const createStyledNativeComponent: IStyledNativeComponentFactory<Target> = (
-    target,
-    options,
-    rules
-  ) => {
+export default (InlineStyle: IInlineStyleConstructor<any>) => {
+  const createStyledNativeComponent = <
+    Target extends NativeTarget,
+    OuterProps extends ExtensibleObject,
+    Statics = undefined
+  >(
+    target: Target,
+    options: StyledNativeOptions<OuterProps>,
+    rules: RuleSet<OuterProps>
+  ): ReturnType<IStyledNativeComponentFactory<Target, OuterProps, Statics>> => {
     const isTargetStyledComp = isStyledComponent(target);
-    const styledComponentTarget = target as IStyledNativeComponent<Target>;
+    const styledComponentTarget = target as IStyledNativeComponent<Target, OuterProps>;
 
     const { displayName = generateDisplayName(target), attrs = EMPTY_ARRAY } = options;
 
@@ -115,7 +124,7 @@ export default <Target extends NativeTarget>(InlineStyle: IInlineStyleConstructo
     const finalAttrs =
       isTargetStyledComp && styledComponentTarget.attrs
         ? styledComponentTarget.attrs.concat(attrs).filter(Boolean)
-        : (attrs as Attrs[]);
+        : (attrs as Attrs<OuterProps>[]);
 
     // eslint-disable-next-line prefer-destructuring
     let shouldForwardProp = options.shouldForwardProp;
@@ -136,26 +145,26 @@ export default <Target extends NativeTarget>(InlineStyle: IInlineStyleConstructo
       }
     }
 
+    const forwardRef = (props: ExtensibleObject & OuterProps, ref: React.Ref<any>) =>
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref);
+
+    forwardRef.displayName = displayName;
+
     /**
      * forwardRef creates a new interim component, which we'll take advantage of
      * instead of extending ParentComponent to create _another_ interim class
      */
-    let WrappedStyledComponent: IStyledNativeComponent<Target>;
-
-    const forwardRef = (props: ExtensibleObject, ref: React.Ref<any>) =>
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      useStyledComponentImpl<Target>(WrappedStyledComponent, props, ref);
-
-    forwardRef.displayName = displayName;
-
-    WrappedStyledComponent = React.forwardRef(
-      forwardRef
-    ) as unknown as IStyledNativeComponent<Target>;
+    let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledNativeComponent<
+      Target,
+      OuterProps
+    > &
+      Statics;
 
     WrappedStyledComponent.attrs = finalAttrs;
     WrappedStyledComponent.inlineStyle = new InlineStyle(
       isTargetStyledComp ? styledComponentTarget.inlineStyle.rules.concat(rules) : rules
-    );
+    ) as InstanceType<IInlineStyleConstructor<OuterProps>>;
     WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
 
@@ -165,15 +174,20 @@ export default <Target extends NativeTarget>(InlineStyle: IInlineStyleConstructo
     // fold the underlying StyledComponent target up since we folded the styles
     WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
 
-    WrappedStyledComponent.withComponent = function withComponent(
-      tag: IStyledNativeComponent<Target>['target']
-    ) {
+    WrappedStyledComponent.withComponent = function withComponent<
+      Target extends NativeTarget,
+      Props = undefined
+    >(tag: Target) {
       const newOptions = {
         ...options,
         attrs: finalAttrs,
-      };
+      } as StyledNativeOptions<OuterProps & Props>;
 
-      return createStyledNativeComponent(tag, newOptions, rules);
+      return createStyledNativeComponent<Target, OuterProps & Props, Statics>(
+        tag,
+        newOptions,
+        rules as RuleSet<OuterProps & Props>
+      );
     };
 
     Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
@@ -188,7 +202,7 @@ export default <Target extends NativeTarget>(InlineStyle: IInlineStyleConstructo
       },
     });
 
-    hoist<IStyledNativeComponent<Target>, typeof target>(WrappedStyledComponent, target, {
+    hoist<typeof WrappedStyledComponent, typeof target>(WrappedStyledComponent, target, {
       // all SC-specific things should not be hoisted
       attrs: true,
       inlineStyle: true,

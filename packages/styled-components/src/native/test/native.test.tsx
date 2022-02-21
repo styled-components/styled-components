@@ -1,6 +1,6 @@
 /* eslint-disable no-console, react/jsx-key, @typescript-eslint/no-empty-function */
 import React, { PropsWithChildren } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, TextProps, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider } from '../';
 
@@ -20,6 +20,7 @@ describe('native', () => {
     const validComps = ['View', FunctionalComponent, ClassComponent];
     validComps.forEach(comp => {
       expect(() => {
+        // @ts-expect-error invalid input
         const Comp = styled(comp)``;
         TestRenderer.create(<Comp />);
       }).not.toThrowError();
@@ -57,8 +58,7 @@ describe('native', () => {
         fontSize: 12,
       },
       style: {
-        background: 'blue',
-        textAlign: 'center',
+        backgroundColor: 'blue',
       },
     };
 
@@ -69,15 +69,14 @@ describe('native', () => {
         fontSize: 16,
       },
       style: {
-        background: 'silver',
+        backgroundColor: 'silver',
       },
     };
 
     expect(Outer.defaultProps).toMatchInlineSnapshot(`
       Object {
         "style": Object {
-          "background": "silver",
-          "textAlign": "center",
+          "backgroundColor": "silver",
         },
         "theme": Object {
           "fontSize": 16,
@@ -147,7 +146,7 @@ describe('native', () => {
 
   // https://github.com/styled-components/styled-components/issues/1266
   it('should update when props change', () => {
-    const Comp = styled.View`
+    const Comp = styled.View<{ opacity?: number }>`
       padding-top: 5px;
       opacity: ${p => p.opacity || 0};
     `;
@@ -203,7 +202,7 @@ describe('native', () => {
     it('calls an attr-function with context', () => {
       const Comp = styled.View.attrs(p => ({
         copy: p.test,
-      }))``;
+      }))<{ test: string }>``;
 
       const test = 'Put that cookie down!';
       const wrapper = TestRenderer.create(<Comp test={test} />);
@@ -437,7 +436,7 @@ describe('native', () => {
     });
 
     it('should omit transient props', () => {
-      const Comp = styled.Text`
+      const Comp = styled.Text<{ $color: string }>`
         color: ${p => p.$color};
       `;
 
@@ -453,9 +452,9 @@ describe('native', () => {
     });
 
     it('allows for custom prop filtering for elements', () => {
-      const Comp = styled('View').withConfig({
+      const Comp = styled.View.withConfig({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
-      })`
+      })<{ filterThis: string; passThru: string }>`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
@@ -500,7 +499,7 @@ describe('native', () => {
       const stub = jest.fn(() => true);
       const StyledView = styled.View.withConfig({
         shouldForwardProp: stub,
-      })`
+      })<{ something: boolean }>`
         color: red;
       `;
 
@@ -525,7 +524,7 @@ describe('native', () => {
       const AsComp = (props: PropsWithChildren<{}>) => <View {...props} />;
       const Comp = styled.View.withConfig({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
-      })`
+      })<{ filterThis: string; passThru: string }>`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
@@ -540,7 +539,7 @@ describe('native', () => {
       const AsComp = (props: PropsWithChildren<{}>) => <View {...props} />;
       const Comp = styled.View.withConfig({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
-      })`
+      })<{ filterThis: string; passThru: string }>`
         color: ${props => (props.filterThis === 'abc' ? 'red' : undefined)};
       `;
       const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
@@ -554,7 +553,7 @@ describe('native', () => {
     it('should filter our props when using "as" to a different element', () => {
       const Comp = styled.View.withConfig({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
-      })`
+      })<{ filterThis: string; passThru: string }>`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp as="a" filterThis="abc" passThru="def" />);
@@ -566,13 +565,13 @@ describe('native', () => {
     });
 
     it('should prefer transient $as over as', () => {
-      const OtherText = (props: PropsWithChildren<{}>) => <Text {...props} />;
+      const OtherText = (props: TextProps) => <Text {...props} />;
 
       const Comp = styled.Text`
         color: red;
       `;
 
-      const wrapper = TestRenderer.create(<Comp $as="View" as={OtherText} />);
+      const wrapper = TestRenderer.create(<Comp $as={View} as={OtherText} />);
       // @ts-expect-error bs error
       const view = wrapper.root.findByType('View');
 

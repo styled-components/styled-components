@@ -1,29 +1,59 @@
-import createStyledComponent from '../models/StyledComponent';
 import {
   Attrs,
   Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
+  IStyledNativeComponent,
+  IStyledNativeComponentFactory,
+  NativeTarget,
   RuleSet,
+  StyledNativeOptions,
   StyledOptions,
   StyledTarget,
   Styles,
+  WebTarget,
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import styledError from '../utils/error';
 import css from './css';
 
-export interface Styled<Target extends StyledTarget, OuterProps = {}, OuterStatics = {}> {
+export interface NativeStyled<Target extends NativeTarget, OuterProps = {}, OuterStatics = {}> {
+  <Props = {}, Statics = {}>(
+    initialStyles: Styles<OuterProps & Props>,
+    ...interpolations: Exclude<Interpolation<OuterProps & Props>, IStyledComponent<any>>[]
+  ): IStyledNativeComponent<Target, OuterProps & Props> & OuterStatics & Statics;
+  attrs(attrs: Attrs<OuterProps>): NativeStyled<Target, OuterProps, OuterStatics>;
+  withConfig(
+    config: StyledNativeOptions<OuterProps>
+  ): NativeStyled<Target, OuterProps, OuterStatics>;
+}
+
+export interface NativeConstruct<
+  Target extends NativeTarget,
+  OuterProps = {}, // used for styled<{}>().attrs() so attrs() gets the generic prop context,
+  OuterStatics = {}
+> {
+  <Props = {}, Statics = {}>(
+    componentConstructor: IStyledNativeComponentFactory<Target, OuterProps & Props>,
+    tag: Target,
+    options?: StyledNativeOptions<OuterProps & Props>
+  ): NativeStyled<Target, OuterProps & Props, OuterStatics & Statics> & OuterStatics & Statics;
+  attrs(attrs: Attrs<OuterProps>): NativeStyled<Target, OuterProps, OuterStatics>;
+  withConfig(
+    config: StyledNativeOptions<OuterProps>
+  ): NativeStyled<Target, OuterProps, OuterStatics>;
+}
+
+export interface WebStyled<Target extends WebTarget, OuterProps = {}, OuterStatics = {}> {
   <Props = {}, Statics = {}>(
     initialStyles: Styles<OuterProps & Props>,
     ...interpolations: Interpolation<OuterProps & Props>[]
   ): IStyledComponent<Target, OuterProps & Props> & OuterStatics & Statics;
-  attrs(attrs: Attrs<OuterProps>): Styled<Target, OuterProps, OuterStatics>;
-  withConfig(config: StyledOptions<OuterProps>): Styled<Target, OuterProps, OuterStatics>;
+  attrs(attrs: Attrs<OuterProps>): WebStyled<Target, OuterProps, OuterStatics>;
+  withConfig(config: StyledOptions<OuterProps>): WebStyled<Target, OuterProps, OuterStatics>;
 }
-
-export interface Construct<
-  Target extends StyledTarget,
+export interface WebConstruct<
+  Target extends WebTarget,
   OuterProps = {}, // used for styled<{}>().attrs() so attrs() gets the generic prop context,
   OuterStatics = {}
 > {
@@ -31,17 +61,20 @@ export interface Construct<
     componentConstructor: IStyledComponentFactory<Target, OuterProps & Props>,
     tag: Target,
     options?: StyledOptions<OuterProps & Props>
-  ): Styled<Target, OuterProps & Props, OuterStatics & Statics> & OuterStatics & Statics;
-  attrs(attrs: Attrs<OuterProps>): Styled<Target, OuterProps, OuterStatics>;
-  withConfig(config: StyledOptions<OuterProps>): Styled<Target, OuterProps, OuterStatics>;
+  ): WebStyled<Target, OuterProps & Props, OuterStatics & Statics> & OuterStatics & Statics;
+  attrs(attrs: Attrs<OuterProps>): WebStyled<Target, OuterProps, OuterStatics>;
+  withConfig(config: StyledOptions<OuterProps>): WebStyled<Target, OuterProps, OuterStatics>;
 }
 
 export default function constructWithOptions<
+  Environment extends 'web' | 'native',
   Target extends StyledTarget,
   OuterProps = {}, // used for styled<{}>().attrs() so attrs() gets the generic prop context
   OuterStatics = {}
 >(
-  componentConstructor: typeof createStyledComponent,
+  componentConstructor: Environment extends 'web'
+    ? IStyledComponentFactory<any, any, any>
+    : IStyledNativeComponentFactory<any, any, any>,
   tag: Target,
   options: StyledOptions<OuterProps> = EMPTY_OBJECT as StyledOptions<OuterProps>
 ) {
@@ -58,23 +91,32 @@ export default function constructWithOptions<
     initialStyles: Styles<OuterProps & Props>,
     ...interpolations: Interpolation<OuterProps & Props>[]
   ) =>
-    componentConstructor<Target, OuterProps & Props, OuterStatics & Statics>(
+    componentConstructor(
       tag,
-      options as unknown as StyledOptions<OuterProps & Props>,
+      options as unknown as Environment extends 'web'
+        ? StyledOptions<OuterProps & Props>
+        : StyledNativeOptions<OuterProps & Props>,
       css<OuterProps & Props>(initialStyles, ...interpolations) as RuleSet<OuterProps & Props>
-    );
+    ) as ReturnType<
+      Environment extends 'web'
+        ? IStyledComponentFactory<Target, OuterProps & Props, OuterStatics & Statics>
+        : // @ts-expect-error compiler is not narrowing properly
+          IStyledNativeComponentFactory<Target, OuterProps & Props, OuterStatics & Statics>
+    >;
 
   /* Modify/inject new props at runtime */
   templateFunction.attrs = (attrs: Attrs<OuterProps>) =>
-    constructWithOptions<Target, OuterProps, OuterStatics>(componentConstructor, tag, {
+    constructWithOptions<Environment, Target, OuterProps, OuterStatics>(componentConstructor, tag, {
       ...options,
       attrs: Array.prototype.concat(options.attrs, attrs).filter(Boolean),
     });
 
   /**
    * If config methods are called, wrap up a new template function and merge options */
-  templateFunction.withConfig = (config: StyledOptions<OuterProps>) =>
-    constructWithOptions<Target, OuterProps, OuterStatics>(componentConstructor, tag, {
+  templateFunction.withConfig = (
+    config: Environment extends 'web' ? StyledOptions<OuterProps> : StyledNativeOptions<OuterProps>
+  ) =>
+    constructWithOptions<Environment, Target, OuterProps, OuterStatics>(componentConstructor, tag, {
       ...options,
       ...config,
     });

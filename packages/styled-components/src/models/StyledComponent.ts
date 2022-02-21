@@ -7,6 +7,7 @@ import type {
   ExecutionContext,
   ExtensibleObject,
   IStyledComponent,
+  IStyledComponentFactory,
   IStyledStatics,
   RuleSet,
   StyledOptions,
@@ -182,11 +183,11 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
   return createElement(elementToBeCreated, propsForElement);
 }
 
-const createStyledComponent = <Target extends WebTarget, OuterProps = {}, Statics = undefined>(
+function createStyledComponent<Target extends WebTarget, OuterProps = {}, Statics = undefined>(
   target: Target,
   options: StyledOptions<OuterProps>,
   rules: RuleSet<OuterProps>
-): IStyledComponent<Target, OuterProps> & Statics => {
+): ReturnType<IStyledComponentFactory<Target, OuterProps, Statics>> {
   const isTargetStyledComp = isStyledComponent(target);
   const styledComponentTarget = target as IStyledComponent<Target, OuterProps>;
   const isCompositeComponent = !isTag(target);
@@ -333,6 +334,6 @@ const createStyledComponent = <Target extends WebTarget, OuterProps = {}, Static
   }
 
   return WrappedStyledComponent;
-};
+}
 
 export default createStyledComponent;

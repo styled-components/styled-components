@@ -1,4 +1,5 @@
-import constructWithOptions, { Construct } from '../constructors/constructWithOptions';
+import React from 'react';
+import constructWithOptions, { NativeConstruct } from '../constructors/constructWithOptions';
 import css from '../constructors/css';
 import withTheme from '../hoc/withTheme';
 import useTheme from '../hooks/useTheme';
@@ -8,14 +9,16 @@ import ThemeProvider, { ThemeConsumer, ThemeContext } from '../models/ThemeProvi
 import { NativeTarget } from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
 
+type Awaited<T> = T extends PromiseLike<infer U> ? U : T;
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const reactNative = require('react-native');
+const reactNative = require('react-native') as Awaited<typeof import('react-native')>;
 
 const InlineStyle = _InlineStyle(reactNative.StyleSheet);
 const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
 
-let styled = <Target extends NativeTarget>(tag: NativeTarget) =>
-  constructWithOptions<Target>(StyledNativeComponent, tag);
+const baseStyled = <Target extends NativeTarget>(tag: Target) =>
+  constructWithOptions<'native', Target>(StyledNativeComponent, tag);
 
 /* React native lazy-requires each of these modules for some reason, so let's
  *  assume it's for a good reason and not eagerly load them all */
@@ -71,9 +74,21 @@ const aliases = [
   'WebView',
 ] as const;
 
-styled = styled as typeof styled & {
-  [E in typeof aliases[number]]: ReturnType<
-    <Props extends {} = {}>() => ReturnType<Construct<E, Props>>
+type KnownComponents = typeof aliases[number];
+
+/** Isolates RN-provided components since they don't expose a helper type for this. */
+type RNComponents = {
+  [K in keyof typeof reactNative]: typeof reactNative[K] extends React.JSXElementConstructor<any>
+    ? typeof reactNative[K]
+    : never;
+};
+
+const styled = baseStyled as typeof baseStyled & {
+  [E in KnownComponents]: ReturnType<
+    <Props = {}, Statics = {}>() => ReturnType<
+      // @ts-expect-error it works
+      NativeConstruct<RNComponents[E], React.ComponentProps<RNComponents[E]> & Props, Statics>
+    >
   >;
 };
 
@@ -84,6 +99,7 @@ aliases.forEach(alias =>
     enumerable: true,
     configurable: false,
     get() {
+      // @ts-expect-error supporting old imports in some cases
       return styled(reactNative[alias]);
     },
   })
@@ -91,6 +107,4 @@ aliases.forEach(alias =>
 
 export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
 
-export default styled as typeof styled & {
-  [key in typeof aliases[number]]: ReturnType<typeof constructWithOptions>;
-};
+export default styled;

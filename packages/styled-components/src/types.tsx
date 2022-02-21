@@ -17,6 +17,17 @@ export type StyledNativeOptions<Props> = {
   shouldForwardProp?: ShouldForwardProp;
 };
 
+export type KnownWebTarget =
+  | keyof JSX.IntrinsicElements
+  | React.ComponentType<any>
+  | React.ExoticComponent<any>;
+
+export type WebTarget =
+  | string // allow custom elements, etc.
+  | KnownWebTarget;
+
+export type NativeTarget = ComponentType<any> | React.ExoticComponent<any>;
+
 export type BaseExtensibleObject = {
   [key: string]: any;
 };
@@ -35,7 +46,7 @@ export type ExecutionContext = ExtensibleObject & {
 
 export type StyleFunction<Props> = (
   executionContext: ExecutionContext & Props
-) => string | StyledObject | CSSConstructor<Props> | StyleFunction<Props>;
+) => string | number | StyledObject | CSSConstructor<Props> | StyleFunction<Props>;
 
 // IStyledNativeComponent is not included here since we don't allow
 // component selectors for RN
@@ -55,16 +66,6 @@ export type Attrs<Props> =
 export type RuleSet<Props> = Interpolation<Props>[];
 
 export type Styles<Props> = TemplateStringsArray | StyledObject | StyleFunction<Props>;
-
-export type KnownWebTarget =
-  | keyof JSX.IntrinsicElements
-  | React.ComponentType<any>
-  | React.ForwardRefExoticComponent<any>;
-export type WebTarget =
-  | string // allow custom elements, etc.
-  | KnownWebTarget;
-
-export type NativeTarget = ComponentType<any> | React.ForwardRefExoticComponent<any>;
 
 export type NameGenerator = (hash: number) => string;
 
@@ -128,7 +129,7 @@ export interface IStyledStatics<OuterProps = undefined> extends CommonStatics<Ou
 }
 
 type CustomComponentProps<
-  ActualComponent extends WebTarget,
+  ActualComponent extends StyledTarget,
   PropsToBeInjectedIntoActualComponent extends {},
   ActualComponentProps = ActualComponent extends KnownWebTarget
     ? React.ComponentPropsWithRef<ActualComponent>
@@ -141,11 +142,11 @@ type CustomComponentProps<
   };
 
 interface CustomComponent<
-  FallbackComponent extends WebTarget,
+  FallbackComponent extends StyledTarget,
   ExpectedProps = {},
   PropsToBeInjectedIntoActualComponent = {}
 > extends React.ForwardRefExoticComponent<ExpectedProps> {
-  <ActualComponent extends WebTarget = FallbackComponent>(
+  <ActualComponent extends StyledTarget = FallbackComponent>(
     props: CustomComponentProps<
       ActualComponent,
       ExpectedProps & PropsToBeInjectedIntoActualComponent
@@ -162,15 +163,18 @@ interface CustomComponent<
 export interface IStyledComponent<Target extends WebTarget, Props = undefined>
   extends CustomComponent<Target, Props, ExecutionContext>,
     IStyledStatics<Props> {
-  defaultProps?: Partial<ExtensibleObject & Props>;
+  defaultProps?: Partial<
+    ExtensibleObject & (Target extends KnownWebTarget ? React.ComponentProps<Target> : {}) & Props
+  >;
   toString: () => string;
 }
 
-export type IStyledComponentFactory<Target extends WebTarget, Props = undefined> = (
+// corresponds to createStyledComponent
+export type IStyledComponentFactory<Target extends WebTarget, Props = {}, Statics = {}> = (
   target: Target,
   options: StyledOptions<Props>,
   rules: RuleSet<Props>
-) => IStyledComponent<Target, Props>;
+) => IStyledComponent<Target, Props> & Statics;
 
 export interface IStyledNativeStatics<OuterProps = undefined> extends CommonStatics<OuterProps> {
   inlineStyle: InstanceType<IInlineStyleConstructor<OuterProps>>;
@@ -181,16 +185,19 @@ export interface IStyledNativeStatics<OuterProps = undefined> extends CommonStat
 }
 
 export interface IStyledNativeComponent<Target extends NativeTarget, Props = undefined>
-  extends CustomComponent<Target, Props>,
+  extends CustomComponent<Target, Props, ExecutionContext>,
     IStyledNativeStatics<Props> {
-  defaultProps?: Partial<ExtensibleObject & Props>;
+  defaultProps?: Partial<
+    ExtensibleObject & (Target extends KnownWebTarget ? React.ComponentProps<Target> : {}) & Props
+  >;
 }
 
-export type IStyledNativeComponentFactory<Target extends NativeTarget, Props = undefined> = (
-  target: NativeTarget,
+// corresponds to createNativeStyledComponent
+export type IStyledNativeComponentFactory<Target extends NativeTarget, Props = {}, Statics = {}> = (
+  target: Target,
   options: StyledNativeOptions<Props>,
   rules: RuleSet<Props>
-) => IStyledNativeComponent<Target, Props>;
+) => IStyledNativeComponent<Target, Props> & Statics;
 export interface IInlineStyleConstructor<Props = undefined> {
   new (rules: RuleSet<Props>): IInlineStyle<Props>;
 }
