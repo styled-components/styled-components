@@ -98,7 +98,7 @@ describe('keyframes', () => {
     const animation = keyframes`${rules}`;
     const name = animation.getName();
 
-    expect(getRenderedCSS()).toMatchInlineSnapshot('', `""`);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
 
     const Comp = styled.div({
       animation: css`
@@ -144,7 +144,7 @@ describe('keyframes', () => {
 
     const animation = keyframes`${rules}`;
 
-    expect(getRenderedCSS()).toMatchInlineSnapshot('', `""`);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
 
     const Comp = styled.div({
       '@media(max-width: 700px)': {
