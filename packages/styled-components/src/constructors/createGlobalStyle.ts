@@ -10,11 +10,11 @@ import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
-export default function createGlobalStyle(
-  strings: Styles,
-  ...interpolations: Array<Interpolation>
+export default function createGlobalStyle<Props = {}>(
+  strings: Styles<Props>,
+  ...interpolations: Array<Interpolation<Props>>
 ) {
-  const rules = css(strings, ...interpolations) as RuleSet;
+  const rules = css(strings, ...interpolations) as RuleSet<Props>;
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle(rules, styledComponentId);
 
