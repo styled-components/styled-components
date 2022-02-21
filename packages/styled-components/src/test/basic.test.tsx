@@ -268,7 +268,7 @@ describe('basic', () => {
       const Outer = styled(Inner)``;
 
       class Wrapper extends Component<any, any> {
-        testRef = React.createRef<HTMLDivElement>();
+        testRef = React.createRef<InstanceType<typeof Inner>>();
 
         render() {
           return (
@@ -326,8 +326,17 @@ describe('basic', () => {
       `);
     });
 
-    it('should hoist non-react static properties', () => {
+    it('should hoist non-react static properties on styled primitives', () => {
       const Inner = styled.div<{}, { foo: string }>``;
+      Inner.foo = 'bar';
+
+      const Outer = styled(Inner)``;
+
+      expect(Outer).toHaveProperty('foo', 'bar');
+    });
+
+    it('should hoist non-react static properties on wrapped components', () => {
+      const Inner = styled('div')<{}, { foo: string }>``;
       Inner.foo = 'bar';
 
       const Outer = styled(Inner)``;

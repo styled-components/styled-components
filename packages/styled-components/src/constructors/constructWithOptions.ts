@@ -21,6 +21,7 @@ export interface Styled<Target extends StyledTarget, OuterProps = {}, OuterStati
   attrs(attrs: Attrs<OuterProps>): Styled<Target, OuterProps, OuterStatics>;
   withConfig(config: StyledOptions<OuterProps>): Styled<Target, OuterProps, OuterStatics>;
 }
+
 export interface Construct<
   Target extends StyledTarget,
   OuterProps = {}, // used for styled<{}>().attrs() so attrs() gets the generic prop context,
@@ -29,10 +30,10 @@ export interface Construct<
   <Props = {}, Statics = {}>(
     componentConstructor: IStyledComponentFactory<Target, OuterProps & Props>,
     tag: Target,
-    options?: StyledOptions<OuterProps>
-  ): Styled<Target, OuterProps & Props, OuterStatics & Statics>;
-  attrs(attrs: Attrs<OuterProps>): Construct<Target, OuterProps, OuterStatics>;
-  withConfig(config: StyledOptions<OuterProps>): Construct<Target, OuterProps, OuterStatics>;
+    options?: StyledOptions<OuterProps & Props>
+  ): Styled<Target, OuterProps & Props, OuterStatics & Statics> & OuterStatics & Statics;
+  attrs(attrs: Attrs<OuterProps>): Styled<Target, OuterProps, OuterStatics>;
+  withConfig(config: StyledOptions<OuterProps>): Styled<Target, OuterProps, OuterStatics>;
 }
 
 export default function constructWithOptions<
@@ -76,7 +77,7 @@ export default function constructWithOptions<
     constructWithOptions<Target, OuterProps, OuterStatics>(componentConstructor, tag, {
       ...options,
       ...config,
-    } as StyledOptions<OuterProps>);
+    });
 
   return templateFunction;
 }

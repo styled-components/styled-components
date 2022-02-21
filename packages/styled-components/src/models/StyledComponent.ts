@@ -186,7 +186,7 @@ const createStyledComponent = <Target extends WebTarget, OuterProps = {}, Static
   target: Target,
   options: StyledOptions<OuterProps>,
   rules: RuleSet<OuterProps>
-) => {
+): IStyledComponent<Target, OuterProps> & Statics => {
   const isTargetStyledComp = isStyledComponent(target);
   const styledComponentTarget = target as IStyledComponent<Target, OuterProps>;
   const isCompositeComponent = !isTag(target);
@@ -234,13 +234,6 @@ const createStyledComponent = <Target extends WebTarget, OuterProps = {}, Static
   // statically styled-components don't need to build an execution context object,
   // and shouldn't be increasing the number of class names
   const isStatic = componentStyle.isStatic && attrs.length === 0;
-
-  /**
-   * forwardRef creates a new interim component, which we'll take advantage of
-   * instead of extending ParentComponent to create _another_ interim class
-   */
-  let WrappedStyledComponent: IStyledComponent<Target, OuterProps>;
-
   function forwardRef(props: ExtensibleObject & OuterProps, ref: Ref<Element>) {
     // eslint-disable-next-line
     return useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref, isStatic);
@@ -248,7 +241,11 @@ const createStyledComponent = <Target extends WebTarget, OuterProps = {}, Static
 
   forwardRef.displayName = displayName;
 
-  WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
+  /**
+   * forwardRef creates a new interim component, which we'll take advantage of
+   * instead of extending ParentComponent to create _another_ interim class
+   */
+  let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
     typeof target,
     OuterProps
   > &
