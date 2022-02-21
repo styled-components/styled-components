@@ -136,10 +136,17 @@ type CustomComponentProps<
     : {}
 > = React.HTMLAttributes<ActualComponent> &
   Omit<PropsToBeInjectedIntoActualComponent, keyof ActualComponentProps | 'as' | '$as'> &
-  ActualComponentProps & {
-    $as?: ActualComponent;
-    as?: ActualComponent;
-  };
+  ActualComponentProps &
+  (
+    | {
+        // if "$as" is passed it takes precendence over "as"
+        $as: ActualComponent;
+        as?: React.ComponentType<any> | React.ExoticComponent<any>;
+      }
+    | {
+        as?: ActualComponent;
+      }
+  );
 
 interface CustomComponent<
   FallbackComponent extends StyledTarget,

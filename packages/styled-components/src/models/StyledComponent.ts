@@ -50,7 +50,7 @@ function generateId(displayName?: string, parentComponentId?: string): string {
 
 function useResolvedAttrs<Props = {}>(
   theme: DefaultTheme = EMPTY_OBJECT,
-  props: ExtensibleObject & Props,
+  props: Props,
   attrs: Attrs<Props>[]
 ) {
   // NOTE: can't memoize this
