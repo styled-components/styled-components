@@ -96,7 +96,6 @@ describe('keyframes', () => {
     `;
 
     const animation = keyframes`${rules}`;
-    const name = animation.getName();
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
 
