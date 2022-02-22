@@ -102,9 +102,8 @@ createGlobalStyle\`
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import { createGlobalStyle as _createGlobalStyle } from 'styled-components';
-_createGlobalStyle\`
-  background: red;
-\`;
+
+_createGlobalStyle(['background:red;']);
 
 
 `;
@@ -230,19 +229,18 @@ function Foo() {
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled2 from 'styled-components';
 import _styled from 'styled-components';
 import React from 'react';
 
-var _StyledThing = _styled(Thing).withConfig({
-  displayName: 'macrotest___StyledThing',
-  componentId: 'sc-17fdca0-0',
-})(['color:red;']);
-
 const Thing = _styled.div.withConfig({
   displayName: 'macrotest__Thing',
-  componentId: 'sc-17fdca0-1',
+  componentId: 'sc-17fdca0-0',
 })(['color:blue;']);
+
+var _StyledThing = _styled(Thing).withConfig({
+  displayName: 'macrotest___StyledThing',
+  componentId: 'sc-17fdca0-1',
+})(['color:red;']);
 
 function Foo() {
   return /*#__PURE__*/ React.createElement(_StyledThing, null);
@@ -261,7 +259,6 @@ function Foo() {
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled2 from 'styled-components';
 import _styled from 'styled-components';
 import React from 'react';
 
