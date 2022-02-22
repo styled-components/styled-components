@@ -6,7 +6,7 @@ import {
   IInlineStyle,
   IInlineStyleConstructor,
   RuleSet,
-  StyleSheet
+  StyleSheet,
 } from '../types';
 import flatten from '../utils/flatten';
 import generateComponentId from '../utils/generateComponentId';
@@ -20,8 +20,10 @@ export const resetStyleCache = (): void => {
 /**
  * InlineStyle takes arbitrary CSS and generates a flat object
  */
-export default function makeInlineStyleClass<Props = {}>(styleSheet: StyleSheet) {
-  const InlineStyle: IInlineStyleConstructor<Props> = class InlineStyle implements IInlineStyle<Props> {
+export default function makeInlineStyleClass<Props = unknown>(styleSheet: StyleSheet) {
+  const InlineStyle: IInlineStyleConstructor<Props> = class InlineStyle
+    implements IInlineStyle<Props>
+  {
     rules: RuleSet<Props>;
 
     constructor(rules: RuleSet<Props>) {

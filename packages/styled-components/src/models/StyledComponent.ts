@@ -48,7 +48,7 @@ function generateId(displayName?: string, parentComponentId?: string): string {
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-function useResolvedAttrs<Props = {}>(
+function useResolvedAttrs<Props = unknown>(
   theme: DefaultTheme = EMPTY_OBJECT,
   props: Props,
   attrs: Attrs<Props>[]
@@ -183,7 +183,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
   return createElement(elementToBeCreated, propsForElement);
 }
 
-function createStyledComponent<Target extends WebTarget, OuterProps = {}, Statics = undefined>(
+function createStyledComponent<Target extends WebTarget, OuterProps = unknown, Statics = unknown>(
   target: Target,
   options: StyledOptions<OuterProps>,
   rules: RuleSet<OuterProps>
@@ -269,7 +269,7 @@ function createStyledComponent<Target extends WebTarget, OuterProps = {}, Static
 
   WrappedStyledComponent.withComponent = function withComponent<
     Target extends WebTarget,
-    Props = undefined
+    Props = unknown
   >(tag: Target) {
     const { componentId: previousComponentId, ...optionsToCopy } = options;
 

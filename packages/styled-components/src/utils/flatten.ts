@@ -41,7 +41,7 @@ export const objToCssArray = (obj: ExtensibleObject, prevKey?: string): string[]
   return prevKey ? [`${prevKey} {`, ...rules, '}'] : rules;
 };
 
-export default function flatten<Props = {}>(
+export default function flatten<Props = unknown>(
   chunk: Interpolation<Props>,
   executionContext?: ExecutionContext & Props,
   styleSheet?: StyleSheet,

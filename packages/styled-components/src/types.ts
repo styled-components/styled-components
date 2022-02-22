@@ -3,6 +3,10 @@ import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
+interface ExoticComponentWithDisplayName<Props = unknown> extends React.ExoticComponent<Props> {
+  displayName?: string;
+}
+
 export interface StyledOptions<Props> {
   attrs?: Attrs<Props>[];
   componentId?: string;
@@ -20,13 +24,13 @@ export interface StyledNativeOptions<Props> {
 export type KnownWebTarget =
   | keyof JSX.IntrinsicElements
   | React.ComponentType<any>
-  | React.ExoticComponent<any>;
+  | ExoticComponentWithDisplayName<any>;
 
 export type WebTarget =
   | string // allow custom elements, etc.
   | KnownWebTarget;
 
-export type NativeTarget = ComponentType<any> | React.ExoticComponent<any>;
+export type NativeTarget = ComponentType<any> | ExoticComponentWithDisplayName<any>;
 
 export interface BaseExtensibleObject {
   [key: string]: any;
@@ -124,14 +128,14 @@ export interface CommonStatics<Props> {
   withComponent: any;
 }
 
-export interface IStyledStatics<OuterProps = {}> extends CommonStatics<OuterProps> {
+export interface IStyledStatics<OuterProps = unknown> extends CommonStatics<OuterProps> {
   componentStyle: ComponentStyle;
   // this is here because we want the uppermost displayName retained in a folding scenario
   foldedComponentIds: Array<string>;
   target: WebTarget;
   styledComponentId: string;
   warnTooManyClasses?: ReturnType<typeof createWarnTooManyClasses>;
-  withComponent: <Target extends WebTarget, Props = {}>(
+  withComponent: <Target extends WebTarget, Props = unknown>(
     tag: Target
   ) => IStyledComponent<Target, OuterProps & Props>;
 }
@@ -149,7 +153,7 @@ type CustomComponentProps<
     | {
         // if "$as" is passed it takes precendence over "as"
         $as: ActualComponent;
-        as?: React.ComponentType<any> | React.ExoticComponent<any>;
+        as?: React.ComponentType<any> | ExoticComponentWithDisplayName<any>;
       }
     | {
         as?: ActualComponent;
@@ -158,8 +162,8 @@ type CustomComponentProps<
 
 interface CustomComponent<
   FallbackComponent extends StyledTarget,
-  ExpectedProps = {},
-  PropsToBeInjectedIntoActualComponent = {}
+  ExpectedProps = unknown,
+  PropsToBeInjectedIntoActualComponent = unknown
 > extends React.ForwardRefExoticComponent<ExpectedProps> {
   <ActualComponent extends StyledTarget = FallbackComponent>(
     props: CustomComponentProps<
@@ -175,7 +179,7 @@ interface CustomComponent<
   >;
 }
 
-export interface IStyledComponent<Target extends WebTarget, Props = {}>
+export interface IStyledComponent<Target extends WebTarget, Props = unknown>
   extends CustomComponent<Target, Props, ExecutionContext>,
     IStyledStatics<Props> {
   defaultProps?: Partial<
@@ -185,7 +189,11 @@ export interface IStyledComponent<Target extends WebTarget, Props = {}>
 }
 
 // corresponds to createStyledComponent
-export interface IStyledComponentFactory<Target extends WebTarget, Props = {}, Statics = {}> {
+export interface IStyledComponentFactory<
+  Target extends WebTarget,
+  Props = unknown,
+  Statics = unknown
+> {
   (target: Target, options: StyledOptions<Props>, rules: RuleSet<Props>): IStyledComponent<
     Target,
     Props
@@ -193,15 +201,15 @@ export interface IStyledComponentFactory<Target extends WebTarget, Props = {}, S
     Statics;
 }
 
-export interface IStyledNativeStatics<OuterProps = {}> extends CommonStatics<OuterProps> {
+export interface IStyledNativeStatics<OuterProps = unknown> extends CommonStatics<OuterProps> {
   inlineStyle: InstanceType<IInlineStyleConstructor<OuterProps>>;
   target: NativeTarget;
-  withComponent: <Target extends NativeTarget, Props = {}>(
+  withComponent: <Target extends NativeTarget, Props = unknown>(
     tag: Target
   ) => IStyledNativeComponent<Target, OuterProps & Props>;
 }
 
-export interface IStyledNativeComponent<Target extends NativeTarget, Props = {}>
+export interface IStyledNativeComponent<Target extends NativeTarget, Props = unknown>
   extends CustomComponent<Target, Props, ExecutionContext>,
     IStyledNativeStatics<Props> {
   defaultProps?: Partial<
@@ -212,8 +220,8 @@ export interface IStyledNativeComponent<Target extends NativeTarget, Props = {}>
 // corresponds to createNativeStyledComponent
 export interface IStyledNativeComponentFactory<
   Target extends NativeTarget,
-  Props = {},
-  Statics = {}
+  Props = unknown,
+  Statics = unknown
 > {
   (
     target: Target,
@@ -221,11 +229,11 @@ export interface IStyledNativeComponentFactory<
     rules: RuleSet<Props>
   ): IStyledNativeComponent<Target, Props> & Statics;
 }
-export interface IInlineStyleConstructor<Props = {}> {
+export interface IInlineStyleConstructor<Props = unknown> {
   new (rules: RuleSet<Props>): IInlineStyle<Props>;
 }
 
-export interface IInlineStyle<Props = {}> {
+export interface IInlineStyle<Props = unknown> {
   rules: RuleSet<Props>;
   generateStyleObject(executionContext: Object): Object;
 }

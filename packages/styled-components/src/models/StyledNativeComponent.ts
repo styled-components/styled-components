@@ -20,7 +20,7 @@ import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
-function useResolvedAttrs<Props = {}>(
+function useResolvedAttrs<Props = unknown>(
   theme: DefaultTheme = EMPTY_OBJECT,
   props: Props,
   attrs: Attrs<Props>[]
@@ -109,7 +109,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
   const createStyledNativeComponent = <
     Target extends NativeTarget,
     OuterProps extends ExtensibleObject,
-    Statics = undefined
+    Statics = unknown
   >(
     target: Target,
     options: StyledNativeOptions<OuterProps>,
@@ -176,7 +176,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
 
     WrappedStyledComponent.withComponent = function withComponent<
       Target extends NativeTarget,
-      Props = undefined
+      Props = unknown
     >(tag: Target) {
       const newOptions = {
         ...options,

@@ -17,8 +17,12 @@ import { EMPTY_OBJECT } from '../utils/empties';
 import styledError from '../utils/error';
 import css from './css';
 
-export interface NativeStyled<Target extends NativeTarget, OuterProps = {}, OuterStatics = {}> {
-  <Props = {}, Statics = {}>(
+export interface NativeStyled<
+  Target extends NativeTarget,
+  OuterProps = unknown,
+  OuterStatics = unknown
+> {
+  <Props = unknown, Statics = unknown>(
     initialStyles: Styles<OuterProps & Props>,
     ...interpolations: Exclude<Interpolation<OuterProps & Props>, IStyledComponent<any>>[]
   ): IStyledNativeComponent<Target, OuterProps & Props> & OuterStatics & Statics;
@@ -28,8 +32,8 @@ export interface NativeStyled<Target extends NativeTarget, OuterProps = {}, Oute
   ): NativeStyled<Target, OuterProps, OuterStatics>;
 }
 
-export interface WebStyled<Target extends WebTarget, OuterProps = {}, OuterStatics = {}> {
-  <Props = {}, Statics = {}>(
+export interface WebStyled<Target extends WebTarget, OuterProps = unknown, OuterStatics = unknown> {
+  <Props = unknown, Statics = unknown>(
     initialStyles: Styles<OuterProps & Props>,
     ...interpolations: Interpolation<OuterProps & Props>[]
   ): IStyledComponent<Target, OuterProps & Props> & OuterStatics & Statics;
@@ -40,8 +44,8 @@ export interface WebStyled<Target extends WebTarget, OuterProps = {}, OuterStati
 export default function constructWithOptions<
   Environment extends 'web' | 'native',
   Target extends StyledTarget,
-  OuterProps = {}, // used for styled<{}>().attrs() so attrs() gets the generic prop context
-  OuterStatics = {}
+  OuterProps = unknown, // used for styled<{}>().attrs() so attrs() gets the generic prop context
+  OuterStatics = unknown
 >(
   componentConstructor: Environment extends 'web'
     ? IStyledComponentFactory<any, any, any>
@@ -58,7 +62,7 @@ export default function constructWithOptions<
   }
 
   /* This is callable directly as a template function */
-  const templateFunction = <Props = {}, Statics = {}>(
+  const templateFunction = <Props = unknown, Statics = unknown>(
     initialStyles: Styles<OuterProps & Props>,
     ...interpolations: Interpolation<OuterProps & Props>[]
   ) =>
