@@ -81,6 +81,7 @@
     "react-dom": ">= 16.8.0"
   },
   "devDependencies": {
+    "@babel/helper-environment-visitor": "^7.16.7",
     "@rollup/plugin-typescript": "^8.2.5",
     "@types/babel-plugin-macros": "^2.8.4",
     "@types/enzyme": "^3.10.9",
@@ -101,6 +102,7 @@
     "babel-jest": "^27.0.6",
     "babel-plugin-add-module-exports": "^1.0.4",
     "babel-plugin-macros": "^3.1.0",
+    "babel-plugin-styled-components": "^2.0.4",
     "babel-plugin-tester": "^10.0.0",
     "babel-plugin-transform-react-remove-prop-types": "^0.4.24",
     "bundlewatch": "^0.3.1",

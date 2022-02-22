@@ -7,7 +7,7 @@
     "dev": "next dev"
   },
   "devDependencies": {
-    "babel-plugin-styled-components": "^2.0.0",
+    "babel-plugin-styled-components": "^2.0.4",
     "next": "^12.1.0"
   },
   "dependencies": {
