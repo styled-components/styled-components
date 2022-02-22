@@ -2,7 +2,6 @@
   "recommendations": [
     "christian-kohler.path-intellisense",
     "dbaeumer.vscode-eslint",
-    "jpoissonnier.vscode-styled-components",
     "esbenp.prettier-vscode"
   ]
 }
