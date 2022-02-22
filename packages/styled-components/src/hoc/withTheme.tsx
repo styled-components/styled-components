@@ -1,12 +1,12 @@
 import React from 'react';
 import { ThemeContext } from '../models/ThemeProvider';
-import { ExecutionContext } from '../types';
+import { AnyComponent, ExecutionContext } from '../types';
 import determineTheme from '../utils/determineTheme';
 import getComponentName from '../utils/getComponentName';
 import hoist from '../utils/hoist';
 
-export default function withTheme<T extends React.ComponentType<any>>(Component: T) {
-  const WithTheme = React.forwardRef<Element, ExecutionContext & React.ComponentProps<T>>(
+export default function withTheme<T extends AnyComponent>(Component: T) {
+  const WithTheme = React.forwardRef<T, JSX.LibraryManagedAttributes<T, ExecutionContext>>(
     (props, ref) => {
       const theme = React.useContext(ThemeContext);
       const themeProp = determineTheme(props, theme, Component.defaultProps);
