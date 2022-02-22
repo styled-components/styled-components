@@ -2,6 +2,7 @@ import validAttr from '@emotion/is-prop-valid';
 import React, { createElement, Ref, useContext, useDebugValue } from 'react';
 import { SC_VERSION } from '../constants';
 import type {
+  AnyComponent,
   Attrs,
   BaseExtensibleObject,
   ExecutionContext,
@@ -314,7 +315,7 @@ function createStyledComponent<Target extends WebTarget, OuterProps = unknown, S
   WrappedStyledComponent.toString = () => `.${WrappedStyledComponent.styledComponentId}`;
 
   if (isCompositeComponent) {
-    const compositeComponentTarget = target as React.ComponentType<any>;
+    const compositeComponentTarget = target as AnyComponent;
 
     hoist<typeof WrappedStyledComponent, typeof compositeComponentTarget>(
       WrappedStyledComponent,

@@ -1,5 +1,6 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
+import { AnyComponent } from '../types';
 import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
@@ -97,11 +98,7 @@ describe('extending', () => {
       return Parent;
     };
 
-    const addDefaultProps = (
-      Parent: React.ComponentType<any>,
-      Child: React.ComponentType<any>,
-      Grandson: React.ComponentType<any>
-    ) => {
+    const addDefaultProps = (Parent: AnyComponent, Child: AnyComponent, Grandson: AnyComponent) => {
       Parent.defaultProps = {
         color: 'primary',
       };

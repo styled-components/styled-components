@@ -1,11 +1,14 @@
-import React, { ComponentType } from 'react';
+import React from 'react';
 import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
-interface ExoticComponentWithDisplayName<Props = unknown> extends React.ExoticComponent<Props> {
+interface ExoticComponentWithDisplayName<P = unknown> extends React.ExoticComponent<P> {
+  defaultProps?: Partial<P>;
   displayName?: string;
 }
+
+export type AnyComponent<P = any> = ExoticComponentWithDisplayName<P> | React.ComponentType<P>;
 
 export interface StyledOptions<Props> {
   attrs?: Attrs<Props>[];
@@ -21,16 +24,13 @@ export interface StyledNativeOptions<Props> {
   shouldForwardProp?: ShouldForwardProp;
 }
 
-export type KnownWebTarget =
-  | keyof JSX.IntrinsicElements
-  | React.ComponentType<any>
-  | ExoticComponentWithDisplayName<any>;
+export type KnownWebTarget = keyof JSX.IntrinsicElements | AnyComponent;
 
 export type WebTarget =
   | string // allow custom elements, etc.
   | KnownWebTarget;
 
-export type NativeTarget = ComponentType<any> | ExoticComponentWithDisplayName<any>;
+export type NativeTarget = AnyComponent;
 
 export interface BaseExtensibleObject {
   [key: string]: any;
@@ -153,7 +153,7 @@ type CustomComponentProps<
     | {
         // if "$as" is passed it takes precendence over "as"
         $as: ActualComponent;
-        as?: React.ComponentType<any> | ExoticComponentWithDisplayName<any>;
+        as?: AnyComponent;
       }
     | {
         as?: ActualComponent;

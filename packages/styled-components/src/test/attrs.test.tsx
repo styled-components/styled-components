@@ -1,6 +1,7 @@
-import React, { Component, ComponentType } from 'react';
+import React from 'react';
 import TestRenderer from 'react-test-renderer';
 import ThemeProvider from '../models/ThemeProvider';
+import { AnyComponent } from '../types';
 import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
@@ -40,13 +41,13 @@ describe('attrs', () => {
   });
 
   it('pass a React component', () => {
-    class ReactComponent extends Component {
+    class ReactComponent extends React.Component {
       render() {
         return <p>React Component</p>;
       }
     }
 
-    const Button = ({ component: ChildComponent }: { component: ComponentType<any> }) => (
+    const Button = ({ component: ChildComponent }: { component: AnyComponent }) => (
       <button>
         <ChildComponent />
       </button>

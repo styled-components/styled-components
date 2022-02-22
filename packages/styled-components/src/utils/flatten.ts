@@ -1,6 +1,7 @@
 import Keyframes from '../models/Keyframes';
 import StyleSheet from '../sheet';
 import {
+  AnyComponent,
   ExecutionContext,
   ExtensibleObject,
   Interpolation,
@@ -87,7 +88,7 @@ export default function flatten<Props = unknown>(
         console.error(
           `${getComponentName(
             // @ts-expect-error handling unexpected input
-            chunkFn as React.ComponentType<any>
+            chunkFn as AnyComponent
           )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
         );
       }

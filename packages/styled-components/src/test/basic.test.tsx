@@ -4,6 +4,7 @@ import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';
 import { find } from '../../test-utils';
+import { AnyComponent } from '../types';
 import hoist from '../utils/hoist';
 import { getRenderedCSS, resetStyled } from './utils';
 
@@ -353,7 +354,7 @@ describe('basic', () => {
     });
 
     it('should not fold components if there is an interim HOC', () => {
-      function withSomething(WrappedComponent: React.ComponentType<any>) {
+      function withSomething(WrappedComponent: AnyComponent) {
         const WithSomething: React.FC<any> = props => {
           return <WrappedComponent {...props} />;
         };
