@@ -1,9 +1,10 @@
 /* eslint-disable no-console */
-import React, { Component, StrictMode } from 'react';
+import React, { Component, CSSProperties, StrictMode } from 'react';
 import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';
 import { find } from '../../test-utils';
+import { AnyComponent } from '../types';
 import hoist from '../utils/hoist';
 import { getRenderedCSS, resetStyled } from './utils';
 
@@ -26,7 +27,7 @@ describe('basic', () => {
         return <div />;
       }
     }
-    const validComps = ['div', FunctionalComponent, ClassComponent];
+    const validComps = ['div' as const, FunctionalComponent, ClassComponent];
     validComps.forEach(comp => {
       expect(() => {
         const Comp = styled(comp)``;
@@ -153,7 +154,7 @@ describe('basic', () => {
   });
 
   it('should allow you to pass in a function returning a style object', () => {
-    const Comp = styled.div(({ color }) => ({
+    const Comp = styled.div(({ color }: { color: CSSProperties['color'] }) => ({
       color,
     }));
     TestRenderer.create(<Comp color="blue" />);
@@ -188,7 +189,7 @@ describe('basic', () => {
   });
 
   it('does not filter outs custom props for uppercased string-like components', () => {
-    const Comp = styled('Comp')`
+    const Comp = styled('Comp')<{ customProp: string }>`
       color: red;
     `;
     const wrapper = TestRenderer.create(<Comp customProp="abc" />);
@@ -268,7 +269,7 @@ describe('basic', () => {
       const Outer = styled(Inner)``;
 
       class Wrapper extends Component<any, any> {
-        testRef = React.createRef<HTMLDivElement>();
+        testRef = React.createRef<InstanceType<typeof Inner>>();
 
         render() {
           return (
@@ -326,8 +327,17 @@ describe('basic', () => {
       `);
     });
 
-    it('should hoist non-react static properties', () => {
-      const Inner = styled.div``;
+    it('should hoist non-react static properties on styled primitives', () => {
+      const Inner = styled.div<{}, { foo: string }>``;
+      Inner.foo = 'bar';
+
+      const Outer = styled(Inner)``;
+
+      expect(Outer).toHaveProperty('foo', 'bar');
+    });
+
+    it('should hoist non-react static properties on wrapped components', () => {
+      const Inner = styled('div')<{}, { foo: string }>``;
       Inner.foo = 'bar';
 
       const Outer = styled(Inner)``;
@@ -344,7 +354,7 @@ describe('basic', () => {
     });
 
     it('should not fold components if there is an interim HOC', () => {
-      function withSomething(WrappedComponent: React.ComponentType<any>) {
+      function withSomething(WrappedComponent: AnyComponent) {
         const WithSomething: React.FC<any> = props => {
           return <WrappedComponent {...props} />;
         };

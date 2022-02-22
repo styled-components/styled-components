@@ -96,9 +96,8 @@ describe('keyframes', () => {
     `;
 
     const animation = keyframes`${rules}`;
-    const name = animation.getName();
 
-    getRenderedCSS('');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
 
     const Comp = styled.div({
       animation: css`
@@ -108,28 +107,28 @@ describe('keyframes', () => {
 
     TestRenderer.create(<Comp />);
 
-    getRenderedCSS(`
-      .a {
-        -webkit-animation: ${name} 2s linear infinite;
-        animation: ${name} 2s linear infinite;
-      }
-      @-webkit-keyframes ${name} {
-        0% {
-          opacity:0;
-        }
-        100% {
-          opacity:1;
-        }
-      }
-      @keyframes ${name} {
-        0% {
-          opacity:0;
-        }
-        100% {
-          opacity:1;
-        }
-      }
-    `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+".c {
+  -webkit-animation: a 2s linear infinite;
+  animation: a 2s linear infinite;
+}
+@-webkit-keyframes a {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes a {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}"
+`);
   });
 
   it('should insert the correct styles for objects with nesting', () => {
@@ -144,7 +143,7 @@ describe('keyframes', () => {
 
     const animation = keyframes`${rules}`;
 
-    getRenderedCSS('');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
 
     const Comp = styled.div({
       '@media(max-width: 700px)': {
@@ -161,34 +160,34 @@ describe('keyframes', () => {
 
     TestRenderer.create(<Comp />);
 
-    getRenderedCSS(`
-     @media(max-width: 700px) {
-      .a {
-        -webkit-animation: jgzmJZ 2s linear infinite;
-        animation: jgzmJZ 2s linear infinite;
-       }
-     }
-    .a:hover {
-      -webkit-animation: jgzmJZ 10s linear infinite;
-      animation: jgzmJZ 10s linear infinite;
-    }
-    @-webkit-keyframes jgzmJZ {
-      0% {
-        opacity: 0;
-      }
-      100% {
-        opacity: 1;
-      }
-    }
-    @keyframes jgzmJZ {
-      0% {
-        opacity: 0;
-      }
-      100% {
-        opacity: 1;
-      }
-    }
-    `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+"@media(max-width:700px) {
+  .c {
+    -webkit-animation: a 2s linear infinite;
+    animation: a 2s linear infinite;
+  }
+  .c :hover {
+    -webkit-animation: a 10s linear infinite;
+    animation: a 10s linear infinite;
+  }
+}
+@-webkit-keyframes a {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes a {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}"
+`);
   });
 
   it('should insert the correct styles when keyframes in props', () => {

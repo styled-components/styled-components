@@ -6,6 +6,7 @@ import beautify from 'js-beautify';
 import styled from '../constructors/styled';
 import { mainSheet } from '../models/StyleSheetManager';
 import { resetGroupIds } from '../sheet/GroupIDAllocator';
+import { rehydrateSheet } from '../sheet/Rehydration';
 import styledError from '../utils/error';
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
@@ -39,6 +40,10 @@ export const resetStyled = (isServer = false) => {
   mockInputs = {};
 
   return styled;
+};
+
+export const rehydrateTestStyles = () => {
+  rehydrateSheet(mainSheet);
 };
 
 export const stripComments = (str: string) => str.replace(/\/\*.*?\*\/\n?/g, '');

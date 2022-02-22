@@ -102,9 +102,8 @@ createGlobalStyle\`
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import { createGlobalStyle as _createGlobalStyle } from 'styled-components';
-_createGlobalStyle\`
-  background: red;
-\`;
+
+_createGlobalStyle(['background:red;']);
 
 
 `;
@@ -230,7 +229,6 @@ function Foo() {
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled2 from 'styled-components';
 import _styled from 'styled-components';
 import React from 'react';
 
@@ -261,7 +259,6 @@ function Foo() {
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-import _styled2 from 'styled-components';
 import _styled from 'styled-components';
 import React from 'react';
 

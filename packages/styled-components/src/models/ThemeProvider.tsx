@@ -2,23 +2,23 @@ import React, { useContext, useMemo } from 'react';
 import styledError from '../utils/error';
 import isFunction from '../utils/isFunction';
 
-export type Theme = {
+export interface DefaultTheme {
   [key: string]: any;
-};
+}
 
-type ThemeFn = (outerTheme?: Theme) => Theme;
-type ThemeArgument = Theme | ThemeFn;
+type ThemeFn = (outerTheme?: DefaultTheme) => DefaultTheme;
+type ThemeArgument = DefaultTheme | ThemeFn;
 
 type Props = {
   children?: React.ReactChild;
   theme: ThemeArgument;
 };
 
-export const ThemeContext = React.createContext<Theme | undefined>(undefined);
+export const ThemeContext = React.createContext<DefaultTheme | undefined>(undefined);
 
 export const ThemeConsumer = ThemeContext.Consumer;
 
-function mergeTheme(theme: ThemeArgument, outerTheme?: Theme): Theme {
+function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme): DefaultTheme {
   if (!theme) {
     throw styledError(14);
   }

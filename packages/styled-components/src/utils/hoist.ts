@@ -1,4 +1,5 @@
 import React from 'react';
+import { AnyComponent } from '../types';
 
 const hasSymbol = typeof Symbol === 'function' && Symbol.for;
 
@@ -55,10 +56,12 @@ const TYPE_STATICS = {
   [REACT_MEMO_TYPE]: MEMO_STATICS,
 };
 
-type OmniComponent = React.ComponentType | React.ExoticComponent;
+type OmniComponent = AnyComponent;
 
 // adapted from react-is
-function isMemo(object: OmniComponent | React.MemoExoticComponent<any>) {
+function isMemo(
+  object: OmniComponent | React.MemoExoticComponent<any>
+): object is React.MemoExoticComponent<any> {
   const $$typeofType = 'type' in object && object.type.$$typeof;
 
   return $$typeofType === REACT_MEMO_TYPE;

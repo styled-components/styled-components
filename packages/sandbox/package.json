@@ -7,16 +7,15 @@
     "dev": "next dev"
   },
   "devDependencies": {
-    "babel-loader": "^8.2.2",
-    "babel-plugin-styled-components": "^1.12.0",
-    "next": "^11.1.2"
+    "babel-plugin-styled-components": "^2.0.5",
+    "next": "^12.1.0"
   },
   "dependencies": {
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-live": "^2.3.0"
+    "styled-components": "link:../styled-components"
   },
   "engines": {
-    "node": ">= 12"
+    "node": ">= 14"
   }
 }

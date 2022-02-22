@@ -4,6 +4,7 @@ import { expectCSSMatches } from './utils';
 
 declare global {
   namespace NodeJS {
+    // @ts-expect-error mismatched types but we need it for testing
     export interface ProcessEnv {
       REACT_APP_SC_DISABLE_SPEEDY?: boolean | string;
       SC_DISABLE_SPEEDY?: boolean | string;

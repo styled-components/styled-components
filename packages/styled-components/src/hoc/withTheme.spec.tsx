@@ -1,5 +1,7 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
+import ThemeProvider from '../models/ThemeProvider';
+import { ExecutionContext } from '../types';
 import withTheme from './withTheme';
 
 describe('withTheme', () => {
@@ -34,5 +36,22 @@ describe('withTheme', () => {
     expect(warn.mock.calls[0][0]).toMatchInlineSnapshot(
       `"[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class \\"Comp\\""`
     );
+  });
+
+  it('should provide the theme to the wrapped component', () => {
+    const WrappedComponent = withTheme((p: ExecutionContext) => {
+      return <span>{JSON.stringify(p.theme)}</span>;
+    });
+
+    const wrapper = TestRenderer.create(
+      <ThemeProvider theme={{ color: 'red' }}>
+        <WrappedComponent />
+      </ThemeProvider>
+    );
+    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
+<span>
+  {"color":"red"}
+</span>
+`);
   });
 });

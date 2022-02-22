@@ -1,12 +1,11 @@
-import css from './css';
-import generateComponentId from '../utils/generateComponentId';
 import Keyframes from '../models/Keyframes';
-
 import { Interpolation, Styles } from '../types';
+import generateComponentId from '../utils/generateComponentId';
+import css from './css';
 
-export default function keyframes(
-  strings: Styles,
-  ...interpolations: Array<Interpolation>
+export default function keyframes<Props = unknown>(
+  strings: Styles<Props>,
+  ...interpolations: Array<Interpolation<Props>>
 ): Keyframes {
   /* Warning if you've used keyframes on React Native */
   if (

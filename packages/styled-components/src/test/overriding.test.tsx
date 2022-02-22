@@ -1,5 +1,6 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
+import { AnyComponent } from '../types';
 import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
@@ -97,11 +98,7 @@ describe('extending', () => {
       return Parent;
     };
 
-    const addDefaultProps = (
-      Parent: React.ComponentType<any>,
-      Child: React.ComponentType<any>,
-      Grandson: React.ComponentType<any>
-    ) => {
+    const addDefaultProps = (Parent: AnyComponent, Child: AnyComponent, Grandson: AnyComponent) => {
       Parent.defaultProps = {
         color: 'primary',
       };
@@ -141,7 +138,7 @@ describe('extending', () => {
     describe('when overriding with another component', () => {
       it('should override parents defaultProps', () => {
         const Parent = setupParent();
-        const Child = styled(Parent).attrs(() => ({ as: 'h2' }))``;
+        const Child = styled(Parent).attrs({ as: 'h2' })``;
         const Grandson = styled(Child).attrs(() => ({ as: 'h3' }))``;
         addDefaultProps(Parent, Child, Grandson);
         TestRenderer.create(<Parent />);
@@ -166,7 +163,7 @@ describe('extending', () => {
 
       it('should evaluate grandsons props', () => {
         const Parent = setupParent();
-        const Child = styled(Parent).attrs(() => ({ as: 'h2' }))``;
+        const Child = styled(Parent).attrs({ as: 'h2' })``;
         const Grandson = styled(Child).attrs(() => ({ as: 'h3' }))``;
         addDefaultProps(Parent, Child, Grandson);
 

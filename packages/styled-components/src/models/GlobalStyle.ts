@@ -1,14 +1,14 @@
 import StyleSheet from '../sheet';
-import { FlattenerResult, RuleSet, Stringifier } from '../types';
+import { ExecutionContext, FlattenerResult, RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import isStaticRules from '../utils/isStaticRules';
 
-export default class GlobalStyle {
+export default class GlobalStyle<Props = unknown> {
   componentId: string;
   isStatic: boolean;
-  rules: FlattenerResult;
+  rules: FlattenerResult<Props>;
 
-  constructor(rules: RuleSet, componentId: string) {
+  constructor(rules: RuleSet<Props>, componentId: string) {
     this.rules = rules;
     this.componentId = componentId;
     this.isStatic = isStaticRules(rules);
@@ -20,7 +20,7 @@ export default class GlobalStyle {
 
   createStyles(
     instance: number,
-    executionContext: Object,
+    executionContext: ExecutionContext & Props,
     styleSheet: StyleSheet,
     stylis: Stringifier
   ): void {
@@ -38,7 +38,7 @@ export default class GlobalStyle {
 
   renderStyles(
     instance: number,
-    executionContext: Object,
+    executionContext: ExecutionContext & Props,
     styleSheet: StyleSheet,
     stylis: Stringifier
   ): void {

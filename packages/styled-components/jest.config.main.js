@@ -1,6 +1,4 @@
 // eslint-disable-next-line
-const path = require('path');
-// eslint-disable-next-line
 const baseConfig = require('./jest.config.base');
 
 module.exports = Object.assign({}, baseConfig, {

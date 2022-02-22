@@ -62,14 +62,14 @@
   "dependencies": {
     "@babel/cli": "^7.15.7",
     "@babel/core": "^7.15.5",
-    "@babel/helper-module-imports": "^7.15.4",
+    "@babel/helper-module-imports": "^7.16.7",
     "@babel/plugin-external-helpers": "^7.0.0",
     "@babel/plugin-proposal-class-properties": "^7.0.0",
     "@babel/plugin-proposal-object-rest-spread": "^7.15.6",
     "@babel/preset-env": "^7.15.6",
     "@babel/preset-react": "^7.0.0",
     "@babel/preset-typescript": "^7.15.0",
-    "@babel/traverse": "^7.15.4",
+    "@babel/traverse": "^7.17.3",
     "@emotion/is-prop-valid": "^1.1.0",
     "@emotion/unitless": "^0.7.4",
     "css-to-react-native": "^3.0.0",
@@ -86,7 +86,7 @@
     "@types/enzyme": "^3.10.9",
     "@types/jest": "^27.0.2",
     "@types/js-beautify": "^1.13.1",
-    "@types/node": "^14.14.9",
+    "@types/node": "^14.0.0",
     "@types/react": "^17.0.22",
     "@types/react-dom": "^17.0.9",
     "@types/react-frame-component": "^4.1.1",
@@ -94,19 +94,19 @@
     "@types/react-primitives": "^0.6.2",
     "@types/react-test-renderer": "^17.0.1",
     "@types/shallowequal": "^1.1.1",
-    "@types/stylis": "^4.0.0",
+    "@types/stylis": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^4.20.0",
     "@typescript-eslint/parser": "^4.20.0",
     "babel-eslint": "^10.0.1",
     "babel-jest": "^27.0.6",
     "babel-plugin-add-module-exports": "^1.0.4",
     "babel-plugin-macros": "^3.1.0",
+    "babel-plugin-styled-components": "^2.0.5",
     "babel-plugin-tester": "^10.0.0",
     "babel-plugin-transform-react-remove-prop-types": "^0.4.24",
     "bundlewatch": "^0.3.1",
     "eslint": "^7.23.0",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-react": "^7.20.6",
     "eslint-plugin-react-hooks": "^4.2.0",
@@ -131,7 +131,7 @@
     "rollup-plugin-terser": "^7.0.2",
     "stylis-plugin-rtl": "^2.1.1",
     "tslib": "^2.3.1",
-    "typescript": "^4.4.3",
+    "typescript": "^4.5.5",
     "utility-types": "^3.10.0"
   },
   "bundlewatch": {
@@ -151,6 +151,6 @@
     "url": "https://opencollective.com/styled-components"
   },
   "engines": {
-    "node": ">= 12"
+    "node": ">= 14"
   }
 }

@@ -16,10 +16,10 @@ export default class ComponentStyle {
   baseStyle: ComponentStyle | null | undefined;
   componentId: string;
   isStatic: boolean;
-  rules: RuleSet;
+  rules: RuleSet<any>;
   staticRulesId: string;
 
-  constructor(rules: RuleSet, componentId: string, baseStyle?: ComponentStyle) {
+  constructor(rules: RuleSet<any>, componentId: string, baseStyle?: ComponentStyle) {
     this.rules = rules;
     this.staticRulesId = '';
     this.isStatic =

@@ -1,29 +1,30 @@
-import React, { ComponentType, useContext } from 'react';
+import React from 'react';
 import { ThemeContext } from '../models/ThemeProvider';
+import { AnyComponent, ExecutionContext } from '../types';
 import determineTheme from '../utils/determineTheme';
 import getComponentName from '../utils/getComponentName';
 import hoist from '../utils/hoist';
 
-export default function withTheme(Component: ComponentType<any>) {
-  const WithTheme = React.forwardRef((props, ref) => {
-    const theme = useContext(ThemeContext);
-    const themeProp = determineTheme(props, theme, Component.defaultProps);
+export default function withTheme<T extends AnyComponent>(Component: T) {
+  const WithTheme = React.forwardRef<T, JSX.LibraryManagedAttributes<T, ExecutionContext>>(
+    (props, ref) => {
+      const theme = React.useContext(ThemeContext);
+      const themeProp = determineTheme(props, theme, Component.defaultProps);
 
-    if (process.env.NODE_ENV !== 'production' && themeProp === undefined) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        `[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class "${getComponentName(
-          Component
-        )}"`
-      );
+      if (process.env.NODE_ENV !== 'production' && themeProp === undefined) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class "${getComponentName(
+            Component
+          )}"`
+        );
+      }
+
+      return <Component {...props} theme={themeProp} ref={ref} />;
     }
-
-    return <Component {...props} theme={themeProp} ref={ref} />;
-  });
-
-  hoist(WithTheme, Component);
+  );
 
   WithTheme.displayName = `WithTheme(${getComponentName(Component)})`;
 
-  return WithTheme;
+  return hoist(WithTheme, Component);
 }

@@ -51,7 +51,7 @@ describe(`createGlobalStyle`, () => {
 
   it(`supports interpolation`, () => {
     const { render } = context;
-    const Component = createGlobalStyle`div {color:${props => props.color};} `;
+    const Component = createGlobalStyle<{ color: string }>`div {color:${props => props.color};} `;
     render(<Component color="orange" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "div {
@@ -138,7 +138,6 @@ describe(`createGlobalStyle`, () => {
       }"
     `);
 
-    // @ts-expect-error TS not detecting construction during render
     update({ color: 'red' });
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "div {

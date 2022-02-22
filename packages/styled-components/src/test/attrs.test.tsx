@@ -1,6 +1,7 @@
-import React, { Component, ComponentType } from 'react';
+import React from 'react';
 import TestRenderer from 'react-test-renderer';
 import ThemeProvider from '../models/ThemeProvider';
+import { AnyComponent } from '../types';
 import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
@@ -40,14 +41,13 @@ describe('attrs', () => {
   });
 
   it('pass a React component', () => {
-    // $FlowFixMe
-    class ReactComponent extends Component {
+    class ReactComponent extends React.Component {
       render() {
         return <p>React Component</p>;
       }
     }
 
-    const Button = ({ component: ChildComponent }: { component: ComponentType<any> }) => (
+    const Button = ({ component: ChildComponent }: { component: AnyComponent }) => (
       <button>
         <ChildComponent />
       </button>
@@ -127,7 +127,7 @@ describe('attrs', () => {
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
     expect(TestRenderer.create(<Comp type="reset" />).toJSON()).toMatchSnapshot();
-    expect(TestRenderer.create(<Comp type="reset" tabIndex="-1" />).toJSON()).toMatchSnapshot();
+    expect(TestRenderer.create(<Comp type="reset" tabIndex={-1} />).toJSON()).toMatchSnapshot();
   });
 
   it('should merge className', () => {
@@ -319,10 +319,11 @@ describe('attrs', () => {
       color: ${props => props.textColor};
     `;
 
-    const StyledComp = styled<{ textColor: string }>(Comp).attrs(() => ({
+    const StyledComp = styled(Comp).attrs(() => ({
       textColor: 'red',
-    }))``;
+    }))<{ textColor: string }>``;
 
+    // @ts-expect-error missing required prop
     expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();
   });
 });
