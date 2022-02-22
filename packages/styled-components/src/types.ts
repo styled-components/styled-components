@@ -44,9 +44,14 @@ export interface ExecutionContext extends ExtensibleObject {
   theme: DefaultTheme;
 }
 
-export type StyleFunction<Props> = (
-  executionContext: ExecutionContext & Props
-) => string | number | StyledObject | CSSConstructor<Props> | StyleFunction<Props>;
+export interface StyleFunction<Props> {
+  (executionContext: ExecutionContext & Props):
+    | string
+    | number
+    | StyledObject
+    | CSSConstructor<Props>
+    | StyleFunction<Props>;
+}
 
 // IStyledNativeComponent is not included here since we don't allow
 // component selectors for RN
@@ -69,14 +74,13 @@ export type Styles<Props> = TemplateStringsArray | StyledObject | StyleFunction<
 
 export type NameGenerator = (hash: number) => string;
 
-export type CSSConstructor<Props> = (
-  strings: string[],
-  ...interpolations: Interpolation<Props>[]
-) => RuleSet<Props>;
+export interface CSSConstructor<Props> {
+  (strings: string[], ...interpolations: Interpolation<Props>[]): RuleSet<Props>;
+}
 
-export type StyleSheet = {
+export interface StyleSheet {
   create: Function;
-};
+}
 
 export interface Keyframes {
   id: string;
@@ -84,11 +88,13 @@ export interface Keyframes {
   rules: string;
 }
 
-export type Flattener<Props> = (
-  chunks: Interpolation<Props>[],
-  executionContext: Object | null | undefined,
-  styleSheet: Object | null | undefined
-) => Interpolation<Props>[];
+export interface Flattener<Props> {
+  (
+    chunks: Interpolation<Props>[],
+    executionContext: Object | null | undefined,
+    styleSheet: Object | null | undefined
+  ): Interpolation<Props>[];
+}
 
 export type FlattenerResult<Props> =
   | RuleSet<Props>
@@ -103,11 +109,13 @@ export interface Stringifier {
   hash: string;
 }
 
-export type ShouldForwardProp = (
-  prop: string,
-  isValidAttr: (prop: string) => boolean,
-  elementToBeCreated?: WebTarget | NativeTarget
-) => boolean;
+export interface ShouldForwardProp {
+  (
+    prop: string,
+    isValidAttr: (prop: string) => boolean,
+    elementToBeCreated?: WebTarget | NativeTarget
+  ): boolean;
+}
 
 export interface CommonStatics<Props> {
   attrs: Attrs<Props>[];
@@ -177,11 +185,13 @@ export interface IStyledComponent<Target extends WebTarget, Props = {}>
 }
 
 // corresponds to createStyledComponent
-export type IStyledComponentFactory<Target extends WebTarget, Props = {}, Statics = {}> = (
-  target: Target,
-  options: StyledOptions<Props>,
-  rules: RuleSet<Props>
-) => IStyledComponent<Target, Props> & Statics;
+export interface IStyledComponentFactory<Target extends WebTarget, Props = {}, Statics = {}> {
+  (target: Target, options: StyledOptions<Props>, rules: RuleSet<Props>): IStyledComponent<
+    Target,
+    Props
+  > &
+    Statics;
+}
 
 export interface IStyledNativeStatics<OuterProps = {}> extends CommonStatics<OuterProps> {
   inlineStyle: InstanceType<IInlineStyleConstructor<OuterProps>>;
@@ -200,11 +210,17 @@ export interface IStyledNativeComponent<Target extends NativeTarget, Props = {}>
 }
 
 // corresponds to createNativeStyledComponent
-export type IStyledNativeComponentFactory<Target extends NativeTarget, Props = {}, Statics = {}> = (
-  target: Target,
-  options: StyledNativeOptions<Props>,
-  rules: RuleSet<Props>
-) => IStyledNativeComponent<Target, Props> & Statics;
+export interface IStyledNativeComponentFactory<
+  Target extends NativeTarget,
+  Props = {},
+  Statics = {}
+> {
+  (
+    target: Target,
+    options: StyledNativeOptions<Props>,
+    rules: RuleSet<Props>
+  ): IStyledNativeComponent<Target, Props> & Statics;
+}
 export interface IInlineStyleConstructor<Props = {}> {
   new (rules: RuleSet<Props>): IInlineStyle<Props>;
 }
