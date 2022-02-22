@@ -4,7 +4,14 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
-import { ExtensibleObject, Interpolation, RuleSet, Stringifier, Styles } from '../types';
+import {
+  ExecutionContext,
+  ExtensibleObject,
+  Interpolation,
+  RuleSet,
+  Stringifier,
+  Styles,
+} from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
@@ -16,7 +23,7 @@ export default function createGlobalStyle<Props = {}>(
 ) {
   const rules = css(strings, ...interpolations) as RuleSet<Props>;
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
-  const globalStyle = new GlobalStyle(rules, styledComponentId);
+  const globalStyle = new GlobalStyle<Props>(rules, styledComponentId);
 
   if (process.env.NODE_ENV !== 'production') {
     checkDynamicCreation(styledComponentId);
@@ -72,12 +79,17 @@ export default function createGlobalStyle<Props = {}>(
     stylis: Stringifier
   ) {
     if (globalStyle.isStatic) {
-      globalStyle.renderStyles(instance, STATIC_EXECUTION_CONTEXT, styleSheet, stylis);
+      globalStyle.renderStyles(
+        instance,
+        STATIC_EXECUTION_CONTEXT as unknown as ExecutionContext & Props,
+        styleSheet,
+        stylis
+      );
     } else {
       const context = {
         ...props,
         theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
-      };
+      } as ExecutionContext & Props;
 
       globalStyle.renderStyles(instance, context, styleSheet, stylis);
     }
