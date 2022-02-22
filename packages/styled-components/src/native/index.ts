@@ -9,8 +9,6 @@ import ThemeProvider, { ThemeConsumer, ThemeContext } from '../models/ThemeProvi
 import { NativeTarget } from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
 
-type Awaited<T> = T extends PromiseLike<infer U> ? U : T;
-
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const reactNative = require('react-native') as Awaited<typeof import('react-native')>;
 

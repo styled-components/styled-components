@@ -1,11 +1,7 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 import { SC_ATTR, SC_ATTR_VERSION } from '../constants';
-import createGlobalStyle from '../constructors/createGlobalStyle';
-import keyframes from '../constructors/keyframes';
-import { mainSheet } from '../models/StyleSheetManager';
-import { rehydrateSheet } from '../sheet/Rehydration';
-import { getRenderedCSS, resetStyled, seedNextClassnames } from './utils';
+import { getRenderedCSS, rehydrateTestStyles, resetStyled, seedNextClassnames } from './utils';
 
 declare const __VERSION__: string;
 
@@ -16,12 +12,16 @@ declare const __VERSION__: string;
    ${() => ''}
    */
 let styled: ReturnType<typeof resetStyled>;
+let createGlobalStyle: Awaited<typeof import('../constructors/createGlobalStyle')>['default'];
+let keyframes: Awaited<typeof import('../constructors/keyframes')>['default'];
 
 describe('rehydration', () => {
   /**
    * Make sure the setup is the same for every test
    */
   beforeEach(() => {
+    createGlobalStyle = require('../constructors/createGlobalStyle');
+    keyframes = require('../constructors/keyframes');
     styled = resetStyled();
   });
 
@@ -34,7 +34,7 @@ describe('rehydration', () => {
         </style>
       `;
 
-      rehydrateSheet(mainSheet);
+      rehydrateTestStyles();
     });
 
     it('should preserve the styles', () => {
@@ -141,7 +141,7 @@ describe('rehydration', () => {
         </style>
       `;
 
-      rehydrateSheet(mainSheet);
+      rehydrateTestStyles();
     });
 
     it('should preserve the styles', () => {
@@ -200,7 +200,7 @@ describe('rehydration', () => {
         </style>
       `;
 
-      rehydrateSheet(mainSheet);
+      rehydrateTestStyles();
     });
 
     it('should leave the existing styles there', () => {
@@ -231,7 +231,7 @@ describe('rehydration', () => {
         </style>
       `;
 
-      rehydrateSheet(mainSheet);
+      rehydrateTestStyles();
     });
 
     it('should leave the existing styles there', () => {
@@ -310,7 +310,7 @@ describe('rehydration', () => {
         </style>
       `;
 
-      rehydrateSheet(mainSheet);
+      rehydrateTestStyles();
     });
 
     it('should not touch existing styles', () => {
@@ -410,7 +410,7 @@ describe('rehydration', () => {
         </style>
       `;
 
-      rehydrateSheet(mainSheet);
+      rehydrateTestStyles();
     });
 
     it('should not touch existing styles', () => {
