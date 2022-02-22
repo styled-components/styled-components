@@ -69,7 +69,7 @@
     "@babel/preset-env": "^7.15.6",
     "@babel/preset-react": "^7.0.0",
     "@babel/preset-typescript": "^7.15.0",
-    "@babel/traverse": "^7.15.4",
+    "@babel/traverse": "^7.17.3",
     "@emotion/is-prop-valid": "^1.1.0",
     "@emotion/unitless": "^0.7.4",
     "css-to-react-native": "^3.0.0",
@@ -81,7 +81,6 @@
     "react-dom": ">= 16.8.0"
   },
   "devDependencies": {
-    "@babel/helper-environment-visitor": "^7.16.7",
     "@rollup/plugin-typescript": "^8.2.5",
     "@types/babel-plugin-macros": "^2.8.4",
     "@types/enzyme": "^3.10.9",
