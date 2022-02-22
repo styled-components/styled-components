@@ -12,6 +12,7 @@ const styled = baseStyled as typeof baseStyled & {
 
 // Shorthands for all valid HTML Elements
 domElements.forEach(domElement => {
+  // @ts-expect-error someday they'll handle imperative assignment properly
   styled[domElement] = baseStyled(domElement);
 });
 

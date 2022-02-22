@@ -51,7 +51,9 @@ export default function constructWithOptions<
     ? IStyledComponentFactory<any, any, any>
     : IStyledNativeComponentFactory<any, any, any>,
   tag: Target,
-  options: StyledOptions<OuterProps> = EMPTY_OBJECT as StyledOptions<OuterProps>
+  options: Environment extends 'web'
+    ? StyledOptions<OuterProps>
+    : StyledNativeOptions<OuterProps> = EMPTY_OBJECT as StyledOptions<OuterProps>
 ) {
   // We trust that the tag is a valid component as long as it isn't falsish
   // Typically the tag here is a string or function (i.e. class or pure function component)
