@@ -86,7 +86,7 @@
     "@types/enzyme": "^3.10.9",
     "@types/jest": "^27.0.2",
     "@types/js-beautify": "^1.13.1",
-    "@types/node": "^14.14.9",
+    "@types/node": "^14.0.0",
     "@types/react": "^17.0.22",
     "@types/react-dom": "^17.0.9",
     "@types/react-frame-component": "^4.1.1",
@@ -106,7 +106,6 @@
     "bundlewatch": "^0.3.1",
     "eslint": "^7.23.0",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-react": "^7.20.6",
     "eslint-plugin-react-hooks": "^4.2.0",
@@ -151,6 +150,6 @@
     "url": "https://opencollective.com/styled-components"
   },
   "engines": {
-    "node": ">= 12"
+    "node": ">= 14"
   }
 }
