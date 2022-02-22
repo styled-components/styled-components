@@ -3,19 +3,19 @@ import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
-export type StyledOptions<Props> = {
+export interface StyledOptions<Props> {
   attrs?: Attrs<Props>[];
   componentId?: string;
   displayName?: string;
   parentComponentId?: string;
   shouldForwardProp?: ShouldForwardProp;
-};
+}
 
-export type StyledNativeOptions<Props> = {
+export interface StyledNativeOptions<Props> {
   attrs?: Attrs<Props>[];
   displayName?: string;
   shouldForwardProp?: ShouldForwardProp;
-};
+}
 
 export type KnownWebTarget =
   | keyof JSX.IntrinsicElements
@@ -28,21 +28,21 @@ export type WebTarget =
 
 export type NativeTarget = ComponentType<any> | React.ExoticComponent<any>;
 
-export type BaseExtensibleObject = {
+export interface BaseExtensibleObject {
   [key: string]: any;
-};
+}
 
-export type ExtensibleObject = BaseExtensibleObject & {
+export interface ExtensibleObject extends BaseExtensibleObject {
   $as?: KnownWebTarget;
   $forwardedAs?: KnownWebTarget;
   as?: KnownWebTarget;
   forwardedAs?: KnownWebTarget;
   theme?: DefaultTheme;
-};
+}
 
-export type ExecutionContext = ExtensibleObject & {
+export interface ExecutionContext extends ExtensibleObject {
   theme: DefaultTheme;
-};
+}
 
 export type StyleFunction<Props> = (
   executionContext: ExecutionContext & Props
@@ -116,14 +116,14 @@ export interface CommonStatics<Props> {
   withComponent: any;
 }
 
-export interface IStyledStatics<OuterProps = undefined> extends CommonStatics<OuterProps> {
+export interface IStyledStatics<OuterProps = {}> extends CommonStatics<OuterProps> {
   componentStyle: ComponentStyle;
   // this is here because we want the uppermost displayName retained in a folding scenario
   foldedComponentIds: Array<string>;
   target: WebTarget;
   styledComponentId: string;
   warnTooManyClasses?: ReturnType<typeof createWarnTooManyClasses>;
-  withComponent: <Target extends WebTarget, Props = undefined>(
+  withComponent: <Target extends WebTarget, Props = {}>(
     tag: Target
   ) => IStyledComponent<Target, OuterProps & Props>;
 }
@@ -167,7 +167,7 @@ interface CustomComponent<
   >;
 }
 
-export interface IStyledComponent<Target extends WebTarget, Props = undefined>
+export interface IStyledComponent<Target extends WebTarget, Props = {}>
   extends CustomComponent<Target, Props, ExecutionContext>,
     IStyledStatics<Props> {
   defaultProps?: Partial<
@@ -183,15 +183,15 @@ export type IStyledComponentFactory<Target extends WebTarget, Props = {}, Static
   rules: RuleSet<Props>
 ) => IStyledComponent<Target, Props> & Statics;
 
-export interface IStyledNativeStatics<OuterProps = undefined> extends CommonStatics<OuterProps> {
+export interface IStyledNativeStatics<OuterProps = {}> extends CommonStatics<OuterProps> {
   inlineStyle: InstanceType<IInlineStyleConstructor<OuterProps>>;
   target: NativeTarget;
-  withComponent: <Target extends NativeTarget, Props = undefined>(
+  withComponent: <Target extends NativeTarget, Props = {}>(
     tag: Target
   ) => IStyledNativeComponent<Target, OuterProps & Props>;
 }
 
-export interface IStyledNativeComponent<Target extends NativeTarget, Props = undefined>
+export interface IStyledNativeComponent<Target extends NativeTarget, Props = {}>
   extends CustomComponent<Target, Props, ExecutionContext>,
     IStyledNativeStatics<Props> {
   defaultProps?: Partial<
@@ -205,20 +205,19 @@ export type IStyledNativeComponentFactory<Target extends NativeTarget, Props = {
   options: StyledNativeOptions<Props>,
   rules: RuleSet<Props>
 ) => IStyledNativeComponent<Target, Props> & Statics;
-export interface IInlineStyleConstructor<Props = undefined> {
+export interface IInlineStyleConstructor<Props = {}> {
   new (rules: RuleSet<Props>): IInlineStyle<Props>;
 }
 
-export interface IInlineStyle<Props = undefined> {
+export interface IInlineStyle<Props = {}> {
   rules: RuleSet<Props>;
   generateStyleObject(executionContext: Object): Object;
 }
 
 export type StyledTarget = WebTarget | NativeTarget;
 
-export type StyledObject = {
+export interface StyledObject {
   [key: string]: Record<string, any> | string | number | StyleFunction<ExecutionContext>;
-} & {
-  // uncomment when we can eventually override index signatures with more specific types
-  // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);
-};
+}
+// uncomment when we can eventually override index signatures with more specific types
+// [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);

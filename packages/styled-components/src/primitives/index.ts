@@ -1,5 +1,5 @@
 import reactPrimitives from 'react-primitives';
-import constructWithOptions, { WebConstruct } from '../constructors/constructWithOptions';
+import constructWithOptions, { NativeStyled } from '../constructors/constructWithOptions';
 import css from '../constructors/css';
 import withTheme from '../hoc/withTheme';
 import useTheme from '../hooks/useTheme';
@@ -31,9 +31,16 @@ aliases.forEach(alias =>
   })
 );
 
+type RNComponents = {
+  [K in keyof typeof reactPrimitives]: typeof reactPrimitives[K] extends React.JSXElementConstructor<any>
+    ? typeof reactPrimitives[K]
+    : never;
+};
+
 const styled = baseStyled as typeof baseStyled & {
-  [E in typeof aliases[number]]: ReturnType<
-    <Props extends {} = {}>() => ReturnType<WebConstruct<E, Props>>
+  [E in typeof aliases[number]]: NativeStyled<
+    RNComponents[E],
+    React.ComponentProps<RNComponents[E]>
   >;
 };
 

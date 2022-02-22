@@ -1,17 +1,13 @@
 import createStyledComponent from '../models/StyledComponent';
 import { WebTarget } from '../types';
 import domElements from '../utils/domElements';
-import constructWithOptions, { WebConstruct } from './constructWithOptions';
+import constructWithOptions, { WebStyled } from './constructWithOptions';
 
 const baseStyled = <Target extends WebTarget>(tag: Target) =>
   constructWithOptions<'web', Target>(createStyledComponent, tag);
 
 const styled = baseStyled as typeof baseStyled & {
-  [E in keyof JSX.IntrinsicElements]: ReturnType<
-    <Props = {}, Statics = {}>() => ReturnType<
-      WebConstruct<E, React.ComponentProps<E> & Props, Statics>
-    >
-  >;
+  [E in keyof JSX.IntrinsicElements]: WebStyled<E, React.ComponentProps<E>>;
 };
 
 // Shorthands for all valid HTML Elements

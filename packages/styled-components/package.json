@@ -94,7 +94,7 @@
     "@types/react-primitives": "^0.6.2",
     "@types/react-test-renderer": "^17.0.1",
     "@types/shallowequal": "^1.1.1",
-    "@types/stylis": "^4.0.0",
+    "@types/stylis": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^4.20.0",
     "@typescript-eslint/parser": "^4.20.0",
     "babel-eslint": "^10.0.1",
@@ -129,7 +129,6 @@
     "rollup-plugin-sourcemaps": "^0.6.3",
     "rollup-plugin-terser": "^7.0.2",
     "stylis-plugin-rtl": "^2.1.1",
-    "tslib": "^2.3.1",
     "typescript": "^4.5.5",
     "utility-types": "^3.10.0"
   },

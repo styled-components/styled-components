@@ -1,5 +1,5 @@
 import React from 'react';
-import constructWithOptions, { NativeConstruct } from '../constructors/constructWithOptions';
+import constructWithOptions, { NativeStyled } from '../constructors/constructWithOptions';
 import css from '../constructors/css';
 import withTheme from '../hoc/withTheme';
 import useTheme from '../hooks/useTheme';
@@ -82,12 +82,8 @@ type RNComponents = {
 };
 
 const styled = baseStyled as typeof baseStyled & {
-  [E in KnownComponents]: ReturnType<
-    <Props = {}, Statics = {}>() => ReturnType<
-      // @ts-expect-error it works
-      NativeConstruct<RNComponents[E], React.ComponentProps<RNComponents[E]> & Props, Statics>
-    >
-  >;
+  // @ts-expect-error it's fine
+  [E in KnownComponents]: NativeStyled<RNComponents[E], React.ComponentProps<RNComponents[E]>>;
 };
 
 /* Define a getter for each alias which simply gets the reactNative component

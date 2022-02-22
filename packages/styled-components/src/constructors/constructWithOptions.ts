@@ -28,40 +28,11 @@ export interface NativeStyled<Target extends NativeTarget, OuterProps = {}, Oute
   ): NativeStyled<Target, OuterProps, OuterStatics>;
 }
 
-export interface NativeConstruct<
-  Target extends NativeTarget,
-  OuterProps = {}, // used for styled<{}>().attrs() so attrs() gets the generic prop context,
-  OuterStatics = {}
-> {
-  <Props = {}, Statics = {}>(
-    componentConstructor: IStyledNativeComponentFactory<Target, OuterProps & Props>,
-    tag: Target,
-    options?: StyledNativeOptions<OuterProps & Props>
-  ): NativeStyled<Target, OuterProps & Props, OuterStatics & Statics> & OuterStatics & Statics;
-  attrs(attrs: Attrs<OuterProps>): NativeStyled<Target, OuterProps, OuterStatics>;
-  withConfig(
-    config: StyledNativeOptions<OuterProps>
-  ): NativeStyled<Target, OuterProps, OuterStatics>;
-}
-
 export interface WebStyled<Target extends WebTarget, OuterProps = {}, OuterStatics = {}> {
   <Props = {}, Statics = {}>(
     initialStyles: Styles<OuterProps & Props>,
     ...interpolations: Interpolation<OuterProps & Props>[]
   ): IStyledComponent<Target, OuterProps & Props> & OuterStatics & Statics;
-  attrs(attrs: Attrs<OuterProps>): WebStyled<Target, OuterProps, OuterStatics>;
-  withConfig(config: StyledOptions<OuterProps>): WebStyled<Target, OuterProps, OuterStatics>;
-}
-export interface WebConstruct<
-  Target extends WebTarget,
-  OuterProps = {}, // used for styled<{}>().attrs() so attrs() gets the generic prop context,
-  OuterStatics = {}
-> {
-  <Props = {}, Statics = {}>(
-    componentConstructor: IStyledComponentFactory<Target, OuterProps & Props>,
-    tag: Target,
-    options?: StyledOptions<OuterProps & Props>
-  ): WebStyled<Target, OuterProps & Props, OuterStatics & Statics> & OuterStatics & Statics;
   attrs(attrs: Attrs<OuterProps>): WebStyled<Target, OuterProps, OuterStatics>;
   withConfig(config: StyledOptions<OuterProps>): WebStyled<Target, OuterProps, OuterStatics>;
 }
