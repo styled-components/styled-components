@@ -1,6 +1,14 @@
 /* ported from https://github.com/jonschlinkert/mixin-deep; thanks Jon! */
 import mixinDeep from '../mixinDeep';
 
+const MyObj = function (foo, bar, baz = undefined) {
+  this.foo = foo;
+  this.bar = bar;
+  if (baz) {
+    this.baz = 5;
+  }
+};
+
 it('should deeply mix the properties of object into the first object.', () => {
   expect(mixinDeep({ a: { aa: 'aa' } }, { a: { bb: 'bb' } }, { a: { cc: 'cc' } })).toEqual({
     a: { aa: 'aa', bb: 'bb', cc: 'cc' },
@@ -32,6 +40,31 @@ it('should mixin nested object properties', () => {
   const obj2 = { a: { b: 2, d: { f: 'f' } } };
 
   expect(mixinDeep(obj1, obj2)).toEqual({ a: { b: 2, c: 1, d: { e: 1, f: 'f' } } });
+});
+
+it('should shallow merge properties if target is not a POJO or array', () => {
+  const obj1 = new MyObj(5, 6);
+  const obj2 = { a: { b: 2, d: { f: 'f' } } };
+
+  expect(mixinDeep(obj1, obj2)).toMatchInlineSnapshot(`
+MyObj {
+  "a": Object {
+    "b": 2,
+    "d": Object {
+      "f": "f",
+    },
+  },
+  "bar": 6,
+  "foo": 5,
+}
+`);
+});
+
+it('should NOT shallow merge non-POJO properties of target', () => {
+  const obj1 = { wrapped: new MyObj(5, 6) };
+  const obj2 = { wrapped: { a: { b: 2, d: { f: 'f' } } } };
+
+  expect(mixinDeep(obj1, obj2)).toEqual({ wrapped: { a: { b: 2, d: { f: 'f' } } } });
 });
 
 it('should use the last value defined', () => {
@@ -81,15 +114,55 @@ it('should deep mixin arrays during mixin', () => {
   expect(actual.a).toEqual([1, 2, [3, 4]]);
   expect(actual.a[2]).toEqual([3, 4]);
   expect(actual.b).toEqual(obj2.b);
+
+  expect(
+    mixinDeep(
+      [new MyObj(1, 2), { a: 1 }, new MyObj(4, 5), new MyObj(8, 9)],
+      [{ abc: 345 }, { abc: 456 }, new MyObj(7, 8)]
+    )
+  ).toMatchInlineSnapshot(`
+    Array [
+      Object {
+        "abc": 345,
+      },
+      Object {
+        "a": 1,
+        "abc": 456,
+      },
+      MyObj {
+        "bar": 8,
+        "foo": 7,
+      },
+      MyObj {
+        "bar": 9,
+        "foo": 8,
+      },
+    ]
+  `);
 });
 
 it('should not modify source properties', () => {
   expect(mixinDeep({ test: true }).test).toEqual(true);
 });
 
-it('should not mixin arrays', () => {
+it('should properly mixin arrays', () => {
   expect(mixinDeep([1, 2, 3])).toEqual([1, 2, 3]);
   expect(mixinDeep([1, 2, 3], {})).toEqual([1, 2, 3]);
+  expect(mixinDeep([1, 2, 3], {})).toEqual([1, 2, 3]);
+  expect(mixinDeep([10, 20, 30, 40, 50, 60], [11, 21, { abc: 123 }, true], [12, 22])).toEqual([
+    12,
+    22,
+    { abc: 123 },
+    true,
+    50,
+    60,
+  ]);
+  expect(mixinDeep([10], [11, 21, { abc: 123 }, true], [12, 22])).toEqual([
+    12,
+    22,
+    { abc: 123 },
+    true,
+  ]);
 });
 
 it('should work with sparse objects:', () => {
@@ -114,4 +187,15 @@ it('should not mixin objects created with custom constructor', () => {
   const fixture = new TestType();
   const actual = mixinDeep(fixture);
   expect(actual).toEqual(fixture);
+});
+
+it('should not fail on objects with cyclical prototypes', () => {
+  const Cyclical = function () {};
+  Cyclical.prototype.cycle = new Cyclical();
+
+  const cycle1 = new Cyclical();
+  const cycle2 = new Cyclical();
+
+  const actual = mixinDeep(cycle1, cycle2, { a: 1 });
+  expect(actual).toEqual(cycle1);
 });

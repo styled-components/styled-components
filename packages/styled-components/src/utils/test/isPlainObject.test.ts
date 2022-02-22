@@ -15,6 +15,12 @@ it('returns false for an instance of a class with its own toString method', () =
   expect(isPlainObject(new SomeClass())).toEqual(false);
 });
 
+it('returns false for an instance of an object with a custom prototype', () => {
+  function SomeObj(): void {
+  }
+  expect(isPlainObject(new SomeObj())).toEqual(false);
+});
+
 it('returns false for a function', () => {
   expect(isPlainObject(() => {})).toEqual(false);
 });
