@@ -8,6 +8,8 @@ interface ExoticComponentWithDisplayName<P = unknown> extends React.ExoticCompon
   displayName?: string;
 }
 
+export { DefaultTheme };
+
 export type AnyComponent<P = any> = ExoticComponentWithDisplayName<P> | React.ComponentType<P>;
 
 export interface StyledOptions<Props> {
