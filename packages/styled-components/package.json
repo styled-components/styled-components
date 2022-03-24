@@ -46,7 +46,8 @@
     "primitives",
     "scripts",
     "test-utils",
-    "macro"
+    "macro",
+    "postinstall.js"
   ],
   "keywords": [
     "react",
