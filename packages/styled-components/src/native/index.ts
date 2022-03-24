@@ -99,6 +99,7 @@ aliases.forEach(alias =>
   })
 );
 
+export { IStyledNativeComponent, IStyledNativeComponentFactory, IStyledNativeStatics, NativeTarget, StyledNativeOptions } from '../types';
 export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
 
 export default styled;

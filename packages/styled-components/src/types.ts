@@ -142,7 +142,7 @@ export interface IStyledStatics<OuterProps = unknown> extends CommonStatics<Oute
   ) => IStyledComponent<Target, OuterProps & Props>;
 }
 
-type CustomComponentProps<
+type PolymorphicComponentProps<
   ActualComponent extends StyledTarget,
   PropsToBeInjectedIntoActualComponent extends {},
   ActualComponentProps = ActualComponent extends KnownWebTarget
@@ -162,18 +162,18 @@ type CustomComponentProps<
       }
   );
 
-interface CustomComponent<
+interface PolymorphicComponent<
   FallbackComponent extends StyledTarget,
   ExpectedProps = unknown,
   PropsToBeInjectedIntoActualComponent = unknown
 > extends React.ForwardRefExoticComponent<ExpectedProps> {
   <ActualComponent extends StyledTarget = FallbackComponent>(
-    props: CustomComponentProps<
+    props: PolymorphicComponentProps<
       ActualComponent,
       ExpectedProps & PropsToBeInjectedIntoActualComponent
     >
   ): React.ReactElement<
-    CustomComponentProps<
+    PolymorphicComponentProps<
       ActualComponent,
       ExecutionContext & ExpectedProps & PropsToBeInjectedIntoActualComponent
     >,
@@ -182,7 +182,7 @@ interface CustomComponent<
 }
 
 export interface IStyledComponent<Target extends WebTarget, Props = unknown>
-  extends CustomComponent<Target, Props, ExecutionContext>,
+  extends PolymorphicComponent<Target, Props, ExecutionContext>,
     IStyledStatics<Props> {
   defaultProps?: Partial<
     ExtensibleObject & (Target extends KnownWebTarget ? React.ComponentProps<Target> : {}) & Props
@@ -212,7 +212,7 @@ export interface IStyledNativeStatics<OuterProps = unknown> extends CommonStatic
 }
 
 export interface IStyledNativeComponent<Target extends NativeTarget, Props = unknown>
-  extends CustomComponent<Target, Props, ExecutionContext>,
+  extends PolymorphicComponent<Target, Props, ExecutionContext>,
     IStyledNativeStatics<Props> {
   defaultProps?: Partial<
     ExtensibleObject & (Target extends KnownWebTarget ? React.ComponentProps<Target> : {}) & Props
@@ -247,3 +247,5 @@ export interface StyledObject {
 }
 // uncomment when we can eventually override index signatures with more specific types
 // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);
+
+export type CSSProp = string | StyledObject | StyleFunction<ExecutionContext>;
