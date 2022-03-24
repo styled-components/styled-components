@@ -2,6 +2,7 @@
   "name": "styled-components",
   "version": "6.0.0-alpha.1",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
+  "types": "dist/index.d.ts",
   "main": "dist/styled-components.cjs.js",
   "module": "dist/styled-components.esm.js",
   "react-native": "native/dist/styled-components.native.cjs.js",
