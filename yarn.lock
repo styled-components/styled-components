@@ -9573,7 +9573,7 @@ style-loader@^0.23.1:
     supports-color "^5.5.0"
 
 "styled-components@link:packages/styled-components":
-  version "6.0.0-alpha.1"
+  version "6.0.0-alpha.4"
   dependencies:
     "@babel/cli" "^7.15.7"
     "@babel/core" "^7.15.5"

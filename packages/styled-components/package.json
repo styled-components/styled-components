@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "6.0.0-alpha.4",
+  "version": "6.0.0-alpha.5",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "types": "dist/index.d.ts",
   "main": "dist/styled-components.cjs.js",
@@ -78,8 +78,14 @@
     "stylis": "^4.0.13"
   },
   "peerDependencies": {
+    "babel-plugin-styled-components": ">= 2",
     "react": ">= 16.8.0",
     "react-dom": ">= 16.8.0"
+  },
+  "peerDependenciesMeta": {
+    "babel-plugin-styled-components": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^8.2.5",
