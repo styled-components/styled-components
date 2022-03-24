@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "5.3.3",
+  "version": "5.3.4",
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "main": "dist/styled-components.cjs.js",
   "jsnext:main": "dist/styled-components.esm.js",
@@ -30,6 +30,7 @@
     "lint": "eslint src",
     "lint:size": "bundlewatch",
     "prettier": "prettier */**/*.js --write",
+    "postinstall": "node ./postinstall.js",
     "prepublishOnly": "npm run build",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js"
   },
