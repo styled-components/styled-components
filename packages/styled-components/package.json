@@ -71,7 +71,7 @@
     "@babel/preset-react": "^7.0.0",
     "@babel/preset-typescript": "^7.15.0",
     "@babel/traverse": "^7.17.3",
-    "@emotion/is-prop-valid": "^1.1.0",
+    "@emotion/is-prop-valid": "^1.1.2",
     "@emotion/unitless": "^0.7.4",
     "css-to-react-native": "^3.0.0",
     "shallowequal": "^1.1.0",
