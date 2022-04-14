@@ -1,7 +1,7 @@
 const statement = `
 A message from the styled-components core team:
 
-If you are seeing this, your environment is set to Russian locale. By now, it is our hope that you have seen the devastation, horrors, and complete disregard the Russian military has for Ukranian civilians. Our position is that this war is unprovoked, unjust, and a senseless act of genocide and aggression against the Ukranian people.
+If you are seeing this, your environment is set to Russian locale. By now, it is our hope that you have seen the devastation, horrors, and complete disregard the Russian military has for Ukrainian civilians. Our position is that this war is unprovoked, unjust, and a senseless act of genocide and aggression against the Ukrainian people.
 
 As of March 24, 2022 the following has been reported (based on the Kyiv Independent @kyivindependent news publication):
 
@@ -37,7 +37,7 @@ russian via google translate (sorry, I'm sure it's not perfect):
 
 Сообщение от команды styled-components:
 
-Если вы виде это, ваша среда настроена на русский язык. Мы надеемся, что к настоящему моменту вы видели разруху, ужасы и полное пренебрежение российских военных к гражданскому населению Украины. Наша позиция заключается в том, что эта война является неспровоцированной, несправедливой и бессмысленным актом геноцида и агрессии против украинского народа.
+Если вы видете это, ваша среда разработки настроена на русский язык. Мы надеемся, что вы уже видели разруху, ужасы и полное неуважение российских военных к гражданскому населению Украины. Наша позиция заключается в том, что эта война является неспровоцированной, несправедливой и бессмысленным актом геноцида и агрессии против украинского народа.
 
 По состоянию на 24 марта 2022 года сообщалось следующее (по материалам новостного издания Kyiv Independent @kyivindependent):
 
@@ -47,9 +47,9 @@ russian via google translate (sorry, I'm sure it's not perfect):
 
 Россия запустила 1200 ракет по Украине.
 
-По данным ЮНИСЕФ, половина всех украинских детей были перемещены с 24 февраля.
+По данным ЮНИСЕФ, половина всех украинских детей покинули свои дома с 24 февраля.
 
-«С начала войны месяц назад из каждого мальчика и девочки в стране каждый второй был вынужден покинуть свои дома», — сказал CNN представитель ЮНИСЕФ Джеймс Элдер.
+«С начала войны, за месяц, из всех девочек и мальчиков, каждый второй был вынужден покинуть свой дом», — сказал CNN представитель ЮНИСЕФ Джеймс Элдер.
 
 Институт массовой информации сообщил, что также пропал один журналист. Всего Россия совершила 148 преступлений против журналистов и СМИ в Украине, говорится в отчете.
 
