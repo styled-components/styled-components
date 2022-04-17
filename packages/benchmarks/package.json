@@ -4,7 +4,8 @@
   "version": "0.8.6",
   "scripts": {
     "build": "webpack-cli --config webpack.config.js",
-    "start": "node run-headless.js"
+    "start": "node run-headless.js",
+    "see": "python3 -m webbrowser index.html"
   },
   "dependencies": {
     "@emotion/react": "^11.4.1",
@@ -12,6 +13,7 @@
     "aphrodite": "^2.2.0",
     "classnames": "^2.2.5",
     "d3-scale-chromatic": "^1.2.0",
+    "puppeteer": "^13.5.2",
     "react": "^17.0.2",
     "react-art": "^16.8.6",
     "react-dom": "^17.0.2",

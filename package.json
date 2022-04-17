@@ -7,7 +7,10 @@
     "postinstall": "yarn workspace styled-components generateErrors",
     "lint": "yarn workspace styled-components lint",
     "size": "yarn workspace styled-components lint:size",
-    "test": "yarn workspace styled-components test"
+    "test": "yarn workspace styled-components test",
+    "benchmarks:build": "yarn workspace @styled-components/benchmarks build",
+    "benchmarks:see": "yarn workspace @styled-components/benchmarks see",
+    "benchmarks": "yarn workspace @styled-components/benchmarks start"
   },
   "author": "Glen Maddern",
   "license": "MIT",

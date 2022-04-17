@@ -12,7 +12,7 @@ export default class Button extends Component {
       onPress,
       style,
       textStyle,
-      testID,
+      dataSet,
       title,
     } = this.props;
 
@@ -28,7 +28,7 @@ export default class Button extends Component {
           color && { backgroundColor: color },
           disabled && styles.buttonDisabled,
         ]}
-        testID={testID}
+        dataSet={dataSet}
       >
         <Text style={[styles.text, textStyle, disabled && styles.textDisabled]}>{title}</Text>
       </TouchableHighlight>

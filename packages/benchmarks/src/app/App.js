@@ -1,13 +1,13 @@
 /* eslint-disable */
 
-import { Picker, StyleSheet, ScrollView, TouchableOpacity, View } from 'react-native';
 import React, { Component } from 'react';
+import { Picker, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Benchmark from './Benchmark';
 import Button from './Button';
 import { IconClear, IconEye } from './Icons';
+import Layout from './Layout';
 import ReportCard from './ReportCard';
 import Text from './Text';
-import Layout from './Layout';
 import { colors } from './theme';
 
 const Overlay = () => <View style={[StyleSheet.absoluteFill, { zIndex: 2 }]} />;
@@ -55,13 +55,13 @@ export default class App extends Component {
               <View style={{ width: 1, backgroundColor: colors.fadedGray }} />
               <View style={styles.pickerContainer}>
                 <Text style={styles.pickerTitle}>Benchmark</Text>
-                <Text testID="current-benchmark-name">{currentBenchmarkName}</Text>
+                <Text dataSet={{ testid: "current-benchmark-name" }}>{currentBenchmarkName}</Text>
                 <Picker
                   enabled={status !== 'running'}
                   onValueChange={this._handleChangeBenchmark}
                   selectedValue={currentBenchmarkName}
                   style={styles.picker}
-                  testID="benchmark-picker"
+                  dataSet={{ testid: "benchmark-picker" }}
                 >
                   {Object.keys(tests).map(test => (
                     <Picker.Item key={test} label={test} value={test} />
@@ -77,7 +77,7 @@ export default class App extends Component {
                   style={styles.button}
                   title={status === 'running' ? 'Running…' : 'Run'}
                   disabled={status === 'running'}
-                  testID="run-button"
+                  dataSet={{ testid: "run-button" }}
                 />
               </View>
             </View>
