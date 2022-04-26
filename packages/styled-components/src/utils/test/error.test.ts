@@ -28,7 +28,7 @@ describe('production', () => {
     expect(() => {
       throw styledError(2);
     }).toThrowErrorMatchingInlineSnapshot(
-      `"An error occurred. See https://git.io/JUIaE#2 for more information."`
+      `"An error occurred. See https://github.com/styled-components/styled-components/blob/main/packages/styled-components/src/utils/errors.md#2 for more information."`
     );
   });
 
@@ -36,7 +36,7 @@ describe('production', () => {
     expect(() => {
       throw styledError(1, 'foo');
     }).toThrowErrorMatchingInlineSnapshot(
-      `"An error occurred. See https://git.io/JUIaE#1 for more information. Args: foo"`
+      `"An error occurred. See https://github.com/styled-components/styled-components/blob/main/packages/styled-components/src/utils/errors.md#1 for more information. Args: foo"`
     );
   });
 });
