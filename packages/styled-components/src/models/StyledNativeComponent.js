@@ -70,6 +70,7 @@ class StyledNativeComponent extends Component<*, *> {
             return [generatedStyles].concat(style(state))
           }
           : [generatedStyles].concat(style);
+          // we want to prevent unnecessary renders
           if (isArrayEqual(propsForElement.style, this.previousStyle)) {
             propsForElement.style = this.previousStyle
           } else {
