@@ -4,10 +4,16 @@
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "types": "dist/index.d.ts",
   "main": "dist/styled-components.cjs.js",
-  "module": "dist/styled-components.esm.js",
+  "module": "dist/styled-components.esm.mjs",
   "react-native": "native/dist/styled-components.native.cjs.js",
+  "exports": {
+    ".": {
+      "import": "./dist/styled-components.esm.mjs",
+      "require": "./dist/styled-components.cjs.js"
+    }
+  },
   "browser": {
-    "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js",
+    "./dist/styled-components.esm.mjs": "./dist/styled-components.browser.esm.mjs",
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
   },
   "sideEffects": [

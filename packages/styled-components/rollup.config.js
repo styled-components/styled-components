@@ -104,7 +104,7 @@ const standaloneProdConfig = {
 const serverConfig = {
   ...configBase,
   output: [
-    getESM({ file: 'dist/styled-components.esm.js' }),
+    getESM({ file: 'dist/styled-components.esm.mjs' }),
     getCJS({ file: 'dist/styled-components.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
@@ -119,7 +119,7 @@ const serverConfig = {
 const browserConfig = {
   ...configBase,
   output: [
-    getESM({ file: 'dist/styled-components.browser.esm.js' }),
+    getESM({ file: 'dist/styled-components.browser.esm.mjs' }),
     getCJS({ file: 'dist/styled-components.browser.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
@@ -138,7 +138,7 @@ const nativeConfig = {
       file: 'native/dist/styled-components.native.cjs.js',
     }),
     getESM({
-      file: 'native/dist/styled-components.native.esm.js',
+      file: 'native/dist/styled-components.native.esm.mjs',
     }),
   ],
 };
@@ -147,7 +147,7 @@ const primitivesConfig = {
   ...configBase,
   input: './src/primitives/index.ts',
   output: [
-    getESM({ file: 'primitives/dist/styled-components-primitives.esm.js' }),
+    getESM({ file: 'primitives/dist/styled-components-primitives.esm.mjs' }),
     getCJS({
       file: 'primitives/dist/styled-components-primitives.cjs.js',
     }),
@@ -162,7 +162,7 @@ const primitivesConfig = {
 const macroConfig = Object.assign({}, configBase, {
   input: './src/macro/index.ts',
   output: [
-    getESM({ file: 'dist/styled-components-macro.esm.js' }),
+    getESM({ file: 'dist/styled-components-macro.esm.mjs' }),
     getCJS({ file: 'dist/styled-components-macro.cjs.js' }),
   ],
   plugins: configBase.plugins.concat(
