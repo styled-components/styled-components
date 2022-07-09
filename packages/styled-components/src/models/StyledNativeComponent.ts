@@ -32,6 +32,7 @@ function useResolvedAttrs<Props = unknown>(
   const resolvedAttrs: BaseExtensibleObject = {};
 
   attrs.forEach(attrDef => {
+    // @ts-expect-error narrowing isn't working properly for some reason
     let resolvedAttrDef = typeof attrDef === 'function' ? attrDef(context) : attrDef;
     let key;
 
