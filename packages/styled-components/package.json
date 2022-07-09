@@ -73,7 +73,7 @@
     "@emotion/unitless": "^0.7.4",
     "css-to-react-native": "^3.0.0",
     "shallowequal": "^1.1.0",
-    "stylis": "^4.0.13"
+    "stylis": "^4.1.1"
   },
   "peerDependencies": {
     "babel-plugin-styled-components": ">= 2",
@@ -133,8 +133,8 @@
     "rollup-plugin-sourcemaps": "^0.6.3",
     "rollup-plugin-terser": "^7.0.2",
     "stylis-plugin-rtl": "^2.1.1",
-    "tslib": "^2.3.1",
-    "typescript": "^4.5.5",
+    "tslib": "^2.4.0",
+    "typescript": "^4.7.4",
     "utility-types": "^3.10.0"
   },
   "bundlewatch": {
