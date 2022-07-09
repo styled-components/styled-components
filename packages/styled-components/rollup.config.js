@@ -143,22 +143,6 @@ const nativeConfig = {
   ],
 };
 
-const primitivesConfig = {
-  ...configBase,
-  input: './src/primitives/index.ts',
-  output: [
-    getESM({ file: 'primitives/dist/styled-components-primitives.esm.js' }),
-    getCJS({
-      file: 'primitives/dist/styled-components-primitives.cjs.js',
-    }),
-  ],
-  plugins: configBase.plugins.concat(
-    replace({
-      __SERVER__: JSON.stringify(true),
-    })
-  ),
-};
-
 const macroConfig = Object.assign({}, configBase, {
   input: './src/macro/index.ts',
   output: [
@@ -179,6 +163,5 @@ export default [
   serverConfig,
   browserConfig,
   nativeConfig,
-  primitivesConfig,
   macroConfig,
 ];

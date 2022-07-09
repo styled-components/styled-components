@@ -1,8 +1,0 @@
-{
-  "name": "styled-components/primitives",
-  "private": true,
-  "types": "./dist/primitives/index.d.ts",
-  "main": "./dist/styled-components-primitives.cjs.js",
-  "module": "./dist/styled-components-primitives.esm.js",
-  "jsnext:main": "./dist/styled-components-primitives.esm.js"
-}
