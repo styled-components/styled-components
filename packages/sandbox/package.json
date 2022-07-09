@@ -1,10 +1,10 @@
 {
   "name": "sandbox",
-  "version": "4.2.0",
   "private": true,
   "license": "MIT",
   "scripts": {
-    "dev": "next dev"
+    "dev": "next dev",
+    "build": "next build"
   },
   "devDependencies": {
     "babel-plugin-styled-components": "^2.0.6",

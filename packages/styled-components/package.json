@@ -4,11 +4,11 @@
   "description": "Visual primitives for the component age. Use the best bits of ES6 and CSS to style your apps without stress",
   "types": "dist/index.d.ts",
   "main": "dist/styled-components.cjs.js",
-  "module": "dist/styled-components.esm.js",
   "react-native": "native/dist/styled-components.native.cjs.js",
-  "browser": {
-    "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js",
-    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
+  "exports": {
+    "node": "./dist/styled-components.cjs.js",
+    "require": "./dist/styled-components.browser.cjs.js",
+    "default": "./dist/styled-components.browser.esm.js"
   },
   "sideEffects": [
     "./src/base.js"
@@ -87,7 +87,7 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-flow-strip-types": "^7.18.6",
-    "@rollup/plugin-typescript": "^8.2.5",
+    "@rollup/plugin-typescript": "^8.3.3",
     "@types/babel-plugin-macros": "^2.8.4",
     "@types/enzyme": "^3.10.9",
     "@types/jest": "^27.0.2",
@@ -125,7 +125,7 @@
     "react-frame-component": "^4.0.2",
     "react-native": "^0.69.1",
     "react-test-renderer": "^17.0.2",
-    "rollup": "^2.47.0",
+    "rollup": "^2.76.0",
     "rollup-plugin-commonjs": "^10.1.0",
     "rollup-plugin-json": "^4.0.0",
     "rollup-plugin-node-resolve": "^5.2.0",
