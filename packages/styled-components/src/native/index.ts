@@ -22,54 +22,29 @@ const baseStyled = <Target extends NativeTarget>(tag: Target) =>
  *  assume it's for a good reason and not eagerly load them all */
 const aliases = [
   'ActivityIndicator',
-  'ActivityIndicatorIOS',
-  'ART',
   'Button',
   'DatePickerIOS',
   'DrawerLayoutAndroid',
   'FlatList',
   'Image',
   'ImageBackground',
-  'ImageEditor',
-  'ImageStore',
   'KeyboardAvoidingView',
-  'ListView',
-  'MapView',
   'Modal',
-  'NavigatorIOS',
-  'Picker',
-  'PickerIOS',
   'Pressable',
   'ProgressBarAndroid',
   'ProgressViewIOS',
-  'RecyclerViewBackedScrollView',
   'RefreshControl',
   'SafeAreaView',
   'ScrollView',
   'SectionList',
-  'SegmentedControlIOS',
   'Slider',
-  'SliderIOS',
-  'SnapshotViewIOS',
-  'StatusBar',
-  'SwipeableListView',
   'Switch',
-  'SwitchAndroid',
-  'SwitchIOS',
-  'TabBarIOS',
   'Text',
   'TextInput',
-  'ToastAndroid',
-  'ToolbarAndroid',
-  'Touchable',
   'TouchableHighlight',
-  'TouchableNativeFeedback',
   'TouchableOpacity',
-  'TouchableWithoutFeedback',
   'View',
-  'ViewPagerAndroid',
   'VirtualizedList',
-  'WebView',
 ] as const;
 
 type KnownComponents = typeof aliases[number];
@@ -82,7 +57,6 @@ type RNComponents = {
 };
 
 const styled = baseStyled as typeof baseStyled & {
-  // @ts-expect-error it's fine
   [E in KnownComponents]: NativeStyled<RNComponents[E], React.ComponentProps<RNComponents[E]>>;
 };
 
@@ -93,13 +67,24 @@ aliases.forEach(alias =>
     enumerable: true,
     configurable: false,
     get() {
-      // @ts-expect-error supporting old imports in some cases
-      return styled(reactNative[alias]);
+      if (alias in reactNative && reactNative[alias]) {
+        return styled(reactNative[alias]);
+      }
+
+      throw new Error(
+        `${alias} is not available in the currently-installed version of react-native`
+      );
     },
   })
 );
 
-export { IStyledNativeComponent, IStyledNativeComponentFactory, IStyledNativeStatics, NativeTarget, StyledNativeOptions } from '../types';
+export {
+  IStyledNativeComponent,
+  IStyledNativeComponentFactory,
+  IStyledNativeStatics,
+  NativeTarget,
+  StyledNativeOptions,
+} from '../types';
 export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
 
 export default styled;
