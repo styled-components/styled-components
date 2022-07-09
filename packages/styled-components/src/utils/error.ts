@@ -31,8 +31,7 @@ export default function throwStyledComponentsError(
 ) {
   if (process.env.NODE_ENV === 'production') {
     return new Error(
-      `An error occurred. See https://git.io/JUIaE#${code} for more information.${
-        interpolations.length > 0 ? ` Args: ${interpolations.join(', ')}` : ''
+      `An error occurred. See https://github.com/styled-components/styled-components/blob/main/packages/styled-components/src/utils/errors.md#${code} for more information.${interpolations.length > 0 ? ` Args: ${interpolations.join(', ')}` : ''
       }`
     );
   } else {
