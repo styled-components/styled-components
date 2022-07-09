@@ -15,7 +15,7 @@ module.exports = () => ({
     '@babel/preset-typescript',
   ],
   plugins: [
-    ['babel-plugin-transform-react-remove-prop-types', { mode: 'unsafe-wrap' }],
+    '@babel/plugin-transform-flow-strip-types',
     ['@babel/plugin-proposal-object-rest-spread', { loose: true }],
     ['@babel/plugin-proposal-class-properties', { loose: true }],
     modules === 'commonjs' && 'add-module-exports',

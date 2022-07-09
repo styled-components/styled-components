@@ -1,6 +1,6 @@
 /* eslint-disable no-console, react/jsx-key, @typescript-eslint/no-empty-function */
 import React, { PropsWithChildren } from 'react';
-import { Pressable, Text, TextProps, View } from 'react-native';
+import { ActivityIndicator, Text, TextProps, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider } from '../';
 
@@ -98,7 +98,7 @@ describe('native', () => {
   });
 
   it('should allow style function prop when available as builtin', () => {
-    const Comp = styled.Pressable`
+    const Comp = styled.ActivityIndicator`
       padding-top: 10px;
     `;
 
@@ -108,13 +108,13 @@ describe('native', () => {
         <Text>test</Text>
       </Comp>
     );
-    const view = wrapper.root.findByType(Pressable);
+    const view = wrapper.root.findByType(ActivityIndicator);
 
     expect(view.props.style()).toEqual([{ paddingTop: 10 }, style()]);
   });
 
   it('should allow style function prop when available as extended', () => {
-    const Comp = styled(Pressable)`
+    const Comp = styled(ActivityIndicator)`
       padding-top: 10px;
     `;
 
@@ -124,7 +124,7 @@ describe('native', () => {
         <Text>test</Text>
       </Comp>
     );
-    const view = wrapper.root.findByType(Pressable);
+    const view = wrapper.root.findByType(ActivityIndicator);
 
     expect(view.props.style()).toEqual([{ paddingTop: 10 }, style()]);
   });

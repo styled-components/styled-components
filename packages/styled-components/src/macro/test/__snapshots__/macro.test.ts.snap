@@ -16,6 +16,8 @@ _styled.div.withConfig({
   displayName: 'macrotest',
 })(['background:', ';'], p => (p.error ? 'red' : 'green'));
 
+export {};
+
 
 `;
 
@@ -35,6 +37,8 @@ _styled.div.withConfig({
   displayName: 'macrotest',
   componentId: 'sc-17fdca0-0',
 })(['background:', ';'], p => (p.error ? 'red' : 'green'));
+
+export {};
 
 
 `;
@@ -87,6 +91,7 @@ React.createComponent(
   },
   'hello'
 );
+export {};
 
 
 `;
@@ -105,6 +110,8 @@ import { createGlobalStyle as _createGlobalStyle } from 'styled-components';
 
 _createGlobalStyle(['background:red;']);
 
+export {};
+
 
 `;
 
@@ -121,6 +128,8 @@ css\`
 import { css as _css } from 'styled-components';
 
 _css(['color:', ';'], props => (props.whiteColor ? 'white' : 'black'));
+
+export {};
 
 
 `;
@@ -139,6 +148,8 @@ keyframes\`
 import { keyframes as _keyframes } from 'styled-components';
 
 _keyframes(['0%{opacity:0;}100%{opacity:1;}']);
+
+export {};
 
 
 `;
@@ -161,6 +172,8 @@ _styled.div.withConfig({
   componentId: 'sc-17fdca0-0',
 })(['background:', ';'], p => (p.error ? 'red' : 'green'));
 
+export {};
+
 
 `;
 
@@ -172,6 +185,7 @@ import styled, { css } from '../../macro'
 
 import { css as _css } from 'styled-components';
 import _styled from 'styled-components';
+export {};
 
 
 `;
@@ -193,6 +207,8 @@ _styled.div.withConfig({
   componentId: 'sc-17fdca0-0',
 })(['background:red;']);
 
+export {};
+
 
 `;
 
@@ -212,6 +228,8 @@ _styled.div.withConfig({
   displayName: 'macrotest',
   componentId: 'sc-17fdca0-0',
 })(['background:', ';'], p => (p.error ? 'red' : 'green'));
+
+export {};
 
 
 `;
@@ -282,6 +300,7 @@ import styled, { DefaultTheme } from '../../macro'
 
 import { DefaultTheme as _DefaultTheme } from 'styled-components';
 import _styled from 'styled-components';
+export {};
 
 
 `;
@@ -293,6 +312,7 @@ import { DefaultTheme } from '../../macro'
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import { DefaultTheme as _DefaultTheme } from 'styled-components';
+export {};
 
 
 `;
