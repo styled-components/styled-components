@@ -1,4 +1,4 @@
-import React, { useContext, useLayoutEffect, useRef } from 'react';
+import React from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
@@ -32,8 +32,8 @@ export default function createGlobalStyle<Props = unknown>(
   const GlobalStyleComponent: React.ComponentType<ExtensibleObject> = props => {
     const styleSheet = useStyleSheet();
     const stylis = useStylis();
-    const theme = useContext(ThemeContext);
-    const instanceRef = useRef(styleSheet.allocateGSInstance(styledComponentId));
+    const theme = React.useContext(ThemeContext);
+    const instanceRef = React.useRef(styleSheet.allocateGSInstance(styledComponentId));
 
     const instance = instanceRef.current;
 
@@ -60,7 +60,8 @@ export default function createGlobalStyle<Props = unknown>(
 
     if (!__SERVER__) {
       // eslint-disable-next-line react-hooks/rules-of-hooks
-      useLayoutEffect(() => {
+      // @ts-expect-error still using React 17 types for the time being
+      (React.useInsertionEffect || React.useLayoutEffect)(() => {
         if (!styleSheet.server) {
           renderStyles(instance, props, styleSheet, theme, stylis);
           return () => globalStyle.removeStyles(instance, styleSheet);
