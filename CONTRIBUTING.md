@@ -1,6 +1,6 @@
 # Contributing to `styled-components`
 
-As the creators and maintainers of this project, we want to ensure that `styled-components` lives and continues to grow and evolve. The evolution of the library should never be blocked by any single person's time. One of the simplest ways of doing this is by encouraging a larger set of shallow contributors. Through this, we hope to mitigate the problems of a project that needs updates but there's no-one who has the power to do so.
+As the creators and maintainers of this project, we want to ensure that `styled-components` lives and continues to grow and evolve. The evolution of the library should never be blocked by any single person's time. One of the simplest ways of doing this is by encouraging a larger set of shallow contributors. Through this, we hope to mitigate the problems of a project that needs updates but there's no one who has the power to do so.
 
 ## Ownership
 
@@ -22,9 +22,9 @@ This project is not continuously deployed, there is space for debate after revie
 
 It's normal for a first pull request to be a potential fix for a problem, and moving on from there to helping the project's direction can be difficult. We try to help contributors cross that barrier by offering good first step issues. These issues can be fixed without feeling like you're stepping on toes. Ideally, these are non-critical issues that are well defined. They will be purposely avoided by mature contributors to the project, to make space for others.
 
-We aim to keep all technical discussions inside GitHub issues, and all other discussions in our [Spectrum community](https://spectrum.chat/styled-components). This is to make sure valuable discussions are public and discoverable via search engines. If you have questions about a specific PR, want to discuss a new API idea etc GitHub issues are the right place. If you have questions about how to use the library, or how the project is running - the [Spectrum community](https://spectrum.chat/styled-components) is the place to go.
+We aim to keep all technical discussions inside GitHub issues, and all other discussions in our [Spectrum community](https://spectrum.chat/styled-components). This is to make sure valuable discussions are public and discoverable via search engines. If you have questions about a specific PR, want to discuss a new API idea, etc GitHub issues are the right place. If you have questions about how to use the library, or how the project is running - the [Spectrum community](https://spectrum.chat/styled-components) is the place to go.
 
-### Our expectations on you as a contributor
+### Our expectations of you as a contributor
 
 To quote [@alloy](https://github.com/alloy) from [this issue](https://github.com/Moya/Moya/issues/135):
 
@@ -40,7 +40,7 @@ The fact that you'll have push access will allow you to:
 
 It's up to you to use those superpowers or not though 😉
 
-If someone submits a pull request that's not perfect, and you are reviewing, it's better to think about the PR's motivation rather than the specific implementation. Having braces on the wrong line should not be a blocker. Though we do want to keep test coverage high, we will work with you to figure that out together.
+If someone submits a pull request that's not perfect, and you are reviewing it, it's better to think about the PR's motivation rather than the specific implementation. Having braces on the wrong line should not be a blocker. Though we do want to keep test coverage high, we will work with you to figure that out together.
 
 ### What about if you have problems that cannot be discussed in a public issue?
 
@@ -153,7 +153,7 @@ a git hook is already present.
 4. Update the [CHANGELOG.md](./CHANGELOG.md) with the new version number, add a new Unreleased section at the top and edit the links at the bottom so everything is linked correctly
 5. Commit the Changelog changes with `git commit -m 'Update CHANGELOG'`
 6. Push the branch to the repo with `git push -u origin <branchname>`
-7. Run `yarn run publish`. (Not `yarn publish`) This will run `test` cases, check for `flow` and `lint` errors and then start the `lerna publish` process. You will prompted to choose the next versions for all the packages including `styled-components`. (Note: Packages which are marked as `private` will not be published to `npm`, choose any version for them).
+7. Run `yarn run publish`. (Not `yarn publish`) This will run `test` cases, check for `flow` and `lint` errors and then start the `lerna publish` process. You will be prompted to choose the next versions for all the packages including `styled-components`. (Note: Packages which are marked as `private` will not be published to `npm`, choose any version for them).
 8. Congratulations, you just published a new release of `styled-components`! :tada: Let everybody know on Twitter, in our community and all the other places
 
 ## Credits
