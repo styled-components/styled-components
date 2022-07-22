@@ -1,5 +1,6 @@
 {
   "name": "sandbox",
+  "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "scripts": {
@@ -13,7 +14,7 @@
   "dependencies": {
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "styled-components": "link:../styled-components"
+    "styled-components": "*"
   },
   "engines": {
     "node": ">= 14"
