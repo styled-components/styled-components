@@ -1,5 +1,6 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
+import css from '../constructors/css';
 import { mainSheet } from '../models/StyleSheetManager';
 import * as nonce from '../utils/nonce';
 import { getRenderedCSS, resetStyled } from './utils';
@@ -47,7 +48,7 @@ describe('with styles', () => {
   });
 
   it('amperstand should refer to the static class when making a self-referential combo selector', () => {
-    const Comp = styled.div`
+    const Comp = styled.div<{ color: string }>`
       background: red;
       color: ${p => p.color};
 
@@ -392,5 +393,18 @@ describe('with styles', () => {
     Array.from(document.querySelectorAll('style')).forEach(el => {
       expect(el.getAttribute('nonce')).toBe('foo');
     });
+  });
+
+  it('should handle functions inside TTL that return css constructor', () => {
+    const Comp = styled.div<{ variant: 'foo' | 'bar' }>`
+      color: ${p => (p.variant === 'bar' ? css`green` : 'red')};
+    `;
+
+    TestRenderer.create(<Comp variant="bar" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: green;
+      }"
+    `);
   });
 });

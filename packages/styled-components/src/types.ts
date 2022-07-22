@@ -26,11 +26,11 @@ export interface StyledNativeOptions<Props> {
   shouldForwardProp?: ShouldForwardProp;
 }
 
-export type KnownWebTarget = keyof JSX.IntrinsicElements | AnyComponent;
+export type KnownTarget = keyof JSX.IntrinsicElements | AnyComponent;
 
 export type WebTarget =
   | string // allow custom elements, etc.
-  | KnownWebTarget;
+  | KnownTarget;
 
 export type NativeTarget = AnyComponent;
 
@@ -39,10 +39,10 @@ export interface BaseExtensibleObject {
 }
 
 export interface ExtensibleObject extends BaseExtensibleObject {
-  $as?: KnownWebTarget;
-  $forwardedAs?: KnownWebTarget;
-  as?: KnownWebTarget;
-  forwardedAs?: KnownWebTarget;
+  $as?: KnownTarget;
+  $forwardedAs?: KnownTarget;
+  as?: KnownTarget;
+  forwardedAs?: KnownTarget;
   theme?: DefaultTheme;
 }
 
@@ -50,39 +50,29 @@ export interface ExecutionContext extends ExtensibleObject {
   theme: DefaultTheme;
 }
 
-export interface StyleFunction<Props> {
-  (executionContext: ExecutionContext & Props):
-    | string
-    | number
-    | StyledObject
-    | CSSConstructor<Props>
-    | StyleFunction<Props>;
+export interface StyleFunction<Props = ExecutionContext> {
+  (executionContext: Props): Interpolation<Props>;
 }
 
 // IStyledNativeComponent is not included here since we don't allow
 // component selectors for RN
 export type Interpolation<Props> =
   | StyleFunction<Props>
-  | StyledObject
+  | StyledObject<Props>
+  | TemplateStringsArray
   | string
   | number
   | Keyframes
   | IStyledComponent<any, any>
   | Interpolation<Props>[];
 
-export type Attrs<Props> =
-  | (ExtensibleObject & Props)
-  | ((props: ExecutionContext & Props) => ExecutionContext & Props);
+export type Attrs<Props> = (ExtensibleObject & Props) | ((props: Props) => Partial<Props>);
 
 export type RuleSet<Props> = Interpolation<Props>[];
 
-export type Styles<Props> = TemplateStringsArray | StyledObject | StyleFunction<Props>;
+export type Styles<Props> = TemplateStringsArray | StyledObject<Props> | StyleFunction<Props>;
 
 export type NameGenerator = (hash: number) => string;
-
-export interface CSSConstructor<Props> {
-  (strings: string[], ...interpolations: Interpolation<Props>[]): RuleSet<Props>;
-}
 
 export interface StyleSheet {
   create: Function;
@@ -145,7 +135,7 @@ export interface IStyledStatics<OuterProps = unknown> extends CommonStatics<Oute
 type PolymorphicComponentProps<
   ActualComponent extends StyledTarget,
   PropsToBeInjectedIntoActualComponent extends {},
-  ActualComponentProps = ActualComponent extends KnownWebTarget
+  ActualComponentProps = ActualComponent extends KnownTarget
     ? React.ComponentPropsWithRef<ActualComponent>
     : {}
 > = React.HTMLAttributes<ActualComponent> &
@@ -185,7 +175,7 @@ export interface IStyledComponent<Target extends WebTarget, Props = unknown>
   extends PolymorphicComponent<Target, Props, ExecutionContext>,
     IStyledStatics<Props> {
   defaultProps?: Partial<
-    ExtensibleObject & (Target extends KnownWebTarget ? React.ComponentProps<Target> : {}) & Props
+    ExtensibleObject & (Target extends KnownTarget ? React.ComponentProps<Target> : {}) & Props
   >;
   toString: () => string;
 }
@@ -215,7 +205,7 @@ export interface IStyledNativeComponent<Target extends NativeTarget, Props = unk
   extends PolymorphicComponent<Target, Props, ExecutionContext>,
     IStyledNativeStatics<Props> {
   defaultProps?: Partial<
-    ExtensibleObject & (Target extends KnownWebTarget ? React.ComponentProps<Target> : {}) & Props
+    ExtensibleObject & (Target extends KnownTarget ? React.ComponentProps<Target> : {}) & Props
   >;
 }
 
@@ -242,8 +232,8 @@ export interface IInlineStyle<Props = unknown> {
 
 export type StyledTarget = WebTarget | NativeTarget;
 
-export interface StyledObject {
-  [key: string]: Record<string, any> | string | number | StyleFunction<ExecutionContext>;
+export interface StyledObject<Props = ExecutionContext> {
+  [key: string]: BaseExtensibleObject | string | number | StyleFunction<Props>;
 }
 // uncomment when we can eventually override index signatures with more specific types
 // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);
@@ -270,4 +260,4 @@ export interface StyledObject {
  * }
  * ```
  */
-export type CSSProp = string | StyledObject | StyleFunction<ExecutionContext>;
+export type CSSProp = string | StyledObject | StyleFunction;
