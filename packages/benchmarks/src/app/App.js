@@ -1,13 +1,13 @@
 /* eslint-disable */
 
-import { Picker, StyleSheet, ScrollView, TouchableOpacity, View } from 'react-native';
 import React, { Component } from 'react';
+import { Picker, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Benchmark from './Benchmark';
 import Button from './Button';
 import { IconClear, IconEye } from './Icons';
+import Layout from './Layout';
 import ReportCard from './ReportCard';
 import Text from './Text';
-import Layout from './Layout';
 import { colors } from './theme';
 
 const Overlay = () => <View style={[StyleSheet.absoluteFill, { zIndex: 2 }]} />;
@@ -192,24 +192,26 @@ export default class App extends Component {
     }
   };
 
-  _createHandleComplete = ({ benchmarkName, libraryName, sampleCount }) => results => {
-    this.setState(
-      state => ({
-        results: state.results.concat([
-          {
-            ...results,
-            benchmarkName,
-            libraryName,
-            libraryVersion: this.props.tests[benchmarkName][libraryName].version,
-          },
-        ]),
-        status: 'complete',
-      }),
-      this._scrollToEnd
-    );
-    // console.log(results);
-    // console.log(results.samples.map(sample => sample.elapsed.toFixed(1)).join('\n'));
-  };
+  _createHandleComplete =
+    ({ benchmarkName, libraryName, sampleCount }) =>
+    results => {
+      this.setState(
+        state => ({
+          results: state.results.concat([
+            {
+              ...results,
+              benchmarkName,
+              libraryName,
+              libraryVersion: this.props.tests[benchmarkName][libraryName].version,
+            },
+          ]),
+          status: 'complete',
+        }),
+        this._scrollToEnd
+      );
+      // console.log(results);
+      // console.log(results.samples.map(sample => sample.elapsed.toFixed(1)).join('\n'));
+    };
 
   _handleClear = () => {
     this.setState(() => ({ results: [] }));

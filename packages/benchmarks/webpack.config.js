@@ -1,5 +1,4 @@
 const webpack = require('webpack');
-const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const path = require('path');
 
 const appDirectory = path.resolve(__dirname);
@@ -19,14 +18,8 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.css$/,
-        use: [
-          'style-loader',
-          {
-            loader: 'css-loader',
-            options: { modules: true, localIdentName: '[hash:base64:8]' },
-          },
-        ],
+        test: /\.css$/i,
+        use: ['style-loader', 'css-loader'],
       },
       {
         test: /\.(js|tsx?)$/,
@@ -38,11 +31,6 @@ module.exports = {
     ],
   },
   plugins: [
-    new BundleAnalyzerPlugin({
-      analyzerMode: 'static',
-      openAnalyzer: false,
-    }),
-
     new webpack.DefinePlugin({
       __VERSION__: JSON.stringify('benchmark'),
     }),
