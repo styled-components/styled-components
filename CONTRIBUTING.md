@@ -90,11 +90,15 @@ To make development process easier we provide a Sandbox React application in thi
 
 To use the sandbox, follow these steps:
 
-1. Go to sandbox folder: `cd packages/sandbox`
+1. Install all the dependencies: `yarn install`. Since this repository uses `yarn` workspaces, avoid using `npm` where you can.
 
-2. Install all the dependencies: `yarn install`. Since this repository uses `yarn` workspaces, avoid using `npm` where you can.
+2. Go to styled-components folder: `cd packages/styled-components`
 
-3. Run `yarn dev` to start sandbox server
+3. Run `yarn build --watch` to build styled-components and watch for changes
+
+4. Open a new terminal and go to sandbox folder: `cd packages/sandbox`
+
+5. Run `yarn dev` to start sandbox server
 
 Now you should have the sandbox running on `localhost:3000`. The Sandbox supports client-side and server-side rendering.
 
