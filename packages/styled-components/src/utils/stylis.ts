@@ -1,4 +1,4 @@
-import { compile, middleware, prefixer, RULESET, serialize, stringify } from 'stylis';
+import { compile, Element, Middleware, middleware, prefixer, RULESET, stringify } from 'stylis';
 import { Stringifier } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
@@ -9,13 +9,21 @@ const COMPLEX_SELECTOR_PREFIX = [':', '[', '.', '#'];
 
 type StylisInstanceConstructorArgs = {
   options?: { prefix?: boolean };
-  plugins?: stylis.Middleware[];
+  plugins?: Middleware[];
 };
+
+/**
+ * Serialize stylis output as an array of css strings. It is important that rules are
+ * separated when using CSSOM injection.
+ */
+function serialize(children: Element[], callback: Middleware): string[] {
+  return children.map((c, i) => callback(c, i, children, callback)).filter(Boolean) as string[];
+}
 
 export default function createStylisInstance(
   {
     options = EMPTY_OBJECT as Object,
-    plugins = EMPTY_ARRAY as unknown as stylis.Middleware[],
+    plugins = EMPTY_ARRAY as unknown as Middleware[],
   }: StylisInstanceConstructorArgs = EMPTY_OBJECT as Object
 ) {
   let _componentId: string;
@@ -47,7 +55,7 @@ export default function createStylisInstance(
    *
    * https://github.com/thysultan/stylis.js/tree/v4.0.2#abstract-syntax-structure
    */
-  const selfReferenceReplacementPlugin: stylis.Middleware = element => {
+  const selfReferenceReplacementPlugin: Middleware = element => {
     if (element.type === RULESET && element.value.includes('&')) {
       const props = element.props as string[];
       props[0] = props[0].replace(_selectorRegexp, selfReferenceReplacer);

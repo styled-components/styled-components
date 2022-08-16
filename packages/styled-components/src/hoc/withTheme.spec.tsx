@@ -49,9 +49,9 @@ describe('withTheme', () => {
       </ThemeProvider>
     );
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-<span>
-  {"color":"red"}
-</span>
-`);
+      <span>
+        {"color":"red"}
+      </span>
+    `);
   });
 });
