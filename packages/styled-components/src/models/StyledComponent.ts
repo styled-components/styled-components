@@ -4,7 +4,6 @@ import { SC_VERSION } from '../constants';
 import type {
   AnyComponent,
   Attrs,
-  BaseExtensibleObject,
   ExecutionContext,
   ExtensibleObject,
   IStyledComponent,
@@ -58,7 +57,6 @@ function useResolvedAttrs<Props = unknown>(
   // returns [context, resolvedAttrs]
   // where resolvedAttrs is only the things injected by the attrs themselves
   const context: ExecutionContext & Props = { ...props, theme };
-  const resolvedAttrs: BaseExtensibleObject = {};
 
   attrs.forEach(attrDef => {
     // @ts-expect-error narrowing isn't working properly for some reason
@@ -68,15 +66,17 @@ function useResolvedAttrs<Props = unknown>(
     /* eslint-disable guard-for-in */
     for (key in resolvedAttrDef) {
       // @ts-expect-error bad types
-      context[key] = resolvedAttrs[key] =
+      context[key] =
         key === 'className'
-          ? joinStrings(resolvedAttrs[key], resolvedAttrDef[key])
+          ? joinStrings(context[key], resolvedAttrDef[key])
+          : key === 'style'
+          ? { ...context[key], ...resolvedAttrDef[key] }
           : resolvedAttrDef[key];
     }
     /* eslint-enable guard-for-in */
   });
 
-  return [context, resolvedAttrs];
+  return context;
 }
 
 function useInjectedStyle<T>(
@@ -126,7 +126,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
   // should be an immutable value, but behave for now.
   const theme = determineTheme(props, useContext(ThemeContext), defaultProps);
 
-  const [context, attrs] = useResolvedAttrs<Props>(theme || EMPTY_OBJECT, props, componentAttrs);
+  const context = useResolvedAttrs<Props>(theme || EMPTY_OBJECT, props, componentAttrs);
 
   const generatedClassName = useInjectedStyle(
     componentStyle,
@@ -137,17 +137,16 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
 
   const refToForward = forwardedRef;
 
-  const elementToBeCreated: WebTarget = attrs.$as || props.$as || attrs.as || props.as || target;
+  const elementToBeCreated: WebTarget = context.$as || context.as || target;
 
   const isTargetTag = isTag(elementToBeCreated);
-  const computedProps: ExtensibleObject = attrs !== props ? { ...props, ...attrs } : props;
   const propsForElement: ExtensibleObject = {};
 
   // eslint-disable-next-line guard-for-in
-  for (const key in computedProps) {
-    if (key[0] === '$' || key === 'as') continue;
+  for (const key in context) {
+    if (key[0] === '$' || key === 'as' || key === 'theme') continue;
     else if (key === 'forwardedAs') {
-      propsForElement.as = computedProps[key];
+      propsForElement.as = context[key];
     } else if (
       shouldForwardProp
         ? shouldForwardProp(key, validAttr, elementToBeCreated)
@@ -156,12 +155,8 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
         : true
     ) {
       // Don't pass through non HTML tags through to HTML elements
-      propsForElement[key] = computedProps[key];
+      propsForElement[key] = context[key];
     }
-  }
-
-  if (props.style && attrs.style !== props.style) {
-    propsForElement.style = { ...props.style, ...attrs.style };
   }
 
   propsForElement[
@@ -174,8 +169,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
     .concat(
       styledComponentId,
       (generatedClassName !== styledComponentId ? generatedClassName : null) as string,
-      props.className,
-      attrs.className
+      context.className
     )
     .filter(Boolean)
     .join(' ');
