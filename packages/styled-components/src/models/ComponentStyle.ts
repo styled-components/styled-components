@@ -16,10 +16,12 @@ export default class ComponentStyle {
   baseStyle: ComponentStyle | null | undefined;
   componentId: string;
   isStatic: boolean;
+  names: string[];
   rules: RuleSet<any>;
   staticRulesId: string;
 
   constructor(rules: RuleSet<any>, componentId: string, baseStyle?: ComponentStyle) {
+    this.names = [];
     this.rules = rules;
     this.staticRulesId = '';
     this.isStatic =
@@ -51,16 +53,16 @@ export default class ComponentStyle {
   ): string {
     const { componentId } = this;
 
-    const names = [];
+    this.names.length = 0;
 
     if (this.baseStyle) {
-      names.push(this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis));
+      this.names.push(this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis));
     }
 
     // force dynamic classnames if user-supplied stylis plugins are in use
     if (this.isStatic && !stylis.hash) {
       if (this.staticRulesId && styleSheet.hasNameForId(componentId, this.staticRulesId)) {
-        names.push(this.staticRulesId);
+        this.names.push(this.staticRulesId);
       } else {
         const cssStatic = (
           flatten(this.rules, executionContext, styleSheet, stylis) as string[]
@@ -72,7 +74,7 @@ export default class ComponentStyle {
           styleSheet.insertRules(componentId, name, cssStaticFormatted);
         }
 
-        names.push(name);
+        this.names.push(name);
         this.staticRulesId = name;
       }
     } else {
@@ -86,13 +88,13 @@ export default class ComponentStyle {
         if (typeof partRule === 'string') {
           css += partRule;
 
-          if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule + i);
+          if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule);
         } else if (partRule) {
           const partChunk = flatten(partRule, executionContext, styleSheet, stylis) as
             | string
             | string[];
           const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
-          dynamicHash = phash(dynamicHash, partString + i);
+          dynamicHash = phash(dynamicHash, partString);
           css += partString;
         }
       }
@@ -105,10 +107,10 @@ export default class ComponentStyle {
           styleSheet.insertRules(componentId, name, cssFormatted);
         }
 
-        names.push(name);
+        this.names.push(name);
       }
     }
 
-    return names.join(' ');
+    return this.names.join(' ');
   }
 }
