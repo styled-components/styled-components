@@ -33,19 +33,55 @@ const commonPlugins = [
   }),
   sourceMaps(),
   json(),
-  nodeResolve(),
+  nodeResolve({
+    extensions: ['.mjs', '.js', '.jsx', '.json', '.node'],
+    mainFields: ['module', 'jsnext', 'main'],
+  }),
   commonjs({
+    esmExternals: false,
     ignoreGlobal: true,
+    include: /\/node_modules\//,
+    requireReturnsDefault: 'namespace',
   }),
   replace({
     __VERSION__: JSON.stringify(pkg.version),
+  }),
+  /** @type {import('rollup').Plugin} */
+  ({
+    name: 'postprocessing',
+    // Rollup 2 injects globalThis, which is nice, but doesn't really make sense for Microbundle.
+    // Only ESM environments necessitate globalThis, and UMD bundles can't be properly loaded as ESM.
+    // So we remove the globalThis check, replacing it with `this||self` to match Rollup 1's output:
+    renderChunk(code, chunk, opts) {
+      if (opts.format === 'umd') {
+        // minified:
+        code = code.replace(
+          /([a-zA-Z$_]+)="undefined"!=typeof globalThis\?globalThis:(\1\|\|self)/,
+          '$2'
+        );
+        // unminified:
+        code = code.replace(
+          /(global *= *)typeof +globalThis *!== *['"]undefined['"] *\? *globalThis *: *(global *\|\| *self)/,
+          '$1$2'
+        );
+        return { code, map: null };
+      }
+    },
   }),
 ];
 
 // this should always be last
 const minifierPlugin = terser({
   compress: {
-    passes: 2,
+    passes: 10,
+    keep_infinity: true,
+    pure_getters: true,
+  },
+  ecma: 5,
+  format: {
+    wrap_func_args: false,
+    comments: /^\s*([@#]__[A-Z]+__\s*$|@cc_on)/,
+    preserve_annotations: true,
   },
 });
 
@@ -75,6 +111,9 @@ const standaloneBaseConfig = {
       __SERVER__: JSON.stringify(false),
     })
   ),
+  treeshake: {
+    propertyReadSideEffects: false,
+  },
 };
 
 const standaloneConfig = {
