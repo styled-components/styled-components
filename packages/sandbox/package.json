@@ -5,11 +5,12 @@
   "license": "MIT",
   "scripts": {
     "dev": "next dev",
-    "build": "next build"
+    "build": "next build",
+    "start": "next start"
   },
   "devDependencies": {
     "babel-plugin-styled-components": "^2.0.6",
-    "next": "^12.1.0"
+    "next": "^12.2.0"
   },
   "dependencies": {
     "react": "^17.0.2",
