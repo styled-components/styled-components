@@ -30,6 +30,7 @@ const commonPlugins = [
   typescript({
     outputToFilesystem: true,
     tsconfig: './tsconfig.json',
+    target: 'es5',
   }),
   sourceMaps(),
   json(),
