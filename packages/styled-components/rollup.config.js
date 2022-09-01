@@ -122,7 +122,6 @@ const standaloneConfig = {
     replace({
       'process.env.NODE_ENV': JSON.stringify('development'),
     }),
-    minifierPlugin
   ),
 };
 
@@ -151,7 +150,6 @@ const serverConfig = {
       window: undefined,
       __SERVER__: JSON.stringify(true),
     }),
-    minifierPlugin
   ),
 };
 
@@ -165,7 +163,6 @@ const browserConfig = {
     replace({
       __SERVER__: JSON.stringify(false),
     }),
-    minifierPlugin
   ),
 };
 
@@ -192,7 +189,6 @@ const macroConfig = Object.assign({}, configBase, {
     replace({
       __SERVER__: JSON.stringify(false),
     }),
-    minifierPlugin
   ),
 });
 
