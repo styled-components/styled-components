@@ -510,14 +510,13 @@ describe('native', () => {
           Array [
             "something",
             [Function],
-            [Function],
           ],
         ]
       `);
 
       // element being created
       // @ts-expect-error bad types
-      expect(stub.mock.calls[0][2]).toEqual(View);
+      expect(stub.mock.calls[0][1]).toEqual(View);
     });
 
     it('should filter out props when using "as" to a custom component', () => {

@@ -50,8 +50,8 @@ export interface ExecutionContext extends ExtensibleObject {
   theme: DefaultTheme;
 }
 
-export interface StyleFunction<Props = ExecutionContext> {
-  (executionContext: Props): Interpolation<Props>;
+export interface StyleFunction<Props = BaseExtensibleObject> {
+  (executionContext: ExecutionContext & Props): Interpolation<Props>;
 }
 
 // IStyledNativeComponent is not included here since we don't allow
@@ -108,11 +108,7 @@ export interface Stringifier {
 }
 
 export interface ShouldForwardProp {
-  (
-    prop: string,
-    isValidAttr: (prop: string) => boolean,
-    elementToBeCreated?: WebTarget | NativeTarget
-  ): boolean;
+  (prop: string, elementToBeCreated?: WebTarget | NativeTarget): boolean;
 }
 
 export interface CommonStatics<Props> {

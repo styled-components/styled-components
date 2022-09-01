@@ -112,16 +112,16 @@ describe('attrs', () => {
 
   it('pass props to the attr function', () => {
     const Comp = styled.button.attrs(p => ({
-      type: p.submit ? 'submit' : 'button',
+      type: p.$submit ? 'submit' : 'button',
     }))``;
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-    expect(TestRenderer.create(<Comp submit />).toJSON()).toMatchSnapshot();
+    expect(TestRenderer.create(<Comp $submit />).toJSON()).toMatchSnapshot();
   });
 
   it('should replace props with attrs', () => {
     const Comp = styled.button.attrs(p => ({
-      type: p.submit ? 'submit' : 'button',
+      type: p.$submit ? 'submit' : 'button',
       tabIndex: 0,
     }))``;
 
@@ -154,11 +154,11 @@ describe('attrs', () => {
 
   it('should merge className even if its a function', () => {
     const Comp = styled.div.attrs(p => ({
-      className: `meow ${p.purr ? 'purr' : 'nya'}`,
+      className: `meow ${p.$purr ? 'purr' : 'nya'}`,
     }))``;
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-    expect(TestRenderer.create(<Comp purr />).toJSON()).toMatchSnapshot();
+    expect(TestRenderer.create(<Comp $purr />).toJSON()).toMatchSnapshot();
   });
 
   it('should merge style', () => {
@@ -259,9 +259,9 @@ describe('attrs', () => {
     const Paragraph = styled.p.attrs(p => ({
       style: {
         ...p.style,
-        fontSize: `${p.fontScale}em`,
+        fontSize: `${p.$fontScale}em`,
       },
-    }))`
+    }))<{ $fontScale: number }>`
       background: red;
     `;
 
@@ -274,7 +274,7 @@ describe('attrs', () => {
 
       render() {
         return (
-          <Paragraph fontScale={this.state.fontScale} {...this.props}>
+          <Paragraph $fontScale={this.state.fontScale} {...this.props}>
             {this.props.children}
           </Paragraph>
         );
@@ -314,14 +314,14 @@ describe('attrs', () => {
         `);
   });
 
-  it('does not pass non html tags to HTML element', () => {
-    const Comp = styled.div<{ textColor: string }>`
-      color: ${props => props.textColor};
+  it('does not pass transient props to HTML element', () => {
+    const Comp = styled.div<{ $textColor: string }>`
+      color: ${props => props.$textColor};
     `;
 
     const StyledComp = styled(Comp).attrs(() => ({
-      textColor: 'red',
-    }))<{ textColor: string }>``;
+      $textColor: 'red',
+    }))<{ $textColor: string }>``;
 
     // @ts-expect-error missing required prop
     expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();

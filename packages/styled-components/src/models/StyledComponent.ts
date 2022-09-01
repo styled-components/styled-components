@@ -1,4 +1,3 @@
-import validAttr from '@emotion/is-prop-valid';
 import React, { createElement, Ref, useContext, useDebugValue } from 'react';
 import { SC_VERSION } from '../constants';
 import type {
@@ -147,13 +146,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
     if (key[0] === '$' || key === 'as' || key === 'theme') continue;
     else if (key === 'forwardedAs') {
       propsForElement.as = context[key];
-    } else if (
-      shouldForwardProp
-        ? shouldForwardProp(key, validAttr, elementToBeCreated)
-        : isTargetTag
-        ? validAttr(key)
-        : true
-    ) {
+    } else if (shouldForwardProp ? shouldForwardProp(key, elementToBeCreated) : true) {
       // Don't pass through non HTML tags through to HTML elements
       propsForElement[key] = context[key];
     }
@@ -214,9 +207,9 @@ function createStyledComponent<Target extends WebTarget, OuterProps = unknown, S
       const passedShouldForwardPropFn = options.shouldForwardProp;
 
       // compose nested shouldForwardProp calls
-      shouldForwardProp = (prop, filterFn, elementToBeCreated) =>
-        shouldForwardPropFn(prop, filterFn, elementToBeCreated) &&
-        passedShouldForwardPropFn(prop, filterFn, elementToBeCreated);
+      shouldForwardProp = (prop, elementToBeCreated) =>
+        shouldForwardPropFn(prop, elementToBeCreated) &&
+        passedShouldForwardPropFn(prop, elementToBeCreated);
     } else {
       shouldForwardProp = shouldForwardPropFn;
     }

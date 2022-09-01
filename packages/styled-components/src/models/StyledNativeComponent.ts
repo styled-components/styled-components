@@ -47,9 +47,6 @@ function useResolvedAttrs<Props = unknown>(
   return [context, resolvedAttrs];
 }
 
-// Validator defaults to true if not in HTML/DOM env
-const validAttr = () => true;
-
 function useStyledComponentImpl<Target extends NativeTarget, Props extends ExtensibleObject>(
   forwardedComponent: IStyledNativeComponent<Target, Props>,
   props: Props,
@@ -84,7 +81,7 @@ function useStyledComponentImpl<Target extends NativeTarget, Props extends Exten
     if (key[0] === '$' || key === 'as') continue;
     else if (key === 'forwardedAs') {
       propsForElement.as = computedProps[key];
-    } else if (!shouldForwardProp || shouldForwardProp(key, validAttr, elementToBeCreated)) {
+    } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
       propsForElement[key] = computedProps[key];
     }
   }
@@ -137,9 +134,9 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
         const passedShouldForwardPropFn = options.shouldForwardProp;
 
         // compose nested shouldForwardProp calls
-        shouldForwardProp = (prop, filterFn, elementToBeCreated) =>
-          shouldForwardPropFn(prop, filterFn, elementToBeCreated) &&
-          passedShouldForwardPropFn(prop, filterFn, elementToBeCreated);
+        shouldForwardProp = (prop, elementToBeCreated) =>
+          shouldForwardPropFn(prop, elementToBeCreated) &&
+          passedShouldForwardPropFn(prop, elementToBeCreated);
       } else {
         // eslint-disable-next-line prefer-destructuring
         shouldForwardProp = shouldForwardPropFn;

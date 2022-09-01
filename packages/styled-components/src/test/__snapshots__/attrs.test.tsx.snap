@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`attrs does not pass non html tags to HTML element 1`] = `
+exports[`attrs does not pass transient props to HTML element 1`] = `
 <div
   className="sc-a sc-b c"
 />
