@@ -21,7 +21,7 @@ import isStyledComponent from './isStyledComponent';
 /**
  * It's falsish not falsy because 0 is allowed.
  */
-const isFalsish = (chunk: any) =>
+const isFalsish = (chunk: any): chunk is undefined | null | false | '' =>
   chunk === undefined || chunk === null || chunk === false || chunk === '';
 
 export const objToCssArray = (obj: ExtensibleObject, prevKey?: string): string[] => {
@@ -87,7 +87,6 @@ export default function flatten<Props = unknown>(
         // eslint-disable-next-line no-console
         console.error(
           `${getComponentName(
-            // @ts-expect-error handling unexpected input
             chunkFn as AnyComponent
           )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
         );

@@ -216,7 +216,7 @@ describe('props', () => {
       const AsComp = props => <div {...props} />;
       const Comp = styled('div').withConfig({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
-      })`
+      })<{ filterThis?: string; passThru?: string }>`
         color: ${props => (props.filterThis === 'abc' ? 'red' : undefined)};
       `;
       const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);

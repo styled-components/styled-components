@@ -62,6 +62,8 @@ export type Interpolation<Props> =
   | TemplateStringsArray
   | string
   | number
+  | undefined
+  | null
   | Keyframes
   | IStyledComponent<any, any>
   | Interpolation<Props>[];
