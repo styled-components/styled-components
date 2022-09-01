@@ -1,6 +1,7 @@
 import {
   Attrs,
   ExecutionContext,
+  ExtensibleObject,
   Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
@@ -33,7 +34,7 @@ export interface NativeStyled<
     >[]
   ): IStyledNativeComponent<Target, DerivedProps & OuterProps & Props> & OuterStatics & Statics;
   attrs(
-    attrs: Attrs<ExecutionContext & DerivedProps & OuterProps>
+    attrs: Attrs<ExtensibleObject & DerivedProps & OuterProps>
   ): NativeStyled<Target, DerivedProps, OuterProps, OuterStatics>;
   withConfig(
     config: StyledNativeOptions<DerivedProps & OuterProps>
@@ -51,7 +52,7 @@ export interface WebStyled<
     ...interpolations: Interpolation<ExecutionContext & DerivedProps & OuterProps & Props>[]
   ): IStyledComponent<Target, DerivedProps & OuterProps & Props> & OuterStatics & Statics;
   attrs(
-    attrs: Attrs<ExecutionContext & DerivedProps & OuterProps>
+    attrs: Attrs<ExtensibleObject & DerivedProps & OuterProps>
   ): WebStyled<Target, DerivedProps, OuterProps, OuterStatics>;
   withConfig(
     config: StyledOptions<DerivedProps & OuterProps>
@@ -109,7 +110,7 @@ export default function constructWithOptions<
     >;
 
   /* Modify/inject new props at runtime */
-  templateFunction.attrs = (attrs: Attrs<ExecutionContext & DerivedProps & OuterProps>) =>
+  templateFunction.attrs = (attrs: Attrs<ExtensibleObject & DerivedProps & OuterProps>) =>
     constructWithOptions<Environment, Target, DerivedProps & OuterProps, OuterStatics>(
       componentConstructor,
       tag,

@@ -68,7 +68,9 @@ export type Interpolation<Props> =
   | IStyledComponent<any, any>
   | Interpolation<Props>[];
 
-export type Attrs<Props> = (ExtensibleObject & Props) | ((props: Props) => Partial<Props>);
+export type Attrs<Props> =
+  | (ExtensibleObject & Props)
+  | ((props: ExecutionContext & Props) => Partial<Props>);
 
 export type RuleSet<Props> = Interpolation<Props>[];
 
