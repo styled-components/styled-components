@@ -154,7 +154,7 @@ describe('basic', () => {
   });
 
   it('should allow you to pass in a function returning a style object', () => {
-    const Comp = styled.div(({ color }: { color: CSSProperties['color'] }) => ({
+    const Comp = styled.div(({ color }: { color: Exclude<CSSProperties['color'], undefined> }) => ({
       color,
     }));
     TestRenderer.create(<Comp color="blue" />);
