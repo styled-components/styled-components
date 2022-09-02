@@ -7,7 +7,7 @@ const baseStyled = <Target extends WebTarget>(tag: Target) =>
   constructWithOptions<'web', Target>(createStyledComponent, tag);
 
 const styled = baseStyled as typeof baseStyled & {
-  [E in keyof JSX.IntrinsicElements]: Styled<E, JSX.IntrinsicElements[E]>;
+  [E in keyof JSX.IntrinsicElements]: Styled<'web', E, JSX.IntrinsicElements[E]>;
 };
 
 // Shorthands for all valid HTML Elements
