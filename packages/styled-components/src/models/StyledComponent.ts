@@ -8,6 +8,7 @@ import type {
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
+  OmitNever,
   RuleSet,
   StyledOptions,
   WebTarget,
@@ -102,7 +103,7 @@ function useInjectedStyle<T>(
 }
 
 function useStyledComponentImpl<Target extends WebTarget, Props extends ExtensibleObject>(
-  forwardedComponent: IStyledComponent<Target, Props>,
+  forwardedComponent: IStyledComponent<'web', Target, Props>,
   props: Props,
   forwardedRef: Ref<Element>,
   isStatic: boolean
@@ -174,11 +175,11 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
 
 function createStyledComponent<Target extends WebTarget, OuterProps = unknown, Statics = unknown>(
   target: Target,
-  options: StyledOptions<OuterProps>,
+  options: StyledOptions<'web', OuterProps>,
   rules: RuleSet<OuterProps>
-): ReturnType<IStyledComponentFactory<Target, OuterProps, Statics>> {
+): ReturnType<IStyledComponentFactory<'web', Target, OuterProps, Statics>> {
   const isTargetStyledComp = isStyledComponent(target);
-  const styledComponentTarget = target as IStyledComponent<Target, OuterProps>;
+  const styledComponentTarget = target as IStyledComponent<'web', Target, OuterProps>;
   const isCompositeComponent = !isTag(target);
 
   const {
@@ -236,6 +237,7 @@ function createStyledComponent<Target extends WebTarget, OuterProps = unknown, S
    * instead of extending ParentComponent to create _another_ interim class
    */
   let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
+    'web',
     typeof target,
     OuterProps
   > &
@@ -270,7 +272,7 @@ function createStyledComponent<Target extends WebTarget, OuterProps = unknown, S
       ...optionsToCopy,
       attrs: finalAttrs,
       componentId: newComponentId,
-    } as StyledOptions<OuterProps & Props>;
+    } as StyledOptions<'web', OuterProps & Props>;
 
     return createStyledComponent<Target, OuterProps & Props, Statics>(
       tag,
@@ -318,7 +320,7 @@ function createStyledComponent<Target extends WebTarget, OuterProps = unknown, S
         styledComponentId: true,
         target: true,
         withComponent: true,
-      } as { [key in keyof IStyledStatics<OuterProps>]: true }
+      } as { [key in keyof OmitNever<IStyledStatics<'web', OuterProps>>]: true }
     );
   }
 

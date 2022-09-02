@@ -1,5 +1,5 @@
 import React from 'react';
-import constructWithOptions, { NativeStyled } from '../constructors/constructWithOptions';
+import constructWithOptions, { Styled } from '../constructors/constructWithOptions';
 import css from '../constructors/css';
 import withTheme from '../hoc/withTheme';
 import useTheme from '../hooks/useTheme';
@@ -51,13 +51,13 @@ type KnownComponents = typeof aliases[number];
 
 /** Isolates RN-provided components since they don't expose a helper type for this. */
 type RNComponents = {
-  [K in keyof typeof reactNative]: typeof reactNative[K] extends React.JSXElementConstructor<any>
+  [K in keyof typeof reactNative]: typeof reactNative[K] extends React.ComponentType<any>
     ? typeof reactNative[K]
     : never;
 };
 
 const styled = baseStyled as typeof baseStyled & {
-  [E in KnownComponents]: NativeStyled<RNComponents[E], React.ComponentProps<RNComponents[E]>>;
+  [E in KnownComponents]: Styled<'native', RNComponents[E]>;
 };
 
 /* Define a getter for each alias which simply gets the reactNative component
@@ -79,11 +79,11 @@ aliases.forEach(alias =>
 );
 
 export {
-  IStyledNativeComponent,
-  IStyledNativeComponentFactory,
-  IStyledNativeStatics,
+  IStyledComponent,
+  IStyledComponentFactory,
+  IStyledStatics,
   NativeTarget,
-  StyledNativeOptions,
+  StyledOptions,
 } from '../types';
 export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
 

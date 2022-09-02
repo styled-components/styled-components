@@ -68,7 +68,7 @@ export default function flatten<Props = unknown>(
 
   /* Handle other components */
   if (isStyledComponent(chunk)) {
-    return `.${(chunk as unknown as IStyledComponent<'div', any>).styledComponentId}`;
+    return `.${(chunk as unknown as IStyledComponent<'web', 'div', any>).styledComponentId}`;
   }
 
   /* Either execute or defer the function */
@@ -93,7 +93,7 @@ export default function flatten<Props = unknown>(
       }
 
       return flatten(result, executionContext, styleSheet, stylisInstance);
-    } else return chunk as unknown as IStyledComponent<'div', any>;
+    } else return chunk as unknown as IStyledComponent<'web', 'div', any>;
   }
 
   if (chunk instanceof Keyframes) {

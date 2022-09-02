@@ -5,12 +5,13 @@ import type {
   ExecutionContext,
   ExtensibleObject,
   IInlineStyleConstructor,
-  IStyledNativeComponent,
-  IStyledNativeComponentFactory,
-  IStyledNativeStatics,
+  IStyledComponent,
+  IStyledComponentFactory,
+  IStyledStatics,
   NativeTarget,
+  OmitNever,
   RuleSet,
-  StyledNativeOptions,
+  StyledOptions,
 } from '../types';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
@@ -48,7 +49,7 @@ function useResolvedAttrs<Props = unknown>(
 }
 
 function useStyledComponentImpl<Target extends NativeTarget, Props extends ExtensibleObject>(
-  forwardedComponent: IStyledNativeComponent<Target, Props>,
+  forwardedComponent: IStyledComponent<'native', Target, Props>,
   props: Props,
   forwardedRef: Ref<any>
 ) {
@@ -110,11 +111,11 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     Statics = unknown
   >(
     target: Target,
-    options: StyledNativeOptions<OuterProps>,
+    options: StyledOptions<'native', OuterProps>,
     rules: RuleSet<OuterProps>
-  ): ReturnType<IStyledNativeComponentFactory<Target, OuterProps, Statics>> => {
+  ): ReturnType<IStyledComponentFactory<'native', Target, OuterProps, Statics>> => {
     const isTargetStyledComp = isStyledComponent(target);
-    const styledComponentTarget = target as IStyledNativeComponent<Target, OuterProps>;
+    const styledComponentTarget = target as IStyledComponent<'native', Target, OuterProps>;
 
     const { displayName = generateDisplayName(target), attrs = EMPTY_ARRAY } = options;
 
@@ -153,7 +154,8 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
      * forwardRef creates a new interim component, which we'll take advantage of
      * instead of extending ParentComponent to create _another_ interim class
      */
-    let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledNativeComponent<
+    let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
+      'native',
       Target,
       OuterProps
     > &
@@ -179,7 +181,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       const newOptions = {
         ...options,
         attrs: finalAttrs,
-      } as StyledNativeOptions<OuterProps & Props>;
+      } as StyledOptions<'native', OuterProps & Props>;
 
       return createStyledNativeComponent<Target, OuterProps & Props, Statics>(
         tag,
@@ -208,7 +210,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       shouldForwardProp: true,
       target: true,
       withComponent: true,
-    } as { [key in keyof IStyledNativeStatics<Target>]: true });
+    } as { [key in keyof OmitNever<IStyledStatics<'native', Target>>]: true });
 
     return WrappedStyledComponent;
   };

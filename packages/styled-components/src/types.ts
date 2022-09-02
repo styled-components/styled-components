@@ -8,22 +8,21 @@ interface ExoticComponentWithDisplayName<P = unknown> extends React.ExoticCompon
   displayName?: string;
 }
 
+// from https://stackoverflow.com/a/69852402
+export type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
+
+export type Runtime = 'web' | 'native';
+
 export { DefaultTheme };
 
 export type AnyComponent<P = any> = ExoticComponentWithDisplayName<P> | React.ComponentType<P>;
 
-export interface StyledOptions<Props> {
+export interface StyledOptions<R extends Runtime, Props> {
   attrs?: Attrs<Props>[];
-  componentId?: string;
+  componentId?: R extends 'web' ? string : never;
   displayName?: string;
-  parentComponentId?: string;
-  shouldForwardProp?: ShouldForwardProp;
-}
-
-export interface StyledNativeOptions<Props> {
-  attrs?: Attrs<Props>[];
-  displayName?: string;
-  shouldForwardProp?: ShouldForwardProp;
+  parentComponentId?: R extends 'web' ? string : never;
+  shouldForwardProp?: ShouldForwardProp<R>;
 }
 
 export type KnownTarget = keyof JSX.IntrinsicElements | AnyComponent;
@@ -54,8 +53,6 @@ export interface StyleFunction<Props = BaseExtensibleObject> {
   (executionContext: ExecutionContext & Props): Interpolation<Props>;
 }
 
-// IStyledNativeComponent is not included here since we don't allow
-// component selectors for RN
 export type Interpolation<Props> =
   | StyleFunction<Props>
   | StyledObject<Props>
@@ -65,7 +62,8 @@ export type Interpolation<Props> =
   | undefined
   | null
   | Keyframes
-  | IStyledComponent<any, any>
+  // we don't allow component selectors for native
+  | IStyledComponent<'web', any, any>
   | Interpolation<Props>[];
 
 export type Attrs<Props> =
@@ -109,31 +107,34 @@ export interface Stringifier {
   hash: string;
 }
 
-export interface ShouldForwardProp {
-  (prop: string, elementToBeCreated?: WebTarget | NativeTarget): boolean;
+export interface ShouldForwardProp<R extends Runtime> {
+  (prop: string, elementToBeCreated?: StyledTarget<R>): boolean;
 }
 
-export interface CommonStatics<Props> {
+export interface CommonStatics<R extends Runtime, Props> {
   attrs: Attrs<Props>[];
-  target: StyledTarget;
-  shouldForwardProp?: ShouldForwardProp;
+  target: StyledTarget<R>;
+  shouldForwardProp?: ShouldForwardProp<R>;
   withComponent: any;
 }
 
-export interface IStyledStatics<OuterProps = unknown> extends CommonStatics<OuterProps> {
-  componentStyle: ComponentStyle;
+export interface IStyledStatics<R extends Runtime, OuterProps = unknown>
+  extends CommonStatics<R, OuterProps> {
+  componentStyle: R extends 'web' ? ComponentStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
-  foldedComponentIds: Array<string>;
-  target: WebTarget;
-  styledComponentId: string;
-  warnTooManyClasses?: ReturnType<typeof createWarnTooManyClasses>;
-  withComponent: <Target extends WebTarget, Props = unknown>(
+  foldedComponentIds: R extends 'web' ? Array<string> : never;
+  inlineStyle: R extends 'native' ? InstanceType<IInlineStyleConstructor<OuterProps>> : never;
+  target: StyledTarget<R>;
+  styledComponentId: R extends 'web' ? string : never;
+  warnTooManyClasses?: R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never;
+  withComponent: <Target extends StyledTarget<R>, Props = unknown>(
     tag: Target
-  ) => IStyledComponent<Target, OuterProps & Props>;
+  ) => IStyledComponent<R, Target, OuterProps & Props>;
 }
 
 type PolymorphicComponentProps<
-  ActualComponent extends StyledTarget,
+  R extends Runtime,
+  ActualComponent extends StyledTarget<R>,
   PropsToBeInjectedIntoActualComponent extends {},
   ActualComponentProps = ActualComponent extends KnownTarget
     ? React.ComponentPropsWithRef<ActualComponent>
@@ -153,17 +154,20 @@ type PolymorphicComponentProps<
   );
 
 interface PolymorphicComponent<
-  FallbackComponent extends StyledTarget,
+  R extends Runtime,
+  FallbackComponent extends StyledTarget<R>,
   ExpectedProps = unknown,
   PropsToBeInjectedIntoActualComponent = unknown
 > extends React.ForwardRefExoticComponent<ExpectedProps> {
-  <ActualComponent extends StyledTarget = FallbackComponent>(
+  <ActualComponent extends StyledTarget<R> = FallbackComponent>(
     props: PolymorphicComponentProps<
+      R,
       ActualComponent,
       ExpectedProps & PropsToBeInjectedIntoActualComponent
     >
   ): React.ReactElement<
     PolymorphicComponentProps<
+      R,
       ActualComponent,
       ExecutionContext & ExpectedProps & PropsToBeInjectedIntoActualComponent
     >,
@@ -171,9 +175,12 @@ interface PolymorphicComponent<
   >;
 }
 
-export interface IStyledComponent<Target extends WebTarget, Props = unknown>
-  extends PolymorphicComponent<Target, Props, ExecutionContext>,
-    IStyledStatics<Props> {
+export interface IStyledComponent<
+  R extends Runtime,
+  Target extends StyledTarget<R>,
+  Props = unknown
+> extends PolymorphicComponent<R, Target, Props, ExecutionContext>,
+    IStyledStatics<R, Props> {
   defaultProps?: Partial<
     ExtensibleObject & (Target extends KnownTarget ? React.ComponentProps<Target> : {}) & Props
   >;
@@ -182,45 +189,19 @@ export interface IStyledComponent<Target extends WebTarget, Props = unknown>
 
 // corresponds to createStyledComponent
 export interface IStyledComponentFactory<
-  Target extends WebTarget,
+  R extends Runtime,
+  Target extends StyledTarget<R>,
   Props = unknown,
   Statics = unknown
 > {
-  (target: Target, options: StyledOptions<Props>, rules: RuleSet<Props>): IStyledComponent<
+  (target: Target, options: StyledOptions<R, Props>, rules: RuleSet<Props>): IStyledComponent<
+    R,
     Target,
     Props
   > &
     Statics;
 }
 
-export interface IStyledNativeStatics<OuterProps = unknown> extends CommonStatics<OuterProps> {
-  inlineStyle: InstanceType<IInlineStyleConstructor<OuterProps>>;
-  target: NativeTarget;
-  withComponent: <Target extends NativeTarget, Props = unknown>(
-    tag: Target
-  ) => IStyledNativeComponent<Target, OuterProps & Props>;
-}
-
-export interface IStyledNativeComponent<Target extends NativeTarget, Props = unknown>
-  extends PolymorphicComponent<Target, Props, ExecutionContext>,
-    IStyledNativeStatics<Props> {
-  defaultProps?: Partial<
-    ExtensibleObject & (Target extends KnownTarget ? React.ComponentProps<Target> : {}) & Props
-  >;
-}
-
-// corresponds to createNativeStyledComponent
-export interface IStyledNativeComponentFactory<
-  Target extends NativeTarget,
-  Props = unknown,
-  Statics = unknown
-> {
-  (
-    target: Target,
-    options: StyledNativeOptions<Props>,
-    rules: RuleSet<Props>
-  ): IStyledNativeComponent<Target, Props> & Statics;
-}
 export interface IInlineStyleConstructor<Props = unknown> {
   new (rules: RuleSet<Props>): IInlineStyle<Props>;
 }
@@ -230,7 +211,7 @@ export interface IInlineStyle<Props = unknown> {
   generateStyleObject(executionContext: Object): Object;
 }
 
-export type StyledTarget = WebTarget | NativeTarget;
+export type StyledTarget<R extends Runtime> = R extends 'web' ? WebTarget : NativeTarget;
 
 export interface StyledObject<Props = ExecutionContext> {
   [key: string]: BaseExtensibleObject | string | number | StyleFunction<Props>;
