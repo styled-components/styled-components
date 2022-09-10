@@ -57,9 +57,11 @@ function useInjectedStyle<T>(
   const styleSheet = useStyleSheet();
   const stylis = useStylis();
 
-  const className = isStatic
-    ? componentStyle.generateAndInjectStyles(EMPTY_OBJECT, styleSheet, stylis)
-    : componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet, stylis);
+  const className = componentStyle.generateAndInjectStyles(
+    isStatic ? EMPTY_OBJECT : resolvedAttrs,
+    styleSheet,
+    stylis
+  );
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   if (process.env.NODE_ENV !== 'production') useDebugValue(className);
