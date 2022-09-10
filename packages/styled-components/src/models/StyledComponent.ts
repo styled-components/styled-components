@@ -29,7 +29,7 @@ import joinStrings from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
 import { useStyleSheet, useStylis } from './StyleSheetManager';
-import { DefaultTheme, ThemeContext } from './ThemeProvider';
+import { ThemeContext } from './ThemeProvider';
 
 const identifiers: { [key: string]: number } = {};
 
@@ -46,37 +46,6 @@ function generateId(displayName?: string, parentComponentId?: string): string {
   )}`;
 
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
-}
-
-function useResolvedAttrs<Props = unknown>(
-  theme: DefaultTheme = EMPTY_OBJECT,
-  props: Props,
-  attrs: Attrs<Props>[]
-) {
-  // NOTE: can't memoize this
-  // returns [context, resolvedAttrs]
-  // where resolvedAttrs is only the things injected by the attrs themselves
-  const context: ExecutionContext & Props = { ...props, theme };
-
-  attrs.forEach(attrDef => {
-    // @ts-expect-error narrowing isn't working properly for some reason
-    const resolvedAttrDef = typeof attrDef === 'function' ? attrDef(context) : attrDef;
-    let key;
-
-    /* eslint-disable guard-for-in */
-    for (key in resolvedAttrDef) {
-      // @ts-expect-error bad types
-      context[key] =
-        key === 'className'
-          ? joinStrings(context[key], resolvedAttrDef[key])
-          : key === 'style'
-          ? { ...context[key], ...resolvedAttrDef[key] }
-          : resolvedAttrDef[key];
-    }
-    /* eslint-enable guard-for-in */
-  });
-
-  return context;
 }
 
 function useInjectedStyle<T>(
@@ -124,9 +93,31 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme = determineTheme(props, useContext(ThemeContext), defaultProps);
+  const theme = determineTheme(props, useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
 
-  const context = useResolvedAttrs<Props>(theme || EMPTY_OBJECT, props, componentAttrs);
+  const context = componentAttrs.reduce<
+    ExecutionContext & Props & { class?: string; className?: string; ref?: React.Ref<Target> }
+  >(
+    (p, attrDef) => {
+      const resolvedAttrDef = typeof attrDef === 'function' ? attrDef(p) : attrDef;
+      let key;
+
+      /* eslint-disable guard-for-in */
+      for (key in resolvedAttrDef) {
+        // @ts-expect-error bad types
+        p[key] =
+          key === 'className'
+            ? joinStrings(p[key], resolvedAttrDef[key])
+            : key === 'style'
+            ? { ...p[key], ...resolvedAttrDef[key] }
+            : resolvedAttrDef[key];
+      }
+      /* eslint-enable guard-for-in */
+
+      return p;
+    },
+    { ...props, theme }
+  );
 
   const generatedClassName = useInjectedStyle(
     componentStyle,
@@ -140,26 +131,28 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
   const elementToBeCreated: WebTarget = context.$as || context.as || target;
 
   const isTargetTag = isTag(elementToBeCreated);
-  const propsForElement: ExtensibleObject = {};
 
   // eslint-disable-next-line guard-for-in
   for (const key in context) {
-    if (key[0] === '$' || key === 'as' || key === 'theme') continue;
+    // @ts-expect-error type narrowing not working properly
+    if (key[0] === '$' || key === 'as' || key === 'theme') context[key] = undefined;
     else if (key === 'forwardedAs') {
-      propsForElement.as = context[key];
-    } else if (shouldForwardProp ? shouldForwardProp(key, elementToBeCreated) : true) {
+      context.as = context[key];
+      context[key] = undefined;
+    } else if (shouldForwardProp ? !shouldForwardProp(key, elementToBeCreated) : false) {
       // Don't pass through non HTML tags through to HTML elements
-      propsForElement[key] = context[key];
+      // @ts-expect-error we don't know ahead of time
+      context[key] = undefined;
     }
   }
 
-  propsForElement[
+  context[
     // handle custom elements which React doesn't properly alias
     isTargetTag &&
     domElements.indexOf(elementToBeCreated as unknown as Extract<typeof domElements, string>) === -1
       ? 'class'
       : 'className'
-  ] = (foldedComponentIds as string[])
+  ] = (foldedComponentIds as Array<string | undefined>)
     .concat(
       styledComponentId,
       (generatedClassName !== styledComponentId ? generatedClassName : null) as string,
@@ -168,9 +161,10 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
     .filter(Boolean)
     .join(' ');
 
-  propsForElement.ref = refToForward;
+  // @ts-expect-error idk the type is probably wrong in this file
+  context.ref = refToForward;
 
-  return createElement(elementToBeCreated, propsForElement);
+  return createElement(elementToBeCreated, context);
 }
 
 function createStyledComponent<Target extends WebTarget, OuterProps = unknown, Statics = unknown>(
