@@ -59,6 +59,7 @@ export type Interpolation<Props> =
   | TemplateStringsArray
   | string
   | number
+  | false
   | undefined
   | null
   | Keyframes
