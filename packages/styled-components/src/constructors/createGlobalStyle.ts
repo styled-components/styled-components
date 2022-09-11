@@ -6,7 +6,7 @@ import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
 import {
   ExecutionContext,
-  ExtensibleObject,
+  ExecutionProps,
   Interpolation,
   RuleSet,
   Stringifier,
@@ -29,7 +29,7 @@ export default function createGlobalStyle<Props extends object>(
     checkDynamicCreation(styledComponentId);
   }
 
-  const GlobalStyleComponent: React.ComponentType<ExtensibleObject> = props => {
+  const GlobalStyleComponent: React.ComponentType<ExecutionProps> = props => {
     const styleSheet = useStyleSheet();
     const stylis = useStylis();
     const theme = React.useContext(ThemeContext);
@@ -74,7 +74,7 @@ export default function createGlobalStyle<Props extends object>(
 
   function renderStyles(
     instance: number,
-    props: ExtensibleObject,
+    props: ExecutionProps,
     styleSheet: StyleSheet,
     theme: DefaultTheme | undefined,
     stylis: Stringifier
