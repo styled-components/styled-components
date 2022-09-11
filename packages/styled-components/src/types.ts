@@ -35,7 +35,7 @@ export type NativeTarget = AnyComponent;
 
 export type Dict<T> = { [key: string]: T };
 
-export interface ExtensibleObject {
+export interface ExecutionProps {
   $as?: KnownTarget;
   $forwardedAs?: KnownTarget;
   as?: KnownTarget;
@@ -43,7 +43,7 @@ export interface ExtensibleObject {
   theme?: DefaultTheme;
 }
 
-export interface ExecutionContext extends ExtensibleObject {
+export interface ExecutionContext extends ExecutionProps {
   theme: DefaultTheme;
 }
 
@@ -66,7 +66,7 @@ export type Interpolation<Props extends {}> =
   | Interpolation<Props>[];
 
 export type Attrs<Props extends {}> =
-  | (ExtensibleObject & Props)
+  | (ExecutionProps & Props)
   | ((props: ExecutionContext & Props) => Partial<Props>);
 
 export type RuleSet<Props extends {}> = Interpolation<Props>[];
@@ -187,7 +187,7 @@ export interface IStyledComponent<
 > extends PolymorphicComponent<R, Target, Props, ExecutionContext>,
     IStyledStatics<R, Props> {
   defaultProps?: Partial<
-    ExtensibleObject & (Target extends KnownTarget ? React.ComponentProps<Target> : {}) & Props
+    ExecutionProps & (Target extends KnownTarget ? React.ComponentProps<Target> : {}) & Props
   >;
   toString: () => string;
 }

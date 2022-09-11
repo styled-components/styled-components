@@ -3,7 +3,7 @@ import type {
   Attrs,
   Dict,
   ExecutionContext,
-  ExtensibleObject,
+  ExecutionProps,
   IInlineStyleConstructor,
   IStyledComponent,
   IStyledComponentFactory,
@@ -47,7 +47,7 @@ function useResolvedAttrs<Props extends {}>(
   return [context, resolvedAttrs];
 }
 
-interface StyledComponentImplProps extends ExtensibleObject {
+interface StyledComponentImplProps extends ExecutionProps {
   style?: any;
 }
 
@@ -111,7 +111,7 @@ function useStyledComponentImpl<
 export default (InlineStyle: IInlineStyleConstructor<any>) => {
   const createStyledNativeComponent = <
     Target extends NativeTarget,
-    OuterProps extends ExtensibleObject,
+    OuterProps extends ExecutionProps,
     Statics = unknown
   >(
     target: Target,
@@ -148,7 +148,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       }
     }
 
-    const forwardRef = (props: ExtensibleObject & OuterProps, ref: React.Ref<any>) =>
+    const forwardRef = (props: ExecutionProps & OuterProps, ref: React.Ref<any>) =>
       // eslint-disable-next-line react-hooks/rules-of-hooks
       useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref);
 

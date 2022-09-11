@@ -1,7 +1,7 @@
 import {
   Attrs,
   ExecutionContext,
-  ExtensibleObject,
+  ExecutionProps,
   Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
@@ -28,7 +28,7 @@ export interface Styled<
     ...interpolations: Interpolation<ExecutionContext & DerivedProps & OuterProps & Props>[]
   ): IStyledComponent<R, Target, DerivedProps & OuterProps & Props> & OuterStatics & Statics;
   attrs(
-    attrs: Attrs<ExtensibleObject & DerivedProps & OuterProps>
+    attrs: Attrs<ExecutionProps & DerivedProps & OuterProps>
   ): Styled<R, Target, DerivedProps, OuterProps, OuterStatics>;
   withConfig(
     config: StyledOptions<R, DerivedProps & OuterProps>
@@ -74,7 +74,7 @@ export default function constructWithOptions<
     >;
 
   /* Modify/inject new props at runtime */
-  templateFunction.attrs = (attrs: Attrs<ExtensibleObject & DerivedProps & OuterProps>) =>
+  templateFunction.attrs = (attrs: Attrs<ExecutionProps & DerivedProps & OuterProps>) =>
     constructWithOptions<R, Target, DerivedProps, OuterProps, OuterStatics>(
       componentConstructor,
       tag,

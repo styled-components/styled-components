@@ -1,4 +1,4 @@
-import { ExtensibleObject } from '../types';
+import { ExecutionProps } from '../types';
 import isPlainObject from './isPlainObject'
 
 function mixinRecursively(target: any, source: any, forceMerge = false) {
@@ -26,7 +26,7 @@ function mixinRecursively(target: any, source: any, forceMerge = false) {
  * If target is not a POJO or an Array, it will get source properties injected via shallow merge
  * Source objects applied left to right.  Mutates & returns target.  Similar to lodash merge.
  */
-export default function mixinDeep(target: ExtensibleObject = {}, ...sources: any[]) {
+export default function mixinDeep(target: ExecutionProps = {}, ...sources: any[]) {
   for (const source of sources) {
     mixinRecursively(target, source, true);
   }

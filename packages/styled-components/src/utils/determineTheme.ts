@@ -1,8 +1,8 @@
-import { ExtensibleObject } from '../types';
+import { ExecutionProps } from '../types';
 import { EMPTY_OBJECT } from './empties';
 
 export default function determineTheme(
-  props: ExtensibleObject,
+  props: ExecutionProps,
   providedTheme: any,
   defaultProps: any = EMPTY_OBJECT
 ) {

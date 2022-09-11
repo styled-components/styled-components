@@ -5,7 +5,7 @@ import type {
   Attrs,
   Dict,
   ExecutionContext,
-  ExtensibleObject,
+  ExecutionProps,
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
@@ -105,7 +105,7 @@ function useInjectedStyle<T extends {}>(
   return className;
 }
 
-function useStyledComponentImpl<Target extends WebTarget, Props extends ExtensibleObject>(
+function useStyledComponentImpl<Target extends WebTarget, Props extends ExecutionProps>(
   forwardedComponent: IStyledComponent<'web', Target, Props>,
   props: Props,
   forwardedRef: Ref<Element>,
@@ -230,7 +230,7 @@ function createStyledComponent<Target extends WebTarget, OuterProps extends {}, 
   // statically styled-components don't need to build an execution context object,
   // and shouldn't be increasing the number of class names
   const isStatic = componentStyle.isStatic && attrs.length === 0;
-  function forwardRef(props: ExtensibleObject & OuterProps, ref: Ref<Element>) {
+  function forwardRef(props: ExecutionProps & OuterProps, ref: Ref<Element>) {
     // eslint-disable-next-line
     return useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref, isStatic);
   }
