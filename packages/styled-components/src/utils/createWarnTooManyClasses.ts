@@ -1,9 +1,9 @@
-import { ExtensibleObject } from '../types';
+import { Dict } from '../types';
 
 export const LIMIT = 200;
 
 export default (displayName: string, componentId: string) => {
-  let generatedClasses: ExtensibleObject = {};
+  let generatedClasses: Dict<any> = {};
   let warningSeen = false;
 
   return (className: string) => {

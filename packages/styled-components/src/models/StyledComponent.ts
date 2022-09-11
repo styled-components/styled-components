@@ -3,6 +3,7 @@ import { SC_VERSION } from '../constants';
 import type {
   AnyComponent,
   Attrs,
+  Dict,
   ExecutionContext,
   ExtensibleObject,
   IStyledComponent,
@@ -48,7 +49,7 @@ function generateId(displayName?: string, parentComponentId?: string): string {
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-function useResolvedAttrs<Props = unknown>(
+function useResolvedAttrs<Props extends {}>(
   theme: DefaultTheme = EMPTY_OBJECT,
   props: Props,
   attrs: Attrs<Props>[]
@@ -142,7 +143,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
   const elementToBeCreated: WebTarget = context.$as || context.as || target;
 
   const isTargetTag = isTag(elementToBeCreated);
-  const propsForElement: ExtensibleObject = {};
+  const propsForElement: Dict<any> = {};
 
   // eslint-disable-next-line guard-for-in
   for (const key in context) {
@@ -151,6 +152,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
       propsForElement.as = context[key];
     } else if (shouldForwardProp ? shouldForwardProp(key, elementToBeCreated) : true) {
       // Don't pass through non HTML tags through to HTML elements
+      // @ts-expect-error bad types
       propsForElement[key] = context[key];
     }
   }
@@ -161,11 +163,12 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
     domElements.indexOf(elementToBeCreated as unknown as Extract<typeof domElements, string>) === -1
       ? 'class'
       : 'className'
-  ] = (foldedComponentIds as string[])
+  ] = foldedComponentIds
     .concat(
       styledComponentId,
-      (generatedClassName !== styledComponentId ? generatedClassName : null) as string,
-      context.className
+      (generatedClassName !== styledComponentId ? generatedClassName : ''),
+      // @ts-expect-error bad types
+      context.className || ''
     )
     .filter(Boolean)
     .join(' ');

@@ -39,7 +39,7 @@ export default function constructWithOptions<
   R extends Runtime,
   Target extends StyledTarget<R>,
   DerivedProps = Target extends KnownTarget ? React.ComponentProps<Target> : unknown,
-  OuterProps = unknown, // used for styled<{}>().attrs() so attrs() gets the generic prop context
+  OuterProps extends {} = {}, // used for styled<{}>().attrs() so attrs() gets the generic prop context
   OuterStatics = unknown
 >(
   componentConstructor: IStyledComponentFactory<R, any, any, any>,
