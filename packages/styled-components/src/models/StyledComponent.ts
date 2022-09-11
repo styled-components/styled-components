@@ -59,7 +59,6 @@ function useResolvedAttrs<Props = unknown>(
   const context: ExecutionContext & Props = { ...props, theme };
 
   attrs.forEach(attrDef => {
-    // @ts-expect-error narrowing isn't working properly for some reason
     const resolvedAttrDef = typeof attrDef === 'function' ? attrDef(context) : attrDef;
     let key;
 
@@ -68,10 +67,13 @@ function useResolvedAttrs<Props = unknown>(
       // @ts-expect-error bad types
       context[key] =
         key === 'className'
-          ? joinStrings(context[key], resolvedAttrDef[key])
+          ? // @ts-expect-error bad types
+            joinStrings(context[key], resolvedAttrDef[key])
           : key === 'style'
-          ? { ...context[key], ...resolvedAttrDef[key] }
-          : resolvedAttrDef[key];
+          ? // @ts-expect-error bad types
+            { ...context[key], ...resolvedAttrDef[key] }
+          : // @ts-expect-error bad types
+            resolvedAttrDef[key];
     }
     /* eslint-enable guard-for-in */
   });
@@ -79,7 +81,7 @@ function useResolvedAttrs<Props = unknown>(
   return context;
 }
 
-function useInjectedStyle<T>(
+function useInjectedStyle<T extends {}>(
   componentStyle: ComponentStyle,
   isStatic: boolean,
   resolvedAttrs: T,
@@ -173,7 +175,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
   return createElement(elementToBeCreated, propsForElement);
 }
 
-function createStyledComponent<Target extends WebTarget, OuterProps = unknown, Statics = unknown>(
+function createStyledComponent<Target extends WebTarget, OuterProps extends {}, Statics = unknown>(
   target: Target,
   options: StyledOptions<'web', OuterProps>,
   rules: RuleSet<OuterProps>
