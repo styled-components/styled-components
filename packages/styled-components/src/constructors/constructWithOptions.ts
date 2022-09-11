@@ -75,7 +75,7 @@ export default function constructWithOptions<
 
   /* Modify/inject new props at runtime */
   templateFunction.attrs = (attrs: Attrs<ExtensibleObject & DerivedProps & OuterProps>) =>
-    constructWithOptions<R, Target, DerivedProps & OuterProps, OuterStatics>(
+    constructWithOptions<R, Target, DerivedProps, OuterProps, OuterStatics>(
       componentConstructor,
       tag,
       {
