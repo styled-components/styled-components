@@ -23,16 +23,16 @@ export interface Styled<
   OuterProps extends object = object,
   OuterStatics = unknown
 > {
-  <Props = unknown, Statics = unknown>(
+  <Props extends object = object, Statics = unknown>(
     initialStyles: Styles<DerivedProps & OuterProps & Props>,
     ...interpolations: Interpolation<ExecutionContext & DerivedProps & OuterProps & Props>[]
   ): IStyledComponent<R, Target, DerivedProps & OuterProps & Props> & OuterStatics & Statics;
-  attrs(
-    attrs: Attrs<ExecutionProps & DerivedProps & OuterProps>
-  ): Styled<R, Target, DerivedProps, OuterProps, OuterStatics>;
-  withConfig(
+  attrs: <Props extends object = object>(
+    attrs: Attrs<ExecutionProps & DerivedProps & OuterProps & Props>
+  ) => Styled<R, Target, DerivedProps, OuterProps & Partial<Props>, OuterStatics>;
+  withConfig: (
     config: StyledOptions<R, DerivedProps & OuterProps>
-  ): Styled<R, Target, DerivedProps, OuterProps, OuterStatics>;
+  ) => Styled<R, Target, DerivedProps, OuterProps, OuterStatics>;
 }
 
 export default function constructWithOptions<
@@ -44,11 +44,8 @@ export default function constructWithOptions<
 >(
   componentConstructor: IStyledComponentFactory<R, any, any, any>,
   tag: Target,
-  options: StyledOptions<R, DerivedProps & OuterProps> = EMPTY_OBJECT as StyledOptions<
-    R,
-    DerivedProps & OuterProps
-  >
-) {
+  options: StyledOptions<R, DerivedProps & OuterProps> = EMPTY_OBJECT
+): Styled<R, Target, DerivedProps, OuterProps, OuterStatics> {
   // We trust that the tag is a valid component as long as it isn't falsish
   // Typically the tag here is a string or function (i.e. class or pure function component)
   // However a component may also be an object if it uses another utility, e.g. React.memo
@@ -74,8 +71,10 @@ export default function constructWithOptions<
     >;
 
   /* Modify/inject new props at runtime */
-  templateFunction.attrs = (attrs: Attrs<ExecutionProps & DerivedProps & OuterProps>) =>
-    constructWithOptions<R, Target, DerivedProps, OuterProps, OuterStatics>(
+  templateFunction.attrs = <Props extends object = object>(
+    attrs: Attrs<ExecutionProps & DerivedProps & OuterProps & Props>
+  ) =>
+    constructWithOptions<R, Target, DerivedProps, OuterProps & Partial<Props>, OuterStatics>(
       componentConstructor,
       tag,
       {
