@@ -164,13 +164,15 @@ interface PolymorphicComponent<
     props: PolymorphicComponentProps<
       R,
       ActualComponent,
-      ExpectedProps & PropsToBeInjectedIntoActualComponent
+      ExpectedProps & PropsToBeInjectedIntoActualComponent,
+      ExpectedProps
     >
   ): React.ReactElement<
     PolymorphicComponentProps<
       R,
       ActualComponent,
-      ExecutionContext & ExpectedProps & PropsToBeInjectedIntoActualComponent
+      ExecutionContext & ExpectedProps & PropsToBeInjectedIntoActualComponent,
+      ExpectedProps
     >,
     ActualComponent
   >;
