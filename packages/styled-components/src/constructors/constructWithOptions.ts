@@ -8,7 +8,7 @@ import {
   Runtime,
   StyledOptions,
   StyledTarget,
-  Styles,
+  Styles
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import styledError from '../utils/error';
@@ -50,6 +50,10 @@ export interface Styled<
     : object,
   OuterStatics extends object = object
 > {
+  (
+    initialStyles: Styles<OuterProps & OuterProps>,
+    ...interpolations: Interpolation<OuterProps & OuterProps>[]
+  ): IStyledComponent<R, Target, OuterProps & OuterProps> & OuterStatics;
   <Props extends object = object, Statics extends object = object>(
     initialStyles: Styles<OuterProps & Props>,
     ...interpolations: Interpolation<OuterProps & Props>[]

@@ -9,7 +9,7 @@ import isPlainObject from '../utils/isPlainObject';
  * Used when flattening object styles to determine if we should
  * expand an array of styles.
  */
-const addTag = <T>(arg: T extends any[] ? T & { isCss?: boolean } : T) => {
+const addTag = <T>(arg: T extends any[] ? T & { isCss?: boolean } : T): T => {
   if (Array.isArray(arg)) {
     // eslint-disable-next-line no-param-reassign
     (arg as any[] & { isCss?: boolean }).isCss = true;
@@ -18,10 +18,18 @@ const addTag = <T>(arg: T extends any[] ? T & { isCss?: boolean } : T) => {
   return arg;
 };
 
-export default function css<Props extends object>(
+function css(
+  styles: Styles<{}>,
+  ...interpolations: Interpolation<{}>[]
+): Interpolation<{}>;
+function css<Props extends object>(
   styles: Styles<Props>,
   ...interpolations: Interpolation<Props>[]
-) {
+): Interpolation<Props>;
+function css<Props extends {} = {}>(
+  styles: Styles<Props>,
+  ...interpolations: Interpolation<Props>[]
+): Interpolation<Props> {
   if (isFunction(styles) || isPlainObject(styles)) {
     const styleFunctionOrObject = styles as StyleFunction<Props> | StyledObject;
 
@@ -47,3 +55,5 @@ export default function css<Props extends object>(
 
   return addTag(flatten<Props>(interleave<Props>(styleStringArray, interpolations)));
 }
+
+export default css;

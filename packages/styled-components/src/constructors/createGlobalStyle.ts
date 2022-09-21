@@ -10,7 +10,7 @@ import {
   Interpolation,
   RuleSet,
   Stringifier,
-  Styles,
+  Styles
 } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
@@ -21,7 +21,7 @@ export default function createGlobalStyle<Props extends object>(
   strings: Styles<Props>,
   ...interpolations: Array<Interpolation<Props>>
 ) {
-  const rules = css(strings, ...interpolations) as RuleSet<Props>;
+  const rules = css<Props>(strings, ...interpolations) as RuleSet<Props>;
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle<Props>(rules, styledComponentId);
 
@@ -29,7 +29,7 @@ export default function createGlobalStyle<Props extends object>(
     checkDynamicCreation(styledComponentId);
   }
 
-  const GlobalStyleComponent: React.ComponentType<ExecutionProps> = props => {
+  const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const styleSheet = useStyleSheet();
     const stylis = useStylis();
     const theme = React.useContext(ThemeContext);
