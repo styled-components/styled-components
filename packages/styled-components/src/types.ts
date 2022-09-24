@@ -100,7 +100,7 @@ export type FlattenerResult<Props> =
   | number
   | string
   | string[]
-  | IStyledComponent<any, any>
+  | IStyledComponent<any, any, any>
   | Keyframes;
 
 export interface Stringifier {
@@ -119,7 +119,7 @@ export interface CommonStatics<R extends Runtime, Props> {
   withComponent: any;
 }
 
-export interface IStyledStatics<R extends Runtime, OuterProps = unknown>
+export interface IStyledStatics<R extends Runtime, OuterProps extends {}>
   extends CommonStatics<R, OuterProps> {
   componentStyle: R extends 'web' ? ComponentStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
@@ -160,8 +160,8 @@ type PolymorphicComponentProps<
 interface PolymorphicComponent<
   R extends Runtime,
   FallbackComponent extends StyledTarget<R>,
-  ExpectedProps = unknown,
-  PropsToBeInjectedIntoActualComponent = unknown
+  ExpectedProps extends {},
+  PropsToBeInjectedIntoActualComponent extends {}
 > extends React.ForwardRefExoticComponent<ExpectedProps> {
   <ActualComponent extends StyledTarget<R> = FallbackComponent>(
     props: PolymorphicComponentProps<
@@ -182,7 +182,7 @@ interface PolymorphicComponent<
 export interface IStyledComponent<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  Props = unknown
+  Props extends {}
 > extends PolymorphicComponent<R, Target, Props, ExecutionContext>,
     IStyledStatics<R, Props> {
   defaultProps?: Partial<
@@ -195,7 +195,7 @@ export interface IStyledComponent<
 export interface IStyledComponentFactory<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  Props = unknown,
+  Props extends {},
   Statics = unknown
 > {
   (target: Target, options: StyledOptions<R, Props>, rules: RuleSet<Props>): IStyledComponent<

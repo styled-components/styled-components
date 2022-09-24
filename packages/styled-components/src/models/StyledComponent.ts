@@ -48,7 +48,7 @@ function generateId(displayName?: string, parentComponentId?: string): string {
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-function useInjectedStyle<T>(
+function useInjectedStyle<T extends {}>(
   componentStyle: ComponentStyle,
   isStatic: boolean,
   resolvedAttrs: T,
@@ -169,7 +169,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
   return createElement(elementToBeCreated, context);
 }
 
-function createStyledComponent<Target extends WebTarget, OuterProps = unknown, Statics = unknown>(
+function createStyledComponent<Target extends WebTarget, OuterProps extends {}, Statics = unknown>(
   target: Target,
   options: StyledOptions<'web', OuterProps>,
   rules: RuleSet<OuterProps>
