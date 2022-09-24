@@ -145,7 +145,7 @@ type PolymorphicComponentProps<
   Omit<PropsToBeInjectedIntoActualComponent, keyof ActualComponentProps | 'as' | '$as'> &
   ActualComponentProps &
   (
-    | // Only one of "$as" or "as" is allowed. This used to take "$as" in
+  | // Only one of "$as" or "as" is allowed. This used to take "$as" in
     // preference over "as" if both were present, but it's less confusing to be
     // strict.
     {
