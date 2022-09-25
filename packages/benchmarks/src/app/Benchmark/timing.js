@@ -10,7 +10,6 @@ export function now() {
     const secInMS = seconds * MS_PER_S;
     const nSecInMS = nanoseconds / NS_PER_MS;
     return secInMS + nSecInMS;
-  } else {
-    return Date.now();
   }
+  return Date.now();
 }

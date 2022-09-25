@@ -7,9 +7,9 @@ export const makeTag = ({ isServer, useCSSOMInjection, target }: SheetOptions) =
     return new VirtualTag(target);
   } else if (useCSSOMInjection) {
     return new CSSOMTag(target);
-  } else {
-    return new TextTag(target);
   }
+
+  return new TextTag(target);
 };
 
 export const CSSOMTag = class CSSOMTag implements Tag {
@@ -47,11 +47,7 @@ export const CSSOMTag = class CSSOMTag implements Tag {
   getRule(index: number): string {
     const rule = this.sheet.cssRules[index];
     // Avoid IE11 quirk where cssText is inaccessible on some invalid rules
-    if (rule !== undefined && typeof rule.cssText === 'string') {
-      return rule.cssText;
-    } else {
-      return '';
-    }
+    return rule !== undefined && typeof rule.cssText === 'string' ? rule.cssText : '';
   }
 };
 
@@ -74,9 +70,9 @@ export const TextTag = class TextTag implements Tag {
       this.element.insertBefore(node, refNode || null);
       this.length++;
       return true;
-    } else {
-      return false;
     }
+
+    return false;
   }
 
   deleteRule(index: number) {
@@ -85,11 +81,7 @@ export const TextTag = class TextTag implements Tag {
   }
 
   getRule(index: number) {
-    if (index < this.length) {
-      return this.nodes[index].textContent as string;
-    } else {
-      return '';
-    }
+    return index < this.length ? (this.nodes[index].textContent as string) : '';
   }
 };
 
@@ -109,9 +101,9 @@ export const VirtualTag = class VirtualTag implements Tag {
       this.rules.splice(index, 0, rule);
       this.length++;
       return true;
-    } else {
-      return false;
     }
+
+    return false;
   }
 
   deleteRule(index: number) {
@@ -120,10 +112,6 @@ export const VirtualTag = class VirtualTag implements Tag {
   }
 
   getRule(index: number) {
-    if (index < this.length) {
-      return this.rules[index];
-    } else {
-      return '';
-    }
+    return index < this.length ? this.rules[index] : '';
   }
 };

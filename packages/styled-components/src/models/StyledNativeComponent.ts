@@ -93,9 +93,9 @@ function useStyledComponentImpl<Target extends NativeTarget, Props extends Exten
       };
     } else if (props.style == null) {
       return generatedStyles;
-    } else {
-      return [generatedStyles].concat(props.style || []);
     }
+
+    return [generatedStyles].concat(props.style || []);
   }, [props.style, generatedStyles]);
 
   propsForElement.ref = refToForward;

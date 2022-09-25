@@ -91,10 +91,10 @@ export const expectCSSMatches = (
     const stripped = stripWhitespace(stripComments(css));
     expect(stripped).toEqual(stripWhitespace(expectation));
     return stripped;
-  } else {
-    expect(css).toEqual(expectation);
-    return css;
   }
+
+  expect(css).toEqual(expectation);
+  return css;
 };
 
 export const getRenderedCSS = () => {

@@ -263,11 +263,11 @@ describe('keyframes', () => {
             `,
           ''
         );
-      } else {
-        return css`
-          ${animation === 'slide' ? slideAnimation : opacityAnimation} 1s linear
-        `;
       }
+
+      return css`
+        ${animation === 'slide' ? slideAnimation : opacityAnimation} 1s linear
+      `;
     };
 
     const Foo = styled.div`

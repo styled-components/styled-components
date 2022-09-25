@@ -81,9 +81,9 @@ class SierpinskiTriangle extends React.Component {
           />
         </React.Fragment>
       );
-    } else {
-      return <span style={{ color: 'white' }}>No implementation available</span>;
     }
+
+    return <span style={{ color: 'white' }}>No implementation available</span>;
   }
 }
 
