@@ -119,7 +119,7 @@ export interface CommonStatics<R extends Runtime, Props> {
   withComponent: any;
 }
 
-export interface IStyledStatics<R extends Runtime, OuterProps extends {}>
+export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   extends CommonStatics<R, OuterProps> {
   componentStyle: R extends 'web' ? ComponentStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
@@ -136,7 +136,7 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends {}>
 type PolymorphicComponentProps<
   R extends Runtime,
   ActualComponent extends StyledTarget<R>,
-  PropsToBeInjectedIntoActualComponent extends {},
+  PropsToBeInjectedIntoActualComponent extends object,
   ActualComponentProps = ActualComponent extends KnownTarget
     ? React.ComponentPropsWithRef<ActualComponent>
     : {}
@@ -160,8 +160,8 @@ type PolymorphicComponentProps<
 interface PolymorphicComponent<
   R extends Runtime,
   FallbackComponent extends StyledTarget<R>,
-  ExpectedProps extends {},
-  PropsToBeInjectedIntoActualComponent extends {}
+  ExpectedProps extends object,
+  PropsToBeInjectedIntoActualComponent extends object
 > extends React.ForwardRefExoticComponent<ExpectedProps> {
   <ActualComponent extends StyledTarget<R> = FallbackComponent>(
     props: PolymorphicComponentProps<
@@ -182,7 +182,7 @@ interface PolymorphicComponent<
 export interface IStyledComponent<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  Props extends {}
+  Props extends object
 > extends PolymorphicComponent<R, Target, Props, ExecutionContext>,
     IStyledStatics<R, Props> {
   defaultProps?: Partial<
@@ -195,7 +195,7 @@ export interface IStyledComponent<
 export interface IStyledComponentFactory<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  Props extends {},
+  Props extends object,
   Statics = unknown
 > {
   (target: Target, options: StyledOptions<R, Props>, rules: RuleSet<Props>): IStyledComponent<

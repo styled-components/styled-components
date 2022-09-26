@@ -20,7 +20,7 @@ export interface Styled<
   R extends Runtime,
   Target extends StyledTarget<R>,
   DerivedProps = Target extends KnownTarget ? React.ComponentProps<Target> : unknown,
-  OuterProps extends {} = {},
+  OuterProps extends object = object,
   OuterStatics = unknown
 > {
   <Props = unknown, Statics = unknown>(
@@ -58,7 +58,7 @@ export default function constructWithOptions<
   }
 
   /* This is callable directly as a template function */
-  const templateFunction = <Props extends {} = {}, Statics = unknown>(
+  const templateFunction = <Props extends object = object, Statics = unknown>(
     initialStyles: Styles<DerivedProps & OuterProps & Props>,
     ...interpolations: Interpolation<ExecutionContext & DerivedProps & OuterProps & Props>[]
   ) =>
