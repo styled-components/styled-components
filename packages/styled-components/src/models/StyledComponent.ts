@@ -154,11 +154,11 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
     domElements.indexOf(elementToBeCreated as unknown as Extract<typeof domElements, string>) === -1
       ? 'class'
       : 'className'
-  ] = (foldedComponentIds as Array<string | undefined>)
+  ] = foldedComponentIds
     .concat(
       styledComponentId,
-      (generatedClassName !== styledComponentId ? generatedClassName : null) as string,
-      context.className
+      generatedClassName !== styledComponentId ? generatedClassName : '',
+      context.className || ''
     )
     .filter(Boolean)
     .join(' ');
