@@ -110,7 +110,7 @@ export interface Stringifier {
 }
 
 export interface ShouldForwardProp<R extends Runtime> {
-  (prop: string, elementToBeCreated?: StyledTarget<R>): boolean;
+  (prop: string, elementToBeCreated: StyledTarget<R>): boolean;
 }
 
 export interface CommonStatics<R extends Runtime, Props extends object> {
