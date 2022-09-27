@@ -3,7 +3,7 @@ import { Interpolation, Styles } from '../types';
 import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
-export default function keyframes<Props = unknown>(
+export default function keyframes<Props extends object = object>(
   strings: Styles<Props>,
   ...interpolations: Array<Interpolation<Props>>
 ): Keyframes {

@@ -17,7 +17,7 @@ import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
-export default function createGlobalStyle<Props = unknown>(
+export default function createGlobalStyle<Props extends object>(
   strings: Styles<Props>,
   ...interpolations: Array<Interpolation<Props>>
 ) {

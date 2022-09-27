@@ -1,8 +1,8 @@
 import transformDeclPairs from 'css-to-react-native';
 import { parse } from 'postcss';
 import {
+  Dict,
   ExecutionContext,
-  ExtensibleObject,
   IInlineStyle,
   IInlineStyleConstructor,
   RuleSet,
@@ -11,7 +11,7 @@ import {
 import flatten from '../utils/flatten';
 import generateComponentId from '../utils/generateComponentId';
 
-let generated: ExtensibleObject = {};
+let generated: Dict<any> = {};
 
 export const resetStyleCache = (): void => {
   generated = {};
@@ -20,7 +20,7 @@ export const resetStyleCache = (): void => {
 /**
  * InlineStyle takes arbitrary CSS and generates a flat object
  */
-export default function makeInlineStyleClass<Props = unknown>(styleSheet: StyleSheet) {
+export default function makeInlineStyleClass<Props extends object>(styleSheet: StyleSheet) {
   const InlineStyle: IInlineStyleConstructor<Props> = class InlineStyle
     implements IInlineStyle<Props>
   {

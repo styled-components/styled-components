@@ -3,7 +3,7 @@ import { ExecutionContext, FlattenerResult, RuleSet, Stringifier } from '../type
 import flatten from '../utils/flatten';
 import isStaticRules from '../utils/isStaticRules';
 
-export default class GlobalStyle<Props = unknown> {
+export default class GlobalStyle<Props extends object> {
   componentId: string;
   isStatic: boolean;
   rules: FlattenerResult<Props>;

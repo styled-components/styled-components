@@ -109,10 +109,13 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
         // @ts-expect-error bad types
         p[key] =
           key === 'className'
-            ? joinStrings(p[key], resolvedAttrDef[key])
+            ? // @ts-expect-error bad types
+              joinStrings(p[key], resolvedAttrDef[key])
             : key === 'style'
-            ? { ...p[key], ...resolvedAttrDef[key] }
-            : resolvedAttrDef[key];
+            ? // @ts-expect-error bad types
+              { ...p[key], ...resolvedAttrDef[key] }
+            : // @ts-expect-error bad types
+              resolvedAttrDef[key];
       }
       /* eslint-enable guard-for-in */
 
