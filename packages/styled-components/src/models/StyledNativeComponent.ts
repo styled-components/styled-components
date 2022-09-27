@@ -86,17 +86,15 @@ function useStyledComponentImpl<Target extends NativeTarget, Props extends Exten
     }
   }
 
-  propsForElement.style = useMemo(() => {
-    if (typeof props.style === 'function') {
-      return (state: any) => {
-        return [generatedStyles].concat(props.style(state));
-      };
-    } else if (props.style == null) {
-      return generatedStyles;
-    } else {
-      return [generatedStyles].concat(props.style || []);
-    }
-  }, [props.style, generatedStyles]);
+  propsForElement.style = useMemo(
+    () =>
+      typeof props.style === 'function'
+        ? (state: any) => [generatedStyles].concat(props.style(state))
+        : props.style
+        ? [generatedStyles].concat(props.style)
+        : generatedStyles,
+    [props.style, generatedStyles]
+  );
 
   propsForElement.ref = refToForward;
 
