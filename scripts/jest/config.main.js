@@ -7,7 +7,4 @@ module.exports = Object.assign({}, baseConfig, {
   setupFiles: ['raf/polyfill', '<rootDir>/src/test/globals.js'],
   setupFilesAfterEnv: ['<rootDir>/test-utils/setupTestFramework.js'],
   testPathIgnorePatterns: ['<rootDir>/src/native', '<rootDir>/src/primitives'],
-  globals: {
-    window: { __webpack_nonce__: 'test' },
-  },
 });
