@@ -10,7 +10,7 @@ describe('props', () => {
   });
 
   it('should execute interpolations and fall back', () => {
-    const Comp = styled.div`
+    const Comp = styled.div<{ fg?: string }>`
       color: ${props => props.fg || 'black'};
     `;
     TestRenderer.create(<Comp />);
@@ -87,10 +87,15 @@ describe('props', () => {
   });
 
   it('"$as" should take precedence over "as"', () => {
-    const Comp = styled.div`
+    const Comp = styled.div<{ $fg?: string }>`
       color: ${props => props.$fg || 'black'};
     `;
-    expect(TestRenderer.create(<Comp $as="button" as="span" />).toJSON()).toMatchInlineSnapshot(`
+    expect(
+      TestRenderer.create(
+        // @ts-expect-error bad input test
+        <Comp $as="button" as="span" />
+      ).toJSON()
+    ).toMatchInlineSnapshot(`
         <button
           className="sc-a b"
         />

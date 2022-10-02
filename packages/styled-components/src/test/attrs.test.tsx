@@ -111,7 +111,7 @@ describe('attrs', () => {
   });
 
   it('pass props to the attr function', () => {
-    const Comp = styled.button.attrs(p => ({
+    const Comp = styled.button.attrs<{ $submit?: boolean }>(p => ({
       type: p.$submit ? 'submit' : 'button',
     }))``;
 
@@ -120,7 +120,7 @@ describe('attrs', () => {
   });
 
   it('should replace props with attrs', () => {
-    const Comp = styled.button.attrs(p => ({
+    const Comp = styled.button.attrs<{ $submit?: boolean }>(p => ({
       type: p.$submit ? 'submit' : 'button',
       tabIndex: 0,
     }))``;
@@ -153,7 +153,7 @@ describe('attrs', () => {
   });
 
   it('should merge className even if its a function', () => {
-    const Comp = styled.div.attrs(p => ({
+    const Comp = styled.div.attrs<{ $purr?: boolean }>(p => ({
       className: `meow ${p.$purr ? 'purr' : 'nya'}`,
     }))``;
 
@@ -256,7 +256,7 @@ describe('attrs', () => {
   });
 
   it('should shallow merge "style" prop + attr instead of overwriting', () => {
-    const Paragraph = styled.p.attrs(p => ({
+    const Paragraph = styled.p.attrs<{ $fontScale?: number }>(p => ({
       style: {
         ...p.style,
         fontSize: `${p.$fontScale}em`,

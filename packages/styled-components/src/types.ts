@@ -3,7 +3,7 @@ import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
-interface ExoticComponentWithDisplayName<P = unknown> extends React.ExoticComponent<P> {
+interface ExoticComponentWithDisplayName<P = any> extends React.ExoticComponent<P> {
   defaultProps?: Partial<P>;
   displayName?: string;
 }
@@ -69,7 +69,7 @@ export type Attrs<Props extends object> =
   | (ExecutionProps & Props)
   | ((props: ExecutionContext & Props) => Partial<Props>);
 
-export type RuleSet<Props extends object> = Interpolation<Props>[];
+export type RuleSet<Props extends object> = Interpolation<ExecutionContext & Props>[];
 
 export type Styles<Props extends object> =
   | TemplateStringsArray
@@ -129,9 +129,9 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   target: StyledTarget<R>;
   styledComponentId: R extends 'web' ? string : never;
   warnTooManyClasses?: R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never;
-  withComponent: <Target extends StyledTarget<R>, Props = unknown>(
+  withComponent: <Target extends StyledTarget<R>, Props extends object = object>(
     tag: Target
-  ) => IStyledComponent<R, Target, OuterProps & Props>;
+  ) => IStyledComponent<R, Target, Omit<OuterProps, keyof Props> & Props>;
 }
 
 type PolymorphicComponentProps<
@@ -194,15 +194,14 @@ export interface IStyledComponent<
 export interface IStyledComponentFactory<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  Props extends object,
-  Statics = unknown
+  OuterProps extends object,
+  OuterStatics extends object = object
 > {
-  (target: Target, options: StyledOptions<R, Props>, rules: RuleSet<Props>): IStyledComponent<
-    R,
-    Target,
-    Props
-  > &
-    Statics;
+  <Props extends object = object, Statics extends object = object>(
+    target: Target,
+    options: StyledOptions<R, OuterProps>,
+    rules: RuleSet<OuterProps & Props>
+  ): IStyledComponent<R, Target, Omit<OuterProps, keyof Props> & Props> & OuterStatics & Statics;
 }
 
 export interface IInlineStyleConstructor<Props extends object> {

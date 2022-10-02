@@ -90,9 +90,9 @@ describe('extending', () => {
         tertiary: 'green',
       };
 
-      const Parent = styled.h1<{ color: keyof typeof colors }>`
+      const Parent = styled.h1<{ color?: keyof typeof colors }>`
         position: relative;
-        color: ${props => colors[props.color]};
+        color: ${props => colors[props.color!]};
       `;
 
       return Parent;

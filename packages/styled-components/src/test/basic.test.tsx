@@ -180,7 +180,7 @@ describe('basic', () => {
       color: red;
     `;
 
-    TestRenderer.create(<StyledComp color="blue" />);
+    TestRenderer.create(<StyledComp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: red;
