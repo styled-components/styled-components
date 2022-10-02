@@ -261,9 +261,10 @@ describe('props', () => {
         color: red;
       `;
 
-      TestRenderer.create(<Comp as="a" filterThis="abc" passThru="def" />);
+      TestRenderer.create(<Comp as="a" href="/foo" filterThis="abc" passThru="def" />);
 
-      expect(stub.mock.calls[0]).toEqual(['filterThis', 'a']);
+      expect(stub).toHaveBeenCalledWith('filterThis', 'a');
+      expect(stub).toHaveBeenCalledWith('href', 'a');
     });
   });
 });

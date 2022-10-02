@@ -36,8 +36,34 @@ export type NativeTarget = AnyComponent;
 export type Dict<T> = { [key: string]: T };
 
 export interface ExecutionProps {
+  /**
+   * Dynamically adjust the rendered component or HTML tag, e.g.
+   * ```
+   * const StyledButton = styled.button``
+   *
+   * <StyledButton $as="a" href="/foo">
+   *   I'm an anchor now
+   * </StyledButton>
+   * ```
+   */
   $as?: KnownTarget;
+  /**
+   * If the wrapped component is also
+   * capable of receiving an "as" prop, you
+   * may use `forwardedAs` to define
+   * one and pass it along.
+   */
   $forwardedAs?: KnownTarget;
+  /**
+   * Dynamically adjust the rendered component or HTML tag, e.g.
+   * ```
+   * const StyledButton = styled.button``
+   *
+   * <StyledButton as="a" href="/foo">
+   *   I'm an anchor now
+   * </StyledButton>
+   * ```
+   */
   as?: KnownTarget;
   forwardedAs?: KnownTarget;
   theme?: DefaultTheme;
@@ -134,55 +160,26 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   ) => IStyledComponent<R, Target, Omit<OuterProps, keyof Props> & Props>;
 }
 
-type PolymorphicComponentProps<
-  R extends Runtime,
-  ActualComponent extends StyledTarget<R>,
-  PropsToBeInjectedIntoActualComponent extends object,
-  ActualComponentProps = ActualComponent extends KnownTarget
-    ? React.ComponentPropsWithRef<ActualComponent>
-    : {}
-> = React.HTMLAttributes<ActualComponent> &
-  Omit<PropsToBeInjectedIntoActualComponent, keyof ActualComponentProps | 'as' | '$as'> &
-  ActualComponentProps &
-  // Only one of "$as" or "as" is allowed. This used to take "$as" in preference
-  // over "as" if both were present, but it's less confusing to be strict.
-  (| {
-        $as: ActualComponent;
-        as?: never;
-      }
-    | {
-        $as?: never;
-        as?: ActualComponent;
-      }
-  );
+type PolymorphicComponentProps<R extends Runtime, E extends StyledTarget<R>, P extends object> = {
+  as?: E;
+} & P &
+  Omit<E extends KnownTarget ? React.ComponentProps<E> : object, keyof P | 'as'>;
 
 interface PolymorphicComponent<
   R extends Runtime,
-  FallbackComponent extends StyledTarget<R>,
-  ExpectedProps extends object,
-  PropsToBeInjectedIntoActualComponent extends object
-> extends React.ForwardRefExoticComponent<ExpectedProps> {
-  <ActualComponent extends StyledTarget<R> = FallbackComponent>(
-    props: PolymorphicComponentProps<
-      R,
-      ActualComponent,
-      ExpectedProps & PropsToBeInjectedIntoActualComponent
-    >
-  ): React.ReactElement<
-    PolymorphicComponentProps<
-      R,
-      ActualComponent,
-      ExecutionContext & ExpectedProps & PropsToBeInjectedIntoActualComponent
-    >,
-    ActualComponent
-  >;
+  P extends object,
+  FallbackComponent extends StyledTarget<R>
+> extends React.ForwardRefExoticComponent<P> {
+  <E extends StyledTarget<R> = FallbackComponent>(
+    props: PolymorphicComponentProps<R, E, P>
+  ): React.ReactElement | null;
 }
 
 export interface IStyledComponent<
   R extends Runtime,
   Target extends StyledTarget<R>,
   Props extends object
-> extends PolymorphicComponent<R, Target, Props, ExecutionContext>,
+> extends PolymorphicComponent<R, Props, Target>,
     IStyledStatics<R, Props> {
   defaultProps?: Partial<
     ExecutionProps & (Target extends KnownTarget ? React.ComponentProps<Target> : {}) & Props

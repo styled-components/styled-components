@@ -34,13 +34,7 @@ export interface Styled<
     Props extends object = T extends (...args: any) => object ? ReturnType<T> : T
   >(
     attrs: Attrs<DerivedProps & OuterProps & Props>
-  ) => Styled<
-    R,
-    Target,
-    Omit<DerivedProps, keyof Props>,
-    Omit<OuterProps, keyof Props> & Partial<Props>,
-    OuterStatics
-  >;
+  ) => Styled<R, Target, DerivedProps, OuterProps & Partial<Props>, OuterStatics>;
 
   withConfig: (
     config: StyledOptions<R, DerivedProps & OuterProps>
@@ -59,7 +53,7 @@ export default function constructWithOptions<
   componentConstructor: IStyledComponentFactory<R, Target, DerivedProps & OuterProps, OuterStatics>,
   tag: Target,
   options: StyledOptions<R, DerivedProps & OuterProps> = EMPTY_OBJECT
-) {
+): Styled<R, Target, DerivedProps, OuterProps, OuterStatics> {
   // We trust that the tag is a valid component as long as it isn't falsish
   // Typically the tag here is a string or function (i.e. class or pure function component)
   // However a component may also be an object if it uses another utility, e.g. React.memo
