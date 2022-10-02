@@ -19,6 +19,7 @@ export default class ComponentStyle {
   isStatic: boolean;
   rules: RuleSet<any>;
   staticRulesId: string;
+  buffer: [css: string, name: string][];
 
   constructor(rules: RuleSet<any>, componentId: string, baseStyle?: ComponentStyle) {
     this.rules = rules;
@@ -30,6 +31,7 @@ export default class ComponentStyle {
     this.componentId = componentId;
     this.baseHash = phash(SEED, componentId);
     this.baseStyle = baseStyle;
+    this.buffer = [];
 
     // NOTE: This registers the componentId, which ensures a consistent order
     // for this component's styles compared to others
@@ -54,11 +56,7 @@ export default class ComponentStyle {
           flatten(this.rules, executionContext, styleSheet, stylis) as string[]
         );
         const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
-
-        if (!styleSheet.hasNameForId(this.componentId, name)) {
-          const cssStaticFormatted = stylis(cssStatic, `.${name}`, undefined, this.componentId);
-          styleSheet.insertRules(this.componentId, name, cssStaticFormatted);
-        }
+        this.buffer.push([cssStatic, name]);
 
         names = joinStrings(names, name);
         this.staticRulesId = name;
@@ -85,19 +83,29 @@ export default class ComponentStyle {
 
       if (css) {
         const name = generateName(dynamicHash >>> 0);
-
-        if (!styleSheet.hasNameForId(this.componentId, name)) {
-          styleSheet.insertRules(
-            this.componentId,
-            name,
-            stylis(css, `.${name}`, undefined, this.componentId)
-          );
-        }
-
+        this.buffer.push([css, name]);
         names = joinStrings(names, name);
       }
     }
 
     return names;
+  }
+
+  flushStyles(styleSheet: StyleSheet, stylis: Stringifier) {
+    const length = this.buffer.length;
+
+    for (let i = 0; i < length; i++) {
+      const [css, name] = this.buffer[i];
+
+      if (!styleSheet.hasNameForId(this.componentId, name)) {
+        styleSheet.insertRules(
+          this.componentId,
+          name,
+          stylis(css, `.${name}`, undefined, this.componentId)
+        );
+      }
+    }
+
+    this.buffer.length = 0;
   }
 }
