@@ -17,7 +17,7 @@ export { DefaultTheme };
 
 export type AnyComponent<P = any> = ExoticComponentWithDisplayName<P> | React.ComponentType<P>;
 
-export interface StyledOptions<R extends Runtime, Props> {
+export interface StyledOptions<R extends Runtime, Props extends object> {
   attrs?: Attrs<Props>[];
   componentId?: R extends 'web' ? string : never;
   displayName?: string;
@@ -33,11 +33,9 @@ export type WebTarget =
 
 export type NativeTarget = AnyComponent;
 
-export interface BaseExtensibleObject {
-  [key: string]: any;
-}
+export type Dict<T> = { [key: string]: T };
 
-export interface ExtensibleObject extends BaseExtensibleObject {
+export interface ExecutionProps {
   $as?: KnownTarget;
   $forwardedAs?: KnownTarget;
   as?: KnownTarget;
@@ -45,15 +43,15 @@ export interface ExtensibleObject extends BaseExtensibleObject {
   theme?: DefaultTheme;
 }
 
-export interface ExecutionContext extends ExtensibleObject {
+export interface ExecutionContext extends ExecutionProps {
   theme: DefaultTheme;
 }
 
-export interface StyleFunction<Props = BaseExtensibleObject> {
+export interface StyleFunction<Props extends object> {
   (executionContext: ExecutionContext & Props): Interpolation<Props>;
 }
 
-export type Interpolation<Props> =
+export type Interpolation<Props extends object> =
   | StyleFunction<Props>
   | StyledObject<Props>
   | TemplateStringsArray
@@ -67,13 +65,16 @@ export type Interpolation<Props> =
   | IStyledComponent<'web', any, any>
   | Interpolation<Props>[];
 
-export type Attrs<Props> =
-  | (ExtensibleObject & Props)
+export type Attrs<Props extends object> =
+  | (ExecutionProps & Props)
   | ((props: ExecutionContext & Props) => Partial<Props>);
 
-export type RuleSet<Props> = Interpolation<Props>[];
+export type RuleSet<Props extends object> = Interpolation<Props>[];
 
-export type Styles<Props> = TemplateStringsArray | StyledObject<Props> | StyleFunction<Props>;
+export type Styles<Props extends object> =
+  | TemplateStringsArray
+  | StyledObject<Props>
+  | StyleFunction<Props>;
 
 export type NameGenerator = (hash: number) => string;
 
@@ -87,7 +88,7 @@ export interface Keyframes {
   rules: string;
 }
 
-export interface Flattener<Props> {
+export interface Flattener<Props extends object> {
   (
     chunks: Interpolation<Props>[],
     executionContext: Object | null | undefined,
@@ -95,7 +96,7 @@ export interface Flattener<Props> {
   ): Interpolation<Props>[];
 }
 
-export type FlattenerResult<Props> =
+export type FlattenerResult<Props extends object> =
   | RuleSet<Props>
   | number
   | string
@@ -109,17 +110,17 @@ export interface Stringifier {
 }
 
 export interface ShouldForwardProp<R extends Runtime> {
-  (prop: string, elementToBeCreated?: StyledTarget<R>): boolean;
+  (prop: string, elementToBeCreated: StyledTarget<R>): boolean;
 }
 
-export interface CommonStatics<R extends Runtime, Props> {
+export interface CommonStatics<R extends Runtime, Props extends object> {
   attrs: Attrs<Props>[];
   target: StyledTarget<R>;
   shouldForwardProp?: ShouldForwardProp<R>;
   withComponent: any;
 }
 
-export interface IStyledStatics<R extends Runtime, OuterProps extends {}>
+export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   extends CommonStatics<R, OuterProps> {
   componentStyle: R extends 'web' ? ComponentStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
@@ -136,18 +137,16 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends {}>
 type PolymorphicComponentProps<
   R extends Runtime,
   ActualComponent extends StyledTarget<R>,
-  PropsToBeInjectedIntoActualComponent extends {},
+  PropsToBeInjectedIntoActualComponent extends object,
   ActualComponentProps = ActualComponent extends KnownTarget
     ? React.ComponentPropsWithRef<ActualComponent>
     : {}
 > = React.HTMLAttributes<ActualComponent> &
   Omit<PropsToBeInjectedIntoActualComponent, keyof ActualComponentProps | 'as' | '$as'> &
   ActualComponentProps &
-  (
-    // Only one of "$as" or "as" is allowed. This used to take "$as" in
-    // preference over "as" if both were present, but it's less confusing to be
-    // strict.
-    | {
+  // Only one of "$as" or "as" is allowed. This used to take "$as" in preference
+  // over "as" if both were present, but it's less confusing to be strict.
+  (| {
         $as: ActualComponent;
         as?: never;
       }
@@ -160,8 +159,8 @@ type PolymorphicComponentProps<
 interface PolymorphicComponent<
   R extends Runtime,
   FallbackComponent extends StyledTarget<R>,
-  ExpectedProps extends {},
-  PropsToBeInjectedIntoActualComponent extends {}
+  ExpectedProps extends object,
+  PropsToBeInjectedIntoActualComponent extends object
 > extends React.ForwardRefExoticComponent<ExpectedProps> {
   <ActualComponent extends StyledTarget<R> = FallbackComponent>(
     props: PolymorphicComponentProps<
@@ -182,11 +181,11 @@ interface PolymorphicComponent<
 export interface IStyledComponent<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  Props extends {}
+  Props extends object
 > extends PolymorphicComponent<R, Target, Props, ExecutionContext>,
     IStyledStatics<R, Props> {
   defaultProps?: Partial<
-    ExtensibleObject & (Target extends KnownTarget ? React.ComponentProps<Target> : {}) & Props
+    ExecutionProps & (Target extends KnownTarget ? React.ComponentProps<Target> : {}) & Props
   >;
   toString: () => string;
 }
@@ -195,7 +194,7 @@ export interface IStyledComponent<
 export interface IStyledComponentFactory<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  Props extends {},
+  Props extends object,
   Statics = unknown
 > {
   (target: Target, options: StyledOptions<R, Props>, rules: RuleSet<Props>): IStyledComponent<
@@ -206,19 +205,19 @@ export interface IStyledComponentFactory<
     Statics;
 }
 
-export interface IInlineStyleConstructor<Props = unknown> {
+export interface IInlineStyleConstructor<Props extends object> {
   new (rules: RuleSet<Props>): IInlineStyle<Props>;
 }
 
-export interface IInlineStyle<Props = unknown> {
+export interface IInlineStyle<Props extends object> {
   rules: RuleSet<Props>;
   generateStyleObject(executionContext: Object): Object;
 }
 
 export type StyledTarget<R extends Runtime> = R extends 'web' ? WebTarget : NativeTarget;
 
-export interface StyledObject<Props = ExecutionContext> {
-  [key: string]: BaseExtensibleObject | string | number | StyleFunction<Props>;
+export interface StyledObject<Props extends object = ExecutionContext> {
+  [key: string]: Dict<any> | string | number | StyleFunction<Props>;
 }
 // uncomment when we can eventually override index signatures with more specific types
 // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);
@@ -245,4 +244,4 @@ export interface StyledObject<Props = ExecutionContext> {
  * }
  * ```
  */
-export type CSSProp = string | StyledObject | StyleFunction;
+export type CSSProp = string | StyledObject | StyleFunction<any>;

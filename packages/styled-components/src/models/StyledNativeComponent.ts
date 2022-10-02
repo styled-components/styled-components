@@ -1,9 +1,9 @@
 import React, { createElement, Ref, useContext, useMemo } from 'react';
 import type {
   Attrs,
-  BaseExtensibleObject,
+  Dict,
   ExecutionContext,
-  ExtensibleObject,
+  ExecutionProps,
   IInlineStyleConstructor,
   IStyledComponent,
   IStyledComponentFactory,
@@ -21,7 +21,7 @@ import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
-function useResolvedAttrs<Props = unknown>(
+function useResolvedAttrs<Props extends object>(
   theme: DefaultTheme = EMPTY_OBJECT,
   props: Props,
   attrs: Attrs<Props>[]
@@ -30,7 +30,7 @@ function useResolvedAttrs<Props = unknown>(
   // returns [context, resolvedAttrs]
   // where resolvedAttrs is only the things injected by the attrs themselves
   const context: ExecutionContext & Props = { ...props, theme };
-  const resolvedAttrs: BaseExtensibleObject = {};
+  const resolvedAttrs: Dict<any> = {};
 
   attrs.forEach(attrDef => {
     let resolvedAttrDef = typeof attrDef === 'function' ? attrDef(context) : attrDef;
@@ -47,7 +47,14 @@ function useResolvedAttrs<Props = unknown>(
   return [context, resolvedAttrs];
 }
 
-function useStyledComponentImpl<Target extends NativeTarget, Props extends ExtensibleObject>(
+interface StyledComponentImplProps extends ExecutionProps {
+  style?: any;
+}
+
+function useStyledComponentImpl<
+  Target extends NativeTarget,
+  Props extends StyledComponentImplProps
+>(
   forwardedComponent: IStyledComponent<'native', Target, Props>,
   props: Props,
   forwardedRef: Ref<any>
@@ -73,8 +80,8 @@ function useStyledComponentImpl<Target extends NativeTarget, Props extends Exten
 
   const elementToBeCreated: NativeTarget = attrs.$as || props.$as || attrs.as || props.as || target;
 
-  const computedProps: ExtensibleObject = attrs !== props ? { ...props, ...attrs } : props;
-  const propsForElement: ExtensibleObject = {};
+  const computedProps: Dict<any> = attrs !== props ? { ...props, ...attrs } : props;
+  const propsForElement: Dict<any> = {};
 
   // eslint-disable-next-line guard-for-in
   for (const key in computedProps) {
@@ -86,17 +93,15 @@ function useStyledComponentImpl<Target extends NativeTarget, Props extends Exten
     }
   }
 
-  propsForElement.style = useMemo(() => {
-    if (typeof props.style === 'function') {
-      return (state: any) => {
-        return [generatedStyles].concat(props.style(state));
-      };
-    } else if (props.style == null) {
-      return generatedStyles;
-    } else {
-      return [generatedStyles].concat(props.style || []);
-    }
-  }, [props.style, generatedStyles]);
+  propsForElement.style = useMemo(
+    () =>
+      typeof props.style === 'function'
+        ? (state: any) => [generatedStyles].concat(props.style(state))
+        : props.style
+        ? [generatedStyles].concat(props.style)
+        : generatedStyles,
+    [props.style, generatedStyles]
+  );
 
   propsForElement.ref = refToForward;
 
@@ -106,7 +111,7 @@ function useStyledComponentImpl<Target extends NativeTarget, Props extends Exten
 export default (InlineStyle: IInlineStyleConstructor<any>) => {
   const createStyledNativeComponent = <
     Target extends NativeTarget,
-    OuterProps extends ExtensibleObject,
+    OuterProps extends ExecutionProps,
     Statics = unknown
   >(
     target: Target,
@@ -143,7 +148,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       }
     }
 
-    const forwardRef = (props: ExtensibleObject & OuterProps, ref: React.Ref<any>) =>
+    const forwardRef = (props: ExecutionProps & OuterProps, ref: React.Ref<any>) =>
       // eslint-disable-next-line react-hooks/rules-of-hooks
       useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref);
 

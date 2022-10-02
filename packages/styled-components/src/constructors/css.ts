@@ -18,7 +18,7 @@ const addTag = <T>(arg: T extends any[] ? T & { isCss?: boolean } : T) => {
   return arg;
 };
 
-export default function css<Props>(
+export default function css<Props extends object>(
   styles: Styles<Props>,
   ...interpolations: Interpolation<Props>[]
 ) {

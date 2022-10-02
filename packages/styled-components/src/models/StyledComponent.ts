@@ -4,7 +4,7 @@ import type {
   AnyComponent,
   Attrs,
   ExecutionContext,
-  ExtensibleObject,
+  ExecutionProps,
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
@@ -48,7 +48,7 @@ function generateId(displayName?: string, parentComponentId?: string): string {
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-function useInjectedStyle<T extends {}>(
+function useInjectedStyle<T extends object>(
   componentStyle: ComponentStyle,
   isStatic: boolean,
   resolvedAttrs: T,
@@ -73,7 +73,7 @@ function useInjectedStyle<T extends {}>(
   return className;
 }
 
-function useStyledComponentImpl<Target extends WebTarget, Props extends ExtensibleObject>(
+function useStyledComponentImpl<Target extends WebTarget, Props extends ExecutionProps>(
   forwardedComponent: IStyledComponent<'web', Target, Props>,
   props: Props,
   forwardedRef: Ref<Element>,
@@ -109,10 +109,13 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
         // @ts-expect-error bad types
         p[key] =
           key === 'className'
-            ? joinStrings(p[key], resolvedAttrDef[key])
+            ? // @ts-expect-error bad types
+              joinStrings(p[key], resolvedAttrDef[key])
             : key === 'style'
-            ? { ...p[key], ...resolvedAttrDef[key] }
-            : resolvedAttrDef[key];
+            ? // @ts-expect-error bad types
+              { ...p[key], ...resolvedAttrDef[key] }
+            : // @ts-expect-error bad types
+              resolvedAttrDef[key];
       }
       /* eslint-enable guard-for-in */
 
@@ -154,11 +157,11 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
     domElements.indexOf(elementToBeCreated as unknown as Extract<typeof domElements, string>) === -1
       ? 'class'
       : 'className'
-  ] = (foldedComponentIds as Array<string | undefined>)
+  ] = foldedComponentIds
     .concat(
       styledComponentId,
-      (generatedClassName !== styledComponentId ? generatedClassName : null) as string,
-      context.className
+      generatedClassName !== styledComponentId ? generatedClassName : '',
+      context.className || ''
     )
     .filter(Boolean)
     .join(' ');
@@ -169,7 +172,11 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Extensib
   return createElement(elementToBeCreated, context);
 }
 
-function createStyledComponent<Target extends WebTarget, OuterProps extends {}, Statics = unknown>(
+function createStyledComponent<
+  Target extends WebTarget,
+  OuterProps extends object,
+  Statics = unknown
+>(
   target: Target,
   options: StyledOptions<'web', OuterProps>,
   rules: RuleSet<OuterProps>
@@ -221,7 +228,7 @@ function createStyledComponent<Target extends WebTarget, OuterProps extends {}, 
   // statically styled-components don't need to build an execution context object,
   // and shouldn't be increasing the number of class names
   const isStatic = componentStyle.isStatic && attrs.length === 0;
-  function forwardRef(props: ExtensibleObject & OuterProps, ref: Ref<Element>) {
+  function forwardRef(props: ExecutionProps & OuterProps, ref: Ref<Element>) {
     // eslint-disable-next-line
     return useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref, isStatic);
   }

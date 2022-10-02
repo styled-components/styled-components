@@ -2,8 +2,8 @@ import Keyframes from '../models/Keyframes';
 import StyleSheet from '../sheet';
 import {
   AnyComponent,
+  Dict,
   ExecutionContext,
-  ExtensibleObject,
   Interpolation,
   IStyledComponent,
   RuleSet,
@@ -24,7 +24,7 @@ import isStyledComponent from './isStyledComponent';
 const isFalsish = (chunk: any): chunk is undefined | null | false | '' =>
   chunk === undefined || chunk === null || chunk === false || chunk === '';
 
-export const objToCssArray = (obj: ExtensibleObject, prevKey?: string): string[] => {
+export const objToCssArray = (obj: Dict<any>, prevKey?: string): string[] => {
   const rules = [];
 
   for (const key in obj) {
@@ -42,7 +42,7 @@ export const objToCssArray = (obj: ExtensibleObject, prevKey?: string): string[]
   return prevKey ? [`${prevKey} {`, ...rules, '}'] : rules;
 };
 
-export default function flatten<Props = unknown>(
+export default function flatten<Props extends object>(
   chunk: Interpolation<Props>,
   executionContext?: ExecutionContext & Props,
   styleSheet?: StyleSheet,

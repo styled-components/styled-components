@@ -1,7 +1,7 @@
-import { ExtensibleObject } from '../types';
+import { Dict } from '../types';
 import errorMap from './errors';
 
-const ERRORS: ExtensibleObject = process.env.NODE_ENV !== 'production' ? errorMap : {};
+const ERRORS: Dict<any> = process.env.NODE_ENV !== 'production' ? errorMap : {};
 
 /**
  * super basic version of sprintf
