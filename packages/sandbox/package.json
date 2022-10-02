@@ -9,13 +9,12 @@
     "start": "next start"
   },
   "devDependencies": {
-    "babel-plugin-styled-components": "^2.0.6",
     "next": "^12.2.0"
   },
   "dependencies": {
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "styled-components": "*"
+    "styled-components": "link:../styled-components"
   },
   "engines": {
     "node": ">= 14"
