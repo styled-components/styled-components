@@ -1,6 +1,6 @@
 /* eslint-disable no-console, react/jsx-key, @typescript-eslint/no-empty-function */
 import React, { PropsWithChildren } from 'react';
-import { Text, TextProps, View } from 'react-native';
+import { Text, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider } from '../';
 
@@ -168,9 +168,9 @@ describe('native', () => {
     });
 
     it('calls an attr-function with context', () => {
-      const Comp = styled.View.attrs(p => ({
+      const Comp = styled.View.attrs<{ copy: string; test: string }>(p => ({
         copy: p.test,
-      }))<{ test: string }>``;
+      }))``;
 
       const test = 'Put that cookie down!';
       const wrapper = TestRenderer.create(<Comp test={test} />);
@@ -437,7 +437,7 @@ describe('native', () => {
       const InnerComp = (props: PropsWithChildren<{}>) => <View {...props} />;
       const Comp = styled(InnerComp).withConfig({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
-      })`
+      })<{ filterThis?: string; passThru?: string }>`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
@@ -451,7 +451,7 @@ describe('native', () => {
     it('composes shouldForwardProp on composed styled components', () => {
       const StyledView = styled.View.withConfig({
         shouldForwardProp: prop => prop === 'passThru',
-      })`
+      })<{ filterThis?: boolean; passThru?: boolean }>`
         color: red;
       `;
       const ComposedView = styled(StyledView).withConfig({
@@ -523,27 +523,12 @@ describe('native', () => {
       })<{ filterThis: string; passThru: string }>`
         color: red;
       `;
-      const wrapper = TestRenderer.create(<Comp as="a" filterThis="abc" passThru="def" />);
-      const { props } = wrapper.root.findByType('a');
+      const wrapper = TestRenderer.create(<Comp as={Text} filterThis="abc" passThru="def" />);
+      const { props } = wrapper.root.findByType(Text);
 
       expect(props.style).toEqual({ color: 'red' });
       expect(props.passThru).toBe('def');
       expect(props.filterThis).toBeUndefined();
-    });
-
-    it('should prefer transient $as over as', () => {
-      const OtherText = (props: TextProps) => <Text {...props} />;
-
-      const Comp = styled.Text`
-        color: red;
-      `;
-
-      const wrapper = TestRenderer.create(<Comp $as={View} as={OtherText} />);
-      // @ts-expect-error bs error
-      const view = wrapper.root.findByType('View');
-
-      expect(view.props.style).toEqual({ color: 'red' });
-      expect(() => wrapper.root.findByType(Text)).toThrowError();
     });
   });
 });

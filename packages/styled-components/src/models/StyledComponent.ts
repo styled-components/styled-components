@@ -133,7 +133,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
 
   const refToForward = forwardedRef;
 
-  const elementToBeCreated: WebTarget = context.$as || context.as || target;
+  const elementToBeCreated: WebTarget = context.as || target;
 
   const isTargetTag = isTag(elementToBeCreated);
 
@@ -175,7 +175,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
 function createStyledComponent<
   Target extends WebTarget,
   OuterProps extends object,
-  Statics = unknown
+  Statics extends object = object
 >(
   target: Target,
   options: StyledOptions<'web', OuterProps>,
@@ -263,7 +263,7 @@ function createStyledComponent<
 
   WrappedStyledComponent.withComponent = function withComponent<
     Target extends WebTarget,
-    Props = unknown
+    Props extends object = object
   >(tag: Target) {
     const { componentId: previousComponentId, ...optionsToCopy } = options;
 

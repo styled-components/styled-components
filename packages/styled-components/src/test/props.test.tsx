@@ -86,22 +86,6 @@ describe('props', () => {
     `);
   });
 
-  it('"$as" should take precedence over "as"', () => {
-    const Comp = styled.div<{ $fg?: string }>`
-      color: ${props => props.$fg || 'black'};
-    `;
-    expect(
-      TestRenderer.create(
-        // @ts-expect-error bad input test
-        <Comp $as="button" as="span" />
-      ).toJSON()
-    ).toMatchInlineSnapshot(`
-        <button
-          className="sc-a b"
-        />
-    `);
-  });
-
   it('should forward the "as" prop if "forwardedAs" is used', () => {
     const Comp = ({ as: Component = 'div', ...props }) => <Component {...props} />;
 

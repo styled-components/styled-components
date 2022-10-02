@@ -41,24 +41,6 @@ export interface ExecutionProps {
    * ```
    * const StyledButton = styled.button``
    *
-   * <StyledButton $as="a" href="/foo">
-   *   I'm an anchor now
-   * </StyledButton>
-   * ```
-   */
-  $as?: KnownTarget;
-  /**
-   * If the wrapped component is also
-   * capable of receiving an "as" prop, you
-   * may use `forwardedAs` to define
-   * one and pass it along.
-   */
-  $forwardedAs?: KnownTarget;
-  /**
-   * Dynamically adjust the rendered component or HTML tag, e.g.
-   * ```
-   * const StyledButton = styled.button``
-   *
    * <StyledButton as="a" href="/foo">
    *   I'm an anchor now
    * </StyledButton>
@@ -157,11 +139,12 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   warnTooManyClasses?: R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never;
   withComponent: <Target extends StyledTarget<R>, Props extends object = object>(
     tag: Target
-  ) => IStyledComponent<R, Target, Omit<OuterProps, keyof Props> & Props>;
+  ) => IStyledComponent<R, Target, OuterProps & Props>;
 }
 
 type PolymorphicComponentProps<R extends Runtime, E extends StyledTarget<R>, P extends object> = {
   as?: E;
+  theme?: DefaultTheme;
 } & P &
   Omit<E extends KnownTarget ? React.ComponentProps<E> : object, keyof P | 'as'>;
 
@@ -198,7 +181,7 @@ export interface IStyledComponentFactory<
     target: Target,
     options: StyledOptions<R, OuterProps>,
     rules: RuleSet<OuterProps & Props>
-  ): IStyledComponent<R, Target, Omit<OuterProps, keyof Props> & Props> & OuterStatics & Statics;
+  ): IStyledComponent<R, Target, OuterProps & Props> & OuterStatics & Statics;
 }
 
 export interface IInlineStyleConstructor<Props extends object> {

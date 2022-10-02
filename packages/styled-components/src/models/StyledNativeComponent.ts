@@ -78,7 +78,7 @@ function useStyledComponentImpl<
 
   const refToForward = forwardedRef;
 
-  const elementToBeCreated: NativeTarget = attrs.$as || props.$as || attrs.as || props.as || target;
+  const elementToBeCreated: NativeTarget = attrs.as || props.as || target;
 
   const computedProps: Dict<any> = attrs !== props ? { ...props, ...attrs } : props;
   const propsForElement: Dict<any> = {};
@@ -112,7 +112,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
   const createStyledNativeComponent = <
     Target extends NativeTarget,
     OuterProps extends ExecutionProps,
-    Statics = unknown
+    Statics extends object = object
   >(
     target: Target,
     options: StyledOptions<'native', OuterProps>,
