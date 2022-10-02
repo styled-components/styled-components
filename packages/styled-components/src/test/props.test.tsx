@@ -55,7 +55,7 @@ describe('props', () => {
   });
 
   it('should filter out props prefixed with dollar sign (transient props)', () => {
-    const Comp = styled(p => <div {...p} />)<{ $fg: string; fg: string }>`
+    const Comp = styled(p => <div {...p} />)<{ $fg?: string; fg?: string }>`
       color: ${props => props.$fg || 'black'};
     `;
     expect(
