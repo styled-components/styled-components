@@ -146,7 +146,7 @@ type PolymorphicComponentProps<R extends Runtime, E extends StyledTarget<R>, P e
   as?: E;
   theme?: DefaultTheme;
 } & P &
-  Omit<E extends KnownTarget ? React.ComponentProps<E> : object, keyof P | 'as'>;
+  (E extends KnownTarget ? Omit<React.ComponentProps<E>, keyof P | 'as'> : object);
 
 interface PolymorphicComponent<
   R extends Runtime,

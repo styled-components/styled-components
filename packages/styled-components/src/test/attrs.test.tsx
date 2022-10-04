@@ -321,9 +321,8 @@ describe('attrs', () => {
 
     const StyledComp = styled(Comp).attrs(() => ({
       $textColor: 'red',
-    }))<{ $textColor: string }>``;
+    }))``;
 
-    // @ts-expect-error missing required prop
     expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();
   });
 });
