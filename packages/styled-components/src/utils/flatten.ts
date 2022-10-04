@@ -47,7 +47,7 @@ export default function flatten<Props extends object>(
   executionContext?: ExecutionContext & Props,
   styleSheet?: StyleSheet,
   stylisInstance?: Stringifier
-): Interpolation<Props> {
+): Interpolation<Props> | RuleSet<Props> {
   if (Array.isArray(chunk)) {
     const ruleSet: RuleSet<Props> = [];
 
