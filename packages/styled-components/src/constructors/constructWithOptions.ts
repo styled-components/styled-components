@@ -51,9 +51,9 @@ export interface Styled<
   OuterStatics extends object = object
 > {
   (
-    initialStyles: Styles<OuterProps & OuterProps>,
-    ...interpolations: Interpolation<OuterProps & OuterProps>[]
-  ): IStyledComponent<R, Target, OuterProps & OuterProps> & OuterStatics;
+    initialStyles: Styles<OuterProps>,
+    ...interpolations: Interpolation<OuterProps>[]
+  ): IStyledComponent<R, Target, OuterProps> & OuterStatics;
   <Props extends object = object, Statics extends object = object>(
     initialStyles: Styles<OuterProps & Props>,
     ...interpolations: Interpolation<OuterProps & Props>[]
