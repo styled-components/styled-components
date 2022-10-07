@@ -23,7 +23,7 @@ export default function css<Props extends object>(
   ...interpolations: Interpolation<Props>[]
 ) {
   if (isFunction(styles) || isPlainObject(styles)) {
-    const styleFunctionOrObject = styles as StyleFunction<Props> | StyledObject;
+    const styleFunctionOrObject = styles as StyleFunction<Props> | StyledObject<Props>;
 
     return addTag(
       flatten<Props>(
