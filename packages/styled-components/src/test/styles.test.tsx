@@ -397,10 +397,7 @@ describe('with styles', () => {
 
   it('should handle functions inside TTL that return css constructor', () => {
     const Comp = styled.div<{ variant: 'foo' | 'bar' }>`
-      color: ${
-        // @ts-expect-error TODO css function breaking this
-        p => (p.variant === 'bar' ? css`green` : 'red')
-      };
+      color: ${p => (p.variant === 'bar' ? css`green` : 'red')};
     `;
 
     TestRenderer.create(<Comp variant="bar" />);
