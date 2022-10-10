@@ -52,7 +52,6 @@ describe(`createGlobalStyle`, () => {
   it(`supports interpolation`, () => {
     const { render } = context;
     const Component = createGlobalStyle<{ color: string }>`div {color:${props => props.color};} `;
-    // @ts-expect-error TODO createGlobalStyle custom props
     render(<Component color="orange" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "div {
@@ -234,7 +233,6 @@ describe(`createGlobalStyle`, () => {
         background: ${props => props.bg};
       }
     `;
-    // @ts-expect-error TODO createGlobalStyle custom props
     render(<Component fg="red" bg="green" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "div {
@@ -369,7 +367,6 @@ describe(`createGlobalStyle`, () => {
       body { background: ${props => props.bgColor}; }
     `;
 
-    // @ts-expect-error TODO createGlobalStyle custom props
     render(<A bgColor="blue" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
@@ -377,7 +374,6 @@ describe(`createGlobalStyle`, () => {
       }"
     `);
 
-    // @ts-expect-error TODO createGlobalStyle custom props
     render(<A bgColor="red" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
