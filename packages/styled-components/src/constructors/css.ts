@@ -12,7 +12,15 @@ import isPlainObject from '../utils/isPlainObject';
 const addTag = <T extends RuleSet<any>>(arg: T): T & { isCss: true } =>
   Object.assign(arg, { isCss: true } as const);
 
-export default function css<Props extends object>(
+function css(
+  styles: Styles<object>,
+  ...interpolations: Interpolation<object>[]
+): RuleSet<object>;
+function css<Props extends object>(
+  styles: Styles<Props>,
+  ...interpolations: Interpolation<Props>[]
+): RuleSet<Props>;
+function css<Props extends object = object>(
   styles: Styles<Props>,
   ...interpolations: Interpolation<Props>[]
 ): RuleSet<Props> {
@@ -41,3 +49,5 @@ export default function css<Props extends object>(
 
   return addTag(flatten<Props>(interleave<Props>(styleStringArray, interpolations)));
 }
+
+export default css;
