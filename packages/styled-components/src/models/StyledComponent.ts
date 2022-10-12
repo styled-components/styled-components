@@ -277,11 +277,7 @@ function createStyledComponent<
       componentId: newComponentId,
     } as StyledOptions<'web', OuterProps & Props>;
 
-    return createStyledComponent<Target, OuterProps & Props, Statics>(
-      tag,
-      newOptions,
-      rules as RuleSet<OuterProps & Props>
-    );
+    return createStyledComponent<Target, OuterProps & Props, Statics>(tag, newOptions, rules);
   };
 
   Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
