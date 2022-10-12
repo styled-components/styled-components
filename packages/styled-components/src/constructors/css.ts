@@ -1,4 +1,4 @@
-import { Interpolation, StyledObject, StyleFunction, Styles } from '../types';
+import { Interpolation, RuleSet, StyledObject, StyleFunction, Styles } from '../types';
 import { EMPTY_ARRAY } from '../utils/empties';
 import flatten from '../utils/flatten';
 import interleave from '../utils/interleave';
@@ -9,14 +9,13 @@ import isPlainObject from '../utils/isPlainObject';
  * Used when flattening object styles to determine if we should
  * expand an array of styles.
  */
-const addTag = <T>(arg: T): T extends any[] ? T & { isCss: true } : T =>
-  // @ts-expect-error isArray doesn't guard any[] properly
-  Array.isArray(arg) ? Object.assign(arg, { isCss: true }) : arg;
+const addTag = <T extends RuleSet<any>>(arg: T): T & { isCss: true } =>
+  Object.assign(arg, { isCss: true } as const);
 
 export default function css<Props extends object>(
   styles: Styles<Props>,
   ...interpolations: Interpolation<Props>[]
-) {
+): RuleSet<Props> {
   if (isFunction(styles) || isPlainObject(styles)) {
     const styleFunctionOrObject = styles as StyleFunction<Props> | StyledObject<Props>;
 
@@ -37,7 +36,7 @@ export default function css<Props extends object>(
     styleStringArray.length === 1 &&
     typeof styleStringArray[0] === 'string'
   ) {
-    return styleStringArray;
+    return flatten<Props>(styleStringArray);
   }
 
   return addTag(flatten<Props>(interleave<Props>(styleStringArray, interpolations)));

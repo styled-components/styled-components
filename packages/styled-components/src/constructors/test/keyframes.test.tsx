@@ -99,7 +99,6 @@ describe('keyframes', () => {
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
 
-    // @ts-expect-error TODO css can return null, not allowed CSS value
     const Comp = styled.div({
       animation: css`
         ${animation} 2s linear infinite
