@@ -9,14 +9,9 @@ import isPlainObject from '../utils/isPlainObject';
  * Used when flattening object styles to determine if we should
  * expand an array of styles.
  */
-const addTag = <T>(arg: T extends any[] ? T & { isCss?: boolean } : T) => {
-  if (Array.isArray(arg)) {
-    // eslint-disable-next-line no-param-reassign
-    (arg as any[] & { isCss?: boolean }).isCss = true;
-  }
-
-  return arg;
-};
+const addTag = <T>(arg: T): T extends any[] ? T & { isCss: true } : T =>
+  // @ts-expect-error isArray doesn't guard any[] properly
+  Array.isArray(arg) ? Object.assign(arg, { isCss: true }) : arg;
 
 export default function css<Props extends object>(
   styles: Styles<Props>,
