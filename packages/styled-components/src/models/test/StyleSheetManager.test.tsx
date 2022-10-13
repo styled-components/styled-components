@@ -69,9 +69,9 @@ describe('StyleSheetManager', () => {
       </StyleSheetManager>
     );
 
-    const styles = target.querySelector('style').textContent;
+    const styles = target.querySelector('style')?.textContent;
 
-    expect(styles.includes(`palevioletred`)).toEqual(true);
+    expect(styles?.includes(`palevioletred`)).toEqual(true);
   });
 
   it('should append style to given target in iframe', () => {
@@ -79,9 +79,9 @@ describe('StyleSheetManager', () => {
     const app = document.createElement('div');
 
     document.body.appendChild(iframe);
-    iframe.contentDocument.body.appendChild(app);
+    iframe.contentDocument!.body.appendChild(app);
 
-    const target = iframe.contentDocument.head;
+    const target = iframe.contentDocument!.head;
     const Title = styled.h1`
       color: palevioletred;
     `;
@@ -99,8 +99,8 @@ describe('StyleSheetManager', () => {
       app
     );
 
-    const styles = target.querySelector('style').textContent;
-    expect(styles.includes(`palevioletred`)).toEqual(true);
+    const styles = target.querySelector('style')?.textContent;
+    expect(styles?.includes(`palevioletred`)).toEqual(true);
   });
 
   it('should apply styles to appropriate targets for nested StyleSheetManagers', () => {
@@ -139,14 +139,14 @@ describe('StyleSheetManager', () => {
     `;
 
     // Injects the stylesheet into the document available via context
-    const SheetInjector = ({ children, target }) => (
+    const SheetInjector = ({ children, target }: any) => (
       <StyleSheetManager target={target}>{children}</StyleSheetManager>
     );
 
     class Child extends React.Component<{ document: Document; resolve: Function }> {
       componentDidMount() {
-        const styles = this.props.document.querySelector('style').textContent;
-        expect(styles.includes(`palevioletred`)).toEqual(true);
+        const styles = this.props.document.querySelector('style')?.textContent;
+        expect(styles?.includes(`palevioletred`)).toEqual(true);
         this.props.resolve();
       }
 
@@ -188,12 +188,12 @@ describe('StyleSheetManager', () => {
           );
         } catch (e) {
           reject(e);
-          div.parentElement.removeChild(div);
+          div.parentElement!.removeChild(div);
         }
       });
     });
     await Promise.all([promiseA, promiseB]);
-    div.parentElement.removeChild(div);
+    div.parentElement!.removeChild(div);
   });
 
   // https://github.com/styled-components/styled-components/issues/2973
@@ -203,14 +203,14 @@ describe('StyleSheetManager', () => {
     `;
 
     // Injects the stylesheet into the document available via context
-    const SheetInjector = ({ children, target }) => (
+    const SheetInjector = ({ children, target }: any) => (
       <StyleSheetManager target={target}>{children}</StyleSheetManager>
     );
 
     class Main extends React.Component<{ document: Document }> {
       componentDidMount() {
-        const styles = this.props.document.querySelector('style').textContent;
-        expect(styles.includes('palevioletred')).toEqual(true);
+        const styles = this.props.document.querySelector('style')?.textContent;
+        expect(styles?.includes('palevioletred')).toEqual(true);
       }
 
       render() {
@@ -220,8 +220,8 @@ describe('StyleSheetManager', () => {
 
     class Child extends React.Component<{ document: Document }> {
       componentDidMount() {
-        const styles = this.props.document.querySelector('style').textContent;
-        expect(styles.includes(`palevioletred`)).toEqual(true);
+        const styles = this.props.document.querySelector('style')?.textContent;
+        expect(styles?.includes(`palevioletred`)).toEqual(true);
       }
 
       render() {
@@ -249,7 +249,7 @@ describe('StyleSheetManager', () => {
       div
     );
 
-    div.parentElement.removeChild(div);
+    div.parentElement!.removeChild(div);
   });
 
   it('should render styles in correct order when styled(StyledComponent) and StyleSheetManager is used', () => {

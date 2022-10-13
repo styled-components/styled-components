@@ -73,6 +73,7 @@ describe('attrs', () => {
   });
 
   it('function form allows access to theme', () => {
+    // @ts-expect-error TODO
     const Comp = styled.button.attrs(props => ({
       'data-color': props.theme!.color,
     }))``;
@@ -92,6 +93,7 @@ describe('attrs', () => {
   });
 
   it('defaultProps are merged into what function attrs receives', () => {
+    // @ts-expect-error TODO
     const Comp = styled.button.attrs(props => ({
       'data-color': props.theme!.color,
     }))``;
@@ -219,7 +221,10 @@ describe('attrs', () => {
       'data-active-class-name': '--is-active',
     }))`
       color: blue;
-      &.${props => props['data-active-class-name']} {
+      &.${
+          // @ts-expect-error TODO InferAttrResultType something?
+          props => props['data-active-class-name']
+        } {
         color: red;
       }
     `;

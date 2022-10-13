@@ -109,7 +109,7 @@ export type FlattenerResult<Props extends object> =
   | number
   | string
   | string[]
-  | IStyledComponent<any, any, any>
+  | IStyledComponent<'web', any, any>
   | Keyframes;
 
 export interface Stringifier {
@@ -195,8 +195,8 @@ export interface IInlineStyle<Props extends object> {
 
 export type StyledTarget<R extends Runtime> = R extends 'web' ? WebTarget : NativeTarget;
 
-export interface StyledObject<Props extends object = ExecutionContext> {
-  [key: string]: Dict<any> | string | number | StyleFunction<Props>;
+export interface StyledObject<Props extends object> {
+  [key: string]: Dict<any> | string | number | StyleFunction<Props> | StyledObject<Props>;
 }
 // uncomment when we can eventually override index signatures with more specific types
 // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);
@@ -223,4 +223,4 @@ export interface StyledObject<Props extends object = ExecutionContext> {
  * }
  * ```
  */
-export type CSSProp = string | StyledObject | StyleFunction<any>;
+export type CSSProp = string | StyledObject<any> | StyleFunction<any>;

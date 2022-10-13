@@ -310,7 +310,7 @@ describe('theming', () => {
   });
 
   it('should properly update style if props used in styles is changed', () => {
-    const Comp1 = styled.div`
+    const Comp1 = styled.div<{ zIndex?: number }>`
       color: ${props => props.theme.color};
       z-index: ${props => props.zIndex};
     `;
@@ -391,9 +391,9 @@ describe('theming', () => {
     const originalTheme = { color: 'black' };
     const newTheme = { color: 'blue' };
 
-    const Theme = ({ theme }) => (
+    const Theme = ({ theme }: any) => (
       <ThemeProvider theme={theme}>
-        <Comp someProps={theme} />
+        <Comp />
       </ThemeProvider>
     );
 
@@ -424,7 +424,7 @@ describe('theming', () => {
   it('should inject props.theme into a component that uses withTheme hoc', () => {
     const originalTheme = { color: 'black' };
 
-    const MyDiv = ({ theme }) => <div>{theme.color}</div>;
+    const MyDiv = ({ theme }: any) => <div>{theme.color}</div>;
     const MyDivWithTheme = withTheme(MyDiv);
 
     const wrapper = TestRenderer.create(
@@ -437,13 +437,13 @@ describe('theming', () => {
   });
 
   it('should properly update theme prop on hoc component when theme is changed', () => {
-    const MyDiv = ({ theme }) => <div>{theme.color}</div>;
+    const MyDiv = ({ theme }: any) => <div>{theme.color}</div>;
     const MyDivWithTheme = withTheme(MyDiv);
 
     const originalTheme = { color: 'black' };
     const newTheme = { color: 'blue' };
 
-    const Theme = ({ theme }) => (
+    const Theme = ({ theme }: any) => (
       <ThemeProvider theme={theme}>
         <MyDivWithTheme />
       </ThemeProvider>
@@ -470,20 +470,20 @@ describe('theming', () => {
       },
     };
 
-    const Theme = props => (
+    const Theme = (props: React.ComponentProps<typeof Text>) => (
       <ThemeProvider theme={{ color: 'green' }}>
         <Text {...props} />
       </ThemeProvider>
     );
 
-    const wrapper = TestRenderer.create(<Theme key="a" prop="foo" />);
+    const wrapper = TestRenderer.create(<Theme key="a" data-prop="foo" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: green;
       }"
     `);
 
-    wrapper.update(<Theme key="a" prop="bar" />);
+    wrapper.update(<Theme key="a" data-prop="bar" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: green;
@@ -531,7 +531,7 @@ describe('theming', () => {
     }
 
     const CompWithTheme = withTheme(Comp);
-    const ref = React.createRef<Element>();
+    const ref = React.createRef<typeof Comp>();
 
     renderIntoDocument(
       <ThemeProvider theme={{}}>
@@ -616,7 +616,7 @@ describe('theming', () => {
     class Theme {
       borderRadius: string;
 
-      constructor(borderRadius) {
+      constructor(borderRadius: string) {
         this.borderRadius = borderRadius;
       }
     }
@@ -646,6 +646,7 @@ describe('theming', () => {
       // these tests need to be changed to use error boundaries instead
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       TestRenderer.create(
+        // @ts-expect-error properly catching null theme
         <ThemeProvider theme={null}>
           <div />
         </ThemeProvider>

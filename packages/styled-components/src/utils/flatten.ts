@@ -104,5 +104,5 @@ export default function flatten<Props extends object>(
   }
 
   /* Handle objects */
-  return isPlainObject(chunk) ? objToCssArray(chunk as StyledObject) : chunk.toString();
+  return isPlainObject(chunk) ? objToCssArray(chunk as StyledObject<Props>) : chunk.toString();
 }

@@ -1,7 +1,7 @@
 import { Interpolation } from '../types';
 
 export default function interleave<Props extends object>(
-  strings: TemplateStringsArray,
+  strings: readonly string[],
   interpolations: Interpolation<Props>[]
 ): Interpolation<Props>[] {
   const result: Interpolation<Props>[] = [strings[0]];

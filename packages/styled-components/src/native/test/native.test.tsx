@@ -302,6 +302,7 @@ describe('native', () => {
     });
 
     it('function form allows access to theme', () => {
+      // @ts-expect-error TODO
       const Comp = styled.Text.attrs(props => ({
         'data-color': props.theme.color,
       }))``;
