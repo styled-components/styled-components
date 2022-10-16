@@ -1,5 +1,5 @@
-import React from 'react';
-import { AnyComponent } from '../types';
+import type React from 'react';
+import type { AnyComponent } from '../types';
 
 const hasSymbol = typeof Symbol === 'function' && Symbol.for;
 

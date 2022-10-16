@@ -1,7 +1,8 @@
 import createStyledComponent from '../models/StyledComponent';
-import { WebTarget } from '../types';
+import type { WebTarget } from '../types';
 import domElements from '../utils/domElements';
-import constructWithOptions, { Styled } from './constructWithOptions';
+import type { Styled } from './constructWithOptions';
+import constructWithOptions from './constructWithOptions';
 
 const baseStyled = <Target extends WebTarget>(tag: Target) =>
   constructWithOptions<'web', Target>(createStyledComponent, tag);

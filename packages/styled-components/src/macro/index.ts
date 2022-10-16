@@ -1,7 +1,8 @@
-import { types } from '@babel/core';
+import type { types } from '@babel/core';
 import { addDefault, addNamed } from '@babel/helper-module-imports';
 import traverse from '@babel/traverse';
-import { createMacro, MacroParams } from 'babel-plugin-macros';
+import type { MacroParams } from 'babel-plugin-macros';
+import { createMacro } from 'babel-plugin-macros';
 import babelPlugin from 'babel-plugin-styled-components';
 
 function styledComponentsMacro({

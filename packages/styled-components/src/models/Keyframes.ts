@@ -1,5 +1,5 @@
-import StyleSheet from '../sheet';
-import { Keyframes as KeyframesType, Stringifier } from '../types';
+import type StyleSheet from '../sheet';
+import type { Keyframes as KeyframesType, Stringifier } from '../types';
 import styledError from '../utils/error';
 import { mainStylis } from './StyleSheetManager';
 

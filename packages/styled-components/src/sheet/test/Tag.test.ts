@@ -1,6 +1,6 @@
-import { Class } from 'utility-types';
+import type { Class } from 'utility-types';
 import { CSSOMTag, TextTag, VirtualTag } from '../Tag';
-import { Tag } from '../types';
+import type { Tag } from '../types';
 
 const describeTag = (TagClass: Class<Tag>) => {
   it('inserts and retrieves rules at indices', () => {

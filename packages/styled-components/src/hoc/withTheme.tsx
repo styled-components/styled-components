@@ -1,6 +1,6 @@
 import React from 'react';
 import { ThemeContext } from '../models/ThemeProvider';
-import { AnyComponent, ExecutionProps } from '../types';
+import type { AnyComponent, ExecutionProps } from '../types';
 import determineTheme from '../utils/determineTheme';
 import getComponentName from '../utils/getComponentName';
 import hoist from '../utils/hoist';

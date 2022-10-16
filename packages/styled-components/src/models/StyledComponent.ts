@@ -1,4 +1,5 @@
-import React, { createElement, Ref, useContext, useDebugValue } from 'react';
+import type { Ref} from 'react';
+import React, { createElement, useContext, useDebugValue } from 'react';
 import { SC_VERSION } from '../constants';
 import type {
   AnyComponent,

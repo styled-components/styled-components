@@ -1,7 +1,7 @@
-import React from 'react';
-import ComponentStyle from './models/ComponentStyle';
+import type React from 'react';
+import type ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
-import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
+import type createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
 interface ExoticComponentWithDisplayName<P = any> extends React.ExoticComponent<P> {
   defaultProps?: Partial<P>;

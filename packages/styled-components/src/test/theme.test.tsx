@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import { renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';
 import withTheme from '../hoc/withTheme';
-import ThemeProvider, { DefaultTheme } from '../models/ThemeProvider';
+import type { DefaultTheme } from '../models/ThemeProvider';
+import ThemeProvider from '../models/ThemeProvider';
 import { getRenderedCSS, resetStyled } from './utils';
 
 let styled: ReturnType<typeof resetStyled>;

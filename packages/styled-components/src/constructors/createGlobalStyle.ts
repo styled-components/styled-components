@@ -2,9 +2,10 @@ import React from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
-import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
-import StyleSheet from '../sheet';
-import {
+import type { DefaultTheme} from '../models/ThemeProvider';
+import { ThemeContext } from '../models/ThemeProvider';
+import type StyleSheet from '../sheet';
+import type {
   ExecutionContext,
   ExecutionProps,
   Interpolation,

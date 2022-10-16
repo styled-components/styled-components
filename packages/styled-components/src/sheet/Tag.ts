@@ -1,5 +1,5 @@
 import { getSheet, makeStyleTag } from './dom';
-import { SheetOptions, Tag } from './types';
+import type { SheetOptions, Tag } from './types';
 
 /** Create a CSSStyleSheet-like tag depending on the environment */
 export const makeTag = ({ isServer, useCSSOMInjection, target }: SheetOptions) => {

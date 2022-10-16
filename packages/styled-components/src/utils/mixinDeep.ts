@@ -1,4 +1,4 @@
-import { ExecutionProps } from '../types';
+import type { ExecutionProps } from '../types';
 import isPlainObject from './isPlainObject'
 
 function mixinRecursively(target: any, source: any, forceMerge = false) {

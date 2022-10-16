@@ -1,4 +1,4 @@
-import { Interpolation } from '../types';
+import type { Interpolation } from '../types';
 
 export default function interleave<Props extends object>(
   strings: TemplateStringsArray,

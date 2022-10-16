@@ -1,4 +1,5 @@
-import React, { createElement, Ref, useContext, useMemo } from 'react';
+import type { Ref} from 'react';
+import React, { createElement, useContext, useMemo } from 'react';
 import type {
   Attrs,
   Dict,
@@ -19,7 +20,8 @@ import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
-import { DefaultTheme, ThemeContext } from './ThemeProvider';
+import type { DefaultTheme} from './ThemeProvider';
+import { ThemeContext } from './ThemeProvider';
 
 function useResolvedAttrs<Props extends object>(
   theme: DefaultTheme = EMPTY_OBJECT,

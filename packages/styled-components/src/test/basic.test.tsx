@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
-import React, { Component, CSSProperties, StrictMode } from 'react';
+import type { CSSProperties} from 'react';
+import React, { Component, StrictMode } from 'react';
 import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';
 import { find } from '../../test-utils';
-import { AnyComponent } from '../types';
+import type { AnyComponent } from '../types';
 import hoist from '../utils/hoist';
 import { getRenderedCSS, resetStyled } from './utils';
 

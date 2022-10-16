@@ -4,7 +4,7 @@ import { makeGroupedTag } from './GroupedTag';
 import { getGroupForId } from './GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from './Rehydration';
 import { makeTag } from './Tag';
-import { GroupedTag, Sheet, SheetOptions } from './types';
+import type { GroupedTag, Sheet, SheetOptions } from './types';
 
 let SHOULD_REHYDRATE = IS_BROWSER;
 

@@ -1,5 +1,6 @@
 /* eslint-disable no-console, react/jsx-key, @typescript-eslint/no-empty-function */
-import React, { PropsWithChildren } from 'react';
+import type { PropsWithChildren } from 'react';
+import React from 'react';
 import { Text, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider } from '../';

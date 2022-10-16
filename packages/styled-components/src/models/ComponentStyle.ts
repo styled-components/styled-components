@@ -1,6 +1,6 @@
 import { SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
-import { RuleSet, Stringifier } from '../types';
+import type { RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
 import { hash, phash } from '../utils/hash';

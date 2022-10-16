@@ -1,12 +1,13 @@
-import React from 'react';
-import constructWithOptions, { Styled } from '../constructors/constructWithOptions';
+import type React from 'react';
+import type { Styled } from '../constructors/constructWithOptions';
+import constructWithOptions from '../constructors/constructWithOptions';
 import css from '../constructors/css';
 import withTheme from '../hoc/withTheme';
 import useTheme from '../hooks/useTheme';
 import _InlineStyle from '../models/InlineStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
 import ThemeProvider, { ThemeConsumer, ThemeContext } from '../models/ThemeProvider';
-import { NativeTarget } from '../types';
+import type { NativeTarget } from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires

@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import shallowequal from 'shallowequal';
 import StyleSheet from '../sheet';
-import { Stringifier } from '../types';
+import type { Stringifier } from '../types';
 import createStylisInstance from '../utils/stylis';
 
 type Props = {

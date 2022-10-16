@@ -1,5 +1,5 @@
 import Keyframes from '../models/Keyframes';
-import { Interpolation, Styles } from '../types';
+import type { Interpolation, Styles } from '../types';
 import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 

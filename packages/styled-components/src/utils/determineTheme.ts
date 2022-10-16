@@ -1,4 +1,4 @@
-import { ExecutionProps } from '../types';
+import type { ExecutionProps } from '../types';
 import { EMPTY_OBJECT } from './empties';
 
 export default function determineTheme(

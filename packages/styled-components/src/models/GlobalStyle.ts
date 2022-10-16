@@ -1,5 +1,5 @@
 import StyleSheet from '../sheet';
-import { ExecutionContext, FlattenerResult, RuleSet, Stringifier } from '../types';
+import type { ExecutionContext, FlattenerResult, RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import isStaticRules from '../utils/isStaticRules';
 

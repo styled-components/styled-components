@@ -1,6 +1,6 @@
 import Keyframes from '../models/Keyframes';
-import StyleSheet from '../sheet';
-import {
+import type StyleSheet from '../sheet';
+import type {
   AnyComponent,
   Dict,
   ExecutionContext,

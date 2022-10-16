@@ -1,4 +1,4 @@
-import { StyledTarget } from '../types';
+import type { StyledTarget } from '../types';
 
 export default function isTag(target: StyledTarget<'web'>): target is string {
   return (

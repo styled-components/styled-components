@@ -1,7 +1,7 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 import ThemeProvider from '../models/ThemeProvider';
-import { ExecutionContext } from '../types';
+import type { ExecutionContext } from '../types';
 import withTheme from './withTheme';
 
 describe('withTheme', () => {

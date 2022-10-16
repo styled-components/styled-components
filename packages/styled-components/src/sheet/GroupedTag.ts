@@ -1,6 +1,6 @@
 import { SPLITTER } from '../constants';
 import styledError from '../utils/error';
-import { GroupedTag, Tag } from './types';
+import type { GroupedTag, Tag } from './types';
 
 /** Create a GroupedTag with an underlying Tag implementation */
 export const makeGroupedTag = (tag: Tag) => {

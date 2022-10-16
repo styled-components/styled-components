@@ -1,6 +1,6 @@
 import transformDeclPairs from 'css-to-react-native';
 import { parse } from 'postcss';
-import {
+import type {
   Dict,
   ExecutionContext,
   IInlineStyle,

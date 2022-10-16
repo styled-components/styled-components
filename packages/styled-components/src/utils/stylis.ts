@@ -1,5 +1,6 @@
-import { compile, Element, Middleware, middleware, prefixer, RULESET, stringify } from 'stylis';
-import { Stringifier } from '../types';
+import type { Element, Middleware} from 'stylis';
+import { compile, middleware, prefixer, RULESET, stringify } from 'stylis';
+import type { Stringifier } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
 import { phash, SEED } from './hash';
