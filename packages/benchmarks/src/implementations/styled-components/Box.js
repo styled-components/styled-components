@@ -1,4 +1,4 @@
-import styled from 'styled-components-next';
+import styled from 'styled-components';
 import View from './View';
 
 const getColor = color => {
