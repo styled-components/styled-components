@@ -1,4 +1,4 @@
-import { Interpolation, StyledObject, StyleFunction, Styles } from '../types';
+import { Interpolation, RuleSet, StyledObject, StyleFunction, Styles } from '../types';
 import { EMPTY_ARRAY } from '../utils/empties';
 import flatten from '../utils/flatten';
 import interleave from '../utils/interleave';
@@ -9,25 +9,27 @@ import isPlainObject from '../utils/isPlainObject';
  * Used when flattening object styles to determine if we should
  * expand an array of styles.
  */
-const addTag = <T>(arg: T extends any[] ? T & { isCss?: boolean } : T) => {
-  if (Array.isArray(arg)) {
-    // eslint-disable-next-line no-param-reassign
-    (arg as any[] & { isCss?: boolean }).isCss = true;
-  }
+const addTag = <T extends RuleSet<any>>(arg: T): T & { isCss: true } =>
+  Object.assign(arg, { isCss: true } as const);
 
-  return arg;
-};
-
-export default function css<Props extends object>(
+function css(
+  styles: Styles<object>,
+  ...interpolations: Interpolation<object>[]
+): RuleSet<object>;
+function css<Props extends object>(
   styles: Styles<Props>,
   ...interpolations: Interpolation<Props>[]
-) {
+): RuleSet<Props>;
+function css<Props extends object = object>(
+  styles: Styles<Props>,
+  ...interpolations: Interpolation<Props>[]
+): RuleSet<Props> {
   if (isFunction(styles) || isPlainObject(styles)) {
-    const styleFunctionOrObject = styles as StyleFunction<Props> | StyledObject;
+    const styleFunctionOrObject = styles as StyleFunction<Props> | StyledObject<Props>;
 
     return addTag(
       flatten<Props>(
-        interleave<Props>(EMPTY_ARRAY as TemplateStringsArray, [
+        interleave<Props>(EMPTY_ARRAY, [
           styleFunctionOrObject,
           ...interpolations,
         ])
@@ -42,8 +44,10 @@ export default function css<Props extends object>(
     styleStringArray.length === 1 &&
     typeof styleStringArray[0] === 'string'
   ) {
-    return styleStringArray;
+    return flatten<Props>(styleStringArray);
   }
 
   return addTag(flatten<Props>(interleave<Props>(styleStringArray, interpolations)));
 }
+
+export default css;

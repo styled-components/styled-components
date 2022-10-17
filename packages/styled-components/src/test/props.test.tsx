@@ -55,7 +55,7 @@ describe('props', () => {
   });
 
   it('should filter out props prefixed with dollar sign (transient props)', () => {
-    const Comp = styled(p => <div {...p} />)<{ $fg?: string; fg?: string }>`
+    const Comp = styled((p: any) => <div {...p} />)<{ $fg?: string; fg?: string }>`
       color: ${props => props.$fg || 'black'};
     `;
     expect(
@@ -127,10 +127,10 @@ describe('props', () => {
     });
 
     it('allows custom prop filtering for components', () => {
-      const InnerComp = props => <div {...props} />;
+      const InnerComp = (props: React.ComponentProps<'div'>) => <div {...props} />;
       const Comp = styled(InnerComp).withConfig({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
-      })`
+      })<{ filterThis: string; passThru: string }>`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
@@ -184,10 +184,10 @@ describe('props', () => {
     });
 
     it('should filter out props when using "as" to a custom component', () => {
-      const AsComp = props => <div {...props} />;
+      const AsComp = (props: React.ComponentProps<'div'>) => <div {...props} />;
       const Comp = styled('div').withConfig({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
-      })`
+      })<{ filterThis: string; passThru: string }>`
         color: red;
       `;
       const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
@@ -202,10 +202,10 @@ describe('props', () => {
     });
 
     it('can set computed styles based on props that are being filtered out', () => {
-      const AsComp = props => <div {...props} />;
+      const AsComp = (props: React.ComponentProps<'div'>) => <div {...props} />;
       const Comp = styled('div').withConfig({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
-      })<{ filterThis?: string; passThru?: string }>`
+      })<{ filterThis: string; passThru: string }>`
         color: ${props => (props.filterThis === 'abc' ? 'red' : undefined)};
       `;
       const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);

@@ -1,5 +1,5 @@
-import { ReactWrapper } from "enzyme";
-import { IStyledComponent } from "../src/types";
+import { ReactWrapper } from 'enzyme';
+import { IStyledComponent } from '../src/types';
 
 function assertElement(element: any) {
   if (!(element instanceof HTMLElement)) {
@@ -9,7 +9,8 @@ function assertElement(element: any) {
 
 function assertStyledComponent(styledComponent: any) {
   if (
-    !(styledComponent.styledComponentId && typeof styledComponent.styledComponentId === 'string')
+    !styledComponent?.styledComponentId ||
+    typeof styledComponent.styledComponentId !== 'string'
   ) {
     throw new Error(
       `${
@@ -19,19 +20,22 @@ function assertStyledComponent(styledComponent: any) {
   }
 }
 
-export function enzymeFind(wrapper: ReactWrapper, styledComponent: IStyledComponent) {
+export function enzymeFind(
+  wrapper: ReactWrapper,
+  styledComponent: IStyledComponent<'web', any, any>
+) {
   assertStyledComponent(styledComponent);
 
   return wrapper.find(`.${styledComponent.styledComponentId}`);
 }
 
-export function find(element: Element, styledComponent: IStyledComponent) {
+export function find(element: Element, styledComponent: IStyledComponent<'web', any, any>) {
   assertElement(element);
   assertStyledComponent(styledComponent);
   return element.querySelector(`.${styledComponent.styledComponentId}`);
 }
 
-export function findAll(element: Element, styledComponent: IStyledComponent) {
+export function findAll(element: Element, styledComponent: IStyledComponent<'web', any, any>) {
   assertElement(element);
   assertStyledComponent(styledComponent);
   return element.querySelectorAll(`.${styledComponent.styledComponentId}`);

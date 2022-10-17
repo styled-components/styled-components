@@ -1,6 +1,6 @@
 {
   "include": ["src/**/*"],
-  "exclude": ["**/*.test.ts", "**/*.test.tsx", "dist"],
+  "exclude": ["dist"],
   "compilerOptions": {
     // "tsBuildInfoFile": ".tsbuildinfo",
     "outDir": "dist",

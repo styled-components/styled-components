@@ -1,13 +1,18 @@
 /* ported from https://github.com/jonschlinkert/mixin-deep; thanks Jon! */
 import mixinDeep from '../mixinDeep';
 
-const MyObj = function (foo, bar, baz = undefined) {
-  this.foo = foo;
-  this.bar = bar;
-  if (baz) {
-    this.baz = 5;
+class MyObj {
+  foo: any;
+  bar: any;
+  baz?: 5;
+  constructor(foo: any, bar: any, baz: any = undefined) {
+    this.foo = foo;
+    this.bar = bar;
+    if (baz) {
+      this.baz = 5;
+    }
   }
-};
+}
 
 it('should deeply mix the properties of object into the first object.', () => {
   expect(mixinDeep({ a: { aa: 'aa' } }, { a: { bb: 'bb' } }, { a: { cc: 'cc' } })).toEqual({
@@ -191,9 +196,12 @@ it('should not mixin objects created with custom constructor', () => {
 
 it('should not fail on objects with cyclical prototypes', () => {
   const Cyclical = function () {};
+  // @ts-expect-error properly catching hacky test JS
   Cyclical.prototype.cycle = new Cyclical();
 
+  // @ts-expect-error properly catching hacky test JS
   const cycle1 = new Cyclical();
+  // @ts-expect-error properly catching hacky test JS
   const cycle2 = new Cyclical();
 
   const actual = mixinDeep(cycle1, cycle2, { a: 1 });

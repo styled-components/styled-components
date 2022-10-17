@@ -9,7 +9,6 @@ describe('flatten', () => {
   });
 
   it('drops nulls', () => {
-    // @ts-expect-error invalid input test
     expect(flatten(['foo', false, 'bar', undefined, 'baz', null])).toEqual(['foo', 'bar', 'baz']);
   });
 
@@ -83,6 +82,9 @@ describe('flatten', () => {
         return 'some: thing;';
       }
     }
+    // This works but we don't support it directly in the Interpolation type,
+    // because it prevents generating type errors that we usually want.
+    // @ts-expect-error properly catching unexpected class instance
     expect(flatten([new SomeClass()])).toEqual(['some: thing;']);
   });
 
@@ -100,7 +102,7 @@ describe('flatten', () => {
 
   it('defers functions', () => {
     const func = () => 'bar';
-    const funcWFunc = () => ['static', subfunc => (subfunc ? 'bar' : 'baz')];
+    const funcWFunc = () => ['static', (subfunc: Function) => (subfunc ? 'bar' : 'baz')];
     expect(flatten(['foo', func, 'baz'])).toEqual(['foo', func, 'baz']);
     expect(flatten(['foo', funcWFunc, 'baz'])).toEqual(['foo', funcWFunc, 'baz']);
   });
@@ -111,24 +113,28 @@ describe('flatten', () => {
   });
 
   it('passes values to function', () => {
-    const func = ({ bool }) => (bool ? 'bar' : 'baz');
+    const func = ({ bool }: any) => (bool ? 'bar' : 'baz');
     expect(flatten(['foo', func], { bool: true, theme: {} })).toEqual(['foo', 'bar']);
     expect(flatten(['foo', func], { bool: false, theme: {} })).toEqual(['foo', 'baz']);
   });
 
   it('recursively calls functions', () => {
-    const func = () => ['static', ({ bool }) => (bool ? 'bar' : 'baz')];
-    expect(flatten(['foo', func], { bool: true })).toEqual(['foo', 'static', 'bar']);
-    expect(flatten(['foo', func], { bool: false })).toEqual(['foo', 'static', 'baz']);
+    const func = () => ['static', ({ bool }: any) => (bool ? 'bar' : 'baz')];
+    expect(flatten(['foo', func], { bool: true } as any)).toEqual(['foo', 'static', 'bar']);
+    expect(flatten(['foo', func], { bool: false } as any)).toEqual(['foo', 'static', 'baz']);
   });
 
   it('throws if trying to interpolate a normal React component', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
-    const Foo = ({ className }) => <div className={className}>hello there!</div>;
+    const Foo = ({ className }: { className?: string }) => (
+      <div className={className}>hello there!</div>
+    );
 
     const Bar = styled.div`
-      // @ts-expect-error invalid input
-      ${Foo}: {
+      ${
+        // @ts-expect-error invalid input
+        Foo
+      }: {
         background-color: red;
       } ;
     `;

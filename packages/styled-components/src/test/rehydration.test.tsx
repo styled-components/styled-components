@@ -565,10 +565,10 @@ describe('rehydration', () => {
       const fadeOut = keyframes`
         from { opacity: 1; }
       `;
-      const A = styled.div`
+      const A = styled.div<{ animation: any }>`
         animation: ${props => props.animation} 1s both;
       `;
-      const B = styled.div`
+      const B = styled.div<{ animation: any }>`
         animation: ${props => props.animation} 1s both;
       `;
 

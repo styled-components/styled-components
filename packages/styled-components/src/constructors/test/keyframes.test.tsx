@@ -204,7 +204,7 @@ describe('keyframes', () => {
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
 
-    const Comp = styled.div`
+    const Comp = styled.div<{ animation: any }>`
       animation: ${props => props.animation} 2s linear infinite;
     `;
     TestRenderer.create(<Comp animation={animation} />);
@@ -254,7 +254,7 @@ describe('keyframes', () => {
       }
     `;
 
-    const getAnimation = animation => {
+    const getAnimation = (animation: any): any => {
       if (Array.isArray(animation)) {
         return animation.reduce(
           (ret, a, index) =>
@@ -270,7 +270,7 @@ describe('keyframes', () => {
       }
     };
 
-    const Foo = styled.div`
+    const Foo = styled.div<{ animation?: any }>`
       animation: ${props => (props.animation ? getAnimation(props.animation) : 'none')};
     `;
 

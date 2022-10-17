@@ -28,6 +28,10 @@ const getESM = override => ({ ...esm, ...override });
 
 const commonPlugins = [
   typescript({
+    // The build breaks if the tests are included by the typescript plugin.
+    // Since un-excluding them in tsconfig.json, we must explicitly exclude them
+    // here.
+    exclude: ['**/*.test.ts', '**/*.test.tsx', 'dist'],
     outputToFilesystem: true,
     tsconfig: './tsconfig.json',
   }),

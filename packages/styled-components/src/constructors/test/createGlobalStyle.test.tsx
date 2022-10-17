@@ -112,7 +112,7 @@ describe(`createGlobalStyle`, () => {
   it(`updates theme correctly`, () => {
     const { render } = context;
     const Component = createGlobalStyle`div {color:${props => props.theme.color};} `;
-    let update: Function;
+    let update: any;
     class App extends React.Component {
       state = { color: 'grey' };
 
@@ -227,7 +227,7 @@ describe(`createGlobalStyle`, () => {
 
   it(`stringifies multiple rules correctly`, () => {
     const { render } = context;
-    const Component = createGlobalStyle`
+    const Component = createGlobalStyle<{ fg: any; bg: any }>`
       div {
         color: ${props => props.fg};
         background: ${props => props.bg};
@@ -363,7 +363,7 @@ describe(`createGlobalStyle`, () => {
 
     const { render } = context;
 
-    const A = createGlobalStyle`
+    const A = createGlobalStyle<{ bgColor?: any }>`
       body { background: ${props => props.bgColor}; }
     `;
 
@@ -389,13 +389,14 @@ describe(`createGlobalStyle`, () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     const { render } = context;
-    const Component = createGlobalStyle`
+    const Component = createGlobalStyle<{ fg: any; bg: any }>`
       div {
         color: ${props => props.fg};
         background: ${props => props.bg};
       }
     `;
     render(
+      // @ts-expect-error children not expected
       <Component fg="red" bg="green">
         <div />
       </Component>

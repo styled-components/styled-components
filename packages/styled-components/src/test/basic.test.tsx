@@ -136,7 +136,7 @@ describe('basic', () => {
   });
 
   it('should allow you to pass in style nested object with a function', () => {
-    const Comp = styled.div({
+    const Comp = styled.div<{ color?: string }>({
       span: {
         small: {
           color: ({ color }) => color,

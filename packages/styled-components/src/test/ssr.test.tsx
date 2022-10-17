@@ -2,12 +2,13 @@
  * @jest-environment node
  */
 
-import React from 'react';
-import { renderToString, renderToNodeStream } from 'react-dom/server';
-import stylisRTLPlugin from 'stylis-plugin-rtl';
-import ServerStyleSheet from '../models/ServerStyleSheet';
 import { resetStyled } from './utils';
+
+import React from 'react';
+import { renderToNodeStream, renderToString } from 'react-dom/server';
+import stylisRTLPlugin from 'stylis-plugin-rtl';
 import createGlobalStyle from '../constructors/createGlobalStyle';
+import ServerStyleSheet from '../models/ServerStyleSheet';
 import StyleSheetManager from '../models/StyleSheetManager';
 
 jest.mock('../utils/nonce');
@@ -198,9 +199,10 @@ describe('ssr', () => {
         <Heading>Hello SSR!</Heading>
       </React.Fragment>
     );
+    // @ts-expect-error TODO ReadableStream vs Readable
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       let received = '';
 
       stream.on('data', chunk => {
@@ -255,8 +257,9 @@ describe('ssr', () => {
       </React.Fragment>
     );
 
+    // @ts-expect-error TODO ReadableStream vs Readable
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
-    const stream$ = new Promise((resolve, reject) => {
+    const stream$ = new Promise<string>((resolve, reject) => {
       let received = '';
 
       stream.on('data', chunk => {
@@ -278,9 +281,10 @@ describe('ssr', () => {
   it('should handle errors while streaming', () => {
     const sheet = new ServerStyleSheet();
     const jsx = sheet.collectStyles(null);
+    // @ts-expect-error TODO ReadableStream vs Readable
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise(resolve => {
+    return new Promise<void>(resolve => {
       stream.on('data', () => {});
 
       stream.on('error', err => {
@@ -292,7 +296,7 @@ describe('ssr', () => {
   });
 
   it('should not interleave style tags into textarea elements', () => {
-    const StyledTextArea = styled.textarea`
+    const StyledTextArea = styled.textarea<{ height: number }>`
       height: ${props => `${props.height}px`};
     `;
 
@@ -316,9 +320,10 @@ describe('ssr', () => {
       </React.Fragment>
     );
 
+    // @ts-expect-error TODO ReadableStream vs Readable
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       let received = '';
 
       stream.on('data', chunk => {
@@ -353,6 +358,7 @@ describe('ssr', () => {
     );
 
     expect(() =>
+      // @ts-expect-error TODO ReadableStream vs Readable
       sheet.interleaveWithNodeStream(sheet.interleaveWithNodeStream(renderToNodeStream(jsx)))
     ).toThrowErrorMatchingSnapshot();
   });
@@ -374,6 +380,7 @@ describe('ssr', () => {
       </React.Fragment>
     );
 
+    // @ts-expect-error TODO ReadableStream vs Readable
     sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
     expect(sheet.getStyleTags).toThrowErrorMatchingSnapshot();
@@ -396,6 +403,7 @@ describe('ssr', () => {
       </React.Fragment>
     );
 
+    // @ts-expect-error TODO ReadableStream vs Readable
     sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
     expect(sheet.getStyleElement).toThrowErrorMatchingSnapshot();
@@ -416,9 +424,10 @@ describe('ssr', () => {
         <Heading>Hello SSR!</Heading>
       </React.Fragment>
     );
+    // @ts-expect-error TODO ReadableStream vs Readable
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       let received = '';
 
       stream.on('data', chunk => {
@@ -452,9 +461,10 @@ describe('ssr', () => {
         <Heading>Hello SSR!</Heading>
       </React.Fragment>
     );
+    // @ts-expect-error TODO ReadableStream vs Readable
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       let received = '';
 
       stream.on('data', chunk => {

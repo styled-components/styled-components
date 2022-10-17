@@ -4,14 +4,7 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
-import {
-  ExecutionContext,
-  ExecutionProps,
-  Interpolation,
-  RuleSet,
-  Stringifier,
-  Styles,
-} from '../types';
+import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
@@ -21,7 +14,7 @@ export default function createGlobalStyle<Props extends object>(
   strings: Styles<Props>,
   ...interpolations: Array<Interpolation<Props>>
 ) {
-  const rules = css(strings, ...interpolations) as RuleSet<Props>;
+  const rules = css<Props>(strings, ...interpolations);
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
   const globalStyle = new GlobalStyle<Props>(rules, styledComponentId);
 
@@ -29,7 +22,7 @@ export default function createGlobalStyle<Props extends object>(
     checkDynamicCreation(styledComponentId);
   }
 
-  const GlobalStyleComponent: React.ComponentType<ExecutionProps> = props => {
+  const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const styleSheet = useStyleSheet();
     const stylis = useStylis();
     const theme = React.useContext(ThemeContext);

@@ -47,28 +47,28 @@ export default function flatten<Props extends object>(
   executionContext?: ExecutionContext & Props,
   styleSheet?: StyleSheet,
   stylisInstance?: Stringifier
-): Interpolation<Props> | RuleSet<Props> {
+): RuleSet<Props> {
   if (Array.isArray(chunk)) {
     const ruleSet: RuleSet<Props> = [];
 
     for (let i = 0, len = chunk.length, result; i < len; i += 1) {
       result = flatten<Props>(chunk[i], executionContext, styleSheet, stylisInstance);
 
-      if (result === '') continue;
-      else if (Array.isArray(result)) ruleSet.push(...result);
-      else ruleSet.push(result);
+      if (result.length === 0) continue;
+
+      ruleSet.push(...result);
     }
 
     return ruleSet;
   }
 
   if (isFalsish(chunk)) {
-    return '';
+    return [];
   }
 
   /* Handle other components */
   if (isStyledComponent(chunk)) {
-    return `.${(chunk as unknown as IStyledComponent<'web', 'div', any>).styledComponentId}`;
+    return [`.${(chunk as unknown as IStyledComponent<'web', 'div', any>).styledComponentId}`];
   }
 
   /* Either execute or defer the function */
@@ -93,16 +93,20 @@ export default function flatten<Props extends object>(
       }
 
       return flatten(result, executionContext, styleSheet, stylisInstance);
-    } else return chunk as unknown as IStyledComponent<'web', 'div', any>;
+    } else {
+      return [chunk as unknown as IStyledComponent<'web', 'div', any>];
+    }
   }
 
   if (chunk instanceof Keyframes) {
     if (styleSheet) {
       chunk.inject(styleSheet, stylisInstance);
-      return chunk.getName(stylisInstance);
-    } else return chunk;
+      return [chunk.getName(stylisInstance)];
+    } else {
+      return [chunk];
+    }
   }
 
   /* Handle objects */
-  return isPlainObject(chunk) ? objToCssArray(chunk as StyledObject) : chunk.toString();
+  return isPlainObject(chunk) ? objToCssArray(chunk as StyledObject<Props>) : [chunk.toString()];
 }

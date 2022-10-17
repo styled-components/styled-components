@@ -16,7 +16,7 @@ describe('warn too many classes', () => {
   });
 
   it('should warn once', () => {
-    const Comp = styled.div`
+    const Comp = styled.div<{ size: number }>`
       width: ${props => props.size};
     `;
 
@@ -28,7 +28,7 @@ describe('warn too many classes', () => {
   });
 
   it(`should warn if number of classes is ${LIMIT}`, () => {
-    const Comp = styled.div`
+    const Comp = styled.div<{ size: number }>`
       width: ${props => props.size};
     `;
 
@@ -40,7 +40,7 @@ describe('warn too many classes', () => {
   });
 
   it(`should not warn if number of classes is below ${LIMIT}`, () => {
-    const Comp = styled.div`
+    const Comp = styled.div<{ size: number }>`
       width: ${props => props.size};
     `;
 
