@@ -82,8 +82,6 @@ Here is a quick guide to doing code contributions to the library.
 
 Run [`yarn install`](https://yarnpkg.com/) and edit code in the `packages/styled-components/src/` folder. It's luckily very simple! :wink:
 
-> We use yarn workspaces with [lerna](https://github.com/lerna/lerna) to make this work as a monorepo under the hood.
-
 ### How do I verify and test my changes?
 
 To make development process easier we provide a Sandbox React application in this repo which automatically uses your local version of the `styled-components` library. That means when you make any changes in the `packages/styled-components/src/` folder they'll show up automatically there!
@@ -148,12 +146,12 @@ a git hook is already present.
 [Core team members](./CORE_TEAM.md) have the responsibility of pushing new releases to npm. The release process is as follows:
 
 1. Make sure you have the latest changes and are on the main branch: `git checkout main && git pull origin main`
-2. Install all the dependencies by running `yarn` in the root folder. This will also install `lerna`.
+2. Install all the dependencies by running `yarn` in the root folder.
 3. Create a new branch based on the version number, for example `git checkout -b 3.4.1`
 4. Update the [CHANGELOG.md](./CHANGELOG.md) with the new version number, add a new Unreleased section at the top and edit the links at the bottom so everything is linked correctly
 5. Commit the Changelog changes with `git commit -m 'Update CHANGELOG'`
 6. Push the branch to the repo with `git push -u origin <branchname>`
-7. Run `yarn run publish`. (Not `yarn publish`) This will run `test` cases, check for `flow` and `lint` errors and then start the `lerna publish` process. You will be prompted to choose the next versions for all the packages including `styled-components`. (Note: Packages which are marked as `private` will not be published to `npm`, choose any version for them).
+7. Run `yarn run publish`. (Not `yarn publish`) This will run `test` cases, check for `flow` and `lint` errors. You will be prompted to choose the next versions for all the packages including `styled-components`. (Note: Packages which are marked as `private` will not be published to `npm`, choose any version for them).
 8. Congratulations, you just published a new release of `styled-components`! :tada: Let everybody know on Twitter, in our community and all the other places
 
 ## Credits
