@@ -69,15 +69,21 @@ export type Interpolation<Props extends object> =
   | undefined
   | null
   | Keyframes
-  // we don't allow component selectors for native
-  | IStyledComponent<'web', any, any>
+  // Omit function signature for IStyledComponent in Interpolation so that TS
+  // can disambiguate functions as StyledFunction. Note that IStyledComponent is
+  // not actually callable, the function signature is just a crutch for JSX,
+  // same as React.ExoticComponent.
+  | OmitSignatures<
+      // We don't allow component selectors for native.
+      IStyledComponent<'web', any, any>
+    >
   | Interpolation<Props>[];
 
 export type Attrs<Props extends object> =
   | (ExecutionProps & Props)
   | ((props: ExecutionContext & Props) => Partial<Props>);
 
-export type RuleSet<Props extends object> = Interpolation<ExecutionContext & Props>[];
+export type RuleSet<Props extends object> = Interpolation<Props>[];
 
 export type Styles<Props extends object> =
   | TemplateStringsArray
@@ -148,11 +154,17 @@ type PolymorphicComponentProps<R extends Runtime, E extends StyledTarget<R>, P e
 } & P &
   (E extends KnownTarget ? Omit<React.ComponentProps<E>, keyof P | 'as'> : object);
 
+/**
+ * Remove the function call signature, keeping the additional properties.
+ * https://stackoverflow.com/a/62502740/347386
+ */
+type OmitSignatures<T> = Pick<T, keyof T>;
+
 interface PolymorphicComponent<
   R extends Runtime,
   P extends object,
   FallbackComponent extends StyledTarget<R>
-> extends React.ForwardRefExoticComponent<P> {
+> extends OmitSignatures<React.ForwardRefExoticComponent<P>> {
   <E extends StyledTarget<R> = FallbackComponent>(
     props: PolymorphicComponentProps<R, E, P>
   ): React.ReactElement | null;

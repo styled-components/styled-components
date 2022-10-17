@@ -190,7 +190,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       return createStyledNativeComponent<Target, OuterProps & Props, Statics>(
         tag,
         newOptions,
-        rules as RuleSet<OuterProps & Props>
+        rules
       );
     };
 
