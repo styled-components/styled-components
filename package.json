@@ -1,13 +1,14 @@
 {
   "name": "styled-components-project",
+  "packageManager": "pnpm@7.13.5",
   "private": true,
   "scripts": {
-    "build": "yarn workspace styled-components build",
+    "build": "pnpm --filter styled-components build",
     "postbuild": "cp README.md packages/styled-components/",
-    "postinstall": "yarn workspace styled-components generateErrors",
-    "lint": "yarn workspace styled-components lint",
-    "size": "yarn workspace styled-components lint:size",
-    "test": "yarn workspace styled-components test"
+    "postinstall": "pnpm --filter styled-components generateErrors",
+    "lint": "pnpm --filter styled-components lint",
+    "size": "pnpm --filter styled-components lint:size",
+    "test": "pnpm --filter styled-components test"
   },
   "author": "Glen Maddern",
   "license": "MIT",
@@ -15,11 +16,6 @@
     "url": "https://github.com/styled-components/styled-components/issues"
   },
   "homepage": "https://styled-components.com",
-  "workspaces": {
-    "packages": [
-      "packages/*"
-    ]
-  },
   "engines": {
     "node": ">= 14"
   },

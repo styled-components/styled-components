@@ -15,11 +15,11 @@
   ],
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
-    "prebuild": "rimraf dist && yarn generateErrors",
+    "prebuild": "rm -rf dist && pnpm generateErrors",
     "build": "rollup -c",
-    "postbuild": "yarn lint:size",
-    "pretest": "yarn generateErrors",
-    "test": "yarn test:web && yarn test:native",
+    "postbuild": "pnpm lint:size",
+    "pretest": "pnpm generateErrors",
+    "test": "pnpm test:web && pnpm test:native",
     "test:web": "jest -c jest.config.main.js --forceExit",
     "test:native": "jest -c jest.config.native.js --forceExit",
     "test:integration": "jest -c jest.config.integration.js --runInBand --forceExit",
@@ -27,7 +27,7 @@
     "lint": "eslint src",
     "lint:size": "bundlewatch",
     "prettier": "prettier src/** --write",
-    "prepublishOnly": "cp ../../README.md . && yarn build"
+    "prepublishOnly": "cp ../../README.md . && pnpm build"
   },
   "repository": {
     "type": "git",
