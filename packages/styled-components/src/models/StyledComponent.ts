@@ -138,16 +138,17 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
   const isTargetTag = isTag(elementToBeCreated);
 
   // eslint-disable-next-line guard-for-in
-  for (const key in context) {
-    // @ts-expect-error type narrowing not working properly
-    if (key[0] === '$' || key === 'as' || key === 'theme') context[key] = undefined;
-    else if (key === 'forwardedAs') {
-      context.as = context[key];
-      context[key] = undefined;
-    } else if (shouldForwardProp ? !shouldForwardProp(key, elementToBeCreated) : false) {
-      // Don't pass through non HTML tags through to HTML elements
-      // @ts-expect-error we don't know ahead of time
-      context[key] = undefined;
+  for (const _key in context) {
+    const key = _key as keyof typeof context;
+    if (context[key] === undefined) {
+      delete context[key];
+    } else if (_key[0] === '$' || key === 'as' || key === 'theme') {
+      delete context[key];
+    } else if (key === 'forwardedAs') {
+      context.as = context.forwardedAs;
+      delete context[key];
+    } else if (shouldForwardProp && !shouldForwardProp(_key, elementToBeCreated)) {
+      delete context[key];
     }
   }
 
