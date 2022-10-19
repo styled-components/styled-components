@@ -3,6 +3,7 @@ import { SC_VERSION } from '../constants';
 import type {
   AnyComponent,
   Attrs,
+  Dict,
   ExecutionContext,
   ExecutionProps,
   IStyledComponent,
@@ -102,20 +103,16 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
   >(
     (p, attrDef) => {
       const resolvedAttrDef = typeof attrDef === 'function' ? attrDef(p) : attrDef;
-      let key;
 
       /* eslint-disable guard-for-in */
-      for (key in resolvedAttrDef) {
+      for (const key in resolvedAttrDef) {
         // @ts-expect-error bad types
         p[key] =
           key === 'className'
-            ? // @ts-expect-error bad types
-              joinStrings(p[key], resolvedAttrDef[key])
+            ? joinStrings(p[key], resolvedAttrDef[key])
             : key === 'style'
-            ? // @ts-expect-error bad types
-              { ...p[key], ...resolvedAttrDef[key] }
-            : // @ts-expect-error bad types
-              resolvedAttrDef[key];
+            ? { ...p[key], ...resolvedAttrDef[key] }
+            : resolvedAttrDef[key];
       }
       /* eslint-enable guard-for-in */
 
@@ -132,29 +129,30 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
   );
 
   const refToForward = forwardedRef;
-
   const elementToBeCreated: WebTarget = context.as || target;
-
   const isTargetTag = isTag(elementToBeCreated);
+  const propsForElement: Dict<any> = {};
 
   // eslint-disable-next-line guard-for-in
   for (const key in context) {
-    // @ts-expect-error type narrowing not working properly
-    if (key[0] === '$' || key === 'as' || key === 'theme') context[key] = undefined;
-    else if (key === 'forwardedAs') {
-      context.as = context[key];
-      context[key] = undefined;
-    } else if (shouldForwardProp ? !shouldForwardProp(key, elementToBeCreated) : false) {
-      // Don't pass through non HTML tags through to HTML elements
-      // @ts-expect-error we don't know ahead of time
-      context[key] = undefined;
+    // @ts-expect-error for..in iterates strings instead of keyof
+    if (context[key] === undefined) {
+      // Omit undefined values from props passed to wrapped element.
+      // This enables using .attrs() to remove props, for example.
+    } else if (key[0] === '$' || key === 'as' || key === 'theme') {
+      // Omit transient props and execution props.
+    } else if (key === 'forwardedAs') {
+      propsForElement.as = context.forwardedAs;
+    } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
+      // @ts-expect-error for..in iterates strings instead of keyof
+      propsForElement[key] = context[key];
     }
   }
 
-  context[
+  propsForElement[
     // handle custom elements which React doesn't properly alias
     isTargetTag &&
-    domElements.indexOf(elementToBeCreated as unknown as Extract<typeof domElements, string>) === -1
+    domElements.indexOf(elementToBeCreated as Extract<typeof domElements, string>) === -1
       ? 'class'
       : 'className'
   ] = foldedComponentIds
@@ -166,10 +164,9 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
     .filter(Boolean)
     .join(' ');
 
-  // @ts-expect-error idk the type is probably wrong in this file
-  context.ref = refToForward;
+  propsForElement.ref = refToForward;
 
-  return createElement(elementToBeCreated, context);
+  return createElement(elementToBeCreated, propsForElement);
 }
 
 function createStyledComponent<
