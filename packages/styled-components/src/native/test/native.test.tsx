@@ -302,9 +302,8 @@ describe('native', () => {
     });
 
     it('function form allows access to theme', () => {
-      // @ts-expect-error TODO
       const Comp = styled.Text.attrs(props => ({
-        'data-color': props.theme.color,
+        selectionColor: props.theme.color,
       }))``;
 
       const wrapper = TestRenderer.create(
@@ -316,7 +315,7 @@ describe('native', () => {
 
       expect(text.props).toMatchObject({
         children: 'Something else',
-        'data-color': 'red',
+        selectionColor: 'red',
         style: {},
       });
     });
