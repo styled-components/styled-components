@@ -18,7 +18,7 @@ export { DefaultTheme };
 export type AnyComponent<P = any> = ExoticComponentWithDisplayName<P> | React.ComponentType<P>;
 
 export interface StyledOptions<R extends Runtime, Props extends object> {
-  attrs?: Attrs<Props>[];
+  attrs?: AttrsArg<Props>[];
   componentId?: R extends 'web' ? string : never;
   displayName?: string;
   parentComponentId?: R extends 'web' ? string : never;
@@ -79,9 +79,11 @@ export type Interpolation<Props extends object> =
     >
   | Interpolation<Props>[];
 
-export type Attrs<Props extends object> =
+export type AttrsArg<Props extends object> =
   | (ExecutionProps & Props)
   | ((props: ExecutionContext & Props) => Partial<Props>);
+
+export type Attrs = object | ((...args: any) => object);
 
 export type RuleSet<Props extends object> = Interpolation<Props>[];
 
@@ -128,7 +130,7 @@ export interface ShouldForwardProp<R extends Runtime> {
 }
 
 export interface CommonStatics<R extends Runtime, Props extends object> {
-  attrs: Attrs<Props>[];
+  attrs: AttrsArg<Props>[];
   target: StyledTarget<R>;
   shouldForwardProp?: ShouldForwardProp<R>;
   withComponent: any;

@@ -10,7 +10,7 @@ import useTheme from './hooks/useTheme';
 import ServerStyleSheet from './models/ServerStyleSheet';
 import StyleSheetManager, {
   StyleSheetConsumer,
-  StyleSheetContext
+  StyleSheetContext,
 } from './models/StyleSheetManager';
 /* Import components */
 import ThemeProvider, { ThemeConsumer, ThemeContext } from './models/ThemeProvider';
@@ -61,7 +61,7 @@ if (
 
 /* Export everything */
 export * from './secretInternals';
-export { Attrs, DefaultTheme, ShouldForwardProp } from './types';
+export { AttrsArg as Attrs, DefaultTheme, ShouldForwardProp } from './types';
 export {
   createGlobalStyle,
   css,
@@ -78,4 +78,3 @@ export {
   SC_VERSION as version,
   withTheme,
 };
-
