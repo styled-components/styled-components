@@ -2,7 +2,7 @@ import React, { createElement, Ref, useContext, useDebugValue } from 'react';
 import { SC_VERSION } from '../constants';
 import type {
   AnyComponent,
-  Attrs,
+  AttrsArg,
   Dict,
   ExecutionContext,
   ExecutionProps,
@@ -196,8 +196,10 @@ function createStyledComponent<
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     isTargetStyledComp && styledComponentTarget.attrs
-      ? styledComponentTarget.attrs.concat(attrs as unknown as Attrs<OuterProps>[]).filter(Boolean)
-      : (attrs as Attrs<OuterProps>[]);
+      ? styledComponentTarget.attrs
+          .concat(attrs as unknown as AttrsArg<OuterProps>[])
+          .filter(Boolean)
+      : (attrs as AttrsArg<OuterProps>[]);
 
   let { shouldForwardProp } = options;
 

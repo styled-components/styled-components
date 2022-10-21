@@ -1,6 +1,6 @@
 import React, { createElement, Ref, useContext, useMemo } from 'react';
 import type {
-  Attrs,
+  AttrsArg,
   Dict,
   ExecutionContext,
   ExecutionProps,
@@ -24,7 +24,7 @@ import { DefaultTheme, ThemeContext } from './ThemeProvider';
 function useResolvedAttrs<Props extends object>(
   theme: DefaultTheme = EMPTY_OBJECT,
   props: Props,
-  attrs: Attrs<Props>[]
+  attrs: AttrsArg<Props>[]
 ) {
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
@@ -127,7 +127,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     const finalAttrs =
       isTargetStyledComp && styledComponentTarget.attrs
         ? styledComponentTarget.attrs.concat(attrs).filter(Boolean)
-        : (attrs as Attrs<OuterProps>[]);
+        : (attrs as AttrsArg<OuterProps>[]);
 
     // eslint-disable-next-line prefer-destructuring
     let shouldForwardProp = options.shouldForwardProp;

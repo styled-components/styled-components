@@ -73,7 +73,6 @@ describe('attrs', () => {
   });
 
   it('function form allows access to theme', () => {
-    // @ts-expect-error TODO
     const Comp = styled.button.attrs(props => ({
       'data-color': props.theme!.color,
     }))``;
@@ -93,7 +92,6 @@ describe('attrs', () => {
   });
 
   it('defaultProps are merged into what function attrs receives', () => {
-    // @ts-expect-error TODO
     const Comp = styled.button.attrs(props => ({
       'data-color': props.theme!.color,
     }))``;
@@ -270,7 +268,7 @@ describe('attrs', () => {
       background: red;
     `;
 
-    class Text extends React.Component {
+    class Text extends React.Component<{}, { fontScale: number }> {
       state = {
         // Assume that will be changed automatically
         // according to the dimensions of the container
