@@ -154,7 +154,7 @@ type PolymorphicComponentProps<R extends Runtime, E extends StyledTarget<R>, P e
   as?: E;
   theme?: DefaultTheme;
 } & P &
-  (E extends KnownTarget ? Omit<React.ComponentProps<E>, keyof P | 'as'> : object);
+  (E extends KnownTarget ? Omit<React.ComponentProps<E>, keyof P> : object);
 
 /**
  * Remove the function call signature, keeping the additional properties.
