@@ -194,5 +194,23 @@ describe('expanded api', () => {
         }"
       `);
     });
+
+    it('"as" prop signature should inform rendered JSX if provided', () => {
+      const X = styled.div<{ as?: 'div' | 'button' }>``;
+      const StyledX = styled(X)``;
+
+      TestRenderer.create(
+        <>
+          <X
+            // @ts-expect-error invalid input test
+            as="section"
+          />
+          <StyledX
+            // @ts-expect-error invalid input test
+            as="section"
+          />
+        </>
+      );
+    });
   });
 });

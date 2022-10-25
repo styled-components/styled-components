@@ -56,7 +56,7 @@ export interface ExecutionContext extends ExecutionProps {
 }
 
 export interface StyleFunction<Props extends object> {
-  (executionContext: ExecutionContext & Props): Interpolation<Props>;
+  (executionContext: Omit<ExecutionContext, keyof Props> & Props): Interpolation<Props>;
 }
 
 export type Interpolation<Props extends object> =
@@ -80,8 +80,8 @@ export type Interpolation<Props extends object> =
   | Interpolation<Props>[];
 
 export type AttrsArg<Props extends object> =
-  | (ExecutionProps & Props)
-  | ((props: ExecutionContext & Props) => Partial<Props>);
+  | (Omit<ExecutionProps, keyof Props> & Props)
+  | ((props: Omit<ExecutionContext, keyof Props> & Props) => Partial<Props>);
 
 export type Attrs = object | ((...args: any) => object);
 
@@ -150,11 +150,17 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   ) => IStyledComponent<R, Target, OuterProps & Props>;
 }
 
-type PolymorphicComponentProps<R extends Runtime, E extends StyledTarget<R>, P extends object> = {
-  as?: E;
+type PolymorphicComponentProps<
+  R extends Runtime,
+  E extends StyledTarget<R>,
+  P extends object
+> = Omit<
+  P & (E extends KnownTarget ? Omit<React.ComponentProps<E>, keyof P> : object),
+  'as' | 'theme'
+> & {
+  as?: P extends { as?: string | AnyComponent } ? P['as'] : E;
   theme?: DefaultTheme;
-} & P &
-  (E extends KnownTarget ? Omit<React.ComponentProps<E>, keyof P> : object);
+};
 
 /**
  * Remove the function call signature, keeping the additional properties.
