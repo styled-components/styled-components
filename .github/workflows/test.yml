@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [14, 16, 18]
+        node: [16, 18]
     steps:
       - uses: actions/checkout@v3
 
@@ -26,13 +26,13 @@ jobs:
 
       - name: Lint
         run: yarn lint
-        if: matrix.node == '14'
+        if: matrix.node == '16'
 
       - name: Jest
         run: yarn test
 
       - name: Build
         run: yarn build
-        if: matrix.node == '14'
+        if: matrix.node == '16'
         env:
           BUNDLEWATCH_GITHUB_TOKEN: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}
