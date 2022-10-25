@@ -9249,7 +9249,7 @@ style-loader@^3.3.1:
     supports-color "^5.5.0"
 
 "styled-components@link:packages/styled-components":
-  version "6.0.0-beta.3"
+  version "6.0.0-beta.4"
   dependencies:
     "@babel/cli" "^7.18.6"
     "@babel/core" "^7.18.6"
@@ -9264,7 +9264,7 @@ style-loader@^3.3.1:
     "@emotion/unitless" "^0.7.4"
     css-to-react-native "^3.0.0"
     shallowequal "^1.1.0"
-    stylis "^4.1.1"
+    stylis "^4.1.2"
 
 styled-jsx@5.0.4:
   version "5.0.4"
@@ -9312,11 +9312,6 @@ stylis@4.0.13:
   version "4.0.13"
   resolved "https://registry.yarnpkg.com/stylis/-/stylis-4.0.13.tgz#f5db332e376d13cc84ecfe5dace9a2a51d954c91"
   integrity sha512-xGPXiFVl4YED9Jh7Euv2V220mriG9u4B2TA6Ybjc1catrstKD2PpIdU3U0RKpkVBC2EhmL/F0sPCr9vrFTNRag==
-
-stylis@^4.1.1:
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/stylis/-/stylis-4.1.1.tgz#e46c6a9bbf7c58db1e65bb730be157311ae1fe12"
-  integrity sha512-lVrM/bNdhVX2OgBFNa2YJ9Lxj7kPzylieHd3TNjuGE0Re9JB7joL5VUKOVH1kdNNJTgGPpT8hmwIAPLaSyEVFQ==
 
 stylis@^4.1.2:
   version "4.1.2"
