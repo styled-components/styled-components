@@ -51,6 +51,9 @@ export interface ExecutionProps {
   theme?: DefaultTheme;
 }
 
+/**
+ * ExecutionProps but with `theme` required.
+ */
 export interface ExecutionContext extends ExecutionProps {
   theme: DefaultTheme;
 }
@@ -150,7 +153,10 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   ) => IStyledComponent<R, Target, OuterProps & Props>;
 }
 
-type PolymorphicComponentProps<
+/**
+ * Used by PolymorphicComponent to define prop override cascading order.
+ */
+export type PolymorphicComponentProps<
   R extends Runtime,
   E extends StyledTarget<R>,
   P extends object
@@ -168,7 +174,13 @@ type PolymorphicComponentProps<
  */
 type OmitSignatures<T> = Pick<T, keyof T>;
 
-interface PolymorphicComponent<
+/**
+ * This type forms the signature for a forwardRef-enabled component that accepts
+ * the "as" prop to dynamically change the underlying rendered JSX. The interface will
+ * automatically attempt to extract props from the given rendering target to
+ * get proper typing for any specialized props in the target component.
+ */
+export interface PolymorphicComponent<
   R extends Runtime,
   P extends object,
   FallbackComponent extends StyledTarget<R>

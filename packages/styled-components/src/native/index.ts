@@ -79,10 +79,17 @@ aliases.forEach(alias =>
 );
 
 export {
+  DefaultTheme,
+  ExecutionContext,
+  ExecutionProps,
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
   NativeTarget,
+  PolymorphicComponent,
+  PolymorphicComponentProps,
+  Runtime,
+  StyledObject,
   StyledOptions,
 } from '../types';
 export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
