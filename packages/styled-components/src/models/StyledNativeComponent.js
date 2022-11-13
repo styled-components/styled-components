@@ -69,7 +69,7 @@ class StyledNativeComponent extends Component<*, *> {
             return [generatedStyles].concat(style(state))
           }
           : [generatedStyles].concat(style);
-          propsForElement.testID = testID;
+          propsForElement.testID = testID || propsForElement.testID;
 
           if (forwardedRef) propsForElement.ref = forwardedRef;
           if (forwardedAs) propsForElement.as = forwardedAs;
