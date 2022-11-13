@@ -38,9 +38,9 @@ export interface Styled<
   R extends Runtime,
   Target extends StyledTarget<R>,
   OuterProps extends object = Target extends KnownTarget
-    ? R extends 'web'
-      ? React.HTMLAttributes<Target>
-      : object & React.ComponentPropsWithRef<Target>
+    ? React.ComponentPropsWithRef<Target>
+    : R extends 'web'
+    ? /** use div as an ultimate fallback, probably a safe bet */ JSX.IntrinsicElements['div']
     : object,
   OuterStatics extends object = object
 > {
@@ -60,9 +60,9 @@ export default function constructWithOptions<
   R extends Runtime,
   Target extends StyledTarget<R>,
   OuterProps extends object = Target extends KnownTarget
-    ? R extends 'web'
-      ? React.HTMLAttributes<Target>
-      : object & React.ComponentPropsWithRef<Target>
+    ? React.ComponentPropsWithRef<Target>
+    : R extends 'web'
+    ? /** use div as an ultimate fallback, probably a safe bet */ JSX.IntrinsicElements['div']
     : object,
   OuterStatics extends object = object
 >(

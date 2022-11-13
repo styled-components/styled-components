@@ -127,7 +127,7 @@ describe('props', () => {
     });
 
     it('allows custom prop filtering for components', () => {
-      const InnerComp = (props: React.ComponentProps<'div'>) => <div {...props} />;
+      const InnerComp = (props: JSX.IntrinsicElements['div']) => <div {...props} />;
       const Comp = styled(InnerComp).withConfig({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
       })<{ filterThis: string; passThru: string }>`
@@ -184,7 +184,7 @@ describe('props', () => {
     });
 
     it('should filter out props when using "as" to a custom component', () => {
-      const AsComp = (props: React.ComponentProps<'div'>) => <div {...props} />;
+      const AsComp = (props: JSX.IntrinsicElements['div']) => <div {...props} />;
       const Comp = styled('div').withConfig({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
       })<{ filterThis: string; passThru: string }>`
@@ -202,7 +202,7 @@ describe('props', () => {
     });
 
     it('can set computed styles based on props that are being filtered out', () => {
-      const AsComp = (props: React.ComponentProps<'div'>) => <div {...props} />;
+      const AsComp = (props: JSX.IntrinsicElements['div']) => <div {...props} />;
       const Comp = styled('div').withConfig({
         shouldForwardProp: prop => !['filterThis'].includes(prop),
       })<{ filterThis: string; passThru: string }>`

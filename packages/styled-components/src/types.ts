@@ -161,7 +161,7 @@ export type PolymorphicComponentProps<
   E extends StyledTarget<R>,
   P extends object
 > = Omit<
-  P & (E extends KnownTarget ? Omit<React.ComponentProps<E>, keyof P> : object),
+  E extends KnownTarget ? P & Omit<React.ComponentPropsWithRef<E>, keyof P> : P,
   'as' | 'theme'
 > & {
   as?: P extends { as?: string | AnyComponent } ? P['as'] : E;
@@ -197,7 +197,10 @@ export interface IStyledComponent<
 > extends PolymorphicComponent<R, Props, Target>,
     IStyledStatics<R, Props> {
   defaultProps?: Partial<
-    ExecutionProps & (Target extends KnownTarget ? React.ComponentProps<Target> : {}) & Props
+    (Target extends KnownTarget
+      ? ExecutionProps & Omit<React.ComponentProps<Target>, keyof ExecutionProps>
+      : ExecutionProps) &
+      Props
   >;
   toString: () => string;
 }

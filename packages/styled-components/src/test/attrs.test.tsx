@@ -268,7 +268,10 @@ describe('attrs', () => {
       background: red;
     `;
 
-    class Text extends React.Component<{}, { fontScale: number }> {
+    class Text extends React.Component<
+      Partial<React.ComponentProps<typeof Paragraph>>,
+      { fontScale: number }
+    > {
       state = {
         // Assume that will be changed automatically
         // according to the dimensions of the container
