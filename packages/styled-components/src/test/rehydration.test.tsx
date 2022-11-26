@@ -535,11 +535,11 @@ describe('rehydration', () => {
             opacity: 0;
           }
         }
-        .c {
+        .d {
           -webkit-animation: keyframe_880 1s both;
           animation: keyframe_880 1s both;
         }
-        .b {
+        .c {
           -webkit-animation: keyframe_144 1s both;
           animation: keyframe_144 1s both;
         }

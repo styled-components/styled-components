@@ -5,9 +5,7 @@ import type {
   AttrsArg,
   Dict,
   ExecutionContext,
-  ExecutionProps,
-  Interpolation,
-  IStyledComponent,
+  ExecutionProps, IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
   OmitNever,
@@ -21,7 +19,6 @@ import determineTheme from '../utils/determineTheme';
 import domElements from '../utils/domElements';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import escape from '../utils/escape';
-import flatten from '../utils/flatten';
 import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import getComponentName from '../utils/getComponentName';
@@ -31,7 +28,6 @@ import isTag from '../utils/isTag';
 import joinStrings from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
-import Keyframes from './Keyframes';
 import { useStyleSheet, useStylis } from './StyleSheetManager';
 import { ThemeContext } from './ThemeProvider';
 
@@ -43,13 +39,9 @@ const COMPONENT_IDENTIFIERS: Record<string, Record<string, number>> = {}
 function generateId<OuterProps extends object>(rules: RuleSet<OuterProps>, displayName?: string, parentComponentId?: string): string {
   const namespace = typeof displayName !== 'string' ? 'sc' : escape(displayName);
 
-  /** Keyframes cannot be interpolated without stylesheet */
-  const isNotKeyframe = (interpolation: Interpolation<OuterProps>) => !(interpolation instanceof Keyframes)
-  const styleSheet = flatten(rules).filter(isNotKeyframe).join('')
-
   // SC_VERSION gives us isolation between multiple runtimes on the page at once
   // this is improved further with use of the babel plugin "namespace" feature
-  const componentId = `${namespace}-${generateComponentId(SC_VERSION + styleSheet)}`;
+  const componentId = `${namespace}-${generateComponentId(SC_VERSION + JSON.stringify(rules))}`;
 
   let increment = 0
   if (namespace in COMPONENT_IDENTIFIERS && componentId in COMPONENT_IDENTIFIERS[namespace]) {
