@@ -171,10 +171,10 @@ describe('theming', () => {
       </div>
     );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".c {
+      ".b {
         color: black;
       }
-      .d {
+      .c {
         color: red;
       }"
     `);
@@ -404,7 +404,7 @@ describe('theming', () => {
         color: black;
       }"
     `);
-    expect(wrapper.root.findByType('div').props.className).toBe('sc-a b');
+    expect(wrapper.root.findByType('div').props.className).toBe('sc-a-12 b');
 
     // Change theme
     wrapper.update(Theme({ theme: newTheme }));
@@ -418,7 +418,7 @@ describe('theming', () => {
       }"
     `);
 
-    expect(wrapper.root.findByType('div').props.className).toBe('sc-a c');
+    expect(wrapper.root.findByType('div').props.className).toBe('sc-a-12 c');
   });
 
   it('should inject props.theme into a component that uses withTheme hoc', () => {

@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 1`] = `
-<h1 class="sc-b c">
+<h1 class="sc-b-1 c">
   Hello SSR!
 </h1>
 `;
@@ -14,7 +14,7 @@ exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected i
   body{background:papayawhip;}/*!sc*/
 data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
 .c{color:red;}/*!sc*/
-data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
+data-styled.g2[id="sc-b-1"]{content:"c,"}/*!sc*/
 </style>
 `;
 
@@ -59,9 +59,9 @@ exports[`ssr should interleave styles with rendered HTML when utilitizing stream
   body{background:papayawhip;}/*!sc*/
 data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
 .c{color:red;}/*!sc*/
-data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
+data-styled.g2[id="sc-b-4"]{content:"c,"}/*!sc*/
 </style>
-<h1 class="sc-b c">
+<h1 class="sc-b-4 c">
   Hello SSR!
 </h1>
 `;
@@ -92,7 +92,7 @@ Object {
     "__html": "body{background:papayawhip;}/*!sc*/
 data-styled.g1[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
 .c{color:red;}/*!sc*/
-data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
+data-styled.g2[id=\\"sc-b-2\\"]{content:\\"c,\\"}/*!sc*/
 ",
   },
   "data-styled": "",
@@ -114,9 +114,9 @@ exports[`ssr should throw if getStyleElement is called after streaming is comple
   body{background:papayawhip;}/*!sc*/
 data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
 .c{color:red;}/*!sc*/
-data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
+data-styled.g2[id="sc-b-10"]{content:"c,"}/*!sc*/
 </style>
-<h1 class="sc-b c">
+<h1 class="sc-b-10 c">
   Hello SSR!
 </h1>
 `;
@@ -141,10 +141,10 @@ exports[`ssr should throw if getStyleTags is called after streaming is complete 
 >
   body{background:papayawhip;}/*!sc*/
 data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
-.c{color:red;}/*!sc*/
-data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
+.f{color:red;}/*!sc*/
+data-styled.g2[id="sc-b-9"]{content:"f,"}/*!sc*/
 </style>
-<h1 class="sc-b c">
+<h1 class="sc-b-9 f">
   Hello SSR!
 </h1>
 `;

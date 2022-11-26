@@ -211,7 +211,7 @@ describe('basic', () => {
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
       <custom-element
-        class="sc-a b"
+        class="sc-a-20 b"
       />
     `);
   });
@@ -233,7 +233,7 @@ describe('basic', () => {
       }
 
       const wrapper = TestRenderer.create(<Wrapper />);
-      expect(wrapper.root.findByType(InnerComponent).props.className).toBe('sc-a test');
+      expect(wrapper.root.findByType(InnerComponent).props.className).toBe('sc-a-21 test');
     });
 
     it('should pass the ref to the component', () => {
@@ -384,7 +384,7 @@ describe('basic', () => {
       `);
       expect(rendered.toJSON()).toMatchInlineSnapshot(`
         <div
-          className="sc-a d sc-b c"
+          className="sc-a-32 d sc-b c"
         />
       `);
     });

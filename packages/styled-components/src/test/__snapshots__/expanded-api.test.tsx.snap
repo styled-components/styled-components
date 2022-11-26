@@ -2,19 +2,19 @@
 
 exports[`expanded api "as" prop changes the rendered element type 1`] = `
 <span
-  className="sc-a b"
+  className="sc-a-2 b"
 />
 `;
 
 exports[`expanded api "as" prop changes the rendered element type when used with attrs 1`] = `
 <header
-  className="sc-a b"
+  className="sc-a-3 b"
 />
 `;
 
 exports[`expanded api "as" prop works with custom components 1`] = `
 <figure
-  className="sc-a b"
+  className="sc-a-5 b"
 />
 `;
 
@@ -54,15 +54,15 @@ exports[`expanded api componentId should be combined with displayName if both pa
 />
 `;
 
-exports[`expanded api componentId should be generated as "sc" + hash 1`] = `
+exports[`expanded api componentId should be generated as "sc" + hash + increment 1`] = `
 <div
   className="sc-a"
 />
 `;
 
-exports[`expanded api componentId should be generated as "sc" + hash 2`] = `
+exports[`expanded api componentId should be generated as "sc" + hash + increment 2`] = `
 <div
-  className="sc-b"
+  className="sc-a-1"
 />
 `;
 
@@ -74,7 +74,7 @@ exports[`expanded api componentId should be generated from displayName + hash 1`
 
 exports[`expanded api componentId should be generated from displayName + hash 2`] = `
 <div
-  className="Comp2-b"
+  className="Comp2-a"
 />
 `;
 

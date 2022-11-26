@@ -2,13 +2,13 @@
 
 exports[`attrs does not pass transient props to HTML element 1`] = `
 <div
-  className="sc-a sc-b c"
+  className="sc-a-23 sc-b c"
 />
 `;
 
 exports[`attrs merge attrs 1`] = `
 <button
-  className="sc-a"
+  className="sc-a-15"
   tabIndex={0}
   type="submit"
 />
@@ -16,7 +16,7 @@ exports[`attrs merge attrs 1`] = `
 
 exports[`attrs merge attrs when inheriting SC 1`] = `
 <button
-  className="sc-a sc-b"
+  className="sc-a-16 sc-a-17"
   tabIndex={0}
   type="submit"
 />
@@ -32,21 +32,21 @@ exports[`attrs pass a React component 1`] = `
 
 exports[`attrs pass a simple attr via function with object return 1`] = `
 <button
-  className="sc-a"
+  className="sc-a-2"
   type="button"
 />
 `;
 
 exports[`attrs pass a simple attr via object 1`] = `
 <button
-  className="sc-a"
+  className="sc-a-1"
   type="button"
 />
 `;
 
 exports[`attrs pass attrs to style block 1`] = `
 <a
-  className="sc-a b"
+  className="sc-a-18 b"
   data-active-class-name="--is-active"
   href="#"
 />
@@ -54,39 +54,39 @@ exports[`attrs pass attrs to style block 1`] = `
 
 exports[`attrs pass props to the attr function 1`] = `
 <button
-  className="sc-a"
+  className="sc-a-7"
   type="button"
 />
 `;
 
 exports[`attrs pass props to the attr function 2`] = `
 <button
-  className="sc-a"
+  className="sc-a-7"
   type="submit"
 />
 `;
 
 exports[`attrs should merge className 1`] = `
 <div
-  className="sc-a meow nya"
+  className="sc-a-9 meow nya"
 />
 `;
 
 exports[`attrs should merge className even if its a function 1`] = `
 <div
-  className="sc-a meow nya"
+  className="sc-a-12 meow nya"
 />
 `;
 
 exports[`attrs should merge className even if its a function 2`] = `
 <div
-  className="sc-a meow purr"
+  className="sc-a-12 meow purr"
 />
 `;
 
 exports[`attrs should override children of course 1`] = `
 <div
-  className="sc-a"
+  className="sc-a-21"
 >
   <span>
     Amazing
@@ -96,7 +96,7 @@ exports[`attrs should override children of course 1`] = `
 
 exports[`attrs should pass through children as a normal prop 1`] = `
 <div
-  className="sc-a"
+  className="sc-a-19"
 >
   Probably a bad idea
 </div>
@@ -104,7 +104,7 @@ exports[`attrs should pass through children as a normal prop 1`] = `
 
 exports[`attrs should pass through complex children as well 1`] = `
 <div
-  className="sc-a"
+  className="sc-a-20"
 >
   <span>
     Probably a bad idea
@@ -114,7 +114,7 @@ exports[`attrs should pass through complex children as well 1`] = `
 
 exports[`attrs should replace props with attrs 1`] = `
 <button
-  className="sc-a"
+  className="sc-a-8"
   tabIndex={0}
   type="button"
 />
@@ -122,7 +122,7 @@ exports[`attrs should replace props with attrs 1`] = `
 
 exports[`attrs should replace props with attrs 2`] = `
 <button
-  className="sc-a"
+  className="sc-a-8"
   tabIndex={0}
   type="button"
 />
@@ -130,7 +130,7 @@ exports[`attrs should replace props with attrs 2`] = `
 
 exports[`attrs should replace props with attrs 3`] = `
 <button
-  className="sc-a"
+  className="sc-a-8"
   tabIndex={0}
   type="button"
 />
@@ -139,7 +139,7 @@ exports[`attrs should replace props with attrs 3`] = `
 exports[`attrs should work with data and aria attributes 1`] = `
 <div
   aria-label="A simple FooBar"
-  className="sc-a"
+  className="sc-a-14"
   data-foo="bar"
 />
 `;

@@ -85,7 +85,7 @@ describe('attrs', () => {
       ).toJSON()
     ).toMatchInlineSnapshot(`
       <button
-        className="sc-a"
+        className="sc-a-5"
         data-color="red"
       />
     `);
@@ -104,7 +104,7 @@ describe('attrs', () => {
 
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
       <button
-        className="sc-a"
+        className="sc-a-6"
         data-color="red"
       />
     `);
@@ -147,7 +147,7 @@ describe('attrs', () => {
 
     expect(TestRenderer.create(<Comp className="something" />).toJSON()).toMatchInlineSnapshot(`
       <div
-        className="sc-a sc-b something foo meow nya"
+        className="sc-a-10 sc-a-11 something foo meow nya"
       />
     `);
   });
@@ -169,7 +169,7 @@ describe('attrs', () => {
     expect(TestRenderer.create(<Comp style={{ color: 'green', borderStyle: 'dotted' }} />).toJSON())
       .toMatchInlineSnapshot(`
       <div
-        className="sc-a"
+        className="sc-a-13"
         style={
           Object {
             "background": "blue",
@@ -306,18 +306,18 @@ describe('attrs', () => {
       }"
     `);
     expect(rendered.toJSON()).toMatchInlineSnapshot(`
-            <p
-              className="sc-a d sc-b c"
-              style={
-                Object {
-                  "color": "blue",
-                  "fontSize": "4em",
-                }
-              }
-            >
-              Hello
-            </p>
-        `);
+      <p
+        className="sc-a-22 d sc-b c"
+        style={
+          Object {
+            "color": "blue",
+            "fontSize": "4em",
+          }
+        }
+      >
+        Hello
+      </p>
+    `);
   });
 
   it('does not pass transient props to HTML element', () => {

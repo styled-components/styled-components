@@ -120,15 +120,15 @@ describe('extending', () => {
       TestRenderer.create(<Grandson />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".d {
+        ".c {
           position: relative;
           color: red;
         }
-        .e {
+        .d {
           position: relative;
           color: blue;
         }
-        .f {
+        .e {
           position: relative;
           color: green;
         }"
@@ -146,15 +146,15 @@ describe('extending', () => {
         TestRenderer.create(<Grandson />);
 
         expect(getRenderedCSS()).toMatchInlineSnapshot(`
-          ".d {
+          ".c {
             position: relative;
             color: red;
           }
-          .e {
+          .d {
             position: relative;
             color: blue;
           }
-          .f {
+          .e {
             position: relative;
             color: green;
           }"
@@ -169,29 +169,29 @@ describe('extending', () => {
 
         expect(TestRenderer.create(<Parent />).toJSON()).toMatchInlineSnapshot(`
           <h1
-            className="sc-a d"
+            className="sc-a-3 c"
             color="primary"
           />
         `);
         expect(TestRenderer.create(<Child />).toJSON()).toMatchInlineSnapshot(`
           <h2
-            className="sc-a sc-b e"
+            className="sc-a-3 sc-b-5 d"
             color="secondary"
           />
         `);
 
         expect(TestRenderer.create(<Grandson color="primary" />).toJSON()).toMatchInlineSnapshot(`
           <h3
-            className="sc-a sc-b sc-c d"
+            className="sc-a-3 sc-b-5 sc-b-6 c"
             color="primary"
           />
         `);
         expect(getRenderedCSS()).toMatchInlineSnapshot(`
-          ".d {
+          ".c {
             position: relative;
             color: red;
           }
-          .e {
+          .d {
             position: relative;
             color: blue;
           }"

@@ -109,28 +109,28 @@ describe('with styles', () => {
       .b[disabled] {
         color: red;
       }
-      .b[disabled] + .sc-a[disabled] {
+      .b[disabled] + .sc-a-1[disabled] {
         margin-bottom: 4px;
       }
-      .b[disabled] > .sc-a[disabled] {
+      .b[disabled] > .sc-a-1[disabled] {
         margin-top: 4px;
       }
-      .sc-a + .sc-a {
+      .sc-a-1 + .sc-a-1 {
         margin-left: 4px;
       }
-      .sc-a + .sc-a ~ .sc-a {
+      .sc-a-1 + .sc-a-1 ~ .sc-a-1 {
         background: black;
       }
-      .sc-a ~ .sc-a {
+      .sc-a-1 ~ .sc-a-1 {
         margin-right: 4px;
       }
-      .sc-a > .sc-a {
+      .sc-a-1 > .sc-a-1 {
         margin-top: 4px;
       }
-      .foo .sc-a {
+      .foo .sc-a-1 {
         color: silver;
       }
-      .foo > .sc-a {
+      .foo > .sc-a-1 {
         color: green;
       }
       .c {
@@ -143,28 +143,28 @@ describe('with styles', () => {
       .c[disabled] {
         color: red;
       }
-      .c[disabled] + .sc-a[disabled] {
+      .c[disabled] + .sc-a-1[disabled] {
         margin-bottom: 4px;
       }
-      .c[disabled] > .sc-a[disabled] {
+      .c[disabled] > .sc-a-1[disabled] {
         margin-top: 4px;
       }
-      .sc-a + .sc-a {
+      .sc-a-1 + .sc-a-1 {
         margin-left: 4px;
       }
-      .sc-a + .sc-a ~ .sc-a {
+      .sc-a-1 + .sc-a-1 ~ .sc-a-1 {
         background: black;
       }
-      .sc-a ~ .sc-a {
+      .sc-a-1 ~ .sc-a-1 {
         margin-right: 4px;
       }
-      .sc-a > .sc-a {
+      .sc-a-1 > .sc-a-1 {
         margin-top: 4px;
       }
-      .foo .sc-a {
+      .foo .sc-a-1 {
         color: silver;
       }
-      .foo > .sc-a {
+      .foo > .sc-a-1 {
         color: green;
       }"
     `);
@@ -286,7 +286,7 @@ describe('with styles', () => {
       ".b {
         background-color: blue;
       }
-      html.something .sc-a {
+      html.something .sc-a-7 {
         color: white;
       }"
     `);

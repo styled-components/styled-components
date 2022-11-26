@@ -3,11 +3,11 @@
 exports[`props shouldForwardProp should inherit shouldForwardProp for wrapped styled components 2`] = `
 Array [
   <div
-    className="sc-a c"
+    className="sc-a-7 c"
     id="test-1"
   />,
   <div
-    className="sc-a sc-b d"
+    className="sc-a-7 sc-b d"
     id="test-2"
   />,
 ]

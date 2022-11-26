@@ -358,12 +358,12 @@ describe('StyleSheetManager', () => {
     `);
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-            <div
-              className="sc-a b"
-            >
-              Foo
-            </div>
-        `);
+      <div
+        className="sc-a-10 b"
+      >
+        Foo
+      </div>
+    `);
 
     act(() => {
       wrapper.update(
@@ -383,12 +383,12 @@ describe('StyleSheetManager', () => {
     `);
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-            <div
-              className="sc-a c"
-            >
-              Foo
-            </div>
-        `);
+      <div
+        className="sc-a-10 c"
+      >
+        Foo
+      </div>
+    `);
 
     act(() => {
       wrapper.update(
@@ -408,12 +408,12 @@ describe('StyleSheetManager', () => {
     `);
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-            <div
-              className="sc-a b"
-            >
-              Foo
-            </div>
-        `);
+      <div
+        className="sc-a-10 b"
+      >
+        Foo
+      </div>
+    `);
   });
 
   it('subtrees with different stylis configs should not conflict', () => {
@@ -441,12 +441,12 @@ describe('StyleSheetManager', () => {
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
       <div>
         <div
-          className="sc-a b"
+          className="sc-a-11 b"
         >
           Bar
         </div>
         <div
-          className="sc-a c"
+          className="sc-a-11 c"
         >
           Foo
         </div>

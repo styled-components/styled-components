@@ -29,12 +29,12 @@ describe('expanded api', () => {
   });
 
   describe('componentId', () => {
-    it('should be generated as "sc" + hash', () => {
+    it('should be generated as "sc" + hash + increment', () => {
       const Comp = styled.div``;
       const Comp2 = styled.div``;
       expect(Comp.styledComponentId).toBe('sc-a');
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-      expect(Comp2.styledComponentId).toBe('sc-b');
+      expect(Comp2.styledComponentId).toBe('sc-a-1');
       expect(TestRenderer.create(<Comp2 />)).toMatchSnapshot();
     });
 
@@ -43,7 +43,7 @@ describe('expanded api', () => {
       const Comp2 = styled.div.withConfig({ displayName: 'Comp2' })``;
       expect(Comp.styledComponentId).toBe('Comp-a');
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-      expect(Comp2.styledComponentId).toBe('Comp2-b');
+      expect(Comp2.styledComponentId).toBe('Comp2-a');
       expect(TestRenderer.create(<Comp2 />)).toMatchSnapshot();
     });
 
@@ -134,7 +134,7 @@ describe('expanded api', () => {
 
       expect(TestRenderer.create(<Comp as="span" />).toJSON()).toMatchInlineSnapshot(`
         <header
-          className="sc-a b"
+          className="sc-a-4 b"
         />
       `);
     });
@@ -167,17 +167,17 @@ describe('expanded api', () => {
       expect(Comp3.displayName).toMatchInlineSnapshot(`"Styled(Styled(styled.div))"`);
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
         <div
-          className="sc-a d"
+          className="sc-a-6 d"
         />
       `);
       expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchInlineSnapshot(`
         <div
-          className="sc-a sc-b d e"
+          className="sc-a-6 sc-b d e"
         />
       `);
       expect(TestRenderer.create(<Comp3 as="span" />).toJSON()).toMatchInlineSnapshot(`
         <span
-          className="sc-a sc-b sc-c d e f"
+          className="sc-a-6 sc-b sc-c d e f"
         />
       `);
 

@@ -499,7 +499,7 @@ describe('ssr', () => {
     const css = sheet.getStyleTags();
 
     expect(html).toMatchInlineSnapshot(`
-      <h1 class="sc-a b">
+      <h1 class="sc-a-2 b">
         Hello SSR!
       </h1>
     `);
@@ -508,7 +508,7 @@ describe('ssr', () => {
              data-styled-version="JEST_MOCK_VERSION"
       >
         .b{padding-right:5px;}/*!sc*/
-      data-styled.g1[id="sc-a"]{content:"b,"}/*!sc*/
+      data-styled.g1[id="sc-a-2"]{content:"b,"}/*!sc*/
       </style>
     `);
   });

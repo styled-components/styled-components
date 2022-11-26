@@ -6,13 +6,14 @@ import type {
   Dict,
   ExecutionContext,
   ExecutionProps,
+  Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
   OmitNever,
   RuleSet,
   StyledOptions,
-  WebTarget,
+  WebTarget
 } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
@@ -20,6 +21,7 @@ import determineTheme from '../utils/determineTheme';
 import domElements from '../utils/domElements';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import escape from '../utils/escape';
+import flatten from '../utils/flatten';
 import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import getComponentName from '../utils/getComponentName';
@@ -29,24 +31,40 @@ import isTag from '../utils/isTag';
 import joinStrings from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
+import Keyframes from './Keyframes';
 import { useStyleSheet, useStylis } from './StyleSheetManager';
 import { ThemeContext } from './ThemeProvider';
 
-const identifiers: { [key: string]: number } = {};
+/** Shared context for component identifiers, preventing duplicate ids */
+const COMPONENT_IDENTIFIERS: Record<string, Record<string, number>> = {}
+
 
 /* We depend on components having unique IDs */
-function generateId(displayName?: string, parentComponentId?: string): string {
-  const name = typeof displayName !== 'string' ? 'sc' : escape(displayName);
+function generateId<OuterProps extends object>(rules: RuleSet<OuterProps>, displayName?: string, parentComponentId?: string): string {
+  const namespace = typeof displayName !== 'string' ? 'sc' : escape(displayName);
+
+  /** Keyframes cannot be interpolated without stylesheet */
+  const isNotKeyframe = (interpolation: Interpolation<OuterProps>) => !(interpolation instanceof Keyframes)
+  const styleSheet = flatten(rules).filter(isNotKeyframe).join('')
+
+  // SC_VERSION gives us isolation between multiple runtimes on the page at once
+  // this is improved further with use of the babel plugin "namespace" feature
+  const componentId = `${namespace}-${generateComponentId(SC_VERSION + styleSheet)}`;
+
+  let increment = 0
+  if (namespace in COMPONENT_IDENTIFIERS && componentId in COMPONENT_IDENTIFIERS[namespace]) {
+    increment = COMPONENT_IDENTIFIERS[namespace][componentId]++
+  } else {
+    COMPONENT_IDENTIFIERS[namespace] = {
+      ...COMPONENT_IDENTIFIERS[namespace],
+      [componentId]: increment
+    }
+  }
+
   // Ensure that no displayName can lead to duplicate componentIds
-  identifiers[name] = (identifiers[name] || 0) + 1;
+  const postfix = increment > 0 ? `-${increment}` : ''
 
-  const componentId = `${name}-${generateComponentId(
-    // SC_VERSION gives us isolation between multiple runtimes on the page at once
-    // this is improved further with use of the babel plugin "namespace" feature
-    SC_VERSION + name + identifiers[name]
-  )}`;
-
-  return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
+  return (parentComponentId ? `${parentComponentId}-${componentId}` : componentId) + postfix;
 }
 
 function useInjectedStyle<T extends object>(
@@ -111,8 +129,8 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
           key === 'className'
             ? joinStrings(p[key], resolvedAttrDef[key])
             : key === 'style'
-            ? { ...p[key], ...resolvedAttrDef[key] }
-            : resolvedAttrDef[key];
+              ? { ...p[key], ...resolvedAttrDef[key] }
+              : resolvedAttrDef[key];
       }
       /* eslint-enable guard-for-in */
 
@@ -152,7 +170,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
   propsForElement[
     // handle custom elements which React doesn't properly alias
     isTargetTag &&
-    domElements.indexOf(elementToBeCreated as Extract<typeof domElements, string>) === -1
+      domElements.indexOf(elementToBeCreated as Extract<typeof domElements, string>) === -1
       ? 'class'
       : 'className'
   ] = foldedComponentIds
@@ -184,7 +202,7 @@ function createStyledComponent<
 
   const {
     attrs = EMPTY_ARRAY,
-    componentId = generateId(options.displayName, options.parentComponentId),
+    componentId = generateId<OuterProps>(rules, options.displayName, options.parentComponentId),
     displayName = generateDisplayName(target),
   } = options;
 
@@ -197,8 +215,8 @@ function createStyledComponent<
   const finalAttrs =
     isTargetStyledComp && styledComponentTarget.attrs
       ? styledComponentTarget.attrs
-          .concat(attrs as unknown as AttrsArg<OuterProps>[])
-          .filter(Boolean)
+        .concat(attrs as unknown as AttrsArg<OuterProps>[])
+        .filter(Boolean)
       : (attrs as AttrsArg<OuterProps>[]);
 
   let { shouldForwardProp } = options;

@@ -68,10 +68,10 @@ describe('props', () => {
     ).toMatchInlineSnapshot(`
       Array [
         <div
-          className="sc-a b"
+          className="sc-a-2 b"
         />,
         <div
-          className="sc-a c"
+          className="sc-a-2 c"
           fg="red"
         />,
       ]
@@ -95,7 +95,7 @@ describe('props', () => {
 
     expect(TestRenderer.create(<Comp2 forwardedAs="button" />).toJSON()).toMatchInlineSnapshot(`
       <button
-        className="sc-a b"
+        className="sc-a-3 b"
       />
     `);
 
