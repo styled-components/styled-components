@@ -1,4 +1,4 @@
-import styled, { css } from 'styled-components-next';
+import { css, styled } from 'goober';
 import View from './View';
 
 const getColor = color => {
@@ -20,12 +20,13 @@ const getColor = color => {
   }
 };
 
-export default styled(View).attrs(p => ({ style: { backgroundColor: getColor(p.color) } }))`
+export default styled(View)`
   align-self: flex-start;
-  flex-direction: ${props => (props.layout === 'column' ? 'column' : 'row')};
-  padding: ${props => (props.outer ? '4px' : '0')};
-  ${props =>
-    props.fixed &&
+  background-color: ${p => getColor(p.color)};
+  flex-direction: ${p => (p.layout === 'column' ? 'column' : 'row')};
+  padding: ${p => (p.outer ? '4px' : '0')};
+  ${p =>
+    p.fixed &&
     css`
       height: 6px;
       width: 6px;
