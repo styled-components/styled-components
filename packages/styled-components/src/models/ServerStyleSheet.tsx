@@ -6,7 +6,7 @@ import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
 import styledError from '../utils/error';
 import getNonce from '../utils/nonce';
-import StyleSheetManager from './StyleSheetManager';
+import { StyleSheetManager } from './StyleSheetManager';
 
 declare const __SERVER__: boolean;
 

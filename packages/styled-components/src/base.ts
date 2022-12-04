@@ -8,9 +8,13 @@ import withTheme from './hoc/withTheme';
 /* Import hooks */
 import useTheme from './hooks/useTheme';
 import ServerStyleSheet from './models/ServerStyleSheet';
-import StyleSheetManager, {
+import {
+  IStyleSheetContext,
+  IStyleSheetManager,
+  IStylisContext,
   StyleSheetConsumer,
   StyleSheetContext,
+  StyleSheetManager,
 } from './models/StyleSheetManager';
 /* Import components */
 import ThemeProvider, { ThemeConsumer, ThemeContext } from './models/ThemeProvider';
@@ -66,6 +70,9 @@ export {
   createGlobalStyle,
   css,
   isStyledComponent,
+  IStyleSheetManager,
+  IStyleSheetContext,
+  IStylisContext,
   keyframes,
   ServerStyleSheet,
   StyleSheetConsumer,

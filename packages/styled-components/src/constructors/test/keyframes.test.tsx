@@ -2,7 +2,7 @@ import React from 'react';
 import TestRenderer from 'react-test-renderer';
 import stylisRTLPlugin from 'stylis-plugin-rtl';
 import Keyframes from '../../models/Keyframes';
-import StyleSheetManager from '../../models/StyleSheetManager';
+import { StyleSheetManager } from '../../models/StyleSheetManager';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
 import css from '../css';
 import keyframes from '../keyframes';
