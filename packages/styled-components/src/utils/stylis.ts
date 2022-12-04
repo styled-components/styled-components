@@ -7,8 +7,8 @@ import { phash, SEED } from './hash';
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 const COMPLEX_SELECTOR_PREFIX = [':', '[', '.', '#'];
 
-type StylisInstanceConstructorArgs = {
-  options?: { prefix?: boolean };
+export type ICreateStylisInstance = {
+  options?: { namespace?: string; prefix?: boolean };
   plugins?: Middleware[];
 };
 
@@ -22,9 +22,9 @@ function serialize(children: Element[], callback: Middleware): string[] {
 
 export default function createStylisInstance(
   {
-    options = EMPTY_OBJECT as Object,
+    options = EMPTY_OBJECT as object,
     plugins = EMPTY_ARRAY as unknown as Middleware[],
-  }: StylisInstanceConstructorArgs = EMPTY_OBJECT as Object
+  }: ICreateStylisInstance = EMPTY_OBJECT as object
 ) {
   let _componentId: string;
   let _selector: string;
@@ -65,6 +65,9 @@ export default function createStylisInstance(
   const stringifyRules: Stringifier = (
     css: string,
     selector = '',
+    /**
+     * This "prefix" referes to a _selector_ prefix.
+     */
     prefix = '',
     componentId = '&'
   ) => {
@@ -80,6 +83,9 @@ export default function createStylisInstance(
 
     const middlewares = plugins.slice();
 
+    /**
+     * Enables automatic vendor-prefixing for styles.
+     */
     if (options.prefix || options.prefix === undefined) {
       middlewares.unshift(prefixer);
     }
@@ -87,7 +93,13 @@ export default function createStylisInstance(
     middlewares.push(selfReferenceReplacementPlugin, stringify);
 
     return serialize(
-      compile(prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS),
+      compile(
+        options.namespace || prefix || selector
+          ? `${
+              options.namespace ? options.namespace + ' ' : ''
+            }${prefix} ${selector} { ${flatCSS} }`
+          : flatCSS
+      ),
       middleware(middlewares)
     );
   };

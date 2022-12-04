@@ -490,4 +490,53 @@ describe('StyleSheetManager', () => {
       </style>
     `);
   });
+
+  it('passing a namespace to StyleSheetManager works', () => {
+    const Test = styled.div`
+      display: flex;
+    `;
+
+    TestRenderer.create(
+      <StyleSheetManager namespace="#foo">
+        <Test>Foo</Test>
+      </StyleSheetManager>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        #foo .b{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;}
+      </style>
+    `);
+  });
+
+  it('nested StyleSheetManager with different namespaces works', () => {
+    const Test = styled.div`
+      padding-left: 5px;
+    `;
+
+    const Test2 = styled.div`
+      background: red;
+    `;
+
+    TestRenderer.create(
+      <StyleSheetManager namespace="#foo">
+        <div>
+          <Test>Foo</Test>
+          <StyleSheetManager namespace="#bar">
+            <Test2>Bar</Test2>
+          </StyleSheetManager>
+        </div>
+      </StyleSheetManager>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        #foo .c{padding-left:5px;}#bar .d{background:red;}
+      </style>
+    `);
+  });
 });

@@ -36,6 +36,10 @@ export type IStyleSheetManager = React.PropsWithChildren<{
    */
   disableVendorPrefixes?: boolean;
   /**
+   * Provide an optional selector to be prepended to all generated style rules.
+   */
+  namespace?: string;
+  /**
    * Create and provide your own `StyleSheet` if necessary for advanced SSR scenarios.
    */
   sheet?: StyleSheet;
@@ -76,10 +80,10 @@ export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {
   const stylis = useMemo(
     () =>
       createStylisInstance({
-        options: { prefix: !props.disableVendorPrefixes },
+        options: { namespace: props.namespace, prefix: !props.disableVendorPrefixes },
         plugins,
       }),
-    [props.disableVendorPrefixes, plugins]
+    [props.disableVendorPrefixes, props.namespace, plugins]
   );
 
   useEffect(() => {
