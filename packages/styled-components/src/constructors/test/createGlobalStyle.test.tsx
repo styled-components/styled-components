@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom';
 import { act, Simulate } from 'react-dom/test-utils';
 import ReactTestRenderer from 'react-test-renderer';
 import * as constants from '../../constants';
-import StyleSheetManager from '../../models/StyleSheetManager';
+import { StyleSheetManager } from '../../models/StyleSheetManager';
 import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
 import { getRenderedCSS, resetStyled } from '../../test/utils';

@@ -9,7 +9,7 @@ import { renderToNodeStream, renderToString } from 'react-dom/server';
 import stylisRTLPlugin from 'stylis-plugin-rtl';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 import ServerStyleSheet from '../models/ServerStyleSheet';
-import StyleSheetManager from '../models/StyleSheetManager';
+import { StyleSheetManager } from '../models/StyleSheetManager';
 
 jest.mock('../utils/nonce');
 

@@ -7,7 +7,7 @@ import stylisRTLPlugin from 'stylis-plugin-rtl';
 import StyleSheet from '../../sheet';
 import { resetStyled } from '../../test/utils';
 import ServerStyleSheet from '../ServerStyleSheet';
-import StyleSheetManager from '../StyleSheetManager';
+import { StyleSheetManager } from '../StyleSheetManager';
 
 let styled: ReturnType<typeof resetStyled>;
 
