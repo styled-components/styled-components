@@ -92,6 +92,15 @@ export {
   StyledObject,
   StyledOptions,
 } from '../types';
-export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
+export {
+  css,
+  isStyledComponent,
+  styled,
+  ThemeProvider,
+  ThemeConsumer,
+  ThemeContext,
+  withTheme,
+  useTheme,
+};
 
 export default styled;
