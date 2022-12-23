@@ -77,15 +77,3 @@ exports[`expanded api componentId should be generated from displayName + hash 2`
   className="Comp2-b"
 />
 `;
-
-exports[`expanded api componentId should work with \`.withComponent\` 1`] = `
-<h1
-  className="Comp-OMGLOL-h1"
-/>
-`;
-
-exports[`expanded api componentId should work with \`.withComponent\` 2`] = `
-<div
-  className="Comp2-OMFG-Dummy"
-/>
-`;
