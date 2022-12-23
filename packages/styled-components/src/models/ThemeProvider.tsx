@@ -32,7 +32,7 @@ type ThemeFn = (outerTheme?: DefaultTheme) => DefaultTheme;
 type ThemeArgument = DefaultTheme | ThemeFn;
 
 type Props = {
-  children?: React.ReactChild;
+  children?: React.ReactNode;
   theme: ThemeArgument;
 };
 
