@@ -31,7 +31,7 @@ describe(`createGlobalStyle`, () => {
 
     expect(html).toBe('');
     expect(stripWhitespace(stripComments(styles))).toMatchInlineSnapshot(
-      `"[data-test-inject]{ color:red; } data-styled.g1[id=\\"sc-global-a1\\"]{ content:\\"sc-global-a1,\\"} "`
+      `"[data-test-inject]{ color:red; } data-styled.g1[id="sc-global-a1"]{ content:"sc-global-a1,"} "`
     );
   });
 });

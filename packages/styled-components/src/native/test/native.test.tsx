@@ -74,11 +74,11 @@ describe('native', () => {
     };
 
     expect(Outer.defaultProps).toMatchInlineSnapshot(`
-      Object {
-        "style": Object {
+      {
+        "style": {
           "backgroundColor": "silver",
         },
-        "theme": Object {
+        "theme": {
           "fontSize": 16,
         },
       }
@@ -388,7 +388,7 @@ describe('native', () => {
       expect(TestRenderer.create(<Comp $color="red" />).toJSON()).toMatchInlineSnapshot(`
         <Text
           style={
-            Object {
+            {
               "color": "red",
             }
           }
@@ -451,8 +451,8 @@ describe('native', () => {
       TestRenderer.create(<StyledView something />);
 
       expect(stub.mock.calls).toMatchInlineSnapshot(`
-        Array [
-          Array [
+        [
+          [
             "something",
             [Function],
           ],

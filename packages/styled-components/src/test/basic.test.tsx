@@ -414,12 +414,12 @@ describe('basic', () => {
       };
 
       expect(Outer.defaultProps).toMatchInlineSnapshot(`
-        Object {
-          "style": Object {
+        {
+          "style": {
             "background": "silver",
             "textAlign": "center",
           },
-          "theme": Object {
+          "theme": {
             "fontSize": 16,
           },
         }

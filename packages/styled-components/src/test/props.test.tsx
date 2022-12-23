@@ -66,7 +66,7 @@ describe('props', () => {
         </>
       ).toJSON()
     ).toMatchInlineSnapshot(`
-      Array [
+      [
         <div
           className="sc-a b"
         />,

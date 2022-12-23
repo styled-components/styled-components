@@ -34,7 +34,7 @@ describe('withTheme', () => {
     const WrappedComponent = withTheme(Comp);
     TestRenderer.create(<WrappedComponent />);
     expect(warn.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class \\"Comp\\""`
+      `"[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class "Comp""`
     );
   });
 

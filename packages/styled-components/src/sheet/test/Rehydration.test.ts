@@ -22,14 +22,14 @@ describe('outputSheet', () => {
     const output = outputSheet(sheet).trim().split('/*!sc*/');
 
     expect(output).toMatchInlineSnapshot(`
-      Array [
+      [
         ".a {}",
         "
-      ${SC_ATTR}.g11[id=\\"idA\\"]{content:\\"nameA,\\"}",
+      data-styled.g11[id="idA"]{content:"nameA,"}",
         "
       .b {}",
         "
-      ${SC_ATTR}.g22[id=\\"idB\\"]{content:\\"nameB,\\"}",
+      data-styled.g22[id="idB"]{content:"nameB,"}",
         "",
       ]
     `);
