@@ -93,5 +93,4 @@ export {
   StyledOptions,
 } from '../types';
 export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
-
-export default styled;
+export { styled, styled as default };
