@@ -1,7 +1,6 @@
-import React from 'react';
 import styled, { css } from 'styled-components';
 
-const Button = styled.button`
+const Button = styled.button<{ $primary?: boolean }>`
   font-size: 16px;
   border-radius: 5px;
   padding: 0.25em 1em;
@@ -12,7 +11,7 @@ const Button = styled.button`
   cursor: pointer;
 
   ${props =>
-    props.primary &&
+    props.$primary &&
     css`
       background: palevioletred;
       color: white;
@@ -23,7 +22,7 @@ export default function ButtonExample() {
   return (
     <>
       <Button onClick={() => alert('Clicked!')}>Normal Button</Button>
-      <Button primary onClick={() => alert('Clicked!')}>
+      <Button $primary onClick={() => alert('Clicked!')}>
         Primary Button
       </Button>
     </>

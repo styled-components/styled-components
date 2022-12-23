@@ -5,7 +5,7 @@ import nodeResolve from 'rollup-plugin-node-resolve';
 import replace from 'rollup-plugin-replace';
 import sourceMaps from 'rollup-plugin-sourcemaps';
 import { terser } from 'rollup-plugin-terser';
-import pkg from './package.json';
+import pkg from './package.json' assert { type: 'json' };
 
 /**
  * NODE_ENV explicit replacement is only needed for standalone packages, as webpack
@@ -125,7 +125,7 @@ const standaloneConfig = {
   plugins: standaloneBaseConfig.plugins.concat(
     replace({
       'process.env.NODE_ENV': JSON.stringify('development'),
-    }),
+    })
   ),
 };
 
@@ -153,7 +153,7 @@ const serverConfig = {
     replace({
       window: undefined,
       __SERVER__: JSON.stringify(true),
-    }),
+    })
   ),
 };
 
@@ -166,7 +166,7 @@ const browserConfig = {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
-    }),
+    })
   ),
 };
 
@@ -192,7 +192,7 @@ const macroConfig = Object.assign({}, configBase, {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
-    }),
+    })
   ),
 });
 
