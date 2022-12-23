@@ -11,11 +11,9 @@ styled.div\`
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import _styled from 'styled-components';
-
 _styled.div.withConfig({
   displayName: 'macrotest',
 })(['background:', ';'], p => (p.error ? 'red' : 'green'));
-
 export {};
 
 
@@ -32,12 +30,10 @@ styled.div\`
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import _styled from '@xstyled/styled-components';
-
 _styled.div.withConfig({
   displayName: 'macrotest',
   componentId: 'sc-17fdca0-0',
 })(['background:', ';'], p => (p.error ? 'red' : 'green'));
-
 export {};
 
 
@@ -58,9 +54,7 @@ styled(Hello)\`
 
 import _styled from 'styled-components';
 import React from 'react';
-
 const Hello = () => React.createComponent(div, null, 'hello');
-
 _styled(Hello).withConfig({
   displayName: 'macrotest',
   componentId: 'sc-17fdca0-0',
@@ -107,9 +101,9 @@ createGlobalStyle\`
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import { createGlobalStyle as _createGlobalStyle } from 'styled-components';
-
-_createGlobalStyle(['background:red;']);
-
+_createGlobalStyle\`
+  background: red;
+\`;
 export {};
 
 
@@ -126,9 +120,7 @@ css\`
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import { css as _css } from 'styled-components';
-
 _css(['color:', ';'], props => (props.whiteColor ? 'white' : 'black'));
-
 export {};
 
 
@@ -146,9 +138,7 @@ keyframes\`
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import { keyframes as _keyframes } from 'styled-components';
-
 _keyframes(['0%{opacity:0;}100%{opacity:1;}']);
-
 export {};
 
 
@@ -166,12 +156,10 @@ myStyled.div\`
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import _styled from 'styled-components';
-
 _styled.div.withConfig({
   displayName: 'macrotest',
   componentId: 'sc-17fdca0-0',
 })(['background:', ';'], p => (p.error ? 'red' : 'green'));
-
 export {};
 
 
@@ -201,12 +189,10 @@ styled.div\`
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import _styled from 'styled-components';
-
 _styled.div.withConfig({
   displayName: 'macrotest',
   componentId: 'sc-17fdca0-0',
 })(['background:red;']);
-
 export {};
 
 
@@ -223,12 +209,10 @@ styled.div\`
       ↓ ↓ ↓ ↓ ↓ ↓
 
 import _styled from 'styled-components';
-
 _styled.div.withConfig({
   displayName: 'macrotest',
   componentId: 'sc-17fdca0-0',
 })(['background:', ';'], p => (p.error ? 'red' : 'green'));
-
 export {};
 
 
@@ -247,19 +231,17 @@ function Foo() {
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
+import _styled2 from 'styled-components';
 import _styled from 'styled-components';
 import React from 'react';
-
-const Thing = _styled.div.withConfig({
-  displayName: 'macrotest__Thing',
-  componentId: 'sc-17fdca0-0',
-})(['color:blue;']);
-
 var _StyledThing = _styled(Thing).withConfig({
   displayName: 'macrotest___StyledThing',
-  componentId: 'sc-17fdca0-1',
+  componentId: 'sc-17fdca0-0',
 })(['color:red;']);
-
+const Thing = _styled.div.withConfig({
+  displayName: 'macrotest__Thing',
+  componentId: 'sc-17fdca0-1',
+})(['color:blue;']);
 function Foo() {
   return /*#__PURE__*/ React.createElement(_StyledThing, null);
 }
@@ -277,13 +259,12 @@ function Foo() {
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
+import _styled2 from 'styled-components';
 import _styled from 'styled-components';
 import React from 'react';
-
 function Foo() {
   return /*#__PURE__*/ React.createElement(_StyledDiv, null);
 }
-
 var _StyledDiv = _styled('div').withConfig({
   displayName: 'macrotest___StyledDiv',
   componentId: 'sc-17fdca0-0',
