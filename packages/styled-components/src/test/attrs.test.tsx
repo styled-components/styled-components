@@ -171,7 +171,7 @@ describe('attrs', () => {
       <div
         className="sc-a"
         style={
-          Object {
+          {
             "background": "blue",
             "borderStyle": "dotted",
             "color": "red",
@@ -306,18 +306,18 @@ describe('attrs', () => {
       }"
     `);
     expect(rendered.toJSON()).toMatchInlineSnapshot(`
-            <p
-              className="sc-a d sc-b c"
-              style={
-                Object {
-                  "color": "blue",
-                  "fontSize": "4em",
-                }
-              }
-            >
-              Hello
-            </p>
-        `);
+      <p
+        className="sc-a d sc-b c"
+        style={
+          {
+            "color": "blue",
+            "fontSize": "4em",
+          }
+        }
+      >
+        Hello
+      </p>
+    `);
   });
 
   it('does not pass transient props to HTML element', () => {

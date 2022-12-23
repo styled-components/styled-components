@@ -208,8 +208,8 @@ describe('rehydration', () => {
         ".b {
           color: red;
         }
-        data-styled.g2[id=\\"TWO\\"] {
-          content: \\"b,\\"
+        data-styled.g2[id="TWO"] {
+          content: "b,"
         }"
       `);
     });

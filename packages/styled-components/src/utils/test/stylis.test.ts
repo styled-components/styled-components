@@ -13,7 +13,7 @@ describe('stylis', () => {
       color: red;
     `);
     expect(css).toMatchInlineSnapshot(`
-      Array [
+      [
         ".a{background:yellow;color:red;}",
       ]
     `);
@@ -28,7 +28,7 @@ describe('stylis', () => {
       }
     `);
     expect(css).toMatchInlineSnapshot(`
-      Array [
+      [
         ".a{background:yellow;color:red;}",
         "@media (min-width: 500px){.a{color:blue;}}",
       ]

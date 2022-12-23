@@ -52,17 +52,17 @@ it('should shallow merge properties if target is not a POJO or array', () => {
   const obj2 = { a: { b: 2, d: { f: 'f' } } };
 
   expect(mixinDeep(obj1, obj2)).toMatchInlineSnapshot(`
-MyObj {
-  "a": Object {
-    "b": 2,
-    "d": Object {
-      "f": "f",
-    },
-  },
-  "bar": 6,
-  "foo": 5,
-}
-`);
+    MyObj {
+      "a": {
+        "b": 2,
+        "d": {
+          "f": "f",
+        },
+      },
+      "bar": 6,
+      "foo": 5,
+    }
+  `);
 });
 
 it('should NOT shallow merge non-POJO properties of target', () => {
@@ -126,11 +126,11 @@ it('should deep mixin arrays during mixin', () => {
       [{ abc: 345 }, { abc: 456 }, new MyObj(7, 8)]
     )
   ).toMatchInlineSnapshot(`
-    Array [
-      Object {
+    [
+      {
         "abc": 345,
       },
-      Object {
+      {
         "a": 1,
         "abc": 456,
       },

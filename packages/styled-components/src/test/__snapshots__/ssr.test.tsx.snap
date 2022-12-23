@@ -87,12 +87,12 @@ data-styled.g2[id="TWO"]{content:"a,"}/*!sc*/
 `;
 
 exports[`ssr should return a generated React style element 1`] = `
-Object {
-  "dangerouslySetInnerHTML": Object {
+{
+  "dangerouslySetInnerHTML": {
     "__html": "body{background:papayawhip;}/*!sc*/
-data-styled.g1[id=\\"sc-global-a1\\"]{content:\\"sc-global-a1,\\"}/*!sc*/
+data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
 .c{color:red;}/*!sc*/
-data-styled.g2[id=\\"sc-b\\"]{content:\\"c,\\"}/*!sc*/
+data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
 ",
   },
   "data-styled": "",
