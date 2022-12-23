@@ -14,12 +14,14 @@ import pkg from './package.json' assert { type: 'json' };
 
 const cjs = {
   exports: 'named',
+  interop: 'auto',
   format: 'cjs',
   sourcemap: true,
 };
 
 const esm = {
   format: 'esm',
+  interop: 'auto',
   sourcemap: true,
 };
 
@@ -37,15 +39,10 @@ const commonPlugins = [
   }),
   sourceMaps(),
   json(),
-  nodeResolve({
-    extensions: ['.mjs', '.js', '.jsx', '.json', '.node'],
-    mainFields: ['module', 'jsnext', 'main'],
-  }),
+  nodeResolve(),
   commonjs({
     esmExternals: false,
     ignoreGlobal: true,
-    include: /\/node_modules\//,
-    requireReturnsDefault: 'namespace',
   }),
   replace({
     __VERSION__: JSON.stringify(pkg.version),
