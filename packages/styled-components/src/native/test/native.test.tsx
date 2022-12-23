@@ -365,29 +365,6 @@ describe('native', () => {
       expect(Comp.displayName).toBe('Test2');
     });
 
-    it('withComponent should work', () => {
-      const Dummy = (props: PropsWithChildren<{}>) => <View {...props} />;
-
-      const Comp = styled.View.withConfig({
-        displayName: 'Comp',
-      })``.withComponent(Text);
-
-      const Comp2 = styled.View.withConfig({
-        displayName: 'Comp2',
-      })``.withComponent(Dummy);
-
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
-        <Text
-          style={Object {}}
-        />
-      `);
-      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchInlineSnapshot(`
-        <View
-          style={Object {}}
-        />
-      `);
-    });
-
     it('"as" prop should change the rendered element without affecting the styling', () => {
       // @ts-expect-error foo is expected later in the test
       const OtherText = (props: PropsWithChildren<{}>) => <Text {...props} foo />;

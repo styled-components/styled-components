@@ -136,7 +136,6 @@ export interface CommonStatics<R extends Runtime, Props extends object> {
   attrs: AttrsArg<Props>[];
   target: StyledTarget<R>;
   shouldForwardProp?: ShouldForwardProp<R>;
-  withComponent: any;
 }
 
 export interface IStyledStatics<R extends Runtime, OuterProps extends object>
@@ -148,9 +147,6 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   target: StyledTarget<R>;
   styledComponentId: R extends 'web' ? string : never;
   warnTooManyClasses?: R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never;
-  withComponent: <Target extends StyledTarget<R>, Props extends object = object>(
-    tag: Target
-  ) => IStyledComponent<R, Target, OuterProps & Props>;
 }
 
 /**
