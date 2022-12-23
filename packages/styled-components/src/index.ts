@@ -16,4 +16,4 @@ export {
   StyledOptions,
   WebTarget,
 } from './types';
-export { styled as default };
+export { styled, styled as default };
