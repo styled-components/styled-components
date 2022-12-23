@@ -178,22 +178,6 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     // fold the underlying StyledComponent target up since we folded the styles
     WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
 
-    WrappedStyledComponent.withComponent = function withComponent<
-      Target extends NativeTarget,
-      Props = unknown
-    >(tag: Target) {
-      const newOptions = {
-        ...options,
-        attrs: finalAttrs,
-      } as StyledOptions<'native', OuterProps & Props>;
-
-      return createStyledNativeComponent<Target, OuterProps & Props, Statics>(
-        tag,
-        newOptions,
-        rules as RuleSet<OuterProps & Props>
-      );
-    };
-
     Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
       get() {
         return this._foldedDefaultProps;
@@ -213,7 +197,6 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       displayName: true,
       shouldForwardProp: true,
       target: true,
-      withComponent: true,
     } as { [key in keyof OmitNever<IStyledStatics<'native', Target>>]: true });
 
     return WrappedStyledComponent;

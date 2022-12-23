@@ -22,7 +22,6 @@ import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
-import getComponentName from '../utils/getComponentName';
 import hoist from '../utils/hoist';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
@@ -260,29 +259,6 @@ function createStyledComponent<
   // fold the underlying StyledComponent target up since we folded the styles
   WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
 
-  WrappedStyledComponent.withComponent = function withComponent<
-    Target extends WebTarget,
-    Props extends object = object
-  >(tag: Target) {
-    const { componentId: previousComponentId, ...optionsToCopy } = options;
-
-    const newComponentId =
-      previousComponentId &&
-      `${previousComponentId}-${isTag(tag) ? tag : escape(getComponentName(tag))}`;
-
-    const newOptions = {
-      ...optionsToCopy,
-      attrs: finalAttrs,
-      componentId: newComponentId,
-    } as StyledOptions<'web', OuterProps & Props>;
-
-    return createStyledComponent<Target, OuterProps & Props, Statics>(
-      tag,
-      newOptions,
-      rules as RuleSet<OuterProps & Props>
-    );
-  };
-
   Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
     get() {
       return this._foldedDefaultProps;
@@ -321,7 +297,6 @@ function createStyledComponent<
         shouldForwardProp: true,
         styledComponentId: true,
         target: true,
-        withComponent: true,
       } as { [key in keyof OmitNever<IStyledStatics<'web', OuterProps>>]: true }
     );
   }

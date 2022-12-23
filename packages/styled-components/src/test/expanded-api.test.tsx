@@ -70,22 +70,6 @@ describe('expanded api', () => {
       expect(Comp2.styledComponentId).toBe('Comp2-OMGLOL');
       expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot();
     });
-
-    it('should work with `.withComponent`', () => {
-      const Dummy: React.FC<any> = props => <div {...props} />;
-      const Comp = styled.div.withConfig({
-        displayName: 'Comp',
-        componentId: 'OMGLOL',
-      })``.withComponent('h1');
-      const Comp2 = styled.div.withConfig({
-        displayName: 'Comp2',
-        componentId: 'OMFG',
-      })``.withComponent(Dummy);
-      expect(Comp.styledComponentId).toBe('Comp-OMGLOL-h1');
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-      expect(Comp2.styledComponentId).toBe('Comp2-OMFG-Dummy');
-      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot();
-    });
   });
 
   describe('chaining', () => {
