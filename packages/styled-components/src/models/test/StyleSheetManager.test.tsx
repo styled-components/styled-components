@@ -168,8 +168,8 @@ describe('StyleSheetManager', () => {
               <Frame>
                 <FrameContextConsumer>
                   {({ document }) => (
-                    <SheetInjector target={document.head}>
-                      <Child document={document} resolve={resolveA} />
+                    <SheetInjector target={document!.head}>
+                      <Child document={document!} resolve={resolveA} />
                     </SheetInjector>
                   )}
                 </FrameContextConsumer>
@@ -177,8 +177,8 @@ describe('StyleSheetManager', () => {
               <Frame>
                 <FrameContextConsumer>
                   {({ document }) => (
-                    <SheetInjector target={document.head}>
-                      <Child document={document} resolve={resolveB} />
+                    <SheetInjector target={document!.head}>
+                      <Child document={document!} resolve={resolveB} />
                     </SheetInjector>
                   )}
                 </FrameContextConsumer>
@@ -238,8 +238,8 @@ describe('StyleSheetManager', () => {
           <Frame>
             <FrameContextConsumer>
               {({ document }) => (
-                <SheetInjector target={document.head}>
-                  <Child document={document} />
+                <SheetInjector target={document!.head}>
+                  <Child document={document!} />
                 </SheetInjector>
               )}
             </FrameContextConsumer>
