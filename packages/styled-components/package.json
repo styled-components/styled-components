@@ -72,15 +72,28 @@
     "@emotion/unitless": "^0.8.0",
     "css-to-react-native": "^3.0.0",
     "shallowequal": "^1.1.0",
-    "stylis": "^4.1.3"
+    "stylis": "^4.1.3",
+    "tslib": "^2.4.1"
   },
   "peerDependencies": {
     "babel-plugin-styled-components": ">= 2",
     "react": ">= 16.8.0",
-    "react-dom": ">= 16.8.0"
+    "react-dom": ">= 16.8.0",
+    "shallowequal": ">= 1",
+    "stylis": "^4.0.0",
+    "tslib": "^2.0.0"
   },
   "peerDependenciesMeta": {
     "babel-plugin-styled-components": {
+      "optional": true
+    },
+    "shallowequal": {
+      "optional": true
+    },
+    "stylis": {
+      "optional": true
+    },
+    "tslib": {
       "optional": true
     }
   },
