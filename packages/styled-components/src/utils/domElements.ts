@@ -111,6 +111,7 @@ export default [
   'track',
   'u',
   'ul',
+  'use',
   'var',
   'video',
   'wbr', // SVG
