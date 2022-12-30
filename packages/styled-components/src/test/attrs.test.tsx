@@ -331,4 +331,10 @@ describe('attrs', () => {
 
     expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();
   });
+
+  it('should apply given "as" prop to the progressive type', () => {
+    const Comp = styled.div.attrs({ as: 'video' })``;
+
+    expect(TestRenderer.create(<Comp loop />).toJSON()).toMatchSnapshot();
+  });
 });
