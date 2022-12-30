@@ -22,17 +22,20 @@ type OptionalIntersection<A, B> = {
   [K in Extract<keyof A, keyof B>]?: A[K];
 };
 
+type AttrsResult<T extends Attrs> = T extends (...args: any) => infer P ? P : T;
+
 /**
  * If attrs type is a function (no type provided, inferring from usage), extract the return value
  * and merge it with the existing type to hole-punch any required fields that are satisfied as
  * a result of running attrs. Otherwise if we have a definite type then union the base props
  * with the passed attr type to capture any intended overrides.
  */
-type MarkPropsSatisfiedByAttrs<T extends Attrs, Props extends object> = T extends (
-  ...args: any
-) => infer P
-  ? Omit<Props, keyof P> & OptionalIntersection<Props, P>
-  : Omit<Props, keyof T> & Partial<T>;
+type PropsSatisfiedByAttrs<T extends Attrs, Props extends object, Result = AttrsResult<T>> = Omit<
+  Props,
+  keyof Result
+> &
+  OptionalIntersection<Props, Result> &
+  Partial<Omit<Result, keyof Props>>;
 
 export interface Styled<
   R extends Runtime,
@@ -42,16 +45,23 @@ export interface Styled<
     : R extends 'web'
     ? /** use div as an ultimate fallback, probably a safe bet */ JSX.IntrinsicElements['div']
     : object,
-  OuterStatics extends object = object
+  OuterStatics extends object = object,
+  RuntimeInjectedProps = object
 > {
   <Props extends object = object, Statics extends object = object>(
-    initialStyles: Styles<OuterProps & Props>,
-    ...interpolations: Interpolation<OuterProps & Props>[]
+    initialStyles: Styles<OuterProps & RuntimeInjectedProps & Props>,
+    ...interpolations: Interpolation<OuterProps & RuntimeInjectedProps & Props>[]
   ): IStyledComponent<R, Target, OuterProps & Props> & OuterStatics & Statics;
 
   attrs: <T extends Attrs>(
     attrs: AttrsArg<T extends (...args: any) => infer P ? OuterProps & P : OuterProps & T>
-  ) => Styled<R, Target, MarkPropsSatisfiedByAttrs<T, OuterProps>, OuterStatics>;
+  ) => Styled<
+    R,
+    Target,
+    PropsSatisfiedByAttrs<T, OuterProps>,
+    OuterStatics,
+    RuntimeInjectedProps & AttrsResult<T>
+  >;
 
   withConfig: (config: StyledOptions<R, OuterProps>) => Styled<R, Target, OuterProps, OuterStatics>;
 }
@@ -88,11 +98,11 @@ export default function constructWithOptions<
   templateFunction.attrs = <T extends Attrs>(
     attrs: AttrsArg<T extends (...args: any) => infer P ? OuterProps & P : OuterProps & T>
   ) =>
-    constructWithOptions<R, Target, MarkPropsSatisfiedByAttrs<T, OuterProps>, OuterStatics>(
+    constructWithOptions<R, Target, PropsSatisfiedByAttrs<T, OuterProps>, OuterStatics>(
       componentConstructor as unknown as IStyledComponentFactory<
         R,
         Target,
-        MarkPropsSatisfiedByAttrs<T, OuterProps>,
+        PropsSatisfiedByAttrs<T, OuterProps>,
         OuterStatics
       >,
       tag,

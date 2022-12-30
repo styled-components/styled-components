@@ -219,10 +219,7 @@ describe('attrs', () => {
       'data-active-class-name': '--is-active',
     }))`
       color: blue;
-      &.${
-          // @ts-expect-error TODO InferAttrResultType something?
-          props => props['data-active-class-name']
-        } {
+      &.${props => props['data-active-class-name']} {
         color: red;
       }
     `;
