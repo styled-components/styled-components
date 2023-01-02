@@ -66,6 +66,13 @@ exports[`attrs pass props to the attr function 2`] = `
 />
 `;
 
+exports[`attrs should apply given "as" prop to the progressive type 1`] = `
+<video
+  className="sc-a"
+  loop={true}
+/>
+`;
+
 exports[`attrs should merge className 1`] = `
 <div
   className="sc-a meow nya"
