@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Attrs,
   AttrsArg,
+  ExecutionProps,
   Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
@@ -35,32 +36,35 @@ type PropsSatisfiedByAttrs<T extends Attrs, Props extends object, Result = Attrs
   keyof Result
 > &
   OptionalIntersection<Props, Result> &
-  Partial<Omit<Result, keyof Props>>;
+  Partial<Omit<Result, keyof Props | 'as'>>;
 
 export interface Styled<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  OuterProps extends object = Target extends KnownTarget
-    ? React.ComponentPropsWithRef<Target>
-    : R extends 'web'
-    ? /** use div as an ultimate fallback, probably a safe bet */ JSX.IntrinsicElements['div']
-    : object,
+  OuterProps extends object = object,
   OuterStatics extends object = object,
-  RuntimeInjectedProps = object
+  RuntimeInjectedProps extends ExecutionProps = object,
+  /**
+   * Taking the attrs result from a prior Styled<> invocation, adjust the "fallback target"
+   * (a.k.a what will be rendered if "as" isn't also passed as a normal prop)
+   */
+  RuntimeTarget extends StyledTarget<R> = RuntimeInjectedProps['as'] extends StyledTarget<R>
+    ? RuntimeInjectedProps['as']
+    : Target
 > {
   <Props extends object = object, Statics extends object = object>(
     initialStyles: Styles<OuterProps & RuntimeInjectedProps & Props>,
     ...interpolations: Interpolation<OuterProps & RuntimeInjectedProps & Props>[]
-  ): IStyledComponent<R, Target, OuterProps & Props> & OuterStatics & Statics;
+  ): IStyledComponent<R, RuntimeTarget, OuterProps & Props> & OuterStatics & Statics;
 
-  attrs: <T extends Attrs>(
+  attrs: <T extends Attrs, TResult = AttrsResult<T>>(
     attrs: AttrsArg<T extends (...args: any) => infer P ? OuterProps & P : OuterProps & T>
   ) => Styled<
     R,
     Target,
     PropsSatisfiedByAttrs<T, OuterProps>,
     OuterStatics,
-    RuntimeInjectedProps & AttrsResult<T>
+    Omit<RuntimeInjectedProps, keyof TResult> & TResult
   >;
 
   withConfig: (config: StyledOptions<R, OuterProps>) => Styled<R, Target, OuterProps, OuterStatics>;
@@ -71,8 +75,6 @@ export default function constructWithOptions<
   Target extends StyledTarget<R>,
   OuterProps extends object = Target extends KnownTarget
     ? React.ComponentPropsWithRef<Target>
-    : R extends 'web'
-    ? /** use div as an ultimate fallback, probably a safe bet */ JSX.IntrinsicElements['div']
     : object,
   OuterStatics extends object = object
 >(

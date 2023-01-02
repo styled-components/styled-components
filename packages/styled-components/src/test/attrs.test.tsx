@@ -330,7 +330,7 @@ describe('attrs', () => {
   });
 
   it('should apply given "as" prop to the progressive type', () => {
-    const Comp = styled.div.attrs({ as: 'video' })``;
+    const Comp = styled.div.attrs({ as: 'video' as const })``;
 
     expect(TestRenderer.create(<Comp loop />).toJSON()).toMatchSnapshot();
   });
