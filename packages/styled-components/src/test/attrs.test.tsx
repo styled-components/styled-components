@@ -219,10 +219,7 @@ describe('attrs', () => {
       'data-active-class-name': '--is-active',
     }))`
       color: blue;
-      &.${
-          // @ts-expect-error TODO InferAttrResultType something?
-          props => props['data-active-class-name']
-        } {
+      &.${props => props['data-active-class-name']} {
         color: red;
       }
     `;
@@ -330,5 +327,11 @@ describe('attrs', () => {
     }))``;
 
     expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();
+  });
+
+  it('should apply given "as" prop to the progressive type', () => {
+    const Comp = styled.div.attrs({ as: 'video' as const })``;
+
+    expect(TestRenderer.create(<Comp loop />).toJSON()).toMatchSnapshot();
   });
 });
