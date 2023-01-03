@@ -543,16 +543,16 @@ describe('StyleSheetManager', () => {
   it('namespaced StyleSheetManager works with ampersand selector', () => {
     const Test = styled.div`
       padding-top: 5px;
-      .bar & {
+      .child & {
         padding-top: 10px;
       }
     `;
 
     TestRenderer.create(
-      <StyleSheetManager namespace="#foo">
+      <StyleSheetManager namespace=".parent">
         <div>
           <Test>Foo</Test>
-          <div className=".bar">
+          <div className="child">
             <Test>Foo Bar</Test>
           </div>
         </div>
@@ -563,7 +563,39 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        #foo .b{padding-top:5px;}#foo .bar .sc-a{padding-top:10px;}
+        .parent .b{padding-top:5px;}.parent .child .sc-a{padding-top:10px;}
+      </style>
+    `);
+  });
+
+  it('namespaced StyleSheetManager works with ampersand selector (complex)', () => {
+    const Test = styled.div`
+      color: red;
+      .child2 &,
+      .child & {
+        color: green;
+      }
+    `;
+
+    TestRenderer.create(
+      <StyleSheetManager namespace=".parent">
+        <div>
+          <Test>Foo</Test>
+          <div className="child">
+            <Test>Foo Bar</Test>
+          </div>
+          <div className="child2">
+            <Test>Foo Bar</Test>
+          </div>
+        </div>
+      </StyleSheetManager>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .parent .b{color:red;}.parent .child2 .sc-a,.parent .child .sc-a{color:green;}
       </style>
     `);
   });

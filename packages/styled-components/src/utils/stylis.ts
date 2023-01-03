@@ -91,17 +91,25 @@ export default function createStylisInstance(
     }
 
     middlewares.push(selfReferenceReplacementPlugin, stringify);
+    let compiled = compile(prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS);
 
-    return serialize(
-      compile(
-        options.namespace || prefix || selector
-          ? `${
-              options.namespace ? options.namespace + ' ' : ''
-            }${prefix} ${selector} { ${flatCSS} }`
-          : flatCSS
-      ),
+    if(options.namespace) {
+      compiled = compiled.map(rule=> {
+        // add the namespace to the start
+        rule.value = `${options.namespace} ${rule.value}`;
+        // add the namespace after each comma for subsequent selectors.
+        rule.value = rule.value.replaceAll(',', `,${options.namespace} `)
+        rule.props = rule.props.map(prop => {
+          return `${options.namespace} ${prop}`
+        });
+        return rule;
+      })
+    }
+    const serialized = serialize(
+      compiled,
       middleware(middlewares)
     );
+    return serialized;
   };
 
   stringifyRules.hash = plugins.length
