@@ -25,16 +25,23 @@ type OptionalIntersection<A, B> = {
 
 type AttrsResult<T extends Attrs> = T extends (...args: any) => infer P ? P : T;
 
+type ExtractAttrsTarget<
+  R extends Runtime,
+  P extends ExecutionProps,
+  DefaultTarget extends StyledTarget<R>
+> = P['as'] extends KnownTarget ? P['as'] : DefaultTarget;
+
 /**
  * If attrs type is a function (no type provided, inferring from usage), extract the return value
  * and merge it with the existing type to hole-punch any required fields that are satisfied as
  * a result of running attrs. Otherwise if we have a definite type then union the base props
  * with the passed attr type to capture any intended overrides.
  */
-type PropsSatisfiedByAttrs<T extends Attrs, Props extends object, Result = AttrsResult<T>> = Omit<
-  Props,
-  keyof Result
-> &
+type PropsSatisfiedByAttrs<
+  T extends Attrs,
+  Props extends object,
+  Result extends ExecutionProps = AttrsResult<T>
+> = Omit<Props, keyof Result> &
   OptionalIntersection<Props, Result> &
   Partial<Omit<Result, keyof Props | 'as'>>;
 
@@ -43,25 +50,26 @@ export interface Styled<
   Target extends StyledTarget<R>,
   OuterProps extends object = object,
   OuterStatics extends object = object,
-  RuntimeInjectedProps extends ExecutionProps = object,
-  /**
-   * Taking the attrs result from a prior Styled<> invocation, adjust the "fallback target"
-   * (a.k.a what will be rendered if "as" isn't also passed as a normal prop)
-   */
-  RuntimeTarget extends StyledTarget<R> = RuntimeInjectedProps['as'] extends StyledTarget<R>
-    ? RuntimeInjectedProps['as']
-    : Target
+  RuntimeInjectedProps extends ExecutionProps = object
 > {
   <Props extends object = object, Statics extends object = object>(
     initialStyles: Styles<OuterProps & RuntimeInjectedProps & Props>,
     ...interpolations: Interpolation<OuterProps & RuntimeInjectedProps & Props>[]
-  ): IStyledComponent<R, RuntimeTarget, OuterProps & Props> & OuterStatics & Statics;
+  ): // @ts-expect-error KnownTarget is a subset of StyledTarget<R>
+  IStyledComponent<R, ExtractAttrsTarget<R, RuntimeInjectedProps, Target>, OuterProps & Props> &
+    OuterStatics &
+    Statics;
 
-  attrs: <T extends Attrs, TResult = AttrsResult<T>>(
+  attrs: <
+    T extends Attrs,
+    TResult extends ExecutionProps = AttrsResult<T>,
+    // @ts-expect-error KnownTarget is a subset of StyledTarget<R>
+    TTarget extends StyledTarget<R> = ExtractAttrsTarget<R, TResult, Target>
+  >(
     attrs: AttrsArg<T extends (...args: any) => infer P ? OuterProps & P : OuterProps & T>
   ) => Styled<
     R,
-    Target,
+    TTarget,
     PropsSatisfiedByAttrs<T, OuterProps>,
     OuterStatics,
     Omit<RuntimeInjectedProps, keyof TResult> & TResult

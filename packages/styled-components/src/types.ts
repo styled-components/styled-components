@@ -17,14 +17,6 @@ export { DefaultTheme };
 
 export type AnyComponent<P = any> = ExoticComponentWithDisplayName<P> | React.ComponentType<P>;
 
-export interface StyledOptions<R extends Runtime, Props extends object> {
-  attrs?: AttrsArg<Props>[];
-  componentId?: R extends 'web' ? string : never;
-  displayName?: string;
-  parentComponentId?: R extends 'web' ? string : never;
-  shouldForwardProp?: ShouldForwardProp<R>;
-}
-
 export type KnownTarget = keyof JSX.IntrinsicElements | AnyComponent;
 
 export type WebTarget =
@@ -32,6 +24,15 @@ export type WebTarget =
   | KnownTarget;
 
 export type NativeTarget = AnyComponent;
+
+export type StyledTarget<R extends Runtime> = R extends 'web' ? WebTarget : NativeTarget;
+export interface StyledOptions<R extends Runtime, Props extends object> {
+  attrs?: AttrsArg<Props>[];
+  componentId?: R extends 'web' ? string : never;
+  displayName?: string;
+  parentComponentId?: R extends 'web' ? string : never;
+  shouldForwardProp?: ShouldForwardProp<R>;
+}
 
 export type Dict<T> = { [key: string]: T };
 
@@ -223,8 +224,6 @@ export interface IInlineStyle<Props extends object> {
   rules: RuleSet<Props>;
   generateStyleObject(executionContext: Object): Object;
 }
-
-export type StyledTarget<R extends Runtime> = R extends 'web' ? WebTarget : NativeTarget;
 
 export interface StyledObject<Props extends object> {
   [key: string]: Dict<any> | string | number | StyleFunction<Props> | StyledObject<Props>;
