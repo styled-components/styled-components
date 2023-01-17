@@ -49,28 +49,12 @@ function generateId(displayName?: string, parentComponentId?: string): string {
 }
 
 function useInjectedStyle<T extends object>(
-  componentStyle: ComponentStyle,
-  isStatic: boolean,
-  resolvedAttrs: T,
-  warnTooManyClasses?: ReturnType<typeof createWarnTooManyClasses>
+  _componentStyle: ComponentStyle,
+  _isStatic: boolean,
+  _resolvedAttrs: T,
+  _warnTooManyClasses?: ReturnType<typeof createWarnTooManyClasses>
 ) {
-  const styleSheet = useStyleSheet();
-  const stylis = useStylis();
-
-  const className = componentStyle.generateAndInjectStyles(
-    isStatic ? EMPTY_OBJECT : resolvedAttrs,
-    styleSheet,
-    stylis
-  );
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  if (process.env.NODE_ENV !== 'production') useDebugValue(className);
-
-  if (process.env.NODE_ENV !== 'production' && !isStatic && warnTooManyClasses) {
-    warnTooManyClasses(className);
-  }
-
-  return className;
+  return ""
 }
 
 function useStyledComponentImpl<Target extends WebTarget, Props extends ExecutionProps>(
