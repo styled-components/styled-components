@@ -595,7 +595,7 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .parent .b{color:red;}.parent .child2 .sc-a,.parent .child .sc-a{color:green;}
+        .parent .b{color:red;}.parent .child2 .sc-a,.parent .child .b{color:green;}
       </style>
     `);
   });
