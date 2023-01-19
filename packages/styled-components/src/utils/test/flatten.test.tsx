@@ -168,3 +168,15 @@ describe('flatten', () => {
     expect(console.error).not.toHaveBeenCalled();
   });
 });
+
+it('does not error for functions that return null', () => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+
+  const Bar = styled.div`
+    ${() => null}
+  `;
+
+  expect(() => TestRenderer.create(<Bar />)).not.toThrowError();
+
+  expect(console.error).not.toHaveBeenCalled();
+});
