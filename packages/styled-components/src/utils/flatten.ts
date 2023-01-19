@@ -82,7 +82,8 @@ export default function flatten<Props extends object>(
         typeof result === 'object' &&
         !Array.isArray(result) &&
         !(result instanceof Keyframes) &&
-        !isPlainObject(result)
+        !isPlainObject(result) &&
+        result !== null
       ) {
         // eslint-disable-next-line no-console
         console.error(
