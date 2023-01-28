@@ -539,4 +539,103 @@ describe('StyleSheetManager', () => {
       </style>
     `);
   });
+
+  it('namespaced StyleSheetManager works with ampersand selector', () => {
+    const Test = styled.div`
+      padding-top: 5px;
+      .child & {
+        padding-top: 10px;
+      }
+    `;
+
+    TestRenderer.create(
+      <StyleSheetManager namespace=".parent">
+        <div>
+          <Test>Foo</Test>
+          <div className="child">
+            <Test>Foo Bar</Test>
+          </div>
+        </div>
+      </StyleSheetManager>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .parent .b{padding-top:5px;}.parent .child .sc-a{padding-top:10px;}
+      </style>
+    `);
+  });
+
+  it('namespaced StyleSheetManager works with ampersand selector (complex)', () => {
+    const Test = styled.div`
+      color: red;
+      .child2 &,
+      .child & {
+        color: green;
+      }
+    `;
+
+    TestRenderer.create(
+      <StyleSheetManager namespace=".parent">
+        <div>
+          <Test>Foo</Test>
+          <div className="child">
+            <Test>Foo Bar</Test>
+          </div>
+          <div className="child2">
+            <Test>Foo Bar</Test>
+          </div>
+        </div>
+      </StyleSheetManager>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .parent .b{color:red;}.parent .child2 .sc-a,.parent .child .b{color:green;}
+      </style>
+    `);
+  });
+});
+
+it('namespaced StyleSheetManager works with ampersand selector and media queries', () => {
+  const Test = styled.div`
+    color: red;
+    .child2 &,
+    .child & {
+      color: green;
+    }
+    @media (min-width: 768px) {
+      color: blue;
+      .child2 &,
+      .child & {
+        color: cyan;
+      }
+    }
+  `;
+
+  TestRenderer.create(
+    <StyleSheetManager namespace=".parent">
+      <div>
+        <Test>Foo</Test>
+        <div className="child">
+          <Test>Foo Bar</Test>
+        </div>
+        <div className="child2">
+          <Test>Foo Bar</Test>
+        </div>
+      </div>
+    </StyleSheetManager>
+  );
+
+  expect(document.head.innerHTML).toMatchInlineSnapshot(`
+    <style data-styled="active"
+           data-styled-version="JEST_MOCK_VERSION"
+    >
+      .parent .b{color:red;}.parent .child2 .sc-a,.parent .child .b{color:green;}.parent .d{color:red;}.parent .child2 .sc-c,.parent .child .d{color:green;}@media (min-width: 768px){.parent .d{color:blue;}.parent .child2 .sc-c,.parent .child .d{color:cyan;}}
+    </style>
+  `);
 });

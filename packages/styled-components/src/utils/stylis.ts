@@ -20,6 +20,29 @@ function serialize(children: Element[], callback: Middleware): string[] {
   return children.map((c, i) => callback(c, i, children, callback)).filter(Boolean) as string[];
 }
 
+/**
+ * Takes an element and recurses through it's rules added the namespace to the start of each selector.
+ * Takes into account media queries by recursing through child rules if they are present.
+ */
+function recursivelySetNamepace(compiled: Element[], namespace: String): Element[] {
+  return compiled.map(rule => {
+    if (rule.type === 'rule') {
+      // add the namespace to the start
+      rule.value = `${namespace} ${rule.value}`;
+      // add the namespace after each comma for subsequent selectors.
+      rule.value = rule.value.replaceAll(',', `,${namespace} `);
+      rule.props = rule.props.map(prop => {
+        return `${namespace} ${prop}`;
+      });
+    }
+
+    if (Array.isArray(rule.children)) {
+      rule.children = recursivelySetNamepace(rule.children, namespace);
+    }
+    return rule;
+  });
+}
+
 export default function createStylisInstance(
   {
     options = EMPTY_OBJECT as object,
@@ -91,17 +114,12 @@ export default function createStylisInstance(
     }
 
     middlewares.push(selfReferenceReplacementPlugin, stringify);
+    let compiled = compile(prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS);
 
-    return serialize(
-      compile(
-        options.namespace || prefix || selector
-          ? `${
-              options.namespace ? options.namespace + ' ' : ''
-            }${prefix} ${selector} { ${flatCSS} }`
-          : flatCSS
-      ),
-      middleware(middlewares)
-    );
+    if (options.namespace) {
+      compiled = recursivelySetNamepace(compiled, options.namespace);
+    }
+    return serialize(compiled, middleware(middlewares));
   };
 
   stringifyRules.hash = plugins.length
