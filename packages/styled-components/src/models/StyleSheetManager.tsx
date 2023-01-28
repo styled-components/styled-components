@@ -1,11 +1,17 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import shallowequal from 'shallowequal';
 import StyleSheet from '../sheet';
-import { Stringifier } from '../types';
+import { ShouldForwardProp, Stringifier } from '../types';
 import createStylisInstance from '../utils/stylis';
 
-export type IStyleSheetContext = StyleSheet | void;
-export const StyleSheetContext = React.createContext<IStyleSheetContext>(undefined);
+export type IStyleSheetContext = {
+  shouldForwardProp?: ShouldForwardProp<'web'>;
+  styleSheet?: StyleSheet;
+};
+export const StyleSheetContext = React.createContext<IStyleSheetContext>({
+  shouldForwardProp: undefined,
+  styleSheet: undefined,
+});
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
 
 export type IStylisContext = Stringifier | void;
@@ -15,8 +21,12 @@ export const StylisConsumer = StylisContext.Consumer;
 export const mainSheet: StyleSheet = new StyleSheet();
 export const mainStylis: Stringifier = createStylisInstance();
 
+export function useShouldForwardProp() {
+  return useContext(StyleSheetContext).shouldForwardProp;
+}
+
 export function useStyleSheet(): StyleSheet {
-  return useContext(StyleSheetContext) || mainSheet;
+  return useContext(StyleSheetContext).styleSheet || mainSheet;
 }
 
 export function useStylis(): Stringifier {
@@ -43,6 +53,21 @@ export type IStyleSheetManager = React.PropsWithChildren<{
    * Create and provide your own `StyleSheet` if necessary for advanced SSR scenarios.
    */
   sheet?: StyleSheet;
+  /**
+   * Starting in v6, styled-components no longer does its own prop validation
+   * and recommends use of transient props "$prop" to pass style-only props to
+   * components. If for some reason you are not able to use transient props, a
+   * prop validation function can be provided via `StyleSheetManager`, such as
+   * `@emotion/is-prop-valid`.
+   *
+   * When the return value is `true`, props will be forwarded to the DOM/underlying
+   * component. If return value is `false`, the prop will be discarded after styles
+   * are calculated.
+   *
+   * Manually composing `styled.{element}.withConfig({shouldForwardProp})` will
+   * override this default.
+   */
+  shouldForwardProp?: IStyleSheetContext['shouldForwardProp'];
   /**
    * An array of plugins to be run by stylis (style processor) during compilation.
    * Check out [what's available on npm*](https://www.npmjs.com/search?q=keywords%3Astylis).
@@ -91,7 +116,7 @@ export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {
   }, [props.stylisPlugins]);
 
   return (
-    <StyleSheetContext.Provider value={styleSheet}>
+    <StyleSheetContext.Provider value={{ shouldForwardProp: props.shouldForwardProp, styleSheet }}>
       <StylisContext.Provider value={stylis}>
         {process.env.NODE_ENV !== 'production'
           ? React.Children.only(props.children)
