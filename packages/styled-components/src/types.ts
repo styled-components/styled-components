@@ -77,10 +77,8 @@ export type Interpolation<Props extends object> =
   // can disambiguate functions as StyledFunction. Note that IStyledComponent is
   // not actually callable, the function signature is just a crutch for JSX,
   // same as React.ExoticComponent.
-  | OmitSignatures<
-      // We don't allow component selectors for native.
-      IStyledComponent<'web', any, any>
-    >
+  // We don't allow component selectors for native.
+  | IStyledComponent<'web', any, any>
   | Interpolation<Props>[];
 
 export type AttrsArg<Props extends object> =
@@ -166,12 +164,6 @@ export type PolymorphicComponentProps<
 };
 
 /**
- * Remove the function call signature, keeping the additional properties.
- * https://stackoverflow.com/a/62502740/347386
- */
-type OmitSignatures<T> = Pick<T, keyof T>;
-
-/**
  * This type forms the signature for a forwardRef-enabled component that accepts
  * the "as" prop to dynamically change the underlying rendered JSX. The interface will
  * automatically attempt to extract props from the given rendering target to
@@ -181,7 +173,7 @@ export interface PolymorphicComponent<
   R extends Runtime,
   P extends object,
   FallbackComponent extends StyledTarget<R>
-> extends OmitSignatures<React.ForwardRefExoticComponent<P>> {
+> extends React.ForwardRefExoticComponent<P> {
   <E extends StyledTarget<R> = FallbackComponent>(
     props: PolymorphicComponentProps<R, E, P>
   ): React.ReactElement | null;
