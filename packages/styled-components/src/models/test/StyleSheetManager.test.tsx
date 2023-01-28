@@ -299,6 +299,29 @@ describe('StyleSheetManager', () => {
     `);
   });
 
+  it('passing default shouldForwardProp via StyleSheetManager works', () => {
+    const Test = styled.div<{ foo?: boolean; bar?: boolean }>`
+      padding-left: 5px;
+    `;
+
+    const result = TestRenderer.create(
+      <StyleSheetManager shouldForwardProp={p => (p === 'foo' ? false : true)}>
+        <Test foo bar>
+          Foo
+        </Test>
+      </StyleSheetManager>
+    );
+
+    expect(result.toJSON()).toMatchInlineSnapshot(`
+      <div
+        bar={true}
+        className="sc-a b"
+      >
+        Foo
+      </div>
+    `);
+  });
+
   it('passing stylis plugins via StyleSheetManager works', () => {
     const Test = styled.div`
       padding-left: 5px;

@@ -28,7 +28,7 @@ import isTag from '../utils/isTag';
 import joinStrings from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
-import { useStyleSheet, useStylis } from './StyleSheetManager';
+import { useShouldForwardProp, useStyleSheet, useStylis } from './StyleSheetManager';
 import { ThemeContext } from './ThemeProvider';
 
 const identifiers: { [key: string]: number } = {};
@@ -84,10 +84,12 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
     componentStyle,
     defaultProps,
     foldedComponentIds,
-    shouldForwardProp,
     styledComponentId,
     target,
   } = forwardedComponent;
+
+  const defaultShouldForwardProp = useShouldForwardProp();
+  const shouldForwardProp = forwardedComponent.shouldForwardProp || defaultShouldForwardProp;
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   if (process.env.NODE_ENV !== 'production') useDebugValue(styledComponentId);
