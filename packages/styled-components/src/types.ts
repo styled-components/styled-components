@@ -203,7 +203,7 @@ export interface IStyledComponentFactory<
 > {
   <Props extends object = object, Statics extends object = object>(
     target: Target,
-    options: StyledOptions<R, OuterProps>,
+    options: StyledOptions<R, OuterProps & Props>,
     rules: RuleSet<OuterProps & Props>
   ): IStyledComponent<R, Target, OuterProps & Props> & OuterStatics & Statics;
 }

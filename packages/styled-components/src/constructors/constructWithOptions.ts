@@ -102,7 +102,12 @@ export default function constructWithOptions<
   const templateFunction = <Props extends object = object, Statics extends object = object>(
     initialStyles: Styles<OuterProps & Props>,
     ...interpolations: Interpolation<OuterProps & Props>[]
-  ) => componentConstructor<Props, Statics>(tag, options, css(initialStyles, ...interpolations));
+  ) =>
+    componentConstructor<Props, Statics>(
+      tag,
+      options as StyledOptions<R, OuterProps & Props>,
+      css(initialStyles, ...interpolations)
+    );
 
   /* Modify/inject new props at runtime */
   templateFunction.attrs = <T extends Attrs>(
