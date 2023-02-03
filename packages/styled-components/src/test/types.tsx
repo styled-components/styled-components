@@ -44,3 +44,19 @@ const Component2 = () => {
     </Wrapper>
   );
 };
+
+/**
+ * theme prop getting messed with when attrs is used
+ * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1413624609
+ */
+const Example = styled.div.attrs({
+  title: 'test',
+})`
+  margin-top: ${props => props.theme.spacing};
+`;
+
+const Example2 = styled.div.attrs({
+  // title: "test" // This works for some reason
+})`
+  margin-top: ${props => props.theme.spacing};
+`;

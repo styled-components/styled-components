@@ -60,7 +60,7 @@ export interface ExecutionContext extends ExecutionProps {
 }
 
 export interface StyleFunction<Props extends object> {
-  (executionContext: Omit<ExecutionContext, keyof Props> & Props): Interpolation<Props>;
+  (executionContext: ExecutionContext & Omit<Props, keyof ExecutionContext>): Interpolation<Props>;
 }
 
 export type Interpolation<Props extends object> =
@@ -74,7 +74,7 @@ export type Interpolation<Props extends object> =
   | null
   | Keyframes
   // Omit function signature for IStyledComponent in Interpolation so that TS
-  // can disambiguate functions as StyledFunction. Note that IStyledComponent is
+  // can disambiguate functions as StyleFunction. Note that IStyledComponent is
   // not actually callable, the function signature is just a crutch for JSX,
   // same as React.ExoticComponent.
   // We don't allow component selectors for native.
