@@ -173,7 +173,7 @@ export interface PolymorphicComponent<
   R extends Runtime,
   P extends object,
   FallbackComponent extends StyledTarget<R>
-> extends React.ForwardRefExoticComponent<P> {
+> extends React.ForwardRefExoticComponent<object> {
   <E extends StyledTarget<R> = FallbackComponent>(
     props: PolymorphicComponentProps<R, E, P>
   ): React.ReactElement | null;

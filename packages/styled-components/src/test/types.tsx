@@ -38,7 +38,9 @@ const Component2 = () => {
   return (
     // Wrapper should not be influenced by Button's types
     <Wrapper>
-      <Button foo>test</Button>
+      <Button as="video" foo loop>
+        test
+      </Button>
     </Wrapper>
   );
 };
