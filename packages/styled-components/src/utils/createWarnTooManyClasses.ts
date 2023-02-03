@@ -12,7 +12,6 @@ export default (displayName: string, componentId: string) => {
       if (Object.keys(generatedClasses).length >= LIMIT) {
         // Unable to find latestRule in test environment.
 
-        /* eslint-disable no-console, prefer-template */
         const parsedIdString = componentId ? ` with the id of "${componentId}"` : '';
 
         console.warn(

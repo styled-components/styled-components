@@ -36,12 +36,10 @@ function useResolvedAttrs<Props extends object>(
     let resolvedAttrDef = typeof attrDef === 'function' ? attrDef(context) : attrDef;
     let key;
 
-    /* eslint-disable guard-for-in */
     for (key in resolvedAttrDef) {
       // @ts-expect-error bad types
       context[key] = resolvedAttrs[key] = resolvedAttrDef[key];
     }
-    /* eslint-enable guard-for-in */
   });
 
   return [context, resolvedAttrs];
@@ -83,7 +81,6 @@ function useStyledComponentImpl<
   const computedProps: Dict<any> = attrs !== props ? { ...props, ...attrs } : props;
   const propsForElement: Dict<any> = {};
 
-  // eslint-disable-next-line guard-for-in
   for (const key in computedProps) {
     if (key[0] === '$' || key === 'as') continue;
     else if (key === 'forwardedAs') {
@@ -129,7 +126,6 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
         ? styledComponentTarget.attrs.concat(attrs).filter(Boolean)
         : (attrs as AttrsArg<OuterProps>[]);
 
-    // eslint-disable-next-line prefer-destructuring
     let shouldForwardProp = options.shouldForwardProp;
 
     if (isTargetStyledComp && styledComponentTarget.shouldForwardProp) {
@@ -143,13 +139,11 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
           shouldForwardPropFn(prop, elementToBeCreated) &&
           passedShouldForwardPropFn(prop, elementToBeCreated);
       } else {
-        // eslint-disable-next-line prefer-destructuring
         shouldForwardProp = shouldForwardPropFn;
       }
     }
 
     const forwardRef = (props: ExecutionProps & OuterProps, ref: React.Ref<any>) =>
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref);
 
     forwardRef.displayName = displayName;

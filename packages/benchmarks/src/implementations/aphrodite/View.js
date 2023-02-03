@@ -1,6 +1,5 @@
-/* eslint-disable react/prop-types */
-import React from 'react';
 import { css, StyleSheet } from 'aphrodite/no-important';
+import React from 'react';
 
 const baseStyles = StyleSheet.create({
   base: {

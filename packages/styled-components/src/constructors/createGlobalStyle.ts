@@ -31,7 +31,6 @@ export default function createGlobalStyle<Props extends object>(
     const instance = instanceRef.current;
 
     if (process.env.NODE_ENV !== 'production' && React.Children.count(props.children)) {
-      // eslint-disable-next-line no-console
       console.warn(
         `The global style component ${styledComponentId} was given child JSX. createGlobalStyle does not render children.`
       );
@@ -41,7 +40,6 @@ export default function createGlobalStyle<Props extends object>(
       process.env.NODE_ENV !== 'production' &&
       rules.some(rule => typeof rule === 'string' && rule.indexOf('@import') !== -1)
     ) {
-      // eslint-disable-next-line no-console
       console.warn(
         `Please do not use @import CSS syntax in createGlobalStyle at this time, as the CSSOM APIs we use in production do not handle it well. Instead, we recommend using a library such as react-helmet to inject a typical <link> meta tag to the stylesheet, or simply embedding it manually in your index.html <head> section for a simpler app.`
       );
@@ -52,7 +50,6 @@ export default function createGlobalStyle<Props extends object>(
     }
 
     if (!__SERVER__) {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       // @ts-expect-error still using React 17 types for the time being
       (React.useInsertionEffect || React.useLayoutEffect)(() => {
         if (!styleSheet.server) {

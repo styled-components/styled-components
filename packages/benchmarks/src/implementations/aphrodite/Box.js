@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import { StyleSheet } from 'aphrodite/no-important';
 import React from 'react';
 import View from './View';

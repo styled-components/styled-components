@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 import { mainSheet } from './models/StyleSheetManager';
 import StyleSheet from './sheet';
 

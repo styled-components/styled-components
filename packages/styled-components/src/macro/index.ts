@@ -28,7 +28,6 @@ function styledComponentsMacro({
 
     // update references with the new identifiers
     references[refName].forEach(referencePath => {
-      // eslint-disable-next-line no-param-reassign
       (referencePath.node as types.Identifier).name = id.name;
     });
   });

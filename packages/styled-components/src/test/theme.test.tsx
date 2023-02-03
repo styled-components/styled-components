@@ -551,7 +551,6 @@ describe('theming', () => {
     const theme = { color: 'red' };
     const newTheme = { color: 'blue' };
 
-    // eslint-disable-next-line no-console
     const consoleWarn = console.warn;
 
     jest

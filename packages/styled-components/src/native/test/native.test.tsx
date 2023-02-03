@@ -1,4 +1,3 @@
-/* eslint-disable no-console, react/jsx-key, @typescript-eslint/no-empty-function */
 import React, { PropsWithChildren } from 'react';
 import { Text, View } from 'react-native';
 import TestRenderer from 'react-test-renderer';
@@ -101,7 +100,6 @@ describe('native', () => {
     const oldConsoleWarn = console.warn;
     console.warn = jest.fn();
     try {
-      // eslint-disable-next-line no-unused-expressions
       styled.View`
         /* this is a comment */
       `;

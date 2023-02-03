@@ -42,7 +42,6 @@ const rehydrateNamesFromContent = (sheet: Sheet, id: string, content: string) =>
   let name;
 
   for (let i = 0, l = names.length; i < l; i++) {
-    // eslint-disable-next-line
     if ((name = names[i])) {
       sheet.registerName(id, name);
     }

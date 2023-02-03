@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import React, { Component, CSSProperties, StrictMode } from 'react';
 import { findDOMNode } from 'react-dom';
 import { findRenderedComponentWithType, renderIntoDocument } from 'react-dom/test-utils';
@@ -37,7 +36,6 @@ describe('basic', () => {
   });
 
   it('should not inject anything by default', () => {
-    // eslint-disable-next-line no-unused-expressions
     styled.div``;
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
@@ -174,7 +172,6 @@ describe('basic', () => {
   });
 
   it('works with the React 16.6 "memo" API', () => {
-    // eslint-disable-next-line react/display-name
     const Comp = React.memo(props => <div {...props} />);
     const StyledComp = styled(Comp)`
       color: red;
@@ -252,8 +249,6 @@ describe('basic', () => {
       }
 
       const wrapper = renderIntoDocument<any, Wrapper>(<Wrapper />);
-
-      // eslint-disable-next-line react/no-find-dom-node
       const component = find(findDOMNode(wrapper) as Element, Comp);
 
       expect(wrapper.testRef.current).toBe(component);

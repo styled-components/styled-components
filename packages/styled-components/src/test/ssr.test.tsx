@@ -19,7 +19,6 @@ describe('ssr', () => {
   beforeEach(() => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-    // eslint-disable-next-line
     require('../utils/nonce').mockReset();
 
     styled = resetStyled(true);
@@ -84,7 +83,6 @@ describe('ssr', () => {
   });
 
   it('should add a nonce to the stylesheet if webpack nonce is detected in the global scope', () => {
-    // eslint-disable-next-line
     require('../utils/nonce').mockImplementation(() => 'foo');
 
     const Component = createGlobalStyle`
@@ -159,7 +157,6 @@ describe('ssr', () => {
   });
 
   it('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
-    // eslint-disable-next-line
     require('../utils/nonce').mockImplementation(() => 'foo');
 
     const Component = createGlobalStyle`

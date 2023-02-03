@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import { styled } from 'styletron-react';
 
 const staticStyle = {

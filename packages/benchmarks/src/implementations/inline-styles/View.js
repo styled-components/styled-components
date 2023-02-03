@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import React from 'react';
 
 const compose = (s1, s2) => {
@@ -30,7 +29,7 @@ const viewStyle = {
   position: 'relative',
   // fix flexbox bugs
   minHeight: 0,
-  minWidth: 0
+  minWidth: 0,
 };
 
 export default View;

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { act, Simulate } from 'react-dom/test-utils';
@@ -534,7 +533,6 @@ describe(`createGlobalStyle`, () => {
 
       ReactDOM.unmountComponentAtNode(container);
     } catch (e) {
-      // eslint-disable-next-line no-undef
       fail('should not throw exception');
     }
 

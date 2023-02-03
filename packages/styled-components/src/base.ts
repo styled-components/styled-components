@@ -34,7 +34,6 @@ if (
   typeof navigator !== 'undefined' &&
   navigator.product === 'ReactNative'
 ) {
-  // eslint-disable-next-line no-console
   console.warn(
     "It looks like you've imported 'styled-components' on React Native.\n" +
       "Perhaps you're looking to import 'styled-components/native'?\n" +
@@ -51,7 +50,6 @@ if (
   window['__styled-components-init__'] ||= 0;
 
   if (window['__styled-components-init__'] === 1) {
-    // eslint-disable-next-line no-console
     console.warn(
       "It looks like there are several instances of 'styled-components' initialized in this application. " +
         'This may cause dynamic styles to not render properly, errors during the rehydration process, ' +

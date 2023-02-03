@@ -1,3 +1,0 @@
-node_modules
-packages/benchmarks/**/*.js
-packages/sandbox/**/*.js

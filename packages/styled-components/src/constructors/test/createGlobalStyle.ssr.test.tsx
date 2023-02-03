@@ -1,7 +1,6 @@
 /**
  * @jest-environment node
  */
-/* eslint-disable no-console */
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
