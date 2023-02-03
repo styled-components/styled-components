@@ -28,21 +28,6 @@ jobs:
         run: yarn build
         env:
           BUNDLEWATCH_GITHUB_TOKEN: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: "yarn"
-
-      - run: yarn --pure-lockfile
-
-      - name: Lint
-        run: yarn lint
   test:
     runs-on: ubuntu-latest
     strategy:

@@ -9,7 +9,6 @@ const errorMap = md
   .reduce((errors, str) => {
     const [, code, message] = str.split(/^.*?(\d+)\s*\n/);
 
-    // eslint-disable-next-line no-param-reassign
     errors[code] = message;
 
     return errors;

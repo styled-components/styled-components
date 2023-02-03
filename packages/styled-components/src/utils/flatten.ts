@@ -85,7 +85,6 @@ export default function flatten<Props extends object>(
         !isPlainObject(result) &&
         result !== null
       ) {
-        // eslint-disable-next-line no-console
         console.error(
           `${getComponentName(
             chunkFn as AnyComponent

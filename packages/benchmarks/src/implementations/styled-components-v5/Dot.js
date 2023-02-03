@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import styled from 'styled-components-v5';
 import View from './View';
 

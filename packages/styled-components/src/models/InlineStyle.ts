@@ -43,7 +43,6 @@ export default function makeInlineStyleClass<Props extends object>(styleSheet: S
           if (node.type === 'decl') {
             declPairs.push([node.prop, node.value]);
           } else if (process.env.NODE_ENV !== 'production' && node.type !== 'comment') {
-            /* eslint-disable no-console */
             console.warn(`Node of type ${node.type} not supported as an inline style`);
           }
         });

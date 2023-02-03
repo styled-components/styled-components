@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import classnames from 'classnames';
 import React from 'react';
 import styles from './view-styles.css';

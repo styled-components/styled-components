@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 import React from 'react';
 import type * as streamInternal from 'stream';
 import { Readable } from 'stream';
@@ -72,7 +71,6 @@ export default class ServerStyleSheet {
     return [<style {...props} key="sc-0-0" />];
   };
 
-  // eslint-disable-next-line consistent-return
   // @ts-expect-error alternate return types are not possible due to code transformation
   interleaveWithNodeStream(input: Readable): streamInternal.Transform {
     if (!__SERVER__ || IS_BROWSER) {
@@ -84,7 +82,6 @@ export default class ServerStyleSheet {
     if (__SERVER__) {
       this.seal();
 
-      // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
       const { Transform } = require('stream');
 
       const readableStream: Readable = input;

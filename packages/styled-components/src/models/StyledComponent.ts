@@ -63,7 +63,6 @@ function useInjectedStyle<T extends object>(
     stylis
   );
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   if (process.env.NODE_ENV !== 'production') useDebugValue(className);
 
   if (process.env.NODE_ENV !== 'production' && !isStatic && warnTooManyClasses) {
@@ -91,7 +90,6 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
   const defaultShouldForwardProp = useShouldForwardProp();
   const shouldForwardProp = forwardedComponent.shouldForwardProp || defaultShouldForwardProp;
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   if (process.env.NODE_ENV !== 'production') useDebugValue(styledComponentId);
 
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
@@ -105,7 +103,6 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
     (p, attrDef) => {
       const resolvedAttrDef = typeof attrDef === 'function' ? attrDef(p) : attrDef;
 
-      /* eslint-disable guard-for-in */
       for (const key in resolvedAttrDef) {
         // @ts-expect-error bad types
         p[key] =
@@ -115,7 +112,6 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
             ? { ...p[key], ...resolvedAttrDef[key] }
             : resolvedAttrDef[key];
       }
-      /* eslint-enable guard-for-in */
 
       return p;
     },
@@ -134,7 +130,6 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
   const isTargetTag = isTag(elementToBeCreated);
   const propsForElement: Dict<any> = {};
 
-  // eslint-disable-next-line guard-for-in
   for (const key in context) {
     // @ts-expect-error for..in iterates strings instead of keyof
     if (context[key] === undefined) {
@@ -229,7 +224,6 @@ function createStyledComponent<
   // and shouldn't be increasing the number of class names
   const isStatic = componentStyle.isStatic && attrs.length === 0;
   function forwardRef(props: ExecutionProps & OuterProps, ref: Ref<Element>) {
-    // eslint-disable-next-line
     return useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref, isStatic);
   }
 

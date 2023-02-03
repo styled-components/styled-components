@@ -31,11 +31,9 @@ export const checkDynamicCreation = (displayName: string, componentId?: string) 
       };
       // We purposefully call `useRef` outside of a component and expect it to throw
       // If it doesn't, then we're inside another component.
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       useRef();
 
       if (didNotCallInvalidHook && !seen.has(message)) {
-        // eslint-disable-next-line no-console
         console.warn(message);
         seen.add(message);
       }
