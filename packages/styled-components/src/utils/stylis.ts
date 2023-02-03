@@ -30,8 +30,9 @@ function recursivelySetNamepace(compiled: Element[], namespace: String): Element
       // add the namespace to the start
       rule.value = `${namespace} ${rule.value}`;
       // add the namespace after each comma for subsequent selectors.
+      // @ts-expect-error we target modern browsers but intentionally transpile to ES5 for speed
       rule.value = rule.value.replaceAll(',', `,${namespace} `);
-      rule.props = rule.props.map(prop => {
+      rule.props = (rule.props as string[]).map(prop => {
         return `${namespace} ${prop}`;
       });
     }
