@@ -93,7 +93,8 @@ export default function createStylisInstance(
      * This "prefix" referes to a _selector_ prefix.
      */
     prefix = '',
-    componentId = '&'
+    componentId = '&',
+    isGlobal = false
   ) => {
     let flatCSS = css.replace(COMMENT_REGEX, '');
 
@@ -117,7 +118,7 @@ export default function createStylisInstance(
     middlewares.push(selfReferenceReplacementPlugin, stringify);
     let compiled = compile(prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS);
 
-    if (options.namespace) {
+    if (options.namespace && !isGlobal) {
       compiled = recursivelySetNamepace(compiled, options.namespace);
     }
     return serialize(compiled, middleware(middlewares));
