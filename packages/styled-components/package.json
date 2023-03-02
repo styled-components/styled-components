@@ -105,7 +105,7 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-flow-strip-types": "^7.21.0",
-    "@rollup/plugin-typescript": "^10.0.1",
+    "@rollup/plugin-typescript": "^11.0.0",
     "@types/babel-plugin-macros": "^2.8.4",
     "@types/enzyme": "^3.10.12",
     "@types/jest": "^29.4.0",
