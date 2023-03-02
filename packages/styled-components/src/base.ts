@@ -1,5 +1,5 @@
 /* Import singletons */
-import { SC_VERSION } from './constants';
+import { SC_ATTR, SC_VERSION } from './constants';
 import createGlobalStyle from './constructors/createGlobalStyle';
 import css from './constructors/css';
 import keyframes from './constructors/keyframes';
@@ -20,14 +20,6 @@ import {
 import ThemeProvider, { ThemeConsumer, ThemeContext } from './models/ThemeProvider';
 import isStyledComponent from './utils/isStyledComponent';
 
-declare const __SERVER__: boolean;
-
-declare global {
-  interface Window {
-    '__styled-components-init__'?: number;
-  }
-}
-
 /* Warning if you've imported this file on React Native */
 if (
   process.env.NODE_ENV !== 'production' &&
@@ -35,11 +27,11 @@ if (
   navigator.product === 'ReactNative'
 ) {
   console.warn(
-    "It looks like you've imported 'styled-components' on React Native.\n" +
-      "Perhaps you're looking to import 'styled-components/native'?\n" +
-      'Read more about this at https://www.styled-components.com/docs/basics#react-native'
+    `It looks like you've imported 'styled-components' on React Native.\nPerhaps you're looking to import 'styled-components/native'?\nRead more about this at https://www.styled-components.com/docs/basics#react-native`
   );
 }
+
+const windowGlobalKey = `__sc-${SC_ATTR}__`;
 
 /* Warning if there are several instances of styled-components */
 if (
@@ -47,18 +39,18 @@ if (
   process.env.NODE_ENV !== 'test' &&
   typeof window !== 'undefined'
 ) {
-  window['__styled-components-init__'] ||= 0;
+  // @ts-expect-error dynamic key not in window object
+  window[windowGlobalKey] ||= 0;
 
-  if (window['__styled-components-init__'] === 1) {
+  // @ts-expect-error dynamic key not in window object
+  if (window[windowGlobalKey] === 1) {
     console.warn(
-      "It looks like there are several instances of 'styled-components' initialized in this application. " +
-        'This may cause dynamic styles to not render properly, errors during the rehydration process, ' +
-        'a missing theme prop, and makes your application bigger without good reason.\n\n' +
-        'See https://s-c.sh/2BAXzed for more info.'
+      `It looks like there are several instances of 'styled-components' initialized in this application. This may cause dynamic styles to not render properly, errors during the rehydration process, a missing theme prop, and makes your application bigger without good reason.\n\nSee https://s-c.sh/2BAXzed for more info.`
     );
   }
 
-  window['__styled-components-init__'] += 1;
+  // @ts-expect-error dynamic key not in window object
+  window[windowGlobalKey] += 1;
 }
 
 /* Export everything */
