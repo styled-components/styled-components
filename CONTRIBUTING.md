@@ -147,12 +147,9 @@ a git hook is already present.
 
 1. Make sure you have the latest changes and are on the main branch: `git checkout main && git pull origin main`
 2. Install all the dependencies by running `yarn` in the root folder.
-3. Create a new branch based on the version number, for example `git checkout -b 3.4.1`
-4. Update the [CHANGELOG.md](./CHANGELOG.md) with the new version number, add a new Unreleased section at the top and edit the links at the bottom so everything is linked correctly
-5. Commit the Changelog changes with `git commit -m 'Update CHANGELOG'`
-6. Push the branch to the repo with `git push -u origin <branchname>`
-7. Run `yarn run publish`. (Not `yarn publish`) This will run `test` cases, check for `flow` and `lint` errors. You will be prompted to choose the next versions for all the packages including `styled-components`. (Note: Packages which are marked as `private` will not be published to `npm`, choose any version for them).
-8. Congratulations, you just published a new release of `styled-components`! :tada: Let everybody know on Twitter, in our community and all the other places
+3. Run `yarn publish`, choose the next logical version number based on changes
+4. Push the resulting commit after release back to `main` branch
+5. Congratulations, you just published a new release of `styled-components`! :tada: Let everybody know on Twitter, in our community and all the other places
 
 ## Credits
 
