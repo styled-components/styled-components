@@ -1,7 +1,3 @@
 {
-  "recommendations": [
-    "christian-kohler.path-intellisense",
-    "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode"
-  ]
+  "recommendations": ["christian-kohler.path-intellisense", "esbenp.prettier-vscode"]
 }
