@@ -6,7 +6,23 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
-- Add support for the `translate` attribute as a valid prop by [@ay4toh5i](https://github.com/ay4toh5i) (See [#3619](https://github.com/styled-components/styled-components/pull/3619))
+## [v5.3.7] - 2023-03-01
+
+- fix: (React Native) passing testID as attrs property by @ku8ar (see #3857)
+
+- fix: prevent crash when process.env is not defined by Suhas R (see #3957)
+
+- Add support for the `translate` attribute as a valid prop by [@ay4toh5i](https://github.com/ay4toh5i) (see #3619)
+
+- remove Ukraine message; it's now out of date and the message has been received
+
+## [v5.3.6] - 2022-09-27
+
+Fix/nonce in ssr by @samimakicc (see #3755)
+
+## [v5.3.4][v5.4.5] - 2022-03-24
+
+Statement of support for Ukraine
 
 ## [v5.3.3] - 2021-10-19
 
@@ -1197,7 +1213,11 @@ _v3.3.1 was skipped due to a bad deploy._
 
 - Fixed compatibility with other react-broadcast-based systems (like `react-router` v4)
 
-[unreleased]: https://github.com/styled-components/styled-components/compare/v5.3.3...master
+[unreleased]: https://github.com/styled-components/styled-components/compare/v5.3.7...master
+[v5.3.7]: https://github.com/styled-components/styled-components/compare/v5.3.6...v5.3.7
+[v5.3.6]: https://github.com/styled-components/styled-components/compare/v5.3.5...v5.3.6
+[v5.3.5]: https://github.com/styled-components/styled-components/compare/v5.3.4...v5.3.5
+[v5.3.4]: https://github.com/styled-components/styled-components/compare/v5.3.3...v5.3.4
 [v5.3.3]: https://github.com/styled-components/styled-components/compare/v5.3.2...v5.3.3
 [v5.3.2]: https://github.com/styled-components/styled-components/compare/v5.3.1...v5.3.2
 [v5.3.1]: https://github.com/styled-components/styled-components/compare/v5.3.0...v5.3.1

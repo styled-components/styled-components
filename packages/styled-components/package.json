@@ -30,7 +30,6 @@
     "lint": "eslint src",
     "lint:size": "bundlewatch",
     "prettier": "prettier */**/*.js --write",
-    "postinstall": "node ./postinstall.js",
     "prepublishOnly": "npm run build",
     "dev": "cross-env BABEL_ENV=cjs babel-node example/startServer.js"
   },
@@ -46,8 +45,7 @@
     "primitives",
     "scripts",
     "test-utils",
-    "macro",
-    "postinstall.js"
+    "macro"
   ],
   "keywords": [
     "react",
