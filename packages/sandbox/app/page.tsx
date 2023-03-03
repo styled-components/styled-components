@@ -1,3 +1,6 @@
+// comment out 'use client' to see the context error
+'use client';
+
 import styled, { createGlobalStyle } from 'styled-components';
 import ButtonExample from '../src/Button.example';
 
