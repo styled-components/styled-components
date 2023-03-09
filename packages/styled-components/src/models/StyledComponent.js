@@ -305,7 +305,11 @@ export default function createStyledComponent(
     );
   }
 
-  WrappedStyledComponent.toString = () => `.${WrappedStyledComponent.styledComponentId}`;
+  // If the Object prototype is frozen, the "toString" property is non-writable. This means that any objects which inherit this property
+  // cannot have the property changed using an assignment. If using strict mode, attempting that will cause an error. If not using strict
+  // mode, attempting that will be silently ignored.
+  // However, we can still explicitly shadow the prototype's "toString" property by defining a new "toString" property on this object.
+  Object.defineProperty(WrappedStyledComponent, 'toString', { value: () => `.${WrappedStyledComponent.styledComponentId}` });
 
   if (isCompositeComponent) {
     hoist<
