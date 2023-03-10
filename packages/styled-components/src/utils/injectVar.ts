@@ -8,7 +8,7 @@ function isVar<Props extends object>(item: any): item is Var<Props> {
   return isObject(item) && item.var && item.compute;
 }
 
-export default function cssVar<Props extends object>(
+export default function injectVar<Props extends object>(
   chunk: Interpolation<Props>[]
 ): Interpolation<Props>[] {
   const result: Interpolation<Props>[] = [];
