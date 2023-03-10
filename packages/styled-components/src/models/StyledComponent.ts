@@ -23,6 +23,7 @@ import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
+import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import joinStrings from '../utils/joinStrings';
@@ -81,7 +82,7 @@ function resolveContext<Props extends object>(
     ExecutionContext & Props & { class?: string; className?: string; ref?: React.Ref<any> }
   >(
     (p, attrDef) => {
-      const resolvedAttrDef = typeof attrDef === 'function' ? attrDef(p) : attrDef;
+      const resolvedAttrDef = isFunction(attrDef) ? attrDef(p) : attrDef;
 
       for (const key in resolvedAttrDef) {
         // @ts-expect-error bad types

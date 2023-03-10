@@ -17,6 +17,7 @@ import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
+import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
@@ -33,7 +34,7 @@ function useResolvedAttrs<Props extends object>(
   const resolvedAttrs: Dict<any> = {};
 
   attrs.forEach(attrDef => {
-    let resolvedAttrDef = typeof attrDef === 'function' ? attrDef(context) : attrDef;
+    let resolvedAttrDef = isFunction(attrDef) ? attrDef(context) : attrDef;
     let key;
 
     for (key in resolvedAttrDef) {
@@ -92,7 +93,7 @@ function useStyledComponentImpl<
 
   propsForElement.style = useMemo(
     () =>
-      typeof props.style === 'function'
+      isFunction(props.style)
         ? (state: any) => [generatedStyles].concat(props.style(state))
         : props.style
         ? [generatedStyles].concat(props.style)
