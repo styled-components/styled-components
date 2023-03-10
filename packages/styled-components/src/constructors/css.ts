@@ -1,4 +1,5 @@
 import { Interpolation, RuleSet, StyledObject, StyleFunction, Styles } from '../types';
+import cssVar from '../utils/cssVar';
 import { EMPTY_ARRAY } from '../utils/empties';
 import flatten from '../utils/flatten';
 import interleave from '../utils/interleave';
@@ -29,10 +30,7 @@ function css<Props extends object = object>(
 
     return addTag(
       flatten<Props>(
-        interleave<Props>(EMPTY_ARRAY, [
-          styleFunctionOrObject,
-          ...interpolations,
-        ])
+        cssVar<Props>(interleave<Props>(EMPTY_ARRAY, [styleFunctionOrObject, ...interpolations]))
       )
     );
   }
@@ -47,7 +45,7 @@ function css<Props extends object = object>(
     return flatten<Props>(styleStringArray);
   }
 
-  return addTag(flatten<Props>(interleave<Props>(styleStringArray, interpolations)));
+  return addTag(flatten<Props>(cssVar<Props>(interleave<Props>(styleStringArray, interpolations))));
 }
 
 export default css;

@@ -21,6 +21,97 @@ describe('props', () => {
     `);
   });
 
+  it('should handle CSS variable', () => {
+    const Comp = styled.div<{ $$foo: boolean, $bar?: boolean }>`      
+      color: ${{ var: 'foo', compute: props => props.$$foo ? 'black' : 'white' }};
+      background-color: ${props => props.$bar ? 'red' : 'blue'};
+    `;
+    expect(
+      TestRenderer.create(
+        <Comp $$foo={true} $bar={true} />
+      ).toJSON()
+    ).toMatchInlineSnapshot(`
+      <div
+        className="sc-a b"
+        style={
+          {
+            "--foo": "black",
+          }
+        }
+      />
+    `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: var(--foo);
+        background-color: red;
+      }"
+    `);
+  });
+
+  it('should handle CSS variable with default value and single rule', () => {
+    const Comp = styled.div<{ $$fontSize?: string }>`      
+      font-size: ${{ var: 'fontSize', compute: props => props.$$fontSize || "1rm" }};
+    `;
+    expect(
+      TestRenderer.create(
+        <>
+          <Comp />
+          <Comp $$fontSize="2rm" />
+        </>
+      ).toJSON()
+    ).toMatchInlineSnapshot(`
+    [
+      <div
+        className="sc-a b"
+        style={
+          {
+            "--fontSize": "1rm",
+          }
+        }
+      />,
+      <div
+        className="sc-a b"
+        style={
+          {
+            "--fontSize": "2rm",
+          }
+        }
+      />,
+    ]
+    `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        font-size: var(--fontSize);
+      }"
+    `);
+  });
+
+  it('should handle CSS variable with style prop', () => {
+    const Comp = styled.div<{ $$foo?: boolean }>`      
+      color: ${{ var: 'foo', compute: props => props.$$foo ? 'black' : 'white' }};
+    `;
+    expect(
+      TestRenderer.create(
+        <Comp $$foo={true} style={{ backgroundColor: 'red' }} />
+      ).toJSON()
+    ).toMatchInlineSnapshot(`
+      <div
+        className="sc-a b"
+        style={
+          {
+            "--foo": "black",
+            "backgroundColor": "red",
+          }
+        }
+      />
+    `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: var(--foo);
+      }"
+    `);
+  });
+
   it('should execute interpolations and inject props', () => {
     const Comp = styled.div<{ fg: string }>`
       color: ${props => props.fg || 'black'};

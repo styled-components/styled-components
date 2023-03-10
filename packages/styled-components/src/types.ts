@@ -63,8 +63,16 @@ export interface StyleFunction<Props extends object> {
   (executionContext: ExecutionContext & Omit<Props, keyof ExecutionContext>): Interpolation<Props>;
 }
 
+export interface ComputeFunction<Props extends object> {
+  (executionContext: ExecutionContext & Omit<Props, keyof ExecutionContext>): Interpolation<Props>;
+  var: string;
+}
+
+export type Var<Props extends object> = { var: string; compute: ComputeFunction<Props> };
+
 export type Interpolation<Props extends object> =
   | StyleFunction<Props>
+  | Var<Props>
   | StyledObject<Props>
   | TemplateStringsArray
   | string
@@ -146,6 +154,7 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   target: StyledTarget<R>;
   styledComponentId: R extends 'web' ? string : never;
   warnTooManyClasses?: R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never;
+  varRules?: Array<ComputeFunction<OuterProps>>;
 }
 
 /**

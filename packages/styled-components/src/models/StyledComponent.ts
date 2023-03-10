@@ -3,6 +3,7 @@ import { SC_VERSION } from '../constants';
 import type {
   AnyComponent,
   AttrsArg,
+  ComputeFunction,
   Dict,
   ExecutionContext,
   ExecutionProps,
@@ -23,6 +24,7 @@ import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
+import isComputeFunction from '../utils/isComputeFunction';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
@@ -138,13 +140,14 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
   const elementToBeCreated: WebTarget = context.as || target;
   const isTargetTag = isTag(elementToBeCreated);
   const propsForElement: Dict<any> = {};
+  const varRules = forwardedComponent.varRules;
 
   for (const key in context) {
     // @ts-expect-error for..in iterates strings instead of keyof
     if (context[key] === undefined) {
       // Omit undefined values from props passed to wrapped element.
       // This enables using .attrs() to remove props, for example.
-    } else if (key[0] === '$' || key === 'as' || key === 'theme') {
+    } else if (key[0] === '$' || key.substring(0, 2) === '$$' || key === 'as' || key === 'theme') {
       // Omit transient props and execution props.
     } else if (key === 'forwardedAs') {
       propsForElement.as = context.forwardedAs;
@@ -153,6 +156,14 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
       propsForElement[key] = context[key];
     }
   }
+
+  propsForElement.style = varRules?.reduce(
+    (previousValue, currentValue) => ({
+      ...previousValue,
+      [`--${currentValue.var}`]: currentValue(context),
+    }),
+    propsForElement.style
+  );
 
   propsForElement[
     // handle custom elements which React doesn't properly alias
@@ -223,8 +234,19 @@ function createStyledComponent<
     }
   }
 
+  const varRules: Array<ComputeFunction<OuterProps>> = [];
+  const restRules: RuleSet<OuterProps> = [];
+
+  rules.forEach(rule => {
+    if (isComputeFunction<OuterProps>(rule)) {
+      varRules.push(rule);
+    } else {
+      restRules.push(rule);
+    }
+  });
+
   const componentStyle = new ComponentStyle(
-    rules,
+    restRules,
     styledComponentId,
     isTargetStyledComp ? (styledComponentTarget.componentStyle as ComponentStyle) : undefined
   );
@@ -252,6 +274,7 @@ function createStyledComponent<
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
   WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
+  WrappedStyledComponent.varRules = varRules;
 
   // this static is used to preserve the cascade of static classes for component selector
   // purposes; this is especially important with usage of the css prop
