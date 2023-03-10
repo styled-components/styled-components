@@ -52,8 +52,7 @@ function generateId(displayName?: string, parentComponentId?: string): string {
 function useInjectedStyle<T extends object>(
   componentStyle: ComponentStyle,
   isStatic: boolean,
-  resolvedAttrs: T,
-  warnTooManyClasses?: ReturnType<typeof createWarnTooManyClasses>
+  resolvedAttrs: T
 ) {
   const styleSheet = useStyleSheet();
   const stylis = useStylis();
@@ -66,10 +65,6 @@ function useInjectedStyle<T extends object>(
 
   if (process.env.NODE_ENV !== 'production') useDebugValue(className);
 
-  if (process.env.NODE_ENV !== 'production' && !isStatic && warnTooManyClasses) {
-    warnTooManyClasses(className);
-  }
-
   return className;
 }
 
@@ -78,26 +73,26 @@ function resolveContext<Props extends object>(
   props: Props,
   theme: DefaultTheme
 ) {
-  return attrs.reduce<
-    ExecutionContext & Props & { class?: string; className?: string; ref?: React.Ref<any> }
-  >(
-    (p, attrDef) => {
-      const resolvedAttrDef = isFunction(attrDef) ? attrDef(p) : attrDef;
+  const context: ExecutionContext &
+    Props & { class?: string; className?: string; ref?: React.Ref<any> } = { ...props, theme };
+  let attrDef;
 
-      for (const key in resolvedAttrDef) {
-        // @ts-expect-error bad types
-        p[key] =
-          key === 'className'
-            ? joinStrings(p[key] as string | undefined, resolvedAttrDef[key] as string)
-            : key === 'style'
-            ? { ...p[key], ...resolvedAttrDef[key] }
-            : resolvedAttrDef[key];
-      }
+  for (let i = 0; i < attrs.length; i += 1) {
+    attrDef = attrs[i];
+    const resolvedAttrDef = isFunction(attrDef) ? attrDef(context) : attrDef;
 
-      return p;
-    },
-    { ...props, theme }
-  );
+    for (const key in resolvedAttrDef) {
+      // @ts-expect-error bad types
+      context[key] =
+        key === 'className'
+          ? joinStrings(context[key] as string | undefined, resolvedAttrDef[key] as string)
+          : key === 'style'
+          ? { ...context[key], ...resolvedAttrDef[key] }
+          : resolvedAttrDef[key];
+    }
+  }
+
+  return context;
 }
 
 function useStyledComponentImpl<Target extends WebTarget, Props extends ExecutionProps>(
@@ -125,22 +120,11 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
   // should be an immutable value, but behave for now.
   const theme = determineTheme(props, useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
 
-  const context = resolveContext<Props>(componentAttrs, props, theme);
-
-  const generatedClassName = useInjectedStyle(
-    componentStyle,
-    isStatic,
-    context,
-    process.env.NODE_ENV !== 'production' ? forwardedComponent.warnTooManyClasses : undefined
-  );
-
-  const refToForward = forwardedRef;
+  const context: Dict<any> = resolveContext<Props>(componentAttrs, props, theme);
   const elementToBeCreated: WebTarget = context.as || target;
-  const isTargetTag = isTag(elementToBeCreated);
   const propsForElement: Dict<any> = {};
 
   for (const key in context) {
-    // @ts-expect-error for..in iterates strings instead of keyof
     if (context[key] === undefined) {
       // Omit undefined values from props passed to wrapped element.
       // This enables using .attrs() to remove props, for example.
@@ -149,27 +133,28 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
     } else if (key === 'forwardedAs') {
       propsForElement.as = context.forwardedAs;
     } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
-      // @ts-expect-error for..in iterates strings instead of keyof
       propsForElement[key] = context[key];
     }
   }
 
+  const generatedClassName = useInjectedStyle(componentStyle, isStatic, context);
+
+  if (process.env.NODE_ENV !== 'production' && !isStatic && forwardedComponent.warnTooManyClasses) {
+    forwardedComponent.warnTooManyClasses(generatedClassName);
+  }
+
   propsForElement[
     // handle custom elements which React doesn't properly alias
-    isTargetTag &&
+    isTag(elementToBeCreated) &&
     domElements.indexOf(elementToBeCreated as Extract<typeof domElements, string>) === -1
       ? 'class'
       : 'className'
   ] = foldedComponentIds
-    .concat(
-      styledComponentId,
-      generatedClassName !== styledComponentId ? generatedClassName : '',
-      context.className || ''
-    )
+    .concat(styledComponentId, generatedClassName, context.className)
     .filter(Boolean)
     .join(' ');
 
-  propsForElement.ref = refToForward;
+  propsForElement.ref = forwardedRef;
 
   return createElement(elementToBeCreated, propsForElement);
 }

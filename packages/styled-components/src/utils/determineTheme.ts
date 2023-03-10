@@ -6,5 +6,5 @@ export default function determineTheme(
   providedTheme: any,
   defaultProps: any = EMPTY_OBJECT
 ) {
-  return (props.theme !== defaultProps.theme && props.theme) || providedTheme || defaultProps.theme;
+  return (props.theme && props.theme !== defaultProps.theme) || providedTheme || defaultProps.theme;
 }

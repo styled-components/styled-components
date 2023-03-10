@@ -54,9 +54,7 @@ export default function flatten<Props extends object>(
     for (let i = 0, len = chunk.length, result; i < len; i += 1) {
       result = flatten<Props>(chunk[i], executionContext, styleSheet, stylisInstance);
 
-      if (result.length === 0) continue;
-
-      ruleSet.push(...result);
+      if (result.length) ruleSet.push(...result);
     }
 
     return ruleSet;
@@ -74,8 +72,7 @@ export default function flatten<Props extends object>(
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
     if (isStatelessFunction(chunk) && executionContext) {
-      const chunkFn = chunk as (props: {}) => Interpolation<Props>;
-      const result = chunkFn(executionContext);
+      const result = chunk(executionContext);
 
       if (
         process.env.NODE_ENV !== 'production' &&
@@ -87,7 +84,7 @@ export default function flatten<Props extends object>(
       ) {
         console.error(
           `${getComponentName(
-            chunkFn as AnyComponent
+            chunk as AnyComponent
           )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
         );
       }

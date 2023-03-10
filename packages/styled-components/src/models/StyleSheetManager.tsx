@@ -8,10 +8,12 @@ export type IStyleSheetContext = {
   shouldForwardProp?: ShouldForwardProp<'web'>;
   styleSheet?: StyleSheet;
 };
+
 export const StyleSheetContext = React.createContext<IStyleSheetContext>({
   shouldForwardProp: undefined,
   styleSheet: undefined,
 });
+
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
 
 export type IStylisContext = Stringifier | void;
@@ -116,11 +118,7 @@ export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {
 
   return (
     <StyleSheetContext.Provider value={{ shouldForwardProp: props.shouldForwardProp, styleSheet }}>
-      <StylisContext.Provider value={stylis}>
-        {process.env.NODE_ENV !== 'production'
-          ? React.Children.only(props.children)
-          : props.children}
-      </StylisContext.Provider>
+      <StylisContext.Provider value={stylis}>{props.children}</StylisContext.Provider>
     </StyleSheetContext.Provider>
   );
 }

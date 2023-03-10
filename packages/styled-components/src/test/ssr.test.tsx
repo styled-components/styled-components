@@ -276,8 +276,12 @@ describe('ssr', () => {
   });
 
   it('should handle errors while streaming', () => {
+    function ExplodingComponent(): JSX.Element {
+      throw new Error('ahhh');
+    }
+
     const sheet = new ServerStyleSheet();
-    const jsx = sheet.collectStyles(null);
+    const jsx = sheet.collectStyles(<ExplodingComponent />);
     // @ts-expect-error TODO ReadableStream vs Readable
     const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
 

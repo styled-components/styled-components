@@ -150,7 +150,8 @@ const serverConfig = {
     replace({
       window: undefined,
       __SERVER__: JSON.stringify(true),
-    })
+    }),
+    minifierPlugin
   ),
 };
 
@@ -163,7 +164,8 @@ const browserConfig = {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
-    })
+    }),
+    minifierPlugin
   ),
 };
 
@@ -178,6 +180,7 @@ const nativeConfig = {
       file: 'native/dist/styled-components.native.esm.js',
     }),
   ],
+  plugins: configBase.plugins.concat(minifierPlugin),
 };
 
 const macroConfig = Object.assign({}, configBase, {

@@ -29,11 +29,7 @@ export default class ComponentStyle {
       (baseStyle === undefined || baseStyle.isStatic) &&
       isStaticRules(rules);
     this.componentId = componentId;
-
-    // SC_VERSION gives us isolation between multiple runtimes on the page at once
-    // this is improved further with use of the babel plugin "namespace" feature
     this.baseHash = phash(SEED, componentId);
-
     this.baseStyle = baseStyle;
 
     // NOTE: This registers the componentId, which ensures a consistent order
@@ -41,18 +37,11 @@ export default class ComponentStyle {
     StyleSheet.registerId(componentId);
   }
 
-  /*
-   * Flattens a rule set into valid CSS
-   * Hashes it, wraps the whole chunk in a .hash1234 {}
-   * Returns the hash to be injected on render()
-   * */
   generateAndInjectStyles(
     executionContext: Object,
     styleSheet: StyleSheet,
     stylis: Stringifier
   ): string {
-    const { componentId } = this;
-
     this.names.length = 0;
 
     if (this.baseStyle) {
@@ -61,7 +50,7 @@ export default class ComponentStyle {
 
     // force dynamic classnames if user-supplied stylis plugins are in use
     if (this.isStatic && !stylis.hash) {
-      if (this.staticRulesId && styleSheet.hasNameForId(componentId, this.staticRulesId)) {
+      if (this.staticRulesId && styleSheet.hasNameForId(this.componentId, this.staticRulesId)) {
         this.names.push(this.staticRulesId);
       } else {
         const cssStatic = (
@@ -69,20 +58,19 @@ export default class ComponentStyle {
         ).join('');
         const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
 
-        if (!styleSheet.hasNameForId(componentId, name)) {
-          const cssStaticFormatted = stylis(cssStatic, `.${name}`, undefined, componentId);
-          styleSheet.insertRules(componentId, name, cssStaticFormatted);
+        if (!styleSheet.hasNameForId(this.componentId, name)) {
+          const cssStaticFormatted = stylis(cssStatic, `.${name}`, undefined, this.componentId);
+          styleSheet.insertRules(this.componentId, name, cssStaticFormatted);
         }
 
         this.names.push(name);
         this.staticRulesId = name;
       }
     } else {
-      const { length } = this.rules;
       let dynamicHash = phash(this.baseHash, stylis.hash);
       let css = '';
 
-      for (let i = 0; i < length; i++) {
+      for (let i = 0; i < this.rules.length; i++) {
         const partRule = this.rules[i];
 
         if (typeof partRule === 'string') {
@@ -102,9 +90,12 @@ export default class ComponentStyle {
       if (css) {
         const name = generateName(dynamicHash >>> 0);
 
-        if (!styleSheet.hasNameForId(componentId, name)) {
-          const cssFormatted = stylis(css, `.${name}`, undefined, componentId);
-          styleSheet.insertRules(componentId, name, cssFormatted);
+        if (!styleSheet.hasNameForId(this.componentId, name)) {
+          styleSheet.insertRules(
+            this.componentId,
+            name,
+            stylis(css, `.${name}`, undefined, this.componentId)
+          );
         }
 
         this.names.push(name);
