@@ -112,6 +112,31 @@ describe('props', () => {
     `);
   });
 
+  it('should handle CSS variable middle of the value', () => {
+    const Comp = styled.div<{ $$borderWidth: string }>`
+      border: solid ${{ var: 'borderWidth', compute: props => props.$$borderWidth }} pink;
+    `;
+    expect(
+      TestRenderer.create(
+        <Comp $$borderWidth="2px" />
+      ).toJSON()
+    ).toMatchInlineSnapshot(`
+      <div
+        className="sc-a b"
+        style={
+          {
+            "--borderWidth": "2px",
+          }
+        }
+      />
+    `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        border: solid var(--borderWidth) pink;
+      }"
+    `);
+  });
+
   it('should execute interpolations and inject props', () => {
     const Comp = styled.div<{ fg: string }>`
       color: ${props => props.fg || 'black'};
