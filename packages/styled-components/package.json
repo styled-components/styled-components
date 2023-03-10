@@ -11,17 +11,6 @@
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
   },
   "sideEffects": false,
-  "exports": {
-    "types": "./dist/index.d.ts",
-    "node": {
-      "require": "./dist/styled-components.cjs.js",
-      "import": "./dist/styled-components.esm.js",
-      "default": "./dist/styled-components.cjs.js"
-    },
-    "require": "./dist/styled-components.browser.cjs.js",
-    "import": "./dist/styled-components.browser.esm.js",
-    "default": "./dist/styled-components.browser.cjs.js"
-  },
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
     "prebuild": "rimraf dist && yarn generateErrors",
