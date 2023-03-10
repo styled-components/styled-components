@@ -29,7 +29,7 @@ import joinStrings from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
 import { useShouldForwardProp, useStyleSheet, useStylis } from './StyleSheetManager';
-import { ThemeContext } from './ThemeProvider';
+import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 const identifiers: { [key: string]: number } = {};
 
@@ -72,6 +72,33 @@ function useInjectedStyle<T extends object>(
   return className;
 }
 
+function resolveContext<Props extends object>(
+  attrs: AttrsArg<Props>[],
+  props: Props,
+  theme: DefaultTheme
+) {
+  return attrs.reduce<
+    ExecutionContext & Props & { class?: string; className?: string; ref?: React.Ref<any> }
+  >(
+    (p, attrDef) => {
+      const resolvedAttrDef = typeof attrDef === 'function' ? attrDef(p) : attrDef;
+
+      for (const key in resolvedAttrDef) {
+        // @ts-expect-error bad types
+        p[key] =
+          key === 'className'
+            ? joinStrings(p[key] as string | undefined, resolvedAttrDef[key] as string)
+            : key === 'style'
+            ? { ...p[key], ...resolvedAttrDef[key] }
+            : resolvedAttrDef[key];
+      }
+
+      return p;
+    },
+    { ...props, theme }
+  );
+}
+
 function useStyledComponentImpl<Target extends WebTarget, Props extends ExecutionProps>(
   forwardedComponent: IStyledComponent<'web', Target, Props>,
   props: Props,
@@ -97,26 +124,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
   // should be an immutable value, but behave for now.
   const theme = determineTheme(props, useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
 
-  const context = componentAttrs.reduce<
-    ExecutionContext & Props & { class?: string; className?: string; ref?: React.Ref<Target> }
-  >(
-    (p, attrDef) => {
-      const resolvedAttrDef = typeof attrDef === 'function' ? attrDef(p) : attrDef;
-
-      for (const key in resolvedAttrDef) {
-        // @ts-expect-error bad types
-        p[key] =
-          key === 'className'
-            ? joinStrings(p[key], resolvedAttrDef[key])
-            : key === 'style'
-            ? { ...p[key], ...resolvedAttrDef[key] }
-            : resolvedAttrDef[key];
-      }
-
-      return p;
-    },
-    { ...props, theme }
-  );
+  const context = resolveContext<Props>(componentAttrs, props, theme);
 
   const generatedClassName = useInjectedStyle(
     componentStyle,
@@ -280,7 +288,9 @@ function createStyledComponent<
   // cannot have the property changed using an assignment. If using strict mode, attempting that will cause an error. If not using strict
   // mode, attempting that will be silently ignored.
   // However, we can still explicitly shadow the prototype's "toString" property by defining a new "toString" property on this object.
-  Object.defineProperty(WrappedStyledComponent, 'toString', { value: () => `.${WrappedStyledComponent.styledComponentId}` });
+  Object.defineProperty(WrappedStyledComponent, 'toString', {
+    value: () => `.${WrappedStyledComponent.styledComponentId}`,
+  });
 
   if (isCompositeComponent) {
     const compositeComponentTarget = target as AnyComponent;
