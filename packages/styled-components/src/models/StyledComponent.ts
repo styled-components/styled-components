@@ -143,15 +143,21 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
     forwardedComponent.warnTooManyClasses(generatedClassName);
   }
 
+  let classString = joinStrings(foldedComponentIds, styledComponentId);
+  if (generatedClassName) {
+    classString += ' ' + generatedClassName;
+  }
+  if (context.className) {
+    classString += ' ' + context.className;
+  }
+
   propsForElement[
     // handle custom elements which React doesn't properly alias
     isTag(elementToBeCreated) &&
     domElements.indexOf(elementToBeCreated as Extract<typeof domElements, string>) === -1
       ? 'class'
       : 'className'
-  ] = [foldedComponentIds, styledComponentId, generatedClassName, context.className]
-    .filter(Boolean)
-    .join(' ');
+  ] = classString;
 
   propsForElement.ref = forwardedRef;
 
