@@ -154,7 +154,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
   propsForElement[
     // handle custom elements which React doesn't properly alias
     isTag(elementToBeCreated) &&
-    domElements.indexOf(elementToBeCreated as Extract<typeof domElements, string>) === -1
+    !domElements.has(elementToBeCreated as Extract<typeof domElements, string>)
       ? 'class'
       : 'className'
   ] = classString;
