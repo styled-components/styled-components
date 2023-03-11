@@ -149,8 +149,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
     domElements.indexOf(elementToBeCreated as Extract<typeof domElements, string>) === -1
       ? 'class'
       : 'className'
-  ] = foldedComponentIds
-    .concat(styledComponentId, generatedClassName, context.className)
+  ] = [foldedComponentIds, styledComponentId, generatedClassName, context.className]
     .filter(Boolean)
     .join(' ');
 
@@ -241,8 +240,8 @@ function createStyledComponent<
   // this static is used to preserve the cascade of static classes for component selector
   // purposes; this is especially important with usage of the css prop
   WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
-    ? styledComponentTarget.foldedComponentIds.concat(styledComponentTarget.styledComponentId)
-    : (EMPTY_ARRAY as string[]);
+    ? joinStrings(styledComponentTarget.foldedComponentIds, styledComponentTarget.styledComponentId)
+    : '';
 
   WrappedStyledComponent.styledComponentId = styledComponentId;
 
