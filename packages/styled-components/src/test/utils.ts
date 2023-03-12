@@ -8,6 +8,7 @@ import { mainSheet } from '../models/StyleSheetManager';
 import { resetGroupIds } from '../sheet/GroupIDAllocator';
 import { rehydrateSheet } from '../sheet/Rehydration';
 import styledError from '../utils/error';
+import { joinStringArray } from '../utils/joinStrings';
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let mockIndex = 0;
@@ -68,9 +69,10 @@ export const stripWhitespace = (str: string) =>
     .replace(/\s+/g, ' ');
 
 export const getCSS = (scope: Document | HTMLElement) =>
-  Array.from(scope.querySelectorAll('style'))
-    .map(tag => tag.innerHTML)
-    .join('\n')
+  joinStringArray(
+    Array.from(scope.querySelectorAll('style')).map(tag => tag.innerHTML),
+    '\n'
+  )
     .replace(/ {/g, '{')
     .replace(/:\s+/g, ':')
     .replace(/:\s+;/g, ':;');

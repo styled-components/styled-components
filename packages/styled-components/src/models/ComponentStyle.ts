@@ -5,7 +5,7 @@ import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
 import { hash, phash } from '../utils/hash';
 import isStaticRules from '../utils/isStaticRules';
-import joinStrings from '../utils/joinStrings';
+import { joinStringArray, joinStrings } from '../utils/joinStrings';
 
 const SEED = hash(SC_VERSION);
 
@@ -50,7 +50,9 @@ export default class ComponentStyle {
       if (this.staticRulesId && styleSheet.hasNameForId(this.componentId, this.staticRulesId)) {
         names = joinStrings(names, this.staticRulesId);
       } else {
-        const cssStatic = flatten(this.rules, executionContext, styleSheet, stylis).join('');
+        const cssStatic = joinStringArray(
+          flatten(this.rules, executionContext, styleSheet, stylis) as string[]
+        );
         const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
 
         if (!styleSheet.hasNameForId(this.componentId, name)) {
@@ -73,7 +75,9 @@ export default class ComponentStyle {
 
           if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule);
         } else if (partRule) {
-          const partString = flatten(partRule, executionContext, styleSheet, stylis).join('');
+          const partString = joinStringArray(
+            flatten(partRule, executionContext, styleSheet, stylis) as string[]
+          );
           dynamicHash = phash(dynamicHash, partString);
           css += partString;
         }

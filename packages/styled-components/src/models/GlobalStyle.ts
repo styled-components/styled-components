@@ -2,6 +2,7 @@ import StyleSheet from '../sheet';
 import { ExecutionContext, FlattenerResult, RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import isStaticRules from '../utils/isStaticRules';
+import { joinStringArray } from '../utils/joinStrings';
 
 export default class GlobalStyle<Props extends object> {
   componentId: string;
@@ -24,7 +25,9 @@ export default class GlobalStyle<Props extends object> {
     styleSheet: StyleSheet,
     stylis: Stringifier
   ): void {
-    const flatCSS = flatten(this.rules, executionContext, styleSheet, stylis).join('');
+    const flatCSS = joinStringArray(
+      flatten(this.rules, executionContext, styleSheet, stylis) as string[]
+    );
     const css = stylis(flatCSS, '');
     const id = this.componentId + instance;
 
