@@ -16,12 +16,10 @@ export default class ComponentStyle {
   baseStyle: ComponentStyle | null | undefined;
   componentId: string;
   isStatic: boolean;
-  names: string[];
   rules: RuleSet<any>;
   staticRulesId: string;
 
   constructor(rules: RuleSet<any>, componentId: string, baseStyle?: ComponentStyle) {
-    this.names = [];
     this.rules = rules;
     this.staticRulesId = '';
     this.isStatic =
@@ -42,16 +40,16 @@ export default class ComponentStyle {
     styleSheet: StyleSheet,
     stylis: Stringifier
   ): string {
-    this.names.length = 0;
+    let names = [];
 
     if (this.baseStyle) {
-      this.names.push(this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis));
+      names.push(this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis));
     }
 
     // force dynamic classnames if user-supplied stylis plugins are in use
     if (this.isStatic && !stylis.hash) {
       if (this.staticRulesId && styleSheet.hasNameForId(this.componentId, this.staticRulesId)) {
-        this.names.push(this.staticRulesId);
+        names.push(this.staticRulesId);
       } else {
         const cssStatic = flatten(this.rules, executionContext, styleSheet, stylis).join('');
         const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
@@ -61,7 +59,7 @@ export default class ComponentStyle {
           styleSheet.insertRules(this.componentId, name, cssStaticFormatted);
         }
 
-        this.names.push(name);
+        names.push(name);
         this.staticRulesId = name;
       }
     } else {
@@ -93,10 +91,10 @@ export default class ComponentStyle {
           );
         }
 
-        this.names.push(name);
+        names.push(name);
       }
     }
 
-    return this.names.join(' ');
+    return names.join(' ');
   }
 }
