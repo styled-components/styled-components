@@ -32,7 +32,7 @@ export default function makeInlineStyleClass<Props extends object>(styleSheet: S
 
     generateStyleObject(executionContext: ExecutionContext & Props) {
       // keyframes, functions, and component selectors are not allowed for React Native
-      const flatCSS = (flatten(this.rules, executionContext) as string[]).join('');
+      const flatCSS = flatten(this.rules, executionContext).join('');
       const hash = generateComponentId(flatCSS);
 
       if (!generated[hash]) {

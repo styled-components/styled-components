@@ -24,8 +24,8 @@ export default class GlobalStyle<Props extends object> {
     styleSheet: StyleSheet,
     stylis: Stringifier
   ): void {
-    const flatCSS = flatten(this.rules, executionContext, styleSheet, stylis) as string[];
-    const css = stylis(flatCSS.join(''), '');
+    const flatCSS = flatten(this.rules, executionContext, styleSheet, stylis).join('');
+    const css = stylis(flatCSS, '');
     const id = this.componentId + instance;
 
     // NOTE: We use the id as a name as well, since these rules never change
