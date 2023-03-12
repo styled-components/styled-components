@@ -24,7 +24,7 @@ import isStyledComponent from './isStyledComponent';
 const isFalsish = (chunk: any): chunk is undefined | null | false | '' =>
   chunk === undefined || chunk === null || chunk === false || chunk === '';
 
-export const objToCssArray = (obj: Dict<any>, prevKey?: string): string[] => {
+export const objToCssArray = (obj: Dict<any>): string[] => {
   const rules = [];
 
   for (const key in obj) {
@@ -35,13 +35,13 @@ export const objToCssArray = (obj: Dict<any>, prevKey?: string): string[] => {
     if ((Array.isArray(val) && val.isCss) || isFunction(val)) {
       rules.push(`${hyphenate(key)}:`, val, ';');
     } else if (isPlainObject(val)) {
-      rules.push(...objToCssArray(val, key));
+      rules.push(`${key} {`, ...objToCssArray(val), '}');
     } else {
       rules.push(`${hyphenate(key)}: ${addUnitIfNeeded(key, val)};`);
     }
   }
 
-  return prevKey ? [`${prevKey} {`, ...rules, '}'] : rules;
+  return rules;
 };
 
 export default function flatten<Props extends object>(
