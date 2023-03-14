@@ -12,7 +12,7 @@ import type {
   OmitNever,
   RuleSet,
   StyledOptions,
-  WebTarget,
+  WebTarget
 } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
@@ -150,7 +150,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
       ? 'class'
       : 'className'
   ] = foldedComponentIds
-    .concat(styledComponentId, generatedClassName, context.className)
+    .concat(styledComponentId, context.className, generatedClassName)
     .filter(Boolean)
     .join(' ');
 

@@ -304,7 +304,7 @@ describe('attrs', () => {
     `);
     expect(rendered.toJSON()).toMatchInlineSnapshot(`
       <p
-        className="sc-a d sc-b c"
+        className="sc-a sc-b c d"
         style={
           {
             "color": "blue",

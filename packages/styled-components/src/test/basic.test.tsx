@@ -379,7 +379,7 @@ describe('basic', () => {
       `);
       expect(rendered.toJSON()).toMatchInlineSnapshot(`
         <div
-          className="sc-a d sc-b c"
+          className="sc-a sc-b c d"
         />
       `);
     });
