@@ -5,6 +5,7 @@ import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
 import { hash, phash } from '../utils/hash';
 import isStaticRules from '../utils/isStaticRules';
+import joinStrings from '../utils/joinStrings';
 
 const SEED = hash(SC_VERSION);
 
@@ -40,16 +41,14 @@ export default class ComponentStyle {
     styleSheet: StyleSheet,
     stylis: Stringifier
   ): string {
-    let names = [];
-
-    if (this.baseStyle) {
-      names.push(this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis));
-    }
+    let names = this.baseStyle
+      ? this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis)
+      : '';
 
     // force dynamic classnames if user-supplied stylis plugins are in use
     if (this.isStatic && !stylis.hash) {
       if (this.staticRulesId && styleSheet.hasNameForId(this.componentId, this.staticRulesId)) {
-        names.push(this.staticRulesId);
+        names = joinStrings(names, this.staticRulesId);
       } else {
         const cssStatic = flatten(this.rules, executionContext, styleSheet, stylis).join('');
         const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
@@ -59,7 +58,7 @@ export default class ComponentStyle {
           styleSheet.insertRules(this.componentId, name, cssStaticFormatted);
         }
 
-        names.push(name);
+        names = joinStrings(names, name);
         this.staticRulesId = name;
       }
     } else {
@@ -91,10 +90,10 @@ export default class ComponentStyle {
           );
         }
 
-        names.push(name);
+        names = joinStrings(names, name);
       }
     }
 
-    return names.join(' ');
+    return names;
   }
 }
