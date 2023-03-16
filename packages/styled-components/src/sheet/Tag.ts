@@ -20,12 +20,12 @@ export const CSSOMTag = class CSSOMTag implements Tag {
   length: number;
 
   constructor(target?: HTMLElement) {
-    const element = (this.element = makeStyleTag(target));
+    this.element = makeStyleTag(target);
 
     // Avoid Edge bug where empty style elements don't create sheets
-    element.appendChild(document.createTextNode(''));
+    this.element.appendChild(document.createTextNode(''));
 
-    this.sheet = getSheet(element);
+    this.sheet = getSheet(this.element);
     this.length = 0;
   }
 
@@ -46,8 +46,9 @@ export const CSSOMTag = class CSSOMTag implements Tag {
 
   getRule(index: number): string {
     const rule = this.sheet.cssRules[index];
+
     // Avoid IE11 quirk where cssText is inaccessible on some invalid rules
-    if (rule !== undefined && typeof rule.cssText === 'string') {
+    if (rule && rule.cssText) {
       return rule.cssText;
     } else {
       return '';
@@ -62,8 +63,8 @@ export const TextTag = class TextTag implements Tag {
   length: number;
 
   constructor(target?: HTMLElement) {
-    const element = (this.element = makeStyleTag(target));
-    this.nodes = element.childNodes;
+    this.element = makeStyleTag(target);
+    this.nodes = this.element.childNodes;
     this.length = 0;
   }
 

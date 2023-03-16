@@ -29,7 +29,7 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
     return index;
   }
 
-  insertRules(group: number, rules: string | string[]) {
+  insertRules(group: number, rules: string[]) {
     if (group >= this.groupSizes.length) {
       const oldBuffer = this.groupSizes;
       const oldSize = oldBuffer.length;
@@ -53,16 +53,10 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
 
     let ruleIndex = this.indexOfGroup(group + 1);
 
-    if (Array.isArray(rules)) {
-      for (let i = 0, l = rules.length; i < l; i++) {
-        if (this.tag.insertRule(ruleIndex, rules[i])) {
-          this.groupSizes[group]++;
-          ruleIndex++;
-        }
-      }
-    } else {
-      if (this.tag.insertRule(ruleIndex, rules)) {
+    for (let i = 0, l = rules.length; i < l; i++) {
+      if (this.tag.insertRule(ruleIndex, rules[i])) {
         this.groupSizes[group]++;
+        ruleIndex++;
       }
     }
   }
