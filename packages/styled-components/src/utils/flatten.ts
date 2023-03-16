@@ -48,18 +48,6 @@ export default function flatten<Props extends object>(
   styleSheet?: StyleSheet,
   stylisInstance?: Stringifier
 ): RuleSet<Props> {
-  if (Array.isArray(chunk)) {
-    const ruleSet: RuleSet<Props> = [];
-
-    for (let i = 0, len = chunk.length, result; i < len; i += 1) {
-      result = flatten<Props>(chunk[i], executionContext, styleSheet, stylisInstance);
-
-      if (result.length) ruleSet.push(...result);
-    }
-
-    return ruleSet;
-  }
-
   if (isFalsish(chunk)) {
     return [];
   }
@@ -105,5 +93,16 @@ export default function flatten<Props extends object>(
   }
 
   /* Handle objects */
-  return isPlainObject(chunk) ? objToCssArray(chunk as StyledObject<Props>) : [chunk.toString()];
+  if (isPlainObject(chunk)) {
+    return objToCssArray(chunk as StyledObject<Props>);
+  }
+
+  if (!Array.isArray(chunk)) {
+    return [chunk.toString()];
+  }
+
+  /* Handle objects */
+  return chunk.flatMap(chunklet =>
+    flatten<Props>(chunklet, executionContext, styleSheet, stylisInstance)
+  );
 }
