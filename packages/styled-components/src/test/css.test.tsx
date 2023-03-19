@@ -20,7 +20,6 @@ describe('css features', () => {
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
-        -webkit-transition: opacity 0.3s;
         transition: opacity 0.3s;
       }"
     `);
@@ -35,16 +34,8 @@ describe('css features', () => {
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
-        display: -webkit-box;
-        display: -webkit-flex;
-        display: -ms-flexbox;
         display: flex;
-        -webkit-flex-direction: column;
-        -ms-flex-direction: column;
         flex-direction: column;
-        -webkit-align-items: center;
-        -webkit-box-align: center;
-        -ms-flex-align: center;
         align-items: center;
       }"
     `);

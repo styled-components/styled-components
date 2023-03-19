@@ -279,13 +279,13 @@ describe('StyleSheetManager', () => {
     expect(indexOfBlueStyle).toBeGreaterThan(indexOfRedStyle);
   });
 
-  it('passing disableVendorPrefixes to StyleSheetManager works', () => {
+  it('passing `enableVendorPrefixes` to StyleSheetManager works', () => {
     const Test = styled.div`
       display: flex;
     `;
 
     TestRenderer.create(
-      <StyleSheetManager disableVendorPrefixes>
+      <StyleSheetManager enableVendorPrefixes>
         <Test>Foo</Test>
       </StyleSheetManager>
     );
@@ -294,7 +294,7 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .b{display:flex;}
+        .b{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;}
       </style>
     `);
   });
@@ -529,7 +529,7 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        #foo .b{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;}
+        #foo .b{display:flex;}
       </style>
     `);
   });

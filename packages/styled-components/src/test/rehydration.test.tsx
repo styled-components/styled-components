@@ -454,7 +454,6 @@ describe('rehydration', () => {
           }
         }
         .b {
-          -webkit-animation: keyframe_880 1s both;
           animation: keyframe_880 1s both;
         }"
       `);
@@ -486,13 +485,7 @@ describe('rehydration', () => {
           }
         }
         .b {
-          -webkit-animation: keyframe_144 1s both;
           animation: keyframe_144 1s both;
-        }
-        @-webkit-keyframes keyframe_144 {
-          from {
-            opacity: 1;
-          }
         }
         @keyframes keyframe_144 {
           from {
@@ -536,17 +529,10 @@ describe('rehydration', () => {
           }
         }
         .d {
-          -webkit-animation: keyframe_880 1s both;
           animation: keyframe_880 1s both;
         }
         .c {
-          -webkit-animation: keyframe_144 1s both;
           animation: keyframe_144 1s both;
-        }
-        @-webkit-keyframes keyframe_144 {
-          from {
-            opacity: 1;
-          }
         }
         @keyframes keyframe_144 {
           from {
@@ -588,17 +574,10 @@ describe('rehydration', () => {
           }
         }
         .d {
-          -webkit-animation: keyframe_880 1s both;
           animation: keyframe_880 1s both;
         }
         .c {
-          -webkit-animation: keyframe_144 1s both;
           animation: keyframe_144 1s both;
-        }
-        @-webkit-keyframes keyframe_144 {
-          from {
-            opacity: 1;
-          }
         }
         @keyframes keyframe_144 {
           from {

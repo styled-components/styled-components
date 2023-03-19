@@ -63,16 +63,7 @@ describe('keyframes', () => {
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
-        -webkit-animation: a 2s linear infinite;
         animation: a 2s linear infinite;
-      }
-      @-webkit-keyframes a {
-        0% {
-          opacity: 0;
-        }
-        100% {
-          opacity: 1;
-        }
       }
       @keyframes a {
         0% {
@@ -108,27 +99,18 @@ describe('keyframes', () => {
     TestRenderer.create(<Comp />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-".c {
-  -webkit-animation: a 2s linear infinite;
-  animation: a 2s linear infinite;
-}
-@-webkit-keyframes a {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-@keyframes a {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}"
-`);
+      ".c {
+        animation: a 2s linear infinite;
+      }
+      @keyframes a {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }"
+    `);
   });
 
   it('should insert the correct styles for objects with nesting', () => {
@@ -161,33 +143,23 @@ describe('keyframes', () => {
     TestRenderer.create(<Comp />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-"@media(max-width:700px) {
-  .c {
-    -webkit-animation: a 2s linear infinite;
-    animation: a 2s linear infinite;
-  }
-  .c :hover {
-    -webkit-animation: a 10s linear infinite;
-    animation: a 10s linear infinite;
-  }
-}
-@-webkit-keyframes a {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-@keyframes a {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}"
-`);
+      "@media(max-width:700px) {
+        .c {
+          animation: a 2s linear infinite;
+        }
+        .c :hover {
+          animation: a 10s linear infinite;
+        }
+      }
+      @keyframes a {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }"
+    `);
   });
 
   it('should insert the correct styles when keyframes in props', () => {
@@ -211,16 +183,7 @@ describe('keyframes', () => {
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
-        -webkit-animation: a 2s linear infinite;
         animation: a 2s linear infinite;
-      }
-      @-webkit-keyframes a {
-        0% {
-          opacity: 0;
-        }
-        100% {
-          opacity: 1;
-        }
       }
       @keyframes a {
         0% {
@@ -287,55 +250,23 @@ describe('keyframes', () => {
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".d {
-        -webkit-animation: none;
         animation: none;
       }
       .e {
-        -webkit-animation: b 1s linear, a 1s linear;
         animation: b 1s linear, a 1s linear;
       }
       .f {
-        -webkit-animation: a 1s linear;
         animation: a 1s linear;
       }
       .g {
-        -webkit-animation: b 1s linear;
         animation: b 1s linear;
-      }
-      @-webkit-keyframes b {
-        from {
-          -webkit-transform: translateX(-10px);
-          -moz-transform: translateX(-10px);
-          -ms-transform: translateX(-10px);
-          transform: translateX(-10px);
-        }
-        to {
-          -webkit-transform: none;
-          -moz-transform: none;
-          -ms-transform: none;
-          transform: none;
-        }
       }
       @keyframes b {
         from {
-          -webkit-transform: translateX(-10px);
-          -moz-transform: translateX(-10px);
-          -ms-transform: translateX(-10px);
           transform: translateX(-10px);
         }
         to {
-          -webkit-transform: none;
-          -moz-transform: none;
-          -ms-transform: none;
           transform: none;
-        }
-      }
-      @-webkit-keyframes a {
-        from {
-          opacity: 0;
-        }
-        to {
-          opacity: 1;
         }
       }
       @keyframes a {
@@ -380,16 +311,7 @@ describe('keyframes', () => {
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
-        -webkit-animation: a-1567285458 2s linear infinite;
         animation: a-1567285458 2s linear infinite;
-      }
-      @-webkit-keyframes a-1567285458 {
-        0% {
-          right: 0%;
-        }
-        100% {
-          right: 100%;
-        }
       }
       @keyframes a-1567285458 {
         0% {
@@ -430,20 +352,10 @@ describe('keyframes', () => {
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
-        -webkit-animation: a 2s linear infinite;
         animation: a 2s linear infinite;
       }
       .d {
-        -webkit-animation: a-1567285458 2s linear infinite;
         animation: a-1567285458 2s linear infinite;
-      }
-      @-webkit-keyframes a {
-        0% {
-          left: 0%;
-        }
-        100% {
-          left: 100%;
-        }
       }
       @keyframes a {
         0% {
@@ -451,14 +363,6 @@ describe('keyframes', () => {
         }
         100% {
           left: 100%;
-        }
-      }
-      @-webkit-keyframes a-1567285458 {
-        0% {
-          right: 0%;
-        }
-        100% {
-          right: 100%;
         }
       }
       @keyframes a-1567285458 {

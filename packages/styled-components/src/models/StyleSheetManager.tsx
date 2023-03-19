@@ -40,7 +40,7 @@ export type IStyleSheetManager = React.PropsWithChildren<{
    * If you are working exclusively with modern browsers, vendor prefixes can often be omitted
    * to reduce the weight of CSS on the page.
    */
-  disableVendorPrefixes?: boolean;
+  enableVendorPrefixes?: boolean;
   /**
    * Provide an optional selector to be prepended to all generated style rules.
    */
@@ -100,10 +100,10 @@ export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {
   const stylis = useMemo(
     () =>
       createStylisInstance({
-        options: { namespace: props.namespace, prefix: !props.disableVendorPrefixes },
+        options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
         plugins,
       }),
-    [props.disableVendorPrefixes, props.namespace, plugins]
+    [props.enableVendorPrefixes, props.namespace, plugins]
   );
 
   useEffect(() => {

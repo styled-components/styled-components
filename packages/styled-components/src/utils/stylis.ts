@@ -101,7 +101,7 @@ export default function createStylisInstance(
   /**
    * Enables automatic vendor-prefixing for styles.
    */
-  if (options.prefix || options.prefix === undefined) {
+  if (options.prefix) {
     middlewares.unshift(prefixer);
   }
 
