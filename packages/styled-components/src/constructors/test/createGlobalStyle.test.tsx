@@ -540,4 +540,28 @@ describe(`createGlobalStyle`, () => {
       }"
     `);
   });
+
+  it(`namespaced StyleSheetManager does not namespace global styles`, () => {
+    const { render } = context;
+    const GlobalStyle = createGlobalStyle`
+    .blue {
+      color: lightblue;
+    }
+  `;
+
+    render(
+      <StyleSheetManager namespace=".parent">
+        <div>
+          <GlobalStyle />
+          <div className="blue">Im blue dabadee</div>
+        </div>
+      </StyleSheetManager>
+    );
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".blue {
+        color: lightblue;
+      }"
+    `);
+  });
 });

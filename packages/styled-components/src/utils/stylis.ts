@@ -114,7 +114,8 @@ export default function createStylisInstance(
      * This "prefix" referes to a _selector_ prefix.
      */
     prefix = '',
-    componentId = '&'
+    componentId = '&',
+    isGlobal = false
   ) => {
     // stylis has no concept of state to be passed to plugins
     // but since JS is single-threaded, we can rely on that to ensure
@@ -127,7 +128,7 @@ export default function createStylisInstance(
     const flatCSS = css.replace(COMMENT_REGEX, '');
     let compiled = compile(prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS);
 
-    if (options.namespace) {
+    if (options.namespace && !isGlobal) {
       compiled = recursivelySetNamepace(compiled, options.namespace);
     }
 

@@ -123,7 +123,13 @@ export type FlattenerResult<Props extends object> =
   | Keyframes;
 
 export interface Stringifier {
-  (css: string, selector?: string, prefix?: string, componentId?: string): string[];
+  (
+    css: string,
+    selector?: string,
+    prefix?: string,
+    componentId?: string,
+    isGlobal?: boolean
+  ): string[];
   hash: string;
 }
 
