@@ -6,7 +6,6 @@ import keyframes from './constructors/keyframes';
 /* Import Higher Order Components */
 import withTheme from './hoc/withTheme';
 /* Import hooks */
-import useTheme from './hooks/useTheme';
 import ServerStyleSheet from './models/ServerStyleSheet';
 import {
   IStyleSheetContext,
@@ -17,7 +16,7 @@ import {
   StyleSheetManager,
 } from './models/StyleSheetManager';
 /* Import components */
-import ThemeProvider, { ThemeConsumer, ThemeContext } from './models/ThemeProvider';
+import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from './models/ThemeProvider';
 import isStyledComponent from './utils/isStyledComponent';
 
 /* Warning if you've imported this file on React Native */

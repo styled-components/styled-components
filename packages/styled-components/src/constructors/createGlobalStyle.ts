@@ -1,8 +1,8 @@
 import React from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
-import { useStyleSheet, useStylis } from '../models/StyleSheetManager';
-import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
+import { useStyleSheetContext } from '../models/StyleSheetManager';
+import { DefaultTheme, useTheme } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
 import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
@@ -23,10 +23,9 @@ export default function createGlobalStyle<Props extends object>(
   }
 
   const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
-    const styleSheet = useStyleSheet();
-    const stylis = useStylis();
-    const theme = React.useContext(ThemeContext);
-    const instanceRef = React.useRef(styleSheet.allocateGSInstance(styledComponentId));
+    const ssc = useStyleSheetContext();
+    const theme = useTheme();
+    const instanceRef = React.useRef(ssc.styleSheet.allocateGSInstance(styledComponentId));
 
     const instance = instanceRef.current;
 
@@ -45,18 +44,18 @@ export default function createGlobalStyle<Props extends object>(
       );
     }
 
-    if (styleSheet.server) {
-      renderStyles(instance, props, styleSheet, theme, stylis);
+    if (ssc.styleSheet.server) {
+      renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
     }
 
     if (!__SERVER__) {
       // @ts-expect-error still using React 17 types for the time being
       (React.useInsertionEffect || React.useLayoutEffect)(() => {
-        if (!styleSheet.server) {
-          renderStyles(instance, props, styleSheet, theme, stylis);
-          return () => globalStyle.removeStyles(instance, styleSheet);
+        if (!ssc.styleSheet.server) {
+          renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
+          return () => globalStyle.removeStyles(instance, ssc.styleSheet);
         }
-      }, [instance, props, styleSheet, theme, stylis]);
+      }, [instance, props, ssc.styleSheet, theme, ssc.stylis]);
     }
 
     return null;

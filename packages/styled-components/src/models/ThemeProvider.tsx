@@ -66,11 +66,15 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme): DefaultThe
   return outerTheme ? { ...outerTheme, ...theme } : theme;
 }
 
+export function useTheme(): DefaultTheme | undefined {
+  return useContext(ThemeContext);
+}
+
 /**
  * Provide a theme to an entire react component tree via context
  */
 export default function ThemeProvider(props: Props): JSX.Element | null {
-  const outerTheme = useContext(ThemeContext);
+  const outerTheme = useTheme();
   const themeContext = useMemo(
     () => mergeTheme(props.theme, outerTheme),
     [props.theme, outerTheme]

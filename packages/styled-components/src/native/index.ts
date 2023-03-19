@@ -2,10 +2,9 @@ import React from 'react';
 import constructWithOptions, { Styled } from '../constructors/constructWithOptions';
 import css from '../constructors/css';
 import withTheme from '../hoc/withTheme';
-import useTheme from '../hooks/useTheme';
 import _InlineStyle from '../models/InlineStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
-import ThemeProvider, { ThemeConsumer, ThemeContext } from '../models/ThemeProvider';
+import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from '../models/ThemeProvider';
 import { NativeTarget } from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
 
@@ -46,12 +45,12 @@ const aliases = [
   'VirtualizedList',
 ] as const;
 
-type KnownComponents = typeof aliases[number];
+type KnownComponents = (typeof aliases)[number];
 
 /** Isolates RN-provided components since they don't expose a helper type for this. */
 type RNComponents = {
-  [K in keyof typeof reactNative]: typeof reactNative[K] extends React.ComponentType<any>
-    ? typeof reactNative[K]
+  [K in keyof typeof reactNative]: (typeof reactNative)[K] extends React.ComponentType<any>
+    ? (typeof reactNative)[K]
     : never;
 };
 

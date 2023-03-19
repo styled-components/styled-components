@@ -4,14 +4,19 @@ import StyleSheet from '../sheet';
 import { ShouldForwardProp, Stringifier } from '../types';
 import createStylisInstance from '../utils/stylis';
 
+export const mainSheet: StyleSheet = new StyleSheet();
+export const mainStylis: Stringifier = createStylisInstance();
+
 export type IStyleSheetContext = {
   shouldForwardProp?: ShouldForwardProp<'web'>;
-  styleSheet?: StyleSheet;
+  styleSheet: StyleSheet;
+  stylis: Stringifier;
 };
 
 export const StyleSheetContext = React.createContext<IStyleSheetContext>({
   shouldForwardProp: undefined,
-  styleSheet: undefined,
+  styleSheet: mainSheet,
+  stylis: mainStylis,
 });
 
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
@@ -20,19 +25,8 @@ export type IStylisContext = Stringifier | void;
 export const StylisContext = React.createContext<IStylisContext>(undefined);
 export const StylisConsumer = StylisContext.Consumer;
 
-export const mainSheet: StyleSheet = new StyleSheet();
-export const mainStylis: Stringifier = createStylisInstance();
-
-export function useShouldForwardProp() {
-  return useContext(StyleSheetContext).shouldForwardProp;
-}
-
-export function useStyleSheet(): StyleSheet {
-  return useContext(StyleSheetContext).styleSheet || mainSheet;
-}
-
-export function useStylis(): Stringifier {
-  return useContext(StylisContext) || mainStylis;
+export function useStyleSheetContext() {
+  return useContext(StyleSheetContext);
 }
 
 export type IStyleSheetManager = React.PropsWithChildren<{
@@ -85,10 +79,10 @@ export type IStyleSheetManager = React.PropsWithChildren<{
 
 export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {
   const [plugins, setPlugins] = useState(props.stylisPlugins);
-  const contextStyleSheet = useStyleSheet();
+  const { styleSheet } = useStyleSheetContext();
 
-  const styleSheet = useMemo(() => {
-    let sheet = contextStyleSheet;
+  const resolvedStyleSheet = useMemo(() => {
+    let sheet = styleSheet;
 
     if (props.sheet) {
       sheet = props.sheet;
@@ -101,7 +95,7 @@ export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {
     }
 
     return sheet;
-  }, [props.disableCSSOMInjection, props.sheet, props.target]);
+  }, [props.disableCSSOMInjection, props.sheet, props.target, styleSheet]);
 
   const stylis = useMemo(
     () =>
@@ -117,7 +111,9 @@ export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {
   }, [props.stylisPlugins]);
 
   return (
-    <StyleSheetContext.Provider value={{ shouldForwardProp: props.shouldForwardProp, styleSheet }}>
+    <StyleSheetContext.Provider
+      value={{ shouldForwardProp: props.shouldForwardProp, styleSheet: resolvedStyleSheet, stylis }}
+    >
       <StylisContext.Provider value={stylis}>{props.children}</StylisContext.Provider>
     </StyleSheetContext.Provider>
   );

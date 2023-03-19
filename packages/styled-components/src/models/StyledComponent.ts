@@ -1,4 +1,4 @@
-import React, { createElement, Ref, useContext, useDebugValue } from 'react';
+import React, { createElement, Ref, useDebugValue } from 'react';
 import { SC_VERSION } from '../constants';
 import type {
   AnyComponent,
@@ -29,8 +29,8 @@ import isTag from '../utils/isTag';
 import joinStrings from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
-import { useShouldForwardProp, useStyleSheet, useStylis } from './StyleSheetManager';
-import { DefaultTheme, ThemeContext } from './ThemeProvider';
+import { useStyleSheetContext } from './StyleSheetManager';
+import { DefaultTheme, useTheme } from './ThemeProvider';
 
 const identifiers: { [key: string]: number } = {};
 
@@ -54,13 +54,12 @@ function useInjectedStyle<T extends object>(
   isStatic: boolean,
   resolvedAttrs: T
 ) {
-  const styleSheet = useStyleSheet();
-  const stylis = useStylis();
+  const ssc = useStyleSheetContext();
 
   const className = componentStyle.generateAndInjectStyles(
     isStatic ? EMPTY_OBJECT : resolvedAttrs,
-    styleSheet,
-    stylis
+    ssc.styleSheet,
+    ssc.stylis
   );
 
   if (process.env.NODE_ENV !== 'production') useDebugValue(className);
@@ -110,15 +109,16 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
     target,
   } = forwardedComponent;
 
-  const defaultShouldForwardProp = useShouldForwardProp();
-  const shouldForwardProp = forwardedComponent.shouldForwardProp || defaultShouldForwardProp;
+  const contextTheme = useTheme();
+  const ssc = useStyleSheetContext();
+  const shouldForwardProp = forwardedComponent.shouldForwardProp || ssc.shouldForwardProp;
 
   if (process.env.NODE_ENV !== 'production') useDebugValue(styledComponentId);
 
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme = determineTheme(props, useContext(ThemeContext), defaultProps) || EMPTY_OBJECT;
+  const theme = determineTheme(props, contextTheme, defaultProps) || EMPTY_OBJECT;
 
   const context: Dict<any> = resolveContext<Props>(componentAttrs, props, theme);
   const elementToBeCreated: WebTarget = context.as || target;
