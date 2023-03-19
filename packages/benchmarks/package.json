@@ -19,7 +19,7 @@
     "react-is": "^17.0.2",
     "react-native-web": "^0.17.1",
     "styled-components-next": "link:../styled-components",
-    "styled-components-v5": "npm:styled-components",
+    "styled-components-v5": "npm:styled-components@^5.3.7",
     "styled-jsx": "^5.1.2",
     "styletron-engine-atomic": "^1.5.0",
     "styletron-react": "^6.1.0"

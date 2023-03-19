@@ -17,7 +17,15 @@ export type ICreateStylisInstance = {
  * separated when using CSSOM injection.
  */
 function serialize(children: Element[], callback: Middleware): string[] {
-  return children.map((c, i) => callback(c, i, children, callback)).filter(Boolean) as string[];
+  const ret: string[] = [];
+
+  for (let i = 0, result; i < children.length; i += 1) {
+    result = callback(children[i], i, children, callback);
+
+    if (result) ret.push(result);
+  }
+
+  return ret;
 }
 
 /**
@@ -81,10 +89,23 @@ export default function createStylisInstance(
    */
   const selfReferenceReplacementPlugin: Middleware = element => {
     if (element.type === RULESET && element.value.includes('&')) {
-      const props = element.props as string[];
-      props[0] = props[0].replace(_selectorRegexp, selfReferenceReplacer);
+      (element.props as string[])[0] = element.props[0].replace(
+        _selectorRegexp,
+        selfReferenceReplacer
+      );
     }
   };
+
+  const middlewares = plugins.slice();
+
+  /**
+   * Enables automatic vendor-prefixing for styles.
+   */
+  if (options.prefix || options.prefix === undefined) {
+    middlewares.unshift(prefixer);
+  }
+
+  middlewares.push(selfReferenceReplacementPlugin, stringify);
 
   const stringifyRules: Stringifier = (
     css: string,
@@ -95,8 +116,6 @@ export default function createStylisInstance(
     prefix = '',
     componentId = '&'
   ) => {
-    let flatCSS = css.replace(COMMENT_REGEX, '');
-
     // stylis has no concept of state to be passed to plugins
     // but since JS is single-threaded, we can rely on that to ensure
     // these properties stay in sync with the current stylis run
@@ -105,21 +124,13 @@ export default function createStylisInstance(
     _selectorRegexp = new RegExp(`\\${_selector}\\b`, 'g');
     _consecutiveSelfRefRegExp = new RegExp(`(\\${_selector}\\b){2,}`);
 
-    const middlewares = plugins.slice();
-
-    /**
-     * Enables automatic vendor-prefixing for styles.
-     */
-    if (options.prefix || options.prefix === undefined) {
-      middlewares.unshift(prefixer);
-    }
-
-    middlewares.push(selfReferenceReplacementPlugin, stringify);
+    const flatCSS = css.replace(COMMENT_REGEX, '');
     let compiled = compile(prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS);
 
     if (options.namespace) {
       compiled = recursivelySetNamepace(compiled, options.namespace);
     }
+
     return serialize(compiled, middleware(middlewares));
   };
 
