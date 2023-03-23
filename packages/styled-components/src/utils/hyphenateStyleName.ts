@@ -1,11 +1,4 @@
-/**
- * inlined version of
- * https://github.com/facebook/fbjs/blob/master/packages/fbjs/src/core/hyphenateStyleName.js
- */
-const uppercaseCheck = /[A-Z]/;
-const uppercasePattern = /[A-Z]/g;
-const msPattern = /^ms-/;
-const prefixAndLowerCase = (char: string): string => `-${char.toLowerCase()}`;
+const isUpper = (c: string) => c >= 'A' && c <= 'Z';
 
 /**
  * Hyphenates a camelcased CSS property name, for example:
@@ -20,8 +13,22 @@ const prefixAndLowerCase = (char: string): string => `-${char.toLowerCase()}`;
  * As Modernizr suggests (http://modernizr.com/docs/#prefixed), an `ms` prefix
  * is converted to `-ms-`.
  */
-export default function hyphenateStyleName(string: string) {
-  return uppercaseCheck.test(string) && !string.startsWith('--')
-    ? string.replace(uppercasePattern, prefixAndLowerCase).replace(msPattern, '-ms-')
-    : string;
+export default function hyphenateStyleName(string: string): string {
+  let output = '';
+
+  for (let i = 0; i < string.length; i++) {
+    const c = string[i];
+    // Check for CSS variable prefix
+    if (i === 1 && c === '-' && string[0] === '-') {
+      return string;
+    }
+
+    if (isUpper(c)) {
+      output += '-' + c.toLowerCase();
+    } else {
+      output += c;
+    }
+  }
+
+  return output.startsWith('ms-') ? '-' + output : output;
 }

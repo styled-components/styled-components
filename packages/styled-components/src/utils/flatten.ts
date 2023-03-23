@@ -24,22 +24,24 @@ import isStyledComponent from './isStyledComponent';
 const isFalsish = (chunk: any): chunk is undefined | null | false | '' =>
   chunk === undefined || chunk === null || chunk === false || chunk === '';
 
-export const objToCssArray = (obj: Dict<any>, prevKey?: string): string[] => {
+export const objToCssArray = (obj: Dict<any>): string[] => {
   const rules = [];
 
   for (const key in obj) {
-    if (!obj.hasOwnProperty(key) || isFalsish(obj[key])) continue;
+    const val = obj[key];
+    if (!obj.hasOwnProperty(key) || isFalsish(val)) continue;
 
-    if ((Array.isArray(obj[key]) && obj[key].isCss) || isFunction(obj[key])) {
-      rules.push(`${hyphenate(key)}:`, obj[key], ';');
-    } else if (isPlainObject(obj[key])) {
-      rules.push(...objToCssArray(obj[key], key));
+    // @ts-expect-error Property 'isCss' does not exist on type 'any[]'
+    if ((Array.isArray(val) && val.isCss) || isFunction(val)) {
+      rules.push(`${hyphenate(key)}:`, val, ';');
+    } else if (isPlainObject(val)) {
+      rules.push(`${key} {`, ...objToCssArray(val), '}');
     } else {
-      rules.push(`${hyphenate(key)}: ${addUnitIfNeeded(key, obj[key])};`);
+      rules.push(`${hyphenate(key)}: ${addUnitIfNeeded(key, val)};`);
     }
   }
 
-  return prevKey ? [`${prevKey} {`, ...rules, '}'] : rules;
+  return rules;
 };
 
 export default function flatten<Props extends object>(

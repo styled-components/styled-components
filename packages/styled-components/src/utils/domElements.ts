@@ -1,6 +1,6 @@
 // Thanks to ReactDOMFactories for this handy list!
 
-export default [
+export default new Set([
   'a',
   'abbr',
   'address',
@@ -136,4 +136,4 @@ export default [
   'svg',
   'text',
   'tspan',
-] as const;
+] as const);

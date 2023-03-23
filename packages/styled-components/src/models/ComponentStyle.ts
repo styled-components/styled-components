@@ -5,6 +5,7 @@ import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
 import { hash, phash } from '../utils/hash';
 import isStaticRules from '../utils/isStaticRules';
+import { joinStringArray, joinStrings } from '../utils/joinStrings';
 
 const SEED = hash(SC_VERSION);
 
@@ -16,12 +17,10 @@ export default class ComponentStyle {
   baseStyle: ComponentStyle | null | undefined;
   componentId: string;
   isStatic: boolean;
-  names: string[];
   rules: RuleSet<any>;
   staticRulesId: string;
 
   constructor(rules: RuleSet<any>, componentId: string, baseStyle?: ComponentStyle) {
-    this.names = [];
     this.rules = rules;
     this.staticRulesId = '';
     this.isStatic =
@@ -42,20 +41,18 @@ export default class ComponentStyle {
     styleSheet: StyleSheet,
     stylis: Stringifier
   ): string {
-    this.names.length = 0;
-
-    if (this.baseStyle) {
-      this.names.push(this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis));
-    }
+    let names = this.baseStyle
+      ? this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis)
+      : '';
 
     // force dynamic classnames if user-supplied stylis plugins are in use
     if (this.isStatic && !stylis.hash) {
       if (this.staticRulesId && styleSheet.hasNameForId(this.componentId, this.staticRulesId)) {
-        this.names.push(this.staticRulesId);
+        names = joinStrings(names, this.staticRulesId);
       } else {
-        const cssStatic = (
+        const cssStatic = joinStringArray(
           flatten(this.rules, executionContext, styleSheet, stylis) as string[]
-        ).join('');
+        );
         const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
 
         if (!styleSheet.hasNameForId(this.componentId, name)) {
@@ -63,7 +60,7 @@ export default class ComponentStyle {
           styleSheet.insertRules(this.componentId, name, cssStaticFormatted);
         }
 
-        this.names.push(name);
+        names = joinStrings(names, name);
         this.staticRulesId = name;
       }
     } else {
@@ -78,10 +75,9 @@ export default class ComponentStyle {
 
           if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule);
         } else if (partRule) {
-          const partChunk = flatten(partRule, executionContext, styleSheet, stylis) as
-            | string
-            | string[];
-          const partString = Array.isArray(partChunk) ? partChunk.join('') : partChunk;
+          const partString = joinStringArray(
+            flatten(partRule, executionContext, styleSheet, stylis) as string[]
+          );
           dynamicHash = phash(dynamicHash, partString);
           css += partString;
         }
@@ -98,10 +94,10 @@ export default class ComponentStyle {
           );
         }
 
-        this.names.push(name);
+        names = joinStrings(names, name);
       }
     }
 
-    return this.names.join(' ');
+    return names;
   }
 }

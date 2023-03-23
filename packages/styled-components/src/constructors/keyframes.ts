@@ -1,6 +1,7 @@
 import Keyframes from '../models/Keyframes';
 import { Interpolation, Styles } from '../types';
 import generateComponentId from '../utils/generateComponentId';
+import { joinStringArray } from '../utils/joinStrings';
 import css from './css';
 
 export default function keyframes<Props extends object = object>(
@@ -18,7 +19,7 @@ export default function keyframes<Props extends object = object>(
     );
   }
 
-  const rules = (css(strings, ...interpolations) as string[]).join('');
+  const rules = joinStringArray(css(strings, ...interpolations) as string[]);
   const name = generateComponentId(rules);
   return new Keyframes(name, rules);
 }

@@ -141,7 +141,7 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   extends CommonStatics<R, OuterProps> {
   componentStyle: R extends 'web' ? ComponentStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
-  foldedComponentIds: R extends 'web' ? Array<string> : never;
+  foldedComponentIds: R extends 'web' ? string : never;
   inlineStyle: R extends 'native' ? InstanceType<IInlineStyleConstructor<OuterProps>> : never;
   target: StyledTarget<R>;
   styledComponentId: R extends 'web' ? string : never;

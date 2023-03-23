@@ -26,7 +26,7 @@ import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
-import joinStrings from '../utils/joinStrings';
+import { joinStrings } from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
@@ -143,16 +143,21 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
     forwardedComponent.warnTooManyClasses(generatedClassName);
   }
 
+  let classString = joinStrings(foldedComponentIds, styledComponentId);
+  if (generatedClassName) {
+    classString += ' ' + generatedClassName;
+  }
+  if (context.className) {
+    classString += ' ' + context.className;
+  }
+
   propsForElement[
     // handle custom elements which React doesn't properly alias
     isTag(elementToBeCreated) &&
-    domElements.indexOf(elementToBeCreated as Extract<typeof domElements, string>) === -1
+    !domElements.has(elementToBeCreated as Extract<typeof domElements, string>)
       ? 'class'
       : 'className'
-  ] = foldedComponentIds
-    .concat(styledComponentId, generatedClassName, context.className)
-    .filter(Boolean)
-    .join(' ');
+  ] = classString;
 
   propsForElement.ref = forwardedRef;
 
@@ -241,8 +246,8 @@ function createStyledComponent<
   // this static is used to preserve the cascade of static classes for component selector
   // purposes; this is especially important with usage of the css prop
   WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
-    ? styledComponentTarget.foldedComponentIds.concat(styledComponentTarget.styledComponentId)
-    : (EMPTY_ARRAY as string[]);
+    ? joinStrings(styledComponentTarget.foldedComponentIds, styledComponentTarget.styledComponentId)
+    : '';
 
   WrappedStyledComponent.styledComponentId = styledComponentId;
 
