@@ -1,8 +1,8 @@
 /**
  * Convenience function for joining strings to form className chains
  */
-export function joinStrings(a: string | undefined, b: string): string {
-  return a && b ? `${a} ${b}` : a || b;
+export function joinStrings(a?: string, b?: string): string {
+  return a && b ? `${a} ${b}` : a || b || '';
 }
 
 export function joinStringArray(arr: string[], sep?: string): string {

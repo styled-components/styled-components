@@ -147,7 +147,7 @@ describe('attrs', () => {
 
     expect(TestRenderer.create(<Comp className="something" />).toJSON()).toMatchInlineSnapshot(`
       <div
-        className="sc-a sc-b something foo meow nya"
+        className="sc-a sc-b foo meow nya something"
       />
     `);
   });

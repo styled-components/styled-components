@@ -69,11 +69,16 @@ function useInjectedStyle<T extends object>(
 
 function resolveContext<Props extends object>(
   attrs: AttrsArg<Props>[],
-  props: Props,
+  props: React.HTMLAttributes<Element> & Props,
   theme: DefaultTheme
 ) {
   const context: ExecutionContext &
-    Props & { class?: string; className?: string; ref?: React.Ref<any> } = { ...props, theme };
+    Props & { class?: string; className?: string; ref?: React.Ref<any> } = {
+    ...props,
+    // unset, add `props.className` back at the end so props always "wins"
+    className: undefined,
+    theme,
+  };
   let attrDef;
 
   for (let i = 0; i < attrs.length; i += 1) {
@@ -89,6 +94,10 @@ function resolveContext<Props extends object>(
           ? { ...context[key], ...resolvedAttrDef[key] }
           : resolvedAttrDef[key];
     }
+  }
+
+  if (props.className) {
+    context.className = joinStrings(context.className, props.className);
   }
 
   return context;
