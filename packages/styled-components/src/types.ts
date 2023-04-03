@@ -17,11 +17,9 @@ export { DefaultTheme };
 
 export type AnyComponent<P = any> = ExoticComponentWithDisplayName<P> | React.ComponentType<P>;
 
-export type KnownTarget =
-  | React.ElementType
-  | readonly React.ElementType[]
-  | AnyComponent
-  | readonly AnyComponent[];
+export type KnownTarget = React.ElementType | AnyComponent;
+
+export type AllowedTarget = unknown | KnownTarget;
 
 export type WebTarget =
   | string // allow custom elements, etc.
@@ -158,18 +156,22 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
 export type PolymorphicComponentProps<
   R extends Runtime,
   E extends StyledTarget<R>,
-  P extends object
-> = Omit<
-  E extends KnownTarget ? P & Omit<GatherElementTypeProps<E>, keyof P> : P,
-  'as' | 'theme'
-> & {
-  as?: P extends { as?: KnownTarget } ? P['as'] : E | E[];
-  mix?: P extends { mix?: KnownTarget } ? P['mix'] : E | E[];
-  theme?: DefaultTheme;
-};
+  P extends object,
+  Mix extends AllowedTarget
+> = WithPolymorphicAttrs<P, E, Mix> &
+  P &
+  Simplify<GatherElementTypeProps<E>> &
+  Simplify<GatherElementTypeProps<Mix>> & {
+    theme?: DefaultTheme;
+  };
+
+interface WithPolymorphicAttrs<Props, As extends AllowedTarget, Mix extends AllowedTarget> {
+  as?: Props extends { as?: KnownTarget } ? Props['as'] : As | As[];
+  mix?: Props extends { mix?: KnownTarget } ? Props['mix'] : Mix | Mix[];
+}
 
 type GatherElementTypeProps<T> = T extends React.ElementType
-  ? Omit<React.ComponentPropsWithRef<T>, 'as' | 'mix'>
+  ? Omit<React.ComponentPropsWithoutRef<T>, 'as' | 'mix'>
   : T extends [infer Element, ...infer RestElement]
   ? Spread<GatherElementTypeProps<Element>, GatherElementTypeProps<RestElement>>
   : T extends [infer Element]
@@ -177,7 +179,7 @@ type GatherElementTypeProps<T> = T extends React.ElementType
   : // eslint-disable-next-line @typescript-eslint/ban-types
     {};
 
-/* Type utils from https://github.com/sindresorhus/type-fest */
+/****** Type utils from https://github.com/sindresorhus/type-fest ******/
 
 type Simplify<T> = { [KeyType in keyof T]: T[KeyType] };
 
@@ -208,6 +210,8 @@ type RequiredKeysOf<BaseType extends object> = Exclude<
   undefined
 >;
 
+/****** End of type utils from https://github.com/sindresorhus/type-fest ******/
+
 /**
  * This type forms the signature for a forwardRef-enabled component that accepts
  * the "as" prop to dynamically change the underlying rendered JSX. The interface will
@@ -219,8 +223,8 @@ export interface PolymorphicComponent<
   P extends object,
   FallbackComponent extends StyledTarget<R>
 > extends React.ForwardRefExoticComponent<P> {
-  <E extends StyledTarget<R> = FallbackComponent>(
-    props: PolymorphicComponentProps<R, E, P>
+  <E extends StyledTarget<R> = FallbackComponent, Mix extends AllowedTarget = unknown>(
+    props: PolymorphicComponentProps<R, E, P, Mix>
   ): React.ReactElement | null;
 }
 
