@@ -3,6 +3,7 @@ package-lock.json
 **/styled-components/src/utils/errors.ts
 coverage
 .idea/*
+.history
 node_modules
 dist
 .DS_Store

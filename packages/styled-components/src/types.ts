@@ -17,13 +17,17 @@ export { DefaultTheme };
 
 export type AnyComponent<P = any> = ExoticComponentWithDisplayName<P> | React.ComponentType<P>;
 
-export type KnownTarget = keyof JSX.IntrinsicElements | AnyComponent;
+export type KnownTarget =
+  | React.ElementType
+  | readonly React.ElementType[]
+  | AnyComponent
+  | readonly AnyComponent[];
 
 export type WebTarget =
   | string // allow custom elements, etc.
   | KnownTarget;
 
-export type NativeTarget = AnyComponent;
+export type NativeTarget = AnyComponent | readonly AnyComponent[];
 
 export type StyledTarget<R extends Runtime> = R extends 'web' ? WebTarget : NativeTarget;
 export interface StyledOptions<R extends Runtime, Props extends object> {
@@ -141,7 +145,7 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   extends CommonStatics<R, OuterProps> {
   componentStyle: R extends 'web' ? ComponentStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
-  foldedComponentIds: R extends 'web' ? string : never;
+  foldedComponentIds: R extends 'web' ? Array<string> : never;
   inlineStyle: R extends 'native' ? InstanceType<IInlineStyleConstructor<OuterProps>> : never;
   target: StyledTarget<R>;
   styledComponentId: R extends 'web' ? string : never;
@@ -156,12 +160,53 @@ export type PolymorphicComponentProps<
   E extends StyledTarget<R>,
   P extends object
 > = Omit<
-  E extends KnownTarget ? P & Omit<React.ComponentPropsWithRef<E>, keyof P> : P,
+  E extends KnownTarget ? P & Omit<GatherElementTypeProps<E>, keyof P> : P,
   'as' | 'theme'
 > & {
-  as?: P extends { as?: string | AnyComponent } ? P['as'] : E;
+  as?: P extends { as?: KnownTarget } ? P['as'] : E | E[];
+  mix?: P extends { mix?: KnownTarget } ? P['mix'] : E | E[];
   theme?: DefaultTheme;
 };
+
+type GatherElementTypeProps<T> = T extends React.ElementType
+  ? Omit<React.ComponentPropsWithRef<T>, 'as' | 'mix'>
+  : T extends [infer Element, ...infer RestElement]
+  ? Spread<GatherElementTypeProps<Element>, GatherElementTypeProps<RestElement>>
+  : T extends [infer Element]
+  ? GatherElementTypeProps<Element>
+  : // eslint-disable-next-line @typescript-eslint/ban-types
+    {};
+
+/* Type utils from https://github.com/sindresorhus/type-fest */
+
+type Simplify<T> = { [KeyType in keyof T]: T[KeyType] };
+
+type Spread<
+  FirstType extends Spreadable,
+  SecondType extends Spreadable
+> = FirstType extends TupleOrArray
+  ? SecondType extends TupleOrArray
+    ? SpreadTupleOrArray<FirstType, SecondType>
+    : Simplify<SpreadObject<FirstType, SecondType>>
+  : Simplify<SpreadObject<FirstType, SecondType>>;
+
+type TupleOrArray = readonly [...unknown[]];
+type Spreadable = object | TupleOrArray;
+
+type SpreadTupleOrArray<FirstType extends TupleOrArray, SecondType extends TupleOrArray> = Array<
+  FirstType[number] | SecondType[number]
+>;
+
+type SpreadObject<FirstType extends object, SecondType extends object> = {
+  [Key in keyof FirstType]: Key extends keyof SecondType ? FirstType[Key] : FirstType[Key];
+} & Pick<SecondType, RequiredKeysOf<SecondType> | Exclude<keyof SecondType, keyof FirstType>>;
+
+type RequiredKeysOf<BaseType extends object> = Exclude<
+  {
+    [Key in keyof BaseType]: BaseType extends Record<Key, BaseType[Key]> ? Key : never;
+  }[keyof BaseType],
+  undefined
+>;
 
 /**
  * This type forms the signature for a forwardRef-enabled component that accepts
@@ -187,7 +232,7 @@ export interface IStyledComponent<
     IStyledStatics<R, Props> {
   defaultProps?: Partial<
     (Target extends KnownTarget
-      ? ExecutionProps & Omit<React.ComponentProps<Target>, keyof ExecutionProps>
+      ? ExecutionProps & Omit<GatherElementTypeProps<Target>, keyof ExecutionProps>
       : ExecutionProps) &
       Props
   >;
