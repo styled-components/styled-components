@@ -156,18 +156,16 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
 export type PolymorphicComponentProps<
   R extends Runtime,
   E extends StyledTarget<R>,
-  P extends object,
-  Mix extends AllowedTarget
-> = WithPolymorphicAttrs<P, E, Mix> &
+  P extends object
+> = WithPolymorphicAttrs<P, E> &
   P &
-  Simplify<GatherElementTypeProps<E>> &
-  Simplify<GatherElementTypeProps<Mix>> & {
+  Simplify<GatherElementTypeProps<E>> & {
     theme?: DefaultTheme;
   };
 
-interface WithPolymorphicAttrs<Props, As extends AllowedTarget, Mix extends AllowedTarget> {
-  as?: Props extends { as?: KnownTarget } ? Props['as'] : As | As[];
-  mix?: Props extends { mix?: KnownTarget } ? Props['mix'] : Mix | Mix[];
+interface WithPolymorphicAttrs<Props, E extends AllowedTarget> {
+  as?: Props extends { as?: KnownTarget } ? Props['as'] : E | E[];
+  mix?: Props extends { mix?: KnownTarget } ? Props['mix'] : E | E[];
 }
 
 type GatherElementTypeProps<T> = T extends React.ElementType
@@ -176,8 +174,7 @@ type GatherElementTypeProps<T> = T extends React.ElementType
   ? Spread<GatherElementTypeProps<Element>, GatherElementTypeProps<RestElement>>
   : T extends [infer Element]
   ? GatherElementTypeProps<Element>
-  : // eslint-disable-next-line @typescript-eslint/ban-types
-    {};
+  : {};
 
 /****** Type utils from https://github.com/sindresorhus/type-fest ******/
 
@@ -223,8 +220,8 @@ export interface PolymorphicComponent<
   P extends object,
   FallbackComponent extends StyledTarget<R>
 > extends React.ForwardRefExoticComponent<P> {
-  <E extends StyledTarget<R> = FallbackComponent, Mix extends AllowedTarget = unknown>(
-    props: PolymorphicComponentProps<R, E, P, Mix>
+  <E extends StyledTarget<R> = FallbackComponent>(
+    props: PolymorphicComponentProps<R, E, P>
   ): React.ReactElement | null;
 }
 

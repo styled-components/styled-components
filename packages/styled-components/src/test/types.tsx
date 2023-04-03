@@ -49,7 +49,7 @@ const Component3 = () => {
   return (
     // Wrapper should not be influenced by Button's types
     <Wrapper>
-      <Button mix={'video' as const} foo loop>
+      <Button mix={['video']} foo loop src="sd">
         test
       </Button>
     </Wrapper>
