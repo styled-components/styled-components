@@ -1,5 +1,6 @@
 import styled, { createGlobalStyle } from 'styled-components';
 import ButtonExample from '../src/Button.example';
+import PolymorphExample from '../src/Polymorph.example';
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -45,6 +46,7 @@ const Content = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-flow: column;
   width: 100%;
   max-width: 860px;
 
@@ -77,6 +79,7 @@ const App = () => (
     </Heading>
     <Content>
       <ButtonExample />
+      <PolymorphExample />
     </Content>
   </Body>
 );

@@ -130,20 +130,57 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
   const theme = determineTheme(props, contextTheme, defaultProps) || EMPTY_OBJECT;
 
   const context: Dict<any> = resolveContext<Props>(componentAttrs, props, theme);
-  const elementToBeCreated: WebTarget = context.as || target;
+
+  const polyProps: { as?: any } = {};
+
+  const getPolymorphicElement = () => {
+    if (context.mix) {
+      const mixArray = Array.isArray(context.mix) ? context.mix : [context.mix];
+
+      const [current, ...rest] = mixArray;
+
+      if (Array.isArray(context.as)) {
+        polyProps.as = [...rest, ...context.as];
+      } else if (context.as) {
+        polyProps.as = [...rest, context.as];
+      } else {
+        polyProps.as = rest;
+      }
+
+      return current;
+    }
+
+    if (Array.isArray(context.as)) {
+      const [current, ...rest] = context.as;
+
+      if (rest && rest.length > 0) {
+        polyProps.as = rest;
+      }
+
+      return current;
+    }
+
+    return context.as;
+  };
+
+  let elementToBeCreated: WebTarget = getPolymorphicElement() || target;
   const propsForElement: Dict<any> = {};
 
   for (const key in context) {
     if (context[key] === undefined) {
       // Omit undefined values from props passed to wrapped element.
       // This enables using .attrs() to remove props, for example.
-    } else if (key[0] === '$' || key === 'as' || key === 'theme') {
+    } else if (key[0] === '$' || key === 'as' || key === 'mix' || key === 'theme') {
       // Omit transient props and execution props.
     } else if (key === 'forwardedAs') {
       propsForElement.as = context.forwardedAs;
     } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
       propsForElement[key] = context[key];
     }
+  }
+
+  if (Array.isArray(polyProps.as) && polyProps.as.length > 0) {
+    propsForElement.as = polyProps.as;
   }
 
   const generatedClassName = useInjectedStyle(componentStyle, isStatic, context);

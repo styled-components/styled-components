@@ -25,7 +25,7 @@ export type WebTarget =
   | string // allow custom elements, etc.
   | KnownTarget;
 
-export type NativeTarget = AnyComponent | readonly AnyComponent[];
+export type NativeTarget = AnyComponent;
 
 export type StyledTarget<R extends Runtime> = R extends 'web' ? WebTarget : NativeTarget;
 export interface StyledOptions<R extends Runtime, Props extends object> {
@@ -143,7 +143,7 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   extends CommonStatics<R, OuterProps> {
   componentStyle: R extends 'web' ? ComponentStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
-  foldedComponentIds: R extends 'web' ? Array<string> : never;
+  foldedComponentIds: R extends 'web' ? string : never;
   inlineStyle: R extends 'native' ? InstanceType<IInlineStyleConstructor<OuterProps>> : never;
   target: StyledTarget<R>;
   styledComponentId: R extends 'web' ? string : never;
@@ -156,16 +156,18 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
 export type PolymorphicComponentProps<
   R extends Runtime,
   E extends StyledTarget<R>,
-  P extends object
-> = WithPolymorphicAttrs<P, E> &
+  P extends object,
+  Mix extends AllowedTarget
+> = WithPolymorphicAttrs<P, E, Mix> &
   P &
-  Simplify<GatherElementTypeProps<E>> & {
+  Simplify<GatherElementTypeProps<E>> &
+  Simplify<GatherElementTypeProps<Mix>> & {
     theme?: DefaultTheme;
   };
 
-interface WithPolymorphicAttrs<Props, E extends AllowedTarget> {
+interface WithPolymorphicAttrs<Props, E extends AllowedTarget, Mix extends AllowedTarget> {
   as?: Props extends { as?: KnownTarget } ? Props['as'] : E | E[];
-  mix?: Props extends { mix?: KnownTarget } ? Props['mix'] : E | E[];
+  mix?: Props extends { mix?: KnownTarget } ? Props['mix'] : Mix | Mix[];
 }
 
 type GatherElementTypeProps<T> = T extends React.ElementType
@@ -174,7 +176,7 @@ type GatherElementTypeProps<T> = T extends React.ElementType
   ? Spread<GatherElementTypeProps<Element>, GatherElementTypeProps<RestElement>>
   : T extends [infer Element]
   ? GatherElementTypeProps<Element>
-  : {};
+  : Record<string, unknown>;
 
 /****** Type utils from https://github.com/sindresorhus/type-fest ******/
 
@@ -220,8 +222,8 @@ export interface PolymorphicComponent<
   P extends object,
   FallbackComponent extends StyledTarget<R>
 > extends React.ForwardRefExoticComponent<P> {
-  <E extends StyledTarget<R> = FallbackComponent>(
-    props: PolymorphicComponentProps<R, E, P>
+  <E extends StyledTarget<R> = FallbackComponent, Mix extends AllowedTarget = E>(
+    props: PolymorphicComponentProps<R, E, P, Mix>
   ): React.ReactElement | null;
 }
 
