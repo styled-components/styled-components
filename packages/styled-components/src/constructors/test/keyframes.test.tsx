@@ -375,4 +375,35 @@ describe('keyframes', () => {
       }"
     `);
   });
+  it('namespaced StyleSheetManager works with animations', () => {
+    const rotate = keyframes`
+    0% {
+      transform: rotate(0deg)
+    }
+    100% {
+      transform: rotate(360deg)
+    }
+  `;
+
+    const TestAnim = styled.div`
+      color: blue;
+      animation: ${rotate} 0.75s infinite linear;
+    `;
+
+    TestRenderer.create(
+      <StyleSheetManager namespace=".animparent">
+        <div>
+          <TestAnim>Foo</TestAnim>
+        </div>
+      </StyleSheetManager>
+    );
+
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .animparent .c{color:blue;animation:a 0.75s infinite linear;}@keyframes a{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+      </style>
+    `);
+  });
 });

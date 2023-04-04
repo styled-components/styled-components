@@ -4,7 +4,6 @@ import { renderToString } from 'react-dom/server';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
 import TestRenderer, { act } from 'react-test-renderer';
 import stylisRTLPlugin from 'stylis-plugin-rtl';
-import { keyframes } from '../../base';
 import StyleSheet from '../../sheet';
 import { resetStyled } from '../../test/utils';
 import ServerStyleSheet from '../ServerStyleSheet';
@@ -659,37 +658,6 @@ describe('StyleSheetManager', () => {
              data-styled-version="JEST_MOCK_VERSION"
       >
         .parent .b{color:red;}.parent .child2 .sc-a,.parent .child .b{color:green;}@media (min-width: 768px){.parent .b{color:blue;}.parent .child2 .sc-a,.parent .child .b{color:cyan;}}
-      </style>
-    `);
-  });
-  it('namespaced StyleSheetManager works with animations', () => {
-    const rotate = keyframes`
-    0% {
-      transform: rotate(0deg)
-    }
-    100% {
-      transform: rotate(360deg)
-    }
-  `;
-
-    const TestAnim = styled.div`
-      color: blue;
-      animation: ${rotate} 0.75s infinite linear;
-    `;
-
-    TestRenderer.create(
-      <StyleSheetManager namespace=".animparent">
-        <div>
-          <TestAnim>Foo</TestAnim>
-        </div>
-      </StyleSheetManager>
-    );
-
-    expect(document.head.innerHTML).toMatchInlineSnapshot(`
-      <style data-styled="active"
-             data-styled-version="JEST_MOCK_VERSION"
-      >
-        .animparent .a{color:blue;animation:iayyQJ 0.75s infinite linear;}@keyframes iayyQJ{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
       </style>
     `);
   });
