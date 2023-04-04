@@ -1,4 +1,3 @@
-import dynamic from 'next/dynamic';
 import NextLink from 'next/link';
 import styled, { css } from '../../styled-components/src/index';
 
@@ -39,7 +38,7 @@ const Button = styled.button<{ primary?: boolean }>`
     `};
 `;
 
-export function PolymorphExample() {
+export default function PolymorphExample() {
   return (
     <Box background="white" padding={20}>
       <Text as="div">PolymorphExample</Text>
@@ -54,7 +53,3 @@ export function PolymorphExample() {
     </Box>
   );
 }
-
-export default dynamic(() => Promise.resolve(PolymorphExample), {
-  ssr: false,
-});
