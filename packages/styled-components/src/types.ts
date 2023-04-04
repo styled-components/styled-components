@@ -176,7 +176,7 @@ type GatherElementTypeProps<T> = T extends React.ElementType
   ? Spread<GatherElementTypeProps<Element>, GatherElementTypeProps<RestElement>>
   : T extends [infer Element]
   ? GatherElementTypeProps<Element>
-  : Record<string, unknown>;
+  : {};
 
 /****** Type utils from https://github.com/sindresorhus/type-fest ******/
 
