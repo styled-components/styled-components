@@ -45,7 +45,7 @@ function recursivelySetNamepace(compiled: Element[], namespace: String): Element
       });
     }
 
-    if (Array.isArray(rule.children)) {
+    if (Array.isArray(rule.children) && rule.type !== '@keyframes') {
       rule.children = recursivelySetNamepace(rule.children, namespace);
     }
     return rule;
