@@ -9,8 +9,8 @@ export default function addUnitIfNeeded(name: string, value: any): any {
     return '';
   }
 
-  if (typeof value === 'number' && value !== 0 && !(name in unitless)) {
-    return `${value}px`; // Presumes implicit 'px' suffix for unitless numbers
+  if (typeof value === 'number' && value !== 0 && !(name in unitless) && !name.startsWith('--')) {
+    return `${value}px`; // Presumes implicit 'px' suffix for unitless numbers except for CSS variables
   }
 
   return String(value).trim();
