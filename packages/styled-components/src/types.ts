@@ -224,25 +224,24 @@ export interface StyledObject<Props extends object> {
 // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);
 
 /**
- * Override DefaultTheme to get accurate typings for your project.
+ * The `css` prop is not declared by default in the types as it would cause `css` to be present
+ * on the types of anything that uses styled-components indirectly, even if they do not use the
+ * babel plugin.
  *
- * ```
- * // create styled-components.d.ts in your project source
- * // if it isn't being picked up, check tsconfig compilerOptions.types
+ * To enable support for the `css` prop in TypeScript, create a `styled-components.d.ts` file in
+ * your project source with the following contents:
+ *
+ * ```ts
  * import type { CSSProp } from "styled-components";
- * import Theme from './theme';
- *
- * type ThemeType = typeof Theme;
- *
- * declare module "styled-components" {
- *  export interface DefaultTheme extends ThemeType {}
- * }
  *
  * declare module "react" {
- *  interface DOMAttributes<T> {
+ *  interface Attributes {
  *    css?: CSSProp;
  *  }
  * }
  * ```
+ *
+ * In order to get accurate typings for `props.theme` in `css` interpolations, see
+ * {@link DefaultTheme}.
  */
 export type CSSProp = RuleSet<any>;
