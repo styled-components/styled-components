@@ -11,6 +11,7 @@ export {
   IStyledStatics,
   PolymorphicComponent,
   PolymorphicComponentProps,
+  RuleSet,
   Runtime,
   StyledObject,
   StyledOptions,
