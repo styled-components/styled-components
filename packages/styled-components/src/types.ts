@@ -245,4 +245,4 @@ export interface StyledObject<Props extends object> {
  * }
  * ```
  */
-export type CSSProp = string | StyledObject<any> | StyleFunction<any>;
+export type CSSProp = RuleSet<any>;
