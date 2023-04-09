@@ -1,14 +1,11 @@
-name: test
+name: ci
 
 on:
   push:
     branches:
-      - "main"
+      - legacy-v5
+      - main
   pull_request:
-    types: [opened, synchronize, reopened]
-
-permissions:
-  contents: read #  to fetch code (actions/checkout)
 
 jobs:
   build:
@@ -16,13 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup node
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: 18
-          cache: "yarn"
+          node-version-file: .nvmrc
+          cache: yarn
 
-      - run: yarn --pure-lockfile
+      - run: yarn --immutable
 
       - name: Build
         run: yarn build
@@ -40,9 +36,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
-          cache: "yarn"
+          cache: yarn
 
-      - run: yarn --pure-lockfile
+      - run: yarn --immutable
 
       - name: Jest
         run: yarn test
