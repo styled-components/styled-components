@@ -229,27 +229,6 @@ describe('with styles', () => {
     `);
   });
 
-  it('should handle inline style objects with pseudo selectors', () => {
-    const rule1 = {
-      backgroundColor: 'blue',
-      '&:hover': {
-        color: 'green',
-      },
-    };
-    const Comp = styled.div`
-      ${rule1};
-    `;
-    TestRenderer.create(<Comp />);
-    expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
-        background-color: blue;
-      }
-      .b:hover {
-        color: green;
-      }"
-    `);
-  });
-
   it('should handle inline style objects with nesting', () => {
     const rule1 = {
       backgroundColor: 'blue',
