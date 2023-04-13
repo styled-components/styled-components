@@ -16,6 +16,7 @@ it('does not add a px prefix for unitless properties', () => {
     ['lineHeight', 1],
     ['flex', 2],
     ['fontWeight', 400],
+    ['--tooltip-z-index', 1000],
   ];
   pairs.forEach(([key, value]) => expect(addUnitIfNeeded(key, value)).toEqual(String(value)));
 });
