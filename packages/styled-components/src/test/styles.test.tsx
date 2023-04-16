@@ -1,5 +1,6 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
+import { ThemeProvider } from '../base';
 import css from '../constructors/css';
 import { mainSheet } from '../models/StyleSheetManager';
 import * as nonce from '../utils/nonce';
@@ -383,6 +384,101 @@ describe('with styles', () => {
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: green;
+      }"
+    `);
+  });
+
+  it('failing test', () => {
+    interface IconProps {
+      color?: string;
+      rounded?: boolean;
+      spin?: boolean;
+    }
+
+    const spinCss = css`
+      @keyframes iconSpin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      animation-name: iconSpin;
+      animation-duration: 1000ms;
+      animation-iteration-count: infinite;
+      animation-timing-function: linear;
+    `;
+
+    const Wrapper = styled.span<IconProps>`
+      vertical-align: middle;
+      display: inline-block;
+      line-height: ${({ theme }) => theme.lineHeights.sm};
+      font-size: ${({ theme }) => theme.fontSizes.sm};
+
+      & > svg {
+        stroke: ${({ theme, color }): string =>
+          color && color !== 'inherit' ? theme.colors[color] : 'currentColor'};
+        ${({ spin }): any => (spin ? spinCss : '')};
+      }
+      ${({ rounded }): string => (rounded ? 'border-radius: 9999px;' : '')};
+    `;
+
+    TestRenderer.create(
+      // spinCss should only be added if spin is true. Meanwhile, when any icon component in the application receives spin=true prop, all icons in the app start spinning (see video).
+
+      <ThemeProvider
+        theme={{
+          colors: { red: 'darkred' },
+          fontSizes: { sm: '14px' },
+          lineHeights: { sm: '20px' },
+        }}
+      >
+        <Wrapper />
+        <Wrapper spin />
+        <Wrapper color="red" />
+      </ThemeProvider>
+    );
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        vertical-align: middle;
+        display: inline-block;
+        line-height: 20px;
+        font-size: 14px;
+      }
+      .a > svg {
+        stroke: currentColor;
+      }
+      .b {
+        vertical-align: middle;
+        display: inline-block;
+        line-height: 20px;
+        font-size: 14px;
+      }
+      .b > svg {
+        stroke: currentColor;
+        animation-name: iconSpin;
+        animation-duration: 1000ms;
+        animation-iteration-count: infinite;
+        animation-timing-function: linear;
+      }
+      @keyframes iconSpin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .c {
+        vertical-align: middle;
+        display: inline-block;
+        line-height: 20px;
+        font-size: 14px;
+      }
+      .c > svg {
+        stroke: darkred;
       }"
     `);
   });

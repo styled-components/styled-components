@@ -96,3 +96,11 @@ function ColorizedComponent(props: ColorizedComponentProps) {
     color: ${props => props.color};
   `}
 />;
+
+// SVG generating overly-complex typings
+const MySVG = styled.svg.attrs({
+  xmlns: 'http://www.w3.org/2000/svg',
+  viewBox: '0 0 50 50',
+})`
+  display: block;
+`;
