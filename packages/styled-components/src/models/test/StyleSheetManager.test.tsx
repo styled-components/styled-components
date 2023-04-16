@@ -586,7 +586,7 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .parent .b{padding-top:5px;}.parent .child .sc-a{padding-top:10px;}
+        .parent .b{padding-top:5px;}.parent .child .b{padding-top:10px;}
       </style>
     `);
   });
@@ -618,7 +618,7 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .parent .b{color:red;}.parent .child2 .sc-a,.parent .child .b{color:green;}
+        .parent .b{color:red;}.parent .child2 .b,.parent .child .b{color:green;}
       </style>
     `);
   });
@@ -657,7 +657,7 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .parent .b{color:red;}.parent .child2 .sc-a,.parent .child .b{color:green;}@media (min-width: 768px){.parent .b{color:blue;}.parent .child2 .sc-a,.parent .child .b{color:cyan;}}
+        .parent .b{color:red;}.parent .child2 .b,.parent .child .b{color:green;}@media (min-width: 768px){.parent .b{color:blue;}.parent .child2 .b,.parent .child .b{color:cyan;}}
       </style>
     `);
   });
