@@ -54,7 +54,7 @@ if (
 
 /* Export everything */
 export * from './secretInternals';
-export { AttrsArg as Attrs, DefaultTheme, ShouldForwardProp } from './types';
+export { Attrs, DefaultTheme, ShouldForwardProp } from './types';
 export {
   createGlobalStyle,
   css,
