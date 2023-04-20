@@ -20,7 +20,7 @@ import css from './css';
  * for types a and b, if b shares a field with a, mark a's field as optional
  */
 type OptionalIntersection<A, B> = {
-  [K in Extract<keyof A, keyof B>]?: A[K];
+  [K in Extract<keyof A, keyof B>]?: A[K] | undefined;
 };
 
 type AttrsResult<T extends Attrs> = T extends (...args: any) => infer P ? P : T;

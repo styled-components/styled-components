@@ -11,7 +11,7 @@ let SHOULD_REHYDRATE = IS_BROWSER;
 type SheetConstructorArgs = {
   isServer?: boolean;
   useCSSOMInjection?: boolean;
-  target?: HTMLElement;
+  target?: HTMLElement | undefined;
 };
 
 type GlobalStylesAllocationMap = {
@@ -30,7 +30,7 @@ export default class StyleSheet implements Sheet {
   names: NamesAllocationMap;
   options: SheetOptions;
   server: boolean;
-  tag?: GroupedTag;
+  tag?: GroupedTag | undefined;
 
   /** Register a group ID to give it an index */
   static registerId(id: string): number {
@@ -40,7 +40,7 @@ export default class StyleSheet implements Sheet {
   constructor(
     options: SheetConstructorArgs = EMPTY_OBJECT as Object,
     globalStyles: GlobalStylesAllocationMap = {},
-    names?: NamesAllocationMap
+    names?: NamesAllocationMap | undefined
   ) {
     this.options = {
       ...defaultOptions,

@@ -4,8 +4,8 @@ import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
 interface ExoticComponentWithDisplayName<P = any> extends React.ExoticComponent<P> {
-  defaultProps?: Partial<P>;
-  displayName?: string;
+  defaultProps?: Partial<P> | undefined;
+  displayName?: string | undefined;
 }
 
 // from https://stackoverflow.com/a/69852402
@@ -27,11 +27,11 @@ export type NativeTarget = AnyComponent;
 
 export type StyledTarget<R extends Runtime> = R extends 'web' ? WebTarget : NativeTarget;
 export interface StyledOptions<R extends Runtime, Props extends object> {
-  attrs?: AttrsArg<Props>[];
-  componentId?: R extends 'web' ? string : never;
-  displayName?: string;
-  parentComponentId?: R extends 'web' ? string : never;
-  shouldForwardProp?: ShouldForwardProp<R>;
+  attrs?: AttrsArg<Props>[] | undefined;
+  componentId?: (R extends 'web' ? string : never) | undefined;
+  displayName?: string | undefined;
+  parentComponentId?: (R extends 'web' ? string : never) | undefined;
+  shouldForwardProp?: ShouldForwardProp<R> | undefined;
 }
 
 export type Dict<T> = { [key: string]: T };
@@ -47,9 +47,9 @@ export interface ExecutionProps {
    * </StyledButton>
    * ```
    */
-  as?: KnownTarget;
-  forwardedAs?: KnownTarget;
-  theme?: DefaultTheme;
+  as?: KnownTarget | undefined;
+  forwardedAs?: KnownTarget | undefined;
+  theme?: DefaultTheme | undefined;
 }
 
 /**
@@ -123,7 +123,7 @@ export type FlattenerResult<Props extends object> =
   | Keyframes;
 
 export interface Stringifier {
-  (css: string, selector?: string, prefix?: string, componentId?: string): string[];
+  (css: string, selector?: string | undefined, prefix?: string | undefined, componentId?: string | undefined): string[];
   hash: string;
 }
 
@@ -134,7 +134,7 @@ export interface ShouldForwardProp<R extends Runtime> {
 export interface CommonStatics<R extends Runtime, Props extends object> {
   attrs: AttrsArg<Props>[];
   target: StyledTarget<R>;
-  shouldForwardProp?: ShouldForwardProp<R>;
+  shouldForwardProp?: ShouldForwardProp<R> | undefined;
 }
 
 export interface IStyledStatics<R extends Runtime, OuterProps extends object>
@@ -145,7 +145,7 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   inlineStyle: R extends 'native' ? InstanceType<IInlineStyleConstructor<OuterProps>> : never;
   target: StyledTarget<R>;
   styledComponentId: R extends 'web' ? string : never;
-  warnTooManyClasses?: R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never;
+  warnTooManyClasses?: (R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never) | undefined;
 }
 
 /**
@@ -159,8 +159,8 @@ export type PolymorphicComponentProps<
   E extends KnownTarget ? P & Omit<React.ComponentPropsWithRef<E>, keyof P> : P,
   'as' | 'theme'
 > & {
-  as?: P extends { as?: string | AnyComponent } ? P['as'] : E;
-  theme?: DefaultTheme;
+  as?: (P extends { as?: string | AnyComponent } ? P['as'] : E) | undefined;
+  theme?: DefaultTheme | undefined;
 };
 
 /**
@@ -190,7 +190,7 @@ export interface IStyledComponent<
       ? ExecutionProps & Omit<React.ComponentProps<Target>, keyof ExecutionProps>
       : ExecutionProps) &
       Props
-  >;
+  > | undefined;
   toString: () => string;
 }
 

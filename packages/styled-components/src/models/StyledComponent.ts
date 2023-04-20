@@ -35,7 +35,7 @@ import { DefaultTheme, useTheme } from './ThemeProvider';
 const identifiers: { [key: string]: number } = {};
 
 /* We depend on components having unique IDs */
-function generateId(displayName?: string, parentComponentId?: string): string {
+function generateId(displayName?: string | undefined, parentComponentId?: string | undefined): string {
   const name = typeof displayName !== 'string' ? 'sc' : escape(displayName);
   // Ensure that no displayName can lead to duplicate componentIds
   identifiers[name] = (identifiers[name] || 0) + 1;
@@ -73,7 +73,7 @@ function resolveContext<Props extends object>(
   theme: DefaultTheme
 ) {
   const context: ExecutionContext &
-    Props & { class?: string; className?: string; ref?: React.Ref<any> } = {
+    Props & { class?: string | undefined; className?: string | undefined; ref?: React.Ref<any> | undefined } = {
     ...props,
     // unset, add `props.className` back at the end so props always "wins"
     className: undefined,

@@ -8,7 +8,7 @@ export const mainSheet: StyleSheet = new StyleSheet();
 export const mainStylis: Stringifier = createStylisInstance();
 
 export type IStyleSheetContext = {
-  shouldForwardProp?: ShouldForwardProp<'web'>;
+  shouldForwardProp?: ShouldForwardProp<'web'> | undefined; 
   styleSheet: StyleSheet;
   stylis: Stringifier;
 };
@@ -44,11 +44,11 @@ export type IStyleSheetManager = React.PropsWithChildren<{
   /**
    * Provide an optional selector to be prepended to all generated style rules.
    */
-  namespace?: string;
+  namespace?: string | undefined;
   /**
    * Create and provide your own `StyleSheet` if necessary for advanced SSR scenarios.
    */
-  sheet?: StyleSheet;
+  sheet?: StyleSheet | undefined;
   /**
    * Starting in v6, styled-components no longer does its own prop validation
    * and recommends use of transient props "$prop" to pass style-only props to
@@ -63,18 +63,18 @@ export type IStyleSheetManager = React.PropsWithChildren<{
    * Manually composing `styled.{element}.withConfig({shouldForwardProp})` will
    * override this default.
    */
-  shouldForwardProp?: IStyleSheetContext['shouldForwardProp'];
+  shouldForwardProp?: IStyleSheetContext['shouldForwardProp'] | undefined;
   /**
    * An array of plugins to be run by stylis (style processor) during compilation.
    * Check out [what's available on npm*](https://www.npmjs.com/search?q=keywords%3Astylis).
    *
    * \* The plugin(s) must be compatible with stylis v4 or above.
    */
-  stylisPlugins?: stylis.Middleware[];
+  stylisPlugins?: stylis.Middleware[] | undefined;
   /**
    * Provide an alternate DOM node to host generated styles; useful for iframes.
    */
-  target?: HTMLElement;
+  target?: HTMLElement | undefined;
 }>;
 
 export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {

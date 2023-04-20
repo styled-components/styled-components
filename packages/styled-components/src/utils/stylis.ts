@@ -8,8 +8,8 @@ const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 const COMPLEX_SELECTOR_PREFIX = [':', '[', '.', '#'];
 
 export type ICreateStylisInstance = {
-  options?: { namespace?: string; prefix?: boolean };
-  plugins?: Middleware[];
+  options?: { namespace?: string | undefined; prefix?: boolean | undefined };
+  plugins?: Middleware[] | undefined;
 };
 
 /**

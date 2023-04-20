@@ -46,9 +46,9 @@ export const objToCssArray = (obj: Dict<any>): string[] => {
 
 export default function flatten<Props extends object>(
   chunk: Interpolation<Props>,
-  executionContext?: ExecutionContext & Props,
-  styleSheet?: StyleSheet,
-  stylisInstance?: Stringifier
+  executionContext?: ExecutionContext & Props | undefined,
+  styleSheet?: StyleSheet | undefined,
+  stylisInstance?: Stringifier | undefined
 ): RuleSet<Props> {
   if (isFalsish(chunk)) {
     return [];

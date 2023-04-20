@@ -67,7 +67,7 @@ const Example2 = styled.div.attrs({
  */
 declare module 'react' {
   interface Attributes {
-    css?: CSSProp;
+    css?: CSSProp | undefined;
   }
 }
 
