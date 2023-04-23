@@ -112,6 +112,7 @@
     "babel-plugin-styled-components": "^2.0.7",
     "babel-plugin-tester": "^10.0.0",
     "bundlewatch": "^0.3.3",
+    "csstype": "^3.1.2",
     "jest": "^29.4.3",
     "jest-environment-jsdom": "^29.4.3",
     "jest-serializer-html": "^7.0.0",

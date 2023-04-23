@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Attrs,
-  AttrsArg,
   ExecutionProps,
   Interpolation,
   IStyledComponent,
@@ -66,7 +65,7 @@ export interface Styled<
     // @ts-expect-error KnownTarget is a subset of StyledTarget<R>
     TTarget extends StyledTarget<R> = ExtractAttrsTarget<R, TResult, Target>
   >(
-    attrs: AttrsArg<T extends (...args: any) => infer P ? OuterProps & P : OuterProps & T>
+    attrs: Attrs<T extends (...args: any) => infer P ? OuterProps & P : OuterProps & T>
   ) => Styled<
     R,
     TTarget,
@@ -105,13 +104,13 @@ export default function constructWithOptions<
   ) =>
     componentConstructor<Props, Statics>(
       tag,
-      options as StyledOptions<R, OuterProps & Props>,
+      options as unknown as StyledOptions<R, OuterProps & Props>,
       css(initialStyles, ...interpolations)
     );
 
   /* Modify/inject new props at runtime */
   templateFunction.attrs = <T extends Attrs>(
-    attrs: AttrsArg<T extends (...args: any) => infer P ? OuterProps & P : OuterProps & T>
+    attrs: Attrs<T extends (...args: any) => infer P ? OuterProps & P : OuterProps & T>
   ) =>
     constructWithOptions<R, Target, PropsSatisfiedByAttrs<T, OuterProps>, OuterStatics>(
       componentConstructor as unknown as IStyledComponentFactory<

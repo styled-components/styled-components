@@ -5,7 +5,6 @@ import throwStyledError from './error';
 import { phash, SEED } from './hash';
 
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
-const COMPLEX_SELECTOR_PREFIX = [':', '[', '.', '#'];
 
 export type ICreateStylisInstance = {
   options?: { namespace?: string; prefix?: boolean };
@@ -65,9 +64,16 @@ export default function createStylisInstance(
 
   const selfReferenceReplacer: Parameters<String['replace']>[1] = (match, offset, string) => {
     if (
-      // do not replace the first occurrence if it is complex (has a modifier)
-      (offset === 0 ? !COMPLEX_SELECTOR_PREFIX.includes(string[_selector.length]) : true) && // no consecutive self refs (.b.b); that is a precedence boost and treated differently
-      !string.match(_consecutiveSelfRefRegExp)
+      /**
+       * We only want to refer to the static class directly in the following scenarios:
+       *
+       * 1. The selector is alone on the line `& { color: red; }`
+       * 2. The selector is part of a self-reference selector `& + & { color: red; }`
+       */
+      string === _selector ||
+      (string.startsWith(_selector) &&
+        string.endsWith(_selector) &&
+        string.replaceAll(_selector, '').length > 0)
     ) {
       return `.${_componentId}`;
     }

@@ -1,6 +1,6 @@
 import React, { createElement, Ref, useMemo } from 'react';
 import type {
-  AttrsArg,
+  Attrs,
   Dict,
   ExecutionContext,
   ExecutionProps,
@@ -25,7 +25,7 @@ import { DefaultTheme, useTheme } from './ThemeProvider';
 function useResolvedAttrs<Props extends object>(
   theme: DefaultTheme = EMPTY_OBJECT,
   props: Props,
-  attrs: AttrsArg<Props>[]
+  attrs: Attrs<Props>[]
 ) {
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
@@ -127,7 +127,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     const finalAttrs =
       isTargetStyledComp && styledComponentTarget.attrs
         ? styledComponentTarget.attrs.concat(attrs).filter(Boolean)
-        : (attrs as AttrsArg<OuterProps>[]);
+        : (attrs as Attrs<OuterProps>[]);
 
     let shouldForwardProp = options.shouldForwardProp;
 

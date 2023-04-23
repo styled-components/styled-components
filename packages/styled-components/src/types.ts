@@ -27,7 +27,7 @@ export type NativeTarget = AnyComponent;
 
 export type StyledTarget<R extends Runtime> = R extends 'web' ? WebTarget : NativeTarget;
 export interface StyledOptions<R extends Runtime, Props extends object> {
-  attrs?: AttrsArg<Props>[];
+  attrs?: Attrs<Props>[];
   componentId?: R extends 'web' ? string : never;
   displayName?: string;
   parentComponentId?: R extends 'web' ? string : never;
@@ -81,11 +81,9 @@ export type Interpolation<Props extends object> =
   | IStyledComponent<'web', any, any>
   | Interpolation<Props>[];
 
-export type AttrsArg<Props extends object> =
-  | (Omit<ExecutionProps, keyof Props> & Props)
-  | ((props: Omit<ExecutionContext, keyof Props> & Props) => Partial<Props>);
-
-export type Attrs = object | ((...args: any) => object);
+export type Attrs<Props extends object = object> =
+  | (ExecutionProps & Props)
+  | ((props: ExecutionContext & Props) => Partial<Props>);
 
 export type RuleSet<Props extends object> = Interpolation<Props>[];
 
@@ -132,7 +130,7 @@ export interface ShouldForwardProp<R extends Runtime> {
 }
 
 export interface CommonStatics<R extends Runtime, Props extends object> {
-  attrs: AttrsArg<Props>[];
+  attrs: Attrs<Props>[];
   target: StyledTarget<R>;
   shouldForwardProp?: ShouldForwardProp<R>;
 }

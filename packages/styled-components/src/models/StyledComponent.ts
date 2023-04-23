@@ -2,7 +2,7 @@ import React, { createElement, Ref, useDebugValue } from 'react';
 import { SC_VERSION } from '../constants';
 import type {
   AnyComponent,
-  AttrsArg,
+  Attrs,
   Dict,
   ExecutionContext,
   ExecutionProps,
@@ -68,7 +68,7 @@ function useInjectedStyle<T extends object>(
 }
 
 function resolveContext<Props extends object>(
-  attrs: AttrsArg<Props>[],
+  attrs: Attrs<Props>[],
   props: React.HTMLAttributes<Element> & Props,
   theme: DefaultTheme
 ) {
@@ -200,10 +200,8 @@ function createStyledComponent<
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     isTargetStyledComp && styledComponentTarget.attrs
-      ? styledComponentTarget.attrs
-          .concat(attrs as unknown as AttrsArg<OuterProps>[])
-          .filter(Boolean)
-      : (attrs as AttrsArg<OuterProps>[]);
+      ? styledComponentTarget.attrs.concat(attrs as unknown as Attrs<OuterProps>[]).filter(Boolean)
+      : (attrs as Attrs<OuterProps>[]);
 
   let { shouldForwardProp } = options;
 
