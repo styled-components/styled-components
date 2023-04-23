@@ -104,7 +104,7 @@ export default function constructWithOptions<
   ) =>
     componentConstructor<Props, Statics>(
       tag,
-      options as StyledOptions<R, OuterProps & Props>,
+      options as unknown as StyledOptions<R, OuterProps & Props>,
       css(initialStyles, ...interpolations)
     );
 

@@ -1,3 +1,4 @@
+import * as CSS from 'csstype';
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 import ThemeProvider from '../models/ThemeProvider';
@@ -63,7 +64,7 @@ describe('attrs', () => {
   it('should not call a function passed to attrs as an object value', () => {
     const stub = jest.fn(() => 'div');
 
-    const Comp = styled.button.attrs(() => ({
+    const Comp = styled.button.attrs<{ foo: typeof stub }>(() => ({
       foo: stub,
     }))``;
 
@@ -318,7 +319,7 @@ describe('attrs', () => {
   });
 
   it('does not pass transient props to HTML element', () => {
-    const Comp = styled.div<{ $textColor: string }>`
+    const Comp = styled.div<{ $textColor: CSS.Properties['color'] }>`
       color: ${props => props.$textColor};
     `;
 

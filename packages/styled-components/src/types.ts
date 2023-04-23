@@ -82,8 +82,8 @@ export type Interpolation<Props extends object> =
   | Interpolation<Props>[];
 
 export type Attrs<Props extends object = object> =
-  | (Omit<ExecutionProps, keyof Props> & Props)
-  | ((props: Omit<ExecutionContext, keyof Props> & Props) => Partial<Props>);
+  | (ExecutionProps & Props)
+  | ((props: ExecutionContext & Props) => Partial<Props>);
 
 export type RuleSet<Props extends object> = Interpolation<Props>[];
 
