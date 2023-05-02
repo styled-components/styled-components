@@ -72,22 +72,10 @@
   "peerDependencies": {
     "babel-plugin-styled-components": ">= 2",
     "react": ">= 16.8.0",
-    "react-dom": ">= 16.8.0",
-    "shallowequal": ">= 1",
-    "stylis": "^4.0.0",
-    "tslib": "^2.0.0"
+    "react-dom": ">= 16.8.0"
   },
   "peerDependenciesMeta": {
     "babel-plugin-styled-components": {
-      "optional": true
-    },
-    "shallowequal": {
-      "optional": true
-    },
-    "stylis": {
-      "optional": true
-    },
-    "tslib": {
       "optional": true
     }
   },
