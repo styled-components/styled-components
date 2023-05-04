@@ -322,6 +322,30 @@ describe('basic', () => {
       `);
     });
 
+    it('should handle container queries inside style rules', () => {
+      const Comp = styled.div`
+        background: blue;
+        container-type: inline-size;
+
+        @container (width > 30px) {
+          background: red;
+        }
+      `;
+
+      TestRenderer.create(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          background: blue;
+          container-type: inline-size;
+        }
+        @container (width > 30px) {
+          .b {
+            background: red;
+          }
+        }"
+      `);
+    });
+
     it('should hoist non-react static properties on styled primitives', () => {
       const Inner = styled.div<{}, { foo: string }>``;
       Inner.foo = 'bar';
