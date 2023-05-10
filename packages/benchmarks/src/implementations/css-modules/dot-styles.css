@@ -1,0 +1,10 @@
+.root {
+  position: absolute;
+  cursor: pointer;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-top-width: 0;
+  transform: translate(50%, 50%);
+}

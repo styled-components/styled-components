@@ -1,5 +1,6 @@
 .initial {
   align-items: stretch;
+  background-color: transparent;
   border-width: 0;
   border-style: solid;
   box-sizing: border-box;
@@ -7,9 +8,11 @@
   flex-basis: auto;
   flex-direction: column;
   flex-shrink: 0;
+  list-style: none;
   margin: 0;
-  padding: 0;
-  position: relative;
   min-height: 0;
   min-width: 0;
+  padding: 0;
+  position: relative;
+  z-index: 0;
 }
