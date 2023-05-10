@@ -92,6 +92,10 @@ describe('with styles', () => {
       .foo > & {
         color: green;
       }
+
+      &:not(& ~ &) {
+        color: cornflowerblue;
+      }
     `;
     TestRenderer.create(
       <React.Fragment>
@@ -134,6 +138,9 @@ describe('with styles', () => {
       .foo > .a {
         color: green;
       }
+      .a:not(.a ~ .a) {
+        color: cornflowerblue;
+      }
       .b {
         background: red;
         color: red;
@@ -167,6 +174,9 @@ describe('with styles', () => {
       }
       .foo > .b {
         color: green;
+      }
+      .b:not(.b ~ .b) {
+        color: cornflowerblue;
       }"
     `);
   });

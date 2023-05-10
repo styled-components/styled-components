@@ -4,6 +4,7 @@ import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
 import { phash, SEED } from './hash';
 
+const AMP_REGEX = /&/g;
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 
 export type ICreateStylisInstance = {
@@ -60,7 +61,6 @@ export default function createStylisInstance(
   let _componentId: string;
   let _selector: string;
   let _selectorRegexp: RegExp;
-  let _consecutiveSelfRefRegExp: RegExp;
 
   const selfReferenceReplacer: Parameters<String['replace']>[1] = (match, offset, string) => {
     if (
@@ -95,10 +95,10 @@ export default function createStylisInstance(
    */
   const selfReferenceReplacementPlugin: Middleware = element => {
     if (element.type === RULESET && element.value.includes('&')) {
-      (element.props as string[])[0] = element.props[0].replace(
-        _selectorRegexp,
-        selfReferenceReplacer
-      );
+      (element.props as string[])[0] = element.props[0]
+        // catch any hanging references that stylis missed
+        .replace(AMP_REGEX, _selector)
+        .replace(_selectorRegexp, selfReferenceReplacer);
     }
   };
 
@@ -128,7 +128,6 @@ export default function createStylisInstance(
     _componentId = componentId;
     _selector = selector;
     _selectorRegexp = new RegExp(`\\${_selector}\\b`, 'g');
-    _consecutiveSelfRefRegExp = new RegExp(`(\\${_selector}\\b){2,}`);
 
     const flatCSS = css.replace(COMMENT_REGEX, '');
     let compiled = compile(prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS);
