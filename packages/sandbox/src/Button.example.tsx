@@ -79,6 +79,8 @@ export const Example = () => {
       <DivWithoutProps>test</DivWithoutProps>
       <DivWithProps waz={42}>test</DivWithProps>
       <InheritedDivWithProps waz={42}>test</InheritedDivWithProps>
+
+      <UnstyledComponent foo="add-clip" />
       <StyledComponent foo="add-clip" />
       <InheritedStyledComponent foo="add-clip" />
     </>

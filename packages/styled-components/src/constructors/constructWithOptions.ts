@@ -44,6 +44,9 @@ type PropsSatisfiedByAttrs<
   OptionalIntersection<Props, Result> &
   Partial<Omit<Result, keyof Props | 'as'>>;
 
+// Prevents TypeScript from inferring generic argument
+type NoInfer<T> = [T][T extends any ? 0 : never];
+
 export interface Styled<
   R extends Runtime,
   Target extends StyledTarget<R>,
@@ -52,8 +55,8 @@ export interface Styled<
   RuntimeInjectedProps extends ExecutionProps = object
 > {
   <Props extends object = object, Statics extends object = object>(
-    initialStyles: Styles<OuterProps & RuntimeInjectedProps & Props>,
-    ...interpolations: Interpolation<OuterProps & RuntimeInjectedProps & Props>[]
+    initialStyles: Styles<OuterProps & RuntimeInjectedProps & NoInfer<Props>>,
+    ...interpolations: Interpolation<OuterProps & RuntimeInjectedProps & NoInfer<Props>>[]
   ): // @ts-expect-error KnownTarget is a subset of StyledTarget<R>
   IStyledComponent<R, ExtractAttrsTarget<R, RuntimeInjectedProps, Target>, OuterProps & Props> &
     OuterStatics &
