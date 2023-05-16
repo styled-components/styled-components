@@ -2,7 +2,7 @@
  * This file is meant for typing-related tests that don't need to go through Jest.
  */
 import React from 'react';
-import { css, CSSProp } from '../index';
+import { css, CSSProp, IStyledComponent, StyledObject } from '../index';
 import styled from '../index-standalone';
 
 /**
@@ -104,3 +104,57 @@ const MySVG = styled.svg.attrs({
 })`
   display: block;
 `;
+
+/** StyledObject should accept undefined properties
+ *
+ */
+
+interface MyStyle extends StyledObject<{}> {
+  fontSize: string;
+  lineHeight: string;
+  textTransform?: string;
+}
+
+/** Attrs should not expect all props to be provided (even if they are required)
+ *
+ */
+type MyRequiredProps = {
+  children: React.ReactNode;
+  label: string;
+};
+
+const RequiredChildren = styled.div<MyRequiredProps>``;
+
+const ComponentWithChildren = styled(RequiredChildren).attrs({
+  label: 'hello',
+})``;
+
+/** Intrinsic props and ref are being incorrectly types when using `as`
+ *
+ */
+const Text = styled.p``;
+<Text
+  as="label"
+  ref={(el: HTMLLabelElement | null) => {}}
+  onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
+></Text>;
+
+const Label = styled(Text).attrs({ as: 'label' })``;
+<Label
+  ref={(el: HTMLLabelElement | null) => {}}
+  onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
+></Label>;
+
+/**
+ * Using IStyledComponent as the casted type of a functional component won't retain intrinsic prop types once styled
+ *
+ */
+const StyledDiv = styled.div``;
+
+const CustomComponent = (({ ...props }) => {
+  return <StyledDiv {...props} />;
+}) as IStyledComponent<'web', 'div', {}>;
+
+const StyledCustomComponent = styled(CustomComponent)``;
+
+<StyledCustomComponent className="class" />;
