@@ -55,7 +55,7 @@ export interface Styled<
     initialStyles: Styles<OuterProps & RuntimeInjectedProps & Props>,
     ...interpolations: Interpolation<OuterProps & RuntimeInjectedProps & Props>[]
   ): // @ts-expect-error KnownTarget is a subset of StyledTarget<R>
-  IStyledComponent<R, ExtractAttrsTarget<R, RuntimeInjectedProps, Target>, Props> &
+  IStyledComponent<R, ExtractAttrsTarget<R, RuntimeInjectedProps, Target>, OuterProps & Props> &
     OuterStatics &
     Statics;
 
