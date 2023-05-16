@@ -106,7 +106,7 @@ const MySVG = styled.svg.attrs({
 `;
 
 /** StyledObject should accept undefined properties
- *
+ * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
 
 interface MyStyle extends StyledObject<{}> {
@@ -116,7 +116,7 @@ interface MyStyle extends StyledObject<{}> {
 }
 
 /** Attrs should not expect all props to be provided (even if they are required)
- *
+ * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
 type MyRequiredProps = {
   children: React.ReactNode;
@@ -130,7 +130,7 @@ const ComponentWithChildren = styled(RequiredChildren).attrs({
 })``;
 
 /** Intrinsic props and ref are being incorrectly types when using `as`
- *
+ * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
 const Text = styled.p``;
 <Text
@@ -147,7 +147,7 @@ const Label = styled(Text).attrs({ as: 'label' })``;
 
 /**
  * Using IStyledComponent as the casted type of a functional component won't retain intrinsic prop types once styled
- *
+ * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
 const StyledDiv = styled.div``;
 
