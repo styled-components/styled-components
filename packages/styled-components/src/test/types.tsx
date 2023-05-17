@@ -104,3 +104,64 @@ const MySVG = styled.svg.attrs({
 })`
   display: block;
 `;
+
+interface UnstyledComponentProps {
+  foo: number;
+}
+
+const UnstyledComponent = (_props: UnstyledComponentProps) => {
+  return <></>;
+};
+
+// Styled component of unstyled component should inherit props
+const StyledComponent = styled(UnstyledComponent)`
+  color: ${props => props.foo};
+`;
+
+// Inherited component of styled component should inherit props too
+const InheritedStyledComponent = styled(StyledComponent)``;
+
+// Mentioning another styled component within interpolation should not cause
+// this styled component to inherit its props (in other words, this div still has custom props)
+const DivWithoutProps = styled.div`
+  ${StyledComponent} {
+    display: block;
+  }
+`;
+
+// Mentioning another styled component within interpolation should not cause
+// this styled component to inherit its props (in other words, this div only has waz prop)
+const DivWithProps = styled.div<{ waz: number }>`
+  ${StyledComponent} {
+    display: block;
+  }
+
+  color: ${props => props.waz};
+`;
+
+// Inherited component of styled component should inherit props too
+const InheritedDivWithProps = styled(DivWithProps)`
+  color: ${props => props.waz};
+`;
+
+const TestCases = () => {
+  return (
+    <>
+      Positive test cases:
+      <DivWithoutProps>test</DivWithoutProps>
+      <DivWithProps waz={42}>test</DivWithProps>
+      <InheritedDivWithProps waz={42}>test</InheritedDivWithProps>
+      <UnstyledComponent foo={42} />
+      <StyledComponent foo={42} />
+      <InheritedStyledComponent foo={42} />
+
+      Negative test cases:
+      {/* @ts-expect-error Div should not have inherited foo */}
+      <DivWithProps foo={42} waz={42} />
+      {/* @ts-expect-error Div requires waz */}
+      <DivWithProps />
+      {/* @ts-expect-error InheritedDiv inherited the required waz prop */}
+      <InheritedDivWithProps />
+    </>
+  );
+};
