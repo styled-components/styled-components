@@ -112,14 +112,21 @@ interface UnstyledComponentProps {
 const UnstyledComponent = (_props: UnstyledComponentProps) => {
   return <></>;
 };
+<UnstyledComponent foo={42} />;
 
 // Styled component of unstyled component should inherit props
 const StyledComponent = styled(UnstyledComponent)`
   color: ${props => props.foo};
 `;
+<StyledComponent foo={42} />;
+// @ts-expect-error UnstyledComponent didn't allow children, so neither does this one
+<StyledComponent foo={42}>children allowed</StyledComponent>;
 
 // Inherited component of styled component should inherit props too
 const InheritedStyledComponent = styled(StyledComponent)``;
+<InheritedStyledComponent foo={42} />;
+// @ts-expect-error UnstyledComponent didn't allow children, so neither does this one
+<InheritedStyledComponent foo={42}>children allowed</InheritedStyledComponent>;
 
 // Mentioning another styled component within interpolation should not cause
 // this styled component to inherit its props (in other words, this div still has custom props)
@@ -128,6 +135,8 @@ const DivWithoutProps = styled.div`
     display: block;
   }
 `;
+<DivWithoutProps />;
+<DivWithoutProps>children allowed</DivWithoutProps>;
 
 // Mentioning another styled component within interpolation should not cause
 // this styled component to inherit its props (in other words, this div only has waz prop)
@@ -138,30 +147,17 @@ const DivWithProps = styled.div<{ waz: number }>`
 
   color: ${props => props.waz};
 `;
+<DivWithProps waz={42} />;
+<DivWithProps waz={42}>children allowed</DivWithProps>;
+// @ts-expect-error Div should not have inherited foo
+<DivWithProps foo={42} waz={42} />;
+// @ts-expect-error Div requires waz
+<DivWithProps />;
 
 // Inherited component of styled component should inherit props too
 const InheritedDivWithProps = styled(DivWithProps)`
   color: ${props => props.waz};
 `;
-
-const TestCases = () => {
-  return (
-    <>
-      Positive test cases:
-      <DivWithoutProps>test</DivWithoutProps>
-      <DivWithProps waz={42}>test</DivWithProps>
-      <InheritedDivWithProps waz={42}>test</InheritedDivWithProps>
-      <UnstyledComponent foo={42} />
-      <StyledComponent foo={42} />
-      <InheritedStyledComponent foo={42} />
-
-      Negative test cases:
-      {/* @ts-expect-error Div should not have inherited foo */}
-      <DivWithProps foo={42} waz={42} />
-      {/* @ts-expect-error Div requires waz */}
-      <DivWithProps />
-      {/* @ts-expect-error InheritedDiv inherited the required waz prop */}
-      <InheritedDivWithProps />
-    </>
-  );
-};
+<InheritedDivWithProps waz={42}>test</InheritedDivWithProps>;
+// @ts-expect-error InheritedDiv inherited the required waz prop
+<InheritedDivWithProps />;
