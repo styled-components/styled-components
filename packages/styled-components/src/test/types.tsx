@@ -4,6 +4,7 @@
 import React from 'react';
 import { css, CSSProp, IStyledComponent, StyledObject } from '../index';
 import styled from '../index-standalone';
+import { VeryLargeUnionType } from './veryLargeUnionType';
 
 /**
  * Prop inference when using forwardRef
@@ -149,23 +150,43 @@ const DivWithProps = styled.div<{ waz: number }>`
 `;
 <DivWithProps waz={42} />;
 <DivWithProps waz={42}>children allowed</DivWithProps>;
-// @ts-expect-error Div should not have inherited foo
+// @ts-expect-error DivWithProps should not have inherited foo
 <DivWithProps foo={42} waz={42} />;
-// @ts-expect-error Div requires waz
+// @ts-expect-error DivWithProps requires waz
 <DivWithProps />;
 
 // Inherited component of styled component should inherit props too
-const InheritedDivWithProps = styled(DivWithProps)`
+const InheritedDivWithProps = styled(DivWithProps)<{ bar: "bar" }>`
   color: ${props => props.waz};
+  color: ${props => props.bar};
+
+  color: ${props =>
+    /* @ts-expect-error foo is not a valid prop */
+    props.foo
+  };
 `;
-<InheritedDivWithProps waz={42}>test</InheritedDivWithProps>;
+<InheritedDivWithProps waz={42} bar="bar">test</InheritedDivWithProps>;
 // @ts-expect-error InheritedDiv inherited the required waz prop
 <InheritedDivWithProps />;
+// @ts-expect-error bar must be "bar"
+<InheritedDivWithProps waz={42} bar="foo" />;
+
+const DivWithRequiredProps = styled.div<{ foo: number, bar: string }>``;
+
+const RequiredPropsProvidedAsAttrs = styled(DivWithRequiredProps).attrs({
+  foo: 42, // Providing required prop foo, which makes it optional going forward
+})``;
+
+// foo prop is now optional
+<RequiredPropsProvidedAsAttrs bar="bar" />;
+// Can still provide foo if we want
+<RequiredPropsProvidedAsAttrs foo={22} bar="bar" />;
+// @ts-expect-error bar is still required
+<RequiredPropsProvidedAsAttrs />;
 
 /** StyledObject should accept undefined properties
  * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
-
 interface MyStyle extends StyledObject<{}> {
   fontSize: string;
   lineHeight: string;
@@ -175,32 +196,52 @@ interface MyStyle extends StyledObject<{}> {
 /** Attrs should not expect all props to be provided (even if they are required)
  * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
-type MyRequiredProps = {
-  children: React.ReactNode;
-  label: string;
-};
-
-const RequiredChildren = styled.div<MyRequiredProps>``;
-
-const ComponentWithChildren = styled(RequiredChildren).attrs({
-  label: 'hello',
+const AttrRequiredTest = styled(DivWithRequiredProps).attrs({
+  // Should not have to provide foo within attrs
+  bar: "hello",
+  // Should allow additional props
+  newProp: 42,
 })``;
+
+const AttrRequiredTest2 = styled(DivWithRequiredProps).attrs({
+  // @ts-expect-error foo must be a number
+  foo: "not a number"
+})``;
+
+<AttrRequiredTest foo={42} bar="bar" />;
+// @ts-expect-error foo and bar are required props
+<AttrRequiredTest bar="bar" />;
 
 /** Intrinsic props and ref are being incorrectly types when using `as`
  * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
 const Text = styled.p``;
+// @ts-expect-error Can't treat paragraph element as label element
+<Text onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}} />;
 <Text
   as="label"
   ref={(el: HTMLLabelElement | null) => {}}
   onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
-></Text>;
+/>;
+<Text as="label" ref={(e: HTMLLabelElement | null) => {}} />;
+// @ts-expect-error Should now be a label element
+<Text as="label" ref={(e: HTMLParagraphElement | null) => {}} />;
 
-const Label = styled(Text).attrs({ as: 'label' })``;
-<Label
+const AttrObjectAsLabel = styled(Text).attrs({ as: 'label' })``;
+<AttrObjectAsLabel
   ref={(el: HTMLLabelElement | null) => {}}
   onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
-></Label>;
+/>;
+// @ts-expect-error Should now be a Label element
+<AttrObjectAsLabel onCopy={(e: React.ClipboardEvent<HTMLParagraphElement>) => {}} />;
+
+const AttrFunctionAsLabel = styled(Text).attrs(() => ({ as: 'label' }))``;
+<AttrFunctionAsLabel
+  ref={(el: HTMLLabelElement | null) => {}}
+  onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
+/>;
+// @ts-expect-error Should now be a Label element
+<AttrFunctionAsLabel onCopy={(e: React.ClipboardEvent<HTMLParagraphElement>) => {}} />;
 
 /**
  * Using IStyledComponent as the casted type of a functional component won't retain intrinsic prop types once styled
@@ -215,3 +256,26 @@ const CustomComponent = (({ ...props }) => {
 const StyledCustomComponent = styled(CustomComponent)``;
 
 <StyledCustomComponent className="class" />;
+
+// Performance test
+interface VeryLargeUnionProps {
+  foo: VeryLargeUnionType; // Comment out this line to compare performance
+}
+
+const UnstyledComponentVeryLargeUnion = (_props: VeryLargeUnionProps) => {
+  return <></>;
+};
+
+const StyledComponentVeryLargeUnion = styled(UnstyledComponentVeryLargeUnion)`
+  // Multiple template strings helps illustrate possible perf issue
+  color: ${props => props.theme.waz};
+  color: ${props => props.theme.waz};
+  color: ${props => props.theme.waz};
+  color: ${props => props.theme.waz};
+  color: ${props => props.theme.waz};
+  color: ${props => props.theme.waz};
+  color: ${props => props.theme.waz};
+  color: ${props => props.theme.waz};
+  color: ${props => props.theme.waz};
+  color: ${props => props.theme.waz};
+`;
