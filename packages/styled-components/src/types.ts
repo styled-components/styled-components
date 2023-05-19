@@ -36,6 +36,11 @@ export interface StyledOptions<R extends Runtime, Props extends object> {
 
 export type Dict<T> = { [key: string]: T };
 
+// Allows for jsx ignored attributes such as data-* and aria-*
+export interface HyphenatedAttributes {
+  [key: `${string}-${string}`]: unknown;
+}
+
 export interface ExecutionProps {
   /**
    * Dynamically adjust the rendered component or HTML tag, e.g.

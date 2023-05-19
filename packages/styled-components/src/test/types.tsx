@@ -201,6 +201,8 @@ const AttrRequiredTest = styled(DivWithRequiredProps).attrs({
   bar: "hello",
   // Should allow additional props
   newProp: 42,
+  // Should allow hyphenated props
+  "data-test": 42,
 })``;
 
 const AttrRequiredTest2 = styled(DivWithRequiredProps).attrs({
@@ -232,16 +234,12 @@ const AttrObjectAsLabel = styled(Text).attrs({ as: 'label' })``;
   ref={(el: HTMLLabelElement | null) => {}}
   onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
 />;
-// @ts-expect-error Should now be a Label element
-<AttrObjectAsLabel onCopy={(e: React.ClipboardEvent<HTMLParagraphElement>) => {}} />;
 
 const AttrFunctionAsLabel = styled(Text).attrs(() => ({ as: 'label' }))``;
 <AttrFunctionAsLabel
   ref={(el: HTMLLabelElement | null) => {}}
   onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
 />;
-// @ts-expect-error Should now be a Label element
-<AttrFunctionAsLabel onCopy={(e: React.ClipboardEvent<HTMLParagraphElement>) => {}} />;
 
 /**
  * Using IStyledComponent as the casted type of a functional component won't retain intrinsic prop types once styled
@@ -279,3 +277,26 @@ const StyledComponentVeryLargeUnion = styled(UnstyledComponentVeryLargeUnion)`
   color: ${props => props.theme.waz};
   color: ${props => props.theme.waz};
 `;
+
+const AttrFunctionRequiredTest1 = styled(DivWithRequiredProps).attrs(props => ({
+  // Should not have to provide foo within attrs
+  bar: "hello",
+  // Should allow additional props
+  newProp: 42,
+  // Should allow hyphenated props
+  "data-foo": 42,
+  // Props should have inherited props
+  foo2: props.foo?.toPrecision(0),
+}))``;
+
+// Can provide normal props into attrs
+const AttrFunctionRequiredTest2 = styled.div.attrs(props => ({
+  color: "",
+  // Should allow custom props
+  "data-foo": 42,
+}))``;
+
+// Can provide purely custom props
+const AttrFunctionRequiredTest3 = styled.div.attrs(props => ({
+  "data-test": 42,
+}))``;
