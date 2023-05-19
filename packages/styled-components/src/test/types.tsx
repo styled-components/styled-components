@@ -39,7 +39,18 @@ const Component2 = () => {
   return (
     // Wrapper should not be influenced by Button's types
     <Wrapper>
-      <Button as="video" foo loop>
+      <Button as={'video'} foo loop>
+        test
+      </Button>
+    </Wrapper>
+  );
+};
+
+const Component3 = () => {
+  return (
+    // Wrapper should not be influenced by Button's types
+    <Wrapper>
+      <Button mix={['video' as const]} foo loop>
         test
       </Button>
     </Wrapper>
