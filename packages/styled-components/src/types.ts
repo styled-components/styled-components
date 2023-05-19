@@ -78,7 +78,7 @@ export type Interpolation<Props extends object> =
   // not actually callable, the function signature is just a crutch for JSX,
   // same as React.ExoticComponent.
   // We don't allow component selectors for native.
-  | IStyledComponent<'web', any, any>
+  | IStyledComponent<'web', any>
   | Interpolation<Props>[];
 
 export type Attrs<Props extends object = object> =
@@ -154,7 +154,9 @@ export type PolymorphicComponentProps<
   E extends StyledTarget<R>,
   P extends object
 > = Omit<
-  E extends KnownTarget ? P & Omit<React.ComponentPropsWithRef<E>, keyof P> : P,
+  E extends KnownTarget
+    ? Omit<P, keyof React.ComponentPropsWithRef<E>> & React.ComponentPropsWithRef<E>
+    : P,
   'as' | 'theme'
 > & {
   as?: P extends { as?: string | AnyComponent } ? P['as'] : E;
@@ -180,7 +182,7 @@ export interface PolymorphicComponent<
 export interface IStyledComponent<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  Props extends object
+  Props extends object = Target extends KnownTarget ? React.ComponentPropsWithRef<Target> : object
 > extends PolymorphicComponent<R, Props, Target>,
     IStyledStatics<R, Props> {
   defaultProps?: Partial<
@@ -216,7 +218,13 @@ export interface IInlineStyle<Props extends object> {
 }
 
 export interface StyledObject<Props extends object> {
-  [key: string]: Dict<any> | string | number | StyleFunction<Props> | StyledObject<Props>;
+  [key: string]:
+    | Dict<any>
+    | string
+    | number
+    | StyleFunction<Props>
+    | StyledObject<Props>
+    | undefined;
 }
 // uncomment when we can eventually override index signatures with more specific types
 // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);
@@ -243,3 +251,6 @@ export interface StyledObject<Props extends object> {
  * {@link DefaultTheme}.
  */
 export type CSSProp = RuleSet<any>;
+
+// Prevents TypeScript from inferring generic argument
+export type NoInfer<T> = [T][T extends any ? 0 : never];

@@ -6,6 +6,7 @@ import {
   IStyledComponent,
   IStyledComponentFactory,
   KnownTarget,
+  NoInfer,
   Runtime,
   StyledOptions,
   StyledTarget,
@@ -43,9 +44,6 @@ type PropsSatisfiedByAttrs<
 > = Omit<Props, keyof Result> &
   OptionalIntersection<Props, Result> &
   Partial<Omit<Result, keyof Props | 'as'>>;
-
-// Prevents TypeScript from inferring generic argument
-type NoInfer<T> = [T][T extends any ? 0 : never];
 
 export interface Styled<
   R extends Runtime,

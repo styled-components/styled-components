@@ -210,7 +210,7 @@ const StyledDiv = styled.div``;
 
 const CustomComponent = (({ ...props }) => {
   return <StyledDiv {...props} />;
-}) as IStyledComponent<'web', 'div', {}>;
+}) as IStyledComponent<'web', 'div'>;
 
 const StyledCustomComponent = styled(CustomComponent)``;
 
