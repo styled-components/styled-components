@@ -60,7 +60,7 @@ export interface ExecutionContext extends ExecutionProps {
 }
 
 export interface StyleFunction<Props extends object> {
-  (executionContext: ExecutionContext & Omit<Props, keyof ExecutionContext>): Interpolation<Props>;
+  (executionContext: ExecutionContext & Props): Interpolation<Props>;
 }
 
 export type Interpolation<Props extends object> =
