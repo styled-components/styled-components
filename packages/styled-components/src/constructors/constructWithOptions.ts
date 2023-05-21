@@ -1,8 +1,8 @@
 import React from 'react';
 import {
   Attrs,
+  DataAttributes,
   ExecutionProps,
-  HyphenatedAttributes,
   Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
@@ -67,7 +67,7 @@ export interface Styled<
     // @ts-expect-error KnownTarget is a subset of StyledTarget<R>
     TTarget extends StyledTarget<R> = ExtractAttrsTarget<R, TResult, Target>
   >(
-    attrs: Attrs<T extends (...args: any) => infer P ? Partial<OuterProps & P> : Partial<OuterProps & T> & HyphenatedAttributes>
+    attrs: Attrs<T extends (...args: any) => infer P ? Partial<OuterProps & P> : Partial<OuterProps & T> & DataAttributes & React.AriaAttributes>
   ) => Styled<
     R,
     TTarget,
@@ -112,7 +112,7 @@ export default function constructWithOptions<
 
   /* Modify/inject new props at runtime */
   templateFunction.attrs = <T extends Attrs>(
-    attrs: Attrs<T extends (...args: any) => infer P ? Partial<OuterProps & P> : Partial<OuterProps & T> & HyphenatedAttributes>
+    attrs: Attrs<T extends (...args: any) => infer P ? Partial<OuterProps & P> : Partial<OuterProps & T> & DataAttributes & React.AriaAttributes>
   ) =>
     constructWithOptions<R, Target, PropsSatisfiedByAttrs<T, OuterProps>, OuterStatics>(
       componentConstructor as unknown as IStyledComponentFactory<
