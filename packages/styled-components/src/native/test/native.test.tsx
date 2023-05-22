@@ -152,7 +152,7 @@ describe('native', () => {
     });
 
     it('passes simple props on', () => {
-      const Comp = styled.View.attrs(() => ({
+      const Comp = styled.View.attrs<{ test: boolean }>(() => ({
         test: true,
       }))``;
 
@@ -182,10 +182,10 @@ describe('native', () => {
     });
 
     it('merges multiple calls', () => {
-      const Comp = styled.View.attrs(() => ({
+      const Comp = styled.View.attrs<{ test: string, first: string }>(() => ({
         first: 'first',
         test: '_',
-      })).attrs(() => ({
+      })).attrs<{ second: string }>(() => ({
         second: 'second',
         test: 'test',
       }))``;
@@ -202,10 +202,10 @@ describe('native', () => {
     });
 
     it('merges multiple fn calls', () => {
-      const Comp = styled.View.attrs(() => ({
+      const Comp = styled.View.attrs<{ test: string, first: string }>(() => ({
         first: 'first',
         test: '_',
-      })).attrs(() => ({
+      })).attrs<{ second: string }>(() => ({
         second: 'second',
         test: 'test',
       }))``;
@@ -222,11 +222,11 @@ describe('native', () => {
     });
 
     it('merges attrs when inheriting SC', () => {
-      const Parent = styled.View.attrs(() => ({
+      const Parent = styled.View.attrs<{ first: string }>(() => ({
         first: 'first',
       }))``;
 
-      const Child = styled(Parent).attrs(() => ({
+      const Child = styled(Parent).attrs<{ second: string }>(() => ({
         second: 'second',
       }))``;
 

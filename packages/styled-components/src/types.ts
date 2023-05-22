@@ -258,3 +258,6 @@ export type CSSProp = RuleSet<any>;
 
 // Prevents TypeScript from inferring generic argument
 export type NoInfer<T> = [T][T extends any ? 0 : never];
+
+// Restricts properties of A to only those shared in B
+export type SubsetOnly<A, B> = { [K in keyof A]: K extends keyof B ? A[K] : never };

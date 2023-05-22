@@ -199,20 +199,32 @@ interface MyStyle extends StyledObject<{}> {
 const AttrRequiredTest = styled(DivWithRequiredProps).attrs({
   // Should not have to provide foo within attrs
   bar: "hello",
-  // Should allow additional props
-  newProp: 42,
   // Should allow hyphenated props
   "data-test": 42,
 })``;
+<AttrRequiredTest foo={42} bar="bar" />;
+// Bar was defaulted in attrs
+<AttrRequiredTest foo={42} />;
+// @ts-expect-error foo and bar are required props
+<AttrRequiredTest bar="bar" />;
+// @ts-expect-error foo and bar are required props
+<AttrRequiredTest />;
 
+// @ts-expect-error foo must be a number
 const AttrRequiredTest2 = styled(DivWithRequiredProps).attrs({
-  // @ts-expect-error foo must be a number
   foo: "not a number"
 })``;
 
-<AttrRequiredTest foo={42} bar="bar" />;
-// @ts-expect-error foo and bar are required props
-<AttrRequiredTest bar="bar" />;
+const AttrRequiredTest3 = styled(DivWithRequiredProps).attrs<{ newProp: number }>({
+  // Should allow props defined within attrs generic arg
+  newProp: 42,
+})``;
+<AttrRequiredTest3 foo={42} bar="bar" newProp={42} />;
+
+// @ts-expect-error Should not allow unknown props
+const AttrRequiredTest4 = styled(DivWithRequiredProps).attrs({
+  waz: 42,
+})``;
 
 /** Intrinsic props and ref are being incorrectly types when using `as`
  * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
@@ -234,12 +246,16 @@ const AttrObjectAsLabel = styled(Text).attrs({ as: 'label' })``;
   ref={(el: HTMLLabelElement | null) => {}}
   onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
 />;
+// @ts-expect-error Can't provide unknown props
+<AttrObjectAsLabel waz={42} />;
 
-const AttrFunctionAsLabel = styled(Text).attrs(() => ({ as: 'label' }))``;
+const AttrFunctionAsLabel = styled(Text).attrs(() => ({ as: 'label' as const }))``;
 <AttrFunctionAsLabel
   ref={(el: HTMLLabelElement | null) => {}}
   onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
 />;
+// @ts-expect-error Can't provide unknown props
+<AttrFunctionAsLabel waz={42} />;
 
 /**
  * Using IStyledComponent as the casted type of a functional component won't retain intrinsic prop types once styled
@@ -281,15 +297,16 @@ const StyledComponentVeryLargeUnion = styled(UnstyledComponentVeryLargeUnion)`
 const AttrFunctionRequiredTest1 = styled(DivWithRequiredProps).attrs(props => ({
   // Should not have to provide foo within attrs
   bar: "hello",
-  // Should allow additional props
-  newProp: 42,
   // Should allow hyphenated props
   "data-foo": 42,
-  // Props should have inherited props
-  foo2: props.foo?.toPrecision(0),
 }))``;
 
-// Can provide normal props into attrs
+// bar was provided in attrs, so is now optional
+<AttrFunctionRequiredTest1 foo={42} />;
+// @ts-expect-error foo is still required though
+<AttrFunctionRequiredTest1 />;
+
+// Can provide div props into attrs
 const AttrFunctionRequiredTest2 = styled.div.attrs(props => ({
   color: "",
   // Should allow custom props
@@ -300,3 +317,18 @@ const AttrFunctionRequiredTest2 = styled.div.attrs(props => ({
 const AttrFunctionRequiredTest3 = styled.div.attrs(props => ({
   "data-test": 42,
 }))``;
+
+// @ts-expect-error Cannot provide unknown attributes
+const AttrFunctionRequiredTest4 = styled.div.attrs(props => ({
+  "data-test": 42,
+  waz: 42,
+}))``;
+
+const AttrFunctionRequiredTest5 = styled(DivWithRequiredProps).attrs(props => ({
+  foo: props.foo ? Math.round(props.foo) : 42,
+}))``;
+
+// Can provide foo
+<AttrFunctionRequiredTest1 foo={42} />;
+// @ts-expect-error foo is still required though
+<AttrFunctionRequiredTest1 />;
