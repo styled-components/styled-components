@@ -141,6 +141,6 @@
     "url": "https://opencollective.com/styled-components"
   },
   "engines": {
-    "node": ">= 14"
+    "node": ">= 16"
   }
 }
