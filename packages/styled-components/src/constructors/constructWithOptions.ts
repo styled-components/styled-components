@@ -1,15 +1,19 @@
 import React from 'react';
 import {
   Attrs,
+  DataAttributes,
+  ExecutionContext,
   ExecutionProps,
   Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
   KnownTarget,
+  NoInfer,
   Runtime,
   StyledOptions,
   StyledTarget,
   Styles,
+  SubsetOnly
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import styledError from '../utils/error';
@@ -44,8 +48,14 @@ type PropsSatisfiedByAttrs<
   OptionalIntersection<Props, Result> &
   Partial<Omit<Result, keyof Props | 'as'>>;
 
-// Prevents TypeScript from inferring generic argument
-type NoInfer<T> = [T][T extends any ? 0 : never];
+/**
+ * Rejects an attr factory function argument (T) if it returns any properties not defined in Props.
+ */
+type StrictAttrFactory<T, Props> = T extends ((props: ExecutionContext & Props) => infer TResult)
+  ? TResult extends SubsetOnly<TResult, (Partial<Props> & ExecutionProps & DataAttributes & React.AriaAttributes)>
+    ? (props: ExecutionContext & Props) => TResult
+    : never
+  : never;
 
 export interface Styled<
   R extends Runtime,
@@ -62,19 +72,37 @@ export interface Styled<
     OuterStatics &
     Statics;
 
-  attrs: <
-    T extends Attrs,
-    TResult extends ExecutionProps = AttrsResult<T>,
-    // @ts-expect-error KnownTarget is a subset of StyledTarget<R>
-    TTarget extends StyledTarget<R> = ExtractAttrsTarget<R, TResult, Target>
-  >(
-    attrs: Attrs<T extends (...args: any) => infer P ? OuterProps & P : OuterProps & T>
-  ) => Styled<
+  /**
+   * This is a chainable method that attaches some props to a styled component.
+   * @param props An object containing prop values that will be merged into the rest of the component's props
+   * @argument Props Additional props being injected in `props`
+   */
+  attrs<
+    Props extends object = object,
+    PropValues extends Partial<OuterProps> & ExecutionProps & DataAttributes & React.AriaAttributes & NoInfer<Props> = Partial<OuterProps> & ExecutionProps & DataAttributes & React.AriaAttributes & NoInfer<Props>,
+  >(props: PropValues & SubsetOnly<PropValues, Partial<OuterProps> & ExecutionProps & DataAttributes & React.AriaAttributes & NoInfer<Props>>): Styled<
+    R,
+    Target,
+    PropsSatisfiedByAttrs<PropValues, OuterProps>,
+    OuterStatics,
+    Omit<RuntimeInjectedProps, keyof PropValues> & PropValues
+  >;
+
+  /**
+   * This is a chainable method that attaches some props to a styled component.
+   * @param propFactory A function that receives the props that are passed into the component and computes a value, that is then going to be merged into the existing component props.
+   * @argument Props Additional props being returned by `propFactory`
+   */
+  attrs<
+    Props extends object = object,
+    Factory extends ((...args: any[]) => any) = (...args: any[]) => any,
+    TTarget extends StyledTarget<R> = ExtractAttrsTarget<R, AttrsResult<Factory>, Target>
+  >(propFactory: Factory & StrictAttrFactory<Factory, OuterProps & NoInfer<Props>>): Styled<
     R,
     TTarget,
-    PropsSatisfiedByAttrs<T, OuterProps>,
+    PropsSatisfiedByAttrs<Factory, OuterProps>,
     OuterStatics,
-    Omit<RuntimeInjectedProps, keyof TResult> & TResult
+    Omit<RuntimeInjectedProps, keyof AttrsResult<Factory>> & AttrsResult<Factory>
   >;
 
   withConfig: (config: StyledOptions<R, OuterProps>) => Styled<R, Target, OuterProps, OuterStatics>;
@@ -113,7 +141,7 @@ export default function constructWithOptions<
 
   /* Modify/inject new props at runtime */
   templateFunction.attrs = <T extends Attrs>(
-    attrs: Attrs<T extends (...args: any) => infer P ? OuterProps & P : OuterProps & T>
+    attrs: Attrs<T extends (...args: any) => infer P ? Partial<OuterProps & P> : Partial<OuterProps & T> & DataAttributes & React.AriaAttributes>
   ) =>
     constructWithOptions<R, Target, PropsSatisfiedByAttrs<T, OuterProps>, OuterStatics>(
       componentConstructor as unknown as IStyledComponentFactory<

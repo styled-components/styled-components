@@ -1,7 +1,7 @@
 /**
  * Convenience function for joining strings to form className chains
  */
-export function joinStrings(a?: string, b?: string): string {
+export function joinStrings(a?: string | null, b?: string | null): string {
   return a && b ? `${a} ${b}` : a || b || '';
 }
 
