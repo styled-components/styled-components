@@ -222,13 +222,7 @@ export interface IInlineStyle<Props extends object> {
 }
 
 export interface StyledObject<Props extends object> {
-  [key: string]:
-    | Dict<any>
-    | string
-    | number
-    | StyleFunction<Props>
-    | StyledObject<Props>
-    | undefined;
+  [key: string]: string | number | StyleFunction<Props> | StyledObject<Props> | undefined;
 }
 // uncomment when we can eventually override index signatures with more specific types
 // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);
