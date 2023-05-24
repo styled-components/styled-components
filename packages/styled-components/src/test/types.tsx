@@ -156,22 +156,23 @@ const DivWithProps = styled.div<{ waz: number }>`
 <DivWithProps />;
 
 // Inherited component of styled component should inherit props too
-const InheritedDivWithProps = styled(DivWithProps)<{ bar: "bar" }>`
+const InheritedDivWithProps = styled(DivWithProps)<{ bar: 'bar' }>`
   color: ${props => props.waz};
   color: ${props => props.bar};
 
   color: ${props =>
     /* @ts-expect-error foo is not a valid prop */
-    props.foo
-  };
+    props.foo};
 `;
-<InheritedDivWithProps waz={42} bar="bar">test</InheritedDivWithProps>;
+<InheritedDivWithProps waz={42} bar="bar">
+  test
+</InheritedDivWithProps>;
 // @ts-expect-error InheritedDiv inherited the required waz prop
 <InheritedDivWithProps />;
 // @ts-expect-error bar must be "bar"
 <InheritedDivWithProps waz={42} bar="foo" />;
 
-const DivWithRequiredProps = styled.div<{ foo: number, bar: string }>``;
+const DivWithRequiredProps = styled.div<{ foo: number; bar: string }>``;
 
 const RequiredPropsProvidedAsAttrs = styled(DivWithRequiredProps).attrs({
   foo: 42, // Providing required prop foo, which makes it optional going forward
@@ -198,9 +199,9 @@ interface MyStyle extends StyledObject<{}> {
  */
 const AttrRequiredTest = styled(DivWithRequiredProps).attrs({
   // Should not have to provide foo within attrs
-  bar: "hello",
+  bar: 'hello',
   // Should allow hyphenated props
-  "data-test": 42,
+  'data-test': 42,
 })``;
 <AttrRequiredTest foo={42} bar="bar" />;
 // Bar was defaulted in attrs
@@ -210,9 +211,9 @@ const AttrRequiredTest = styled(DivWithRequiredProps).attrs({
 // @ts-expect-error foo and bar are required props
 <AttrRequiredTest />;
 
-// @ts-expect-error foo must be a number
 const AttrRequiredTest2 = styled(DivWithRequiredProps).attrs({
-  foo: "not a number"
+  // @ts-expect-error foo must be a number
+  foo: 'not a number',
 })``;
 
 const AttrRequiredTest3 = styled(DivWithRequiredProps).attrs<{ newProp: number }>({
@@ -221,8 +222,8 @@ const AttrRequiredTest3 = styled(DivWithRequiredProps).attrs<{ newProp: number }
 })``;
 <AttrRequiredTest3 foo={42} bar="bar" newProp={42} />;
 
-// @ts-expect-error Should not allow unknown props
 const AttrRequiredTest4 = styled(DivWithRequiredProps).attrs({
+  // @ts-expect-error Should not allow unknown props
   waz: 42,
 })``;
 
@@ -296,9 +297,9 @@ const StyledComponentVeryLargeUnion = styled(UnstyledComponentVeryLargeUnion)`
 
 const AttrFunctionRequiredTest1 = styled(DivWithRequiredProps).attrs(props => ({
   // Should not have to provide foo within attrs
-  bar: "hello",
+  bar: 'hello',
   // Should allow hyphenated props
-  "data-foo": 42,
+  'data-foo': 42,
 }))``;
 
 // bar was provided in attrs, so is now optional
@@ -308,19 +309,19 @@ const AttrFunctionRequiredTest1 = styled(DivWithRequiredProps).attrs(props => ({
 
 // Can provide div props into attrs
 const AttrFunctionRequiredTest2 = styled.div.attrs(props => ({
-  color: "",
+  color: '',
   // Should allow custom props
-  "data-foo": 42,
+  'data-foo': 42,
 }))``;
 
 // Can provide purely custom props
 const AttrFunctionRequiredTest3 = styled.div.attrs(props => ({
-  "data-test": 42,
+  'data-test': 42,
 }))``;
 
 // @ts-expect-error Cannot provide unknown attributes
 const AttrFunctionRequiredTest4 = styled.div.attrs(props => ({
-  "data-test": 42,
+  'data-test': 42,
   waz: 42,
 }))``;
 
