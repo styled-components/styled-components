@@ -9,12 +9,11 @@ export {
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
-  PolymorphicComponent,
-  PolymorphicComponentProps,
   RuleSet,
   Runtime,
   StyledObject,
   StyledOptions,
-  WebTarget,
+  WebTarget
 } from './types';
 export { styled, styled as default };
+

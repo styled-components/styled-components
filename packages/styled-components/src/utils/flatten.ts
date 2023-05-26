@@ -81,7 +81,7 @@ export default function flatten<Props extends object>(
 
       return flatten(result, executionContext, styleSheet, stylisInstance);
     } else {
-      return [chunk as unknown as IStyledComponent<'web', 'div', any>];
+      return [chunk as unknown as IStyledComponent<'web', 'div', any, any>];
     }
   }
 

@@ -5,7 +5,7 @@ import withTheme from '../hoc/withTheme';
 import _InlineStyle from '../models/InlineStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
 import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from '../models/ThemeProvider';
-import { NativeTarget } from '../types';
+import { AnyStyledComponent, NativeTarget, StyledComponentInnerAttrs, StyledComponentInnerComponent, StyledComponentInnerOtherProps } from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
 
 const reactNative = require('react-native') as Awaited<typeof import('react-native')>;
@@ -13,8 +13,11 @@ const reactNative = require('react-native') as Awaited<typeof import('react-nati
 const InlineStyle = _InlineStyle(reactNative.StyleSheet);
 const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
 
-const baseStyled = <Target extends NativeTarget>(tag: Target) =>
-  constructWithOptions<'native', Target>(StyledNativeComponent, tag);
+function createStyle<Target extends AnyStyledComponent<"native">>(tag: Target): Styled<'native', StyledComponentInnerComponent<"native", Target>, StyledComponentInnerOtherProps<"native", Target>, StyledComponentInnerAttrs<"native", Target>>;
+function createStyle<Target extends NativeTarget>(tag: Target): Styled<'native', Target, {}>;
+function createStyle<Target extends NativeTarget>(tag: Target) {
+  return constructWithOptions<'native', Target>(StyledNativeComponent, tag);
+}
 
 /* React native lazy-requires each of these modules for some reason, so let's
  *  assume it's for a good reason and not eagerly load them all */
@@ -54,8 +57,8 @@ type RNComponents = {
     : never;
 };
 
-const styled = baseStyled as typeof baseStyled & {
-  [E in KnownComponents]: Styled<'native', RNComponents[E], React.ComponentProps<RNComponents[E]>>;
+const styled = createStyle as typeof createStyle & {
+  [E in KnownComponents]: Styled<'native', RNComponents[E], {}>;
 };
 
 /* Define a getter for each alias which simply gets the reactNative component
@@ -84,11 +87,10 @@ export {
   IStyledComponentFactory,
   IStyledStatics,
   NativeTarget,
-  PolymorphicComponent,
-  PolymorphicComponentProps,
   Runtime,
   StyledObject,
-  StyledOptions,
+  StyledOptions
 } from '../types';
 export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
 export { styled, styled as default };
+

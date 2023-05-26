@@ -1,19 +1,29 @@
 import createStyledComponent from '../models/StyledComponent';
-import { WebTarget } from '../types';
+import {
+  AnyStyledComponent,
+  StyledComponentInnerAttrs,
+  StyledComponentInnerComponent,
+  StyledComponentInnerOtherProps,
+  WebTarget
+} from '../types';
 import domElements from '../utils/domElements';
 import constructWithOptions, { Styled } from './constructWithOptions';
 
-const baseStyled = <Target extends WebTarget>(tag: Target) =>
-  constructWithOptions<'web', Target>(createStyledComponent, tag);
+function createStyle<Target extends AnyStyledComponent<"web">>(tag: Target): Styled<'web', StyledComponentInnerComponent<"web", Target>, StyledComponentInnerOtherProps<"web", Target>, StyledComponentInnerAttrs<"web", Target>>;
+function createStyle<Target extends WebTarget>(tag: Target): Styled<'web', Target, {}>;
+function createStyle<Target extends WebTarget>(tag: Target) {
+  return constructWithOptions<'web', Target>(createStyledComponent, tag);
+}
 
-const styled = baseStyled as typeof baseStyled & {
-  [E in keyof JSX.IntrinsicElements]: Styled<'web', E, JSX.IntrinsicElements[E]>;
-};
+type WebStyledStatic = typeof createStyle & {
+  [E in keyof JSX.IntrinsicElements]: Styled<'web', E, {}>;
+}
 
-// Shorthands for all valid HTML Elements
+const styled = createStyle as WebStyledStatic;
+
 domElements.forEach(domElement => {
-  // @ts-expect-error someday they'll handle imperative assignment properly
-  styled[domElement] = baseStyled(domElement);
+  // Using any because TS blows CPU up here for some reason
+  (styled as any)[domElement] = createStyle(domElement);
 });
 
 export default styled;

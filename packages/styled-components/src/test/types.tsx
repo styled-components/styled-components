@@ -119,6 +119,7 @@ const UnstyledComponent = (_props: UnstyledComponentProps) => {
 const StyledComponent = styled(UnstyledComponent)`
   color: ${props => props.foo};
 `;
+
 <StyledComponent foo={42} />;
 // @ts-expect-error UnstyledComponent didn't allow children, so neither does this one
 <StyledComponent foo={42}>children allowed</StyledComponent>;
@@ -154,6 +155,13 @@ const DivWithProps = styled.div<{ waz: number }>`
 <DivWithProps foo={42} waz={42} />;
 // @ts-expect-error DivWithProps requires waz
 <DivWithProps />;
+
+const Test2: IStyledComponent<"web", "label", {}> = {} as any;
+/* @ts-expect-error waz not defined */
+<Test2 waz="should error" onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}} />;
+<Test2 as="input" onCopy={(e: React.ClipboardEvent<HTMLInputElement>) => {}} />;
+<Test2 onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}} />;
+<Test2 onCopy={e => e.currentTarget} />;
 
 // Inherited component of styled component should inherit props too
 const InheritedDivWithProps = styled(DivWithProps)<{ bar: 'bar' }>`
@@ -199,7 +207,7 @@ interface MyStyle extends StyledObject<{}> {
  */
 const AttrRequiredTest = styled(DivWithRequiredProps).attrs({
   // Should not have to provide foo within attrs
-  bar: 'hello',
+  bar: "hello",
   // Should allow hyphenated props
   'data-test': 42,
 })``;
@@ -216,14 +224,19 @@ const AttrRequiredTest2 = styled(DivWithRequiredProps).attrs({
   foo: 'not a number',
 })``;
 
+const AttrRequiredTest2b = styled(StyledComponent).attrs({
+  // @ts-expect-error foo must be a number
+  foo: 'not a number',
+})``;
+
 const AttrRequiredTest3 = styled(DivWithRequiredProps).attrs<{ newProp: number }>({
-  // Should allow props defined within attrs generic arg
+  // Should allow props defined
   newProp: 42,
 })``;
 <AttrRequiredTest3 foo={42} bar="bar" newProp={42} />;
 
 const AttrRequiredTest4 = styled(DivWithRequiredProps).attrs({
-  // @ts-expect-error Should not allow unknown props
+  // Can provide unknown props
   waz: 42,
 })``;
 
@@ -233,6 +246,7 @@ const AttrRequiredTest4 = styled(DivWithRequiredProps).attrs({
 const Text = styled.p``;
 // @ts-expect-error Can't treat paragraph element as label element
 <Text onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}} />;
+<Text onChange={ev => ev.target} />;
 <Text
   as="label"
   ref={(el: HTMLLabelElement | null) => {}}
@@ -250,7 +264,7 @@ const AttrObjectAsLabel = styled(Text).attrs({ as: 'label' })``;
 // @ts-expect-error Can't provide unknown props
 <AttrObjectAsLabel waz={42} />;
 
-const AttrFunctionAsLabel = styled(Text).attrs(() => ({ as: 'label' as const }))``;
+const AttrFunctionAsLabel = styled(Text).attrs(props => ({ as: 'label' as const }))``;
 <AttrFunctionAsLabel
   ref={(el: HTMLLabelElement | null) => {}}
   onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
@@ -266,11 +280,52 @@ const StyledDiv = styled.div``;
 
 const CustomComponent = (({ ...props }) => {
   return <StyledDiv {...props} />;
-}) as IStyledComponent<'web', 'div'>;
+}) as IStyledComponent<'web', 'div', {}>;
 
 const StyledCustomComponent = styled(CustomComponent)``;
 
 <StyledCustomComponent className="class" />;
+
+const CustomComponentWithRequiredProps: React.FC<{
+  foo: 'red' | 'black';
+  bar?: boolean;
+  hello: (a: string) => string;
+}> = ({ foo, hello, bar }) => (
+  <StyledDiv
+    style={{ backgroundColor: foo, color: bar ? 'blue' : 'green' }}
+    onClick={() => hello('world')}
+  />
+);
+
+const StyledCustomComponentWithRequiredProps = styled(CustomComponentWithRequiredProps)``;
+
+// foo should be typed 'red' | 'black'
+// hello should be typed (a: string) => string
+// bar should be optional
+<StyledCustomComponentWithRequiredProps foo='red' hello={(world) => world} />;
+
+// @ts-expect-error all props have type mismatches
+<StyledCustomComponentWithRequiredProps foo='blue' bar="baz" hello={() => false} />;
+
+// foo should be typed 'red' | 'black'
+// hello should be typed (a: string) => string
+// bar should be typed boolean
+const StyledCustomComponentWithAttrs = styled(
+  CustomComponentWithRequiredProps
+).attrs((props) => ({
+  foo: props.foo === 'black' ? 'red' : 'black',
+  hello: (world) => props.hello(world),
+  bar: !props.bar,
+}));
+
+const StyledCustomComponentWithBadAttrs = styled(
+  CustomComponentWithRequiredProps
+).attrs((props) => ({
+  foo: props.foo === 'black' ? 'blue' : 'black',
+  // @ts-expect-error argument of type number is not assignable to string
+  hello: (w) => props.hello(w === 'world' ? 1 : 2) === 'world',
+  bar: 'fizz',
+}));
 
 // Performance test
 interface VeryLargeUnionProps {
@@ -316,12 +371,12 @@ const AttrFunctionRequiredTest2 = styled.div.attrs(props => ({
 
 // Can provide purely custom props
 const AttrFunctionRequiredTest3 = styled.div.attrs(props => ({
-  'data-test': 42,
+  'data-waz': 42,
 }))``;
 
-// @ts-expect-error Cannot provide unknown attributes
 const AttrFunctionRequiredTest4 = styled.div.attrs(props => ({
-  'data-test': 42,
+  // Can provide unknown props
+  'data-waz': 42,
   waz: 42,
 }))``;
 
@@ -329,7 +384,37 @@ const AttrFunctionRequiredTest5 = styled(DivWithRequiredProps).attrs(props => ({
   foo: props.foo ? Math.round(props.foo) : 42,
 }))``;
 
+const AttrFunctionRequiredTest6 = styled.button.attrs<{ $submit?: boolean }>(p => ({
+  type: p.$submit ? 'submit' : 'button',
+}))``;
+<AttrFunctionRequiredTest6 $submit />;
+
 // Can provide foo
 <AttrFunctionRequiredTest1 foo={42} />;
 // @ts-expect-error foo is still required though
 <AttrFunctionRequiredTest1 />;
+
+const style = css<{prop?: boolean}>``;
+
+const Box = styled.div<{ prop?: boolean }>`
+    ${style}
+`
+
+const Usage = () => (
+    <Box prop>something</Box>
+)
+
+
+const NameField = styled.input``;
+const r = <NameField
+    defaultValue="test"
+    onChange={ev => {   // <-- ev is typed as any
+        console.log(ev.target)
+    }}
+/>
+
+interface TextProps {
+  $textVariant: string;
+}
+
+styled.label.attrs<TextProps>(({ $textVariant = 'footnote' }) => ({$textVariant}))
