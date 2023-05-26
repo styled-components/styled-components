@@ -272,6 +272,48 @@ const StyledCustomComponent = styled(CustomComponent)``;
 
 <StyledCustomComponent className="class" />;
 
+const CustomComponentWithRequiredProps: React.FC<{
+  foo: 'red' | 'black';
+  bar?: boolean;
+  hello: (a: string) => string;
+}> = ({ foo, hello, bar }) => (
+  <StyledDiv
+    style={{ backgroundColor: foo, color: bar ? 'blue' : 'green' }}
+    onClick={() => hello('world')}
+  />
+);
+
+const StyledCustomComponentWithRequiredProps = styled(CustomComponentWithRequiredProps)
+  
+// foo should be typed 'red' | 'black'
+// hello should be typed (a: string) => string
+// bar should be optional
+<StyledCustomComponent foo='red' hello={(world) => world} />
+
+// @ts-expect-error all props have type mismatches
+<StyledCustomComponent foo='blue' bar="baz" hello={() => false} />
+  
+// foo should be typed 'red' | 'black'
+// hello should be typed (a: string) => string
+// bar should be typed boolean
+const StyledCustomComponentWithAttrs = styled(
+  CustomComponentWithRequiredProps
+).attrs((props) => ({
+  foo: props.foo === 'black' ? 'red' : 'black',
+  hello: (world) => props.hello(world),
+  bar: !props.bar,
+}));
+
+const StyledCustomComponentWithBadAttrs = styled(
+  CustomComponentWithRequiredProps
+  // @ts-expect-error all attrs have type mismatches
+).attrs((props) => ({
+  foo: props.foo === 'black' ? 'blue' : 'black',
+  // @ts-expect-error argument of type number is not assignable to string
+  hello: (w) => props.hello(w === 'world' ? 1 : 2) === 'world',
+  bar: 'fizz',
+}));
+
 // Performance test
 interface VeryLargeUnionProps {
   foo: VeryLargeUnionType; // Comment out this line to compare performance
