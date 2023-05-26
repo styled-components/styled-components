@@ -65,6 +65,7 @@
     "@babel/traverse": "^7.21.2",
     "@emotion/unitless": "^0.8.0",
     "css-to-react-native": "^3.2.0",
+    "postcss": "^8.4.23",
     "shallowequal": "^1.1.0",
     "stylis": "^4.2.0",
     "tslib": "^2.5.0"
