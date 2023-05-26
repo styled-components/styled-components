@@ -6,6 +6,7 @@ import { phash, SEED } from './hash';
 
 const AMP_REGEX = /&/g;
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
+const SPLIT_RULE_REGEX = /[^}]+\}+(?!\})/g;
 
 export type ICreateStylisInstance = {
   options?: { namespace?: string; prefix?: boolean };
@@ -22,7 +23,8 @@ function serialize(children: Element[], callback: Middleware): string[] {
   for (let i = 0, result; i < children.length; i += 1) {
     result = callback(children[i], i, children, callback);
 
-    if (result) ret.push(result);
+    // split up conjoined rules
+    if (result) ret.push.apply(ret, result.match(SPLIT_RULE_REGEX)!);
   }
 
   return ret;
