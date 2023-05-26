@@ -37,11 +37,33 @@ describe('stylis', () => {
     `);
   });
 
+  it('splits css with encoded closing curly brace', () => {
+    const css = stylisTest(`
+      @media (min-width: 500px) {
+        &::before {
+          content: "}";
+        }
+      }
+    `);
+
+    expect(css).toMatchInlineSnapshot(`
+      [
+        "@media (min-width: 500px){.a::before{content:"}";}}",
+      ]
+    `);
+  });
+
   it('splits vendor-prefixed rules', () => {
     const css = stylisTest(
       `
       &::placeholder {
         color: red;
+      }
+
+      @media (min-width: 500px) {
+        &::placeholder {
+          content: "}";
+        }
       }
     `,
       { options: { prefix: true } }
@@ -53,6 +75,10 @@ describe('stylis', () => {
         ".a::-moz-placeholder{color:red;}",
         ".a:-ms-input-placeholder{color:red;}",
         ".a::placeholder{color:red;}",
+        "@media (min-width: 500px){.a::-webkit-input-placeholder{color:red;}}",
+        "@media (min-width: 500px){.a::-moz-placeholder{color:red;}}",
+        "@media (min-width: 500px){.a:-ms-input-placeholder{color:red;}}",
+        "@media (min-width: 500px){.a::placeholder{color:red;}}",
       ]
     `);
   });
