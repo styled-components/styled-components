@@ -288,10 +288,10 @@ const StyledCustomComponentWithRequiredProps = styled(CustomComponentWithRequire
 // foo should be typed 'red' | 'black'
 // hello should be typed (a: string) => string
 // bar should be optional
-<StyledCustomComponent foo='red' hello={(world) => world} />
+<StyledCustomComponentWithRequiredProps foo='red' hello={(world) => world} />
 
 // @ts-expect-error all props have type mismatches
-<StyledCustomComponent foo='blue' bar="baz" hello={() => false} />
+<StyledCustomComponentWithRequiredProps foo='blue' bar="baz" hello={() => false} />
   
 // foo should be typed 'red' | 'black'
 // hello should be typed (a: string) => string
