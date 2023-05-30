@@ -178,15 +178,11 @@ export type StyledComponentProps<
   // The other props added by the template
   OtherProps extends object,
   // The props that are made optional by .attrs
-  AttrProps extends keyof any,
-  // The Component passed with "forwardedAs" prop
-  FAsC extends StyledTarget<R> = Target
+  AttrProps extends keyof any
 > =
   // Distribute O if O is a union type
   OtherProps extends object
-    ? MakeAttrsOptional<R, Target, OtherProps, AttrProps> &
-      MakeAttrsOptional<R, FAsC, OtherProps, AttrProps> &
-      { theme?: DefaultTheme | undefined }
+    ? MakeAttrsOptional<R, Target, OtherProps, AttrProps> & { theme?: DefaultTheme | undefined }
     : never;
 
 type StyledComponentPropsWithAs<
@@ -194,9 +190,8 @@ type StyledComponentPropsWithAs<
   Target extends StyledTarget<R>,
   OtherProps extends object,
   AttrProps extends keyof any,
-  AsC extends StyledTarget<R> = Target,
-  FAsC extends StyledTarget<R> = Target
-> = StyledComponentProps<R, Target, OtherProps, AttrProps, FAsC> & { as?: AsC | undefined; forwardedAs?: FAsC | undefined };
+  AsC extends StyledTarget<R> = Target
+> = StyledComponentProps<R, Target, OtherProps, AttrProps> & { as?: AsC | undefined; forwardedAs?: AsC | undefined };
 
 export interface ThemeProps {
   theme: DefaultTheme;
@@ -213,9 +208,9 @@ export interface IStyledComponent<
     props: StyledComponentProps<R, Target, OtherProps, AttrProps> & { as?: never | undefined; forwardedAs?: never | undefined }
   ): React.ReactElement<StyledComponentProps<R, Target, OtherProps, AttrProps>>;
 
-  <AsC extends StyledTarget<R> = Target, FAsC extends StyledTarget<R> = AsC>(
-    props: StyledComponentPropsWithAs<R, AsC, OtherProps, AttrProps, AsC, FAsC>
-  ): React.ReactElement<StyledComponentPropsWithAs<R, AsC, OtherProps, AttrProps, AsC, FAsC>>;
+  <AsC extends StyledTarget<R> = Target>(
+    props: StyledComponentPropsWithAs<R, AsC, OtherProps, AttrProps, AsC>
+  ): React.ReactElement<StyledComponentPropsWithAs<R, AsC, OtherProps, AttrProps, AsC>>;
 
   displayName?: string;
   defaultProps?: Partial<StyledComponentProps<R, Target, OtherProps, AttrProps>>;
