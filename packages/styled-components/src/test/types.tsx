@@ -162,6 +162,8 @@ const Test2: IStyledComponent<"web", "label", {}> = {} as any;
 <Test2 as="input" onCopy={(e: React.ClipboardEvent<HTMLInputElement>) => {}} />;
 <Test2 forwardedAs="input" onCopy={(e: React.ClipboardEvent<HTMLInputElement>) => {}} />;
 <Test2 forwardedAs="a" href="#" />;
+<Test2 css={["padding: 0px"]} />;
+<Test2 css="padding: 0px" />;
 <Test2 onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}} />;
 <Test2 onCopy={e => e.currentTarget} />;
 

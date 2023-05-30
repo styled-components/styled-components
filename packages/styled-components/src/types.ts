@@ -271,7 +271,7 @@ export interface StyledObject<Props extends object> {
  * In order to get accurate typings for `props.theme` in `css` interpolations, see
  * {@link DefaultTheme}.
  */
-export type CSSProp = RuleSet<any>;
+export type CSSProp = Interpolation<any> | Interpolation<any>[];
 
 // Prevents TypeScript from inferring generic argument
 export type NoInfer<T> = [T][T extends any ? 0 : never];
