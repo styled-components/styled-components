@@ -10,6 +10,7 @@ import {
   StyledOptions,
   StyledTarget,
   Styles,
+  SubsetOnly,
   ThemedProps
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
@@ -41,6 +42,20 @@ type FactoryAsC<
   Factory extends (...args: any[]) => any
 > = ReturnType<Factory> extends { as: infer AsC } ? AsC extends StyledTarget<R> ? AsC : Target : Target;
 
+// Prevents functions
+type AttrValueType<T> = T extends (() => any) | ((...args: any[]) => any) ? never : {};
+
+type StrictAttrFactory<
+  Factory extends (...args: any[]) => any,
+  R extends Runtime,
+  Target extends StyledTarget<R>,
+  Props extends object,
+> = Factory extends ((...args: any[]) => infer TResult)
+  ? TResult extends object & SubsetOnly<TResult, AttrPropValues<R, Target, Props>>
+    ? (props: AttrFactoryProps<R, Target, Props>) => AttrPropValues<R, Target, Props>
+    : never
+  : never;
+
 export interface Styled<
   R extends Runtime,
   Target extends StyledTarget<R>,
@@ -58,8 +73,8 @@ export interface Styled<
     AsC extends StyledTarget<R> = Target,
     NewA extends AttrPropValues<R, Target, OtherProps> & { as?: AsC } = AttrPropValues<R, Target, OtherProps> & { as?: AsC },
   >(
-    attrs: NewA & { as?: AsC },
-  ): Styled<R, AsC, OtherProps & NewA, AttrProps | keyof NewA>;
+    attrs: NewA & AttrValueType<NewA> & { as?: AsC },
+  ): Styled<R, AsC, OtherProps & Omit<NewA, "as">, AttrProps | keyof NewA>;
 
   // .attrs<{ prop: value }>({ as: "foo", prop: value })
   attrs<
@@ -67,23 +82,26 @@ export interface Styled<
     AsC extends StyledTarget<R> = Target,
     NewA extends AttrPropValues<R, Target, OtherProps & NewProps> & { as?: AsC } = AttrPropValues<R, Target, OtherProps & NewProps> & { as?: AsC },
   >(
-    attrs: NewA & { as?: AsC },
-  ): Styled<R, AsC, OtherProps & NewProps, AttrProps | keyof NewA>;
+    attrs: NewA & AttrValueType<NewA> & { as?: AsC },
+  ): Styled<R, AsC, OtherProps & Omit<NewProps, "as">, AttrProps | keyof NewA>;
 
   // .attrs(props => ({ prop: value }))
   attrs<
-    Factory extends (props: AttrFactoryProps<R, Target, OtherProps>) => AttrPropValues<R, Target, OtherProps>
+    AsC extends StyledTarget<R>,
+    Factory extends (props: AttrFactoryProps<R, Target, OtherProps>) => AttrPropValues<R, Target, OtherProps & { as?: AsC }>
   >(
-    attrFactory: Factory
-  ): Styled<R, FactoryAsC<R, Target, Factory>, OtherProps & Omit<ReturnType<Factory>, keyof StyledComponentPropsWithRef<R, Target>>, AttrProps | keyof ReturnType<Factory>>;
+    attrFactory: Factory & StrictAttrFactory<Factory, R, Target, OtherProps & { as?: AsC }>
+  ): Styled<R, FactoryAsC<R, Target, Factory>, OtherProps & Omit<ReturnType<Factory>, "as" | keyof StyledComponentPropsWithRef<R, Target>>, AttrProps | keyof ReturnType<Factory>>;
 
   // .attrs<{ prop: value }>(props => ({ prop: value }))
   attrs<
-    NewProps extends object,
-    Factory extends ((...args: any[]) => any) = (props: AttrFactoryProps<R, Target, NewProps>) => Partial<OtherProps & NewProps>,
+    NewProps extends object = {},
+    AsC extends StyledTarget<R> = Target,
+    Factory extends (props: AttrFactoryProps<R, Target, OtherProps & NoInfer<NewProps>>) => AttrPropValues<R, Target, OtherProps & NoInfer<NewProps> & { as?: AsC }> =
+      (props: AttrFactoryProps<R, Target, OtherProps & NoInfer<NewProps>>) => AttrPropValues<R, Target, OtherProps & NoInfer<NewProps> & { as?: AsC }>,
   >(
-    attrFactory: Factory
-  ): Styled<R, FactoryAsC<R, Target, Factory>, OtherProps & NewProps, AttrProps | keyof ReturnType<Factory>>;
+    attrFactory: Factory & StrictAttrFactory<Factory, R, Target, OtherProps & NoInfer<NewProps>>
+  ): Styled<R, FactoryAsC<R, Target, Factory>, OtherProps & Omit<NewProps, "as">, AttrProps | keyof ReturnType<Factory>>;
 
   withConfig: <Props extends OtherProps = OtherProps>(
     config: StyledOptions<R, StyledComponentPropsWithRef<R, Target> & Props>,

@@ -156,16 +156,16 @@ const DivWithProps = styled.div<{ waz: number }>`
 // @ts-expect-error DivWithProps requires waz
 <DivWithProps />;
 
-const Test2: IStyledComponent<"web", "label", {}> = {} as any;
+const StyledCompTest: IStyledComponent<"web", "label", {}> = {} as any;
 /* @ts-expect-error waz not defined */
-<Test2 waz="should error" onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}} />;
-<Test2 as="input" onCopy={(e: React.ClipboardEvent<HTMLInputElement>) => {}} />;
-<Test2 forwardedAs="input" onCopy={(e: React.ClipboardEvent<HTMLInputElement>) => {}} />;
-<Test2 forwardedAs="a" href="#" />;
-<Test2 css={["padding: 0px"]} />;
-<Test2 css="padding: 0px" />;
-<Test2 onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}} />;
-<Test2 onCopy={e => e.currentTarget} />;
+<StyledCompTest waz="should error" onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}} />;
+<StyledCompTest as="input" onCopy={(e: React.ClipboardEvent<HTMLInputElement>) => {}} />;
+<StyledCompTest forwardedAs="input" onCopy={(e: React.ClipboardEvent<HTMLInputElement>) => {}} />;
+<StyledCompTest forwardedAs="a" href="#" />;
+<StyledCompTest css={["padding: 0px"]} />;
+<StyledCompTest css="padding: 0px" />;
+<StyledCompTest onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}} />;
+<StyledCompTest onCopy={e => e.currentTarget} />;
 
 // Inherited component of styled component should inherit props too
 const InheritedDivWithProps = styled(DivWithProps)<{ bar: 'bar' }>`
@@ -268,7 +268,7 @@ const AttrObjectAsLabel = styled(Text).attrs({ as: 'label' })``;
 // @ts-expect-error Can't provide unknown props
 <AttrObjectAsLabel waz={42} />;
 
-const AttrFunctionAsLabel = styled(Text).attrs(props => ({ as: 'label' as const }))``;
+const AttrFunctionAsLabel = styled(Text).attrs(props => ({ as: 'label' }))``;
 <AttrFunctionAsLabel
   ref={(el: HTMLLabelElement | null) => {}}
   onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
@@ -314,22 +314,39 @@ const StyledCustomComponentWithRequiredProps = styled(CustomComponentWithRequire
 // foo should be typed 'red' | 'black'
 // hello should be typed (a: string) => string
 // bar should be typed boolean
-const StyledCustomComponentWithAttrs = styled(
-  CustomComponentWithRequiredProps
-).attrs((props) => ({
+styled(CustomComponentWithRequiredProps).attrs({
+  foo: 'black',
+  hello: (world) => world,
+  bar: true,
+});
+
+styled(CustomComponentWithRequiredProps).attrs((props) => ({
   foo: props.foo === 'black' ? 'red' : 'black',
   hello: (world) => props.hello(world),
   bar: !props.bar,
 }));
+styled(CustomComponentWithRequiredProps).attrs((p) => ({ foo: 'red' }));
+styled(CustomComponentWithRequiredProps).attrs((p) => ({ hello: (w) => 'test' }));
+styled(CustomComponentWithRequiredProps).attrs((p) => ({ bar: true }));
+styled(CustomComponentWithRequiredProps).attrs<{ newProp: number }>((p) => ({ foo: 'red', newProp: 42 }));
+styled(CustomComponentWithRequiredProps).attrs<{ newProp: number }>((p) => ({ hello: (w) => 'test' }));
+styled(CustomComponentWithRequiredProps).attrs<{ newProp: number }>((p) => ({ bar: true }));
 
-const StyledCustomComponentWithBadAttrs = styled(
-  CustomComponentWithRequiredProps
-).attrs((props) => ({
-  foo: props.foo === 'black' ? 'blue' : 'black',
-  // @ts-expect-error argument of type number is not assignable to string
-  hello: (w) => props.hello(w === 'world' ? 1 : 2) === 'world',
-  bar: 'fizz',
-}));
+// @ts-expect-error 'blue' is not assignable to 'red' or 'black'
+styled(CustomComponentWithRequiredProps).attrs({ foo: 'blue' });
+// @ts-expect-error argument of type number is not assignable to string
+styled(CustomComponentWithRequiredProps).attrs({ hello: (w) => 42 });
+// @ts-expect-error argument of type string is not assignable to boolean
+styled(CustomComponentWithRequiredProps).attrs({ bar: 'fizz' });
+
+// @ts-expect-error 'blue' is not assignable to 'red' or 'black'
+styled(CustomComponentWithRequiredProps).attrs((p) => ({ foo: 'blue' }));
+
+// @ts-expect-error argument of type number is not assignable to string
+styled(CustomComponentWithRequiredProps).attrs((p) => ({ hello: (w) => 42 }));
+
+// @ts-expect-error argument of type string is not assignable to boolean
+styled(CustomComponentWithRequiredProps).attrs((p) => ({ bar: 'fizz' }));
 
 // Performance test
 interface VeryLargeUnionProps {

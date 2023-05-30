@@ -276,6 +276,9 @@ export type CSSProp = Interpolation<any> | Interpolation<any>[];
 // Prevents TypeScript from inferring generic argument
 export type NoInfer<T> = [T][T extends any ? 0 : never];
 
+// Restricts properties of A to only those shared in B
+export type SubsetOnly<A, B> = { [K in keyof A]: K extends keyof B ? A[K] : never };
+
 // Pick that distributes over union types
 export type PickU<T, K extends keyof T> = T extends any ? {[P in K]: T[P]} : never;
 export type OmitU<T, K extends keyof T> = T extends any ? PickU<T, Exclude<keyof T, K>> : never;
