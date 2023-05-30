@@ -84,6 +84,8 @@ declare module 'react' {
   `}
 />;
 
+<Button css="padding: 0.5em 1em;" />;
+
 interface ColorizedComponentProps {
   color: string;
 }
@@ -97,6 +99,11 @@ function ColorizedComponent(props: ColorizedComponentProps) {
     color: ${props => props.color};
   `}
 />;
+
+/** forwardedAs should be a valid prop */
+const ForwardedTo = styled.button``;
+const ForwardedThrough = styled(ForwardedTo)``;
+<ForwardedThrough forwardedAs="a" href="#" />;
 
 // SVG generating overly-complex typings
 const MySVG = styled.svg.attrs({
