@@ -156,13 +156,13 @@ const DivWithProps = styled.div<{ waz: number }>`
 // @ts-expect-error DivWithProps requires waz
 <DivWithProps />;
 
-const StyledCompTest: IStyledComponent<"web", "label", {}> = {} as any;
+const StyledCompTest: IStyledComponent<'web', 'label', {}> = {} as any;
 /* @ts-expect-error waz not defined */
 <StyledCompTest waz="should error" onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}} />;
 <StyledCompTest as="input" onCopy={(e: React.ClipboardEvent<HTMLInputElement>) => {}} />;
 <StyledCompTest forwardedAs="input" onCopy={(e: React.ClipboardEvent<HTMLInputElement>) => {}} />;
 <StyledCompTest forwardedAs="a" href="#" />;
-<StyledCompTest css={["padding: 0px"]} />;
+<StyledCompTest css={['padding: 0px']} />;
 <StyledCompTest css="padding: 0px" />;
 <StyledCompTest onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}} />;
 <StyledCompTest onCopy={e => e.currentTarget} />;
@@ -211,7 +211,7 @@ interface MyStyle extends StyledObject<{}> {
  */
 const AttrRequiredTest = styled(DivWithRequiredProps).attrs({
   // Should not have to provide foo within attrs
-  bar: "hello",
+  bar: 'hello',
   // Should allow hyphenated props
   'data-test': 42,
 })``;
@@ -284,7 +284,7 @@ const StyledDiv = styled.div``;
 
 const CustomComponent = (({ ...props }) => {
   return <StyledDiv {...props} />;
-}) as IStyledComponent<'web', 'div', {}>;
+}) as IStyledComponent<'web', 'div'>;
 
 const StyledCustomComponent = styled(CustomComponent)``;
 
@@ -306,47 +306,50 @@ const StyledCustomComponentWithRequiredProps = styled(CustomComponentWithRequire
 // foo should be typed 'red' | 'black'
 // hello should be typed (a: string) => string
 // bar should be optional
-<StyledCustomComponentWithRequiredProps foo='red' hello={(world) => world} />;
+<StyledCustomComponentWithRequiredProps foo="red" hello={world => world} />;
 
 // @ts-expect-error all props have type mismatches
-<StyledCustomComponentWithRequiredProps foo='blue' bar="baz" hello={() => false} />;
+<StyledCustomComponentWithRequiredProps foo="blue" bar="baz" hello={() => false} />;
 
 // foo should be typed 'red' | 'black'
 // hello should be typed (a: string) => string
 // bar should be typed boolean
 styled(CustomComponentWithRequiredProps).attrs({
   foo: 'black',
-  hello: (world) => world,
+  hello: world => world,
   bar: true,
 });
 
-styled(CustomComponentWithRequiredProps).attrs((props) => ({
+styled(CustomComponentWithRequiredProps).attrs(props => ({
   foo: props.foo === 'black' ? 'red' : 'black',
-  hello: (world) => props.hello(world),
+  hello: world => props.hello(world),
   bar: !props.bar,
 }));
-styled(CustomComponentWithRequiredProps).attrs((p) => ({ foo: 'red' }));
-styled(CustomComponentWithRequiredProps).attrs((p) => ({ hello: (w) => 'test' }));
-styled(CustomComponentWithRequiredProps).attrs((p) => ({ bar: true }));
-styled(CustomComponentWithRequiredProps).attrs<{ newProp: number }>((p) => ({ foo: 'red', newProp: 42 }));
-styled(CustomComponentWithRequiredProps).attrs<{ newProp: number }>((p) => ({ hello: (w) => 'test' }));
-styled(CustomComponentWithRequiredProps).attrs<{ newProp: number }>((p) => ({ bar: true }));
+styled(CustomComponentWithRequiredProps).attrs(p => ({ foo: 'red' }));
+styled(CustomComponentWithRequiredProps).attrs(p => ({ hello: w => 'test' }));
+styled(CustomComponentWithRequiredProps).attrs(p => ({ bar: true }));
+styled(CustomComponentWithRequiredProps).attrs<{ newProp: number }>(p => ({
+  foo: 'red',
+  newProp: 42,
+}));
+styled(CustomComponentWithRequiredProps).attrs<{ newProp: number }>(p => ({ hello: w => 'test' }));
+styled(CustomComponentWithRequiredProps).attrs<{ newProp: number }>(p => ({ bar: true }));
 
 // @ts-expect-error 'blue' is not assignable to 'red' or 'black'
 styled(CustomComponentWithRequiredProps).attrs({ foo: 'blue' });
 // @ts-expect-error argument of type number is not assignable to string
-styled(CustomComponentWithRequiredProps).attrs({ hello: (w) => 42 });
+styled(CustomComponentWithRequiredProps).attrs({ hello: w => 42 });
 // @ts-expect-error argument of type string is not assignable to boolean
 styled(CustomComponentWithRequiredProps).attrs({ bar: 'fizz' });
 
 // @ts-expect-error 'blue' is not assignable to 'red' or 'black'
-styled(CustomComponentWithRequiredProps).attrs((p) => ({ foo: 'blue' }));
+styled(CustomComponentWithRequiredProps).attrs(p => ({ foo: 'blue' }));
 
 // @ts-expect-error argument of type number is not assignable to string
-styled(CustomComponentWithRequiredProps).attrs((p) => ({ hello: (w) => 42 }));
+styled(CustomComponentWithRequiredProps).attrs(p => ({ hello: w => 42 }));
 
 // @ts-expect-error argument of type string is not assignable to boolean
-styled(CustomComponentWithRequiredProps).attrs((p) => ({ bar: 'fizz' }));
+styled(CustomComponentWithRequiredProps).attrs(p => ({ bar: 'fizz' }));
 
 // Performance test
 interface VeryLargeUnionProps {
@@ -415,27 +418,27 @@ const AttrFunctionRequiredTest6 = styled.button.attrs<{ $submit?: boolean }>(p =
 // @ts-expect-error foo is still required though
 <AttrFunctionRequiredTest1 />;
 
-const style = css<{prop?: boolean}>``;
+const style = css<{ prop?: boolean }>``;
 
 const Box = styled.div<{ prop?: boolean }>`
-    ${style}
-`
+  ${style}
+`;
 
-const Usage = () => (
-    <Box prop>something</Box>
-)
-
+const Usage = () => <Box prop>something</Box>;
 
 const NameField = styled.input``;
-const r = <NameField
+const r = (
+  <NameField
     defaultValue="test"
-    onChange={ev => {   // <-- ev is typed as any
-        console.log(ev.target)
+    onChange={ev => {
+      // <-- ev is typed as any
+      console.log(ev.target);
     }}
-/>
+  />
+);
 
 interface TextProps {
   $textVariant: string;
 }
 
-styled.label.attrs<TextProps>(({ $textVariant = 'footnote' }) => ({$textVariant}))
+styled.label.attrs<TextProps>(({ $textVariant = 'footnote' }) => ({ $textVariant }));
