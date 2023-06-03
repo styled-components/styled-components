@@ -1,125 +1,158 @@
 import React from 'react';
 import {
-  Attrs,
-  DataAttributes,
-  ExecutionContext,
-  ExecutionProps,
   Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
-  KnownTarget,
   NoInfer,
   Runtime,
+  StyledComponentInnerComponent,
+  StyledComponentProps,
   StyledOptions,
   StyledTarget,
   Styles,
-  SubsetOnly
+  SubsetOnly,
+  ThemedProps,
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import styledError from '../utils/error';
 import css from './css';
 
-/**
- * for types a and b, if b shares a field with a, mark a's field as optional
- */
-type OptionalIntersection<A, B> = {
-  [K in Extract<keyof A, keyof B>]?: A[K];
-};
-
-type AttrsResult<T extends Attrs> = T extends (...args: any) => infer P ? P : T;
-
-type ExtractAttrsTarget<
+type StyledComponentPropsWithRef<
   R extends Runtime,
-  P extends ExecutionProps,
-  DefaultTarget extends StyledTarget<R>
-> = P['as'] extends KnownTarget ? P['as'] : DefaultTarget;
+  Target extends StyledTarget<R>
+> = Target extends keyof JSX.IntrinsicElements | React.ComponentType<any>
+  ? Target extends { readonly _sc: symbol }
+    ? React.ComponentPropsWithRef<StyledComponentInnerComponent<R, Target>>
+    : React.ComponentPropsWithRef<Target>
+  : {};
 
-/**
- * If attrs type is a function (no type provided, inferring from usage), extract the return value
- * and merge it with the existing type to hole-punch any required fields that are satisfied as
- * a result of running attrs. Otherwise if we have a definite type then union the base props
- * with the passed attr type to capture any intended overrides.
- */
-type PropsSatisfiedByAttrs<
-  T extends Attrs,
-  Props extends object,
-  Result extends ExecutionProps = AttrsResult<T>
-> = Omit<Props, keyof Result> &
-  OptionalIntersection<Props, Result> &
-  Partial<Omit<Result, keyof Props | 'as'>>;
+type AttrPropValues<
+  R extends Runtime,
+  Target extends StyledTarget<R>,
+  Props extends object
+> = Partial<StyledComponentPropsWithRef<R, Target> & Props> & { [key: string]: any };
 
-/**
- * Rejects an attr factory function argument (T) if it returns any properties not defined in Props.
- */
-type StrictAttrFactory<T, Props> = T extends ((props: ExecutionContext & Props) => infer TResult)
-  ? TResult extends SubsetOnly<TResult, (Partial<Props> & ExecutionProps & DataAttributes & React.AriaAttributes)>
-    ? (props: ExecutionContext & Props) => TResult
+type AttrFactoryProps<
+  R extends Runtime,
+  Target extends StyledTarget<R>,
+  Props extends object
+> = ThemedProps<StyledComponentPropsWithRef<R, Target> & Props>;
+
+type FactoryAsC<
+  R extends Runtime,
+  Target extends StyledTarget<R>,
+  Factory extends (...args: any[]) => any
+> = ReturnType<Factory> extends { as: infer AsC }
+  ? AsC extends StyledTarget<R>
+    ? AsC
+    : Target
+  : Target;
+
+// Prevents functions
+type AttrValueType<T> = T extends (() => any) | ((...args: any[]) => any) ? never : {};
+
+type StrictAttrFactory<
+  Factory extends (...args: any[]) => any,
+  R extends Runtime,
+  Target extends StyledTarget<R>,
+  Props extends object
+> = Factory extends (...args: any[]) => infer TResult
+  ? TResult extends object & SubsetOnly<TResult, AttrPropValues<R, Target, Props>>
+    ? (props: AttrFactoryProps<R, Target, Props>) => AttrPropValues<R, Target, Props>
     : never
   : never;
 
 export interface Styled<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  OuterProps extends object = object,
-  OuterStatics extends object = object,
-  RuntimeInjectedProps extends ExecutionProps = object
+  OtherProps extends object,
+  AttrProps extends keyof any = never,
+  OtherStatics extends object = {}
 > {
-  <Props extends object = object, Statics extends object = object>(
-    initialStyles: Styles<OuterProps & RuntimeInjectedProps & NoInfer<Props>>,
-    ...interpolations: Interpolation<OuterProps & RuntimeInjectedProps & NoInfer<Props>>[]
-  ): // @ts-expect-error KnownTarget is a subset of StyledTarget<R>
-  IStyledComponent<R, ExtractAttrsTarget<R, RuntimeInjectedProps, Target>, OuterProps & Props> &
-    OuterStatics &
-    Statics;
+  <MoreOtherProps extends object = {}, MoreStatics extends object = {}>(
+    initialStyles: Styles<
+      ThemedProps<StyledComponentPropsWithRef<R, Target> & OtherProps & NoInfer<MoreOtherProps>>
+    >,
+    ...interpolations: Interpolation<
+      ThemedProps<StyledComponentPropsWithRef<R, Target> & OtherProps & NoInfer<MoreOtherProps>>
+    >[]
+  ): IStyledComponent<R, Target, OtherProps & NoInfer<MoreOtherProps>, AttrProps> &
+    OtherStatics &
+    MoreStatics;
 
-  /**
-   * This is a chainable method that attaches some props to a styled component.
-   * @param props An object containing prop values that will be merged into the rest of the component's props
-   * @argument Props Additional props being injected in `props`
-   */
+  // .attrs({ as: "foo", prop: value })
   attrs<
-    Props extends object = object,
-    PropValues extends Partial<OuterProps> & ExecutionProps & DataAttributes & React.AriaAttributes & NoInfer<Props> = Partial<OuterProps> & ExecutionProps & DataAttributes & React.AriaAttributes & NoInfer<Props>,
-  >(props: PropValues & SubsetOnly<PropValues, Partial<OuterProps> & ExecutionProps & DataAttributes & React.AriaAttributes & NoInfer<Props>>): Styled<
+    AsC extends StyledTarget<R> = Target,
+    NewA extends AttrPropValues<R, Target, OtherProps> & { as?: AsC } = AttrPropValues<
+      R,
+      Target,
+      OtherProps
+    > & { as?: AsC }
+  >(
+    attrs: NewA & AttrValueType<NewA> & { as?: AsC }
+  ): Styled<R, AsC, OtherProps & Omit<NewA, 'as'>, AttrProps | keyof NewA>;
+
+  // .attrs<{ prop: value }>({ as: "foo", prop: value })
+  attrs<
+    NewProps extends object = never,
+    AsC extends StyledTarget<R> = Target,
+    NewA extends AttrPropValues<R, Target, OtherProps & NewProps> & { as?: AsC } = AttrPropValues<
+      R,
+      Target,
+      OtherProps & NewProps
+    > & { as?: AsC }
+  >(
+    attrs: NewA & AttrValueType<NewA> & { as?: AsC }
+  ): Styled<R, AsC, OtherProps & Omit<NewProps, 'as'>, AttrProps | keyof NewA>;
+
+  // .attrs(props => ({ prop: value }))
+  attrs<
+    AsC extends StyledTarget<R>,
+    Factory extends (
+      props: AttrFactoryProps<R, Target, OtherProps>
+    ) => AttrPropValues<R, Target, OtherProps & { as?: AsC }>
+  >(
+    attrFactory: Factory & StrictAttrFactory<Factory, R, Target, OtherProps & { as?: AsC }>
+  ): Styled<
     R,
-    Target,
-    PropsSatisfiedByAttrs<PropValues, OuterProps>,
-    OuterStatics,
-    Omit<RuntimeInjectedProps, keyof PropValues> & PropValues
+    FactoryAsC<R, Target, Factory>,
+    OtherProps & Omit<ReturnType<Factory>, 'as' | keyof StyledComponentPropsWithRef<R, Target>>,
+    AttrProps | keyof ReturnType<Factory>
   >;
 
-  /**
-   * This is a chainable method that attaches some props to a styled component.
-   * @param propFactory A function that receives the props that are passed into the component and computes a value, that is then going to be merged into the existing component props.
-   * @argument Props Additional props being returned by `propFactory`
-   */
+  // .attrs<{ prop: value }>(props => ({ prop: value }))
   attrs<
-    Props extends object = object,
-    Factory extends ((...args: any[]) => any) = (...args: any[]) => any,
-    TTarget extends StyledTarget<R> = ExtractAttrsTarget<R, AttrsResult<Factory>, Target>
-  >(propFactory: Factory & StrictAttrFactory<Factory, OuterProps & NoInfer<Props>>): Styled<
+    NewProps extends object = {},
+    AsC extends StyledTarget<R> = Target,
+    Factory extends (
+      props: AttrFactoryProps<R, Target, OtherProps & NoInfer<NewProps>>
+    ) => AttrPropValues<R, Target, OtherProps & NoInfer<NewProps> & { as?: AsC }> = (
+      props: AttrFactoryProps<R, Target, OtherProps & NoInfer<NewProps>>
+    ) => AttrPropValues<R, Target, OtherProps & NoInfer<NewProps> & { as?: AsC }>
+  >(
+    attrFactory: Factory & StrictAttrFactory<Factory, R, Target, OtherProps & NoInfer<NewProps>>
+  ): Styled<
     R,
-    TTarget,
-    PropsSatisfiedByAttrs<Factory, OuterProps>,
-    OuterStatics,
-    Omit<RuntimeInjectedProps, keyof AttrsResult<Factory>> & AttrsResult<Factory>
+    FactoryAsC<R, Target, Factory>,
+    OtherProps & Omit<NewProps, 'as'>,
+    AttrProps | keyof ReturnType<Factory>
   >;
 
-  withConfig: (config: StyledOptions<R, OuterProps>) => Styled<R, Target, OuterProps, OuterStatics>;
+  withConfig: <Props extends OtherProps = OtherProps>(
+    config: StyledOptions<R, StyledComponentPropsWithRef<R, Target> & Props>
+  ) => Styled<R, Target, Props, AttrProps>;
 }
 
 export default function constructWithOptions<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  OuterProps extends object = Target extends KnownTarget
-    ? React.ComponentPropsWithRef<Target>
-    : object,
-  OuterStatics extends object = object
+  OtherProps extends object = {},
+  OtherStatics extends object = {}
 >(
-  componentConstructor: IStyledComponentFactory<R, Target, OuterProps, OuterStatics>,
+  componentConstructor: IStyledComponentFactory<R, Target, OtherProps, never, OtherStatics>,
   tag: Target,
-  options: StyledOptions<R, OuterProps> = EMPTY_OBJECT
-): Styled<R, Target, OuterProps, OuterStatics> {
+  options: StyledOptions<R, StyledComponentProps<R, Target, OtherProps, never>> = EMPTY_OBJECT
+): Styled<R, Target, OtherProps, never, OtherStatics> {
   // We trust that the tag is a valid component as long as it isn't falsish
   // Typically the tag here is a string or function (i.e. class or pure function component)
   // However a component may also be an object if it uses another utility, e.g. React.memo
@@ -129,27 +162,28 @@ export default function constructWithOptions<
   }
 
   /* This is callable directly as a template function */
-  const templateFunction = <Props extends object = object, Statics extends object = object>(
-    initialStyles: Styles<OuterProps & Props>,
-    ...interpolations: Interpolation<OuterProps & Props>[]
-  ) =>
-    componentConstructor<Props, Statics>(
+  const templateFunction = <MoreOtherProps extends object = {}, MoreStatics extends object = {}>(
+    initialStyles: Styles<
+      ThemedProps<StyledComponentPropsWithRef<R, Target> & OtherProps & NoInfer<MoreOtherProps>>
+    >,
+    ...interpolations: Interpolation<
+      ThemedProps<StyledComponentPropsWithRef<R, Target> & OtherProps & NoInfer<MoreOtherProps>>
+    >[]
+  ): IStyledComponent<R, Target, OtherProps & NoInfer<MoreOtherProps>, never> &
+    OtherStatics &
+    MoreStatics =>
+    componentConstructor<OtherStatics & MoreStatics>(
       tag,
-      options as unknown as StyledOptions<R, OuterProps & Props>,
-      css(initialStyles, ...interpolations)
+      options,
+      css<any>(initialStyles, ...interpolations)
     );
 
   /* Modify/inject new props at runtime */
-  templateFunction.attrs = <T extends Attrs>(
-    attrs: Attrs<T extends (...args: any) => infer P ? Partial<OuterProps & P> : Partial<OuterProps & T> & DataAttributes & React.AriaAttributes>
+  templateFunction.attrs = <NewProps extends object>(
+    attrs: AttrPropValues<R, Target, OtherProps & NewProps> | AttrFactoryProps<R, Target, NewProps>
   ) =>
-    constructWithOptions<R, Target, PropsSatisfiedByAttrs<T, OuterProps>, OuterStatics>(
-      componentConstructor as unknown as IStyledComponentFactory<
-        R,
-        Target,
-        PropsSatisfiedByAttrs<T, OuterProps>,
-        OuterStatics
-      >,
+    constructWithOptions<R, Target, OtherProps & NewProps, OtherStatics>(
+      componentConstructor,
       tag,
       {
         ...options,
@@ -159,11 +193,13 @@ export default function constructWithOptions<
 
   /**
    * If config methods are called, wrap up a new template function and merge options */
-  templateFunction.withConfig = (config: StyledOptions<R, OuterProps>) =>
-    constructWithOptions<R, Target, OuterProps, OuterStatics>(componentConstructor, tag, {
+  templateFunction.withConfig = <Props extends OtherProps = OtherProps>(
+    config: StyledOptions<R, StyledComponentPropsWithRef<R, Target> & Props>
+  ) =>
+    constructWithOptions<R, Target, any, OtherStatics>(componentConstructor, tag, {
       ...options,
       ...config,
-    });
+    } as StyledOptions<R, StyledComponentProps<R, Target, any, never>>);
 
   return templateFunction;
 }
