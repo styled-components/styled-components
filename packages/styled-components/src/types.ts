@@ -152,8 +152,8 @@ type Defaultize<P, D> = P extends any
   ? string extends keyof P
     ? P
     : PickU<P, Exclude<keyof P, keyof D>> &
-      Partial<PickU<P, Extract<keyof P, keyof D>>> &
-      Partial<PickU<D, Exclude<keyof D, keyof P>>>
+        Partial<PickU<P, Extract<keyof P, keyof D>>> &
+        Partial<PickU<D, Exclude<keyof D, keyof P>>>
   : never;
 
 type ReactDefaultizedProps<C, P> = C extends { defaultProps: infer D } ? Defaultize<P, D> : P;
@@ -163,12 +163,14 @@ type MakeAttrsOptional<
   Target extends StyledTarget<R>,
   OtherProps extends object,
   AttrProps extends keyof Props,
-  Props = Target extends keyof JSX.IntrinsicElements | React.ComponentType<any> ? React.ComponentPropsWithRef<Target> : {},
+  Props = Target extends keyof JSX.IntrinsicElements | React.ComponentType<any>
+    ? React.ComponentPropsWithRef<Target>
+    : {}
 > =
   // Distribute unions early to avoid quadratic expansion
   Props extends any
     ? OmitU<ReactDefaultizedProps<Target, Props> & OtherProps, AttrProps> &
-      Partial<PickU<Props & OtherProps, AttrProps>>
+        Partial<PickU<Props & OtherProps, AttrProps>>
     : never;
 
 export type StyledComponentProps<
@@ -191,7 +193,10 @@ type StyledComponentPropsWithAs<
   OtherProps extends object,
   AttrProps extends keyof any,
   AsC extends StyledTarget<R> = Target
-> = StyledComponentProps<R, Target, OtherProps, AttrProps> & { as?: AsC | undefined; forwardedAs?: AsC | undefined };
+> = StyledComponentProps<R, Target, OtherProps, AttrProps> & {
+  as?: AsC | undefined;
+  forwardedAs?: AsC | undefined;
+};
 
 export interface ThemeProps {
   theme: DefaultTheme;
@@ -205,7 +210,10 @@ export interface IStyledComponent<
   AttrProps extends keyof any = never
 > extends IStyledStatics<R, StyledComponentProps<R, Target, OtherProps, AttrProps>> {
   (
-    props: StyledComponentProps<R, Target, OtherProps, AttrProps> & { as?: never | undefined; forwardedAs?: never | undefined }
+    props: StyledComponentProps<R, Target, OtherProps, AttrProps> & {
+      as?: never | undefined;
+      forwardedAs?: never | undefined;
+    }
   ): React.ReactElement<StyledComponentProps<R, Target, OtherProps, AttrProps>>;
 
   <AsC extends StyledTarget<R> = Target>(
@@ -280,28 +288,34 @@ export type NoInfer<T> = [T][T extends any ? 0 : never];
 export type SubsetOnly<A, B> = { [K in keyof A]: K extends keyof B ? A[K] : never };
 
 // Pick that distributes over union types
-export type PickU<T, K extends keyof T> = T extends any ? {[P in K]: T[P]} : never;
+export type PickU<T, K extends keyof T> = T extends any ? { [P in K]: T[P] } : never;
 export type OmitU<T, K extends keyof T> = T extends any ? PickU<T, Exclude<keyof T, K>> : never;
 
 // IStyledComponent with either AttrProps generic arg set to "any" or "never"
-export type AnyStyledComponent<R extends Runtime> = IStyledComponent<R, any, any, any> | IStyledComponent<R, any, any>;
+export type AnyStyledComponent<R extends Runtime> =
+  | IStyledComponent<R, any, any, any>
+  | IStyledComponent<R, any, any>;
 
 // Helper types for inferring inner component generic args
-export type StyledComponentInnerComponent<R extends Runtime, Target extends StyledTarget<R>> =
-  Target extends IStyledComponent<R, infer I, any, any>
+export type StyledComponentInnerComponent<
+  R extends Runtime,
+  Target extends StyledTarget<R>
+> = Target extends IStyledComponent<R, infer I, any, any>
   ? I
   : Target extends IStyledComponent<R, infer I, any>
-    ? I
-    : Target;
+  ? I
+  : Target;
 
-export type StyledComponentInnerOtherProps<R extends Runtime, Target extends AnyStyledComponent<R>> =
-  Target extends IStyledComponent<R, any, infer OtherProps, any>
-    ? OtherProps
-    : Target extends IStyledComponent<R, any, infer OtherProps>
-      ? OtherProps
-      : never;
+export type StyledComponentInnerOtherProps<
+  R extends Runtime,
+  Target extends AnyStyledComponent<R>
+> = Target extends IStyledComponent<R, any, infer OtherProps, any>
+  ? OtherProps
+  : Target extends IStyledComponent<R, any, infer OtherProps>
+  ? OtherProps
+  : never;
 
-export type StyledComponentInnerAttrs<R extends Runtime, Target extends AnyStyledComponent<R>> =
-  Target extends IStyledComponent<R, any, any, infer AttrProps>
-    ? AttrProps
-    : never;
+export type StyledComponentInnerAttrs<
+  R extends Runtime,
+  Target extends AnyStyledComponent<R>
+> = Target extends IStyledComponent<R, any, any, infer AttrProps> ? AttrProps : never;

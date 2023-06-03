@@ -5,7 +5,13 @@ import withTheme from '../hoc/withTheme';
 import _InlineStyle from '../models/InlineStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
 import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from '../models/ThemeProvider';
-import { AnyStyledComponent, NativeTarget, StyledComponentInnerAttrs, StyledComponentInnerComponent, StyledComponentInnerOtherProps } from '../types';
+import {
+  AnyStyledComponent,
+  NativeTarget,
+  StyledComponentInnerAttrs,
+  StyledComponentInnerComponent,
+  StyledComponentInnerOtherProps,
+} from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
 
 const reactNative = require('react-native') as Awaited<typeof import('react-native')>;
@@ -13,7 +19,14 @@ const reactNative = require('react-native') as Awaited<typeof import('react-nati
 const InlineStyle = _InlineStyle(reactNative.StyleSheet);
 const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
 
-function createStyle<Target extends AnyStyledComponent<"native">>(tag: Target): Styled<'native', StyledComponentInnerComponent<"native", Target>, StyledComponentInnerOtherProps<"native", Target>, StyledComponentInnerAttrs<"native", Target>>;
+function createStyle<Target extends AnyStyledComponent<'native'>>(
+  tag: Target
+): Styled<
+  'native',
+  StyledComponentInnerComponent<'native', Target>,
+  StyledComponentInnerOtherProps<'native', Target>,
+  StyledComponentInnerAttrs<'native', Target>
+>;
 function createStyle<Target extends NativeTarget>(tag: Target): Styled<'native', Target, {}>;
 function createStyle<Target extends NativeTarget>(tag: Target) {
   return constructWithOptions<'native', Target>(StyledNativeComponent, tag);
@@ -89,8 +102,7 @@ export {
   NativeTarget,
   Runtime,
   StyledObject,
-  StyledOptions
+  StyledOptions,
 } from '../types';
 export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
 export { styled, styled as default };
-

@@ -13,7 +13,7 @@ import type {
   RuleSet,
   StyledComponentProps,
   StyledOptions,
-  WebTarget
+  WebTarget,
 } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
@@ -74,7 +74,7 @@ function resolveContext<Props extends object>(
   theme: DefaultTheme
 ) {
   const context: ExecutionContext &
-    Props & { class?: string; className?: string; ref?: React.Ref<any>, style?: any } = {
+    Props & { class?: string; className?: string; ref?: React.Ref<any>; style?: any } = {
     ...props,
     // unset, add `props.className` back at the end so props always "wins"
     className: undefined,
@@ -92,8 +92,8 @@ function resolveContext<Props extends object>(
         key === 'className'
           ? joinStrings(context[key] as string | undefined, resolvedAttrDef[key] as string)
           : key === 'style'
-            ? { ...context[key], ...resolvedAttrDef[key] }
-            : resolvedAttrDef[key];
+          ? { ...context[key], ...resolvedAttrDef[key] }
+          : resolvedAttrDef[key];
     }
   }
 
@@ -191,7 +191,9 @@ function createStyledComponent<
     componentId = generateId(options.displayName, options.parentComponentId),
     displayName = generateDisplayName(target),
   } = options;
-  const attrs = (options.attrs ?? []) as Attrs<StyledComponentProps<"web", Target, OtherProps, never>>[];
+  const attrs = (options.attrs ?? []) as Attrs<
+    StyledComponentProps<'web', Target, OtherProps, never>
+  >[];
 
   const styledComponentId =
     options.displayName && options.componentId
@@ -240,7 +242,12 @@ function createStyledComponent<
    * forwardRef creates a new interim component, which we'll take advantage of
    * instead of extending ParentComponent to create _another_ interim class
    */
-  let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<'web', typeof target, OtherProps> & Statics;
+  let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
+    'web',
+    typeof target,
+    OtherProps
+  > &
+    Statics;
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;

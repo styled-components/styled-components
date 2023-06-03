@@ -1,7 +1,8 @@
 import React, { createElement, Ref, useMemo } from 'react';
 import type {
   Attrs,
-  Dict, ExecutionProps,
+  Dict,
+  ExecutionProps,
   IInlineStyleConstructor,
   IStyledComponent,
   IStyledComponentFactory,
@@ -11,7 +12,7 @@ import type {
   RuleSet,
   StyledComponentProps,
   StyledOptions,
-  ThemedProps
+  ThemedProps,
 } from '../types';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_OBJECT } from '../utils/empties';
@@ -116,13 +117,15 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
   >(
     target: Target,
     options: StyledOptions<'native', OtherProps>,
-    rules: RuleSet<StyledComponentProps<"native", Target, OtherProps, never>>
+    rules: RuleSet<StyledComponentProps<'native', Target, OtherProps, never>>
   ): ReturnType<IStyledComponentFactory<'native', Target, OtherProps, never, Statics>> => {
     const isTargetStyledComp = isStyledComponent(target);
     const styledComponentTarget = target as IStyledComponent<'native', Target, OtherProps>;
 
     const { displayName = generateDisplayName(target) } = options;
-    const attrs = (options.attrs ?? []) as Attrs<StyledComponentProps<"native", Target, OtherProps, never>>[];
+    const attrs = (options.attrs ?? []) as Attrs<
+      StyledComponentProps<'native', Target, OtherProps, never>
+    >[];
 
     // fold the underlying StyledComponent attrs up (implicit extend)
     const finalAttrs =
@@ -156,7 +159,12 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
      * forwardRef creates a new interim component, which we'll take advantage of
      * instead of extending ParentComponent to create _another_ interim class
      */
-    let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<'native', Target, OtherProps> & Statics;
+    let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
+      'native',
+      Target,
+      OtherProps
+    > &
+      Statics;
 
     WrappedStyledComponent.attrs = finalAttrs;
     WrappedStyledComponent.inlineStyle = new InlineStyle(

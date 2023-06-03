@@ -8,7 +8,7 @@ import {
   IStyledComponent,
   RuleSet,
   Stringifier,
-  StyledObject
+  StyledObject,
 } from '../types';
 import addUnitIfNeeded from './addUnitIfNeeded';
 import getComponentName from './getComponentName';

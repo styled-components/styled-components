@@ -13,7 +13,6 @@ export {
   Runtime,
   StyledObject,
   StyledOptions,
-  WebTarget
+  WebTarget,
 } from './types';
 export { styled, styled as default };
-
