@@ -28,7 +28,11 @@ type ExtractAttrsTarget<
   R extends Runtime,
   P extends ExecutionProps,
   DefaultTarget extends StyledTarget<R>
-> = P['as'] extends KnownTarget ? P['as'] : DefaultTarget;
+> = P['as'] extends KnownTarget
+  ? P['forwardedAs'] extends KnownTarget
+    ? P['forwardedAs']
+    : P['as']
+  : DefaultTarget;
 
 /**
  * If attrs type is a function (no type provided, inferring from usage), extract the return value
