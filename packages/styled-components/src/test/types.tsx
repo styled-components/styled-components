@@ -240,7 +240,7 @@ const AttrRequiredTest3 = styled(DivWithRequiredProps).attrs<{ newProp: number }
 <AttrRequiredTest3 foo={42} bar="bar" newProp={42} />;
 
 const AttrRequiredTest4 = styled(DivWithRequiredProps).attrs({
-  // Can provide unknown props
+  // // @ts-expect-error cannot provide unknown props
   waz: 42,
 })``;
 
