@@ -442,3 +442,19 @@ interface TextProps {
 }
 
 styled.label.attrs<TextProps>(({ $textVariant = 'footnote' }) => ({ $textVariant }));
+
+// CSSProp support for different things
+type CSSPropTestType = { color?: string; css?: CSSProp };
+styled.div<CSSPropTestType>(p => ({ css: 'color: red;' }));
+styled.div<CSSPropTestType>(p => ({ css: { color: 'red' } }));
+styled.div<CSSPropTestType>(p => ({ css: () => ({ color: 'red' }) }));
+styled.div<CSSPropTestType>(p => ({
+  css: css`
+    color: red;
+  `,
+}));
+styled.div<CSSPropTestType>(p => ({
+  css: css<Omit<CSSPropTestType, 'css'>>`
+    color: ${p => p.color || 'red'};
+  `,
+}));

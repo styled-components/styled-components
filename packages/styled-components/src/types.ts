@@ -83,7 +83,7 @@ export type Interpolation<Props extends object> =
 
 export type Attrs<Props> = ((props: ThemedProps<Props>) => Partial<Props>) | Partial<Props>;
 
-export type RuleSet<Props extends object> = Interpolation<Props>[];
+export type RuleSet<Props extends object = {}> = Interpolation<Props>[];
 
 export type Styles<Props extends object> =
   | TemplateStringsArray
@@ -253,7 +253,13 @@ export interface IInlineStyle<Props extends object> {
 }
 
 export interface StyledObject<Props extends object> {
-  [key: string]: string | number | StyleFunction<Props> | StyledObject<Props> | undefined;
+  [key: string]:
+    | string
+    | number
+    | StyleFunction<Props>
+    | StyledObject<Props>
+    | RuleSet<Props>
+    | undefined;
 }
 // uncomment when we can eventually override index signatures with more specific types
 // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);
