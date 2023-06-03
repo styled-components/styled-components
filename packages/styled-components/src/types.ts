@@ -85,7 +85,7 @@ export type Attrs<Props extends object = object> =
   | (ExecutionProps & Props)
   | ((props: ExecutionContext & Props) => Partial<Props>);
 
-export type RuleSet<Props extends object> = Interpolation<Props>[];
+export type RuleSet<Props extends object = {}> = Interpolation<Props>[];
 
 export type Styles<Props extends object> =
   | TemplateStringsArray
@@ -158,7 +158,7 @@ export type PolymorphicComponentProps<
   'as' | 'theme'
 > &
   Omit<ExecutionProps, 'as'> & {
-    as?: P extends { as?: infer RuntimeTarget } ? RuntimeTarget : E;
+    as?: P extends { as?: string | AnyComponent } ? P['as'] : E;
   };
 
 /**
@@ -180,7 +180,7 @@ export interface PolymorphicComponent<
 export interface IStyledComponent<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  Props extends object
+  Props extends object = Target extends KnownTarget ? React.ComponentProps<Target> : object
 > extends PolymorphicComponent<R, Props, Target>,
     IStyledStatics<R, Props> {
   defaultProps?: Partial<
@@ -216,7 +216,13 @@ export interface IInlineStyle<Props extends object> {
 }
 
 export interface StyledObject<Props extends object> {
-  [key: string]: Dict<any> | string | number | StyleFunction<Props> | StyledObject<Props>;
+  [key: string]:
+    | string
+    | number
+    | StyleFunction<Props>
+    | StyledObject<Props>
+    | RuleSet<Props>
+    | undefined;
 }
 // uncomment when we can eventually override index signatures with more specific types
 // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);
@@ -242,4 +248,8 @@ export interface StyledObject<Props extends object> {
  * In order to get accurate typings for `props.theme` in `css` interpolations, see
  * {@link DefaultTheme}.
  */
-export type CSSProp = RuleSet<any>;
+
+export type CSSProp = Interpolation<any>;
+
+// Prevents TypeScript from inferring generic argument
+export type NoInfer<T> = [T][T extends any ? 0 : never];
