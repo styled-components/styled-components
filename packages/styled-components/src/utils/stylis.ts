@@ -1,4 +1,4 @@
-import { compile, Element, Middleware, middleware, prefixer, RULESET, stringify } from 'stylis';
+import * as stylis from 'stylis';
 import { Stringifier } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
@@ -9,31 +9,14 @@ const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 
 export type ICreateStylisInstance = {
   options?: { namespace?: string; prefix?: boolean };
-  plugins?: Middleware[];
+  plugins?: stylis.Middleware[];
 };
-
-/**
- * Serialize stylis output as an array of css strings. It is important that rules are
- * separated when using CSSOM injection.
- */
-function serialize(children: Element[], callback: Middleware): string[] {
-  const ret: string[] = [];
-
-  for (let i = 0, result; i < children.length; i += 1) {
-    result = callback(children[i], i, children, callback);
-
-    // split up conjoined rules
-    if (result) ret.push(result);
-  }
-
-  return ret;
-}
 
 /**
  * Takes an element and recurses through it's rules added the namespace to the start of each selector.
  * Takes into account media queries by recursing through child rules if they are present.
  */
-function recursivelySetNamepace(compiled: Element[], namespace: String): Element[] {
+function recursivelySetNamepace(compiled: stylis.Element[], namespace: String): stylis.Element[] {
   return compiled.map(rule => {
     if (rule.type === 'rule') {
       // add the namespace to the start
@@ -56,7 +39,7 @@ function recursivelySetNamepace(compiled: Element[], namespace: String): Element
 export default function createStylisInstance(
   {
     options = EMPTY_OBJECT as object,
-    plugins = EMPTY_ARRAY as unknown as Middleware[],
+    plugins = EMPTY_ARRAY as unknown as stylis.Middleware[],
   }: ICreateStylisInstance = EMPTY_OBJECT as object
 ) {
   let _componentId: string;
@@ -94,8 +77,8 @@ export default function createStylisInstance(
    *
    * https://github.com/thysultan/stylis.js/tree/v4.0.2#abstract-syntax-structure
    */
-  const selfReferenceReplacementPlugin: Middleware = element => {
-    if (element.type === RULESET && element.value.includes('&')) {
+  const selfReferenceReplacementPlugin: stylis.Middleware = element => {
+    if (element.type === stylis.RULESET && element.value.includes('&')) {
       (element.props as string[])[0] = element.props[0]
         // catch any hanging references that stylis missed
         .replace(AMP_REGEX, _selector)
@@ -105,14 +88,16 @@ export default function createStylisInstance(
 
   const middlewares = plugins.slice();
 
+  middlewares.push(selfReferenceReplacementPlugin);
+
   /**
    * Enables automatic vendor-prefixing for styles.
    */
   if (options.prefix) {
-    middlewares.unshift(prefixer);
+    middlewares.push(stylis.prefixer);
   }
 
-  middlewares.push(selfReferenceReplacementPlugin, stringify);
+  middlewares.push(stylis.stringify);
 
   const stringifyRules: Stringifier = (
     css: string,
@@ -131,13 +116,22 @@ export default function createStylisInstance(
     _selectorRegexp = new RegExp(`\\${_selector}\\b`, 'g');
 
     const flatCSS = css.replace(COMMENT_REGEX, '');
-    let compiled = compile(prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS);
+    let compiled = stylis.compile(
+      prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS
+    );
 
     if (options.namespace) {
       compiled = recursivelySetNamepace(compiled, options.namespace);
     }
 
-    return serialize(compiled, middleware(middlewares));
+    const stack: string[] = [];
+
+    stylis.serialize(
+      compiled,
+      stylis.middleware(middlewares.concat(stylis.rulesheet(value => stack.push(value))))
+    );
+
+    return stack;
   };
 
   stringifyRules.hash = plugins.length
