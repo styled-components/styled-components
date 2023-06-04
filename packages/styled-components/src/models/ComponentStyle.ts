@@ -1,6 +1,6 @@
 import { SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
-import { ExecutionContext, RuleSet, Stringifier } from '../types';
+import { RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
 import { hash, phash } from '../utils/hash';
@@ -37,7 +37,7 @@ export default class ComponentStyle {
   }
 
   generateAndInjectStyles(
-    executionContext: ExecutionContext,
+    executionContext: Object,
     styleSheet: StyleSheet,
     stylis: Stringifier
   ): string {
