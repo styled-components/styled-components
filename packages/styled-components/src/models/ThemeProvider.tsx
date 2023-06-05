@@ -66,8 +66,12 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme): DefaultThe
   return outerTheme ? { ...outerTheme, ...theme } : theme;
 }
 
-export function useTheme(): DefaultTheme | undefined {
-  return useContext(ThemeContext);
+export function useTheme(): DefaultTheme {
+  const theme = useContext(ThemeContext);
+  if(!theme) {
+    throw Error('can not use useTheme outside a ThemeProvider');
+  }
+  return theme;
 }
 
 /**
