@@ -101,7 +101,36 @@ function ColorizedComponent(props: ColorizedComponentProps) {
 /** forwardedAs should be a valid prop */
 const ForwardedTo = styled.button``;
 const ForwardedThrough = styled(ForwardedTo)``;
+// href is inferred from "forwardedAs"
 <ForwardedThrough forwardedAs="a" href="#" />;
+
+const RuntimePropTest = styled.button<{ color?: 'indigo' }>``;
+const RuntimePropOverrideTest = styled.button<{ color?: 'cerulean' }>``;
+const RuntimePropDeepestOverrideTest = styled.button<{ color?: 'vermillion' }>``;
+// @ts-expect-error color should be "indigo" | undefined
+<RuntimePropTest color="red" />;
+// @ts-expect-error wrong type entirely
+<RuntimePropTest color />;
+// ok
+<RuntimePropTest color="indigo" />;
+
+// @ts-expect-error color should be "cerulean" | undefined
+<RuntimePropTest as={RuntimePropOverrideTest} color="indigo" />;
+// ok
+<RuntimePropTest as={RuntimePropOverrideTest} color="cerulean" />;
+
+<RuntimePropTest
+  as={RuntimePropOverrideTest}
+  forwardedAs={RuntimePropDeepestOverrideTest}
+  // @ts-expect-error "as" wins over "forwardedAs" for prop conflicts
+  color="vermillion"
+/>;
+// ok
+<RuntimePropTest
+  as={RuntimePropOverrideTest}
+  forwardedAs={RuntimePropDeepestOverrideTest}
+  color="cerulean"
+/>;
 
 // SVG generating overly-complex typings
 const MySVG = styled.svg.attrs({
@@ -171,19 +200,6 @@ const InheritedDivWithProps = styled(DivWithProps)`
 // @ts-expect-error bar must be "bar"
 <InheritedDivWithProps waz={42} bar="foo" />;
 
-const DivWithRequiredProps = styled.div<{ foo: number; bar: string }>``;
-
-const RequiredPropsProvidedAsAttrs = styled(DivWithRequiredProps).attrs({
-  foo: 42, // Providing required prop foo, which makes it optional going forward
-})``;
-
-// foo prop is now optional
-<RequiredPropsProvidedAsAttrs bar="bar" />;
-// Can still provide foo if we want
-<RequiredPropsProvidedAsAttrs foo={22} bar="bar" />;
-// @ts-expect-error bar is still required
-<RequiredPropsProvidedAsAttrs />;
-
 /** StyledObject should accept undefined properties
  * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
@@ -193,10 +209,35 @@ interface MyStyle extends StyledObject<{}> {
   textTransform?: string;
 }
 
+const DivWithRequiredProps = styled.div.attrs<{ foo?: number; bar: string }>({
+  foo: 42, // Providing required prop foo, which makes it optional
+})``;
+
+// foo can still be provided
+<DivWithRequiredProps foo={45} bar="meh" />;
+// but is optional
+<DivWithRequiredProps bar="meh" />;
+// @ts-expect-error and bar is still required
+<DivWithRequiredProps />;
+
+const DivWithUnfulfilledRequiredProps = styled.div<{ foo?: number; bar: string }>``;
+
+// same test as above but with a wrapped, typed component
+const RequiredPropsProvidedAsAttrs = styled(DivWithUnfulfilledRequiredProps).attrs({
+  foo: 42, // Providing required prop foo, which makes it optional
+})``;
+
+// foo prop is optional
+<RequiredPropsProvidedAsAttrs bar="bar" />;
+// Can still provide foo if we want
+<RequiredPropsProvidedAsAttrs foo={22} bar="bar" />;
+// @ts-expect-error bar is still required
+<RequiredPropsProvidedAsAttrs />;
+
 /** Attrs should not expect all props to be provided (even if they are required)
  * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
-const AttrRequiredTest = styled(DivWithRequiredProps).attrs({
+const AttrRequiredTest = styled(DivWithUnfulfilledRequiredProps).attrs<{ bar?: string }>({
   // Should not have to provide foo within attrs
   bar: 'hello',
   // Should allow hyphenated props
@@ -205,23 +246,23 @@ const AttrRequiredTest = styled(DivWithRequiredProps).attrs({
 <AttrRequiredTest foo={42} bar="bar" />;
 // Bar was defaulted in attrs
 <AttrRequiredTest foo={42} />;
-// @ts-expect-error foo and bar are required props
+// foo is not required
 <AttrRequiredTest bar="bar" />;
-// @ts-expect-error foo and bar are required props
+// foo and bar are both no longer required
 <AttrRequiredTest />;
 
-const AttrRequiredTest2 = styled(DivWithRequiredProps).attrs({
+const AttrRequiredTest2 = styled(DivWithUnfulfilledRequiredProps).attrs({
   // @ts-expect-error foo must be a number
   foo: 'not a number',
 })``;
 
-const AttrRequiredTest3 = styled(DivWithRequiredProps).attrs<{ newProp: number }>({
+const AttrRequiredTest3 = styled(DivWithUnfulfilledRequiredProps).attrs<{ newProp: number }>({
   // Should allow props defined within attrs generic arg
   newProp: 42,
 })``;
 <AttrRequiredTest3 foo={42} bar="bar" newProp={42} />;
 
-const AttrRequiredTest4 = styled(DivWithRequiredProps).attrs({
+const AttrRequiredTest4 = styled(DivWithUnfulfilledRequiredProps).attrs({
   // @ts-expect-error Should not allow unknown props
   waz: 42,
 })``;
@@ -249,7 +290,7 @@ const AttrObjectAsLabel = styled(Text).attrs({ as: 'label' })``;
 // @ts-expect-error Can't provide unknown props
 <AttrObjectAsLabel waz={42} />;
 
-const AttrFunctionAsLabel = styled(Text).attrs(() => ({ as: 'label' as const }))``;
+const AttrFunctionAsLabel = styled(Text).attrs(() => ({ as: 'label' }))``;
 <AttrFunctionAsLabel
   ref={(el: HTMLLabelElement | null) => {}}
   onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
@@ -265,7 +306,7 @@ const StyledDiv = styled.div``;
 
 const CustomComponent = (({ ...props }) => {
   return <StyledDiv {...props} />;
-}) as IStyledComponent<'web', 'div'>;
+}) as IStyledComponent<'web', JSX.IntrinsicElements['div']>;
 
 const StyledCustomComponent = styled(CustomComponent)``;
 
@@ -294,37 +335,25 @@ const StyledComponentVeryLargeUnion = styled(UnstyledComponentVeryLargeUnion)`
   color: ${props => props.theme.waz};
 `;
 
-const AttrFunctionRequiredTest1 = styled(DivWithRequiredProps).attrs(props => ({
-  // Should not have to provide foo within attrs
-  bar: 'hello',
-  // Should allow hyphenated props
-  'data-foo': 42,
-}))``;
-
-// bar was provided in attrs, so is now optional
-<AttrFunctionRequiredTest1 foo={42} />;
-// @ts-expect-error foo is still required though
-<AttrFunctionRequiredTest1 />;
-
 // Can provide div props into attrs
-const AttrFunctionRequiredTest2 = styled.div.attrs(props => ({
+const AttrFunctionRequiredTest2 = styled.div.attrs(_ => ({
   color: '',
   // Should allow custom props
   'data-foo': 42,
 }))``;
 
 // Can provide purely custom props
-const AttrFunctionRequiredTest3 = styled.div.attrs(props => ({
+const AttrFunctionRequiredTest3 = styled.div.attrs(_ => ({
   'data-test': 42,
 }))``;
 
-// @ts-expect-error Cannot provide unknown attributes
-const AttrFunctionRequiredTest4 = styled.div.attrs(props => ({
+const AttrFunctionRequiredTest4 = styled.div.attrs(_ => ({
   'data-test': 42,
+  // @ts-expect-error Cannot provide unknown attributes
   waz: 42,
 }))``;
 
-const AttrFunctionRequiredTest5 = styled(DivWithRequiredProps).attrs(props => ({
+const AttrFunctionRequiredTest5 = styled(DivWithUnfulfilledRequiredProps).attrs(props => ({
   foo: props.foo ? Math.round(props.foo) : 42,
 }))``;
 
@@ -339,7 +368,9 @@ styled.div<CSSPropTestType>(p => ({
     color: red;
   `,
 }));
+
 styled.div<CSSPropTestType>(p => ({
   css: css<Omit<CSSPropTestType, 'css'>>`
     color: ${p => p.color || 'red'};
   `,
+}));
