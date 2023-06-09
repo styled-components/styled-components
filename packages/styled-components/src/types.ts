@@ -156,10 +156,10 @@ export type PolymorphicComponentProps<
 > = Omit<
   E extends KnownTarget ? P & Omit<React.ComponentPropsWithRef<E>, keyof P> : P,
   'as' | 'theme'
-> & {
-  as?: P extends { as?: string | AnyComponent } ? P['as'] : E;
-  theme?: DefaultTheme;
-};
+> &
+  Omit<ExecutionProps, 'as'> & {
+    as?: P extends { as?: infer RuntimeTarget } ? RuntimeTarget : E;
+  };
 
 /**
  * This type forms the signature for a forwardRef-enabled component that accepts
