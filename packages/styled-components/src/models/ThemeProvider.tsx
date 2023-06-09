@@ -68,8 +68,8 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme): DefaultThe
 
 export function useTheme(): DefaultTheme {
   const theme = useContext(ThemeContext);
-  if(!theme) {
-    throw Error('can not use useTheme outside a ThemeProvider');
+  if (!theme) {
+    throw styledError(18);
   }
   return theme;
 }

@@ -91,3 +91,25 @@ as for instance in your render method then you may be running into this limitati
 
 CSSStyleSheet could not be found on HTMLStyleElement.
 Has styled-components' style tag been unmounted or altered by another script?
+
+## 18
+
+Accessing `useTheme` hook outside of a `<ThemeProvider>` element.
+
+```jsx
+import { useTheme } from 'styled-components';
+export function StyledCompoent({ children }) {
+  const theme = useTheme();
+  return <div style={{ width: theme.sizes.full }}>{children}</div>;
+}
+
+import { StyledComponent } from './StyledComponent';
+import { theme } from './theme';
+export function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <StyledComponent />
+    </ThemeProvider>
+  );
+}
+```
