@@ -4,7 +4,7 @@ import generateComponentId from '../utils/generateComponentId';
 import { joinStringArray } from '../utils/joinStrings';
 import css from './css';
 
-export default function keyframes<Props extends object = object>(
+export default function keyframes<Props extends object = {}>(
   strings: Styles<Props>,
   ...interpolations: Array<Interpolation<Props>>
 ): Keyframes {

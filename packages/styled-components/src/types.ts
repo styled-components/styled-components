@@ -8,6 +8,8 @@ interface ExoticComponentWithDisplayName<P = any> extends React.ExoticComponent<
   displayName?: string;
 }
 
+export type BaseObject = object;
+
 // from https://stackoverflow.com/a/69852402
 export type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
 
@@ -17,7 +19,7 @@ export { DefaultTheme };
 
 export type AnyComponent<P = any> = ExoticComponentWithDisplayName<P> | React.ComponentType<P>;
 
-export type KnownTarget = keyof JSX.IntrinsicElements | AnyComponent;
+export type KnownTarget = Exclude<keyof JSX.IntrinsicElements, 'symbol' | 'object'> | AnyComponent;
 
 export type WebTarget =
   | string // allow custom elements, etc.
@@ -34,9 +36,10 @@ export interface StyledOptions<R extends Runtime, Props extends object> {
   shouldForwardProp?: ShouldForwardProp<R>;
 }
 
-export type Dict<T> = { [key: string]: T };
+export type Dict<T = any> = { [key: string]: T };
 
 export interface ExecutionProps {
+  [key: `data-${string}`]: any;
   /**
    * Dynamically adjust the rendered component or HTML tag, e.g.
    * ```
@@ -78,14 +81,14 @@ export type Interpolation<Props extends object> =
   // not actually callable, the function signature is just a crutch for JSX,
   // same as React.ExoticComponent.
   // We don't allow component selectors for native.
-  | IStyledComponent<'web', any, any>
+  | IStyledComponent<'web', any>
   | Interpolation<Props>[];
 
-export type Attrs<Props extends object = object> =
-  | (ExecutionProps & Props)
-  | ((props: ExecutionContext & Props) => Partial<Props>);
+export type Attrs<Props extends object = BaseObject> =
+  | (ExecutionProps & Partial<Props>)
+  | ((props: ExecutionContext & Props) => ExecutionProps & Partial<Props>);
 
-export type RuleSet<Props extends object = {}> = Interpolation<Props>[];
+export type RuleSet<Props extends object = BaseObject> = Interpolation<Props>[];
 
 export type Styles<Props extends object> =
   | TemplateStringsArray
@@ -107,8 +110,8 @@ export interface Keyframes {
 export interface Flattener<Props extends object> {
   (
     chunks: Interpolation<Props>[],
-    executionContext: Object | null | undefined,
-    styleSheet: Object | null | undefined
+    executionContext: object | null | undefined,
+    styleSheet: StyleSheet | null | undefined
   ): Interpolation<Props>[];
 }
 
@@ -117,7 +120,7 @@ export type FlattenerResult<Props extends object> =
   | number
   | string
   | string[]
-  | IStyledComponent<'web', any, any>
+  | IStyledComponent<'web', any>
   | Keyframes;
 
 export interface Stringifier {
@@ -151,44 +154,51 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
  */
 export type PolymorphicComponentProps<
   R extends Runtime,
-  E extends StyledTarget<R>,
-  P extends object
+  BaseProps extends object,
+  AsTarget extends StyledTarget<R> | void,
+  ForwardedAsTarget extends StyledTarget<R> | void,
+  // props extracted from "as"
+  AsTargetProps extends object = AsTarget extends KnownTarget
+    ? React.ComponentPropsWithRef<AsTarget>
+    : {},
+  // props extracted from "forwardAs"; note that ref is excluded
+  ForwardedAsTargetProps extends object = ForwardedAsTarget extends KnownTarget
+    ? React.ComponentPropsWithoutRef<ForwardedAsTarget>
+    : {}
 > = Omit<
-  E extends KnownTarget ? P & Omit<React.ComponentPropsWithRef<E>, keyof P> : P,
-  'as' | 'theme'
+  Substitute<
+    BaseProps,
+    // "as" wins over "forwardedAs" when it comes to prop interface
+    Substitute<ForwardedAsTargetProps, AsTargetProps>
+  >,
+  keyof ExecutionProps
 > &
-  Omit<ExecutionProps, 'as'> & {
-    as?: P extends { as?: string | AnyComponent } ? P['as'] : E;
+  Omit<ExecutionProps, 'as' | 'forwardedAs'> & {
+    as?: AsTarget;
+    forwardedAs?: ForwardedAsTarget;
   };
 
 /**
- * This type forms the signature for a forwardRef-enabled component that accepts
- * the "as" prop to dynamically change the underlying rendered JSX. The interface will
- * automatically attempt to extract props from the given rendering target to
- * get proper typing for any specialized props in the target component.
+ * This type forms the signature for a forwardRef-enabled component
+ * that accepts the "as" prop to dynamically change the underlying
+ * rendered JSX. The interface will automatically attempt to extract
+ * props from the given rendering target to get proper typing for
+ * any specialized props in the target component.
  */
-export interface PolymorphicComponent<
-  R extends Runtime,
-  P extends object,
-  FallbackComponent extends StyledTarget<R>
-> extends React.ForwardRefExoticComponent<P> {
-  <E extends StyledTarget<R> = FallbackComponent>(
-    props: PolymorphicComponentProps<R, E, P>
-  ): React.ReactElement | null;
+export interface PolymorphicComponent<R extends Runtime, BaseProps extends object>
+  extends React.ForwardRefExoticComponent<BaseProps> {
+  <
+    AsTarget extends StyledTarget<R> | void = void,
+    ForwardedAsTarget extends StyledTarget<R> | void = void
+  >(
+    props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget>
+  ): JSX.Element;
 }
 
-export interface IStyledComponent<
-  R extends Runtime,
-  Target extends StyledTarget<R>,
-  Props extends object = Target extends KnownTarget ? React.ComponentProps<Target> : object
-> extends PolymorphicComponent<R, Props, Target>,
+export interface IStyledComponent<R extends Runtime, Props extends object = BaseObject>
+  extends PolymorphicComponent<R, Props>,
     IStyledStatics<R, Props> {
-  defaultProps?: Partial<
-    (Target extends KnownTarget
-      ? ExecutionProps & Omit<React.ComponentProps<Target>, keyof ExecutionProps>
-      : ExecutionProps) &
-      Props
-  >;
+  defaultProps?: Partial<Substitute<ExecutionProps, Props>>;
   toString: () => string;
 }
 
@@ -197,13 +207,13 @@ export interface IStyledComponentFactory<
   R extends Runtime,
   Target extends StyledTarget<R>,
   OuterProps extends object,
-  OuterStatics extends object = object
+  OuterStatics extends object = BaseObject
 > {
-  <Props extends object = object, Statics extends object = object>(
+  <Props extends object = BaseObject, Statics extends object = BaseObject>(
     target: Target,
     options: StyledOptions<R, OuterProps & Props>,
     rules: RuleSet<OuterProps & Props>
-  ): IStyledComponent<R, Target, OuterProps & Props> & OuterStatics & Statics;
+  ): IStyledComponent<R, Substitute<OuterProps, Props>> & OuterStatics & Statics;
 }
 
 export interface IInlineStyleConstructor<Props extends object> {
@@ -253,3 +263,5 @@ export type CSSProp = Interpolation<any>;
 
 // Prevents TypeScript from inferring generic argument
 export type NoInfer<T> = [T][T extends any ? 0 : never];
+
+export type Substitute<A extends object, B extends object> = Omit<A, keyof B> & B;

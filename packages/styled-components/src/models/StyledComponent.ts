@@ -3,6 +3,7 @@ import { SC_VERSION } from '../constants';
 import type {
   AnyComponent,
   Attrs,
+  BaseObject,
   Dict,
   ExecutionContext,
   ExecutionProps,
@@ -69,12 +70,13 @@ function useInjectedStyle<T extends object>(
 }
 
 function resolveContext<Props extends object>(
-  attrs: Attrs<Props>[],
-  props: React.HTMLAttributes<Element> & Props,
+  attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
+  props: React.HTMLAttributes<Element> & ExecutionProps & Props,
   theme: DefaultTheme
 ) {
-  const context: ExecutionContext &
-    Props & { class?: string; className?: string; ref?: React.Ref<any> } = {
+  const context: React.HTMLAttributes<Element> &
+    ExecutionContext &
+    Props & { class?: string; ref?: React.Ref<any> } = {
     ...props,
     // unset, add `props.className` back at the end so props always "wins"
     className: undefined,
@@ -87,13 +89,12 @@ function resolveContext<Props extends object>(
     const resolvedAttrDef = isFunction(attrDef) ? attrDef(context) : attrDef;
 
     for (const key in resolvedAttrDef) {
-      // @ts-expect-error bad types
-      context[key] =
+      context[key as keyof typeof context] =
         key === 'className'
           ? joinStrings(context[key] as string | undefined, resolvedAttrDef[key] as string)
           : key === 'style'
           ? { ...context[key], ...resolvedAttrDef[key] }
-          : resolvedAttrDef[key];
+          : resolvedAttrDef[key as keyof typeof resolvedAttrDef];
     }
   }
 
@@ -104,9 +105,9 @@ function resolveContext<Props extends object>(
   return context;
 }
 
-function useStyledComponentImpl<Target extends WebTarget, Props extends ExecutionProps>(
-  forwardedComponent: IStyledComponent<'web', Target, Props>,
-  props: Props,
+function useStyledComponentImpl<Props extends object>(
+  forwardedComponent: IStyledComponent<'web', Props>,
+  props: ExecutionProps & Props,
   forwardedRef: Ref<Element>,
   isStatic: boolean
 ) {
@@ -177,14 +178,14 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
 function createStyledComponent<
   Target extends WebTarget,
   OuterProps extends object,
-  Statics extends object = object
+  Statics extends object = BaseObject
 >(
   target: Target,
   options: StyledOptions<'web', OuterProps>,
   rules: RuleSet<OuterProps>
 ): ReturnType<IStyledComponentFactory<'web', Target, OuterProps, Statics>> {
   const isTargetStyledComp = isStyledComponent(target);
-  const styledComponentTarget = target as IStyledComponent<'web', Target, OuterProps>;
+  const styledComponentTarget = target as IStyledComponent<'web', OuterProps>;
   const isCompositeComponent = !isTag(target);
 
   const {
@@ -231,7 +232,7 @@ function createStyledComponent<
   // and shouldn't be increasing the number of class names
   const isStatic = componentStyle.isStatic && attrs.length === 0;
   function forwardRef(props: ExecutionProps & OuterProps, ref: Ref<Element>) {
-    return useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref, isStatic);
+    return useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref, isStatic);
   }
 
   forwardRef.displayName = displayName;
@@ -242,7 +243,6 @@ function createStyledComponent<
    */
   let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
     'web',
-    typeof target,
     OuterProps
   > &
     Statics;

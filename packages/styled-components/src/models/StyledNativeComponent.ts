@@ -1,6 +1,7 @@
 import React, { createElement, Ref, useMemo } from 'react';
 import type {
   Attrs,
+  BaseObject,
   Dict,
   ExecutionContext,
   ExecutionProps,
@@ -50,11 +51,8 @@ interface StyledComponentImplProps extends ExecutionProps {
   style?: any;
 }
 
-function useStyledComponentImpl<
-  Target extends NativeTarget,
-  Props extends StyledComponentImplProps
->(
-  forwardedComponent: IStyledComponent<'native', Target, Props>,
+function useStyledComponentImpl<Props extends StyledComponentImplProps>(
+  forwardedComponent: IStyledComponent<'native', Props>,
   props: Props,
   forwardedRef: Ref<any>
 ) {
@@ -112,14 +110,14 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
   const createStyledNativeComponent = <
     Target extends NativeTarget,
     OuterProps extends ExecutionProps,
-    Statics extends object = object
+    Statics extends object = BaseObject
   >(
     target: Target,
     options: StyledOptions<'native', OuterProps>,
     rules: RuleSet<OuterProps>
   ): ReturnType<IStyledComponentFactory<'native', Target, OuterProps, Statics>> => {
     const isTargetStyledComp = isStyledComponent(target);
-    const styledComponentTarget = target as IStyledComponent<'native', Target, OuterProps>;
+    const styledComponentTarget = target as IStyledComponent<'native', OuterProps>;
 
     const { displayName = generateDisplayName(target), attrs = EMPTY_ARRAY } = options;
 
@@ -147,7 +145,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     }
 
     const forwardRef = (props: ExecutionProps & OuterProps, ref: React.Ref<any>) =>
-      useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref);
+      useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
 
     forwardRef.displayName = displayName;
 
@@ -157,7 +155,6 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
      */
     let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
       'native',
-      Target,
       OuterProps
     > &
       Statics;
