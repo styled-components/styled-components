@@ -2,6 +2,7 @@
 import StyleSheet from '../sheet';
 import { type Stringifier } from '../types';
 import throwStyledError from '../utils/error';
+import { setToString } from '../utils/setToString';
 import { masterStylis } from './StyleSheetManager';
 
 export default class Keyframes {
@@ -15,6 +16,10 @@ export default class Keyframes {
     this.name = name;
     this.id = `sc-keyframes-${name}`;
     this.rules = rules;
+
+    setToString(this, () => {
+      throwStyledError(12, String(this.name));
+    });
   }
 
   inject = (styleSheet: StyleSheet, stylisInstance: Stringifier = masterStylis) => {
@@ -27,10 +32,6 @@ export default class Keyframes {
         stylisInstance(this.rules, resolvedName, '@keyframes')
       );
     }
-  };
-
-  toString = () => {
-    return throwStyledError(12, String(this.name));
   };
 
   getName(stylisInstance: Stringifier = masterStylis) {
