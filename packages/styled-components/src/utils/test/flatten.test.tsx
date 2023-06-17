@@ -136,7 +136,7 @@ describe('flatten', () => {
         Foo
       }: {
         background-color: red;
-      }
+      } ;
     `;
 
     TestRenderer.create(<Bar />);

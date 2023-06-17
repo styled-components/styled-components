@@ -35,7 +35,7 @@ describe('attrs', () => {
   });
 
   it('pass a simple attr via function with object return', () => {
-    const Comp = styled.button.attrs(p => ({
+    const Comp = styled.button.attrs(() => ({
       type: 'button',
     }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
@@ -192,22 +192,22 @@ describe('attrs', () => {
 
   it('merge attrs', () => {
     const Comp = styled.button
-      .attrs(p => ({
+      .attrs(() => ({
         type: 'button',
         tabIndex: 0,
       }))
-      .attrs(p => ({
+      .attrs(() => ({
         type: 'submit',
       }))``;
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
   });
 
   it('merge attrs when inheriting SC', () => {
-    const Parent = styled.button.attrs(p => ({
+    const Parent = styled.button.attrs(() => ({
       type: 'button',
       tabIndex: 0,
     }))``;
-    const Child = styled(Parent).attrs(p => ({
+    const Child = styled(Parent).attrs(() => ({
       type: 'submit',
     }))``;
     expect(TestRenderer.create(<Child />).toJSON()).toMatchSnapshot();

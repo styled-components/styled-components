@@ -37,8 +37,7 @@ describe('with styles', () => {
     const rule1 = 'color: blue;';
     const rule2 = 'background: red;';
     const Comp = styled.div`
-      ${rule1};
-      ${rule2};
+      ${rule1} ${rule2};
     `;
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
