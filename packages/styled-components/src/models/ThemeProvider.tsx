@@ -66,11 +66,20 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme): DefaultThe
   return outerTheme ? { ...outerTheme, ...theme } : theme;
 }
 
+/**
+ * Returns the current theme (as provided by the closest ancestor `ThemeProvider`.)
+ *
+ * If no `ThemeProvider` is found, the function will error. If you need access to the theme in an
+ * uncertain composition scenario, `React.useContext(ThemeContext)` will not emit an error if there
+ * is no theme.
+ */
 export function useTheme(): DefaultTheme {
   const theme = useContext(ThemeContext);
+
   if (!theme) {
     throw styledError(18);
   }
+
   return theme;
 }
 
