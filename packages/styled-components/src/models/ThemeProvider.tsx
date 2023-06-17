@@ -78,7 +78,7 @@ export function useTheme(): DefaultTheme {
  * Provide a theme to an entire react component tree via context
  */
 export default function ThemeProvider(props: Props): JSX.Element | null {
-  const outerTheme = useTheme();
+  const outerTheme = React.useContext(ThemeContext);
   const themeContext = useMemo(
     () => mergeTheme(props.theme, outerTheme),
     [props.theme, outerTheme]

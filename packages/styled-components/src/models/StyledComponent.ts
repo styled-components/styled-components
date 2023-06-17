@@ -31,7 +31,7 @@ import { joinStrings } from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import ComponentStyle from './ComponentStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
-import { DefaultTheme, useTheme } from './ThemeProvider';
+import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 const identifiers: { [key: string]: number } = {};
 
@@ -119,7 +119,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
     target,
   } = forwardedComponent;
 
-  const contextTheme = useTheme();
+  const contextTheme = React.useContext(ThemeContext);
   const ssc = useStyleSheetContext();
   const shouldForwardProp = forwardedComponent.shouldForwardProp || ssc.shouldForwardProp;
 
