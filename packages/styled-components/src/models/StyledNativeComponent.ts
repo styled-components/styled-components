@@ -2,6 +2,7 @@ import React, { createElement, Ref, useMemo } from 'react';
 import type {
   Attrs,
   Dict,
+  ExecutionContext,
   ExecutionProps,
   IInlineStyleConstructor,
   IStyledComponent,
@@ -10,12 +11,10 @@ import type {
   NativeTarget,
   OmitNever,
   RuleSet,
-  StyledComponentProps,
   StyledOptions,
-  ThemedProps,
 } from '../types';
 import determineTheme from '../utils/determineTheme';
-import { EMPTY_OBJECT } from '../utils/empties';
+import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
@@ -26,12 +25,12 @@ import { DefaultTheme, ThemeContext } from './ThemeProvider';
 function useResolvedAttrs<Props extends object>(
   theme: DefaultTheme = EMPTY_OBJECT,
   props: Props,
-  attrs: Attrs<unknown>[]
+  attrs: Attrs<Props>[]
 ) {
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
   // where resolvedAttrs is only the things injected by the attrs themselves
-  const context: ThemedProps<Props> = { ...props, theme };
+  const context: ExecutionContext & Props = { ...props, theme };
   const resolvedAttrs: Dict<any> = {};
 
   attrs.forEach(attrDef => {
@@ -112,26 +111,23 @@ function useStyledComponentImpl<
 export default (InlineStyle: IInlineStyleConstructor<any>) => {
   const createStyledNativeComponent = <
     Target extends NativeTarget,
-    OtherProps extends ExecutionProps,
+    OuterProps extends ExecutionProps,
     Statics extends object = object
   >(
     target: Target,
-    options: StyledOptions<'native', OtherProps>,
-    rules: RuleSet<StyledComponentProps<'native', Target, OtherProps, never>>
-  ): ReturnType<IStyledComponentFactory<'native', Target, OtherProps, never, Statics>> => {
+    options: StyledOptions<'native', OuterProps>,
+    rules: RuleSet<OuterProps>
+  ): ReturnType<IStyledComponentFactory<'native', Target, OuterProps, Statics>> => {
     const isTargetStyledComp = isStyledComponent(target);
-    const styledComponentTarget = target as IStyledComponent<'native', Target, OtherProps>;
+    const styledComponentTarget = target as IStyledComponent<'native', Target, OuterProps>;
 
-    const { displayName = generateDisplayName(target) } = options;
-    const attrs = (options.attrs ?? []) as Attrs<
-      StyledComponentProps<'native', Target, OtherProps, never>
-    >[];
+    const { displayName = generateDisplayName(target), attrs = EMPTY_ARRAY } = options;
 
     // fold the underlying StyledComponent attrs up (implicit extend)
     const finalAttrs =
       isTargetStyledComp && styledComponentTarget.attrs
         ? styledComponentTarget.attrs.concat(attrs).filter(Boolean)
-        : attrs;
+        : (attrs as Attrs<OuterProps>[]);
 
     let shouldForwardProp = options.shouldForwardProp;
 
@@ -150,8 +146,8 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       }
     }
 
-    const forwardRef = (props: ExecutionProps & OtherProps, ref: React.Ref<any>) =>
-      useStyledComponentImpl<Target, OtherProps>(WrappedStyledComponent, props, ref);
+    const forwardRef = (props: ExecutionProps & OuterProps, ref: React.Ref<any>) =>
+      useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref);
 
     forwardRef.displayName = displayName;
 
@@ -162,14 +158,14 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
       'native',
       Target,
-      OtherProps
+      OuterProps
     > &
       Statics;
 
     WrappedStyledComponent.attrs = finalAttrs;
     WrappedStyledComponent.inlineStyle = new InlineStyle(
       isTargetStyledComp ? styledComponentTarget.inlineStyle.rules.concat(rules) : rules
-    );
+    ) as InstanceType<IInlineStyleConstructor<OuterProps>>;
     WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
 

@@ -11,7 +11,6 @@ import type {
   IStyledStatics,
   OmitNever,
   RuleSet,
-  StyledComponentProps,
   StyledOptions,
   WebTarget,
 } from '../types';
@@ -19,7 +18,7 @@ import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
 import domElements from '../utils/domElements';
-import { EMPTY_OBJECT } from '../utils/empties';
+import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
@@ -70,12 +69,12 @@ function useInjectedStyle<T extends object>(
 }
 
 function resolveContext<Props extends object>(
-  attrs: Attrs<unknown>[],
+  attrs: Attrs<Props>[],
   props: React.HTMLAttributes<Element> & Props,
   theme: DefaultTheme
 ) {
   const context: ExecutionContext &
-    Props & { class?: string; className?: string; ref?: React.Ref<any>; style?: any } = {
+    Props & { class?: string; className?: string; ref?: React.Ref<any> } = {
     ...props,
     // unset, add `props.className` back at the end so props always "wins"
     className: undefined,
@@ -177,24 +176,22 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
 
 function createStyledComponent<
   Target extends WebTarget,
-  OtherProps extends object,
+  OuterProps extends object,
   Statics extends object = object
 >(
   target: Target,
-  options: StyledOptions<'web', OtherProps>,
-  rules: RuleSet<OtherProps>
-): ReturnType<IStyledComponentFactory<'web', Target, OtherProps, never, Statics>> {
+  options: StyledOptions<'web', OuterProps>,
+  rules: RuleSet<OuterProps>
+): ReturnType<IStyledComponentFactory<'web', Target, OuterProps, Statics>> {
   const isTargetStyledComp = isStyledComponent(target);
-  const styledComponentTarget = target as IStyledComponent<'web', Target, OtherProps>;
+  const styledComponentTarget = target as IStyledComponent<'web', Target, OuterProps>;
   const isCompositeComponent = !isTag(target);
 
   const {
+    attrs = EMPTY_ARRAY,
     componentId = generateId(options.displayName, options.parentComponentId),
     displayName = generateDisplayName(target),
   } = options;
-  const attrs = (options.attrs ?? []) as Attrs<
-    StyledComponentProps<'web', Target, OtherProps, never>
-  >[];
 
   const styledComponentId =
     options.displayName && options.componentId
@@ -204,8 +201,8 @@ function createStyledComponent<
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     isTargetStyledComp && styledComponentTarget.attrs
-      ? styledComponentTarget.attrs.concat(attrs).filter(Boolean)
-      : attrs;
+      ? styledComponentTarget.attrs.concat(attrs as unknown as Attrs<OuterProps>[]).filter(Boolean)
+      : (attrs as Attrs<OuterProps>[]);
 
   let { shouldForwardProp } = options;
 
@@ -233,8 +230,8 @@ function createStyledComponent<
   // statically styled-components don't need to build an execution context object,
   // and shouldn't be increasing the number of class names
   const isStatic = componentStyle.isStatic && attrs.length === 0;
-  function forwardRef(props: ExecutionProps & OtherProps, ref: Ref<Element>) {
-    return useStyledComponentImpl<Target, OtherProps>(WrappedStyledComponent, props, ref, isStatic);
+  function forwardRef(props: ExecutionProps & OuterProps, ref: Ref<Element>) {
+    return useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref, isStatic);
   }
 
   forwardRef.displayName = displayName;
@@ -246,7 +243,7 @@ function createStyledComponent<
   let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
     'web',
     typeof target,
-    OtherProps
+    OuterProps
   > &
     Statics;
   WrappedStyledComponent.attrs = finalAttrs;
@@ -303,7 +300,7 @@ function createStyledComponent<
         shouldForwardProp: true,
         styledComponentId: true,
         target: true,
-      } as { [key in keyof OmitNever<IStyledStatics<'web', OtherProps>>]: true }
+      } as { [key in keyof OmitNever<IStyledStatics<'web', OuterProps>>]: true }
     );
   }
 

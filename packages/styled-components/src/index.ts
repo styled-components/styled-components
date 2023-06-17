@@ -9,6 +9,8 @@ export {
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
+  PolymorphicComponent,
+  PolymorphicComponentProps,
   RuleSet,
   Runtime,
   StyledObject,
