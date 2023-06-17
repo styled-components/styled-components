@@ -29,6 +29,7 @@ import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import { joinStrings } from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
+import { setToString } from '../utils/setToString';
 import ComponentStyle from './ComponentStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, useTheme } from './ThemeProvider';
@@ -285,13 +286,7 @@ function createStyledComponent<
     );
   }
 
-  // If the Object prototype is frozen, the "toString" property is non-writable. This means that any objects which inherit this property
-  // cannot have the property changed using an assignment. If using strict mode, attempting that will cause an error. If not using strict
-  // mode, attempting that will be silently ignored.
-  // However, we can still explicitly shadow the prototype's "toString" property by defining a new "toString" property on this object.
-  Object.defineProperty(WrappedStyledComponent, 'toString', {
-    value: () => `.${WrappedStyledComponent.styledComponentId}`,
-  });
+  setToString(WrappedStyledComponent, () => `.${WrappedStyledComponent.styledComponentId}`);
 
   if (isCompositeComponent) {
     const compositeComponentTarget = target as AnyComponent;
