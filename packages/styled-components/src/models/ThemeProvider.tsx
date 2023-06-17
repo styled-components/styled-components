@@ -71,7 +71,7 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme): DefaultThe
  *
  * If no `ThemeProvider` is found, the function will error. If you need access to the theme in an
  * uncertain composition scenario, `React.useContext(ThemeContext)` will not emit an error if there
- * is no theme.
+ * is no `ThemeProvider` ancestor.
  */
 export function useTheme(): DefaultTheme {
   const theme = useContext(ThemeContext);

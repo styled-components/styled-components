@@ -113,3 +113,5 @@ export function App() {
   );
 }
 ```
+
+If you need access to the theme in an uncertain composition scenario, `React.useContext(ThemeContext)` will not emit an error if there is no `ThemeProvider` ancestor.
