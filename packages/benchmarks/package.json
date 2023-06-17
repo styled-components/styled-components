@@ -30,6 +30,7 @@
     "babel-plugin-module-resolver": "^4.1.0",
     "babel-plugin-react-native-web": "^0.18.12",
     "css-loader": "^6.7.3",
+    "puppeteer": "^20.1.2",
     "source-map-loader": "^4.0.1",
     "style-loader": "^3.3.1",
     "webpack": "^5.75.0",
