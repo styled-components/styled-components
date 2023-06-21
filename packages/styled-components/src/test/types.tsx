@@ -204,10 +204,10 @@ const InheritedDivWithProps = styled(DivWithProps)`
 /** StyledObject should accept undefined properties
  * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
-interface MyStyle extends StyledObject<{}> {
+interface MyStyle extends StyledObject<object> {
   fontSize: string;
   lineHeight: string;
-  textTransform?: string;
+  textTransform?: StyledObject<object>['textTransform'];
 }
 
 const DivWithRequiredProps = styled.div.attrs<{ foo?: number; bar: string }>({
@@ -360,10 +360,10 @@ const AttrFunctionRequiredTest5 = styled(DivWithUnfulfilledRequiredProps).attrs(
 // CSSProp support for different things
 <Button css="padding: 0.5em 1em;" foo />;
 type CSSPropTestType = { color?: string; css?: CSSProp };
-styled.div<CSSPropTestType>(p => ({ css: 'color: red;' }));
-styled.div<CSSPropTestType>(p => ({ css: { color: 'red' } }));
-styled.div<CSSPropTestType>(p => ({ css: () => ({ color: 'red' }) }));
-styled.div<CSSPropTestType>(p => ({
+styled.div<CSSPropTestType>(_ => ({ css: 'color: red;' }));
+styled.div<CSSPropTestType>(_ => ({ css: { color: 'red' } }));
+styled.div<CSSPropTestType>(_ => ({ css: () => ({ color: 'red' }) }));
+styled.div<CSSPropTestType>(_ => ({
   css: css`
     color: red;
   `,
@@ -374,3 +374,6 @@ styled.div<CSSPropTestType>(p => ({
     color: ${p => p.color || 'red'};
   `,
 }));
+
+// object styles
+styled.div({ color: 'red', '@media (min-width: 500px)': { fontSize: '11px' } });

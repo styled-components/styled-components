@@ -1,3 +1,4 @@
+import { Properties } from 'csstype';
 import React from 'react';
 import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
@@ -228,17 +229,16 @@ export interface IInlineStyle<Props extends object> {
   generateStyleObject(executionContext: Object): Object;
 }
 
-export interface StyledObject<Props extends object> {
-  [key: string]:
-    | string
-    | number
-    | StyleFunction<Props>
-    | StyledObject<Props>
-    | RuleSet<Props>
-    | undefined;
-}
-// uncomment when we can eventually override index signatures with more specific types
-// [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);
+export type StyledObject<Props extends object> = Properties &
+  Props & {
+    [key: string]:
+      | string
+      | number
+      | StyleFunction<Props>
+      | StyledObject<Props>
+      | RuleSet<any>
+      | undefined;
+  };
 
 /**
  * The `css` prop is not declared by default in the types as it would cause `css` to be present
