@@ -250,5 +250,21 @@ describe('props', () => {
       expect(stub).toHaveBeenCalledWith('filterThis', 'a');
       expect(stub).toHaveBeenCalledWith('href', 'a');
     });
+
+    it('warns in development mode when shouldForwardProp is not provided for an unknown prop', () => {
+      let originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const Comp = styled('div')<{ filterThis: string }>`
+        color: red;
+      `;
+
+      TestRenderer.create(<Comp as="a" href="/foo" filterThis="abc" />);
+
+      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('filterThis'));
+      process.env.NODE_ENV = originalEnv;
+    });
   });
 });
