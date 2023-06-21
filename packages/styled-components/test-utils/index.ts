@@ -20,22 +20,19 @@ function assertStyledComponent(styledComponent: any) {
   }
 }
 
-export function enzymeFind(
-  wrapper: ReactWrapper,
-  styledComponent: IStyledComponent<'web', any, any>
-) {
+export function enzymeFind(wrapper: ReactWrapper, styledComponent: IStyledComponent<'web', any>) {
   assertStyledComponent(styledComponent);
 
   return wrapper.find(`.${styledComponent.styledComponentId}`);
 }
 
-export function find(element: Element, styledComponent: IStyledComponent<'web', any, any>) {
+export function find(element: Element, styledComponent: IStyledComponent<'web', any>) {
   assertElement(element);
   assertStyledComponent(styledComponent);
   return element.querySelector(`.${styledComponent.styledComponentId}`);
 }
 
-export function findAll(element: Element, styledComponent: IStyledComponent<'web', any, any>) {
+export function findAll(element: Element, styledComponent: IStyledComponent<'web', any>) {
   assertElement(element);
   assertStyledComponent(styledComponent);
   return element.querySelectorAll(`.${styledComponent.styledComponentId}`);
