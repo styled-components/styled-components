@@ -10,6 +10,13 @@
     "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js",
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
   },
+  "exports": {
+		".": {
+      "types": "./dist/index.d.ts",
+			"import": "./dist/styled-components.esm.js",
+			"require": "./dist/styled-components.cjs.js"
+		}
+	},
   "sideEffects": false,
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
