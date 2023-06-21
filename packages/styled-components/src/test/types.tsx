@@ -4,6 +4,7 @@
 import React from 'react';
 import { css, CSSProp, IStyledComponent, StyledObject } from '../index';
 import styled from '../index-standalone';
+import { DataAttributes } from '../types';
 import { VeryLargeUnionType } from './veryLargeUnionType';
 
 /**
@@ -237,13 +238,15 @@ const RequiredPropsProvidedAsAttrs = styled(DivWithUnfulfilledRequiredProps).att
 /** Attrs should not expect all props to be provided (even if they are required)
  * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
-const AttrRequiredTest = styled(DivWithUnfulfilledRequiredProps).attrs<{ bar?: string }>({
+const AttrRequiredTest = styled(DivWithUnfulfilledRequiredProps).attrs<
+  DataAttributes & { bar?: string }
+>({
   // Should not have to provide foo within attrs
   bar: 'hello',
   // Should allow hyphenated props
   'data-test': 42,
 })``;
-<AttrRequiredTest foo={42} bar="bar" />;
+<AttrRequiredTest data-yeah="ok" foo={42} bar="bar" />;
 // Bar was defaulted in attrs
 <AttrRequiredTest foo={42} />;
 // foo is not required
@@ -338,18 +341,15 @@ const StyledComponentVeryLargeUnion = styled(UnstyledComponentVeryLargeUnion)`
 // Can provide div props into attrs
 const AttrFunctionRequiredTest2 = styled.div.attrs(_ => ({
   color: '',
-  // Should allow custom props
-  'data-foo': 42,
 }))``;
 
 // Can provide purely custom props
-const AttrFunctionRequiredTest3 = styled.div.attrs(_ => ({
+const AttrFunctionRequiredTest3 = styled.div.attrs<DataAttributes>(_ => ({
   'data-test': 42,
 }))``;
 
+// @ts-expect-error Cannot provide unknown attributes
 const AttrFunctionRequiredTest4 = styled.div.attrs(_ => ({
-  'data-test': 42,
-  // @ts-expect-error Cannot provide unknown attributes
   waz: 42,
 }))``;
 
