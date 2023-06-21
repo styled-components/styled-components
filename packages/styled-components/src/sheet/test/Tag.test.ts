@@ -1,8 +1,8 @@
-import { Class } from 'utility-types';
+import { C } from 'ts-toolbelt';
 import { CSSOMTag, TextTag, VirtualTag } from '../Tag';
 import { Tag } from '../types';
 
-const describeTag = (TagClass: Class<Tag>) => {
+const describeTag = (TagClass: C.Class<[], Tag>) => {
   it('inserts and retrieves rules at indices', () => {
     const tag = new TagClass();
     expect(tag.insertRule(0, '.b {}')).toBe(true);

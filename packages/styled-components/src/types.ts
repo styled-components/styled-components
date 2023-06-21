@@ -10,6 +10,8 @@ interface ExoticComponentWithDisplayName<P = any> extends React.ExoticComponent<
 
 export type BaseObject = object;
 
+export type Exact<T> = { [K in keyof T]: T[K] };
+
 // from https://stackoverflow.com/a/69852402
 export type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
 
@@ -38,8 +40,9 @@ export interface StyledOptions<R extends Runtime, Props extends object> {
 
 export type Dict<T = any> = { [key: string]: T };
 
-export interface ExecutionProps {
-  [key: `data-${string}`]: any;
+export type DataAttributes = { [key: `data-${string}`]: any };
+
+export type ExecutionProps = {
   /**
    * Dynamically adjust the rendered component or HTML tag, e.g.
    * ```
@@ -53,7 +56,7 @@ export interface ExecutionProps {
   as?: KnownTarget;
   forwardedAs?: KnownTarget;
   theme?: DefaultTheme;
-}
+};
 
 /**
  * ExecutionProps but with `theme` required.
