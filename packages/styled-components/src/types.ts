@@ -125,7 +125,7 @@ export type FlattenerResult<Props extends object> =
   | number
   | string
   | string[]
-  | IStyledComponent<'web', any>
+  | StyledComponentBrand
   | Keyframes;
 
 export interface Stringifier {

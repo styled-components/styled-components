@@ -107,7 +107,7 @@ export default function constructWithOptions<
     componentConstructor<Substitute<OuterProps, NoInfer<Props>>, Statics>(
       tag,
       options as StyledOptions<R, Substitute<OuterProps, NoInfer<Props>>>,
-      css(initialStyles, ...interpolations)
+      css<Substitute<OuterProps, NoInfer<Props>>>(initialStyles, ...interpolations)
     );
 
   /**

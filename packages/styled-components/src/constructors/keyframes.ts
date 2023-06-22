@@ -19,7 +19,7 @@ export default function keyframes<Props extends object = {}>(
     );
   }
 
-  const rules = joinStringArray(css(strings, ...interpolations) as string[]);
+  const rules = joinStringArray(css<Props>(strings, ...interpolations) as string[]);
   const name = generateComponentId(rules);
   return new Keyframes(name, rules);
 }
