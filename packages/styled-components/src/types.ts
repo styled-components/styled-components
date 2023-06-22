@@ -9,6 +9,12 @@ interface ExoticComponentWithDisplayName<P = any> extends React.ExoticComponent<
   displayName?: string;
 }
 
+/**
+ * Use this type to disambiguate between a styled-component instance
+ * and a StyleFunction or any other type of function.
+ */
+export type StyledComponentBrand = { readonly _sc: symbol };
+
 export type BaseObject = object;
 
 export type Exact<T> = { [K in keyof T]: T[K] };
@@ -80,12 +86,7 @@ export type Interpolation<Props extends object> =
   | undefined
   | null
   | Keyframes
-  // Omit function signature for IStyledComponent in Interpolation so that TS
-  // can disambiguate functions as StyleFunction. Note that IStyledComponent is
-  // not actually callable, the function signature is just a crutch for JSX,
-  // same as React.ExoticComponent.
-  // We don't allow component selectors for native.
-  | IStyledComponent<'web', any>
+  | StyledComponentBrand
   | Interpolation<Props>[];
 
 export type Attrs<Props extends object = BaseObject> =
@@ -201,7 +202,8 @@ export interface PolymorphicComponent<R extends Runtime, BaseProps extends objec
 
 export interface IStyledComponent<R extends Runtime, Props extends object = BaseObject>
   extends PolymorphicComponent<R, Props>,
-    IStyledStatics<R, Props> {
+    IStyledStatics<R, Props>,
+    StyledComponentBrand {
   defaultProps?: Partial<Substitute<ExecutionProps, Props>>;
   toString: () => string;
 }
