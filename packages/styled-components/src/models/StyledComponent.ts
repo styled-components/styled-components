@@ -148,17 +148,18 @@ function useStyledComponentImpl<Props extends object>(
       propsForElement.as = context.forwardedAs;
     } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
       propsForElement[key] = context[key];
+    }
 
-      if (
-        process.env.NODE_ENV === 'development' &&
-        !isPropValid(key) &&
-        !seenUnknownProps.has(key)
-      ) {
-        seenUnknownProps.add(key);
-        console.warn(
-          `styled-components: it looks like an unknown prop "${key}" is being sent through to the DOM, which will likely trigger a React console error. If you would like automatic filtering of unknown props, you can opt-into that behavior via \`<StyleSheetManager shouldForwardProp={...}>\` (connect an API like \`@emotion/is-prop-valid\`) or consider using transient props (\`$\` prefix for automatic filtering.)`
-        );
-      }
+    if (
+      !shouldForwardProp &&
+      process.env.NODE_ENV === 'development' &&
+      !isPropValid(key) &&
+      !seenUnknownProps.has(key)
+    ) {
+      seenUnknownProps.add(key);
+      console.warn(
+        `styled-components: it looks like an unknown prop "${key}" is being sent through to the DOM, which will likely trigger a React console error. If you would like automatic filtering of unknown props, you can opt-into that behavior via \`<StyleSheetManager shouldForwardProp={...}>\` (connect an API like \`@emotion/is-prop-valid\`) or consider using transient props (\`$\` prefix for automatic filtering.)`
+      );
     }
   }
 
