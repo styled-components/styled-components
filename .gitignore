@@ -20,3 +20,4 @@ README.md
 .rollup.cache
 .build
 .next
+*.tsbuildinfo

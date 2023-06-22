@@ -4,6 +4,8 @@ import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
+export { DefaultTheme };
+
 interface ExoticComponentWithDisplayName<P = any> extends React.ExoticComponent<P> {
   defaultProps?: Partial<P>;
   displayName?: string;
@@ -15,16 +17,12 @@ interface ExoticComponentWithDisplayName<P = any> extends React.ExoticComponent<
  */
 export type StyledComponentBrand = { readonly _sc: symbol };
 
-export type BaseObject = object;
-
-export type Exact<T> = { [K in keyof T]: T[K] };
+export type BaseObject = {};
 
 // from https://stackoverflow.com/a/69852402
 export type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
 
 export type Runtime = 'web' | 'native';
-
-export { DefaultTheme };
 
 export type AnyComponent<P = any> = ExoticComponentWithDisplayName<P> | React.ComponentType<P>;
 

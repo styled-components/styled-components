@@ -52,11 +52,11 @@ export interface Styled<
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
     initialStyles: Styles<Substitute<OuterProps, NoInfer<Props>>>,
     ...interpolations: Interpolation<Substitute<OuterProps, NoInfer<Props>>>[]
-  ): IStyledComponent<R, Substitute<OuterProps, NoInfer<Props>>> & OuterStatics & Statics;
+  ): IStyledComponent<R, Substitute<OuterProps, Props>> & OuterStatics & Statics;
 
   attrs: <
     Props extends object = BaseObject,
-    PrivateMergedProps extends object = Substitute<OuterProps, NoInfer<Props>>,
+    PrivateMergedProps extends object = Substitute<OuterProps, Props>,
     PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
     PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>
   >(
@@ -67,7 +67,7 @@ export interface Styled<
     PrivateResolvedTarget extends KnownTarget
       ? Substitute<
           Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-          NoInfer<Props>
+          Props
         >
       : PrivateMergedProps,
     OuterStatics
@@ -101,13 +101,13 @@ export default function constructWithOptions<
 
   /* This is callable directly as a template function */
   const templateFunction = <Props extends object = BaseObject, Statics extends object = BaseObject>(
-    initialStyles: Styles<Substitute<OuterProps, NoInfer<Props>>>,
-    ...interpolations: Interpolation<Substitute<OuterProps, NoInfer<Props>>>[]
+    initialStyles: Styles<Substitute<OuterProps, Props>>,
+    ...interpolations: Interpolation<Substitute<OuterProps, Props>>[]
   ) =>
-    componentConstructor<Substitute<OuterProps, NoInfer<Props>>, Statics>(
+    componentConstructor<Substitute<OuterProps, Props>, Statics>(
       tag,
-      options as StyledOptions<R, Substitute<OuterProps, NoInfer<Props>>>,
-      css<Substitute<OuterProps, NoInfer<Props>>>(initialStyles, ...interpolations)
+      options as StyledOptions<R, Substitute<OuterProps, Props>>,
+      css<Substitute<OuterProps, Props>>(initialStyles, ...interpolations)
     );
 
   /**
@@ -118,7 +118,7 @@ export default function constructWithOptions<
    */
   templateFunction.attrs = <
     Props extends object = BaseObject,
-    PrivateMergedProps extends object = Substitute<OuterProps, NoInfer<Props>>,
+    PrivateMergedProps extends object = Substitute<OuterProps, Props>,
     PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
     PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>
   >(
@@ -130,7 +130,7 @@ export default function constructWithOptions<
       PrivateResolvedTarget extends KnownTarget
         ? Substitute<
             Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-            NoInfer<Props>
+            Props
           >
         : PrivateMergedProps,
       OuterStatics
