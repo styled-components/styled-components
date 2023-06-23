@@ -2,26 +2,14 @@ import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../constan
 import styledError from '../utils/error';
 import getNonce from '../utils/nonce';
 
-const ELEMENT_TYPE = 1;
-/* Node.ELEMENT_TYPE */
-
 /** Find last style element if any inside target */
 const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
-  const { childNodes } = target;
-
-  for (let i = childNodes.length; i >= 0; i--) {
-    const child = childNodes[i] as any as HTMLElement | null | undefined;
-    if (child && child.nodeType === ELEMENT_TYPE && child.hasAttribute(SC_ATTR)) {
-      return child as any as HTMLStyleElement;
-    }
-  }
-
-  return undefined;
+  return Array.from(target.querySelectorAll<HTMLStyleElement>(`style[${SC_ATTR}]`)).at(-1);
 };
 
 /** Create a style element inside `target` or <head> after the last */
 export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
-  const head = document.head as any as HTMLElement;
+  const head = document.head;
   const parent = target || head;
   const style = document.createElement('style');
   const prevStyle = findLastStyleTag(parent);
