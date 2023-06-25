@@ -2,7 +2,7 @@ import * as CSS from 'csstype';
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 import ThemeProvider from '../models/ThemeProvider';
-import { AnyComponent } from '../types';
+import { AnyComponent, DataAttributes } from '../types';
 import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
@@ -48,13 +48,17 @@ describe('attrs', () => {
       }
     }
 
-    const Button = ({ component: ChildComponent }: { component: AnyComponent }) => (
+    type ButtonProps = {
+      component: AnyComponent;
+    };
+
+    const Button = ({ component: ChildComponent }: ButtonProps) => (
       <button>
         <ChildComponent />
       </button>
     );
 
-    const Comp = styled(Button).attrs(() => ({
+    const Comp = styled(Button).attrs<Partial<ButtonProps>>(() => ({
       component: ReactComponent,
     }))``;
 
@@ -64,7 +68,7 @@ describe('attrs', () => {
   it('should not call a function passed to attrs as an object value', () => {
     const stub = jest.fn(() => 'div');
 
-    const Comp = styled.button.attrs<{ foo: typeof stub }>(() => ({
+    const Comp = styled.button.attrs<{ foo?: typeof stub }>(() => ({
       foo: stub,
     }))``;
 
@@ -74,7 +78,7 @@ describe('attrs', () => {
   });
 
   it('function form allows access to theme', () => {
-    const Comp = styled.button.attrs(props => ({
+    const Comp = styled.button.attrs<DataAttributes>(props => ({
       'data-color': props.theme!.color,
     }))``;
 
@@ -93,7 +97,7 @@ describe('attrs', () => {
   });
 
   it('defaultProps are merged into what function attrs receives', () => {
-    const Comp = styled.button.attrs(props => ({
+    const Comp = styled.button.attrs<DataAttributes>(props => ({
       'data-color': props.theme!.color,
     }))``;
 
@@ -183,7 +187,7 @@ describe('attrs', () => {
   });
 
   it('should work with data and aria attributes', () => {
-    const Comp = styled.div.attrs(() => ({
+    const Comp = styled.div.attrs<DataAttributes>(() => ({
       'data-foo': 'bar',
       'aria-label': 'A simple FooBar',
     }))``;
@@ -215,7 +219,7 @@ describe('attrs', () => {
 
   it('pass attrs to style block', () => {
     /* Would be a React Router Link in real life */
-    const Comp = styled.a.attrs(() => ({
+    const Comp = styled.a.attrs<DataAttributes>(() => ({
       href: '#',
       'data-active-class-name': '--is-active',
     }))`
@@ -319,11 +323,13 @@ describe('attrs', () => {
   });
 
   it('does not pass transient props to HTML element', () => {
-    const Comp = styled.div<{ $textColor: CSS.Properties['color'] }>`
+    type CompProps = { $textColor: CSS.Properties['color'] };
+
+    const Comp = styled.div<CompProps>`
       color: ${props => props.$textColor};
     `;
 
-    const StyledComp = styled(Comp).attrs(() => ({
+    const StyledComp = styled(Comp).attrs<Partial<CompProps>>(() => ({
       $textColor: 'red',
     }))``;
 
