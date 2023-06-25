@@ -9100,6 +9100,7 @@ style-loader@^3.3.1:
     "@emotion/unitless" "^0.8.0"
     "@types/stylis" "^4.0.2"
     css-to-react-native "^3.2.0"
+    csstype "^3.1.2"
     postcss "^8.4.23"
     shallowequal "^1.1.0"
     stylis "^4.2.0"
