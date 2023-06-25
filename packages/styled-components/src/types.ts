@@ -1,10 +1,10 @@
-import { Properties } from 'csstype';
+import * as CSS from 'csstype';
 import React from 'react';
 import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
-export { DefaultTheme };
+export { CSS, DefaultTheme };
 
 interface ExoticComponentWithDisplayName<P = any> extends React.ExoticComponent<P> {
   defaultProps?: Partial<P>;
@@ -230,7 +230,7 @@ export interface IInlineStyle<Props extends object> {
   generateStyleObject(executionContext: Object): Object;
 }
 
-export type StyledObject<Props extends object> = Substitute<Props, Properties> & {
+export type StyledObject<Props extends object> = Substitute<Props, CSS.Properties> & {
   [key: string]:
     | string
     | number
