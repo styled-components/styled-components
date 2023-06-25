@@ -71,7 +71,7 @@ export interface ExecutionContext extends ExecutionProps {
 }
 
 export interface StyleFunction<Props extends object> {
-  (executionContext: ExecutionContext & Props): Interpolation<Props>;
+  (executionContext: ExecutionContext & Props): Interpolation<object>;
 }
 
 export type Interpolation<Props extends object> =
@@ -230,16 +230,15 @@ export interface IInlineStyle<Props extends object> {
   generateStyleObject(executionContext: Object): Object;
 }
 
-export type StyledObject<Props extends object> = Properties &
-  Props & {
-    [key: string]:
-      | string
-      | number
-      | StyleFunction<Props>
-      | StyledObject<Props>
-      | RuleSet<any>
-      | undefined;
-  };
+export type StyledObject<Props extends object> = Substitute<Props, Properties> & {
+  [key: string]:
+    | string
+    | number
+    | StyleFunction<Props>
+    | StyledObject<Props>
+    | RuleSet<any>
+    | undefined;
+};
 
 /**
  * The `css` prop is not declared by default in the types as it would cause `css` to be present

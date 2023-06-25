@@ -377,3 +377,29 @@ styled.div<CSSPropTestType>(p => ({
 
 // object styles
 styled.div({ color: 'red', '@media (min-width: 500px)': { fontSize: '11px' } });
+
+type TextProps = React.PropsWithChildren<{
+  color: 'primary' | 'secondary';
+  size?: 'sm' | 'md' | 'lg';
+}>;
+
+const sizeMap = {
+  sm: '10px',
+  md: '14px',
+  lg: '16px',
+} as const;
+
+const Text2 = styled('span')<TextProps>(({ color, size }) => ({
+  color: color === 'primary' ? '#444' : color === 'secondary' ? 'maroon' : 'black',
+  fontSize: size && sizeMap[size],
+}));
+
+type ExtendingTextProps = React.PropsWithChildren<{ hasResult: boolean }>;
+const ExtendingText = styled(Text2)<ExtendingTextProps>(({ hasResult }) => ({
+  opacity: !hasResult ? '100%' : '50%',
+}));
+
+const StylingText = styled(Text2)({
+  display: 'block',
+  margin: '10px 0',
+});
