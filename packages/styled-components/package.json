@@ -74,7 +74,7 @@
     "csstype": "^3.1.2",
     "postcss": "^8.4.23",
     "shallowequal": "^1.1.0",
-    "stylis": "^4.2.0",
+    "stylis": "^4.3.0",
     "tslib": "^2.5.0"
   },
   "peerDependencies": {
