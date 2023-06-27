@@ -61,11 +61,11 @@ describe('stylis', () => {
       }
 
       // this currently does not split correctly
-      // @media (min-width: 500px) {
-      //   &::placeholder {
-      //     content: "}";
-      //   }
-      // }
+      @media (min-width: 500px) {
+        &::placeholder {
+          content: "}";
+        }
+      }
     `,
       { options: { prefix: true } }
     );
@@ -76,19 +76,11 @@ describe('stylis', () => {
         ".a::-moz-placeholder{color:red;}",
         ".a:-ms-input-placeholder{color:red;}",
         ".a::placeholder{color:red;}",
+        "@media (min-width: 500px){.a::-webkit-input-placeholder{content:"}";}}",
+        "@media (min-width: 500px){.a::-moz-placeholder{content:"}";}}",
+        "@media (min-width: 500px){.a:-ms-input-placeholder{content:"}";}}",
+        "@media (min-width: 500px){.a::placeholder{content:"}";}}",
       ]
     `);
-    // `
-    //   [
-    //     ".a::-webkit-input-placeholder{color:red;}",
-    //     ".a::-moz-placeholder{color:red;}",
-    //     ".a:-ms-input-placeholder{color:red;}",
-    //     ".a::placeholder{color:red;}",
-    //     "@media (min-width: 500px){.a::-webkit-input-placeholder{color:red;}}",
-    //     "@media (min-width: 500px){.a::-moz-placeholder{color:red;}}",
-    //     "@media (min-width: 500px){.a:-ms-input-placeholder{color:red;}}",
-    //     "@media (min-width: 500px){.a::placeholder{color:red;}}",
-    //   ]
-    // `
   });
 });
