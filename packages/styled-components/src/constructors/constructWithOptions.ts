@@ -44,9 +44,7 @@ type AttrsTarget<
 export interface Styled<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  OuterProps extends object = Target extends KnownTarget
-    ? React.ComponentPropsWithRef<Target>
-    : BaseObject,
+  OuterProps extends object,
   OuterStatics extends object = BaseObject
 > {
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
