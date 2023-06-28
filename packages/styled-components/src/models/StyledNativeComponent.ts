@@ -44,7 +44,7 @@ function useResolvedAttrs<Props extends object>(
     }
   });
 
-  return [context, resolvedAttrs];
+  return [context, resolvedAttrs] as const;
 }
 
 interface StyledComponentImplProps extends ExecutionProps {
@@ -71,7 +71,7 @@ function useStyledComponentImpl<Props extends StyledComponentImplProps>(
   // should be an immutable value, but behave for now.
   const theme = determineTheme(props, contextTheme, defaultProps);
 
-  const [context, attrs] = useResolvedAttrs(theme || EMPTY_OBJECT, props, componentAttrs);
+  const [context, attrs] = useResolvedAttrs<Props>(theme || EMPTY_OBJECT, props, componentAttrs);
 
   const generatedStyles = inlineStyle.generateStyleObject(context);
 

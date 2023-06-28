@@ -33,7 +33,12 @@ function css<Props extends object = BaseObject>(
     const styleFunctionOrObject = styles as StyleFunction<Props> | StyledObject<Props>;
 
     return addTag(
-      flatten<Props>(interleave<Props>(EMPTY_ARRAY, [styleFunctionOrObject, ...interpolations]))
+      flatten<Props>(
+        interleave<Props>(EMPTY_ARRAY, [
+          styleFunctionOrObject,
+          ...interpolations,
+        ]) as Interpolation<object>
+      )
     );
   }
 
@@ -47,7 +52,9 @@ function css<Props extends object = BaseObject>(
     return flatten<Props>(styleStringArray);
   }
 
-  return addTag(flatten<Props>(interleave<Props>(styleStringArray, interpolations)));
+  return addTag(
+    flatten<Props>(interleave<Props>(styleStringArray, interpolations) as Interpolation<object>)
+  );
 }
 
 export default css;

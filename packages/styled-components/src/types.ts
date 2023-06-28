@@ -119,14 +119,6 @@ export interface Flattener<Props extends object> {
   ): Interpolation<Props>[];
 }
 
-export type FlattenerResult<Props extends object> =
-  | RuleSet<Props>
-  | number
-  | string
-  | string[]
-  | StyledComponentBrand
-  | Keyframes;
-
 export interface Stringifier {
   (css: string, selector?: string, prefix?: string, componentId?: string): string[];
   hash: string;
@@ -227,7 +219,7 @@ export interface IInlineStyleConstructor<Props extends object> {
 
 export interface IInlineStyle<Props extends object> {
   rules: RuleSet<Props>;
-  generateStyleObject(executionContext: Object): Object;
+  generateStyleObject(executionContext: ExecutionContext & Props): object;
 }
 
 export type StyledObject<Props extends object> = Substitute<Props, CSS.Properties> & {
