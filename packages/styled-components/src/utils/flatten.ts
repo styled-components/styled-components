@@ -45,7 +45,7 @@ export const objToCssArray = (obj: Dict<any>): string[] => {
 };
 
 export default function flatten<Props extends object>(
-  chunk: Interpolation<Props>,
+  chunk: Interpolation<object>,
   executionContext?: ExecutionContext & Props,
   styleSheet?: StyleSheet,
   stylisInstance?: Stringifier
@@ -79,7 +79,7 @@ export default function flatten<Props extends object>(
         );
       }
 
-      return flatten(result, executionContext, styleSheet, stylisInstance);
+      return flatten<Props>(result, executionContext, styleSheet, stylisInstance);
     } else {
       return [chunk as unknown as IStyledComponent<'web'>];
     }

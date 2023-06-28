@@ -52,15 +52,14 @@ function generateId(displayName?: string, parentComponentId?: string): string {
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-function useInjectedStyle<T extends object>(
+function useInjectedStyle<T extends ExecutionContext>(
   componentStyle: ComponentStyle,
-  isStatic: boolean,
   resolvedAttrs: T
 ) {
   const ssc = useStyleSheetContext();
 
   const className = componentStyle.generateAndInjectStyles(
-    isStatic ? EMPTY_OBJECT : resolvedAttrs,
+    resolvedAttrs,
     ssc.styleSheet,
     ssc.stylis
   );
@@ -77,7 +76,7 @@ function resolveContext<Props extends object>(
 ) {
   const context: React.HTMLAttributes<Element> &
     ExecutionContext &
-    Props & { class?: string; ref?: React.Ref<any> } = {
+    Props & { [key: string]: any; class?: string; ref?: React.Ref<any> } = {
     ...props,
     // unset, add `props.className` back at the end so props always "wins"
     className: undefined,
@@ -134,7 +133,7 @@ function useStyledComponentImpl<Props extends object>(
   // should be an immutable value, but behave for now.
   const theme = determineTheme(props, contextTheme, defaultProps) || EMPTY_OBJECT;
 
-  const context: Dict<any> = resolveContext<Props>(componentAttrs, props, theme);
+  const context = resolveContext<Props>(componentAttrs, props, theme);
   const elementToBeCreated: WebTarget = context.as || target;
   const propsForElement: Dict<any> = {};
 
@@ -163,7 +162,7 @@ function useStyledComponentImpl<Props extends object>(
     }
   }
 
-  const generatedClassName = useInjectedStyle(componentStyle, isStatic, context);
+  const generatedClassName = useInjectedStyle(componentStyle, context);
 
   if (process.env.NODE_ENV !== 'production' && !isStatic && forwardedComponent.warnTooManyClasses) {
     forwardedComponent.warnTooManyClasses(generatedClassName);
