@@ -33,7 +33,7 @@ const commonPlugins = [
     // The build breaks if the tests are included by the typescript plugin.
     // Since un-excluding them in tsconfig.json, we must explicitly exclude them
     // here.
-    exclude: ['**/*.test.ts', '**/*.test.tsx', 'dist'],
+    exclude: ['**/*.test.ts', '**/*.test.tsx', 'dist', 'src/test/types.tsx'],
     outputToFilesystem: true,
     tsconfig: './tsconfig.json',
   }),
