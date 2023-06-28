@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "6.0.0-rc.6",
+  "version": "6.0.0",
   "description": "CSS for the <Component> Age. Style components your way with speed, strong typing, and flexibility.",
   "types": "dist/index.d.ts",
   "main": "dist/styled-components.cjs.js",
@@ -134,7 +134,7 @@
     "files": [
       {
         "path": "./dist/styled-components.min.js",
-        "maxSize": "13kB"
+        "maxSize": "11.5kB"
       }
     ]
   },
