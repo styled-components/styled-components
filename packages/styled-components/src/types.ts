@@ -22,6 +22,10 @@ export type BaseObject = {};
 // from https://stackoverflow.com/a/69852402
 export type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
 
+type FastOmit<T, U extends string | number | symbol> = {
+  [K in keyof T as K extends U ? never : K]: T[K];
+}
+
 export type Runtime = 'web' | 'native';
 
 export type AnyComponent<P = any> = ExoticComponentWithDisplayName<P> | React.ComponentType<P>;
@@ -161,7 +165,7 @@ export type PolymorphicComponentProps<
   ForwardedAsTargetProps extends object = ForwardedAsTarget extends KnownTarget
     ? React.ComponentPropsWithoutRef<ForwardedAsTarget>
     : {}
-> = Omit<
+> = FastOmit<
   Substitute<
     BaseProps,
     // "as" wins over "forwardedAs" when it comes to prop interface
@@ -169,7 +173,7 @@ export type PolymorphicComponentProps<
   >,
   keyof ExecutionProps
 > &
-  Omit<ExecutionProps, 'as' | 'forwardedAs'> & {
+  FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
     as?: AsTarget;
     forwardedAs?: ForwardedAsTarget;
   };
@@ -259,4 +263,4 @@ export type CSSProp = Interpolation<any>;
 // Prevents TypeScript from inferring generic argument
 export type NoInfer<T> = [T][T extends any ? 0 : never];
 
-export type Substitute<A extends object, B extends object> = Omit<A, keyof B> & B;
+export type Substitute<A extends object, B extends object> = FastOmit<A, keyof B> & B;
