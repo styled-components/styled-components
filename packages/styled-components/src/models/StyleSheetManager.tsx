@@ -35,20 +35,20 @@ export type IStyleSheetManager = React.PropsWithChildren<{
    * uses the browser [CSSOM APIs](https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet).
    * When disabled, rules are inserted as simple text into style blocks.
    */
-  disableCSSOMInjection?: boolean;
+  disableCSSOMInjection?: undefined | boolean;
   /**
    * If you are working exclusively with modern browsers, vendor prefixes can often be omitted
    * to reduce the weight of CSS on the page.
    */
-  enableVendorPrefixes?: boolean;
+  enableVendorPrefixes?: undefined | boolean;
   /**
    * Provide an optional selector to be prepended to all generated style rules.
    */
-  namespace?: string;
+  namespace?: undefined | string;
   /**
    * Create and provide your own `StyleSheet` if necessary for advanced SSR scenarios.
    */
-  sheet?: StyleSheet;
+  sheet?: undefined | StyleSheet;
   /**
    * Starting in v6, styled-components no longer does its own prop validation
    * and recommends use of transient props "$prop" to pass style-only props to
@@ -63,18 +63,18 @@ export type IStyleSheetManager = React.PropsWithChildren<{
    * Manually composing `styled.{element}.withConfig({shouldForwardProp})` will
    * override this default.
    */
-  shouldForwardProp?: IStyleSheetContext['shouldForwardProp'];
+  shouldForwardProp?: undefined | IStyleSheetContext['shouldForwardProp'];
   /**
    * An array of plugins to be run by stylis (style processor) during compilation.
    * Check out [what's available on npm*](https://www.npmjs.com/search?q=keywords%3Astylis).
    *
    * \* The plugin(s) must be compatible with stylis v4 or above.
    */
-  stylisPlugins?: stylis.Middleware[];
+  stylisPlugins?: undefined | stylis.Middleware[];
   /**
    * Provide an alternate DOM node to host generated styles; useful for iframes.
    */
-  target?: HTMLElement;
+  target?: undefined | HTMLElement;
 }>;
 
 export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {
