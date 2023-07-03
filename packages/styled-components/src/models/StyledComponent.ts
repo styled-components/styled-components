@@ -245,7 +245,9 @@ function createStyledComponent<
     return useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
   }
 
-  forwardRefRender.displayName = displayName;
+  if (process.env.NODE_ENV !== 'production') {
+    forwardRefRender.displayName = displayName;
+  }
 
   /**
    * forwardRef creates a new interim component, which we'll take advantage of
@@ -258,8 +260,11 @@ function createStyledComponent<
     Statics;
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
-  WrappedStyledComponent.displayName = displayName;
   WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
+
+  if (process.env.NODE_ENV !== 'production') {
+    WrappedStyledComponent.displayName = displayName;
+  }
 
   // this static is used to preserve the cascade of static classes for component selector
   // purposes; this is especially important with usage of the css prop

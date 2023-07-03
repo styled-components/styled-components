@@ -23,7 +23,9 @@ export default function withTheme<T extends AnyComponent>(Component: T) {
     }
   );
 
-  WithTheme.displayName = `WithTheme(${getComponentName(Component)})`;
+  if (process.env.NODE_ENV !== 'production') {
+    WithTheme.displayName = `WithTheme(${getComponentName(Component)})`;
+  }
 
   return hoist(WithTheme, Component);
 }

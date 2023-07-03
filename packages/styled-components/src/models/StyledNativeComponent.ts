@@ -144,16 +144,18 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       }
     }
 
-    const forwardRef = (props: ExecutionProps & OuterProps, ref: React.Ref<any>) =>
+    const forwardRefRender = (props: ExecutionProps & OuterProps, ref: React.Ref<any>) =>
       useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
 
-    forwardRef.displayName = displayName;
+    if (process.env.NODE_ENV !== 'production') {
+      forwardRefRender.displayName = displayName;
+    }
 
     /**
      * forwardRef creates a new interim component, which we'll take advantage of
      * instead of extending ParentComponent to create _another_ interim class
      */
-    let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
+    let WrappedStyledComponent = React.forwardRef(forwardRefRender) as unknown as IStyledComponent<
       'native',
       any
     > &
@@ -163,8 +165,11 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     WrappedStyledComponent.inlineStyle = new InlineStyle(
       isTargetStyledComp ? styledComponentTarget.inlineStyle.rules.concat(rules) : rules
     ) as InstanceType<IInlineStyleConstructor<OuterProps>>;
-    WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
+
+    if (process.env.NODE_ENV !== 'production') {
+      WrappedStyledComponent.displayName = displayName;
+    }
 
     // @ts-expect-error we don't actually need this for anything other than detection of a styled-component
     WrappedStyledComponent.styledComponentId = true;
