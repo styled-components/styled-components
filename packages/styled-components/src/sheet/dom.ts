@@ -4,7 +4,9 @@ import getNonce from '../utils/nonce';
 
 /** Find last style element if any inside target */
 const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
-  return Array.from(target.querySelectorAll<HTMLStyleElement>(`style[${SC_ATTR}]`)).at(-1);
+  const arr = Array.from(target.querySelectorAll<HTMLStyleElement>(`style[${SC_ATTR}]`));
+
+  return arr[arr.length - 1];
 };
 
 /** Create a style element inside `target` or <head> after the last */
