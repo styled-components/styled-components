@@ -253,7 +253,7 @@ function createStyledComponent<
    */
   let WrappedStyledComponent = React.forwardRef(forwardRefRender) as unknown as IStyledComponent<
     'web',
-    OuterProps
+    any
   > &
     Statics;
   WrappedStyledComponent.attrs = finalAttrs;

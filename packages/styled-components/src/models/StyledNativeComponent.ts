@@ -155,7 +155,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
      */
     let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
       'native',
-      OuterProps
+      any
     > &
       Statics;
 

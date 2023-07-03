@@ -6,7 +6,7 @@ import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
 export { CSS, DefaultTheme };
 
-interface ExoticComponentWithDisplayName<P = any> extends React.ExoticComponent<P> {
+interface ExoticComponentWithDisplayName<P extends object = {}> extends React.ExoticComponent<P> {
   defaultProps?: Partial<P>;
   displayName?: string;
 }
@@ -22,13 +22,15 @@ export type BaseObject = {};
 // from https://stackoverflow.com/a/69852402
 export type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
 
-type FastOmit<T, U extends string | number | symbol> = {
+type FastOmit<T extends object, U extends string | number | symbol> = {
   [K in keyof T as K extends U ? never : K]: T[K];
-}
+};
 
 export type Runtime = 'web' | 'native';
 
-export type AnyComponent<P = any> = ExoticComponentWithDisplayName<P> | React.ComponentType<P>;
+export type AnyComponent<P extends object = any> =
+  | ExoticComponentWithDisplayName<P>
+  | React.ComponentType<P>;
 
 export type KnownTarget = Exclude<keyof JSX.IntrinsicElements, 'symbol' | 'object'> | AnyComponent;
 
@@ -199,7 +201,7 @@ export interface IStyledComponent<R extends Runtime, Props extends object = Base
   extends PolymorphicComponent<R, Props>,
     IStyledStatics<R, Props>,
     StyledComponentBrand {
-  defaultProps?: Partial<Substitute<ExecutionProps, Props>>;
+  defaultProps?: ExecutionProps & Partial<Props>;
   toString: () => string;
 }
 
