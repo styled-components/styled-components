@@ -110,8 +110,7 @@ let seenUnknownProps = new Set();
 function useStyledComponentImpl<Props extends object>(
   forwardedComponent: IStyledComponent<'web', Props>,
   props: ExecutionProps & Props,
-  forwardedRef: Ref<Element>,
-  isStatic: boolean
+  forwardedRef: Ref<Element>
 ) {
   const {
     attrs: componentAttrs,
@@ -164,7 +163,7 @@ function useStyledComponentImpl<Props extends object>(
 
   const generatedClassName = useInjectedStyle(componentStyle, context);
 
-  if (process.env.NODE_ENV !== 'production' && !isStatic && forwardedComponent.warnTooManyClasses) {
+  if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {
     forwardedComponent.warnTooManyClasses(generatedClassName);
   }
 
@@ -242,20 +241,17 @@ function createStyledComponent<
     isTargetStyledComp ? (styledComponentTarget.componentStyle as ComponentStyle) : undefined
   );
 
-  // statically styled-components don't need to build an execution context object,
-  // and shouldn't be increasing the number of class names
-  const isStatic = componentStyle.isStatic && attrs.length === 0;
-  function forwardRef(props: ExecutionProps & OuterProps, ref: Ref<Element>) {
-    return useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref, isStatic);
+  function forwardRefRender(props: ExecutionProps & OuterProps, ref: Ref<Element>) {
+    return useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
   }
 
-  forwardRef.displayName = displayName;
+  forwardRefRender.displayName = displayName;
 
   /**
    * forwardRef creates a new interim component, which we'll take advantage of
    * instead of extending ParentComponent to create _another_ interim class
    */
-  let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
+  let WrappedStyledComponent = React.forwardRef(forwardRefRender) as unknown as IStyledComponent<
     'web',
     OuterProps
   > &
