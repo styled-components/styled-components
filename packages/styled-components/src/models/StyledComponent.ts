@@ -153,7 +153,7 @@ function useStyledComponentImpl<Props extends object>(
         !isPropValid(key) &&
         !seenUnknownProps.has(key) &&
         // Only warn on HTML Element.
-        typeof elementToBeCreated === 'string'
+        isTag(elementToBeCreated)
       ) {
         seenUnknownProps.add(key);
         console.warn(
