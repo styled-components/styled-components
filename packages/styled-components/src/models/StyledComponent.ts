@@ -151,7 +151,9 @@ function useStyledComponentImpl<Props extends object>(
         !shouldForwardProp &&
         process.env.NODE_ENV === 'development' &&
         !isPropValid(key) &&
-        !seenUnknownProps.has(key)
+        !seenUnknownProps.has(key) &&
+        // Only warn on DOM Element.
+        domElements.has(elementToBeCreated as any)
       ) {
         seenUnknownProps.add(key);
         console.warn(
