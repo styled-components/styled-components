@@ -25,7 +25,6 @@ import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
-import isDOMElement from '../utils/isDOMElement';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
@@ -154,7 +153,7 @@ function useStyledComponentImpl<Props extends object>(
         !isPropValid(key) &&
         !seenUnknownProps.has(key) &&
         // Only warn on DOM Element.
-        isDOMElement(elementToBeCreated)
+        domElements.has(elementToBeCreated as any)
       ) {
         seenUnknownProps.add(key);
         console.warn(
