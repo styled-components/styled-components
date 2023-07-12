@@ -22,8 +22,6 @@ export type BaseObject = {};
 // from https://stackoverflow.com/a/69852402
 export type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
 
-type Distributive<T> = T extends any ? T : never;
-
 type FastOmit<T extends object, U extends string | number | symbol> = {
   [K in keyof T as K extends U ? never : K]: T[K];
 };
@@ -169,7 +167,7 @@ export type PolymorphicComponentProps<
   ForwardedAsTargetProps extends object = ForwardedAsTarget extends KnownTarget
     ? React.ComponentPropsWithoutRef<ForwardedAsTarget>
     : {}
-> = Distributive<
+> = NoInfer<
   FastOmit<
     Substitute<
       BaseProps,
