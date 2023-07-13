@@ -167,13 +167,15 @@ export type PolymorphicComponentProps<
   ForwardedAsTargetProps extends object = ForwardedAsTarget extends KnownTarget
     ? React.ComponentPropsWithoutRef<ForwardedAsTarget>
     : {}
-> = FastOmit<
-  Substitute<
-    BaseProps,
-    // "as" wins over "forwardedAs" when it comes to prop interface
-    Substitute<ForwardedAsTargetProps, AsTargetProps>
-  >,
-  keyof ExecutionProps
+> = NoInfer<
+  FastOmit<
+    Substitute<
+      BaseProps,
+      // "as" wins over "forwardedAs" when it comes to prop interface
+      Substitute<ForwardedAsTargetProps, AsTargetProps>
+    >,
+    keyof ExecutionProps
+  >
 > &
   FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
     as?: AsTarget;
