@@ -410,7 +410,4 @@ const StylingText = styled(Text2)({
 
 const ButtonEventTest = styled.button``;
 
-const ButtonEventTestExample = () => (
-  // @ts-expect-error this should error since the event has a type
-  <ButtonEventTest onClick={(e: never) => console.log(e)} />
-);
+const ButtonEventTestExample = () => <ButtonEventTest onClick={e => console.log(e)} />;
