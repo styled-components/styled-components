@@ -20,7 +20,20 @@ export type StyledComponentBrand = { readonly _sc: symbol };
 export type BaseObject = {};
 
 // from https://stackoverflow.com/a/69852402
-export type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
+// export type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
+/** 
+ * if T == never type can not extends never , never is the empty union and it could lead to infinite weird behavior 
+ * like in is never in the TS Docs
+ * https://github.com/microsoft/TypeScript/blob/main/tests/cases/conformance/types/conditional/conditionalTypes1.ts#L212 
+ * 
+ * if we change IsNever 
+ *          type IsNever<T> = T extends never ? true : false;
+ *          ant try it  
+ *                   type Test = IsNever<never>   // it will be never 
+ * */
+ 
+export type OmitNever<T> = { [K in keyof T as [T[K]] extends [never] ? never : K]: T[K] };
+
 
 type FastOmit<T extends object, U extends string | number | symbol> = {
   [K in keyof T as K extends U ? never : K]: T[K];
