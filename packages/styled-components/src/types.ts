@@ -23,7 +23,7 @@ export type BaseObject = {};
 // export type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
 /** 
  * if T == never type can not extends never , never is the empty union and it could lead to infinite weird behavior 
- * like in is never in the TS Docs
+ * like in is never in the TS src
  * https://github.com/microsoft/TypeScript/blob/main/tests/cases/conformance/types/conditional/conditionalTypes1.ts#L212 
  * 
  * if we change IsNever 
