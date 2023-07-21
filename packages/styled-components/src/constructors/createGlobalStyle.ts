@@ -49,8 +49,7 @@ export default function createGlobalStyle<Props extends object>(
     }
 
     if (!__SERVER__) {
-      // @ts-expect-error still using React 17 types for the time being
-      (React.useInsertionEffect || React.useLayoutEffect)(() => {
+      React.useLayoutEffect(() => {
         if (!ssc.styleSheet.server) {
           renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
           return () => globalStyle.removeStyles(instance, ssc.styleSheet);
