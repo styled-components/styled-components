@@ -21,17 +21,17 @@ import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
-import { DefaultTheme, ThemeContext } from './ThemeProvider';
+import { ThemeContext } from './ThemeProvider';
 
-function useResolvedAttrs<Props extends object>(
-  theme: DefaultTheme = EMPTY_OBJECT,
+function useResolvedAttrs<Props extends object, Theme extends object>(
+  theme: Theme,
   props: Props,
-  attrs: Attrs<Props>[]
+  attrs: Attrs<Props, Theme>[]
 ) {
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
   // where resolvedAttrs is only the things injected by the attrs themselves
-  const context: ExecutionContext & Props = { ...props, theme };
+  const context: ExecutionContext<Theme> & Props = { ...props, theme };
   const resolvedAttrs: Dict<any> = {};
 
   attrs.forEach(attrDef => {
@@ -47,12 +47,15 @@ function useResolvedAttrs<Props extends object>(
   return [context, resolvedAttrs] as const;
 }
 
-interface StyledComponentImplProps extends ExecutionProps {
+interface StyledComponentImplProps<Theme extends object> extends ExecutionProps<Theme> {
   style?: any;
 }
 
-function useStyledComponentImpl<Props extends StyledComponentImplProps>(
-  forwardedComponent: IStyledComponent<'native', Props>,
+function useStyledComponentImpl<
+  Theme extends object,
+  Props extends StyledComponentImplProps<Theme>
+>(
+  forwardedComponent: IStyledComponent<'native', Theme, Props>,
   props: Props,
   forwardedRef: Ref<any>
 ) {
@@ -69,9 +72,13 @@ function useStyledComponentImpl<Props extends StyledComponentImplProps>(
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme = determineTheme(props, contextTheme, defaultProps);
+  const theme = determineTheme<Theme>(props, contextTheme as Theme, defaultProps);
 
-  const [context, attrs] = useResolvedAttrs<Props>(theme || EMPTY_OBJECT, props, componentAttrs);
+  const [context, attrs] = useResolvedAttrs<Props, Theme>(
+    theme || (EMPTY_OBJECT as Theme),
+    props,
+    componentAttrs
+  );
 
   const generatedStyles = inlineStyle.generateStyleObject(context);
 
@@ -106,18 +113,18 @@ function useStyledComponentImpl<Props extends StyledComponentImplProps>(
   return createElement(elementToBeCreated, propsForElement);
 }
 
-export default (InlineStyle: IInlineStyleConstructor<any>) => {
+export default <Theme extends object>(InlineStyle: IInlineStyleConstructor<any, Theme>) => {
   const createStyledNativeComponent = <
     Target extends NativeTarget,
-    OuterProps extends ExecutionProps,
+    OuterProps extends ExecutionProps<Theme>,
     Statics extends object = BaseObject
   >(
     target: Target,
-    options: StyledOptions<'native', OuterProps>,
-    rules: RuleSet<OuterProps>
-  ): ReturnType<IStyledComponentFactory<'native', Target, OuterProps, Statics>> => {
+    options: StyledOptions<'native', OuterProps, Theme>,
+    rules: RuleSet<OuterProps, Theme>
+  ): ReturnType<IStyledComponentFactory<'native', Theme, Target, OuterProps, Statics>> => {
     const isTargetStyledComp = isStyledComponent(target);
-    const styledComponentTarget = target as IStyledComponent<'native', OuterProps>;
+    const styledComponentTarget = target as IStyledComponent<'native', Theme, OuterProps>;
 
     const { displayName = generateDisplayName(target), attrs = EMPTY_ARRAY } = options;
 
@@ -125,7 +132,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     const finalAttrs =
       isTargetStyledComp && styledComponentTarget.attrs
         ? styledComponentTarget.attrs.concat(attrs).filter(Boolean)
-        : (attrs as Attrs<OuterProps>[]);
+        : (attrs as Attrs<OuterProps, Theme>[]);
 
     let shouldForwardProp = options.shouldForwardProp;
 
@@ -144,8 +151,8 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       }
     }
 
-    const forwardRefRender = (props: ExecutionProps & OuterProps, ref: React.Ref<any>) =>
-      useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
+    const forwardRefRender = (props: ExecutionProps<Theme> & OuterProps, ref: React.Ref<any>) =>
+      useStyledComponentImpl<Theme, OuterProps>(WrappedStyledComponent, props, ref);
 
     if (process.env.NODE_ENV !== 'production') {
       forwardRefRender.displayName = displayName;
@@ -157,6 +164,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
      */
     let WrappedStyledComponent = React.forwardRef(forwardRefRender) as unknown as IStyledComponent<
       'native',
+      Theme,
       any
     > &
       Statics;
@@ -164,7 +172,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     WrappedStyledComponent.attrs = finalAttrs;
     WrappedStyledComponent.inlineStyle = new InlineStyle(
       isTargetStyledComp ? styledComponentTarget.inlineStyle.rules.concat(rules) : rules
-    ) as InstanceType<IInlineStyleConstructor<OuterProps>>;
+    ) as InstanceType<IInlineStyleConstructor<OuterProps, Theme>>;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
 
     if (process.env.NODE_ENV !== 'production') {
@@ -196,7 +204,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       displayName: true,
       shouldForwardProp: true,
       target: true,
-    } as { [key in keyof OmitNever<IStyledStatics<'native', Target>>]: true });
+    } as { [key in keyof OmitNever<IStyledStatics<'native', Target, Theme>>]: true });
 
     return WrappedStyledComponent;
   };

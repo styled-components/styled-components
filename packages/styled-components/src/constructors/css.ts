@@ -1,5 +1,6 @@
 import {
   BaseObject,
+  DefaultTheme,
   Interpolation,
   NoInfer,
   RuleSet,
@@ -17,27 +18,32 @@ import isPlainObject from '../utils/isPlainObject';
  * Used when flattening object styles to determine if we should
  * expand an array of styles.
  */
-const addTag = <T extends RuleSet<any>>(arg: T): T & { isCss: true } =>
+const addTag = <T extends RuleSet<any, any>>(arg: T): T & { isCss: true } =>
   Object.assign(arg, { isCss: true } as const);
 
-function css(styles: Styles<object>, ...interpolations: Interpolation<object>[]): RuleSet<object>;
-function css<Props extends object>(
-  styles: Styles<NoInfer<Props>>,
-  ...interpolations: Interpolation<NoInfer<Props>>[]
-): RuleSet<NoInfer<Props>>;
-function css<Props extends object = BaseObject>(
-  styles: Styles<NoInfer<Props>>,
-  ...interpolations: Interpolation<NoInfer<Props>>[]
-): RuleSet<NoInfer<Props>> {
+function css<Props extends object = BaseObject, Theme extends object = DefaultTheme>(
+  styles: Styles<Props, Theme>,
+  ...interpolations: Interpolation<Props, Theme>[]
+): RuleSet<Props, Theme>;
+function css<Props extends object, Theme extends object = DefaultTheme>(
+  styles: Styles<NoInfer<Props>, Theme>,
+  ...interpolations: Interpolation<NoInfer<Props>, Theme>[]
+): RuleSet<NoInfer<Props>, Theme>;
+function css<Props extends object = BaseObject, Theme extends object = DefaultTheme>(
+  styles: Styles<NoInfer<Props>, Theme>,
+  ...interpolations: Interpolation<NoInfer<Props>, Theme>[]
+): RuleSet<NoInfer<Props>, Theme> {
   if (isFunction(styles) || isPlainObject(styles)) {
-    const styleFunctionOrObject = styles as StyleFunction<Props> | StyledObject<Props>;
+    const styleFunctionOrObject = styles as
+      | StyleFunction<Props, Theme>
+      | StyledObject<Props, Theme>;
 
     return addTag(
-      flatten<Props>(
-        interleave<Props>(EMPTY_ARRAY, [
-          styleFunctionOrObject,
-          ...interpolations,
-        ]) as Interpolation<object>
+      flatten<Props, Theme>(
+        interleave<Props>(EMPTY_ARRAY, [styleFunctionOrObject, ...interpolations]) as Interpolation<
+          object,
+          Theme
+        >
       )
     );
   }
@@ -49,11 +55,13 @@ function css<Props extends object = BaseObject>(
     styleStringArray.length === 1 &&
     typeof styleStringArray[0] === 'string'
   ) {
-    return flatten<Props>(styleStringArray);
+    return flatten<Props, Theme>(styleStringArray);
   }
 
   return addTag(
-    flatten<Props>(interleave<Props>(styleStringArray, interpolations) as Interpolation<object>)
+    flatten<Props, Theme>(
+      interleave<Props>(styleStringArray, interpolations) as Interpolation<object, Theme>
+    )
   );
 }
 

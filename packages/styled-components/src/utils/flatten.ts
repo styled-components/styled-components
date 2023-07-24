@@ -45,19 +45,19 @@ export const objToCssArray = (obj: Dict<any>): string[] => {
   return rules;
 };
 
-export default function flatten<Props extends object>(
-  chunk: Interpolation<object>,
-  executionContext?: ExecutionContext & Props,
+export default function flatten<Props extends object, Theme extends object>(
+  chunk: Interpolation<object, Theme>,
+  executionContext?: ExecutionContext<Theme> & Props,
   styleSheet?: StyleSheet,
   stylisInstance?: Stringifier
-): RuleSet<Props> {
+): RuleSet<Props, Theme> {
   if (isFalsish(chunk)) {
     return [];
   }
 
   /* Handle other components */
   if (isStyledComponent(chunk)) {
-    return [`.${(chunk as unknown as IStyledComponent<'web', any>).styledComponentId}`];
+    return [`.${(chunk as unknown as IStyledComponent<'web', Theme, any>).styledComponentId}`];
   }
 
   /* Either execute or defer the function */
@@ -80,9 +80,9 @@ export default function flatten<Props extends object>(
         );
       }
 
-      return flatten<Props>(result, executionContext, styleSheet, stylisInstance);
+      return flatten<Props, Theme>(result, executionContext, styleSheet, stylisInstance);
     } else {
-      return [chunk as unknown as IStyledComponent<'web'>];
+      return [chunk as unknown as IStyledComponent<'web', Theme>];
     }
   }
 
@@ -97,7 +97,7 @@ export default function flatten<Props extends object>(
 
   /* Handle objects */
   if (isPlainObject(chunk)) {
-    return objToCssArray(chunk as StyledObject<Props>);
+    return objToCssArray(chunk as StyledObject<Props, Theme>);
   }
 
   if (!Array.isArray(chunk)) {
@@ -105,7 +105,7 @@ export default function flatten<Props extends object>(
   }
 
   return flatMap(chunk, chunklet =>
-    flatten<Props>(chunklet, executionContext, styleSheet, stylisInstance)
+    flatten<Props, Theme>(chunklet, executionContext, styleSheet, stylisInstance)
   );
 }
 

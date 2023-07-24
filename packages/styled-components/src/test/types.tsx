@@ -2,7 +2,15 @@
  * This file is meant for typing-related tests that don't need to go through Jest.
  */
 import React from 'react';
-import { css, CSSProp, IStyledComponent, StyledObject } from '../index';
+import { createThemedWebFactory } from '../constructors/styled';
+import {
+  createGlobalStyle,
+  css,
+  CSSProp,
+  DefaultTheme,
+  IStyledComponent,
+  StyledObject,
+} from '../index';
 import styled from '../index-standalone';
 import { DataAttributes } from '../types';
 import { VeryLargeUnionType } from './veryLargeUnionType';
@@ -204,10 +212,10 @@ const InheritedDivWithProps = styled(DivWithProps)`
 /** StyledObject should accept undefined properties
  * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
-interface MyStyle extends StyledObject<object> {
+interface MyStyle extends StyledObject<object, DefaultTheme> {
   fontSize: string;
   lineHeight: string;
-  textTransform?: StyledObject<object>['textTransform'];
+  textTransform?: StyledObject<object, DefaultTheme>['textTransform'];
 }
 
 const DivWithRequiredProps = styled.div.attrs<{ foo?: number; bar: string }>({
@@ -309,7 +317,7 @@ const StyledDiv = styled.div``;
 
 const CustomComponent = (({ ...props }) => {
   return <StyledDiv {...props} />;
-}) as IStyledComponent<'web', JSX.IntrinsicElements['div']>;
+}) as IStyledComponent<'web', DefaultTheme, JSX.IntrinsicElements['div']>;
 
 const StyledCustomComponent = styled(CustomComponent)``;
 
@@ -411,3 +419,18 @@ const StylingText = styled(Text2)({
 const ButtonEventTest = styled.button``;
 
 const ButtonEventTestExample = () => <ButtonEventTest onClick={e => console.log(e)} />;
+
+/** Custom theming */
+type CustomTheme = {
+  color: 'red' | 'black';
+};
+
+const themedStyled = createThemedWebFactory<CustomTheme>();
+
+const CustomThemeGlobalStyle = createGlobalStyle<object, CustomTheme>`
+  color: ${p => p.theme.color};
+`;
+
+const ThemedStyledDiv = themedStyled.div`
+  color: ${p => p.theme.color};
+`;

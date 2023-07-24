@@ -73,8 +73,8 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme): DefaultThe
  * uncertain composition scenario, `React.useContext(ThemeContext)` will not emit an error if there
  * is no `ThemeProvider` ancestor.
  */
-export function useTheme(): DefaultTheme {
-  const theme = useContext(ThemeContext);
+export function useTheme<Theme extends object = DefaultTheme>(): Theme {
+  const theme = useContext(ThemeContext) as Theme;
 
   if (!theme) {
     throw styledError(18);

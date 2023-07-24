@@ -12,15 +12,15 @@ const SEED = hash(SC_VERSION);
 /**
  * ComponentStyle is all the CSS-specific stuff, not the React-specific stuff.
  */
-export default class ComponentStyle {
+export default class ComponentStyle<Theme extends object> {
   baseHash: number;
-  baseStyle: ComponentStyle | null | undefined;
+  baseStyle: ComponentStyle<Theme> | null | undefined;
   componentId: string;
   isStatic: boolean;
-  rules: RuleSet<any>;
+  rules: RuleSet<any, Theme>;
   staticRulesId: string;
 
-  constructor(rules: RuleSet<any>, componentId: string, baseStyle?: ComponentStyle) {
+  constructor(rules: RuleSet<any, Theme>, componentId: string, baseStyle?: ComponentStyle<Theme>) {
     this.rules = rules;
     this.staticRulesId = '';
     this.isStatic =
@@ -37,7 +37,7 @@ export default class ComponentStyle {
   }
 
   generateAndInjectStyles(
-    executionContext: ExecutionContext,
+    executionContext: ExecutionContext<Theme>,
     styleSheet: StyleSheet,
     stylis: Stringifier
   ): string {

@@ -1,4 +1,4 @@
-import styled from './constructors/styled';
+import styled, { createThemedWebFactory, type ThemedStyledWebFactory } from './constructors/styled';
 
 export * from './base';
 export {
@@ -17,4 +17,4 @@ export {
   StyledOptions,
   WebTarget,
 } from './types';
-export { styled, styled as default };
+export { createThemedWebFactory, styled, styled as default, type ThemedStyledWebFactory };
