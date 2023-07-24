@@ -1,6 +1,6 @@
 // Thanks to ReactDOMFactories for this handy list!
 
-export default new Set([
+export default new Set<keyof JSX.IntrinsicElements>([
   'a',
   'abbr',
   'address',

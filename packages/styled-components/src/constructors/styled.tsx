@@ -1,13 +1,13 @@
 import createStyledComponent from '../models/StyledComponent';
-import { WebTarget } from '../types';
+import { DefaultTheme, WebTarget } from '../types';
 import domElements from '../utils/domElements';
 import constructWithOptions, { Styled } from './constructWithOptions';
 
 const baseStyled = <Target extends WebTarget>(tag: Target) =>
-  constructWithOptions<'web', Target>(createStyledComponent, tag);
+  constructWithOptions<'web', DefaultTheme, Target>(createStyledComponent, tag);
 
 const styled = baseStyled as typeof baseStyled & {
-  [E in keyof JSX.IntrinsicElements]: Styled<'web', E, JSX.IntrinsicElements[E]>;
+  [E in keyof JSX.IntrinsicElements]: Styled<'web', DefaultTheme, E, JSX.IntrinsicElements[E]>;
 };
 
 // Shorthands for all valid HTML Elements

@@ -17,7 +17,7 @@ import { EMPTY_OBJECT } from '../utils/empties';
 import styledError from '../utils/error';
 import css from './css';
 
-type AttrsResult<T extends Attrs<any>> = T extends (...args: any) => infer P
+type AttrsResult<T extends Attrs<any, any>> = T extends (...args: any) => infer P
   ? P extends object
     ? P
     : never
@@ -32,9 +32,10 @@ type AttrsResult<T extends Attrs<any>> = T extends (...args: any) => infer P
  */
 type AttrsTarget<
   R extends Runtime,
-  T extends Attrs<any>,
+  Theme extends object,
+  T extends Attrs<any, any>,
   FallbackTarget extends StyledTarget<R>,
-  Result extends ExecutionProps = AttrsResult<T>
+  Result extends ExecutionProps<Theme> = AttrsResult<T>
 > = Result extends { as: infer RuntimeTarget }
   ? RuntimeTarget extends KnownTarget
     ? RuntimeTarget
@@ -43,24 +44,26 @@ type AttrsTarget<
 
 export interface Styled<
   R extends Runtime,
+  Theme extends object,
   Target extends StyledTarget<R>,
   OuterProps extends object,
   OuterStatics extends object = BaseObject
 > {
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
-    initialStyles: Styles<Substitute<OuterProps, NoInfer<Props>>>,
-    ...interpolations: Interpolation<Substitute<OuterProps, NoInfer<Props>>>[]
-  ): IStyledComponent<R, Substitute<OuterProps, Props>> & OuterStatics & Statics;
+    initialStyles: Styles<Substitute<OuterProps, NoInfer<Props>>, Theme>,
+    ...interpolations: Interpolation<Substitute<OuterProps, NoInfer<Props>>, Theme>[]
+  ): IStyledComponent<R, Theme, Substitute<OuterProps, Props>> & OuterStatics & Statics;
 
   attrs: <
     Props extends object = BaseObject,
     PrivateMergedProps extends object = Substitute<OuterProps, Props>,
-    PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
-    PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>
+    PrivateAttrsArg extends Attrs<PrivateMergedProps, Theme> = Attrs<PrivateMergedProps, Theme>,
+    PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, Theme, PrivateAttrsArg, Target>
   >(
     attrs: PrivateAttrsArg
   ) => Styled<
     R,
+    Theme,
     PrivateResolvedTarget,
     PrivateResolvedTarget extends KnownTarget
       ? Substitute<
@@ -71,21 +74,24 @@ export interface Styled<
     OuterStatics
   >;
 
-  withConfig: (config: StyledOptions<R, OuterProps>) => Styled<R, Target, OuterProps, OuterStatics>;
+  withConfig: (
+    config: StyledOptions<R, OuterProps, Theme>
+  ) => Styled<R, Theme, Target, OuterProps, OuterStatics>;
 }
 
 export default function constructWithOptions<
   R extends Runtime,
+  Theme extends object,
   Target extends StyledTarget<R>,
   OuterProps extends object = Target extends KnownTarget
     ? React.ComponentPropsWithRef<Target>
     : BaseObject,
   OuterStatics extends object = BaseObject
 >(
-  componentConstructor: IStyledComponentFactory<R, StyledTarget<R>, object, any>,
+  componentConstructor: IStyledComponentFactory<R, Theme, StyledTarget<R>, object, any>,
   tag: StyledTarget<R>,
-  options: StyledOptions<R, OuterProps> = EMPTY_OBJECT
-): Styled<R, Target, OuterProps, OuterStatics> {
+  options: StyledOptions<R, OuterProps, Theme> = EMPTY_OBJECT
+): Styled<R, Theme, Target, OuterProps, OuterStatics> {
   /**
    * We trust that the tag is a valid component as long as it isn't
    * falsish. Typically the tag here is a string or function (i.e.
@@ -99,13 +105,13 @@ export default function constructWithOptions<
 
   /* This is callable directly as a template function */
   const templateFunction = <Props extends object = BaseObject, Statics extends object = BaseObject>(
-    initialStyles: Styles<Substitute<OuterProps, Props>>,
-    ...interpolations: Interpolation<Substitute<OuterProps, Props>>[]
+    initialStyles: Styles<Substitute<OuterProps, Props>, Theme>,
+    ...interpolations: Interpolation<Substitute<OuterProps, Props>, Theme>[]
   ) =>
     componentConstructor<Substitute<OuterProps, Props>, Statics>(
       tag,
-      options as StyledOptions<R, Substitute<OuterProps, Props>>,
-      css<Substitute<OuterProps, Props>>(initialStyles, ...interpolations)
+      options as StyledOptions<R, Substitute<OuterProps, Props>, Theme>,
+      css<Substitute<OuterProps, Props>, Theme>(initialStyles, ...interpolations)
     );
 
   /**
@@ -117,13 +123,14 @@ export default function constructWithOptions<
   templateFunction.attrs = <
     Props extends object = BaseObject,
     PrivateMergedProps extends object = Substitute<OuterProps, Props>,
-    PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
-    PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>
+    PrivateAttrsArg extends Attrs<PrivateMergedProps, Theme> = Attrs<PrivateMergedProps, Theme>,
+    PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, Theme, PrivateAttrsArg, Target>
   >(
     attrs: PrivateAttrsArg
   ) =>
     constructWithOptions<
       R,
+      Theme,
       PrivateResolvedTarget,
       PrivateResolvedTarget extends KnownTarget
         ? Substitute<
@@ -141,8 +148,8 @@ export default function constructWithOptions<
    * If config methods are called, wrap up a new template function
    * and merge options.
    */
-  templateFunction.withConfig = (config: StyledOptions<R, OuterProps>) =>
-    constructWithOptions<R, Target, OuterProps, OuterStatics>(componentConstructor, tag, {
+  templateFunction.withConfig = (config: StyledOptions<R, OuterProps, Theme>) =>
+    constructWithOptions<R, Theme, Target, OuterProps, OuterStatics>(componentConstructor, tag, {
       ...options,
       ...config,
     });
