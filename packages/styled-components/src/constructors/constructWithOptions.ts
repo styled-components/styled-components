@@ -42,6 +42,36 @@ type AttrsTarget<
     : FallbackTarget
   : FallbackTarget;
 
+/**
+ * A factory for creating styled-components. You may use it directly via `styled()` or one of the
+ * convenience methods like `styled.div` to create a particular element.
+ *
+ * ```tsx
+ * // syntaxes for making a component
+ * styled('div')``;
+ * styled(CustomReactComponent)``;
+ * styled.div``;
+ *
+ * // syntaxes for composing styles (note these work with any way of making a styled-component from above)
+ * styled.div`
+ *   color: red;
+ *
+ *   > * {
+ *     color: black;
+ *   }
+ * `;
+ *
+ * styled.div({
+ *   color: 'red',
+ *   '> *': { color: 'black' }
+ * });
+ *
+ * styled.div(props => ({
+ *   color: 'red',
+ *   '> *': { color: 'black' }
+ * }));
+ * ```
+ */
 export interface Styled<
   R extends Runtime,
   Theme extends object,
