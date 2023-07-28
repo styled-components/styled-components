@@ -77,7 +77,7 @@ export interface ExecutionContext extends ExecutionProps {
 }
 
 export interface StyleFunction<Props extends object> {
-  (executionContext: ExecutionContext & Props): Interpolation<object>;
+  (executionContext: ExecutionContext & Props): Interpolation<Props>;
 }
 
 export type Interpolation<Props extends object> =
@@ -230,7 +230,7 @@ export interface IInlineStyle<Props extends object> {
   generateStyleObject(executionContext: ExecutionContext & Props): object;
 }
 
-export type StyledObject<Props extends object> = Substitute<Props, CSS.Properties> & {
+export type StyledObject<Props extends object> = CSS.Properties & {
   [key: string]:
     | string
     | number
