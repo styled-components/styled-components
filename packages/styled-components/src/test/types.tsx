@@ -448,7 +448,7 @@ styled.div<PropsWithVariant>`
 /**
  * Styled object as function return value when prop types are provided
  */
-const Bar = styled.div<PropsWithVariant>`
+styled.div<PropsWithVariant>`
   ${p => ({
     color: 'blue',
   })};
