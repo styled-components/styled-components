@@ -421,7 +421,7 @@ type Props = {
   $color: string;
 };
 
-const sizeStyles = css<Pick<Props, '$size'>>`
+const sizeStyles = css<Props>`
   font-size: ${props => props.$size}px;
 `;
 

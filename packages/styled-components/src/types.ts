@@ -91,7 +91,7 @@ export type Interpolation<Props extends object> =
   | null
   | Keyframes
   | StyledComponentBrand
-  | RuleSet<object>
+  | RuleSet<Props>
   | Interpolation<Props>[];
 
 export type Attrs<Props extends object = BaseObject> =
