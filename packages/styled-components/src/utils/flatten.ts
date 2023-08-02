@@ -11,6 +11,7 @@ import {
   StyledObject,
 } from '../types';
 import addUnitIfNeeded from './addUnitIfNeeded';
+import { EMPTY_ARRAY } from './empties';
 import getComponentName from './getComponentName';
 import hyphenate from './hyphenateStyleName';
 import isFunction from './isFunction';
@@ -45,8 +46,8 @@ export const objToCssArray = (obj: Dict<any>): string[] => {
 };
 
 export default function flatten<Props extends object>(
-  chunk: Interpolation<Props>,
-  executionContext?: ExecutionContext & Props | undefined,
+  chunk: Interpolation<object>,
+  executionContext?:(ExecutionContext & Props) | undefined,
   styleSheet?: StyleSheet | undefined,
   stylisInstance?: Stringifier | undefined
 ): RuleSet<Props> {
@@ -56,7 +57,7 @@ export default function flatten<Props extends object>(
 
   /* Handle other components */
   if (isStyledComponent(chunk)) {
-    return [`.${(chunk as unknown as IStyledComponent<'web', 'div', any>).styledComponentId}`];
+    return [`.${(chunk as unknown as IStyledComponent<'web', any>).styledComponentId}`];
   }
 
   /* Either execute or defer the function */
@@ -79,9 +80,9 @@ export default function flatten<Props extends object>(
         );
       }
 
-      return flatten(result, executionContext, styleSheet, stylisInstance);
+      return flatten<Props>(result, executionContext, styleSheet, stylisInstance);
     } else {
-      return [chunk as unknown as IStyledComponent<'web', 'div', any>];
+      return [chunk as unknown as IStyledComponent<'web'>];
     }
   }
 
@@ -103,8 +104,11 @@ export default function flatten<Props extends object>(
     return [chunk.toString()];
   }
 
-  /* Handle objects */
-  return chunk.flatMap(chunklet =>
+  return flatMap(chunk, chunklet =>
     flatten<Props>(chunklet, executionContext, styleSheet, stylisInstance)
   );
+}
+
+function flatMap<T, U>(array: T[], transform: (value: T, index: number, array: T[]) => U[]): U[] {
+  return Array.prototype.concat.apply(EMPTY_ARRAY, array.map(transform));
 }

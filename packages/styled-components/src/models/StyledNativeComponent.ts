@@ -1,6 +1,7 @@
 import React, { createElement, Ref, useMemo } from 'react';
 import type {
-  AttrsArg,
+  Attrs,
+  BaseObject,
   Dict,
   ExecutionContext,
   ExecutionProps,
@@ -20,12 +21,12 @@ import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
-import { DefaultTheme, useTheme } from './ThemeProvider';
+import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 function useResolvedAttrs<Props extends object>(
   theme: DefaultTheme = EMPTY_OBJECT,
   props: Props,
-  attrs: AttrsArg<Props>[]
+  attrs: Attrs<Props>[]
 ) {
   // NOTE: can't memoize this
   // returns [context, resolvedAttrs]
@@ -43,18 +44,15 @@ function useResolvedAttrs<Props extends object>(
     }
   });
 
-  return [context, resolvedAttrs];
+  return [context, resolvedAttrs] as const;
 }
 
 interface StyledComponentImplProps extends ExecutionProps {
   style?: any;
 }
 
-function useStyledComponentImpl<
-  Target extends NativeTarget,
-  Props extends StyledComponentImplProps
->(
-  forwardedComponent: IStyledComponent<'native', Target, Props>,
+function useStyledComponentImpl<Props extends StyledComponentImplProps>(
+  forwardedComponent: IStyledComponent<'native', Props>,
   props: Props,
   forwardedRef: Ref<any>
 ) {
@@ -66,14 +64,14 @@ function useStyledComponentImpl<
     target,
   } = forwardedComponent;
 
-  const contextTheme = useTheme();
+  const contextTheme = React.useContext(ThemeContext);
 
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
   const theme = determineTheme(props, contextTheme, defaultProps);
 
-  const [context, attrs] = useResolvedAttrs(theme || EMPTY_OBJECT, props, componentAttrs);
+  const [context, attrs] = useResolvedAttrs<Props>(theme || EMPTY_OBJECT, props, componentAttrs);
 
   const generatedStyles = inlineStyle.generateStyleObject(context);
 
@@ -112,14 +110,14 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
   const createStyledNativeComponent = <
     Target extends NativeTarget,
     OuterProps extends ExecutionProps,
-    Statics extends object = object
+    Statics extends object = BaseObject
   >(
     target: Target,
     options: StyledOptions<'native', OuterProps>,
     rules: RuleSet<OuterProps>
   ): ReturnType<IStyledComponentFactory<'native', Target, OuterProps, Statics>> => {
     const isTargetStyledComp = isStyledComponent(target);
-    const styledComponentTarget = target as IStyledComponent<'native', Target, OuterProps>;
+    const styledComponentTarget = target as IStyledComponent<'native', OuterProps>;
 
     const { displayName = generateDisplayName(target), attrs = EMPTY_ARRAY } = options;
 
@@ -127,7 +125,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     const finalAttrs =
       isTargetStyledComp && styledComponentTarget.attrs
         ? styledComponentTarget.attrs.concat(attrs).filter(Boolean)
-        : (attrs as AttrsArg<OuterProps>[]);
+        : (attrs as Attrs<OuterProps>[]);
 
     let shouldForwardProp = options.shouldForwardProp;
 
@@ -146,19 +144,20 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       }
     }
 
-    const forwardRef = (props: ExecutionProps & OuterProps, ref: React.Ref<any>) =>
-      useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref);
+    const forwardRefRender = (props: ExecutionProps & OuterProps, ref: React.Ref<any>) =>
+      useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
 
-    forwardRef.displayName = displayName;
+    if (process.env.NODE_ENV !== 'production') {
+      forwardRefRender.displayName = displayName;
+    }
 
     /**
      * forwardRef creates a new interim component, which we'll take advantage of
      * instead of extending ParentComponent to create _another_ interim class
      */
-    let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
+    let WrappedStyledComponent = React.forwardRef(forwardRefRender) as unknown as IStyledComponent<
       'native',
-      Target,
-      OuterProps
+      any
     > &
       Statics;
 
@@ -166,8 +165,11 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     WrappedStyledComponent.inlineStyle = new InlineStyle(
       isTargetStyledComp ? styledComponentTarget.inlineStyle.rules.concat(rules) : rules
     ) as InstanceType<IInlineStyleConstructor<OuterProps>>;
-    WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
+
+    if (process.env.NODE_ENV !== 'production') {
+      WrappedStyledComponent.displayName = displayName;
+    }
 
     // @ts-expect-error we don't actually need this for anything other than detection of a styled-component
     WrappedStyledComponent.styledComponentId = true;

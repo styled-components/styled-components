@@ -1,5 +1,6 @@
 import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
 import { EMPTY_OBJECT } from '../utils/empties';
+import { setToString } from '../utils/setToString';
 import { makeGroupedTag } from './GroupedTag';
 import { getGroupForId } from './GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from './Rehydration';
@@ -56,6 +57,8 @@ export default class StyleSheet implements Sheet {
       SHOULD_REHYDRATE = false;
       rehydrateSheet(this);
     }
+
+    setToString(this, () => outputSheet(this));
   }
 
   reconstructWithOptions(options: SheetConstructorArgs, withNames = true) {
@@ -117,10 +120,5 @@ export default class StyleSheet implements Sheet {
     // NOTE: This does not clear the names, since it's only used during SSR
     // so that we can continuously output only new rules
     this.tag = undefined;
-  }
-
-  /** Outputs the current sheet as a CSS string with markers for SSR */
-  toString(): string {
-    return outputSheet(this);
   }
 }

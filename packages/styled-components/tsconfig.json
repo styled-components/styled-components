@@ -1,8 +1,8 @@
 {
-  "include": ["src/**/*"],
-  "exclude": ["dist"],
+  "include": ["src"],
+  "exclude": ["dist", ".rollup.cache"],
   "compilerOptions": {
-    // "tsBuildInfoFile": ".tsbuildinfo",
+    "tsBuildInfoFile": "local.tsbuildinfo",
     "outDir": "dist",
     /* Visit https://aka.ms/tsconfig.json to read more about this file */
 

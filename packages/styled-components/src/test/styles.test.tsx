@@ -1,5 +1,6 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
+import { ThemeProvider } from '../base';
 import css from '../constructors/css';
 import { mainSheet } from '../models/StyleSheetManager';
 import * as nonce from '../utils/nonce';
@@ -26,7 +27,7 @@ describe('with styles', () => {
     `;
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
+      ".a {
         color: blue;
       }"
     `);
@@ -40,7 +41,7 @@ describe('with styles', () => {
     `;
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
+      ".a {
         color: blue;
         background: red;
       }"
@@ -91,6 +92,10 @@ describe('with styles', () => {
       .foo > & {
         color: green;
       }
+
+      &:not(& ~ &) {
+        color: cornflowerblue;
+      }
     `;
     TestRenderer.create(
       <React.Fragment>
@@ -99,9 +104,46 @@ describe('with styles', () => {
       </React.Fragment>
     );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
+      ".a {
         background: red;
         color: white;
+      }
+      .a.a.a {
+        border: 1px solid red;
+      }
+      .a[disabled] {
+        color: red;
+      }
+      .a[disabled] + .a[disabled] {
+        margin-bottom: 4px;
+      }
+      .a[disabled] > .a[disabled] {
+        margin-top: 4px;
+      }
+      .sc-gRlPMw + .sc-gRlPMw {
+        margin-left: 4px;
+      }
+      .sc-gRlPMw + .sc-gRlPMw ~ .sc-gRlPMw {
+        background: black;
+      }
+      .sc-gRlPMw ~ .sc-gRlPMw {
+        margin-right: 4px;
+      }
+      .sc-gRlPMw > .sc-gRlPMw {
+        margin-top: 4px;
+      }
+      .foo .a {
+        color: silver;
+      }
+      .foo > .a {
+        color: green;
+      }
+      .a:not(.a ~ .a) {
+        color: cornflowerblue;
+      }
+      .b {
+        background: red;
+        color: red;
       }
       .b.b.b {
         border: 1px solid red;
@@ -109,63 +151,32 @@ describe('with styles', () => {
       .b[disabled] {
         color: red;
       }
-      .b[disabled] + .sc-a[disabled] {
+      .b[disabled] + .b[disabled] {
         margin-bottom: 4px;
       }
-      .b[disabled] > .sc-a[disabled] {
+      .b[disabled] > .b[disabled] {
         margin-top: 4px;
       }
-      .sc-a + .sc-a {
+      .sc-gRlPMw + .sc-gRlPMw {
         margin-left: 4px;
       }
-      .sc-a + .sc-a ~ .sc-a {
+      .sc-gRlPMw + .sc-gRlPMw ~ .sc-gRlPMw {
         background: black;
       }
-      .sc-a ~ .sc-a {
+      .sc-gRlPMw ~ .sc-gRlPMw {
         margin-right: 4px;
       }
-      .sc-a > .sc-a {
+      .sc-gRlPMw > .sc-gRlPMw {
         margin-top: 4px;
       }
-      .foo .sc-a {
+      .foo .b {
         color: silver;
       }
-      .foo > .sc-a {
+      .foo > .b {
         color: green;
       }
-      .c {
-        background: red;
-        color: red;
-      }
-      .c.c.c {
-        border: 1px solid red;
-      }
-      .c[disabled] {
-        color: red;
-      }
-      .c[disabled] + .sc-a[disabled] {
-        margin-bottom: 4px;
-      }
-      .c[disabled] > .sc-a[disabled] {
-        margin-top: 4px;
-      }
-      .sc-a + .sc-a {
-        margin-left: 4px;
-      }
-      .sc-a + .sc-a ~ .sc-a {
-        background: black;
-      }
-      .sc-a ~ .sc-a {
-        margin-right: 4px;
-      }
-      .sc-a > .sc-a {
-        margin-top: 4px;
-      }
-      .foo .sc-a {
-        color: silver;
-      }
-      .foo > .sc-a {
-        color: green;
+      .b:not(.b ~ .b) {
+        color: cornflowerblue;
       }"
     `);
   });
@@ -179,7 +190,7 @@ describe('with styles', () => {
     `;
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
+      ".a {
         background-color: blue;
       }"
     `);
@@ -197,11 +208,11 @@ describe('with styles', () => {
     `;
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
+      ".a {
         background-color: blue;
       }
       @media screen and (min-width:250px) {
-        .b {
+        .a {
           background-color: red;
         }
       }"
@@ -220,10 +231,10 @@ describe('with styles', () => {
     `;
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
+      ".a {
         background-color: blue;
       }
-      .b:hover {
+      .a:hover {
         color: green;
       }"
     `);
@@ -241,10 +252,10 @@ describe('with styles', () => {
     `;
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
+      ".a {
         background-color: blue;
       }
-      .b > h1 {
+      .a > h1 {
         color: white;
       }"
     `);
@@ -262,10 +273,10 @@ describe('with styles', () => {
     `;
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
+      ".a {
         background-color: blue;
       }
-      html.something .sc-a {
+      html.something .a {
         color: white;
       }"
     `);
@@ -285,10 +296,10 @@ describe('with styles', () => {
     TestRenderer.create(<SecondComp />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".c {
+      ".a {
         background: blue;
       }
-      .d {
+      .b {
         background: red;
       }"
     `);
@@ -310,10 +321,10 @@ describe('with styles', () => {
 
     // Classes _do_ get generated in the order of rendering but that's ok
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".d {
+      ".b {
         content: "first rule";
       }
-      .c {
+      .a {
         content: "second rule";
       }"
     `);
@@ -329,7 +340,7 @@ describe('with styles', () => {
     `;
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
+      ".a {
         color: blue;
       }"
     `);
@@ -351,7 +362,7 @@ describe('with styles', () => {
     mainSheet.clearRules(Text.styledComponentId);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".c {
+      ".a {
         color: red;
       }"
     `);
@@ -364,7 +375,7 @@ describe('with styles', () => {
     `;
     TestRenderer.create(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
+      ".a {
         color: blue;
       }"
     `);
@@ -381,8 +392,103 @@ describe('with styles', () => {
 
     TestRenderer.create(<Comp variant="bar" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
+      ".a {
         color: green;
+      }"
+    `);
+  });
+
+  it('failing test', () => {
+    interface IconProps {
+      color?: string;
+      rounded?: boolean;
+      spin?: boolean;
+    }
+
+    const spinCss = css`
+      @keyframes iconSpin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      animation-name: iconSpin;
+      animation-duration: 1000ms;
+      animation-iteration-count: infinite;
+      animation-timing-function: linear;
+    `;
+
+    const Wrapper = styled.span<IconProps>`
+      vertical-align: middle;
+      display: inline-block;
+      line-height: ${({ theme }) => theme.lineHeights.sm};
+      font-size: ${({ theme }) => theme.fontSizes.sm};
+
+      & > svg {
+        stroke: ${({ theme, color }): string =>
+          color && color !== 'inherit' ? theme.colors[color] : 'currentColor'};
+        ${({ spin }): any => (spin ? spinCss : '')};
+      }
+      ${({ rounded }): string => (rounded ? 'border-radius: 9999px;' : '')};
+    `;
+
+    TestRenderer.create(
+      // spinCss should only be added if spin is true. Meanwhile, when any icon component in the application receives spin=true prop, all icons in the app start spinning (see video).
+
+      <ThemeProvider
+        theme={{
+          colors: { red: 'darkred' },
+          fontSizes: { sm: '14px' },
+          lineHeights: { sm: '20px' },
+        }}
+      >
+        <Wrapper />
+        <Wrapper spin />
+        <Wrapper color="red" />
+      </ThemeProvider>
+    );
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        vertical-align: middle;
+        display: inline-block;
+        line-height: 20px;
+        font-size: 14px;
+      }
+      .a > svg {
+        stroke: currentColor;
+      }
+      .b {
+        vertical-align: middle;
+        display: inline-block;
+        line-height: 20px;
+        font-size: 14px;
+      }
+      .b > svg {
+        stroke: currentColor;
+        animation-name: iconSpin;
+        animation-duration: 1000ms;
+        animation-iteration-count: infinite;
+        animation-timing-function: linear;
+      }
+      @keyframes iconSpin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .c {
+        vertical-align: middle;
+        display: inline-block;
+        line-height: 20px;
+        font-size: 14px;
+      }
+      .c > svg {
+        stroke: darkred;
       }"
     `);
   });

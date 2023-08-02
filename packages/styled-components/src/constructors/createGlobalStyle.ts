@@ -2,7 +2,7 @@ import React from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
-import { DefaultTheme, useTheme } from '../models/ThemeProvider';
+import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
 import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
@@ -24,7 +24,7 @@ export default function createGlobalStyle<Props extends object>(
 
   const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const ssc = useStyleSheetContext();
-    const theme = useTheme();
+    const theme = React.useContext(ThemeContext);
     const instanceRef = React.useRef(ssc.styleSheet.allocateGSInstance(styledComponentId));
 
     const instance = instanceRef.current;
@@ -49,8 +49,7 @@ export default function createGlobalStyle<Props extends object>(
     }
 
     if (!__SERVER__) {
-      // @ts-expect-error still using React 17 types for the time being
-      (React.useInsertionEffect || React.useLayoutEffect)(() => {
+      React.useLayoutEffect(() => {
         if (!ssc.styleSheet.server) {
           renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
           return () => globalStyle.removeStyles(instance, ssc.styleSheet);

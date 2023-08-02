@@ -1,78 +1,74 @@
-import React from 'react';
 import {
   Attrs,
-  AttrsArg,
+  BaseObject,
   ExecutionProps,
   Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
   KnownTarget,
+  NoInfer,
   Runtime,
   StyledOptions,
   StyledTarget,
   Styles,
+  Substitute,
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import styledError from '../utils/error';
 import css from './css';
 
+type AttrsResult<T extends Attrs<any>> = T extends (...args: any) => infer P
+  ? P extends object
+    ? P
+    : never
+  : T extends object
+  ? T
+  : never;
+
 /**
- * for types a and b, if b shares a field with a, mark a's field as optional
+ * Based on Attrs being a simple object or function that returns
+ * a prop object, inspect the attrs result and attempt to extract
+ * any "as" prop usage to modify the runtime target.
  */
-type OptionalIntersection<A, B> = {
-  [K in Extract<keyof A, keyof B>]?: A[K] | undefined;
-};
-
-type AttrsResult<T extends Attrs> = T extends (...args: any) => infer P ? P : T;
-
-type ExtractAttrsTarget<
+type AttrsTarget<
   R extends Runtime,
-  P extends ExecutionProps,
-  DefaultTarget extends StyledTarget<R>
-> = P['as'] extends KnownTarget ? P['as'] : DefaultTarget;
-
-/**
- * If attrs type is a function (no type provided, inferring from usage), extract the return value
- * and merge it with the existing type to hole-punch any required fields that are satisfied as
- * a result of running attrs. Otherwise if we have a definite type then union the base props
- * with the passed attr type to capture any intended overrides.
- */
-type PropsSatisfiedByAttrs<
-  T extends Attrs,
-  Props extends object,
+  T extends Attrs<any>,
+  FallbackTarget extends StyledTarget<R>,
   Result extends ExecutionProps = AttrsResult<T>
-> = Omit<Props, keyof Result> &
-  OptionalIntersection<Props, Result> &
-  Partial<Omit<Result, keyof Props | 'as'>>;
+> = Result extends { as: infer RuntimeTarget }
+  ? RuntimeTarget extends KnownTarget
+    ? RuntimeTarget
+    : FallbackTarget
+  : FallbackTarget;
 
 export interface Styled<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  OuterProps extends object = object,
-  OuterStatics extends object = object,
-  RuntimeInjectedProps extends ExecutionProps = object
+  OuterProps extends object,
+  OuterStatics extends object = BaseObject
 > {
-  <Props extends object = object, Statics extends object = object>(
-    initialStyles: Styles<OuterProps & RuntimeInjectedProps & Props>,
-    ...interpolations: Interpolation<OuterProps & RuntimeInjectedProps & Props>[]
-  ): // @ts-expect-error KnownTarget is a subset of StyledTarget<R>
-  IStyledComponent<R, ExtractAttrsTarget<R, RuntimeInjectedProps, Target>, OuterProps & Props> &
-    OuterStatics &
-    Statics;
+  <Props extends object = BaseObject, Statics extends object = BaseObject>(
+    initialStyles: Styles<Substitute<OuterProps, NoInfer<Props>>>,
+    ...interpolations: Interpolation<Substitute<OuterProps, NoInfer<Props>>>[]
+  ): IStyledComponent<R, Substitute<OuterProps, Props>> & OuterStatics & Statics;
 
   attrs: <
-    T extends Attrs,
-    TResult extends ExecutionProps = AttrsResult<T>,
-    // @ts-expect-error KnownTarget is a subset of StyledTarget<R>
-    TTarget extends StyledTarget<R> = ExtractAttrsTarget<R, TResult, Target>
+    Props extends object = BaseObject,
+    PrivateMergedProps extends object = Substitute<OuterProps, Props>,
+    PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
+    PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>
   >(
-    attrs: AttrsArg<T extends (...args: any) => infer P ? OuterProps & P : OuterProps & T>
+    attrs: PrivateAttrsArg
   ) => Styled<
     R,
-    TTarget,
-    PropsSatisfiedByAttrs<T, OuterProps>,
-    OuterStatics,
-    Omit<RuntimeInjectedProps, keyof TResult> & TResult
+    PrivateResolvedTarget,
+    PrivateResolvedTarget extends KnownTarget
+      ? Substitute<
+          Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+          Props
+        >
+      : PrivateMergedProps,
+    OuterStatics
   >;
 
   withConfig: (config: StyledOptions<R, OuterProps>) => Styled<R, Target, OuterProps, OuterStatics>;
@@ -83,52 +79,68 @@ export default function constructWithOptions<
   Target extends StyledTarget<R>,
   OuterProps extends object = Target extends KnownTarget
     ? React.ComponentPropsWithRef<Target>
-    : object,
-  OuterStatics extends object = object
+    : BaseObject,
+  OuterStatics extends object = BaseObject
 >(
-  componentConstructor: IStyledComponentFactory<R, Target, OuterProps, OuterStatics>,
-  tag: Target,
+  componentConstructor: IStyledComponentFactory<R, StyledTarget<R>, object, any>,
+  tag: StyledTarget<R>,
   options: StyledOptions<R, OuterProps> = EMPTY_OBJECT
 ): Styled<R, Target, OuterProps, OuterStatics> {
-  // We trust that the tag is a valid component as long as it isn't falsish
-  // Typically the tag here is a string or function (i.e. class or pure function component)
-  // However a component may also be an object if it uses another utility, e.g. React.memo
-  // React will output an appropriate warning however if the `tag` isn't valid
+  /**
+   * We trust that the tag is a valid component as long as it isn't
+   * falsish. Typically the tag here is a string or function (i.e.
+   * class or pure function component), however a component may also be
+   * an object if it uses another utility, e.g. React.memo. React will
+   * output an appropriate warning however if the `tag` isn't valid.
+   */
   if (!tag) {
     throw styledError(1, tag);
   }
 
   /* This is callable directly as a template function */
-  const templateFunction = <Props extends object = object, Statics extends object = object>(
-    initialStyles: Styles<OuterProps & Props>,
-    ...interpolations: Interpolation<OuterProps & Props>[]
+  const templateFunction = <Props extends object = BaseObject, Statics extends object = BaseObject>(
+    initialStyles: Styles<Substitute<OuterProps, Props>>,
+    ...interpolations: Interpolation<Substitute<OuterProps, Props>>[]
   ) =>
-    componentConstructor<Props, Statics>(
+    componentConstructor<Substitute<OuterProps, Props>, Statics>(
       tag,
-      options as StyledOptions<R, OuterProps & Props>,
-      css(initialStyles, ...interpolations)
-    );
-
-  /* Modify/inject new props at runtime */
-  templateFunction.attrs = <T extends Attrs>(
-    attrs: AttrsArg<T extends (...args: any) => infer P ? OuterProps & P : OuterProps & T>
-  ) =>
-    constructWithOptions<R, Target, PropsSatisfiedByAttrs<T, OuterProps>, OuterStatics>(
-      componentConstructor as unknown as IStyledComponentFactory<
-        R,
-        Target,
-        PropsSatisfiedByAttrs<T, OuterProps>,
-        OuterStatics
-      >,
-      tag,
-      {
-        ...options,
-        attrs: Array.prototype.concat(options.attrs, attrs).filter(Boolean),
-      }
+      options as StyledOptions<R, Substitute<OuterProps, Props>>,
+      css<Substitute<OuterProps, Props>>(initialStyles, ...interpolations)
     );
 
   /**
-   * If config methods are called, wrap up a new template function and merge options */
+   * Attrs allows for accomplishing two goals:
+   *
+   * 1. Backfilling props at runtime more expressively than defaultProps
+   * 2. Amending the prop interface of a wrapped styled component
+   */
+  templateFunction.attrs = <
+    Props extends object = BaseObject,
+    PrivateMergedProps extends object = Substitute<OuterProps, Props>,
+    PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
+    PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>
+  >(
+    attrs: PrivateAttrsArg
+  ) =>
+    constructWithOptions<
+      R,
+      PrivateResolvedTarget,
+      PrivateResolvedTarget extends KnownTarget
+        ? Substitute<
+            Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+            Props
+          >
+        : PrivateMergedProps,
+      OuterStatics
+    >(componentConstructor, tag, {
+      ...options,
+      attrs: Array.prototype.concat(options.attrs, attrs).filter(Boolean),
+    });
+
+  /**
+   * If config methods are called, wrap up a new template function
+   * and merge options.
+   */
   templateFunction.withConfig = (config: StyledOptions<R, OuterProps>) =>
     constructWithOptions<R, Target, OuterProps, OuterStatics>(componentConstructor, tag, {
       ...options,

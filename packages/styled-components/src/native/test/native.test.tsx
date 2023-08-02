@@ -1,5 +1,5 @@
 import React, { PropsWithChildren } from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider } from '../';
 
@@ -50,7 +50,7 @@ describe('native', () => {
   });
 
   it('folds defaultProps', () => {
-    const Inner = styled.View``;
+    const Inner = styled.View<ViewProps>``;
 
     Inner.defaultProps = {
       theme: {

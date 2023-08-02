@@ -1,8 +1,10 @@
+import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, Ref, useDebugValue } from 'react';
 import { SC_VERSION } from '../constants';
 import type {
   AnyComponent,
-  AttrsArg,
+  Attrs,
+  BaseObject,
   Dict,
   ExecutionContext,
   ExecutionProps,
@@ -28,9 +30,10 @@ import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import { joinStrings } from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
+import { setToString } from '../utils/setToString';
 import ComponentStyle from './ComponentStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
-import { DefaultTheme, useTheme } from './ThemeProvider';
+import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 const identifiers: { [key: string]: number } = {};
 
@@ -49,15 +52,14 @@ function generateId(displayName?: string | undefined, parentComponentId?: string
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-function useInjectedStyle<T extends object>(
+function useInjectedStyle<T extends ExecutionContext>(
   componentStyle: ComponentStyle,
-  isStatic: boolean,
   resolvedAttrs: T
 ) {
   const ssc = useStyleSheetContext();
 
   const className = componentStyle.generateAndInjectStyles(
-    isStatic ? EMPTY_OBJECT : resolvedAttrs,
+    resolvedAttrs,
     ssc.styleSheet,
     ssc.stylis
   );
@@ -68,12 +70,13 @@ function useInjectedStyle<T extends object>(
 }
 
 function resolveContext<Props extends object>(
-  attrs: AttrsArg<Props>[],
-  props: React.HTMLAttributes<Element> & Props,
+  attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
+  props: React.HTMLAttributes<Element> & ExecutionProps & Props,
   theme: DefaultTheme
 ) {
-  const context: ExecutionContext &
-    Props & { class?: string | undefined; className?: string | undefined; ref?: React.Ref<any> | undefined } = {
+  const context: React.HTMLAttributes<Element> &
+    ExecutionContext &
+    Props & { [key: string]: any; class?: string; ref?: React.Ref<any> } = {
     ...props,
     // unset, add `props.className` back at the end so props always "wins"
     className: undefined,
@@ -86,13 +89,12 @@ function resolveContext<Props extends object>(
     const resolvedAttrDef = isFunction(attrDef) ? attrDef(context) : attrDef;
 
     for (const key in resolvedAttrDef) {
-      // @ts-expect-error bad types
-      context[key] =
+      context[key as keyof typeof context] =
         key === 'className'
           ? joinStrings(context[key] as string | undefined, resolvedAttrDef[key] as string)
           : key === 'style'
           ? { ...context[key], ...resolvedAttrDef[key] }
-          : resolvedAttrDef[key];
+          : resolvedAttrDef[key as keyof typeof resolvedAttrDef];
     }
   }
 
@@ -103,11 +105,12 @@ function resolveContext<Props extends object>(
   return context;
 }
 
-function useStyledComponentImpl<Target extends WebTarget, Props extends ExecutionProps>(
-  forwardedComponent: IStyledComponent<'web', Target, Props>,
-  props: Props,
-  forwardedRef: Ref<Element>,
-  isStatic: boolean
+let seenUnknownProps = new Set();
+
+function useStyledComponentImpl<Props extends object>(
+  forwardedComponent: IStyledComponent<'web', Props>,
+  props: ExecutionProps & Props,
+  forwardedRef: Ref<Element>
 ) {
   const {
     attrs: componentAttrs,
@@ -118,7 +121,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
     target,
   } = forwardedComponent;
 
-  const contextTheme = useTheme();
+  const contextTheme = React.useContext(ThemeContext);
   const ssc = useStyleSheetContext();
   const shouldForwardProp = forwardedComponent.shouldForwardProp || ssc.shouldForwardProp;
 
@@ -129,7 +132,7 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
   // should be an immutable value, but behave for now.
   const theme = determineTheme(props, contextTheme, defaultProps) || EMPTY_OBJECT;
 
-  const context: Dict<any> = resolveContext<Props>(componentAttrs, props, theme);
+  const context = resolveContext<Props>(componentAttrs, props, theme);
   const elementToBeCreated: WebTarget = context.as || target;
   const propsForElement: Dict<any> = {};
 
@@ -143,12 +146,26 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
       propsForElement.as = context.forwardedAs;
     } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
       propsForElement[key] = context[key];
+
+      if (
+        !shouldForwardProp &&
+        process.env.NODE_ENV === 'development' &&
+        !isPropValid(key) &&
+        !seenUnknownProps.has(key) &&
+        // Only warn on DOM Element.
+        domElements.has(elementToBeCreated as any)
+      ) {
+        seenUnknownProps.add(key);
+        console.warn(
+          `styled-components: it looks like an unknown prop "${key}" is being sent through to the DOM, which will likely trigger a React console error. If you would like automatic filtering of unknown props, you can opt-into that behavior via \`<StyleSheetManager shouldForwardProp={...}>\` (connect an API like \`@emotion/is-prop-valid\`) or consider using transient props (\`$\` prefix for automatic filtering.)`
+        );
+      }
     }
   }
 
-  const generatedClassName = useInjectedStyle(componentStyle, isStatic, context);
+  const generatedClassName = useInjectedStyle(componentStyle, context);
 
-  if (process.env.NODE_ENV !== 'production' && !isStatic && forwardedComponent.warnTooManyClasses) {
+  if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {
     forwardedComponent.warnTooManyClasses(generatedClassName);
   }
 
@@ -176,14 +193,14 @@ function useStyledComponentImpl<Target extends WebTarget, Props extends Executio
 function createStyledComponent<
   Target extends WebTarget,
   OuterProps extends object,
-  Statics extends object = object
+  Statics extends object = BaseObject
 >(
   target: Target,
   options: StyledOptions<'web', OuterProps>,
   rules: RuleSet<OuterProps>
 ): ReturnType<IStyledComponentFactory<'web', Target, OuterProps, Statics>> {
   const isTargetStyledComp = isStyledComponent(target);
-  const styledComponentTarget = target as IStyledComponent<'web', Target, OuterProps>;
+  const styledComponentTarget = target as IStyledComponent<'web', OuterProps>;
   const isCompositeComponent = !isTag(target);
 
   const {
@@ -200,10 +217,8 @@ function createStyledComponent<
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     isTargetStyledComp && styledComponentTarget.attrs
-      ? styledComponentTarget.attrs
-          .concat(attrs as unknown as AttrsArg<OuterProps>[])
-          .filter(Boolean)
-      : (attrs as AttrsArg<OuterProps>[]);
+      ? styledComponentTarget.attrs.concat(attrs as unknown as Attrs<OuterProps>[]).filter(Boolean)
+      : (attrs as Attrs<OuterProps>[]);
 
   let { shouldForwardProp } = options;
 
@@ -228,29 +243,30 @@ function createStyledComponent<
     isTargetStyledComp ? (styledComponentTarget.componentStyle as ComponentStyle) : undefined
   );
 
-  // statically styled-components don't need to build an execution context object,
-  // and shouldn't be increasing the number of class names
-  const isStatic = componentStyle.isStatic && attrs.length === 0;
-  function forwardRef(props: ExecutionProps & OuterProps, ref: Ref<Element>) {
-    return useStyledComponentImpl<Target, OuterProps>(WrappedStyledComponent, props, ref, isStatic);
+  function forwardRefRender(props: ExecutionProps & OuterProps, ref: Ref<Element>) {
+    return useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
   }
 
-  forwardRef.displayName = displayName;
+  if (process.env.NODE_ENV !== 'production') {
+    forwardRefRender.displayName = displayName;
+  }
 
   /**
    * forwardRef creates a new interim component, which we'll take advantage of
    * instead of extending ParentComponent to create _another_ interim class
    */
-  let WrappedStyledComponent = React.forwardRef(forwardRef) as unknown as IStyledComponent<
+  let WrappedStyledComponent = React.forwardRef(forwardRefRender) as unknown as IStyledComponent<
     'web',
-    typeof target,
-    OuterProps
+    any
   > &
     Statics;
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
-  WrappedStyledComponent.displayName = displayName;
   WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
+
+  if (process.env.NODE_ENV !== 'production') {
+    WrappedStyledComponent.displayName = displayName;
+  }
 
   // this static is used to preserve the cascade of static classes for component selector
   // purposes; this is especially important with usage of the css prop
@@ -284,13 +300,7 @@ function createStyledComponent<
     );
   }
 
-  // If the Object prototype is frozen, the "toString" property is non-writable. This means that any objects which inherit this property
-  // cannot have the property changed using an assignment. If using strict mode, attempting that will cause an error. If not using strict
-  // mode, attempting that will be silently ignored.
-  // However, we can still explicitly shadow the prototype's "toString" property by defining a new "toString" property on this object.
-  Object.defineProperty(WrappedStyledComponent, 'toString', {
-    value: () => `.${WrappedStyledComponent.styledComponentId}`,
-  });
+  setToString(WrappedStyledComponent, () => `.${WrappedStyledComponent.styledComponentId}`);
 
   if (isCompositeComponent) {
     const compositeComponentTarget = target as AnyComponent;

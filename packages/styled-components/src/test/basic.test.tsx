@@ -152,7 +152,7 @@ describe('basic', () => {
   });
 
   it('should allow you to pass in a function returning a style object', () => {
-    const Comp = styled.div(({ color }: { color: Exclude<CSSProperties['color'], undefined> }) => ({
+    const Comp = styled.div<{ color: Exclude<CSSProperties['color'], undefined> }>(({ color }) => ({
       color,
     }));
     TestRenderer.create(<Comp color="blue" />);
@@ -317,6 +317,30 @@ describe('basic', () => {
         "@media (min-width:500px) {
           .b > * {
             color: pink;
+          }
+        }"
+      `);
+    });
+
+    it('should handle container queries inside style rules', () => {
+      const Comp = styled.div`
+        background: blue;
+        container-type: inline-size;
+
+        @container (width > 30px) {
+          background: red;
+        }
+      `;
+
+      TestRenderer.create(<Comp />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          background: blue;
+          container-type: inline-size;
+        }
+        @container (width > 30px) {
+          .b {
+            background: red;
           }
         }"
       `);

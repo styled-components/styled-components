@@ -6,7 +6,7 @@
     "postbuild": "cp README.md packages/styled-components/",
     "postinstall": "yarn workspace styled-components generateErrors",
     "lint": "yarn workspace styled-components lint",
-    "size": "yarn workspace styled-components lint:size",
+    "size": "yarn workspace styled-components size",
     "test": "yarn workspace styled-components test"
   },
   "author": "Glen Maddern",
