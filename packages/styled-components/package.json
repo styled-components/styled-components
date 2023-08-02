@@ -11,16 +11,32 @@
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
   },
   "exports": {
-		".": {
+    ".": {
       "types": "./dist/index.d.ts",
-			"import": "./dist/styled-components.esm.js",
-			"require": "./dist/styled-components.cjs.js"
-		}
-	},
+      "import": {
+        "node": "./dist/styled-components.esm.js",
+        "default": "./dist/styled-components.browser.esm.js"
+      },
+      "require": {
+        "node": "./dist/styled-components.cjs.js",
+        "default": "./dist/styled-components.browser.cjs.js"
+      }
+    },
+    "./macro": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/styled-components-macro.esm.js",
+      "require": "./dist/styled-components-macro.cjs.js"
+    },
+    "./native": {
+      "types": "./dist/native/index.d.ts",
+      "import": "./dist/styled-components.native.esm.js",
+      "require": "./dist/styled-components.native.cjs.js"
+    }
+  },
   "sideEffects": false,
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
-    "prebuild": "rimraf dist && yarn generateErrors",
+    "prebuild": "rimraf dist native/dist && yarn generateErrors",
     "build": "rollup -c",
     "postbuild": "yarn size",
     "pretest": "yarn generateErrors",
