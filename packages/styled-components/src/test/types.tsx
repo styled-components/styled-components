@@ -411,3 +411,45 @@ const StylingText = styled(Text2)({
 const ButtonEventTest = styled.button``;
 
 const ButtonEventTestExample = () => <ButtonEventTest onClick={e => console.log(e)} />;
+
+/**
+ * Using "css" result as an interpolation value in a styled(Component)
+ * https://github.com/styled-components/styled-components/issues/4099
+ */
+type Props = {
+  $size: number;
+  $color: string;
+};
+
+const sizeStyles = css<Props>`
+  font-size: ${props => props.$size}px;
+`;
+
+styled.div<Props>`
+  color: ${props => props.$color};
+  ${sizeStyles};
+`;
+
+/**
+ * StyleFunction prop types when a StyleFunction returns another StyleFunction and prop types are provided
+ */
+type PropsWithVariant = {
+  variant: 'primary' | 'secondary';
+};
+
+function getStyle(p: PropsWithVariant) {
+  return p.variant === 'primary' ? 'blue' : 'green';
+}
+
+styled.div<PropsWithVariant>`
+  color: ${p => p => getStyle(p)};
+`;
+
+/**
+ * Styled object as function return value when prop types are provided
+ */
+styled.div<PropsWithVariant>`
+  ${p => ({
+    color: 'blue',
+  })};
+`;
