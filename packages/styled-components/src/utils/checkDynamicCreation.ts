@@ -3,7 +3,7 @@ import { useRef } from 'react';
 const invalidHookCallRe = /invalid hook call/i;
 const seen = new Set();
 
-export const checkDynamicCreation = (displayName: string, componentId?: string) => {
+export const checkDynamicCreation = (displayName: string, componentId?: string | undefined) => {
   if (process.env.NODE_ENV !== 'production') {
     const parsedIdString = componentId ? ` with the id of "${componentId}"` : '';
     const message =

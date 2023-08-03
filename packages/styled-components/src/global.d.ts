@@ -42,6 +42,6 @@ declare module 'css-to-react-native' {
 
   export default function transform(
     styleTuples: StyleTuple[],
-    shorthandBlacklist?: string[]
+    shorthandBlacklist?: string[] | undefined
   ): Style;
 }

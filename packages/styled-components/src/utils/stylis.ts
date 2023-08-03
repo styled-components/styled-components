@@ -8,8 +8,8 @@ const AMP_REGEX = /&/g;
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
 
 export type ICreateStylisInstance = {
-  options?: { namespace?: string; prefix?: boolean };
-  plugins?: stylis.Middleware[];
+  options?: { namespace?: string | undefined; prefix?: boolean | undefined } | undefined;
+  plugins?: stylis.Middleware[] | undefined;
 };
 
 /**

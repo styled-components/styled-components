@@ -38,7 +38,7 @@ import { DefaultTheme, ThemeContext } from './ThemeProvider';
 const identifiers: { [key: string]: number } = {};
 
 /* We depend on components having unique IDs */
-function generateId(displayName?: string, parentComponentId?: string): string {
+function generateId(displayName?: string | undefined, parentComponentId?: string | undefined): string {
   const name = typeof displayName !== 'string' ? 'sc' : escape(displayName);
   // Ensure that no displayName can lead to duplicate componentIds
   identifiers[name] = (identifiers[name] || 0) + 1;

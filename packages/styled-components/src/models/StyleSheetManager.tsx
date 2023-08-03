@@ -9,7 +9,7 @@ export const mainSheet: StyleSheet = new StyleSheet();
 export const mainStylis: Stringifier = createStylisInstance();
 
 export type IStyleSheetContext = {
-  shouldForwardProp?: ShouldForwardProp<'web'>;
+  shouldForwardProp?: ShouldForwardProp<'web'> | undefined; 
   styleSheet: StyleSheet;
   stylis: Stringifier;
 };

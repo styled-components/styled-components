@@ -20,7 +20,7 @@ export default class ComponentStyle {
   rules: RuleSet<any>;
   staticRulesId: string;
 
-  constructor(rules: RuleSet<any>, componentId: string, baseStyle?: ComponentStyle) {
+  constructor(rules: RuleSet<any>, componentId: string, baseStyle?: ComponentStyle | undefined) {
     this.rules = rules;
     this.staticRulesId = '';
     this.isStatic =

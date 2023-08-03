@@ -19,7 +19,7 @@ export const CSSOMTag = class CSSOMTag implements Tag {
 
   length: number;
 
-  constructor(target?: HTMLElement) {
+  constructor(target?: HTMLElement | undefined) {
     this.element = makeStyleTag(target);
 
     // Avoid Edge bug where empty style elements don't create sheets
@@ -62,7 +62,7 @@ export const TextTag = class TextTag implements Tag {
   nodes: NodeListOf<Node>;
   length: number;
 
-  constructor(target?: HTMLElement) {
+  constructor(target?: HTMLElement | undefined) {
     this.element = makeStyleTag(target);
     this.nodes = this.element.childNodes;
     this.length = 0;
@@ -100,7 +100,7 @@ export const VirtualTag = class VirtualTag implements Tag {
 
   length: number;
 
-  constructor(_target?: HTMLElement) {
+  constructor(_target?: HTMLElement | undefined) {
     this.rules = [];
     this.length = 0;
   }

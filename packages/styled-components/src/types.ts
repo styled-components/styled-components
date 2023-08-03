@@ -7,8 +7,8 @@ import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 export { CSS, DefaultTheme };
 
 interface ExoticComponentWithDisplayName<P extends object = {}> extends React.ExoticComponent<P> {
-  defaultProps?: Partial<P>;
-  displayName?: string;
+  defaultProps?: Partial<P> | undefined;
+  displayName?: string | undefined;
 }
 
 /**
@@ -42,11 +42,11 @@ export type NativeTarget = AnyComponent;
 
 export type StyledTarget<R extends Runtime> = R extends 'web' ? WebTarget : NativeTarget;
 export interface StyledOptions<R extends Runtime, Props extends object> {
-  attrs?: Attrs<Props>[];
-  componentId?: R extends 'web' ? string : never;
-  displayName?: string;
-  parentComponentId?: R extends 'web' ? string : never;
-  shouldForwardProp?: ShouldForwardProp<R>;
+  attrs?: Attrs<Props>[] | undefined;
+  componentId?: (R extends 'web' ? string : never) | undefined;
+  displayName?: string | undefined;
+  parentComponentId?: (R extends 'web' ? string : never) | undefined;
+  shouldForwardProp?: ShouldForwardProp<R> | undefined;
 }
 
 export type Dict<T = any> = { [key: string]: T };
@@ -64,9 +64,9 @@ export type ExecutionProps = {
    * </StyledButton>
    * ```
    */
-  as?: KnownTarget;
-  forwardedAs?: KnownTarget;
-  theme?: DefaultTheme;
+  as?: KnownTarget | undefined;
+  forwardedAs?: KnownTarget | undefined;
+  theme?: DefaultTheme | undefined;
 };
 
 /**
@@ -126,7 +126,7 @@ export interface Flattener<Props extends object> {
 }
 
 export interface Stringifier {
-  (css: string, selector?: string, prefix?: string, componentId?: string): string[];
+  (css: string, selector?: string | undefined, prefix?: string | undefined, componentId?: string | undefined): string[];
   hash: string;
 }
 
@@ -137,7 +137,7 @@ export interface ShouldForwardProp<R extends Runtime> {
 export interface CommonStatics<R extends Runtime, Props extends object> {
   attrs: Attrs<Props>[];
   target: StyledTarget<R>;
-  shouldForwardProp?: ShouldForwardProp<R>;
+  shouldForwardProp?: ShouldForwardProp<R> | undefined;
 }
 
 export interface IStyledStatics<R extends Runtime, OuterProps extends object>
@@ -148,7 +148,7 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   inlineStyle: R extends 'native' ? InstanceType<IInlineStyleConstructor<OuterProps>> : never;
   target: StyledTarget<R>;
   styledComponentId: R extends 'web' ? string : never;
-  warnTooManyClasses?: R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never;
+  warnTooManyClasses?: (R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never) | undefined;
 }
 
 /**
@@ -203,7 +203,7 @@ export interface IStyledComponent<R extends Runtime, Props extends object = Base
   extends PolymorphicComponent<R, Props>,
     IStyledStatics<R, Props>,
     StyledComponentBrand {
-  defaultProps?: ExecutionProps & Partial<Props>;
+  defaultProps?: (ExecutionProps & Partial<Props>) | undefined;
   toString: () => string;
 }
 

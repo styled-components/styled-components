@@ -10,7 +10,7 @@ const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
 };
 
 /** Create a style element inside `target` or <head> after the last */
-export const makeStyleTag = (target?: HTMLElement): HTMLStyleElement => {
+export const makeStyleTag = (target?: HTMLElement | undefined): HTMLStyleElement => {
   const head = document.head;
   const parent = target || head;
   const style = document.createElement('style');

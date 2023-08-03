@@ -28,7 +28,7 @@ export interface DefaultTheme {
   [key: string]: any;
 }
 
-type ThemeFn = (outerTheme?: DefaultTheme) => DefaultTheme;
+type ThemeFn = (outerTheme?: DefaultTheme | undefined) => DefaultTheme;
 type ThemeArgument = DefaultTheme | ThemeFn;
 
 type Props = {
@@ -40,7 +40,7 @@ export const ThemeContext = React.createContext<DefaultTheme | undefined>(undefi
 
 export const ThemeConsumer = ThemeContext.Consumer;
 
-function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme): DefaultTheme {
+function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme | undefined): DefaultTheme {
   if (!theme) {
     throw styledError(14);
   }
