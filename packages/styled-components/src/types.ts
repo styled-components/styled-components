@@ -230,7 +230,7 @@ export interface IInlineStyle<Props extends object> {
   generateStyleObject(executionContext: ExecutionContext & Props): object;
 }
 
-export type StyledObject<Props extends object> = CSS.Properties & {
+export type StyledObject<Props extends object> = CSS.Properties<number | (string & {})> & {
   [key: string]:
     | string
     | number

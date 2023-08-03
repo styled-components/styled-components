@@ -362,6 +362,8 @@ const AttrFunctionRequiredTest5 = styled(DivWithUnfulfilledRequiredProps).attrs(
 type CSSPropTestType = { color?: string; css?: CSSProp };
 styled.div<CSSPropTestType>(_ => ({ css: 'color: red;' }));
 styled.div<CSSPropTestType>(_ => ({ css: { color: 'red' } }));
+styled.div<CSSPropTestType>(_ => ({ css: { height: '42px' } }));
+styled.div<CSSPropTestType>(_ => ({ css: { height: 42 } }));
 styled.div<CSSPropTestType>(_ => ({ css: () => ({ color: 'red' }) }));
 styled.div<CSSPropTestType>(_ => ({
   css: css`
