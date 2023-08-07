@@ -237,15 +237,25 @@ export interface IInlineStyle<Props extends object> {
   generateStyleObject(executionContext: ExecutionContext & Props): object;
 }
 
-export type StyledObject<Props extends object> = CSS.Properties<number | (string & {})> & {
-  [key: string]:
-    | string
-    | number
-    | StyleFunction<Props>
-    | StyledObject<Props>
-    | RuleSet<any>
-    | undefined;
-};
+export type CSSProperties = CSS.Properties<number | (string & {})>;
+
+export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
+
+export type CSSKeyframes = object & { [key: string]: CSSObject };
+
+export type CSSObject = StyledObject<any>;
+
+export type StyledObject<Props extends object> = CSSProperties &
+  CSSPseudos & {
+    [key: string]:
+      | StyledObject<any> // StyledObject<any> instead of CSSObject. Because writing CSSObject directly results in a circularly references.
+      | string
+      | number
+      | StyleFunction<Props>
+      | StyledObject<Props>
+      | RuleSet<any>
+      | undefined;
+  };
 
 /**
  * The `css` prop is not declared by default in the types as it would cause `css` to be present
@@ -275,13 +285,3 @@ export type CSSProp = Interpolation<any>;
 export type NoInfer<T> = [T][T extends any ? 0 : never];
 
 export type Substitute<A extends object, B extends object> = FastOmit<A, keyof B> & B;
-
-export type CSSProperties = CSS.Properties<string | number>;
-
-export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
-
-export interface CSSObject extends CSSProperties, CSSPseudos {
-  [key: string]: CSSObject | string | number | undefined;
-}
-
-export type CSSKeyframes = object & { [key: string]: CSSObject };
