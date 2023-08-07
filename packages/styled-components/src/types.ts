@@ -126,7 +126,12 @@ export interface Flattener<Props extends object> {
 }
 
 export interface Stringifier {
-  (css: string, selector?: string | undefined, prefix?: string | undefined, componentId?: string | undefined): string[];
+  (
+    css: string,
+    selector?: string | undefined,
+    prefix?: string | undefined,
+    componentId?: string | undefined
+  ): string[];
   hash: string;
 }
 
@@ -148,7 +153,9 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   inlineStyle: R extends 'native' ? InstanceType<IInlineStyleConstructor<OuterProps>> : never;
   target: StyledTarget<R>;
   styledComponentId: R extends 'web' ? string : never;
-  warnTooManyClasses?: (R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never) | undefined;
+  warnTooManyClasses?:
+    | (R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never)
+    | undefined;
 }
 
 /**
