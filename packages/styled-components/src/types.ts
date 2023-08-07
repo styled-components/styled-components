@@ -126,7 +126,12 @@ export interface Flattener<Props extends object> {
 }
 
 export interface Stringifier {
-  (css: string, selector?: string | undefined, prefix?: string | undefined, componentId?: string | undefined): string[];
+  (
+    css: string,
+    selector?: string | undefined,
+    prefix?: string | undefined,
+    componentId?: string | undefined
+  ): string[];
   hash: string;
 }
 
@@ -148,7 +153,9 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   inlineStyle: R extends 'native' ? InstanceType<IInlineStyleConstructor<OuterProps>> : never;
   target: StyledTarget<R>;
   styledComponentId: R extends 'web' ? string : never;
-  warnTooManyClasses?: (R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never) | undefined;
+  warnTooManyClasses?:
+    | (R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never)
+    | undefined;
 }
 
 /**
@@ -268,3 +275,13 @@ export type CSSProp = Interpolation<any>;
 export type NoInfer<T> = [T][T extends any ? 0 : never];
 
 export type Substitute<A extends object, B extends object> = FastOmit<A, keyof B> & B;
+
+export type CSSProperties = CSS.Properties<string | number>;
+
+export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
+
+export interface CSSObject extends CSSProperties, CSSPseudos {
+  [key: string]: CSSObject | string | number | undefined;
+}
+
+export type CSSKeyframes = object & { [key: string]: CSSObject };
