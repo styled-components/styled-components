@@ -1,4 +1,5 @@
-import transformDeclPairs, { StyleTuple } from 'css-to-react-native';
+import transformDeclPairs from 'css-to-react-native';
+import { parse } from 'postcss';
 import React from 'react';
 import constructWithOptions, { Styled } from '../constructors/constructWithOptions';
 import css from '../constructors/css';
@@ -7,7 +8,9 @@ import _InlineStyle from '../models/InlineStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
 import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from '../models/ThemeProvider';
 import { NativeTarget, RuleSet } from '../types';
+import flatten from '../utils/flatten';
 import isStyledComponent from '../utils/isStyledComponent';
+import { joinStringArray } from '../utils/joinStrings';
 
 const reactNative = require('react-native') as Awaited<typeof import('react-native')>;
 
@@ -77,22 +80,23 @@ aliases.forEach(alias =>
   })
 );
 
-const toStyleSheet = (style: RuleSet<object>) => {
-  const rules = style
-      .toString()
-      .replace(/,/g, '')
-      .split(';')
-      .reduce((acc : StyleTuple[] , curr: string) => {
-          const [key, value] = curr.split(':');
-          if (key && value) {
-              acc.push([key.trim(), value.trim()]);
-          }
-          return acc;
-      }, []);
+const toStyleSheet = (rules: RuleSet<object>) => {
+  const flatCSS = joinStringArray(flatten(rules) as string[]);
 
-  const transformed = transformDeclPairs(rules);
+  const root = parse(flatCSS);
+  const declPairs: [string, string][] = [];
 
-  return reactNative.StyleSheet.create({style: transformed}).style;
+  root.each(node => {
+    if (node.type === 'decl') {
+      declPairs.push([node.prop, node.value]);
+    } else if (process.env.NODE_ENV !== 'production' && node.type !== 'comment') {
+      console.warn(`Node of type ${node.type} not supported as an inline style`);
+    }
+  });
+
+  const styleObject = transformDeclPairs(declPairs);
+
+  return reactNative.StyleSheet.create({ style: styleObject }).style;
 };
 
 export {
@@ -107,7 +111,17 @@ export {
   PolymorphicComponentProps,
   Runtime,
   StyledObject,
-  StyledOptions
+  StyledOptions,
 } from '../types';
-export { ThemeConsumer, ThemeContext, ThemeProvider, css, styled as default, isStyledComponent, styled, toStyleSheet, useTheme, withTheme };
-
+export {
+  ThemeConsumer,
+  ThemeContext,
+  ThemeProvider,
+  css,
+  styled as default,
+  isStyledComponent,
+  styled,
+  toStyleSheet,
+  useTheme,
+  withTheme,
+};

@@ -1,5 +1,5 @@
 import React, { PropsWithChildren } from 'react';
-import { ScrollView, Text, View, ViewProps } from 'react-native';
+import { Text, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
 
@@ -345,17 +345,8 @@ describe('native', () => {
       const cssStyle = css`
         background-color: red;
       `;
-      const Comp = styled.ScrollView.attrs(() => ({
-        contentContainerStyle: toStyleSheet(cssStyle),
-      }))`
-        background-color: blue;
-      `;
-      const wrapper = TestRenderer.create(<Comp />);
-      const view = wrapper.root.findByType(ScrollView);
-      expect(view.props).toEqual({
-        style: { backgroundColor: 'blue' },
-        contentContainerStyle: { backgroundColor: 'red' },
-      });
+
+      expect(toStyleSheet(cssStyle)).toEqual({ backgroundColor: 'red' });
     });
   });
 
