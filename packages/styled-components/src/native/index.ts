@@ -1,3 +1,4 @@
+import transformDeclPairs, { StyleTuple } from 'css-to-react-native';
 import React from 'react';
 import constructWithOptions, { Styled } from '../constructors/constructWithOptions';
 import css from '../constructors/css';
@@ -5,7 +6,7 @@ import withTheme from '../hoc/withTheme';
 import _InlineStyle from '../models/InlineStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
 import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from '../models/ThemeProvider';
-import { NativeTarget } from '../types';
+import { NativeTarget, RuleSet } from '../types';
 import isStyledComponent from '../utils/isStyledComponent';
 
 const reactNative = require('react-native') as Awaited<typeof import('react-native')>;
@@ -76,6 +77,24 @@ aliases.forEach(alias =>
   })
 );
 
+const toStyleSheet = (style: RuleSet<object>) => {
+  const rules = style
+      .toString()
+      .replace(/,/g, '')
+      .split(';')
+      .reduce((acc : StyleTuple[] , curr: string) => {
+          const [key, value] = curr.split(':');
+          if (key && value) {
+              acc.push([key.trim(), value.trim()]);
+          }
+          return acc;
+      }, []);
+
+  const transformed = transformDeclPairs(rules);
+
+  return reactNative.StyleSheet.create({style: transformed}).style;
+};
+
 export {
   DefaultTheme,
   ExecutionContext,
@@ -88,7 +107,7 @@ export {
   PolymorphicComponentProps,
   Runtime,
   StyledObject,
-  StyledOptions,
+  StyledOptions
 } from '../types';
-export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
-export { styled, styled as default };
+export { ThemeConsumer, ThemeContext, ThemeProvider, css, styled as default, isStyledComponent, styled, toStyleSheet, useTheme, withTheme };
+
