@@ -294,4 +294,3 @@ export interface ThemeProps<T> {
 
 export type ThemedStyledProps<P, T> = P & ThemeProps<T>;
 export type StyledProps<P> = ThemedStyledProps<P, AnyIfEmpty<DefaultTheme>>;
-export type IntrinsicElementsKeys = keyof JSX.IntrinsicElements;

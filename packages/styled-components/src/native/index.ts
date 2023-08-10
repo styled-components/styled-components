@@ -110,7 +110,6 @@ export {
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
-  IntrinsicElementsKeys,
   NativeTarget,
   PolymorphicComponent,
   PolymorphicComponentProps,

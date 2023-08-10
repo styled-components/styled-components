@@ -12,7 +12,7 @@ export {
   ExecutionProps,
   IStyledComponent,
   IStyledComponentFactory,
-  IStyledStatics, IntrinsicElementsKeys, PolymorphicComponent,
+  IStyledStatics, PolymorphicComponent,
   PolymorphicComponentProps,
   RuleSet,
   Runtime,
@@ -21,3 +21,4 @@ export {
   ThemedStyledProps, WebTarget
 } from './types';
 export { styled as default, styled };
+
