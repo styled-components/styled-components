@@ -126,7 +126,12 @@ export interface Flattener<Props extends object> {
 }
 
 export interface Stringifier {
-  (css: string, selector?: string | undefined, prefix?: string | undefined, componentId?: string | undefined): string[];
+  (
+    css: string,
+    selector?: string | undefined,
+    prefix?: string | undefined,
+    componentId?: string | undefined
+  ): string[];
   hash: string;
 }
 
@@ -148,7 +153,9 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
   inlineStyle: R extends 'native' ? InstanceType<IInlineStyleConstructor<OuterProps>> : never;
   target: StyledTarget<R>;
   styledComponentId: R extends 'web' ? string : never;
-  warnTooManyClasses?: (R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never) | undefined;
+  warnTooManyClasses?:
+    | (R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never)
+    | undefined;
 }
 
 /**
@@ -230,15 +237,25 @@ export interface IInlineStyle<Props extends object> {
   generateStyleObject(executionContext: ExecutionContext & Props): object;
 }
 
-export type StyledObject<Props extends object> = CSS.Properties<number | (string & {})> & {
-  [key: string]:
-    | string
-    | number
-    | StyleFunction<Props>
-    | StyledObject<Props>
-    | RuleSet<any>
-    | undefined;
-};
+export type CSSProperties = CSS.Properties<number | (string & {})>;
+
+export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
+
+export type CSSKeyframes = object & { [key: string]: CSSObject };
+
+export type CSSObject = StyledObject<any>;
+
+export type StyledObject<Props extends object> = CSSProperties &
+  CSSPseudos & {
+    [key: string]:
+      | StyledObject<any> // StyledObject<any> instead of CSSObject. Because writing CSSObject directly results in a circularly references.
+      | string
+      | number
+      | StyleFunction<Props>
+      | StyledObject<Props>
+      | RuleSet<any>
+      | undefined;
+  };
 
 /**
  * The `css` prop is not declared by default in the types as it would cause `css` to be present

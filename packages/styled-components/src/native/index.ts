@@ -100,6 +100,10 @@ const toStyleSheet = (rules: RuleSet<object>) => {
 };
 
 export {
+  CSSKeyframes,
+  CSSObject,
+  CSSProperties,
+  CSSPseudos,
   DefaultTheme,
   ExecutionContext,
   ExecutionProps,

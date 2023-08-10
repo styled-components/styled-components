@@ -2,7 +2,11 @@ import styled from './constructors/styled';
 
 export * from './base';
 export {
+  CSSKeyframes,
+  CSSObject,
   CSSProp,
+  CSSProperties,
+  CSSPseudos,
   DefaultTheme,
   ExecutionContext,
   ExecutionProps,
@@ -17,4 +21,4 @@ export {
   StyledOptions,
   WebTarget,
 } from './types';
-export { styled, styled as default };
+export { styled as default, styled };
