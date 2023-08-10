@@ -386,6 +386,4 @@ export type NoInfer<T> = [T][T extends any ? 0 : never];
 
 export type Substitute<A extends object, B extends object> = FastOmit<A, keyof B> & B;
 
-// conflicts with https://github.com/styled-components/styled-components/pull/4126
-// TODO: remove after merge above.
 export type IntrinsicElementsKeys = keyof JSX.IntrinsicElements;
