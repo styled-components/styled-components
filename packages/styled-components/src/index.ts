@@ -21,4 +21,3 @@ export {
   ThemedStyledProps, WebTarget
 } from './types';
 export { styled as default, styled };
-
