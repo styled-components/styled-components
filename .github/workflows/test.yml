@@ -11,6 +11,21 @@ permissions:
   contents: read #  to fetch code (actions/checkout)
 
 jobs:
+  prettier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "yarn"
+
+      - run: yarn --pure-lockfile
+
+      - name: Prettier
+        run: yarn prettier
   build:
     runs-on: ubuntu-latest
     steps:
@@ -46,19 +61,3 @@ jobs:
 
       - name: Jest
         run: yarn test
-
-  prettier:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: "yarn"
-
-      - run: yarn --pure-lockfile
-
-      - name: Prettier
-        run: yarn prettier
