@@ -77,6 +77,10 @@ aliases.forEach(alias =>
 );
 
 export {
+  CSSKeyframes,
+  CSSObject,
+  CSSProperties,
+  CSSPseudos,
   DefaultTheme,
   ExecutionContext,
   ExecutionProps,
@@ -90,5 +94,14 @@ export {
   StyledObject,
   StyledOptions,
 } from '../types';
-export { css, isStyledComponent, ThemeProvider, ThemeConsumer, ThemeContext, withTheme, useTheme };
-export { styled, styled as default };
+export {
+  ThemeConsumer,
+  ThemeContext,
+  ThemeProvider,
+  css,
+  styled as default,
+  isStyledComponent,
+  styled,
+  useTheme,
+  withTheme,
+};
