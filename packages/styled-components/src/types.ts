@@ -173,7 +173,7 @@ export type PolymorphicComponentProps<
   // props extracted from "forwardAs"; note that ref is excluded
   ForwardedAsTargetProps extends object = ForwardedAsTarget extends KnownTarget
     ? React.ComponentPropsWithoutRef<ForwardedAsTarget>
-    : {}
+    : {},
 > = NoInfer<
   FastOmit<
     Substitute<
@@ -200,7 +200,7 @@ export interface PolymorphicComponent<R extends Runtime, BaseProps extends objec
   extends React.ForwardRefExoticComponent<BaseProps> {
   <
     AsTarget extends StyledTarget<R> | void = void,
-    ForwardedAsTarget extends StyledTarget<R> | void = void
+    ForwardedAsTarget extends StyledTarget<R> | void = void,
   >(
     props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget>
   ): JSX.Element;
@@ -219,7 +219,7 @@ export interface IStyledComponentFactory<
   R extends Runtime,
   Target extends StyledTarget<R>,
   OuterProps extends object,
-  OuterStatics extends object = BaseObject
+  OuterStatics extends object = BaseObject,
 > {
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
     target: Target,

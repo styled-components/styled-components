@@ -220,10 +220,9 @@ describe('keyframes', () => {
     const getAnimation = (animation: any): any => {
       if (Array.isArray(animation)) {
         return animation.reduce(
-          (ret, a, index) =>
-            css`
-              ${ret}${index > 0 ? ',' : ''} ${getAnimation(a)}
-            `,
+          (ret, a, index) => css`
+            ${ret}${index > 0 ? ',' : ''} ${getAnimation(a)}
+          `,
           ''
         );
       } else {

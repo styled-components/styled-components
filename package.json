@@ -6,6 +6,7 @@
     "postbuild": "cp README.md packages/styled-components/",
     "postinstall": "yarn workspace styled-components generateErrors",
     "lint": "yarn workspace styled-components lint",
+    "prettier": "yarn workspace styled-components prettier:check",
     "size": "yarn workspace styled-components size",
     "test": "yarn workspace styled-components test"
   },
