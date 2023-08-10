@@ -80,6 +80,92 @@ export interface StyleFunction<Props extends object> {
   (executionContext: ExecutionContext & Props): Interpolation<Props>;
 }
 
+type Defaultize<P, D> = P extends any
+  ? string extends keyof P
+    ? P
+    : PickU<P, Exclude<keyof P, keyof D>> &
+        Partial<PickU<P, Extract<keyof P, keyof D>>> &
+        Partial<PickU<D, Exclude<keyof D, keyof P>>>
+  : never;
+
+type ReactDefaultizedProps<C, P> = C extends { defaultProps: infer D } ? Defaultize<P, D> : P;
+type ForwardRefExoticBase<P> = PickU<
+  React.ForwardRefExoticComponent<P>,
+  keyof React.ForwardRefExoticComponent<any>
+>;
+type StyledComponentPropsWithAs<
+  C extends string | React.ComponentType<any>,
+  T extends object,
+  O extends object,
+  A extends keyof any,
+  AsC extends string | React.ComponentType<any> = C,
+  FAsC extends string | React.ComponentType<any> = C
+> = StyledComponentProps<C, T, O, A, FAsC> & {
+  as?: AsC | undefined;
+  forwardedAs?: FAsC | undefined;
+};
+
+type WithOptionalTheme<P extends { theme?: T | undefined }, T> = OmitU<P, 'theme'> & {
+  theme?: T | undefined;
+};
+
+type MakeAttrsOptional<
+  C extends string | React.ComponentType<any>,
+  O extends object,
+  A extends keyof P,
+  P = React.ComponentPropsWithRef<
+    C extends IntrinsicElementsKeys | React.ComponentType<any> ? C : never
+  >
+> =
+  // Distribute unions early to avoid quadratic expansion
+  P extends any ? OmitU<ReactDefaultizedProps<C, P> & O, A> & Partial<PickU<P & O, A>> : never;
+
+export type StyledComponentProps<
+  // The Component from whose props are derived
+  C extends string | React.ComponentType<any>,
+  // The Theme from the current context
+  T extends object,
+  // The other props added by the template
+  O extends object,
+  // The props that are made optional by .attrs
+  A extends keyof any,
+  // The Component passed with "forwardedAs" prop
+  FAsC extends string | React.ComponentType<any> = C
+> =
+  // Distribute O if O is a union type
+  O extends object
+    ? WithOptionalTheme<MakeAttrsOptional<C, O, A> & MakeAttrsOptional<FAsC, O, A>, T>
+    : never;
+
+export interface StyledComponentBase<
+  C extends string | React.ComponentType<any>,
+  T extends object,
+  O extends object = {},
+  A extends keyof any = never
+> extends ForwardRefExoticBase<StyledComponentProps<C, T, O, A>> {
+  // add our own fake call signature to implement the polymorphic 'as' prop
+  (
+    props: StyledComponentProps<C, T, O, A> & {
+      as?: never | undefined;
+      forwardedAs?: never | undefined;
+    }
+  ): React.ReactElement<StyledComponentProps<C, T, O, A>>;
+  <
+    AsC extends string | React.ComponentType<any> = C,
+    FAsC extends string | React.ComponentType<any> = AsC
+  >(
+    props: StyledComponentPropsWithAs<AsC, T, O, A, AsC, FAsC>
+  ): React.ReactElement<StyledComponentPropsWithAs<AsC, T, O, A, AsC, FAsC>>;
+}
+
+export type PickU<T, K extends keyof T> = T extends any ? { [P in K]: T[P] } : never;
+export type OmitU<T, K extends keyof T> = T extends any ? PickU<T, Exclude<keyof T, K>> : never;
+
+type StyledComponentInterpolation =
+  | PickU<StyledComponentBase<any, any, any, any>, keyof StyledComponentBase<any, any>>
+  | PickU<StyledComponentBase<any, any, any>, keyof StyledComponentBase<any, any>>;
+
+export type FalseyValue = undefined | null | false;
 export type Interpolation<Props extends object> =
   | StyleFunction<Props>
   | StyledObject<Props>
@@ -92,7 +178,21 @@ export type Interpolation<Props extends object> =
   | Keyframes
   | StyledComponentBrand
   | RuleSet<Props>
-  | Interpolation<Props>[];
+  | Interpolation<Props>[]
+  | InterpolationFunction<Props>
+  | FlattenInterpolation<Props>;
+
+export type InterpolationFunction<P extends object> = (props: P) => Interpolation<P>;
+export type FlattenInterpolation<P extends object> = ReadonlyArray<Interpolation<P>>;
+export type InterpolationValue =
+  | string
+  | number
+  | FalseyValue
+  | Keyframes
+  | StyledComponentInterpolation
+  | CSSObject;
+export type SimpleInterpolation = InterpolationValue | FlattenSimpleInterpolation;
+export type FlattenSimpleInterpolation = ReadonlyArray<SimpleInterpolation>;
 
 export type Attrs<Props extends object = BaseObject> =
   | (ExecutionProps & Partial<Props>)
@@ -285,3 +385,7 @@ export type CSSProp = Interpolation<any>;
 export type NoInfer<T> = [T][T extends any ? 0 : never];
 
 export type Substitute<A extends object, B extends object> = FastOmit<A, keyof B> & B;
+
+// conflicts with https://github.com/styled-components/styled-components/pull/4126
+// TODO: remove after merge above.
+export type IntrinsicElementsKeys = keyof JSX.IntrinsicElements;
