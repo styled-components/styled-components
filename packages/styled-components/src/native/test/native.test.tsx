@@ -1,7 +1,7 @@
 import React, { PropsWithChildren } from 'react';
 import { Text, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
-import styled, { ThemeProvider } from '../';
+import styled, { ThemeProvider, css, toStyleSheet } from '../';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
@@ -339,6 +339,14 @@ describe('native', () => {
       const text = wrapper.root.findByType(Text);
 
       expect(text.props.style).toMatchObject({ color: 'red' });
+    });
+
+    it('convert css to styleSheet', () => {
+      const cssStyle = css`
+        background-color: red;
+      `;
+
+      expect(toStyleSheet(cssStyle)).toEqual({ backgroundColor: 'red' });
     });
   });
 
