@@ -110,7 +110,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
   const createStyledNativeComponent = <
     Target extends NativeTarget,
     OuterProps extends ExecutionProps,
-    Statics extends object = BaseObject
+    Statics extends object = BaseObject,
   >(
     target: Target,
     options: StyledOptions<'native', OuterProps>,
