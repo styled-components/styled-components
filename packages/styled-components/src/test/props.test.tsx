@@ -69,10 +69,12 @@ describe('props', () => {
       [
         <div
           className="sc-a b"
+          theme={{}}
         />,
         <div
           className="sc-a c"
           fg="red"
+          theme={{}}
         />,
       ]
     `);
@@ -96,6 +98,7 @@ describe('props', () => {
     expect(TestRenderer.create(<Comp2 forwardedAs="button" />).toJSON()).toMatchInlineSnapshot(`
       <button
         className="sc-a b"
+        theme={{}}
       />
     `);
 

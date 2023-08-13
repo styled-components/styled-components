@@ -209,6 +209,7 @@ describe('basic', () => {
     expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
       <custom-element
         class="sc-a b"
+        theme={{}}
       />
     `);
   });
@@ -404,6 +405,7 @@ describe('basic', () => {
       expect(rendered.toJSON()).toMatchInlineSnapshot(`
         <div
           className="sc-a d sc-b c"
+          theme={{}}
         />
       `);
     });

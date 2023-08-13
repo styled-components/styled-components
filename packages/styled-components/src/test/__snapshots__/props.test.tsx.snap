@@ -5,10 +5,12 @@ exports[`props shouldForwardProp should inherit shouldForwardProp for wrapped st
   <div
     className="sc-a c"
     id="test-1"
+    theme={{}}
   />,
   <div
     className="sc-a sc-b d"
     id="test-2"
+    theme={{}}
   />,
 ]
 `;

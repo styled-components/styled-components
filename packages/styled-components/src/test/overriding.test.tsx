@@ -78,6 +78,7 @@ describe('extending', () => {
     expect(tree.toJSON()).toMatchInlineSnapshot(`
       <div
         className="sc-a sc-b c d"
+        theme={{}}
       />
     `);
   });
@@ -171,12 +172,14 @@ describe('extending', () => {
           <h1
             className="sc-a d"
             color="primary"
+            theme={{}}
           />
         `);
         expect(TestRenderer.create(<Child />).toJSON()).toMatchInlineSnapshot(`
           <h2
             className="sc-a sc-b e"
             color="secondary"
+            theme={{}}
           />
         `);
 
@@ -184,6 +187,7 @@ describe('extending', () => {
           <h3
             className="sc-a sc-b sc-c d"
             color="primary"
+            theme={{}}
           />
         `);
         expect(getRenderedCSS()).toMatchInlineSnapshot(`
