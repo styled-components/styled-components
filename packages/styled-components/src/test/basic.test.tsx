@@ -66,6 +66,23 @@ describe('basic', () => {
     `);
   });
 
+  it('should inject two different styles if the same compnoent is mounted with different props and css', () => {
+    const Comp = styled.div<{ $variant: 'text' | 'background' }>`
+      color: ${props => props.$variant == 'text' && 'red'};
+      background-color: ${props => props.$variant == 'background' && 'red'};
+    `;
+    TestRenderer.create(<Comp $variant="text" />);
+    TestRenderer.create(<Comp $variant="background" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".b {
+        color: red;
+      }
+      .c {
+        background-color: red;
+      }"
+    `);
+  });
+
   it('Should have the correct styled(component) displayName', () => {
     const CompWithoutName = () => (() => <div />) as React.FC<any>;
 
@@ -524,6 +541,36 @@ describe('basic', () => {
       );
 
       expect(console.warn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('production mode', () => {
+    let originalEnv: string | undefined;
+
+    beforeEach(() => {
+      originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+    });
+
+    afterEach(() => {
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('should inject two different styles if the same compnoent is mounted with different props and css', () => {
+      const Comp = styled.div<{ $variant: 'text' | 'background' }>`
+        color: ${props => props.$variant == 'text' && 'red'};
+        background-color: ${props => props.$variant == 'background' && 'red'};
+      `;
+      TestRenderer.create(<Comp $variant="text" />);
+      TestRenderer.create(<Comp $variant="background" />);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".b {
+          color: red;
+        }
+        .c {
+          background-color: red;
+        }"
+      `);
     });
   });
 });
