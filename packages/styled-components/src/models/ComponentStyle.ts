@@ -73,7 +73,7 @@ export default class ComponentStyle {
         if (typeof partRule === 'string') {
           css += partRule;
 
-          if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule);
+          dynamicHash = phash(dynamicHash, partRule);
         } else if (partRule) {
           const partString = joinStringArray(
             flatten(partRule, executionContext, styleSheet, stylis) as string[]
