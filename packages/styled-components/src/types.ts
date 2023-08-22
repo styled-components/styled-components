@@ -243,12 +243,12 @@ export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
 
 export type CSSKeyframes = object & { [key: string]: CSSObject };
 
-export type CSSObject = StyledObject<any>;
+export type CSSObject<Props extends object = BaseObject> = StyledObject<Props>;
 
-export type StyledObject<Props extends object> = CSSProperties &
+export type StyledObject<Props extends object = BaseObject> = CSSProperties &
   CSSPseudos & {
     [key: string]:
-      | StyledObject<any> // StyledObject<any> instead of CSSObject. Because writing CSSObject directly results in a circularly references.
+      | StyledObject<Props>
       | string
       | number
       | StyleFunction<Props>
