@@ -14,6 +14,7 @@ Thank you for contributing and please follow this guide before creating an issue
 - Use the "BUG TEMPLATE" below to report a test
 - Don't forget to 👉PROVIDE A REPRODUCTION PLEASE 😉 (Codesandbox links are provided and most useful, repositories are ok)
 - If you can't provide a reproduction, snippets of code can help, but are incomplete reports
+- Note: Typescript issues prior to v6 should be referred to the DefinitelyTyped project
 
 3. Do you have a feature request?
 =============================
