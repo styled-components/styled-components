@@ -32,7 +32,7 @@ export type AnyComponent<P extends object = any> =
   | ExoticComponentWithDisplayName<P>
   | React.ComponentType<P>;
 
-export type KnownTarget = Exclude<keyof JSX.IntrinsicElements, 'symbol' | 'object'> | AnyComponent;
+export type KnownTarget = Exclude<keyof React.ReactDOM, 'symbol' | 'object'> | AnyComponent;
 
 export type WebTarget =
   | string // allow custom elements, etc.
