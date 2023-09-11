@@ -111,10 +111,17 @@ export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {
     if (!shallowequal(plugins, props.stylisPlugins)) setPlugins(props.stylisPlugins);
   }, [props.stylisPlugins]);
 
+  const styleSheetContextValue = useMemo(
+    () => ({
+      shouldForwardProp: props.shouldForwardProp,
+      styleSheet: resolvedStyleSheet,
+      stylis,
+    }),
+    [props.shouldForwardProp, resolvedStyleSheet, stylis]
+  );
+
   return (
-    <StyleSheetContext.Provider
-      value={{ shouldForwardProp: props.shouldForwardProp, styleSheet: resolvedStyleSheet, stylis }}
-    >
+    <StyleSheetContext.Provider value={styleSheetContextValue}>
       <StylisContext.Provider value={stylis}>{props.children}</StylisContext.Provider>
     </StyleSheetContext.Provider>
   );
