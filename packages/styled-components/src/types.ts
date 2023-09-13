@@ -52,6 +52,19 @@ export interface StyledOptions<R extends Runtime, Props extends object> {
 
 export type Dict<T = any> = { [key: string]: T };
 
+/**
+ * This type is intended for when data attributes are composed via
+ * the `.attrs` API:
+ *
+ * ```tsx
+ * styled.div.attrs<DataAttributes>({ 'data-testid': 'foo' })``
+ * ```
+ *
+ * Would love to figure out how to support this natively without having to
+ * manually compose the type, but haven't figured out a way to do so yet that
+ * doesn't cause specificity loss (see `test/types.tsx` if you attempt to embed
+ * `DataAttributes` directly in the `Attrs<>` type.)
+ */
 export type DataAttributes = { [key: `data-${string}`]: any };
 
 export type ExecutionProps = {
