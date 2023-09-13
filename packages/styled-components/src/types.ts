@@ -173,7 +173,7 @@ export type PolymorphicComponentProps<
     : {},
   // props extracted from "forwardAs"; note that ref is excluded
   ForwardedAsTargetProps extends object = ForwardedAsTarget extends KnownTarget
-    ? React.ComponentPropsWithoutRef<ForwardedAsTarget>
+    ? React.ComponentPropsWithRef<ForwardedAsTarget>
     : {},
 > = NoInfer<
   FastOmit<
