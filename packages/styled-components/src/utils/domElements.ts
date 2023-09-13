@@ -1,6 +1,6 @@
 // Thanks to ReactDOMFactories for this handy list!
 
-export default new Set([
+const elements = [
   'a',
   'abbr',
   'address',
@@ -46,7 +46,6 @@ export default new Set([
   'h4',
   'h5',
   'h6',
-  'head',
   'header',
   'hgroup',
   'hr',
@@ -106,7 +105,6 @@ export default new Set([
   'th',
   'thead',
   'time',
-  'title',
   'tr',
   'track',
   'u',
@@ -136,4 +134,7 @@ export default new Set([
   'svg',
   'text',
   'tspan',
-] as const);
+] as const;
+
+export default new Set(elements);
+export type SupportedHTMLElements = (typeof elements)[number];

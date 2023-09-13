@@ -3,6 +3,7 @@ import React from 'react';
 import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
+import type { SupportedHTMLElements } from './utils/domElements';
 
 export { CSS, DefaultTheme };
 
@@ -32,7 +33,7 @@ export type AnyComponent<P extends object = any> =
   | ExoticComponentWithDisplayName<P>
   | React.ComponentType<P>;
 
-export type KnownTarget = Exclude<keyof React.ReactDOM, 'symbol' | 'object'> | AnyComponent;
+export type KnownTarget = SupportedHTMLElements | AnyComponent;
 
 export type WebTarget =
   | string // allow custom elements, etc.
