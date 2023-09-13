@@ -3,8 +3,9 @@ import React from 'react';
 import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
+import type { SupportedHTMLElements } from './utils/domElements';
 
-export { CSS, DefaultTheme };
+export { CSS, DefaultTheme, SupportedHTMLElements };
 
 interface ExoticComponentWithDisplayName<P extends object = {}> extends React.ExoticComponent<P> {
   defaultProps?: Partial<P> | undefined;
@@ -32,7 +33,7 @@ export type AnyComponent<P extends object = any> =
   | ExoticComponentWithDisplayName<P>
   | React.ComponentType<P>;
 
-export type KnownTarget = Exclude<keyof JSX.IntrinsicElements, 'symbol' | 'object'> | AnyComponent;
+export type KnownTarget = SupportedHTMLElements | AnyComponent;
 
 export type WebTarget =
   | string // allow custom elements, etc.

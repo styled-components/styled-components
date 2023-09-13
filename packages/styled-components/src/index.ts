@@ -21,6 +21,7 @@ export {
   StyleFunction,
   StyledObject,
   StyledOptions,
+  SupportedHTMLElements,
   WebTarget,
 } from './types';
 export { styled as default, styled };

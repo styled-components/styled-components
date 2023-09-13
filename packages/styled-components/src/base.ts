@@ -56,13 +56,9 @@ if (
 export * from './secretInternals';
 export { Attrs, DefaultTheme, ShouldForwardProp } from './types';
 export {
-  createGlobalStyle,
-  css,
-  isStyledComponent,
-  IStyleSheetManager,
   IStyleSheetContext,
+  IStyleSheetManager,
   IStylisContext,
-  keyframes,
   ServerStyleSheet,
   StyleSheetConsumer,
   StyleSheetContext,
@@ -70,6 +66,10 @@ export {
   ThemeConsumer,
   ThemeContext,
   ThemeProvider,
+  createGlobalStyle,
+  css,
+  isStyledComponent,
+  keyframes,
   useTheme,
   SC_VERSION as version,
   withTheme,
