@@ -5,7 +5,7 @@ import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 import type { SupportedHTMLElements } from './utils/domElements';
 
-export { CSS, DefaultTheme };
+export { CSS, DefaultTheme, SupportedHTMLElements };
 
 interface ExoticComponentWithDisplayName<P extends object = {}> extends React.ExoticComponent<P> {
   defaultProps?: Partial<P> | undefined;
