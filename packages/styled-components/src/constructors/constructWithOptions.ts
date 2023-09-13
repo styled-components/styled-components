@@ -50,7 +50,10 @@ export interface Styled<
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
     initialStyles: Styles<Substitute<OuterProps, NoInfer<Props>>>,
     ...interpolations: Interpolation<Substitute<OuterProps, NoInfer<Props>>>[]
-  ): IStyledComponent<R, Substitute<OuterProps, Props>> & OuterStatics & Statics & Target;
+  ): IStyledComponent<R, Substitute<OuterProps, Props>> &
+    OuterStatics &
+    Statics &
+    (Target extends string ? {} : Target);
 
   attrs: <
     Props extends object = BaseObject,
