@@ -459,7 +459,7 @@ styled.div<PropsWithVariant>`
 const TargetWithStaticProperties = (p: React.PropsWithChildren<{}>) => <div {...p} />;
 TargetWithStaticProperties.foo = 'bar';
 
-const StyledTargetWithStaticProperties = styled(TargetWithStaticProperties)``;
+const StyledTargetWithStaticProperties = styled(TargetWithStaticProperties)<{}, { foo: 'bar' }>``;
 StyledTargetWithStaticProperties.foo;
 
 /**
