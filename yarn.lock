@@ -910,13 +910,6 @@
     "@babel/helper-skip-transparent-expression-wrappers" "^7.20.0"
     "@babel/plugin-proposal-optional-chaining" "^7.20.7"
 
-"@babel/plugin-external-helpers@^7.18.6":
-  version "7.18.6"
-  resolved "https://registry.yarnpkg.com/@babel/plugin-external-helpers/-/plugin-external-helpers-7.18.6.tgz#58f2a6eca8ad05bc130de8cec569c43dc19b6deb"
-  integrity sha512-wNqc87qjLvsD1PIMQBzLn1bMuTlGzqLzM/1VGQ22Wm51cbCWS9k71ydp5iZS4hjwQNuTWSn/xbZkkusNENwtZg==
-  dependencies:
-    "@babel/helper-plugin-utils" "^7.18.6"
-
 "@babel/plugin-proposal-async-generator-functions@^7.0.0":
   version "7.18.6"
   resolved "https://registry.yarnpkg.com/@babel/plugin-proposal-async-generator-functions/-/plugin-proposal-async-generator-functions-7.18.6.tgz#aedac81e6fc12bb643374656dd5f2605bf743d17"
@@ -9084,12 +9077,11 @@ style-loader@^3.3.1:
     supports-color "^5.5.0"
 
 "styled-components@link:packages/styled-components":
-  version "6.0.7"
+  version "6.0.8"
   dependencies:
     "@babel/cli" "^7.21.0"
     "@babel/core" "^7.21.0"
     "@babel/helper-module-imports" "^7.18.6"
-    "@babel/plugin-external-helpers" "^7.18.6"
     "@babel/plugin-proposal-class-properties" "^7.18.6"
     "@babel/plugin-proposal-object-rest-spread" "^7.20.7"
     "@babel/preset-env" "^7.20.2"
