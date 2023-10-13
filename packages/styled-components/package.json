@@ -73,7 +73,7 @@
     "@types/stylis": "^4.0.2",
     "css-to-react-native": "^3.2.0",
     "csstype": "^3.1.2",
-    "postcss": "^8.4.23",
+    "postcss": "^8.4.31",
     "shallowequal": "^1.1.0",
     "stylis": "^4.3.0",
     "tslib": "^2.5.0"
