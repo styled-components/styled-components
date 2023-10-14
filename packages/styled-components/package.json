@@ -35,16 +35,13 @@
     "README.md",
     "dist",
     "native",
-    "test-utils",
-    "macro"
+    "test-utils"
   ],
   "keywords": [
     "react",
     "css",
     "css-in-js",
     "styled-components",
-    "babel-macro",
-    "babel-macros",
     "styling"
   ],
   "author": "Glen Maddern",
@@ -58,16 +55,6 @@
     "@types/react-dom": "^17.0.0"
   },
   "dependencies": {
-    "@babel/cli": "^7.21.0",
-    "@babel/core": "^7.21.0",
-    "@babel/helper-module-imports": "^7.18.6",
-    "@babel/plugin-external-helpers": "^7.18.6",
-    "@babel/plugin-proposal-class-properties": "^7.18.6",
-    "@babel/plugin-proposal-object-rest-spread": "^7.20.7",
-    "@babel/preset-env": "^7.20.2",
-    "@babel/preset-react": "^7.18.6",
-    "@babel/preset-typescript": "^7.21.0",
-    "@babel/traverse": "^7.21.2",
     "@emotion/is-prop-valid": "^1.2.1",
     "@emotion/unitless": "^0.8.0",
     "@types/stylis": "^4.0.2",
@@ -79,32 +66,32 @@
     "tslib": "^2.5.0"
   },
   "peerDependencies": {
-    "babel-plugin-styled-components": ">= 2",
     "react": ">= 16.8.0",
     "react-dom": ">= 16.8.0"
   },
-  "peerDependenciesMeta": {
-    "babel-plugin-styled-components": {
-      "optional": true
-    }
-  },
   "devDependencies": {
+    "@babel/core": "^7.21.0",
+    "@babel/helper-module-imports": "^7.18.6",
+    "@babel/plugin-external-helpers": "^7.18.6",
+    "@babel/plugin-proposal-class-properties": "^7.18.6",
+    "@babel/plugin-proposal-object-rest-spread": "^7.20.7",
     "@babel/plugin-transform-flow-strip-types": "^7.21.0",
+    "@babel/preset-env": "^7.20.2",
+    "@babel/preset-react": "^7.18.6",
+    "@babel/preset-typescript": "^7.21.0",
     "@rollup/plugin-typescript": "^11.0.0",
-    "@types/babel-plugin-macros": "^2.8.4",
     "@types/enzyme": "^3.10.12",
     "@types/jest": "^29.4.0",
     "@types/js-beautify": "^1.13.1",
     "@types/node": "^18.14.2",
-    "@types/react": "^17.0.22",
     "@types/react-dom": "^17.0.9",
     "@types/react-frame-component": "^4.1.3",
     "@types/react-native": "^0.69.1",
     "@types/react-test-renderer": "^17.0.1",
+    "@types/react": "^17.0.22",
     "@types/shallowequal": "^1.1.1",
     "babel-jest": "^29.4.3",
     "babel-plugin-add-module-exports": "^1.0.4",
-    "babel-plugin-macros": "^3.1.0",
     "babel-plugin-styled-components": "^2.0.7",
     "babel-plugin-tester": "^10.0.0",
     "bundlewatch": "^0.3.3",
