@@ -70,7 +70,6 @@
     "react-dom": ">= 16.8.0"
   },
   "devDependencies": {
-    "@babel/cli": "^7.21.0",
     "@babel/core": "^7.21.0",
     "@babel/helper-module-imports": "^7.18.6",
     "@babel/plugin-external-helpers": "^7.18.6",
@@ -80,7 +79,6 @@
     "@babel/preset-env": "^7.20.2",
     "@babel/preset-react": "^7.18.6",
     "@babel/preset-typescript": "^7.21.0",
-    "@babel/traverse": "^7.21.2",
     "@rollup/plugin-typescript": "^11.0.0",
     "@types/enzyme": "^3.10.12",
     "@types/jest": "^29.4.0",
