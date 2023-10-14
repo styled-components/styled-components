@@ -151,8 +151,17 @@ describe('native', () => {
       });
     });
 
+    interface TestProps {
+      first?: string;
+      second?: string;
+      test?: string | boolean;
+      copy?: string;
+    }
+
+    const ComponentWithProps = styled.View<TestProps>``;
+
     it('passes simple props on', () => {
-      const Comp = styled.View.attrs(() => ({
+      const Comp = styled(ComponentWithProps).attrs(() => ({
         test: true,
       }))``;
 
@@ -166,7 +175,7 @@ describe('native', () => {
     });
 
     it('calls an attr-function with context', () => {
-      const Comp = styled.View.attrs<{ copy: string; test: string }>(p => ({
+      const Comp = styled(ComponentWithProps).attrs<{ copy?: string; test: string }>(p => ({
         copy: p.test,
       }))``;
 
@@ -182,13 +191,15 @@ describe('native', () => {
     });
 
     it('merges multiple calls', () => {
-      const Comp = styled.View.attrs(() => ({
-        first: 'first',
-        test: '_',
-      })).attrs(() => ({
-        second: 'second',
-        test: 'test',
-      }))``;
+      const Comp = styled(ComponentWithProps)
+        .attrs(() => ({
+          first: 'first',
+          test: '_',
+        }))
+        .attrs(() => ({
+          second: 'second',
+          test: 'test',
+        }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
       const view = wrapper.root.findByType(View);
@@ -202,13 +213,17 @@ describe('native', () => {
     });
 
     it('merges multiple fn calls', () => {
-      const Comp = styled.View.attrs(() => ({
-        first: 'first',
-        test: '_',
-      })).attrs(() => ({
-        second: 'second',
-        test: 'test',
-      }))``;
+      const ComponentWithProps = styled.View<TestProps>``;
+
+      const Comp = styled(ComponentWithProps)
+        .attrs(() => ({
+          first: 'first',
+          test: '_',
+        }))
+        .attrs(() => ({
+          second: 'second',
+          test: 'test',
+        }))``;
 
       const wrapper = TestRenderer.create(<Comp />);
       const view = wrapper.root.findByType(View);
@@ -222,7 +237,7 @@ describe('native', () => {
     });
 
     it('merges attrs when inheriting SC', () => {
-      const Parent = styled.View.attrs(() => ({
+      const Parent = styled(ComponentWithProps).attrs(() => ({
         first: 'first',
       }))``;
 
