@@ -50,7 +50,17 @@ export default function makeInlineStyleClass<Props extends object>(styleSheet: S
           }
         });
 
-        const styleObject = transformDeclPairs(declPairs);
+      // RN currently does not support differing values for the border color of Image
+      // components (but does for View). It is almost impossible to tell whether we'll have
+      // support, so we'll just disable multiple values here.
+      // https://github.com/styled-components/styled-components/issues/4181
+
+        const styleObject = transformDeclPairs(declPairs, [
+          'borderWidth',
+          'borderColor',
+          'borderStyle',
+        ])
+
         const styles = styleSheet.create({
           generated: styleObject,
         });
