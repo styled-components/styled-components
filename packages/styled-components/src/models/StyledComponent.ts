@@ -196,7 +196,7 @@ function useStyledComponentImpl<Props extends object>(
 function createStyledComponent<
   Target extends WebTarget,
   OuterProps extends object,
-  Statics extends object = BaseObject
+  Statics extends object = BaseObject,
 >(
   target: Target,
   options: StyledOptions<'web', OuterProps>,

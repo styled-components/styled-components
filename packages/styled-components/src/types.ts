@@ -3,8 +3,9 @@ import React from 'react';
 import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
+import type { SupportedHTMLElements } from './utils/domElements';
 
-export { CSS, DefaultTheme };
+export { CSS, DefaultTheme, SupportedHTMLElements };
 
 interface ExoticComponentWithDisplayName<P extends object = {}> extends React.ExoticComponent<P> {
   defaultProps?: Partial<P> | undefined;
@@ -32,7 +33,7 @@ export type AnyComponent<P extends object = any> =
   | ExoticComponentWithDisplayName<P>
   | React.ComponentType<P>;
 
-export type KnownTarget = Exclude<keyof JSX.IntrinsicElements, 'symbol' | 'object'> | AnyComponent;
+export type KnownTarget = SupportedHTMLElements | AnyComponent;
 
 export type WebTarget =
   | string // allow custom elements, etc.
@@ -51,6 +52,19 @@ export interface StyledOptions<R extends Runtime, Props extends object> {
 
 export type Dict<T = any> = { [key: string]: T };
 
+/**
+ * This type is intended for when data attributes are composed via
+ * the `.attrs` API:
+ *
+ * ```tsx
+ * styled.div.attrs<DataAttributes>({ 'data-testid': 'foo' })``
+ * ```
+ *
+ * Would love to figure out how to support this natively without having to
+ * manually compose the type, but haven't figured out a way to do so yet that
+ * doesn't cause specificity loss (see `test/types.tsx` if you attempt to embed
+ * `DataAttributes` directly in the `Attrs<>` type.)
+ */
 export type DataAttributes = { [key: `data-${string}`]: any };
 
 export type ExecutionProps = {
@@ -172,8 +186,8 @@ export type PolymorphicComponentProps<
     : {},
   // props extracted from "forwardAs"; note that ref is excluded
   ForwardedAsTargetProps extends object = ForwardedAsTarget extends KnownTarget
-    ? React.ComponentPropsWithoutRef<ForwardedAsTarget>
-    : {}
+    ? React.ComponentPropsWithRef<ForwardedAsTarget>
+    : {},
 > = NoInfer<
   FastOmit<
     Substitute<
@@ -200,7 +214,7 @@ export interface PolymorphicComponent<R extends Runtime, BaseProps extends objec
   extends React.ForwardRefExoticComponent<BaseProps> {
   <
     AsTarget extends StyledTarget<R> | void = void,
-    ForwardedAsTarget extends StyledTarget<R> | void = void
+    ForwardedAsTarget extends StyledTarget<R> | void = void,
   >(
     props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget>
   ): JSX.Element;
@@ -219,7 +233,7 @@ export interface IStyledComponentFactory<
   R extends Runtime,
   Target extends StyledTarget<R>,
   OuterProps extends object,
-  OuterStatics extends object = BaseObject
+  OuterStatics extends object = BaseObject,
 > {
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
     target: Target,
@@ -243,12 +257,12 @@ export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
 
 export type CSSKeyframes = object & { [key: string]: CSSObject };
 
-export type CSSObject = StyledObject<any>;
+export type CSSObject<Props extends object = BaseObject> = StyledObject<Props>;
 
-export type StyledObject<Props extends object> = CSSProperties &
+export type StyledObject<Props extends object = BaseObject> = CSSProperties &
   CSSPseudos & {
     [key: string]:
-      | StyledObject<any> // StyledObject<any> instead of CSSObject. Because writing CSSObject directly results in a circularly references.
+      | StyledObject<Props>
       | string
       | number
       | StyleFunction<Props>

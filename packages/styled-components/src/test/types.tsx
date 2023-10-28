@@ -455,3 +455,26 @@ styled.div<PropsWithVariant>`
     color: 'blue',
   })};
 `;
+
+const TargetWithStaticProperties = (p: React.PropsWithChildren<{}>) => <div {...p} />;
+TargetWithStaticProperties.foo = 'bar';
+
+const StyledTargetWithStaticProperties = styled(TargetWithStaticProperties)``;
+StyledTargetWithStaticProperties.foo;
+
+/**
+ * forwardedAs ref typing
+ */
+const StyledCard = styled.div``;
+
+const App = () => {
+  const listRef = React.useRef<HTMLUListElement>(null);
+  return (
+    <StyledCard forwardedAs="ul" ref={listRef}>
+      {' '}
+      <li>One</li>
+      <li>Two</li>
+      <li>Three</li>
+    </StyledCard>
+  );
+};

@@ -115,18 +115,24 @@ We have three different benchmarks: mounting a deep tree, mounting a wide tree a
 To run the benchmarks run:
 
 ```sh
-cd packages/styled-components
+cd packages/benchmarks
 ```
+
+Then build the benchmark page:
 
 ```sh
-yarn run benchmarks
+yarn run build
 ```
 
-You can also get traces that you can look at in the Chrome DevTools "Performance" panel by running
+Then open the page in your browser:
 
 ```sh
-yarn run benchmarks --tracing
+yarn run open
 ```
+
+On the page which opens, select the benchmark to run and click the "Run" button in your browser. 
+
+You may need to re-build styled-components and/or the benchmarks package after making changes if you want to re-run the benchmarks with your changes. 
 
 ### How do I fix my pre-commit hook?
 

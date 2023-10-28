@@ -104,7 +104,7 @@ type NonReactStatics<S extends OmniComponent, C extends ExcludeList = {}> = {
 export default function hoistNonReactStatics<
   T extends OmniComponent,
   S extends OmniComponent,
-  C extends ExcludeList = {}
+  C extends ExcludeList = {},
 >(targetComponent: T, sourceComponent: S, excludelist?: C | undefined) {
   if (typeof sourceComponent !== 'string') {
     // don't hoist over string (html) components

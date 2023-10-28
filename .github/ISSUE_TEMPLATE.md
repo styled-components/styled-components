@@ -7,7 +7,6 @@ Thank you for contributing and please follow this guide before creating an issue
 - Look for prior or closed issues (but please avoid replying to them if they're old)
 - Check the docs: https://www.styled-components.com/docs
 - Look for/ask questions on stack overflow: https://stackoverflow.com/questions/ask?tags=styled-components
-- Is this about Typescript? TS types are provided by DefinitelyTyped, all issues opened about TS will be closed and referred there.
 
 2. Think you found a bug?
 =============================
@@ -15,6 +14,7 @@ Thank you for contributing and please follow this guide before creating an issue
 - Use the "BUG TEMPLATE" below to report a test
 - Don't forget to 👉PROVIDE A REPRODUCTION PLEASE 😉 (Codesandbox links are provided and most useful, repositories are ok)
 - If you can't provide a reproduction, snippets of code can help, but are incomplete reports
+- Note: Typescript issues prior to v6 should be referred to the DefinitelyTyped project
 
 3. Do you have a feature request?
 =============================
