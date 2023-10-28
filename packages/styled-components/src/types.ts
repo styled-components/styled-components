@@ -300,11 +300,7 @@ export type NoInfer<T> = [T][T extends any ? 0 : never];
 
 export type Substitute<A extends object, B extends object> = FastOmit<A, keyof B> & B;
 
-type AnyIfEmpty<T extends object> = keyof T extends never ? any : T;
+export interface ThemeProps extends ExecutionContext {}
 
-export interface ThemeProps<T> {
-  theme: T;
-}
-
-export type ThemedStyledProps<P, T> = P & ThemeProps<T>;
-export type StyledProps<P> = ThemedStyledProps<P, AnyIfEmpty<DefaultTheme>>;
+export type ThemedStyledProps<P> = P & ExecutionContext;
+export type StyledProps<P> = P & ThemeProps;
