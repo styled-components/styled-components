@@ -58,7 +58,6 @@ export default function makeInlineStyleClass<Props extends object>(styleSheet: S
         const styleObject = transformDeclPairs(declPairs, [
           'borderWidth',
           'borderColor',
-          'borderStyle',
         ]);
 
         const styles = styleSheet.create({
