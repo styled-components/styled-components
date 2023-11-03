@@ -146,7 +146,7 @@ describe('native', () => {
 
     const loremPicsumUri = 'https://picsum.photos/200/300';
 
-    const wrapper = TestRenderer.create(<Comp source={{uri: loremPicsumUri}} />);
+    const wrapper = TestRenderer.create(<Comp source={{ uri: loremPicsumUri }} />);
     const image = wrapper.root.findByType(Image);
 
     expect(image.props.style).toEqual({ borderWidth: 10, borderColor: 'red' });

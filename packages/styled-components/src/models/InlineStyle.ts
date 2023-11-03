@@ -55,10 +55,7 @@ export default function makeInlineStyleClass<Props extends object>(styleSheet: S
         // support, so we'll just disable multiple values here.
         // https://github.com/styled-components/styled-components/issues/4181
 
-        const styleObject = transformDeclPairs(declPairs, [
-          'borderWidth',
-          'borderColor',
-        ]);
+        const styleObject = transformDeclPairs(declPairs, ['borderWidth', 'borderColor']);
 
         const styles = styleSheet.create({
           generated: styleObject,
