@@ -478,3 +478,10 @@ const App = () => {
     </StyledCard>
   );
 };
+
+/**
+ * attrs accepts css variables via style prop
+ */
+const DivWitCSSVariable = styled.div.attrs(() => ({
+  style: { '--dim': 'yes' },
+}))``;
