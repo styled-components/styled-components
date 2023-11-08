@@ -266,7 +266,6 @@ export type StyledObject<Props extends object = BaseObject> = CSSProperties &
       | string
       | number
       | StyleFunction<Props>
-      | StyledObject<Props>
       | RuleSet<any>
       | undefined;
   };
