@@ -108,7 +108,7 @@ data-styled.g11[id=\"idA\"]{content:\"nameA,\"}/*!sc*/
 .b {}/*!sc*/
 data-styled.g22[id=\"idB\"]{content:\"nameB,\"}/*!sc*/
 .a{color:burgundy;}/*!sc*/
-data-styled.g1[id=\"sc-kqxcKS\"]{content:\"a,\"}/*!sc*/
+data-styled.g23[id=\"sc-kqxcKS\"]{content:\"a,\"}/*!sc*/
 </style>
     `.trim()
     );
