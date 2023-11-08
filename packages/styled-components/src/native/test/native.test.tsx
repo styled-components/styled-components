@@ -1,5 +1,5 @@
 import React, { PropsWithChildren } from 'react';
-import { Text, View, ViewProps, Image } from 'react-native';
+import { Image, Text, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
 
@@ -373,9 +373,10 @@ describe('native', () => {
     it('convert css to styleSheet', () => {
       const cssStyle = css`
         background-color: red;
+        border-width: 10px;
       `;
 
-      expect(toStyleSheet(cssStyle)).toEqual({ backgroundColor: 'red' });
+      expect(toStyleSheet(cssStyle)).toEqual({ backgroundColor: 'red', borderWidth: 10 });
     });
   });
 
