@@ -1,6 +1,6 @@
+import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
-import React from 'react';
 import { ServerStyleSheet, StyleSheetManager } from '../../base';
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../../constants';
 import { resetStyled } from '../../test/utils';
@@ -11,11 +11,8 @@ import StyleSheet from '../Sheet';
 let styled: ReturnType<typeof resetStyled>;
 
 beforeEach(() => {
-  styled = resetStyled();
-});
-
-beforeEach(() => {
   GroupIDAllocator.resetGroupIds();
+  styled = resetStyled();
 });
 
 describe('outputSheet', () => {
