@@ -173,10 +173,10 @@ const nativeConfig = {
   input: './src/native/index.ts',
   output: [
     getCJS({
-      file: 'native/dist/styled-components.native.cjs.js',
+      file: 'dist/styled-components.native.cjs.js',
     }),
     getESM({
-      file: 'native/dist/styled-components.native.esm.js',
+      file: 'dist/styled-components.native.esm.js',
     }),
   ],
   plugins: configBase.plugins.concat(minifierPlugin),
