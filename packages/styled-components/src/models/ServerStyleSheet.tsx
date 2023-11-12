@@ -6,13 +6,14 @@ import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
 import styledError from '../utils/error';
 import getNonce from '../utils/nonce';
-import StyleSheetManager from './StyleSheetManager';
+import { StyleSheetManager } from './StyleSheetManager';
 
 declare const __SERVER__: boolean;
 
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 
 const CONTENT_IN_TAG_R = /<[^>]+>[^<]+<\/[^>]+>/;
+const TEG_PRESENCE_R = /<\s*\/?[a-z][^>]*>/i;
 
 export default class ServerStyleSheet {
   instance: StyleSheet;
@@ -93,6 +94,18 @@ export default class ServerStyleSheet {
 
       let queue: string[] = [];
 
+      const takeStylesFromQueue = () => {
+        const styles = queue.join('\n');
+        queue = [];
+        return styles;
+      };
+
+      const splitHtmlByIndex = (html: string, splitByIndex: number) => {
+        const before = html.slice(0, splitByIndex);
+        const after = html.slice(splitByIndex);
+        return [before, after];
+      };
+
       const transformer: streamInternal.Transform = new Transform({
         transform: function appendStyleChunks(
           chunk: string,
@@ -108,8 +121,13 @@ export default class ServerStyleSheet {
           sheet.clearTag();
 
           // we don't need to inject empty <style> tag into the response
-          // also we want to check if we can shift all of our styles
-          if (!CONTENT_IN_TAG_R.test(html) && queue.length === 0) {
+          // it's related to "_emitSheetCSS" which will return empty <style> tag
+          // even if we don't have styles to send
+          if (
+            !CONTENT_IN_TAG_R.test(html) &&
+            // also we want to check if we can shift all of our styles
+            queue.length === 0
+          ) {
             this.push(renderedHtml);
             callback();
             return;
@@ -117,17 +135,22 @@ export default class ServerStyleSheet {
           // prepend style html to chunk, unless the start of the chunk is a
           // closing tag in which case append right after that
           else if (CLOSING_TAG_R.test(renderedHtml)) {
-            const styles = queue.join('\n') + '\n' + html;
-            queue = [];
-
             const endOfClosingTag = renderedHtml.indexOf('>') + 1;
-            const before = renderedHtml.slice(0, endOfClosingTag);
-            const after = renderedHtml.slice(endOfClosingTag);
+            const [before, after] = splitHtmlByIndex(renderedHtml, endOfClosingTag);
 
-            this.push(before + styles + after);
+            queue.push(html);
+
+            this.push(before + takeStylesFromQueue() + after);
+          } else if (TEG_PRESENCE_R.test(renderedHtml)) {
+            // check if we may have open tags
+            const startOfStartingTag = renderedHtml.indexOf('<');
+            const [before, after] = splitHtmlByIndex(renderedHtml, startOfStartingTag);
+
+            queue.push(html);
+
+            this.push(takeStylesFromQueue() + before + after);
           } else {
-            // we don't want to inject <style> tags every time where we dont pass the regex condition
-            // because it may be middle of the svg path or etc.
+            // edge case case when we don't have any tags only content like svg path or big text
             queue.push(html);
             this.push(renderedHtml);
           }
@@ -135,8 +158,6 @@ export default class ServerStyleSheet {
           callback();
         },
       });
-
-      console.log({ readableStream });
 
       readableStream.on('error', err => {
         // forward the error to the transform stream
