@@ -120,12 +120,12 @@ export default class ServerStyleSheet {
 
           sheet.clearTag();
 
-          // we don't need to inject empty <style> tag into the response
-          // it's related to "_emitSheetCSS" which will return empty <style> tag
+          // we don't need to insert an empty <style> tag into the response,
+          // which is related to "_emitSheetCSS" which will return an empty <style> tag
           // even if we don't have styles to send
           if (
             !CONTENT_IN_TAG_R.test(html) &&
-            // also we want to check if we can shift all of our styles
+            // also we want to check if we need to shift all of our styles
             queue.length === 0
           ) {
             this.push(renderedHtml);
@@ -142,7 +142,7 @@ export default class ServerStyleSheet {
 
             this.push(before + takeStylesFromQueue() + after);
           } else if (TEG_PRESENCE_R.test(renderedHtml)) {
-            // check if we may have open tags
+            // check if we have open tags
             const startOfStartingTag = renderedHtml.indexOf('<');
             const [before, after] = splitHtmlByIndex(renderedHtml, startOfStartingTag);
 
@@ -150,7 +150,7 @@ export default class ServerStyleSheet {
 
             this.push(takeStylesFromQueue() + before + after);
           } else {
-            // edge case case when we don't have any tags only content like svg path or big text
+            // edge case case when we don't have any tags, only content such as an svg path or large text
             queue.push(html);
             this.push(renderedHtml);
           }
