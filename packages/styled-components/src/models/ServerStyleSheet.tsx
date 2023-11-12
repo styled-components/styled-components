@@ -1,16 +1,18 @@
+/* eslint-disable no-underscore-dangle */
 import React from 'react';
 import type * as streamInternal from 'stream';
 import { Readable } from 'stream';
 import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
 import styledError from '../utils/error';
-import { joinStringArray } from '../utils/joinStrings';
 import getNonce from '../utils/nonce';
-import { StyleSheetManager } from './StyleSheetManager';
+import StyleSheetManager from './StyleSheetManager';
 
 declare const __SERVER__: boolean;
 
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
+
+const CONTENT_IN_TAG_R = /<[^>]+>[^<]+<\/[^>]+>/;
 
 export default class ServerStyleSheet {
   instance: StyleSheet;
@@ -29,7 +31,7 @@ export default class ServerStyleSheet {
       `${SC_ATTR}="true"`,
       `${SC_ATTR_VERSION}="${SC_VERSION}"`,
     ];
-    const htmlAttr = joinStringArray(attrs.filter(Boolean) as string[], ' ');
+    const htmlAttr = attrs.filter(Boolean).join(' ');
 
     return `<style ${htmlAttr}>${css}</style>`;
   };
@@ -72,6 +74,7 @@ export default class ServerStyleSheet {
     return [<style {...props} key="sc-0-0" />];
   };
 
+  // eslint-disable-next-line consistent-return
   // @ts-expect-error alternate return types are not possible due to code transformation
   interleaveWithNodeStream(input: Readable): streamInternal.Transform {
     if (!__SERVER__ || IS_BROWSER) {
@@ -88,6 +91,8 @@ export default class ServerStyleSheet {
       const readableStream: Readable = input;
       const { instance: sheet, _emitSheetCSS } = this;
 
+      let queue: string[] = [];
+
       const transformer: streamInternal.Transform = new Transform({
         transform: function appendStyleChunks(
           chunk: string,
@@ -102,21 +107,36 @@ export default class ServerStyleSheet {
 
           sheet.clearTag();
 
+          // we don't need to inject empty <style> tag into the response
+          // also we want to check if we can shift all of our styles
+          if (!CONTENT_IN_TAG_R.test(html) && queue.length === 0) {
+            this.push(renderedHtml);
+            callback();
+            return;
+          }
           // prepend style html to chunk, unless the start of the chunk is a
           // closing tag in which case append right after that
-          if (CLOSING_TAG_R.test(renderedHtml)) {
+          else if (CLOSING_TAG_R.test(renderedHtml)) {
+            const styles = queue.join('\n') + '\n' + html;
+            queue = [];
+
             const endOfClosingTag = renderedHtml.indexOf('>') + 1;
             const before = renderedHtml.slice(0, endOfClosingTag);
             const after = renderedHtml.slice(endOfClosingTag);
 
-            this.push(before + html + after);
+            this.push(before + styles + after);
           } else {
-            this.push(html + renderedHtml);
+            // we don't want to inject <style> tags every time where we dont pass the regex condition
+            // because it may be middle of the svg path or etc.
+            queue.push(html);
+            this.push(renderedHtml);
           }
 
           callback();
         },
       });
+
+      console.log({ readableStream });
 
       readableStream.on('error', err => {
         // forward the error to the transform stream
