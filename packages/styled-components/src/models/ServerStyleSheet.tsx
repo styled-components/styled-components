@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 import React from 'react';
 import type * as streamInternal from 'stream';
 import { Readable } from 'stream';
