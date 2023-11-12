@@ -203,7 +203,6 @@ describe('ssr', () => {
       let received = '';
 
       stream.on('data', chunk => {
-        console.log({ chunk: chunk.toString('utf-8') });
         received += chunk;
       });
 
