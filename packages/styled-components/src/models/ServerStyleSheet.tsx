@@ -14,7 +14,6 @@ const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 const OPENING_TAG_R = /<[^/>][^>]*>/;
 
 const CONTENT_IN_TAG_R = /<[^>]+>[^<]+<\/[^>]+>/;
-const TEG_PRESENCE_R = /<\s*\/?[a-z][^>]*>/i;
 
 export default class ServerStyleSheet {
   instance: StyleSheet;
@@ -142,7 +141,7 @@ export default class ServerStyleSheet {
             queue.push(html);
 
             this.push(before + takeStylesFromQueue() + after);
-          } else if (TEG_PRESENCE_R.test(renderedHtml)) {
+          } else if (OPENING_TAG_R.test(renderedHtml)) {
             // check if we have open tags
             const startOfStartingTag = renderedHtml.search(OPENING_TAG_R);
             const [before, after] = splitHtmlByIndex(renderedHtml, startOfStartingTag);
