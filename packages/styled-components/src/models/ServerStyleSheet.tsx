@@ -11,6 +11,7 @@ import { StyleSheetManager } from './StyleSheetManager';
 declare const __SERVER__: boolean;
 
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
+const OPENING_TAG_R = /<[^/>][^>]*>/;
 
 const CONTENT_IN_TAG_R = /<[^>]+>[^<]+<\/[^>]+>/;
 const TEG_PRESENCE_R = /<\s*\/?[a-z][^>]*>/i;
@@ -143,12 +144,12 @@ export default class ServerStyleSheet {
             this.push(before + takeStylesFromQueue() + after);
           } else if (TEG_PRESENCE_R.test(renderedHtml)) {
             // check if we have open tags
-            const startOfStartingTag = renderedHtml.indexOf('<');
+            const startOfStartingTag = renderedHtml.search(OPENING_TAG_R);
             const [before, after] = splitHtmlByIndex(renderedHtml, startOfStartingTag);
 
             queue.push(html);
 
-            this.push(takeStylesFromQueue() + before + after);
+            this.push(before + takeStylesFromQueue() + after);
           } else {
             // edge case case when we don't have any tags, only content such as an svg path or large text
             queue.push(html);
