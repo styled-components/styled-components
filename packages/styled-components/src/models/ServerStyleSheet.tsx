@@ -140,7 +140,7 @@ export default class ServerStyleSheet {
             queue.push(html);
 
             this.push(before + takeStylesFromQueue() + after);
-          } else if (renderedHtml.search(OPENING_TAG_R)) {
+          } else if (OPENING_TAG_R.test(renderedHtml)) {
             // check if we have open tags
             const startOfStartingTag = renderedHtml.search(OPENING_TAG_R);
             const [before, after] = splitHtmlByIndex(renderedHtml, startOfStartingTag);
