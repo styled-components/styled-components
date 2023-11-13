@@ -75,7 +75,6 @@ export default class ServerStyleSheet {
     return [<style {...props} key="sc-0-0" />];
   };
 
-  // eslint-disable-next-line consistent-return
   // @ts-expect-error alternate return types are not possible due to code transformation
   interleaveWithNodeStream(input: Readable): streamInternal.Transform {
     if (!__SERVER__ || IS_BROWSER) {
