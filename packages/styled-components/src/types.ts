@@ -303,4 +303,4 @@ export type Substitute<A extends object, B extends object> = FastOmit<A, keyof B
 export interface ThemeProps extends ExecutionContext {}
 
 export type ThemedStyledProps<P> = P & ExecutionContext;
-export type StyledProps<P> = P & ThemeProps;
+export type StyledProps<P> = P & ExecutionContext;
