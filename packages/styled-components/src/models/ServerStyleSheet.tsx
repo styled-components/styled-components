@@ -13,7 +13,11 @@ declare const __SERVER__: boolean;
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 const OPENING_TAG_R = /<[^/>][^>]*>/;
 
-const CONTENT_IN_TAG_R = /<[^>]+>[^<]+<\/[^>]+>/;
+const hasContentInStyle = (string: string) => {
+  const num = string.indexOf('</style>');
+  return string[num - 1] !== '>';
+};
+
 
 export default class ServerStyleSheet {
   instance: StyleSheet;
@@ -123,7 +127,7 @@ export default class ServerStyleSheet {
           // which is related to "_emitSheetCSS" which will return an empty <style> tag
           // even if we don't have styles to send
           if (
-            !CONTENT_IN_TAG_R.test(html) &&
+            !hasContentInStyle(html) &&
             // also we want to check if we need to shift all of our styles
             queue.length === 0
           ) {
