@@ -480,10 +480,10 @@ const App = () => {
 };
 
 /**
- * attrs accepts css variables via style prop
+ * attrs accepts css variables via css prop
  */
-const DivWitCSSVariable = styled.div.attrs(() => ({
-  style: { '--dim': 'yes' },
+const DivWithCSSVariable = styled.div.attrs(() => ({
+  css: { '--dim': 'yes' },
 }))``;
 
 /**
