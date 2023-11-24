@@ -485,3 +485,49 @@ const App = () => {
 const DivWitCSSVariable = styled.div.attrs(() => ({
   style: { '--dim': 'yes' },
 }))``;
+
+/**
+ * Nested styled component
+ */
+
+const StyledComponent1 = styled.a<{ $prop1?: boolean }>``;
+
+const StyledComponent2 = styled(StyledComponent1)<{ $prop2?: boolean }>``;
+
+const StyledComponent3 = styled(StyledComponent2)<{ $prop3?: boolean }>``;
+
+const NestedStyledTest1 = () => <StyledComponent2 $prop1={true} $prop2={true} />;
+
+const NestedStyledTest2 = () => (
+  <StyledComponent2
+    $prop1={true}
+    // FIXME: $prop2 exists on type
+    $prop2={true}
+    // @ts-expect-error Property '$prop3' does not exist on type
+    $prop3={true}
+  />
+);
+
+const NestedStyledTest3 = () => (
+  <StyledComponent3
+    $prop1={true}
+    // FIXME: $prop2 exists on type
+    $prop2={true}
+    $prop3={true}
+  />
+);
+
+/**
+ * Nested class component
+ */
+class ClassComponent1 extends React.Component<{ $prop1?: boolean }> {}
+
+const ClassComponent2 = styled(ClassComponent1)<{ $prop2?: boolean }>``;
+
+const NestedStyledClassTest1 = () => (
+  <ClassComponent2
+    $prop1={true}
+    // FIXME: $prop2 exists on type
+    $prop2={true}
+  />
+);
