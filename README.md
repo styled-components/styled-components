@@ -20,6 +20,8 @@
 
 ---
 
+**Upgrading from v5?** See the [migration guide](https://styled-components.com/docs/faqs#what-do-i-need-to-do-to-migrate-to-v6).
+
 Utilizing [tagged template literals](https://www.styled-components.com/docs/advanced#tagged-template-literals) (a recent addition to JavaScript) and the [power of CSS](https://www.styled-components.com/docs/api#supported-css), `styled-components` allow you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
 ```jsx
@@ -48,13 +50,7 @@ const Button = styled.button`
 
 _Supported by [Front End Center](https://frontend.center). Thank you for making this possible!_
 
-## Upgrading from v4
-
-1. `npm install styled-components@^5.0.0 react@^16.8 react-dom@^16.8 react-is@^16.8`
-1. ??
-1. Profit!
-
-> If you use jest-styled-components, make sure you update that too.
+---
 
 ## [Docs](https://www.styled-components.com/docs)
 
@@ -68,10 +64,11 @@ Quicklinks to some of the most-visited pages:
 - [Server-side rendering](https://www.styled-components.com/docs/advanced#server-side-rendering)
 - [Tagged Template Literals explained](https://www.styled-components.com/docs/advanced#tagged-template-literals)
 
+---
+
 ## Example
 
-<!-- prettier-ignore -->
-```JSX
+```jsx
 import React from 'react';
 
 import styled from 'styled-components';
@@ -91,10 +88,14 @@ const Wrapper = styled.section`
   background: papayawhip;
 `;
 
-// Use them like any other React component – except they're styled!
-<Wrapper>
-  <Title>Hello World, this is my first styled component!</Title>
-</Wrapper>
+function MyUI() {
+  return (
+    // Use them like any other React component – except they're styled!
+    <Wrapper>
+      <Title>Hello World, this is my first styled component!</Title>
+    </Wrapper>
+  );
+}
 ```
 
 This is what you'll see in your browser:
