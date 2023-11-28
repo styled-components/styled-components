@@ -20,11 +20,7 @@
 
 ---
 
-## Looking for v5?
-
-The `main` branch is under development of the upcoming v6 major version of styled-components. For changes targeting v5, please point your PRs at the `legacy-v5` branch.
-
----
+**Upgrading from v5?** See the [migration guide](https://styled-components.com/docs/faqs#what-do-i-need-to-do-to-migrate-to-v6).
 
 Utilizing [tagged template literals](https://www.styled-components.com/docs/advanced#tagged-template-literals) (a recent addition to JavaScript) and the [power of CSS](https://www.styled-components.com/docs/api#supported-css), `styled-components` allow you to write actual CSS code to style your components. It also removes the mapping between components and styles – using components as a low-level styling construct could not be easier!
 
@@ -54,13 +50,7 @@ const Button = styled.button`
 
 _Supported by [Front End Center](https://frontend.center). Thank you for making this possible!_
 
-## Upgrading from v4
-
-1. `npm install styled-components@^5.0.0 react@^16.8 react-dom@^16.8 react-is@^16.8`
-1. ??
-1. Profit!
-
-> If you use jest-styled-components, make sure you update that too.
+---
 
 ## [Docs](https://www.styled-components.com/docs)
 
@@ -74,10 +64,11 @@ Quicklinks to some of the most-visited pages:
 - [Server-side rendering](https://www.styled-components.com/docs/advanced#server-side-rendering)
 - [Tagged Template Literals explained](https://www.styled-components.com/docs/advanced#tagged-template-literals)
 
+---
+
 ## Example
 
-<!-- prettier-ignore -->
-```JSX
+```jsx
 import React from 'react';
 
 import styled from 'styled-components';
@@ -97,10 +88,14 @@ const Wrapper = styled.section`
   background: papayawhip;
 `;
 
-// Use them like any other React component – except they're styled!
-<Wrapper>
-  <Title>Hello World, this is my first styled component!</Title>
-</Wrapper>
+function MyUI() {
+  return (
+    // Use them like any other React component – except they're styled!
+    <Wrapper>
+      <Title>Hello World, this is my first styled component!</Title>
+    </Wrapper>
+  );
+}
 ```
 
 This is what you'll see in your browser:
@@ -111,22 +106,13 @@ This is what you'll see in your browser:
   </a>
 </div>
 
-## Babel Macro
+---
 
-If you're using tooling that has babel-plugin-macros set up, you can switch to the `styled-components/macro` import path instead to gain the effects of the babel plugin without further setup.
+## Looking for v5?
 
-```js
-import styled from 'styled-components/macro';
+The `main` branch is for the most-current version of styled-components, currently v6. For changes targeting v5, please point your PRs at the `legacy-v5` branch.
 
-// A static className will be generated for Title (important for SSR)
-const Title = styled.h1`
-  font-size: 1.5em;
-  text-align: center;
-  color: palevioletred;
-`;
-```
-
-If you wish to provide configuration options to the babel plugin similar to how you would in a `.babelrc`, [see this guide](https://github.com/kentcdodds/babel-plugin-macros/blob/main/other/docs/author.md#config-experimental). The config name is `"styledComponents"`.
+---
 
 ## Built with `styled-components`
 
@@ -134,11 +120,15 @@ A lot of hard work goes into community libraries, projects, and guides. A lot of
 
 Make sure to head over to [awesome-styled-components](https://github.com/styled-components/awesome-styled-components) to see them all! And please contribute and add your own work to the list so others can find it.
 
+---
+
 ## Contributing
 
 If you want to contribute to `styled-components` please see our [contributing and community guidelines](./CONTRIBUTING.md), they'll help you get set up locally and explain the whole process.
 
 Please also note that all repositories under the `styled-components` organization follow our [Code of Conduct](./CODE_OF_CONDUCT.md), make sure to review and follow it.
+
+---
 
 ## Badge
 
@@ -148,16 +138,22 @@ Let everyone know you're using _styled-components_ → [![style: styled-componen
 [![style: styled-components](https://img.shields.io/badge/style-%F0%9F%92%85%20styled--components-orange.svg?colorB=daa357&colorA=db748e)](https://github.com/styled-components/styled-components)
 ```
 
+---
+
 ## Contributors
 
 This project exists thanks to all the people who contribute. [[Contribute](CONTRIBUTING.md)].
 <a href="https://github.com/styled-components/styled-components/graphs/contributors"><img src="https://opencollective.com/styled-components/contributors.svg?width=890" /></a>
+
+---
 
 ## Backers
 
 Thank you to all our backers! 🙏 [[Become a backer](https://opencollective.com/styled-components#backer)]
 
 <a href="https://opencollective.com/styled-components#backers" target="_blank"><img src="https://opencollective.com/styled-components/backers.svg?width=890"></a>
+
+---
 
 ## Sponsors
 
@@ -174,11 +170,15 @@ Support this project by becoming a sponsor. Your logo will show up here with a l
 <a href="https://opencollective.com/styled-components/sponsor/8/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/8/avatar.svg"></a>
 <a href="https://opencollective.com/styled-components/sponsor/9/website" target="_blank"><img src="https://opencollective.com/styled-components/sponsor/9/avatar.svg"></a>
 
+---
+
 ## License
 
 Licensed under the MIT License, Copyright © 2016-present Glen Maddern and Maximilian Stoiber.
 
 See [LICENSE](./LICENSE) for more information.
+
+---
 
 ## Acknowledgements
 
