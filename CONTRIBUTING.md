@@ -62,11 +62,11 @@ Here is a quick guide to doing code contributions to the library.
 
 3. Create a branch with a meaningful name for the issue: `git checkout -b fix-something`
 
-4. Install packages by running `yarn` in the root of the project.
+4. Install packages by running `bun` in the root of the project; if you don't have `bun` installed, [follow this guide](https://bun.sh/docs/installation)
 
 5. Make your changes and commit: `git add` and `git commit`
 
-6. Make sure that the tests still pass: `yarn test`
+6. Make sure that the tests still pass: `bun run test`
 
 7. Push your branch: `git push -u origin your-branch-name`
 
@@ -80,7 +80,7 @@ Here is a quick guide to doing code contributions to the library.
 
 ### How do I set up the project?
 
-Run [`yarn install`](https://yarnpkg.com/) and edit code in the `packages/styled-components/src/` folder. It's luckily very simple! :wink:
+Run `bun install` and edit code in the `packages/styled-components/src/` folder.
 
 ### How do I verify and test my changes?
 
@@ -90,9 +90,9 @@ To use the sandbox, follow these steps:
 
 1. Go to sandbox folder: `cd packages/sandbox`
 
-2. Install all the dependencies: `yarn install`. Since this repository uses `yarn` workspaces, avoid using `npm` where you can.
+2. Install all the dependencies: `bun install`.
 
-3. Run `yarn dev` to start sandbox server
+3. Run `bun dev` to start sandbox server
 
 Now you should have the sandbox running on `localhost:3000`. The Sandbox supports client-side and server-side rendering.
 
@@ -121,18 +121,18 @@ cd packages/benchmarks
 Then build the benchmark page:
 
 ```sh
-yarn run build
+bun run build
 ```
 
 Then open the page in your browser:
 
 ```sh
-yarn run open
+bun run open
 ```
 
-On the page which opens, select the benchmark to run and click the "Run" button in your browser. 
+On the page which opens, select the benchmark to run and click the "Run" button in your browser.
 
-You may need to re-build styled-components and/or the benchmarks package after making changes if you want to re-run the benchmarks with your changes. 
+You may need to re-build styled-components and/or the benchmarks package after making changes if you want to re-run the benchmarks with your changes.
 
 ### How do I fix my pre-commit hook?
 
@@ -146,16 +146,6 @@ node ./node_modules/husky/bin/install.js
 This will delete the old `pre-commit` git hook and install husky's one.
 Without the proper uninstallation script of the `pre-commit` package, this is necessary because `husky` will skip its installation when
 a git hook is already present.
-
-## Release process
-
-[Core team members](./CORE_TEAM.md) have the responsibility of pushing new releases to npm. The release process is as follows:
-
-1. Make sure you have the latest changes and are on the main branch: `git checkout main && git pull origin main`
-2. Install all the dependencies by running `yarn` in the root folder.
-3. Run `yarn publish`, choose the next logical version number based on changes
-4. Push the resulting commit after release back to `main` branch
-5. Congratulations, you just published a new release of `styled-components`! :tada: Let everybody know on Twitter, in our community and all the other places
 
 ## Credits
 

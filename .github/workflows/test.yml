@@ -14,50 +14,35 @@ jobs:
   prettier:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Setup node
-        uses: actions/setup-node@v3
+      - uses: oven-sh/setup-bun@v1
         with:
-          node-version: 18
-          cache: "yarn"
+          bun-version: latest
 
-      - run: yarn --pure-lockfile
-
-      - name: Prettier
-        run: yarn prettier
+      - run: bun install
+      - run: bun run prettier
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Setup node
-        uses: actions/setup-node@v3
+      - uses: oven-sh/setup-bun@v1
         with:
-          node-version: 18
-          cache: "yarn"
+          bun-version: latest
 
-      - run: yarn --pure-lockfile
-
-      - name: Build
-        run: yarn build
+      - run: bun install
+      - run: bun run build
         env:
           BUNDLEWATCH_GITHUB_TOKEN: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [16, 18]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Setup node
-        uses: actions/setup-node@v3
+      - uses: oven-sh/setup-bun@v1
         with:
-          node-version: ${{ matrix.node }}
-          cache: "yarn"
+          bun-version: latest
 
-      - run: yarn --pure-lockfile
-
-      - name: Jest
-        run: yarn test
+      - run: bun install
+      - run: bun run test
