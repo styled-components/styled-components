@@ -13,18 +13,18 @@
   "sideEffects": false,
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
-    "prebuild": "rimraf dist && yarn generateErrors",
+    "prebuild": "rimraf dist && bun run generateErrors",
     "build": "rollup -c",
-    "postbuild": "yarn size",
-    "pretest": "yarn generateErrors",
-    "test": "yarn test:web && yarn test:native",
+    "postbuild": "bun run size",
+    "pretest": "bun run generateErrors",
+    "test": "bun run test:web && bun run test:native",
     "test:web": "jest -c jest.config.main.js",
     "test:native": "jest -c jest.config.native.js --forceExit",
     "test:integration": "jest -c jest.config.integration.js --runInBand --forceExit",
     "size": "bundlewatch",
     "prettier": "prettier src/** --write",
     "prettier:check": "prettier src/** --check",
-    "prepublishOnly": "cp ../../README.md . && yarn build"
+    "prepublishOnly": "cp ../../README.md . && bun run build"
   },
   "repository": {
     "type": "git",
