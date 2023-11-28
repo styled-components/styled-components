@@ -2,55 +2,39 @@
 
 As the creators and maintainers of this project, we want to ensure that `styled-components` lives and continues to grow and evolve. The evolution of the library should never be blocked by any single person's time. One of the simplest ways of doing this is by encouraging a larger set of shallow contributors. Through this, we hope to mitigate the problems of a project that needs updates but there's no one who has the power to do so.
 
-## Ownership
-
-**If your Pull Request is merged, regardless of content, you're eligible for push access to the organization on GitHub.** This is checked for on pull request merges and an invite is sent automatically. (thanks to an [Aeryn instance](https://github.com/Moya/Aeryn/) that [@mxstbr](https://github.com/mxstbr) runs)
-
-Offhand, it's easy to imagine that this would make code quality suffer, but in reality it offers fresh perspectives to the codebase and encourages ownership from people who are depending on the project. If you are building a project that relies on this codebase, then you probably have the skills to improve it and offer valuable feedback.
-
-Everyone comes in with their own perspective on what a project could/should look like, and encouraging discussion can help expose good ideas sooner.
-
-### Why do we give push access?
-
-It can be overwhelming to be offered the chance to wipe the source code for a project. Don't worry, we don't let you push to main. All code has to be reviewed by at least two contributors or one core team member, and we have the convention that someone other than the submitter has to merge non-trivial pull requests.
-
-**As an organization contributor, you can merge other people's pull requests, or other contributors can merge yours.** You likely won't be assigned a pull request, but you're welcome to jump in and take a code review on topics that interest you.
-
-This project is not continuously deployed, there is space for debate after review too. This means there's always a chance to revert, or to make an amending pull request. If it feels right, merge.
-
-### How can we help you get comfortable contributing?
-
-It's normal for a first pull request to be a potential fix for a problem, and moving on from there to helping the project's direction can be difficult. We try to help contributors cross that barrier by offering good first step issues. These issues can be fixed without feeling like you're stepping on toes. Ideally, these are non-critical issues that are well defined. They will be purposely avoided by mature contributors to the project, to make space for others.
-
-We aim to keep all technical discussions inside GitHub issues, and all other discussions in our [Spectrum community](https://spectrum.chat/styled-components). This is to make sure valuable discussions are public and discoverable via search engines. If you have questions about a specific PR, want to discuss a new API idea, etc GitHub issues are the right place. If you have questions about how to use the library, or how the project is running - the [Spectrum community](https://spectrum.chat/styled-components) is the place to go.
-
-### Our expectations of you as a contributor
-
 To quote [@alloy](https://github.com/alloy) from [this issue](https://github.com/Moya/Moya/issues/135):
 
 > Don't ever feel bad for not contributing to open source.
 
 We want contributors to provide ideas, keep the ship shipping and to take some of the load from others. It is non-obligatory; we’re here to get things done in an enjoyable way. :trophy:
 
-The fact that you'll have push access will allow you to:
+## Code of Conduct
 
-- Avoid having to fork the project if you want to submit other pull requests as you'll be able to create branches directly on the project.
-- Help triage issues, merge pull requests.
-- Pick up the project if other maintainers move their focus elsewhere.
+It's important to note that all repositories under the `styled-components` banner have a [Code of Conduct](./CODE_OF_CONDUCT.md). Please review and help enforce this CoC should any violations happen if you feel comfortable doing so.
 
-It's up to you to use those superpowers or not though 😉
+## What if you have problems that cannot be discussed in a public issue?
 
-If someone submits a pull request that's not perfect, and you are reviewing it, it's better to think about the PR's motivation rather than the specific implementation. Having braces on the wrong line should not be a blocker. Though we do want to keep test coverage high, we will work with you to figure that out together.
-
-### What about if you have problems that cannot be discussed in a public issue?
-
-[Max Stoiber](https://twitter.com/mxstbr) and [Phil Pluckthun](https://twitter.com/_philpl) (Twitter links) have contactable emails on their GitHub profiles, and are happy to talk about any problems via those or via Twitter DMs.
-
-### Code of Conduct
-
-It's also important to note that all repositories under the `styled-components` banner have a [Code of Conduct](./CODE_OF_CONDUCT.md). It is important that you review and enforce this CoC should any violations happen.
+These days, we highly recommend trying a tool like [ChatGPT](https://chat.openai.com/) to get instant feedback and tips. [@quantizor](https://x.com/quantizor) can be reached on X to start a private conversation, but please keep in mind that response is not guaranteed since open source is volunteer effort and subject to personal availability.
 
 ## Code contributions
+
+### Environment setup
+
+1. Install `bun` and [configure bun lockfile handling](https://bun.sh/docs/install/lockfile) for the best development experience
+2. [Fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo), then pull it down to your disk: `git clone git@github.com:YOUR_USERNAME/styled-components.git`
+3. Hop into the styled-components folder and run `bun install`
+4. Set the base repository as upstream: `git remote add upstream git@github.com:styled-components/styled-components.git` (makes it easier to pull updates to your fork)
+
+At this point, the repository is initialized and ready for development! Check the `packages/` folder for the `styled-components` core library, a development `sandbox` (great for testing functionality), and the `benchmarks` suite.
+
+Helpful commands:
+
+- run unit tests: `bun run test`
+- check code style `bun run prettier` (handled automatically if you have a prettier extension installed in your IDE)
+- run build: `bun run build`
+- run dev sandbox: `bun --cwd packages/sandbox dev` (or just `bun dev` if you're in that folder)
+
+### Making changes
 
 Here is a quick guide to doing code contributions to the library.
 
@@ -58,15 +42,15 @@ Here is a quick guide to doing code contributions to the library.
    Also make sure that no one else is already working on it. We don't want you to be
    disappointed.
 
-2. Fork, then clone: `git clone https://github.com/YOUR_USERNAME/styled-components.git`
+2. See [Environment setup](#environment-setup)
 
-3. Create a branch with a meaningful name for the issue: `git checkout -b fix-something`
+3. Update your local copy of the `main` branch with the latest code: `git checkout main && git pull -f upstream/main`
 
-4. Install packages by running `bun` in the root of the project; if you don't have `bun` installed, [follow this guide](https://bun.sh/docs/installation)
+4. Create a branch with a meaningful name for the issue: `git checkout -b fix-something`
 
-5. Make your changes and commit: `git add` and `git commit`
+5. Run `bun install` to capture any dependency updates
 
-6. Make sure that the tests still pass: `bun run test`
+6. Make desired changes...
 
 7. Push your branch: `git push -u origin your-branch-name`
 
@@ -77,36 +61,6 @@ Here is a quick guide to doing code contributions to the library.
 10. Wait for a maintainer to review your PR, make changes if it's being recommended, and get it merged.
 
 11. Perform a celebratory dance! :dancer:
-
-### How do I set up the project?
-
-Run `bun install` and edit code in the `packages/styled-components/src/` folder.
-
-### How do I verify and test my changes?
-
-To make development process easier we provide a Sandbox React application in this repo which automatically uses your local version of the `styled-components` library. That means when you make any changes in the `packages/styled-components/src/` folder they'll show up automatically there!
-
-To use the sandbox, follow these steps:
-
-1. Go to sandbox folder: `cd packages/sandbox`
-
-2. Install all the dependencies: `bun install`.
-
-3. Run `bun dev` to start sandbox server
-
-Now you should have the sandbox running on `localhost:3000`. The Sandbox supports client-side and server-side rendering.
-
-You can use an interactive editor, powered by [`react-live`](https://react-live.philpl.com/), to test your changes. But if you want more control, you can edit the sandbox itself too:
-
-- Root `<App>` component is located at `packages/sandbox/src/App.js` file
-
-- Client-side entry point is at `packages/sandbox/src/browser.js`
-
-- Server-side entry point is at `packages/sandbox/src/server.js`
-
-In the sandbox source, `styled-components` is an alias to `packages/styled-components/src` folder, so you can edit the source directly and dev-server will handle rebuilding the source and livereloading your sandbox after the build is done.
-
-When you commit our pre-commit hook will run, which executes `lint-staged`. It will run the linter automatically and warn you if the code you've written doesn't comply with our code style guidelines.
 
 ### How do I run the benchmarks?
 
@@ -134,27 +88,13 @@ On the page which opens, select the benchmark to run and click the "Run" button 
 
 You may need to re-build styled-components and/or the benchmarks package after making changes if you want to re-run the benchmarks with your changes.
 
-### How do I fix my pre-commit hook?
-
-We've recently migrated from `pre-commit` to `husky`, so if you're running into issues during this migration, you'll likely have to do the following:
-
-```sh
-rm .git/hooks/pre-commit*
-node ./node_modules/husky/bin/install.js
-```
-
-This will delete the old `pre-commit` git hook and install husky's one.
-Without the proper uninstallation script of the `pre-commit` package, this is necessary because `husky` will skip its installation when
-a git hook is already present.
-
 ## Credits
 
 These contribution guidelines are based on https://github.com/moya/contributors, big thanks to @alloy, @orta et al. for the inspiration and guidance.
 
 ## Financial contributions
 
-We also welcome financial contributions in full transparency on our [open collective](https://opencollective.com/styled-components).
-Anyone can file an expense. If the expense makes sense for the development of the community, it will be "merged" in the ledger of our open collective by the core contributors and the person who filed the expense will be reimbursed.
+Please see the "Sponsor" button at the top of the repository, thank you!
 
 ## Credits
 
