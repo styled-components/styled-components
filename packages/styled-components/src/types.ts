@@ -259,16 +259,15 @@ export type CSSKeyframes = object & { [key: string]: CSSObject };
 
 export type CSSObject<Props extends object = BaseObject> = StyledObject<Props>;
 
-export type StyledObject<Props extends object = BaseObject> = CSSProperties &
-  CSSPseudos & {
-    [key: string]:
-      | StyledObject<Props>
-      | string
-      | number
-      | StyleFunction<Props>
-      | RuleSet<any>
-      | undefined;
-  };
+export interface StyledObject<Props extends object = BaseObject> extends CSSProperties, CSSPseudos {
+  [key: string]:
+    | StyledObject<Props>
+    | string
+    | number
+    | StyleFunction<Props>
+    | RuleSet<any>
+    | undefined;
+}
 
 /**
  * The `css` prop is not declared by default in the types as it would cause `css` to be present

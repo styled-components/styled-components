@@ -485,3 +485,16 @@ const App = () => {
 const DivWitCSSVariable = styled.div.attrs(() => ({
   style: { '--dim': 'yes' },
 }))``;
+
+/**
+ * Styled object with nested selectors without CSSProperties
+ */
+const StyledObjectWithNestedSelectors: StyledObject = {
+  '&:hover': {
+    '.sort-arrows': {
+      '> svg': {
+        color: 'red',
+      },
+    },
+  },
+};
