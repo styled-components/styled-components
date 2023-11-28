@@ -96,8 +96,8 @@ function useStyledComponentImpl<Props extends StyledComponentImplProps>(
       isFunction(props.style)
         ? (state: any) => [generatedStyles].concat(props.style(state))
         : props.style
-        ? [generatedStyles].concat(props.style)
-        : generatedStyles,
+          ? [generatedStyles].concat(props.style)
+          : generatedStyles,
     [props.style, generatedStyles]
   );
 
