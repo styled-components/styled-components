@@ -21,6 +21,6 @@ it('does not add a px prefix for unitless properties', () => {
   pairs.forEach(([key, value]) => expect(addUnitIfNeeded(key, value)).toEqual(String(value)));
 });
 
-it('does not add a px prefix for shadowOpacity', () => {
+it('does not add a px prefix for overridden properties', () => {
   expect(addUnitIfNeeded('shadowOpacity', 0.5)).toEqual('0.5');
 });
