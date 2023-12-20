@@ -22,8 +22,8 @@ type AttrsResult<T extends Attrs<any>> = T extends (...args: any) => infer P
     ? P
     : never
   : T extends object
-    ? T
-    : never;
+  ? T
+  : never;
 
 /**
  * Based on Attrs being a simple object or function that returns
@@ -34,7 +34,7 @@ type AttrsTarget<
   R extends Runtime,
   T extends Attrs<any>,
   FallbackTarget extends StyledTarget<R>,
-  Result extends ExecutionProps = AttrsResult<T>,
+  Result extends ExecutionProps = AttrsResult<T>
 > = Result extends { as: infer RuntimeTarget }
   ? RuntimeTarget extends KnownTarget
     ? RuntimeTarget
@@ -45,7 +45,7 @@ export interface Styled<
   R extends Runtime,
   Target extends StyledTarget<R>,
   OuterProps extends object,
-  OuterStatics extends object = BaseObject,
+  OuterStatics extends object = BaseObject
 > {
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
     initialStyles: Styles<Substitute<OuterProps, NoInfer<Props>>>,
@@ -53,13 +53,17 @@ export interface Styled<
   ): IStyledComponent<R, Substitute<OuterProps, Props>> &
     OuterStatics &
     Statics &
-    (R extends 'web' ? (Target extends string ? {} : Omit<Target, keyof React.Component<any>>) : {});
+    (R extends 'web'
+      ? Target extends string
+        ? {}
+        : Omit<Target, keyof React.Component<any>>
+      : {});
 
   attrs: <
     Props extends object = BaseObject,
     PrivateMergedProps extends object = Substitute<OuterProps, Props>,
     PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
-    PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>,
+    PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>
   >(
     attrs: PrivateAttrsArg
   ) => Styled<
@@ -83,7 +87,7 @@ export default function constructWithOptions<
   OuterProps extends object = Target extends KnownTarget
     ? React.ComponentPropsWithRef<Target>
     : BaseObject,
-  OuterStatics extends object = BaseObject,
+  OuterStatics extends object = BaseObject
 >(
   componentConstructor: IStyledComponentFactory<R, StyledTarget<R>, object, any>,
   tag: StyledTarget<R>,
@@ -121,7 +125,7 @@ export default function constructWithOptions<
     Props extends object = BaseObject,
     PrivateMergedProps extends object = Substitute<OuterProps, Props>,
     PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
-    PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>,
+    PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>
   >(
     attrs: PrivateAttrsArg
   ) =>
