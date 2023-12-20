@@ -498,3 +498,29 @@ const StyledObjectWithNestedSelectors: StyledObject = {
     },
   },
 };
+
+/**
+ * Nested styled component
+ */
+
+const ParentStyledComponent1 = styled.a<{ $prop1?: boolean }>``;
+const ParentStyledComponent2 = styled(ParentStyledComponent1)<{ $prop2?: boolean }>``;
+const ParentStyledComponent3 = styled(ParentStyledComponent2)<{ $prop3?: boolean }>``;
+
+<ParentStyledComponent2 $prop1={true} $prop2={true} />;
+<ParentStyledComponent3 $prop1={true} $prop2={true} $prop3={true} />;
+
+<ParentStyledComponent2
+  $prop1={true}
+  $prop2={true}
+  // @ts-expect-error Property '$prop3' does not exist on type
+  $prop3={true}
+/>;
+
+/**
+ * Nested class component
+ */
+class ParentClassComponent1 extends React.Component<{ $prop1?: boolean }> {}
+const ParentClassComponent2 = styled(ParentClassComponent1)<{ $prop2?: boolean }>``;
+
+<ParentClassComponent2 $prop1={true} $prop2={true} />;
