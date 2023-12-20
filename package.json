@@ -15,11 +15,9 @@
     "url": "https://github.com/styled-components/styled-components/issues"
   },
   "homepage": "https://styled-components.com",
-  "workspaces": {
-    "packages": [
-      "packages/*"
-    ]
-  },
+  "workspaces": [
+    "packages/*"
+  ],
   "engines": {
     "node": ">= 14"
   },
