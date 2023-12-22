@@ -53,7 +53,11 @@ export interface Styled<
   ): IStyledComponent<R, Substitute<OuterProps, Props>> &
     OuterStatics &
     Statics &
-    (R extends 'web' ? (Target extends string ? {} : Target) : {});
+    (R extends 'web'
+      ? Target extends string
+        ? {}
+        : Omit<Target, keyof React.Component<any>>
+      : {});
 
   attrs: <
     Props extends object = BaseObject,
