@@ -22,8 +22,8 @@ type AttrsResult<T extends Attrs<any>> = T extends (...args: any) => infer P
     ? P
     : never
   : T extends object
-    ? T
-    : never;
+  ? T
+  : never;
 
 /**
  * Based on Attrs being a simple object or function that returns
