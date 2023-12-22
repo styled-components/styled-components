@@ -96,8 +96,8 @@ function resolveContext<Props extends object>(
         key === 'className'
           ? joinStrings(context[key] as string | undefined, resolvedAttrDef[key] as string)
           : key === 'style'
-            ? { ...context[key], ...resolvedAttrDef[key] }
-            : resolvedAttrDef[key as keyof typeof resolvedAttrDef];
+          ? { ...context[key], ...resolvedAttrDef[key] }
+          : resolvedAttrDef[key as keyof typeof resolvedAttrDef];
     }
   }
 
