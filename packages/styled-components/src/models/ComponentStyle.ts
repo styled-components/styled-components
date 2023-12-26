@@ -78,7 +78,8 @@ export default class ComponentStyle {
           const partString = joinStringArray(
             flatten(partRule, executionContext, styleSheet, stylis) as string[]
           );
-          dynamicHash = phash(dynamicHash, partString);
+          // The same value can switch positions in the array, so we include "i" in the hash.
+          dynamicHash = phash(dynamicHash, partString + i);
           css += partString;
         }
       }

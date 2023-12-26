@@ -1,10 +1,18 @@
+import React from 'react';
+import TestRenderer from 'react-test-renderer';
+
+import { ServerStyleSheet, StyleSheetManager } from '../../base';
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../../constants';
+import { resetStyled } from '../../test/utils';
 import * as GroupIDAllocator from '../GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from '../Rehydration';
 import StyleSheet from '../Sheet';
 
+let styled: ReturnType<typeof resetStyled>;
+
 beforeEach(() => {
   GroupIDAllocator.resetGroupIds();
+  styled = resetStyled();
 });
 
 describe('outputSheet', () => {
@@ -58,25 +66,49 @@ describe('rehydrateSheet', () => {
     expect(styleHead!.parentElement).toBe(document.head);
     expect(styleBody!.parentElement).toBe(document.body);
 
-    const sheet = new StyleSheet({ isServer: true });
-    rehydrateSheet(sheet);
+    const sheet = new ServerStyleSheet();
+    rehydrateSheet(sheet.instance);
 
     // Adds ID to Group mapping to GroupIDAllocator
     expect(GroupIDAllocator.getIdForGroup(11)).toBe('idA');
     expect(GroupIDAllocator.getIdForGroup(33)).toBe('empty');
     expect(GroupIDAllocator.getIdForGroup(22)).toBe('idB');
     // Registers ID + name combinations on the StyleSheet
-    expect(sheet.hasNameForId('idA', 'nameA')).toBe(true);
-    expect(sheet.hasNameForId('empty', 'empty')).toBe(false);
-    expect(sheet.hasNameForId('idB', 'nameB')).toBe(true);
+    expect(sheet.instance.hasNameForId('idA', 'nameA')).toBe(true);
+    expect(sheet.instance.hasNameForId('empty', 'empty')).toBe(false);
+    expect(sheet.instance.hasNameForId('idB', 'nameB')).toBe(true);
     // Populates the underlying tag
-    expect(sheet.getTag().tag.length).toBe(2);
-    expect(sheet.getTag().getGroup(11)).toBe('.a {}/*!sc*/\n');
-    expect(sheet.getTag().getGroup(22)).toBe('.b {}/*!sc*/\n');
-    expect(sheet.getTag().getGroup(33)).toBe('');
+    expect(sheet.instance.getTag().tag.length).toBe(2);
+    expect(sheet.instance.getTag().getGroup(11)).toBe('.a {}/*!sc*/\n');
+    expect(sheet.instance.getTag().getGroup(22)).toBe('.b {}/*!sc*/\n');
+    expect(sheet.instance.getTag().getGroup(33)).toBe('');
     // Removes the old tags
     expect(styleHead!.parentElement).toBe(null);
     expect(styleBody!.parentElement).toBe(null);
+
+    const Foo = styled.div`
+      color: burgundy;
+    `;
+
+    // new insertion is placed after the rehydrated styles
+    TestRenderer.create(
+      <StyleSheetManager sheet={sheet.instance}>
+        <Foo />
+      </StyleSheetManager>
+    );
+
+    expect(sheet.instance.getTag().tag.length).toBe(3);
+    expect(sheet.getStyleTags()).toBe(
+      `
+<style data-styled=\"true\" data-styled-version=\"JEST_MOCK_VERSION\">.a {}/*!sc*/
+data-styled.g11[id=\"idA\"]{content:\"nameA,\"}/*!sc*/
+.b {}/*!sc*/
+data-styled.g22[id=\"idB\"]{content:\"nameB,\"}/*!sc*/
+.a{color:burgundy;}/*!sc*/
+data-styled.g23[id=\"sc-kqxcKS\"]{content:\"a,\"}/*!sc*/
+</style>
+    `.trim()
+    );
   });
 
   it('ignores active style elements', () => {

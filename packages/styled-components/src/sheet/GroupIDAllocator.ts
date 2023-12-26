@@ -37,6 +37,9 @@ export const getIdForGroup = (group: number): void | string => {
 };
 
 export const setGroupForId = (id: string, group: number) => {
+  // move pointer
+  nextFreeGroup = group + 1;
+
   groupIDRegister.set(id, group);
   reverseRegister.set(group, id);
 };

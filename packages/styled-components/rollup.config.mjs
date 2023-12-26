@@ -148,7 +148,6 @@ const serverConfig = {
   ],
   plugins: configBase.plugins.concat(
     replace({
-      window: undefined,
       __SERVER__: JSON.stringify(true),
     }),
     minifierPlugin
@@ -183,24 +182,4 @@ const nativeConfig = {
   plugins: configBase.plugins.concat(minifierPlugin),
 };
 
-const macroConfig = Object.assign({}, configBase, {
-  input: './src/macro/index.ts',
-  output: [
-    getESM({ file: 'dist/styled-components-macro.esm.js' }),
-    getCJS({ file: 'dist/styled-components-macro.cjs.js' }),
-  ],
-  plugins: configBase.plugins.concat(
-    replace({
-      __SERVER__: JSON.stringify(false),
-    })
-  ),
-});
-
-export default [
-  standaloneConfig,
-  standaloneProdConfig,
-  serverConfig,
-  browserConfig,
-  nativeConfig,
-  macroConfig,
-];
+export default [standaloneConfig, standaloneProdConfig, serverConfig, browserConfig, nativeConfig];

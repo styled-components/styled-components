@@ -1,1 +1,2 @@
 test-results.json binary
+*.lockb binary diff=lockb
