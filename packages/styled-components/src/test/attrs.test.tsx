@@ -345,9 +345,9 @@ describe('attrs', () => {
   it('aliasing an alternate theme via attrs makes it through to the child component', () => {
     const InnerComp: React.FC<{ theme: object }> = p => <div {...p} />;
 
-    const Comp = styled(InnerComp).attrs<{ alternateTheme: object }>(p => ({
+    const Comp = styled(InnerComp).attrs<{ alternateTheme: object | undefined }>(p => ({
       alternateTheme: undefined,
-      theme: p.alternateTheme,
+      theme: p.alternateTheme!,
     }))``;
 
     expect(
