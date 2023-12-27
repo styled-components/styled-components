@@ -20,19 +20,19 @@ These days, we highly recommend trying a tool like [ChatGPT](https://chat.openai
 
 ### Environment setup
 
-1. Install `bun` and [configure bun lockfile handling](https://bun.sh/docs/install/lockfile) for the best development experience
+1. Ensure `yarn` is installed (https://yarnpkg.com/getting-started/install)
 2. [Fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo), then pull it down to your disk: `git clone git@github.com:YOUR_USERNAME/styled-components.git`
-3. Hop into the styled-components folder and run `bun install`
+3. Hop into the styled-components folder and run `yarn install`
 4. Set the base repository as upstream: `git remote add upstream git@github.com:styled-components/styled-components.git` (makes it easier to pull updates to your fork)
 
 At this point, the repository is initialized and ready for development! Check the `packages/` folder for the `styled-components` core library, a development `sandbox` (great for testing functionality), and the `benchmarks` suite.
 
 Helpful commands:
 
-- run unit tests: `bun run test`
-- check code style `bun run prettier` (handled automatically if you have a prettier extension installed in your IDE)
-- run build: `bun run build`
-- run dev sandbox: `bun --cwd packages/sandbox dev` (or just `bun dev` if you're in that folder)
+- run unit tests: `yarn run test`
+- check code style `yarn run prettier` (handled automatically if you have a prettier extension installed in your IDE)
+- run build: `yarn run build`
+- run dev sandbox: `yarn workspace sandbox dev` (or just `yarn dev` if you're in that folder)
 
 ### Making changes
 
@@ -48,7 +48,7 @@ Here is a quick guide to doing code contributions to the library.
 
 4. Create a branch with a meaningful name for the issue: `git checkout -b fix-something`
 
-5. Run `bun install` to capture any dependency updates
+5. Run `yarn install` to capture any dependency updates
 
 6. Make desired changes...
 
@@ -75,13 +75,13 @@ cd packages/benchmarks
 Then build the benchmark page:
 
 ```sh
-bun run build
+yarn run build
 ```
 
 Then open the page in your browser:
 
 ```sh
-bun run open
+yarn run open
 ```
 
 On the page which opens, select the benchmark to run and click the "Run" button in your browser.

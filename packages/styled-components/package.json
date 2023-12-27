@@ -7,24 +7,24 @@
   "module": "./dist/styled-components.esm.js",
   "react-native": "native/dist/styled-components.native.cjs.js",
   "browser": {
-    "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js",
-    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js"
+    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js",
+    "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js"
   },
   "sideEffects": false,
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
-    "prebuild": "rimraf dist && bun run generateErrors",
+    "prebuild": "rimraf dist && yarn run generateErrors",
     "build": "rollup -c",
-    "postbuild": "bun run size",
-    "pretest": "bun run generateErrors",
-    "test": "bun run test:web && bun run test:native",
+    "postbuild": "yarn run size",
+    "pretest": "yarn run generateErrors",
+    "test": "yarn run test:web && yarn run test:native",
     "test:web": "jest -c jest.config.main.js",
     "test:native": "jest -c jest.config.native.js --forceExit",
     "test:integration": "jest -c jest.config.integration.js --runInBand --forceExit",
     "size": "bundlewatch",
-    "prettier": "prettier src/** --write",
-    "prettier:check": "prettier src/** --check",
-    "prepublishOnly": "cp ../../README.md . && bun run build"
+    "prettier": "prettier src --write",
+    "prettier:check": "prettier src --check",
+    "prepublishOnly": "cp ../../README.md . && yarn run build"
   },
   "repository": {
     "type": "git",
