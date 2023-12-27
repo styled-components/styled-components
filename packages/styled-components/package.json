@@ -50,10 +50,6 @@
     "url": "https://github.com/styled-components/styled-components/issues"
   },
   "homepage": "https://styled-components.com",
-  "resolutions": {
-    "@types/react": "^17.0.0",
-    "@types/react-dom": "^17.0.0"
-  },
   "dependencies": {
     "@emotion/is-prop-valid": "1.2.1",
     "@emotion/unitless": "0.8.0",
