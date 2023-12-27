@@ -500,7 +500,9 @@ describe('ssr', () => {
     const css = sheet.getStyleTags();
 
     expect(html).toMatchInlineSnapshot(`
-      <h1 class="sc-a b">
+      <h1 theme="[object Object]"
+          class="sc-a b"
+      >
         Hello SSR!
       </h1>
     `);

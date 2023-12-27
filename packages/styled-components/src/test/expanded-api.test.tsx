@@ -119,6 +119,7 @@ describe('expanded api', () => {
       expect(TestRenderer.create(<Comp as="span" />).toJSON()).toMatchInlineSnapshot(`
         <header
           className="sc-a b"
+          theme={{}}
         />
       `);
     });
@@ -152,16 +153,19 @@ describe('expanded api', () => {
       expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
         <div
           className="sc-a d"
+          theme={{}}
         />
       `);
       expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchInlineSnapshot(`
         <div
           className="sc-a sc-b d e"
+          theme={{}}
         />
       `);
       expect(TestRenderer.create(<Comp3 as="span" />).toJSON()).toMatchInlineSnapshot(`
         <span
           className="sc-a sc-b sc-c d e f"
+          theme={{}}
         />
       `);
 

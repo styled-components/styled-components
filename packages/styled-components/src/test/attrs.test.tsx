@@ -92,6 +92,11 @@ describe('attrs', () => {
       <button
         className="sc-a"
         data-color="red"
+        theme={
+          {
+            "color": "red",
+          }
+        }
       />
     `);
   });
@@ -111,6 +116,11 @@ describe('attrs', () => {
       <button
         className="sc-a"
         data-color="red"
+        theme={
+          {
+            "color": "red",
+          }
+        }
       />
     `);
   });
@@ -153,6 +163,7 @@ describe('attrs', () => {
     expect(TestRenderer.create(<Comp className="something" />).toJSON()).toMatchInlineSnapshot(`
       <div
         className="sc-a sc-b foo meow nya something"
+        theme={{}}
       />
     `);
   });
@@ -182,6 +193,7 @@ describe('attrs', () => {
             "color": "red",
           }
         }
+        theme={{}}
       />
     `);
   });
@@ -316,6 +328,7 @@ describe('attrs', () => {
             "fontSize": "4em",
           }
         }
+        theme={{}}
       >
         Hello
       </p>

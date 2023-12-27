@@ -316,6 +316,7 @@ describe('StyleSheetManager', () => {
       <div
         bar={true}
         className="sc-a b"
+        theme={{}}
       >
         Foo
       </div>
@@ -381,12 +382,13 @@ describe('StyleSheetManager', () => {
     `);
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-            <div
-              className="sc-a b"
-            >
-              Foo
-            </div>
-        `);
+      <div
+        className="sc-a b"
+        theme={{}}
+      >
+        Foo
+      </div>
+    `);
 
     act(() => {
       wrapper.update(
@@ -406,12 +408,13 @@ describe('StyleSheetManager', () => {
     `);
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-            <div
-              className="sc-a c"
-            >
-              Foo
-            </div>
-        `);
+      <div
+        className="sc-a c"
+        theme={{}}
+      >
+        Foo
+      </div>
+    `);
 
     act(() => {
       wrapper.update(
@@ -431,12 +434,13 @@ describe('StyleSheetManager', () => {
     `);
 
     expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-            <div
-              className="sc-a b"
-            >
-              Foo
-            </div>
-        `);
+      <div
+        className="sc-a b"
+        theme={{}}
+      >
+        Foo
+      </div>
+    `);
   });
 
   it('subtrees with different stylis configs should not conflict', () => {
@@ -465,11 +469,13 @@ describe('StyleSheetManager', () => {
       <div>
         <div
           className="sc-a b"
+          theme={{}}
         >
           Bar
         </div>
         <div
           className="sc-a c"
+          theme={{}}
         >
           Foo
         </div>
