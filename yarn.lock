@@ -10033,7 +10033,7 @@ __metadata:
     rollup-plugin-sourcemaps: "npm:0.6.3"
     rollup-plugin-terser: "npm:7.0.2"
     shallowequal: "npm:1.1.0"
-    stylis: "npm:4.3.0"
+    stylis: "npm:4.3.1"
     stylis-plugin-rtl: "npm:2.1.1"
     ts-toolbelt: "npm:9.6.0"
     tslib: "npm:2.5.0"
@@ -10125,10 +10125,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"stylis@npm:4.3.0":
-  version: 4.3.0
-  resolution: "stylis@npm:4.3.0"
-  checksum: 5a9f7e0cf2a15591efaacc1c6416a8785d2b57522cd38bb8e0a81a03c23d3bea2363659fa5f9d486a73d1b6ebaf1d32826ce1c1974c95afdb5b495d98acb25c0
+"stylis@npm:4.3.1":
+  version: 4.3.1
+  resolution: "stylis@npm:4.3.1"
+  checksum: 33e8ebd2bfa5f0bd0215f718dc2d3be896e1d00c5bcaeb9a4ae03cf239db6867af9eee230f57229bf1c29499357073ba3e6b547484ba1db2f5de1e8be7d4eee9
   languageName: node
   linkType: hard
 

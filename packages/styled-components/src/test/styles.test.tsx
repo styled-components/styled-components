@@ -503,7 +503,7 @@ describe('with styles', () => {
     `);
   });
 
-  it('comma-joined selector chains should be namespaced', () => {
+  it('comma-joined complex selector chains should be namespaced', () => {
     const Comp = styled.h1`
       &.foo,
       p:not(:last-child) {
