@@ -53,6 +53,10 @@ describe('with styles', () => {
       background: red;
       color: ${p => p.color};
 
+      & {
+        display: flex;
+      }
+
       &&& {
         border: 1px solid red;
       }
@@ -108,6 +112,9 @@ describe('with styles', () => {
         background: red;
         color: white;
       }
+      .a {
+        display: flex;
+      }
       .a.a.a {
         border: 1px solid red;
       }
@@ -144,6 +151,9 @@ describe('with styles', () => {
       .b {
         background: red;
         color: red;
+      }
+      .b {
+        display: flex;
       }
       .b.b.b {
         border: 1px solid red;
