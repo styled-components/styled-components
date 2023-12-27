@@ -408,7 +408,7 @@ describe('with styles', () => {
     `);
   });
 
-  it('failing test', () => {
+  it('conditional styles should only apply to the relevant component instance', () => {
     interface IconProps {
       color?: string;
       rounded?: boolean;
@@ -499,6 +499,23 @@ describe('with styles', () => {
       }
       .c > svg {
         stroke: darkred;
+      }"
+    `);
+  });
+
+  it('comma-joined selector chains should be namespaced', () => {
+    const Comp = styled.h1`
+      &.foo,
+      p:not(:last-child) {
+        color: red;
+      }
+    `;
+
+    TestRenderer.create(<Comp />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a.foo, .a p:not(:last-child) {
+        color: red;
       }"
     `);
   });
