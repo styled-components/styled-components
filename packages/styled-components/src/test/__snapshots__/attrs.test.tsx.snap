@@ -1,5 +1,16 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`attrs aliasing an alternate theme via attrs makes it through to the child component 1`] = `
+<div
+  className="sc-a"
+  theme={
+    {
+      "foo": "bar",
+    }
+  }
+/>
+`;
+
 exports[`attrs does not pass transient props to HTML element 1`] = `
 <div
   className="sc-a sc-b c"

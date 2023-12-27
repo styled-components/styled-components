@@ -341,4 +341,17 @@ describe('attrs', () => {
 
     expect(TestRenderer.create(<Comp loop />).toJSON()).toMatchSnapshot();
   });
+
+  it('aliasing an alternate theme via attrs makes it through to the child component', () => {
+    const InnerComp: React.FC<{ theme: object }> = p => <div {...p} />;
+
+    const Comp = styled(InnerComp).attrs<{ alternateTheme: object }>(p => ({
+      alternateTheme: undefined,
+      theme: p.alternateTheme,
+    }))``;
+
+    expect(
+      TestRenderer.create(<Comp alternateTheme={{ foo: 'bar' }} />).toJSON()
+    ).toMatchSnapshot();
+  });
 });
