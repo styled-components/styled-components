@@ -16,23 +16,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v1
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          cache: 'yarn'
+          node-version-file: '.nvmrc'
 
-      - run: bun install
-      - run: bun run prettier
+      - run: yarn install --immutable
+      - run: yarn run prettier
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v1
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          cache: 'yarn'
+          node-version-file: '.nvmrc'
 
-      - run: bun install
-      - run: bun run build
+      - run: yarn install --immutable
+      - run: yarn run build
         env:
           BUNDLEWATCH_GITHUB_TOKEN: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}
   test:
@@ -40,9 +42,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v1
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          cache: 'yarn'
+          node-version-file: '.nvmrc'
 
-      - run: bun install
-      - run: bun run test
+      - run: yarn install --immutable
+      - run: yarn run test

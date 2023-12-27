@@ -1,4 +1,0 @@
-# all config options https://bun.sh/docs/runtime/bunfig
-
-[install]
-exact = true
