@@ -53,6 +53,10 @@ describe('with styles', () => {
       background: red;
       color: ${p => p.color};
 
+      & {
+        display: flex;
+      }
+
       &&& {
         border: 1px solid red;
       }
@@ -108,6 +112,9 @@ describe('with styles', () => {
         background: red;
         color: white;
       }
+      .a {
+        display: flex;
+      }
       .a.a.a {
         border: 1px solid red;
       }
@@ -144,6 +151,9 @@ describe('with styles', () => {
       .b {
         background: red;
         color: red;
+      }
+      .b {
+        display: flex;
       }
       .b.b.b {
         border: 1px solid red;
@@ -398,7 +408,7 @@ describe('with styles', () => {
     `);
   });
 
-  it('failing test', () => {
+  it('conditional styles should only apply to the relevant component instance', () => {
     interface IconProps {
       color?: string;
       rounded?: boolean;
@@ -489,6 +499,23 @@ describe('with styles', () => {
       }
       .c > svg {
         stroke: darkred;
+      }"
+    `);
+  });
+
+  it('comma-joined complex selector chains should be namespaced', () => {
+    const Comp = styled.h1`
+      &.foo,
+      p:not(:last-child) {
+        color: red;
+      }
+    `;
+
+    TestRenderer.create(<Comp />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a.foo, .a p:not(:last-child) {
+        color: red;
       }"
     `);
   });

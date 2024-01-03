@@ -10,8 +10,13 @@ on:
 permissions:
   contents: read #  to fetch code (actions/checkout)
 
+env:
+  YARN_ENABLE_HARDENED_MODE: 0
+
 jobs:
   prettier:
+    env:
+      YARN_ENABLE_HARDENED_MODE: 1
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

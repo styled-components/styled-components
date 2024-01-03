@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "6.1.4",
+  "version": "6.1.6",
   "description": "CSS for the <Component> Age. Style components your way with speed, strong typing, and flexibility.",
   "types": "dist/index.d.ts",
   "main": "dist/styled-components.cjs.js",
@@ -58,7 +58,7 @@
     "csstype": "3.1.2",
     "postcss": "8.4.31",
     "shallowequal": "1.1.0",
-    "stylis": "4.3.0",
+    "stylis": "4.3.1",
     "tslib": "2.5.0"
   },
   "peerDependencies": {
