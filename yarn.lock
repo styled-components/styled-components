@@ -10039,35 +10039,8 @@ __metadata:
     tslib: "npm:2.5.0"
     typescript: "npm:4.9.5"
   peerDependencies:
-    "@emotion/is-prop-valid": ^1.2.1
-    "@emotion/unitless": ">= 0.8.0"
-    "@types/stylis": ^4.2.0
-    css-to-react-native: ^3.2.0
-    csstype: ^3.1.2
-    postcss: ^8.0.0
-    react: ^16.8.0 || ^17.0.0 || ^18.0.0
-    react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
-    shallowequal: ^1.1.0
-    tslib: ^2.5.0
-  peerDependenciesMeta:
-    "@emotion/is-prop-valid":
-      optional: true
-    "@emotion/unitless":
-      optional: true
-    "@types/stylis":
-      optional: true
-    css-to-react-native:
-      optional: true
-    csstype:
-      optional: true
-    postcss:
-      optional: true
-    react-dom:
-      optional: true
-    shallowequal:
-      optional: true
-    tslib:
-      optional: true
+    react: ">= 16.8.0"
+    react-dom: ">= 16.8.0"
   languageName: unknown
   linkType: soft
 
