@@ -220,13 +220,35 @@ export interface PolymorphicComponent<R extends Runtime, BaseProps extends objec
   ): JSX.Element;
 }
 
-export interface IStyledComponent<R extends Runtime, Props extends object = BaseObject>
-  extends PolymorphicComponent<R, Props>,
-    IStyledStatics<R, Props>,
-    StyledComponentBrand {
-  defaultProps?: (ExecutionProps & Partial<Props>) | undefined;
-  toString: () => string;
-}
+/**
+ * TypeScript doesn't allow using a styled component as a key inside object
+ * styles because "A computed property name must be of type 'string', 'number',
+ * 'symbol', or 'any'.". The toString() method only exists in the web runtime.
+ * This hack intersects the `IStyledComponent` type with the built-in `string`
+ * type to keep TSC happy.
+ *
+ * @example
+ *  const H1 = styled.h1({
+ *    fontSize: '2rem'
+ *  });
+ *
+ *  const Header = styled.header({
+ *    [H1]: {
+ *      marginBottom: '1rem'
+ *    }
+ *  })
+ */
+type WebRuntimeReferenceHack<R extends Runtime> = R extends 'web' ? string : {};
+
+export type IStyledComponent<
+  R extends Runtime,
+  Props extends object = BaseObject,
+> = PolymorphicComponent<R, Props> &
+  IStyledStatics<R, Props> &
+  StyledComponentBrand & {
+    defaultProps?: (ExecutionProps & Partial<Props>) | undefined;
+    toString: () => string;
+  } & WebRuntimeReferenceHack<R>;
 
 // corresponds to createStyledComponent
 export interface IStyledComponentFactory<
