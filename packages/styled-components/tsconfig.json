@@ -10,12 +10,12 @@
     "incremental": true /* Enable incremental compilation */,
     "target": "ES5" /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', 'ES2018', 'ES2019', 'ES2020', or 'ESNEXT'. */,
     "module": "ESNext" /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', 'es2020', or 'ESNext'. */,
-    // "lib": [],                             /* Specify library files to be included in the compilation. */
+    "lib": ["ES2021"] /* Specify library files to be included in the compilation. */,
     // "allowJs": true,                       /* Allow javascript files to be compiled. */
     // "checkJs": true,                       /* Report errors in .js files. */
     "jsx": "react" /* Specify JSX code generation: 'preserve', 'react-native', or 'react'. */,
     "declaration": true /* Generates corresponding '.d.ts' file. */,
-    "declarationDir": ".",
+    // "declarationDir": ".",
     // "declarationMap": true /* Generates a sourcemap for each corresponding '.d.ts' file. */,
     // "sourceMap": true,                     /* Generates corresponding '.map' file. */
     // "outFile": "./",                       /* Concatenate and emit output to single file. */
@@ -44,7 +44,7 @@
     // "noUnusedParameters": true,            /* Report errors on unused parameters. */
     // "noImplicitReturns": true,             /* Report error when not all code paths in function return a value. */
     // "noFallthroughCasesInSwitch": true,    /* Report errors for fallthrough cases in switch statement. */
-    "exactOptionalPropertyTypes": true        /* Interpret optional property types as written, rather than adding 'undefined'. */,
+    "exactOptionalPropertyTypes": true /* Interpret optional property types as written, rather than adding 'undefined'. */,
 
     /* Module Resolution Options */
     "moduleResolution": "node" /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */,

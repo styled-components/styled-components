@@ -94,7 +94,7 @@ const toStyleSheet = (rules: RuleSet<object>) => {
     }
   });
 
-  const styleObject = transformDeclPairs(declPairs);
+  const styleObject = transformDeclPairs(declPairs, ['borderWidth', 'borderColor']);
 
   return reactNative.StyleSheet.create({ style: styleObject }).style;
 };

@@ -23,7 +23,7 @@ export type BaseObject = {};
 // from https://stackoverflow.com/a/69852402
 export type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
 
-type FastOmit<T extends object, U extends string | number | symbol> = {
+export type FastOmit<T extends object, U extends string | number | symbol> = {
   [K in keyof T as K extends U ? never : K]: T[K];
 };
 
@@ -259,17 +259,15 @@ export type CSSKeyframes = object & { [key: string]: CSSObject };
 
 export type CSSObject<Props extends object = BaseObject> = StyledObject<Props>;
 
-export type StyledObject<Props extends object = BaseObject> = CSSProperties &
-  CSSPseudos & {
-    [key: string]:
-      | StyledObject<Props>
-      | string
-      | number
-      | StyleFunction<Props>
-      | StyledObject<Props>
-      | RuleSet<any>
-      | undefined;
-  };
+export interface StyledObject<Props extends object = BaseObject> extends CSSProperties, CSSPseudos {
+  [key: string]:
+    | StyledObject<Props>
+    | string
+    | number
+    | StyleFunction<Props>
+    | RuleSet<any>
+    | undefined;
+}
 
 /**
  * The `css` prop is not declared by default in the types as it would cause `css` to be present

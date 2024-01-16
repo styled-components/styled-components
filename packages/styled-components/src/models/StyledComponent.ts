@@ -143,7 +143,7 @@ function useStyledComponentImpl<Props extends object>(
     if (context[key] === undefined) {
       // Omit undefined values from props passed to wrapped element.
       // This enables using .attrs() to remove props, for example.
-    } else if (key[0] === '$' || key === 'as' || key === 'theme') {
+    } else if (key[0] === '$' || key === 'as' || (key === 'theme' && context.theme === theme)) {
       // Omit transient props and execution props.
     } else if (key === 'forwardedAs') {
       propsForElement.as = context.forwardedAs;
@@ -250,9 +250,7 @@ function createStyledComponent<
     return useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    forwardRefRender.displayName = displayName;
-  }
+  forwardRefRender.displayName = displayName;
 
   /**
    * forwardRef creates a new interim component, which we'll take advantage of
@@ -265,11 +263,8 @@ function createStyledComponent<
     Statics;
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
+  WrappedStyledComponent.displayName = displayName;
   WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
-
-  if (process.env.NODE_ENV !== 'production') {
-    WrappedStyledComponent.displayName = displayName;
-  }
 
   // this static is used to preserve the cascade of static classes for component selector
   // purposes; this is especially important with usage of the css prop

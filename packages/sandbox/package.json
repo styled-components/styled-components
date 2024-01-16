@@ -9,12 +9,12 @@
     "start": "next start"
   },
   "devDependencies": {
-    "next": "^12.2.0"
+    "next": "12.3.4"
   },
   "dependencies": {
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "styled-components": "link:../styled-components"
+    "react": "17.0.2",
+    "react-dom": "17.0.2",
+    "styled-components": "workspace:*"
   },
   "engines": {
     "node": ">= 14"
