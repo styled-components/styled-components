@@ -22,7 +22,10 @@ export {
   StyleFunction,
   StyledObject,
   StyledOptions,
+  StyledProps,
   SupportedHTMLElements,
+  ThemeProps,
+  ThemedStyledProps,
   WebTarget,
 } from './types';
 export { styled as default, styled };
