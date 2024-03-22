@@ -30,7 +30,7 @@ export const objToCssArray = (obj: Dict<any>): string[] => {
 
   for (const key in obj) {
     const val = obj[key];
-    if (!obj.hasOwnProperty(key) || isFalsish(val)) continue;
+    if (!Object.hasOwn(obj, key) || isFalsish(val)) continue;
 
     // @ts-expect-error Property 'isCss' does not exist on type 'any[]'
     if ((Array.isArray(val) && val.isCss) || isFunction(val)) {
