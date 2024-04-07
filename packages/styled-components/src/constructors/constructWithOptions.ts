@@ -44,11 +44,11 @@ type AttrsTarget<
 /**
  * Extract non-optional fields from given object type.
  */
-type RequiredFields<T> = Pick<
+type RequiredFields<T, Ex> = Pick<
   T,
   {
     [K in keyof T]-?: undefined extends T[K] ? never : K;
-  }[keyof T]
+  }[Exclude<keyof T, Ex>]
 >;
 
 export interface Styled<
@@ -83,7 +83,7 @@ export interface Styled<
     PrivateResolvedTarget extends KnownTarget
       ? Substitute<
           Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-          Props & Partial<RequiredFields<PrivateAttrsArg>>
+          Props & Partial<RequiredFields<PrivateAttrsArg, 'as'>>
         >
       : PrivateMergedProps,
     OuterStatics,
@@ -153,7 +153,7 @@ export default function constructWithOptions<
       PrivateResolvedTarget extends KnownTarget
         ? Substitute<
             Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-            Props & Partial<RequiredFields<PrivateAttrsArg>>
+            Props & Partial<RequiredFields<PrivateAttrsArg, 'as'>>
           >
         : PrivateMergedProps,
       OuterStatics,

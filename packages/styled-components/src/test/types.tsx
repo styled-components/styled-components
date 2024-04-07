@@ -295,6 +295,18 @@ const AttrRequiredTest4 = styled(DivWithUnfulfilledRequiredProps).attrs({
   <DivWithRequiredBar foo="3" bar="3" />;
 }
 
+{
+  // double overriding
+  const Div = styled.div``;
+  const H1 = styled(Div).attrs({ as: 'h1' })``;
+  const Label = styled(H1).attrs({ as: 'label' })``;
+
+  <Label
+    ref={(el: HTMLLabelElement | null) => {}}
+    onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
+  />;
+}
+
 /** Intrinsic props and ref are being incorrectly types when using `as`
  * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
