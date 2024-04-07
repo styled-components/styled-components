@@ -293,6 +293,33 @@ const AttrRequiredTest4 = styled(DivWithUnfulfilledRequiredProps).attrs({
   <DivWithRequiredBar foo={3} bar="3" />;
   // @ts-expect-error foo must be a number
   <DivWithRequiredBar foo="3" bar="3" />;
+
+  const Div = styled(DivWithRequiredBar).attrs({ bar: '42' })`
+    margin: ${props => {
+      // @ts-expect-error foo is optional
+      const foo: number = props.foo;
+      const bar: string = props.bar;
+      return foo * Number(bar);
+    }}px;
+  `;
+  // OK
+  <Div />;
+  <Div foo={3} />;
+  <Div bar="3" />;
+  <Div foo={3} bar="3" />;
+}
+
+{
+  // double attrs
+  const DivWithRequiredFooBar = styled.div<{ foo: number; bar: number }>``;
+  const Div = styled(DivWithRequiredFooBar).attrs({ foo: 42 }).attrs({ bar: 42 })`
+    margin: ${props => props.foo * props.bar}px;
+    `;
+
+  <Div />;
+  <Div foo={3} />;
+  <Div bar={3} />;
+  <Div foo={3} bar={3} />;
 }
 
 {
