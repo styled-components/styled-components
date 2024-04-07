@@ -41,15 +41,26 @@ type AttrsTarget<
     : FallbackTarget
   : FallbackTarget;
 
+/**
+ * Extract non-optional fields from given object type.
+ */
+type RequiredFields<T> = Pick<
+  T,
+  {
+    [K in keyof T]-?: undefined extends T[K] ? never : K;
+  }[keyof T]
+>;
+
 export interface Styled<
   R extends Runtime,
   Target extends StyledTarget<R>,
   OuterProps extends object,
   OuterStatics extends object = BaseObject,
+  InnerProps extends object = OuterProps,
 > {
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
-    initialStyles: Styles<Substitute<OuterProps, NoInfer<Props>>>,
-    ...interpolations: Interpolation<Substitute<OuterProps, NoInfer<Props>>>[]
+    initialStyles: Styles<Substitute<InnerProps, NoInfer<Props>>>,
+    ...interpolations: Interpolation<Substitute<InnerProps, NoInfer<Props>>>[]
   ): IStyledComponent<R, Substitute<OuterProps, Props>> &
     OuterStatics &
     Statics &
@@ -72,10 +83,16 @@ export interface Styled<
     PrivateResolvedTarget extends KnownTarget
       ? Substitute<
           Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-          Props
+          Props & Partial<RequiredFields<PrivateAttrsArg>>
         >
       : PrivateMergedProps,
-    OuterStatics
+    OuterStatics,
+    PrivateResolvedTarget extends KnownTarget
+      ? Substitute<
+          Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+          Props
+        >
+      : PrivateMergedProps
   >;
 
   withConfig: (config: StyledOptions<R, OuterProps>) => Styled<R, Target, OuterProps, OuterStatics>;

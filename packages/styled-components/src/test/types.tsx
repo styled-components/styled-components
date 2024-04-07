@@ -270,6 +270,31 @@ const AttrRequiredTest4 = styled(DivWithUnfulfilledRequiredProps).attrs({
   waz: 42,
 })``;
 
+{
+  const DivWithRequiredFooBar = styled.div<{ foo: number; bar: string }>``;
+  // @ts-expect-error must provide both foo and bar
+  <DivWithRequiredFooBar />;
+  // @ts-expect-error must provide both foo and bar
+  <DivWithRequiredFooBar foo={3} />;
+  // @ts-expect-error must provide both foo and bar
+  <DivWithRequiredFooBar bar="3" />;
+  // OK
+  <DivWithRequiredFooBar foo={3} bar="3" />;
+
+  // foo is provided, so it becomes optional
+  const DivWithRequiredBar = styled(DivWithRequiredFooBar).attrs({ foo: 42 })`
+    margin; ${props => props.foo * 10}px;
+  `;
+  // @ts-expect-error must provide bar
+  <DivWithRequiredBar />;
+  // OK
+  <DivWithRequiredBar bar="3" />;
+  // OK. Can still provide foo if we want
+  <DivWithRequiredBar foo={3} bar="3" />;
+  // @ts-expect-error foo must be a number
+  <DivWithRequiredBar foo="3" bar="3" />;
+}
+
 /** Intrinsic props and ref are being incorrectly types when using `as`
  * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
