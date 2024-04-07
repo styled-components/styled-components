@@ -74,29 +74,57 @@ export interface Styled<
     Props extends object = BaseObject,
     PrivateMergedProps extends object = Substitute<OuterProps, Props>,
     PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
-    PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>,
   >(
     attrs: PrivateAttrsArg
-  ) => Styled<
+  ) => StyledAttrsResult<
     R,
-    PrivateResolvedTarget,
-    PrivateResolvedTarget extends KnownTarget
-      ? Substitute<
-          Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-          Props & Partial<RequiredFields<PrivateAttrsArg, 'as'>>
-        >
-      : PrivateMergedProps,
+    Target,
+    OuterProps,
     OuterStatics,
-    PrivateResolvedTarget extends KnownTarget
-      ? Substitute<
-          Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-          Props
-        >
-      : PrivateMergedProps
+    InnerProps,
+    Props,
+    PrivateMergedProps,
+    PrivateAttrsArg
   >;
 
   withConfig: (config: StyledOptions<R, OuterProps>) => Styled<R, Target, OuterProps, OuterStatics>;
 }
+
+type StyledAttrsResult<
+  R extends Runtime,
+  Target extends StyledTarget<R>,
+  OuterProps extends object,
+  OuterStatics extends object = BaseObject,
+  InnerProps extends object = OuterProps,
+  Props extends object = BaseObject,
+  PrivateMergedProps extends object = Substitute<OuterProps, Props>,
+  PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
+> = (
+  AttrsResult<PrivateAttrsArg> extends { as: infer RuntimeTarget extends KnownTarget }
+    ? {
+        Target: RuntimeTarget;
+        TargetProps: Substitute<OuterProps, React.ComponentPropsWithRef<RuntimeTarget>>;
+      }
+    : { Target: Target; TargetProps: OuterProps }
+) extends {
+  Target: infer PrivateResolvedTarget extends StyledTarget<R>;
+  TargetProps: infer TargetProps extends object;
+}
+  ? Styled<
+      R,
+      PrivateResolvedTarget,
+      PrivateResolvedTarget extends KnownTarget
+        ? Substitute<TargetProps, Props & Partial<RequiredFields<PrivateAttrsArg, 'as'>>>
+        : PrivateMergedProps,
+      OuterStatics,
+      PrivateResolvedTarget extends KnownTarget
+        ? Substitute<
+            Substitute<InnerProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+            Props
+          >
+        : PrivateMergedProps
+    >
+  : unknown;
 
 export default function constructWithOptions<
   R extends Runtime,
@@ -143,30 +171,22 @@ export default function constructWithOptions<
     Props extends object = BaseObject,
     PrivateMergedProps extends object = Substitute<OuterProps, Props>,
     PrivateAttrsArg extends Attrs<PrivateMergedProps> = Attrs<PrivateMergedProps>,
-    PrivateResolvedTarget extends StyledTarget<R> = AttrsTarget<R, PrivateAttrsArg, Target>,
   >(
     attrs: PrivateAttrsArg
-  ) =>
-    constructWithOptions<
-      R,
-      PrivateResolvedTarget,
-      PrivateResolvedTarget extends KnownTarget
-        ? Substitute<
-            Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-            Props & Partial<RequiredFields<PrivateAttrsArg, 'as'>>
-          >
-        : PrivateMergedProps,
-      OuterStatics,
-      PrivateResolvedTarget extends KnownTarget
-        ? Substitute<
-            Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-            Props
-          >
-        : PrivateMergedProps
-    >(componentConstructor, tag, {
+  ): StyledAttrsResult<
+    R,
+    Target,
+    OuterProps,
+    OuterStatics,
+    InnerProps,
+    Props,
+    PrivateMergedProps,
+    PrivateAttrsArg
+  > =>
+    constructWithOptions<R, Target, any, any, any>(componentConstructor, tag, {
       ...options,
       attrs: Array.prototype.concat(options.attrs, attrs).filter(Boolean),
-    });
+    }) as any;
 
   /**
    * If config methods are called, wrap up a new template function
