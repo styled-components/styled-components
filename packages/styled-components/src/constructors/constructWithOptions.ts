@@ -105,11 +105,12 @@ export default function constructWithOptions<
     ? React.ComponentPropsWithRef<Target>
     : BaseObject,
   OuterStatics extends object = BaseObject,
+  InnerProps extends object = OuterProps,
 >(
   componentConstructor: IStyledComponentFactory<R, StyledTarget<R>, object, any>,
   tag: StyledTarget<R>,
   options: StyledOptions<R, OuterProps> = EMPTY_OBJECT
-): Styled<R, Target, OuterProps, OuterStatics> {
+): Styled<R, Target, OuterProps, OuterStatics, InnerProps> {
   /**
    * We trust that the tag is a valid component as long as it isn't
    * falsish. Typically the tag here is a string or function (i.e.
@@ -123,13 +124,13 @@ export default function constructWithOptions<
 
   /* This is callable directly as a template function */
   const templateFunction = <Props extends object = BaseObject, Statics extends object = BaseObject>(
-    initialStyles: Styles<Substitute<OuterProps, Props>>,
-    ...interpolations: Interpolation<Substitute<OuterProps, Props>>[]
+    initialStyles: Styles<Substitute<InnerProps, Props>>,
+    ...interpolations: Interpolation<Substitute<InnerProps, Props>>[]
   ) =>
-    componentConstructor<Substitute<OuterProps, Props>, Statics>(
+    componentConstructor<Substitute<InnerProps, Props>, Statics>(
       tag,
-      options as StyledOptions<R, Substitute<OuterProps, Props>>,
-      css<Substitute<OuterProps, Props>>(initialStyles, ...interpolations)
+      options as StyledOptions<R, Substitute<InnerProps, Props>>,
+      css<Substitute<InnerProps, Props>>(initialStyles, ...interpolations)
     );
 
   /**
@@ -152,10 +153,16 @@ export default function constructWithOptions<
       PrivateResolvedTarget extends KnownTarget
         ? Substitute<
             Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-            Props
+            Props & Partial<RequiredFields<PrivateAttrsArg>>
           >
         : PrivateMergedProps,
-      OuterStatics
+      OuterStatics,
+      PrivateResolvedTarget extends KnownTarget
+        ? Substitute<
+            Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+            Props
+          >
+        : PrivateMergedProps
     >(componentConstructor, tag, {
       ...options,
       attrs: Array.prototype.concat(options.attrs, attrs).filter(Boolean),
