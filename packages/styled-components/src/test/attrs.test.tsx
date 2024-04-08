@@ -354,4 +354,34 @@ describe('attrs', () => {
       TestRenderer.create(<Comp alternateTheme={{ foo: 'bar' }} />).toJSON()
     ).toMatchSnapshot();
   });
+
+  it('marks keys in attrs as optional', () => {
+    // This is mainly a typescript test
+    const Comp: React.FC<{ href: string }> = ({ href }) => <a href={href} />;
+    const CompWithAttrs = styled(Comp).attrs({ href: 'https://example.com' })`
+      color: red;
+    `;
+
+    expect(() => TestRenderer.create(<CompWithAttrs />)).not.toThrow();
+  });
+
+  it('marks only keys in attrs as optional', () => {
+    // This is mainly a typescript test
+    const Comp: React.FC<{ href: string; otherProp: string }> = ({ href }) => <a href={href} />;
+
+    const CompWithAttrs = styled(Comp).attrs({ href: 'https://example.com' })`
+      color: red;
+    `;
+    // @ts-expect-error otherProp is still required
+    expect(() => TestRenderer.create(<CompWithAttrs />)).not.toThrow();
+  });
+
+  it('marks keys not required in polymorphic target as optional', () => {
+    // This is mainly a typescript test
+    const Comp: React.FC<{ href: string }> = ({ href }) => <a href={href} />;
+    const StyledComp = styled(Comp)`
+      color: red;
+    `;
+    expect(() => TestRenderer.create(<StyledComp as="button" />)).not.toThrow();
+  });
 });

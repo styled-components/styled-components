@@ -3,7 +3,6 @@ import {
   Attrs,
   BaseObject,
   ExecutionProps,
-  FastOmit,
   Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
