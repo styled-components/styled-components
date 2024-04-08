@@ -1,7 +1,9 @@
+import { Optional } from 'ts-toolbelt/out/Object/Optional';
 import {
   Attrs,
   BaseObject,
   ExecutionProps,
+  FastOmit,
   Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
@@ -69,12 +71,15 @@ export interface Styled<
   ) => Styled<
     R,
     PrivateResolvedTarget,
-    PrivateResolvedTarget extends KnownTarget
-      ? Substitute<
-          Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-          Props
-        >
-      : PrivateMergedProps,
+    Optional<
+      PrivateResolvedTarget extends KnownTarget
+        ? Substitute<
+            Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+            Props
+          >
+        : PrivateMergedProps,
+      keyof PrivateAttrsArg
+    >,
     OuterStatics
   >;
 
@@ -132,12 +137,15 @@ export default function constructWithOptions<
     constructWithOptions<
       R,
       PrivateResolvedTarget,
-      PrivateResolvedTarget extends KnownTarget
-        ? Substitute<
-            Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-            Props
-          >
-        : PrivateMergedProps,
+      Optional<
+        PrivateResolvedTarget extends KnownTarget
+          ? Substitute<
+              Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+              Props
+            >
+          : PrivateMergedProps,
+        keyof PrivateAttrsArg
+      >,
       OuterStatics
     >(componentConstructor, tag, {
       ...options,

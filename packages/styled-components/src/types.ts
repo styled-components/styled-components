@@ -191,7 +191,7 @@ export type PolymorphicComponentProps<
 > = NoInfer<
   FastOmit<
     Substitute<
-      BaseProps,
+      AsTarget extends void ? BaseProps : Partial<BaseProps>,
       // "as" wins over "forwardedAs" when it comes to prop interface
       Substitute<ForwardedAsTargetProps, AsTargetProps>
     >,
