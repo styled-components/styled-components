@@ -524,3 +524,23 @@ class ParentClassComponent1 extends React.Component<{ $prop1?: boolean }> {}
 const ParentClassComponent2 = styled(ParentClassComponent1)<{ $prop2?: boolean }>``;
 
 <ParentClassComponent2 $prop1={true} $prop2={true} />;
+
+/**
+ * Attrs call marks props as optional
+ */
+const BaseComponentWithRequiredFoo = styled.div<{ foo: string }>``;
+const WithAttrs = styled(BaseComponentWithRequiredFoo).attrs({ foo: 'bar' })``;
+<WithAttrs />;
+
+/**
+ * Polymorphic as does not require required props from the base component
+ */
+<BaseComponentWithRequiredFoo as="span" />;
+
+/**
+ * Attrs does not overwrite props not specified in the attrs call
+ */
+const BaseComponentWithRequiredBar = styled(BaseComponentWithRequiredFoo)<{ bar: string }>``;
+const WithAttrs2 = styled(BaseComponentWithRequiredBar).attrs({ foo: 'bar' })``;
+// @ts-expect-error Property 'bar' is missing in type
+<WithAttrs2 />;
