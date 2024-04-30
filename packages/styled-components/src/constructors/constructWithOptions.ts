@@ -1,7 +1,6 @@
 import {
   Attrs,
   BaseObject,
-  ExecutionProps,
   Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
@@ -24,22 +23,6 @@ type AttrsResult<T extends Attrs<any>> = T extends (...args: any) => infer P
   : T extends object
   ? T
   : never;
-
-/**
- * Based on Attrs being a simple object or function that returns
- * a prop object, inspect the attrs result and attempt to extract
- * any "as" prop usage to modify the runtime target.
- */
-type AttrsTarget<
-  R extends Runtime,
-  T extends Attrs<any>,
-  FallbackTarget extends StyledTarget<R>,
-  Result extends ExecutionProps = AttrsResult<T>,
-> = Result extends { as: infer RuntimeTarget }
-  ? RuntimeTarget extends KnownTarget
-    ? RuntimeTarget
-    : FallbackTarget
-  : FallbackTarget;
 
 /**
  * Extract non-optional fields from given object type.
