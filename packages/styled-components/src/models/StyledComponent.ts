@@ -96,8 +96,8 @@ function resolveContext<Props extends object>(
         key === 'className'
           ? joinStrings(context[key] as string | undefined, resolvedAttrDef[key] as string)
           : key === 'style'
-            ? { ...context[key], ...resolvedAttrDef[key] }
-            : resolvedAttrDef[key as keyof typeof resolvedAttrDef];
+          ? { ...context[key], ...resolvedAttrDef[key] }
+          : resolvedAttrDef[key as keyof typeof resolvedAttrDef];
     }
   }
 
@@ -143,7 +143,7 @@ function useStyledComponentImpl<Props extends object>(
     if (context[key] === undefined) {
       // Omit undefined values from props passed to wrapped element.
       // This enables using .attrs() to remove props, for example.
-    } else if (key[0] === '$' || key === 'as' || key === 'theme') {
+    } else if (key[0] === '$' || key === 'as' || (key === 'theme' && context.theme === theme)) {
       // Omit transient props and execution props.
     } else if (key === 'forwardedAs') {
       propsForElement.as = context.forwardedAs;

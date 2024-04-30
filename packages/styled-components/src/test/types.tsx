@@ -270,6 +270,70 @@ const AttrRequiredTest4 = styled(DivWithUnfulfilledRequiredProps).attrs({
   waz: 42,
 })``;
 
+{
+  const DivWithRequiredFooBar = styled.div<{ foo: number; bar: string }>``;
+  // @ts-expect-error must provide both foo and bar
+  <DivWithRequiredFooBar />;
+  // @ts-expect-error must provide both foo and bar
+  <DivWithRequiredFooBar foo={3} />;
+  // @ts-expect-error must provide both foo and bar
+  <DivWithRequiredFooBar bar="3" />;
+  // OK
+  <DivWithRequiredFooBar foo={3} bar="3" />;
+
+  // foo is provided, so it becomes optional
+  const DivWithRequiredBar = styled(DivWithRequiredFooBar).attrs({ foo: 42 })`
+    margin; ${props => props.foo * 10}px;
+  `;
+  // @ts-expect-error must provide bar
+  <DivWithRequiredBar />;
+  // OK
+  <DivWithRequiredBar bar="3" />;
+  // OK. Can still provide foo if we want
+  <DivWithRequiredBar foo={3} bar="3" />;
+  // @ts-expect-error foo must be a number
+  <DivWithRequiredBar foo="3" bar="3" />;
+
+  const Div = styled(DivWithRequiredBar).attrs({ bar: '42' })`
+    margin: ${props => {
+      // @ts-expect-error foo is optional
+      const foo: number = props.foo;
+      const bar: string = props.bar;
+      return foo * Number(bar);
+    }}px;
+  `;
+  // OK
+  <Div />;
+  <Div foo={3} />;
+  <Div bar="3" />;
+  <Div foo={3} bar="3" />;
+}
+
+{
+  // double attrs
+  const DivWithRequiredFooBar = styled.div<{ foo: number; bar: number }>``;
+  const Div = styled(DivWithRequiredFooBar).attrs({ foo: 42 }).attrs({ bar: 42 })`
+    margin: ${props => props.foo * props.bar}px;
+    `;
+
+  <Div />;
+  <Div foo={3} />;
+  <Div bar={3} />;
+  <Div foo={3} bar={3} />;
+}
+
+{
+  // double overriding
+  const Div = styled.div``;
+  const H1 = styled(Div).attrs({ as: 'h1' })``;
+  const Label = styled(H1).attrs({ as: 'label' })``;
+
+  <Label
+    ref={(el: HTMLLabelElement | null) => {}}
+    onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
+  />;
+}
+
 /** Intrinsic props and ref are being incorrectly types when using `as`
  * https://github.com/styled-components/styled-components/issues/3800#issuecomment-1548941843
  */
@@ -379,6 +443,9 @@ styled.div<CSSPropTestType>(p => ({
 
 // object styles
 styled.div({ color: 'red', '@media (min-width: 500px)': { fontSize: '11px' } });
+
+// object styles referencing another component
+styled.div({ [AttrFunctionRequiredTest5]: { color: 'red' } });
 
 type TextProps = React.PropsWithChildren<{
   color: 'primary' | 'secondary';
@@ -498,3 +565,29 @@ const StyledObjectWithNestedSelectors: StyledObject = {
     },
   },
 };
+
+/**
+ * Nested styled component
+ */
+
+const ParentStyledComponent1 = styled.a<{ $prop1?: boolean }>``;
+const ParentStyledComponent2 = styled(ParentStyledComponent1)<{ $prop2?: boolean }>``;
+const ParentStyledComponent3 = styled(ParentStyledComponent2)<{ $prop3?: boolean }>``;
+
+<ParentStyledComponent2 $prop1={true} $prop2={true} />;
+<ParentStyledComponent3 $prop1={true} $prop2={true} $prop3={true} />;
+
+<ParentStyledComponent2
+  $prop1={true}
+  $prop2={true}
+  // @ts-expect-error Property '$prop3' does not exist on type
+  $prop3={true}
+/>;
+
+/**
+ * Nested class component
+ */
+class ParentClassComponent1 extends React.Component<{ $prop1?: boolean }> {}
+const ParentClassComponent2 = styled(ParentClassComponent1)<{ $prop2?: boolean }>``;
+
+<ParentClassComponent2 $prop1={true} $prop2={true} />;

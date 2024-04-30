@@ -2,7 +2,7 @@ import * as stylis from 'stylis';
 import { Stringifier } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
-import { phash, SEED } from './hash';
+import { SEED, phash } from './hash';
 
 const AMP_REGEX = /&/g;
 const COMMENT_REGEX = /^\s*\/\/.*$/gm;
@@ -22,7 +22,6 @@ function recursivelySetNamepace(compiled: stylis.Element[], namespace: String): 
       // add the namespace to the start
       rule.value = `${namespace} ${rule.value}`;
       // add the namespace after each comma for subsequent selectors.
-      // @ts-expect-error we target modern browsers but intentionally transpile to ES5 for speed
       rule.value = rule.value.replaceAll(',', `,${namespace} `);
       rule.props = (rule.props as string[]).map(prop => {
         return `${namespace} ${prop}`;
@@ -46,18 +45,15 @@ export default function createStylisInstance(
   let _selector: string;
   let _selectorRegexp: RegExp;
 
-  const selfReferenceReplacer: Parameters<String['replace']>[1] = (match, offset, string) => {
+  const selfReferenceReplacer = (match: string, offset: number, string: string) => {
     if (
       /**
-       * We only want to refer to the static class directly in the following scenarios:
-       *
-       * 1. The selector is alone on the line `& { color: red; }`
-       * 2. The selector is part of a self-reference selector `& + & { color: red; }`
+       * We only want to refer to the static class directly if the selector is part of a
+       * self-reference selector `& + & { color: red; }`
        */
-      string === _selector ||
-      (string.startsWith(_selector) &&
-        string.endsWith(_selector) &&
-        string.replaceAll(_selector, '').length > 0)
+      string.startsWith(_selector) &&
+      string.endsWith(_selector) &&
+      string.replaceAll(_selector, '').length > 0
     ) {
       return `.${_componentId}`;
     }

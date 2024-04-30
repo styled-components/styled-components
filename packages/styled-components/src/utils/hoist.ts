@@ -96,8 +96,8 @@ type NonReactStatics<S extends OmniComponent, C extends ExcludeList = {}> = {
     S extends React.MemoExoticComponent<any>
       ? keyof typeof MEMO_STATICS | keyof C
       : S extends React.ForwardRefExoticComponent<any>
-        ? keyof typeof FORWARD_REF_STATICS | keyof C
-        : keyof typeof REACT_STATICS | keyof typeof KNOWN_STATICS | keyof C
+      ? keyof typeof FORWARD_REF_STATICS | keyof C
+      : keyof typeof REACT_STATICS | keyof typeof KNOWN_STATICS | keyof C
   >]: S[key];
 };
 

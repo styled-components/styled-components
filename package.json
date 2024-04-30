@@ -2,12 +2,12 @@
   "name": "styled-components-project",
   "private": true,
   "scripts": {
-    "build": "bun run --cwd packages/styled-components build",
+    "build": "yarn workspace styled-components build",
     "postbuild": "cp README.md packages/styled-components/",
-    "postinstall": "bun run --cwd packages/styled-components generateErrors",
-    "prettier": "bun run --cwd packages/styled-components prettier:check",
-    "size": "bun run --cwd packages/styled-components size",
-    "test": "bun run --cwd packages/styled-components test"
+    "postinstall": "yarn workspace styled-components generateErrors",
+    "prettier": "yarn workspace styled-components prettier:check",
+    "size": "yarn workspace styled-components size",
+    "test": "yarn workspace styled-components test"
   },
   "author": "Glen Maddern",
   "license": "MIT",
@@ -15,13 +15,15 @@
     "url": "https://github.com/styled-components/styled-components/issues"
   },
   "homepage": "https://styled-components.com",
-  "workspaces": {
-    "packages": [
-      "packages/*"
-    ]
-  },
+  "workspaces": [
+    "packages/*"
+  ],
   "engines": {
     "node": ">= 14"
   },
-  "dependencies": {}
+  "resolutions": {
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0"
+  },
+  "packageManager": "yarn@4.0.2"
 }
