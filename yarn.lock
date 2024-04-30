@@ -2692,7 +2692,7 @@ __metadata:
     style-loader: "npm:3.3.1"
     styled-components: "workspace:*"
     styled-components-v5: "npm:styled-components@5.3.9"
-    styled-components-v6: "npm:styled-components@6.1.8"
+    styled-components-v6: "npm:styled-components@latest"
     styled-jsx: "npm:5.1.2"
     styletron-engine-atomic: "npm:1.5.0"
     styletron-react: "npm:6.1.0"
@@ -10037,7 +10037,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"styled-components-v6@npm:styled-components@6.1.8, styled-components@workspace:*, styled-components@workspace:packages/styled-components":
+"styled-components-v6@npm:styled-components@latest":
+  version: 6.1.9
+  resolution: "styled-components@npm:6.1.9"
+  dependencies:
+    "@emotion/is-prop-valid": "npm:1.2.1"
+    "@emotion/unitless": "npm:0.8.1"
+    "@types/stylis": "npm:4.2.0"
+    css-to-react-native: "npm:3.2.0"
+    csstype: "npm:3.1.2"
+    postcss: "npm:8.4.31"
+    shallowequal: "npm:1.1.0"
+    stylis: "npm:4.3.1"
+    tslib: "npm:2.5.0"
+  peerDependencies:
+    react: ">= 16.8.0"
+    react-dom: ">= 16.8.0"
+  checksum: e5298859675f954424af45e7e1261980f86ca01188509e0af330cabe869533e6ce04aa63a4f94cbdc66ba1b834da247e54bb0ee05b5d2d57d906f0a45388763f
+  languageName: node
+  linkType: hard
+
+"styled-components@workspace:*, styled-components@workspace:packages/styled-components":
   version: 0.0.0-use.local
   resolution: "styled-components@workspace:packages/styled-components"
   dependencies:
