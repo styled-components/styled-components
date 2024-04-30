@@ -2621,6 +2621,7 @@ __metadata:
     style-loader: "npm:3.3.1"
     styled-components: "workspace:*"
     styled-components-v5: "npm:styled-components@5.3.9"
+    styled-components-v6: "npm:styled-components@6.1.8"
     styled-jsx: "npm:5.1.2"
     styletron-engine-atomic: "npm:1.5.0"
     styletron-react: "npm:6.1.0"
@@ -9978,7 +9979,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"styled-components@workspace:*, styled-components@workspace:packages/styled-components":
+"styled-components-v6@npm:styled-components@6.1.8, styled-components@workspace:*, styled-components@workspace:packages/styled-components":
   version: 0.0.0-use.local
   resolution: "styled-components@workspace:packages/styled-components"
   dependencies:
