@@ -52,7 +52,7 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "@emotion/is-prop-valid": "1.2.1",
-    "@emotion/unitless": "0.8.0",
+    "@emotion/unitless": "0.8.1",
     "@types/stylis": "4.2.0",
     "css-to-react-native": "3.2.0",
     "csstype": "3.1.2",
