@@ -18,7 +18,6 @@ const hasContentInStyle = (string: string) => {
   return string[num - 1] !== '>';
 };
 
-
 export default class ServerStyleSheet {
   instance: StyleSheet;
   sealed: boolean;
