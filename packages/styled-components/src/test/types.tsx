@@ -444,6 +444,9 @@ styled.div<CSSPropTestType>(p => ({
 // object styles
 styled.div({ color: 'red', '@media (min-width: 500px)': { fontSize: '11px' } });
 
+// object styles referencing another component
+styled.div({ [AttrFunctionRequiredTest5]: { color: 'red' } });
+
 type TextProps = React.PropsWithChildren<{
   color: 'primary' | 'secondary';
   size?: 'sm' | 'md' | 'lg';
