@@ -21,8 +21,8 @@ type AttrsResult<T extends Attrs<any>> = T extends (...args: any) => infer P
     ? P
     : never
   : T extends object
-  ? T
-  : never;
+    ? T
+    : never;
 
 /**
  * Extract non-optional fields from given object type.
