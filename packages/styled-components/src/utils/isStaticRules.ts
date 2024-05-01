@@ -1,8 +1,10 @@
-import { RuleSet } from '../types';
+import { DefaultTheme, RuleSet } from '../types';
 import isFunction from './isFunction';
 import isStyledComponent from './isStyledComponent';
 
-export default function isStaticRules<Props extends object>(rules: RuleSet<Props>) {
+export default function isStaticRules<Props extends object, Theme extends object = DefaultTheme>(
+  rules: RuleSet<Props, Theme>
+) {
   for (let i = 0; i < rules.length; i += 1) {
     const rule = rules[i];
 

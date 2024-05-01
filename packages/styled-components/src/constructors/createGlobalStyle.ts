@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Context } from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
@@ -10,21 +10,21 @@ import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
 import css from './css';
 
-export default function createGlobalStyle<Props extends object>(
-  strings: Styles<Props>,
-  ...interpolations: Array<Interpolation<Props>>
-) {
-  const rules = css<Props>(strings, ...interpolations);
+export default function createGlobalStyle<
+  Props extends object,
+  Theme extends object = DefaultTheme,
+>(strings: Styles<Props, Theme>, ...interpolations: Array<Interpolation<Props, Theme>>) {
+  const rules = css<Props, Theme>(strings, ...interpolations);
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
-  const globalStyle = new GlobalStyle<Props>(rules, styledComponentId);
+  const globalStyle = new GlobalStyle<Props, Theme>(rules, styledComponentId);
 
   if (process.env.NODE_ENV !== 'production') {
     checkDynamicCreation(styledComponentId);
   }
 
-  const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
+  const GlobalStyleComponent: React.ComponentType<ExecutionProps<Theme> & Props> = props => {
     const ssc = useStyleSheetContext();
-    const theme = React.useContext(ThemeContext);
+    const theme = React.useContext<Theme | undefined>(ThemeContext as Context<Theme | undefined>);
     const instanceRef = React.useRef(ssc.styleSheet.allocateGSInstance(styledComponentId));
 
     const instance = instanceRef.current;
@@ -62,23 +62,23 @@ export default function createGlobalStyle<Props extends object>(
 
   function renderStyles(
     instance: number,
-    props: ExecutionProps,
+    props: ExecutionProps<Theme>,
     styleSheet: StyleSheet,
-    theme: DefaultTheme | undefined,
+    theme: Theme | undefined,
     stylis: Stringifier
   ) {
     if (globalStyle.isStatic) {
       globalStyle.renderStyles(
         instance,
-        STATIC_EXECUTION_CONTEXT as unknown as ExecutionContext & Props,
+        STATIC_EXECUTION_CONTEXT as unknown as ExecutionContext<Theme> & Props,
         styleSheet,
         stylis
       );
     } else {
       const context = {
         ...props,
-        theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
-      } as ExecutionContext & Props;
+        theme: determineTheme<Theme>(props, theme, GlobalStyleComponent.defaultProps),
+      } as ExecutionContext<Theme> & Props;
 
       globalStyle.renderStyles(instance, context, styleSheet, stylis);
     }

@@ -55,8 +55,8 @@ function generateId(
   return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
 }
 
-function useInjectedStyle<T extends ExecutionContext>(
-  componentStyle: ComponentStyle,
+function useInjectedStyle<Theme extends object, T extends ExecutionContext<Theme>>(
+  componentStyle: ComponentStyle<Theme>,
   resolvedAttrs: T
 ) {
   const ssc = useStyleSheetContext();
@@ -72,13 +72,13 @@ function useInjectedStyle<T extends ExecutionContext>(
   return className;
 }
 
-function resolveContext<Props extends object>(
-  attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
-  props: React.HTMLAttributes<Element> & ExecutionProps & Props,
-  theme: DefaultTheme
+function resolveContext<Props extends object, Theme extends object = DefaultTheme>(
+  attrs: Attrs<React.HTMLAttributes<Element> & Props, Theme>[],
+  props: React.HTMLAttributes<Element> & ExecutionProps<Theme> & Props,
+  theme: Theme
 ) {
   const context: React.HTMLAttributes<Element> &
-    ExecutionContext &
+    ExecutionContext<Theme> &
     Props & { [key: string]: any; class?: string; ref?: React.Ref<any> } = {
     ...props,
     // unset, add `props.className` back at the end so props always "wins"
@@ -96,8 +96,8 @@ function resolveContext<Props extends object>(
         key === 'className'
           ? joinStrings(context[key] as string | undefined, resolvedAttrDef[key] as string)
           : key === 'style'
-            ? { ...context[key], ...resolvedAttrDef[key] }
-            : resolvedAttrDef[key as keyof typeof resolvedAttrDef];
+          ? { ...context[key], ...resolvedAttrDef[key] }
+          : resolvedAttrDef[key as keyof typeof resolvedAttrDef];
     }
   }
 
@@ -110,9 +110,9 @@ function resolveContext<Props extends object>(
 
 let seenUnknownProps = new Set();
 
-function useStyledComponentImpl<Props extends object>(
-  forwardedComponent: IStyledComponent<'web', Props>,
-  props: ExecutionProps & Props,
+function useStyledComponentImpl<Props extends object, Theme extends object = DefaultTheme>(
+  forwardedComponent: IStyledComponent<'web', Props, Theme>,
+  props: ExecutionProps<Theme> & Props,
   forwardedRef: Ref<Element>
 ) {
   const {
@@ -124,7 +124,7 @@ function useStyledComponentImpl<Props extends object>(
     target,
   } = forwardedComponent;
 
-  const contextTheme = React.useContext(ThemeContext);
+  const contextTheme = React.useContext(ThemeContext) as Theme | undefined;
   const ssc = useStyleSheetContext();
   const shouldForwardProp = forwardedComponent.shouldForwardProp || ssc.shouldForwardProp;
 
@@ -133,9 +133,9 @@ function useStyledComponentImpl<Props extends object>(
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme = determineTheme(props, contextTheme, defaultProps) || EMPTY_OBJECT;
+  const theme = determineTheme<Theme>(props, contextTheme, defaultProps) || (EMPTY_OBJECT as Theme);
 
-  const context = resolveContext<Props>(componentAttrs, props, theme);
+  const context = resolveContext<Props, Theme>(componentAttrs, props, theme);
   const elementToBeCreated: WebTarget = context.as || target;
   const propsForElement: Dict<any> = {};
 
@@ -166,7 +166,7 @@ function useStyledComponentImpl<Props extends object>(
     }
   }
 
-  const generatedClassName = useInjectedStyle(componentStyle, context);
+  const generatedClassName = useInjectedStyle<Theme, typeof context>(componentStyle, context);
 
   if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {
     forwardedComponent.warnTooManyClasses(generatedClassName);
@@ -195,15 +195,16 @@ function useStyledComponentImpl<Props extends object>(
 
 function createStyledComponent<
   Target extends WebTarget,
-  OuterProps extends object,
+  Theme extends object = DefaultTheme,
+  OuterProps extends object = BaseObject,
   Statics extends object = BaseObject,
 >(
   target: Target,
-  options: StyledOptions<'web', OuterProps>,
-  rules: RuleSet<OuterProps>
-): ReturnType<IStyledComponentFactory<'web', Target, OuterProps, Statics>> {
+  options: StyledOptions<'web', OuterProps, Theme>,
+  rules: RuleSet<OuterProps, Theme>
+): ReturnType<IStyledComponentFactory<'web', Target, OuterProps, Statics, Theme>> {
   const isTargetStyledComp = isStyledComponent(target);
-  const styledComponentTarget = target as IStyledComponent<'web', OuterProps>;
+  const styledComponentTarget = target as IStyledComponent<'web', OuterProps, Theme>;
   const isCompositeComponent = !isTag(target);
 
   const {
@@ -220,8 +221,10 @@ function createStyledComponent<
   // fold the underlying StyledComponent attrs up (implicit extend)
   const finalAttrs =
     isTargetStyledComp && styledComponentTarget.attrs
-      ? styledComponentTarget.attrs.concat(attrs as unknown as Attrs<OuterProps>[]).filter(Boolean)
-      : (attrs as Attrs<OuterProps>[]);
+      ? styledComponentTarget.attrs
+          .concat(attrs as unknown as Attrs<OuterProps, Theme>[])
+          .filter(Boolean)
+      : (attrs as Attrs<OuterProps, Theme>[]);
 
   let { shouldForwardProp } = options;
 
@@ -240,14 +243,14 @@ function createStyledComponent<
     }
   }
 
-  const componentStyle = new ComponentStyle(
+  const componentStyle = new ComponentStyle<Theme>(
     rules,
     styledComponentId,
-    isTargetStyledComp ? (styledComponentTarget.componentStyle as ComponentStyle) : undefined
+    isTargetStyledComp ? (styledComponentTarget.componentStyle as ComponentStyle<Theme>) : undefined
   );
 
-  function forwardRefRender(props: ExecutionProps & OuterProps, ref: Ref<Element>) {
-    return useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
+  function forwardRefRender(props: ExecutionProps<Theme> & OuterProps, ref: Ref<Element>) {
+    return useStyledComponentImpl<OuterProps, Theme>(WrappedStyledComponent, props, ref);
   }
 
   forwardRefRender.displayName = displayName;
@@ -258,7 +261,8 @@ function createStyledComponent<
    */
   let WrappedStyledComponent = React.forwardRef(forwardRefRender) as unknown as IStyledComponent<
     'web',
-    any
+    any,
+    Theme
   > &
     Statics;
   WrappedStyledComponent.attrs = finalAttrs;
@@ -315,7 +319,7 @@ function createStyledComponent<
         shouldForwardProp: true,
         styledComponentId: true,
         target: true,
-      } as { [key in keyof OmitNever<IStyledStatics<'web', OuterProps>>]: true }
+      } as { [key in keyof OmitNever<IStyledStatics<'web', OuterProps, Theme>>]: true }
     );
   }
 

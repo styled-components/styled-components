@@ -1,6 +1,6 @@
 import { SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
-import { ExecutionContext, RuleSet, Stringifier } from '../types';
+import { DefaultTheme, ExecutionContext, RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
 import { hash, phash } from '../utils/hash';
@@ -12,21 +12,25 @@ const SEED = hash(SC_VERSION);
 /**
  * ComponentStyle is all the CSS-specific stuff, not the React-specific stuff.
  */
-export default class ComponentStyle {
+export default class ComponentStyle<Theme extends object = DefaultTheme> {
   baseHash: number;
-  baseStyle: ComponentStyle | null | undefined;
+  baseStyle: ComponentStyle<Theme> | null | undefined;
   componentId: string;
   isStatic: boolean;
-  rules: RuleSet<any>;
+  rules: RuleSet<any, Theme>;
   staticRulesId: string;
 
-  constructor(rules: RuleSet<any>, componentId: string, baseStyle?: ComponentStyle | undefined) {
+  constructor(
+    rules: RuleSet<any, Theme>,
+    componentId: string,
+    baseStyle?: ComponentStyle<Theme> | undefined
+  ) {
     this.rules = rules;
     this.staticRulesId = '';
     this.isStatic =
       process.env.NODE_ENV === 'production' &&
       (baseStyle === undefined || baseStyle.isStatic) &&
-      isStaticRules(rules);
+      isStaticRules<any, Theme>(rules);
     this.componentId = componentId;
     this.baseHash = phash(SEED, componentId);
     this.baseStyle = baseStyle;
@@ -37,7 +41,7 @@ export default class ComponentStyle {
   }
 
   generateAndInjectStyles(
-    executionContext: ExecutionContext,
+    executionContext: ExecutionContext<Theme>,
     styleSheet: StyleSheet,
     stylis: Stringifier
   ): string {
@@ -51,7 +55,7 @@ export default class ComponentStyle {
         names = joinStrings(names, this.staticRulesId);
       } else {
         const cssStatic = joinStringArray(
-          flatten(this.rules, executionContext, styleSheet, stylis) as string[]
+          flatten<any, Theme>(this.rules, executionContext, styleSheet, stylis) as string[]
         );
         const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
 
@@ -76,7 +80,7 @@ export default class ComponentStyle {
           if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule);
         } else if (partRule) {
           const partString = joinStringArray(
-            flatten(partRule, executionContext, styleSheet, stylis) as string[]
+            flatten<any, Theme>(partRule, executionContext, styleSheet, stylis) as string[]
           );
           // The same value can switch positions in the array, so we include "i" in the hash.
           dynamicHash = phash(dynamicHash, partString + i);
