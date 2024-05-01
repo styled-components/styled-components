@@ -1,10 +1,10 @@
-import { Interpolation } from '../types';
+import { DefaultTheme, Interpolation } from '../types';
 
-export default function interleave<Props extends object>(
+export default function interleave<Props extends object, Theme extends object = DefaultTheme>(
   strings: readonly string[],
-  interpolations: Interpolation<Props>[]
-): Interpolation<Props>[] {
-  const result: Interpolation<Props>[] = [strings[0]];
+  interpolations: Interpolation<Props, Theme>[]
+): Interpolation<Props, Theme>[] {
+  const result: Interpolation<Props, Theme>[] = [strings[0]];
 
   for (let i = 0, len = interpolations.length; i < len; i += 1) {
     result.push(interpolations[i], strings[i + 1]);

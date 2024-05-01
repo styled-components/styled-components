@@ -42,8 +42,12 @@ export type WebTarget =
 export type NativeTarget = AnyComponent;
 
 export type StyledTarget<R extends Runtime> = R extends 'web' ? WebTarget : NativeTarget;
-export interface StyledOptions<R extends Runtime, Props extends object> {
-  attrs?: Attrs<Props>[] | undefined;
+export interface StyledOptions<
+  R extends Runtime,
+  Props extends object,
+  Theme extends object = DefaultTheme,
+> {
+  attrs?: Attrs<Props, Theme>[] | undefined;
   componentId?: (R extends 'web' ? string : never) | undefined;
   displayName?: string | undefined;
   parentComponentId?: (R extends 'web' ? string : never) | undefined;
@@ -67,7 +71,7 @@ export type Dict<T = any> = { [key: string]: T };
  */
 export type DataAttributes = { [key: `data-${string}`]: any };
 
-export type ExecutionProps = {
+export type ExecutionProps<Theme extends object = DefaultTheme> = {
   /**
    * Dynamically adjust the rendered component or HTML tag, e.g.
    * ```
@@ -80,23 +84,24 @@ export type ExecutionProps = {
    */
   as?: KnownTarget | undefined;
   forwardedAs?: KnownTarget | undefined;
-  theme?: DefaultTheme | undefined;
+  theme?: Theme | undefined;
 };
 
 /**
  * ExecutionProps but with `theme` required.
  */
-export interface ExecutionContext extends ExecutionProps {
-  theme: DefaultTheme;
+export interface ExecutionContext<Theme extends object = DefaultTheme>
+  extends ExecutionProps<Theme> {
+  theme: Theme;
 }
 
-export interface StyleFunction<Props extends object> {
-  (executionContext: ExecutionContext & Props): Interpolation<Props>;
+export interface StyleFunction<Props extends object, Theme extends object = DefaultTheme> {
+  (executionContext: ExecutionContext<Theme> & Props): Interpolation<Props>;
 }
 
-export type Interpolation<Props extends object> =
-  | StyleFunction<Props>
-  | StyledObject<Props>
+export type Interpolation<Props extends object, Theme extends object = DefaultTheme> =
+  | StyleFunction<Props, Theme>
+  | StyledObject<Props, Theme>
   | TemplateStringsArray
   | string
   | number
@@ -105,19 +110,22 @@ export type Interpolation<Props extends object> =
   | null
   | Keyframes
   | StyledComponentBrand
-  | RuleSet<Props>
-  | Interpolation<Props>[];
+  | RuleSet<Props, Theme>
+  | Interpolation<Props, Theme>[];
 
-export type Attrs<Props extends object = BaseObject> =
-  | (ExecutionProps & Partial<Props>)
-  | ((props: ExecutionContext & Props) => ExecutionProps & Partial<Props>);
+export type Attrs<Props extends object = BaseObject, Theme extends object = DefaultTheme> =
+  | (ExecutionProps<Theme> & Partial<Props>)
+  | ((props: ExecutionContext<Theme> & Props) => ExecutionProps<Theme> & Partial<Props>);
 
-export type RuleSet<Props extends object = BaseObject> = Interpolation<Props>[];
+export type RuleSet<
+  Props extends object = object,
+  Theme extends object = DefaultTheme,
+> = Interpolation<Props, Theme>[];
 
-export type Styles<Props extends object> =
+export type Styles<Props extends object, Theme extends object = DefaultTheme> =
   | TemplateStringsArray
-  | StyledObject<Props>
-  | StyleFunction<Props>;
+  | StyledObject<Props, Theme>
+  | StyleFunction<Props, Theme>;
 
 export type NameGenerator = (hash: number) => string;
 
@@ -131,12 +139,12 @@ export interface Keyframes {
   rules: string;
 }
 
-export interface Flattener<Props extends object> {
+export interface Flattener<Props extends object, Theme extends object = DefaultTheme> {
   (
-    chunks: Interpolation<Props>[],
+    chunks: Interpolation<Props, Theme>[],
     executionContext: object | null | undefined,
     styleSheet: StyleSheet | null | undefined
-  ): Interpolation<Props>[];
+  ): Interpolation<Props, Theme>[];
 }
 
 export interface Stringifier {
@@ -153,18 +161,27 @@ export interface ShouldForwardProp<R extends Runtime> {
   (prop: string, elementToBeCreated: StyledTarget<R>): boolean;
 }
 
-export interface CommonStatics<R extends Runtime, Props extends object> {
-  attrs: Attrs<Props>[];
+export interface CommonStatics<
+  R extends Runtime,
+  Props extends object,
+  Theme extends object = DefaultTheme,
+> {
+  attrs: Attrs<Props, Theme>[];
   target: StyledTarget<R>;
   shouldForwardProp?: ShouldForwardProp<R> | undefined;
 }
 
-export interface IStyledStatics<R extends Runtime, OuterProps extends object>
-  extends CommonStatics<R, OuterProps> {
-  componentStyle: R extends 'web' ? ComponentStyle : never;
+export interface IStyledStatics<
+  R extends Runtime,
+  OuterProps extends object,
+  Theme extends object = DefaultTheme,
+> extends CommonStatics<R, OuterProps, Theme> {
+  componentStyle: R extends 'web' ? ComponentStyle<Theme> : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
   foldedComponentIds: R extends 'web' ? string : never;
-  inlineStyle: R extends 'native' ? InstanceType<IInlineStyleConstructor<OuterProps>> : never;
+  inlineStyle: R extends 'native'
+    ? InstanceType<IInlineStyleConstructor<OuterProps, Theme>>
+    : never;
   target: StyledTarget<R>;
   styledComponentId: R extends 'web' ? string : never;
   warnTooManyClasses?:
@@ -220,18 +237,22 @@ export interface PolymorphicComponent<R extends Runtime, BaseProps extends objec
   ): JSX.Element;
 }
 
-interface IStyledComponentBase<R extends Runtime, Props extends object = BaseObject>
-  extends PolymorphicComponent<R, Props>,
-    IStyledStatics<R, Props>,
+interface IStyledComponentBase<
+  R extends Runtime,
+  Props extends object = BaseObject,
+  Theme extends object = DefaultTheme,
+> extends PolymorphicComponent<R, Props>,
+    IStyledStatics<R, Props, Theme>,
     StyledComponentBrand {
-  defaultProps?: (ExecutionProps & Partial<Props>) | undefined;
+  defaultProps?: (ExecutionProps<Theme> & Partial<Props>) | undefined;
   toString: () => string;
 }
 
 export type IStyledComponent<
   R extends Runtime,
   Props extends object = BaseObject,
-> = IStyledComponentBase<R, Props> &
+  Theme extends object = DefaultTheme,
+> = IStyledComponentBase<R, Props, Theme> &
   /**
    * TypeScript doesn't allow using a styled component as a key inside object
    * styles because "A computed property name must be of type 'string', 'number',
@@ -258,38 +279,53 @@ export interface IStyledComponentFactory<
   Target extends StyledTarget<R>,
   OuterProps extends object,
   OuterStatics extends object = BaseObject,
+  Theme extends object = DefaultTheme,
 > {
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
     target: Target,
-    options: StyledOptions<R, OuterProps & Props>,
-    rules: RuleSet<OuterProps & Props>
-  ): IStyledComponent<R, Substitute<OuterProps, Props>> & OuterStatics & Statics;
+    options: StyledOptions<R, OuterProps & Props, Theme>,
+    rules: RuleSet<OuterProps & Props, Theme>
+  ): IStyledComponent<R, Substitute<OuterProps, Props>, Theme> & OuterStatics & Statics;
 }
 
-export interface IInlineStyleConstructor<Props extends object> {
-  new (rules: RuleSet<Props>): IInlineStyle<Props>;
+export interface IInlineStyleConstructor<
+  Props extends object,
+  Theme extends object = DefaultTheme,
+> {
+  new (rules: RuleSet<Props, Theme>): IInlineStyle<Props, Theme>;
 }
 
-export interface IInlineStyle<Props extends object> {
-  rules: RuleSet<Props>;
-  generateStyleObject(executionContext: ExecutionContext & Props): object;
+export interface IInlineStyle<Props extends object, Theme extends object = DefaultTheme> {
+  rules: RuleSet<Props, Theme>;
+  generateStyleObject(executionContext: ExecutionContext<Theme> & Props): object;
 }
 
 export type CSSProperties = CSS.Properties<number | (string & {})>;
 
-export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
+export type CSSPseudos<Theme extends object = DefaultTheme> = {
+  [K in CSS.Pseudos]?: CSSObject<Theme>;
+};
 
-export type CSSKeyframes = object & { [key: string]: CSSObject };
+export type CSSKeyframes<Theme extends object = DefaultTheme> = object & {
+  [key: string]: CSSObject<Theme>;
+};
 
-export type CSSObject<Props extends object = BaseObject> = StyledObject<Props>;
+export type CSSObject<
+  Props extends object = BaseObject,
+  Theme extends object = DefaultTheme,
+> = StyledObject<Props, Theme>;
 
-export interface StyledObject<Props extends object = BaseObject> extends CSSProperties, CSSPseudos {
+export interface StyledObject<
+  Props extends object = BaseObject,
+  Theme extends object = DefaultTheme,
+> extends CSSProperties,
+    CSSPseudos {
   [key: string]:
-    | StyledObject<Props>
+    | StyledObject<Props, Theme>
     | string
     | number
-    | StyleFunction<Props>
-    | RuleSet<any>
+    | StyleFunction<Props, Theme>
+    | RuleSet<any, Theme>
     | undefined;
 }
 
@@ -315,7 +351,7 @@ export interface StyledObject<Props extends object = BaseObject> extends CSSProp
  * {@link DefaultTheme}.
  */
 
-export type CSSProp = Interpolation<any>;
+export type CSSProp<Theme extends object = DefaultTheme> = Interpolation<any, Theme>;
 
 // Prevents TypeScript from inferring generic argument
 export type NoInfer<T> = [T][T extends any ? 0 : never];
