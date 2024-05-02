@@ -220,7 +220,7 @@ export interface PolymorphicComponent<R extends Runtime, BaseProps extends objec
   ): JSX.Element;
 }
 
-interface IStyledComponentBase<R extends Runtime, Props extends object = BaseObject>
+export interface IStyledComponentBase<R extends Runtime, Props extends object = BaseObject>
   extends PolymorphicComponent<R, Props>,
     IStyledStatics<R, Props>,
     StyledComponentBrand {
