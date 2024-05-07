@@ -527,3 +527,23 @@ class ParentClassComponent1 extends React.Component<{ $prop1?: boolean }> {}
 const ParentClassComponent2 = styled(ParentClassComponent1)<{ $prop2?: boolean }>``;
 
 <ParentClassComponent2 $prop1={true} $prop2={true} />;
+
+{
+  // React.forwardRef in combination with .attrs()
+
+  const Button = React.forwardRef<
+    HTMLButtonElement,
+    {
+      icon: 'a' | 'b' | 'c';
+    }
+  >((props, ref) => {
+    return (
+      <button ref={ref} {...props}>
+        button
+      </button>
+    );
+  });
+  const ButtonWithIcon = styled(Button).attrs({ icon: 'a' })``;
+
+  <ButtonWithIcon />;
+}
