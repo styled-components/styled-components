@@ -11,6 +11,7 @@ export {
   DefaultTheme,
   ExecutionContext,
   ExecutionProps,
+  FastOmit,
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
