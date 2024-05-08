@@ -1,4 +1,4 @@
-import styled from './constructors/styled';
+import styled, { LibraryStyled, Styled, StyledInstance } from './constructors/styled';
 
 export * from './base';
 export {
@@ -25,4 +25,4 @@ export {
   SupportedHTMLElements,
   WebTarget,
 } from './types';
-export { styled as default, styled };
+export { LibraryStyled, Styled, StyledInstance, styled as default, styled };

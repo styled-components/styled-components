@@ -1,13 +1,20 @@
+import { ComponentPropsWithRef } from 'react';
 import createStyledComponent from '../models/StyledComponent';
-import { WebTarget } from '../types';
+import { BaseObject, KnownTarget, WebTarget } from '../types';
 import domElements, { SupportedHTMLElements } from '../utils/domElements';
-import constructWithOptions, { Styled } from './constructWithOptions';
+import constructWithOptions, { Styled as StyledInstance } from './constructWithOptions';
 
-const baseStyled = <Target extends WebTarget>(tag: Target) =>
-  constructWithOptions<'web', Target>(createStyledComponent, tag);
+const baseStyled = <Target extends WebTarget, InjectedProps extends object = BaseObject>(
+  tag: Target
+) =>
+  constructWithOptions<
+    'web',
+    Target,
+    Target extends KnownTarget ? ComponentPropsWithRef<Target> & InjectedProps : InjectedProps
+  >(createStyledComponent, tag);
 
 const styled = baseStyled as typeof baseStyled & {
-  [E in SupportedHTMLElements]: Styled<'web', E, JSX.IntrinsicElements[E]>;
+  [E in SupportedHTMLElements]: StyledInstance<'web', E, JSX.IntrinsicElements[E]>;
 };
 
 // Shorthands for all valid HTML Elements
@@ -17,3 +24,17 @@ domElements.forEach(domElement => {
 });
 
 export default styled;
+export { StyledInstance };
+
+/**
+ * This is the type of the `styled` HOC.
+ */
+export type Styled = typeof styled;
+
+/**
+ * Use this higher-order type for scenarios where you are wrapping `styled`
+ * and providing extra props as a third-party library.
+ */
+export type LibraryStyled<LibraryProps extends object = BaseObject> = <Target extends WebTarget>(
+  tag: Target
+) => typeof baseStyled<Target, LibraryProps>;
