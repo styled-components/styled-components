@@ -23,7 +23,10 @@ export {
   StyleFunction,
   StyledObject,
   StyledOptions,
+  StyledProps,
   SupportedHTMLElements,
+  ThemeProps,
+  ThemedStyledProps,
   WebTarget,
 } from './types';
 export { LibraryStyled, Styled, StyledInstance, styled as default, styled };

@@ -116,6 +116,9 @@ export {
   Runtime,
   StyledObject,
   StyledOptions,
+  StyledProps,
+  ThemeProps,
+  ThemedStyledProps,
 } from '../types';
 export {
   ThemeConsumer,
