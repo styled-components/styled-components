@@ -3,14 +3,14 @@ import styledError from '../utils/error';
 import getNonce from '../utils/nonce';
 
 /** Find last style element if any inside target */
-const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
+const findLastStyleTag = (target: HTMLElement | ShadowRoot): void | HTMLStyleElement => {
   const arr = Array.from(target.querySelectorAll<HTMLStyleElement>(`style[${SC_ATTR}]`));
 
   return arr[arr.length - 1];
 };
 
 /** Create a style element inside `target` or <head> after the last */
-export const makeStyleTag = (target?: HTMLElement | undefined): HTMLStyleElement => {
+export const makeStyleTag = (target?: HTMLElement | ShadowRoot | undefined): HTMLStyleElement => {
   const head = document.head;
   const parent = target || head;
   const style = document.createElement('style');

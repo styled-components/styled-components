@@ -18,7 +18,7 @@ export interface GroupedTag {
 
 export type SheetOptions = {
   isServer: boolean;
-  target?: HTMLElement | undefined;
+  target?: HTMLElement | ShadowRoot | undefined;
   useCSSOMInjection: boolean;
 };
 

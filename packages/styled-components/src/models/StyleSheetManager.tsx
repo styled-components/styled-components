@@ -75,7 +75,7 @@ export type IStyleSheetManager = React.PropsWithChildren<{
   /**
    * Provide an alternate DOM node to host generated styles; useful for iframes.
    */
-  target?: undefined | HTMLElement;
+  target?: undefined | HTMLElement | ShadowRoot;
 }>;
 
 export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {

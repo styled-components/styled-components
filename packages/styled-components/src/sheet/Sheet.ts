@@ -12,7 +12,7 @@ let SHOULD_REHYDRATE = IS_BROWSER;
 type SheetConstructorArgs = {
   isServer?: boolean;
   useCSSOMInjection?: boolean;
-  target?: HTMLElement | undefined;
+  target?: HTMLElement | ShadowRoot | undefined;
 };
 
 type GlobalStylesAllocationMap = {
