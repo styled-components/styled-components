@@ -1,4 +1,5 @@
 import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
+import { InsertionTarget } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import { setToString } from '../utils/setToString';
 import { makeGroupedTag } from './GroupedTag';
@@ -12,7 +13,7 @@ let SHOULD_REHYDRATE = IS_BROWSER;
 type SheetConstructorArgs = {
   isServer?: boolean;
   useCSSOMInjection?: boolean;
-  target?: HTMLElement | ShadowRoot | undefined;
+  target?: InsertionTarget | undefined;
 };
 
 type GlobalStylesAllocationMap = {
