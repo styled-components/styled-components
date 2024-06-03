@@ -6,6 +6,10 @@ _The format is based on [Keep a Changelog](http://keepachangelog.com/) and this 
 
 ## Unreleased
 
+## [v.5.4.0] - 2024-06-03
+
+- Backport introduction of named export of `styled` to make migration to v6 easier to manage for consumers with large quantities of internal libraries.
+
 ## [v5.3.7] - 2023-03-01
 
 - fix: (React Native) passing testID as attrs property by @ku8ar (see #3857)
