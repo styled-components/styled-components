@@ -68,8 +68,11 @@ describe('ssr', () => {
     const sheet = new ServerStyleSheet();
     renderToString(sheet.collectStyles(<div />));
 
-    const css = sheet.getStyleTags();
-    expect(css).toBe('');
+    const cssTags = sheet.getStyleTags();
+    expect(cssTags).toBe('');
+
+    const cssElements = sheet.getStyleElement();
+    expect(cssElements).toEqual([]);
   });
 
   it('should not spill ServerStyleSheets into each other', () => {

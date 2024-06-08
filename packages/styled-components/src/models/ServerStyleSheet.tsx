@@ -56,11 +56,14 @@ export default class ServerStyleSheet {
       throw styledError(2);
     }
 
+    const css = this.instance.toString();
+    if (!css) return [];
+
     const props = {
       [SC_ATTR]: '',
       [SC_ATTR_VERSION]: SC_VERSION,
       dangerouslySetInnerHTML: {
-        __html: this.instance.toString(),
+        __html: css,
       },
     };
 
