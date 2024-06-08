@@ -60,6 +60,18 @@ describe('ssr', () => {
     expect(css).toMatchSnapshot();
   });
 
+  it('should emit nothing when no styles were generated', () => {
+    styled.h1`
+      color: red;
+    `;
+
+    const sheet = new ServerStyleSheet();
+    renderToString(sheet.collectStyles(<div />));
+
+    const css = sheet.getStyleTags();
+    expect(css).toBe('');
+  });
+
   it('should not spill ServerStyleSheets into each other', () => {
     const A = styled.h1`
       color: red;

@@ -23,6 +23,7 @@ export default class ServerStyleSheet {
 
   _emitSheetCSS = (): string => {
     const css = this.instance.toString();
+    if (!css) return '';
     const nonce = getNonce();
     const attrs = [
       nonce && `nonce="${nonce}"`,
