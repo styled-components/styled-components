@@ -33,5 +33,6 @@ export interface Sheet {
   options: SheetOptions;
   names: Map<string, Set<string>>;
   registerName(id: string, name: string): void;
+  rehydrate(): void;
   toString(): string;
 }
