@@ -75,6 +75,23 @@ describe('ssr', () => {
     expect(cssElements).toEqual([]);
   });
 
+  it('should emit global styles without any other components', () => {
+    const Component = createGlobalStyle`
+      body { background: papayawhip; }
+    `;
+
+    const sheet = new ServerStyleSheet();
+    renderToString(
+      sheet.collectStyles(
+        <Component />
+      )
+    );
+    const cssTags = sheet.getStyleTags();
+    expect(cssTags).toMatchSnapshot();
+    const cssElements = sheet.getStyleElement();
+    expect(cssElements).toMatchSnapshot();
+  });
+
   it('should not spill ServerStyleSheets into each other', () => {
     const A = styled.h1`
       color: red;
