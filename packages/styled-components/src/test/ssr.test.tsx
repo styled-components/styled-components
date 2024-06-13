@@ -81,13 +81,11 @@ describe('ssr', () => {
     `;
 
     const sheet = new ServerStyleSheet();
-    renderToString(
-      sheet.collectStyles(
-        <Component />
-      )
-    );
+    renderToString(sheet.collectStyles(<Component />));
+
     const cssTags = sheet.getStyleTags();
     expect(cssTags).toMatchSnapshot();
+
     const cssElements = sheet.getStyleElement();
     expect(cssElements).toMatchSnapshot();
   });
