@@ -1,3 +1,4 @@
+import { useInsertionEffectWithLayoutFallback } from '@emotion/use-insertion-effect-with-fallbacks';
 import React from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
@@ -49,7 +50,7 @@ export default function createGlobalStyle<Props extends object>(
     }
 
     if (!__SERVER__) {
-      React.useLayoutEffect(() => {
+      useInsertionEffectWithLayoutFallback(() => {
         if (!ssc.styleSheet.server) {
           renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
           return () => globalStyle.removeStyles(instance, ssc.styleSheet);

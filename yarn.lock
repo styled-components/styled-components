@@ -2083,7 +2083,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@emotion/use-insertion-effect-with-fallbacks@npm:^1.0.1":
+"@emotion/use-insertion-effect-with-fallbacks@npm:1.0.1, @emotion/use-insertion-effect-with-fallbacks@npm:^1.0.1":
   version: 1.0.1
   resolution: "@emotion/use-insertion-effect-with-fallbacks@npm:1.0.1"
   peerDependencies:
@@ -10612,6 +10612,7 @@ __metadata:
     "@babel/preset-typescript": "npm:7.24.1"
     "@emotion/is-prop-valid": "npm:1.2.2"
     "@emotion/unitless": "npm:0.8.1"
+    "@emotion/use-insertion-effect-with-fallbacks": "npm:1.0.1"
     "@rollup/plugin-typescript": "npm:11.1.6"
     "@types/enzyme": "npm:3.10.18"
     "@types/jest": "npm:29.5.12"

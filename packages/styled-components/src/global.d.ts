@@ -19,6 +19,17 @@ declare module '@emotion/unitless' {
   export default {} as { [key: string]: boolean };
 }
 
+declare module '@emotion/use-insertion-effect-with-fallbacks' {
+  export const useInsertionEffectAlwaysWithSyncFallback: (
+    effect: React.EffectCallback,
+    deps?: React.DependencyList | undefined
+  ) => void;
+  export const useInsertionEffectWithLayoutFallback: (
+    effect: React.EffectCallback,
+    deps?: React.DependencyList | undefined
+  ) => void;
+}
+
 declare module 'babel-plugin-styled-components' {
   export default function ({ types: any }): {
     inherits: any;
