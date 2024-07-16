@@ -53,7 +53,7 @@ describe('theming', () => {
 
   it('should properly allow a component to fallback to its default props when a theme is not provided', () => {
     const Comp1 = styled.div`
-      color: ${props => props.theme.test.color};
+      color: ${props => props.theme.test!.color};
     `;
 
     Comp1.defaultProps = {
@@ -78,7 +78,7 @@ describe('theming', () => {
   // https://github.com/styled-components/styled-components/issues/344
   it('should use ThemeProvider theme instead of defaultProps theme', () => {
     const Comp1 = styled.div`
-      color: ${props => props.theme.test.color};
+      color: ${props => props.theme.test?.color};
     `;
 
     Comp1.defaultProps = {
@@ -104,7 +104,7 @@ describe('theming', () => {
 
   it('should properly allow a component to override the theme with a prop even if it is equal to defaultProps theme', () => {
     const Comp1 = styled.div`
-      color: ${props => props.theme.test.color};
+      color: ${props => props.theme.test!.color};
     `;
 
     Comp1.defaultProps = {
@@ -581,18 +581,14 @@ describe('theming', () => {
       palette: {
         black: '#000',
         white: '#fff',
-        // Flow has limited support for Symbols and computed properties;
-        // see <https://github.com/facebook/flow/issues/3258>.
         [Symbol.toStringTag]: 'Module',
       },
-      // Flow has limited support for Symbols and computed properties;
-      // see <https://github.com/facebook/flow/issues/3258>.
       [Symbol.toStringTag]: 'Module',
     };
 
     const Comp1 = styled.div`
-      background-color: ${({ theme }) => theme.palette.white};
-      color: ${({ theme }) => theme.palette.black};
+      background-color: ${({ theme }) => theme.palette!.white};
+      color: ${({ theme }) => theme.palette!.black};
     `;
 
     expect(() => {
@@ -660,6 +656,7 @@ describe('theming', () => {
       // these tests need to be changed to use error boundaries instead
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       TestRenderer.create(
+        // @ts-expect-error invalid theme input
         <ThemeProvider theme={['a', 'b', 'c']}>
           <div />
         </ThemeProvider>
