@@ -61,6 +61,12 @@ export default class StyleSheet implements Sheet {
     setToString(this, () => outputSheet(this));
   }
 
+  rehydrate(): void {
+    if (!this.server && IS_BROWSER) {
+      rehydrateSheet(this);
+    }
+  }
+
   reconstructWithOptions(options: SheetConstructorArgs, withNames = true) {
     return new StyleSheet(
       { ...this.options, ...options },
