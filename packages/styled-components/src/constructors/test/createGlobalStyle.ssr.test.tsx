@@ -12,7 +12,7 @@ describe(`createGlobalStyle`, () => {
 
   function setup() {
     return {
-      renderToString(comp: JSX.Element) {
+      renderToString(comp: React.JSX.Element) {
         return ReactDOMServer.renderToString(comp);
       },
     };
