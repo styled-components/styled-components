@@ -35,7 +35,7 @@ export default class ServerStyleSheet {
     return `<style ${htmlAttr}>${css}</style>`;
   };
 
-  collectStyles(children: any): JSX.Element {
+  collectStyles(children: any): React.JSX.Element {
     if (this.sealed) {
       throw styledError(2);
     }

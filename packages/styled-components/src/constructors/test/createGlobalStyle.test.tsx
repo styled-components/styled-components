@@ -19,7 +19,7 @@ describe(`createGlobalStyle`, () => {
 
     return {
       container,
-      render(comp: JSX.Element) {
+      render(comp: React.JSX.Element) {
         ReactDOM.render(comp, container);
       },
       cleanup() {

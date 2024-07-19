@@ -309,7 +309,7 @@ const StyledDiv = styled.div``;
 
 const CustomComponent = (({ ...props }) => {
   return <StyledDiv {...props} />;
-}) as IStyledComponent<'web', JSX.IntrinsicElements['div']>;
+}) as IStyledComponent<'web', React.JSX.IntrinsicElements['div']>;
 
 const StyledCustomComponent = styled(CustomComponent)``;
 

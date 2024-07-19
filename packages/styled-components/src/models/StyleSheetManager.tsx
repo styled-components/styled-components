@@ -78,7 +78,7 @@ export type IStyleSheetManager = React.PropsWithChildren<{
   target?: undefined | HTMLElement;
 }>;
 
-export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {
+export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
   const [plugins, setPlugins] = useState(props.stylisPlugins);
   const { styleSheet } = useStyleSheetContext();
 

@@ -306,7 +306,7 @@ describe('ssr', () => {
   });
 
   it('should handle errors while streaming', () => {
-    function ExplodingComponent(): JSX.Element {
+    function ExplodingComponent(): React.JSX.Element {
       throw new Error('ahhh');
     }
 
