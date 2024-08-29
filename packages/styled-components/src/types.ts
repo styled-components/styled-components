@@ -217,7 +217,7 @@ export interface PolymorphicComponent<R extends Runtime, BaseProps extends objec
     ForwardedAsTarget extends StyledTarget<R> | void = void,
   >(
     props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget>
-  ): JSX.Element;
+  ): React.JSX.Element;
 }
 
 export interface IStyledComponentBase<R extends Runtime, Props extends object = BaseObject>
