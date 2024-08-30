@@ -9855,7 +9855,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"styled-components-v6@npm:styled-components@6.1.12, styled-components@workspace:*, styled-components@workspace:packages/styled-components":
+"styled-components-v6@npm:styled-components@6.1.12":
+  version: 6.1.12
+  resolution: "styled-components@npm:6.1.12"
+  dependencies:
+    "@emotion/is-prop-valid": "npm:1.2.2"
+    "@emotion/unitless": "npm:0.8.1"
+    "@types/stylis": "npm:4.2.5"
+    css-to-react-native: "npm:3.2.0"
+    csstype: "npm:3.1.3"
+    postcss: "npm:8.4.38"
+    shallowequal: "npm:1.1.0"
+    stylis: "npm:4.3.2"
+    tslib: "npm:2.6.2"
+  peerDependencies:
+    react: ">= 16.8.0"
+    react-dom: ">= 16.8.0"
+  checksum: 1ad728aea763a26dbce5ede380ef54b0aacae177166d19346eed97eab8e46935b8797d3ba8e1db689605175d5f9c9892a60d91d2e797e2ea61901fb7f58ed1a5
+  languageName: node
+  linkType: hard
+
+"styled-components@workspace:*, styled-components@workspace:packages/styled-components":
   version: 0.0.0-use.local
   resolution: "styled-components@workspace:packages/styled-components"
   dependencies:
