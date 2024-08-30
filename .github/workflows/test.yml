@@ -29,7 +29,6 @@ jobs:
       - run: yarn install --immutable
       - run: yarn run prettier
   build:
-    if: github.ref != 'refs/heads/changeset-release/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +43,6 @@ jobs:
         env:
           BUNDLEWATCH_GITHUB_TOKEN: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}
   test:
-    if: github.ref != 'refs/heads/changeset-release/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
