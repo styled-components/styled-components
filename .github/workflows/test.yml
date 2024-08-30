@@ -4,8 +4,9 @@ on:
   push:
     branches:
       - 'main'
-      - 'changesets/action'
   pull_request:
+    branches-ignore:
+      - changeset-release/main
     types: [opened, synchronize, reopened]
 
 permissions:
