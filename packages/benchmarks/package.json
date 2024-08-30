@@ -1,7 +1,6 @@
 {
   "name": "@styled-components/benchmarks",
   "private": true,
-  "version": "0.8.6",
   "scripts": {
     "build": "webpack-cli --config webpack.config.js",
     "open": "open ./index.html",

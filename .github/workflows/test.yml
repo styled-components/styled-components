@@ -3,7 +3,8 @@ name: test
 on:
   push:
     branches:
-      - "main"
+      - 'main'
+      - 'changesets/action'
   pull_request:
     types: [opened, synchronize, reopened]
 
