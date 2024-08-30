@@ -52,15 +52,21 @@ Here is a quick guide to doing code contributions to the library.
 
 6. Make desired changes...
 
-7. Push your branch: `git push -u origin your-branch-name`
+7. Add a changeset via `yarn changeset`, be descriptive!
 
-8. Submit a pull request to the upstream styled-components repository.
+   - patch = bugfix, chores, small things
+   - minor = new functionality
+   - major = breaking changes
 
-9. Choose a descriptive title and describe your changes briefly.
+8. Push your branch: `git push -u origin your-branch-name`
 
-10. Wait for a maintainer to review your PR, make changes if it's being recommended, and get it merged.
+9. Submit a pull request to the upstream styled-components repository.
 
-11. Perform a celebratory dance! :dancer:
+10. Choose a descriptive title and describe your changes briefly.
+
+11. Wait for a maintainer to review your PR, make changes if it's being recommended, and get it merged.
+
+12. Perform a celebratory dance! :dancer:
 
 ### How do I run the benchmarks?
 
