@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "yarn workspace styled-components build",
+    "release": "yarn workspace styled-components prepublishOnly",
     "postbuild": "cp README.md packages/styled-components/",
     "postinstall": "yarn workspace styled-components generateErrors",
     "prettier": "yarn workspace styled-components prettier:check",
@@ -25,5 +26,9 @@
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0"
   },
-  "packageManager": "yarn@4.0.2"
+  "packageManager": "yarn@4.0.2",
+  "devDependencies": {
+    "@changesets/changelog-github": "0.5.0",
+    "@changesets/cli": "2.27.7"
+  }
 }
