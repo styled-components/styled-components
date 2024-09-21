@@ -37,6 +37,24 @@ describe('ssr', () => {
     expect(css).toMatchSnapshot();
   });
 
+  it('should extract the vendor CSS in a simple case', () => {
+    const Heading = styled.h1`
+      color: red;
+      align-items: center;
+    `;
+
+    const sheet = new ServerStyleSheet();
+    const html = renderToString(
+      sheet.collectStyles(<Heading>Hello SSR!</Heading>, {
+        enableVendorPrefixes: true,
+      })
+    );
+    const css = sheet.getStyleTags();
+
+    expect(html).toMatchSnapshot();
+    expect(css).toMatchSnapshot();
+  });
+
   it('should extract both global and local CSS', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
