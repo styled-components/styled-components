@@ -12,6 +12,7 @@ let SHOULD_REHYDRATE = IS_BROWSER;
 
 type SheetConstructorArgs = {
   isServer?: boolean;
+  nonce?: string;
   useCSSOMInjection?: boolean;
   target?: InsertionTarget | undefined;
 };
