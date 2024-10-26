@@ -7,7 +7,7 @@ import generateName from '../utils/generateAlphabeticName';
 import { hash, phash } from '../utils/hash';
 import isStaticRules from '../utils/isStaticRules';
 
-const SEED = hash(SC_VERSION);
+const SEED = hash(SC_VERSION + SC_ATTR);
 
 /**
  * ComponentStyle is all the CSS-specific stuff, not the React-specific stuff.
