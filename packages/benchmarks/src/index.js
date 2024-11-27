@@ -32,14 +32,14 @@ const tests = {
   'Mount deep tree': createTestBlock(components => ({
     benchmarkType: 'mount',
     Component: Tree,
-    getComponentProps: () => ({ breadth: 2, components, depth: 7, id: 0, wrap: 1 }),
+    getComponentProps: ({ cycle }) => ({ breadth: 2, components, depth: 7, id: cycle, wrap: 1 }),
     Provider: components.Provider,
     sampleCount: 500,
   })),
   'Mount wide tree': createTestBlock(components => ({
     benchmarkType: 'mount',
     Component: Tree,
-    getComponentProps: () => ({ breadth: 6, components, depth: 3, id: 0, wrap: 2 }),
+    getComponentProps: ({ cycle }) => ({ breadth: 6, components, depth: 3, id: cycle, wrap: 2 }),
     Provider: components.Provider,
     sampleCount: 500,
   })),

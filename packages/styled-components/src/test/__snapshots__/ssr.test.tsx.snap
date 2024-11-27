@@ -18,6 +18,31 @@ data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
 </style>
 `;
 
+exports[`ssr should emit global styles without any other components 1`] = `
+<style data-styled="true"
+       data-styled-version="JEST_MOCK_VERSION"
+>
+  body{background:papayawhip;}/*!sc*/
+data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+</style>
+`;
+
+exports[`ssr should emit global styles without any other components 2`] = `
+[
+  <style
+    dangerouslySetInnerHTML={
+      {
+        "__html": "body{background:papayawhip;}/*!sc*/
+data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+",
+      }
+    }
+    data-styled=""
+    data-styled-version="JEST_MOCK_VERSION"
+  />,
+]
+`;
+
 exports[`ssr should extract both global and local CSS 1`] = `
 <h1 class="sc-b c">
   Hello SSR!

@@ -217,7 +217,7 @@ export interface PolymorphicComponent<R extends Runtime, BaseProps extends objec
     ForwardedAsTarget extends StyledTarget<R> | void = void,
   >(
     props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget>
-  ): JSX.Element;
+  ): React.JSX.Element;
 }
 
 export interface IStyledComponentBase<R extends Runtime, Props extends object = BaseObject>
@@ -321,3 +321,5 @@ export type CSSProp = Interpolation<any>;
 export type NoInfer<T> = [T][T extends any ? 0 : never];
 
 export type Substitute<A extends object, B extends object> = FastOmit<A, keyof B> & B;
+
+export type InsertionTarget = HTMLElement | ShadowRoot;

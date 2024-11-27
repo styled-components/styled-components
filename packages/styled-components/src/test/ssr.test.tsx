@@ -60,6 +60,36 @@ describe('ssr', () => {
     expect(css).toMatchSnapshot();
   });
 
+  it('should emit nothing when no styles were generated', () => {
+    styled.h1`
+      color: red;
+    `;
+
+    const sheet = new ServerStyleSheet();
+    renderToString(sheet.collectStyles(<div />));
+
+    const cssTags = sheet.getStyleTags();
+    expect(cssTags).toBe('');
+
+    const cssElements = sheet.getStyleElement();
+    expect(cssElements).toEqual([]);
+  });
+
+  it('should emit global styles without any other components', () => {
+    const Component = createGlobalStyle`
+      body { background: papayawhip; }
+    `;
+
+    const sheet = new ServerStyleSheet();
+    renderToString(sheet.collectStyles(<Component />));
+
+    const cssTags = sheet.getStyleTags();
+    expect(cssTags).toMatchSnapshot();
+
+    const cssElements = sheet.getStyleElement();
+    expect(cssElements).toMatchSnapshot();
+  });
+
   it('should not spill ServerStyleSheets into each other', () => {
     const A = styled.h1`
       color: red;
@@ -276,7 +306,7 @@ describe('ssr', () => {
   });
 
   it('should handle errors while streaming', () => {
-    function ExplodingComponent(): JSX.Element {
+    function ExplodingComponent(): React.JSX.Element {
       throw new Error('ahhh');
     }
 

@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useMemo, useState } from 'react';
 import shallowequal from 'shallowequal';
 import type stylis from 'stylis';
 import StyleSheet from '../sheet';
-import { ShouldForwardProp, Stringifier } from '../types';
+import { InsertionTarget, ShouldForwardProp, Stringifier } from '../types';
 import createStylisInstance from '../utils/stylis';
 
 export const mainSheet: StyleSheet = new StyleSheet();
@@ -75,10 +75,10 @@ export type IStyleSheetManager = React.PropsWithChildren<{
   /**
    * Provide an alternate DOM node to host generated styles; useful for iframes.
    */
-  target?: undefined | HTMLElement;
+  target?: undefined | InsertionTarget;
 }>;
 
-export function StyleSheetManager(props: IStyleSheetManager): JSX.Element {
+export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
   const [plugins, setPlugins] = useState(props.stylisPlugins);
   const { styleSheet } = useStyleSheetContext();
 

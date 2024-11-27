@@ -1,7 +1,6 @@
 {
   "name": "@styled-components/benchmarks",
   "private": true,
-  "version": "0.8.6",
   "scripts": {
     "build": "webpack-cli --config webpack.config.js",
     "open": "open ./index.html",
@@ -20,7 +19,7 @@
     "react-native-web": "0.17.7",
     "styled-components": "workspace:*",
     "styled-components-v5": "npm:styled-components@5.3.9",
-    "styled-components-v6": "npm:styled-components@latest",
+    "styled-components-v6": "npm:styled-components@6.1.12",
     "styled-jsx": "5.1.2",
     "styletron-engine-atomic": "1.6.2",
     "styletron-react": "6.1.1"

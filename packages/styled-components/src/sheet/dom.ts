@@ -1,16 +1,17 @@
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../constants';
+import { InsertionTarget } from '../types';
 import styledError from '../utils/error';
 import getNonce from '../utils/nonce';
 
 /** Find last style element if any inside target */
-const findLastStyleTag = (target: HTMLElement): void | HTMLStyleElement => {
+const findLastStyleTag = (target: InsertionTarget): void | HTMLStyleElement => {
   const arr = Array.from(target.querySelectorAll<HTMLStyleElement>(`style[${SC_ATTR}]`));
 
   return arr[arr.length - 1];
 };
 
 /** Create a style element inside `target` or <head> after the last */
-export const makeStyleTag = (target?: HTMLElement | undefined): HTMLStyleElement => {
+export const makeStyleTag = (target?: InsertionTarget | undefined): HTMLStyleElement => {
   const head = document.head;
   const parent = target || head;
   const style = document.createElement('style');

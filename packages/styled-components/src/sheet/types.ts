@@ -1,3 +1,5 @@
+import { InsertionTarget } from '../types';
+
 /** CSSStyleSheet-like Tag abstraction for CSS rules */
 export interface Tag {
   insertRule(index: number, rule: string): boolean;
@@ -18,7 +20,7 @@ export interface GroupedTag {
 
 export type SheetOptions = {
   isServer: boolean;
-  target?: HTMLElement | undefined;
+  target?: InsertionTarget | undefined;
   useCSSOMInjection: boolean;
 };
 
@@ -33,5 +35,6 @@ export interface Sheet {
   options: SheetOptions;
   names: Map<string, Set<string>>;
   registerName(id: string, name: string): void;
+  rehydrate(): void;
   toString(): string;
 }

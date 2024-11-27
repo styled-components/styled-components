@@ -1,4 +1,5 @@
 import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
+import { InsertionTarget } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import { setToString } from '../utils/setToString';
 import { makeGroupedTag } from './GroupedTag';
@@ -12,7 +13,7 @@ let SHOULD_REHYDRATE = IS_BROWSER;
 type SheetConstructorArgs = {
   isServer?: boolean;
   useCSSOMInjection?: boolean;
-  target?: HTMLElement | undefined;
+  target?: InsertionTarget | undefined;
 };
 
 type GlobalStylesAllocationMap = {
@@ -59,6 +60,12 @@ export default class StyleSheet implements Sheet {
     }
 
     setToString(this, () => outputSheet(this));
+  }
+
+  rehydrate(): void {
+    if (!this.server && IS_BROWSER) {
+      rehydrateSheet(this);
+    }
   }
 
   reconstructWithOptions(options: SheetConstructorArgs, withNames = true) {

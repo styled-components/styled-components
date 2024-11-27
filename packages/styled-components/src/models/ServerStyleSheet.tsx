@@ -23,6 +23,7 @@ export default class ServerStyleSheet {
 
   _emitSheetCSS = (): string => {
     const css = this.instance.toString();
+    if (!css) return '';
     const nonce = getNonce();
     const attrs = [
       nonce && `nonce="${nonce}"`,
@@ -34,7 +35,7 @@ export default class ServerStyleSheet {
     return `<style ${htmlAttr}>${css}</style>`;
   };
 
-  collectStyles(children: any): JSX.Element {
+  collectStyles(children: any): React.JSX.Element {
     if (this.sealed) {
       throw styledError(2);
     }
@@ -55,11 +56,14 @@ export default class ServerStyleSheet {
       throw styledError(2);
     }
 
+    const css = this.instance.toString();
+    if (!css) return [];
+
     const props = {
       [SC_ATTR]: '',
       [SC_ATTR_VERSION]: SC_VERSION,
       dangerouslySetInnerHTML: {
-        __html: this.instance.toString(),
+        __html: css,
       },
     };
 
