@@ -188,7 +188,12 @@ function useStyledComponentImpl<Props extends object>(
       : 'className'
   ] = classString;
 
-  propsForElement.ref = forwardedRef;
+  // forwardedRef is coming from React.forwardRef.
+  // But it might not exist. Since React 19 handles `ref` like a prop, it only define it if there is a value.
+  // We don't want to inject an empty ref.
+  if (forwardedRef) {
+    propsForElement.ref = forwardedRef;
+  }
 
   return createElement(elementToBeCreated, propsForElement);
 }
