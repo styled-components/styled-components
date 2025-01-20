@@ -1,7 +1,10 @@
 {
   "name": "styled-components",
-  "version": "6.1.13",
+  "version": "6.1.14",
   "description": "CSS for the <Component> Age. Style components your way with speed, strong typing, and flexibility.",
+  "publishConfig": {
+    "access": "public"
+  },
   "types": "dist/index.d.ts",
   "main": "dist/styled-components.cjs.js",
   "module": "./dist/styled-components.esm.js",

@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "yarn workspace styled-components build",
-    "release": "yarn workspace styled-components prepublishOnly",
+    "release": "yarn workspace styled-components prepublishOnly && changeset publish",
     "postbuild": "cp README.md packages/styled-components/",
     "postinstall": "yarn workspace styled-components generateErrors",
     "prettier": "yarn workspace styled-components prettier:check",
