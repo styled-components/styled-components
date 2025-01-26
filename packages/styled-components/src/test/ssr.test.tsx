@@ -4,7 +4,7 @@
 
 import { resetStyled } from './utils';
 
-import React from 'react';
+import React, { JSX } from 'react';
 import { renderToNodeStream, renderToString } from 'react-dom/server';
 import stylisRTLPlugin from 'stylis-plugin-rtl';
 import createGlobalStyle from '../constructors/createGlobalStyle';
@@ -306,7 +306,7 @@ describe('ssr', () => {
   });
 
   it('should handle errors while streaming', () => {
-    function ExplodingComponent(): React.JSX.Element {
+    function ExplodingComponent(): JSX.Element {
       throw new Error('ahhh');
     }
 

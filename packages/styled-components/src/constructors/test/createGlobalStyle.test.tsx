@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { JSX } from 'react';
 import ReactDOM from 'react-dom';
 import { act, Simulate } from 'react-dom/test-utils';
 import ReactTestRenderer from 'react-test-renderer';
@@ -19,7 +19,7 @@ describe(`createGlobalStyle`, () => {
 
     return {
       container,
-      render(comp: React.JSX.Element) {
+      render(comp: JSX.Element) {
         ReactDOM.render(comp, container);
       },
       cleanup() {

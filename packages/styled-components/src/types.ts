@@ -1,5 +1,5 @@
 import type * as CSS from 'csstype';
-import React from 'react';
+import React, { JSX } from 'react';
 import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
@@ -217,7 +217,7 @@ export interface PolymorphicComponent<R extends Runtime, BaseProps extends objec
     ForwardedAsTarget extends StyledTarget<R> | void = void,
   >(
     props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget>
-  ): React.JSX.Element;
+  ): JSX.Element;
 }
 
 export interface IStyledComponentBase<R extends Runtime, Props extends object = BaseObject>
