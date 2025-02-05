@@ -67,6 +67,19 @@ function useInjectedStyle<T extends ExecutionContext>(
     ssc.stylis
   );
 
+  if (ssc.styleSheet.server) {
+    componentStyle.flushStyles(ssc.styleSheet, ssc.stylis);
+  }
+
+  if (!__SERVER__) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    // @ts-expect-error still using React 17 types for the time being
+    (React.useInsertionEffect || React.useLayoutEffect)(() => {
+      componentStyle.flushStyles(ssc.styleSheet, ssc.stylis);
+    });
+  }
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   if (process.env.NODE_ENV !== 'production') useDebugValue(className);
 
   return className;
