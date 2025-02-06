@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import React from 'react';
+import React, { JSX } from 'react';
 import ReactDOMServer from 'react-dom/server';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
 import { stripComments, stripWhitespace } from '../../test/utils';
@@ -12,7 +12,7 @@ describe(`createGlobalStyle`, () => {
 
   function setup() {
     return {
-      renderToString(comp: React.JSX.Element) {
+      renderToString(comp: JSX.Element) {
         return ReactDOMServer.renderToString(comp);
       },
     };
