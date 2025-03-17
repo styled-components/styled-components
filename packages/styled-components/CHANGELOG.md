@@ -1,5 +1,12 @@
 # styled-components
 
+## 6.1.16
+
+### Patch Changes
+
+- 246c77b: Resolve TS error related to `ExoticComponentWithDisplayName` API from React.
+- 4757191: Native typings weren't on the correct folder, which caused issues on React Native projects using this library
+
 ## 6.1.15
 
 ### Patch Changes
