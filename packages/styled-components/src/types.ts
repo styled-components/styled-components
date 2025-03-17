@@ -7,7 +7,8 @@ import type { SupportedHTMLElements } from './utils/domElements';
 
 export { CSS, DefaultTheme, SupportedHTMLElements };
 
-export interface ExoticComponentWithDisplayName<P extends object = {}> extends React.ExoticComponent<P> {
+export interface ExoticComponentWithDisplayName<P extends object = {}>
+  extends React.ExoticComponent<P> {
   defaultProps?: Partial<P> | undefined;
   displayName?: string | undefined;
 }
