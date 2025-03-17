@@ -1,7 +1,7 @@
 /**
  * This file is meant for typing-related tests that don't need to go through Jest.
  */
-import React from 'react';
+import React, { JSX } from 'react';
 import { css, CSSProp, IStyledComponent, StyledObject } from '../index';
 import styled from '../index-standalone';
 import { DataAttributes } from '../types';
@@ -309,7 +309,7 @@ const StyledDiv = styled.div``;
 
 const CustomComponent = (({ ...props }) => {
   return <StyledDiv {...props} />;
-}) as IStyledComponent<'web', React.JSX.IntrinsicElements['div']>;
+}) as IStyledComponent<'web', JSX.IntrinsicElements['div']>;
 
 const StyledCustomComponent = styled(CustomComponent)``;
 
