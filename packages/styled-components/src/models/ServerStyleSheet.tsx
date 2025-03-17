@@ -1,7 +1,7 @@
 import React from 'react';
 import type * as streamInternal from 'stream';
 import { Readable } from 'stream';
-import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
+import { IS_BROWSER, NONCE, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
 import styledError from '../utils/error';
 import { joinStringArray } from '../utils/joinStrings';
@@ -15,18 +15,20 @@ const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 export default class ServerStyleSheet {
   instance: StyleSheet;
   sealed: boolean;
+  nonce?: string;
 
-  constructor() {
-    this.instance = new StyleSheet({ isServer: true });
+  constructor({ nonce = NONCE }: { nonce?: string } = {}) {
+    this.instance = new StyleSheet({ isServer: true, nonce: nonce ?? '' });
     this.sealed = false;
+    this.nonce = nonce ?? '';
   }
 
   _emitSheetCSS = (): string => {
     const css = this.instance.toString();
     if (!css) return '';
-    const nonce = getNonce();
+    const _nonce = this.nonce ?? getNonce();
     const attrs = [
-      nonce && `nonce="${nonce}"`,
+      _nonce && `nonce="${_nonce}"`,
       `${SC_ATTR}="true"`,
       `${SC_ATTR_VERSION}="${SC_VERSION}"`,
     ];
@@ -67,13 +69,16 @@ export default class ServerStyleSheet {
       },
     };
 
-    const nonce = getNonce();
+    const nonce = this.nonce ?? getNonce();
     if (nonce) {
       (props as any).nonce = nonce;
     }
 
     // v4 returned an array for this fn, so we'll do the same for v5 for backward compat
-    return [<style {...props} key="sc-0-0" />];
+    return [
+      ...(nonce ? [<meta key="sc-nonce" nonce={nonce} name="sc-nonce" content={nonce} />] : []),
+      <style {...props} key="sc-0-0" />,
+    ];
   };
 
   // @ts-expect-error alternate return types are not possible due to code transformation
