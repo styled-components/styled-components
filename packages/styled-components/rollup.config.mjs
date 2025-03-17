@@ -28,7 +28,7 @@ const esm = {
 const getCJS = override => ({ ...cjs, ...override });
 const getESM = override => ({ ...esm, ...override });
 
-const commonPlugins = [
+const defaultTypescriptPlugin =
   typescript({
     // The build breaks if the tests are included by the typescript plugin.
     // Since un-excluding them in tsconfig.json, we must explicitly exclude them
@@ -36,7 +36,22 @@ const commonPlugins = [
     exclude: ['**/*.test.ts', '**/*.test.tsx', 'dist', 'src/test/types.tsx'],
     outputToFilesystem: true,
     tsconfig: './tsconfig.json',
-  }),
+  });
+
+const nativeTypescriptPlugin =
+  typescript({
+    // The build breaks if the tests are included by the typescript plugin.
+    // Since un-excluding them in tsconfig.json, we must explicitly exclude them
+    // here.
+    exclude: ['**/*.test.ts', '**/*.test.tsx', 'dist', 'src/test/types.tsx'],
+    outputToFilesystem: true,
+    tsconfig: './tsconfig.json',
+    compilerOptions: {
+      outDir: 'native/dist'
+    }
+  });
+
+const basePlugins = [
   sourceMaps(),
   json(),
   nodeResolve(),
@@ -85,6 +100,11 @@ const minifierPlugin = terser({
     preserve_annotations: true,
   },
 });
+
+const commonPlugins = [
+  defaultTypescriptPlugin,
+  basePlugins
+];
 
 const configBase = {
   input: './src/index.ts',
@@ -179,7 +199,11 @@ const nativeConfig = {
       file: 'native/dist/styled-components.native.esm.js',
     }),
   ],
-  plugins: configBase.plugins.concat(minifierPlugin),
+  plugins: [
+    nativeTypescriptPlugin,
+    ...commonPlugins,
+    minifierPlugin
+  ],
 };
 
 export default [standaloneConfig, standaloneProdConfig, serverConfig, browserConfig, nativeConfig];
