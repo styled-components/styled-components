@@ -9,7 +9,8 @@ export const checkDynamicCreation = (displayName: string, componentId?: string |
     const message =
       `The component ${displayName}${parsedIdString} has been created dynamically.\n` +
       "You may see this warning because you've called styled inside another component.\n" +
-      'To resolve this only create new StyledComponents outside of any render method and function component.';
+      'To resolve this only create new StyledComponents outside of any render method and function component.\n' +
+      'See https://styled-components.com/docs/basics#define-styled-components-outside-of-the-render-method for more info.\n';
 
     // If a hook is called outside of a component:
     // React 17 and earlier throw an error
