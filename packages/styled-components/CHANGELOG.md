@@ -1,5 +1,12 @@
 # styled-components
 
+## 6.1.17
+
+### Patch Changes
+
+- 47a4dcb: Fix for loose `DefaultTheme` type definition
+- a8c0f5b: fix: add info link to console
+
 ## 6.1.16
 
 ### Patch Changes
