@@ -2,6 +2,10 @@ import React, { useContext, useMemo } from 'react';
 import styledError from '../utils/error';
 import isFunction from '../utils/isFunction';
 
+// Helper type for the `DefaultTheme` interface that enforces an object type & exclusively allows
+// for typed keys.
+type DefaultThemeAsObject<T = object> = Record<keyof T, any>;
+
 /**
  * Override DefaultTheme to get accurate typings for your project.
  *
@@ -24,9 +28,7 @@ import isFunction from '../utils/isFunction';
  * }
  * ```
  */
-export interface DefaultTheme {
-  [key: string]: any;
-}
+export interface DefaultTheme extends DefaultThemeAsObject {}
 
 type ThemeFn = (outerTheme?: DefaultTheme | undefined) => DefaultTheme;
 type ThemeArgument = DefaultTheme | ThemeFn;

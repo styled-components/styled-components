@@ -434,12 +434,12 @@ describe('with styles', () => {
     const Wrapper = styled.span<IconProps>`
       vertical-align: middle;
       display: inline-block;
-      line-height: ${({ theme }) => theme.lineHeights.sm};
-      font-size: ${({ theme }) => theme.fontSizes.sm};
+      line-height: ${({ theme }) => theme.lineHeights!.sm};
+      font-size: ${({ theme }) => theme.fontSizes!.sm};
 
       & > svg {
         stroke: ${({ theme, color }): string =>
-          color && color !== 'inherit' ? theme.colors[color] : 'currentColor'};
+          color && color !== 'inherit' ? theme.colors![color] : 'currentColor'};
         ${({ spin }): any => (spin ? spinCss : '')};
       }
       ${({ rounded }): string => (rounded ? 'border-radius: 9999px;' : '')};
