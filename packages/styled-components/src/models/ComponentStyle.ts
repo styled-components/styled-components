@@ -39,16 +39,22 @@ export default class ComponentStyle {
   generateAndInjectStyles(
     executionContext: ExecutionContext,
     styleSheet: StyleSheet,
-    stylis: Stringifier
+    stylis: Stringifier,
+    insertionEffectBuffer: [name: string, rules: string[]][] | false
   ): string {
-    let names = this.baseStyle
-      ? this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis)
+    let className = this.baseStyle
+      ? this.baseStyle.generateAndInjectStyles(
+          executionContext,
+          styleSheet,
+          stylis,
+          insertionEffectBuffer
+        )
       : '';
 
     // force dynamic classnames if user-supplied stylis plugins are in use
     if (this.isStatic && !stylis.hash) {
       if (this.staticRulesId && styleSheet.hasNameForId(this.componentId, this.staticRulesId)) {
-        names = joinStrings(names, this.staticRulesId);
+        className = joinStrings(className, this.staticRulesId);
       } else {
         const cssStatic = joinStringArray(
           flatten(this.rules, executionContext, styleSheet, stylis) as string[]
@@ -57,10 +63,12 @@ export default class ComponentStyle {
 
         if (!styleSheet.hasNameForId(this.componentId, name)) {
           const cssStaticFormatted = stylis(cssStatic, `.${name}`, undefined, this.componentId);
-          styleSheet.insertRules(this.componentId, name, cssStaticFormatted);
+          insertionEffectBuffer
+            ? insertionEffectBuffer.push([name, cssStaticFormatted])
+            : styleSheet.insertRules(this.componentId, name, cssStaticFormatted);
         }
 
-        names = joinStrings(names, name);
+        className = joinStrings(className, name);
         this.staticRulesId = name;
       }
     } else {
@@ -88,17 +96,26 @@ export default class ComponentStyle {
         const name = generateName(dynamicHash >>> 0);
 
         if (!styleSheet.hasNameForId(this.componentId, name)) {
-          styleSheet.insertRules(
-            this.componentId,
-            name,
-            stylis(css, `.${name}`, undefined, this.componentId)
-          );
+          const cssFormatted = stylis(css, `.${name}`, undefined, this.componentId);
+          insertionEffectBuffer
+            ? insertionEffectBuffer.push([name, cssFormatted])
+            : styleSheet.insertRules(this.componentId, name, cssFormatted);
         }
 
-        names = joinStrings(names, name);
+        className = joinStrings(className, name);
       }
     }
 
-    return names;
+    return className;
+  }
+
+  flushStyles(buffer: [name: string, rules: string[]][], styleSheet: StyleSheet) {
+    for (let i = 0; i < buffer.length; i++) {
+      const [name, rules] = buffer[i];
+
+      if (!styleSheet.hasNameForId(this.componentId, name)) {
+        styleSheet.insertRules(this.componentId, name, rules);
+      }
+    }
   }
 }
