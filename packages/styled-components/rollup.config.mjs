@@ -1,11 +1,14 @@
 import typescript from '@rollup/plugin-typescript';
+import { createRequire } from 'node:module';
 import commonjs from 'rollup-plugin-commonjs';
 import json from 'rollup-plugin-json';
 import nodeResolve from 'rollup-plugin-node-resolve';
 import replace from 'rollup-plugin-replace';
 import sourceMaps from 'rollup-plugin-sourcemaps';
 import { terser } from 'rollup-plugin-terser';
-import pkg from './package.json' assert { type: 'json' };
+const req = createRequire(import.meta.url);
+
+const pkg = req('./package.json');
 
 /**
  * NODE_ENV explicit replacement is only needed for standalone packages, as webpack
