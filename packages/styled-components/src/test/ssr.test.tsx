@@ -112,9 +112,7 @@ describe('ssr', () => {
     expect(cssB).toContain('green');
   });
 
-  it('should add a nonce to the stylesheet if webpack nonce is detected in the global scope', () => {
-    require('../utils/nonce').mockImplementation(() => 'foo');
-
+  it('should add a nonce to the stylesheet if nonce is passed', () => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
@@ -122,7 +120,7 @@ describe('ssr', () => {
       color: red;
     `;
 
-    const sheet = new ServerStyleSheet();
+    const sheet = new ServerStyleSheet({ nonce: 'foo' });
     const html = renderToString(
       sheet.collectStyles(
         <React.Fragment>
@@ -184,31 +182,6 @@ describe('ssr', () => {
     expect(element.props.dangerouslySetInnerHTML).toBeDefined();
     expect(element.props.children).not.toBeDefined();
     expect(element.props).toMatchSnapshot();
-  });
-
-  it('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
-    require('../utils/nonce').mockImplementation(() => 'foo');
-
-    const Component = createGlobalStyle`
-      body { background: papayawhip; }
-    `;
-    const Heading = styled.h1`
-      color: red;
-    `;
-
-    const sheet = new ServerStyleSheet();
-
-    renderToString(
-      sheet.collectStyles(
-        <React.Fragment>
-          <Heading>Hello SSR!</Heading>
-          <Component />
-        </React.Fragment>
-      )
-    );
-
-    const [element] = sheet.getStyleElement();
-    expect(element.props.nonce).toBe('foo');
   });
 
   it('should interleave styles with rendered HTML when utilitizing streaming', () => {

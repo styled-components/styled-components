@@ -13,7 +13,10 @@ export const SC_VERSION = __VERSION__;
 export const SPLITTER = '/*!sc*/\n';
 
 export const IS_BROWSER = typeof window !== 'undefined' && 'HTMLElement' in window;
-
+export const NONCE =
+  typeof document !== 'undefined'
+    ? document.head.querySelector('meta[name="sc-nonce"]')?.getAttribute('content') ?? undefined
+    : undefined;
 export const DISABLE_SPEEDY = Boolean(
   typeof SC_DISABLE_SPEEDY === 'boolean'
     ? SC_DISABLE_SPEEDY

@@ -1,12 +1,12 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 1`] = `
+exports[`ssr should add a nonce to the stylesheet if nonce is passed 1`] = `
 <h1 class="sc-b c">
   Hello SSR!
 </h1>
 `;
 
-exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 2`] = `
+exports[`ssr should add a nonce to the stylesheet if nonce is passed 2`] = `
 <style nonce="foo"
        data-styled="true"
        data-styled-version="JEST_MOCK_VERSION"

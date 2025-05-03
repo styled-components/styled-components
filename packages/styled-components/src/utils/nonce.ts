@@ -1,5 +1,9 @@
+import { NONCE } from '../constants';
+
 declare let __webpack_nonce__: string;
 
 export default function getNonce() {
-  return typeof __webpack_nonce__ !== 'undefined' ? __webpack_nonce__ : null;
+  if (typeof __webpack_nonce__ !== 'undefined') return __webpack_nonce__;
+  if (NONCE) return NONCE;
+  return null;
 }
