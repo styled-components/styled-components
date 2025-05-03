@@ -3,9 +3,15 @@ import { ThemeContext } from '../models/ThemeProvider';
 import { AnyComponent, ExecutionProps } from '../types';
 import determineTheme from '../utils/determineTheme';
 import getComponentName from '../utils/getComponentName';
-import hoist from '../utils/hoist';
+import hoist, { NonReactStatics } from '../utils/hoist';
 
-export default function withTheme<T extends AnyComponent>(Component: T) {
+export default function withTheme<T extends AnyComponent>(
+  Component: T
+): React.ForwardRefExoticComponent<
+  React.PropsWithoutRef<React.JSX.LibraryManagedAttributes<T, ExecutionProps>> &
+    React.RefAttributes<T>
+> &
+  NonReactStatics<T> {
   const WithTheme = React.forwardRef<T, React.JSX.LibraryManagedAttributes<T, ExecutionProps>>(
     (props, ref) => {
       const theme = React.useContext(ThemeContext);
