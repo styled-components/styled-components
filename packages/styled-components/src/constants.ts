@@ -12,7 +12,7 @@ export const SC_ATTR_VERSION = 'data-styled-version';
 export const SC_VERSION = __VERSION__;
 export const SPLITTER = '/*!sc*/\n';
 
-export const IS_BROWSER = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+export const IS_BROWSER = typeof window !== 'undefined' && typeof document !== 'undefined';
 
 export const DISABLE_SPEEDY = Boolean(
   typeof SC_DISABLE_SPEEDY === 'boolean'
