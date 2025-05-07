@@ -1,5 +1,12 @@
 # styled-components
 
+## 6.1.18
+
+### Patch Changes
+
+- 76b18a4: fix react 19 compatibility
+- bdac7af: Quickfix to support expo sdk >= 53 and react-native >=0.79.
+
 ## 6.1.17
 
 ### Patch Changes
