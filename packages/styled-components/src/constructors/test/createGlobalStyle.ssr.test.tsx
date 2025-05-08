@@ -24,13 +24,29 @@ describe(`createGlobalStyle`, () => {
 
   it(`injects global <style> when rendered to string`, () => {
     const sheet = new ServerStyleSheet();
-    const Component = createGlobalStyle`[data-test-inject]{color:red;} `;
+    const Component = createGlobalStyle`[data-test-inject]{color:red;align-items:center;} `;
     const html = context.renderToString(sheet.collectStyles(<Component />));
     const styles = stripOuterHTML(sheet.getStyleTags());
 
     expect(html).toBe('');
     expect(stripWhitespace(stripComments(styles))).toMatchInlineSnapshot(
-      `"[data-test-inject]{ color:red; } data-styled.g1[id="sc-global-a1"]{ content:"sc-global-a1,"} "`
+      `"[data-test-inject]{ color:red; align-items:center; } data-styled.g1[id="sc-global-a1"]{ content:"sc-global-a1,"} "`
+    );
+  });
+
+  it(`injects global <style> when rendered to string and adds vendor prefix if required`, () => {
+    const sheet = new ServerStyleSheet();
+    const Component = createGlobalStyle`[data-test-inject]{color:red;align-items:center;} `;
+    const html = context.renderToString(
+      sheet.collectStyles(<Component />, {
+        enableVendorPrefixes: true,
+      })
+    );
+    const styles = stripOuterHTML(sheet.getStyleTags());
+
+    expect(html).toBe('');
+    expect(stripWhitespace(stripComments(styles))).toMatchInlineSnapshot(
+      `"[data-test-inject]{ color:red; -webkit-align-items:center; -webkit-box-align:center; -ms-flex-align:center; align-items:center; } data-styled.g1[id="sc-global-a1"]{ content:"sc-global-a1,"} "`
     );
   });
 });
