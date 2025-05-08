@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "6.1.17",
+  "version": "6.1.18",
   "description": "CSS for the <Component> Age. Style components your way with speed, strong typing, and flexibility.",
   "publishConfig": {
     "access": "public"
