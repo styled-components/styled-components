@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "devDependencies": {
-    "next": "12.3.4"
+    "next": "13.5.9"
   },
   "dependencies": {
     "react": "17.0.2",
