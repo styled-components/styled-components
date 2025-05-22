@@ -2,11 +2,22 @@ import React, { PropsWithChildren } from 'react';
 import { Image, Text, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
+import { RN_UNSUPPORTED_VALUES } from '../../models/InlineStyle';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
 
 describe('native', () => {
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
   it('should not throw an error when called with a valid element', () => {
     expect(() => styled.View``).not.toThrowError();
 
@@ -150,6 +161,45 @@ describe('native', () => {
     const image = wrapper.root.findByType(Image);
 
     expect(image.props.style).toEqual({ borderWidth: 10, borderColor: 'red' });
+  });
+
+  it('should warn all css unsupported values', () => {
+    RN_UNSUPPORTED_VALUES.forEach(value => {
+      const Box = styled.View`
+        width: ${value};
+        height: 20px;
+      `;
+      const testInstance = TestRenderer.create(<Box />);
+      const styleProp = testInstance.root.findByType(View).props.style;
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining(value));
+    });
+  });
+
+  it('should ignore all css unsupported values', () => {
+    RN_UNSUPPORTED_VALUES.forEach(value => {
+      const Box = styled.View`
+        width: ${value};
+        height: 30px;
+      `;
+      const testInstance = TestRenderer.create(<Box />);
+      const styleProp = testInstance.root.findByType(View).props.style;
+
+      expect(styleProp.width).toBeUndefined();
+    });
+  });
+
+  it('should still apply css supported values', () => {
+    RN_UNSUPPORTED_VALUES.forEach(value => {
+      const Box = styled.View`
+        width: ${value};
+        height: 40px;
+      `;
+      const testInstance = TestRenderer.create(<Box />);
+      const styleProp = testInstance.root.findByType(View).props.style;
+
+      expect(styleProp.height).toBe(40);
+    });
   });
 
   describe('attrs', () => {

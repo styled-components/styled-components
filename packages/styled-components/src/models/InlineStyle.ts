@@ -12,6 +12,9 @@ import flatten from '../utils/flatten';
 import generateComponentId from '../utils/generateComponentId';
 import { joinStringArray } from '../utils/joinStrings';
 
+// List of CSS values not supported by React Native
+export const RN_UNSUPPORTED_VALUES = ['fit-content', 'min-content', 'max-content'];
+
 let generated: Dict<any> = {};
 
 export const resetStyleCache = (): void => {
@@ -44,6 +47,14 @@ export default function makeInlineStyleClass<Props extends object>(styleSheet: S
 
         root.each(node => {
           if (node.type === 'decl') {
+            if (RN_UNSUPPORTED_VALUES.includes(node.value)) {
+              if (process.env.NODE_ENV !== 'production') {
+                console.warn(
+                  `[styled-components/native] The value "${node.value}" for property "${node.prop}" is not supported in React Native and will be ignored.`
+                );
+              }
+              return;
+            }
             declPairs.push([node.prop, node.value]);
           } else if (process.env.NODE_ENV !== 'production' && node.type !== 'comment') {
             console.warn(`Node of type ${node.type} not supported as an inline style`);
