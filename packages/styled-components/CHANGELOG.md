@@ -1,5 +1,11 @@
 # styled-components
 
+## 6.1.19
+
+### Patch Changes
+
+- aa997d8: fix for React Native >=0.79 crashes when using unsupported web-only CSS values (e.g., fit-content, min-content, max-content). The fix emits a warning and ignores the property using those values, instead of causing crashes.
+
 ## 6.1.18
 
 ### Patch Changes
