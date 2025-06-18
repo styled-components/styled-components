@@ -1,5 +1,11 @@
 # styled-components
 
+## 6.1.20
+
+### Patch Changes
+
+- d0b73ac: Fix no longer existing link in console debug message
+
 ## 6.1.19
 
 ### Patch Changes
