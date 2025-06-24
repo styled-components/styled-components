@@ -6,7 +6,7 @@ import StyleSheet from '../sheet';
 import styledError from '../utils/error';
 import { joinStringArray } from '../utils/joinStrings';
 import getNonce from '../utils/nonce';
-import { StyleSheetManager } from './StyleSheetManager';
+import { IStyleSheetManager, StyleSheetManager } from './StyleSheetManager';
 
 declare const __SERVER__: boolean;
 
@@ -35,12 +35,22 @@ export default class ServerStyleSheet {
     return `<style ${htmlAttr}>${css}</style>`;
   };
 
-  collectStyles(children: any): React.JSX.Element {
+  collectStyles(
+    children: any,
+    styleSheetProps?: Omit<IStyleSheetManager, 'sheet' | 'children'>
+  ): React.JSX.Element {
     if (this.sealed) {
       throw styledError(2);
     }
 
-    return <StyleSheetManager sheet={this.instance}>{children}</StyleSheetManager>;
+    return (
+      <StyleSheetManager
+        sheet={this.instance}
+        enableVendorPrefixes={styleSheetProps?.enableVendorPrefixes || false}
+      >
+        {children}
+      </StyleSheetManager>
+    );
   }
 
   getStyleTags = (): string => {
