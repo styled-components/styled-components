@@ -170,5 +170,10 @@
   },
   "engines": {
     "node": ">= 16"
+  },
+  "peerDependenciesMeta": {
+      "react-dom": {
+        "optional": true
+      }
   }
 }
