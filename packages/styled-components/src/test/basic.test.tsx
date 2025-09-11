@@ -18,7 +18,7 @@ describe('basic', () => {
   });
 
   it('should not throw an error when called with a valid element', () => {
-    expect(() => styled.div``).not.toThrowError();
+    expect(() => styled.div``).not.toThrow();
 
     const FunctionalComponent = () => <div />;
     class ClassComponent extends Component<any, any> {
@@ -31,7 +31,7 @@ describe('basic', () => {
       expect(() => {
         const Comp = styled(comp)``;
         TestRenderer.create(<Comp />);
-      }).not.toThrowError();
+      }).not.toThrow();
     });
   });
 

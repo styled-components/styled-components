@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`StyleSheetManager should apply styles to appropriate targets for nested StyleSheetManagers 1`] = `
 <style data-styled="active"

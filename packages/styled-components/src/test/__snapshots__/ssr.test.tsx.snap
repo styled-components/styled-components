@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected in the global scope 1`] = `
 <h1 class="sc-b c">

@@ -163,7 +163,7 @@ describe('flatten', () => {
           <path d="M39.6,95.6z" />
         </SvgIcon>
       )
-    ).not.toThrowError();
+    ).not.toThrow();
 
     expect(console.error).not.toHaveBeenCalled();
   });
@@ -176,7 +176,7 @@ it('does not error for functions that return null', () => {
     ${() => null}
   `;
 
-  expect(() => TestRenderer.create(<Bar />)).not.toThrowError();
+  expect(() => TestRenderer.create(<Bar />)).not.toThrow();
 
   expect(console.error).not.toHaveBeenCalled();
 });

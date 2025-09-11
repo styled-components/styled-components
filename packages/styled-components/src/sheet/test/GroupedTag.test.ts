@@ -82,5 +82,9 @@ it('throws when the upper group limit is reached', () => {
 
   expect(() => {
     groupedTag.insertRules(group, ['.test {}']);
-  }).toThrowError(/reached the limit/i);
+  }).toThrowErrorMatchingInlineSnapshot(`
+    "Reached the limit of how many styled components may be created at group 2147483649.
+    You may only create up to 1,073,741,824 components. If you're creating components dynamically,
+    as for instance in your render method then you may be running into this limitation."
+  `);
 });
