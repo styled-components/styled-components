@@ -1,5 +1,6 @@
+import '@testing-library/jest-dom';
+import { render } from '@testing-library/react';
 import React, { Fragment } from 'react';
-import TestRenderer from 'react-test-renderer';
 import { getRenderedCSS, resetStyled } from './utils';
 
 let styled: ReturnType<typeof resetStyled>;
@@ -13,7 +14,7 @@ describe('props', () => {
     const Comp = styled.div<{ fg?: string }>`
       color: ${props => props.fg || 'black'};
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: black;
@@ -25,7 +26,7 @@ describe('props', () => {
     const Comp = styled.div<{ fg: string }>`
       color: ${props => props.fg || 'black'};
     `;
-    TestRenderer.create(<Comp fg="red" />);
+    render(<Comp fg="red" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: red;
@@ -46,7 +47,7 @@ describe('props', () => {
         })
       };
     `;
-    TestRenderer.create(<Comp fg="red" />);
+    render(<Comp fg="red" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         border-width: 0;
@@ -59,22 +60,22 @@ describe('props', () => {
       color: ${props => props.$fg || 'black'};
     `;
     expect(
-      TestRenderer.create(
+      render(
         <>
           <Comp $fg="red" />
           <Comp fg="red" />
         </>
-      ).toJSON()
+      ).asFragment()
     ).toMatchInlineSnapshot(`
-      [
+      <DocumentFragment>
         <div
-          className="sc-a b"
-        />,
+          class="sc-a b"
+        />
         <div
-          className="sc-a c"
+          class="sc-a c"
           fg="red"
-        />,
-      ]
+        />
+      </DocumentFragment>
     `);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
@@ -93,10 +94,12 @@ describe('props', () => {
       background: red;
     `;
 
-    expect(TestRenderer.create(<Comp2 forwardedAs="button" />).toJSON()).toMatchInlineSnapshot(`
-      <button
-        className="sc-a b"
-      />
+    expect(render(<Comp2 forwardedAs="button" />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <button
+          class="sc-a b"
+        />
+      </DocumentFragment>
     `);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -115,15 +118,15 @@ describe('props', () => {
       })<{ filterThis: string; passThru: string }>`
         color: red;
       `;
-      const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
-      const { props } = wrapper.root.findByType('div');
+      const wrapper = render(<Comp data-testid="subject" filterThis="abc" passThru="def" />);
+      const el = wrapper.getByTestId('subject');
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
         }"
       `);
-      expect(props.passThru).toBe('def');
-      expect(props.filterThis).toBeUndefined();
+      expect(el).toHaveAttribute('passThru', 'def');
+      expect(el).not.toHaveAttribute('filterThis');
     });
 
     it('allows custom prop filtering for components', () => {
@@ -133,30 +136,30 @@ describe('props', () => {
       })<{ filterThis: string; passThru: string }>`
         color: red;
       `;
-      const wrapper = TestRenderer.create(<Comp filterThis="abc" passThru="def" />);
-      const { props } = wrapper.root.findByType('div');
+      const wrapper = render(<Comp data-testid="subject" filterThis="abc" passThru="def" />);
+      const el = wrapper.getByTestId('subject');
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
         }"
       `);
-      expect(props.passThru).toBe('def');
-      expect(props.filterThis).toBeUndefined();
+      expect(el).toHaveAttribute('passThru', 'def');
+      expect(el).not.toHaveAttribute('filterThis');
     });
 
     it('composes shouldForwardProp on composed styled components', () => {
       const StyledDiv = styled('div').withConfig({
-        shouldForwardProp: prop => prop === 'passThru',
+        shouldForwardProp: prop => prop === 'passThru' || prop === 'data-testid',
       })<{ filterThis: boolean; passThru: boolean }>`
         color: red;
       `;
       const ComposedDiv = styled(StyledDiv).withConfig({
         shouldForwardProp: () => true,
       })``;
-      const wrapper = TestRenderer.create(<ComposedDiv filterThis passThru />);
-      const { props } = wrapper.root.findByType('div');
-      expect(props.passThru).toBeDefined();
-      expect(props.filterThis).toBeUndefined();
+      const wrapper = render(<ComposedDiv data-testid="subject" filterThis passThru="true" />);
+      const el = wrapper.getByTestId('subject');
+      expect(el).toHaveAttribute('passThru');
+      expect(el).not.toHaveAttribute('filterThis');
     });
 
     it('should inherit shouldForwardProp for wrapped styled components', () => {
@@ -166,7 +169,7 @@ describe('props', () => {
         background-color: ${({ color }) => color};
       `;
       const Div2 = styled(Div1)``;
-      const wrapper = TestRenderer.create(
+      const wrapper = render(
         <Fragment>
           <Div1 color="red" id="test-1" />
           <Div2 color="green" id="test-2" />
@@ -180,7 +183,7 @@ describe('props', () => {
           background-color: green;
         }"
       `);
-      expect(wrapper.toJSON()).toMatchSnapshot();
+      expect(wrapper.asFragment()).toMatchSnapshot();
     });
 
     it('should filter out props when using "as" to a custom component', () => {
@@ -190,15 +193,17 @@ describe('props', () => {
       })<{ filterThis: string; passThru: string }>`
         color: red;
       `;
-      const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
-      const { props } = wrapper.root.findByType(AsComp);
+      const wrapper = render(
+        <Comp as={AsComp} data-testid="subject" filterThis="abc" passThru="def" />
+      );
+      const el = wrapper.getByTestId('subject');
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
         }"
       `);
-      expect(props.passThru).toBe('def');
-      expect(props.filterThis).toBeUndefined();
+      expect(el).toHaveAttribute('passThru', 'def');
+      expect(el).not.toHaveAttribute('filterThis');
     });
 
     it('can set computed styles based on props that are being filtered out', () => {
@@ -208,15 +213,17 @@ describe('props', () => {
       })<{ filterThis: string; passThru: string }>`
         color: ${props => (props.filterThis === 'abc' ? 'red' : undefined)};
       `;
-      const wrapper = TestRenderer.create(<Comp as={AsComp} filterThis="abc" passThru="def" />);
-      const { props } = wrapper.root.findByType(AsComp);
+      const wrapper = render(
+        <Comp as={AsComp} data-testid="subject" filterThis="abc" passThru="def" />
+      );
+      const el = wrapper.getByTestId('subject');
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
         }"
       `);
-      expect(props.passThru).toBe('def');
-      expect(props.filterThis).toBeUndefined();
+      expect(el).toHaveAttribute('passThru', 'def');
+      expect(el).not.toHaveAttribute('filterThis');
     });
 
     it('should filter our props when using "as" to a different element', () => {
@@ -225,15 +232,15 @@ describe('props', () => {
       })<{ filterThis: string; passThru: string }>`
         color: red;
       `;
-      const wrapper = TestRenderer.create(<Comp as="a" filterThis="abc" passThru="def" />);
-      const { props } = wrapper.root.findByType('a');
+      const wrapper = render(<Comp as="a" data-testid="subject" filterThis="abc" passThru="def" />);
+      const el = wrapper.getByTestId('subject');
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
         }"
       `);
-      expect(props.passThru).toBe('def');
-      expect(props.filterThis).toBeUndefined();
+      expect(el).toHaveAttribute('passThru', 'def');
+      expect(el).not.toHaveAttribute('filterThis');
     });
 
     it('passes the target element for use if desired', () => {
@@ -245,7 +252,7 @@ describe('props', () => {
         color: red;
       `;
 
-      TestRenderer.create(<Comp as="a" href="/foo" filterThis="abc" passThru="def" />);
+      render(<Comp as="a" href="/foo" filterThis="abc" passThru="def" />);
 
       expect(stub).toHaveBeenCalledWith('filterThis', 'a');
       expect(stub).toHaveBeenCalledWith('href', 'a');
@@ -261,7 +268,7 @@ describe('props', () => {
         color: red;
       `;
 
-      TestRenderer.create(<Comp as="a" href="/foo" filterThis="abc" />);
+      render(<Comp as="a" href="/foo" filterThis="abc" />);
 
       expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('filterThis'));
       process.env.NODE_ENV = originalEnv;
@@ -279,7 +286,7 @@ describe('props', () => {
         color: red;
       `;
 
-      TestRenderer.create(<Comp myLabel="My label" />);
+      render(<Comp myLabel="My label" />);
 
       expect(console.warn).not.toHaveBeenCalledWith(expect.stringContaining('myLabel'));
       expect(console.warn).toHaveBeenCalledTimes(0);

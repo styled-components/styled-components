@@ -14,6 +14,18 @@ exports[`StyleSheetManager should apply styles to appropriate targets for nested
 `;
 
 exports[`StyleSheetManager should apply styles to appropriate targets for nested StyleSheetManagers 2`] = `
+<div>
+  <div>
+    <h1 class="sc-a d">
+    </h1>
+    <div>
+      <h2 class="sc-b e">
+      </h2>
+      <h3 class="sc-c f">
+      </h3>
+    </div>
+  </div>
+</div>
 <style data-styled="active"
        data-styled-version="JEST_MOCK_VERSION"
 >

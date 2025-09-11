@@ -4,14 +4,14 @@ import { expectCSSMatches } from './utils';
 declare global {
   namespace NodeJS {
     export interface ProcessEnv {
-      REACT_APP_SC_DISABLE_SPEEDY?: boolean | string;
-      SC_DISABLE_SPEEDY?: boolean | string;
+      REACT_APP_SC_DISABLE_SPEEDY?: string;
+      SC_DISABLE_SPEEDY?: string;
     }
   }
 
   interface Window {
-    REACT_APP_SC_DISABLE_SPEEDY?: boolean | string;
-    SC_DISABLE_SPEEDY?: boolean | string;
+    REACT_APP_SC_DISABLE_SPEEDY?: boolean;
+    SC_DISABLE_SPEEDY?: boolean;
   }
 }
 
@@ -23,7 +23,8 @@ describe('constants', () => {
   describe('SC_ATTR', () => {
     function renderAndExpect(expectedAttr: string) {
       const React = require('react');
-      const TestRenderer = require('react-test-renderer');
+      const { flushSync } = require('react-dom');
+      const ReactDOM = require('react-dom/client');
       const { SC_ATTR } = require('../constants');
       const styled = require('./utils').resetStyled();
 
@@ -31,12 +32,20 @@ describe('constants', () => {
         color: blue;
       `;
 
-      TestRenderer.create(<Comp />);
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = ReactDOM.createRoot(container);
+      flushSync(() => {
+        root.render(<Comp />);
+      });
 
       expectCSSMatches('.b { color:blue; }');
 
       expect(SC_ATTR).toEqual(expectedAttr);
       expect(document.head.querySelectorAll(`style[${SC_ATTR}]`)).toHaveLength(1);
+
+      root.unmount();
+      document.body.removeChild(container);
     }
 
     it('should work with default SC_ATTR', () => {
@@ -67,7 +76,8 @@ describe('constants', () => {
   describe('DISABLE_SPEEDY', () => {
     function renderAndExpect(expectedDisableSpeedy: boolean, expectedCss: string) {
       const React = require('react');
-      const TestRenderer = require('react-test-renderer');
+      const { flushSync } = require('react-dom');
+      const ReactDOM = require('react-dom/client');
       const { DISABLE_SPEEDY } = require('../constants');
       const styled = require('./utils').resetStyled();
 
@@ -75,10 +85,20 @@ describe('constants', () => {
         color: blue;
       `;
 
-      TestRenderer.create(<Comp />);
+      const container = document.createElement('div');
 
-      expect(DISABLE_SPEEDY).toEqual(expectedDisableSpeedy);
+      document.body.appendChild(container);
+
+      const root = ReactDOM.createRoot(container);
+
+      flushSync(() => {
+        root.render(<Comp />);
+      });
+
+      expect(DISABLE_SPEEDY).toBe(expectedDisableSpeedy);
       expectCSSMatches(expectedCss);
+      root.unmount();
+      document.body.removeChild(container);
     }
 
     beforeEach(() => {
@@ -106,11 +126,6 @@ describe('constants', () => {
       renderAndExpect(false, '');
     });
 
-    it('should be false in production NODE_ENV when window.SC_DISABLE_SPEEDY is set to truthy value', () => {
-      window.SC_DISABLE_SPEEDY = 'true';
-      renderAndExpect(false, '');
-    });
-
     it('should be true in production NODE_ENV when window.SC_DISABLE_SPEEDY is set to true', () => {
       window.SC_DISABLE_SPEEDY = true;
       renderAndExpect(true, '.b { color:blue; }');
@@ -127,7 +142,7 @@ describe('constants', () => {
     });
 
     it('should work with SC_DISABLE_SPEEDY environment variable', () => {
-      process.env.SC_DISABLE_SPEEDY = true;
+      process.env.SC_DISABLE_SPEEDY = 'true';
       renderAndExpect(true, '.b { color:blue; }');
 
       delete process.env.SC_DISABLE_SPEEDY;
@@ -135,7 +150,7 @@ describe('constants', () => {
 
     it('should work with SC_DISABLE_SPEEDY environment variable when set to `false` in development NODE_ENV', () => {
       process.env.NODE_ENV = 'development';
-      process.env.SC_DISABLE_SPEEDY = false;
+      process.env.SC_DISABLE_SPEEDY = 'false';
       renderAndExpect(false, '');
 
       delete process.env.SC_DISABLE_SPEEDY;
@@ -150,7 +165,7 @@ describe('constants', () => {
     });
 
     it('should work with REACT_APP_SC_DISABLE_SPEEDY environment variable', () => {
-      process.env.REACT_APP_SC_DISABLE_SPEEDY = true;
+      process.env.REACT_APP_SC_DISABLE_SPEEDY = 'true';
       renderAndExpect(true, '.b { color:blue; }');
 
       delete process.env.REACT_APP_SC_DISABLE_SPEEDY;
@@ -158,7 +173,7 @@ describe('constants', () => {
 
     it('should work with REACT_APP_SC_DISABLE_SPEEDY environment variable when set to `false` in development NODE_ENV', () => {
       process.env.NODE_ENV = 'development';
-      process.env.REACT_APP_SC_DISABLE_SPEEDY = false;
+      process.env.REACT_APP_SC_DISABLE_SPEEDY = 'false';
       renderAndExpect(false, '');
 
       delete process.env.REACT_APP_SC_DISABLE_SPEEDY;

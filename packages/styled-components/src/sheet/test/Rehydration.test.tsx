@@ -1,6 +1,6 @@
 import React from 'react';
-import TestRenderer from 'react-test-renderer';
 
+import { render } from '@testing-library/react';
 import { ServerStyleSheet, StyleSheetManager } from '../../base';
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION } from '../../constants';
 import { resetStyled } from '../../test/utils';
@@ -91,7 +91,7 @@ describe('rehydrateSheet', () => {
     `;
 
     // new insertion is placed after the rehydrated styles
-    TestRenderer.create(
+    render(
       <StyleSheetManager sheet={sheet.instance}>
         <Foo />
       </StyleSheetManager>

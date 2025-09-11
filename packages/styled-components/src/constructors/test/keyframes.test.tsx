@@ -1,5 +1,5 @@
+import { render } from '@testing-library/react';
 import React from 'react';
-import TestRenderer from 'react-test-renderer';
 import stylisRTLPlugin from 'stylis-plugin-rtl';
 import Keyframes from '../../models/Keyframes';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
@@ -59,7 +59,7 @@ describe('keyframes', () => {
     const Comp = styled.div`
       animation: ${animation} 2s linear infinite;
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
@@ -96,7 +96,7 @@ describe('keyframes', () => {
       `,
     });
 
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
@@ -140,7 +140,7 @@ describe('keyframes', () => {
       },
     });
 
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "@media(max-width:700px) {
@@ -176,10 +176,10 @@ describe('keyframes', () => {
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
 
-    const Comp = styled.div<{ animation: any }>`
-      animation: ${props => props.animation} 2s linear infinite;
+    const Comp = styled.div<{ $animation: any }>`
+      animation: ${props => props.$animation} 2s linear infinite;
     `;
-    TestRenderer.create(<Comp animation={animation} />);
+    render(<Comp $animation={animation} />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
@@ -245,7 +245,7 @@ describe('keyframes', () => {
       </React.Fragment>
     );
 
-    TestRenderer.create(<App />);
+    render(<App />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".d {
@@ -302,7 +302,7 @@ describe('keyframes', () => {
     const Comp = styled.div`
       animation: ${animation} 2s linear infinite;
     `;
-    TestRenderer.create(
+    render(
       <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
         <Comp />
       </StyleSheetManager>
@@ -340,7 +340,7 @@ describe('keyframes', () => {
     const Comp = styled.div`
       animation: ${animation} 2s linear infinite;
     `;
-    TestRenderer.create(
+    render(
       <>
         <Comp />
         <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
@@ -389,7 +389,7 @@ describe('keyframes', () => {
       animation: ${rotate} 0.75s infinite linear;
     `;
 
-    TestRenderer.create(
+    render(
       <StyleSheetManager namespace=".animparent">
         <div>
           <TestAnim>Foo</TestAnim>

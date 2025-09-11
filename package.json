@@ -22,10 +22,6 @@
   "engines": {
     "node": ">= 14"
   },
-  "resolutions": {
-    "@types/react": "^17.0.0",
-    "@types/react-dom": "^17.0.0"
-  },
   "packageManager": "yarn@4.0.2",
   "devDependencies": {
     "@changesets/cli": "2.27.7"

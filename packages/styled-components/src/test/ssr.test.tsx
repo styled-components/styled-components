@@ -5,7 +5,7 @@
 import { resetStyled } from './utils';
 
 import React from 'react';
-import { renderToNodeStream, renderToString } from 'react-dom/server';
+import { renderToNodeStream, renderToPipeableStream, renderToString } from 'react-dom/server';
 import stylisRTLPlugin from 'stylis-plugin-rtl';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 import ServerStyleSheet from '../models/ServerStyleSheet';
@@ -14,6 +14,35 @@ import { StyleSheetManager } from '../models/StyleSheetManager';
 jest.mock('../utils/nonce');
 
 let styled: ReturnType<typeof resetStyled>;
+
+// Test helper to run streaming tests with both stream types
+const streamingTestCases = [
+  {
+    name: 'renderToNodeStream (legacy)',
+    renderFn: renderToNodeStream,
+  },
+  {
+    name: 'renderToPipeableStream',
+    renderFn: renderToPipeableStream,
+  },
+] as const;
+
+/**
+ * Helper function to create parameterized streaming tests
+ */
+function describeStreamingTests(
+  testName: string,
+  testFn: (
+    renderFn: typeof renderToNodeStream | typeof renderToPipeableStream,
+    streamType: string
+  ) => void
+) {
+  describe(testName, () => {
+    streamingTestCases.forEach(({ name, renderFn }) => {
+      it(`with ${name}`, () => testFn(renderFn, name));
+    });
+  });
+}
 
 describe('ssr', () => {
   beforeEach(() => {
@@ -211,7 +240,7 @@ describe('ssr', () => {
     expect(element.props.nonce).toBe('foo');
   });
 
-  it('should interleave styles with rendered HTML when utilitizing streaming', () => {
+  describeStreamingTests('should interleave styles with rendered HTML', renderFn => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
@@ -226,8 +255,7 @@ describe('ssr', () => {
         <Heading>Hello SSR!</Heading>
       </React.Fragment>
     );
-    // @ts-expect-error TODO ReadableStream vs Readable
-    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+    const stream = sheet.interleaveWithNodeStream(renderFn(jsx));
 
     return new Promise<void>((resolve, reject) => {
       let received = '';
@@ -246,74 +274,77 @@ describe('ssr', () => {
     });
   });
 
-  it('should interleave styles with rendered HTML when chunked streaming', () => {
-    const Component = createGlobalStyle`
+  describeStreamingTests(
+    'should interleave styles with rendered HTML when chunked streaming',
+    renderFn => {
+      const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const Heading = styled.h1`
-      color: red;
-    `;
+      const Heading = styled.h1`
+        color: red;
+      `;
 
-    const Body = styled.div`
-      color: blue;
-    `;
+      const Body = styled.div`
+        color: blue;
+      `;
 
-    const SideBar = styled.div`
-      color: yellow;
-    `;
+      const SideBar = styled.div`
+        color: yellow;
+      `;
 
-    const Footer = styled.div`
-      color: green;
-    `;
+      const Footer = styled.div`
+        color: green;
+      `;
 
-    // This is the result of the above
-    const expectedElements = '<div>*************************</div>'.repeat(100);
+      // This is the result of the above
+      const expectedElements = '<div>*************************</div>'.repeat(100);
 
-    const sheet = new ServerStyleSheet();
-    const jsx = sheet.collectStyles(
-      <React.Fragment>
-        <Component />
-        <Heading>Hello SSR!</Heading>
-        <Body>
-          {new Array(1000).fill(0).map((_, i) => (
-            <div key={i}>*************************</div>
-          ))}
-        </Body>
-        <SideBar>SideBar</SideBar>
-        <Footer>Footer</Footer>
-      </React.Fragment>
-    );
+      const sheet = new ServerStyleSheet();
+      const jsx = sheet.collectStyles(
+        <React.Fragment>
+          <Component />
+          <Heading>Hello SSR!</Heading>
+          <Body>
+            {new Array(1000).fill(0).map((_, i) => (
+              <div key={i}>*************************</div>
+            ))}
+          </Body>
+          <SideBar>SideBar</SideBar>
+          <Footer>Footer</Footer>
+        </React.Fragment>
+      );
 
-    // @ts-expect-error TODO ReadableStream vs Readable
-    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
-    const stream$ = new Promise<string>((resolve, reject) => {
-      let received = '';
+      const stream = sheet.interleaveWithNodeStream(renderFn(jsx));
+      const stream$ = new Promise<string>((resolve, reject) => {
+        let received = '';
 
-      stream.on('data', chunk => {
-        received += chunk;
+        stream.on('data', chunk => {
+          received += chunk;
+        });
+
+        stream.on('end', () => resolve(received));
+        stream.on('error', reject);
       });
 
-      stream.on('end', () => resolve(received));
-      stream.on('error', reject);
-    });
+      return stream$.then(received => {
+        expect(sheet.sealed).toBe(true);
+        expect(received.includes(expectedElements)).toBeTruthy();
+        expect(received).toMatch(/yellow/);
+        expect(received).toMatch(/green/);
+      });
+    }
+  );
 
-    return stream$.then(received => {
-      expect(sheet.sealed).toBe(true);
-      expect(received.includes(expectedElements)).toBeTruthy();
-      expect(received).toMatch(/yellow/);
-      expect(received).toMatch(/green/);
-    });
-  });
+  describeStreamingTests('should handle errors while streaming', renderFn => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
 
-  it('should handle errors while streaming', () => {
     function ExplodingComponent(): React.JSX.Element {
       throw new Error('ahhh');
     }
 
     const sheet = new ServerStyleSheet();
     const jsx = sheet.collectStyles(<ExplodingComponent />);
-    // @ts-expect-error TODO ReadableStream vs Readable
-    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+    const stream = sheet.interleaveWithNodeStream(renderFn(jsx));
 
     return new Promise<void>(resolve => {
       stream.on('data', () => {});
@@ -326,14 +357,14 @@ describe('ssr', () => {
     });
   });
 
-  it('should not interleave style tags into textarea elements', () => {
+  describeStreamingTests('should not interleave style tags into textarea elements', renderFn => {
     const StyledTextArea = styled.textarea<{ height: number }>`
       height: ${props => `${props.height}px`};
     `;
 
     const sheet = new ServerStyleSheet();
 
-    // Currently we cannot set the chunk size to read with react renderToNodeStream, so to ensure
+    // Currently we cannot set the chunk size to read with react renderToPipeableStream, so to ensure
     // that multiple chunks are created, we initialize a large array of styled text areas.  We give
     // each textarea a different style to ensure a large enough number of style tags are generated
     // to be interleaved in the document
@@ -351,8 +382,7 @@ describe('ssr', () => {
       </React.Fragment>
     );
 
-    // @ts-expect-error TODO ReadableStream vs Readable
-    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+    const stream = sheet.interleaveWithNodeStream(renderFn(jsx));
 
     return new Promise<void>((resolve, reject) => {
       let received = '';
@@ -372,7 +402,7 @@ describe('ssr', () => {
     });
   });
 
-  it('should throw if interleaveWithNodeStream is called twice', () => {
+  describeStreamingTests('should throw if interleaveWithNodeStream is called twice', renderFn => {
     const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
@@ -389,130 +419,137 @@ describe('ssr', () => {
     );
 
     expect(() =>
-      // @ts-expect-error TODO ReadableStream vs Readable
-      sheet.interleaveWithNodeStream(sheet.interleaveWithNodeStream(renderToNodeStream(jsx)))
+      sheet.interleaveWithNodeStream(sheet.interleaveWithNodeStream(renderFn(jsx)))
     ).toThrowErrorMatchingSnapshot();
   });
 
-  it('should throw if getStyleTags is called after interleaveWithNodeStream is called', () => {
-    const Component = createGlobalStyle`
+  describeStreamingTests(
+    'should throw if getStyleTags is called after interleaveWithNodeStream is called',
+    renderFn => {
+      const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const Heading = styled.h1`
-      color: red;
-    `;
+      const Heading = styled.h1`
+        color: red;
+      `;
 
-    const sheet = new ServerStyleSheet();
+      const sheet = new ServerStyleSheet();
 
-    const jsx = sheet.collectStyles(
-      <React.Fragment>
-        <Component />
-        <Heading>Hello SSR!</Heading>
-      </React.Fragment>
-    );
+      const jsx = sheet.collectStyles(
+        <React.Fragment>
+          <Component />
+          <Heading>Hello SSR!</Heading>
+        </React.Fragment>
+      );
 
-    // @ts-expect-error TODO ReadableStream vs Readable
-    sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+      sheet.interleaveWithNodeStream(renderFn(jsx));
 
-    expect(sheet.getStyleTags).toThrowErrorMatchingSnapshot();
-  });
+      expect(sheet.getStyleTags).toThrowErrorMatchingSnapshot();
+    }
+  );
 
-  it('should throw if getStyleElement is called after interleaveWithNodeStream is called', () => {
-    const Component = createGlobalStyle`
+  describeStreamingTests(
+    'should throw if getStyleElement is called after interleaveWithNodeStream is called',
+    renderFn => {
+      const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const Heading = styled.h1`
-      color: red;
-    `;
+      const Heading = styled.h1`
+        color: red;
+      `;
 
-    const sheet = new ServerStyleSheet();
+      const sheet = new ServerStyleSheet();
 
-    const jsx = sheet.collectStyles(
-      <React.Fragment>
-        <Component />
-        <Heading>Hello SSR!</Heading>
-      </React.Fragment>
-    );
+      const jsx = sheet.collectStyles(
+        <React.Fragment>
+          <Component />
+          <Heading>Hello SSR!</Heading>
+        </React.Fragment>
+      );
 
-    // @ts-expect-error TODO ReadableStream vs Readable
-    sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+      sheet.interleaveWithNodeStream(renderFn(jsx));
 
-    expect(sheet.getStyleElement).toThrowErrorMatchingSnapshot();
-  });
+      expect(sheet.getStyleElement).toThrowErrorMatchingSnapshot();
+    }
+  );
 
-  it('should throw if getStyleTags is called after streaming is complete', () => {
-    const Component = createGlobalStyle`
+  describeStreamingTests(
+    'should throw if getStyleTags is called after streaming is complete',
+    renderFn => {
+      const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const Heading = styled.h1`
-      color: red;
-    `;
+      const Heading = styled.h1`
+        color: red;
+      `;
 
-    const sheet = new ServerStyleSheet();
-    const jsx = sheet.collectStyles(
-      <React.Fragment>
-        <Component />
-        <Heading>Hello SSR!</Heading>
-      </React.Fragment>
-    );
-    // @ts-expect-error TODO ReadableStream vs Readable
-    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+      const sheet = new ServerStyleSheet();
+      const jsx = sheet.collectStyles(
+        <React.Fragment>
+          <Component />
+          <Heading>Hello SSR!</Heading>
+        </React.Fragment>
+      );
+      const stream = sheet.interleaveWithNodeStream(renderFn(jsx));
 
-    return new Promise<void>((resolve, reject) => {
-      let received = '';
+      return new Promise<void>((resolve, reject) => {
+        let received = '';
 
-      stream.on('data', chunk => {
-        received += chunk;
+        stream.on('data', chunk => {
+          received += chunk;
+        });
+
+        stream.on('end', () => {
+          expect(received).toMatchSnapshot();
+          expect(sheet.sealed).toBe(true);
+          expect(sheet.getStyleTags).toThrowErrorMatchingSnapshot();
+
+          resolve();
+        });
+
+        stream.on('error', reject);
       });
+    }
+  );
 
-      stream.on('end', () => {
-        expect(received).toMatchSnapshot();
-        expect(sheet.sealed).toBe(true);
-        expect(sheet.getStyleTags).toThrowErrorMatchingSnapshot();
-
-        resolve();
-      });
-
-      stream.on('error', reject);
-    });
-  });
-
-  it('should throw if getStyleElement is called after streaming is complete', () => {
-    const Component = createGlobalStyle`
+  describeStreamingTests(
+    'should throw if getStyleElement is called after streaming is complete',
+    renderFn => {
+      const Component = createGlobalStyle`
       body { background: papayawhip; }
     `;
-    const Heading = styled.h1`
-      color: red;
-    `;
+      const Heading = styled.h1`
+        color: red;
+      `;
 
-    const sheet = new ServerStyleSheet();
-    const jsx = sheet.collectStyles(
-      <React.Fragment>
-        <Component />
-        <Heading>Hello SSR!</Heading>
-      </React.Fragment>
-    );
-    // @ts-expect-error TODO ReadableStream vs Readable
-    const stream = sheet.interleaveWithNodeStream(renderToNodeStream(jsx));
+      const sheet = new ServerStyleSheet();
+      const jsx = sheet.collectStyles(
+        <React.Fragment>
+          <Component />
+          <Heading>Hello SSR!</Heading>
+        </React.Fragment>
+      );
+      const stream = sheet.interleaveWithNodeStream(renderFn(jsx));
 
-    return new Promise<void>((resolve, reject) => {
-      let received = '';
+      return new Promise<void>((resolve, reject) => {
+        let received = '';
 
-      stream.on('data', chunk => {
-        received += chunk;
+        stream.on('data', chunk => {
+          received += chunk;
+        });
+
+        stream.on('end', () => {
+          expect(received).toMatchSnapshot();
+          expect(sheet.sealed).toBe(true);
+          expect(sheet.getStyleElement).toThrowErrorMatchingSnapshot();
+
+          resolve();
+        });
+
+        stream.on('error', reject);
       });
-
-      stream.on('end', () => {
-        expect(received).toMatchSnapshot();
-        expect(sheet.sealed).toBe(true);
-        expect(sheet.getStyleElement).toThrowErrorMatchingSnapshot();
-
-        resolve();
-      });
-
-      stream.on('error', reject);
-    });
-  });
+    }
+  );
 
   it('should work with stylesheet manager and passed stylis plugins', () => {
     const Heading = styled.h1`

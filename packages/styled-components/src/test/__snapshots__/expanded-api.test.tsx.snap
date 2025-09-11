@@ -1,79 +1,105 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`expanded api "as" prop changes the rendered element type 1`] = `
-<span
-  className="sc-a b"
-/>
+<DocumentFragment>
+  <span
+    class="sc-a b"
+  />
+</DocumentFragment>
 `;
 
 exports[`expanded api "as" prop changes the rendered element type when used with attrs 1`] = `
-<header
-  className="sc-a b"
-/>
+<DocumentFragment>
+  <header
+    class="sc-a b"
+  />
+</DocumentFragment>
 `;
 
 exports[`expanded api "as" prop works with custom components 1`] = `
-<figure
-  className="sc-a b"
-/>
+<DocumentFragment>
+  <figure
+    class="sc-a b"
+  />
+</DocumentFragment>
 `;
 
 exports[`expanded api chaining should keep the last value passed in when merging 1`] = `
-<div
-  className="dn-5-id-4"
-/>
+<DocumentFragment>
+  <div
+    class="dn-5-id-4"
+  />
+</DocumentFragment>
 `;
 
 exports[`expanded api chaining should merge the options strings 1`] = `
-<div
-  className="dn-2-id-1"
-/>
+<DocumentFragment>
+  <div
+    class="dn-2-id-1"
+  />
+</DocumentFragment>
 `;
 
 exports[`expanded api componentId should be attached if passed in 1`] = `
-<div
-  className="LOLOMG"
-/>
+<DocumentFragment>
+  <div
+    class="LOLOMG"
+  />
+</DocumentFragment>
 `;
 
 exports[`expanded api componentId should be attached if passed in 2`] = `
-<div
-  className="OMGLOL"
-/>
+<DocumentFragment>
+  <div
+    class="OMGLOL"
+  />
+</DocumentFragment>
 `;
 
 exports[`expanded api componentId should be combined with displayName if both passed in 1`] = `
-<div
-  className="Comp-LOLOMG"
-/>
+<DocumentFragment>
+  <div
+    class="Comp-LOLOMG"
+  />
+</DocumentFragment>
 `;
 
 exports[`expanded api componentId should be combined with displayName if both passed in 2`] = `
-<div
-  className="Comp2-OMGLOL"
-/>
+<DocumentFragment>
+  <div
+    class="Comp2-OMGLOL"
+  />
+</DocumentFragment>
 `;
 
 exports[`expanded api componentId should be generated as "sc" + hash 1`] = `
-<div
-  className="sc-a"
-/>
+<DocumentFragment>
+  <div
+    class="sc-a"
+  />
+</DocumentFragment>
 `;
 
 exports[`expanded api componentId should be generated as "sc" + hash 2`] = `
-<div
-  className="sc-b"
-/>
+<DocumentFragment>
+  <div
+    class="sc-b"
+  />
+</DocumentFragment>
 `;
 
 exports[`expanded api componentId should be generated from displayName + hash 1`] = `
-<div
-  className="Comp-a"
-/>
+<DocumentFragment>
+  <div
+    class="Comp-a"
+  />
+</DocumentFragment>
 `;
 
 exports[`expanded api componentId should be generated from displayName + hash 2`] = `
-<div
-  className="Comp2-b"
-/>
+<DocumentFragment>
+  <div
+    class="Comp2-b"
+  />
+</DocumentFragment>
 `;

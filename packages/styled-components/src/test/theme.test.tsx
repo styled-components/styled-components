@@ -1,6 +1,6 @@
+import '@testing-library/jest-dom';
+import { render } from '@testing-library/react';
 import React, { Component } from 'react';
-import { renderIntoDocument } from 'react-dom/test-utils';
-import TestRenderer from 'react-test-renderer';
 import withTheme from '../hoc/withTheme';
 import ThemeProvider, { DefaultTheme } from '../models/ThemeProvider';
 import { getRenderedCSS, resetStyled } from './utils';
@@ -18,7 +18,7 @@ describe('theming', () => {
       color: ${props => props.theme.color};
     `;
     const theme = { color: 'black' };
-    TestRenderer.create(
+    render(
       <ThemeProvider theme={theme}>
         <Comp />
       </ThemeProvider>
@@ -35,7 +35,7 @@ describe('theming', () => {
       color: ${props => props.theme.color};
     `;
     const theme = { color: 'black' };
-    TestRenderer.create(
+    render(
       <ThemeProvider theme={theme}>
         <div>
           <div>
@@ -63,7 +63,7 @@ describe('theming', () => {
         },
       },
     };
-    TestRenderer.create(
+    render(
       <div>
         <Comp1 />
       </div>
@@ -90,7 +90,7 @@ describe('theming', () => {
     };
     const theme = { test: { color: 'green' } };
 
-    TestRenderer.create(
+    render(
       <ThemeProvider theme={theme}>
         <Comp1 />
       </ThemeProvider>
@@ -116,7 +116,7 @@ describe('theming', () => {
     };
     const theme = { test: { color: 'green' } };
 
-    TestRenderer.create(
+    render(
       <ThemeProvider theme={theme}>
         <Comp1 theme={{ test: { color: 'purple' } }} />
       </ThemeProvider>
@@ -137,7 +137,7 @@ describe('theming', () => {
       color: 'purple',
     };
 
-    TestRenderer.create(
+    render(
       <div>
         <ThemeProvider theme={theme}>
           <Comp theme={{ color: 'red' }} />
@@ -160,7 +160,7 @@ describe('theming', () => {
     `;
 
     const theme = { color: 'black' };
-    TestRenderer.create(
+    render(
       <div>
         <ThemeProvider theme={theme}>
           <div>
@@ -188,7 +188,7 @@ describe('theming', () => {
       background: ${props => props.theme.color};
     `;
     const theme = { color: 'black' };
-    TestRenderer.create(
+    render(
       <ThemeProvider theme={theme}>
         <div>
           <div>
@@ -217,7 +217,7 @@ describe('theming', () => {
     let theme = originalTheme;
     // Force render the component
     const renderComp = () => {
-      TestRenderer.create(
+      render(
         <ThemeProvider theme={theme}>
           <Comp />
         </ThemeProvider>
@@ -255,14 +255,14 @@ describe('theming', () => {
 
     const jsx = <Comp1 />;
 
-    const wrapper = TestRenderer.create(jsx);
+    const wrapper = render(jsx);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: purple;
       }"
     `);
 
-    wrapper.update(jsx);
+    wrapper.rerender(jsx);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: purple;
@@ -275,7 +275,7 @@ describe('theming', () => {
       color: ${props => props.theme.color};
     `;
 
-    const wrapper = TestRenderer.create(
+    const wrapper = render(
       <ThemeProvider
         theme={{
           color: 'purple',
@@ -290,7 +290,7 @@ describe('theming', () => {
       }"
     `);
 
-    wrapper.update(
+    wrapper.rerender(
       <ThemeProvider
         theme={{
           color: 'pink',
@@ -319,7 +319,7 @@ describe('theming', () => {
       zIndex: 0,
     };
 
-    const wrapper = TestRenderer.create(
+    const wrapper = render(
       <ThemeProvider
         theme={{
           color: 'purple',
@@ -336,7 +336,7 @@ describe('theming', () => {
       }"
     `);
 
-    wrapper.update(
+    wrapper.rerender(
       <ThemeProvider
         theme={{
           color: 'pink',
@@ -358,7 +358,7 @@ describe('theming', () => {
     `);
 
     Comp1.defaultProps.zIndex = 1;
-    wrapper.update(
+    wrapper.rerender(
       <ThemeProvider
         theme={{
           color: 'pink',
@@ -393,21 +393,21 @@ describe('theming', () => {
 
     const Theme = ({ theme }: any) => (
       <ThemeProvider theme={theme}>
-        <Comp />
+        <Comp data-testid="subject" />
       </ThemeProvider>
     );
 
-    const wrapper = TestRenderer.create(<Theme theme={originalTheme} />);
+    const wrapper = render(<Theme theme={originalTheme} />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: black;
       }"
     `);
-    expect(wrapper.root.findByType('div').props.className).toBe('sc-a b');
+    expect(wrapper.getByTestId('subject')).toHaveAttribute('class', 'sc-a b');
 
     // Change theme
-    wrapper.update(Theme({ theme: newTheme }));
+    wrapper.rerender(Theme({ theme: newTheme }));
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
@@ -418,7 +418,7 @@ describe('theming', () => {
       }"
     `);
 
-    expect(wrapper.root.findByType('div').props.className).toBe('sc-a c');
+    expect(wrapper.getByTestId('subject')).toHaveAttribute('class', 'sc-a c');
   });
 
   it('should inject props.theme into a component that uses withTheme hoc', () => {
@@ -427,13 +427,13 @@ describe('theming', () => {
     const MyDiv = ({ theme }: any) => <div>{theme.color}</div>;
     const MyDivWithTheme = withTheme(MyDiv);
 
-    const wrapper = TestRenderer.create(
+    const wrapper = render(
       <ThemeProvider theme={originalTheme}>
         <MyDivWithTheme />
       </ThemeProvider>
     );
 
-    expect(wrapper.root.findByType('div').props.children).toBe('black');
+    expect(wrapper.getByText('black')).toBeDefined();
   });
 
   it('should properly update theme prop on hoc component when theme is changed', () => {
@@ -449,13 +449,13 @@ describe('theming', () => {
       </ThemeProvider>
     );
 
-    const wrapper = TestRenderer.create(<Theme key="a" theme={originalTheme} />);
-    expect(wrapper.root.findByType('div').props.children).toBe('black');
+    const wrapper = render(<Theme key="a" theme={originalTheme} />);
+    expect(wrapper.getByText('black')).toBeDefined();
 
     // Change theme
-    wrapper.update(<Theme key="a" theme={newTheme} />);
+    wrapper.rerender(<Theme key="a" theme={newTheme} />);
 
-    expect(wrapper.root.findByType('div').props.children).toBe('blue');
+    expect(wrapper.getByText('blue')).toBeDefined();
   });
 
   // https://github.com/styled-components/styled-components/issues/445
@@ -476,14 +476,14 @@ describe('theming', () => {
       </ThemeProvider>
     );
 
-    const wrapper = TestRenderer.create(<Theme key="a" data-prop="foo" />);
+    const wrapper = render(<Theme key="a" data-prop="foo" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: green;
       }"
     `);
 
-    wrapper.update(<Theme key="a" data-prop="bar" />);
+    wrapper.rerender(<Theme key="a" data-prop="bar" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: green;
@@ -505,22 +505,22 @@ describe('theming', () => {
   it('should only pass the theme prop', () => {
     class Comp extends Component<any, any> {
       render() {
-        return <div />;
+        return <div data-testid="subject" />;
       }
     }
 
+    let ref = React.createRef<InstanceType<typeof Comp>>();
+
     const CompWithTheme = withTheme(Comp);
 
-    const wrapper = TestRenderer.create(
+    render(
       <ThemeProvider theme={{}}>
-        <CompWithTheme />
+        <CompWithTheme ref={ref} />
       </ThemeProvider>
     );
 
-    const inner = wrapper.root.findByType(Comp);
-
-    expect(Object.keys(inner.props).length).toEqual(1);
-    expect(inner.props).toEqual({ theme: {} });
+    expect(Object.keys(ref.current!.props).length).toEqual(1);
+    expect(ref.current!.props).toEqual({ theme: {} });
   });
 
   it('should forward refs', () => {
@@ -533,7 +533,7 @@ describe('theming', () => {
     const CompWithTheme = withTheme(Comp);
     const ref = React.createRef<typeof Comp>();
 
-    renderIntoDocument(
+    render(
       <ThemeProvider theme={{}}>
         <CompWithTheme ref={ref} />
       </ThemeProvider>
@@ -561,17 +561,17 @@ describe('theming', () => {
 
     MyDivWithTheme.defaultProps = { theme };
 
-    const wrapper = TestRenderer.create(<MyDivWithTheme />);
+    const wrapper = render(<MyDivWithTheme />);
 
-    expect(wrapper.root.findByType('div').props.children).toBe('red');
+    expect(wrapper.getByText('red')).toBeDefined();
 
     // Change theme
     MyDivWithTheme.defaultProps = { theme: newTheme };
 
     // Change theme
-    wrapper.update(<MyDivWithTheme />);
+    wrapper.rerender(<MyDivWithTheme />);
 
-    expect(wrapper.root.findByType('div').props.children).toBe('blue');
+    expect(wrapper.getByText('blue')).toBeDefined();
   });
 
   // https://github.com/styled-components/styled-components/issues/1776
@@ -592,7 +592,7 @@ describe('theming', () => {
     `;
 
     expect(() => {
-      TestRenderer.create(
+      render(
         <ThemeProvider theme={theme}>
           <Comp1 />
         </ThemeProvider>
@@ -622,7 +622,7 @@ describe('theming', () => {
       border-radius: ${({ theme }) => theme.borderRadius};
     `;
 
-    TestRenderer.create(
+    render(
       <ThemeProvider theme={theme}>
         <Comp1 />
       </ThemeProvider>
@@ -640,7 +640,7 @@ describe('theming', () => {
       // HACK: work around the problem without changing the snapshots
       // these tests need to be changed to use error boundaries instead
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
-      TestRenderer.create(
+      render(
         // @ts-expect-error properly catching null theme
         <ThemeProvider theme={null}>
           <div />
@@ -655,7 +655,7 @@ describe('theming', () => {
       // HACK: work around the problem without changing the snapshots
       // these tests need to be changed to use error boundaries instead
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
-      TestRenderer.create(
+      render(
         // @ts-expect-error invalid theme input
         <ThemeProvider theme={['a', 'b', 'c']}>
           <div />
@@ -670,7 +670,7 @@ describe('theming', () => {
       // HACK: work around the problem without changing the snapshots
       // these tests need to be changed to use error boundaries instead
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
-      TestRenderer.create(
+      render(
         // @ts-expect-error invalid input
         <ThemeProvider theme={42}>
           <div />

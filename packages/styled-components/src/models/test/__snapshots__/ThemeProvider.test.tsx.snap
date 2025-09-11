@@ -1,7 +1,9 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`ThemeProvider should render its child 1`] = `
-<p>
-  Child!
-</p>
+<DocumentFragment>
+  <p>
+    Child!
+  </p>
+</DocumentFragment>
 `;

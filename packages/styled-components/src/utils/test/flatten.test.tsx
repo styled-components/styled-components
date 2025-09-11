@@ -1,5 +1,5 @@
+import { render } from '@testing-library/react';
 import React from 'react';
-import TestRenderer from 'react-test-renderer';
 import styled from '../../constructors/styled';
 import flatten from '../flatten';
 
@@ -139,7 +139,7 @@ describe('flatten', () => {
       }
     `;
 
-    TestRenderer.create(<Bar />);
+    render(<Bar />);
 
     expect((console.error as jest.Mock<Console['warn']>).mock.calls[0][0]).toMatchInlineSnapshot(
       `"Foo is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details."`
@@ -158,7 +158,7 @@ describe('flatten', () => {
     `;
 
     expect(() =>
-      TestRenderer.create(
+      render(
         <SvgIcon viewBox="0 0 512 512">
           <path d="M39.6,95.6z" />
         </SvgIcon>
@@ -176,7 +176,7 @@ it('does not error for functions that return null', () => {
     ${() => null}
   `;
 
-  expect(() => TestRenderer.create(<Bar />)).not.toThrow();
+  expect(() => render(<Bar />)).not.toThrow();
 
   expect(console.error).not.toHaveBeenCalled();
 });
