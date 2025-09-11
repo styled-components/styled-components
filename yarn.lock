@@ -3743,6 +3743,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/stylis@npm:4.2.7":
+  version: 4.2.7
+  resolution: "@types/stylis@npm:4.2.7"
+  checksum: 01a9679addb3f63951a9c09729564e2205581f2db40875a28b25cc461efc52ba17a711cc50cdb5e7d3a67c5f2cd60580e078c8a69b8df7b67699d89060d2a977
+  languageName: node
+  linkType: hard
+
 "@types/tough-cookie@npm:*":
   version: 4.0.5
   resolution: "@types/tough-cookie@npm:4.0.5"
@@ -11158,7 +11165,7 @@ __metadata:
     "@types/react-native": "npm:0.69.26"
     "@types/react-test-renderer": "npm:17.0.9"
     "@types/shallowequal": "npm:1.1.5"
-    "@types/stylis": "npm:4.2.5"
+    "@types/stylis": "npm:4.2.7"
     babel-jest: "npm:30.1.2"
     babel-plugin-add-module-exports: "npm:1.0.4"
     babel-plugin-styled-components: "npm:2.1.4"
@@ -11187,7 +11194,7 @@ __metadata:
     rollup-plugin-sourcemaps: "npm:0.6.3"
     rollup-plugin-terser: "npm:7.0.2"
     shallowequal: "npm:1.1.0"
-    stylis: "npm:4.3.2"
+    stylis: "npm:4.3.6"
     stylis-plugin-rtl: "npm:2.1.1"
     ts-toolbelt: "npm:9.6.0"
     tslib: "npm:2.6.2"
@@ -11283,6 +11290,13 @@ __metadata:
   version: 4.3.2
   resolution: "stylis@npm:4.3.2"
   checksum: 0410e1404cbeee3388a9e17587875211ce2f014c8379af0d1e24ca55878867c9f1ccc7b0ce9a156ca53f5d6e301391a82b0645522a604674a378b3189a4a1994
+  languageName: node
+  linkType: hard
+
+"stylis@npm:4.3.6":
+  version: 4.3.6
+  resolution: "stylis@npm:4.3.6"
+  checksum: e736d484983a34f7c65d362c67dc79b7bce388054b261c2b7b23d02eaaf280617033f65d44b1ea341854f4331a5074b885668ac8741f98c13a6cfd6443ae85d0
   languageName: node
   linkType: hard
 
