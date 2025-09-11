@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`props shouldForwardProp should inherit shouldForwardProp for wrapped styled components 2`] = `
 [

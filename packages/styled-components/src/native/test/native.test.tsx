@@ -19,7 +19,7 @@ describe('native', () => {
   });
 
   it('should not throw an error when called with a valid element', () => {
-    expect(() => styled.View``).not.toThrowError();
+    expect(() => styled.View``).not.toThrow();
 
     const FunctionalComponent = () => <View />;
     class ClassComponent extends React.Component {
@@ -33,7 +33,7 @@ describe('native', () => {
         // @ts-expect-error invalid input
         const Comp = styled(comp)``;
         TestRenderer.create(<Comp />);
-      }).not.toThrowError();
+      }).not.toThrow();
     });
   });
 

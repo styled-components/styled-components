@@ -47,7 +47,7 @@ describe('StyleSheetManager', () => {
       </StyleSheetManager>
     );
 
-    expect(() => renderedComp.root.findByType(Title)).not.toThrowError();
+    expect(() => renderedComp.root.findByType(Title)).not.toThrow();
   });
 
   it('should append style to given target', () => {
@@ -356,7 +356,7 @@ describe('StyleSheetManager', () => {
           <Test>Foo</Test>
         </StyleSheetManager>
       )
-    ).toThrowError();
+    ).toThrow();
 
     Object.defineProperty(stylisRTLPlugin, 'name', { value: cachedName });
   });
