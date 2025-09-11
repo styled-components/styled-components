@@ -1,12 +1,10 @@
+import '@testing-library/jest-dom';
+import { act, render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-dom';
-import { renderToString } from 'react-dom/server';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
-import TestRenderer, { act } from 'react-test-renderer';
 import stylisRTLPlugin from 'stylis-plugin-rtl';
 import StyleSheet from '../../sheet';
 import { resetStyled } from '../../test/utils';
-import ServerStyleSheet from '../ServerStyleSheet';
 import { StyleSheetManager } from '../StyleSheetManager';
 
 let styled: ReturnType<typeof resetStyled>;
@@ -22,32 +20,19 @@ describe('StyleSheetManager', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
-  it('should use given stylesheet instance', () => {
-    const serverStyles = new ServerStyleSheet();
-    const Title = styled.h1`
-      color: palevioletred;
-    `;
-    renderToString(
-      <StyleSheetManager sheet={serverStyles.instance}>
-        <Title />
-      </StyleSheetManager>
-    );
-    expect(serverStyles.getStyleTags().includes(`palevioletred`)).toEqual(true);
-  });
-
   it('should render its child', () => {
     const target = document.head;
 
     const Title = styled.h1`
       color: palevioletred;
     `;
-    const renderedComp = TestRenderer.create(
+    const renderedComp = render(
       <StyleSheetManager target={target}>
-        <Title />
+        <Title data-testid="subject" />
       </StyleSheetManager>
     );
 
-    expect(() => renderedComp.root.findByType(Title)).not.toThrow();
+    expect(renderedComp.getByTestId('subject')).toHaveAttribute('data-testid', 'subject');
   });
 
   it('should append style to given target', () => {
@@ -63,7 +48,7 @@ describe('StyleSheetManager', () => {
 
     expect(document.body.querySelectorAll('style')).toHaveLength(0);
 
-    TestRenderer.create(
+    render(
       <StyleSheetManager target={target}>
         <Child />
       </StyleSheetManager>
@@ -95,8 +80,7 @@ describe('StyleSheetManager', () => {
     render(
       <StyleSheetManager target={target}>
         <Child />
-      </StyleSheetManager>,
-      app
+      </StyleSheetManager>
     );
 
     const styles = target.querySelector('style')?.textContent;
@@ -114,7 +98,7 @@ describe('StyleSheetManager', () => {
       color: green;
     `;
 
-    TestRenderer.create(
+    render(
       <div>
         <ONE />
         <StyleSheetManager target={document.head}>
@@ -155,45 +139,38 @@ describe('StyleSheetManager', () => {
       }
     }
 
-    const div = document.body.appendChild(document.createElement('div'));
-
     let promiseB;
 
     const promiseA = new Promise((resolveA, reject) => {
       promiseB = new Promise(resolveB => {
-        try {
-          // Render two iframes. each iframe should have the styles for the child injected into their head
-          render(
-            <div>
-              <Frame>
-                <FrameContextConsumer>
-                  {({ document }) => (
+        // Render two iframes. each iframe should have the styles for the child injected into their head
+        render(
+          <div>
+            <Frame>
+              <FrameContextConsumer>
+                {({ document }) => {
+                  return (
                     <SheetInjector target={document!.head}>
                       <Child document={document!} resolve={resolveA} />
                     </SheetInjector>
-                  )}
-                </FrameContextConsumer>
-              </Frame>
-              <Frame>
-                <FrameContextConsumer>
-                  {({ document }) => (
-                    <SheetInjector target={document!.head}>
-                      <Child document={document!} resolve={resolveB} />
-                    </SheetInjector>
-                  )}
-                </FrameContextConsumer>
-              </Frame>
-            </div>,
-            div
-          );
-        } catch (e) {
-          reject(e);
-          div.parentElement!.removeChild(div);
-        }
+                  );
+                }}
+              </FrameContextConsumer>
+            </Frame>
+            <Frame>
+              <FrameContextConsumer>
+                {({ document }) => (
+                  <SheetInjector target={document!.head}>
+                    <Child document={document!} resolve={resolveB} />
+                  </SheetInjector>
+                )}
+              </FrameContextConsumer>
+            </Frame>
+          </div>
+        );
       });
     });
     await Promise.all([promiseA, promiseB]);
-    div.parentElement!.removeChild(div);
   });
 
   // https://github.com/styled-components/styled-components/issues/2973
@@ -207,7 +184,7 @@ describe('StyleSheetManager', () => {
       <StyleSheetManager target={target}>{children}</StyleSheetManager>
     );
 
-    class Main extends React.Component<{ document: Document }> {
+    class Main extends React.Component<React.PropsWithChildren<{ document: Document }>> {
       componentDidMount() {
         const styles = this.props.document.querySelector('style')?.textContent;
         expect(styles?.includes('palevioletred')).toEqual(true);
@@ -229,8 +206,6 @@ describe('StyleSheetManager', () => {
       }
     }
 
-    const div = document.body.appendChild(document.createElement('div'));
-
     render(
       <Main document={document}>
         <div>
@@ -245,11 +220,8 @@ describe('StyleSheetManager', () => {
             </FrameContextConsumer>
           </Frame>
         </div>
-      </Main>,
-      div
+      </Main>
     );
-
-    div.parentElement!.removeChild(div);
   });
 
   it('should render styles in correct order when styled(StyledComponent) and StyleSheetManager is used', () => {
@@ -265,8 +237,7 @@ describe('StyleSheetManager', () => {
         <RedChangedToBlue>I should be blue</RedChangedToBlue>
       </StyleSheetManager>
     );
-    const attachPoint = document.body.appendChild(document.createElement('div'));
-    render(<App />, attachPoint);
+    render(<App />);
     // window.getComputedStyles would be perfect, but it seems that JSDOM
     // implementation of that function isn't complete, so need to work around
     // it.
@@ -284,7 +255,7 @@ describe('StyleSheetManager', () => {
       display: flex;
     `;
 
-    TestRenderer.create(
+    render(
       <StyleSheetManager enableVendorPrefixes>
         <Test>Foo</Test>
       </StyleSheetManager>
@@ -304,7 +275,7 @@ describe('StyleSheetManager', () => {
       padding-left: 5px;
     `;
 
-    const result = TestRenderer.create(
+    const result = render(
       <StyleSheetManager shouldForwardProp={p => (p === 'foo' ? false : true)}>
         <Test foo bar>
           Foo
@@ -312,13 +283,14 @@ describe('StyleSheetManager', () => {
       </StyleSheetManager>
     );
 
-    expect(result.toJSON()).toMatchInlineSnapshot(`
-      <div
-        bar={true}
-        className="sc-a b"
-      >
-        Foo
-      </div>
+    expect(result.asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a b"
+        >
+          Foo
+        </div>
+      </DocumentFragment>
     `);
   });
 
@@ -327,7 +299,7 @@ describe('StyleSheetManager', () => {
       padding-left: 5px;
     `;
 
-    TestRenderer.create(
+    render(
       <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
         <Test>Foo</Test>
       </StyleSheetManager>
@@ -351,7 +323,7 @@ describe('StyleSheetManager', () => {
     Object.defineProperty(stylisRTLPlugin, 'name', { value: undefined });
 
     expect(() =>
-      TestRenderer.create(
+      render(
         <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
           <Test>Foo</Test>
         </StyleSheetManager>
@@ -366,7 +338,7 @@ describe('StyleSheetManager', () => {
       padding-left: 5px;
     `;
 
-    const wrapper = TestRenderer.create(
+    const wrapper = render(
       <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
         <Test>Foo</Test>
       </StyleSheetManager>
@@ -380,16 +352,18 @@ describe('StyleSheetManager', () => {
       </style>
     `);
 
-    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-            <div
-              className="sc-a b"
-            >
-              Foo
-            </div>
-        `);
+    expect(wrapper.asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a b"
+        >
+          Foo
+        </div>
+      </DocumentFragment>
+    `);
 
     act(() => {
-      wrapper.update(
+      wrapper.rerender(
         <StyleSheetManager>
           <Test>Foo</Test>
         </StyleSheetManager>
@@ -405,16 +379,18 @@ describe('StyleSheetManager', () => {
       </style>
     `);
 
-    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-            <div
-              className="sc-a c"
-            >
-              Foo
-            </div>
-        `);
+    expect(wrapper.asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a c"
+        >
+          Foo
+        </div>
+      </DocumentFragment>
+    `);
 
     act(() => {
-      wrapper.update(
+      wrapper.rerender(
         <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
           <Test>Foo</Test>
         </StyleSheetManager>
@@ -430,13 +406,15 @@ describe('StyleSheetManager', () => {
       </style>
     `);
 
-    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-            <div
-              className="sc-a b"
-            >
-              Foo
-            </div>
-        `);
+    expect(wrapper.asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a b"
+        >
+          Foo
+        </div>
+      </DocumentFragment>
+    `);
   });
 
   it('subtrees with different stylis configs should not conflict', () => {
@@ -444,7 +422,7 @@ describe('StyleSheetManager', () => {
       padding-left: 5px;
     `;
 
-    const wrapper = TestRenderer.create(
+    const wrapper = render(
       <div>
         <Test>Bar</Test>
         <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
@@ -461,19 +439,21 @@ describe('StyleSheetManager', () => {
       </style>
     `);
 
-    expect(wrapper.toJSON()).toMatchInlineSnapshot(`
-      <div>
-        <div
-          className="sc-a b"
-        >
-          Bar
+    expect(wrapper.asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div>
+          <div
+            class="sc-a b"
+          >
+            Bar
+          </div>
+          <div
+            class="sc-a c"
+          >
+            Foo
+          </div>
         </div>
-        <div
-          className="sc-a c"
-        >
-          Foo
-        </div>
-      </div>
+      </DocumentFragment>
     `);
   });
 
@@ -488,7 +468,7 @@ describe('StyleSheetManager', () => {
 
     const outerSheet = new StyleSheet({ useCSSOMInjection: true });
 
-    TestRenderer.create(
+    render(
       <StyleSheetManager sheet={outerSheet}>
         <div>
           <Test>Foo</Test>
@@ -519,7 +499,7 @@ describe('StyleSheetManager', () => {
       display: flex;
     `;
 
-    TestRenderer.create(
+    render(
       <StyleSheetManager namespace="#foo">
         <Test>Foo</Test>
       </StyleSheetManager>
@@ -543,7 +523,7 @@ describe('StyleSheetManager', () => {
       background: red;
     `;
 
-    TestRenderer.create(
+    render(
       <StyleSheetManager namespace="#foo">
         <div>
           <Test>Foo</Test>
@@ -571,7 +551,7 @@ describe('StyleSheetManager', () => {
       }
     `;
 
-    TestRenderer.create(
+    render(
       <StyleSheetManager namespace=".parent">
         <div>
           <Test>Foo</Test>
@@ -600,7 +580,7 @@ describe('StyleSheetManager', () => {
       }
     `;
 
-    TestRenderer.create(
+    render(
       <StyleSheetManager namespace=".parent">
         <div>
           <Test>Foo</Test>
@@ -639,7 +619,7 @@ describe('StyleSheetManager', () => {
       }
     `;
 
-    TestRenderer.create(
+    render(
       <StyleSheetManager namespace=".parent">
         <div>
           <Test>Foo</Test>

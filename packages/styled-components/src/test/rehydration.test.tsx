@@ -1,5 +1,5 @@
+import { render } from '@testing-library/react';
 import React from 'react';
-import TestRenderer from 'react-test-renderer';
 import { SC_ATTR, SC_ATTR_VERSION } from '../constants';
 import { getRenderedCSS, rehydrateTestStyles, resetStyled, seedNextClassnames } from './utils';
 
@@ -50,7 +50,7 @@ describe('rehydration', () => {
         color: blue;
         ${() => ''}
       `;
-      TestRenderer.create(<Comp />);
+      render(<Comp />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
@@ -66,9 +66,9 @@ describe('rehydration', () => {
         color: blue;
         ${() => ''}
       `;
-      TestRenderer.create(<A />);
+      render(<A />);
       const B = styled.div.withConfig({ componentId: 'TWO' })``;
-      TestRenderer.create(<B />);
+      render(<B />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
@@ -84,12 +84,12 @@ describe('rehydration', () => {
         color: blue;
         ${() => ''}
       `;
-      TestRenderer.create(<A />);
+      render(<A />);
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
         ${() => ''}
       `;
-      TestRenderer.create(<B />);
+      render(<B />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
@@ -105,15 +105,15 @@ describe('rehydration', () => {
         color: blue;
         ${() => ''}
       `;
-      TestRenderer.create(<A />);
+      render(<A />);
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: ${() => 'red'};
       `;
-      TestRenderer.create(<B />);
+      render(<B />);
       const C = styled.div.withConfig({ componentId: 'TWO' })`
         color: ${() => 'green'};
       `;
-      TestRenderer.create(<C />);
+      render(<C />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".b {
           color: red;
@@ -159,7 +159,7 @@ describe('rehydration', () => {
       const Comp = styled.div.withConfig({ componentId: 'ONE' })`
         color: ${props => props.color};
       `;
-      TestRenderer.create(<Comp color="blue" />);
+      render(<Comp color="blue" />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".a {
           color: blue;
@@ -175,7 +175,7 @@ describe('rehydration', () => {
       const Comp = styled.div.withConfig({ componentId: 'ONE' })`
         color: ${props => props.color};
       `;
-      TestRenderer.create(<Comp color="green" />);
+      render(<Comp color="green" />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".a {
           color: blue;
@@ -249,7 +249,7 @@ describe('rehydration', () => {
       const Component = createGlobalStyle`
         body { color: tomato; }
       `;
-      TestRenderer.create(<Component />);
+      render(<Component />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "body {
           background: papayawhip;
@@ -273,8 +273,8 @@ describe('rehydration', () => {
         ${() => ''}
       `;
 
-      TestRenderer.create(<Component />);
-      TestRenderer.create(<A />);
+      render(<Component />);
+      render(<A />);
 
       // although `<Component />` is rendered before `<A />`, the global style isn't registered until render time
       // compared to typical component styles which are registered at creation time
@@ -334,19 +334,19 @@ describe('rehydration', () => {
       const Component1 = createGlobalStyle`
         html { font-size: 16px; }
       `;
-      TestRenderer.create(<Component1 />);
+      render(<Component1 />);
       const Component2 = createGlobalStyle`
         body { background: papayawhip; }
       `;
-      TestRenderer.create(<Component2 />);
+      render(<Component2 />);
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `;
-      TestRenderer.create(<A />);
+      render(<A />);
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `;
-      TestRenderer.create(<B />);
+      render(<B />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "html {
@@ -370,19 +370,19 @@ describe('rehydration', () => {
       const B = styled.div.withConfig({ componentId: 'TWO' })`
         color: red;
       `;
-      TestRenderer.create(<B />);
+      render(<B />);
       const Component1 = createGlobalStyle`
         html { font-size: 16px; }
       `;
-      TestRenderer.create(<Component1 />);
+      render(<Component1 />);
       const Component2 = createGlobalStyle`
         body { background: papayawhip; }
       `;
-      TestRenderer.create(<Component2 />);
+      render(<Component2 />);
       const A = styled.div.withConfig({ componentId: 'ONE' })`
         color: blue;
       `;
-      TestRenderer.create(<A />);
+      render(<A />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "html {
@@ -440,7 +440,7 @@ describe('rehydration', () => {
         ${() => ''}
       `;
 
-      TestRenderer.create(<A />);
+      render(<A />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "@-webkit-keyframes keyframe_880 {
@@ -471,7 +471,7 @@ describe('rehydration', () => {
         ${() => ''}
       `;
 
-      TestRenderer.create(<A />);
+      render(<A />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "@-webkit-keyframes keyframe_880 {
@@ -514,8 +514,8 @@ describe('rehydration', () => {
       `;
 
       /* Purposely rendering out of order to make sure the output looks right */
-      TestRenderer.create(<B />);
-      TestRenderer.create(<A />);
+      render(<B />);
+      render(<A />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "@-webkit-keyframes keyframe_880 {
@@ -551,16 +551,16 @@ describe('rehydration', () => {
       const fadeOut = keyframes`
         from { opacity: 1; }
       `;
-      const A = styled.div<{ animation: any }>`
-        animation: ${props => props.animation} 1s both;
+      const A = styled.div<{ $animation: any }>`
+        animation: ${props => props.$animation} 1s both;
       `;
-      const B = styled.div<{ animation: any }>`
-        animation: ${props => props.animation} 1s both;
+      const B = styled.div<{ $animation: any }>`
+        animation: ${props => props.$animation} 1s both;
       `;
 
       /* Purposely rendering out of order to make sure the output looks right */
-      TestRenderer.create(<B animation={fadeOut} />);
-      TestRenderer.create(<A animation={fadeIn} />);
+      render(<B $animation={fadeOut} />);
+      render(<A $animation={fadeIn} />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "@-webkit-keyframes keyframe_880 {

@@ -1,5 +1,5 @@
+import { render } from '@testing-library/react';
 import React from 'react';
-import TestRenderer from 'react-test-renderer';
 import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
@@ -33,27 +33,27 @@ describe('expanded api', () => {
       const Comp = styled.div``;
       const Comp2 = styled.div``;
       expect(Comp.styledComponentId).toBe('sc-a');
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchSnapshot();
       expect(Comp2.styledComponentId).toBe('sc-b');
-      expect(TestRenderer.create(<Comp2 />)).toMatchSnapshot();
+      expect(render(<Comp2 />).asFragment()).toMatchSnapshot();
     });
 
     it('should be generated from displayName + hash', () => {
       const Comp = styled.div.withConfig({ displayName: 'Comp' })``;
       const Comp2 = styled.div.withConfig({ displayName: 'Comp2' })``;
       expect(Comp.styledComponentId).toBe('Comp-a');
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchSnapshot();
       expect(Comp2.styledComponentId).toBe('Comp2-b');
-      expect(TestRenderer.create(<Comp2 />)).toMatchSnapshot();
+      expect(render(<Comp2 />).asFragment()).toMatchSnapshot();
     });
 
     it('should be attached if passed in', () => {
       const Comp = styled.div.withConfig({ componentId: 'LOLOMG' })``;
       const Comp2 = styled.div.withConfig({ componentId: 'OMGLOL' })``;
       expect(Comp.styledComponentId).toBe('LOLOMG');
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchSnapshot();
       expect(Comp2.styledComponentId).toBe('OMGLOL');
-      expect(TestRenderer.create(<Comp2 />)).toMatchSnapshot();
+      expect(render(<Comp2 />).asFragment()).toMatchSnapshot();
     });
 
     it('should be combined with displayName if both passed in', () => {
@@ -66,9 +66,9 @@ describe('expanded api', () => {
         componentId: 'OMGLOL',
       })``;
       expect(Comp.styledComponentId).toBe('Comp-LOLOMG');
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchSnapshot();
       expect(Comp2.styledComponentId).toBe('Comp2-OMGLOL');
-      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchSnapshot();
+      expect(render(<Comp2 />).asFragment()).toMatchSnapshot();
     });
   });
 
@@ -78,7 +78,7 @@ describe('expanded api', () => {
         .withConfig({ componentId: 'id-1' })
         .withConfig({ displayName: 'dn-2' })``;
       expect(Comp.displayName).toBe('dn-2');
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchSnapshot();
     });
 
     it('should keep the last value passed in when merging', () => {
@@ -86,7 +86,7 @@ describe('expanded api', () => {
         .withConfig({ displayName: 'dn-2', componentId: 'id-3' })
         .withConfig({ displayName: 'dn-5', componentId: 'id-4' })``;
       expect(Comp.displayName).toBe('dn-5');
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchSnapshot();
     });
   });
 
@@ -96,7 +96,7 @@ describe('expanded api', () => {
         color: red;
       `;
 
-      expect(TestRenderer.create(<Comp as="span" />).toJSON()).toMatchSnapshot();
+      expect(render(<Comp as="span" />).asFragment()).toMatchSnapshot();
     });
 
     it('changes the rendered element type when used with attrs', () => {
@@ -106,7 +106,7 @@ describe('expanded api', () => {
         color: red;
       `;
 
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchSnapshot();
     });
 
     it('prefers attrs over props', () => {
@@ -116,10 +116,12 @@ describe('expanded api', () => {
         color: red;
       `;
 
-      expect(TestRenderer.create(<Comp as="span" />).toJSON()).toMatchInlineSnapshot(`
-        <header
-          className="sc-a b"
-        />
+      expect(render(<Comp as="span" />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <header
+            class="sc-a b"
+          />
+        </DocumentFragment>
       `);
     });
 
@@ -129,7 +131,7 @@ describe('expanded api', () => {
         color: red;
       `;
 
-      expect(TestRenderer.create(<Comp as={Override} />).toJSON()).toMatchSnapshot();
+      expect(render(<Comp as={Override} />).asFragment()).toMatchSnapshot();
     });
 
     it('transfers all styles that have been applied', () => {
@@ -149,20 +151,26 @@ describe('expanded api', () => {
       expect(Comp.displayName).toMatchInlineSnapshot(`"styled.div"`);
       expect(Comp2.displayName).toMatchInlineSnapshot(`"Styled(styled.div)"`);
       expect(Comp3.displayName).toMatchInlineSnapshot(`"Styled(Styled(styled.div))"`);
-      expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
-        <div
-          className="sc-a d"
-        />
+      expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="sc-a d"
+          />
+        </DocumentFragment>
       `);
-      expect(TestRenderer.create(<Comp2 />).toJSON()).toMatchInlineSnapshot(`
-        <div
-          className="sc-a sc-b d e"
-        />
+      expect(render(<Comp2 />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="sc-a sc-b d e"
+          />
+        </DocumentFragment>
       `);
-      expect(TestRenderer.create(<Comp3 as="span" />).toJSON()).toMatchInlineSnapshot(`
-        <span
-          className="sc-a sc-b sc-c d e f"
-        />
+      expect(render(<Comp3 as="span" />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <span
+            class="sc-a sc-b sc-c d e f"
+          />
+        </DocumentFragment>
       `);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -183,7 +191,7 @@ describe('expanded api', () => {
       const X = styled.div<{ as?: 'div' | 'button' }>``;
       const StyledX = styled(X)``;
 
-      TestRenderer.create(
+      render(
         <>
           <X
             // @ts-expect-error invalid input test

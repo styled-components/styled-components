@@ -1,5 +1,5 @@
+import { render } from '@testing-library/react';
 import React from 'react';
-import TestRenderer from 'react-test-renderer';
 import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
@@ -17,7 +17,7 @@ describe('css features', () => {
     const Comp = styled.div`
       transition: opacity 0.3s;
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         transition: opacity 0.3s;
@@ -31,7 +31,7 @@ describe('css features', () => {
       flex-direction: column;
       align-items: center;
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         display: flex;
@@ -49,7 +49,7 @@ describe('css features', () => {
         }
       }
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "@media (min-width:10px) {
         @media (min-height:20px) {
@@ -65,7 +65,7 @@ describe('css features', () => {
     const Comp = styled.div`
       --custom-prop: some-val;
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         --custom-prop: some-val;

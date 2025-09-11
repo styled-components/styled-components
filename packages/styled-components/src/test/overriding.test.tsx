@@ -1,5 +1,5 @@
+import { render } from '@testing-library/react';
 import React from 'react';
-import TestRenderer from 'react-test-renderer';
 import { AnyComponent } from '../types';
 import { getRenderedCSS, resetStyled } from './utils';
 
@@ -28,8 +28,8 @@ describe('extending', () => {
         font-weight: bold;
       }
     `;
-    TestRenderer.create(<Inner />);
-    TestRenderer.create(<Outer />);
+    render(<Inner />);
+    render(<Outer />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
@@ -58,9 +58,9 @@ describe('extending', () => {
       padding: 1rem;
     `;
 
-    TestRenderer.create(<Inner />);
+    render(<Inner />);
 
-    const tree = TestRenderer.create(<Outer />);
+    const tree = render(<Outer />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".c {
@@ -75,10 +75,12 @@ describe('extending', () => {
     `);
 
     // ensure both static classes are applied and dynamic classes are also present
-    expect(tree.toJSON()).toMatchInlineSnapshot(`
-      <div
-        className="sc-a sc-b c d"
-      />
+    expect(tree.asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a sc-b c d"
+        />
+      </DocumentFragment>
     `);
   });
 
@@ -115,9 +117,9 @@ describe('extending', () => {
       const Child = styled(Parent)``;
       const Grandson = styled(Child)``;
       addDefaultProps(Parent, Child, Grandson);
-      TestRenderer.create(<Parent />);
-      TestRenderer.create(<Child />);
-      TestRenderer.create(<Grandson />);
+      render(<Parent />);
+      render(<Child />);
+      render(<Grandson />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".d {
@@ -141,9 +143,9 @@ describe('extending', () => {
         const Child = styled(Parent).attrs({ as: 'h2' })``;
         const Grandson = styled(Child).attrs(() => ({ as: 'h3' }))``;
         addDefaultProps(Parent, Child, Grandson);
-        TestRenderer.create(<Parent />);
-        TestRenderer.create(<Child />);
-        TestRenderer.create(<Grandson />);
+        render(<Parent />);
+        render(<Child />);
+        render(<Grandson />);
 
         expect(getRenderedCSS()).toMatchInlineSnapshot(`
           ".d {
@@ -167,24 +169,30 @@ describe('extending', () => {
         const Grandson = styled(Child).attrs(() => ({ as: 'h3' }))``;
         addDefaultProps(Parent, Child, Grandson);
 
-        expect(TestRenderer.create(<Parent />).toJSON()).toMatchInlineSnapshot(`
-          <h1
-            className="sc-a d"
-            color="primary"
-          />
+        expect(render(<Parent />).asFragment()).toMatchInlineSnapshot(`
+          <DocumentFragment>
+            <h1
+              class="sc-a d"
+              color="primary"
+            />
+          </DocumentFragment>
         `);
-        expect(TestRenderer.create(<Child />).toJSON()).toMatchInlineSnapshot(`
-          <h2
-            className="sc-a sc-b e"
-            color="secondary"
-          />
+        expect(render(<Child />).asFragment()).toMatchInlineSnapshot(`
+          <DocumentFragment>
+            <h2
+              class="sc-a sc-b e"
+              color="secondary"
+            />
+          </DocumentFragment>
         `);
 
-        expect(TestRenderer.create(<Grandson color="primary" />).toJSON()).toMatchInlineSnapshot(`
-          <h3
-            className="sc-a sc-b sc-c d"
-            color="primary"
-          />
+        expect(render(<Grandson color="primary" />).asFragment()).toMatchInlineSnapshot(`
+          <DocumentFragment>
+            <h3
+              class="sc-a sc-b sc-c d"
+              color="primary"
+            />
+          </DocumentFragment>
         `);
         expect(getRenderedCSS()).toMatchInlineSnapshot(`
           ".d {

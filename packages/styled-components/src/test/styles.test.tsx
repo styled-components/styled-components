@@ -1,5 +1,5 @@
+import { render } from '@testing-library/react';
 import React from 'react';
-import TestRenderer from 'react-test-renderer';
 import { ThemeProvider } from '../base';
 import css from '../constructors/css';
 import { mainSheet } from '../models/StyleSheetManager';
@@ -25,7 +25,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule};
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
         color: blue;
@@ -39,7 +39,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1} ${rule2};
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
         color: blue;
@@ -101,7 +101,7 @@ describe('with styles', () => {
         color: cornflowerblue;
       }
     `;
-    TestRenderer.create(
+    render(
       <React.Fragment>
         <Comp color="white" />
         <Comp color="red" />
@@ -198,7 +198,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1};
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
         background-color: blue;
@@ -216,7 +216,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1};
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
         background-color: blue;
@@ -239,7 +239,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1};
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
         background-color: blue;
@@ -260,7 +260,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1};
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
         background-color: blue;
@@ -281,7 +281,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule1};
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
         background-color: blue;
@@ -302,8 +302,8 @@ describe('with styles', () => {
       ${secondRule};
     `;
 
-    TestRenderer.create(<FirstComp />);
-    TestRenderer.create(<SecondComp />);
+    render(<FirstComp />);
+    render(<SecondComp />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
@@ -326,8 +326,8 @@ describe('with styles', () => {
     `;
 
     // Switch rendering order, shouldn't change injection order
-    TestRenderer.create(<SecondComp />);
-    TestRenderer.create(<FirstComp />);
+    render(<SecondComp />);
+    render(<FirstComp />);
 
     // Classes _do_ get generated in the order of rendering but that's ok
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -348,7 +348,7 @@ describe('with styles', () => {
       ${comment}
       ${rule}
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
         color: blue;
@@ -364,7 +364,7 @@ describe('with styles', () => {
       color: green;
     `;
 
-    TestRenderer.create(
+    render(
       <Heading>
         <Text />
       </Heading>
@@ -383,7 +383,7 @@ describe('with styles', () => {
     const Comp = styled.div`
       ${rule};
     `;
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
         color: blue;
@@ -400,7 +400,7 @@ describe('with styles', () => {
       color: ${p => (p.variant === 'bar' ? css`green` : 'red')};
     `;
 
-    TestRenderer.create(<Comp variant="bar" />);
+    render(<Comp variant="bar" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
         color: green;
@@ -410,9 +410,9 @@ describe('with styles', () => {
 
   it('conditional styles should only apply to the relevant component instance', () => {
     interface IconProps {
-      color?: string;
-      rounded?: boolean;
-      spin?: boolean;
+      $color?: string;
+      $rounded?: boolean;
+      $spin?: boolean;
     }
 
     const spinCss = css`
@@ -438,14 +438,14 @@ describe('with styles', () => {
       font-size: ${({ theme }) => theme.fontSizes!.sm};
 
       & > svg {
-        stroke: ${({ theme, color }): string =>
-          color && color !== 'inherit' ? theme.colors![color] : 'currentColor'};
-        ${({ spin }): any => (spin ? spinCss : '')};
+        stroke: ${({ theme, $color }): string =>
+          $color && $color !== 'inherit' ? theme.colors![$color] : 'currentColor'};
+        ${({ $spin }): any => ($spin ? spinCss : '')};
       }
-      ${({ rounded }): string => (rounded ? 'border-radius: 9999px;' : '')};
+      ${({ $rounded }): string => ($rounded ? 'border-radius: 9999px;' : '')};
     `;
 
-    TestRenderer.create(
+    render(
       // spinCss should only be added if spin is true. Meanwhile, when any icon component in the application receives spin=true prop, all icons in the app start spinning (see video).
 
       <ThemeProvider
@@ -456,8 +456,8 @@ describe('with styles', () => {
         }}
       >
         <Wrapper />
-        <Wrapper spin />
-        <Wrapper color="red" />
+        <Wrapper $spin />
+        <Wrapper $color="red" />
       </ThemeProvider>
     );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -511,7 +511,7 @@ describe('with styles', () => {
       }
     `;
 
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a.foo, .a p:not(:last-child) {

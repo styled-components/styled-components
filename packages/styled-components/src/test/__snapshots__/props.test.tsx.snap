@@ -1,14 +1,14 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`props shouldForwardProp should inherit shouldForwardProp for wrapped styled components 2`] = `
-[
+<DocumentFragment>
   <div
-    className="sc-a c"
+    class="sc-a c"
     id="test-1"
-  />,
+  />
   <div
-    className="sc-a sc-b d"
+    class="sc-a sc-b d"
     id="test-2"
-  />,
-]
+  />
+</DocumentFragment>
 `;

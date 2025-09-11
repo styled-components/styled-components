@@ -1,6 +1,6 @@
+import { render } from '@testing-library/react';
 import * as CSS from 'csstype';
 import React from 'react';
-import TestRenderer from 'react-test-renderer';
 import ThemeProvider from '../models/ThemeProvider';
 import { AnyComponent, DataAttributes } from '../types';
 import { getRenderedCSS, resetStyled } from './utils';
@@ -19,26 +19,26 @@ describe('attrs', () => {
 
   it('work fine with an empty object', () => {
     const Comp = styled.div.attrs({})``;
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
   });
 
   it('work fine with a function that returns an empty object', () => {
     const Comp = styled.div.attrs(() => ({}))``;
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
   });
 
   it('pass a simple attr via object', () => {
     const Comp = styled.button.attrs({
       type: 'button',
     })``;
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
   });
 
   it('pass a simple attr via function with object return', () => {
     const Comp = styled.button.attrs(() => ({
       type: 'button',
     }))``;
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
   });
 
   it('pass a React component', () => {
@@ -62,17 +62,17 @@ describe('attrs', () => {
       component: ReactComponent,
     }))``;
 
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
   });
 
   it('should not call a function passed to attrs as an object value', () => {
     const stub = jest.fn(() => 'div');
 
-    const Comp = styled.button.attrs<{ foo?: typeof stub }>(() => ({
-      foo: stub,
+    const Comp = styled.button.attrs<{ $foo?: typeof stub }>(() => ({
+      $foo: stub,
     }))``;
 
-    TestRenderer.create(<Comp />);
+    render(<Comp />);
 
     expect(stub).not.toHaveBeenCalled();
   });
@@ -83,16 +83,18 @@ describe('attrs', () => {
     }))``;
 
     expect(
-      TestRenderer.create(
+      render(
         <ThemeProvider theme={{ color: 'red' }}>
           <Comp />
         </ThemeProvider>
-      ).toJSON()
+      ).asFragment()
     ).toMatchInlineSnapshot(`
-      <button
-        className="sc-a"
-        data-color="red"
-      />
+      <DocumentFragment>
+        <button
+          class="sc-a"
+          data-color="red"
+        />
+      </DocumentFragment>
     `);
   });
 
@@ -107,11 +109,13 @@ describe('attrs', () => {
       },
     };
 
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchInlineSnapshot(`
-      <button
-        className="sc-a"
-        data-color="red"
-      />
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <button
+          class="sc-a"
+          data-color="red"
+        />
+      </DocumentFragment>
     `);
   });
 
@@ -120,8 +124,8 @@ describe('attrs', () => {
       type: p.$submit ? 'submit' : 'button',
     }))``;
 
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-    expect(TestRenderer.create(<Comp $submit />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp $submit />).asFragment()).toMatchSnapshot();
   });
 
   it('should replace props with attrs', () => {
@@ -130,9 +134,9 @@ describe('attrs', () => {
       tabIndex: 0,
     }))``;
 
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-    expect(TestRenderer.create(<Comp type="reset" />).toJSON()).toMatchSnapshot();
-    expect(TestRenderer.create(<Comp type="reset" tabIndex={-1} />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp type="reset" />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp type="reset" tabIndex={-1} />).asFragment()).toMatchSnapshot();
   });
 
   it('should merge className', () => {
@@ -140,7 +144,7 @@ describe('attrs', () => {
       className: 'meow nya',
     }))``;
 
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
   });
 
   it('should merge className from folded attrs', () => {
@@ -150,10 +154,12 @@ describe('attrs', () => {
       className: 'meow nya',
     }))``;
 
-    expect(TestRenderer.create(<Comp className="something" />).toJSON()).toMatchInlineSnapshot(`
-      <div
-        className="sc-a sc-b foo meow nya something"
-      />
+    expect(render(<Comp className="something" />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a sc-b foo meow nya something"
+        />
+      </DocumentFragment>
     `);
   });
 
@@ -162,8 +168,8 @@ describe('attrs', () => {
       className: `meow ${p.$purr ? 'purr' : 'nya'}`,
     }))``;
 
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
-    expect(TestRenderer.create(<Comp $purr />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp $purr />).asFragment()).toMatchSnapshot();
   });
 
   it('should merge style', () => {
@@ -171,18 +177,14 @@ describe('attrs', () => {
       style: { color: 'red', background: 'blue' },
     }))``;
 
-    expect(TestRenderer.create(<Comp style={{ color: 'green', borderStyle: 'dotted' }} />).toJSON())
+    expect(render(<Comp style={{ color: 'green', borderStyle: 'dotted' }} />).asFragment())
       .toMatchInlineSnapshot(`
-      <div
-        className="sc-a"
-        style={
-          {
-            "background": "blue",
-            "borderStyle": "dotted",
-            "color": "red",
-          }
-        }
-      />
+      <DocumentFragment>
+        <div
+          class="sc-a"
+          style="color: red; border-style: dotted; background: blue;"
+        />
+      </DocumentFragment>
     `);
   });
 
@@ -191,7 +193,7 @@ describe('attrs', () => {
       'data-foo': 'bar',
       'aria-label': 'A simple FooBar',
     }))``;
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
   });
 
   it('merge attrs', () => {
@@ -203,7 +205,7 @@ describe('attrs', () => {
       .attrs(() => ({
         type: 'submit',
       }))``;
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
   });
 
   it('merge attrs when inheriting SC', () => {
@@ -214,7 +216,7 @@ describe('attrs', () => {
     const Child = styled(Parent).attrs(() => ({
       type: 'submit',
     }))``;
-    expect(TestRenderer.create(<Child />).toJSON()).toMatchSnapshot();
+    expect(render(<Child />).asFragment()).toMatchSnapshot();
   });
 
   it('pass attrs to style block', () => {
@@ -228,7 +230,7 @@ describe('attrs', () => {
         color: red;
       }
     `;
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: blue;
@@ -243,21 +245,21 @@ describe('attrs', () => {
     const Comp = styled.div.attrs(() => ({
       children: 'Probably a bad idea',
     }))``;
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
   });
 
   it('should pass through complex children as well', () => {
     const Comp = styled.div.attrs(() => ({
       children: <span>Probably a bad idea</span>,
     }))``;
-    expect(TestRenderer.create(<Comp />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchSnapshot();
   });
 
   it('should override children of course', () => {
     const Comp = styled.div.attrs(() => ({
       children: <span>Amazing</span>,
     }))``;
-    expect(TestRenderer.create(<Comp>Something else</Comp>).toJSON()).toMatchSnapshot();
+    expect(render(<Comp>Something else</Comp>).asFragment()).toMatchSnapshot();
   });
 
   it('should shallow merge "style" prop + attr instead of overwriting', () => {
@@ -297,7 +299,7 @@ describe('attrs', () => {
       background: blue;
     `;
 
-    const rendered = TestRenderer.create(<BlueText>Hello</BlueText>);
+    const rendered = render(<BlueText>Hello</BlueText>);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".d {
@@ -307,18 +309,15 @@ describe('attrs', () => {
         background: blue;
       }"
     `);
-    expect(rendered.toJSON()).toMatchInlineSnapshot(`
-      <p
-        className="sc-a d sc-b c"
-        style={
-          {
-            "color": "blue",
-            "fontSize": "4em",
-          }
-        }
-      >
-        Hello
-      </p>
+    expect(rendered.asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <p
+          class="sc-a d sc-b c"
+          style="color: blue; font-size: 4em;"
+        >
+          Hello
+        </p>
+      </DocumentFragment>
     `);
   });
 
@@ -333,25 +332,25 @@ describe('attrs', () => {
       $textColor: 'red',
     }))``;
 
-    expect(TestRenderer.create(<StyledComp />).toJSON()).toMatchSnapshot();
+    expect(render(<StyledComp />).asFragment()).toMatchSnapshot();
   });
 
   it('should apply given "as" prop to the progressive type', () => {
     const Comp = styled.div.attrs({ as: 'video' as const })``;
 
-    expect(TestRenderer.create(<Comp loop />).toJSON()).toMatchSnapshot();
+    expect(render(<Comp loop />).asFragment()).toMatchSnapshot();
   });
 
   it('aliasing an alternate theme via attrs makes it through to the child component', () => {
-    const InnerComp: React.FC<{ theme: object }> = p => <div {...p} />;
+    const InnerComp: React.FC<{ theme: object }> = ({ theme, ...p }) => (
+      <div data-theme={JSON.stringify(theme)} {...p} />
+    );
 
     const Comp = styled(InnerComp).attrs<{ alternateTheme: object | undefined }>(p => ({
       alternateTheme: undefined,
       theme: p.alternateTheme!,
     }))``;
 
-    expect(
-      TestRenderer.create(<Comp alternateTheme={{ foo: 'bar' }} />).toJSON()
-    ).toMatchSnapshot();
+    expect(render(<Comp alternateTheme={{ foo: 'bar' }} />).asFragment()).toMatchSnapshot();
   });
 });

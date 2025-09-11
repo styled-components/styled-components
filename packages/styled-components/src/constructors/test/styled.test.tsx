@@ -1,5 +1,5 @@
+import { render } from '@testing-library/react';
 import React, { ComponentProps } from 'react';
-import TestRenderer from 'react-test-renderer';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
 import domElements from '../../utils/domElements';
 
@@ -39,7 +39,7 @@ describe('styled', () => {
     expect(StyledCollapse.Panel).toBeTruthy();
     expect(StyledCollapse.PI).toBe('3.14');
 
-    TestRenderer.create(<StyledCollapse />);
+    render(<StyledCollapse />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
     ".b {
       background: red;
