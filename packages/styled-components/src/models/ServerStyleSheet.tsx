@@ -11,6 +11,12 @@ import { StyleSheetManager } from './StyleSheetManager';
 declare const __SERVER__: boolean;
 
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
+const OPENING_TAG_R = /<[^/>][^>]*>/;
+
+const hasContentInStyle = (string: string) => {
+  const num = string.indexOf('</style>');
+  return string[num - 1] !== '>';
+};
 
 export default class ServerStyleSheet {
   instance: StyleSheet;
@@ -92,6 +98,20 @@ export default class ServerStyleSheet {
       const readableStream: Readable = input;
       const { instance: sheet, _emitSheetCSS } = this;
 
+      let queue: string[] = [];
+
+      const takeStylesFromQueue = () => {
+        const styles = queue.join('\n');
+        queue = [];
+        return styles;
+      };
+
+      const splitHtmlByIndex = (html: string, splitByIndex: number) => {
+        const before = html.slice(0, splitByIndex);
+        const after = html.slice(splitByIndex);
+        return [before, after];
+      };
+
       const transformer: streamInternal.Transform = new Transform({
         transform: function appendStyleChunks(
           chunk: string,
@@ -106,16 +126,39 @@ export default class ServerStyleSheet {
 
           sheet.clearTag();
 
+          // we don't need to insert an empty <style> tag into the response,
+          // which is related to "_emitSheetCSS" which will return an empty <style> tag
+          // even if we don't have styles to send
+          if (
+            !hasContentInStyle(html) &&
+            // also we want to check if we need to shift all of our styles
+            queue.length === 0
+          ) {
+            this.push(renderedHtml);
+            callback();
+            return;
+          }
           // prepend style html to chunk, unless the start of the chunk is a
           // closing tag in which case append right after that
-          if (CLOSING_TAG_R.test(renderedHtml)) {
+          else if (CLOSING_TAG_R.test(renderedHtml)) {
             const endOfClosingTag = renderedHtml.indexOf('>') + 1;
-            const before = renderedHtml.slice(0, endOfClosingTag);
-            const after = renderedHtml.slice(endOfClosingTag);
+            const [before, after] = splitHtmlByIndex(renderedHtml, endOfClosingTag);
 
-            this.push(before + html + after);
+            queue.push(html);
+
+            this.push(before + takeStylesFromQueue() + after);
+          } else if (OPENING_TAG_R.test(renderedHtml)) {
+            // check if we have open tags
+            const startOfStartingTag = renderedHtml.search(OPENING_TAG_R);
+            const [before, after] = splitHtmlByIndex(renderedHtml, startOfStartingTag);
+
+            queue.push(html);
+
+            this.push(before + takeStylesFromQueue() + after);
           } else {
-            this.push(html + renderedHtml);
+            // edge case case when we don't have any tags, only content such as an svg path or large text
+            queue.push(html);
+            this.push(renderedHtml);
           }
 
           callback();
