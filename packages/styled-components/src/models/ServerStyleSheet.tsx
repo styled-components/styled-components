@@ -1,6 +1,6 @@
 import React from 'react';
+import { type PipeableStream } from 'react-dom/server';
 import type * as streamInternal from 'stream';
-import { Readable } from 'stream';
 import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
 import styledError from '../utils/error';
@@ -76,58 +76,65 @@ export default class ServerStyleSheet {
     return [<style {...props} key="sc-0-0" />];
   };
 
-  // @ts-expect-error alternate return types are not possible due to code transformation
-  interleaveWithNodeStream(input: Readable): streamInternal.Transform {
+  interleaveWithNodeStream(
+    input: NodeJS.ReadableStream | PipeableStream
+  ): streamInternal.Transform {
     if (!__SERVER__ || IS_BROWSER) {
       throw styledError(3);
     } else if (this.sealed) {
       throw styledError(2);
     }
 
-    if (__SERVER__) {
-      this.seal();
+    this.seal();
 
-      const { Transform } = require('stream');
+    const { Transform } = require('stream');
+    const { instance: sheet, _emitSheetCSS } = this;
 
-      const readableStream: Readable = input;
-      const { instance: sheet, _emitSheetCSS } = this;
+    const transformer: streamInternal.Transform = new Transform({
+      transform: function appendStyleChunks(
+        chunk: string,
+        /* encoding */
+        _: string,
+        callback: Function
+      ) {
+        // Get the chunk and retrieve the sheet's CSS as an HTML chunk,
+        // then reset its rules so we get only new ones for the next chunk
+        const renderedHtml = chunk.toString();
+        const html = _emitSheetCSS();
 
-      const transformer: streamInternal.Transform = new Transform({
-        transform: function appendStyleChunks(
-          chunk: string,
-          /* encoding */
-          _: string,
-          callback: Function
-        ) {
-          // Get the chunk and retrieve the sheet's CSS as an HTML chunk,
-          // then reset its rules so we get only new ones for the next chunk
-          const renderedHtml = chunk.toString();
-          const html = _emitSheetCSS();
+        sheet.clearTag();
 
-          sheet.clearTag();
+        // prepend style html to chunk, unless the start of the chunk is a
+        // closing tag in which case append right after that
+        if (CLOSING_TAG_R.test(renderedHtml)) {
+          const endOfClosingTag = renderedHtml.indexOf('>') + 1;
+          const before = renderedHtml.slice(0, endOfClosingTag);
+          const after = renderedHtml.slice(endOfClosingTag);
 
-          // prepend style html to chunk, unless the start of the chunk is a
-          // closing tag in which case append right after that
-          if (CLOSING_TAG_R.test(renderedHtml)) {
-            const endOfClosingTag = renderedHtml.indexOf('>') + 1;
-            const before = renderedHtml.slice(0, endOfClosingTag);
-            const after = renderedHtml.slice(endOfClosingTag);
+          this.push(before + html + after);
+        } else {
+          this.push(html + renderedHtml);
+        }
 
-            this.push(before + html + after);
-          } else {
-            this.push(html + renderedHtml);
-          }
+        callback();
+      },
+    });
 
-          callback();
-        },
-      });
-
+    // Type guard to determine stream type
+    if ('on' in input && typeof input.on === 'function' && 'pipe' in input) {
+      // NodeJS.ReadableStream
+      const readableStream = input as NodeJS.ReadableStream;
       readableStream.on('error', err => {
         // forward the error to the transform stream
         transformer.emit('error', err);
       });
-
       return readableStream.pipe(transformer);
+    } else if ('pipe' in input && typeof input.pipe === 'function') {
+      // React PipeableStream
+      const pipeableStream = input as PipeableStream;
+      return pipeableStream.pipe(transformer);
+    } else {
+      throw new Error('Unsupported stream type');
     }
   }
 
