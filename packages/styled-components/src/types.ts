@@ -7,7 +7,7 @@ import type { SupportedHTMLElements } from './utils/domElements';
 
 export { CSS, DefaultTheme, SupportedHTMLElements };
 
-export interface ExoticComponentWithDisplayName<P extends object = {}>
+export interface ExoticComponentWithDisplayName<P extends BaseObject = {}>
   extends React.ExoticComponent<P> {
   defaultProps?: Partial<P> | undefined;
   displayName?: string | undefined;
@@ -24,13 +24,13 @@ export type BaseObject = {};
 // from https://stackoverflow.com/a/69852402
 export type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
 
-export type FastOmit<T extends object, U extends string | number | symbol> = {
+export type FastOmit<T extends BaseObject, U extends string | number | symbol> = {
   [K in keyof T as K extends U ? never : K]: T[K];
 };
 
 export type Runtime = 'web' | 'native';
 
-export type AnyComponent<P extends object = any> =
+export type AnyComponent<P extends BaseObject = any> =
   | ExoticComponentWithDisplayName<P>
   | React.ComponentType<P>;
 
@@ -43,7 +43,7 @@ export type WebTarget =
 export type NativeTarget = AnyComponent;
 
 export type StyledTarget<R extends Runtime> = R extends 'web' ? WebTarget : NativeTarget;
-export interface StyledOptions<R extends Runtime, Props extends object> {
+export interface StyledOptions<R extends Runtime, Props extends BaseObject> {
   attrs?: Attrs<Props>[] | undefined;
   componentId?: (R extends 'web' ? string : never) | undefined;
   displayName?: string | undefined;
@@ -91,11 +91,11 @@ export interface ExecutionContext extends ExecutionProps {
   theme: DefaultTheme;
 }
 
-export interface StyleFunction<Props extends object> {
+export interface StyleFunction<Props extends BaseObject> {
   (executionContext: ExecutionContext & Props): Interpolation<Props>;
 }
 
-export type Interpolation<Props extends object> =
+export type Interpolation<Props extends BaseObject> =
   | StyleFunction<Props>
   | StyledObject<Props>
   | TemplateStringsArray
@@ -109,13 +109,13 @@ export type Interpolation<Props extends object> =
   | RuleSet<Props>
   | Interpolation<Props>[];
 
-export type Attrs<Props extends object = BaseObject> =
+export type Attrs<Props extends BaseObject = BaseObject> =
   | (ExecutionProps & Partial<Props>)
   | ((props: ExecutionContext & Props) => ExecutionProps & Partial<Props>);
 
-export type RuleSet<Props extends object = BaseObject> = Interpolation<Props>[];
+export type RuleSet<Props extends BaseObject = BaseObject> = Interpolation<Props>[];
 
-export type Styles<Props extends object> =
+export type Styles<Props extends BaseObject> =
   | TemplateStringsArray
   | StyledObject<Props>
   | StyleFunction<Props>;
@@ -132,7 +132,7 @@ export interface Keyframes {
   rules: string;
 }
 
-export interface Flattener<Props extends object> {
+export interface Flattener<Props extends BaseObject> {
   (
     chunks: Interpolation<Props>[],
     executionContext: object | null | undefined,
@@ -154,13 +154,13 @@ export interface ShouldForwardProp<R extends Runtime> {
   (prop: string, elementToBeCreated: StyledTarget<R>): boolean;
 }
 
-export interface CommonStatics<R extends Runtime, Props extends object> {
+export interface CommonStatics<R extends Runtime, Props extends BaseObject> {
   attrs: Attrs<Props>[];
   target: StyledTarget<R>;
   shouldForwardProp?: ShouldForwardProp<R> | undefined;
 }
 
-export interface IStyledStatics<R extends Runtime, OuterProps extends object>
+export interface IStyledStatics<R extends Runtime, OuterProps extends BaseObject>
   extends CommonStatics<R, OuterProps> {
   componentStyle: R extends 'web' ? ComponentStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
@@ -178,15 +178,15 @@ export interface IStyledStatics<R extends Runtime, OuterProps extends object>
  */
 export type PolymorphicComponentProps<
   R extends Runtime,
-  BaseProps extends object,
+  BaseProps extends BaseObject,
   AsTarget extends StyledTarget<R> | void,
   ForwardedAsTarget extends StyledTarget<R> | void,
   // props extracted from "as"
-  AsTargetProps extends object = AsTarget extends KnownTarget
+  AsTargetProps extends BaseObject = AsTarget extends KnownTarget
     ? React.ComponentPropsWithRef<AsTarget>
     : {},
   // props extracted from "forwardAs"; note that ref is excluded
-  ForwardedAsTargetProps extends object = ForwardedAsTarget extends KnownTarget
+  ForwardedAsTargetProps extends BaseObject = ForwardedAsTarget extends KnownTarget
     ? React.ComponentPropsWithRef<ForwardedAsTarget>
     : {},
 > = NoInfer<
@@ -211,7 +211,7 @@ export type PolymorphicComponentProps<
  * props from the given rendering target to get proper typing for
  * any specialized props in the target component.
  */
-export interface PolymorphicComponent<R extends Runtime, BaseProps extends object>
+export interface PolymorphicComponent<R extends Runtime, BaseProps extends BaseObject>
   extends React.ForwardRefExoticComponent<BaseProps> {
   <
     AsTarget extends StyledTarget<R> | void = void,
@@ -221,7 +221,7 @@ export interface PolymorphicComponent<R extends Runtime, BaseProps extends objec
   ): React.JSX.Element;
 }
 
-export interface IStyledComponentBase<R extends Runtime, Props extends object = BaseObject>
+export interface IStyledComponentBase<R extends Runtime, Props extends BaseObject = BaseObject>
   extends PolymorphicComponent<R, Props>,
     IStyledStatics<R, Props>,
     StyledComponentBrand {
@@ -231,7 +231,7 @@ export interface IStyledComponentBase<R extends Runtime, Props extends object = 
 
 export type IStyledComponent<
   R extends Runtime,
-  Props extends object = BaseObject,
+  Props extends BaseObject = BaseObject,
 > = IStyledComponentBase<R, Props> &
   /**
    * TypeScript doesn't allow using a styled component as a key inside object
@@ -257,21 +257,21 @@ export type IStyledComponent<
 export interface IStyledComponentFactory<
   R extends Runtime,
   Target extends StyledTarget<R>,
-  OuterProps extends object,
-  OuterStatics extends object = BaseObject,
+  OuterProps extends BaseObject,
+  OuterStatics extends BaseObject = BaseObject,
 > {
-  <Props extends object = BaseObject, Statics extends object = BaseObject>(
+  <Props extends BaseObject = BaseObject, Statics extends BaseObject = BaseObject>(
     target: Target,
     options: StyledOptions<R, OuterProps & Props>,
     rules: RuleSet<OuterProps & Props>
   ): IStyledComponent<R, Substitute<OuterProps, Props>> & OuterStatics & Statics;
 }
 
-export interface IInlineStyleConstructor<Props extends object> {
+export interface IInlineStyleConstructor<Props extends BaseObject> {
   new (rules: RuleSet<Props>): IInlineStyle<Props>;
 }
 
-export interface IInlineStyle<Props extends object> {
+export interface IInlineStyle<Props extends BaseObject> {
   rules: RuleSet<Props>;
   generateStyleObject(executionContext: ExecutionContext & Props): object;
 }
@@ -282,9 +282,11 @@ export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
 
 export type CSSKeyframes = object & { [key: string]: CSSObject };
 
-export type CSSObject<Props extends object = BaseObject> = StyledObject<Props>;
+export type CSSObject<Props extends BaseObject = BaseObject> = StyledObject<Props>;
 
-export interface StyledObject<Props extends object = BaseObject> extends CSSProperties, CSSPseudos {
+export interface StyledObject<Props extends BaseObject = BaseObject>
+  extends CSSProperties,
+    CSSPseudos {
   [key: string]:
     | StyledObject<Props>
     | string
@@ -321,6 +323,6 @@ export type CSSProp = Interpolation<any>;
 // Prevents TypeScript from inferring generic argument
 export type NoInfer<T> = [T][T extends any ? 0 : never];
 
-export type Substitute<A extends object, B extends object> = FastOmit<A, keyof B> & B;
+export type Substitute<A extends BaseObject, B extends BaseObject> = FastOmit<A, keyof B> & B;
 
 export type InsertionTarget = HTMLElement | ShadowRoot;

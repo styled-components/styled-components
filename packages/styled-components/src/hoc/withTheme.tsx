@@ -8,11 +8,10 @@ import hoist, { NonReactStatics } from '../utils/hoist';
 export default function withTheme<T extends AnyComponent>(
   Component: T
 ): React.ForwardRefExoticComponent<
-  React.PropsWithoutRef<React.JSX.LibraryManagedAttributes<T, ExecutionProps>> &
-    React.RefAttributes<T>
+  React.PropsWithoutRef<React.ComponentPropsWithRef<T> & ExecutionProps> & React.RefAttributes<T>
 > &
   NonReactStatics<T> {
-  const WithTheme = React.forwardRef<T, React.JSX.LibraryManagedAttributes<T, ExecutionProps>>(
+  const WithTheme = React.forwardRef<T, React.ComponentPropsWithRef<T> & ExecutionProps>(
     (props, ref) => {
       const theme = React.useContext(ThemeContext);
       const themeProp = determineTheme(props, theme, Component.defaultProps);
@@ -25,7 +24,11 @@ export default function withTheme<T extends AnyComponent>(
         );
       }
 
-      return <Component {...props} theme={themeProp} ref={ref} />;
+      return React.createElement(Component, {
+        ...props,
+        theme: themeProp,
+        ref,
+      } as React.ComponentPropsWithRef<T>);
     }
   );
 

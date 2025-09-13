@@ -1,5 +1,5 @@
 import isPropValid from '@emotion/is-prop-valid';
-import React, { createElement, Ref, useDebugValue } from 'react';
+import React, { createElement, PropsWithoutRef, Ref, useDebugValue } from 'react';
 import { SC_VERSION } from '../constants';
 import type {
   AnyComponent,
@@ -72,19 +72,18 @@ function useInjectedStyle<T extends ExecutionContext>(
   return className;
 }
 
-function resolveContext<Props extends object>(
+function resolveContext<Props extends BaseObject>(
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
-  props: React.HTMLAttributes<Element> & ExecutionProps & Props,
+  props: ExecutionProps & Props,
   theme: DefaultTheme
-) {
-  const context: React.HTMLAttributes<Element> &
-    ExecutionContext &
-    Props & { [key: string]: any; class?: string; ref?: React.Ref<any> } = {
+): React.HTMLAttributes<Element> & ExecutionContext & Props {
+  const context: React.HTMLAttributes<Element> & ExecutionContext & Props = {
     ...props,
     // unset, add `props.className` back at the end so props always "wins"
     className: undefined,
     theme,
-  };
+  } as React.HTMLAttributes<Element> & ExecutionContext & Props;
+
   let attrDef;
 
   for (let i = 0; i < attrs.length; i += 1) {
@@ -92,16 +91,18 @@ function resolveContext<Props extends object>(
     const resolvedAttrDef = isFunction(attrDef) ? attrDef(context) : attrDef;
 
     for (const key in resolvedAttrDef) {
-      context[key as keyof typeof context] =
-        key === 'className'
-          ? joinStrings(context[key] as string | undefined, resolvedAttrDef[key] as string)
-          : key === 'style'
-            ? { ...context[key], ...resolvedAttrDef[key] }
-            : resolvedAttrDef[key as keyof typeof resolvedAttrDef];
+      if (key === 'className') {
+        context.className = joinStrings(context.className, resolvedAttrDef[key] as string);
+      } else if (key === 'style') {
+        context.style = { ...context.style, ...resolvedAttrDef[key] };
+      } else {
+        // @ts-expect-error attrs can dynamically add arbitrary properties
+        context[key] = resolvedAttrDef[key];
+      }
     }
   }
 
-  if (props.className) {
+  if ('className' in props && typeof props.className === 'string') {
     context.className = joinStrings(context.className, props.className);
   }
 
@@ -110,7 +111,7 @@ function resolveContext<Props extends object>(
 
 let seenUnknownProps = new Set();
 
-function useStyledComponentImpl<Props extends object>(
+function useStyledComponentImpl<Props extends BaseObject>(
   forwardedComponent: IStyledComponent<'web', Props>,
   props: ExecutionProps & Props,
   forwardedRef: Ref<Element>
@@ -140,6 +141,7 @@ function useStyledComponentImpl<Props extends object>(
   const propsForElement: Dict<any> = {};
 
   for (const key in context) {
+    // @ts-expect-error context may have arbitrary properties from attrs
     if (context[key] === undefined) {
       // Omit undefined values from props passed to wrapped element.
       // This enables using .attrs() to remove props, for example.
@@ -148,6 +150,7 @@ function useStyledComponentImpl<Props extends object>(
     } else if (key === 'forwardedAs') {
       propsForElement.as = context.forwardedAs;
     } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
+      // @ts-expect-error context may have arbitrary properties from attrs
       propsForElement[key] = context[key];
 
       if (
@@ -200,8 +203,8 @@ function useStyledComponentImpl<Props extends object>(
 
 function createStyledComponent<
   Target extends WebTarget,
-  OuterProps extends object,
-  Statics extends object = BaseObject,
+  OuterProps extends BaseObject,
+  Statics extends BaseObject = BaseObject,
 >(
   target: Target,
   options: StyledOptions<'web', OuterProps>,
@@ -251,8 +254,15 @@ function createStyledComponent<
     isTargetStyledComp ? (styledComponentTarget.componentStyle as ComponentStyle) : undefined
   );
 
-  function forwardRefRender(props: ExecutionProps & OuterProps, ref: Ref<Element>) {
-    return useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
+  function forwardRefRender(
+    props: PropsWithoutRef<ExecutionProps & OuterProps>,
+    ref: Ref<Element>
+  ) {
+    return useStyledComponentImpl<OuterProps>(
+      WrappedStyledComponent,
+      props as ExecutionProps & OuterProps,
+      ref
+    );
   }
 
   forwardRefRender.displayName = displayName;
