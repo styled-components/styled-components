@@ -148,8 +148,15 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       }
     }
 
-    const forwardRefRender = (props: ExecutionProps & OuterProps, ref: React.Ref<any>) =>
-      useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
+    const forwardRefRender = (
+      props: React.PropsWithoutRef<ExecutionProps & OuterProps>,
+      ref: React.Ref<any>
+    ) =>
+      useStyledComponentImpl<OuterProps>(
+        WrappedStyledComponent,
+        props as ExecutionProps & OuterProps,
+        ref
+      );
 
     forwardRefRender.displayName = displayName;
 

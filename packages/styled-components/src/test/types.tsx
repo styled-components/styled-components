@@ -176,7 +176,7 @@ const DivWithoutProps = styled.div`
 
 // Mentioning another styled component within interpolation should not cause
 // this styled component to inherit its props (in other words, this div only has waz prop)
-const DivWithProps = styled.div<{ waz: number }>`
+const DivWithProps = styled.div<{ waz: number; bar?: 'baz' }>`
   ${StyledComponent} {
     display: block;
   }
@@ -198,7 +198,7 @@ const InheritedDivWithProps = styled(DivWithProps)`
 // @ts-expect-error InheritedDiv inherited the required waz prop
 <InheritedDivWithProps />;
 
-// @ts-expect-error bar must be "bar"
+// @ts-expect-error bar must be "baz"
 <InheritedDivWithProps waz={42} bar="foo" />;
 
 /** StyledObject should accept undefined properties

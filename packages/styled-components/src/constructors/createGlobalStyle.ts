@@ -29,7 +29,11 @@ export default function createGlobalStyle<Props extends object>(
 
     const instance = instanceRef.current;
 
-    if (process.env.NODE_ENV !== 'production' && React.Children.count(props.children)) {
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      // @ts-expect-error invariant check
+      React.Children.count(props.children)
+    ) {
       console.warn(
         `The global style component ${styledComponentId} was given child JSX. createGlobalStyle does not render children.`
       );
