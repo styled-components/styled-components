@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 import ThemeProvider from '../models/ThemeProvider';
-import { ExecutionContext } from '../types';
+import { ExecutionProps } from '../types';
 import withTheme from './withTheme';
 
 describe('withTheme', () => {
@@ -39,7 +39,7 @@ describe('withTheme', () => {
   });
 
   it('should provide the theme to the wrapped component', () => {
-    const WrappedComponent = withTheme((p: ExecutionContext) => {
+    const WrappedComponent = withTheme((p: ExecutionProps) => {
       return <span>{JSON.stringify(p.theme)}</span>;
     });
 
