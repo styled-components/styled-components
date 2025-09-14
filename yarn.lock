@@ -3836,13 +3836,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rtsao/csstype@npm:2.6.5-forked.0":
-  version: 2.6.5-forked.0
-  resolution: "@rtsao/csstype@npm:2.6.5-forked.0"
-  checksum: 9ec60347441c232e65ee69f8c44e29c24cecdb533cef2f7d9bddab60c19491480c7e3df927ff028ba38da9f37ffeab6635cc4c0ae0baab707dfc4a36d2593d81
-  languageName: node
-  linkType: hard
-
 "@sideway/address@npm:^4.1.3":
   version: 4.1.4
   resolution: "@sideway/address@npm:4.1.4"
@@ -3914,14 +3907,12 @@ __metadata:
     "@babel/core": "npm:^7.28.4"
     "@emotion/react": "npm:11.14.0"
     "@emotion/styled": "npm:11.14.1"
-    aphrodite: "npm:2.4.0"
     babel-loader: "npm:^9.2.1"
     babel-plugin-module-resolver: "npm:^4.1.0"
     babel-plugin-react-native-web: "npm:^0.18.12"
     classnames: "npm:2.5.1"
     css-loader: "npm:^6.11.0"
     d3-scale-chromatic: "npm:1.5.0"
-    goober: "npm:2.1.14"
     react: "npm:^18.0.0"
     react-dom: "npm:^18.0.0"
     react-is: "npm:^18.0.0"
@@ -3931,9 +3922,6 @@ __metadata:
     styled-components: "workspace:*"
     styled-components-v5: "npm:styled-components@5.3.9"
     styled-components-v6: "npm:styled-components@6.1.12"
-    styled-jsx: "npm:5.1.7"
-    styletron-engine-atomic: "npm:1.6.2"
-    styletron-react: "npm:6.1.1"
     webpack: "npm:^5.101.3"
     webpack-cli: "npm:^5.1.4"
   languageName: unknown
@@ -4967,17 +4955,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aphrodite@npm:2.4.0":
-  version: 2.4.0
-  resolution: "aphrodite@npm:2.4.0"
-  dependencies:
-    asap: "npm:^2.0.3"
-    inline-style-prefixer: "npm:^5.1.0"
-    string-hash: "npm:^1.1.3"
-  checksum: 97ddb840ab4466d2a40028a25027a799b437e4ecaecc045c20e963d75229cd16c6eae8c7799f667e08ef2f059c10565114acec6fdd45781b230ffa4448dfecd0
-  languageName: node
-  linkType: hard
-
 "appdirsjs@npm:^1.2.4":
   version: 1.2.7
   resolution: "appdirsjs@npm:1.2.7"
@@ -5024,7 +5001,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"asap@npm:^2.0.3, asap@npm:~2.0.3, asap@npm:~2.0.6":
+"asap@npm:~2.0.3, asap@npm:~2.0.6":
   version: 2.0.6
   resolution: "asap@npm:2.0.6"
   checksum: c6d5e39fe1f15e4b87677460bd66b66050cd14c772269cee6688824c1410a08ab20254bb6784f9afb75af9144a9f9a7692d49547f4d19d715aeb7c0318f3136d
@@ -5760,13 +5737,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"client-only@npm:0.0.1":
-  version: 0.0.1
-  resolution: "client-only@npm:0.0.1"
-  checksum: 9d6cfd0c19e1c96a434605added99dff48482152af791ec4172fb912a71cff9027ff174efd8cdb2160cc7f377543e0537ffc462d4f279bc4701de3f2a3c4b358
-  languageName: node
-  linkType: hard
-
 "cliui@npm:^6.0.0":
   version: 6.0.0
   resolution: "cliui@npm:6.0.0"
@@ -6101,16 +6071,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"css-in-js-utils@npm:^2.0.0":
-  version: 2.0.1
-  resolution: "css-in-js-utils@npm:2.0.1"
-  dependencies:
-    hyphenate-style-name: "npm:^1.0.2"
-    isobject: "npm:^3.0.1"
-  checksum: 6696cda3ebd596fc42ff40059546786936a8cf709e00bc8dedce6cd42c2b3edb19333a5d5bba6ac35b75b58cf55c021cee7ab3ec0f13fb2cf59fbb024ba0894f
-  languageName: node
-  linkType: hard
-
 "css-in-js-utils@npm:^3.1.0":
   version: 3.1.0
   resolution: "css-in-js-utils@npm:3.1.0"
@@ -6188,7 +6148,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"csstype@npm:3.1.3, csstype@npm:^3.0.0, csstype@npm:^3.0.2":
+"csstype@npm:3.1.3, csstype@npm:^3.0.2":
   version: 3.1.3
   resolution: "csstype@npm:3.1.3"
   checksum: 80c089d6f7e0c5b2bd83cf0539ab41474198579584fa10d86d0cafe0642202343cbc119e076a0b1aece191989477081415d66c9fefbf3c957fc2fc4b7009f248
@@ -7315,15 +7275,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"goober@npm:2.1.14":
-  version: 2.1.14
-  resolution: "goober@npm:2.1.14"
-  peerDependencies:
-    csstype: ^3.0.10
-  checksum: 184eda787a9a14cffbaa8284e98dc127095e538b4acab2a84b81babca84253bb883e16208822e02584f27c7a69f3ec47341e5060dfa40a0e07c32ac1f79b2714
-  languageName: node
-  linkType: hard
-
 "graceful-fs@npm:^4.1.11, graceful-fs@npm:^4.1.2, graceful-fs@npm:^4.1.3, graceful-fs@npm:^4.1.5, graceful-fs@npm:^4.1.6, graceful-fs@npm:^4.2.0, graceful-fs@npm:^4.2.11, graceful-fs@npm:^4.2.4, graceful-fs@npm:^4.2.6, graceful-fs@npm:^4.2.9":
   version: 4.2.11
   resolution: "graceful-fs@npm:4.2.11"
@@ -7519,7 +7470,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hyphenate-style-name@npm:^1.0.2, hyphenate-style-name@npm:^1.0.3, hyphenate-style-name@npm:^1.0.4":
+"hyphenate-style-name@npm:^1.0.3, hyphenate-style-name@npm:^1.0.4":
   version: 1.0.4
   resolution: "hyphenate-style-name@npm:1.0.4"
   checksum: b19c3e2cd1dc426f6f893752fec08140abf79058a1b6238422e45373ed81389f02e1a2ba2ef4e9b2430d4e900a0f5ba12307de82320604e81ac1b722abd2ee62
@@ -7646,15 +7597,6 @@ __metadata:
   version: 1.3.8
   resolution: "ini@npm:1.3.8"
   checksum: ec93838d2328b619532e4f1ff05df7909760b6f66d9c9e2ded11e5c1897d6f2f9980c54dd638f88654b00919ce31e827040631eab0a3969e4d1abefa0719516a
-  languageName: node
-  linkType: hard
-
-"inline-style-prefixer@npm:^5.1.0":
-  version: 5.1.2
-  resolution: "inline-style-prefixer@npm:5.1.2"
-  dependencies:
-    css-in-js-utils: "npm:^2.0.0"
-  checksum: 2f74f596996dd0c4776999d690923fd5fb50f0a0a25b25c9c1e0c555df5f0beb9ddd1790b32486a918a87888a78f978eb36490c455e95b71c6af5c67ba0c8782
   languageName: node
   linkType: hard
 
@@ -11820,13 +11762,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"string-hash@npm:^1.1.3":
-  version: 1.1.3
-  resolution: "string-hash@npm:1.1.3"
-  checksum: 179725d7706b49fbbc0a4901703a2d8abec244140879afd5a17908497e586a6b07d738f6775450aefd9f8dd729e4a0abd073fbc6fa3bd020b7a1d2369614af88
-  languageName: node
-  linkType: hard
-
 "string-length@npm:^4.0.2":
   version: 4.0.2
   resolution: "string-length@npm:4.0.2"
@@ -12117,55 +12052,6 @@ __metadata:
     babel-plugin-macros:
       optional: true
   checksum: eb6f388c7611468bb0ba48ecb0d0b269de4a0079ebeea56c5157552a414f00d575bfa1c37dd07eed5bff6547462b496f12b448dedeca386f778f1ccb2cf8b4ef
-  languageName: node
-  linkType: hard
-
-"styled-jsx@npm:5.1.7":
-  version: 5.1.7
-  resolution: "styled-jsx@npm:5.1.7"
-  dependencies:
-    client-only: "npm:0.0.1"
-  peerDependencies:
-    react: ">= 16.8.0 || 17.x.x || ^18.0.0-0 || ^19.0.0-0"
-  peerDependenciesMeta:
-    "@babel/core":
-      optional: true
-    babel-plugin-macros:
-      optional: true
-  checksum: 7a2544664f74dbd940c96017f81c7066b6c1e88df6e2062fd1ffcada66cfb22eb3367438b4f0ec47de7ba37f7359d153f25da2bf9593a6f3e35af44c7bbaeb48
-  languageName: node
-  linkType: hard
-
-"styletron-engine-atomic@npm:1.6.2":
-  version: 1.6.2
-  resolution: "styletron-engine-atomic@npm:1.6.2"
-  dependencies:
-    inline-style-prefixer: "npm:^5.1.0"
-    styletron-standard: "npm:^3.1.0"
-  checksum: 14aa56b1d7c5366e6dcc403e1c3e78bba8b9de89869b450faaceeebceb502bd38c8a604cf471c907cd7b68bc5b6b71388f0a3b8e2ed596b3b12b2fd4d71f1b45
-  languageName: node
-  linkType: hard
-
-"styletron-react@npm:6.1.1":
-  version: 6.1.1
-  resolution: "styletron-react@npm:6.1.1"
-  dependencies:
-    prop-types: "npm:^15.6.0"
-    styletron-standard: "npm:^3.1.0"
-  peerDependencies:
-    react: ">=16.8.0"
-  checksum: 066b93628ec9d7635616318bf7d1503a1c90f7516c97a6ec1ec7f6c119ba0ab760196d8248f236faea4c16bdf93880ec1a9b26901ac7b8a9e4099ba5c1645708
-  languageName: node
-  linkType: hard
-
-"styletron-standard@npm:^3.1.0":
-  version: 3.1.0
-  resolution: "styletron-standard@npm:3.1.0"
-  dependencies:
-    "@rtsao/csstype": "npm:2.6.5-forked.0"
-    csstype: "npm:^3.0.0"
-    inline-style-prefixer: "npm:^5.1.0"
-  checksum: 1278867bc52c55cc1763826d562e6b024a5c18bb37317c0604f346649b692408ba5e843c159e075bd4163724470eece2243c806a120ff959dfefe7a2994d94e4
   languageName: node
   linkType: hard
 

@@ -9,20 +9,15 @@
   "dependencies": {
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
-    "aphrodite": "2.4.0",
     "classnames": "2.5.1",
     "d3-scale-chromatic": "1.5.0",
-    "goober": "2.1.14",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-is": "^18.0.0",
     "react-native-web": "0.17.7",
     "styled-components": "workspace:*",
     "styled-components-v5": "npm:styled-components@5.3.9",
-    "styled-components-v6": "npm:styled-components@6.1.12",
-    "styled-jsx": "5.1.7",
-    "styletron-engine-atomic": "1.6.2",
-    "styletron-react": "6.1.1"
+    "styled-components-v6": "npm:styled-components@6.1.12"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",
