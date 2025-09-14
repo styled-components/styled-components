@@ -3,6 +3,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './app/App';
+import ConcurrentDataTable from './cases/ConcurrentDataTable';
 import SierpinskiTriangle from './cases/SierpinskiTriangle';
 import Tree from './cases/Tree';
 import impl from './impl';
@@ -51,6 +52,13 @@ const tests = {
     },
     Provider: components.Provider,
     sampleCount: 1000,
+  })),
+  'Async concurrent data table': createTestBlock(components => ({
+    benchmarkType: 'update',
+    Component: ConcurrentDataTable,
+    getComponentProps: ({ cycle }) => ({ components, renderCount: cycle }),
+    Provider: components.Provider,
+    sampleCount: 300,
   })),
 };
 

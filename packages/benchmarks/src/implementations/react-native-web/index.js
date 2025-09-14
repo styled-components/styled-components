@@ -1,11 +1,17 @@
+import { View } from 'react-native';
 import Box from './Box';
+import Cell from './Cell';
+import Container from './Container';
 import Dot from './Dot';
 import Provider from './Provider';
-import { View } from 'react-native';
+import Row from './Row';
 
 export default {
   Box,
+  Cell,
+  Container,
   Dot,
   Provider,
-  View
+  Row,
+  View,
 };
