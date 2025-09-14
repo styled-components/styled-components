@@ -24,6 +24,6 @@
   },
   "packageManager": "yarn@4.0.2",
   "devDependencies": {
-    "@changesets/cli": "2.27.7"
+    "@changesets/cli": "^2.27.7"
   }
 }
