@@ -1,0 +1,17 @@
+.row {
+  flex-direction: row;
+  align-items: center;
+  margin: 2px 0;
+}
+
+.row:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.theme-dark.row:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.theme-contrast.row:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}

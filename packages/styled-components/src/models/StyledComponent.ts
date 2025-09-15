@@ -1,6 +1,7 @@
 import isPropValid from '@emotion/is-prop-valid';
-import React, { createElement, PropsWithoutRef, Ref, useDebugValue } from 'react';
-import { SC_VERSION } from '../constants';
+import { useInsertionEffectAlwaysWithSyncFallback } from '@emotion/use-insertion-effect-with-fallbacks';
+import React, { createElement, Ref, useDebugValue } from 'react';
+import { IS_BROWSER, SC_VERSION } from '../constants';
 import type {
   AnyComponent,
   Attrs,
@@ -37,6 +38,13 @@ import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 const identifiers: { [key: string]: number } = {};
 
+// @ts-expect-error - this is fine
+const useInsertionEffect = React['useInsertion' + 'Effect']
+  ? // @ts-expect-error - this is fine
+    React['useInsertion' + 'Effect']
+  : false;
+const shouldUseInsertionEffect = !IS_BROWSER ? false : Boolean(useInsertionEffect);
+
 /* We depend on components having unique IDs */
 function generateId(
   displayName?: string | undefined,
@@ -61,11 +69,23 @@ function useInjectedStyle<T extends ExecutionContext>(
 ) {
   const ssc = useStyleSheetContext();
 
+  const insertionEffectBuffer: [name: string, rules: string[]][] | false =
+    !ssc.styleSheet.server && shouldUseInsertionEffect && [];
   const className = componentStyle.generateAndInjectStyles(
     resolvedAttrs,
     ssc.styleSheet,
-    ssc.stylis
+    ssc.stylis,
+    insertionEffectBuffer
   );
+
+  if (shouldUseInsertionEffect) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useInsertionEffectAlwaysWithSyncFallback(() => {
+      if (Array.isArray(insertionEffectBuffer) && insertionEffectBuffer.length > 0) {
+        componentStyle.flushStyles(insertionEffectBuffer, ssc.styleSheet);
+      }
+    });
+  }
 
   if (process.env.NODE_ENV !== 'production') useDebugValue(className);
 
