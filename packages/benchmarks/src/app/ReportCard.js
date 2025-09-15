@@ -18,9 +18,11 @@ class ReportCard extends React.PureComponent {
       meanScripting,
       stdDev,
       libraryVersion,
+      reactMode,
     } = this.props;
 
     const sampleCountText = sampleCount != null ? `(${sampleCount})` : '';
+    const reactModeText = reactMode ? ` - ${reactMode}` : '';
 
     return (
       <View style={styles.root}>
@@ -30,6 +32,7 @@ class ReportCard extends React.PureComponent {
           </Text>
           <Text numberOfLines={1}>
             {benchmarkName} {sampleCountText}
+            {reactModeText}
           </Text>
         </View>
         <View style={styles.right}>

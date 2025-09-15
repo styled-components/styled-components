@@ -1,17 +1,17 @@
-import { colors } from './theme';
 import { element } from 'prop-types';
 import React, { Component } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { colors } from './theme';
 
 export default class Layout extends Component {
   static propTypes = {
     actionPanel: element,
     listPanel: element,
-    viewPanel: element
+    viewPanel: element,
   };
 
   state = {
-    widescreen: false
+    widescreen: typeof window !== 'undefined' ? window.innerWidth >= 740 : true,
   };
 
   render() {
@@ -44,25 +44,26 @@ export default class Layout extends Component {
 
 const styles = StyleSheet.create({
   root: {
-    height: '100%'
+    height: '100%',
+    flexDirection: 'column',
   },
   row: {
-    flexDirection: 'row'
+    flexDirection: 'row',
   },
   divider: {
     height: 10,
     backgroundColor: colors.fadedGray,
     borderBottomWidth: 1,
     borderTopWidth: 1,
-    borderColor: colors.mediumGray
+    borderColor: colors.mediumGray,
   },
   grow: {
-    flex: 1
+    flex: 1,
   },
   stackPanel: {
-    height: '33.33%'
+    height: '33.33%',
   },
   layer: {
-    transform: [{ translateZ: '0' }]
-  }
+    transform: [{ translateZ: '0' }],
+  },
 });

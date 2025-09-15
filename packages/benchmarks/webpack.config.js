@@ -19,6 +19,20 @@ module.exports = {
     rules: [
       {
         test: /\.css$/i,
+        include: path.resolve(appDirectory, 'src/implementations/css-modules'),
+        use: [
+          'style-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              modules: true,
+            },
+          },
+        ],
+      },
+      {
+        test: /\.css$/i,
+        exclude: path.resolve(appDirectory, 'src/implementations/css-modules'),
         use: ['style-loader', 'css-loader'],
       },
       {

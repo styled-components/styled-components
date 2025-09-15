@@ -1,0 +1,18 @@
+.cell {
+  margin: 2px;
+  border: 3px solid transparent;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  cursor: pointer;
+}
+
+.cell:hover {
+  z-index: 5;
+  transform: scale(1.12) rotate(-1deg) !important;
+}
+
+.state-error:hover {
+  transform: scale(1.12) rotate(2deg) !important;
+}
+
+/* All size, state, priority, and theme variations are handled dynamically in JavaScript */

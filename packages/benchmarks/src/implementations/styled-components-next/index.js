@@ -1,4 +1,4 @@
-import styled from 'styled-components-v6';
+import styled from 'styled-components';
 import createCell from '../../shared/createCell';
 import createContainer from '../../shared/createContainer';
 import createRow from '../../shared/createRow';

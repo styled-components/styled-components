@@ -2,7 +2,9 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import App from './app/App';
+import ConcurrentDataTable from './cases/ConcurrentDataTable';
 import SierpinskiTriangle from './cases/SierpinskiTriangle';
 import Tree from './cases/Tree';
 import impl from './impl';
@@ -52,6 +54,20 @@ const tests = {
     Provider: components.Provider,
     sampleCount: 1000,
   })),
+  'Concurrent data table': createTestBlock(components => ({
+    benchmarkType: 'update',
+    Component: ConcurrentDataTable,
+    getComponentProps: ({ cycle }) => ({ components, renderCount: cycle }),
+    Provider: components.Provider,
+    sampleCount: 300,
+  })),
 };
 
-ReactDOM.render(<App tests={tests} />, document.querySelector('.root'));
+const container = document.querySelector('.root');
+
+if (!!localStorage.getItem('concurrent_mode') === 'true') {
+  const root = createRoot(container);
+  root.render(<App tests={tests} />);
+} else {
+  ReactDOM.render(<App tests={tests} />, container);
+}
