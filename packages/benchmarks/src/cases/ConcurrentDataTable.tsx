@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useMemo, useTransition } from 'react';
+import React, { useDeferredValue, useEffect, useMemo, useState, useTransition } from 'react';
 import { BenchmarkType } from '../app/Benchmark';
 
 const GRID_SIZE = 15; // 15x15 = 225 cells for intensive testing
@@ -28,7 +28,9 @@ interface CellData {
 // Generate realistic data updates with multiple changing properties
 const generateCellData = (row: number, col: number, renderCount: number): CellData => {
   const id = `${row}-${col}`;
-  const shouldUpdate = Math.random() < UPDATE_FREQUENCY;
+  // Use deterministic randomness based on position and render count to avoid memory leaks
+  const seed = (row * GRID_SIZE + col + renderCount) % 1000;
+  const shouldUpdate = seed / 1000 < UPDATE_FREQUENCY;
 
   if (!shouldUpdate && renderCount > 0) {
     // Keep existing data for stability but still add baseline properties
@@ -44,7 +46,11 @@ const generateCellData = (row: number, col: number, renderCount: number): CellDa
   }
 
   // Create dramatic visual changes with multiple property updates
-  const random = Math.random();
+  // Use deterministic values based on seed for consistent behavior
+  const random = ((seed * 7 + renderCount * 3) % 1000) / 1000;
+  const sizeRandom = ((seed * 11 + renderCount * 5) % 1000) / 1000;
+  const intensityRandom = ((seed * 13 + renderCount * 7) % 1000) / 1000;
+
   let state: CellState;
   let intensity: number;
   let size: 'small' | 'medium' | 'large';
@@ -64,7 +70,7 @@ const generateCellData = (row: number, col: number, renderCount: number): CellDa
   } else if (random < 0.5) {
     state = 'warning';
     intensity = 0.7;
-    size = Math.random() > 0.5 ? 'medium' : 'large';
+    size = sizeRandom > 0.5 ? 'medium' : 'large';
     priority = 'high';
   } else if (random < 0.7) {
     state = 'success';
@@ -73,14 +79,14 @@ const generateCellData = (row: number, col: number, renderCount: number): CellDa
     priority = 'low';
   } else {
     state = 'idle';
-    intensity = 0.3 + Math.random() * 0.4; // Vary intensity even for idle
-    size = ['small', 'medium', 'large'][Math.floor(Math.random() * 3)] as any;
-    priority = ['low', 'medium'][Math.floor(Math.random() * 2)] as any;
+    intensity = 0.3 + intensityRandom * 0.4; // Vary intensity even for idle
+    size = ['small', 'medium', 'large'][Math.floor(sizeRandom * 3)] as any;
+    priority = ['low', 'medium'][Math.floor(sizeRandom * 2)] as any;
   }
 
   return {
     id,
-    value: Math.floor(Math.random() * 1000),
+    value: (seed * 17 + renderCount * 11) % 1000,
     state,
     lastUpdated: renderCount,
     intensity,
@@ -121,15 +127,25 @@ export default function ConcurrentDataTable({ components, renderCount = 0 }: ICo
         : 'contrast';
   }, [deferredRenderCount]);
 
-  // Async theme switching using transition API
-  const asyncThemeVariant = useMemo(() => {
-    let asyncTheme = themeVariant;
+  // Async theme state for transition testing
+  const [asyncThemeVariant, setAsyncThemeVariant] = useState(themeVariant);
+
+  // Handle async theme switching using transition API
+  useEffect(() => {
+    const newAsyncTheme = renderCount % 4 === 0 ? 'contrast' : themeVariant;
+
     startAsyncTransition(() => {
-      // Create async updates to test transition behavior
-      asyncTheme = renderCount % 4 === 0 ? 'contrast' : themeVariant;
+      setAsyncThemeVariant(newAsyncTheme);
     });
-    return asyncTheme;
-  }, [renderCount, themeVariant, startAsyncTransition]);
+  }, [renderCount, themeVariant, asyncThemeVariant]);
+
+  // Cleanup effect to prevent memory leaks when benchmark ends
+  useEffect(() => {
+    return () => {
+      // Reset to initial theme on cleanup
+      setAsyncThemeVariant('light');
+    };
+  }, []);
 
   if (!Cell || !Row || !Container) {
     return <span style={{ color: 'white' }}>No implementation available</span>;

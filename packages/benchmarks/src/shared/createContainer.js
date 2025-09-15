@@ -60,7 +60,7 @@ export default function createContainer(styled, View) {
       props.isPending &&
       `
       position: relative;
-      
+
       &::before {
         content: 'Updating...';
         position: absolute;
