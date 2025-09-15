@@ -73,14 +73,12 @@ export default function createCell(styled, View) {
     margin: 2px;
     border-radius: ${props => 4 * getSizeScale(props.size)}px;
 
-    /* Dynamic background with intensity */
     background: linear-gradient(
       135deg,
       ${props => getStateColor(props.state, props.theme, props.intensity)},
       ${props => getStateColor(props.state, props.theme, props.intensity * 0.8)}
     );
 
-    /* Text styling with intensity */
     color: ${props => getTextColor(props.state, props.theme, props.intensity)};
     font-size: ${props => 11 * getSizeScale(props.size)}px;
     font-weight: ${props => {
@@ -89,10 +87,8 @@ export default function createCell(styled, View) {
       return 'normal';
     }};
 
-    /* Opacity with pending state */
     opacity: ${props => (props.isPending ? 0.6 : 0.9 + props.intensity * 0.1)};
 
-    /* Complex transform combining size, state, and priority */
     transform: scale(
         ${props => {
           let baseScale = getSizeScale(props.size);
@@ -110,23 +106,19 @@ export default function createCell(styled, View) {
         }}
       );
 
-    /* Smooth transitions */
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
-    /* Dynamic border with priority accent */
     border: 3px solid ${props => getPriorityAccent(props.priority, props.intensity)};
     box-shadow:
       0 2px 8px ${props => getPriorityAccent(props.priority, props.intensity * 0.5)},
       inset 0 1px 0 rgba(255, 255, 255, ${props => props.intensity * 0.2});
 
-    /* Text shadow for better readability */
     text-shadow: ${props => {
       const shadowIntensity = props.intensity * 0.5;
       if (props.theme === 'light' && props.state === 'idle') return 'none';
       return `0 1px 2px rgba(0, 0, 0, ${shadowIntensity})`;
     }};
 
-    /* Hover effects */
     &:hover {
       transform: scale(${props => getSizeScale(props.size) * 1.12})
         rotate(${props => (props.state === 'error' ? '2deg' : '-1deg')});
@@ -138,6 +130,7 @@ export default function createCell(styled, View) {
   `;
 
   Cell.defaultProps = {
+    'data-testid': 'cell',
     state: 'idle',
     theme: 'light',
     isPending: false,

@@ -23,6 +23,7 @@ export default function createRow(styled, View) {
   `;
 
   Row.defaultProps = {
+    'data-testid': 'row',
     theme: 'light',
     index: 0,
   };

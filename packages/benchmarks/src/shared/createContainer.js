@@ -14,6 +14,7 @@ export default function createContainer(styled, View) {
 
   const Container = styled(View)`
     width: 100%;
+    height: 100%;
     max-width: 1200px;
     max-height: 800px;
     overflow: auto;
@@ -35,7 +36,6 @@ export default function createContainer(styled, View) {
     opacity: ${props => (props.isPending ? 0.8 : 1)};
     transition: opacity 0.3s ease;
 
-    /* Custom scrollbar */
     &::-webkit-scrollbar {
       width: 8px;
       height: 8px;
@@ -55,7 +55,6 @@ export default function createContainer(styled, View) {
       }
     }
 
-    /* Loading state overlay */
     ${props =>
       props.isPending &&
       `
@@ -78,6 +77,7 @@ export default function createContainer(styled, View) {
   `;
 
   Container.defaultProps = {
+    'data-testid': 'container',
     theme: 'light',
     isPending: false,
   };
