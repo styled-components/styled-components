@@ -15,18 +15,53 @@ export default class App extends Component {
 
   constructor(props, context) {
     super(props, context);
-    const currentBenchmarkName = Object.keys(props.tests)[0];
+    const defaultBenchmarkName = Object.keys(props.tests)[0];
+    const availableLibraries = Object.keys(props.tests[defaultBenchmarkName]);
+
+    // Load saved picker values from localStorage
+    let currentBenchmarkName = defaultBenchmarkName;
+    let currentLibraryName = 'styled-components';
+
+    try {
+      const savedBenchmark = localStorage.getItem('current_benchmark');
+      const savedLibrary = localStorage.getItem('current_library');
+
+      // Only use saved values if they're still valid
+      if (savedBenchmark && props.tests[savedBenchmark]) {
+        currentBenchmarkName = savedBenchmark;
+      }
+
+      if (savedLibrary && props.tests[currentBenchmarkName][savedLibrary]) {
+        currentLibraryName = savedLibrary;
+      }
+    } catch (e) {
+      console.warn('Failed to load saved picker values:', e);
+    }
+
+    // Load saved results from localStorage
+    let savedResults = [];
+    try {
+      const saved = localStorage.getItem('benchmark_results');
+      if (saved) {
+        savedResults = JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Failed to load saved benchmark results:', e);
+    }
+
     this.state = {
       currentBenchmarkName,
-      currentLibraryName: 'styled-components',
+      currentLibraryName,
       status: 'idle',
-      results: [],
+      results: savedResults,
+      concurrentMode: !!localStorage.getItem('concurrent_mode'),
     };
   }
 
   render() {
     const { tests } = this.props;
-    const { currentBenchmarkName, status, currentLibraryName, results } = this.state;
+    const { currentBenchmarkName, status, currentLibraryName, results, concurrentMode } =
+      this.state;
     const currentImplementation = tests[currentBenchmarkName][currentLibraryName];
     const { Component, Provider, getComponentProps, sampleCount } = currentImplementation;
 
@@ -64,6 +99,23 @@ export default class App extends Component {
                   {Object.keys(tests).map(test => (
                     <Picker.Item key={test} label={test} value={test} />
                   ))}
+                </Picker>
+              </View>
+              <View style={{ width: 1, backgroundColor: colors.fadedGray }} />
+              <View style={styles.pickerContainer}>
+                <Text style={styles.pickerTitle}>React Mode</Text>
+                <Text style={{ fontWeight: 'bold' }}>
+                  {concurrentMode ? 'Concurrent' : 'Legacy'}
+                </Text>
+                <Picker
+                  enabled={status !== 'running'}
+                  onValueChange={this._handleConcurrentModeChange}
+                  selectedValue={concurrentMode ? 'concurrent' : 'legacy'}
+                  style={styles.picker}
+                  testID="concurrent-mode-picker"
+                >
+                  <Picker.Item key="legacy" label="Legacy" value="legacy" />
+                  <Picker.Item key="concurrent" label="Concurrent" value="concurrent" />
                 </Picker>
               </View>
             </View>
@@ -161,10 +213,39 @@ export default class App extends Component {
 
   _handleChangeBenchmark = value => {
     this.setState(() => ({ currentBenchmarkName: value }));
+
+    // Save current benchmark to localStorage
+    try {
+      localStorage.setItem('current_benchmark', value);
+    } catch (e) {
+      console.warn('Failed to save current benchmark:', e);
+    }
   };
 
   _handleChangeLibrary = value => {
     this.setState(() => ({ currentLibraryName: value }));
+
+    // Save current library to localStorage
+    try {
+      localStorage.setItem('current_library', value);
+    } catch (e) {
+      console.warn('Failed to save current library:', e);
+    }
+  };
+
+  _handleConcurrentModeChange = value => {
+    const concurrentMode = value === 'concurrent';
+    this.setState(() => ({ concurrentMode }));
+
+    // Update localStorage
+    if (concurrentMode) {
+      localStorage.setItem('concurrent_mode', 'true');
+    } else {
+      localStorage.removeItem('concurrent_mode');
+    }
+
+    // Reload the page to apply the new React mode
+    window.location.reload();
   };
 
   _handleStart = () => {
@@ -193,26 +274,84 @@ export default class App extends Component {
   _createHandleComplete =
     ({ benchmarkName, libraryName, sampleCount }) =>
     results => {
-      this.setState(
-        state => ({
-          results: state.results.concat([
-            {
-              ...results,
-              benchmarkName,
-              libraryName,
-              libraryVersion: this.props.tests[benchmarkName][libraryName].version,
-            },
-          ]),
+      this.setState(state => {
+        const newResults = state.results.concat([
+          {
+            ...results,
+            benchmarkName,
+            libraryName,
+            libraryVersion: this.props.tests[benchmarkName][libraryName].version,
+            sampleCount,
+          },
+        ]);
+
+        // Save results to localStorage
+        try {
+          localStorage.setItem('benchmark_results', JSON.stringify(newResults));
+        } catch (e) {
+          console.warn('Failed to save benchmark results:', e);
+        }
+
+        return {
+          results: newResults,
           status: 'complete',
-        }),
-        this._scrollToEnd
-      );
+        };
+      }, this._scrollToEnd);
+
+      // Force garbage collection after each benchmark run for clean slate
+      this._forceGarbageCollection();
+
       // console.log(results);
       // console.log(results.samples.map(sample => sample.elapsed.toFixed(1)).join('\n'));
     };
 
   _handleClear = () => {
     this.setState(() => ({ results: [] }));
+
+    // Clear only saved results from localStorage (keep picker values)
+    try {
+      localStorage.removeItem('benchmark_results');
+    } catch (e) {
+      console.warn('Failed to clear saved benchmark results:', e);
+    }
+
+    // Force garbage collection
+    this._forceGarbageCollection();
+  };
+
+  _forceGarbageCollection = () => {
+    // Primary method: Use exposed GC if available (Chrome with --expose-gc flag)
+    if (window.gc) {
+      window.gc();
+      return;
+    }
+
+    // Fallback strategies to encourage garbage collection
+    try {
+      // Strategy 1: Create memory pressure to encourage GC
+      const memoryPressure = new Array(1000000).fill(null);
+      memoryPressure.length = 0;
+
+      // Strategy 2: Use performance API if available (experimental)
+      if (performance.measureUserAgentSpecificMemory) {
+        performance.measureUserAgentSpecificMemory().catch(() => {
+          // Ignore errors - this is experimental
+        });
+      }
+
+      // Strategy 3: Allow event loop to process cleanup with setTimeout
+      setTimeout(() => {
+        // Give the browser a chance to clean up
+        if (window.requestIdleCallback) {
+          window.requestIdleCallback(() => {
+            // Idle callback to encourage cleanup during idle time
+          });
+        }
+      }, 0);
+    } catch (e) {
+      // Fallback strategies might fail in some browsers, ignore errors
+      console.warn('Fallback garbage collection strategies failed:', e);
+    }
   };
 
   _setBenchRef = ref => {
