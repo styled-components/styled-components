@@ -158,6 +158,7 @@ export default class App extends Component {
                     runTime={r.runTime}
                     sampleCount={r.sampleCount}
                     stdDev={r.stdDev}
+                    reactMode={r.reactMode}
                   />
                 ))}
                 {status === 'running' ? (
@@ -282,6 +283,7 @@ export default class App extends Component {
             libraryName,
             libraryVersion: this.props.tests[benchmarkName][libraryName].version,
             sampleCount,
+            reactMode: this.state.concurrentMode ? 'concurrent' : 'legacy',
           },
         ]);
 
