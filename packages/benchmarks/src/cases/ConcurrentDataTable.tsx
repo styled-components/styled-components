@@ -1,8 +1,8 @@
 import React, { useDeferredValue, useEffect, useMemo, useState, useTransition } from 'react';
 import { BenchmarkType } from '../app/Benchmark';
 
-const GRID_SIZE = 15; // 15x15 = 225 cells for intensive testing
-const UPDATE_FREQUENCY = 0.6; // 60% of cells update per cycle for more visual change
+const GRID_SIZE = 33;
+const UPDATE_FREQUENCY = 0.6;
 
 type CellState = 'idle' | 'loading' | 'success' | 'error' | 'warning';
 
@@ -20,33 +20,28 @@ interface CellData {
   value: number;
   state: CellState;
   lastUpdated: number;
-  intensity: number; // 0-1 for visual intensity
+  intensity: number;
   size: 'small' | 'medium' | 'large';
   priority: 'low' | 'medium' | 'high' | 'critical';
 }
 
-// Generate realistic data updates with multiple changing properties
 const generateCellData = (row: number, col: number, renderCount: number): CellData => {
   const id = `${row}-${col}`;
-  // Use deterministic randomness based on position and render count to avoid memory leaks
   const seed = (row * GRID_SIZE + col + renderCount) % 1000;
   const shouldUpdate = seed / 1000 < UPDATE_FREQUENCY;
 
   if (!shouldUpdate && renderCount > 0) {
-    // Keep existing data for stability but still add baseline properties
     return {
       id,
       value: (row * GRID_SIZE + col + renderCount) % 1000,
       state: 'idle',
-      lastUpdated: renderCount - Math.floor(Math.random() * 5),
+      lastUpdated: renderCount - Math.floor((seed / 1000) * 5),
       intensity: 0.3,
       size: 'medium',
       priority: 'low',
     };
   }
 
-  // Create dramatic visual changes with multiple property updates
-  // Use deterministic values based on seed for consistent behavior
   const random = ((seed * 7 + renderCount * 3) % 1000) / 1000;
   const sizeRandom = ((seed * 11 + renderCount * 5) % 1000) / 1000;
   const intensityRandom = ((seed * 13 + renderCount * 7) % 1000) / 1000;
@@ -56,7 +51,6 @@ const generateCellData = (row: number, col: number, renderCount: number): CellDa
   let size: 'small' | 'medium' | 'large';
   let priority: 'low' | 'medium' | 'high' | 'critical';
 
-  // Distribute states more evenly for visual impact
   if (random < 0.2) {
     state = 'loading';
     intensity = 0.8;
@@ -79,7 +73,7 @@ const generateCellData = (row: number, col: number, renderCount: number): CellDa
     priority = 'low';
   } else {
     state = 'idle';
-    intensity = 0.3 + intensityRandom * 0.4; // Vary intensity even for idle
+    intensity = 0.3 + intensityRandom * 0.4;
     size = ['small', 'medium', 'large'][Math.floor(sizeRandom * 3)] as any;
     priority = ['low', 'medium'][Math.floor(sizeRandom * 2)] as any;
   }
@@ -99,17 +93,14 @@ export default function ConcurrentDataTable({ components, renderCount = 0 }: ICo
   const { Cell, Row, Container } = components;
   const [isPending, startAsyncTransition] = useTransition();
 
-  // Defer the render count to test interaction with deferred value API
   const deferredRenderCount = useDeferredValue(renderCount);
 
-  // Generate grid data with mixed timing to test concurrent updates
   const gridData = useMemo(() => {
     const data: CellData[][] = [];
 
     for (let row = 0; row < GRID_SIZE; row++) {
       data[row] = [];
       for (let col = 0; col < GRID_SIZE; col++) {
-        // Mix immediate and deferred values for concurrent update testing
         const countToUse = (row + col) % 3 === 0 ? deferredRenderCount : renderCount;
         data[row][col] = generateCellData(row, col, countToUse);
       }
@@ -118,7 +109,6 @@ export default function ConcurrentDataTable({ components, renderCount = 0 }: ICo
     return data;
   }, [renderCount, deferredRenderCount]);
 
-  // Theme calculation using deferred values
   const themeVariant = useMemo(() => {
     return deferredRenderCount % 3 === 0
       ? 'dark'
@@ -127,10 +117,8 @@ export default function ConcurrentDataTable({ components, renderCount = 0 }: ICo
         : 'contrast';
   }, [deferredRenderCount]);
 
-  // Async theme state for transition testing
   const [asyncThemeVariant, setAsyncThemeVariant] = useState(themeVariant);
 
-  // Handle async theme switching using transition API
   useEffect(() => {
     const newAsyncTheme = renderCount % 4 === 0 ? 'contrast' : themeVariant;
 
@@ -139,10 +127,8 @@ export default function ConcurrentDataTable({ components, renderCount = 0 }: ICo
     });
   }, [renderCount, themeVariant, asyncThemeVariant]);
 
-  // Cleanup effect to prevent memory leaks when benchmark ends
   useEffect(() => {
     return () => {
-      // Reset to initial theme on cleanup
       setAsyncThemeVariant('light');
     };
   }, []);
@@ -167,7 +153,6 @@ export default function ConcurrentDataTable({ components, renderCount = 0 }: ICo
               priority={cellData.priority}
               isPending={isPending}
               theme={asyncThemeVariant}
-              // Add some dynamic props for update testing
               className={`cell-${cellData.state}-${cellData.priority}`}
               data-testid={`cell-${cellData.id}`}
             />
