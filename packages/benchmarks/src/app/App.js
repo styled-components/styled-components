@@ -20,7 +20,7 @@ export default class App extends Component {
 
     // Load saved picker values from localStorage
     let currentBenchmarkName = defaultBenchmarkName;
-    let currentLibraryName = 'styled-components';
+    let currentLibraryName = 'styled-components-next';
 
     try {
       const savedBenchmark = localStorage.getItem('current_benchmark');
