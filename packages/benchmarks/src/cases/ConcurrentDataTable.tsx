@@ -1,7 +1,7 @@
 import React, { useDeferredValue, useEffect, useMemo, useState, useTransition } from 'react';
 import { BenchmarkType } from '../app/Benchmark';
 
-const GRID_SIZE = 33;
+const GRID_SIZE = 50;
 const UPDATE_FREQUENCY = 0.6;
 
 type CellState = 'idle' | 'loading' | 'success' | 'error' | 'warning';
@@ -23,6 +23,7 @@ interface CellData {
   intensity: number;
   size: 'small' | 'medium' | 'large';
   priority: 'low' | 'medium' | 'high' | 'critical';
+  suspend: boolean;
 }
 
 const generateCellData = (row: number, col: number, renderCount: number): CellData => {
@@ -39,6 +40,7 @@ const generateCellData = (row: number, col: number, renderCount: number): CellDa
       intensity: 0.3,
       size: 'medium',
       priority: 'low',
+      suspend: false,
     };
   }
 
@@ -86,12 +88,49 @@ const generateCellData = (row: number, col: number, renderCount: number): CellDa
     intensity,
     size,
     priority,
+    suspend: random < 0.05,
   };
 };
+
+// Moderate computation for grid hash
+const computeHeavyGridHash = (gridData: CellData[][]) => {
+  let hash = 0;
+  // Sample every 10th cell to reduce computation
+  for (let i = 0; i < gridData.length; i += 5) {
+    for (let j = 0; j < gridData[i].length; j += 5) {
+      hash = ((hash << 5) - hash + gridData[i][j].value + gridData[i][j].lastUpdated) | 0;
+    }
+  }
+  return hash;
+};
+
+// Async row component that suspends temporarily
+const AsyncRow = ({
+  index,
+  shouldSuspend,
+  children,
+}: {
+  index: number;
+  shouldSuspend: boolean;
+  children: React.ReactNode;
+}) => {
+  if (shouldSuspend && index === 0) {
+    // Only suspend first row when enabled
+    throw new Promise(resolve => setTimeout(() => resolve(null), 100));
+  }
+  return <>{children}</>;
+};
+
+// Full loader fallback
+const FullLoader = () => <div style={{ color: 'white', padding: '20px' }}>Loading grid...</div>;
 
 export default function ConcurrentDataTable({ components, renderCount = 0 }: IConcurrentDataTable) {
   const { Cell, Row, Container } = components;
   const [isPending, startAsyncTransition] = useTransition();
+
+  // Track component mount state for cleanup
+  const isMountedRef = React.useRef(true);
+  const abortControllerRef = React.useRef(new AbortController());
 
   const deferredRenderCount = useDeferredValue(renderCount);
 
@@ -109,6 +148,8 @@ export default function ConcurrentDataTable({ components, renderCount = 0 }: ICo
     return data;
   }, [renderCount, deferredRenderCount]);
 
+  const gridHash = useMemo(() => computeHeavyGridHash(gridData), [gridData]);
+
   const themeVariant = useMemo(() => {
     return deferredRenderCount % 3 === 0
       ? 'dark'
@@ -120,15 +161,44 @@ export default function ConcurrentDataTable({ components, renderCount = 0 }: ICo
   const [asyncThemeVariant, setAsyncThemeVariant] = useState(themeVariant);
 
   useEffect(() => {
-    const newAsyncTheme = renderCount % 4 === 0 ? 'contrast' : themeVariant;
+    // Skip if component is unmounting or aborted
+    if (!isMountedRef.current || abortControllerRef.current.signal.aborted) {
+      return;
+    }
+
+    const newAsyncTheme = renderCount % 2 === 0 ? 'contrast' : themeVariant;
 
     startAsyncTransition(() => {
-      setAsyncThemeVariant(newAsyncTheme);
+      if (isMountedRef.current && !abortControllerRef.current.signal.aborted) {
+        setAsyncThemeVariant(newAsyncTheme);
+      }
     });
   }, [renderCount, themeVariant, asyncThemeVariant]);
 
   useEffect(() => {
+    // Skip if component is unmounting or aborted
+    if (!isMountedRef.current || abortControllerRef.current.signal.aborted) {
+      return;
+    }
+
+    startAsyncTransition(() => {
+      if (
+        isMountedRef.current &&
+        !abortControllerRef.current.signal.aborted &&
+        Math.random() < 0.1
+      ) {
+        setAsyncThemeVariant('interrupt');
+      }
+    });
+  }, [renderCount]);
+
+  useEffect(() => {
     return () => {
+      // Mark as unmounted and abort any pending operations
+      isMountedRef.current = false;
+      abortControllerRef.current.abort();
+
+      // Reset all state to initial values
       setAsyncThemeVariant('light');
     };
   }, []);
@@ -138,7 +208,7 @@ export default function ConcurrentDataTable({ components, renderCount = 0 }: ICo
   }
 
   return (
-    <Container theme={asyncThemeVariant} isPending={isPending}>
+    <Container theme={asyncThemeVariant} isPending={isPending} globalHash={gridHash}>
       {gridData.map((rowData, rowIndex) => (
         <Row key={rowIndex} index={rowIndex} theme={asyncThemeVariant}>
           {rowData.map(cellData => (
@@ -155,6 +225,9 @@ export default function ConcurrentDataTable({ components, renderCount = 0 }: ICo
               theme={asyncThemeVariant}
               className={`cell-${cellData.state}-${cellData.priority}`}
               data-testid={`cell-${cellData.id}`}
+              suspend={false} // Disable suspensions for now
+              rowIndex={rowIndex}
+              abortSignal={abortControllerRef.current.signal}
             />
           ))}
         </Row>

@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  computeHeavyValues,
   getPriorityAccent,
   getSizeScale,
   getStateColor,
@@ -14,9 +15,27 @@ const Cell = ({
   intensity = 1,
   size = 'medium',
   priority = 'low',
+  suspend = false,
+  rowIndex = 0,
+  abortSignal = null,
   style,
   ...other
 }) => {
+  if (suspend) {
+    throw new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => resolve(null), 50 * (rowIndex % 5) || 50);
+
+      if (abortSignal) {
+        abortSignal.addEventListener('abort', () => {
+          clearTimeout(timeoutId);
+          reject(new Error('Cell suspend aborted'));
+        });
+      }
+    });
+  }
+
+  // Heavy computation here for inline-styles
+  const heavyValues = computeHeavyValues(other);
   const sizeScale = getSizeScale(size);
 
   const cellStyle = {
@@ -46,13 +65,13 @@ const Cell = ({
       return '0deg';
     })()})`,
     transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-    border: `3px solid ${getPriorityAccent(priority, intensity)}`,
+    border: `3px solid ${heavyValues.$borderColor || getPriorityAccent(priority, intensity)}`,
     boxShadow: `
-      0 2px 8px ${getPriorityAccent(priority, intensity * 0.5)},
+      0 2px 8px ${getPriorityAccent(priority, heavyValues.$shadowIntensity || intensity * 0.5)},
       inset 0 1px 0 rgba(255, 255, 255, ${intensity * 0.2})
     `,
     textShadow: (() => {
-      const shadowIntensity = intensity * 0.5;
+      const shadowIntensity = heavyValues.$shadowIntensity || intensity * 0.5;
       if (theme === 'light' && state === 'idle') return 'none';
       return `0 1px 2px rgba(0, 0, 0, ${shadowIntensity})`;
     })(),

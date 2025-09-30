@@ -1,3 +1,5 @@
+import React from 'react';
+
 // Shared utility functions for Cell component
 export const getStateColor = (state, theme, intensity = 1) => {
   const baseColors = {
@@ -64,9 +66,25 @@ export const getTextColor = (state, theme, intensity = 1) => {
   return `rgba(255, 255, 255, ${baseOpacity * intensity})`;
 };
 
+// Heavy computation for render (simulates expensive prop transforms)
+export const computeHeavyValues = props => {
+  let hash = 0;
+  const input = props.value + props.lastUpdated + props.intensity * 10;
+  // Moderate loop to simulate work (up to ~100 iterations)
+  for (let i = 0; i < Math.min(input % 100, 100); i++) {
+    hash = ((hash << 5) - hash + i * props.intensity) | 0;
+  }
+  const computedBorderColor = `hsl(${hash % 360}, 70%, 50%)`;
+  const computedShadowIntensity = (hash % 100) / 100;
+  return {
+    $borderColor: computedBorderColor,
+    $shadowIntensity: computedShadowIntensity,
+  };
+};
+
 // Factory function to create Cell component with any styled function
 export default function createCell(styled, View) {
-  const Cell = styled(View)`
+  const StyledCell = styled(View)`
     min-width: ${props => 50 * getSizeScale(props.size)}px;
     min-height: ${props => 35 * getSizeScale(props.size)}px;
     padding: ${props => 6 * getSizeScale(props.size)}px;
@@ -108,13 +126,16 @@ export default function createCell(styled, View) {
 
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
-    border: 3px solid ${props => getPriorityAccent(props.priority, props.intensity)};
+    border: 3px solid
+      ${props => props.$borderColor || getPriorityAccent(props.priority, props.intensity)};
     box-shadow:
-      0 2px 8px ${props => getPriorityAccent(props.priority, props.intensity * 0.5)},
+      0 2px 8px
+        ${props =>
+          getPriorityAccent(props.priority, props.$shadowIntensity || props.intensity * 0.5)},
       inset 0 1px 0 rgba(255, 255, 255, ${props => props.intensity * 0.2});
 
     text-shadow: ${props => {
-      const shadowIntensity = props.intensity * 0.5;
+      const shadowIntensity = props.$shadowIntensity || props.intensity * 0.5;
       if (props.theme === 'light' && props.state === 'idle') return 'none';
       return `0 1px 2px rgba(0, 0, 0, ${shadowIntensity})`;
     }};
@@ -129,6 +150,27 @@ export default function createCell(styled, View) {
     }
   `;
 
+  // Wrapper to handle heavy computation and suspend
+  const Cell = props => {
+    if (props.suspend) {
+      throw new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => resolve(null), 50 * ((props.rowIndex || 0) % 5) || 50);
+
+        // Cancel timeout if abort signal is triggered
+        if (props.abortSignal) {
+          props.abortSignal.addEventListener('abort', () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Cell suspend aborted'));
+          });
+        }
+      });
+    }
+
+    // Always do heavy computation here for consistency
+    const heavyValues = computeHeavyValues(props);
+    return <StyledCell {...props} {...heavyValues} />;
+  };
+
   Cell.defaultProps = {
     'data-testid': 'cell',
     state: 'idle',
@@ -137,6 +179,8 @@ export default function createCell(styled, View) {
     intensity: 1,
     size: 'medium',
     priority: 'low',
+    suspend: false,
+    abortSignal: null,
   };
 
   return Cell;
