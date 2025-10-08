@@ -87,6 +87,7 @@ const elements = [
   's',
   'samp',
   'script',
+  'search',
   'section',
   'select',
   'small',
