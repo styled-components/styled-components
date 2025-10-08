@@ -186,7 +186,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
   propsForElement[
     // handle custom elements which React doesn't properly alias
     isTag(elementToBeCreated) &&
-    !domElements.has(elementToBeCreated as Extract<typeof domElements, string>)
+    elementToBeCreated.includes('-')
       ? 'class'
       : 'className'
   ] = classString;
