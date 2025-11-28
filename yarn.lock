@@ -6172,6 +6172,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"csstype@npm:3.2.3":
+  version: 3.2.3
+  resolution: "csstype@npm:3.2.3"
+  checksum: cd29c51e70fa822f1cecd8641a1445bed7063697469d35633b516e60fe8c1bde04b08f6c5b6022136bb669b64c63d4173af54864510fbb4ee23281801841a3ce
+  languageName: node
+  linkType: hard
+
 "d3-color@npm:1":
   version: 1.4.1
   resolution: "d3-color@npm:1.4.1"
@@ -12046,7 +12053,7 @@ __metadata:
     babel-plugin-tester: "npm:^10.1.0"
     bundlewatch: "npm:^0.3.3"
     css-to-react-native: "npm:3.2.0"
-    csstype: "npm:3.1.3"
+    csstype: "npm:3.2.3"
     jest: "npm:^30.1.3"
     jest-environment-jsdom: "npm:^30.1.2"
     jest-serializer-html: "npm:^7.1.0"
