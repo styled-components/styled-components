@@ -1,5 +1,21 @@
 # styled-components
 
+## 6.2.0
+
+### Minor Changes
+
+- e7c8055: Experimental support for React 18+ renderToPipeableStream.
+
+### Patch Changes
+
+- d0b73ac: Fix no longer existing link in console debug message
+- 8a9c21b: Upgrade stylis to 4.3.6. [Related commits](https://github.com/thysultan/stylis/commits/master/?since=2024-08-01&until=2025-09-11)
+- a21089e: Update internal React types to ^18
+- c3a5990: Update csstype dependency from 3.1.3 to 3.2.3
+
+  This updates the pinned csstype dependency from 3.1.3 to 3.2.3 to fix a
+  type incompatibility with @types/react.
+
 ## 6.1.19
 
 ### Patch Changes
