@@ -96,7 +96,7 @@
     "babel-plugin-add-module-exports": "^1.0.4",
     "babel-plugin-styled-components": "^2.1.4",
     "babel-plugin-tester": "^10.1.0",
-    "bundlewatch": "^0.3.3",
+    "bundlewatch": "^0.4.1",
     "jest": "^30.1.3",
     "jest-environment-jsdom": "^30.1.2",
     "jest-serializer-html": "^7.1.0",
