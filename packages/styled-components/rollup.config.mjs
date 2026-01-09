@@ -166,8 +166,8 @@ const standaloneProdConfig = {
 const serverConfig = {
   ...configBase,
   output: [
-    getESM({ file: 'dist/styled-components.esm.js' }),
-    getCJS({ file: 'dist/styled-components.cjs.js' }),
+    getESM({ file: 'dist/styled-components.mjs' }),
+    getCJS({ file: 'dist/styled-components.cjs' }),
   ],
   plugins: configBase.plugins.concat(
     replace({
@@ -180,8 +180,8 @@ const serverConfig = {
 const browserConfig = {
   ...configBase,
   output: [
-    getESM({ file: 'dist/styled-components.browser.esm.js' }),
-    getCJS({ file: 'dist/styled-components.browser.cjs.js' }),
+    getESM({ file: 'dist/styled-components.browser.mjs' }),
+    getCJS({ file: 'dist/styled-components.browser.cjs' }),
   ],
   plugins: configBase.plugins.concat(
     replace({
@@ -196,10 +196,10 @@ const nativeConfig = {
   input: './src/native/index.ts',
   output: [
     getCJS({
-      file: 'native/dist/styled-components.native.cjs.js',
+      file: 'native/dist/styled-components.native.cjs',
     }),
     getESM({
-      file: 'native/dist/styled-components.native.esm.js',
+      file: 'native/dist/styled-components.native.mjs',
     }),
   ],
   plugins: [
