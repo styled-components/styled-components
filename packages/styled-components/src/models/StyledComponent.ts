@@ -1,7 +1,6 @@
 import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
 import { IS_RSC, SC_VERSION } from '../constants';
-import StyleSheet from '../sheet';
 import type {
   AnyComponent,
   Attrs,
@@ -93,7 +92,7 @@ function resolveContext<Props extends BaseObject>(
       if (key === 'className') {
         context.className = joinStrings(context.className, resolvedAttrDef[key] as string);
       } else if (key === 'style') {
-        context.style = { ...context.style, ...resolvedAttrDef[key] };
+        context.style = { ...context.style, ...(resolvedAttrDef[key] as React.CSSProperties) };
       } else {
         // @ts-expect-error attrs can dynamically add arbitrary properties
         context[key] = resolvedAttrDef[key];
