@@ -1,0 +1,16 @@
+packages:
+  - 'packages/*'
+
+# Optional security features (NOT recommended for initial migration):
+# These may break legitimate dependencies and should only be enabled after testing
+#
+# catalog:
+#   # Centrally manage shared dependency versions
+#   react: ^18.0.0
+#   typescript: ^5.4.5
+#
+# enable-pre-post-scripts: false  # Block lifecycle scripts
+# minimumReleaseAge: 720          # Wait 12 hours before installing new releases
+# trustPolicy: no-downgrade       # Block packages with weaker authentication
+
+
