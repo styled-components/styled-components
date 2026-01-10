@@ -10,7 +10,6 @@ packages:
 #   typescript: ^5.4.5
 #
 # enable-pre-post-scripts: false  # Block lifecycle scripts
-# minimumReleaseAge: 720          # Wait 12 hours before installing new releases
-# trustPolicy: no-downgrade       # Block packages with weaker authentication
-
+minimumReleaseAge: 4320 # Wait 3 days before installing new releases
+trustPolicy: no-downgrade # Block packages with weaker authentication
 
