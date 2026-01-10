@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "6.2.0",
+  "version": "6.2.1-prerelease.0",
   "description": "CSS for the <Component> Age. Style components your way with speed, strong typing, and flexibility.",
   "publishConfig": {
     "access": "public"
@@ -16,17 +16,17 @@
   "sideEffects": false,
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
-    "prebuild": "rimraf dist && yarn run generateErrors",
+    "prebuild": "rimraf dist && pnpm run generateErrors",
     "build": "rollup -c",
-    "postbuild": "yarn run size",
-    "pretest": "yarn run generateErrors",
-    "test": "yarn run test:web && yarn run test:native",
+    "postbuild": "pnpm run size",
+    "pretest": "pnpm run generateErrors",
+    "test": "pnpm run test:web && pnpm run test:native",
     "test:web": "jest -c jest.config.main.js",
     "test:native": "jest -c jest.config.native.js --forceExit",
     "size": "bundlewatch",
     "prettier": "prettier src --write",
     "prettier:check": "prettier src --check",
-    "prepublishOnly": "cp ../../README.md . && yarn run build"
+    "prepublishOnly": "cp ../../README.md . && pnpm run build"
   },
   "repository": {
     "type": "git",

@@ -18,20 +18,22 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          cache: "yarn"
+          cache: "pnpm"
           node-version-file: ".nvmrc"
           registry-url: "https://registry.npmjs.org"
 
       - name: Install Dependencies
-        run: yarn install --immutable
+        run: pnpm install --frozen-lockfile
 
       - name: Create Release Pull Request
         uses: changesets/action@v1
         with:
-          publish: yarn release
+          publish: pnpm release
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}

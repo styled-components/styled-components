@@ -3,43 +3,42 @@ name: test
 on:
   push:
     branches:
-      - 'main'
+      - "main"
   pull_request:
     types: [opened, synchronize, reopened]
 
 permissions:
   contents: read #  to fetch code (actions/checkout)
 
-env:
-  YARN_ENABLE_HARDENED_MODE: 0
-
 jobs:
   prettier:
-    env:
-      YARN_ENABLE_HARDENED_MODE: 1
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
-          cache: 'yarn'
-          node-version-file: '.nvmrc'
+          cache: "pnpm"
+          node-version-file: ".nvmrc"
 
-      - run: yarn install --immutable
-      - run: yarn run prettier
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm prettier
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
-          cache: 'yarn'
-          node-version-file: '.nvmrc'
+          cache: "pnpm"
+          node-version-file: ".nvmrc"
 
-      - run: yarn install --immutable
-      - run: yarn run build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
         env:
           BUNDLEWATCH_GITHUB_TOKEN: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}
   test:
@@ -47,10 +46,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
-          cache: 'yarn'
-          node-version-file: '.nvmrc'
+          cache: "pnpm"
+          node-version-file: ".nvmrc"
 
-      - run: yarn install --immutable
-      - run: yarn run test
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
