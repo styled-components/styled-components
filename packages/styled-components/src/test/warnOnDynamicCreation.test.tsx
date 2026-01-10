@@ -60,9 +60,9 @@ describe('warns on dynamic creation', () => {
 
   it('should not warn in RSC environment even when called in what would be a render context', () => {
     jest.resetModules();
-    
+
     const originalCreateContext = React.createContext;
-    
+
     try {
       // Simulate RSC environment by removing createContext
       // @ts-expect-error mocking for RSC test
@@ -70,10 +70,10 @@ describe('warns on dynamic creation', () => {
 
       // Re-import to get fresh IS_RSC value
       const { checkDynamicCreation } = require('../utils/checkDynamicCreation');
-      
+
       // In RSC, this should not warn
       checkDynamicCreation('TestComponent', 'test-id');
-      
+
       expect(warn).not.toHaveBeenCalled();
     } finally {
       // Restore React.createContext
