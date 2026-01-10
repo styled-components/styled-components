@@ -16,7 +16,8 @@
   "sideEffects": false,
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
-    "prebuild": "rimraf dist && pnpm run generateErrors",
+    "typecheck": "tsc --noEmit",
+    "prebuild": "rimraf dist && pnpm run generateErrors && pnpm run typecheck",
     "build": "rollup -c",
     "postbuild": "pnpm run size",
     "pretest": "pnpm run generateErrors",
