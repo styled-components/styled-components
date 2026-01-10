@@ -1,10 +1,18 @@
 import React from 'react';
+import { IS_RSC } from '../constants';
 
 const invalidHookCallRe = /invalid hook call/i;
 const seen = new Set();
 
 export const checkDynamicCreation = (displayName: string, componentId?: string | undefined) => {
   if (process.env.NODE_ENV !== 'production') {
+    // Skip check in RSC environments where:
+    // 1. Components are always module-level (can't be in render functions)
+    // 2. Hook detection is unreliable due to different module evaluation context
+    if (IS_RSC) {
+      return;
+    }
+
     const parsedIdString = componentId ? ` with the id of "${componentId}"` : '';
     const message =
       `The component ${displayName}${parsedIdString} has been created dynamically.\n` +
