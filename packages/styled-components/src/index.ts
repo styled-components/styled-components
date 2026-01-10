@@ -12,18 +12,18 @@ export {
   ExecutionContext,
   ExecutionProps,
   FastOmit,
+  Interpolation,
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
-  Interpolation,
   PolymorphicComponent,
   PolymorphicComponentProps,
   RuleSet,
   Runtime,
-  StyleFunction,
   StyledObject,
   StyledOptions,
+  StyleFunction,
   SupportedHTMLElements,
   WebTarget,
 } from './types';
-export { LibraryStyled, Styled, StyledInstance, styled as default, styled };
+export { styled as default, LibraryStyled, Styled, styled, StyledInstance };

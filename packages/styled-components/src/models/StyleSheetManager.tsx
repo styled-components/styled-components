@@ -1,6 +1,6 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
-import shallowequal from 'shallowequal';
+import React from 'react';
 import type stylis from 'stylis';
+import { IS_RSC } from '../constants';
 import StyleSheet from '../sheet';
 import { InsertionTarget, ShouldForwardProp, Stringifier } from '../types';
 import createStylisInstance from '../utils/stylis';
@@ -14,20 +14,37 @@ export type IStyleSheetContext = {
   stylis: Stringifier;
 };
 
-export const StyleSheetContext = React.createContext<IStyleSheetContext>({
+const defaultContextValue: IStyleSheetContext = {
   shouldForwardProp: undefined,
   styleSheet: mainSheet,
   stylis: mainStylis,
-});
+};
+
+// Create context only if createContext is available, otherwise create a fallback
+export const StyleSheetContext = !IS_RSC
+  ? React.createContext<IStyleSheetContext>(defaultContextValue)
+  : ({
+      Provider: ({ children }: { children: React.ReactNode; value?: IStyleSheetContext }) =>
+        children,
+      Consumer: ({ children }: { children: (value: IStyleSheetContext) => React.ReactNode }) =>
+        children(defaultContextValue),
+    } as React.Context<IStyleSheetContext>);
 
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
 
 export type IStylisContext = Stringifier | void;
-export const StylisContext = React.createContext<IStylisContext>(undefined);
+export const StylisContext = !IS_RSC
+  ? React.createContext<IStylisContext>(undefined)
+  : ({
+      Provider: ({ children }: { children: React.ReactNode; value?: IStylisContext }) => children,
+      Consumer: ({ children }: { children: (value: IStylisContext) => React.ReactNode }) =>
+        children(undefined),
+    } as React.Context<IStylisContext>);
 export const StylisConsumer = StylisContext.Consumer;
 
 export function useStyleSheetContext() {
-  return useContext(StyleSheetContext);
+  // Skip useContext if we're in an RSC environment without context support
+  return !IS_RSC && React.useContext ? React.useContext(StyleSheetContext) : defaultContextValue;
 }
 
 export type IStyleSheetManager = React.PropsWithChildren<{
@@ -79,10 +96,14 @@ export type IStyleSheetManager = React.PropsWithChildren<{
 }>;
 
 export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
-  const [plugins, setPlugins] = useState(props.stylisPlugins);
+  // In RSC environments without context support, StyleSheetManager becomes a no-op
+  if (IS_RSC || !React.useMemo) {
+    return props.children as React.JSX.Element;
+  }
+
   const { styleSheet } = useStyleSheetContext();
 
-  const resolvedStyleSheet = useMemo(() => {
+  const resolvedStyleSheet = React.useMemo(() => {
     let sheet = styleSheet;
 
     if (props.sheet) {
@@ -98,20 +119,16 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     return sheet;
   }, [props.disableCSSOMInjection, props.sheet, props.target, styleSheet]);
 
-  const stylis = useMemo(
+  const stylis = React.useMemo(
     () =>
       createStylisInstance({
         options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
-        plugins,
+        plugins: props.stylisPlugins,
       }),
-    [props.enableVendorPrefixes, props.namespace, plugins]
+    [props.enableVendorPrefixes, props.namespace, props.stylisPlugins]
   );
 
-  useEffect(() => {
-    if (!shallowequal(plugins, props.stylisPlugins)) setPlugins(props.stylisPlugins);
-  }, [props.stylisPlugins]);
-
-  const styleSheetContextValue = useMemo(
+  const styleSheetContextValue = React.useMemo(
     () => ({
       shouldForwardProp: props.shouldForwardProp,
       styleSheet: resolvedStyleSheet,

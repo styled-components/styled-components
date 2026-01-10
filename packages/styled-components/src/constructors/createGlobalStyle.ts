@@ -1,13 +1,16 @@
 import React from 'react';
-import { STATIC_EXECUTION_CONTEXT } from '../constants';
+import { IS_RSC, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
+import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
+import generateAlphabeticName from '../utils/generateAlphabeticName';
 import generateComponentId from '../utils/generateComponentId';
+import { hash } from '../utils/hash';
 import css from './css';
 
 export default function createGlobalStyle<Props extends object>(
@@ -22,12 +25,19 @@ export default function createGlobalStyle<Props extends object>(
     checkDynamicCreation(styledComponentId);
   }
 
+  // Use a WeakMap to maintain stable instances per stylesheet
+  const instanceMap = new WeakMap<StyleSheet, number>();
+
   const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const ssc = useStyleSheetContext();
-    const theme = React.useContext(ThemeContext);
-    const instanceRef = React.useRef(ssc.styleSheet.allocateGSInstance(styledComponentId));
+    const theme = React.useContext ? React.useContext(ThemeContext) : undefined;
 
-    const instance = instanceRef.current;
+    // Get or create instance ID for this stylesheet
+    let instance = instanceMap.get(ssc.styleSheet);
+    if (instance === undefined) {
+      instance = ssc.styleSheet.allocateGSInstance(styledComponentId);
+      instanceMap.set(ssc.styleSheet, instance);
+    }
 
     if (
       process.env.NODE_ENV !== 'production' &&
@@ -48,17 +58,40 @@ export default function createGlobalStyle<Props extends object>(
       );
     }
 
-    if (ssc.styleSheet.server) {
+    // Render styles during component execution
+    // Use runtime check since __SERVER__ build constant may not match actual environment
+    const shouldRenderStyles = typeof window === 'undefined' || !ssc.styleSheet.server;
+    if (shouldRenderStyles) {
       renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
     }
 
-    if (!__SERVER__) {
+    // Client-side cleanup: conditionally use useLayoutEffect
+    // The IS_RSC check is module-level and deterministic, so this doesn't violate rules of hooks
+    if (!IS_RSC && typeof React.useLayoutEffect === 'function') {
       React.useLayoutEffect(() => {
-        if (!ssc.styleSheet.server) {
-          renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
-          return () => globalStyle.removeStyles(instance, ssc.styleSheet);
-        }
-      }, [instance, props, ssc.styleSheet, theme, ssc.stylis]);
+        return () => {
+          globalStyle.removeStyles(instance, ssc.styleSheet);
+        };
+      }, [instance, ssc.styleSheet]);
+    }
+
+    // RSC mode: output style tag
+    if (IS_RSC) {
+      const id = styledComponentId + instance;
+      const css =
+        typeof window === 'undefined' ? ssc.styleSheet.getTag().getGroup(getGroupForId(id)) : '';
+
+      if (css) {
+        const cssHash = generateAlphabeticName(hash(css) >>> 0);
+        const href = `sc-global-${styledComponentId}-${instance}-${cssHash}`;
+        return React.createElement('style', {
+          key: href,
+          'data-styled-global': styledComponentId,
+          precedence: 'styled-components',
+          href,
+          children: css,
+        });
+      }
     }
 
     return null;
