@@ -1,5 +1,10 @@
-import { ServerTestWrapper } from './ServerTestWrapper';
+import { CustomThemeProvider } from './components/theme-provider';
+import { HomeContent } from './components/home-content';
 
 export default function HomePage() {
-  return <ServerTestWrapper />;
+  return (
+    <CustomThemeProvider>
+      <HomeContent />
+    </CustomThemeProvider>
+  );
 }
