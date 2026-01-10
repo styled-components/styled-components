@@ -1,5 +1,17 @@
 # styled-components
 
+## 6.3.2
+
+### Patch Changes
+
+- a4b4a6b: fix: include TypeScript declaration files in npm package
+
+  Fixed Rollup TypeScript plugin configuration to override tsconfig.json's noEmit setting, ensuring TypeScript declaration files are generated during build.
+
+- a4b4a6b: fix: resolve TypeScript error blocking type declaration emission
+
+  Fixed TypeScript error in StyledComponent when merging style attributes from attrs. Added explicit type cast to React.CSSProperties to safely merge CSS property objects. This error was preventing TypeScript declaration files from being generated during build.
+
 ## 6.3.1
 
 ### Patch Changes
