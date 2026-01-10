@@ -118,13 +118,13 @@ export {
   StyledOptions,
 } from '../types';
 export {
-  ThemeConsumer,
-  ThemeContext,
-  ThemeProvider,
   css,
   styled as default,
   isStyledComponent,
   styled,
+  ThemeConsumer,
+  ThemeContext,
+  ThemeProvider,
   toStyleSheet,
   useTheme,
   withTheme,
