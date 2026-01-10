@@ -1,5 +1,76 @@
 # styled-components
 
+## 6.3.0
+
+### Minor Changes
+
+- 28fd502: Add React Server Components (RSC) support
+
+  styled-components now automatically detects RSC environments and handles CSS delivery appropriately:
+
+  - **No `'use client'` directive required**: Components work in RSC without any wrapper or directive
+  - **Automatic CSS injection**: In RSC mode, styled components emit inline `<style>` tags that React 19 automatically hoists and deduplicates
+  - **Zero configuration**: Works out of the box with Next.js App Router and other RSC-enabled frameworks
+  - **Backward compatible**: Existing SSR patterns with `ServerStyleSheet` continue to work unchanged
+
+  RSC best practices:
+
+  - Prefer static styles over dynamic interpolations to avoid serialization overhead
+  - Use data attributes for discrete variants (e.g., `&[data-size='lg']`)
+  - CSS custom properties work perfectly in styled-components, can be set via inline `style`, and cascade to children:
+
+  ```tsx
+  const Container = styled.div``;
+  const Button = styled.button`
+    background: var(--color-primary, blue);
+  `;
+
+  // Variables set on parent cascade to all DOM children
+  <Container style={{ '--color-primary': 'orchid' }}>
+    <Button>Inherits orchid background</Button>
+  </Container>;
+  ```
+
+  - Use build-time CSS variable generation for theming since `ThemeProvider` is a no-op in RSC
+
+  Technical details:
+
+  - RSC detection via `typeof React.createContext === 'undefined'`
+  - `ThemeProvider` and `StyleSheetManager` become no-ops in RSC (children pass-through)
+  - React hooks are conditionally accessed via runtime guards
+  - CSS is retrieved from the StyleSheet Tag for inline delivery in RSC mode
+
+- 856cf06: feat: update built-in element aliases to include modern HTML and SVG elements
+
+  Added support for modern HTML and SVG elements that were previously missing:
+
+  HTML elements:
+
+  - `search` - HTML5 search element
+  - `slot` - Web Components slot element
+  - `template` - HTML template element
+
+  SVG filter elements:
+
+  - All `fe*` filter primitive elements (feBlend, feColorMatrix, feComponentTransfer, etc.)
+  - `clipPath`, `linearGradient`, `radialGradient` - gradient and clipping elements
+  - `textPath` - SVG text path element
+  - `switch`, `symbol`, `use` - SVG structural elements
+
+  This ensures styled-components has comprehensive coverage of all styleable HTML and SVG elements supported by modern browsers and React.
+
+### Patch Changes
+
+- 418adbe: fix(types): add CSS custom properties (variables) support to style prop
+
+  CSS custom properties (CSS variables like `--primary-color`) are now fully supported in TypeScript without errors:
+
+  - `.attrs({ style: { '--var': 'value' } })` - CSS variables in attrs
+  - `<Component style={{ '--var': 'value' }} />` - CSS variables in component props
+  - Mixed usage with regular CSS properties works seamlessly
+
+- aef2ad6: Update shared css property handling tools to latest versions.
+
 ## 6.2.0
 
 ### Minor Changes
