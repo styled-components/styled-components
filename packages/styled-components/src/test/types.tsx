@@ -489,6 +489,24 @@ const DivWitCSSVariable = styled.div.attrs(() => ({
   style: { '--dim': 'yes' },
 }))``;
 
+const DivWithMultipleCSSVariables = styled.div.attrs(() => ({
+  style: {
+    '--primary-color': '#ff0000',
+    '--spacing': 16,
+    '--opacity': 0.5,
+    color: 'blue',
+  },
+}))``;
+
+const TestCSSVariableUsage = () => {
+  return (
+    <>
+      <DivWitCSSVariable style={{ '--another-var': 'test' }} />
+      <DivWithMultipleCSSVariables style={{ '--custom': 'value', padding: 10 }} />
+    </>
+  );
+};
+
 /**
  * Styled object with nested selectors without CSSProperties
  */
