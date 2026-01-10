@@ -53,15 +53,15 @@
   },
   "homepage": "https://styled-components.com",
   "dependencies": {
-    "@emotion/is-prop-valid": "1.2.2",
-    "@emotion/unitless": "0.8.1",
+    "@emotion/is-prop-valid": "1.4.0",
+    "@emotion/unitless": "0.10.0",
     "@types/stylis": "4.2.7",
     "css-to-react-native": "3.2.0",
     "csstype": "3.2.3",
     "postcss": "8.4.49",
     "shallowequal": "1.1.0",
     "stylis": "4.3.6",
-    "tslib": "2.6.2"
+    "tslib": "2.8.1"
   },
   "peerDependencies": {
     "react": ">= 16.8.0",
