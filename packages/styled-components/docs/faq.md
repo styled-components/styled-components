@@ -29,9 +29,9 @@ export default function Page() {
 - React automatically hoists styles to `<head>` and deduplicates them
 - Zero configuration required!
 
-**For Next.js App Router with Client Components ('use client'):**
+**For Next.js App Router (SSR Style Extraction):**
 
-If you have client components, you need to add a registry in your root layout to avoid FOUC:
+You need to add a registry in your root layout to extract styles during server rendering. This ensures styles work even without JavaScript enabled:
 
 ```tsx
 // app/lib/registry.tsx
@@ -73,10 +73,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
+**Why the registry is needed:**
+
+- Extracts styles during server rendering using `useServerInsertedHTML`
+- Ensures styles are sent inline with HTML for no-JS support
+- React 19's automatic style hoisting only works post-hydration on the client
+- Without the registry, pages will have no styles until JavaScript loads
+
 **Requirements:**
 
-- React 19+ for automatic RSC support with style hoisting
-- For React 16.8-18.x: traditional SSR continues to work as before
+- React 19+ for automatic RSC support with style hoisting (client-side)
+- Registry pattern required for SSR style extraction (all React versions)
+- For React 16.8-18.x: traditional SSR with `ServerStyleSheet` continues to work as before
 
 **For traditional SSR (Next.js Pages Router, custom SSR):**
 
