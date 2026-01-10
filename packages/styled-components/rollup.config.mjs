@@ -39,6 +39,11 @@ const defaultTypescriptPlugin =
     exclude: ['**/*.test.ts', '**/*.test.tsx', 'dist', 'src/test/types.tsx'],
     outputToFilesystem: true,
     tsconfig: './tsconfig.json',
+    compilerOptions: {
+      noEmit: false,
+      declaration: true,
+      declarationMap: false,
+    }
   });
 
 const nativeTypescriptPlugin =
@@ -50,7 +55,10 @@ const nativeTypescriptPlugin =
     outputToFilesystem: true,
     tsconfig: './tsconfig.json',
     compilerOptions: {
-      outDir: 'native/dist'
+      outDir: 'native/dist',
+      noEmit: false,
+      declaration: true,
+      declarationMap: false,
     }
   });
 
