@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import React from 'react';
 
 const invalidHookCallRe = /invalid hook call/i;
 const seen = new Set();
@@ -30,9 +30,12 @@ export const checkDynamicCreation = (displayName: string, componentId?: string |
           originalConsoleError(consoleErrorMessage, ...consoleErrorArgs);
         }
       };
-      // We purposefully call `useRef` outside of a component and expect it to throw
+      // We purposefully call a hook outside of a component and expect it to throw
       // If it doesn't, then we're inside another component.
-      useRef();
+      // Use useState instead of useRef to avoid importing useRef
+      if (typeof React.useState === 'function') {
+        React.useState(null);
+      }
 
       if (didNotCallInvalidHook && !seen.has(message)) {
         console.warn(message);

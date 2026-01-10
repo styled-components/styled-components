@@ -1,0 +1,165 @@
+use pnpm package manager and associated commands
+never run the dev server yourself, ask the user to start it if needed
+use conventional commits: (feat|fix|chore|refactor|test|docs|style|perf|build|ci): [description]
+
+styled-components - CSS-in-JS library for React with tagged template literals
+
+Mandates
+
+- React 16.8 compat
+- Always microbenchmark to validate optimizations
+- Optimize for low memory pressure and monomorphic functions
+
+Root Level
+
+- `package.json` - Monorepo config with pnpm workspaces
+- `README.md` - Main project documentation
+- `CONTRIBUTING.md` - Setup guide and contribution guidelines
+- `babel-preset.js`, `babel.config.js` - Shared Babel configuration
+
+Packages
+
+`packages/styled-components/src` - Main Library
+
+- `base.ts` - Shared exports (warnings, utilities)
+- `constants.ts` - Library constants (SC_ATTR, SC_VERSION)
+- `constructors/constructWithOptions.ts` - Factory for custom configs
+- `constructors/createGlobalStyle.ts` - Global styles API
+- `constructors/css.ts` - css template literal helper
+- `constructors/keyframes.ts` - Animation keyframes API
+- `constructors/styled.tsx` - Main styled() API
+- `hoc/withTheme.tsx` - Theme HOC
+- `index.ts` - Main entry point, exports all public APIs
+- `models/ComponentStyle.ts` - Style compilation & injection
+- `models/GlobalStyle.ts` - Global style model
+- `models/InlineStyle.ts` - Native inline styles
+- `models/Keyframes.ts` - Keyframe animation model
+- `models/ServerStyleSheet.tsx` - SSR style collection
+- `models/StyledComponent.ts` - Core styled component class
+- `models/StyleSheetManager.tsx` - Style sheet configuration
+- `models/ThemeProvider.tsx` - Theming context & hooks
+- `native/index.ts` - React Native entry point
+- `sheet/dom.ts` - DOM-specific sheet operations
+- `sheet/GroupedTag.ts` - Grouped tag optimization
+- `sheet/GroupIDAllocator.ts` - Component ID allocation
+- `sheet/Rehydration.ts` - SSR hydration logic
+- `sheet/Sheet.ts` - Style sheet abstraction
+- `sheet/Tag.ts` - DOM style tag manipulation
+- `types.ts` - TypeScript type definitions
+- `utils/flatten.ts` - Style processing
+- `utils/interleave.ts` - Style processing
+- `utils/stylis.ts` - Style processing
+
+`packages/sandbox/` - Next.js Test Environment
+
+Structure
+
+- `app/` - Next.js App Router
+  - `layout.tsx` - Root layout with registry
+  - `page.tsx` - Server component example
+  - `client-example/page.tsx` - Client component example
+  - `lib/registry.tsx` - StyledComponentsRegistry for RSC
+
+`packages/benchmarks/` - Performance Testing
+
+Performance benchmarks comparing CSS-in-JS libraries
+
+- `src/implementations/` - Different library implementations
+  - `styled-components` (v5, v6, object syntax)
+  - `emotion`, `goober`, `aphrodite`, `styletron`, etc.
+- `src/cases/` - Benchmark test cases (SierpinskiTriangle, Tree)
+- `src/app/` - Benchmark UI components
+
+- `src/utils/errors.md` - Error code documentation
+
+Key Commands
+
+- `pnpm build` - Build main package
+- `pnpm test` - Run all tests
+- `pnpm --filter sandbox dev` - Start Next.js dev server
+- `pnpm --filter styled-components test:web` - Test web build
+- `pnpm --filter styled-components test:native` - Test React Native
+
+Rendering Flow - Update this diagram as the library is edited.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant styled
+    participant createStyledComponent
+    participant ComponentStyle
+    participant React
+    participant StyledComponentImpl
+    participant StyleSheetManager
+    participant StyleSheet
+    participant GroupedTag
+    participant Tag
+    participant DOM
+
+    Note over User,styled: 1. COMPONENT CREATION
+    User->>styled: styled.div with CSS rules
+    styled->>createStyledComponent: createStyledComponent(target, options, rules)
+    createStyledComponent->>ComponentStyle: new ComponentStyle(rules, componentId)
+    ComponentStyle->>StyleSheet: StyleSheet.registerId(componentId)
+    StyleSheet-->>ComponentStyle: group allocated
+    createStyledComponent->>React: React.forwardRef(forwardRefRender)
+    createStyledComponent-->>User: StyledComponent
+
+    Note over User,React: 2. COMPONENT RENDER
+    User->>React: render StyledComponent
+    React->>StyledComponentImpl: useStyledComponentImpl(component, props, ref)
+    StyledComponentImpl->>StyleSheetManager: useStyleSheetContext()
+    StyleSheetManager-->>StyledComponentImpl: styleSheet, stylis, shouldForwardProp
+
+    Note over StyledComponentImpl,ComponentStyle: 3. STYLE PROCESSING
+    StyledComponentImpl->>StyledComponentImpl: resolveContext(attrs, props, theme)
+    StyledComponentImpl->>ComponentStyle: generateAndInjectStyles(context, styleSheet, stylis)
+
+    ComponentStyle->>ComponentStyle: flatten(rules, context)
+    Note over ComponentStyle: Process interpolations,<br/>execute functions,<br/>handle nested components
+
+    ComponentStyle->>ComponentStyle: hash(CSS string)
+    ComponentStyle->>ComponentStyle: generateName(hash)
+    ComponentStyle->>ComponentStyle: stylis(css, className)
+    Note over ComponentStyle: Parse & prefix CSS,<br/>apply plugins,<br/>scope to className
+
+    Note over ComponentStyle,DOM: 4. STYLE INJECTION
+    ComponentStyle->>StyleSheet: insertRules(componentId, className, formattedCSS)
+    StyleSheet->>StyleSheet: registerName(componentId, className)
+    StyleSheet->>GroupedTag: getTag().insertRules(groupId, rules)
+    GroupedTag->>GroupedTag: indexOfGroup(groupId)
+    Note over GroupedTag: Calculate insertion index<br/>based on group priority
+
+    GroupedTag->>Tag: insertRule(index, rule)
+
+    alt Browser (CSSOM)
+        Tag->>DOM: CSSStyleSheet.insertRule(rule, index)
+    else Browser (Text Node)
+        Tag->>DOM: styleElement.insertBefore(textNode)
+    else Server (Virtual)
+        Tag->>Tag: rules.push(rule)
+    end
+
+    Tag-->>GroupedTag: success
+    GroupedTag-->>StyleSheet: complete
+    StyleSheet-->>ComponentStyle: complete
+
+    alt RSC Mode
+        ComponentStyle->>GroupedTag: getGroup(groupId)
+        GroupedTag-->>ComponentStyle: CSS string
+        ComponentStyle-->>StyledComponentImpl: className, css
+    else Client Mode
+        ComponentStyle-->>StyledComponentImpl: className, empty css
+    end
+
+    Note over StyledComponentImpl,DOM: 5. ELEMENT CREATION
+    StyledComponentImpl->>StyledComponentImpl: buildClassName(foldedIds + styledId + generated + props)
+    StyledComponentImpl->>React: createElement(element, className, props, ref)
+
+    alt RSC Mode
+        StyledComponentImpl->>React: createElement(Fragment, styleTag, element)
+        Note over React: React 19 hoists<br/>style tags to head
+    end
+
+    React-->>User: DOM element with injected styles
+```
