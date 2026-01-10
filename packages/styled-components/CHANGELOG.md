@@ -1,5 +1,11 @@
 # styled-components
 
+## 6.3.1
+
+### Patch Changes
+
+- 046e880: Ensure TypeScript declaration files are included in npm package, needed to tweak a Rollup setting.
+
 ## 6.3.0
 
 ### Minor Changes
