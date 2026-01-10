@@ -1,6 +1,8 @@
 declare let SC_DISABLE_SPEEDY: boolean | null | undefined;
 declare let __VERSION__: string;
 
+import React from 'react';
+
 export const SC_ATTR: string =
   (typeof process !== 'undefined' &&
     typeof process.env !== 'undefined' &&
@@ -13,6 +15,12 @@ export const SC_VERSION = __VERSION__;
 export const SPLITTER = '/*!sc*/\n';
 
 export const IS_BROWSER = typeof window !== 'undefined' && typeof document !== 'undefined';
+
+/**
+ * Detect if we're running in a React Server Component environment.
+ * RSC environments lack createContext, making this a reliable indicator.
+ */
+export const IS_RSC = typeof React.createContext === 'undefined';
 
 export const DISABLE_SPEEDY = Boolean(
   typeof SC_DISABLE_SPEEDY === 'boolean'

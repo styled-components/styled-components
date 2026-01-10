@@ -13,7 +13,7 @@ export default function withTheme<T extends AnyComponent>(
   NonReactStatics<T> {
   const WithTheme = React.forwardRef<T, React.ComponentPropsWithRef<T> & ExecutionProps>(
     (props, ref) => {
-      const theme = React.useContext(ThemeContext);
+      const theme = React.useContext ? React.useContext(ThemeContext) : undefined;
       const themeProp = determineTheme(props, theme, Component.defaultProps);
 
       if (process.env.NODE_ENV !== 'production' && themeProp === undefined) {

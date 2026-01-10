@@ -1,6 +1,7 @@
 import isPropValid from '@emotion/is-prop-valid';
-import React, { createElement, PropsWithoutRef, Ref, useDebugValue } from 'react';
-import { SC_VERSION } from '../constants';
+import React, { createElement, PropsWithoutRef, Ref } from 'react';
+import { IS_RSC, SC_VERSION } from '../constants';
+import StyleSheet from '../sheet';
 import type {
   AnyComponent,
   Attrs,
@@ -58,18 +59,16 @@ function generateId(
 function useInjectedStyle<T extends ExecutionContext>(
   componentStyle: ComponentStyle,
   resolvedAttrs: T
-) {
+): { className: string; css: string } {
   const ssc = useStyleSheetContext();
 
-  const className = componentStyle.generateAndInjectStyles(
-    resolvedAttrs,
-    ssc.styleSheet,
-    ssc.stylis
-  );
+  const result = componentStyle.generateAndInjectStyles(resolvedAttrs, ssc.styleSheet, ssc.stylis);
 
-  if (process.env.NODE_ENV !== 'production') useDebugValue(className);
+  if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
+    React.useDebugValue(result.className);
+  }
 
-  return className;
+  return result;
 }
 
 function resolveContext<Props extends BaseObject>(
@@ -125,11 +124,13 @@ function useStyledComponentImpl<Props extends BaseObject>(
     target,
   } = forwardedComponent;
 
-  const contextTheme = React.useContext(ThemeContext);
+  const contextTheme = React.useContext ? React.useContext(ThemeContext) : undefined;
   const ssc = useStyleSheetContext();
   const shouldForwardProp = forwardedComponent.shouldForwardProp || ssc.shouldForwardProp;
 
-  if (process.env.NODE_ENV !== 'production') useDebugValue(styledComponentId);
+  if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
+    React.useDebugValue(styledComponentId);
+  }
 
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
@@ -169,7 +170,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
     }
   }
 
-  const generatedClassName = useInjectedStyle(componentStyle, context);
+  const { className: generatedClassName, css } = useInjectedStyle(componentStyle, context);
 
   if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {
     forwardedComponent.warnTooManyClasses(generatedClassName);
@@ -198,7 +199,24 @@ function useStyledComponentImpl<Props extends BaseObject>(
     propsForElement.ref = forwardedRef;
   }
 
-  return createElement(elementToBeCreated, propsForElement);
+  const element = createElement(elementToBeCreated, propsForElement);
+
+  // RSC mode: output style tag alongside element
+  // React 19's style hoisting will deduplicate by href and move to <head>
+  if (IS_RSC && css) {
+    return React.createElement(
+      React.Fragment,
+      null,
+      React.createElement('style', {
+        precedence: 'styled-components',
+        href: `sc-${styledComponentId}-${generatedClassName}`,
+        children: css,
+      }),
+      element
+    );
+  }
+
+  return element;
 }
 
 function createStyledComponent<
