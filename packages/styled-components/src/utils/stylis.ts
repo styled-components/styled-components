@@ -5,7 +5,55 @@ import throwStyledError from './error';
 import { SEED, phash } from './hash';
 
 const AMP_REGEX = /&/g;
-const COMMENT_REGEX = /^\s*\/\/.*$/gm;
+
+/**
+ * Strips JS-style line comments (//) from CSS, handling comments anywhere
+ * in the line while preserving strings and valid CSS.
+ */
+function stripLineComments(css: string): string {
+  let result = '';
+  let i = 0;
+  let inString: string | null = null;
+
+  while (i < css.length) {
+    const char = css[i];
+    const nextChar = css[i + 1];
+    const prevChar = i > 0 ? css[i - 1] : '';
+
+    // Track string state
+    if ((char === '"' || char === "'") && prevChar !== '\\') {
+      if (inString === null) {
+        inString = char;
+      } else if (inString === char) {
+        inString = null;
+      }
+      result += char;
+      i++;
+      continue;
+    }
+
+    // Pass through string content
+    if (inString !== null) {
+      result += char;
+      i++;
+      continue;
+    }
+
+    // Check for line comment
+    if (char === '/' && nextChar === '/') {
+      // Skip to end of line
+      while (i < css.length && css[i] !== '\n') {
+        i++;
+      }
+      continue;
+    }
+
+    result += char;
+    i++;
+  }
+
+  return result;
+}
 
 /**
  * Checks if CSS has unbalanced closing braces that would cause stylis
@@ -18,88 +66,21 @@ function hasUnbalancedBraces(css: string): boolean {
 
   for (let i = 0; i < css.length; i++) {
     const char = css[i];
+    const nextChar = css[i + 1];
     const prevChar = i > 0 ? css[i - 1] : '';
-    const nextChar = i < css.length - 1 ? css[i + 1] : '';
 
     // Handle CSS comments
     if (!inString && !inComment && char === '/' && nextChar === '*') {
       inComment = true;
-      i++; // Skip the *
+      i++;
       continue;
     }
     if (inComment && char === '*' && nextChar === '/') {
       inComment = false;
-      i++; // Skip the /
+      i++;
       continue;
     }
-    if (inComment) {
-      continue;
-    }
-
-    // Track string state (handle both single and double quotes)
-    if ((char === '"' || char === "'") && prevChar !== '\\') {
-      if (inString === null) {
-        inString = char;
-      } else if (inString === char) {
-        inString = null;
-      }
-      continue;
-    }
-
-    if (inString === null) {
-      if (char === '{') depth++;
-      if (char === '}') depth--;
-      // If depth goes negative, we have an extra closing brace
-      if (depth < 0) return true;
-    }
-  }
-
-  // Check for unterminated strings or unbalanced braces
-  return depth !== 0 || inString !== null;
-}
-
-/**
- * Sanitizes CSS by removing declarations with unbalanced braces that would
- * cause stylis to incorrectly parse subsequent styles.
- *
- * This handles cases like: `line-height: ${() => "14px}"}` where a user
- * accidentally includes an extra `}` in an interpolation result.
- *
- * Fast path: If CSS has no issues, returns it unchanged.
- * Slow path: Parses and filters out problematic declarations.
- */
-function sanitizeCSS(css: string): string {
-  // Fast path: no unbalanced braces - most common case
-  if (!hasUnbalancedBraces(css)) {
-    return css;
-  }
-
-  // Slow path: remove declarations with unbalanced braces
-  let result = '';
-  let declarationStart = 0;
-  let braceDepth = 0;
-  let inString: string | null = null;
-  let inComment = false;
-
-  for (let i = 0; i < css.length; i++) {
-    const char = css[i];
-    const prevChar = i > 0 ? css[i - 1] : '';
-    const nextChar = i < css.length - 1 ? css[i + 1] : '';
-
-    // Handle CSS comments
-    if (!inString && !inComment && char === '/' && nextChar === '*') {
-      inComment = true;
-      i++; // Skip the *
-      continue;
-    }
-    if (inComment && char === '*' && nextChar === '/') {
-      inComment = false;
-      i++; // Skip the /
-      continue;
-    }
-    if (inComment) {
-      continue;
-    }
+    if (inComment) continue;
 
     // Track string state
     if ((char === '"' || char === "'") && prevChar !== '\\') {
@@ -110,10 +91,59 @@ function sanitizeCSS(css: string): string {
       }
       continue;
     }
+    if (inString !== null) continue;
 
-    if (inString !== null) {
+    if (char === '{') depth++;
+    if (char === '}') depth--;
+    if (depth < 0) return true;
+  }
+
+  return depth !== 0 || inString !== null;
+}
+
+/**
+ * Sanitizes CSS by removing declarations with unbalanced braces.
+ * This contains invalid syntax to just the affected declaration.
+ */
+function sanitizeCSS(css: string): string {
+  if (!hasUnbalancedBraces(css)) {
+    return css;
+  }
+
+  let result = '';
+  let declStart = 0;
+  let braceDepth = 0;
+  let inString: string | null = null;
+  let inComment = false;
+
+  for (let i = 0; i < css.length; i++) {
+    const char = css[i];
+    const nextChar = css[i + 1];
+    const prevChar = i > 0 ? css[i - 1] : '';
+
+    // Handle CSS comments
+    if (!inString && !inComment && char === '/' && nextChar === '*') {
+      inComment = true;
+      i++;
       continue;
     }
+    if (inComment && char === '*' && nextChar === '/') {
+      inComment = false;
+      i++;
+      continue;
+    }
+    if (inComment) continue;
+
+    // Track string state
+    if ((char === '"' || char === "'") && prevChar !== '\\') {
+      if (inString === null) {
+        inString = char;
+      } else if (inString === char) {
+        inString = null;
+      }
+      continue;
+    }
+    if (inString !== null) continue;
 
     if (char === '{') {
       braceDepth++;
@@ -121,40 +151,32 @@ function sanitizeCSS(css: string): string {
       braceDepth--;
 
       if (braceDepth < 0) {
-        // Extra closing brace - skip this declaration
-        // Find the end of this problematic declaration (next semicolon)
+        // Extra closing brace - skip to next semicolon or newline
         let skipEnd = i + 1;
-        while (skipEnd < css.length && css[skipEnd] !== ';') {
+        while (skipEnd < css.length && css[skipEnd] !== ';' && css[skipEnd] !== '\n') {
           skipEnd++;
         }
+        if (skipEnd < css.length && css[skipEnd] === ';') skipEnd++;
 
-        // Include the semicolon in what we skip
-        if (skipEnd < css.length && css[skipEnd] === ';') {
-          skipEnd++;
-        }
-
-        // Reset state and continue parsing
         braceDepth = 0;
         i = skipEnd - 1;
-        declarationStart = skipEnd;
+        declStart = skipEnd;
         continue;
       }
 
-      // Valid closing brace for a block
       if (braceDepth === 0) {
-        result += css.substring(declarationStart, i + 1);
-        declarationStart = i + 1;
+        result += css.substring(declStart, i + 1);
+        declStart = i + 1;
       }
     } else if (char === ';' && braceDepth === 0) {
-      // End of a simple declaration
-      result += css.substring(declarationStart, i + 1);
-      declarationStart = i + 1;
+      result += css.substring(declStart, i + 1);
+      declStart = i + 1;
     }
   }
 
-  // Add any remaining valid content
-  if (declarationStart < css.length) {
-    const remaining = css.substring(declarationStart);
+  // Add remaining valid content
+  if (declStart < css.length) {
+    const remaining = css.substring(declStart);
     if (!hasUnbalancedBraces(remaining)) {
       result += remaining;
     }
@@ -267,7 +289,7 @@ export default function createStylisInstance(
     _selector = selector;
     _selectorRegexp = new RegExp(`\\${_selector}\\b`, 'g');
 
-    const flatCSS = sanitizeCSS(css.replace(COMMENT_REGEX, ''));
+    const flatCSS = sanitizeCSS(stripLineComments(css));
     let compiled = stylis.compile(
       prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS
     );
