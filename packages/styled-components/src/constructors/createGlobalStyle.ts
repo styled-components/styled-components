@@ -13,6 +13,8 @@ import generateComponentId from '../utils/generateComponentId';
 import { hash } from '../utils/hash';
 import css from './css';
 
+declare const __SERVER__: boolean;
+
 export default function createGlobalStyle<Props extends object>(
   strings: Styles<Props>,
   ...interpolations: Array<Interpolation<Props>>
@@ -66,8 +68,8 @@ export default function createGlobalStyle<Props extends object>(
     }
 
     // Client-side cleanup: conditionally use useLayoutEffect
-    // The IS_RSC check is module-level and deterministic, so this doesn't violate rules of hooks
-    if (!IS_RSC && typeof React.useLayoutEffect === 'function') {
+    // The __SERVER__ and IS_RSC checks are module-level and deterministic, so this doesn't violate rules of hooks
+    if (!__SERVER__ && !IS_RSC) {
       React.useLayoutEffect(() => {
         return () => {
           globalStyle.removeStyles(instance, ssc.styleSheet);
