@@ -83,4 +83,86 @@ describe('stylis', () => {
       ]
     `);
   });
+
+  describe('malformed CSS handling', () => {
+    it('preserves styles after a declaration with unbalanced closing brace', () => {
+      // This simulates the bug: line-height: ${() => "14px}"}
+      const css = stylisTest(`
+        width: 100px;
+        height: 100px;
+        line-height: 14px}";
+        background-color: green;
+      `);
+
+      // The malformed line-height should be dropped, but background-color preserved
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;height:100px;background-color:green;}",
+        ]
+      `);
+    });
+
+    it('handles multiple malformed declarations', () => {
+      const css = stylisTest(`
+        width: 100px;
+        foo: bar}";
+        height: 50px;
+        baz: qux}";
+        background-color: green;
+      `);
+
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;height:50px;background-color:green;}",
+        ]
+      `);
+    });
+
+    it('handles malformed declaration followed by @media query', () => {
+      const css = stylisTest(`
+        width: 100px;
+        line-height: 14px}";
+        @media (min-width: 500px) {
+          color: blue;
+        }
+        background-color: green;
+      `);
+
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;background-color:green;}",
+          "@media (min-width: 500px){.a{color:blue;}}",
+        ]
+      `);
+    });
+
+    it('preserves properly quoted braces in content', () => {
+      const css = stylisTest(`
+        width: 100px;
+        content: "}";
+        background-color: green;
+      `);
+
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;content:"}";background-color:green;}",
+        ]
+      `);
+    });
+
+    it('handles valid CSS unchanged (fast path)', () => {
+      const css = stylisTest(`
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background-color: green;
+      `);
+
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;height:100px;border-radius:50%;background-color:green;}",
+        ]
+      `);
+    });
+  });
 });

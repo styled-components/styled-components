@@ -519,4 +519,27 @@ describe('with styles', () => {
       }"
     `);
   });
+
+  it('should preserve styles after a malformed declaration with unbalanced brace', () => {
+    // This tests the fix for: https://github.com/styled-components/styled-components/issues/XXXX
+    // In v6, a syntax error like an extra `}` in a value would cause all subsequent styles to be ignored
+    const Comp = styled.div`
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      line-height: ${'14px}"'}; /* Simulates: ${() => "14px}"} - syntax error with extra } */
+      background-color: green;
+    `;
+    render(<Comp />);
+
+    // The malformed line-height should be dropped, but background-color should still apply
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background-color: green;
+      }"
+    `);
+  });
 });
