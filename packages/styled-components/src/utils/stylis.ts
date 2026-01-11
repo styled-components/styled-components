@@ -7,15 +7,15 @@ import { SEED, phash } from './hash';
 const AMP_REGEX = /&/g;
 
 // Character codes for fast comparison
-const DOUBLE_QUOTE = 34;  // "
-const SINGLE_QUOTE = 39;  // '
-const SLASH = 47;         // /
-const ASTERISK = 42;      // *
-const BACKSLASH = 92;     // \
-const OPEN_BRACE = 123;   // {
-const CLOSE_BRACE = 125;  // }
-const SEMICOLON = 59;     // ;
-const NEWLINE = 10;       // \n
+const DOUBLE_QUOTE = 34; // "
+const SINGLE_QUOTE = 39; // '
+const SLASH = 47; // /
+const ASTERISK = 42; // *
+const BACKSLASH = 92; // \
+const OPEN_BRACE = 123; // {
+const CLOSE_BRACE = 125; // }
+const SEMICOLON = 59; // ;
+const NEWLINE = 10; // \n
 
 /**
  * Strips JS-style line comments (//) from CSS, handling comments anywhere
@@ -36,7 +36,10 @@ function stripLineComments(css: string): string {
     const code = css.charCodeAt(i);
 
     // Track string state
-    if ((code === DOUBLE_QUOTE || code === SINGLE_QUOTE) && (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)) {
+    if (
+      (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) &&
+      (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)
+    ) {
       if (inString === 0) {
         inString = code;
       } else if (inString === code) {
@@ -104,7 +107,10 @@ function hasUnbalancedBraces(css: string): boolean {
     }
 
     // Track string state
-    if ((code === DOUBLE_QUOTE || code === SINGLE_QUOTE) && (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)) {
+    if (
+      (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) &&
+      (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)
+    ) {
       if (inString === 0) {
         inString = code;
       } else if (inString === code) {
@@ -162,7 +168,10 @@ function sanitizeCSS(css: string): string {
     }
 
     // Track string state
-    if ((code === DOUBLE_QUOTE || code === SINGLE_QUOTE) && (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)) {
+    if (
+      (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) &&
+      (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)
+    ) {
       if (inString === 0) {
         inString = code;
       } else if (inString === code) {

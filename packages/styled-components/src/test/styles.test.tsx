@@ -527,7 +527,7 @@ describe('with styles', () => {
       width: 100px;
       height: 100px;
       border-radius: 50%;
-      line-height: ${'14px}"'}; /* Simulates: ${() => "14px}"} - syntax error with extra } */
+      line-height: ${'14px}"'}; /* Simulates: ${() => '14px}'} - syntax error with extra } */
       background-color: green;
     `;
     render(<Comp />);

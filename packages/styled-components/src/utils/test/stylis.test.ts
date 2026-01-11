@@ -8,10 +8,12 @@ function stylisTest(css: string, options: ICreateStylisInstance = {}): string[] 
 
 describe('stylis', () => {
   it('handles simple rules', () => {
-    expect(stylisTest(`
+    expect(
+      stylisTest(`
       background: yellow;
       color: red;
-    `)).toMatchInlineSnapshot(`
+    `)
+    ).toMatchInlineSnapshot(`
       [
         ".a{background:yellow;color:red;}",
       ]
@@ -19,13 +21,15 @@ describe('stylis', () => {
   });
 
   it('splits css with multiple rules', () => {
-    expect(stylisTest(`
+    expect(
+      stylisTest(`
       background: yellow;
       color: red;
       @media (min-width: 500px) {
         color: blue;
       }
-    `)).toMatchInlineSnapshot(`
+    `)
+    ).toMatchInlineSnapshot(`
       [
         ".a{background:yellow;color:red;}",
         "@media (min-width: 500px){.a{color:blue;}}",
@@ -34,13 +38,15 @@ describe('stylis', () => {
   });
 
   it('splits css with encoded closing curly brace', () => {
-    expect(stylisTest(`
+    expect(
+      stylisTest(`
       @media (min-width: 500px) {
         &::before {
           content: "}";
         }
       }
-    `)).toMatchInlineSnapshot(`
+    `)
+    ).toMatchInlineSnapshot(`
       [
         "@media (min-width: 500px){.a::before{content:"}";}}",
       ]
@@ -48,8 +54,9 @@ describe('stylis', () => {
   });
 
   it('splits vendor-prefixed rules', () => {
-    expect(stylisTest(
-      `
+    expect(
+      stylisTest(
+        `
       &::placeholder {
         color: red;
       }
@@ -61,8 +68,9 @@ describe('stylis', () => {
         }
       }
     `,
-      { options: { prefix: true } }
-    )).toMatchInlineSnapshot(`
+        { options: { prefix: true } }
+      )
+    ).toMatchInlineSnapshot(`
       [
         ".a::-webkit-input-placeholder{color:red;}",
         ".a::-moz-placeholder{color:red;}",
@@ -79,12 +87,14 @@ describe('stylis', () => {
   describe('malformed CSS handling', () => {
     it('preserves styles after declaration with unbalanced closing brace', () => {
       // Simulates: line-height: ${() => "14px}"}
-      expect(stylisTest(`
+      expect(
+        stylisTest(`
         width: 100px;
         height: 100px;
         line-height: 14px}";
         background-color: green;
-      `)).toMatchInlineSnapshot(`
+      `)
+      ).toMatchInlineSnapshot(`
         [
           ".a{width:100px;height:100px;background-color:green;}",
         ]
@@ -92,13 +102,15 @@ describe('stylis', () => {
     });
 
     it('handles multiple malformed declarations', () => {
-      expect(stylisTest(`
+      expect(
+        stylisTest(`
         width: 100px;
         foo: bar}";
         height: 50px;
         baz: qux}";
         background-color: green;
-      `)).toMatchInlineSnapshot(`
+      `)
+      ).toMatchInlineSnapshot(`
         [
           ".a{width:100px;height:50px;background-color:green;}",
         ]
@@ -106,14 +118,16 @@ describe('stylis', () => {
     });
 
     it('handles malformed declaration followed by @media query', () => {
-      expect(stylisTest(`
+      expect(
+        stylisTest(`
         width: 100px;
         line-height: 14px}";
         @media (min-width: 500px) {
           color: blue;
         }
         background-color: green;
-      `)).toMatchInlineSnapshot(`
+      `)
+      ).toMatchInlineSnapshot(`
         [
           ".a{width:100px;background-color:green;}",
           "@media (min-width: 500px){.a{color:blue;}}",
@@ -122,11 +136,13 @@ describe('stylis', () => {
     });
 
     it('preserves properly quoted braces in content', () => {
-      expect(stylisTest(`
+      expect(
+        stylisTest(`
         width: 100px;
         content: "}";
         background-color: green;
-      `)).toMatchInlineSnapshot(`
+      `)
+      ).toMatchInlineSnapshot(`
         [
           ".a{width:100px;content:"}";background-color:green;}",
         ]
@@ -134,11 +150,13 @@ describe('stylis', () => {
     });
 
     it('handles extra brace not in quotes', () => {
-      expect(stylisTest(`
+      expect(
+        stylisTest(`
         width: 100px;
         height: 50px}
         background-color: green;
-      `)).toMatchInlineSnapshot(`
+      `)
+      ).toMatchInlineSnapshot(`
         [
           ".a{width:100px;background-color:green;}",
         ]
@@ -146,11 +164,13 @@ describe('stylis', () => {
     });
 
     it('handles extra opening brace in string', () => {
-      expect(stylisTest(`
+      expect(
+        stylisTest(`
         width: 100px;
         content: "{test";
         background-color: green;
-      `)).toMatchInlineSnapshot(`
+      `)
+      ).toMatchInlineSnapshot(`
         [
           ".a{width:100px;content:"{test";background-color:green;}",
         ]
@@ -158,12 +178,14 @@ describe('stylis', () => {
     });
 
     it('handles valid CSS unchanged (fast path)', () => {
-      expect(stylisTest(`
+      expect(
+        stylisTest(`
         width: 100px;
         height: 100px;
         border-radius: 50%;
         background-color: green;
-      `)).toMatchInlineSnapshot(`
+      `)
+      ).toMatchInlineSnapshot(`
         [
           ".a{width:100px;height:100px;border-radius:50%;background-color:green;}",
         ]
@@ -173,11 +195,13 @@ describe('stylis', () => {
 
   describe('line comment handling (issue #5613)', () => {
     it('strips line comments at start of line', () => {
-      expect(stylisTest(`
+      expect(
+        stylisTest(`
         // this is a comment
         width: 100px;
         background-color: green;
-      `)).toMatchInlineSnapshot(`
+      `)
+      ).toMatchInlineSnapshot(`
         [
           ".a{width:100px;background-color:green;}",
         ]
@@ -185,10 +209,12 @@ describe('stylis', () => {
     });
 
     it('strips line comments at end of line', () => {
-      expect(stylisTest(`
+      expect(
+        stylisTest(`
         width: 100px; // some comment
         background-color: green;
-      `)).toMatchInlineSnapshot(`
+      `)
+      ).toMatchInlineSnapshot(`
         [
           ".a{width:100px;background-color:green;}",
         ]
@@ -196,10 +222,12 @@ describe('stylis', () => {
     });
 
     it('strips line comments after multiline calc()', () => {
-      expect(stylisTest(`max-height: calc(
+      expect(
+        stylisTest(`max-height: calc(
   100px + 200px
 ); // comment
-background-color: green;`)).toMatchInlineSnapshot(`
+background-color: green;`)
+      ).toMatchInlineSnapshot(`
 [
   ".a{max-height:calc(
   100px + 200px
@@ -209,12 +237,14 @@ background-color: green;`)).toMatchInlineSnapshot(`
     });
 
     it('strips line comments within multiline declarations', () => {
-      expect(stylisTest(`width: 100px;
+      expect(
+        stylisTest(`width: 100px;
 height: calc(
   50vh // viewport height
   - 20px // header
 );
-background-color: green;`)).toMatchInlineSnapshot(`
+background-color: green;`)
+      ).toMatchInlineSnapshot(`
 [
   ".a{width:100px;height:calc(
   50vh 
@@ -225,11 +255,13 @@ background-color: green;`)).toMatchInlineSnapshot(`
     });
 
     it('preserves // inside strings', () => {
-      expect(stylisTest(`
+      expect(
+        stylisTest(`
         width: 100px;
         content: "http://example.com";
         background-color: green;
-      `)).toMatchInlineSnapshot(`
+      `)
+      ).toMatchInlineSnapshot(`
         [
           ".a{width:100px;content:"http://example.com";background-color:green;}",
         ]
