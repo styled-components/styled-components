@@ -11,17 +11,17 @@ const AMP_REGEX = /&/g;
  * in the line while preserving strings and valid CSS.
  */
 function stripLineComments(css: string): string {
+  const len = css.length;
   let result = '';
   let i = 0;
   let inString: string | null = null;
 
-  while (i < css.length) {
+  while (i < len) {
     const char = css[i];
-    const nextChar = css[i + 1];
-    const prevChar = i > 0 ? css[i - 1] : '';
+    const nextChar = i < len - 1 ? css[i + 1] : '';
 
-    // Track string state
-    if ((char === '"' || char === "'") && prevChar !== '\\') {
+    // Track string state - simple escape check (single backslash)
+    if ((char === '"' || char === "'") && (i === 0 || css[i - 1] !== '\\')) {
       if (inString === null) {
         inString = char;
       } else if (inString === char) {
@@ -42,7 +42,7 @@ function stripLineComments(css: string): string {
     // Check for line comment
     if (char === '/' && nextChar === '/') {
       // Skip to end of line
-      while (i < css.length && css[i] !== '\n') {
+      while (i < len && css[i] !== '\n') {
         i++;
       }
       continue;
@@ -60,14 +60,14 @@ function stripLineComments(css: string): string {
  * to prematurely close rule blocks.
  */
 function hasUnbalancedBraces(css: string): boolean {
+  const len = css.length;
   let depth = 0;
   let inString: string | null = null;
   let inComment = false;
 
-  for (let i = 0; i < css.length; i++) {
+  for (let i = 0; i < len; i++) {
     const char = css[i];
-    const nextChar = css[i + 1];
-    const prevChar = i > 0 ? css[i - 1] : '';
+    const nextChar = i < len - 1 ? css[i + 1] : '';
 
     // Handle CSS comments
     if (!inString && !inComment && char === '/' && nextChar === '*') {
@@ -83,7 +83,7 @@ function hasUnbalancedBraces(css: string): boolean {
     if (inComment) continue;
 
     // Track string state
-    if ((char === '"' || char === "'") && prevChar !== '\\') {
+    if ((char === '"' || char === "'") && (i === 0 || css[i - 1] !== '\\')) {
       if (inString === null) {
         inString = char;
       } else if (inString === char) {
@@ -110,16 +110,16 @@ function sanitizeCSS(css: string): string {
     return css;
   }
 
+  const len = css.length;
   let result = '';
   let declStart = 0;
   let braceDepth = 0;
   let inString: string | null = null;
   let inComment = false;
 
-  for (let i = 0; i < css.length; i++) {
+  for (let i = 0; i < len; i++) {
     const char = css[i];
-    const nextChar = css[i + 1];
-    const prevChar = i > 0 ? css[i - 1] : '';
+    const nextChar = i < len - 1 ? css[i + 1] : '';
 
     // Handle CSS comments
     if (!inString && !inComment && char === '/' && nextChar === '*') {
@@ -135,7 +135,7 @@ function sanitizeCSS(css: string): string {
     if (inComment) continue;
 
     // Track string state
-    if ((char === '"' || char === "'") && prevChar !== '\\') {
+    if ((char === '"' || char === "'") && (i === 0 || css[i - 1] !== '\\')) {
       if (inString === null) {
         inString = char;
       } else if (inString === char) {
@@ -153,10 +153,10 @@ function sanitizeCSS(css: string): string {
       if (braceDepth < 0) {
         // Extra closing brace - skip to next semicolon or newline
         let skipEnd = i + 1;
-        while (skipEnd < css.length && css[skipEnd] !== ';' && css[skipEnd] !== '\n') {
+        while (skipEnd < len && css[skipEnd] !== ';' && css[skipEnd] !== '\n') {
           skipEnd++;
         }
-        if (skipEnd < css.length && css[skipEnd] === ';') skipEnd++;
+        if (skipEnd < len && css[skipEnd] === ';') skipEnd++;
 
         braceDepth = 0;
         i = skipEnd - 1;
@@ -175,7 +175,7 @@ function sanitizeCSS(css: string): string {
   }
 
   // Add remaining valid content
-  if (declStart < css.length) {
+  if (declStart < len) {
     const remaining = css.substring(declStart);
     if (!hasUnbalancedBraces(remaining)) {
       result += remaining;
