@@ -16,10 +16,12 @@ const OPEN_BRACE = 123; // {
 const CLOSE_BRACE = 125; // }
 const SEMICOLON = 59; // ;
 const NEWLINE = 10; // \n
+const OPEN_PAREN = 40; // (
+const CLOSE_PAREN = 41; // )
 
 /**
  * Strips JS-style line comments (//) from CSS, handling comments anywhere
- * in the line while preserving strings and valid CSS.
+ * in the line while preserving strings, url() contents, and valid CSS.
  * Optimized with early bail and charCodeAt for performance.
  */
 function stripLineComments(css: string): string {
@@ -31,6 +33,7 @@ function stripLineComments(css: string): string {
   let start = 0;
   let i = 0;
   let inString = 0; // 0 = none, DOUBLE_QUOTE or SINGLE_QUOTE when in string
+  let urlDepth = 0; // Track nesting depth inside url()
 
   while (i < len) {
     const code = css.charCodeAt(i);
@@ -55,7 +58,31 @@ function stripLineComments(css: string): string {
       continue;
     }
 
-    // Check for line comment
+    // Track url() context - check for 'url(' (case insensitive)
+    if (
+      code === OPEN_PAREN &&
+      i >= 3 &&
+      (css.charCodeAt(i - 1) === 108 || css.charCodeAt(i - 1) === 76) && // l or L
+      (css.charCodeAt(i - 2) === 114 || css.charCodeAt(i - 2) === 82) && // r or R
+      (css.charCodeAt(i - 3) === 117 || css.charCodeAt(i - 3) === 85) // u or U
+    ) {
+      urlDepth = 1;
+      i++;
+      continue;
+    }
+
+    // Track nested parentheses inside url()
+    if (urlDepth > 0) {
+      if (code === OPEN_PAREN) {
+        urlDepth++;
+      } else if (code === CLOSE_PAREN) {
+        urlDepth--;
+      }
+      i++;
+      continue;
+    }
+
+    // Check for line comment (only when not in url())
     if (code === SLASH && css.charCodeAt(i + 1) === SLASH) {
       if (i > start) parts.push(css.substring(start, i));
       // Skip to end of line
@@ -69,7 +96,7 @@ function stripLineComments(css: string): string {
     i++;
   }
 
-  // No comments found after indexOf check means // was in a string
+  // No comments found after indexOf check means // was in a string or url()
   if (start === 0) return css;
   if (start < len) parts.push(css.substring(start));
   return parts.join('');
