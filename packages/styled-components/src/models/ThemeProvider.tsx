@@ -99,7 +99,7 @@ export function useTheme(): DefaultTheme {
  */
 export default function ThemeProvider(props: Props): React.JSX.Element | null {
   // In RSC environments without context support, ThemeProvider becomes a no-op
-  if (IS_RSC || !React.useContext || !React.useMemo) {
+  if (IS_RSC) {
     return props.children as React.JSX.Element | null;
   }
 
