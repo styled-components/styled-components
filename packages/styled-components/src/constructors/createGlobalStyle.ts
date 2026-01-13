@@ -33,7 +33,7 @@ export default function createGlobalStyle<Props extends object>(
   const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const ssc = useStyleSheetContext();
     const theme = React.useContext ? React.useContext(ThemeContext) : undefined;
-    
+
     // Use a ref to track cleanup state per component instance
     // This handles React StrictMode's simulated unmount/remount
     const shouldRemoveRef = React.useRef(true);
@@ -81,7 +81,7 @@ export default function createGlobalStyle<Props extends object>(
         return () => {
           // Mark that we're in cleanup
           shouldRemoveRef.current = true;
-          
+
           // Use queueMicrotask to delay cleanup slightly.
           // In React StrictMode's simulated unmount/remount, the next effect
           // will run before this microtask, setting shouldRemove = false.

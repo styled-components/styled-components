@@ -195,23 +195,23 @@ describe(`createGlobalStyle`, () => {
 
     // Styles should be present
     expect(getRenderedCSS()).toContain('[data-strict-unmount]');
-    
+
     // Unmount
     unmount();
-    
+
     // Wait for microtask to complete cleanup
     await Promise.resolve();
-    
+
     // Styles should be removed after unmount
     expect(getRenderedCSS()).not.toContain('[data-strict-unmount]');
-    
+
     // Remount
     render(
       <React.StrictMode>
         <Comp />
       </React.StrictMode>
     );
-    
+
     // Styles should be re-injected
     expect(getRenderedCSS()).toContain('[data-strict-unmount]');
     expect(spy).not.toHaveBeenCalled();
