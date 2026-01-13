@@ -85,7 +85,7 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme | undefined)
  */
 export function useTheme(): DefaultTheme {
   // Skip useContext if we're in an RSC environment without context support
-  const theme = !IS_RSC && React.useContext ? React.useContext(ThemeContext) : undefined;
+  const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
 
   if (!theme) {
     throw styledError(18);

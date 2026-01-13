@@ -32,11 +32,7 @@ export default function createGlobalStyle<Props extends object>(
 
   const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const ssc = useStyleSheetContext();
-    const theme = React.useContext ? React.useContext(ThemeContext) : undefined;
-
-    // Use a ref to track cleanup state per component instance
-    // This handles React StrictMode's simulated unmount/remount
-    const shouldRemoveRef = React.useRef(true);
+    const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
 
     // Get or create instance ID for this stylesheet
     let instance = instanceMap.get(ssc.styleSheet);
@@ -71,9 +67,12 @@ export default function createGlobalStyle<Props extends object>(
       renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
     }
 
-    // Client-side cleanup: conditionally use useLayoutEffect
+    // Client-side cleanup: conditionally use hooks
     // The __SERVER__ and IS_RSC checks are module-level and deterministic, so this doesn't violate rules of hooks
     if (!__SERVER__ && !IS_RSC) {
+      // Track cleanup state per component instance to handle React StrictMode's simulated unmount/remount
+      const shouldRemoveRef = React.useRef(true);
+
       React.useLayoutEffect(() => {
         // Signal that this component is mounted and styles should stay
         shouldRemoveRef.current = false;
