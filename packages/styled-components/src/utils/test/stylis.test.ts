@@ -268,4 +268,219 @@ background-color: green;`)
       `);
     });
   });
+
+  describe('url() function handling', () => {
+    it('preserves unquoted https:// URL in url()', () => {
+      expect(
+        stylisTest(`
+        background-image: url(https://example.com/image.png);
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-image:url(https://example.com/image.png);background-color:green;}",
+        ]
+      `);
+    });
+
+    it('preserves unquoted http:// URL in url()', () => {
+      expect(
+        stylisTest(`
+        background-image: url(http://example.com/image.png);
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-image:url(http://example.com/image.png);background-color:green;}",
+        ]
+      `);
+    });
+
+    it('preserves double-quoted URL in url()', () => {
+      expect(
+        stylisTest(`
+        background-image: url("https://example.com/image.png");
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-image:url("https://example.com/image.png");background-color:green;}",
+        ]
+      `);
+    });
+
+    it('preserves single-quoted URL in url()', () => {
+      expect(
+        stylisTest(`
+        background-image: url('https://example.com/image.png');
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-image:url('https://example.com/image.png');background-color:green;}",
+        ]
+      `);
+    });
+
+    it('preserves data URL in url()', () => {
+      expect(
+        stylisTest(`
+        background-image: url(data:image/png;base64,iVBORw0KGgo=);
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-image:url(data:image/png;base64,iVBORw0KGgo=);background-color:green;}",
+        ]
+      `);
+    });
+
+    it('preserves URL with path and query params', () => {
+      expect(
+        stylisTest(`
+        background-image: url(https://example.com/path/to/image.png?v=1&size=large);
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-image:url(https://example.com/path/to/image.png?v=1&size=large);background-color:green;}",
+        ]
+      `);
+    });
+
+    it('preserves multiple url() declarations', () => {
+      expect(
+        stylisTest(`
+        background-image: url(https://example.com/bg.png);
+        cursor: url(https://example.com/cursor.png), auto;
+        list-style-image: url(https://example.com/bullet.png);
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-image:url(https://example.com/bg.png);cursor:url(https://example.com/cursor.png),auto;list-style-image:url(https://example.com/bullet.png);}",
+        ]
+      `);
+    });
+
+    it('preserves @font-face with unquoted URL', () => {
+      expect(
+        stylisTest(`
+        @font-face {
+          font-family: 'MyFont';
+          src: url(https://example.com/fonts/myfont.woff2) format('woff2');
+        }
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          "@font-face{font-family:'MyFont';src:url(https://example.com/fonts/myfont.woff2) format('woff2');}",
+        ]
+      `);
+    });
+
+    it('preserves @font-face with multiple src URLs', () => {
+      expect(
+        stylisTest(`
+        @font-face {
+          font-family: 'MyFont';
+          src: url(https://example.com/fonts/myfont.woff2) format('woff2'),
+               url(https://example.com/fonts/myfont.woff) format('woff');
+        }
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          "@font-face{font-family:'MyFont';src:url(https://example.com/fonts/myfont.woff2) format('woff2'),url(https://example.com/fonts/myfont.woff) format('woff');}",
+        ]
+      `);
+    });
+
+    it('preserves @import with URL', () => {
+      expect(
+        stylisTest(`
+        @import url(https://example.com/styles.css);
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-color:green;}",
+          "@import url(https://example.com/styles.css);",
+        ]
+      `);
+    });
+
+    it('preserves url() with file:// protocol', () => {
+      expect(
+        stylisTest(`
+        background-image: url(file:///path/to/image.png);
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-image:url(file:///path/to/image.png);background-color:green;}",
+        ]
+      `);
+    });
+
+    it('preserves url() with protocol-relative URL', () => {
+      expect(
+        stylisTest(`
+        background-image: url(//example.com/image.png);
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-image:url(//example.com/image.png);background-color:green;}",
+        ]
+      `);
+    });
+
+    it('handles mix of url() and line comments', () => {
+      expect(
+        stylisTest(`
+        background-image: url(https://example.com/image.png); // this is a comment
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-image:url(https://example.com/image.png);background-color:green;}",
+        ]
+      `);
+    });
+
+    it('preserves srcset URLs in image-set()', () => {
+      expect(
+        stylisTest(`
+        background-image: image-set(url(https://example.com/image.png) 1x, url(https://example.com/image@2x.png) 2x);
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-image:image-set(url(https://example.com/image.png) 1x, url(https://example.com/image@2x.png) 2x);background-color:green;}",
+        ]
+      `);
+    });
+
+    it('does not match url inside other words (word boundary check)', () => {
+      // 'foourl(' should not be treated as url()
+      expect(
+        stylisTest(`
+        width: 100px; // comment
+        content: "foourl(https://example.com)";
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;content:"foourl(https://example.com)";background-color:green;}",
+        ]
+      `);
+    });
+
+    it('preserves url() at the start of CSS', () => {
+      expect(stylisTest(`background-image: url(https://example.com/image.png);`))
+        .toMatchInlineSnapshot(`
+        [
+          ".a{background-image:url(https://example.com/image.png);}",
+        ]
+      `);
+    });
+  });
 });
