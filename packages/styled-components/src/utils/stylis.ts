@@ -20,20 +20,6 @@ const OPEN_PAREN = 40; // (
 const CLOSE_PAREN = 41; // )
 
 /**
- * Check if a character code is a word character (letter, digit, underscore, or hyphen).
- * Used to determine word boundaries for 'url(' detection.
- */
-function isWordChar(code: number): boolean {
-  return (
-    (code >= 97 && code <= 122) || // a-z
-    (code >= 65 && code <= 90) || // A-Z
-    (code >= 48 && code <= 57) || // 0-9
-    code === 95 || // _
-    code === 45 // -
-  );
-}
-
-/**
  * Strips JS-style line comments (//) from CSS, handling comments anywhere
  * in the line while preserving strings, url() contents, and valid CSS.
  * Optimized with early bail and charCodeAt for performance.
@@ -72,15 +58,13 @@ function stripLineComments(css: string): string {
       continue;
     }
 
-    // Track url() context - check for 'url(' (case insensitive)
-    // Also verify word boundary before 'url' to avoid matching 'foourl('
+    // Track url() context - check for 'url(' (case insensitive via | 32)
     if (
       code === OPEN_PAREN &&
       i >= 3 &&
-      (css.charCodeAt(i - 1) === 108 || css.charCodeAt(i - 1) === 76) && // l or L
-      (css.charCodeAt(i - 2) === 114 || css.charCodeAt(i - 2) === 82) && // r or R
-      (css.charCodeAt(i - 3) === 117 || css.charCodeAt(i - 3) === 85) && // u or U
-      (i === 3 || !isWordChar(css.charCodeAt(i - 4))) // word boundary before 'url'
+      (css.charCodeAt(i - 1) | 32) === 108 && // l
+      (css.charCodeAt(i - 2) | 32) === 114 && // r
+      (css.charCodeAt(i - 3) | 32) === 117 // u
     ) {
       urlDepth = 1;
       i++;
@@ -89,11 +73,8 @@ function stripLineComments(css: string): string {
 
     // Track nested parentheses inside url()
     if (urlDepth > 0) {
-      if (code === OPEN_PAREN) {
-        urlDepth++;
-      } else if (code === CLOSE_PAREN) {
-        urlDepth--;
-      }
+      if (code === CLOSE_PAREN) urlDepth--;
+      else if (code === OPEN_PAREN) urlDepth++;
       i++;
       continue;
     }
