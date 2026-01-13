@@ -47,6 +47,15 @@ export default class GlobalStyle<Props extends object> {
   ): void {
     if (instance > 2) StyleSheet.registerId(this.componentId + instance);
 
+    const id = this.componentId + instance;
+
+    // For static styles, only inject once - don't remove and re-add on every render
+    // This prevents issues with React 18/19 concurrent rendering where the brief
+    // removal of styles could cause visual glitches or interfere with style hoisting
+    if (this.isStatic && styleSheet.hasNameForId(id, id)) {
+      return;
+    }
+
     // NOTE: Remove old styles, then inject the new ones
     this.removeStyles(instance, styleSheet);
     this.createStyles(instance, executionContext, styleSheet, stylis);
