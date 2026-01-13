@@ -33,6 +33,10 @@ export default function createGlobalStyle<Props extends object>(
   const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const ssc = useStyleSheetContext();
     const theme = React.useContext ? React.useContext(ThemeContext) : undefined;
+    
+    // Use a ref to track cleanup state per component instance
+    // This handles React StrictMode's simulated unmount/remount
+    const cleanupRef = React.useRef<{ shouldRemove: boolean }>({ shouldRemove: true });
 
     // Get or create instance ID for this stylesheet
     let instance = instanceMap.get(ssc.styleSheet);
@@ -71,8 +75,23 @@ export default function createGlobalStyle<Props extends object>(
     // The __SERVER__ and IS_RSC checks are module-level and deterministic, so this doesn't violate rules of hooks
     if (!__SERVER__ && !IS_RSC) {
       React.useLayoutEffect(() => {
+        // Signal that this component is mounted and styles should stay
+        cleanupRef.current.shouldRemove = false;
+
         return () => {
-          globalStyle.removeStyles(instance, ssc.styleSheet);
+          // Mark that we're in cleanup
+          cleanupRef.current.shouldRemove = true;
+          
+          // Use queueMicrotask to delay cleanup slightly.
+          // In React StrictMode's simulated unmount/remount, the next effect
+          // will run before this microtask, setting shouldRemove = false.
+          // In a real unmount, no new effect runs, so styles get removed.
+          const ref = cleanupRef.current;
+          queueMicrotask(() => {
+            if (ref.shouldRemove) {
+              globalStyle.removeStyles(instance, ssc.styleSheet);
+            }
+          });
         };
       }, [instance, ssc.styleSheet]);
     }
