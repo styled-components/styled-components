@@ -475,9 +475,8 @@ background-color: green;`)
     });
 
     it('preserves url() at the start of CSS', () => {
-      expect(
-        stylisTest(`background-image: url(https://example.com/image.png);`)
-      ).toMatchInlineSnapshot(`
+      expect(stylisTest(`background-image: url(https://example.com/image.png);`))
+        .toMatchInlineSnapshot(`
         [
           ".a{background-image:url(https://example.com/image.png);}",
         ]
