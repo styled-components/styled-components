@@ -458,5 +458,30 @@ background-color: green;`)
         ]
       `);
     });
+
+    it('does not match url inside other words (word boundary check)', () => {
+      // 'foourl(' should not be treated as url()
+      expect(
+        stylisTest(`
+        width: 100px; // comment
+        content: "foourl(https://example.com)";
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;content:"foourl(https://example.com)";background-color:green;}",
+        ]
+      `);
+    });
+
+    it('preserves url() at the start of CSS', () => {
+      expect(
+        stylisTest(`background-image: url(https://example.com/image.png);`)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background-image:url(https://example.com/image.png);}",
+        ]
+      `);
+    });
   });
 });
