@@ -8,9 +8,7 @@ import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
-import generateAlphabeticName from '../utils/generateAlphabeticName';
 import generateComponentId from '../utils/generateComponentId';
-import { hash } from '../utils/hash';
 import css from './css';
 
 declare const __SERVER__: boolean;
@@ -101,8 +99,8 @@ export default function createGlobalStyle<Props extends object>(
         typeof window === 'undefined' ? ssc.styleSheet.getTag().getGroup(getGroupForId(id)) : '';
 
       if (css) {
-        const cssHash = generateAlphabeticName(hash(css) >>> 0);
-        const href = `sc-global-${styledComponentId}-${instance}-${cssHash}`;
+        // Use stable href without content hash so React can deduplicate/replace during HMR
+        const href = `${styledComponentId}-${instance}`;
         return React.createElement('style', {
           key: href,
           'data-styled-global': styledComponentId,
