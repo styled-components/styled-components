@@ -14,17 +14,29 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
   length: number;
   tag: Tag;
 
+  private indexOfGroupCache: Uint32Array;
+  private cacheValidUpTo: number;
+
   constructor(tag: Tag) {
     this.groupSizes = new Uint32Array(BASE_SIZE);
     this.length = BASE_SIZE;
     this.tag = tag;
+
+    this.indexOfGroupCache = new Uint32Array(BASE_SIZE + 1);
+    this.cacheValidUpTo = BASE_SIZE;
   }
 
   indexOfGroup(group: number) {
-    let index = 0;
-    for (let i = 0; i < group; i++) {
-      index += this.groupSizes[i];
+    if (group <= this.cacheValidUpTo) {
+      return this.indexOfGroupCache[group];
     }
+
+    let index = this.indexOfGroupCache[this.cacheValidUpTo];
+    for (let i = this.cacheValidUpTo; i < group; i++) {
+      index += this.groupSizes[i];
+      this.indexOfGroupCache[i + 1] = index;
+    }
+    this.cacheValidUpTo = group;
 
     return index;
   }
@@ -32,6 +44,7 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
   insertRules(group: number, rules: string[]) {
     if (group >= this.groupSizes.length) {
       const oldBuffer = this.groupSizes;
+      const oldCacheBuffer = this.indexOfGroupCache;
       const oldSize = oldBuffer.length;
 
       let newSize = oldSize;
@@ -44,6 +57,8 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
 
       this.groupSizes = new Uint32Array(newSize);
       this.groupSizes.set(oldBuffer);
+      this.indexOfGroupCache = new Uint32Array(newSize + 1);
+      this.indexOfGroupCache.set(oldCacheBuffer);
       this.length = newSize;
 
       for (let i = oldSize; i < newSize; i++) {
@@ -53,10 +68,18 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
 
     let ruleIndex = this.indexOfGroup(group + 1);
 
+    let insertedCount = 0;
     for (let i = 0, l = rules.length; i < l; i++) {
       if (this.tag.insertRule(ruleIndex, rules[i])) {
         this.groupSizes[group]++;
         ruleIndex++;
+        insertedCount++;
+      }
+    }
+
+    if (insertedCount > 0) {
+      if (group < this.cacheValidUpTo) {
+        this.cacheValidUpTo = group;
       }
     }
   }
@@ -71,6 +94,10 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
 
       for (let i = startIndex; i < endIndex; i++) {
         this.tag.deleteRule(startIndex);
+      }
+
+      if (length > 0 && group < this.cacheValidUpTo) {
+        this.cacheValidUpTo = group;
       }
     }
   }
