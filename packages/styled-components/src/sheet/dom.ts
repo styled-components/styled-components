@@ -47,3 +47,11 @@ export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
 
   throw styledError(17);
 };
+
+/** Remove a GlobalStyle's SSR-rendered inline style tag(s) from the DOM */
+export const removeGlobalStyleTag = (componentId: string): void => {
+  if (typeof document === 'undefined') return;
+
+  const styleTags = document.querySelectorAll(`style[data-styled-global="${componentId}"]`);
+  styleTags.forEach(tag => tag.remove());
+};

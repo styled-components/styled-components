@@ -4,6 +4,7 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
+import { removeGlobalStyleTag } from '../sheet/dom';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
@@ -86,6 +87,9 @@ export default function createGlobalStyle<Props extends object>(
           queueMicrotask(() => {
             if (shouldRemoveRef.current) {
               globalStyle.removeStyles(instance, ssc.styleSheet);
+              // Also remove any SSR-rendered inline style tags with precedence
+              // These persist in the DOM because React 19's hoisted styles don't unmount
+              removeGlobalStyleTag(styledComponentId);
             }
           });
         };
