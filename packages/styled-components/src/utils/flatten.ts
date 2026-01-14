@@ -11,7 +11,6 @@ import {
   StyledObject,
 } from '../types';
 import addUnitIfNeeded from './addUnitIfNeeded';
-import { EMPTY_ARRAY } from './empties';
 import getComponentName from './getComponentName';
 import hyphenate from './hyphenateStyleName';
 import isFunction from './isFunction';
@@ -22,28 +21,94 @@ import isStyledComponent from './isStyledComponent';
 /**
  * It's falsish not falsy because 0 is allowed.
  */
-const isFalsish = (chunk: any): chunk is undefined | null | false | '' =>
+const isFalsish = (chunk: unknown): chunk is undefined | null | false | '' =>
   chunk === undefined || chunk === null || chunk === false || chunk === '';
 
-export const objToCssArray = (obj: Dict<any>): string[] => {
-  const rules = [];
-
+export function objToCssArray(obj: Dict<unknown>, result: unknown[] = []): unknown[] {
   for (const key in obj) {
     const val = obj[key];
     if (!obj.hasOwnProperty(key) || isFalsish(val)) continue;
 
-    // @ts-expect-error Property 'isCss' does not exist on type 'any[]'
-    if ((Array.isArray(val) && val.isCss) || isFunction(val)) {
-      rules.push(`${hyphenate(key)}:`, val, ';');
+    if ((Array.isArray(val) && (val as unknown[] & { isCss?: boolean }).isCss) || isFunction(val)) {
+      result.push(`${hyphenate(key)}:`, val, ';');
     } else if (isPlainObject(val)) {
-      rules.push(`${key} {`, ...objToCssArray(val), '}');
+      result.push(`${key} {`);
+      objToCssArray(val as Dict<unknown>, result);
+      result.push('}');
     } else {
-      rules.push(`${hyphenate(key)}: ${addUnitIfNeeded(key, val)};`);
+      result.push(`${hyphenate(key)}: ${addUnitIfNeeded(key, val)};`);
     }
   }
 
-  return rules;
-};
+  return result;
+}
+
+function flattenInto<Props extends object>(
+  chunk: Interpolation<object>,
+  result: RuleSet<Props>,
+  executionContext: (ExecutionContext & Props) | undefined,
+  styleSheet: StyleSheet | undefined,
+  stylisInstance: Stringifier | undefined
+): void {
+  if (isFalsish(chunk)) {
+    return;
+  }
+
+  if (isStyledComponent(chunk)) {
+    result.push(`.${(chunk as unknown as IStyledComponent<'web', Props>).styledComponentId}`);
+    return;
+  }
+
+  if (isFunction(chunk)) {
+    if (isStatelessFunction(chunk) && executionContext) {
+      const fnResult = chunk(executionContext);
+
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        typeof fnResult === 'object' &&
+        !Array.isArray(fnResult) &&
+        !(fnResult instanceof Keyframes) &&
+        !isPlainObject(fnResult) &&
+        fnResult !== null
+      ) {
+        console.error(
+          `${getComponentName(
+            chunk as AnyComponent
+          )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
+        );
+      }
+
+      flattenInto(fnResult, result, executionContext, styleSheet, stylisInstance);
+    } else {
+      result.push(chunk as unknown as IStyledComponent<'web'>);
+    }
+    return;
+  }
+
+  if (chunk instanceof Keyframes) {
+    if (styleSheet) {
+      chunk.inject(styleSheet, stylisInstance);
+      result.push(chunk.getName(stylisInstance));
+    } else {
+      result.push(chunk);
+    }
+    return;
+  }
+
+  if (isPlainObject(chunk)) {
+    objToCssArray(chunk as Dict<unknown>, result as unknown[]);
+    return;
+  }
+
+  if (!Array.isArray(chunk)) {
+    result.push(chunk.toString());
+    return;
+  }
+
+  for (let i = 0; i < chunk.length; i++) {
+    flattenInto(chunk[i], result, executionContext, styleSheet, stylisInstance);
+  }
+}
 
 export default function flatten<Props extends object>(
   chunk: Interpolation<object>,
@@ -55,23 +120,21 @@ export default function flatten<Props extends object>(
     return [];
   }
 
-  /* Handle other components */
   if (isStyledComponent(chunk)) {
-    return [`.${(chunk as unknown as IStyledComponent<'web', any>).styledComponentId}`];
+    return [`.${(chunk as unknown as IStyledComponent<'web', Props>).styledComponentId}`];
   }
 
-  /* Either execute or defer the function */
   if (isFunction(chunk)) {
     if (isStatelessFunction(chunk) && executionContext) {
-      const result = chunk(executionContext);
+      const fnResult = chunk(executionContext);
 
       if (
         process.env.NODE_ENV !== 'production' &&
-        typeof result === 'object' &&
-        !Array.isArray(result) &&
-        !(result instanceof Keyframes) &&
-        !isPlainObject(result) &&
-        result !== null
+        typeof fnResult === 'object' &&
+        !Array.isArray(fnResult) &&
+        !(fnResult instanceof Keyframes) &&
+        !isPlainObject(fnResult) &&
+        fnResult !== null
       ) {
         console.error(
           `${getComponentName(
@@ -80,7 +143,7 @@ export default function flatten<Props extends object>(
         );
       }
 
-      return flatten<Props>(result, executionContext, styleSheet, stylisInstance);
+      return flatten<Props>(fnResult, executionContext, styleSheet, stylisInstance);
     } else {
       return [chunk as unknown as IStyledComponent<'web'>];
     }
@@ -95,20 +158,17 @@ export default function flatten<Props extends object>(
     }
   }
 
-  /* Handle objects */
   if (isPlainObject(chunk)) {
-    return objToCssArray(chunk as StyledObject<Props>);
+    return objToCssArray(chunk as Dict<unknown>) as RuleSet<Props>;
   }
 
   if (!Array.isArray(chunk)) {
     return [chunk.toString()];
   }
 
-  return flatMap(chunk, chunklet =>
-    flatten<Props>(chunklet, executionContext, styleSheet, stylisInstance)
-  );
-}
-
-function flatMap<T, U>(array: T[], transform: (value: T, index: number, array: T[]) => U[]): U[] {
-  return Array.prototype.concat.apply(EMPTY_ARRAY, array.map(transform));
+  const result: RuleSet<Props> = [];
+  for (let i = 0; i < chunk.length; i++) {
+    flattenInto(chunk[i], result, executionContext, styleSheet, stylisInstance);
+  }
+  return result;
 }
