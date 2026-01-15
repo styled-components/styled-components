@@ -116,7 +116,7 @@ The `main` branch is for the most-current version of styled-components, currentl
 
 ## Built with `styled-components`
 
-A lot of hard work goes into community libraries, projects, and guides. A lot of them make it easier to get started or help you with your next project! There are also a whole lot of interesting apps and sites that people have built using styled-components.
+Community libraries, projects, and guides often represent a significant investment of effort. Many of them make it easier to get started or help you with your next project! There are also a whole lot of interesting apps and sites that people have built using styled-components.
 
 Make sure to head over to [awesome-styled-components](https://github.com/styled-components/awesome-styled-components) to see them all! And please contribute and add your own work to the list so others can find it.
 
