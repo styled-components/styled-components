@@ -42,9 +42,11 @@ export const StylisContext = !IS_RSC
     } as React.Context<IStylisContext>);
 export const StylisConsumer = StylisContext.Consumer;
 
-export function useStyleSheetContext() {
-  // Skip useContext if we're in an RSC environment without context support
-  return !IS_RSC && React.useContext ? React.useContext(StyleSheetContext) : defaultContextValue;
+export function useStyleSheetContext(): IStyleSheetContext {
+  if (IS_RSC) {
+    return defaultContextValue;
+  }
+  return React.useContext ? React.useContext(StyleSheetContext) : defaultContextValue;
 }
 
 export type IStyleSheetManager = React.PropsWithChildren<{
