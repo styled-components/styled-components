@@ -5,7 +5,7 @@
     "build": "webpack-cli --config webpack.config.js",
     "open": "open ./index.html",
     "start": "node run-headless.js",
-    "ssr": "node --experimental-vm-modules ssr-benchmark.js"
+    "ssr": "node --expose-gc ssr-benchmark.js"
   },
   "dependencies": {
     "@emotion/react": "11.11.4",
