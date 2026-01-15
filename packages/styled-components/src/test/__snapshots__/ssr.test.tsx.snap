@@ -29,17 +29,22 @@ data-styled.g[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
 
 exports[`ssr should emit global styles without any other components 2`] = `
 [
-  <style
-    dangerouslySetInnerHTML={
-      {
+  {
+    "$$typeof": Symbol(react.transitional.element),
+    "_owner": null,
+    "_store": {},
+    "key": "sc-0-0",
+    "props": {
+      "dangerouslySetInnerHTML": {
         "__html": "body{background:papayawhip;}/*!sc*/
 data-styled.g[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
 ",
-      }
-    }
-    data-styled=""
-    data-styled-version="JEST_MOCK_VERSION"
-  />,
+      },
+      "data-styled": "",
+      "data-styled-version": "JEST_MOCK_VERSION",
+    },
+    "type": "style",
+  },
 ]
 `;
 
@@ -75,23 +80,7 @@ data-styled.g[id="sc-a"]{content:"b,"}/*!sc*/
 </style>
 `;
 
-exports[`ssr should handle errors while streaming with renderToNodeStream (legacy) 1`] = `[Error: ahhh]`;
-
 exports[`ssr should handle errors while streaming with renderToPipeableStream 1`] = `[Error: ahhh]`;
-
-exports[`ssr should interleave styles with rendered HTML with renderToNodeStream (legacy) 1`] = `
-<style data-styled="true"
-       data-styled-version="JEST_MOCK_VERSION"
->
-  body{background:papayawhip;}/*!sc*/
-data-styled.g[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
-.c{color:red;}/*!sc*/
-data-styled.g[id="sc-b"]{content:"c,"}/*!sc*/
-</style>
-<h1 class="sc-b c">
-  Hello SSR!
-</h1>
-`;
 
 exports[`ssr should interleave styles with rendered HTML with renderToPipeableStream 1`] = `
 <style data-styled="true"
@@ -141,35 +130,7 @@ data-styled.g[id="sc-b"]{content:"c,"}/*!sc*/
 }
 `;
 
-exports[`ssr should throw if getStyleElement is called after interleaveWithNodeStream is called with renderToNodeStream (legacy) 1`] = `
-"Can't collect styles once you've consumed a \`ServerStyleSheet\`'s styles! \`ServerStyleSheet\` is a one off instance for each server-side render cycle.
-
-- Are you trying to reuse it across renders?
-- Are you accidentally calling collectStyles twice?"
-`;
-
 exports[`ssr should throw if getStyleElement is called after interleaveWithNodeStream is called with renderToPipeableStream 1`] = `
-"Can't collect styles once you've consumed a \`ServerStyleSheet\`'s styles! \`ServerStyleSheet\` is a one off instance for each server-side render cycle.
-
-- Are you trying to reuse it across renders?
-- Are you accidentally calling collectStyles twice?"
-`;
-
-exports[`ssr should throw if getStyleElement is called after streaming is complete with renderToNodeStream (legacy) 1`] = `
-<style data-styled="true"
-       data-styled-version="JEST_MOCK_VERSION"
->
-  body{background:papayawhip;}/*!sc*/
-data-styled.g[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
-.c{color:red;}/*!sc*/
-data-styled.g[id="sc-b"]{content:"c,"}/*!sc*/
-</style>
-<h1 class="sc-b c">
-  Hello SSR!
-</h1>
-`;
-
-exports[`ssr should throw if getStyleElement is called after streaming is complete with renderToNodeStream (legacy) 2`] = `
 "Can't collect styles once you've consumed a \`ServerStyleSheet\`'s styles! \`ServerStyleSheet\` is a one off instance for each server-side render cycle.
 
 - Are you trying to reuse it across renders?
@@ -197,13 +158,6 @@ exports[`ssr should throw if getStyleElement is called after streaming is comple
 - Are you accidentally calling collectStyles twice?"
 `;
 
-exports[`ssr should throw if getStyleTags is called after interleaveWithNodeStream is called with renderToNodeStream (legacy) 1`] = `
-"Can't collect styles once you've consumed a \`ServerStyleSheet\`'s styles! \`ServerStyleSheet\` is a one off instance for each server-side render cycle.
-
-- Are you trying to reuse it across renders?
-- Are you accidentally calling collectStyles twice?"
-`;
-
 exports[`ssr should throw if getStyleTags is called after interleaveWithNodeStream is called with renderToPipeableStream 1`] = `
 "Can't collect styles once you've consumed a \`ServerStyleSheet\`'s styles! \`ServerStyleSheet\` is a one off instance for each server-side render cycle.
 
@@ -211,7 +165,7 @@ exports[`ssr should throw if getStyleTags is called after interleaveWithNodeStre
 - Are you accidentally calling collectStyles twice?"
 `;
 
-exports[`ssr should throw if getStyleTags is called after streaming is complete with renderToNodeStream (legacy) 1`] = `
+exports[`ssr should throw if getStyleTags is called after streaming is complete with renderToPipeableStream 1`] = `
 <style data-styled="true"
        data-styled-version="JEST_MOCK_VERSION"
 >
@@ -225,35 +179,7 @@ data-styled.g[id="sc-b"]{content:"c,"}/*!sc*/
 </h1>
 `;
 
-exports[`ssr should throw if getStyleTags is called after streaming is complete with renderToNodeStream (legacy) 2`] = `
-"Can't collect styles once you've consumed a \`ServerStyleSheet\`'s styles! \`ServerStyleSheet\` is a one off instance for each server-side render cycle.
-
-- Are you trying to reuse it across renders?
-- Are you accidentally calling collectStyles twice?"
-`;
-
-exports[`ssr should throw if getStyleTags is called after streaming is complete with renderToPipeableStream 1`] = `
-<style data-styled="true"
-       data-styled-version="JEST_MOCK_VERSION"
->
-  body{background:papayawhip;}/*!sc*/
-data-styled.g[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
-.d{color:red;}/*!sc*/
-data-styled.g[id="sc-b"]{content:"d,"}/*!sc*/
-</style>
-<h1 class="sc-b d">
-  Hello SSR!
-</h1>
-`;
-
 exports[`ssr should throw if getStyleTags is called after streaming is complete with renderToPipeableStream 2`] = `
-"Can't collect styles once you've consumed a \`ServerStyleSheet\`'s styles! \`ServerStyleSheet\` is a one off instance for each server-side render cycle.
-
-- Are you trying to reuse it across renders?
-- Are you accidentally calling collectStyles twice?"
-`;
-
-exports[`ssr should throw if interleaveWithNodeStream is called twice with renderToNodeStream (legacy) 1`] = `
 "Can't collect styles once you've consumed a \`ServerStyleSheet\`'s styles! \`ServerStyleSheet\` is a one off instance for each server-side render cycle.
 
 - Are you trying to reuse it across renders?

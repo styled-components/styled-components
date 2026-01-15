@@ -28,7 +28,7 @@ import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
-import isStyledComponent from '../utils/isStyledComponent';
+import isStyledComponent, { registerStyledComponent } from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import { joinStrings } from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
@@ -293,6 +293,7 @@ function createStyledComponent<
       forwardRefRender as any
     ) as unknown as IStyledComponent<'web', any> & Statics;
   }
+  registerStyledComponent(WrappedStyledComponent);
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;

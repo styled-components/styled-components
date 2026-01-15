@@ -19,7 +19,7 @@ import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
-import isStyledComponent from '../utils/isStyledComponent';
+import isStyledComponent, { registerStyledComponent } from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
@@ -176,6 +176,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     > &
       Statics;
 
+    registerStyledComponent(WrappedStyledComponent);
     WrappedStyledComponent.attrs = finalAttrs;
     WrappedStyledComponent.inlineStyle = new InlineStyle(
       isTargetStyledComp ? styledComponentTarget.inlineStyle.rules.concat(rules) : rules

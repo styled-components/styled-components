@@ -114,7 +114,7 @@ export default function createGlobalStyle<Props extends object>(
     } else {
       const context = {
         ...props,
-        theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
+        theme: determineTheme(props, theme, (GlobalStyleComponent as any).defaultProps),
       } as ExecutionContext & Props;
 
       globalStyle.renderStyles(instance, context, styleSheet, stylis);
