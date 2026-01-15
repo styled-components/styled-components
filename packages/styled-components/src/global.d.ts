@@ -15,10 +15,6 @@ declare module '@babel/helper-module-imports' {
   ): types.Identifier;
 }
 
-declare module '@emotion/unitless' {
-  export default {} as { [key: string]: boolean };
-}
-
 declare module 'babel-plugin-styled-components' {
   export default function ({ types: any }): {
     inherits: any;

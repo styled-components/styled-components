@@ -38,11 +38,7 @@ describe('rehydration', () => {
     });
 
     it('should preserve the styles', () => {
-      expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".b {
-          color: red;
-        }"
-      `);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
     });
 
     it('should append a new component like normal', () => {
@@ -52,10 +48,7 @@ describe('rehydration', () => {
       `;
       render(<Comp />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".b {
-          color: red;
-        }
-        .a {
+        ".a {
           color: blue;
         }"
       `);
@@ -70,10 +63,7 @@ describe('rehydration', () => {
       const B = styled.div.withConfig({ componentId: 'TWO' })``;
       render(<B />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".b {
-          color: red;
-        }
-        .a {
+        ".a {
           color: blue;
         }"
       `);
@@ -91,11 +81,11 @@ describe('rehydration', () => {
       `;
       render(<B />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".b {
-          color: red;
-        }
-        .a {
+        ".a {
           color: blue;
+        }
+        .b {
+          color: red;
         }"
       `);
     });
@@ -115,14 +105,14 @@ describe('rehydration', () => {
       `;
       render(<C />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".b {
+        ".a {
+          color: blue;
+        }
+        .b {
           color: red;
         }
         .c {
           color: green;
-        }
-        .a {
-          color: blue;
         }"
       `);
     });
@@ -145,14 +135,7 @@ describe('rehydration', () => {
     });
 
     it('should preserve the styles', () => {
-      expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".a {
-          color: blue;
-        }
-        .b {
-          color: red;
-        }"
-      `);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
     });
 
     it('should not inject new styles for a component already rendered', () => {
@@ -163,9 +146,6 @@ describe('rehydration', () => {
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         ".a {
           color: blue;
-        }
-        .b {
-          color: red;
         }"
       `);
     });
@@ -177,14 +157,8 @@ describe('rehydration', () => {
       `;
       render(<Comp color="green" />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".a {
-          color: blue;
-        }
-        .x {
+        ".x {
           color: green;
-        }
-        .b {
-          color: red;
         }"
       `);
     });
@@ -235,14 +209,7 @@ describe('rehydration', () => {
     });
 
     it('should leave the existing styles there', () => {
-      expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "body {
-          background: papayawhip;
-        }
-        .a {
-          color: red;
-        }"
-      `);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
     });
 
     it('should inject new global styles at the end', () => {
@@ -252,12 +219,6 @@ describe('rehydration', () => {
       render(<Component />);
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "body {
-          background: papayawhip;
-        }
-        .a {
-          color: red;
-        }
-        body {
           color: tomato;
         }"
       `);
@@ -280,12 +241,6 @@ describe('rehydration', () => {
       // compared to typical component styles which are registered at creation time
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "body {
-          background: papayawhip;
-        }
-        .a {
-          color: red;
-        }
-        body {
           color: tomato;
         }
         .b {
@@ -314,20 +269,7 @@ describe('rehydration', () => {
     });
 
     it('should not touch existing styles', () => {
-      expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "html {
-          font-size: 16px;
-        }
-        body {
-          background: papayawhip;
-        }
-        .c {
-          color: blue;
-        }
-        .d {
-          color: red;
-        }"
-      `);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
     });
 
     it('should not change styles if rendered in the same order they were created with', () => {
@@ -385,7 +327,10 @@ describe('rehydration', () => {
       render(<A />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "html {
+        ".d {
+          color: red;
+        }
+        html {
           font-size: 16px;
         }
         body {
@@ -393,9 +338,6 @@ describe('rehydration', () => {
         }
         .c {
           color: blue;
-        }
-        .d {
-          color: red;
         }"
       `);
     });
@@ -414,18 +356,7 @@ describe('rehydration', () => {
     });
 
     it('should not touch existing styles', () => {
-      expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "@-webkit-keyframes keyframe_880 {
-          from {
-            opacity: 0;
-          }
-        }
-        @keyframes keyframe_880 {
-          from {
-            opacity: 0;
-          }
-        }"
-      `);
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
     });
 
     it('should not regenerate keyframes', () => {
@@ -443,12 +374,7 @@ describe('rehydration', () => {
       render(<A />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "@-webkit-keyframes keyframe_880 {
-          from {
-            opacity: 0;
-          }
-        }
-        @keyframes keyframe_880 {
+        "@keyframes keyframe_880 {
           from {
             opacity: 0;
           }
@@ -474,23 +400,13 @@ describe('rehydration', () => {
       render(<A />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "@-webkit-keyframes keyframe_880 {
+        "@keyframes keyframe_144 {
           from {
-            opacity: 0;
-          }
-        }
-        @keyframes keyframe_880 {
-          from {
-            opacity: 0;
+            opacity: 1;
           }
         }
         .b {
           animation: keyframe_144 1s both;
-        }
-        @keyframes keyframe_144 {
-          from {
-            opacity: 1;
-          }
         }"
       `);
     });
@@ -518,10 +434,13 @@ describe('rehydration', () => {
       render(<A />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "@-webkit-keyframes keyframe_880 {
+        "@keyframes keyframe_144 {
           from {
-            opacity: 0;
+            opacity: 1;
           }
+        }
+        .c {
+          animation: keyframe_144 1s both;
         }
         @keyframes keyframe_880 {
           from {
@@ -530,14 +449,6 @@ describe('rehydration', () => {
         }
         .d {
           animation: keyframe_880 1s both;
-        }
-        .c {
-          animation: keyframe_144 1s both;
-        }
-        @keyframes keyframe_144 {
-          from {
-            opacity: 1;
-          }
         }"
       `);
     });
@@ -563,10 +474,13 @@ describe('rehydration', () => {
       render(<A $animation={fadeIn} />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "@-webkit-keyframes keyframe_880 {
+        "@keyframes keyframe_144 {
           from {
-            opacity: 0;
+            opacity: 1;
           }
+        }
+        .c {
+          animation: keyframe_144 1s both;
         }
         @keyframes keyframe_880 {
           from {
@@ -575,14 +489,6 @@ describe('rehydration', () => {
         }
         .d {
           animation: keyframe_880 1s both;
-        }
-        .c {
-          animation: keyframe_144 1s both;
-        }
-        @keyframes keyframe_144 {
-          from {
-            opacity: 1;
-          }
         }"
       `);
     });

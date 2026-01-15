@@ -10,33 +10,20 @@ beforeEach(() => {
 });
 
 it('inserts and retrieves rules by groups correctly', () => {
-  groupedTag.insertRules(2, ['.g2-a {}', '.g2-b {}']);
+  groupedTag.insertRules('g2', ['.g2-a {}', '.g2-b {}']);
+  groupedTag.insertRules('g1', ['.g1-a {}', '.g1-b {}']);
+  groupedTag.insertRules('g2', ['.g2-c {}', '.g2-d {}']);
 
-  // Insert out of order into the right group
-  groupedTag.insertRules(1, ['.g1-a {}', '.g1-b {}']);
-
-  groupedTag.insertRules(2, ['.g2-c {}', '.g2-d {}']);
-
-  expect(groupedTag.length).toBeGreaterThan(2);
   expect(tag.length).toBe(6);
 
-  // Expect groups to contain inserted rules
-  expect(groupedTag.getGroup(0)).toBe('');
-  expect(groupedTag.getGroup(1)).toBe('.g1-a {}/*!sc*/\n.g1-b {}/*!sc*/\n');
-  expect(groupedTag.getGroup(2)).toBe(
+  expect(groupedTag.getGroup('unknown')).toBe('');
+  expect(groupedTag.getGroup('g1')).toBe('.g1-a {}/*!sc*/\n.g1-b {}/*!sc*/\n');
+  expect(groupedTag.getGroup('g2')).toBe(
     '.g2-a {}/*!sc*/\n.g2-b {}/*!sc*/\n' + '.g2-c {}/*!sc*/\n.g2-d {}/*!sc*/\n'
   );
 
-  // Check some rules in the tag as well
-  expect(tag.getRule(3)).toBe('.g2-b {}');
-  expect(tag.getRule(0)).toBe('.g1-a {}');
-
-  // And the indices for sizes: [0, 2, 4, 0, ...]
-  expect(groupedTag.indexOfGroup(0)).toBe(0);
-  expect(groupedTag.indexOfGroup(1)).toBe(0);
-  expect(groupedTag.indexOfGroup(2)).toBe(2);
-  expect(groupedTag.indexOfGroup(3)).toBe(6);
-  expect(groupedTag.indexOfGroup(4)).toBe(6);
+  expect(tag.getRule(0)).toBe('.g2-a {}');
+  expect(tag.getRule(4)).toBe('.g1-a {}');
 });
 
 it('inserts rules at correct indices if some rules are dropped', () => {
@@ -44,47 +31,45 @@ it('inserts rules at correct indices if some rules are dropped', () => {
   jest.spyOn(tag, 'insertRule').mockImplementationOnce(() => false);
   const groupedTag = makeGroupedTag(tag);
 
-  groupedTag.insertRules(1, ['.skipped {}', '.inserted {}']);
+  groupedTag.insertRules('g1', ['.skipped {}', '.inserted {}']);
 
   expect(tag.length).toBe(1);
-  expect(groupedTag.getGroup(1)).toBe('.inserted {}/*!sc*/\n');
+  expect(groupedTag.getGroup('g1')).toBe('.inserted {}/*!sc*/\n');
 });
 
 it('inserts and deletes groups correctly', () => {
-  groupedTag.insertRules(1, ['.g1-a {}']);
+  groupedTag.insertRules('g1', ['.g1-a {}']);
   expect(tag.length).toBe(1);
-  expect(groupedTag.getGroup(1)).not.toBe('');
-  groupedTag.clearGroup(1);
+  expect(groupedTag.getGroup('g1')).not.toBe('');
+  groupedTag.clearGroup('g1');
   expect(tag.length).toBe(0);
-  expect(groupedTag.getGroup(1)).toBe('');
+  expect(groupedTag.getGroup('g1')).toBe('');
 
-  // Noop test for non-existent group
-  groupedTag.clearGroup(0);
+  groupedTag.clearGroup('unknown');
   expect(tag.length).toBe(0);
 });
 
-it('does supports large group numbers', () => {
-  const baseSize = groupedTag.length;
-  const group = 1 << 10;
-  groupedTag.insertRules(group, ['.test {}']);
+it('supports many groups', () => {
+  for (let i = 0; i < 100; i++) {
+    groupedTag.insertRules(`group-${i}`, [`.rule-${i} {}`]);
+  }
 
-  // We expect the internal buffer to have grown beyond its initial size
-  expect(groupedTag.length).toBeGreaterThan(baseSize);
-
-  expect(groupedTag.length).toBeGreaterThan(group);
-  expect(tag.length).toBe(1);
-  expect(groupedTag.indexOfGroup(group)).toBe(0);
-  expect(groupedTag.getGroup(group)).toBe('.test {}/*!sc*/\n');
+  expect(tag.length).toBe(100);
+  expect(groupedTag.getGroup('group-50')).toBe('.rule-50 {}/*!sc*/\n');
+  expect(groupedTag.getGroup('group-99')).toBe('.rule-99 {}/*!sc*/\n');
 });
 
-it('throws when the upper group limit is reached', () => {
-  const group = Math.pow(2, 31) + 1; // This can't be converted to an SMI to prevent cutoff
+it('maintains correct indices after clearing groups', () => {
+  groupedTag.insertRules('g1', ['.g1-a {}', '.g1-b {}']);
+  groupedTag.insertRules('g2', ['.g2-a {}']);
+  groupedTag.insertRules('g3', ['.g3-a {}', '.g3-b {}', '.g3-c {}']);
 
-  expect(() => {
-    groupedTag.insertRules(group, ['.test {}']);
-  }).toThrowErrorMatchingInlineSnapshot(`
-    "Reached the limit of how many styled components may be created at group 2147483649.
-    You may only create up to 1,073,741,824 components. If you're creating components dynamically,
-    as for instance in your render method then you may be running into this limitation."
-  `);
+  expect(tag.length).toBe(6);
+
+  groupedTag.clearGroup('g2');
+  expect(tag.length).toBe(5);
+
+  expect(groupedTag.getGroup('g1')).toBe('.g1-a {}/*!sc*/\n.g1-b {}/*!sc*/\n');
+  expect(groupedTag.getGroup('g2')).toBe('');
+  expect(groupedTag.getGroup('g3')).toBe('.g3-a {}/*!sc*/\n.g3-b {}/*!sc*/\n.g3-c {}/*!sc*/\n');
 });

@@ -62,16 +62,16 @@ describe('keyframes', () => {
     render(<Comp />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".c {
-        animation: a 2s linear infinite;
-      }
-      @keyframes a {
+      "@keyframes a {
         0% {
           opacity: 0;
         }
         100% {
           opacity: 1;
         }
+      }
+      .c {
+        animation: a 2s linear infinite;
       }"
     `);
   });
@@ -99,16 +99,16 @@ describe('keyframes', () => {
     render(<Comp />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".c {
-        animation: a 2s linear infinite;
-      }
-      @keyframes a {
+      "@keyframes a {
         0% {
           opacity: 0;
         }
         100% {
           opacity: 1;
         }
+      }
+      .c {
+        animation: a 2s linear infinite;
       }"
     `);
   });
@@ -143,20 +143,20 @@ describe('keyframes', () => {
     render(<Comp />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "@media(max-width:700px) {
-        .c {
-          animation: a 2s linear infinite;
-        }
-        .c :hover {
-          animation: a 10s linear infinite;
-        }
-      }
-      @keyframes a {
+      "@keyframes a {
         0% {
           opacity: 0;
         }
         100% {
           opacity: 1;
+        }
+      }
+      @media(max-width:700px) {
+        .c {
+          animation: a 2s linear infinite;
+        }
+        .c :hover {
+          animation: a 10s linear infinite;
         }
       }"
     `);
@@ -182,16 +182,16 @@ describe('keyframes', () => {
     render(<Comp $animation={animation} />);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".c {
-        animation: a 2s linear infinite;
-      }
-      @keyframes a {
+      "@keyframes a {
         0% {
           opacity: 0;
         }
         100% {
           opacity: 1;
         }
+      }
+      .c {
+        animation: a 2s linear infinite;
       }"
     `);
   });
@@ -309,16 +309,16 @@ describe('keyframes', () => {
     );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".c {
-        animation: a-1567285458 2s linear infinite;
-      }
-      @keyframes a-1567285458 {
+      "@keyframes a-1567285458 {
         0% {
           right: 0%;
         }
         100% {
           right: 100%;
         }
+      }
+      .c {
+        animation: a-1567285458 2s linear infinite;
       }"
     `);
   });
@@ -350,13 +350,7 @@ describe('keyframes', () => {
     );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".c {
-        animation: a 2s linear infinite;
-      }
-      .d {
-        animation: a-1567285458 2s linear infinite;
-      }
-      @keyframes a {
+      "@keyframes a {
         0% {
           left: 0%;
         }
@@ -371,6 +365,12 @@ describe('keyframes', () => {
         100% {
           right: 100%;
         }
+      }
+      .c {
+        animation: a 2s linear infinite;
+      }
+      .d {
+        animation: a-1567285458 2s linear infinite;
       }"
     `);
   });
@@ -401,7 +401,7 @@ describe('keyframes', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .animparent .c{color:blue;animation:a 0.75s infinite linear;}@keyframes a{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+        @keyframes a{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}.animparent .c{color:blue;animation:a 0.75s infinite linear;}
       </style>
     `);
   });

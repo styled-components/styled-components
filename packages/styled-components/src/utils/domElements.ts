@@ -1,157 +1,159 @@
-const elements = [
-  'a',
-  'abbr',
-  'address',
-  'area',
-  'article',
-  'aside',
-  'audio',
-  'b',
-  'bdi',
-  'bdo',
-  'blockquote',
-  'body',
-  'button',
-  'canvas',
-  'caption',
-  'cite',
-  'code',
-  'col',
-  'colgroup',
-  'data',
-  'datalist',
-  'dd',
-  'del',
-  'details',
-  'dfn',
-  'dialog',
-  'div',
-  'dl',
-  'dt',
-  'em',
-  'embed',
-  'fieldset',
-  'figcaption',
-  'figure',
-  'footer',
-  'form',
-  'h1',
-  'h2',
-  'h3',
-  'h4',
-  'h5',
-  'h6',
-  'header',
-  'hgroup',
-  'hr',
-  'html',
-  'i',
-  'iframe',
-  'img',
-  'input',
-  'ins',
-  'kbd',
-  'label',
-  'legend',
-  'li',
-  'main',
-  'map',
-  'mark',
-  'menu',
-  'meter',
-  'nav',
-  'object',
-  'ol',
-  'optgroup',
-  'option',
-  'output',
-  'p',
-  'picture',
-  'pre',
-  'progress',
-  'q',
-  'rp',
-  'rt',
-  'ruby',
-  's',
-  'samp',
-  'search',
-  'section',
-  'select',
-  'slot',
-  'small',
-  'span',
-  'strong',
-  'sub',
-  'summary',
-  'sup',
-  'table',
-  'tbody',
-  'td',
-  'template',
-  'textarea',
-  'tfoot',
-  'th',
-  'thead',
-  'time',
-  'tr',
-  'u',
-  'ul',
-  'var',
-  'video',
-  'wbr',
-  'circle',
-  'clipPath',
-  'defs',
-  'ellipse',
-  'feBlend',
-  'feColorMatrix',
-  'feComponentTransfer',
-  'feComposite',
-  'feConvolveMatrix',
-  'feDiffuseLighting',
-  'feDisplacementMap',
-  'feDistantLight',
-  'feDropShadow',
-  'feFlood',
-  'feFuncA',
-  'feFuncB',
-  'feFuncG',
-  'feFuncR',
-  'feGaussianBlur',
-  'feImage',
-  'feMerge',
-  'feMergeNode',
-  'feMorphology',
-  'feOffset',
-  'fePointLight',
-  'feSpecularLighting',
-  'feSpotLight',
-  'feTile',
-  'feTurbulence',
-  'filter',
-  'foreignObject',
-  'g',
-  'image',
-  'line',
-  'linearGradient',
-  'marker',
-  'mask',
-  'path',
-  'pattern',
-  'polygon',
-  'polyline',
-  'radialGradient',
-  'rect',
-  'stop',
-  'svg',
-  'switch',
-  'symbol',
-  'text',
-  'textPath',
-  'tspan',
-  'use',
-] as const;
+export type SupportedHTMLElements =
+  | 'a'
+  | 'abbr'
+  | 'address'
+  | 'area'
+  | 'article'
+  | 'aside'
+  | 'audio'
+  | 'b'
+  | 'bdi'
+  | 'bdo'
+  | 'blockquote'
+  | 'body'
+  | 'button'
+  | 'canvas'
+  | 'caption'
+  | 'cite'
+  | 'code'
+  | 'col'
+  | 'colgroup'
+  | 'data'
+  | 'datalist'
+  | 'dd'
+  | 'del'
+  | 'details'
+  | 'dfn'
+  | 'dialog'
+  | 'div'
+  | 'dl'
+  | 'dt'
+  | 'em'
+  | 'embed'
+  | 'fieldset'
+  | 'figcaption'
+  | 'figure'
+  | 'footer'
+  | 'form'
+  | 'h1'
+  | 'h2'
+  | 'h3'
+  | 'h4'
+  | 'h5'
+  | 'h6'
+  | 'header'
+  | 'hgroup'
+  | 'hr'
+  | 'html'
+  | 'i'
+  | 'iframe'
+  | 'img'
+  | 'input'
+  | 'ins'
+  | 'kbd'
+  | 'label'
+  | 'legend'
+  | 'li'
+  | 'main'
+  | 'map'
+  | 'mark'
+  | 'menu'
+  | 'meter'
+  | 'nav'
+  | 'object'
+  | 'ol'
+  | 'optgroup'
+  | 'option'
+  | 'output'
+  | 'p'
+  | 'picture'
+  | 'pre'
+  | 'progress'
+  | 'q'
+  | 'rp'
+  | 'rt'
+  | 'ruby'
+  | 's'
+  | 'samp'
+  | 'search'
+  | 'section'
+  | 'select'
+  | 'slot'
+  | 'small'
+  | 'span'
+  | 'strong'
+  | 'sub'
+  | 'summary'
+  | 'sup'
+  | 'table'
+  | 'tbody'
+  | 'td'
+  | 'template'
+  | 'textarea'
+  | 'tfoot'
+  | 'th'
+  | 'thead'
+  | 'time'
+  | 'tr'
+  | 'u'
+  | 'ul'
+  | 'var'
+  | 'video'
+  | 'wbr'
+  | 'circle'
+  | 'clipPath'
+  | 'defs'
+  | 'ellipse'
+  | 'feBlend'
+  | 'feColorMatrix'
+  | 'feComponentTransfer'
+  | 'feComposite'
+  | 'feConvolveMatrix'
+  | 'feDiffuseLighting'
+  | 'feDisplacementMap'
+  | 'feDistantLight'
+  | 'feDropShadow'
+  | 'feFlood'
+  | 'feFuncA'
+  | 'feFuncB'
+  | 'feFuncG'
+  | 'feFuncR'
+  | 'feGaussianBlur'
+  | 'feImage'
+  | 'feMerge'
+  | 'feMergeNode'
+  | 'feMorphology'
+  | 'feOffset'
+  | 'fePointLight'
+  | 'feSpecularLighting'
+  | 'feSpotLight'
+  | 'feTile'
+  | 'feTurbulence'
+  | 'filter'
+  | 'foreignObject'
+  | 'g'
+  | 'image'
+  | 'line'
+  | 'linearGradient'
+  | 'marker'
+  | 'mask'
+  | 'path'
+  | 'pattern'
+  | 'polygon'
+  | 'polyline'
+  | 'radialGradient'
+  | 'rect'
+  | 'stop'
+  | 'svg'
+  | 'switch'
+  | 'symbol'
+  | 'text'
+  | 'textPath'
+  | 'tspan'
+  | 'use';
 
-export default new Set(elements);
-export type SupportedHTMLElements = (typeof elements)[number];
+export default new Set<SupportedHTMLElements>(
+  'a,abbr,address,area,article,aside,audio,b,bdi,bdo,blockquote,body,button,canvas,caption,cite,code,col,colgroup,data,datalist,dd,del,details,dfn,dialog,div,dl,dt,em,embed,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,header,hgroup,hr,html,i,iframe,img,input,ins,kbd,label,legend,li,main,map,mark,menu,meter,nav,object,ol,optgroup,option,output,p,picture,pre,progress,q,rp,rt,ruby,s,samp,search,section,select,slot,small,span,strong,sub,summary,sup,table,tbody,td,template,textarea,tfoot,th,thead,time,tr,u,ul,var,video,wbr,circle,clipPath,defs,ellipse,feBlend,feColorMatrix,feComponentTransfer,feComposite,feConvolveMatrix,feDiffuseLighting,feDisplacementMap,feDistantLight,feDropShadow,feFlood,feFuncA,feFuncB,feFuncG,feFuncR,feGaussianBlur,feImage,feMerge,feMergeNode,feMorphology,feOffset,fePointLight,feSpecularLighting,feSpotLight,feTile,feTurbulence,filter,foreignObject,g,image,line,linearGradient,marker,mask,path,pattern,polygon,polyline,radialGradient,rect,stop,svg,switch,symbol,text,textPath,tspan,use'.split(
+    ','
+  ) as SupportedHTMLElements[]
+);

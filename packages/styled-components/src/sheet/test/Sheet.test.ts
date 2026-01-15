@@ -46,7 +46,7 @@ it('converts to string correctly', () => {
   sheet.insertRules('id', 'name', ['.test {}']);
   expect(sheet.toString()).toMatchInlineSnapshot(`
     ".test {}/*!sc*/
-    data-styled.g1[id="id"]{content:"name,"}/*!sc*/
+    data-styled.g[id="id"]{content:"name,"}/*!sc*/
     "
   `);
 });

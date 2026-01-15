@@ -4,7 +4,6 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
-import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
@@ -80,8 +79,7 @@ export default function createGlobalStyle<Props extends object>(
     // RSC mode: output style tag
     if (IS_RSC) {
       const id = styledComponentId + instance;
-      const css =
-        typeof window === 'undefined' ? ssc.styleSheet.getTag().getGroup(getGroupForId(id)) : '';
+      const css = typeof window === 'undefined' ? ssc.styleSheet.getTag().getGroup(id) : '';
 
       if (css) {
         const cssHash = generateAlphabeticName(hash(css) >>> 0);

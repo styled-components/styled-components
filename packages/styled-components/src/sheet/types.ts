@@ -1,6 +1,5 @@
 import { InsertionTarget } from '../types';
 
-/** CSSStyleSheet-like Tag abstraction for CSS rules */
 export interface Tag {
   insertRule(index: number, rule: string): boolean;
   deleteRule(index: number): void;
@@ -8,13 +7,11 @@ export interface Tag {
   length: number;
 }
 
-/** Group-aware Tag that sorts rules by indices */
 export interface GroupedTag {
-  clearGroup(group: number): void;
-  getGroup(group: number): string;
-  groupSizes: Uint32Array;
-  insertRules(group: number, rules: string | string[]): void;
-  length: number;
+  insertRules(id: string, rules: string | string[]): void;
+  getGroup(id: string): string;
+  clearGroup(id: string): void;
+  getIds(): IterableIterator<string>;
   tag: Tag;
 }
 
