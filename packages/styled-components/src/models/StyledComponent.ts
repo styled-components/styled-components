@@ -1,6 +1,7 @@
 import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
 import { IS_RSC, SC_VERSION } from '../constants';
+import StyleSheet from '../sheet';
 import type {
   AnyComponent,
   Attrs,
@@ -13,6 +14,7 @@ import type {
   IStyledStatics,
   OmitNever,
   RuleSet,
+  Stringifier,
   StyledOptions,
   WebTarget,
 } from '../types';
@@ -57,11 +59,11 @@ function generateId(
 
 function useInjectedStyle<T extends ExecutionContext>(
   componentStyle: ComponentStyle,
-  resolvedAttrs: T
+  resolvedAttrs: T,
+  styleSheet: StyleSheet,
+  stylis: Stringifier
 ): { className: string; css: string } {
-  const ssc = useStyleSheetContext();
-
-  const result = componentStyle.generateAndInjectStyles(resolvedAttrs, ssc.styleSheet, ssc.stylis);
+  const result = componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet, stylis);
 
   if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
     React.useDebugValue(result.className);
@@ -169,7 +171,12 @@ function useStyledComponentImpl<Props extends BaseObject>(
     }
   }
 
-  const { className: generatedClassName, css } = useInjectedStyle(componentStyle, context);
+  const { className: generatedClassName, css } = useInjectedStyle(
+    componentStyle,
+    context,
+    ssc.styleSheet,
+    ssc.stylis
+  );
 
   if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {
     forwardedComponent.warnTooManyClasses(generatedClassName);
