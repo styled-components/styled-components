@@ -5,6 +5,7 @@
 import beautify from 'js-beautify';
 import styled from '../constructors/styled';
 import { mainSheet } from '../models/StyleSheetManager';
+import { resetGroupIds } from '../sheet/GroupIDAllocator';
 import { rehydrateSheet } from '../sheet/Rehydration';
 import styledError from '../utils/error';
 import { joinStringArray } from '../utils/joinStrings';
@@ -45,6 +46,7 @@ export const resetStyled = (isServer = false) => {
     document.head.innerHTML = '';
   }
 
+  resetGroupIds();
   mainSheet.gs = {};
   mainSheet.names = new Map();
   mainSheet.clearTag();

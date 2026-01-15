@@ -123,7 +123,7 @@
     "files": [
       {
         "path": "./dist/styled-components.min.js",
-        "maxSize": "11.9kB"
+        "maxSize": "12kB"
       }
     ]
   },

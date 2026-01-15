@@ -12,6 +12,8 @@ export interface GroupedTag {
   getGroup(id: string): string;
   clearGroup(id: string): void;
   getIds(): IterableIterator<string>;
+  groupSizes: Uint32Array;
+  length: number;
   tag: Tag;
 }
 

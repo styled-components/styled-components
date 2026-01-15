@@ -413,19 +413,19 @@ describe(`createGlobalStyle`, () => {
     );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "@keyframes a {
+      "div {
+        display: inline-block;
+        animation: a 2s linear infinite;
+        padding: 2rem 1rem;
+        font-size: 1.2rem;
+      }
+      @keyframes a {
         from {
           transform: rotate(0deg);
         }
         to {
           transform: rotate(360deg);
         }
-      }
-      div {
-        display: inline-block;
-        animation: a 2s linear infinite;
-        padding: 2rem 1rem;
-        font-size: 1.2rem;
       }"
     `);
   });

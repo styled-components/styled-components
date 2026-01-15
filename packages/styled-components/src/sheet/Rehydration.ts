@@ -1,4 +1,5 @@
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION, SPLITTER } from '../constants';
+import { getGroupForId, getRegisteredIds } from './GroupIDAllocator';
 import { Sheet } from './types';
 
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
@@ -7,25 +8,28 @@ const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g\\[id="([\\w\\d-]+)"\\].*?"([^"]*)`
 export const outputSheet = (sheet: Sheet) => {
   const tag = sheet.getTag();
   let css = '';
-  const ids = tag.getIds();
+  const ids = getRegisteredIds();
   let idResult = ids.next();
 
   while (!idResult.done) {
     const id = idResult.value;
     const names = sheet.names.get(id);
-    const rules = tag.getGroup(id);
-    if (names === undefined || !names.size || rules.length === 0) continue;
+    const group = getGroupForId(id);
 
-    const selector = `${SC_ATTR}.g[id="${id}"]`;
+    if (group < tag.length && tag.groupSizes[group] > 0 && names !== undefined && names.size > 0) {
+      const rules = tag.getGroup(id);
+      const selector = `${SC_ATTR}.g[id="${id}"]`;
 
-    let content = '';
-    names.forEach(name => {
-      if (name.length > 0) {
-        content += `${name},`;
-      }
-    });
+      let content = '';
+      names.forEach(name => {
+        if (name.length > 0) {
+          content += `${name},`;
+        }
+      });
 
-    css += `${rules}${selector}{content:"${content}"}${SPLITTER}`;
+      css += `${rules}${selector}{content:"${content}"}${SPLITTER}`;
+    }
+
     idResult = ids.next();
   }
 

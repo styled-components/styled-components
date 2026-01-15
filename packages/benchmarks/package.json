@@ -4,7 +4,8 @@
   "scripts": {
     "build": "webpack-cli --config webpack.config.js",
     "open": "open ./index.html",
-    "start": "node run-headless.js"
+    "start": "node run-headless.js",
+    "ssr": "node --experimental-vm-modules ssr-benchmark.js"
   },
   "dependencies": {
     "@emotion/react": "11.11.4",
@@ -30,6 +31,7 @@
     "babel-plugin-module-resolver": "^4.1.0",
     "babel-plugin-react-native-web": "^0.18.12",
     "css-loader": "^6.11.0",
+    "puppeteer": "24.35.0",
     "source-map-loader": "^4.0.2",
     "style-loader": "^3.3.4",
     "webpack": "^5.91.0",
