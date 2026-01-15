@@ -1,6 +1,6 @@
 import isPropValid from '@emotion/is-prop-valid';
-import React, { createElement, PropsWithoutRef, Ref } from 'react';
-import { IS_RSC, SC_VERSION } from '../constants';
+import React, { createElement, Ref } from 'react';
+import { IS_RSC, SC_VERSION, SUPPORTS_REF_AS_PROP } from '../constants';
 import StyleSheet from '../sheet';
 import type {
   AnyComponent,
@@ -278,28 +278,21 @@ function createStyledComponent<
     isTargetStyledComp ? (styledComponentTarget.componentStyle as ComponentStyle) : undefined
   );
 
-  function forwardRefRender(
-    props: PropsWithoutRef<ExecutionProps & OuterProps>,
-    ref: Ref<Element>
-  ) {
-    return useStyledComponentImpl<OuterProps>(
-      WrappedStyledComponent,
-      props as ExecutionProps & OuterProps,
-      ref
-    );
+  let WrappedStyledComponent: IStyledComponent<'web', any> & Statics;
+
+  if (SUPPORTS_REF_AS_PROP && !isCompositeComponent) {
+    const render = (props: ExecutionProps & OuterProps & { ref?: Ref<Element> }) =>
+      useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, props.ref || null);
+    render.displayName = displayName;
+    WrappedStyledComponent = render as unknown as IStyledComponent<'web', any> & Statics;
+  } else {
+    const forwardRefRender = (props: ExecutionProps & OuterProps, ref: Ref<Element>) =>
+      useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
+    forwardRefRender.displayName = displayName;
+    WrappedStyledComponent = React.forwardRef(
+      forwardRefRender as any
+    ) as unknown as IStyledComponent<'web', any> & Statics;
   }
-
-  forwardRefRender.displayName = displayName;
-
-  /**
-   * forwardRef creates a new interim component, which we'll take advantage of
-   * instead of extending ParentComponent to create _another_ interim class
-   */
-  let WrappedStyledComponent = React.forwardRef(forwardRefRender) as unknown as IStyledComponent<
-    'web',
-    any
-  > &
-    Statics;
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;

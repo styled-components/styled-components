@@ -233,41 +233,36 @@ const name = generateName(h);
 
 ---
 
-### Refactor 6: Skip forwardRef for Simple Cases (Medium Impact)
+### Refactor 6: Skip forwardRef for Simple Cases (Medium Impact) ✅ IMPLEMENTED
 
 **Goal:** Use plain function components when ref forwarding isn't needed.
 
-**Current:** Always wrap with `React.forwardRef()`.
+**Status:** Implemented in `src/constants.ts` and `src/models/StyledComponent.ts`
 
-**Proposed:**
-```typescript
-// For string tags (div, span, etc.), refs work automatically in React 19
-if (typeof tag === 'string' && reactVersion >= 19) {
-  return function StyledComponent(props) {
-    return useStyledComponentImpl(this, props, props.ref);
-  };
-}
-// Fallback to forwardRef for composite components
-return React.forwardRef(forwardRefRender);
-```
+**Implementation:**
+- Added `SUPPORTS_REF_AS_PROP` constant that detects React 19+ via version parsing
+- For React 19+ with string tags (div, span, etc.): use plain function component
+- For React 16-18 or composite components: use `React.forwardRef()` (backward compatible)
 
-**Impact:** ~5% faster component creation
-**Risk:** Low - React 19+ only optimization
+**Impact:** ~5% faster component creation in React 19+
+**Risk:** Low - React 19+ only optimization, no change for older React versions
 
 ---
 
 ## Implementation Priority
 
-| Refactor | Impact | Risk | Effort |
-|----------|--------|------|--------|
-| 1. Lazy Style Compilation | High | Low | Medium |
-| 2. Compiled Style Functions | High | Medium | High |
-| 3. Context Elimination | Medium | Low | Low |
-| 4. Monomorphic Factory | Medium | Medium | Medium |
-| 5. Streaming Hash | Low-Med | Low | Low |
-| 6. Skip forwardRef | Medium | Low | Low |
+| Refactor | Impact | Risk | Effort | Status |
+|----------|--------|------|--------|--------|
+| 1. Lazy Style Compilation | High | Low | Medium | Tested - adds overhead for SSR |
+| 2. Compiled Style Functions | High | Medium | High | Pending |
+| 3. Context Elimination | Medium | Low | Low | Pending |
+| 4. Monomorphic Factory | Medium | Medium | Medium | Pending |
+| 5. Streaming Hash | Low-Med | Low | Low | Pending |
+| 6. Skip forwardRef | Medium | Low | Low | ✅ Done |
 
-**Recommended order:** 3 → 5 → 1 → 6 → 4 → 2
+**Recommended order:** 3 → 5 → 4 → 2
+
+Note: Refactor 1 (Lazy Style Compilation) was tested but found to add overhead for SSR since the work is still done, just deferred. It would only help client-side scenarios where components are created but not rendered.
 
 ---
 

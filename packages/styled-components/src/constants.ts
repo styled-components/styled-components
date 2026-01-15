@@ -22,6 +22,14 @@ export const IS_BROWSER = typeof window !== 'undefined' && typeof document !== '
  */
 export const IS_RSC = typeof React.createContext === 'undefined';
 
+/**
+ * Detect React 19+ where refs are passed as regular props.
+ * In React 19, forwardRef is no longer needed for function components.
+ */
+const reactVersionParts = (React.version || '').split('.');
+export const REACT_MAJOR_VERSION = parseInt(reactVersionParts[0], 10) || 0;
+export const SUPPORTS_REF_AS_PROP = REACT_MAJOR_VERSION >= 19;
+
 export const DISABLE_SPEEDY = Boolean(
   typeof SC_DISABLE_SPEEDY === 'boolean'
     ? SC_DISABLE_SPEEDY
