@@ -294,27 +294,23 @@ function createStyledComponent<
     ) as unknown as IStyledComponent<'web', any> & Statics;
   }
   registerStyledComponent(WrappedStyledComponent);
+
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
-  WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
-
-  // this static is used to preserve the cascade of static classes for component selector
-  // purposes; this is especially important with usage of the css prop
   WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
     ? joinStrings(styledComponentTarget.foldedComponentIds, styledComponentTarget.styledComponentId)
     : '';
-
+  WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
   WrappedStyledComponent.styledComponentId = styledComponentId;
-
-  // fold the underlying StyledComponent target up since we folded the styles
   WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
+
+  setToString(WrappedStyledComponent, () => `.${WrappedStyledComponent.styledComponentId}`);
 
   Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
     get() {
       return this._foldedDefaultProps;
     },
-
     set(obj) {
       this._foldedDefaultProps = isTargetStyledComp
         ? merge({}, styledComponentTarget.defaultProps, obj)
@@ -324,14 +320,11 @@ function createStyledComponent<
 
   if (process.env.NODE_ENV !== 'production') {
     checkDynamicCreation(displayName, styledComponentId);
-
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(
       displayName,
       styledComponentId
     );
   }
-
-  setToString(WrappedStyledComponent, () => `.${WrappedStyledComponent.styledComponentId}`);
 
   if (isCompositeComponent) {
     const compositeComponentTarget = target as AnyComponent;

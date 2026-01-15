@@ -167,27 +167,16 @@ css += compiled.suffix;
 
 **Goal:** Create components with consistent hidden class shape.
 
-**Current:** Each styled component has slightly different property assignments, causing V8 to create new hidden classes.
+**Status:** Investigated - minimal additional benefit
 
-**Proposed:**
-```typescript
-class StyledComponent {
-  static create(tag, options, rules) {
-    const instance = new StyledComponent();
-    instance.tag = tag;
-    instance.rules = rules;
-    instance.componentId = generateId();
-    // ... all properties assigned in consistent order
-    return instance.render.bind(instance);
-  }
-  
-  render(props, ref) {
-    // ... render logic
-  }
-}
-```
+**Analysis:**
+- Property assignments reordered for consistency
+- Workspace is already ~5-10% faster than V6 at component creation (from forwardRef optimization)
+- Full monomorphic factory would require converting styled components to class instances
+- V8 already optimizes the current function-with-properties pattern well
+- Risk/reward ratio not favorable for full implementation
 
-**Impact:** 10-20% faster due to V8 optimization
+**Impact:** Already achieved ~10% faster via forwardRef optimization
 **Risk:** Medium - changes component structure
 
 ---
@@ -247,11 +236,11 @@ const name = generateName(h);
 | 1. Lazy Style Compilation | High | Low | Medium | Tested - adds overhead for SSR |
 | 2. Compiled Style Functions | High | Medium | High | Pending |
 | 3. Context Elimination | Medium | Low | Low | ✅ Done |
-| 4. Monomorphic Factory | Medium | Medium | Medium | Pending |
+| 4. Monomorphic Factory | Medium | Medium | Medium | Investigated - minimal additional benefit |
 | 5. Streaming Hash | Low-Med | Low | Low | Tested - no significant benefit |
 | 6. Skip forwardRef | Medium | Low | Low | ✅ Done |
 
-**Recommended order:** 4 → 2
+**Remaining:** Refactor 2 (Compiled Style Functions) - requires significant architectural changes
 
 Note: Refactor 1 (Lazy Style Compilation) was tested but found to add overhead for SSR since the work is still done, just deferred. It would only help client-side scenarios where components are created but not rendered.
 
