@@ -1,4 +1,4 @@
-import { SC_VERSION } from '../constants';
+import { IS_RSC, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
 import { ExecutionContext, RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
@@ -89,8 +89,7 @@ export default class ComponentStyle {
       }
     }
 
-    const generatedCSS =
-      typeof window === 'undefined' ? styleSheet.getTag().getGroup(this.componentId) : '';
+    const generatedCSS = IS_RSC ? styleSheet.getTag().getGroup(this.componentId) : '';
 
     return { className: names, css: generatedCSS };
   }
