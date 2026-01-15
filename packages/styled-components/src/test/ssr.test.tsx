@@ -16,16 +16,16 @@ jest.mock('../utils/nonce');
 let styled: ReturnType<typeof resetStyled>;
 
 // Test helper to run streaming tests with both stream types
-// React 19 removed renderToNodeStream, so we only include it if available
 const streamingTestCases = [
-  ...(typeof renderToNodeStream === 'function'
-    ? [{ name: 'renderToNodeStream (legacy)' as const, renderFn: renderToNodeStream }]
-    : []),
   {
-    name: 'renderToPipeableStream' as const,
+    name: 'renderToNodeStream (legacy)',
+    renderFn: renderToNodeStream,
+  },
+  {
+    name: 'renderToPipeableStream',
     renderFn: renderToPipeableStream,
   },
-];
+] as const;
 
 /**
  * Helper function to create parameterized streaming tests

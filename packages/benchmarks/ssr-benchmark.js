@@ -5,6 +5,26 @@
  * Run with: node --expose-gc ssr-benchmark.js
  */
 
+const Module = require('module');
+const path = require('path');
+
+const originalResolveFilename = Module._resolveFilename;
+const benchmarksReact = require.resolve('react');
+const benchmarksReactDom = require.resolve('react-dom');
+
+Module._resolveFilename = function(request, parent, isMain, options) {
+  if (request === 'react') {
+    return benchmarksReact;
+  }
+  if (request === 'react-dom' || request.startsWith('react-dom/')) {
+    if (request === 'react-dom') {
+      return benchmarksReactDom;
+    }
+    return originalResolveFilename.call(this, request, parent, isMain, options);
+  }
+  return originalResolveFilename.call(this, request, parent, isMain, options);
+};
+
 const React = require('react');
 const { renderToString } = require('react-dom/server');
 
