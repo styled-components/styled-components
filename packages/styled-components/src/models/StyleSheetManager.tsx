@@ -20,6 +20,16 @@ const defaultContextValue: IStyleSheetContext = {
   stylis: mainStylis,
 };
 
+let styleSheetManagerActive = false;
+
+export function setStyleSheetManagerActive(): void {
+  styleSheetManagerActive = true;
+}
+
+export function resetStyleSheetManagerActive(): void {
+  styleSheetManagerActive = false;
+}
+
 // Create context only if createContext is available, otherwise create a fallback
 export const StyleSheetContext = !IS_RSC
   ? React.createContext<IStyleSheetContext>(defaultContextValue)
@@ -46,6 +56,11 @@ export function useStyleSheetContext(): IStyleSheetContext {
   if (IS_RSC) {
     return defaultContextValue;
   }
+
+  if (!styleSheetManagerActive) {
+    return defaultContextValue;
+  }
+
   return React.useContext ? React.useContext(StyleSheetContext) : defaultContextValue;
 }
 
@@ -103,7 +118,9 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     return props.children as React.JSX.Element;
   }
 
-  const { styleSheet } = useStyleSheetContext();
+  setStyleSheetManagerActive();
+
+  const { styleSheet } = React.useContext(StyleSheetContext);
 
   const resolvedStyleSheet = React.useMemo(() => {
     let sheet = styleSheet;

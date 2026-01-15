@@ -35,7 +35,7 @@ import merge from '../utils/mixinDeep';
 import { setToString } from '../utils/setToString';
 import ComponentStyle from './ComponentStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
-import { DefaultTheme, ThemeContext } from './ThemeProvider';
+import { DefaultTheme, useContextTheme } from './ThemeProvider';
 
 const identifiers: { [key: string]: number } = {};
 
@@ -125,7 +125,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
     target,
   } = forwardedComponent;
 
-  const contextTheme = React.useContext ? React.useContext(ThemeContext) : undefined;
+  const contextTheme = useContextTheme();
   const ssc = useStyleSheetContext();
   const shouldForwardProp = forwardedComponent.shouldForwardProp || ssc.shouldForwardProp;
 

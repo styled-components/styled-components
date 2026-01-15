@@ -21,7 +21,7 @@ import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent, { registerStyledComponent } from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
-import { DefaultTheme, ThemeContext } from './ThemeProvider';
+import { DefaultTheme, useContextTheme } from './ThemeProvider';
 
 function useResolvedAttrs<Props extends object>(
   theme: DefaultTheme = EMPTY_OBJECT,
@@ -64,7 +64,7 @@ function useStyledComponentImpl<Props extends StyledComponentImplProps>(
     target,
   } = forwardedComponent;
 
-  const contextTheme = React.useContext ? React.useContext(ThemeContext) : undefined;
+  const contextTheme = useContextTheme();
 
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
