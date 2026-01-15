@@ -302,11 +302,11 @@ describe('attrs', () => {
     const rendered = render(<BlueText>Hello</BlueText>);
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".d {
-        background: red;
-      }
-      .c {
+      ".c {
         background: blue;
+      }
+      .d {
+        background: red;
       }"
     `);
     expect(rendered.asFragment()).toMatchInlineSnapshot(`

@@ -489,10 +489,10 @@ describe(`createGlobalStyle`, () => {
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "[data-test-inject] {
-        color: red;
+        color: green;
       }
       [data-test-inject] {
-        color: green;
+        color: red;
       }"
     `);
   });

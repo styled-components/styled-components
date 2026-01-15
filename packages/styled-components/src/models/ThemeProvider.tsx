@@ -50,6 +50,23 @@ export const ThemeContext = !IS_RSC
 
 export const ThemeConsumer = ThemeContext.Consumer;
 
+let themeProviderActive = false;
+
+export function setThemeProviderActive(): void {
+  themeProviderActive = true;
+}
+
+export function resetThemeProviderActive(): void {
+  themeProviderActive = false;
+}
+
+export function useContextTheme(): DefaultTheme | undefined {
+  if (IS_RSC || !themeProviderActive) {
+    return undefined;
+  }
+  return React.useContext ? React.useContext(ThemeContext) : undefined;
+}
+
 function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme | undefined): DefaultTheme {
   if (!theme) {
     throw styledError(14);
@@ -102,6 +119,8 @@ export default function ThemeProvider(props: Props): React.JSX.Element | null {
   if (IS_RSC || !React.useContext || !React.useMemo) {
     return props.children as React.JSX.Element | null;
   }
+
+  setThemeProviderActive();
 
   const outerTheme = React.useContext(ThemeContext);
   const themeContext = React.useMemo(

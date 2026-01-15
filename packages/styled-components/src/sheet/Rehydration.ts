@@ -1,37 +1,36 @@
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION, SPLITTER } from '../constants';
-import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
+import { getGroupForId, getRegisteredIds } from './GroupIDAllocator';
 import { Sheet } from './types';
 
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
-const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g(\\d+)\\[id="([\\w\\d-]+)"\\].*?"([^"]*)`);
+const MARKER_RE = new RegExp(`^${SC_ATTR}\\.g\\[id="([\\w\\d-]+)"\\].*?"([^"]*)`);
 
 export const outputSheet = (sheet: Sheet) => {
   const tag = sheet.getTag();
-  const { length } = tag;
-
   let css = '';
-  for (let group = 0; group < length; group++) {
-    const id = getIdForGroup(group);
-    if (id === undefined) continue;
+  const ids = getRegisteredIds();
+  let idResult = ids.next();
 
+  while (!idResult.done) {
+    const id = idResult.value;
     const names = sheet.names.get(id);
-    const rules = tag.getGroup(group);
-    if (names === undefined || !names.size || rules.length === 0) continue;
+    const group = getGroupForId(id);
 
-    const selector = `${SC_ATTR}.g${group}[id="${id}"]`;
+    if (group < tag.length && tag.groupSizes[group] > 0 && names !== undefined && names.size > 0) {
+      const rules = tag.getGroup(id);
+      const selector = `${SC_ATTR}.g[id="${id}"]`;
 
-    let content = '';
-    if (names !== undefined) {
+      let content = '';
       names.forEach(name => {
         if (name.length > 0) {
           content += `${name},`;
         }
       });
+
+      css += `${rules}${selector}{content:"${content}"}${SPLITTER}`;
     }
 
-    // NOTE: It's easier to collect rules and have the marker
-    // after the actual rules to simplify the rehydration
-    css += `${rules}${selector}{content:"${content}"}${SPLITTER}`;
+    idResult = ids.next();
   }
 
   return css;
@@ -39,11 +38,9 @@ export const outputSheet = (sheet: Sheet) => {
 
 const rehydrateNamesFromContent = (sheet: Sheet, id: string, content: string) => {
   const names = content.split(',');
-  let name;
-
-  for (let i = 0, l = names.length; i < l; i++) {
-    if ((name = names[i])) {
-      sheet.registerName(id, name);
+  for (let i = 0; i < names.length; i++) {
+    if (names[i]) {
+      sheet.registerName(id, names[i]);
     }
   }
 };
@@ -52,25 +49,18 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
   const parts = (style.textContent ?? '').split(SPLITTER);
   const rules: string[] = [];
 
-  for (let i = 0, l = parts.length; i < l; i++) {
+  for (let i = 0; i < parts.length; i++) {
     const part = parts[i].trim();
     if (!part) continue;
 
     const marker = part.match(MARKER_RE);
 
     if (marker) {
-      const group = parseInt(marker[1], 10) | 0;
-      const id = marker[2];
-
-      if (group !== 0) {
-        // Rehydrate componentId to group index mapping
-        setGroupForId(id, group);
-        // Rehydrate names and rules
-        // looks like: data-styled.g11[id="idA"]{content:"nameA,"}
-        rehydrateNamesFromContent(sheet, id, marker[3]);
-        sheet.getTag().insertRules(group, rules);
+      const id = marker[1];
+      rehydrateNamesFromContent(sheet, id, marker[2]);
+      if (rules.length > 0) {
+        sheet.getTag().insertRules(id, rules);
       }
-
       rules.length = 0;
     } else {
       rules.push(part);
@@ -81,8 +71,8 @@ const rehydrateSheetFromTag = (sheet: Sheet, style: HTMLStyleElement) => {
 export const rehydrateSheet = (sheet: Sheet) => {
   const nodes = document.querySelectorAll(SELECTOR);
 
-  for (let i = 0, l = nodes.length; i < l; i++) {
-    const node = nodes[i] as any as HTMLStyleElement;
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i] as HTMLStyleElement;
     if (node && node.getAttribute(SC_ATTR) !== SC_ATTR_ACTIVE) {
       rehydrateSheetFromTag(sheet, node);
 

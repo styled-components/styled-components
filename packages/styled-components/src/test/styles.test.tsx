@@ -331,11 +331,11 @@ describe('with styles', () => {
 
     // Classes _do_ get generated in the order of rendering but that's ok
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
-        content: "first rule";
-      }
-      .a {
+      ".a {
         content: "second rule";
+      }
+      .b {
+        content: "first rule";
       }"
     `);
   });

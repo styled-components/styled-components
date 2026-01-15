@@ -6,6 +6,22 @@ import { SEED, phash } from './hash';
 
 const AMP_REGEX = /&/g;
 
+const selectorRegexpCache = new Map<string, RegExp>();
+const MAX_SELECTOR_CACHE_SIZE = 1 << 9;
+
+function getSelectorRegexp(selector: string): RegExp {
+  let regexp = selectorRegexpCache.get(selector);
+  if (regexp === undefined) {
+    regexp = new RegExp(`\\${selector}\\b`, 'g');
+    if (selectorRegexpCache.size >= MAX_SELECTOR_CACHE_SIZE) {
+      selectorRegexpCache.clear();
+    }
+    selectorRegexpCache.set(selector, regexp);
+  }
+  regexp.lastIndex = 0;
+  return regexp;
+}
+
 // Character codes for fast comparison
 const DOUBLE_QUOTE = 34; // "
 const SINGLE_QUOTE = 39; // '
@@ -256,12 +272,10 @@ export type ICreateStylisInstance = {
  * Takes an element and recurses through it's rules added the namespace to the start of each selector.
  * Takes into account media queries by recursing through child rules if they are present.
  */
-function recursivelySetNamepace(compiled: stylis.Element[], namespace: String): stylis.Element[] {
+function recursivelySetNamepace(compiled: stylis.Element[], namespace: string): stylis.Element[] {
   return compiled.map(rule => {
     if (rule.type === 'rule') {
-      // add the namespace to the start
       rule.value = `${namespace} ${rule.value}`;
-      // add the namespace after each comma for subsequent selectors.
       rule.value = rule.value.replaceAll(',', `,${namespace} `);
       rule.props = (rule.props as string[]).map(prop => {
         return `${namespace} ${prop}`;
@@ -349,7 +363,7 @@ export default function createStylisInstance(
     // these properties stay in sync with the current stylis run
     _componentId = componentId;
     _selector = selector;
-    _selectorRegexp = new RegExp(`\\${_selector}\\b`, 'g');
+    _selectorRegexp = getSelectorRegexp(selector);
 
     const flatCSS = sanitizeCSS(stripLineComments(css));
     let compiled = stylis.compile(

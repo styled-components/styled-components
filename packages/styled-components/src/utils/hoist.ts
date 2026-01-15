@@ -1,11 +1,8 @@
 import React from 'react';
 import { AnyComponent } from '../types';
 
-const hasSymbol = typeof Symbol === 'function' && Symbol.for;
-
-// copied from react-is
-const REACT_MEMO_TYPE = hasSymbol ? Symbol.for('react.memo') : 0xead3;
-const REACT_FORWARD_REF_TYPE = hasSymbol ? Symbol.for('react.forward_ref') : 0xead0;
+const REACT_MEMO_TYPE = Symbol.for('react.memo');
+const REACT_FORWARD_REF_TYPE = Symbol.for('react.forward_ref');
 
 /**
  * Adapted from hoist-non-react-statics to avoid the react-is dependency.
@@ -51,32 +48,27 @@ const MEMO_STATICS = {
   type: true,
 };
 
-const TYPE_STATICS = {
+const TYPE_STATICS: Record<symbol, Record<string, boolean>> = {
   [REACT_FORWARD_REF_TYPE]: FORWARD_REF_STATICS,
   [REACT_MEMO_TYPE]: MEMO_STATICS,
 };
 
 type OmniComponent = AnyComponent;
 
-// adapted from react-is
 function isMemo(
-  object: OmniComponent | React.MemoExoticComponent<any>
-): object is React.MemoExoticComponent<any> {
-  const $$typeofType = 'type' in object && object.type.$$typeof;
+  object: OmniComponent | React.MemoExoticComponent<React.ComponentType>
+): object is React.MemoExoticComponent<React.ComponentType> {
+  const $$typeofType = 'type' in object && (object.type as { $$typeof?: symbol }).$$typeof;
 
   return $$typeofType === REACT_MEMO_TYPE;
 }
 
 function getStatics(component: OmniComponent) {
-  // React v16.11 and below
   if (isMemo(component)) {
     return MEMO_STATICS;
   }
 
-  // React v16.12 and above
-  return '$$typeof' in component
-    ? TYPE_STATICS[component['$$typeof'] as unknown as string]
-    : REACT_STATICS;
+  return '$$typeof' in component ? TYPE_STATICS[component['$$typeof'] as symbol] : REACT_STATICS;
 }
 
 const defineProperty = Object.defineProperty;
@@ -107,20 +99,14 @@ export default function hoistNonReactStatics<
   C extends ExcludeList = {},
 >(targetComponent: T, sourceComponent: S, excludelist?: C | undefined) {
   if (typeof sourceComponent !== 'string') {
-    // don't hoist over string (html) components
-
-    if (objectPrototype) {
-      const inheritedComponent = getPrototypeOf(sourceComponent);
-      if (inheritedComponent && inheritedComponent !== objectPrototype) {
-        hoistNonReactStatics(targetComponent, inheritedComponent, excludelist);
-      }
+    const inheritedComponent = getPrototypeOf(sourceComponent);
+    if (inheritedComponent && inheritedComponent !== objectPrototype) {
+      hoistNonReactStatics(targetComponent, inheritedComponent, excludelist);
     }
 
-    let keys: (String | Symbol)[] = getOwnPropertyNames(sourceComponent);
-
-    if (getOwnPropertySymbols) {
-      keys = keys.concat(getOwnPropertySymbols(sourceComponent));
-    }
+    const keys: (string | symbol)[] = (
+      getOwnPropertyNames(sourceComponent) as (string | symbol)[]
+    ).concat(getOwnPropertySymbols(sourceComponent));
 
     const targetStatics = getStatics(targetComponent);
     const sourceStatics = getStatics(sourceComponent);
@@ -136,11 +122,8 @@ export default function hoistNonReactStatics<
         const descriptor = getOwnPropertyDescriptor(sourceComponent, key);
 
         try {
-          // Avoid failures from read-only properties
           defineProperty(targetComponent, key, descriptor!);
-        } catch (e) {
-          /* ignore */
-        }
+        } catch (e) {}
       }
     }
   }

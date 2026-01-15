@@ -306,11 +306,11 @@ describe('basic', () => {
       render(<FirstComponent />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".d {
-          color: red;
-        }
-        .c {
+        ".c {
           color: blue;
+        }
+        .d {
+          color: red;
         }"
       `);
     });
@@ -406,11 +406,11 @@ describe('basic', () => {
       const rendered = render(<Outer />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".d {
-          color: red;
-        }
-        .c {
+        ".c {
           color: green;
+        }
+        .d {
+          color: red;
         }"
       `);
       expect(rendered.asFragment()).toMatchInlineSnapshot(`

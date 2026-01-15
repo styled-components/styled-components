@@ -1,6 +1,5 @@
-import { SC_VERSION } from '../constants';
+import { IS_RSC, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
-import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { ExecutionContext, RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
@@ -8,13 +7,8 @@ import { hash, phash } from '../utils/hash';
 import isStaticRules from '../utils/isStaticRules';
 import { joinStringArray, joinStrings } from '../utils/joinStrings';
 
-declare const __SERVER__: boolean;
-
 const SEED = hash(SC_VERSION);
 
-/**
- * ComponentStyle is all the CSS-specific stuff, not the React-specific stuff.
- */
 export default class ComponentStyle {
   baseHash: number;
   baseStyle: ComponentStyle | null | undefined;
@@ -34,8 +28,6 @@ export default class ComponentStyle {
     this.baseHash = phash(SEED, componentId);
     this.baseStyle = baseStyle;
 
-    // NOTE: This registers the componentId, which ensures a consistent order
-    // for this component's styles compared to others
     StyleSheet.registerId(componentId);
   }
 
@@ -48,7 +40,6 @@ export default class ComponentStyle {
       ? this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis).className
       : '';
 
-    // force dynamic classnames if user-supplied stylis plugins are in use
     if (this.isStatic && !stylis.hash) {
       if (this.staticRulesId && styleSheet.hasNameForId(this.componentId, this.staticRulesId)) {
         names = joinStrings(names, this.staticRulesId);
@@ -81,7 +72,6 @@ export default class ComponentStyle {
           const partString = joinStringArray(
             flatten(partRule, executionContext, styleSheet, stylis) as string[]
           );
-          // The same value can switch positions in the array, so we include "i" in the hash.
           dynamicHash = phash(dynamicHash, partString + i);
           css += partString;
         }
@@ -99,11 +89,7 @@ export default class ComponentStyle {
       }
     }
 
-    // Retrieve CSS from Tag for RSC rendering
-    const generatedCSS =
-      typeof window === 'undefined'
-        ? styleSheet.getTag().getGroup(getGroupForId(this.componentId))
-        : '';
+    const generatedCSS = IS_RSC ? styleSheet.getTag().getGroup(this.componentId) : '';
 
     return { className: names, css: generatedCSS };
   }

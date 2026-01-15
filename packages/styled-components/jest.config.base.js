@@ -11,4 +11,10 @@ module.exports = {
   },
   testPathIgnorePatterns: ['node_modules', 'dist', '.rollup.cache'],
   watchPlugins: ['jest-watch-typeahead/filename', 'jest-watch-typeahead/testname'],
+  moduleNameMapper: {
+    '^react$': '<rootDir>/node_modules/react',
+    '^react-dom$': '<rootDir>/node_modules/react-dom',
+    '^react-dom/(.*)$': '<rootDir>/node_modules/react-dom/$1',
+    '^react/(.*)$': '<rootDir>/node_modules/react/$1',
+  },
 };

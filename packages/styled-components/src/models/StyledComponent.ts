@@ -1,6 +1,7 @@
 import isPropValid from '@emotion/is-prop-valid';
-import React, { createElement, PropsWithoutRef, Ref } from 'react';
-import { IS_RSC, SC_VERSION } from '../constants';
+import React, { createElement, Ref } from 'react';
+import { IS_RSC, SC_VERSION, SUPPORTS_REF_AS_PROP } from '../constants';
+import StyleSheet from '../sheet';
 import type {
   AnyComponent,
   Attrs,
@@ -13,6 +14,7 @@ import type {
   IStyledStatics,
   OmitNever,
   RuleSet,
+  Stringifier,
   StyledOptions,
   WebTarget,
 } from '../types';
@@ -26,14 +28,14 @@ import generateComponentId from '../utils/generateComponentId';
 import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
-import isStyledComponent from '../utils/isStyledComponent';
+import isStyledComponent, { registerStyledComponent } from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
 import { joinStrings } from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
 import { setToString } from '../utils/setToString';
 import ComponentStyle from './ComponentStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
-import { DefaultTheme, ThemeContext } from './ThemeProvider';
+import { DefaultTheme, useContextTheme } from './ThemeProvider';
 
 const identifiers: { [key: string]: number } = {};
 
@@ -57,11 +59,11 @@ function generateId(
 
 function useInjectedStyle<T extends ExecutionContext>(
   componentStyle: ComponentStyle,
-  resolvedAttrs: T
+  resolvedAttrs: T,
+  styleSheet: StyleSheet,
+  stylis: Stringifier
 ): { className: string; css: string } {
-  const ssc = useStyleSheetContext();
-
-  const result = componentStyle.generateAndInjectStyles(resolvedAttrs, ssc.styleSheet, ssc.stylis);
+  const result = componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet, stylis);
 
   if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
     React.useDebugValue(result.className);
@@ -123,7 +125,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
     target,
   } = forwardedComponent;
 
-  const contextTheme = React.useContext ? React.useContext(ThemeContext) : undefined;
+  const contextTheme = useContextTheme();
   const ssc = useStyleSheetContext();
   const shouldForwardProp = forwardedComponent.shouldForwardProp || ssc.shouldForwardProp;
 
@@ -169,7 +171,12 @@ function useStyledComponentImpl<Props extends BaseObject>(
     }
   }
 
-  const { className: generatedClassName, css } = useInjectedStyle(componentStyle, context);
+  const { className: generatedClassName, css } = useInjectedStyle(
+    componentStyle,
+    context,
+    ssc.styleSheet,
+    ssc.stylis
+  );
 
   if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {
     forwardedComponent.warnTooManyClasses(generatedClassName);
@@ -271,49 +278,39 @@ function createStyledComponent<
     isTargetStyledComp ? (styledComponentTarget.componentStyle as ComponentStyle) : undefined
   );
 
-  function forwardRefRender(
-    props: PropsWithoutRef<ExecutionProps & OuterProps>,
-    ref: Ref<Element>
-  ) {
-    return useStyledComponentImpl<OuterProps>(
-      WrappedStyledComponent,
-      props as ExecutionProps & OuterProps,
-      ref
-    );
+  let WrappedStyledComponent: IStyledComponent<'web', any> & Statics;
+
+  if (SUPPORTS_REF_AS_PROP && !isCompositeComponent) {
+    const render = (props: ExecutionProps & OuterProps & { ref?: Ref<Element> }) =>
+      useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, props.ref || null);
+    render.displayName = displayName;
+    WrappedStyledComponent = render as unknown as IStyledComponent<'web', any> & Statics;
+  } else {
+    const forwardRefRender = (props: ExecutionProps & OuterProps, ref: Ref<Element>) =>
+      useStyledComponentImpl<OuterProps>(WrappedStyledComponent, props, ref);
+    forwardRefRender.displayName = displayName;
+    WrappedStyledComponent = React.forwardRef(
+      forwardRefRender as any
+    ) as unknown as IStyledComponent<'web', any> & Statics;
   }
+  registerStyledComponent(WrappedStyledComponent);
 
-  forwardRefRender.displayName = displayName;
-
-  /**
-   * forwardRef creates a new interim component, which we'll take advantage of
-   * instead of extending ParentComponent to create _another_ interim class
-   */
-  let WrappedStyledComponent = React.forwardRef(forwardRefRender) as unknown as IStyledComponent<
-    'web',
-    any
-  > &
-    Statics;
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
   WrappedStyledComponent.displayName = displayName;
-  WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
-
-  // this static is used to preserve the cascade of static classes for component selector
-  // purposes; this is especially important with usage of the css prop
   WrappedStyledComponent.foldedComponentIds = isTargetStyledComp
     ? joinStrings(styledComponentTarget.foldedComponentIds, styledComponentTarget.styledComponentId)
     : '';
-
+  WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
   WrappedStyledComponent.styledComponentId = styledComponentId;
-
-  // fold the underlying StyledComponent target up since we folded the styles
   WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
+
+  setToString(WrappedStyledComponent, () => `.${WrappedStyledComponent.styledComponentId}`);
 
   Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
     get() {
       return this._foldedDefaultProps;
     },
-
     set(obj) {
       this._foldedDefaultProps = isTargetStyledComp
         ? merge({}, styledComponentTarget.defaultProps, obj)
@@ -323,14 +320,11 @@ function createStyledComponent<
 
   if (process.env.NODE_ENV !== 'production') {
     checkDynamicCreation(displayName, styledComponentId);
-
     WrappedStyledComponent.warnTooManyClasses = createWarnTooManyClasses(
       displayName,
       styledComponentId
     );
   }
-
-  setToString(WrappedStyledComponent, () => `.${WrappedStyledComponent.styledComponentId}`);
 
   if (isCompositeComponent) {
     const compositeComponentTarget = target as AnyComponent;

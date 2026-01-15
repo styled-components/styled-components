@@ -2,9 +2,8 @@ import React from 'react';
 import { IS_RSC, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
-import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
+import { DefaultTheme, useContextTheme } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
-import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
@@ -32,7 +31,7 @@ export default function createGlobalStyle<Props extends object>(
 
   const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const ssc = useStyleSheetContext();
-    const theme = React.useContext ? React.useContext(ThemeContext) : undefined;
+    const theme = useContextTheme();
 
     // Get or create instance ID for this stylesheet
     let instance = instanceMap.get(ssc.styleSheet);
@@ -80,8 +79,7 @@ export default function createGlobalStyle<Props extends object>(
     // RSC mode: output style tag
     if (IS_RSC) {
       const id = styledComponentId + instance;
-      const css =
-        typeof window === 'undefined' ? ssc.styleSheet.getTag().getGroup(getGroupForId(id)) : '';
+      const css = typeof window === 'undefined' ? ssc.styleSheet.getTag().getGroup(id) : '';
 
       if (css) {
         const cssHash = generateAlphabeticName(hash(css) >>> 0);

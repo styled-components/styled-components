@@ -3,7 +3,6 @@ import { InsertionTarget } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import { setToString } from '../utils/setToString';
 import { makeGroupedTag } from './GroupedTag';
-import { getGroupForId } from './GroupIDAllocator';
 import { outputSheet, rehydrateSheet } from './Rehydration';
 import { makeTag } from './Tag';
 import { GroupedTag, Sheet, SheetOptions } from './types';
@@ -26,7 +25,6 @@ const defaultOptions: SheetOptions = {
   useCSSOMInjection: !DISABLE_SPEEDY,
 };
 
-/** Contains the main stylesheet logic for stringification and caching */
 export default class StyleSheet implements Sheet {
   gs: GlobalStylesAllocationMap;
   names: NamesAllocationMap;
@@ -34,13 +32,10 @@ export default class StyleSheet implements Sheet {
   server: boolean;
   tag?: GroupedTag | undefined;
 
-  /** Register a group ID to give it an index */
-  static registerId(id: string): number {
-    return getGroupForId(id);
-  }
+  static registerId(_id: string): void {}
 
   constructor(
-    options: SheetConstructorArgs = EMPTY_OBJECT as Object,
+    options: SheetConstructorArgs = EMPTY_OBJECT as object,
     globalStyles: GlobalStylesAllocationMap = {},
     names?: NamesAllocationMap | undefined
   ) {
@@ -53,7 +48,6 @@ export default class StyleSheet implements Sheet {
     this.names = new Map(names as NamesAllocationMap);
     this.server = !!options.isServer;
 
-    // We rehydrate only once and use the sheet that is created first
     if (!this.server && IS_BROWSER && SHOULD_REHYDRATE) {
       SHOULD_REHYDRATE = false;
       rehydrateSheet(this);
@@ -80,52 +74,41 @@ export default class StyleSheet implements Sheet {
     return (this.gs[id] = (this.gs[id] || 0) + 1);
   }
 
-  /** Lazily initialises a GroupedTag for when it's actually needed */
   getTag() {
     return this.tag || (this.tag = makeGroupedTag(makeTag(this.options)));
   }
 
-  /** Check whether a name is known for caching */
   hasNameForId(id: string, name: string): boolean {
-    return this.names.has(id) && (this.names.get(id) as any).has(name);
+    return this.names.has(id) && (this.names.get(id) as Set<string>).has(name);
   }
 
-  /** Mark a group's name as known for caching */
   registerName(id: string, name: string) {
-    getGroupForId(id);
-
     if (!this.names.has(id)) {
       const groupNames = new Set<string>();
       groupNames.add(name);
       this.names.set(id, groupNames);
     } else {
-      (this.names.get(id) as any).add(name);
+      (this.names.get(id) as Set<string>).add(name);
     }
   }
 
-  /** Insert new rules which also marks the name as known */
   insertRules(id: string, name: string, rules: string | string[]) {
     this.registerName(id, name);
-    this.getTag().insertRules(getGroupForId(id), rules);
+    this.getTag().insertRules(id, rules);
   }
 
-  /** Clears all cached names for a given group ID */
   clearNames(id: string) {
     if (this.names.has(id)) {
-      (this.names.get(id) as any).clear();
+      (this.names.get(id) as Set<string>).clear();
     }
   }
 
-  /** Clears all rules for a given group ID */
   clearRules(id: string) {
-    this.getTag().clearGroup(getGroupForId(id));
+    this.getTag().clearGroup(id);
     this.clearNames(id);
   }
 
-  /** Clears the entire tag which deletes all rules but not its names */
   clearTag() {
-    // NOTE: This does not clear the names, since it's only used during SSR
-    // so that we can continuously output only new rules
     this.tag = undefined;
   }
 }

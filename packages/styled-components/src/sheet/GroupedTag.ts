@@ -1,15 +1,15 @@
 import { SPLITTER } from '../constants';
 import styledError from '../utils/error';
+import { getGroupForId } from './GroupIDAllocator';
 import { GroupedTag, Tag } from './types';
 
-/** Create a GroupedTag with an underlying Tag implementation */
-export const makeGroupedTag = (tag: Tag) => {
+export const makeGroupedTag = (tag: Tag): GroupedTag => {
   return new DefaultGroupedTag(tag);
 };
 
 const BASE_SIZE = 1 << 9;
 
-const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
+class DefaultGroupedTag implements GroupedTag {
   groupSizes: Uint32Array;
   length: number;
   tag: Tag;
@@ -20,16 +20,18 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
     this.tag = tag;
   }
 
-  indexOfGroup(group: number) {
+  private indexOfGroup(group: number) {
     let index = 0;
     for (let i = 0; i < group; i++) {
       index += this.groupSizes[i];
     }
-
     return index;
   }
 
-  insertRules(group: number, rules: string[]) {
+  insertRules(id: string, rules: string | string[]) {
+    const rulesArr = typeof rules === 'string' ? [rules] : rules;
+    const group = getGroupForId(id);
+
     if (group >= this.groupSizes.length) {
       const oldBuffer = this.groupSizes;
       const oldSize = oldBuffer.length;
@@ -53,29 +55,31 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
 
     let ruleIndex = this.indexOfGroup(group + 1);
 
-    for (let i = 0, l = rules.length; i < l; i++) {
-      if (this.tag.insertRule(ruleIndex, rules[i])) {
+    for (let i = 0, l = rulesArr.length; i < l; i++) {
+      if (this.tag.insertRule(ruleIndex, rulesArr[i])) {
         this.groupSizes[group]++;
         ruleIndex++;
       }
     }
   }
 
-  clearGroup(group: number) {
-    if (group < this.length) {
-      const length = this.groupSizes[group];
-      const startIndex = this.indexOfGroup(group);
-      const endIndex = startIndex + length;
+  clearGroup(id: string) {
+    const group = getGroupForId(id);
+    if (group >= this.length) return;
 
-      this.groupSizes[group] = 0;
+    const length = this.groupSizes[group];
+    if (length === 0) return;
 
-      for (let i = startIndex; i < endIndex; i++) {
-        this.tag.deleteRule(startIndex);
-      }
+    const startIndex = this.indexOfGroup(group);
+    this.groupSizes[group] = 0;
+
+    for (let i = 0; i < length; i++) {
+      this.tag.deleteRule(startIndex);
     }
   }
 
-  getGroup(group: number) {
+  getGroup(id: string) {
+    const group = getGroupForId(id);
     let css = '';
     if (group >= this.length || this.groupSizes[group] === 0) {
       return css;
@@ -91,4 +95,8 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
 
     return css;
   }
-};
+
+  getIds(): IterableIterator<string> {
+    throw new Error('Use getRegisteredIds from GroupIDAllocator');
+  }
+}
