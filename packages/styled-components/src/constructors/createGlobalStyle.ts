@@ -4,13 +4,12 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
+import { removeGlobalStyleTag } from '../sheet/dom';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
-import generateAlphabeticName from '../utils/generateAlphabeticName';
 import generateComponentId from '../utils/generateComponentId';
-import { hash } from '../utils/hash';
 import css from './css';
 
 declare const __SERVER__: boolean;
@@ -32,7 +31,7 @@ export default function createGlobalStyle<Props extends object>(
 
   const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const ssc = useStyleSheetContext();
-    const theme = React.useContext ? React.useContext(ThemeContext) : undefined;
+    const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
 
     // Get or create instance ID for this stylesheet
     let instance = instanceMap.get(ssc.styleSheet);
@@ -67,12 +66,32 @@ export default function createGlobalStyle<Props extends object>(
       renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
     }
 
-    // Client-side cleanup: conditionally use useLayoutEffect
+    // Client-side cleanup: conditionally use hooks
     // The __SERVER__ and IS_RSC checks are module-level and deterministic, so this doesn't violate rules of hooks
     if (!__SERVER__ && !IS_RSC) {
+      // Track cleanup state per component instance to handle React StrictMode's simulated unmount/remount
+      const shouldRemoveRef = React.useRef(true);
+
       React.useLayoutEffect(() => {
+        // Signal that this component is mounted and styles should stay
+        shouldRemoveRef.current = false;
+
         return () => {
-          globalStyle.removeStyles(instance, ssc.styleSheet);
+          // Mark that we're in cleanup
+          shouldRemoveRef.current = true;
+
+          // Use queueMicrotask to delay cleanup slightly.
+          // In React StrictMode's simulated unmount/remount, the next effect
+          // will run before this microtask, setting shouldRemove = false.
+          // In a real unmount, no new effect runs, so styles get removed.
+          queueMicrotask(() => {
+            if (shouldRemoveRef.current) {
+              globalStyle.removeStyles(instance, ssc.styleSheet);
+              // Also remove any SSR-rendered inline style tags with precedence
+              // These persist in the DOM because React 19's hoisted styles don't unmount
+              removeGlobalStyleTag(styledComponentId);
+            }
+          });
         };
       }, [instance, ssc.styleSheet]);
     }
@@ -84,8 +103,8 @@ export default function createGlobalStyle<Props extends object>(
         typeof window === 'undefined' ? ssc.styleSheet.getTag().getGroup(getGroupForId(id)) : '';
 
       if (css) {
-        const cssHash = generateAlphabeticName(hash(css) >>> 0);
-        const href = `sc-global-${styledComponentId}-${instance}-${cssHash}`;
+        // Use stable href without content hash so React can deduplicate/replace during HMR
+        const href = `${styledComponentId}-${instance}`;
         return React.createElement('style', {
           key: href,
           'data-styled-global': styledComponentId,

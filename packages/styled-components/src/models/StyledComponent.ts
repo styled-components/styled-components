@@ -123,7 +123,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
     target,
   } = forwardedComponent;
 
-  const contextTheme = React.useContext ? React.useContext(ThemeContext) : undefined;
+  const contextTheme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
   const ssc = useStyleSheetContext();
   const shouldForwardProp = forwardedComponent.shouldForwardProp || ssc.shouldForwardProp;
 

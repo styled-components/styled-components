@@ -12,6 +12,7 @@ const elements = [
   'blockquote',
   'body',
   'button',
+  'br',
   'canvas',
   'caption',
   'cite',

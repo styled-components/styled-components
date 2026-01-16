@@ -157,6 +157,66 @@ describe(`createGlobalStyle`, () => {
     expect(StyleSheet.registerId).toHaveBeenCalledTimes(1);
   });
 
+  it('should have styles present after StrictMode double-render cycle', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const Comp = createGlobalStyle`
+      [data-strict-test] {
+        color: red;
+      }
+    `;
+
+    act(() => {
+      render(
+        <React.StrictMode>
+          <Comp />
+        </React.StrictMode>
+      );
+    });
+
+    // Styles should be present after StrictMode's render-unmount-remount cycle
+    expect(getRenderedCSS()).toContain('[data-strict-test]');
+    expect(getRenderedCSS()).toContain('color: red');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('should properly cleanup and re-inject styles in StrictMode unmount/remount', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const Comp = createGlobalStyle`
+      [data-strict-unmount] {
+        background: blue;
+      }
+    `;
+
+    const { unmount } = render(
+      <React.StrictMode>
+        <Comp />
+      </React.StrictMode>
+    );
+
+    // Styles should be present
+    expect(getRenderedCSS()).toContain('[data-strict-unmount]');
+
+    // Unmount
+    unmount();
+
+    // Wait for microtask to complete cleanup
+    await Promise.resolve();
+
+    // Styles should be removed after unmount
+    expect(getRenderedCSS()).not.toContain('[data-strict-unmount]');
+
+    // Remount
+    render(
+      <React.StrictMode>
+        <Comp />
+      </React.StrictMode>
+    );
+
+    // Styles should be re-injected
+    expect(getRenderedCSS()).toContain('[data-strict-unmount]');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it(`renders to StyleSheetManager.target`, () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -230,7 +290,7 @@ describe(`createGlobalStyle`, () => {
     `);
   });
 
-  it(`removes styling injected styling when unmounted`, () => {
+  it(`removes styling injected styling when unmounted`, async () => {
     const ComponentA = createGlobalStyle`[data-test-remove]{color:grey;} `;
     const ComponentB = createGlobalStyle`[data-test-keep]{color:blue;} `;
 
@@ -242,23 +302,22 @@ describe(`createGlobalStyle`, () => {
 
     const renderer = render(<Comp insert />);
 
-    act(() => {
-      expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "[data-test-remove] {
-          color: grey;
-        }"
-      `);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "[data-test-remove] {
+        color: grey;
+      }"
+    `);
 
-      renderer.rerender(<Comp insert={false} />);
-    });
+    renderer.rerender(<Comp insert={false} />);
 
-    act(() => {
-      expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "[data-test-keep] {
-          color: blue;
-        }"
-      `);
-    });
+    // Wait for microtask to complete cleanup
+    await Promise.resolve();
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "[data-test-keep] {
+        color: blue;
+      }"
+    `);
   });
 
   it(`removes styling injected for multiple <GlobalStyle> components correctly`, async () => {

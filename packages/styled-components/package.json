@@ -86,8 +86,18 @@
     "tslib": "2.8.1"
   },
   "peerDependencies": {
+    "@types/react": ">= 16.8.0",
+    "@types/react-dom": ">= 16.8.0",
     "react": ">= 16.8.0",
     "react-dom": ">= 16.8.0"
+  },
+  "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    },
+    "@types/react-dom": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@babel/core": "^7.24.5",
