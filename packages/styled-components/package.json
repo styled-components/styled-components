@@ -16,6 +16,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "react-native": "./native/dist/styled-components.native.cjs.js",
       "browser": {
         "import": "./dist/styled-components.browser.esm.js",
         "require": "./dist/styled-components.browser.cjs.js"
