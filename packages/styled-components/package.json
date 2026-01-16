@@ -15,8 +15,13 @@
   },
   "exports": {
     ".": {
+      "react-native": {
+        "types": "./native/dist/native/index.d.ts",
+        "import": "./native/dist/styled-components.native.esm.js",
+        "require": "./native/dist/styled-components.native.cjs.js",
+        "default": "./native/dist/styled-components.native.cjs.js"
+      },
       "types": "./dist/index.d.ts",
-      "react-native": "./native/dist/styled-components.native.cjs.js",
       "browser": {
         "import": "./dist/styled-components.browser.esm.js",
         "require": "./dist/styled-components.browser.cjs.js"
@@ -27,7 +32,6 @@
     },
     "./native": {
       "types": "./native/dist/native/index.d.ts",
-      "react-native": "./native/dist/styled-components.native.cjs.js",
       "import": "./native/dist/styled-components.native.esm.js",
       "require": "./native/dist/styled-components.native.cjs.js",
       "default": "./native/dist/styled-components.native.cjs.js"
