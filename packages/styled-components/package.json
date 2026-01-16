@@ -91,6 +91,14 @@
     "react": ">= 16.8.0",
     "react-dom": ">= 16.8.0"
   },
+  "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    },
+    "@types/react-dom": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@babel/core": "^7.24.5",
     "@babel/helper-module-imports": "^7.24.3",
