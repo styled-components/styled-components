@@ -51,6 +51,14 @@ const aliases = [
 
 type KnownComponents = (typeof aliases)[number];
 
+type PropsWithRef<T> =
+  T extends React.ComponentType<infer P>
+    ? P &
+        React.RefAttributes<
+          T extends React.ComponentClass<any> ? InstanceType<T> : React.ElementRef<T>
+        >
+    : never;
+
 /** Isolates RN-provided components since they don't expose a helper type for this. */
 type RNComponents = {
   [K in keyof typeof reactNative]: (typeof reactNative)[K] extends React.ComponentType<any>
@@ -59,7 +67,7 @@ type RNComponents = {
 };
 
 const styled = baseStyled as typeof baseStyled & {
-  [E in KnownComponents]: Styled<'native', RNComponents[E], React.ComponentProps<RNComponents[E]>>;
+  [E in KnownComponents]: Styled<'native', RNComponents[E], PropsWithRef<RNComponents[E]>>;
 };
 
 /* Define a getter for each alias which simply gets the reactNative component

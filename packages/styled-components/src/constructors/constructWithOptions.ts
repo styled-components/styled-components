@@ -70,9 +70,11 @@ export interface Styled<
     R,
     PrivateResolvedTarget,
     PrivateResolvedTarget extends KnownTarget
-      ? Substitute<
-          Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-          Props
+      ? Partial<
+          Substitute<
+            Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+            Props
+          >
         >
       : PrivateMergedProps,
     OuterStatics
@@ -133,9 +135,11 @@ export default function constructWithOptions<
       R,
       PrivateResolvedTarget,
       PrivateResolvedTarget extends KnownTarget
-        ? Substitute<
-            Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
-            Props
+        ? Partial<
+            Substitute<
+              Substitute<OuterProps, React.ComponentPropsWithRef<PrivateResolvedTarget>>,
+              Props
+            >
           >
         : PrivateMergedProps,
       OuterStatics
