@@ -1,5 +1,11 @@
 # styled-components
 
+## 6.3.9
+
+### Patch Changes
+
+- 2bd6402: Improve react-native "exports" field definition for use without "/native" import subpath.
+
 ## 6.3.8
 
 ### Patch Changes
