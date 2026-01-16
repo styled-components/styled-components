@@ -1,5 +1,11 @@
 # styled-components
 
+## 6.3.8
+
+### Patch Changes
+
+- 55d05c1: Make react-dom an optional peer dependency, clean up some unnecessary type peers.
+
 ## 6.3.7
 
 ### Patch Changes
