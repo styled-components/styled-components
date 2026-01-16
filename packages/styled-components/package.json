@@ -5,13 +5,27 @@
   "publishConfig": {
     "access": "public"
   },
-  "types": "dist/index.d.ts",
-  "main": "dist/styled-components.cjs.js",
-  "module": "./dist/styled-components.esm.js",
-  "react-native": "native/dist/styled-components.native.cjs.js",
-  "browser": {
-    "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js",
-    "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js"
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": {
+        "import": "./dist/styled-components.browser.mjs",
+        "require": "./dist/styled-components.browser.cjs"
+      },
+      "react-native": {
+        "import": "./native/dist/styled-components.native.mjs",
+        "require": "./native/dist/styled-components.native.cjs"
+      },
+      "default": {
+        "import": "./dist/styled-components.mjs",
+        "require": "./dist/styled-components.cjs"
+      }
+    },
+    "./native": {
+      "types": "./native/dist/native/index.d.ts",
+      "import": "./native/dist/styled-components.native.mjs",
+      "require": "./native/dist/styled-components.native.cjs"
+    }
   },
   "exports": {
     ".": {
