@@ -219,7 +219,12 @@ export type PolymorphicComponentProps<
 export interface PolymorphicComponent<
   R extends Runtime,
   BaseProps extends BaseObject,
-> extends React.ForwardRefExoticComponent<BaseProps> {
+> extends React.ForwardRefExoticComponent<
+  BaseProps & {
+    as?: StyledTarget<R> | undefined;
+    forwardedAs?: StyledTarget<R> | undefined;
+  }
+> {
   <
     AsTarget extends StyledTarget<R> | void = void,
     ForwardedAsTarget extends StyledTarget<R> | void = void,
