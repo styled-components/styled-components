@@ -36,6 +36,7 @@
       "require": "./native/dist/styled-components.native.cjs.js",
       "default": "./native/dist/styled-components.native.cjs.js"
     },
+    "./internal-types": "./dist/types.d.ts",
     "./package.json": "./package.json"
   },
   "sideEffects": false,
