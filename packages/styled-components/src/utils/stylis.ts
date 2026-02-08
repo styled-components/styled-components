@@ -58,6 +58,16 @@ function stripLineComments(css: string): string {
       continue;
     }
 
+    // Handle CSS block comments: skip /* ... */ entirely
+    if (code === SLASH && i + 1 < len && css.charCodeAt(i + 1) === ASTERISK) {
+      i += 2;
+      while (i + 1 < len && !(css.charCodeAt(i) === ASTERISK && css.charCodeAt(i + 1) === SLASH)) {
+        i++;
+      }
+      i += 2; // skip past */
+      continue;
+    }
+
     // Track url() context - check for 'url(' (case insensitive via | 32)
     if (
       code === OPEN_PAREN &&
@@ -76,6 +86,14 @@ function stripLineComments(css: string): string {
       if (code === CLOSE_PAREN) urlDepth--;
       else if (code === OPEN_PAREN) urlDepth++;
       i++;
+      continue;
+    }
+
+    // Strip orphaned */ (no matching /*) — invalid CSS that breaks parsing
+    if (code === ASTERISK && i + 1 < len && css.charCodeAt(i + 1) === SLASH) {
+      if (i > start) parts.push(css.substring(start, i));
+      i += 2;
+      start = i;
       continue;
     }
 
@@ -283,7 +301,7 @@ export default function createStylisInstance(
 ) {
   let _componentId: string;
   let _selector: string;
-  let _selectorRegexp: RegExp;
+  let _selectorRegexp: RegExp | undefined;
 
   const selfReferenceReplacer = (match: string, offset: number, string: string) => {
     if (
@@ -315,6 +333,11 @@ export default function createStylisInstance(
    */
   const selfReferenceReplacementPlugin: stylis.Middleware = element => {
     if (element.type === stylis.RULESET && element.value.includes('&')) {
+      // Lazy RegExp creation: only allocate when self-reference pattern is actually used
+      if (!_selectorRegexp) {
+        _selectorRegexp = new RegExp(`\\${_selector}\\b`, 'g');
+      }
+
       (element.props as string[])[0] = element.props[0]
         // catch any hanging references that stylis missed
         .replace(AMP_REGEX, _selector)
@@ -335,6 +358,14 @@ export default function createStylisInstance(
 
   middlewares.push(stylis.stringify);
 
+  // Pre-build the middleware chain once to avoid allocating closures,
+  // arrays, and middleware wrappers on every stringifyRules call.
+  // Safe because JS is single-threaded and _stack is consumed before next call.
+  let _stack: string[] = [];
+  const _middleware = stylis.middleware(
+    middlewares.concat(stylis.rulesheet(value => _stack.push(value)))
+  );
+
   const stringifyRules: Stringifier = (
     css: string,
     selector = '',
@@ -349,7 +380,7 @@ export default function createStylisInstance(
     // these properties stay in sync with the current stylis run
     _componentId = componentId;
     _selector = selector;
-    _selectorRegexp = new RegExp(`\\${_selector}\\b`, 'g');
+    _selectorRegexp = undefined; // Reset for lazy creation per call
 
     const flatCSS = sanitizeCSS(stripLineComments(css));
     let compiled = stylis.compile(
@@ -360,14 +391,10 @@ export default function createStylisInstance(
       compiled = recursivelySetNamepace(compiled, options.namespace);
     }
 
-    const stack: string[] = [];
+    _stack = [];
+    stylis.serialize(compiled, _middleware);
 
-    stylis.serialize(
-      compiled,
-      stylis.middleware(middlewares.concat(stylis.rulesheet(value => stack.push(value))))
-    );
-
-    return stack;
+    return _stack;
   };
 
   stringifyRules.hash = plugins.length
