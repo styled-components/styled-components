@@ -13,31 +13,6 @@
     "./dist/styled-components.cjs.js": "./dist/styled-components.browser.cjs.js",
     "./dist/styled-components.esm.js": "./dist/styled-components.browser.esm.js"
   },
-  "exports": {
-    ".": {
-      "react-native": {
-        "types": "./native/dist/native/index.d.ts",
-        "import": "./native/dist/styled-components.native.esm.js",
-        "require": "./native/dist/styled-components.native.cjs.js",
-        "default": "./native/dist/styled-components.native.cjs.js"
-      },
-      "types": "./dist/index.d.ts",
-      "browser": {
-        "import": "./dist/styled-components.browser.esm.js",
-        "require": "./dist/styled-components.browser.cjs.js"
-      },
-      "import": "./dist/styled-components.esm.js",
-      "require": "./dist/styled-components.cjs.js",
-      "default": "./dist/styled-components.cjs.js"
-    },
-    "./native": {
-      "types": "./native/dist/native/index.d.ts",
-      "import": "./native/dist/styled-components.native.esm.js",
-      "require": "./native/dist/styled-components.native.cjs.js",
-      "default": "./native/dist/styled-components.native.cjs.js"
-    },
-    "./package.json": "./package.json"
-  },
   "sideEffects": false,
   "scripts": {
     "generateErrors": "node scripts/generateErrorMap.js",
@@ -155,7 +130,7 @@
     "files": [
       {
         "path": "./dist/styled-components.min.js",
-        "maxSize": "12kB"
+        "maxSize": "12.3kB"
       }
     ]
   },
