@@ -86,7 +86,10 @@ export type ExecutionProps = {
 };
 
 /**
- * ExecutionProps but with `theme` required.
+ * ExecutionProps but with `theme` narrowed from optional to required.
+ *
+ * Note: in RSC environments where ThemeProvider is a no-op,
+ * `theme` will be `undefined` at runtime.
  */
 export interface ExecutionContext extends ExecutionProps {
   theme: DefaultTheme;
@@ -287,8 +290,8 @@ export type CSSPropertiesWithVars = CSSProperties & {
   [key: `--${string}`]: string | number | undefined;
 };
 
-type OverrideStyle<P> = P extends { style?: any }
-  ? Omit<P, 'style'> & { style?: CSSPropertiesWithVars }
+type OverrideStyle<P> = P extends { style?: infer S }
+  ? Omit<P, 'style'> & { style?: CSSPropertiesWithVars | (S & {}) }
   : P;
 
 export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
