@@ -15,23 +15,23 @@ export const outputSheet = (sheet: Sheet) => {
     if (id === undefined) continue;
 
     const names = sheet.names.get(id);
-    const rules = tag.getGroup(group);
-    if (names === undefined || !names.size || rules.length === 0) continue;
+    if (names === undefined || !names.size) continue;
 
-    const selector = `${SC_ATTR}.g${group}[id="${id}"]`;
+    const rules = tag.getGroup(group);
+    if (rules.length === 0) continue;
+
+    const selector = SC_ATTR + '.g' + group + '[id="' + id + '"]';
 
     let content = '';
-    if (names !== undefined) {
-      names.forEach(name => {
-        if (name.length > 0) {
-          content += `${name},`;
-        }
-      });
-    }
+    names.forEach(name => {
+      if (name.length > 0) {
+        content += name + ',';
+      }
+    });
 
     // NOTE: It's easier to collect rules and have the marker
     // after the actual rules to simplify the rehydration
-    css += `${rules}${selector}{content:"${content}"}${SPLITTER}`;
+    css += rules + selector + '{content:"' + content + '"}' + SPLITTER;
   }
 
   return css;

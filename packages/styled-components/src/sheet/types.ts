@@ -13,7 +13,7 @@ export interface GroupedTag {
   clearGroup(group: number): void;
   getGroup(group: number): string;
   groupSizes: Uint32Array;
-  insertRules(group: number, rules: string | string[]): void;
+  insertRules(group: number, rules: string[]): void;
   length: number;
   tag: Tag;
 }
@@ -31,7 +31,7 @@ export interface Sheet {
   clearTag(): void;
   getTag(): GroupedTag;
   hasNameForId(id: string, name: string): boolean;
-  insertRules(id: string, name: string, rules: string | string[]): void;
+  insertRules(id: string, name: string, rules: string[]): void;
   options: SheetOptions;
   names: Map<string, Set<string>>;
   registerName(id: string, name: string): void;

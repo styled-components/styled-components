@@ -73,7 +73,7 @@ function useInjectedStyle<T extends ExecutionContext>(
 function resolveContext<Props extends BaseObject>(
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
   props: ExecutionProps & Props,
-  theme: DefaultTheme
+  theme: DefaultTheme | undefined
 ): React.HTMLAttributes<Element> & ExecutionContext & Props {
   const context: React.HTMLAttributes<Element> & ExecutionContext & Props = {
     ...props,
@@ -134,7 +134,8 @@ function useStyledComponentImpl<Props extends BaseObject>(
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme = determineTheme(props, contextTheme, defaultProps) || EMPTY_OBJECT;
+  const theme =
+    determineTheme(props, contextTheme, defaultProps) || (IS_RSC ? undefined : EMPTY_OBJECT);
 
   const context = resolveContext<Props>(componentAttrs, props, theme);
   const elementToBeCreated: WebTarget = context.as || target;

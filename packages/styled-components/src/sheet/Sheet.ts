@@ -87,24 +87,23 @@ export default class StyleSheet implements Sheet {
 
   /** Check whether a name is known for caching */
   hasNameForId(id: string, name: string): boolean {
-    return this.names.has(id) && (this.names.get(id) as any).has(name);
+    return this.names.get(id)?.has(name) ?? false;
   }
 
   /** Mark a group's name as known for caching */
   registerName(id: string, name: string) {
     getGroupForId(id);
 
-    if (!this.names.has(id)) {
-      const groupNames = new Set<string>();
-      groupNames.add(name);
-      this.names.set(id, groupNames);
+    const existing = this.names.get(id);
+    if (existing) {
+      existing.add(name);
     } else {
-      (this.names.get(id) as any).add(name);
+      this.names.set(id, new Set([name]));
     }
   }
 
   /** Insert new rules which also marks the name as known */
-  insertRules(id: string, name: string, rules: string | string[]) {
+  insertRules(id: string, name: string, rules: string[]) {
     this.registerName(id, name);
     this.getTag().insertRules(getGroupForId(id), rules);
   }

@@ -11,7 +11,6 @@ import {
   StyledObject,
 } from '../types';
 import addUnitIfNeeded from './addUnitIfNeeded';
-import { EMPTY_ARRAY } from './empties';
 import getComponentName from './getComponentName';
 import hyphenate from './hyphenateStyleName';
 import isFunction from './isFunction';
@@ -49,29 +48,36 @@ export default function flatten<Props extends object>(
   chunk: Interpolation<object>,
   executionContext?: (ExecutionContext & Props) | undefined,
   styleSheet?: StyleSheet | undefined,
-  stylisInstance?: Stringifier | undefined
+  stylisInstance?: Stringifier | undefined,
+  result: RuleSet<Props> = []
 ): RuleSet<Props> {
+  if (typeof chunk === 'string') {
+    if (chunk) result.push(chunk);
+    return result;
+  }
+
   if (isFalsish(chunk)) {
-    return [];
+    return result;
   }
 
   /* Handle other components */
   if (isStyledComponent(chunk)) {
-    return [`.${(chunk as unknown as IStyledComponent<'web', any>).styledComponentId}`];
+    result.push(`.${(chunk as unknown as IStyledComponent<'web', any>).styledComponentId}`);
+    return result;
   }
 
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
     if (isStatelessFunction(chunk) && executionContext) {
-      const result = chunk(executionContext);
+      const fnResult = chunk(executionContext);
 
       if (
         process.env.NODE_ENV !== 'production' &&
-        typeof result === 'object' &&
-        !Array.isArray(result) &&
-        !(result instanceof Keyframes) &&
-        !isPlainObject(result) &&
-        result !== null
+        typeof fnResult === 'object' &&
+        !Array.isArray(fnResult) &&
+        !(fnResult instanceof Keyframes) &&
+        !isPlainObject(fnResult) &&
+        fnResult !== null
       ) {
         console.error(
           `${getComponentName(
@@ -80,35 +86,38 @@ export default function flatten<Props extends object>(
         );
       }
 
-      return flatten<Props>(result, executionContext, styleSheet, stylisInstance);
+      return flatten<Props>(fnResult, executionContext, styleSheet, stylisInstance, result);
     } else {
-      return [chunk as unknown as IStyledComponent<'web'>];
+      result.push(chunk as unknown as IStyledComponent<'web'>);
+      return result;
     }
   }
 
   if (chunk instanceof Keyframes) {
     if (styleSheet) {
       chunk.inject(styleSheet, stylisInstance);
-      return [chunk.getName(stylisInstance)];
+      result.push(chunk.getName(stylisInstance));
     } else {
-      return [chunk];
+      result.push(chunk);
     }
+    return result;
   }
 
   /* Handle objects */
   if (isPlainObject(chunk)) {
-    return objToCssArray(chunk as StyledObject<Props>);
+    const cssArr = objToCssArray(chunk as StyledObject<Props>);
+    for (let i = 0; i < cssArr.length; i++) result.push(cssArr[i]);
+    return result;
   }
 
   if (!Array.isArray(chunk)) {
-    return [chunk.toString()];
+    result.push(chunk.toString());
+    return result;
   }
 
-  return flatMap(chunk, chunklet =>
-    flatten<Props>(chunklet, executionContext, styleSheet, stylisInstance)
-  );
-}
+  for (let i = 0; i < chunk.length; i++) {
+    flatten<Props>(chunk[i], executionContext, styleSheet, stylisInstance, result);
+  }
 
-function flatMap<T, U>(array: T[], transform: (value: T, index: number, array: T[]) => U[]): U[] {
-  return Array.prototype.concat.apply(EMPTY_ARRAY, array.map(transform));
+  return result;
 }

@@ -14,18 +14,37 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
   length: number;
   tag: Tag;
 
+  // Cached position for O(1) sequential indexOfGroup lookups.
+  // Avoids the O(n) linear scan on every call by remembering the last
+  // computed (group → absoluteIndex) pair and scanning incrementally.
+  _cGroup: number;
+  _cIndex: number;
+
   constructor(tag: Tag) {
     this.groupSizes = new Uint32Array(BASE_SIZE);
     this.length = BASE_SIZE;
     this.tag = tag;
+    this._cGroup = 0;
+    this._cIndex = 0;
   }
 
   indexOfGroup(group: number) {
-    let index = 0;
-    for (let i = 0; i < group; i++) {
-      index += this.groupSizes[i];
+    if (group === this._cGroup) return this._cIndex;
+
+    let index = this._cIndex;
+
+    if (group > this._cGroup) {
+      for (let i = this._cGroup; i < group; i++) {
+        index += this.groupSizes[i];
+      }
+    } else {
+      for (let i = this._cGroup - 1; i >= group; i--) {
+        index -= this.groupSizes[i];
+      }
     }
 
+    this._cGroup = group;
+    this._cIndex = index;
     return index;
   }
 
@@ -52,12 +71,19 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
     }
 
     let ruleIndex = this.indexOfGroup(group + 1);
+    let insertedCount = 0;
 
     for (let i = 0, l = rules.length; i < l; i++) {
       if (this.tag.insertRule(ruleIndex, rules[i])) {
         this.groupSizes[group]++;
         ruleIndex++;
+        insertedCount++;
       }
+    }
+
+    // Keep cache consistent: groups after the insertion point shift forward
+    if (insertedCount > 0 && this._cGroup > group) {
+      this._cIndex += insertedCount;
     }
   }
 
@@ -71,6 +97,11 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
 
       for (let i = startIndex; i < endIndex; i++) {
         this.tag.deleteRule(startIndex);
+      }
+
+      // Keep cache consistent: groups after the cleared group shift backward
+      if (length > 0 && this._cGroup > group) {
+        this._cIndex -= length;
       }
     }
   }
@@ -86,7 +117,7 @@ const DefaultGroupedTag = class DefaultGroupedTag implements GroupedTag {
     const endIndex = startIndex + length;
 
     for (let i = startIndex; i < endIndex; i++) {
-      css += `${this.tag.getRule(i)}${SPLITTER}`;
+      css += this.tag.getRule(i) + SPLITTER;
     }
 
     return css;
