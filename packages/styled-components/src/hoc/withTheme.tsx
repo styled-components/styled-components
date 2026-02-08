@@ -6,32 +6,36 @@ import determineTheme from '../utils/determineTheme';
 import getComponentName from '../utils/getComponentName';
 import hoist, { NonReactStatics } from '../utils/hoist';
 
+type WithThemeOuterProps<T extends AnyComponent> = Omit<
+  React.ComponentPropsWithRef<T>,
+  keyof ExecutionProps
+> &
+  ExecutionProps;
+
 export default function withTheme<T extends AnyComponent>(
   Component: T
 ): React.ForwardRefExoticComponent<
-  React.PropsWithoutRef<React.ComponentPropsWithRef<T> & ExecutionProps> & React.RefAttributes<T>
+  React.PropsWithoutRef<WithThemeOuterProps<T>> & React.RefAttributes<any>
 > &
   NonReactStatics<T> {
-  const WithTheme = React.forwardRef<T, React.ComponentPropsWithRef<T> & ExecutionProps>(
-    (props, ref) => {
-      const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
-      const themeProp = determineTheme(props, theme, Component.defaultProps);
+  const WithTheme = React.forwardRef<any, WithThemeOuterProps<T>>((props, ref) => {
+    const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
+    const themeProp = determineTheme(props, theme, Component.defaultProps);
 
-      if (process.env.NODE_ENV !== 'production' && themeProp === undefined) {
-        console.warn(
-          `[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class "${getComponentName(
-            Component
-          )}"`
-        );
-      }
-
-      return React.createElement(Component, {
-        ...props,
-        theme: themeProp,
-        ref,
-      } as React.ComponentPropsWithRef<T>);
+    if (process.env.NODE_ENV !== 'production' && themeProp === undefined) {
+      console.warn(
+        `[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class "${getComponentName(
+          Component
+        )}"`
+      );
     }
-  );
+
+    return React.createElement(Component, {
+      ...props,
+      theme: themeProp,
+      ref,
+    } as React.ComponentPropsWithRef<T>);
+  });
 
   WithTheme.displayName = `WithTheme(${getComponentName(Component)})`;
 
