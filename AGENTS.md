@@ -1,3 +1,5 @@
+NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
+
 use pnpm package manager and associated commands
 never run the dev server yourself, ask the user to start it if needed
 use conventional commits: (feat|fix|chore|refactor|test|docs|style|perf|build|ci): [description]
@@ -85,6 +87,43 @@ Key Commands
 - `pnpm --filter sandbox dev` - Start Next.js dev server
 - `pnpm --filter styled-components test:web` - Test web build
 - `pnpm --filter styled-components test:native` - Test React Native
+- `pnpm --filter styled-components bench` - Run performance benchmarks
+
+Performance Optimization Learnings
+
+Microbenchmark-validated patterns (V8/Node.js):
+
+- String accumulation: `+=` is 3-4x faster than `array.push() + join()` for 5-10 parts
+- Object creation: spread `{...props, theme}` is 4x faster than `Object.assign` or `for..in` copy
+- Props iteration: `for..in` is 1.7x faster than `Object.keys()` + loop
+- RegExp creation: `new RegExp()` costs ~50ns; caching via Map is 5x faster for repeated selectors; indexOf check to skip entirely is 5x more
+- Stylis middleware: pre-building saves only ~8% since `compile+serialize` dominates cost
+- Return value reuse: sub-nanosecond difference, not worth the complexity
+- Flatten output: reusing the result array vs fresh allocation shows no measurable difference (flatten execution time dominates)
+- Template literals: manual `+` concat is 1.3x faster than `` `${a}${b}` `` in tight loops (template overhead)
+- String accumulation at SSR scale: `+=` is STILL faster than `array+join` even at 500 iterations (V8 cons string trees)
+- React.createElement: raw element objects are 60-120x faster; `$$typeof` symbol detected at module load from installed React version
+
+V8-specific gotchas:
+
+- `new Array(n)` creates HOLEY_ELEMENTS arrays that infect V8 type feedback — 3.9x regression observed in GroupedTag
+- `private` modifier is not allowed on anonymous class expressions (`export const Foo = class { ... }`)
+- `import type * from 'stream'` still triggers bundler module resolution even though TypeScript strips it
+
+Build architecture:
+
+- `__SERVER__` build-time constant enables dead-code elimination for SSR paths in browser builds
+- `IS_BROWSER` (`typeof window !== 'undefined'`) is a runtime check — bundlers CANNOT tree-shake code behind it
+- The `browser` field in package.json maps server bundles to browser-specific alternatives for bundler resolution
+- `exports` field caused TS2742 in composite projects and ordering confusion; `browser` field is preferred
+
+Dynamic re-render hot path (most expensive → least):
+
+1. `stylis` compile+serialize: ~1-5µs depending on CSS size (unavoidable, external library)
+2. `flatten()` interpolation evaluation: ~2-5µs for 5 interpolations (unavoidable, user functions)
+3. `phash()` hashing: ~0.3µs per CSS string (unavoidable)
+4. String accumulation / array operations: 0.05-0.2µs (optimizable)
+5. Cache lookups (`hasNameForId`, `generateName`): negligible
 
 Rendering Flow - Update this diagram as the library is edited.
 
@@ -160,10 +199,11 @@ sequenceDiagram
 
     Note over StyledComponentImpl,DOM: 5. ELEMENT CREATION
     StyledComponentImpl->>StyledComponentImpl: buildClassName(foldedIds + styledId + generated + props)
-    StyledComponentImpl->>React: createElement(element, className, props, ref)
+    StyledComponentImpl->>StyledComponentImpl: rawElement(type, props, ref)
+    Note over StyledComponentImpl: Bypasses React.createElement<br/>overhead (~60-120x faster)
 
     alt RSC Mode
-        StyledComponentImpl->>React: createElement(Fragment, styleTag, element)
+        StyledComponentImpl->>StyledComponentImpl: rawElement(Fragment, [styleTag, element])
         Note over React: React 19 hoists<br/>style tags to head
     end
 

@@ -22,3 +22,5 @@ README.md
 .build
 .next
 *.tsbuildinfo
+**/next-env.d.ts
+.claude
