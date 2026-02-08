@@ -177,6 +177,47 @@ const Badge = styled.span<{ $type: 'info' | 'success' | 'warning' }>`
   }}
 `;
 
+/**
+ * Issue #5652 reproduction: CSSPropertiesWithVars incompatible with
+ * React 19's CSSProperties in .attrs() callbacks
+ */
+interface ImageProps {
+  draggable?: boolean;
+  style?: React.CSSProperties;
+  src?: string;
+}
+
+const Image = (props: ImageProps) => <img {...props} />;
+
+// Reproduction 1: attrs callback returning a prop from the wrapped component
+const StyledImage = styled(Image).attrs((p) => ({
+  draggable: p.draggable ?? false,
+}))``;
+
+// Reproduction 2: spreading props through attrs
+const StyledImage2 = styled(Image).attrs((p) => ({
+  ...p,
+  draggable: p.draggable ?? false,
+}))``;
+
+// Reproduction 3: attrs returning style directly (should still work)
+const StyledImage3 = styled(Image).attrs(() => ({
+  style: { color: 'red' },
+}))``;
+
+// Reproduction 4: attrs returning style with CSS variables
+const StyledImage4 = styled(Image).attrs(() => ({
+  style: { '--custom': 'value', color: 'red' } as const,
+}))``;
+
+// Reproduction 5: simple HTML element with attrs returning style from props
+const StyledDiv = styled.div.attrs<{ $scale?: number }>(p => ({
+  style: {
+    ...p.style,
+    transform: `scale(${p.$scale ?? 1})`,
+  },
+}))``;
+
 export function ClientTestingHarness() {
   const [variant, setVariant] = useState<'default' | 'active' | 'disabled' | 'error'>('default');
   const [customColor, setCustomColor] = useState('#ff6b9d');

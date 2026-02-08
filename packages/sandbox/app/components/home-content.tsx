@@ -137,8 +137,23 @@ export function HomeContent() {
         <CardTitle>Try It Out</CardTitle>
         <CardContent>
           Use the theme toggle button in the top-right to switch between light and dark modes.
-          Visit <code>/client-example</code> for advanced client-side testing features.
         </CardContent>
+      </Card>
+
+      <Card>
+        <CardTitle>Test Pages</CardTitle>
+        <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: '2.2' }}>
+          <li>
+            <a href="/client-example">/client-example</a> — Client-side testing features
+          </li>
+          <li>
+            <a href="/rsc-test">/rsc-test</a> — RSC dynamic creation test
+          </li>
+          <li>
+            <a href="/global-style-test">/global-style-test</a> — Global style unmount +
+            navigation persistence (#5649)
+          </li>
+        </ul>
       </Card>
     </PageContainer>
   );

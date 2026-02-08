@@ -13,26 +13,24 @@ import ReactDOMServer from 'react-dom/server';
 import createGlobalStyle from '../createGlobalStyle';
 
 describe('createGlobalStyle RSC mode', () => {
-  it('generates stable href without content hash for HMR deduplication', () => {
+  it('renders style tag without precedence so it can be unmounted', () => {
     const GlobalStyle = createGlobalStyle`
       body { background: red; }
     `;
 
     const html = ReactDOMServer.renderToString(<GlobalStyle />);
 
-    // The href should be stable (componentId + instance only, no content hash)
-    // This ensures React can deduplicate/replace styles during HMR
+    // Global styles must NOT use `precedence` because React 19 treats
+    // precedence styles as permanent resources that persist after unmount.
+    // This would break conditional global styles (e.g. body lock on modal).
     expect(html).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-khwQqP"
-             precedence="styled-components"
-             href="sc-global-khwQqP-1"
-      >
+      <style data-styled-global="sc-global-khwQqP">
         body{background:red;}/*!sc*/
       </style>
     `);
   });
 
-  it('generates same href for same component regardless of dynamic content', () => {
+  it('renders dynamic global styles without precedence', () => {
     const GlobalStyle = createGlobalStyle<{ $color: string }>`
       body { background: ${props => props.$color}; }
     `;
@@ -40,21 +38,14 @@ describe('createGlobalStyle RSC mode', () => {
     const html1 = ReactDOMServer.renderToString(<GlobalStyle $color="red" />);
     const html2 = ReactDOMServer.renderToString(<GlobalStyle $color="blue" />);
 
-    // Same component should produce same href even with different prop values
-    // Only the CSS content inside changes, not the href
+    // Same component should produce same key even with different prop values
     expect(html1).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-kVtqfD"
-             precedence="styled-components"
-             href="sc-global-kVtqfD-1"
-      >
+      <style data-styled-global="sc-global-kVtqfD">
         body{background:red;}/*!sc*/
       </style>
     `);
     expect(html2).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-kVtqfD"
-             precedence="styled-components"
-             href="sc-global-kVtqfD-1"
-      >
+      <style data-styled-global="sc-global-kVtqfD">
         body{background:blue;}/*!sc*/
       </style>
     `);
