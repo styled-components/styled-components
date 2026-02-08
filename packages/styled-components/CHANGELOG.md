@@ -1,5 +1,17 @@
 # styled-components
 
+## 6.3.9
+
+### Patch Changes
+
+- ca61aca: Fix CSS block comments containing `//` (e.g. URLs) causing subsequent styles to not be applied.
+- a2cd792: Fix `createGlobalStyle` styles not being removed when unmounted in RSC environments. React 19's `precedence` attribute on style tags makes them persist as permanent resources; global styles now render without `precedence` so they follow normal component lifecycle.
+- dbe0aae: In RSC environments, `theme` is now `undefined` instead of `{}` for styled components, matching the existing behavior of `withTheme` and `createGlobalStyle`. This ensures accessing theme properties without a ThemeProvider correctly throws rather than silently returning `undefined`.
+- 1888c73: Fix `withTheme` HOC types: ref now correctly resolves to the component instance type instead of the constructor, and `theme` is properly optional in the wrapped component's props.
+- f84f3fa: Fix SSR styles hydration and global style cleanup in Shadow DOM
+- 43a5b4b: Optimize internal style processing hot paths: cached GroupedTag index lookups, string fast path in flatten, direct string concatenation in dynamic style generation, pre-built stylis middleware chain with lazy RegExp creation, single-lookup Map operations, VirtualTag append fast-path, and manual string concat in SSR output.
+- 788e8c0: Revert `exports` field and restore browser/server build split with `browser` field in package.json. Fixes `require('stream')` resolution errors in browser bundlers like webpack 5.
+
 ## 6.3.8
 
 ### Patch Changes
