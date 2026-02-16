@@ -212,7 +212,7 @@ const nativeConfig = {
   ],
   plugins: [
     nativeTypescriptPlugin,
-    ...commonPlugins,
+    basePlugins,
     minifierPlugin
   ],
 };
