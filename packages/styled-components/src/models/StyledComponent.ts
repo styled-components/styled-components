@@ -220,10 +220,10 @@ function useStyledComponentImpl<Props extends BaseObject>(
         let nameKey = '';
         const names = ssc.styleSheet.names.get(cs.componentId);
         if (names) {
-          for (const n of names) {
+          names.forEach(n => {
             if (nameKey) nameKey += '_';
             nameKey += n;
-          }
+          });
         }
 
         styleTags.push(
