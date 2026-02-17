@@ -23,4 +23,5 @@ README.md
 .next
 *.tsbuildinfo
 **/next-env.d.ts
+**/dist-test
 .claude
