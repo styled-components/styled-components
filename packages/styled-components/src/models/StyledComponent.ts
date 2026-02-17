@@ -1,6 +1,7 @@
 import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
 import { IS_RSC, SC_VERSION } from '../constants';
+import { getGroupForId } from '../sheet/GroupIDAllocator';
 import type {
   AnyComponent,
   Attrs,
@@ -201,19 +202,48 @@ function useStyledComponentImpl<Props extends BaseObject>(
 
   const element = createElement(elementToBeCreated, propsForElement);
 
-  // RSC mode: output style tag alongside element
-  // React 19's style hoisting will deduplicate by href and move to <head>
-  if (IS_RSC && css) {
-    return React.createElement(
-      React.Fragment,
-      null,
-      React.createElement('style', {
-        precedence: 'styled-components',
-        href: `sc-${styledComponentId}-${generatedClassName}`,
-        children: css,
-      }),
-      element
-    );
+  // RSC mode: emit a <style> tag per inheritance level so React 19 can
+  // deduplicate shared base styles across sibling components (#5663).
+  // Each tag's href includes registered names (CSS content hashes) so that
+  // dynamic prop variations produce distinct hrefs and aren't incorrectly deduped.
+  if (IS_RSC) {
+    const styleTags: React.ReactElement[] = [];
+    let cs: ComponentStyle | null | undefined = componentStyle;
+
+    while (cs) {
+      const groupCss = ssc.styleSheet.getTag().getGroup(getGroupForId(cs.componentId));
+      if (groupCss) {
+        // Build content-aware href from the registered names for this group.
+        // Names are generated from CSS content hashes, so identical CSS always
+        // produces the same href (enabling dedup) while different CSS produces
+        // different hrefs (preventing incorrect dedup of dynamic variants).
+        let nameKey = '';
+        const names = ssc.styleSheet.names.get(cs.componentId);
+        if (names) {
+          for (const n of names) {
+            if (nameKey) nameKey += '_';
+            nameKey += n;
+          }
+        }
+
+        styleTags.push(
+          React.createElement('style', {
+            key: `sc-${cs.componentId}`,
+            precedence: 'styled-components',
+            href: `sc-${cs.componentId}-${nameKey}`,
+            children: groupCss,
+          })
+        );
+      }
+      cs = cs.baseStyle;
+    }
+
+    if (styleTags.length) {
+      // Reverse so base styles appear before extended styles in the document,
+      // matching GroupedTag's group ordering for correct CSS specificity.
+      styleTags.reverse();
+      return React.createElement(React.Fragment, null, ...styleTags, element);
+    }
   }
 
   return element;
