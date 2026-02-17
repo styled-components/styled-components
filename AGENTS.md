@@ -11,6 +11,7 @@ Mandates
 - React 16.8 compat
 - Always microbenchmark to validate optimizations
 - Optimize for low memory pressure and monomorphic functions
+- NEVER use `precedence` or `href` on `<style>` elements in `createGlobalStyle` — React 19 resource hoisting makes them persist after unmount. Regular styled components may use them since style persistence is intentional.
 
 Agent rules
 
