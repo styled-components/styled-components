@@ -141,7 +141,10 @@ const standaloneBaseConfig = {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
-      __IS_RSC__: JSON.stringify(false),
+    }),
+    replace({
+      delimiters: ['', ''],
+      "typeof React.createContext === 'undefined'": JSON.stringify(false),
     })
   ),
   treeshake: {
@@ -181,7 +184,6 @@ const serverConfig = {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(true),
-      __IS_RSC__: "typeof React.createContext === 'undefined'",
     }),
     minifierPlugin
   ),
@@ -196,7 +198,10 @@ const browserConfig = {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
-      __IS_RSC__: JSON.stringify(false),
+    }),
+    replace({
+      delimiters: ['', ''],
+      "typeof React.createContext === 'undefined'": JSON.stringify(false),
     }),
     minifierPlugin
   ),
@@ -217,7 +222,8 @@ const nativeConfig = {
     nativeTypescriptPlugin,
     ...commonPlugins,
     replace({
-      __IS_RSC__: JSON.stringify(false),
+      delimiters: ['', ''],
+      "typeof React.createContext === 'undefined'": JSON.stringify(false),
     }),
     minifierPlugin
   ],

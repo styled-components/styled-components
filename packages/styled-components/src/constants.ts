@@ -1,6 +1,5 @@
 declare let SC_DISABLE_SPEEDY: boolean | null | undefined;
 declare let __VERSION__: string;
-declare const __IS_RSC__: boolean;
 
 import React from 'react';
 
@@ -18,12 +17,13 @@ export const SPLITTER = '/*!sc*/\n';
 export const IS_BROWSER = typeof window !== 'undefined' && typeof document !== 'undefined';
 
 /**
- * Detect if we're running in a React Server Component environment.
- * RSC environments lack createContext, making this a reliable indicator.
- * __IS_RSC__ is replaced at build time: `false` for browser/standalone builds,
- * runtime check for server builds.
+ * True when running in a React Server Component environment (createContext
+ * is unavailable). In browser / standalone / native builds the entire
+ * expression is replaced with the literal `false` via rollup-plugin-replace
+ * with empty delimiters (exact string match), enabling rollup constant
+ * inlining and terser dead-code elimination for all RSC branches.
  */
-export const IS_RSC: boolean = __IS_RSC__;
+export const IS_RSC: boolean = typeof React.createContext === 'undefined';
 
 export const DISABLE_SPEEDY = Boolean(
   typeof SC_DISABLE_SPEEDY === 'boolean'
