@@ -1,5 +1,11 @@
 # styled-components
 
+## 6.3.11
+
+### Patch Changes
+
+- 752f5ec: fix: resolve "React is not defined" ReferenceError introduced in 6.3.10 when loading the CJS build in Node.js
+
 ## 6.3.10
 
 ### Patch Changes
