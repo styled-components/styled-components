@@ -7,8 +7,9 @@ import type { SupportedHTMLElements } from './utils/domElements';
 
 export { CSS, DefaultTheme, SupportedHTMLElements };
 
-export interface ExoticComponentWithDisplayName<P extends BaseObject = {}>
-  extends React.ExoticComponent<P> {
+export interface ExoticComponentWithDisplayName<
+  P extends BaseObject = {},
+> extends React.ExoticComponent<P> {
   defaultProps?: Partial<P> | undefined;
   displayName?: string | undefined;
 }
@@ -85,7 +86,10 @@ export type ExecutionProps = {
 };
 
 /**
- * ExecutionProps but with `theme` required.
+ * ExecutionProps but with `theme` narrowed from optional to required.
+ *
+ * Note: in RSC environments where ThemeProvider is a no-op,
+ * `theme` will be `undefined` at runtime.
  */
 export interface ExecutionContext extends ExecutionProps {
   theme: DefaultTheme;
@@ -110,8 +114,8 @@ export type Interpolation<Props extends BaseObject> =
   | Interpolation<Props>[];
 
 export type Attrs<Props extends BaseObject = BaseObject> =
-  | (ExecutionProps & Partial<Props>)
-  | ((props: ExecutionContext & Props) => ExecutionProps & Partial<Props>);
+  | (ExecutionProps & Partial<OverrideStyle<Props>>)
+  | ((props: ExecutionContext & Props) => ExecutionProps & Partial<OverrideStyle<Props>>);
 
 export type RuleSet<Props extends BaseObject = BaseObject> = Interpolation<Props>[];
 
@@ -160,8 +164,10 @@ export interface CommonStatics<R extends Runtime, Props extends BaseObject> {
   shouldForwardProp?: ShouldForwardProp<R> | undefined;
 }
 
-export interface IStyledStatics<R extends Runtime, OuterProps extends BaseObject>
-  extends CommonStatics<R, OuterProps> {
+export interface IStyledStatics<
+  R extends Runtime,
+  OuterProps extends BaseObject,
+> extends CommonStatics<R, OuterProps> {
   componentStyle: R extends 'web' ? ComponentStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
   foldedComponentIds: R extends 'web' ? string : never;
@@ -189,20 +195,22 @@ export type PolymorphicComponentProps<
   ForwardedAsTargetProps extends BaseObject = ForwardedAsTarget extends KnownTarget
     ? React.ComponentPropsWithRef<ForwardedAsTarget>
     : {},
-> = NoInfer<
-  FastOmit<
-    Substitute<
-      BaseProps,
-      // "as" wins over "forwardedAs" when it comes to prop interface
-      Substitute<ForwardedAsTargetProps, AsTargetProps>
-    >,
-    keyof ExecutionProps
-  >
-> &
-  FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
-    as?: AsTarget;
-    forwardedAs?: ForwardedAsTarget;
-  };
+> = OverrideStyle<
+  NoInfer<
+    FastOmit<
+      Substitute<
+        BaseProps,
+        // "as" wins over "forwardedAs" when it comes to prop interface
+        Substitute<ForwardedAsTargetProps, AsTargetProps>
+      >,
+      keyof ExecutionProps
+    >
+  > &
+    FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
+      as?: AsTarget;
+      forwardedAs?: ForwardedAsTarget;
+    }
+>;
 
 /**
  * This type forms the signature for a forwardRef-enabled component
@@ -211,8 +219,10 @@ export type PolymorphicComponentProps<
  * props from the given rendering target to get proper typing for
  * any specialized props in the target component.
  */
-export interface PolymorphicComponent<R extends Runtime, BaseProps extends BaseObject>
-  extends React.ForwardRefExoticComponent<BaseProps> {
+export interface PolymorphicComponent<
+  R extends Runtime,
+  BaseProps extends BaseObject,
+> extends React.ForwardRefExoticComponent<BaseProps> {
   <
     AsTarget extends StyledTarget<R> | void = void,
     ForwardedAsTarget extends StyledTarget<R> | void = void,
@@ -222,9 +232,7 @@ export interface PolymorphicComponent<R extends Runtime, BaseProps extends BaseO
 }
 
 export interface IStyledComponentBase<R extends Runtime, Props extends BaseObject = BaseObject>
-  extends PolymorphicComponent<R, Props>,
-    IStyledStatics<R, Props>,
-    StyledComponentBrand {
+  extends PolymorphicComponent<R, Props>, IStyledStatics<R, Props>, StyledComponentBrand {
   defaultProps?: (ExecutionProps & Partial<Props>) | undefined;
   toString: () => string;
 }
@@ -278,6 +286,14 @@ export interface IInlineStyle<Props extends BaseObject> {
 
 export type CSSProperties = CSS.Properties<number | (string & {})>;
 
+export type CSSPropertiesWithVars = CSSProperties & {
+  [key: `--${string}`]: string | number | undefined;
+};
+
+type OverrideStyle<P> = P extends { style?: infer S }
+  ? Omit<P, 'style'> & { style?: CSSPropertiesWithVars | (S & {}) }
+  : P;
+
 export type CSSPseudos = { [K in CSS.Pseudos]?: CSSObject };
 
 export type CSSKeyframes = object & { [key: string]: CSSObject };
@@ -285,8 +301,7 @@ export type CSSKeyframes = object & { [key: string]: CSSObject };
 export type CSSObject<Props extends BaseObject = BaseObject> = StyledObject<Props>;
 
 export interface StyledObject<Props extends BaseObject = BaseObject>
-  extends CSSProperties,
-    CSSPseudos {
+  extends CSSProperties, CSSPseudos {
   [key: string]:
     | StyledObject<Props>
     | string

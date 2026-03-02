@@ -5,7 +5,265 @@ import throwStyledError from './error';
 import { SEED, phash } from './hash';
 
 const AMP_REGEX = /&/g;
-const COMMENT_REGEX = /^\s*\/\/.*$/gm;
+
+// Character codes for fast comparison
+const DOUBLE_QUOTE = 34; // "
+const SINGLE_QUOTE = 39; // '
+const SLASH = 47; // /
+const ASTERISK = 42; // *
+const BACKSLASH = 92; // \
+const OPEN_BRACE = 123; // {
+const CLOSE_BRACE = 125; // }
+const SEMICOLON = 59; // ;
+const NEWLINE = 10; // \n
+const OPEN_PAREN = 40; // (
+const CLOSE_PAREN = 41; // )
+
+/**
+ * Strips JS-style line comments (//) from CSS, handling comments anywhere
+ * in the line while preserving strings, url() contents, and valid CSS.
+ * Optimized with early bail and charCodeAt for performance.
+ */
+function stripLineComments(css: string): string {
+  // Fast path: no // means no line comments
+  if (css.indexOf('//') === -1) return css;
+
+  const len = css.length;
+  const parts: string[] = [];
+  let start = 0;
+  let i = 0;
+  let inString = 0; // 0 = none, DOUBLE_QUOTE or SINGLE_QUOTE when in string
+  let urlDepth = 0; // Track nesting depth inside url()
+
+  while (i < len) {
+    const code = css.charCodeAt(i);
+
+    // Track string state
+    if (
+      (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) &&
+      (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)
+    ) {
+      if (inString === 0) {
+        inString = code;
+      } else if (inString === code) {
+        inString = 0;
+      }
+      i++;
+      continue;
+    }
+
+    // Skip string content
+    if (inString !== 0) {
+      i++;
+      continue;
+    }
+
+    // Handle CSS block comments: skip /* ... */ entirely
+    if (code === SLASH && i + 1 < len && css.charCodeAt(i + 1) === ASTERISK) {
+      i += 2;
+      while (i + 1 < len && !(css.charCodeAt(i) === ASTERISK && css.charCodeAt(i + 1) === SLASH)) {
+        i++;
+      }
+      i += 2; // skip past */
+      continue;
+    }
+
+    // Track url() context - check for 'url(' (case insensitive via | 32)
+    if (
+      code === OPEN_PAREN &&
+      i >= 3 &&
+      (css.charCodeAt(i - 1) | 32) === 108 && // l
+      (css.charCodeAt(i - 2) | 32) === 114 && // r
+      (css.charCodeAt(i - 3) | 32) === 117 // u
+    ) {
+      urlDepth = 1;
+      i++;
+      continue;
+    }
+
+    // Track nested parentheses inside url()
+    if (urlDepth > 0) {
+      if (code === CLOSE_PAREN) urlDepth--;
+      else if (code === OPEN_PAREN) urlDepth++;
+      i++;
+      continue;
+    }
+
+    // Strip orphaned */ (no matching /*) — invalid CSS that breaks parsing
+    if (code === ASTERISK && i + 1 < len && css.charCodeAt(i + 1) === SLASH) {
+      if (i > start) parts.push(css.substring(start, i));
+      i += 2;
+      start = i;
+      continue;
+    }
+
+    // Check for line comment (only when not in url())
+    if (code === SLASH && i + 1 < len && css.charCodeAt(i + 1) === SLASH) {
+      if (i > start) parts.push(css.substring(start, i));
+      // Skip to end of line
+      while (i < len && css.charCodeAt(i) !== NEWLINE) {
+        i++;
+      }
+      start = i;
+      continue;
+    }
+
+    i++;
+  }
+
+  // No comments found after indexOf check means // was in a string or url()
+  if (start === 0) return css;
+  if (start < len) parts.push(css.substring(start));
+  return parts.join('');
+}
+
+/**
+ * Checks if CSS has unbalanced closing braces that would cause stylis
+ * to prematurely close rule blocks.
+ * Optimized with early bail and charCodeAt for performance.
+ */
+function hasUnbalancedBraces(css: string): boolean {
+  // Fast path: no closing brace means can't have unbalanced braces
+  if (css.indexOf('}') === -1) return false;
+
+  const len = css.length;
+  let depth = 0;
+  let inString = 0; // 0 = none, char code when in string
+  let inComment = false;
+
+  for (let i = 0; i < len; i++) {
+    const code = css.charCodeAt(i);
+
+    // Handle CSS comments
+    if (inString === 0 && !inComment && code === SLASH && css.charCodeAt(i + 1) === ASTERISK) {
+      inComment = true;
+      i++;
+      continue;
+    }
+    if (inComment) {
+      if (code === ASTERISK && css.charCodeAt(i + 1) === SLASH) {
+        inComment = false;
+        i++;
+      }
+      continue;
+    }
+
+    // Track string state
+    if (
+      (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) &&
+      (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)
+    ) {
+      if (inString === 0) {
+        inString = code;
+      } else if (inString === code) {
+        inString = 0;
+      }
+      continue;
+    }
+    if (inString !== 0) continue;
+
+    // Track brace depth
+    if (code === OPEN_BRACE) {
+      depth++;
+    } else if (code === CLOSE_BRACE) {
+      depth--;
+      if (depth < 0) return true;
+    }
+  }
+
+  return depth !== 0 || inString !== 0;
+}
+
+/**
+ * Sanitizes CSS by removing declarations with unbalanced braces.
+ * This contains invalid syntax to just the affected declaration.
+ * Optimized with charCodeAt for performance.
+ */
+function sanitizeCSS(css: string): string {
+  // Fast path: valid CSS passes through unchanged
+  if (!hasUnbalancedBraces(css)) {
+    return css;
+  }
+
+  const len = css.length;
+  let result = '';
+  let declStart = 0;
+  let braceDepth = 0;
+  let inString = 0;
+  let inComment = false;
+
+  for (let i = 0; i < len; i++) {
+    const code = css.charCodeAt(i);
+
+    // Handle CSS comments
+    if (inString === 0 && !inComment && code === SLASH && css.charCodeAt(i + 1) === ASTERISK) {
+      inComment = true;
+      i++;
+      continue;
+    }
+    if (inComment) {
+      if (code === ASTERISK && css.charCodeAt(i + 1) === SLASH) {
+        inComment = false;
+        i++;
+      }
+      continue;
+    }
+
+    // Track string state
+    if (
+      (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) &&
+      (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)
+    ) {
+      if (inString === 0) {
+        inString = code;
+      } else if (inString === code) {
+        inString = 0;
+      }
+      continue;
+    }
+    if (inString !== 0) continue;
+
+    if (code === OPEN_BRACE) {
+      braceDepth++;
+    } else if (code === CLOSE_BRACE) {
+      braceDepth--;
+
+      if (braceDepth < 0) {
+        // Extra closing brace - skip to next semicolon or newline
+        let skipEnd = i + 1;
+        while (skipEnd < len) {
+          const skipCode = css.charCodeAt(skipEnd);
+          if (skipCode === SEMICOLON || skipCode === NEWLINE) break;
+          skipEnd++;
+        }
+        if (skipEnd < len && css.charCodeAt(skipEnd) === SEMICOLON) skipEnd++;
+
+        braceDepth = 0;
+        i = skipEnd - 1;
+        declStart = skipEnd;
+        continue;
+      }
+
+      if (braceDepth === 0) {
+        result += css.substring(declStart, i + 1);
+        declStart = i + 1;
+      }
+    } else if (code === SEMICOLON && braceDepth === 0) {
+      result += css.substring(declStart, i + 1);
+      declStart = i + 1;
+    }
+  }
+
+  // Add remaining valid content
+  if (declStart < len) {
+    const remaining = css.substring(declStart);
+    if (!hasUnbalancedBraces(remaining)) {
+      result += remaining;
+    }
+  }
+
+  return result;
+}
 
 export type ICreateStylisInstance = {
   options?: { namespace?: string | undefined; prefix?: boolean | undefined } | undefined;
@@ -43,7 +301,7 @@ export default function createStylisInstance(
 ) {
   let _componentId: string;
   let _selector: string;
-  let _selectorRegexp: RegExp;
+  let _selectorRegexp: RegExp | undefined;
 
   const selfReferenceReplacer = (match: string, offset: number, string: string) => {
     if (
@@ -75,6 +333,11 @@ export default function createStylisInstance(
    */
   const selfReferenceReplacementPlugin: stylis.Middleware = element => {
     if (element.type === stylis.RULESET && element.value.includes('&')) {
+      // Lazy RegExp creation: only allocate when self-reference pattern is actually used
+      if (!_selectorRegexp) {
+        _selectorRegexp = new RegExp(`\\${_selector}\\b`, 'g');
+      }
+
       (element.props as string[])[0] = element.props[0]
         // catch any hanging references that stylis missed
         .replace(AMP_REGEX, _selector)
@@ -95,6 +358,14 @@ export default function createStylisInstance(
 
   middlewares.push(stylis.stringify);
 
+  // Pre-build the middleware chain once to avoid allocating closures,
+  // arrays, and middleware wrappers on every stringifyRules call.
+  // Safe because JS is single-threaded and _stack is consumed before next call.
+  let _stack: string[] = [];
+  const _middleware = stylis.middleware(
+    middlewares.concat(stylis.rulesheet(value => _stack.push(value)))
+  );
+
   const stringifyRules: Stringifier = (
     css: string,
     selector = '',
@@ -109,9 +380,9 @@ export default function createStylisInstance(
     // these properties stay in sync with the current stylis run
     _componentId = componentId;
     _selector = selector;
-    _selectorRegexp = new RegExp(`\\${_selector}\\b`, 'g');
+    _selectorRegexp = undefined; // Reset for lazy creation per call
 
-    const flatCSS = css.replace(COMMENT_REGEX, '');
+    const flatCSS = sanitizeCSS(stripLineComments(css));
     let compiled = stylis.compile(
       prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS
     );
@@ -120,14 +391,10 @@ export default function createStylisInstance(
       compiled = recursivelySetNamepace(compiled, options.namespace);
     }
 
-    const stack: string[] = [];
+    _stack = [];
+    stylis.serialize(compiled, _middleware);
 
-    stylis.serialize(
-      compiled,
-      stylis.middleware(middlewares.concat(stylis.rulesheet(value => stack.push(value))))
-    );
-
-    return stack;
+    return _stack;
   };
 
   stringifyRules.hash = plugins.length

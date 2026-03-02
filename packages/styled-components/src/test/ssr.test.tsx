@@ -580,4 +580,145 @@ describe('ssr', () => {
       </style>
     `);
   });
+
+  describe('dynamic creation warnings', () => {
+    let warn: jest.SpyInstance;
+
+    beforeEach(() => {
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      warn.mockRestore();
+    });
+
+    it('should not warn for module-level components in SSR', () => {
+      const ModuleLevelHeading = styled.h1`
+        color: red;
+      `;
+
+      const sheet = new ServerStyleSheet();
+      renderToString(sheet.collectStyles(<ModuleLevelHeading>Hello</ModuleLevelHeading>));
+
+      expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/has been created dynamically/i));
+    });
+
+    it('should not warn for components with dynamic styles defined outside render', () => {
+      const DynamicHeading = styled.h1<{ $color: string }>`
+        color: ${props => props.$color};
+      `;
+
+      const sheet = new ServerStyleSheet();
+      renderToString(
+        sheet.collectStyles(
+          <React.Fragment>
+            <DynamicHeading $color="red">Hello</DynamicHeading>
+            <DynamicHeading $color="blue">World</DynamicHeading>
+          </React.Fragment>
+        )
+      );
+      const css = sheet.getStyleTags();
+
+      expect(css).toContain('red');
+      expect(css).toContain('blue');
+      expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/has been created dynamically/i));
+    });
+
+    it('should not warn for components with theme-based dynamic styles', () => {
+      const ThemedHeading = styled.h1`
+        color: ${props => (props.theme as Record<string, string>)?.color || 'black'};
+        font-size: ${props => (props.theme as Record<string, string>)?.fontSize || '16px'};
+      `;
+
+      const sheet = new ServerStyleSheet();
+      renderToString(sheet.collectStyles(<ThemedHeading>Themed</ThemedHeading>));
+
+      expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/has been created dynamically/i));
+    });
+
+    it('should not warn for extended components with dynamic styles', () => {
+      const BaseComponent = styled.div`
+        padding: 10px;
+      `;
+
+      const ExtendedComponent = styled(BaseComponent)<{ $active: boolean }>`
+        background: ${props => (props.$active ? 'green' : 'gray')};
+      `;
+
+      const sheet = new ServerStyleSheet();
+      renderToString(
+        sheet.collectStyles(
+          <React.Fragment>
+            <ExtendedComponent $active={true} />
+            <ExtendedComponent $active={false} />
+          </React.Fragment>
+        )
+      );
+
+      expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/has been created dynamically/i));
+    });
+
+    it('should not warn for components using interpolation functions', () => {
+      const getColor = (color: string) => `color: ${color};`;
+
+      const StyledDiv = styled.div<{ $color: string }>`
+        ${props => getColor(props.$color)}
+        padding: 10px;
+      `;
+
+      const sheet = new ServerStyleSheet();
+      renderToString(sheet.collectStyles(<StyledDiv $color="purple">Content</StyledDiv>));
+      const css = sheet.getStyleTags();
+
+      expect(css).toContain('purple');
+      expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/has been created dynamically/i));
+    });
+
+    it('should handle multiple dynamic style variations without warnings', () => {
+      interface CardProps {
+        $variant: 'primary' | 'secondary' | 'danger';
+        $size: 'small' | 'medium' | 'large';
+      }
+
+      const Card = styled.div<CardProps>`
+        background: ${props => {
+          switch (props.$variant) {
+            case 'primary':
+              return 'blue';
+            case 'secondary':
+              return 'gray';
+            case 'danger':
+              return 'red';
+          }
+        }};
+        padding: ${props => {
+          switch (props.$size) {
+            case 'small':
+              return '8px';
+            case 'medium':
+              return '16px';
+            case 'large':
+              return '24px';
+          }
+        }};
+      `;
+
+      const sheet = new ServerStyleSheet();
+      renderToString(
+        sheet.collectStyles(
+          <React.Fragment>
+            <Card $variant="primary" $size="small" />
+            <Card $variant="secondary" $size="medium" />
+            <Card $variant="danger" $size="large" />
+          </React.Fragment>
+        )
+      );
+      const css = sheet.getStyleTags();
+
+      expect(css).toContain('blue');
+      expect(css).toContain('gray');
+      expect(css).toContain('red');
+      expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/has been created dynamically/i));
+    });
+  });
 });

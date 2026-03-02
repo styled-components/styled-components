@@ -1,6 +1,7 @@
 import isPropValid from '@emotion/is-prop-valid';
-import React, { createElement, PropsWithoutRef, Ref, useDebugValue } from 'react';
-import { SC_VERSION } from '../constants';
+import React, { createElement, PropsWithoutRef, Ref } from 'react';
+import { IS_RSC, SC_VERSION } from '../constants';
+import { getGroupForId } from '../sheet/GroupIDAllocator';
 import type {
   AnyComponent,
   Attrs,
@@ -58,24 +59,22 @@ function generateId(
 function useInjectedStyle<T extends ExecutionContext>(
   componentStyle: ComponentStyle,
   resolvedAttrs: T
-) {
+): { className: string; css: string } {
   const ssc = useStyleSheetContext();
 
-  const className = componentStyle.generateAndInjectStyles(
-    resolvedAttrs,
-    ssc.styleSheet,
-    ssc.stylis
-  );
+  const result = componentStyle.generateAndInjectStyles(resolvedAttrs, ssc.styleSheet, ssc.stylis);
 
-  if (process.env.NODE_ENV !== 'production') useDebugValue(className);
+  if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
+    React.useDebugValue(result.className);
+  }
 
-  return className;
+  return result;
 }
 
 function resolveContext<Props extends BaseObject>(
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
   props: ExecutionProps & Props,
-  theme: DefaultTheme
+  theme: DefaultTheme | undefined
 ): React.HTMLAttributes<Element> & ExecutionContext & Props {
   const context: React.HTMLAttributes<Element> & ExecutionContext & Props = {
     ...props,
@@ -94,7 +93,7 @@ function resolveContext<Props extends BaseObject>(
       if (key === 'className') {
         context.className = joinStrings(context.className, resolvedAttrDef[key] as string);
       } else if (key === 'style') {
-        context.style = { ...context.style, ...resolvedAttrDef[key] };
+        context.style = { ...context.style, ...(resolvedAttrDef[key] as React.CSSProperties) };
       } else {
         // @ts-expect-error attrs can dynamically add arbitrary properties
         context[key] = resolvedAttrDef[key];
@@ -125,16 +124,19 @@ function useStyledComponentImpl<Props extends BaseObject>(
     target,
   } = forwardedComponent;
 
-  const contextTheme = React.useContext(ThemeContext);
+  const contextTheme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
   const ssc = useStyleSheetContext();
   const shouldForwardProp = forwardedComponent.shouldForwardProp || ssc.shouldForwardProp;
 
-  if (process.env.NODE_ENV !== 'production') useDebugValue(styledComponentId);
+  if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
+    React.useDebugValue(styledComponentId);
+  }
 
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme = determineTheme(props, contextTheme, defaultProps) || EMPTY_OBJECT;
+  const theme =
+    determineTheme(props, contextTheme, defaultProps) || (IS_RSC ? undefined : EMPTY_OBJECT);
 
   const context = resolveContext<Props>(componentAttrs, props, theme);
   const elementToBeCreated: WebTarget = context.as || target;
@@ -169,7 +171,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
     }
   }
 
-  const generatedClassName = useInjectedStyle(componentStyle, context);
+  const { className: generatedClassName, css } = useInjectedStyle(componentStyle, context);
 
   if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {
     forwardedComponent.warnTooManyClasses(generatedClassName);
@@ -198,7 +200,53 @@ function useStyledComponentImpl<Props extends BaseObject>(
     propsForElement.ref = forwardedRef;
   }
 
-  return createElement(elementToBeCreated, propsForElement);
+  const element = createElement(elementToBeCreated, propsForElement);
+
+  // RSC mode: emit a <style> tag per inheritance level so React 19 can
+  // deduplicate shared base styles across sibling components (#5663).
+  // Each tag's href includes registered names (CSS content hashes) so that
+  // dynamic prop variations produce distinct hrefs and aren't incorrectly deduped.
+  if (IS_RSC) {
+    const styleTags: React.ReactElement[] = [];
+    let cs: ComponentStyle | null | undefined = componentStyle;
+
+    while (cs) {
+      const groupCss = ssc.styleSheet.getTag().getGroup(getGroupForId(cs.componentId));
+      if (groupCss) {
+        // Build content-aware href from the registered names for this group.
+        // Names are generated from CSS content hashes, so identical CSS always
+        // produces the same href (enabling dedup) while different CSS produces
+        // different hrefs (preventing incorrect dedup of dynamic variants).
+        let nameKey = '';
+        const names = ssc.styleSheet.names.get(cs.componentId);
+        if (names) {
+          names.forEach(n => {
+            if (nameKey) nameKey += '_';
+            nameKey += n;
+          });
+        }
+
+        styleTags.push(
+          React.createElement('style', {
+            key: `sc-${cs.componentId}`,
+            precedence: 'styled-components',
+            href: `sc-${cs.componentId}-${nameKey}`,
+            children: groupCss,
+          })
+        );
+      }
+      cs = cs.baseStyle;
+    }
+
+    if (styleTags.length) {
+      // Reverse so base styles appear before extended styles in the document,
+      // matching GroupedTag's group ordering for correct CSS specificity.
+      styleTags.reverse();
+      return React.createElement(React.Fragment, null, ...styleTags, element);
+    }
+  }
+
+  return element;
 }
 
 function createStyledComponent<

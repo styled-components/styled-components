@@ -11,8 +11,7 @@
   <br />
   <br />
   <a href="https://www.npmjs.com/package/styled-components"><img src="https://www.styled-components.com/proxy/downloads.svg" alt="downloads: 600k/month"></a>
-  <a href="#backers" alt="sponsors on Open Collective"><img src="https://opencollective.com/styled-components/backers/badge.svg" /></a> <a href="#sponsors" alt="Sponsors on Open Collective"><img src="https://opencollective.com/styled-components/sponsors/badge.svg" /></a> <a href="https://discord.gg/hfGUrbrxaU">
-        <img alt="Discord" src="https://img.shields.io/discord/818449605409767454?logo=discord" /></a>
+  <a href="#backers" alt="sponsors on Open Collective"><img src="https://opencollective.com/styled-components/backers/badge.svg" /></a> <a href="#sponsors" alt="Sponsors on Open Collective"><img src="https://opencollective.com/styled-components/sponsors/badge.svg" /></a> 
   <a href="https://bundlephobia.com/result?p=styled-components" title="styled-components latest minified+gzip size"><img src="https://badgen.net/bundlephobia/minzip/styled-components" alt="gzip size"></a>
   <a href="#alternative-installation-methods"><img src="https://img.shields.io/badge/module%20formats-umd%2C%20cjs%2C%20esm-green.svg" alt="module formats: umd, cjs, esm"></a>
   <a href="https://codecov.io/gh/styled-components/styled-components"><img src="https://codecov.io/gh/styled-components/styled-components/coverage.svg?branch=main" alt="Code Coverage"></a>
@@ -46,7 +45,7 @@ const Button = styled.button`
 `;
 ```
 
-`styled-components` is compatible with both React (for web) and React Native – meaning it's the perfect choice even for truly universal apps! See the [documentation about React Native](https://www.styled-components.com/docs/basics#react-native) for more information.
+`styled-components` is compatible with both React (for web) and React Native – meaning it's the perfect choice even for truly universal apps! It also supports React Server Components (RSC) through automatic runtime detection. See the [documentation about React Native](https://www.styled-components.com/docs/basics#react-native) for more information.
 
 _Supported by [Front End Center](https://frontend.center). Thank you for making this possible!_
 
@@ -62,6 +61,7 @@ Quicklinks to some of the most-visited pages:
 - [API Reference](https://styled-components.com/docs/api)
 - [Theming](https://www.styled-components.com/docs/advanced#theming)
 - [Server-side rendering](https://www.styled-components.com/docs/advanced#server-side-rendering)
+- [React Server Components](https://www.styled-components.com/docs/advanced#react-server-components) (RSC support)
 - [Tagged Template Literals explained](https://www.styled-components.com/docs/advanced#tagged-template-literals)
 
 ---

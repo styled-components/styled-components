@@ -39,6 +39,11 @@ const defaultTypescriptPlugin =
     exclude: ['**/*.test.ts', '**/*.test.tsx', 'dist', 'src/test/types.tsx'],
     outputToFilesystem: true,
     tsconfig: './tsconfig.json',
+    compilerOptions: {
+      noEmit: false,
+      declaration: true,
+      declarationMap: false,
+    }
   });
 
 const nativeTypescriptPlugin =
@@ -50,7 +55,10 @@ const nativeTypescriptPlugin =
     outputToFilesystem: true,
     tsconfig: './tsconfig.json',
     compilerOptions: {
-      outDir: 'native/dist'
+      outDir: 'native/dist',
+      noEmit: false,
+      declaration: true,
+      declarationMap: false,
     }
   });
 
@@ -133,6 +141,10 @@ const standaloneBaseConfig = {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
+    }),
+    replace({
+      delimiters: ['', ''],
+      "typeof React.createContext === 'undefined'": JSON.stringify(false),
     })
   ),
   treeshake: {
@@ -187,6 +199,10 @@ const browserConfig = {
     replace({
       __SERVER__: JSON.stringify(false),
     }),
+    replace({
+      delimiters: ['', ''],
+      "typeof React.createContext === 'undefined'": JSON.stringify(false),
+    }),
     minifierPlugin
   ),
 };
@@ -205,6 +221,10 @@ const nativeConfig = {
   plugins: [
     nativeTypescriptPlugin,
     ...commonPlugins,
+    replace({
+      delimiters: ['', ''],
+      "typeof React.createContext === 'undefined'": JSON.stringify(false),
+    }),
     minifierPlugin
   ],
 };

@@ -1,5 +1,6 @@
 import { SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
+import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { ExecutionContext, RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
@@ -40,9 +41,9 @@ export default class ComponentStyle {
     executionContext: ExecutionContext,
     styleSheet: StyleSheet,
     stylis: Stringifier
-  ): string {
+  ): { className: string; css: string } {
     let names = this.baseStyle
-      ? this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis)
+      ? this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis).className
       : '';
 
     // force dynamic classnames if user-supplied stylis plugins are in use
@@ -79,7 +80,9 @@ export default class ComponentStyle {
             flatten(partRule, executionContext, styleSheet, stylis) as string[]
           );
           // The same value can switch positions in the array, so we include "i" in the hash.
-          dynamicHash = phash(dynamicHash, partString + i);
+          // Split into two phash calls to avoid temp string allocation (partString + i).
+          // phash processes right-to-left, so phash(h, a+b) === phash(phash(h, b), a).
+          dynamicHash = phash(phash(dynamicHash, String(i)), partString);
           css += partString;
         }
       }
@@ -88,17 +91,20 @@ export default class ComponentStyle {
         const name = generateName(dynamicHash >>> 0);
 
         if (!styleSheet.hasNameForId(this.componentId, name)) {
-          styleSheet.insertRules(
-            this.componentId,
-            name,
-            stylis(css, `.${name}`, undefined, this.componentId)
-          );
+          const cssFormatted = stylis(css, `.${name}`, undefined, this.componentId);
+          styleSheet.insertRules(this.componentId, name, cssFormatted);
         }
 
         names = joinStrings(names, name);
       }
     }
 
-    return names;
+    // Retrieve CSS from Tag for RSC rendering
+    const generatedCSS =
+      typeof window === 'undefined'
+        ? styleSheet.getTag().getGroup(getGroupForId(this.componentId))
+        : '';
+
+    return { className: names, css: generatedCSS };
   }
 }

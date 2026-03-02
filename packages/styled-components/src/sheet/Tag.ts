@@ -108,7 +108,11 @@ export const VirtualTag = class VirtualTag implements Tag {
 
   insertRule(index: number, rule: string) {
     if (index <= this.length) {
-      this.rules.splice(index, 0, rule);
+      if (index === this.length) {
+        this.rules.push(rule);
+      } else {
+        this.rules.splice(index, 0, rule);
+      }
       this.length++;
       return true;
     } else {

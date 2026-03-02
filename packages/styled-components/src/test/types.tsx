@@ -55,13 +55,13 @@ const Component2 = () => {
 const Example = styled.div.attrs({
   title: 'test',
 })`
-  margin-top: ${props => props.theme.spacing};
+  margin-top: ${props => props.theme?.spacing};
 `;
 
 const Example2 = styled.div.attrs({
   // title: "test" // This works for some reason
 })`
-  margin-top: ${props => props.theme.spacing};
+  margin-top: ${props => props.theme?.spacing};
 `;
 
 /**
@@ -326,16 +326,16 @@ const UnstyledComponentVeryLargeUnion = (_props: VeryLargeUnionProps) => {
 
 const StyledComponentVeryLargeUnion = styled(UnstyledComponentVeryLargeUnion)`
   // Multiple template strings helps illustrate possible perf issue
-  color: ${props => props.theme.waz};
-  color: ${props => props.theme.waz};
-  color: ${props => props.theme.waz};
-  color: ${props => props.theme.waz};
-  color: ${props => props.theme.waz};
-  color: ${props => props.theme.waz};
-  color: ${props => props.theme.waz};
-  color: ${props => props.theme.waz};
-  color: ${props => props.theme.waz};
-  color: ${props => props.theme.waz};
+  color: ${props => props.theme?.waz || 'black'};
+  color: ${props => props.theme?.waz || 'black'};
+  color: ${props => props.theme?.waz || 'black'};
+  color: ${props => props.theme?.waz || 'black'};
+  color: ${props => props.theme?.waz || 'black'};
+  color: ${props => props.theme?.waz || 'black'};
+  color: ${props => props.theme?.waz || 'black'};
+  color: ${props => props.theme?.waz || 'black'};
+  color: ${props => props.theme?.waz || 'black'};
+  color: ${props => props.theme?.waz || 'black'};
 `;
 
 // Can provide div props into attrs
@@ -488,6 +488,24 @@ const App = () => {
 const DivWitCSSVariable = styled.div.attrs(() => ({
   style: { '--dim': 'yes' },
 }))``;
+
+const DivWithMultipleCSSVariables = styled.div.attrs(() => ({
+  style: {
+    '--primary-color': '#ff0000',
+    '--spacing': 16,
+    '--opacity': 0.5,
+    color: 'blue',
+  },
+}))``;
+
+const TestCSSVariableUsage = () => {
+  return (
+    <>
+      <DivWitCSSVariable style={{ '--another-var': 'test' }} />
+      <DivWithMultipleCSSVariables style={{ '--custom': 'value', padding: 10 }} />
+    </>
+  );
+};
 
 /**
  * Styled object with nested selectors without CSSProperties

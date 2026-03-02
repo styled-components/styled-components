@@ -1,6 +1,6 @@
 {
   "include": ["src"],
-  "exclude": ["dist", ".rollup.cache", "src/test/test.d.ts"],
+  "exclude": ["dist", ".rollup.cache", "**/*.test.ts", "**/*.test.tsx", "src/test"],
   "compilerOptions": {
     "tsBuildInfoFile": "local.tsbuildinfo",
     "outDir": "dist",

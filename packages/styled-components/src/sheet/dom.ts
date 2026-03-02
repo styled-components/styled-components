@@ -36,8 +36,11 @@ export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
     return tag.sheet as any as CSSStyleSheet;
   }
 
-  // Avoid Firefox quirk where the style element might not have a sheet property
-  const { styleSheets } = document;
+  // Avoid Firefox quirk where the style element might not have a sheet property.
+  // Use the tag's root node to find styleSheets — document.styleSheets doesn't
+  // include sheets inside shadow roots.
+  const root = tag.getRootNode() as Document | ShadowRoot;
+  const styleSheets = root.styleSheets ?? document.styleSheets;
   for (let i = 0, l = styleSheets.length; i < l; i++) {
     const sheet = styleSheets[i];
     if (sheet.ownerNode === tag) {
@@ -46,4 +49,13 @@ export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
   }
 
   throw styledError(17);
+};
+
+/** Remove a GlobalStyle's SSR-rendered inline style tag(s) from the DOM */
+export const removeGlobalStyleTag = (componentId: string, target?: InsertionTarget): void => {
+  if (typeof document === 'undefined') return;
+
+  const container = target ?? document;
+  const styleTags = container.querySelectorAll(`style[data-styled-global="${componentId}"]`);
+  styleTags.forEach(tag => tag.remove());
 };

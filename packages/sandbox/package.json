@@ -8,14 +8,18 @@
     "start": "next start"
   },
   "devDependencies": {
-    "next": "12.3.4"
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "next": "^16.1.1",
+    "typescript": "^5"
   },
   "dependencies": {
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "styled-components": "workspace:*"
   },
   "engines": {
-    "node": ">= 14"
+    "node": ">= 18"
   }
 }

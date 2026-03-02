@@ -153,10 +153,10 @@ describe('theming', () => {
 
   it('should only inject props.theme into styled components within its child component tree', () => {
     const Comp1 = styled.div`
-      color: ${props => props.theme.color || 'red'};
+      color: ${props => props.theme?.color || 'red'};
     `;
     const Comp2 = styled.div`
-      color: ${props => props.theme.color || 'red'};
+      color: ${props => props.theme?.color || 'red'};
     `;
 
     const theme = { color: 'black' };
@@ -531,7 +531,7 @@ describe('theming', () => {
     }
 
     const CompWithTheme = withTheme(Comp);
-    const ref = React.createRef<typeof Comp>();
+    const ref = React.createRef<InstanceType<typeof Comp>>();
 
     render(
       <ThemeProvider theme={{}}>

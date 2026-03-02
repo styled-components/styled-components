@@ -1,14 +1,13 @@
 import React from 'react';
 import { type PipeableStream } from 'react-dom/server';
-import type * as streamInternal from 'stream';
-import { IS_BROWSER, SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
+import { SC_ATTR, SC_ATTR_VERSION, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
 import styledError from '../utils/error';
+
+declare const __SERVER__: boolean;
 import { joinStringArray } from '../utils/joinStrings';
 import getNonce from '../utils/nonce';
 import { StyleSheetManager } from './StyleSheetManager';
-
-declare const __SERVER__: boolean;
 
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 
@@ -76,10 +75,8 @@ export default class ServerStyleSheet {
     return [<style {...props} key="sc-0-0" />];
   };
 
-  interleaveWithNodeStream(
-    input: NodeJS.ReadableStream | PipeableStream
-  ): streamInternal.Transform {
-    if (!__SERVER__ || IS_BROWSER) {
+  interleaveWithNodeStream(input: NodeJS.ReadableStream | PipeableStream): NodeJS.ReadWriteStream {
+    if (!__SERVER__) {
       throw styledError(3);
     } else if (this.sealed) {
       throw styledError(2);
@@ -90,7 +87,7 @@ export default class ServerStyleSheet {
     const { Transform } = require('stream');
     const { instance: sheet, _emitSheetCSS } = this;
 
-    const transformer: streamInternal.Transform = new Transform({
+    const transformer: NodeJS.ReadWriteStream = new Transform({
       transform: function appendStyleChunks(
         chunk: string,
         /* encoding */

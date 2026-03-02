@@ -33,6 +33,22 @@ describe(`createGlobalStyle`, () => {
       `"[data-test-inject]{ color:red; } data-styled.g1[id="sc-global-a1"]{ content:"sc-global-a1,"} "`
     );
   });
+
+  it(`should not emit useLayoutEffect warning during SSR`, () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const sheet = new ServerStyleSheet();
+    const Component = createGlobalStyle`body { background: red; }`;
+    context.renderToString(sheet.collectStyles(<Component />));
+
+    // Check that useLayoutEffect warning was not emitted
+    const useLayoutEffectWarning = consoleErrorSpy.mock.calls.find(call =>
+      call.some(arg => typeof arg === 'string' && arg.includes('useLayoutEffect'))
+    );
+    expect(useLayoutEffectWarning).toBeUndefined();
+
+    consoleErrorSpy.mockRestore();
+  });
 });
 
 function stripOuterHTML(html: string) {

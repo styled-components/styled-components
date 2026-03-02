@@ -1,5 +1,5 @@
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION } from '../../constants';
-import { makeStyleTag } from '../dom';
+import { getSheet, makeStyleTag } from '../dom';
 
 describe('makeStyleTag', () => {
   it('creates a style element with the SC attributes', () => {
@@ -30,5 +30,26 @@ describe('makeStyleTag', () => {
     expect(children[1].getAttribute('data-index')).toBe('2');
     expect(children[2]).toBe(element);
     expect(children[3].getAttribute('data-index')).toBe('3');
+  });
+});
+
+describe('getSheet', () => {
+  it('returns the CSSStyleSheet for a style element in the document', () => {
+    const style = makeStyleTag();
+    const sheet = getSheet(style);
+    expect(sheet).toBeInstanceOf(CSSStyleSheet);
+    style.remove();
+  });
+
+  it('creates a style element inside a Shadow DOM', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const shadowRoot = host.attachShadow({ mode: 'open' });
+
+    const style = makeStyleTag(shadowRoot);
+    expect(style.parentNode).toBe(shadowRoot);
+
+    // Cleanup
+    document.body.removeChild(host);
   });
 });

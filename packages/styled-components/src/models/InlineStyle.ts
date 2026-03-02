@@ -25,9 +25,7 @@ export const resetStyleCache = (): void => {
  * InlineStyle takes arbitrary CSS and generates a flat object
  */
 export default function makeInlineStyleClass<Props extends object>(styleSheet: StyleSheet) {
-  const InlineStyle: IInlineStyleConstructor<Props> = class InlineStyle
-    implements IInlineStyle<Props>
-  {
+  const InlineStyle: IInlineStyleConstructor<Props> = class InlineStyle implements IInlineStyle<Props> {
     rules: RuleSet<Props>;
 
     constructor(rules: RuleSet<Props>) {

@@ -4,7 +4,7 @@ import { EMPTY_OBJECT } from '../utils/empties';
 import { setToString } from '../utils/setToString';
 import { makeGroupedTag } from './GroupedTag';
 import { getGroupForId } from './GroupIDAllocator';
-import { outputSheet, rehydrateSheet } from './Rehydration';
+import { getRehydrationContainer, outputSheet, rehydrateSheet } from './Rehydration';
 import { makeTag } from './Tag';
 import { GroupedTag, Sheet, SheetOptions } from './types';
 
@@ -69,11 +69,25 @@ export default class StyleSheet implements Sheet {
   }
 
   reconstructWithOptions(options: SheetConstructorArgs, withNames = true) {
-    return new StyleSheet(
+    const newSheet = new StyleSheet(
       { ...this.options, ...options },
       this.gs,
       (withNames && this.names) || undefined
     );
+
+    // If we're reconstructing with a new target on the client, check if the container changed
+    // This handles the case where StyleSheetManager's target prop changes (e.g., from undefined to shadowRoot)
+    // We only rehydrate if the container (Document or ShadowRoot) actually changes
+    if (!this.server && IS_BROWSER && options.target !== this.options.target) {
+      const oldContainer = getRehydrationContainer(this.options.target);
+      const newContainer = getRehydrationContainer(options.target);
+
+      if (oldContainer !== newContainer) {
+        rehydrateSheet(newSheet);
+      }
+    }
+
+    return newSheet;
   }
 
   allocateGSInstance(id: string) {
@@ -87,24 +101,23 @@ export default class StyleSheet implements Sheet {
 
   /** Check whether a name is known for caching */
   hasNameForId(id: string, name: string): boolean {
-    return this.names.has(id) && (this.names.get(id) as any).has(name);
+    return this.names.get(id)?.has(name) ?? false;
   }
 
   /** Mark a group's name as known for caching */
   registerName(id: string, name: string) {
     getGroupForId(id);
 
-    if (!this.names.has(id)) {
-      const groupNames = new Set<string>();
-      groupNames.add(name);
-      this.names.set(id, groupNames);
+    const existing = this.names.get(id);
+    if (existing) {
+      existing.add(name);
     } else {
-      (this.names.get(id) as any).add(name);
+      this.names.set(id, new Set([name]));
     }
   }
 
   /** Insert new rules which also marks the name as known */
-  insertRules(id: string, name: string, rules: string | string[]) {
+  insertRules(id: string, name: string, rules: string[]) {
     this.registerName(id, name);
     this.getTag().insertRules(getGroupForId(id), rules);
   }

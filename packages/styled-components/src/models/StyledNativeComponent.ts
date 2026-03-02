@@ -1,4 +1,4 @@
-import React, { createElement, Ref, useMemo } from 'react';
+import React, { createElement, Ref } from 'react';
 import type {
   Attrs,
   BaseObject,
@@ -64,7 +64,7 @@ function useStyledComponentImpl<Props extends StyledComponentImplProps>(
     target,
   } = forwardedComponent;
 
-  const contextTheme = React.useContext(ThemeContext);
+  const contextTheme = React.useContext ? React.useContext(ThemeContext) : undefined;
 
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
@@ -91,15 +91,21 @@ function useStyledComponentImpl<Props extends StyledComponentImplProps>(
     }
   }
 
-  propsForElement.style = useMemo(
-    () =>
-      isFunction(props.style)
-        ? (state: any) => [generatedStyles].concat(props.style(state))
-        : props.style
-          ? [generatedStyles].concat(props.style)
-          : generatedStyles,
-    [props.style, generatedStyles]
-  );
+  propsForElement.style = React.useMemo
+    ? React.useMemo(
+        () =>
+          isFunction(props.style)
+            ? (state: any) => [generatedStyles].concat(props.style(state))
+            : props.style
+              ? [generatedStyles].concat(props.style)
+              : generatedStyles,
+        [props.style, generatedStyles]
+      )
+    : isFunction(props.style)
+      ? (state: any) => [generatedStyles].concat(props.style(state))
+      : props.style
+        ? [generatedStyles].concat(props.style)
+        : generatedStyles;
   // forwardedRef is coming from React.forwardRef.
   // But it might not exist. Since React 19 handles `ref` like a prop, it only define it if there is a value.
   // We don't want to inject an empty ref.
