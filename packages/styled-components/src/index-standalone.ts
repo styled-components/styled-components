@@ -12,3 +12,4 @@ for (const key in secondary) {
 }
 
 export default styled;
+export { styled };
