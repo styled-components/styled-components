@@ -232,7 +232,8 @@ export interface PolymorphicComponent<
     AsTarget extends StyledTarget<R> | void = void,
     ForwardedAsTarget extends StyledTarget<R> | void = void,
   >(
-    props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget>
+    props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget> &
+      React.RefAttributes<any>
   ): React.JSX.Element;
 }
 
@@ -343,6 +344,8 @@ export type CSSProp = Interpolation<any>;
 // Prevents TypeScript from inferring generic argument
 export type NoInfer<T> = [T][T extends any ? 0 : never];
 
-export type Substitute<A extends BaseObject, B extends BaseObject> = FastOmit<A, keyof B> & B;
+export type Substitute<A extends BaseObject, B extends BaseObject> = keyof B extends never
+  ? A
+  : FastOmit<A, keyof B> & B;
 
 export type InsertionTarget = HTMLElement | ShadowRoot;

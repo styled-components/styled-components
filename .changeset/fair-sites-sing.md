@@ -1,5 +1,5 @@
 ---
-'@xavescor/styled-component': patch
+'styled-components': patch
 ---
 
-expose `as` and `forwardedAs` props in React.ComponentProps for the backward compat
+Expose `as` and `forwardedAs` props in `React.ComponentProps` extraction for styled components
