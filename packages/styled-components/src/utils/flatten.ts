@@ -1,5 +1,4 @@
-import Keyframes from '../models/Keyframes';
-import StyleSheet from '../sheet';
+import type StyleSheet from '../sheet';
 import {
   AnyComponent,
   Dict,
@@ -14,6 +13,7 @@ import addUnitIfNeeded from './addUnitIfNeeded';
 import getComponentName from './getComponentName';
 import hyphenate from './hyphenateStyleName';
 import isFunction from './isFunction';
+import isKeyframes from './isKeyframes';
 import isPlainObject from './isPlainObject';
 import isStatelessFunction from './isStatelessFunction';
 import isStyledComponent from './isStyledComponent';
@@ -75,7 +75,7 @@ export default function flatten<Props extends object>(
         process.env.NODE_ENV !== 'production' &&
         typeof fnResult === 'object' &&
         !Array.isArray(fnResult) &&
-        !(fnResult instanceof Keyframes) &&
+        !isKeyframes(fnResult) &&
         !isPlainObject(fnResult) &&
         fnResult !== null
       ) {
@@ -93,7 +93,7 @@ export default function flatten<Props extends object>(
     }
   }
 
-  if (chunk instanceof Keyframes) {
+  if (isKeyframes(chunk)) {
     if (styleSheet) {
       chunk.inject(styleSheet, stylisInstance);
       result.push(chunk.getName(stylisInstance));

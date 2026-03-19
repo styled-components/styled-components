@@ -1,10 +1,13 @@
 import StyleSheet from '../sheet';
 import { Keyframes as KeyframesType, Stringifier } from '../types';
 import styledError from '../utils/error';
+import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { setToString } from '../utils/setToString';
 import { mainStylis } from './StyleSheetManager';
 
 export default class Keyframes implements KeyframesType {
+  readonly [KEYFRAMES_SYMBOL] = true as const;
+
   id: string;
   name: string;
   rules: string;
