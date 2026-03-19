@@ -31,10 +31,13 @@ describe('styled RSC mode', () => {
   });
 
   describe('style tag href attribute (#5663)', () => {
-    // React 19 uses href on <style precedence="..."> for deduplication.
-    // Spaces in href cause: console warning, hydration failure, and style loss.
+    // In dev mode, precedence/href are omitted so React treats style tags as
+    // regular elements (prevents HMR stale tag accumulation, #5670).
+    // These tests verify the style content is still correct in dev mode.
+    // Production href formatting (no spaces, unique per variant) is validated
+    // by the production codepath — can't test here since NODE_ENV=test.
 
-    it('should not contain spaces in href for a single-level component', () => {
+    it('should emit style content for a single-level component', () => {
       const Card = styled.div`
         display: flex;
         padding: 16px;
@@ -42,16 +45,16 @@ describe('styled RSC mode', () => {
       `;
 
       const html = ReactDOMServer.renderToString(<Card />);
-      const hrefs = extractHrefs(html);
+      const css = extractStyleContents(html);
 
-      expect(hrefs.length).toBeGreaterThan(0);
-      for (const href of hrefs) {
-        expect(href).not.toMatch(/\s/);
-      }
+      expect(css).toContain('display:flex');
+      expect(css).toContain('padding:16px');
+      expect(css).toContain('border-radius:8px');
+      // Dev mode: no resource attributes
+      expect(extractHrefs(html)).toHaveLength(0);
     });
 
-    it('should not contain spaces in href when extending a styled component', () => {
-      // Reproduces the exact pattern from #5663: styled(IconWrapper)`...`
+    it('should emit style content when extending a styled component', () => {
       const IconWrapper = styled.svg`
         width: 24px;
         height: 24px;
@@ -63,15 +66,15 @@ describe('styled RSC mode', () => {
       `;
 
       const html = ReactDOMServer.renderToString(<CustomIcon viewBox="0 0 24 24" />);
-      const hrefs = extractHrefs(html);
+      const css = extractStyleContents(html);
 
-      expect(hrefs.length).toBeGreaterThan(0);
-      for (const href of hrefs) {
-        expect(href).not.toMatch(/\s/);
-      }
+      expect(css).toContain('width:24px');
+      expect(css).toContain('height:24px');
+      expect(css).toContain('fill:currentColor');
+      expect(extractHrefs(html)).toHaveLength(0);
     });
 
-    it('should not contain spaces in href across a three-level inheritance chain', () => {
+    it('should emit style content across a three-level inheritance chain', () => {
       const BaseLayout = styled.div`
         display: flex;
         box-sizing: border-box;
@@ -86,15 +89,15 @@ describe('styled RSC mode', () => {
       `;
 
       const html = ReactDOMServer.renderToString(<NarrowContainer />);
-      const hrefs = extractHrefs(html);
+      const css = extractStyleContents(html);
 
-      expect(hrefs.length).toBeGreaterThan(0);
-      for (const href of hrefs) {
-        expect(href).not.toMatch(/\s/);
-      }
+      expect(css).toContain('display:flex');
+      expect(css).toContain('max-width:1200px');
+      expect(css).toContain('max-width:800px');
+      expect(extractHrefs(html)).toHaveLength(0);
     });
 
-    it('should not contain spaces in href with dynamic interpolations in extended components', () => {
+    it('should emit style content with dynamic interpolations in extended components', () => {
       const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
         padding: 8px 16px;
         border: none;
@@ -108,15 +111,14 @@ describe('styled RSC mode', () => {
       `;
 
       const html = ReactDOMServer.renderToString(<IconButton $variant="primary" />);
-      const hrefs = extractHrefs(html);
+      const css = extractStyleContents(html);
 
-      expect(hrefs.length).toBeGreaterThan(0);
-      for (const href of hrefs) {
-        expect(href).not.toMatch(/\s/);
-      }
+      expect(css).toContain('background:#007bff');
+      expect(css).toContain('inline-flex');
+      expect(extractHrefs(html)).toHaveLength(0);
     });
 
-    it('should produce unique hrefs for different components sharing the same base', () => {
+    it('should emit separate style content for different components sharing the same base', () => {
       const Base = styled.div`
         display: block;
       `;
@@ -130,17 +132,13 @@ describe('styled RSC mode', () => {
       const htmlA = ReactDOMServer.renderToString(<VariantA />);
       const htmlB = ReactDOMServer.renderToString(<VariantB />);
 
-      const hrefsA = extractHrefs(htmlA);
-      const hrefsB = extractHrefs(htmlB);
+      const cssA = extractStyleContents(htmlA);
+      const cssB = extractStyleContents(htmlB);
 
-      // Each should have at least one href
-      expect(hrefsA.length).toBeGreaterThan(0);
-      expect(hrefsB.length).toBeGreaterThan(0);
-
-      // Neither should have spaces
-      for (const href of [...hrefsA, ...hrefsB]) {
-        expect(href).not.toMatch(/\s/);
-      }
+      expect(cssA).toContain('display:block');
+      expect(cssA).toContain('color:red');
+      expect(cssB).toContain('display:block');
+      expect(cssB).toContain('color:blue');
     });
   });
 
@@ -395,54 +393,26 @@ describe('styled RSC mode', () => {
       }
     });
 
-    it('should use stable hrefs in development for HMR compatibility', () => {
-      // In development, hrefs should be stable (componentId only, no content hash).
-      // This ensures React 19 replaces style tags on HMR updates instead of
-      // accumulating new permanent resource tags with different hrefs.
+    it('should omit precedence and href in development for HMR compatibility', () => {
+      // In development, style tags should NOT have precedence or href so React
+      // treats them as regular elements that unmount on re-render. This prevents
+      // stale style tags from accumulating during HMR (#5670).
       const Comp = styled.div`
         color: red;
       `;
 
       const html = ReactDOMServer.renderToString(<Comp />);
+
+      // Should have style tags but no hrefs (dev mode)
+      expect(html).toContain('<style');
       const hrefs = extractHrefs(html);
-
-      expect(hrefs.length).toBeGreaterThan(0);
-      for (const href of hrefs) {
-        // In dev mode (test), hrefs should NOT contain underscores (name separators)
-        // since content hashes are excluded. Format: "sc-{componentId}"
-        expect(href).toMatch(/^sc-[a-zA-Z0-9-]+$/);
-        expect(href).not.toContain('_');
-      }
+      expect(hrefs).toHaveLength(0);
+      expect(html).not.toContain('data-precedence');
     });
 
-    it('should produce the same href when CSS content changes (simulating HMR)', () => {
-      // Simulates what happens during HMR: the same componentId renders with
-      // different CSS content. In dev mode, the href should be stable so React
-      // replaces the old tag instead of creating a new one.
-      const CompV1 = styled.div`
-        color: red;
-      `;
-
-      const html1 = ReactDOMServer.renderToString(<CompV1 />);
-      const hrefs1 = extractHrefs(html1);
-
-      // Reset sheet state to simulate HMR re-evaluation
-      mainSheet.clearTag();
-      mainSheet.names = new Map();
-
-      // Re-render produces different CSS but same component structure
-      const html2 = ReactDOMServer.renderToString(<CompV1 />);
-      const hrefs2 = extractHrefs(html2);
-
-      // In dev mode, hrefs should be identical (stable by componentId)
-      expect(hrefs1).toEqual(hrefs2);
-    });
-
-    it('should use content-aware hrefs in production for dynamic variant dedup', () => {
-      // This test validates that in production (when NODE_ENV is set),
-      // hrefs include content hashes so dynamic variants aren't incorrectly deduped.
-      // We can't change NODE_ENV mid-test, so we just verify the current dev behavior
-      // uses stable hrefs (tested above) and trust the production codepath from code review.
+    it('should not deduplicate dynamic variants in development', () => {
+      // Without precedence/href, React treats each style tag as a regular element.
+      // Both variants render their own style tag independently — no dedup issues.
       const DynamicComp = styled.div<{ $color: string }>`
         color: ${p => p.$color};
       `;
@@ -450,12 +420,12 @@ describe('styled RSC mode', () => {
       const htmlRed = ReactDOMServer.renderToString(<DynamicComp $color="red" />);
       const htmlBlue = ReactDOMServer.renderToString(<DynamicComp $color="blue" />);
 
-      const hrefsRed = extractHrefs(htmlRed);
-      const hrefsBlue = extractHrefs(htmlBlue);
-
-      // In dev mode, both should have the same stable href
-      // (dynamic variant dedup is an acceptable tradeoff in dev)
-      expect(hrefsRed).toEqual(hrefsBlue);
+      // Both should render style tags with their respective CSS
+      expect(htmlRed).toContain('color:red');
+      expect(htmlBlue).toContain('color:blue');
+      // Neither should have resource attributes
+      expect(extractHrefs(htmlRed)).toHaveLength(0);
+      expect(extractHrefs(htmlBlue)).toHaveLength(0);
     });
 
     it('should emit base styles before extended styles for correct CSS override order', () => {

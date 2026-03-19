@@ -215,35 +215,32 @@ function useStyledComponentImpl<Props extends BaseObject>(
     while (cs) {
       const groupCss = ssc.styleSheet.getTag().getGroup(getGroupForId(cs.componentId));
       if (groupCss) {
-        // Build content-aware href from the registered names for this group.
-        // Names are generated from CSS content hashes, so identical CSS always
-        // produces the same href (enabling dedup) while different CSS produces
-        // different hrefs (preventing incorrect dedup of dynamic variants).
-        let nameKey = '';
-        const names = ssc.styleSheet.names.get(cs.componentId);
-        if (names) {
-          names.forEach(n => {
-            if (nameKey) nameKey += '_';
-            nameKey += n;
-          });
+        // In production, use precedence/href so React 19 can deduplicate
+        // identical CSS across siblings while keeping dynamic variants separate.
+        // In development, omit precedence/href so React treats <style> as a
+        // regular element that unmounts on re-render — preventing stale style
+        // tag accumulation during HMR (#5670).
+        let resourceProps: Record<string, string> | undefined;
+        if (process.env.NODE_ENV === 'production') {
+          // Build content-aware href from registered names (CSS content hashes).
+          let nameKey = '';
+          const names = ssc.styleSheet.names.get(cs.componentId);
+          if (names) {
+            names.forEach(n => {
+              if (nameKey) nameKey += '_';
+              nameKey += n;
+            });
+          }
+          resourceProps = {
+            precedence: 'styled-components',
+            href: `sc-${cs.componentId}-${nameKey}`,
+          };
         }
-
-        // In production, use content-aware hrefs so React 19 can dedup identical
-        // CSS across siblings while keeping dynamic variants separate.
-        // In development, use stable hrefs (componentId only) so that HMR style
-        // changes replace the old tag instead of accumulating new permanent ones.
-        // This means dynamic variants may incorrectly dedup in dev, but that's
-        // an acceptable tradeoff for correct HMR behavior.
-        const href =
-          process.env.NODE_ENV === 'production'
-            ? `sc-${cs.componentId}-${nameKey}`
-            : `sc-${cs.componentId}`;
 
         styleTags.push(
           React.createElement('style', {
             key: `sc-${cs.componentId}`,
-            precedence: 'styled-components',
-            href,
+            ...resourceProps,
             children: groupCss,
           })
         );
