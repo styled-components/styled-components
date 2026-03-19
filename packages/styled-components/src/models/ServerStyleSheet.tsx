@@ -15,15 +15,15 @@ export default class ServerStyleSheet {
   instance: StyleSheet;
   sealed: boolean;
 
-  constructor() {
-    this.instance = new StyleSheet({ isServer: true });
+  constructor({ nonce }: { nonce?: string } = {}) {
+    this.instance = new StyleSheet({ isServer: true, nonce });
     this.sealed = false;
   }
 
   _emitSheetCSS = (): string => {
     const css = this.instance.toString();
     if (!css) return '';
-    const nonce = getNonce();
+    const nonce = this.instance.options.nonce || getNonce();
     const attrs = [
       nonce && `nonce="${nonce}"`,
       `${SC_ATTR}="true"`,
@@ -66,7 +66,7 @@ export default class ServerStyleSheet {
       },
     };
 
-    const nonce = getNonce();
+    const nonce = this.instance.options.nonce || getNonce();
     if (nonce) {
       (props as any).nonce = nonce;
     }

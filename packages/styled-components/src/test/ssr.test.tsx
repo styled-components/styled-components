@@ -11,7 +11,10 @@ import createGlobalStyle from '../constructors/createGlobalStyle';
 import ServerStyleSheet from '../models/ServerStyleSheet';
 import { StyleSheetManager } from '../models/StyleSheetManager';
 
-jest.mock('../utils/nonce');
+jest.mock('../utils/nonce', () => {
+  const mock = jest.fn(() => null);
+  return { __esModule: true, default: mock, resetNonceCache: jest.fn() };
+});
 
 let styled: ReturnType<typeof resetStyled>;
 
@@ -48,7 +51,7 @@ describe('ssr', () => {
   beforeEach(() => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-    require('../utils/nonce').mockReset();
+    require('../utils/nonce').default.mockReset();
 
     styled = resetStyled(true);
   });
@@ -142,7 +145,7 @@ describe('ssr', () => {
   });
 
   it('should add a nonce to the stylesheet if webpack nonce is detected in the global scope', () => {
-    require('../utils/nonce').mockImplementation(() => 'foo');
+    require('../utils/nonce').default.mockImplementation(() => 'foo');
 
     const Component = createGlobalStyle`
       body { background: papayawhip; }
@@ -216,7 +219,7 @@ describe('ssr', () => {
   });
 
   it('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
-    require('../utils/nonce').mockImplementation(() => 'foo');
+    require('../utils/nonce').default.mockImplementation(() => 'foo');
 
     const Component = createGlobalStyle`
       body { background: papayawhip; }
@@ -238,6 +241,64 @@ describe('ssr', () => {
 
     const [element] = sheet.getStyleElement();
     expect(element.props.nonce).toBe('foo');
+  });
+
+  it('should use nonce from ServerStyleSheet constructor over auto-detection', () => {
+    require('../utils/nonce').default.mockImplementation(() => 'auto-nonce');
+
+    const Heading = styled.h1`
+      color: red;
+    `;
+
+    const sheet = new ServerStyleSheet({ nonce: 'constructor-nonce' });
+    renderToString(sheet.collectStyles(<Heading>Hello!</Heading>));
+
+    const css = sheet.getStyleTags();
+    expect(css).toContain('nonce="constructor-nonce"');
+    expect(css).not.toContain('auto-nonce');
+  });
+
+  it('should use nonce from ServerStyleSheet constructor in getStyleElement', () => {
+    const Heading = styled.h1`
+      color: blue;
+    `;
+
+    const sheet = new ServerStyleSheet({ nonce: 'element-nonce' });
+    renderToString(sheet.collectStyles(<Heading>Hello!</Heading>));
+
+    const [element] = sheet.getStyleElement();
+    expect(element.props.nonce).toBe('element-nonce');
+  });
+
+  it('should fall back to auto-detection when no constructor nonce is provided', () => {
+    require('../utils/nonce').default.mockImplementation(() => 'detected-nonce');
+
+    const Heading = styled.h1`
+      color: green;
+    `;
+
+    const sheet = new ServerStyleSheet();
+    renderToString(sheet.collectStyles(<Heading>Hello!</Heading>));
+
+    const css = sheet.getStyleTags();
+    expect(css).toContain('nonce="detected-nonce"');
+  });
+
+  it('should omit nonce attribute when no nonce is available', () => {
+    require('../utils/nonce').default.mockImplementation(() => null);
+
+    const Heading = styled.h1`
+      color: purple;
+    `;
+
+    const sheet = new ServerStyleSheet();
+    renderToString(sheet.collectStyles(<Heading>Hello!</Heading>));
+
+    const css = sheet.getStyleTags();
+    expect(css).not.toContain('nonce');
+
+    const [element] = sheet.getStyleElement();
+    expect(element.props.nonce).toBeUndefined();
   });
 
   describeStreamingTests('should interleave styles with rendered HTML', renderFn => {

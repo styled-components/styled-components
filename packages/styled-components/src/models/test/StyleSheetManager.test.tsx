@@ -641,4 +641,44 @@ describe('StyleSheetManager', () => {
       </style>
     `);
   });
+
+  it('should apply nonce to injected style tags', () => {
+    const Comp = styled.div`
+      color: red;
+    `;
+
+    render(
+      <StyleSheetManager nonce="test-nonce-123">
+        <Comp />
+      </StyleSheetManager>
+    );
+
+    const style = document.head.querySelector('style[data-styled]');
+    expect(style).not.toBeNull();
+    expect(style!.getAttribute('nonce')).toBe('test-nonce-123');
+  });
+
+  it('should apply different nonces to nested StyleSheetManagers', () => {
+    const Outer = styled.div`
+      color: blue;
+    `;
+    const Inner = styled.div`
+      color: green;
+    `;
+
+    render(
+      <StyleSheetManager nonce="outer-nonce" target={document.head}>
+        <Outer />
+        <StyleSheetManager nonce="inner-nonce" target={document.body}>
+          <Inner />
+        </StyleSheetManager>
+      </StyleSheetManager>
+    );
+
+    const headStyle = document.head.querySelector('style[data-styled]');
+    const bodyStyle = document.body.querySelector('style[data-styled]');
+
+    expect(headStyle!.getAttribute('nonce')).toBe('outer-nonce');
+    expect(bodyStyle!.getAttribute('nonce')).toBe('inner-nonce');
+  });
 });
