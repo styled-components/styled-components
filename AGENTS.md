@@ -106,6 +106,17 @@ Microbenchmark-validated patterns (V8/Node.js):
 - String accumulation at SSR scale: `+=` is STILL faster than `array+join` even at 500 iterations (V8 cons string trees)
 - React.createElement: raw element objects are 60-120x faster; `$$typeof` symbol detected at module load from installed React version
 
+TypeScript type performance:
+
+- `OverrideStyle` (conditional type with `infer`) is the single most expensive type—accounts for ~50% of type instantiations. It exists solely to add CSS custom property support (`--var`) to the `style` prop. Cannot be simplified without breaking `exactOptionalPropertyTypes` or JSX overload resolution. Removal requires a major version with documented module augmentation of `csstype`.
+- Upstream blockers: csstype#63 (open 4+ years) and DefinitelyTyped#68113—neither React nor csstype will add `[key: \`--${string}\`]` to `CSSProperties`. Module augmentation is the official recommendation.
+- Use the built-in `NoInfer` (TS 5.4+) instead of the custom `[T][T extends any ? 0 : never]`. Internal files should use the global directly; the export in `types.ts` is for downstream consumers only.
+- `FastOmit<A, K> & B` (intersection) is CHEAPER than a single mapped type with per-key conditionals despite the TS wiki saying otherwise—benchmarked at 2.4x fewer instantiations for this codebase
+- Homomorphic mapped types (`{ [K in keyof P]: ... }`) break React JSX overload resolution because they create new structural types that TS can't match against `React.DetailedHTMLProps`
+- `Substitute<A, B>` short-circuits to `A` when `keyof B extends never` to avoid unnecessary `FastOmit` wrapping
+- `MakeAttrsOptional<P, K>` tracks attrs-provided keys and makes them optional via `FastOmit<P, K> & Partial<Pick<P, K>>`—two mapped types are unavoidable for conditional optionality under `exactOptionalPropertyTypes`
+- Profile with `npx tsc --noEmit --extendedDiagnostics --project tsconfig.test-types.json` and use a stress test file with 200+ styled components to measure at scale
+
 V8-specific gotchas:
 
 - `new Array(n)` creates HOLEY_ELEMENTS arrays that infect V8 type feedback — 3.9x regression observed in GroupedTag
