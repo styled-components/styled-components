@@ -637,8 +637,7 @@ describe('theming', () => {
 
   it('should not allow the theme to be null', () => {
     expect(() => {
-      // HACK: work around the problem without changing the snapshots
-      // these tests need to be changed to use error boundaries instead
+      // Suppress React error boundary console noise during expected throws
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       render(
         // @ts-expect-error properly catching null theme
@@ -652,8 +651,7 @@ describe('theming', () => {
 
   it('should not allow the theme to be an array', () => {
     expect(() => {
-      // HACK: work around the problem without changing the snapshots
-      // these tests need to be changed to use error boundaries instead
+      // Suppress React error boundary console noise during expected throws
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       render(
         // @ts-expect-error invalid theme input
@@ -667,8 +665,7 @@ describe('theming', () => {
 
   it('should not allow the theme to be a non-object', () => {
     expect(() => {
-      // HACK: work around the problem without changing the snapshots
-      // these tests need to be changed to use error boundaries instead
+      // Suppress React error boundary console noise during expected throws
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       render(
         // @ts-expect-error invalid input

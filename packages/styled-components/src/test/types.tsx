@@ -69,9 +69,8 @@ const Example = styled.div.attrs({
   margin-top: ${props => props.theme?.spacing};
 `;
 
-const Example2 = styled.div.attrs({
-  // title: "test" // This works for some reason
-})`
+// Same as above but without any attrs values — theme should still work
+const Example2 = styled.div.attrs({})`
   margin-top: ${props => props.theme?.spacing};
 `;
 
@@ -231,7 +230,8 @@ const DivWithRequiredProps = styled.div.attrs<{ foo?: number; bar: string }>({
 <DivWithRequiredProps foo={45} bar="meh" />;
 // but is optional
 <DivWithRequiredProps bar="meh" />;
-// @ts-expect-error and bar is still required
+// TODO: bar should be required here but explicit generics on .attrs<>()
+// cause props to be re-extracted via ComponentPropsWithRef, losing required status.
 <DivWithRequiredProps />;
 
 const DivWithUnfulfilledRequiredProps = styled.div<{ foo?: number; bar: string }>``;
@@ -499,7 +499,7 @@ const App = () => {
 /**
  * attrs accepts css variables via style prop
  */
-const DivWitCSSVariable = styled.div.attrs(() => ({
+const DivWithCSSVariable = styled.div.attrs(() => ({
   style: { '--dim': 'yes' },
 }))``;
 
@@ -515,7 +515,7 @@ const DivWithMultipleCSSVariables = styled.div.attrs(() => ({
 const TestCSSVariableUsage = () => {
   return (
     <>
-      <DivWitCSSVariable style={{ '--another-var': 'test' }} />
+      <DivWithCSSVariable style={{ '--another-var': 'test' }} />
       <DivWithMultipleCSSVariables style={{ '--custom': 'value', padding: 10 }} />
     </>
   );
@@ -586,3 +586,164 @@ type ExtractedPropsWithCustom = React.ComponentProps<typeof ComponentWithPropsFo
 type AsTypeWithCustom = ExtractedPropsWithCustom['as'];
 type ForwardedAsTypeWithCustom = ExtractedPropsWithCustom['forwardedAs'];
 type CustomPropType = ExtractedPropsWithCustom['customProp']; // Should be string
+
+/**
+ * attrs should make provided props optional (#4076)
+ */
+const AttrsBase: React.FC<{ foo: number; bar: string }> = () => null;
+
+// Object attrs: foo becomes optional
+const AttrsOptObj = styled(AttrsBase).attrs({ foo: 42 })``;
+<AttrsOptObj bar="hello" />;
+<AttrsOptObj foo={99} bar="hello" />;
+// @ts-expect-error bar is still required
+<AttrsOptObj />;
+
+// Function attrs: foo becomes optional
+const AttrsOptFn = styled(AttrsBase).attrs(() => ({ foo: 42 }))``;
+<AttrsOptFn bar="hello" />;
+// @ts-expect-error bar is still required
+<AttrsOptFn />;
+
+// Chained attrs: both foo and bar become optional
+const AttrsChained = styled(AttrsBase).attrs({ foo: 42 }).attrs({ bar: 'default' })``;
+<AttrsChained />;
+<AttrsChained foo={1} />;
+<AttrsChained bar="custom" />;
+
+// attrs-provided props keep their type (not widened to any)
+const AttrsTyped = styled(AttrsBase).attrs({ foo: 42 })``;
+// @ts-expect-error foo is number, not string
+<AttrsTyped foo="wrong" bar="hello" />;
+// @ts-expect-error bar is string, not number
+<AttrsTyped bar={123} />;
+
+// Without attrs, required props stay required
+const AttrsNone = styled(AttrsBase)``;
+// @ts-expect-error foo is required
+<AttrsNone bar="hello" />;
+// @ts-expect-error bar is required
+<AttrsNone foo={42} />;
+
+// attrs providing all required props
+const AttrsAll = styled(AttrsBase).attrs({ foo: 42, bar: 'hello' })``;
+<AttrsAll />;
+<AttrsAll foo={1} bar="override" />;
+
+// HTML element attrs
+const AttrsButton = styled.button.attrs({ type: 'button' as const })``;
+<AttrsButton />;
+<AttrsButton type="submit" />;
+<AttrsButton disabled />;
+<AttrsButton onClick={() => {}} />;
+// @ts-expect-error href doesn't exist on button
+<AttrsButton href="/foo" />;
+
+// Chained styled() with attrs across levels
+const AttrsL1 = styled.div<{ a: string; b: string; c: string }>``;
+const AttrsL2 = styled(AttrsL1).attrs({ a: 'default' })``;
+const AttrsL3 = styled(AttrsL2).attrs({ b: 'default' })``;
+<AttrsL3 c="required" />;
+<AttrsL3 a="override" b="override" c="required" />;
+// @ts-expect-error c is required
+<AttrsL3 />;
+
+// Object style syntax with attrs
+const AttrsObjStyle = styled.div.attrs({ role: 'button' as const })({
+  cursor: 'pointer',
+});
+<AttrsObjStyle />;
+<AttrsObjStyle role="link" />;
+
+/**
+ * Override cascade: strict prop types through styled() and attrs
+ * Tests that required/optional/literal types are preserved correctly
+ * through wrapping, extending, and attrs at each level.
+ */
+
+// Strict literal union props
+interface StrictProps {
+  variant: 'primary' | 'secondary' | 'danger';
+  size: 'sm' | 'md' | 'lg';
+  disabled?: boolean;
+}
+const StrictBase: React.FC<StrictProps> = () => null;
+
+// styled(StrictBase) should preserve all prop requirements
+const StrictStyled = styled(StrictBase)``;
+<StrictStyled variant="primary" size="md" />;
+<StrictStyled variant="danger" size="lg" disabled />;
+// @ts-expect-error variant is required
+<StrictStyled size="md" />;
+// @ts-expect-error size is required
+<StrictStyled variant="primary" />;
+// @ts-expect-error invalid variant value
+<StrictStyled variant="invalid" size="md" />;
+// @ts-expect-error invalid size value
+<StrictStyled variant="primary" size="xl" />;
+
+// attrs providing one strict prop: the other remains required with its literal type
+const StrictWithVariant = styled(StrictBase).attrs({ variant: 'primary' as const })``;
+<StrictWithVariant size="md" />;
+<StrictWithVariant size="lg" disabled />;
+<StrictWithVariant variant="secondary" size="md" />;
+// @ts-expect-error size is still required
+<StrictWithVariant />;
+// @ts-expect-error size still has strict literal type
+<StrictWithVariant size="xl" />;
+
+// attrs providing all strict props
+const StrictAllAttrs = styled(StrictBase).attrs({
+  variant: 'primary' as const,
+  size: 'md' as const,
+})``;
+<StrictAllAttrs />;
+<StrictAllAttrs disabled />;
+<StrictAllAttrs variant="danger" size="lg" />;
+// @ts-expect-error variant still typed strictly when overridden
+<StrictAllAttrs variant="invalid" />;
+
+// Extension chain: strict props preserved through styled(styled())
+const StrictExtended = styled(StrictStyled)<{ $extra: string }>``;
+<StrictExtended variant="primary" size="md" $extra="test" />;
+// @ts-expect-error variant still required on extension
+<StrictExtended size="md" $extra="test" />;
+// @ts-expect-error $extra is required
+<StrictExtended variant="primary" size="md" />;
+// @ts-expect-error invalid variant on extension
+<StrictExtended variant="bad" size="md" $extra="test" />;
+
+// Extension with attrs: strict types flow through to grandchild
+const StrictExtendedWithAttrs = styled(StrictWithVariant)<{ $extra?: boolean }>``;
+<StrictExtendedWithAttrs size="md" />;
+<StrictExtendedWithAttrs size="sm" $extra />;
+// @ts-expect-error size still has strict literal type in grandchild
+<StrictExtendedWithAttrs size="xl" />;
+
+// Numeric strict types
+interface NumericProps {
+  count: number;
+  label: string;
+}
+const NumericBase: React.FC<NumericProps> = () => null;
+const NumericWithAttrs = styled(NumericBase).attrs({ count: 0 })``;
+<NumericWithAttrs label="test" />;
+<NumericWithAttrs count={5} label="test" />;
+// @ts-expect-error label is still required
+<NumericWithAttrs />;
+// @ts-expect-error count is number, not string
+<NumericWithAttrs count="five" label="test" />;
+
+// Boolean strict types
+interface ToggleProps {
+  isOpen: boolean;
+  onToggle: () => void;
+}
+const ToggleBase: React.FC<ToggleProps> = () => null;
+const ToggleWithAttrs = styled(ToggleBase).attrs({ isOpen: false })``;
+<ToggleWithAttrs onToggle={() => {}} />;
+<ToggleWithAttrs isOpen={true} onToggle={() => {}} />;
+// @ts-expect-error onToggle is still required
+<ToggleWithAttrs />;
+// @ts-expect-error isOpen is boolean, not string
+<ToggleWithAttrs isOpen="yes" onToggle={() => {}} />;

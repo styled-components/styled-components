@@ -341,11 +341,22 @@ export interface StyledObject<Props extends BaseObject = BaseObject>
 
 export type CSSProp = Interpolation<any>;
 
-// Prevents TypeScript from inferring generic argument
+/**
+ * @deprecated Use the built-in NoInfer from TypeScript 5.4+ directly.
+ * Kept for backward compatibility.
+ */
 export type NoInfer<T> = [T][T extends any ? 0 : never];
 
 export type Substitute<A extends BaseObject, B extends BaseObject> = keyof B extends never
   ? A
   : FastOmit<A, keyof B> & B;
+
+/**
+ * Makes keys in K optional while keeping all others required.
+ * Used to make attrs-provided props optional on the final component.
+ */
+export type MakeAttrsOptional<P extends BaseObject, K extends keyof any> = keyof K extends never
+  ? P
+  : FastOmit<P, K & keyof P> & Partial<Pick<P, K & keyof P>>;
 
 export type InsertionTarget = HTMLElement | ShadowRoot;

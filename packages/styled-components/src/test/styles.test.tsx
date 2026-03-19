@@ -521,7 +521,7 @@ describe('with styles', () => {
   });
 
   it('should preserve styles after a malformed declaration with unbalanced brace', () => {
-    // This tests the fix for: https://github.com/styled-components/styled-components/issues/XXXX
+    // Ensures unbalanced braces in interpolated values don't break subsequent styles
     // In v6, a syntax error like an extra `}` in a value would cause all subsequent styles to be ignored
     const Comp = styled.div`
       width: 100px;
