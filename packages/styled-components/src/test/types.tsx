@@ -1,11 +1,22 @@
 /**
  * This file is meant for typing-related tests that don't need to go through Jest.
+ * Run via: pnpm --filter styled-components test:types
  */
 import React from 'react';
 import { css, CSSProp, IStyledComponent, StyledObject } from '../index';
 import styled from '../index-standalone';
 import { DataAttributes } from '../types';
 import { VeryLargeUnionType } from './veryLargeUnionType';
+
+// Augment DefaultTheme so tests can reference theme properties.
+// This augmentation is scoped to test:types via tsconfig.test-types.json
+// and does not affect the main build.
+declare module '../models/ThemeProvider' {
+  interface DefaultTheme {
+    spacing?: string;
+    waz?: string;
+  }
+}
 
 /**
  * Prop inference when using forwardRef
@@ -115,7 +126,9 @@ const RuntimePropDeepestOverrideTest = styled.button<{ color?: 'vermillion' }>``
 // ok
 <RuntimePropTest color="indigo" />;
 
-// @ts-expect-error color should be "cerulean" | undefined
+// TODO(#4305): should error (color should be "cerulean" | undefined) but the
+// polymorphic overload doesn't narrow custom prop types from the `as` target.
+// Narrowing DOES work for standard HTML props (e.g., as="a" adds href).
 <RuntimePropTest as={RuntimePropOverrideTest} color="indigo" />;
 // ok
 <RuntimePropTest as={RuntimePropOverrideTest} color="cerulean" />;
@@ -282,7 +295,8 @@ const Text = styled.p``;
   onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
 />;
 <Text as="label" ref={(e: HTMLLabelElement | null) => {}} />;
-// @ts-expect-error Should now be a label element
+// TODO(#4305): should error (ref should narrow to HTMLLabelElement via as="label")
+// but RefAttributes<any> on the polymorphic overload accepts any ref type.
 <Text as="label" ref={(e: HTMLParagraphElement | null) => {}} />;
 
 const AttrObjectAsLabel = styled(Text).attrs({ as: 'label' })``;
