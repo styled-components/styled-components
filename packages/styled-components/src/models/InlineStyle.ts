@@ -40,7 +40,19 @@ export default function makeInlineStyleClass<Props extends object>(styleSheet: S
       const hash = generateComponentId(flatCSS);
 
       if (!generated[hash]) {
-        const root = parse(flatCSS);
+        let root;
+        try {
+          root = parse(flatCSS);
+        } catch (e) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn(
+              `[styled-components/native] Failed to parse CSS: ${e instanceof Error ? e.message : e}`
+            );
+          }
+          generated[hash] = {};
+          return generated[hash];
+        }
+
         const declPairs: [string, string][] = [];
 
         root.each(node => {
