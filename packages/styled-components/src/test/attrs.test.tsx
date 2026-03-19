@@ -376,4 +376,34 @@ describe('attrs', () => {
     const { container } = render(<Comp />);
     expect(container.querySelector('div')!.hasAttribute('data-removed')).toBe(false);
   });
+
+  it('should not mutate the props object passed to attrs callbacks', () => {
+    const Comp = styled.div
+      .attrs(props => {
+        // Attempt to mutate the received props — this should not affect
+        // the internal context or the rendered output.
+        (props as any).id = 'mutated';
+        (props as any).injected = 'bad';
+        return { 'data-first': 'yes' };
+      })
+      .attrs(props => {
+        // The second callback should see the original id, not the mutation
+        // from the first callback, plus the first callback's returned attrs.
+        return { 'data-saw-id': props.id, 'data-saw-first': (props as any)['data-first'] };
+      })``;
+
+    const { container } = render(<Comp id="original" />);
+    const el = container.firstChild as HTMLElement;
+
+    // The mutation in the first callback should not leak anywhere
+    expect(el.getAttribute('id')).toBe('original');
+    expect(el.hasAttribute('injected')).toBe(false);
+
+    // The second callback should see the original id (not 'mutated')
+    expect(el.getAttribute('data-saw-id')).toBe('original');
+
+    // The second callback should see the first callback's returned attrs
+    // (these are applied to context after the first callback returns)
+    expect(el.getAttribute('data-saw-first')).toBe('yes');
+  });
 });

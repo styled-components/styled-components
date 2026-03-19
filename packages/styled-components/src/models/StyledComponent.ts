@@ -87,7 +87,9 @@ function resolveContext<Props extends BaseObject>(
 
   for (let i = 0; i < attrs.length; i += 1) {
     attrDef = attrs[i];
-    const resolvedAttrDef = isFunction(attrDef) ? attrDef(context) : attrDef;
+    // Pass a shallow copy to function attrs so the callback's captured
+    // reference isn't mutated by subsequent attrs processing (#3336).
+    const resolvedAttrDef = isFunction(attrDef) ? attrDef({ ...context }) : attrDef;
 
     for (const key in resolvedAttrDef) {
       if (key === 'className') {
