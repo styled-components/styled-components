@@ -136,6 +136,7 @@ const standaloneBaseConfig = {
     globals,
     name: 'styled',
     sourcemap: true,
+    exports: 'named',
   },
   external: Object.keys(globals),
   plugins: configBase.plugins.concat(
