@@ -11,7 +11,10 @@ const findLastStyleTag = (target: InsertionTarget): void | HTMLStyleElement => {
 };
 
 /** Create a style element inside `target` or <head> after the last */
-export const makeStyleTag = (target?: InsertionTarget | undefined): HTMLStyleElement => {
+export const makeStyleTag = (
+  target?: InsertionTarget | undefined,
+  nonce?: string | undefined
+): HTMLStyleElement => {
   const head = document.head;
   const parent = target || head;
   const style = document.createElement('style');
@@ -21,9 +24,9 @@ export const makeStyleTag = (target?: InsertionTarget | undefined): HTMLStyleEle
   style.setAttribute(SC_ATTR, SC_ATTR_ACTIVE);
   style.setAttribute(SC_ATTR_VERSION, SC_VERSION);
 
-  const nonce = getNonce();
+  const resolvedNonce = nonce || getNonce();
 
-  if (nonce) style.setAttribute('nonce', nonce);
+  if (resolvedNonce) style.setAttribute('nonce', resolvedNonce);
 
   parent.insertBefore(style, nextSibling);
 

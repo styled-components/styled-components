@@ -65,6 +65,7 @@ export type IStyleSheetManager = React.PropsWithChildren<{
   namespace?: undefined | string;
   /**
    * Create and provide your own `StyleSheet` if necessary for advanced SSR scenarios.
+   * When provided, `target` and `nonce` props are ignored (configure them on the sheet directly).
    */
   sheet?: undefined | StyleSheet;
   /**
@@ -90,6 +91,11 @@ export type IStyleSheetManager = React.PropsWithChildren<{
    */
   stylisPlugins?: undefined | stylis.Middleware[];
   /**
+   * CSP nonce to attach to injected `<style>` tags. Overrides auto-detection
+   * from `<meta name="sc-nonce">`, `<meta property="csp-nonce">`, or `__webpack_nonce__`.
+   */
+  nonce?: undefined | string;
+  /**
    * Provide an alternate DOM node to host generated styles; useful for iframes.
    */
   target?: undefined | InsertionTarget;
@@ -109,7 +115,9 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     if (props.sheet) {
       sheet = props.sheet;
     } else if (props.target) {
-      sheet = sheet.reconstructWithOptions({ target: props.target }, false);
+      sheet = sheet.reconstructWithOptions({ target: props.target, nonce: props.nonce }, false);
+    } else if (props.nonce !== undefined) {
+      sheet = sheet.reconstructWithOptions({ nonce: props.nonce });
     }
 
     if (props.disableCSSOMInjection) {
@@ -117,7 +125,7 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     }
 
     return sheet;
-  }, [props.disableCSSOMInjection, props.sheet, props.target, styleSheet]);
+  }, [props.disableCSSOMInjection, props.nonce, props.sheet, props.target, styleSheet]);
 
   const stylis = React.useMemo(
     () =>

@@ -3,13 +3,13 @@ import { getSheet, makeStyleTag } from './dom';
 import { SheetOptions, Tag } from './types';
 
 /** Create a CSSStyleSheet-like tag depending on the environment */
-export const makeTag = ({ isServer, useCSSOMInjection, target }: SheetOptions) => {
+export const makeTag = ({ isServer, useCSSOMInjection, target, nonce }: SheetOptions) => {
   if (isServer) {
     return new VirtualTag(target);
   } else if (useCSSOMInjection) {
-    return new CSSOMTag(target);
+    return new CSSOMTag(target, nonce);
   } else {
-    return new TextTag(target);
+    return new TextTag(target, nonce);
   }
 };
 
@@ -20,8 +20,8 @@ export const CSSOMTag = class CSSOMTag implements Tag {
 
   length: number;
 
-  constructor(target?: InsertionTarget | undefined) {
-    this.element = makeStyleTag(target);
+  constructor(target?: InsertionTarget | undefined, nonce?: string | undefined) {
+    this.element = makeStyleTag(target, nonce);
 
     // Avoid Edge bug where empty style elements don't create sheets
     this.element.appendChild(document.createTextNode(''));
@@ -63,8 +63,8 @@ export const TextTag = class TextTag implements Tag {
   nodes: NodeListOf<Node>;
   length: number;
 
-  constructor(target?: InsertionTarget | undefined) {
-    this.element = makeStyleTag(target);
+  constructor(target?: InsertionTarget | undefined, nonce?: string | undefined) {
+    this.element = makeStyleTag(target, nonce);
     this.nodes = this.element.childNodes;
     this.length = 0;
   }
