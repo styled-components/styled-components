@@ -545,3 +545,30 @@ class ParentClassComponent1 extends React.Component<{ $prop1?: boolean }> {}
 const ParentClassComponent2 = styled(ParentClassComponent1)<{ $prop2?: boolean }>``;
 
 <ParentClassComponent2 $prop1={true} $prop2={true} />;
+
+/**
+ * React.ComponentProps should be able to extract "as" and "forwardedAs" props
+ * https://github.com/styled-components/styled-components/issues/4294
+ */
+const ComponentForPropsExtraction = styled.div``;
+
+// These should work - extracting props from styled component
+type ExtractedProps = React.ComponentProps<typeof ComponentForPropsExtraction>;
+type AsType = ExtractedProps['as']; // Should be StyledTarget<'web'> | undefined, not error
+type ForwardedAsType = ExtractedProps['forwardedAs']; // Should be StyledTarget<'web'> | undefined, not error
+
+// Verify the types are correct and can be assigned
+const testAs: AsType = 'div';
+const testAs2: AsType = Button;
+const testAs3: AsType = undefined;
+
+const testForwardedAs: ForwardedAsType = 'span';
+const testForwardedAs2: ForwardedAsType = Button;
+const testForwardedAs3: ForwardedAsType = undefined;
+
+// Test with a component that has custom props
+const ComponentWithPropsForExtraction = styled.div<{ customProp: string }>``;
+type ExtractedPropsWithCustom = React.ComponentProps<typeof ComponentWithPropsForExtraction>;
+type AsTypeWithCustom = ExtractedPropsWithCustom['as'];
+type ForwardedAsTypeWithCustom = ExtractedPropsWithCustom['forwardedAs'];
+type CustomPropType = ExtractedPropsWithCustom['customProp']; // Should be string
