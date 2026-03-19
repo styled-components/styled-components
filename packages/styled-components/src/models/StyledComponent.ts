@@ -228,11 +228,22 @@ function useStyledComponentImpl<Props extends BaseObject>(
           });
         }
 
+        // In production, use content-aware hrefs so React 19 can dedup identical
+        // CSS across siblings while keeping dynamic variants separate.
+        // In development, use stable hrefs (componentId only) so that HMR style
+        // changes replace the old tag instead of accumulating new permanent ones.
+        // This means dynamic variants may incorrectly dedup in dev, but that's
+        // an acceptable tradeoff for correct HMR behavior.
+        const href =
+          process.env.NODE_ENV === 'production'
+            ? `sc-${cs.componentId}-${nameKey}`
+            : `sc-${cs.componentId}`;
+
         styleTags.push(
           React.createElement('style', {
             key: `sc-${cs.componentId}`,
             precedence: 'styled-components',
-            href: `sc-${cs.componentId}-${nameKey}`,
+            href,
             children: groupCss,
           })
         );
