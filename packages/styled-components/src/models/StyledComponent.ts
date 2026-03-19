@@ -94,7 +94,9 @@ function resolveContext<Props extends BaseObject>(
         context.className = joinStrings(context.className, resolvedAttrDef[key] as string);
       } else if (key === 'style') {
         context.style = { ...context.style, ...(resolvedAttrDef[key] as React.CSSProperties) };
-      } else {
+      } else if (!(key in props && (props as any)[key] === undefined)) {
+        // Apply attr value unless the user explicitly passed undefined for this prop,
+        // which signals intent to reset the value.
         // @ts-expect-error attrs can dynamically add arbitrary properties
         context[key] = resolvedAttrDef[key];
       }
