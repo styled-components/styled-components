@@ -353,4 +353,27 @@ describe('attrs', () => {
 
     expect(render(<Comp alternateTheme={{ foo: 'bar' }} />).asFragment()).toMatchSnapshot();
   });
+
+  it('should preserve explicitly passed undefined props', () => {
+    const Inner = (props: { role?: string; children?: React.ReactNode }) => (
+      <div role={props.role} data-has-role={String('role' in props)} />
+    );
+
+    const Comp = styled(Inner).attrs({ role: 'button' })``;
+
+    // Without explicit prop, attrs value is used
+    const withAttrs = render(<Comp />);
+    expect(withAttrs.container.querySelector('div')!.getAttribute('role')).toBe('button');
+
+    // Explicitly passing undefined should override attrs
+    const withUndefined = render(<Comp role={undefined} />);
+    expect(withUndefined.container.querySelector('div')!.getAttribute('role')).toBe(null);
+  });
+
+  it('should still strip undefined values from attrs', () => {
+    const Comp = styled.div.attrs({ 'data-removed': undefined as string | undefined })``;
+
+    const { container } = render(<Comp />);
+    expect(container.querySelector('div')!.hasAttribute('data-removed')).toBe(false);
+  });
 });
