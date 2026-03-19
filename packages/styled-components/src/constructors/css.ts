@@ -1,12 +1,4 @@
-import {
-  BaseObject,
-  Interpolation,
-  NoInfer,
-  RuleSet,
-  StyledObject,
-  StyleFunction,
-  Styles,
-} from '../types';
+import { BaseObject, Interpolation, RuleSet, StyledObject, StyleFunction, Styles } from '../types';
 import { EMPTY_ARRAY } from '../utils/empties';
 import flatten from '../utils/flatten';
 import interleave from '../utils/interleave';
