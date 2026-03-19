@@ -119,6 +119,29 @@ Build architecture:
 - The `browser` field in package.json maps server bundles to browser-specific alternatives for bundler resolution
 - `exports` field caused TS2742 in composite projects and ordering confusion; `browser` field is preferred
 
+Native build isolation:
+
+- The native entry (`src/native/index.ts`) must NEVER transitively import DOM code (`sheet/Sheet.ts`, `sheet/Tag.ts`, `sheet/dom.ts`, `sheet/Rehydration.ts`)
+- Value imports of classes that touch DOM pull the entire module graph into the native bundle — use `import type` instead
+- Replace `instanceof SomeClass` with branded `Symbol.for()` checks + duck-typing utilities to avoid value imports (see `utils/isKeyframes.ts`)
+- Verify after build changes: `grep -c 'document\.' native/dist/styled-components.native.cjs.js` must be 0
+- Newer RN/Hermes runtimes (0.79+) fail at **module evaluation time** on `document` references, not just execution time
+
+RSC style injection architecture:
+
+- Two independent injection paths: RSC emits `<style precedence="styled-components">` (hoisted by React 19), client injects into `<style data-styled="active">` (appended to head)
+- These paths have NO shared ordering — client styles appear after RSC styles in document order
+- `createGlobalStyle` intentionally avoids `precedence` (causes unmount persistence) — global styles in RSC render inline where the component appears
+- In dev mode, consider skipping `precedence` on regular styled components too, to avoid HMR tag accumulation
+- No other runtime CSS-in-JS library has solved RSC injection — Emotion doesn't support RSC at all
+
+attrs behavior:
+
+- attrs ALWAYS wins over directly passed props (by design, validated by tests)
+- The function form of attrs is the escape hatch: `.attrs(({ as }) => ({ as: as || "button" }))`
+- Exception: explicitly passing `undefined` for a prop prevents attrs from overwriting it (PR #5683)
+- When server-only code (e.g., `renderStyles`) is added for SSR/RSC, always gate it behind `__SERVER__ || IS_RSC` to avoid double execution on the client
+
 Dynamic re-render hot path (most expensive → least):
 
 1. `stylis` compile+serialize: ~1-5µs depending on CSS size (unavoidable, external library)
