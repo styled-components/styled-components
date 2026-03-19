@@ -4,7 +4,6 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
-import { removeGlobalStyleTag } from '../sheet/dom';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
@@ -59,27 +58,25 @@ export default function createGlobalStyle<Props extends object>(
       );
     }
 
-    // Render styles during component execution
-    const shouldRenderStyles = typeof window === 'undefined' || !ssc.styleSheet.server;
-    if (shouldRenderStyles) {
-      renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
+    // Render styles during component execution for server/RSC (where effects don't run).
+    // In client mode, styles are rendered in the useLayoutEffect below to avoid double work.
+    if (__SERVER__ || IS_RSC) {
+      const shouldRenderStyles = typeof window === 'undefined' || !ssc.styleSheet.server;
+      if (shouldRenderStyles) {
+        renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
+      }
     }
 
     // Client-side lifecycle: render styles in effect and clean up on unmount.
     // __SERVER__ and IS_RSC are build/module-level constants, so this doesn't violate rules of hooks.
     if (!__SERVER__ && !IS_RSC) {
       React.useLayoutEffect(() => {
-        // Re-render styles on every effect run to self-heal after any cleanup
-        // (e.g. StrictMode's simulated unmount/remount, error recovery).
-        // useLayoutEffect runs synchronously before paint, so the brief
-        // remove→re-add in cleanup→mount is never visible to the user.
         if (!ssc.styleSheet.server) {
           renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
         }
 
         return () => {
           globalStyle.removeStyles(instance, ssc.styleSheet);
-          removeGlobalStyleTag(styledComponentId, ssc.styleSheet.options.target);
         };
       }, [instance, props, ssc.styleSheet, theme, ssc.stylis]);
     }
