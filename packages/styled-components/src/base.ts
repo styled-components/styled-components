@@ -54,7 +54,7 @@ if (
 
 /* Export everything */
 export * from './secretInternals';
-export { Attrs, DefaultTheme, ShouldForwardProp } from './types';
+export { Attrs, DefaultTheme, Keyframes, ShouldForwardProp } from './types';
 export {
   IStyleSheetContext,
   IStyleSheetManager,
