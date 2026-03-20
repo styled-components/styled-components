@@ -1,17 +1,3 @@
-import { createGlobalStyle } from 'styled-components';
-import ToggleClient from './toggle-client';
-
-/**
- * Conditional global style — should be removed from <head> when unmounted.
- */
-const BodyLockStyles = createGlobalStyle`
-  body {
-    overflow: hidden !important;
-    outline: 6px solid #e94560 !important;
-    outline-offset: -6px;
-  }
-`;
-
 export default function GlobalStyleTestPage() {
   return (
     <div
@@ -22,16 +8,16 @@ export default function GlobalStyleTestPage() {
         border: '1px solid rgba(255,255,255,0.1)',
       }}
     >
-      <h2>Conditional Unmount</h2>
-      <p style={{ lineHeight: 1.8, marginBottom: '16px' }}>
-        Toggle to mount/unmount a <code>createGlobalStyle</code> that adds a
-        thick pink border to the viewport and locks scrolling. The{' '}
-        <code>&lt;style&gt;</code> tag should appear in <code>&lt;head&gt;</code>{' '}
-        when mounted and disappear when unmounted.
+      <h2>Home</h2>
+      <p style={{ lineHeight: 1.8 }}>
+        This is the landing page for the <code>createGlobalStyle</code> test. The
+        conditional body-lock toggle above lives in the shared layout, so it stays
+        mounted when navigating to Page A or Page B.
       </p>
-      <ToggleClient>
-        <BodyLockStyles />
-      </ToggleClient>
+      <p style={{ lineHeight: 1.8, opacity: 0.7 }}>
+        Try toggling the conditional style, then navigate between pages — the pink
+        border and scroll lock should persist across route changes.
+      </p>
     </div>
   );
 }

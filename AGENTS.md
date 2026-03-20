@@ -129,6 +129,10 @@ Build architecture:
 - `IS_BROWSER` (`typeof window !== 'undefined'`) is a runtime check — bundlers CANNOT tree-shake code behind it
 - The `browser` field in package.json maps server bundles to browser-specific alternatives for bundler resolution
 - `exports` field caused TS2742 in composite projects and ordering confusion; `browser` field is preferred
+- **Turbopack resolves the `browser` entry for SSR of client components** — `__SERVER__` is `false` on the server. Use `styleSheet.server` (runtime flag from `ServerStyleSheet`) as fallback: `if (__SERVER__ || IS_RSC || ssc.styleSheet.server)`
+- `IS_RSC` (`typeof React.createContext === 'undefined'`) is broken in React 19 — `createContext` exists in all environments. Do NOT rely on it as the sole server detection mechanism
+- `React.useRef` is `undefined` in RSC server components — gate behind `__SERVER__` for dead-code elimination, never `typeof React.useRef === 'function'` (runtime conditional hook)
+- SSR `clearTag()` invalidates the DOM tag but NOT module-level caches (`instanceRules`). Cache-based fast-paths must check `!styleSheet.server` to avoid stale matches after `clearTag()`
 
 Native build isolation:
 
@@ -137,6 +141,17 @@ Native build isolation:
 - Replace `instanceof SomeClass` with branded `Symbol.for()` checks + duck-typing utilities to avoid value imports (see `utils/isKeyframes.ts`)
 - Verify after build changes: `grep -c 'document\.' native/dist/styled-components.native.cjs.js` must be 0
 - Newer RN/Hermes runtimes (0.79+) fail at **module evaluation time** on `document` references, not just execution time
+
+GlobalStyle shared-group architecture:
+
+- All instances of a `createGlobalStyle` share ONE stylesheet group, registered once at definition time via `StyleSheet.registerId(componentId)`
+- `instanceRules: Map<number, { name, rules }>` tracks each mount's compiled CSS on the module-level `GlobalStyle` object
+- `rebuildGroup()` clears the shared group and re-inserts from surviving instances — O(N) where N is mounted instances (typically 1-3)
+- `computeRules()` flattens + compiles CSS and caches in `instanceRules` — the single source of truth for rebuild
+- `rulesEqual` fast-path skips CSSOM rebuild when CSS is unchanged — but ONLY on the client (`!styleSheet.server`), because SSR `clearTag()` invalidates the tag without clearing the cache
+- Server-side `instanceRules` entries must be explicitly deleted after style collection (no `useLayoutEffect` cleanup runs on server)
+- CSS injection ordering: group IDs allocated at definition time (when `styled()`, `createGlobalStyle()`, or `keyframes()` is called) — lower ID = earlier in stylesheet
+- Keyframes eagerly register via `getGroupForId(this.id)` in constructor (not `StyleSheet.registerId` to avoid DOM imports in native builds)
 
 RSC style injection architecture:
 
@@ -151,7 +166,7 @@ attrs behavior:
 - attrs ALWAYS wins over directly passed props (by design, validated by tests)
 - The function form of attrs is the escape hatch: `.attrs(({ as }) => ({ as: as || "button" }))`
 - Exception: explicitly passing `undefined` for a prop prevents attrs from overwriting it (PR #5683)
-- When server-only code (e.g., `renderStyles`) is added for SSR/RSC, always gate it behind `__SERVER__ || IS_RSC` to avoid double execution on the client
+- When server-only code (e.g., `renderStyles`) is added for SSR/RSC, gate it behind `__SERVER__ || IS_RSC || ssc.styleSheet.server` to cover Turbopack's browser-bundle-for-SSR resolution
 
 Dynamic re-render hot path (most expensive → least):
 

@@ -12,7 +12,7 @@ exports[`ssr should add a nonce to the stylesheet if webpack nonce is detected i
        data-styled-version="JEST_MOCK_VERSION"
 >
   body{background:papayawhip;}/*!sc*/
-data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
 .c{color:red;}/*!sc*/
 data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
 </style>
@@ -23,7 +23,7 @@ exports[`ssr should emit global styles without any other components 1`] = `
        data-styled-version="JEST_MOCK_VERSION"
 >
   body{background:papayawhip;}/*!sc*/
-data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
 </style>
 `;
 
@@ -33,7 +33,7 @@ exports[`ssr should emit global styles without any other components 2`] = `
     dangerouslySetInnerHTML={
       {
         "__html": "body{background:papayawhip;}/*!sc*/
-data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
 ",
       }
     }
@@ -54,7 +54,7 @@ exports[`ssr should extract both global and local CSS 2`] = `
        data-styled-version="JEST_MOCK_VERSION"
 >
   body{background:papayawhip;}/*!sc*/
-data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
 .c{color:red;}/*!sc*/
 data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
 </style>
@@ -84,7 +84,7 @@ exports[`ssr should interleave styles with rendered HTML with renderToNodeStream
        data-styled-version="JEST_MOCK_VERSION"
 >
   body{background:papayawhip;}/*!sc*/
-data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
 .c{color:red;}/*!sc*/
 data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
 </style>
@@ -98,7 +98,7 @@ exports[`ssr should interleave styles with rendered HTML with renderToPipeableSt
        data-styled-version="JEST_MOCK_VERSION"
 >
   body{background:papayawhip;}/*!sc*/
-data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
 .c{color:red;}/*!sc*/
 data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
 </style>
@@ -131,7 +131,7 @@ exports[`ssr should return a generated React style element 1`] = `
 {
   "dangerouslySetInnerHTML": {
     "__html": "body{background:papayawhip;}/*!sc*/
-data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
 .c{color:red;}/*!sc*/
 data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
 ",
@@ -160,7 +160,7 @@ exports[`ssr should throw if getStyleElement is called after streaming is comple
        data-styled-version="JEST_MOCK_VERSION"
 >
   body{background:papayawhip;}/*!sc*/
-data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
 .c{color:red;}/*!sc*/
 data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
 </style>
@@ -181,7 +181,7 @@ exports[`ssr should throw if getStyleElement is called after streaming is comple
        data-styled-version="JEST_MOCK_VERSION"
 >
   body{background:papayawhip;}/*!sc*/
-data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
 .c{color:red;}/*!sc*/
 data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
 </style>
@@ -216,7 +216,7 @@ exports[`ssr should throw if getStyleTags is called after streaming is complete 
        data-styled-version="JEST_MOCK_VERSION"
 >
   body{background:papayawhip;}/*!sc*/
-data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
 .c{color:red;}/*!sc*/
 data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
 </style>
@@ -237,7 +237,7 @@ exports[`ssr should throw if getStyleTags is called after streaming is complete 
        data-styled-version="JEST_MOCK_VERSION"
 >
   body{background:papayawhip;}/*!sc*/
-data-styled.g1[id="sc-global-a1"]{content:"sc-global-a1,"}/*!sc*/
+data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
 .d{color:red;}/*!sc*/
 data-styled.g2[id="sc-b"]{content:"d,"}/*!sc*/
 </style>
