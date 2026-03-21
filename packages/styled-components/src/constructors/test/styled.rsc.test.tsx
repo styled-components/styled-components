@@ -321,8 +321,19 @@ describe('styled RSC mode', () => {
         expect(href).not.toMatch(/\s/);
       }
     });
+  });
 
-    it('should wrap base CSS in :where() and keep extension CSS normal (#5672)', () => {
+  describe(':where() wrapping', () => {
+    /** Assert every :where() in the CSS contains a valid, complete class selector */
+    function assertValidWhereSelectors(allCSS: string) {
+      const whereMatches = [...allCSS.matchAll(/:where\((\.[^)]+)\)/g)];
+      expect(whereMatches.length).toBeGreaterThan(0);
+      for (const match of whereMatches) {
+        expect(match[1]).toMatch(/^\.\w[\w-]*$/);
+      }
+    }
+
+    it('should wrap base selectors and keep extension selectors normal (#5672)', () => {
       const Base = styled.div`
         width: 100px;
       `;
@@ -333,16 +344,128 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // Base wrapped in :where() — zero specificity, so duplicate copies
-      // in sibling extensions cannot override earlier extensions' styles
       expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*width:100px/);
-      // Extension uses normal single-class selector
       expect(allCSS).toMatch(/\.\w+\{[^}]*width:200px/);
-      // No doubled selectors (no specificity scaling)
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*width:200px/);
       expect(allCSS).not.toMatch(/\.(\w+)\.\1/);
     });
 
-    it('should not wrap period-prefixed strings inside CSS values with :where()', () => {
+    it('should wrap pseudo-class selectors on the base', () => {
+      const Base = styled.button`
+        color: blue;
+        &:hover {
+          color: darkblue;
+        }
+        &:focus {
+          outline: 2px solid blue;
+        }
+      `;
+      const Extended = styled(Base)`
+        background: white;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // Base hover/focus selectors should be :where()-wrapped
+      expect(allCSS).toMatch(/:where\(\.\w+\):hover/);
+      expect(allCSS).toMatch(/:where\(\.\w+\):focus/);
+      // Base root selector also wrapped
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:blue/);
+      // Extension CSS not wrapped
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*background:white/);
+    });
+
+    it('should wrap pseudo-element selectors on the base', () => {
+      const Base = styled.div`
+        &::before {
+          content: '';
+          display: block;
+        }
+        &::after {
+          content: '';
+          clear: both;
+        }
+      `;
+      const Extended = styled(Base)`
+        overflow: hidden;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      expect(allCSS).toMatch(/:where\(\.\w+\)::before/);
+      expect(allCSS).toMatch(/:where\(\.\w+\)::after/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*overflow:hidden/);
+    });
+
+    it('should wrap base selectors inside media queries', () => {
+      const Base = styled.div`
+        font-size: 14px;
+        @media (min-width: 768px) {
+          font-size: 16px;
+        }
+      `;
+      const Extended = styled(Base)`
+        color: red;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // Both the root and media query base selectors should be wrapped
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*font-size:14px/);
+      expect(allCSS).toContain('@media');
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*font-size:16px/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
+    });
+
+    it('should wrap nested descendant selectors on the base', () => {
+      const Base = styled.div`
+        & > span {
+          font-weight: bold;
+        }
+        & .child {
+          margin: 4px;
+        }
+      `;
+      const Extended = styled(Base)`
+        padding: 8px;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // Descendant/child combinators should have base class wrapped
+      // renderToString HTML-encodes `>` as `&gt;`
+      expect(allCSS).toMatch(/:where\(\.\w+\)&gt;span/);
+      expect(allCSS).toMatch(/:where\(\.\w+\) \.child/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*padding:8px/);
+    });
+
+    it('should wrap all levels in a 3-deep chain except the leaf', () => {
+      const A = styled.div`
+        color: red;
+      `;
+      const B = styled(A)`
+        color: green;
+      `;
+      const C = styled(B)`
+        color: blue;
+      `;
+
+      const html = ReactDOMServer.renderToString(<C />);
+      const allCSS = extractStyleContents(html);
+
+      // A (grandparent) and B (parent) are base levels → :where()
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:green/);
+      // C (leaf) is the component being rendered → normal selector
+      expect(allCSS).toMatch(/\.\w+\{[^}]*color:blue/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:blue/);
+    });
+
+    it('should not wrap period-prefixed strings inside CSS values', () => {
       const Base = styled.div`
         &::before {
           content: '.item';
@@ -356,23 +479,15 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // CSS values with periods must not be affected by :where() wrapping.
-      // renderToString HTML-encodes quotes (&#x27;), so check the encoded form.
+      // renderToString HTML-encodes quotes (&#x27;)
       expect(allCSS).toContain('content:&#x27;.item&#x27;');
       expect(allCSS).toContain('url(&#x27;./bg.png&#x27;)');
-      // The period-prefixed values must NOT be wrapped in :where()
       expect(allCSS).not.toMatch(/:where\([^)]*\.item/);
       expect(allCSS).not.toMatch(/:where\([^)]*\.\/bg/);
-      // Extension CSS still normal
-      expect(allCSS).toContain('color:red');
-      // Base selectors ARE wrapped in :where()
-      expect(allCSS).toMatch(/:where\(/);
+      assertValidWhereSelectors(allCSS);
     });
 
     it('should not corrupt longer class names that share a prefix with shorter ones', () => {
-      // Regression: if base component has multiple class names where one is a
-      // prefix of another (e.g. dynamic component rendered with different props),
-      // replaceAll('.a', ':where(.a)') would corrupt '.ab' → ':where(.a)b'.
       const DynamicBase = styled.div<{ $color: string }>`
         color: ${p => p.$color};
       `;
@@ -380,7 +495,6 @@ describe('styled RSC mode', () => {
         font-size: 16px;
       `;
 
-      // Render with two different props to generate two class names for the base
       const html = ReactDOMServer.renderToString(
         <div>
           <Extended $color="red" />
@@ -389,20 +503,184 @@ describe('styled RSC mode', () => {
       );
       const allCSS = extractStyleContents(html);
 
-      // All :where() wrappers must contain valid, complete class selectors.
-      // If prefix corruption occurred, we'd see something like ':where(.a)b'
-      // instead of ':where(.ab)'.
-      const whereMatches = [...allCSS.matchAll(/:where\((\.[^)]+)\)/g)];
-      for (const match of whereMatches) {
-        const selector = match[1];
-        // Each :where() must contain a single valid class selector
-        expect(selector).toMatch(/^\.\w[\w-]*$/);
-      }
-
-      // Both dynamic variants' CSS should be present
+      assertValidWhereSelectors(allCSS);
       expect(allCSS).toContain('color:red');
       expect(allCSS).toContain('color:blue');
       expect(allCSS).toContain('font-size:16px');
+    });
+
+    it('should handle siblings extending the same base with overriding properties', () => {
+      const BaseBox = styled.div`
+        display: flex;
+        padding: 16px;
+        background: white;
+      `;
+      const RedBox = styled(BaseBox)`
+        background: red;
+      `;
+      const BlueBox = styled(BaseBox)`
+        background: blue;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <div>
+          <RedBox />
+          <BlueBox />
+        </div>
+      );
+      const allCSS = extractStyleContents(html);
+
+      // Base CSS wrapped in :where() so it doesn't override extensions
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*background:white/);
+      // Extension CSS uses normal selectors and wins the cascade
+      expect(allCSS).toContain('background:red');
+      expect(allCSS).toContain('background:blue');
+      // Both extension selectors must NOT be wrapped
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*background:red/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*background:blue/);
+    });
+
+    it('should wrap base with compound selectors (multiple pseudo-classes)', () => {
+      const Base = styled.input`
+        border: 1px solid gray;
+        &:focus:not(:disabled) {
+          border-color: blue;
+        }
+        &:disabled {
+          opacity: 0.5;
+        }
+      `;
+      const Extended = styled(Base)`
+        padding: 8px;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // Compound pseudo-class selectors should be wrapped
+      expect(allCSS).toMatch(/:where\(\.\w+\):focus:not\(:disabled\)/);
+      expect(allCSS).toMatch(/:where\(\.\w+\):disabled/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*padding:8px/);
+    });
+
+    it('should wrap base selectors with attribute selectors', () => {
+      const Base = styled.div`
+        &[data-active] {
+          background: yellow;
+        }
+        &[role='button'] {
+          cursor: pointer;
+        }
+      `;
+      const Extended = styled(Base)`
+        display: inline;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended data-active role="button" />);
+      const allCSS = extractStyleContents(html);
+
+      expect(allCSS).toMatch(/:where\(\.\w+\)\[data-active\]/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*display:inline/);
+    });
+
+    it('should wrap base with multiple comma-separated selectors', () => {
+      const Base = styled.div`
+        &:hover,
+        &:focus {
+          outline: 2px solid blue;
+        }
+      `;
+      const Extended = styled(Base)`
+        color: black;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // Both selectors in the comma list should be wrapped
+      expect(allCSS).toMatch(/:where\(\.\w+\):hover/);
+      expect(allCSS).toMatch(/:where\(\.\w+\):focus/);
+      expect(allCSS).toContain('outline:2px solid blue');
+    });
+
+    it('should wrap dynamic base that changes class names across renders', () => {
+      const DynamicBase = styled.div<{ $size: string }>`
+        width: ${p => p.$size};
+        height: ${p => p.$size};
+      `;
+      const Card = styled(DynamicBase)`
+        border: 1px solid gray;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <div>
+          <Card $size="100px" />
+          <Card $size="200px" />
+          <Card $size="300px" />
+        </div>
+      );
+      const allCSS = extractStyleContents(html);
+
+      // All three base variants should be :where()-wrapped
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*width:100px/);
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*width:200px/);
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*width:300px/);
+      // Extension CSS not wrapped
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*border:1px solid gray/);
+      // All :where() selectors must be valid
+      assertValidWhereSelectors(allCSS);
+    });
+
+    it('should wrap base with nested @supports queries', () => {
+      const Base = styled.div`
+        display: flex;
+        @supports (display: grid) {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+        }
+      `;
+      const Extended = styled(Base)`
+        gap: 16px;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      expect(allCSS).toContain('@supports');
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:flex/);
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:grid/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*gap:16px/);
+    });
+
+    it('should only wrap the top-most component when rendering mid-chain', () => {
+      const A = styled.div`
+        color: red;
+      `;
+      const B = styled(A)`
+        color: green;
+      `;
+
+      // Render B directly (not C extending B) — A is base, B is leaf
+      const html = ReactDOMServer.renderToString(<B />);
+      const allCSS = extractStyleContents(html);
+
+      // A (base) is wrapped
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
+      // B (leaf being rendered) is NOT wrapped
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:green/);
+    });
+
+    it('should not wrap a standalone component with no base', () => {
+      const Solo = styled.div`
+        color: purple;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Solo />);
+      const allCSS = extractStyleContents(html);
+
+      expect(allCSS).toContain('color:purple');
+      // No :where() at all — no base to wrap
+      expect(allCSS).not.toContain(':where(');
     });
   });
 
