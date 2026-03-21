@@ -77,15 +77,17 @@ function resolveVars<T extends Record<string, any>>(
   return result as T;
 }
 
-/** Recursively read from `theme` (ThemeProvider context) and emit CSS var declarations */
+/** Recursively read from `theme` (ThemeProvider context) and emit CSS var declarations.
+ *  Skips non-token keys injected by createTheme (GlobalStyle, raw, resolve). */
 function emitVarDeclarations(theme: Record<string, any>, varPrefix: string, path?: string): string {
   let css = '';
   for (const key in theme) {
+    if (key === 'GlobalStyle' || key === 'raw' || key === 'resolve') continue;
     const val = theme[key];
     const fullPath = path ? path + '-' + key : key;
     if (typeof val === 'object' && val !== null) {
       css += emitVarDeclarations(val as Record<string, any>, varPrefix, fullPath);
-    } else {
+    } else if (typeof val !== 'function') {
       css += '--' + varPrefix + fullPath + ':' + val + ';';
     }
   }
