@@ -826,4 +826,360 @@ describe('styled RSC mode', () => {
       expect(styleIdx).toBeLessThan(divIdx);
     });
   });
+
+  describe(':where() adversarial CSS fuzzing', () => {
+    /** Assert every :where() in the CSS contains a valid, complete class selector */
+    function assertValidWhereSelectors(allCSS: string) {
+      const whereMatches = [...allCSS.matchAll(/:where\((\.[^)]+)\)/g)];
+      for (const match of whereMatches) {
+        expect(match[1]).toMatch(/^\.\w[\w-]*$/);
+      }
+    }
+
+    /** Assert no :where() wrapping exists inside CSS string values (content, url, attr selectors) */
+    function assertNoWhereInValues(allCSS: string, ...substrings: string[]) {
+      for (const s of substrings) {
+        // The substring should appear verbatim (possibly HTML-encoded) without :where() corruption
+        expect(allCSS).not.toMatch(
+          new RegExp(':where\\([^)]*' + s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')')
+        );
+      }
+    }
+
+    it('should not corrupt CSS content property with class-name-like strings', () => {
+      const Base = styled.div`
+        &::before {
+          content: '.sc-something';
+        }
+        padding: 8px;
+      `;
+      const Extended = styled(Base)`
+        color: red;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // The content value should be preserved (HTML-encoded quotes)
+      expect(allCSS).toContain('.sc-something');
+      // Base CSS should be :where()-wrapped
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*padding:8px/);
+      // Extension CSS not wrapped
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
+      assertValidWhereSelectors(allCSS);
+    });
+
+    it('should not corrupt CSS url() values with dots', () => {
+      const Base = styled.div`
+        background: url(./../image.png);
+        display: block;
+      `;
+      const Extended = styled(Base)`
+        color: green;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // url() value should not be corrupted by :where() wrapping
+      // (dots in paths are not class selectors)
+      expect(allCSS).toContain('image.png');
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:block/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:green/);
+      assertValidWhereSelectors(allCSS);
+    });
+
+    it('should not corrupt attribute selectors with dot-prefixed values', () => {
+      const Base = styled.div`
+        &[data-value='.foo'] {
+          background: yellow;
+        }
+        margin: 4px;
+      `;
+      const Extended = styled(Base)`
+        color: blue;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // The attribute value .foo should not become :where(.foo)
+      expect(allCSS).toContain('background:yellow');
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*margin:4px/);
+      assertValidWhereSelectors(allCSS);
+    });
+
+    it('should not double-wrap user CSS that already contains :where()', () => {
+      const Base = styled.div`
+        :where(.other) {
+          color: red;
+        }
+        padding: 12px;
+      `;
+      const Extended = styled(Base)`
+        margin: 8px;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // The user's :where(.other) should not become :where(:where(.other))
+      expect(allCSS).not.toContain(':where(:where(');
+      expect(allCSS).toContain('color:red');
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*padding:12px/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*margin:8px/);
+    });
+
+    it('should not corrupt @supports selector() at-rules', () => {
+      const Base = styled.div`
+        display: flex;
+        @supports selector(.test) {
+          display: grid;
+        }
+      `;
+      const Extended = styled(Base)`
+        gap: 8px;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // @supports content should be preserved
+      expect(allCSS).toContain('@supports');
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:flex/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*gap:8px/);
+      assertValidWhereSelectors(allCSS);
+    });
+
+    it('should handle @container queries with nested selectors', () => {
+      const Base = styled.div`
+        container-type: inline-size;
+        @container (min-width: 300px) {
+          & {
+            font-size: 18px;
+          }
+        }
+      `;
+      const Extended = styled(Base)`
+        color: navy;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      expect(allCSS).toContain('container-type:inline-size');
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:navy/);
+      assertValidWhereSelectors(allCSS);
+    });
+
+    it('should not corrupt CSS custom properties with class-name-like values', () => {
+      const Base = styled.div`
+        --my-var: .something;
+        color: var(--my-var);
+      `;
+      const Extended = styled(Base)`
+        font-size: 14px;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // The custom property value .something should be preserved
+      expect(allCSS).toContain('.something');
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*font-size:14px/);
+      assertValidWhereSelectors(allCSS);
+    });
+
+    it('should handle many comma-separated selectors on the base', () => {
+      const Base = styled.div`
+        &:hover,
+        &:focus,
+        &:active,
+        &:visited,
+        &:first-child,
+        &:last-child,
+        &:nth-child(2),
+        &:nth-child(3),
+        &:nth-child(4),
+        &:nth-child(5),
+        &:not(:disabled) {
+          outline: none;
+        }
+      `;
+      const Extended = styled(Base)`
+        border: 1px solid black;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // All pseudo-class selectors in the comma list should be :where()-wrapped
+      expect(allCSS).toMatch(/:where\(\.\w+\):hover/);
+      expect(allCSS).toMatch(/:where\(\.\w+\):focus/);
+      expect(allCSS).toMatch(/:where\(\.\w+\):active/);
+      expect(allCSS).toMatch(/:where\(\.\w+\):first-child/);
+      expect(allCSS).toMatch(/:where\(\.\w+\):last-child/);
+      expect(allCSS).toMatch(/:where\(\.\w+\):not\(:disabled\)/);
+      expect(allCSS).toContain('outline:none');
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*border:1px solid black/);
+    });
+
+    it('should not corrupt animation-name that looks like a class prefix', () => {
+      const Base = styled.div`
+        animation-name: sc-keyframes-abc;
+        animation-duration: 1s;
+      `;
+      const Extended = styled(Base)`
+        opacity: 1;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // animation-name value should not be wrapped
+      expect(allCSS).toContain('sc-keyframes-abc');
+      expect(allCSS).not.toContain(':where(sc-keyframes-abc)');
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*opacity:1/);
+      assertValidWhereSelectors(allCSS);
+    });
+
+    it('should wrap base class at all nesting levels in deep at-rule nesting', () => {
+      const Base = styled.div`
+        color: black;
+        @media (min-width: 768px) {
+          color: gray;
+          @supports (display: grid) {
+            display: grid;
+          }
+        }
+      `;
+      const Extended = styled(Base)`
+        font-weight: bold;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // Base selectors at all nesting levels should be wrapped
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:black/);
+      expect(allCSS).toContain('@media');
+      expect(allCSS).toContain('@supports');
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:gray/);
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:grid/);
+      // Extension not wrapped
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*font-weight:bold/);
+    });
+
+    it('should not interfere with !important declarations', () => {
+      const Base = styled.div`
+        color: red !important;
+        display: flex;
+      `;
+      const Extended = styled(Base)`
+        color: blue;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // !important should be preserved on the :where()-wrapped base rule
+      // (stylis minifies the space before !important)
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:red\s?!important/);
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:flex/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:blue/);
+    });
+
+    it('should handle unicode escapes near class references', () => {
+      const Base = styled.div`
+        &::before {
+          content: '\\2022';
+        }
+        margin: 0;
+      `;
+      const Extended = styled(Base)`
+        padding: 4px;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      expect(allCSS).toContain('2022');
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*margin:0/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*padding:4px/);
+      assertValidWhereSelectors(allCSS);
+    });
+
+    it('should wrap all base levels correctly in A -> B -> C chain', () => {
+      const A = styled.div`
+        font-size: 12px;
+        &:hover {
+          font-size: 14px;
+        }
+      `;
+      const B = styled(A)`
+        font-size: 16px;
+        &:hover {
+          font-size: 18px;
+        }
+      `;
+      const C = styled(B)`
+        font-size: 20px;
+        &:hover {
+          font-size: 22px;
+        }
+      `;
+
+      const html = ReactDOMServer.renderToString(<C />);
+      const allCSS = extractStyleContents(html);
+
+      // A and B are base levels -> :where()
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*font-size:12px/);
+      expect(allCSS).toMatch(/:where\(\.\w+\):hover\{[^}]*font-size:14px/);
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*font-size:16px/);
+      expect(allCSS).toMatch(/:where\(\.\w+\):hover\{[^}]*font-size:18px/);
+      // C is the leaf -> NOT wrapped
+      expect(allCSS).toMatch(/\.\w+\{[^}]*font-size:20px/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*font-size:20px/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\):hover\{[^}]*font-size:22px/);
+    });
+
+    it('should handle component selector interpolation in base CSS', () => {
+      const OtherComponent = styled.span`
+        color: purple;
+      `;
+      const Base = styled.div`
+        ${OtherComponent} {
+          font-weight: bold;
+        }
+        padding: 8px;
+      `;
+      const Extended = styled(Base)`
+        margin: 16px;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // The OtherComponent's class selector should appear in the CSS
+      // and the base's own class should be :where()-wrapped
+      expect(allCSS).toContain('font-weight:bold');
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*padding:8px/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*margin:16px/);
+      assertValidWhereSelectors(allCSS);
+    });
+
+    it('should handle base with empty/whitespace-only CSS', () => {
+      const Base = styled.div``;
+      const Extended = styled(Base)`
+        color: red;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // Extension CSS should be present and not wrapped
+      expect(allCSS).toContain('color:red');
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
+    });
+  });
 });
