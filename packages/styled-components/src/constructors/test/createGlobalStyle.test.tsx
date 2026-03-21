@@ -2,11 +2,13 @@ import { act, render } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import React from 'react';
 import * as constants from '../../constants';
-import { StyleSheetManager } from '../../models/StyleSheetManager';
+import GlobalStyle from '../../models/GlobalStyle';
+import { mainStylis, StyleSheetManager } from '../../models/StyleSheetManager';
 import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
 import createGlobalStyle from '../createGlobalStyle';
+import css from '../css';
 import keyframes from '../keyframes';
 
 describe(`createGlobalStyle`, () => {
@@ -809,5 +811,178 @@ describe(`createGlobalStyle`, () => {
         color: green;
       }"
     `);
+  });
+});
+
+describe('GlobalStyle.renderStyles (unit)', () => {
+  /**
+   * These tests exercise GlobalStyle.renderStyles() directly to cover
+   * the rulesEqual fast-path (lines 57-68 in GlobalStyle.ts) which is
+   * unreachable through the React component lifecycle because
+   * useLayoutEffect cleanup always deletes instanceRules before the
+   * next effect re-runs renderStyles.
+   */
+
+  let sheet: StyleSheet;
+
+  beforeEach(() => {
+    resetStyled();
+    sheet = new StyleSheet({ isServer: false, useCSSOMInjection: false });
+  });
+
+  it('skips rebuildGroup when re-rendered with identical CSS (rulesEqual fast-path)', () => {
+    const rules = css`
+      body {
+        color: ${(p: { theme: { color: string } }) => p.theme.color};
+      }
+    `;
+    const gs = new GlobalStyle(rules, 'sc-global-eq-test');
+    const ctx = { theme: { color: 'red' } } as any;
+
+    // First render — populates instanceRules
+    gs.renderStyles(1, ctx, sheet, mainStylis);
+    expect(gs.instanceRules.has(1)).toBe(true);
+
+    const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
+
+    // Second render with same CSS — should hit fast-path and skip rebuildGroup
+    gs.renderStyles(1, ctx, sheet, mainStylis);
+    expect(clearRulesSpy).not.toHaveBeenCalled();
+  });
+
+  it('rebuilds group when re-rendered with changed CSS', () => {
+    const rules = css`
+      body {
+        color: ${(p: { theme: { color: string } }) => p.theme.color};
+      }
+    `;
+    const gs = new GlobalStyle(rules, 'sc-global-diff-test');
+
+    // First render
+    gs.renderStyles(1, { theme: { color: 'red' } } as any, sheet, mainStylis);
+    const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
+
+    // Second render with different CSS — should NOT hit fast-path
+    gs.renderStyles(1, { theme: { color: 'blue' } } as any, sheet, mainStylis);
+    expect(clearRulesSpy).toHaveBeenCalled();
+
+    // Verify the new CSS is present
+    expect(sheet.toString()).toContain('blue');
+  });
+
+  it('rebuilds group when rule count changes', () => {
+    // Use a rule that can produce different numbers of stylis output rules
+    let extraRule = '';
+    const rules = css`
+      body {
+        color: red;
+      }
+      ${() => extraRule}
+    `;
+    const gs = new GlobalStyle(rules, 'sc-global-count-test');
+    const ctx = { theme: {} } as any;
+
+    // First render — one rule
+    gs.renderStyles(1, ctx, sheet, mainStylis);
+    const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
+
+    // Add extra rule content and re-render
+    extraRule = 'div { background: green; }';
+    gs.renderStyles(1, ctx, sheet, mainStylis);
+    expect(clearRulesSpy).toHaveBeenCalled();
+  });
+
+  it('always rebuilds on server stylesheet even with identical CSS', () => {
+    const serverSheet = new StyleSheet({ isServer: true, useCSSOMInjection: false });
+    const rules = css`
+      body {
+        color: ${(p: { theme: { color: string } }) => p.theme.color};
+      }
+    `;
+    const gs = new GlobalStyle(rules, 'sc-global-server-test');
+    const ctx = { theme: { color: 'red' } } as any;
+
+    // First render
+    gs.renderStyles(1, ctx, serverSheet, mainStylis);
+    const clearRulesSpy = jest.spyOn(serverSheet, 'clearRules');
+
+    // Same CSS — server must always rebuild (clearTag invalidates DOM)
+    gs.renderStyles(1, ctx, serverSheet, mainStylis);
+    expect(clearRulesSpy).toHaveBeenCalled();
+  });
+
+  it('static global style skips re-render entirely when name is already registered', () => {
+    const rules = css`
+      body {
+        background: pink;
+      }
+    `;
+    const gs = new GlobalStyle(rules, 'sc-global-static-test');
+    const ctx = { theme: {} } as any;
+
+    // First render — inserts rules
+    gs.renderStyles(1, ctx, sheet, mainStylis);
+    expect(sheet.toString()).toContain('background');
+
+    const insertSpy = jest.spyOn(sheet, 'insertRules');
+
+    // Second render — name already registered, should skip
+    gs.renderStyles(1, ctx, sheet, mainStylis);
+    expect(insertSpy).not.toHaveBeenCalled();
+  });
+
+  it('static rehydrated style populates instanceRules cache for rebuild', () => {
+    const rules = css`
+      body {
+        background: teal;
+      }
+    `;
+    const gs = new GlobalStyle(rules, 'sc-global-rehydrate-test');
+    const ctx = { theme: {} } as any;
+
+    // First render — inserts rules and populates cache
+    gs.renderStyles(1, ctx, sheet, mainStylis);
+    expect(gs.instanceRules.has(1)).toBe(true);
+    const entry1 = gs.instanceRules.get(1)!;
+
+    // Simulate rehydration: name is registered but instanceRules is cleared
+    gs.instanceRules.clear();
+    expect(gs.instanceRules.has(1)).toBe(false);
+
+    // Re-render — should repopulate cache from computation (not re-insert)
+    const insertSpy = jest.spyOn(sheet, 'insertRules');
+    gs.renderStyles(1, ctx, sheet, mainStylis);
+    expect(gs.instanceRules.has(1)).toBe(true);
+    expect(insertSpy).not.toHaveBeenCalled();
+
+    // Cache should match original
+    expect(gs.instanceRules.get(1)!.rules).toEqual(entry1.rules);
+  });
+
+  it('removeStyles triggers rebuildGroup with surviving instances', () => {
+    const rules = css`
+      body {
+        color: ${(p: { theme: { color: string } }) => p.theme.color};
+      }
+    `;
+    const gs = new GlobalStyle(rules, 'sc-global-remove-test');
+
+    // Mount two instances
+    gs.renderStyles(1, { theme: { color: 'red' } } as any, sheet, mainStylis);
+    gs.renderStyles(2, { theme: { color: 'blue' } } as any, sheet, mainStylis);
+    expect(gs.instanceRules.size).toBe(2);
+    expect(sheet.toString()).toContain('red');
+    expect(sheet.toString()).toContain('blue');
+
+    // Remove instance 1 — instance 2 should survive
+    gs.removeStyles(1, sheet);
+    expect(gs.instanceRules.size).toBe(1);
+    expect(sheet.toString()).not.toContain('red');
+    expect(sheet.toString()).toContain('blue');
+
+    // Remove instance 2 — all gone
+    gs.removeStyles(2, sheet);
+    expect(gs.instanceRules.size).toBe(0);
+    expect(sheet.toString()).toBe('');
   });
 });
