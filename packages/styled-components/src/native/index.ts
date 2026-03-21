@@ -70,7 +70,7 @@ aliases.forEach(alias =>
     configurable: false,
     get() {
       if (alias in reactNative && reactNative[alias]) {
-        return styled(reactNative[alias]);
+        return styled(reactNative[alias] as NativeTarget);
       }
 
       throw new Error(
