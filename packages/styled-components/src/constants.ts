@@ -45,5 +45,7 @@ export const DISABLE_SPEEDY = Boolean(
         : process.env.NODE_ENV !== 'production'
 );
 
+export const KEYFRAMES_ID_PREFIX = 'sc-keyframes-';
+
 // Shared empty execution context when generating static styles
 export const STATIC_EXECUTION_CONTEXT = {};

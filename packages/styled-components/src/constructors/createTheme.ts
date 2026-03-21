@@ -1,3 +1,4 @@
+import { IS_BROWSER } from '../constants';
 import createGlobalStyle from './createGlobalStyle';
 
 type ThemeLeaf = string | number;
@@ -37,58 +38,75 @@ type ThemeContract<T> = CSSVarTheme<T> & {
   resolve(el?: Element): T;
 };
 
-/** Recursively build `var(--prefix-a-b, fallback)` accessor object */
-function buildVars<T extends Record<string, any>>(
-  obj: T,
+/** Shared recursive traversal — calls `leafFn` for each leaf, recurses for objects. */
+function walkTheme(
+  obj: Record<string, any>,
   varPrefix: string,
+  result: Record<string, any>,
+  leafFn: (fullPath: string, val: any, key: string) => any,
   path?: string
-): CSSVarTheme<T> {
-  const result: Record<string, any> = {};
+): void {
   for (const key in obj) {
     const val = obj[key];
     const fullPath = path ? path + '-' + key : key;
     if (typeof val === 'object' && val !== null) {
-      result[key] = buildVars(val as Record<string, any>, varPrefix, fullPath);
+      const nested: Record<string, any> = {};
+      walkTheme(val, varPrefix, nested, leafFn, fullPath);
+      result[key] = nested;
     } else {
-      result[key] = 'var(--' + varPrefix + fullPath + ', ' + val + ')';
+      result[key] = leafFn(fullPath, val, key);
     }
   }
+}
+
+/** Build `var(--prefix-a-b, fallback)` accessor object */
+function buildVars<T extends Record<string, any>>(obj: T, varPrefix: string): CSSVarTheme<T> {
+  const result: Record<string, any> = {};
+  walkTheme(
+    obj,
+    varPrefix,
+    result,
+    (fullPath, val) => 'var(--' + varPrefix + fullPath + ', ' + val + ')'
+  );
   return result as CSSVarTheme<T>;
 }
 
-/** Recursively read computed CSS variable values from the DOM */
+/** Read computed CSS variable values from the DOM */
 function resolveVars<T extends Record<string, any>>(
   obj: T,
   varPrefix: string,
-  styles: CSSStyleDeclaration,
-  path?: string
+  styles: CSSStyleDeclaration
 ): T {
   const result: Record<string, any> = {};
-  for (const key in obj) {
-    const val = obj[key];
-    const fullPath = path ? path + '-' + key : key;
-    if (typeof val === 'object' && val !== null) {
-      result[key] = resolveVars(val as Record<string, any>, varPrefix, styles, fullPath);
-    } else {
-      const resolved = styles.getPropertyValue('--' + varPrefix + fullPath).trim();
-      result[key] = resolved || val;
-    }
-  }
+  walkTheme(obj, varPrefix, result, (fullPath, val) => {
+    const resolved = styles.getPropertyValue('--' + varPrefix + fullPath).trim();
+    return resolved || val;
+  });
   return result as T;
 }
 
-/** Recursively read from `theme` (ThemeProvider context) and emit CSS var declarations.
- *  Skips non-token keys injected by createTheme (GlobalStyle, raw, resolve). */
-function emitVarDeclarations(theme: Record<string, any>, varPrefix: string, path?: string): string {
+/**
+ * Emit CSS var declarations by walking `shape` for structure and reading
+ * values from `theme`. This avoids hardcoded skip lists — only keys
+ * present in the original theme shape are traversed.
+ */
+function emitVarDeclarations(
+  shape: Record<string, any>,
+  theme: Record<string, any>,
+  varPrefix: string,
+  path?: string
+): string {
   let css = '';
-  for (const key in theme) {
-    if (key === 'GlobalStyle' || key === 'raw' || key === 'resolve') continue;
-    const val = theme[key];
+  for (const key in shape) {
+    const shapeVal = shape[key];
+    const themeVal = theme[key];
     const fullPath = path ? path + '-' + key : key;
-    if (typeof val === 'object' && val !== null) {
-      css += emitVarDeclarations(val as Record<string, any>, varPrefix, fullPath);
-    } else if (typeof val !== 'function') {
-      css += '--' + varPrefix + fullPath + ':' + val + ';';
+    if (typeof shapeVal === 'object' && shapeVal !== null) {
+      if (typeof themeVal === 'object' && themeVal !== null) {
+        css += emitVarDeclarations(shapeVal, themeVal, varPrefix, fullPath);
+      }
+    } else if (themeVal !== undefined && typeof themeVal !== 'function') {
+      css += '--' + varPrefix + fullPath + ':' + themeVal + ';';
     }
   }
   return css;
@@ -158,7 +176,7 @@ export default function createTheme<T extends Record<string, any>>(
 
   const GlobalStyle = createGlobalStyle`
     ${sel} {
-      ${(p: { theme: Record<string, any> }) => emitVarDeclarations(p.theme, pfx)}
+      ${(p: { theme: Record<string, any> }) => emitVarDeclarations(defaultTheme, p.theme, pfx)}
     }
   `;
 
@@ -166,7 +184,7 @@ export default function createTheme<T extends Record<string, any>>(
     GlobalStyle,
     raw: defaultTheme,
     resolve(el?: Element): T {
-      if (typeof document === 'undefined') {
+      if (!IS_BROWSER) {
         throw new Error('createTheme.resolve() is client-only');
       }
       const target = el ?? document.documentElement;

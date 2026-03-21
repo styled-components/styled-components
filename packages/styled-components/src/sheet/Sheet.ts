@@ -1,4 +1,4 @@
-import { DISABLE_SPEEDY, IS_BROWSER } from '../constants';
+import { DISABLE_SPEEDY, IS_BROWSER, KEYFRAMES_ID_PREFIX } from '../constants';
 import { InsertionTarget } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import { setToString } from '../utils/setToString';
@@ -28,8 +28,6 @@ const defaultOptions: SheetOptions = {
 };
 
 /** Contains the main stylesheet logic for stringification and caching */
-const KEYFRAMES_ID_PREFIX = 'sc-keyframes-';
-
 export default class StyleSheet implements Sheet {
   gs: GlobalStylesAllocationMap;
   /** Keyframe component IDs for efficient RSC rendering (avoids scanning all names) */
