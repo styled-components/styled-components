@@ -63,7 +63,7 @@ export default function createGlobalStyle<Props extends object>(
       );
     }
 
-    // Render styles during component execution for server environments.
+    // Render styles during component execution for RSC or explicit ServerStyleSheet.
     // Gate on IS_RSC or styleSheet.server (runtime flag from ServerStyleSheet),
     // NOT on __SERVER__ alone. The server build sets __SERVER__=true and eliminates
     // useLayoutEffect, so if we rendered here without cleanup, styles would
