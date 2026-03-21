@@ -64,10 +64,15 @@ export default function createGlobalStyle<Props extends object>(
     }
 
     // Render styles during component execution for server environments.
-    // Uses __SERVER__ (build-time constant) OR styleSheet.server (runtime flag set by
-    // ServerStyleSheet) because some bundlers (Turbopack) resolve the browser entry
-    // for SSR of client components, making __SERVER__ false on the server.
-    if (__SERVER__ || IS_RSC || ssc.styleSheet.server) {
+    // Gate on IS_RSC or styleSheet.server (runtime flag from ServerStyleSheet),
+    // NOT on __SERVER__ alone. The server build sets __SERVER__=true and eliminates
+    // useLayoutEffect, so if we rendered here without cleanup, styles would
+    // accumulate unboundedly in jsdom test environments (O(n²) regression).
+    // On a real server without ServerStyleSheet, VirtualTag is used and styles are
+    // discarded anyway, so skipping this path has no functional impact.
+    // Turbopack resolves the browser entry for SSR, so __SERVER__ is false there;
+    // styleSheet.server handles that case at runtime.
+    if (IS_RSC || ssc.styleSheet.server) {
       renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
     }
 
