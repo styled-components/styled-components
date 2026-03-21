@@ -135,7 +135,7 @@
     "files": [
       {
         "path": "./dist/styled-components.min.js",
-        "maxSize": "13.1kB"
+        "maxSize": "12.75kB"
       }
     ]
   },

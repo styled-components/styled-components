@@ -8,7 +8,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 ## Critical Constraints
 
-- NEVER use `precedence` or `href` on `<style>` elements in `createGlobalStyle` -- React 19 resource hoisting makes them persist after unmount. Regular styled components may use them since style persistence is intentional.
+- NEVER use `precedence` or `href` on `<style>` elements -- React 19 Float merges same-precedence tags, strips custom `data-*` attributes, and hoists to `<head>` where source ordering is unpredictable. RSC style tags must be plain inline `<style>` (server component output is not hydrated, so no mismatch).
 - The native entry must NEVER transitively import DOM code via value imports. Use `import type` and branded `Symbol.for()` checks instead of `instanceof`. Verify: `grep -c 'document\.' native/dist/styled-components.native.cjs.js` must be 0. RN/Hermes 0.79+ fails at module evaluation time on `document` references.
 - Server detection requires three mechanisms combined: `__SERVER__` (build-time constant), `IS_RSC` (module-level constant), and `styleSheet.server` (runtime flag from `ServerStyleSheet`). Always use `__SERVER__ || IS_RSC || ssc.styleSheet.server`. `IS_RSC` evaluates to `false` at runtime in React 19 RSC (`createContext` exists everywhere) but still serves as a build-time constant for dead-code elimination.
 - Turbopack resolves the `browser` entry for SSR of client components, making `__SERVER__` false on the server. `styleSheet.server` is the runtime fallback.
@@ -59,9 +59,12 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 ## RSC Style Injection
 
-- Two independent injection paths: RSC emits `<style precedence="styled-components">` (hoisted by React 19), client injects into `<style data-styled="active">` (appended to head). No shared ordering.
-- `createGlobalStyle` intentionally avoids `precedence` (causes unmount persistence) -- global styles in RSC render inline where the component appears
-- In dev mode, consider skipping `precedence` on regular styled components to avoid HMR tag accumulation
+<<<<<<< HEAD
+- RSC components emit plain inline `<style>` tags (no `precedence`, no `href`, no `data-styled-rsc`). Server component output is NOT hydrated by React, so inline tags cause no hydration mismatch.
+- Inline body styles naturally appear after the registry's `<head>` styles in source order, so cross-boundary extensions (RSC extending a client component) win the cascade.
+- Base-level CSS in inheritance chains is wrapped in `:where()` for zero specificity. This prevents duplicate base CSS (from sibling extensions sharing a base) from overriding earlier extensions' styles.
+- No cleanup of RSC style tags is needed -- they are the sole source of CSS for server-only components.
+- React 19 Float (`precedence` attribute) must NOT be used: it merges same-precedence tags, strips custom `data-*` attributes, and hoists to `<head>` where ordering relative to the registry is unpredictable.
 
 ## attrs Behavior
 
