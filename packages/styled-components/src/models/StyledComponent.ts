@@ -228,11 +228,15 @@ function useStyledComponentImpl<Props extends BaseObject>(
         // Class names are content-dependent hashes — a component's name is
         // derived from its CSS, so the name cannot appear in that CSS.
         // Cross-component collisions are impossible since names are scoped
-        // per componentId.
+        // per componentId. Use negative lookahead to avoid corrupting
+        // longer names that share a prefix (e.g. `.a` vs `.ab`).
         const names = ssc.styleSheet.names.get(cs.componentId);
         if (names) {
           names.forEach(name => {
-            levelCss = levelCss.replaceAll('.' + name, ':where(.' + name + ')');
+            levelCss = levelCss.replace(
+              new RegExp('\\.' + name + '(?![a-zA-Z0-9_-])', 'g'),
+              ':where(.' + name + ')'
+            );
           });
         }
       }

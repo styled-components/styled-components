@@ -368,6 +368,42 @@ describe('styled RSC mode', () => {
       // Base selectors ARE wrapped in :where()
       expect(allCSS).toMatch(/:where\(/);
     });
+
+    it('should not corrupt longer class names that share a prefix with shorter ones', () => {
+      // Regression: if base component has multiple class names where one is a
+      // prefix of another (e.g. dynamic component rendered with different props),
+      // replaceAll('.a', ':where(.a)') would corrupt '.ab' → ':where(.a)b'.
+      const DynamicBase = styled.div<{ $color: string }>`
+        color: ${p => p.$color};
+      `;
+      const Extended = styled(DynamicBase)`
+        font-size: 16px;
+      `;
+
+      // Render with two different props to generate two class names for the base
+      const html = ReactDOMServer.renderToString(
+        <div>
+          <Extended $color="red" />
+          <Extended $color="blue" />
+        </div>
+      );
+      const allCSS = extractStyleContents(html);
+
+      // All :where() wrappers must contain valid, complete class selectors.
+      // If prefix corruption occurred, we'd see something like ':where(.a)b'
+      // instead of ':where(.ab)'.
+      const whereMatches = [...allCSS.matchAll(/:where\((\.[^)]+)\)/g)];
+      for (const match of whereMatches) {
+        const selector = match[1];
+        // Each :where() must contain a single valid class selector
+        expect(selector).toMatch(/^\.\w[\w-]*$/);
+      }
+
+      // Both dynamic variants' CSS should be present
+      expect(allCSS).toContain('color:red');
+      expect(allCSS).toContain('color:blue');
+      expect(allCSS).toContain('font-size:16px');
+    });
   });
 
   describe('cross-boundary extension (#5672)', () => {
