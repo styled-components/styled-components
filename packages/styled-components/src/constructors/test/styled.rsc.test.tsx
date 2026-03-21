@@ -341,6 +341,33 @@ describe('styled RSC mode', () => {
       // No doubled selectors (no specificity scaling)
       expect(allCSS).not.toMatch(/\.(\w+)\.\1/);
     });
+
+    it('should not wrap period-prefixed strings inside CSS values with :where()', () => {
+      const Base = styled.div`
+        &::before {
+          content: '.item';
+        }
+        background: url('./bg.png');
+      `;
+      const Extended = styled(Base)`
+        color: red;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
+
+      // CSS values with periods must not be affected by :where() wrapping.
+      // renderToString HTML-encodes quotes (&#x27;), so check the encoded form.
+      expect(allCSS).toContain('content:&#x27;.item&#x27;');
+      expect(allCSS).toContain('url(&#x27;./bg.png&#x27;)');
+      // The period-prefixed values must NOT be wrapped in :where()
+      expect(allCSS).not.toMatch(/:where\([^)]*\.item/);
+      expect(allCSS).not.toMatch(/:where\([^)]*\.\/bg/);
+      // Extension CSS still normal
+      expect(allCSS).toContain('color:red');
+      // Base selectors ARE wrapped in :where()
+      expect(allCSS).toMatch(/:where\(/);
+    });
   });
 
   describe('cross-boundary extension (#5672)', () => {

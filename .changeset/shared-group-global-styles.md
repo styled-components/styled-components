@@ -13,6 +13,6 @@ Rearchitect `createGlobalStyle` to use shared stylesheet groups and eagerly regi
 4. Global style instances share their definition's group, so remounting always returns to the original position
 5. Keyframes defined before a component now correctly appear before that component's rules
 
-**Breaking changes:**
-- Keyframes CSS now appears _before_ (not after) components that reference them when the keyframes are defined first. This is semantically correct but changes the observable order.
-- SSR rehydration markers changed from `id="sc-global-X1"` to `id="sc-global-X"`. Apps upgrading across versions with cached SSR output may see a one-time style duplication until caches refresh.
+**Migration notes** (implementation detail adjustments, not user-facing API changes):
+- Keyframes CSS now appears before components that reference them when the keyframes are defined first (matches definition order)
+- SSR rehydration markers changed from `id="sc-global-X1"` to `id="sc-global-X"` — cached SSR output may show one-time style duplication until caches refresh

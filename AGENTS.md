@@ -59,12 +59,21 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 ## RSC Style Injection
 
-<<<<<<< HEAD
 - RSC components emit plain inline `<style>` tags (no `precedence`, no `href`, no `data-styled-rsc`). Server component output is NOT hydrated by React, so inline tags cause no hydration mismatch.
 - Inline body styles naturally appear after the registry's `<head>` styles in source order, so cross-boundary extensions (RSC extending a client component) win the cascade.
 - Base-level CSS in inheritance chains is wrapped in `:where()` for zero specificity. This prevents duplicate base CSS (from sibling extensions sharing a base) from overriding earlier extensions' styles.
 - No cleanup of RSC style tags is needed -- they are the sole source of CSS for server-only components.
 - React 19 Float (`precedence` attribute) must NOT be used: it merges same-precedence tags, strips custom `data-*` attributes, and hoists to `<head>` where ordering relative to the registry is unpredictable.
+
+## createTheme
+
+- `createTheme(defaultTheme, options?)` returns an object where every leaf is `var(--prefix-path, fallback)` -- usable in both client and RSC styled components
+- Pass the contract to `ThemeProvider` for stable class name hashes across themes (no hydration mismatch on light/dark)
+- `resolve(el?)` reads computed CSS var values from the DOM -- client-only, returns plain object with resolved values
+- `raw` property holds the original theme object
+- Options: `prefix` (default `"sc"`), `selector` (default `":root"`, use `":host"` for Shadow DOM)
+- Dark mode: declare CSS vars via `@media (prefers-color-scheme: dark)` and `.dark` class overrides in a `createGlobalStyle`, not via JS state -- avoids hydration flash
+- `reconstructWithOptions` must copy `keyframeIds` Set to the new sheet
 
 ## attrs Behavior
 

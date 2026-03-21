@@ -225,7 +225,10 @@ function useStyledComponentImpl<Props extends BaseObject>(
       let levelCss = tag.getGroup(getGroupForId(cs.componentId));
       if (levelCss && cs !== componentStyle) {
         // Base level: wrap selectors in :where() for zero specificity.
-        // Generated class names are unique, so global replace is safe.
+        // Class names are content-dependent hashes — a component's name is
+        // derived from its CSS, so the name cannot appear in that CSS.
+        // Cross-component collisions are impossible since names are scoped
+        // per componentId.
         const names = ssc.styleSheet.names.get(cs.componentId);
         if (names) {
           names.forEach(name => {
