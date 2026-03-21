@@ -114,8 +114,6 @@ export default function createGlobalStyle<Props extends object>(
 
       if (css) {
         globalStyle.instanceRules.delete(instance);
-        // No `precedence` attr, so React 19 Float is not activated and
-        // `data-styled-global` is preserved in the output.
         return React.createElement('style', {
           key: `${styledComponentId}-${instance}`,
           'data-styled-global': styledComponentId,

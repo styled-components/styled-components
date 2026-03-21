@@ -1,3 +1,4 @@
+import { KEYFRAMES_ID_PREFIX } from '../constants';
 import StyleSheet from '../sheet';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { Keyframes as KeyframesType, Stringifier } from '../types';
@@ -15,7 +16,7 @@ export default class Keyframes implements KeyframesType {
 
   constructor(name: string, rules: string) {
     this.name = name;
-    this.id = `sc-keyframes-${name}`;
+    this.id = KEYFRAMES_ID_PREFIX + name;
     this.rules = rules;
 
     // Eagerly register the group so keyframes defined before components

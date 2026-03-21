@@ -116,6 +116,17 @@ function resolveContext<Props extends BaseObject>(
 
 let seenUnknownProps = new Set();
 
+/** Cache RegExp objects for :where() wrapping to avoid recompilation per render */
+const whereRegExpCache = new Map<string, RegExp>();
+function getWhereRegExp(name: string): RegExp {
+  let re = whereRegExpCache.get(name);
+  if (!re) {
+    re = new RegExp('\\.' + name + '(?![a-zA-Z0-9_-])', 'g');
+    whereRegExpCache.set(name, re);
+  }
+  return re;
+}
+
 function useStyledComponentImpl<Props extends BaseObject>(
   forwardedComponent: IStyledComponent<'web', Props>,
   props: ExecutionProps & Props,
@@ -233,10 +244,9 @@ function useStyledComponentImpl<Props extends BaseObject>(
         const names = ssc.styleSheet.names.get(cs.componentId);
         if (names) {
           names.forEach(name => {
-            levelCss = levelCss.replace(
-              new RegExp('\\.' + name + '(?![a-zA-Z0-9_-])', 'g'),
-              ':where(.' + name + ')'
-            );
+            const re = getWhereRegExp(name);
+            re.lastIndex = 0;
+            levelCss = levelCss.replace(re, ':where(.' + name + ')');
           });
         }
       }
