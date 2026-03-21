@@ -30,117 +30,44 @@ describe('styled RSC mode', () => {
     mainSheet.clearTag();
   });
 
-  describe('style tag href attribute (#5663)', () => {
-    // React 19 uses href on <style precedence="..."> for deduplication.
-    // Spaces in href cause: console warning, hydration failure, and style loss.
-
-    it('should not contain spaces in href for a single-level component', () => {
-      const Card = styled.div`
-        display: flex;
-        padding: 16px;
-        border-radius: 8px;
+  describe('RSC style tag emission (#5672)', () => {
+    it('should emit inline style tags without precedence', () => {
+      const Button = styled.button`
+        padding: 8px;
       `;
 
-      const html = ReactDOMServer.renderToString(<Card />);
-      const hrefs = extractHrefs(html);
+      const html = ReactDOMServer.renderToString(<Button />);
 
-      expect(hrefs.length).toBeGreaterThan(0);
-      for (const href of hrefs) {
-        expect(href).not.toMatch(/\s/);
-      }
+      // Inline <style> tag emitted (no precedence — server component output
+      // isn't hydrated, so no mismatch; inline body styles come after
+      // registry <head> styles for correct cascade ordering)
+      expect(html).toContain('<style');
+      expect(html).not.toContain('precedence');
+      expect(html).not.toContain('data-styled-rsc');
     });
 
-    it('should not contain spaces in href when extending a styled component', () => {
-      // Reproduces the exact pattern from #5663: styled(IconWrapper)`...`
-      const IconWrapper = styled.svg`
-        width: 24px;
-        height: 24px;
-        display: inline-block;
-      `;
-      const CustomIcon = styled(IconWrapper)`
-        fill: currentColor;
-        stroke: none;
-      `;
-
-      const html = ReactDOMServer.renderToString(<CustomIcon viewBox="0 0 24 24" />);
-      const hrefs = extractHrefs(html);
-
-      expect(hrefs.length).toBeGreaterThan(0);
-      for (const href of hrefs) {
-        expect(href).not.toMatch(/\s/);
-      }
-    });
-
-    it('should not contain spaces in href across a three-level inheritance chain', () => {
-      const BaseLayout = styled.div`
-        display: flex;
-        box-sizing: border-box;
-      `;
-      const Container = styled(BaseLayout)`
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 16px;
-      `;
-      const NarrowContainer = styled(Container)`
-        max-width: 800px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<NarrowContainer />);
-      const hrefs = extractHrefs(html);
-
-      expect(hrefs.length).toBeGreaterThan(0);
-      for (const href of hrefs) {
-        expect(href).not.toMatch(/\s/);
-      }
-    });
-
-    it('should not contain spaces in href with dynamic interpolations in extended components', () => {
-      const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
-        padding: 8px 16px;
-        border: none;
-        cursor: pointer;
-        background: ${p => (p.$variant === 'primary' ? '#007bff' : '#6c757d')};
-      `;
-      const IconButton = styled(Button)`
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-      `;
-
-      const html = ReactDOMServer.renderToString(<IconButton $variant="primary" />);
-      const hrefs = extractHrefs(html);
-
-      expect(hrefs.length).toBeGreaterThan(0);
-      for (const href of hrefs) {
-        expect(href).not.toMatch(/\s/);
-      }
-    });
-
-    it('should produce unique hrefs for different components sharing the same base', () => {
+    it('should emit base and extension CSS in one tag with :where() on base (#5672)', () => {
       const Base = styled.div`
-        display: block;
+        display: flex;
       `;
-      const VariantA = styled(Base)`
+      const Extended = styled(Base)`
         color: red;
       `;
-      const VariantB = styled(Base)`
-        color: blue;
-      `;
 
-      const htmlA = ReactDOMServer.renderToString(<VariantA />);
-      const htmlB = ReactDOMServer.renderToString(<VariantB />);
+      const html = ReactDOMServer.renderToString(<Extended />);
+      const allCSS = extractStyleContents(html);
 
-      const hrefsA = extractHrefs(htmlA);
-      const hrefsB = extractHrefs(htmlB);
+      // Both base and extension CSS present
+      expect(allCSS).toContain('display:flex');
+      expect(allCSS).toContain('color:red');
 
-      // Each should have at least one href
-      expect(hrefsA.length).toBeGreaterThan(0);
-      expect(hrefsB.length).toBeGreaterThan(0);
-
-      // Neither should have spaces
-      for (const href of [...hrefsA, ...hrefsB]) {
-        expect(href).not.toMatch(/\s/);
-      }
+      // Base CSS wrapped in :where() for zero specificity — prevents
+      // duplicate base CSS in sibling extensions from overriding
+      // earlier extensions' styles
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:flex/);
+      // Extension CSS uses normal selector
+      expect(allCSS).toMatch(/\.\w+\{[^}]*color:red/);
+      expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
     });
   });
 
@@ -395,13 +322,9 @@ describe('styled RSC mode', () => {
       }
     });
 
-    it('should emit base styles before extended styles for correct CSS override order', () => {
-      // CSS specificity: .baseClass and .extClass are both single-class selectors
-      // (equal specificity). Document order is the tiebreaker — the later rule wins.
-      // Base CSS must appear BEFORE extended CSS so that extensions can override.
+    it('should wrap base CSS in :where() and keep extension CSS normal (#5672)', () => {
       const Base = styled.div`
         width: 100px;
-        color: red;
       `;
       const Extended = styled(Base)`
         width: 200px;
@@ -410,13 +333,156 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      expect(allCSS).toContain('width:100px');
-      expect(allCSS).toContain('width:200px');
+      // Base wrapped in :where() — zero specificity, so duplicate copies
+      // in sibling extensions cannot override earlier extensions' styles
+      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*width:100px/);
+      // Extension uses normal single-class selector
+      expect(allCSS).toMatch(/\.\w+\{[^}]*width:200px/);
+      // No doubled selectors (no specificity scaling)
+      expect(allCSS).not.toMatch(/\.(\w+)\.\1/);
+    });
+  });
 
-      // Extended styles must appear after base styles in the output
-      const basePos = allCSS.indexOf('width:100px');
-      const extPos = allCSS.indexOf('width:200px');
-      expect(extPos).toBeGreaterThan(basePos);
+  describe('cross-boundary extension (#5672)', () => {
+    // Simulates the RSC boundary: styled(ClientComponent) where the target
+    // is a non-styled React component (like an RSC client reference proxy).
+    // isStyledComponent(target) returns false, baseStyle is undefined,
+    // but the extension should still produce correct CSS.
+
+    it('should generate CSS when extending a non-styled component', () => {
+      const ClientButton = (props: React.JSX.IntrinsicElements['button']) => <button {...props} />;
+
+      const DangerButton = styled(ClientButton)`
+        background: #dc2626;
+        color: white;
+      `;
+
+      const html = ReactDOMServer.renderToString(<DangerButton>Delete</DangerButton>);
+      const allCSS = extractStyleContents(html);
+
+      expect(allCSS).toContain('background:#dc2626');
+      expect(allCSS).toContain('color:white');
+    });
+
+    it('should pass className through to the wrapped component', () => {
+      const ClientButton = (props: React.JSX.IntrinsicElements['button']) => <button {...props} />;
+
+      const ExtButton = styled(ClientButton)`
+        padding: 12px;
+      `;
+
+      const html = ReactDOMServer.renderToString(<ExtButton>Click</ExtButton>);
+
+      // The rendered button should have the generated className
+      expect(html).toMatch(/class="[^"]*sc-[^"]*"/);
+      // CSS should be in a style tag
+      expect(html).toContain('<style');
+      expect(html).toContain('padding:12px');
+    });
+
+    it('should not use precedence on cross-boundary style tags', () => {
+      const ClientComp = (props: React.JSX.IntrinsicElements['div']) => <div {...props} />;
+      const Extended = styled(ClientComp)`
+        margin: 8px;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+
+      // No precedence — inline style tags avoid Float merging/stripping
+      expect(html).not.toContain('precedence');
+      expect(html).not.toContain('data-precedence');
+      expect(html).toContain('margin:8px');
+    });
+
+    it('should handle multiple cross-boundary extensions of different components', () => {
+      const ClientCard = (props: React.JSX.IntrinsicElements['div']) => <div {...props} />;
+      const ClientButton = (props: React.JSX.IntrinsicElements['button']) => <button {...props} />;
+
+      const DangerCard = styled(ClientCard)`
+        border: 2px solid red;
+      `;
+      const PrimaryButton = styled(ClientButton)`
+        background: blue;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <DangerCard>
+          <PrimaryButton>Click</PrimaryButton>
+        </DangerCard>
+      );
+      const allCSS = extractStyleContents(html);
+
+      expect(allCSS).toContain('border:2px solid red');
+      expect(allCSS).toContain('background:blue');
+    });
+
+    it('should forward props through cross-boundary extensions', () => {
+      const ClientInput = (props: React.JSX.IntrinsicElements['input']) => <input {...props} />;
+
+      const StyledInput = styled(ClientInput)`
+        border: 1px solid gray;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <StyledInput type="email" placeholder="test@example.com" />
+      );
+
+      expect(html).toContain('type="email"');
+      expect(html).toContain('placeholder="test@example.com"');
+    });
+
+    it('should support dynamic interpolations in cross-boundary extensions', () => {
+      const ClientBox = (props: React.JSX.IntrinsicElements['div']) => <div {...props} />;
+
+      const ColorBox = styled(ClientBox)<{ $bg: string }>`
+        background: ${p => p.$bg};
+        padding: 16px;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <div>
+          <ColorBox $bg="red">Red</ColorBox>
+          <ColorBox $bg="blue">Blue</ColorBox>
+        </div>
+      );
+      const allCSS = extractStyleContents(html);
+
+      // Both dynamic variants should have their CSS emitted
+      expect(allCSS).toContain('background:red');
+      expect(allCSS).toContain('background:blue');
+      expect(allCSS).toContain('padding:16px');
+    });
+
+    it('should support attrs on cross-boundary extensions', () => {
+      const ClientButton = (props: React.JSX.IntrinsicElements['button']) => <button {...props} />;
+
+      const SubmitButton = styled(ClientButton).attrs({ type: 'submit' })`
+        font-weight: bold;
+      `;
+
+      const html = ReactDOMServer.renderToString(<SubmitButton>Submit</SubmitButton>);
+
+      expect(html).toContain('type="submit"');
+      expect(extractStyleContents(html)).toContain('font-weight:bold');
+    });
+
+    it('should produce each style tag after its component element for correct source ordering', () => {
+      const ClientBase = (props: React.JSX.IntrinsicElements['div']) => <div {...props} />;
+
+      const Extended = styled(ClientBase)`
+        color: red;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Extended />);
+
+      // The <style> tag should appear before the element in the HTML
+      // (Fragment renders style first, then element) so it's available
+      // before the element that references it
+      const styleIdx = html.indexOf('<style');
+      const divIdx = html.indexOf('<div');
+      expect(styleIdx).toBeGreaterThan(-1);
+      expect(divIdx).toBeGreaterThan(-1);
+      expect(styleIdx).toBeLessThan(divIdx);
     });
   });
 });

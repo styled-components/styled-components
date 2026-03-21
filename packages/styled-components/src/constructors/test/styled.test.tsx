@@ -41,9 +41,9 @@ describe('styled', () => {
 
     render(<StyledCollapse />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-    ".b {
-      background: red;
-    }"
+      ".b {
+        background: red;
+      }"
     `);
   });
 });

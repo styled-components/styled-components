@@ -1,6 +1,5 @@
 import { SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
-import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { ExecutionContext, RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
@@ -41,9 +40,9 @@ export default class ComponentStyle {
     executionContext: ExecutionContext,
     styleSheet: StyleSheet,
     stylis: Stringifier
-  ): { className: string; css: string } {
+  ): string {
     let names = this.baseStyle
-      ? this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis).className
+      ? this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis)
       : '';
 
     // force dynamic classnames if user-supplied stylis plugins are in use
@@ -57,7 +56,7 @@ export default class ComponentStyle {
         const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
 
         if (!styleSheet.hasNameForId(this.componentId, name)) {
-          const cssStaticFormatted = stylis(cssStatic, `.${name}`, undefined, this.componentId);
+          const cssStaticFormatted = stylis(cssStatic, '.' + name, undefined, this.componentId);
           styleSheet.insertRules(this.componentId, name, cssStaticFormatted);
         }
 
@@ -91,7 +90,7 @@ export default class ComponentStyle {
         const name = generateName(dynamicHash >>> 0);
 
         if (!styleSheet.hasNameForId(this.componentId, name)) {
-          const cssFormatted = stylis(css, `.${name}`, undefined, this.componentId);
+          const cssFormatted = stylis(css, '.' + name, undefined, this.componentId);
           styleSheet.insertRules(this.componentId, name, cssFormatted);
         }
 
@@ -99,12 +98,6 @@ export default class ComponentStyle {
       }
     }
 
-    // Retrieve CSS from Tag for RSC rendering
-    const generatedCSS =
-      typeof window === 'undefined'
-        ? styleSheet.getTag().getGroup(getGroupForId(this.componentId))
-        : '';
-
-    return { className: names, css: generatedCSS };
+    return names;
   }
 }

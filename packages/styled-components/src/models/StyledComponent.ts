@@ -2,6 +2,7 @@ import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
 import { IS_RSC, SC_VERSION } from '../constants';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
+import type StyleSheet from '../sheet';
 import type {
   AnyComponent,
   Attrs,
@@ -14,6 +15,7 @@ import type {
   IStyledStatics,
   OmitNever,
   RuleSet,
+  Stringifier,
   StyledOptions,
   WebTarget,
 } from '../types';
@@ -58,17 +60,17 @@ function generateId(
 
 function useInjectedStyle<T extends ExecutionContext>(
   componentStyle: ComponentStyle,
-  resolvedAttrs: T
-): { className: string; css: string } {
-  const ssc = useStyleSheetContext();
-
-  const result = componentStyle.generateAndInjectStyles(resolvedAttrs, ssc.styleSheet, ssc.stylis);
+  resolvedAttrs: T,
+  styleSheet: StyleSheet,
+  stylis: Stringifier
+): string {
+  const className = componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet, stylis);
 
   if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
-    React.useDebugValue(result.className);
+    React.useDebugValue(className);
   }
 
-  return result;
+  return className;
 }
 
 function resolveContext<Props extends BaseObject>(
@@ -175,7 +177,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
     }
   }
 
-  const { className: generatedClassName, css } = useInjectedStyle(componentStyle, context);
+  const generatedClassName = useInjectedStyle(componentStyle, context, ssc.styleSheet, ssc.stylis);
 
   if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {
     forwardedComponent.warnTooManyClasses(generatedClassName);
@@ -206,47 +208,50 @@ function useStyledComponentImpl<Props extends BaseObject>(
 
   const element = createElement(elementToBeCreated, propsForElement);
 
-  // RSC mode: emit a <style> tag per inheritance level so React 19 can
-  // deduplicate shared base styles across sibling components (#5663).
-  // Each tag's href includes registered names (CSS content hashes) so that
-  // dynamic prop variations produce distinct hrefs and aren't incorrectly deduped.
+  // RSC mode: emit this component's CSS (and its inheritance chain + keyframes)
+  // as an inline <style> tag. No `precedence` — server component output isn't
+  // hydrated, so no mismatch. Inline body styles come after the registry's
+  // <head> styles in source order, so extensions naturally win (#5672).
   if (IS_RSC) {
-    const styleTags: React.ReactElement[] = [];
-    let cs: ComponentStyle | null | undefined = componentStyle;
+    const tag = ssc.styleSheet.getTag();
+    let css = '';
 
+    // Walk the inheritance chain and collect CSS for all levels.
+    // Base levels are wrapped in :where() so they have zero specificity —
+    // this prevents duplicate base CSS in sibling extensions from
+    // overriding earlier extensions' styles (#5672).
+    let cs: ComponentStyle | null | undefined = componentStyle;
     while (cs) {
-      const groupCss = ssc.styleSheet.getTag().getGroup(getGroupForId(cs.componentId));
-      if (groupCss) {
-        // Build content-aware href from the registered names for this group.
-        // Names are generated from CSS content hashes, so identical CSS always
-        // produces the same href (enabling dedup) while different CSS produces
-        // different hrefs (preventing incorrect dedup of dynamic variants).
-        let nameKey = '';
+      let levelCss = tag.getGroup(getGroupForId(cs.componentId));
+      if (levelCss && cs !== componentStyle) {
+        // Base level: wrap selectors in :where() for zero specificity.
+        // Generated class names are unique, so global replace is safe.
         const names = ssc.styleSheet.names.get(cs.componentId);
         if (names) {
-          names.forEach(n => {
-            if (nameKey) nameKey += '_';
-            nameKey += n;
+          names.forEach(name => {
+            levelCss = levelCss.replaceAll('.' + name, ':where(.' + name + ')');
           });
         }
-
-        styleTags.push(
-          React.createElement('style', {
-            key: `sc-${cs.componentId}`,
-            precedence: 'styled-components',
-            href: `sc-${cs.componentId}-${nameKey}`,
-            children: groupCss,
-          })
-        );
       }
+      css = levelCss + css;
       cs = cs.baseStyle;
     }
 
-    if (styleTags.length) {
-      // Reverse so base styles appear before extended styles in the document,
-      // matching GroupedTag's group ordering for correct CSS specificity.
-      styleTags.reverse();
-      return React.createElement(React.Fragment, null, ...styleTags, element);
+    // Prepend any keyframe rules
+    ssc.styleSheet.keyframeIds.forEach(kfId => {
+      css = tag.getGroup(getGroupForId(kfId)) + css;
+    });
+
+    if (css) {
+      return React.createElement(
+        React.Fragment,
+        null,
+        React.createElement('style', {
+          key: 'sc-' + componentStyle.componentId,
+          children: css,
+        }),
+        element
+      );
     }
   }
 
