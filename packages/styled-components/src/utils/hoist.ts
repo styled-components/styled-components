@@ -1,25 +1,19 @@
 import React from 'react';
 import { AnyComponent } from '../types';
 
-const hasSymbol = typeof Symbol === 'function' && Symbol.for;
-
 // copied from react-is
-const REACT_MEMO_TYPE = hasSymbol ? Symbol.for('react.memo') : 0xead3;
-const REACT_FORWARD_REF_TYPE = hasSymbol ? Symbol.for('react.forward_ref') : 0xead0;
+const REACT_MEMO_TYPE = Symbol.for('react.memo');
+const REACT_FORWARD_REF_TYPE = Symbol.for('react.forward_ref');
 
 /**
  * Adapted from hoist-non-react-statics to avoid the react-is dependency.
  */
 const REACT_STATICS = {
-  childContextTypes: true,
   contextType: true,
-  contextTypes: true,
   defaultProps: true,
   displayName: true,
-  getDefaultProps: true,
   getDerivedStateFromError: true,
   getDerivedStateFromProps: true,
-  mixins: true,
   propTypes: true,
   type: true,
 };
@@ -51,7 +45,7 @@ const MEMO_STATICS = {
   type: true,
 };
 
-const TYPE_STATICS = {
+const TYPE_STATICS: Record<symbol, Record<string, boolean>> = {
   [REACT_FORWARD_REF_TYPE]: FORWARD_REF_STATICS,
   [REACT_MEMO_TYPE]: MEMO_STATICS,
 };
@@ -75,7 +69,7 @@ function getStatics(component: OmniComponent) {
 
   // React v16.12 and above
   return '$$typeof' in component
-    ? TYPE_STATICS[component['$$typeof'] as unknown as string]
+    ? TYPE_STATICS[component['$$typeof'] as unknown as symbol]
     : REACT_STATICS;
 }
 
@@ -109,24 +103,20 @@ export default function hoistNonReactStatics<
   if (typeof sourceComponent !== 'string') {
     // don't hoist over string (html) components
 
-    if (objectPrototype) {
-      const inheritedComponent = getPrototypeOf(sourceComponent);
-      if (inheritedComponent && inheritedComponent !== objectPrototype) {
-        hoistNonReactStatics(targetComponent, inheritedComponent, excludelist);
-      }
+    const inheritedComponent = getPrototypeOf(sourceComponent);
+    if (inheritedComponent && inheritedComponent !== objectPrototype) {
+      hoistNonReactStatics(targetComponent, inheritedComponent, excludelist);
     }
 
-    let keys: (String | Symbol)[] = getOwnPropertyNames(sourceComponent);
-
-    if (getOwnPropertySymbols) {
-      keys = keys.concat(getOwnPropertySymbols(sourceComponent));
-    }
+    const keys: (string | symbol)[] = (
+      getOwnPropertyNames(sourceComponent) as (string | symbol)[]
+    ).concat(getOwnPropertySymbols(sourceComponent));
 
     const targetStatics = getStatics(targetComponent);
     const sourceStatics = getStatics(sourceComponent);
 
     for (let i = 0; i < keys.length; ++i) {
-      const key = keys[i] as unknown as string;
+      const key = keys[i] as string;
       if (
         !(key in KNOWN_STATICS) &&
         !(excludelist && excludelist[key]) &&
