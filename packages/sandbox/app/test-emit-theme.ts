@@ -8,7 +8,19 @@ export function getThemeColor(theme: DefaultTheme) {
 
 export function makeTheme(): DefaultTheme {
   return {
-    colors: { primary: '#fff', secondary: '#000', text: '#333', background: '#fff' },
+    colors: {
+      primary: '#fff',
+      secondary: '#000',
+      text: '#333',
+      textMuted: '#666',
+      background: '#fff',
+      surface: '#f9fafb',
+      border: '#e5e7eb',
+      accent: '#7c3aed',
+      danger: '#dc2626',
+      success: '#16a34a',
+      warning: '#d97706',
+    },
     spacing: { small: '4px', medium: '8px', large: '16px' },
     typography: {
       fontFamily: 'sans-serif',

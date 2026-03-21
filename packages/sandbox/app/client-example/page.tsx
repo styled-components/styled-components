@@ -1,10 +1,18 @@
-import { CustomThemeProvider } from '../components/theme-provider';
+import BackLink from '../components/back-link';
 import { ClientTestingHarness } from './testing-harness';
+import styled from 'styled-components';
 
 export default function ClientExamplePage() {
   return (
-    <CustomThemeProvider>
+    <PageWrapper>
+      <BackLink />
       <ClientTestingHarness />
-    </CustomThemeProvider>
+    </PageWrapper>
   );
 }
+
+const PageWrapper = styled.div`
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 24px;
+`;

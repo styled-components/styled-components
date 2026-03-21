@@ -1,40 +1,63 @@
-import { createGlobalStyle } from 'styled-components';
+import styled, { createGlobalStyle } from 'styled-components';
+import BackLink from '../components/back-link';
+import AutopilotClient from './autopilot-client';
+import { GlobalStyleChecks } from './global-style-checks';
 import NavClient from './nav-client';
-import ToggleClient from './toggle-client';
 
 /**
  * Persistent global style living in a shared layout.
  * Should remain applied while navigating between child routes.
+ * Uses a subtle stripe pattern and border — works in both light and dark mode
+ * without overriding theme colors.
  */
 const LayoutGlobalStyle = createGlobalStyle`
   body {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;
-    color: #eee !important;
     min-height: 100vh;
-    font-family: Georgia, 'Times New Roman', serif !important;
+    background-image: linear-gradient(
+      135deg,
+      rgba(99, 102, 241, 0.18) 0%,
+      rgba(168, 85, 247, 0.15) 35%,
+      rgba(236, 72, 153, 0.15) 65%,
+      rgba(251, 146, 60, 0.12) 100%
+    ) !important;
+    background-attachment: fixed !important;
+    transition: background 0.5s ease !important;
   }
-
-  a { color: #e94560; }
-  ::selection { background: #e94560; color: #fff; }
 `;
 
 export default function GlobalStyleTestLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <LayoutGlobalStyle />
-      <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
-        <h1 style={{ marginBottom: '8px', color: '#e94560' }}>
-          createGlobalStyle Tests (#5649)
-        </h1>
-        <p style={{ marginBottom: '24px', opacity: 0.7 }}>
-          The dark gradient background and serif font come from a{' '}
-          <code>createGlobalStyle</code> in this shared layout. Navigate between
-          pages — the style should remain applied throughout.
-        </p>
+      <Wrapper>
+        <BackLink />
+        <PageTitle>Global Style Lifecycle Tests</PageTitle>
+        <Desc>
+          The colorful gradient background comes from a{' '}
+          <code>createGlobalStyle</code> in this shared layout.
+        </Desc>
+        <GlobalStyleChecks />
         <NavClient />
-        <ToggleClient />
+        <AutopilotClient />
         {children}
-      </div>
+      </Wrapper>
     </>
   );
 }
+
+const Wrapper = styled.div`
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 24px;
+`;
+
+const PageTitle = styled.h1`
+  margin-bottom: 8px;
+  color: var(--sc-colors-text, #111827);
+`;
+
+const Desc = styled.p`
+  margin-bottom: 8px;
+  color: var(--sc-colors-textMuted, #6b7280);
+`;
+
