@@ -244,10 +244,12 @@ function useStyledComponentImpl<Props extends BaseObject>(
       cs = cs.baseStyle;
     }
 
-    // Prepend any keyframe rules
+    // Prepend keyframe rules (build string in iteration order, prepend once)
+    let kfCss = '';
     ssc.styleSheet.keyframeIds.forEach(kfId => {
-      css = tag.getGroup(getGroupForId(kfId)) + css;
+      kfCss += tag.getGroup(getGroupForId(kfId));
     });
+    css = kfCss + css;
 
     if (css) {
       return React.createElement(
