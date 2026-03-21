@@ -1,6 +1,7 @@
 /* Import singletons */
 import { SC_ATTR, SC_VERSION } from './constants';
 import createGlobalStyle from './constructors/createGlobalStyle';
+import createTheme from './constructors/createTheme';
 import css from './constructors/css';
 import keyframes from './constructors/keyframes';
 /* Import Higher Order Components */
@@ -67,6 +68,7 @@ export {
   ThemeContext,
   ThemeProvider,
   createGlobalStyle,
+  createTheme,
   css,
   isStyledComponent,
   keyframes,
