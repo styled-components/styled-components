@@ -1,296 +1,339 @@
 'use client';
 
-import { useState } from 'react';
-import styled, { css, keyframes } from 'styled-components';
+import { useEffect, useRef, useState } from 'react';
+import styled, { css, keyframes, useTheme } from 'styled-components';
+import { TestStatus, type TestCheck } from '../components/auto-test';
+import { TestSummary } from '../components/test-summary';
+import { Section, SectionTitle, SectionDesc, HintText } from '../components/test-ui';
 
-const fadeIn = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`;
+const test1Checks: TestCheck[] = [
+  { ref: 'variant-card', type: 'exists', label: 'VariantCard renders' },
+];
 
-const Container = styled.div`
-  padding: 40px;
-  max-width: 1200px;
-  margin: 0 auto;
-  animation: ${fadeIn} 0.3s ease-out;
-`;
+const test2Checks: TestCheck[] = [
+  { ref: 'color-text', type: 'exists', label: 'ColorText renders' },
+];
 
-const Title = styled.h1`
-  color: ${props => props.theme.colors.primary};
-  font-size: 48px;
-  margin-bottom: 24px;
-  margin-top: 60px;
-`;
+const test3Checks: TestCheck[] = [
+  { ref: 'bouncing-box', type: 'style-not', prop: 'animation-name', expected: 'none', label: 'Box has animation' },
+];
 
-const Subtitle = styled.p`
-  color: ${props => props.theme.colors.text};
-  font-size: ${props => props.theme.typography.fontSize.large};
-  margin-bottom: ${props => props.theme.spacing.large};
-  opacity: 0.8;
-`;
+const test4Checks: TestCheck[] = [
+  { ref: 'disabled-btn', type: 'attr', prop: 'disabled', expected: '', label: 'Button is disabled' },
+];
 
-const ControlPanel = styled.div`
-  background: ${props => props.theme.colors.background};
-  border: 2px solid ${props => props.theme.colors.primary};
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-`;
+const test5Checks: TestCheck[] = [
+  { ref: 'undefined-as', type: 'element', expected: 'button', label: 'Renders as <button>' },
+];
 
-const ControlGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
+const test6Checks: TestCheck[] = [
+  { ref: 'truncated-text', type: 'style', prop: 'text-overflow', expected: 'ellipsis', label: 'Text truncates' },
+  { ref: 'truncated-text', type: 'style', prop: 'white-space', expected: 'nowrap', label: 'No wrap' },
+];
 
-const ControlLabel = styled.label`
-  color: ${props => props.theme.colors.text};
-  font-size: ${props => props.theme.typography.fontSize.small};
-  font-weight: 600;
-`;
+const test7Checks: TestCheck[] = [
+  { ref: 'swatch-primary', type: 'exists', label: 'Primary swatch renders' },
+  { ref: 'swatch-success', type: 'exists', label: 'Success swatch renders' },
+];
 
-const Select = styled.select`
-  padding: 8px 12px;
-  border: 1px solid ${props => props.theme.colors.primary};
-  border-radius: 6px;
-  background: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.text};
-  font-size: ${props => props.theme.typography.fontSize.small};
-  cursor: pointer;
-  transition: border-color 0.2s;
+const clientSuites = [
+  { name: '1. Variants', checks: test1Checks },
+  { name: '2. Transient', checks: test2Checks },
+  { name: '3. Keyframes', checks: test3Checks },
+  { name: '4. attrs()', checks: test4Checks },
+  { name: '5. undefined as', checks: test5Checks },
+  { name: '6. css helper', checks: test6Checks },
+  { name: '7. Theme', checks: test7Checks },
+];
 
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.colors.secondary};
-  }
-`;
+const VARIANTS = ['default', 'active', 'error'] as const;
+type Variant = (typeof VARIANTS)[number];
 
-const Input = styled.input`
-  padding: 8px 12px;
-  border: 1px solid ${props => props.theme.colors.primary};
-  border-radius: 6px;
-  background: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.text};
-  font-size: ${props => props.theme.typography.fontSize.small};
-  transition: border-color 0.2s;
+const COLORS = ['#7c3aed', '#dc2626', '#0070f3', '#16a34a', '#d97706'] as const;
 
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.colors.secondary};
-  }
-`;
-
-const TestArea = styled.div`
-  background: ${props => props.theme.colors.background};
-  border-radius: 12px;
-  padding: 24px;
-  border: 1px solid ${props => props.theme.colors.primary}20;
-  margin-bottom: 20px;
-`;
-
-const TestCard = styled.div<{ $variant: 'default' | 'active' | 'disabled' | 'error' }>`
-  ${props => {
-    const baseStyles = css`
-      border-radius: 8px;
-      padding: ${props.theme.spacing.medium};
-      margin-bottom: ${props.theme.spacing.medium};
-      transition: all 0.2s;
-      cursor: ${props.$variant === 'disabled' ? 'not-allowed' : 'pointer'};
-      opacity: ${props.$variant === 'disabled' ? 0.5 : 1};
-    `;
-
-    const variantStyles = {
-      default: css`
-        background: ${props.theme.colors.background};
-        border: 2px solid ${props.theme.colors.primary};
-      `,
-      active: css`
-        background: ${props.theme.colors.primary};
-        border: 2px solid ${props.theme.colors.primary};
-        color: ${props.theme.colors.background};
-      `,
-      disabled: css`
-        background: ${props.theme.colors.background};
-        border: 2px solid ${props.theme.colors.secondary};
-      `,
-      error: css`
-        background: ${props.theme.colors.accent || '#ff0000'};
-        border: 2px solid ${props.theme.colors.accent || '#ff0000'};
-        color: ${props.theme.colors.background};
-      `,
-    };
-
-    return css`
-      ${baseStyles}
-      ${variantStyles[props.$variant]}
-    `;
-  }}
-
-  &:hover {
-    ${props => props.$variant !== 'disabled' && css`
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    `}
-  }
-`;
-
-const TestText = styled.p<{ $customColor?: string }>`
-  color: ${props => props.$customColor || props.theme.colors.text};
-  font-size: ${props => props.theme.typography.fontSize.medium};
-  line-height: 1.6;
-  margin-bottom: 16px;
-`;
-
-const Badge = styled.span<{ $type: 'info' | 'success' | 'warning' }>`
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  margin-left: 12px;
-  
-  ${props => {
-    const styles = {
-      info: css`
-        background: ${props.theme.colors.secondary}40;
-        color: ${props.theme.colors.secondary};
-      `,
-      success: css`
-        background: #00c85340;
-        color: #00c853;
-      `,
-      warning: css`
-        background: ${props.theme.colors.accent}40;
-        color: ${props.theme.colors.accent};
-      `,
-    };
-    return styles[props.$type];
-  }}
-`;
-
-/**
- * Issue #5652 reproduction: CSSPropertiesWithVars incompatible with
- * React 19's CSSProperties in .attrs() callbacks
- */
-interface ImageProps {
-  draggable?: boolean;
-  style?: React.CSSProperties;
-  src?: string;
+/** Cycles through an array on an interval */
+function useCycle<T>(items: readonly T[], ms: number): T {
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setIndex(i => (i + 1) % items.length), ms);
+    return () => clearInterval(id);
+  }, [items.length, ms]);
+  return items[index];
 }
 
-const Image = (props: ImageProps) => <img {...props} />;
+/** Increments on each theme change so swatches flip to a new angle */
+function useThemeFlip(): number {
+  const theme = useTheme();
+  const prevRef = useRef(theme);
+  const [count, setCount] = useState(0);
 
-// Reproduction 1: attrs callback returning a prop from the wrapped component
-const StyledImage = styled(Image).attrs((p) => ({
-  draggable: p.draggable ?? false,
-}))``;
+  useEffect(() => {
+    if (prevRef.current !== theme) {
+      prevRef.current = theme;
+      setCount(c => c + 1);
+    }
+  }, [theme]);
 
-// Reproduction 2: spreading props through attrs
-const StyledImage2 = styled(Image).attrs((p) => ({
-  ...p,
-  draggable: p.draggable ?? false,
-}))``;
-
-// Reproduction 3: attrs returning style directly (should still work)
-const StyledImage3 = styled(Image).attrs(() => ({
-  style: { color: 'red' },
-}))``;
-
-// Reproduction 4: attrs returning style with CSS variables
-const StyledImage4 = styled(Image).attrs(() => ({
-  style: { '--custom': 'value', color: 'red' } as const,
-}))``;
-
-// Reproduction 5: simple HTML element with attrs returning style from props
-const StyledDiv = styled.div.attrs<{ $scale?: number }>(p => ({
-  style: {
-    ...p.style,
-    transform: `scale(${p.$scale ?? 1})`,
-  },
-}))``;
+  return count;
+}
 
 export function ClientTestingHarness() {
-  const [variant, setVariant] = useState<'default' | 'active' | 'disabled' | 'error'>('default');
-  const [customColor, setCustomColor] = useState('#ff6b9d');
+  const variant = useCycle(VARIANTS, 1500);
+  const color = useCycle(COLORS, 1200);
+  const flipCount = useThemeFlip();
 
   return (
     <Container>
-      <Title>
-        Client Component Testing
-        <Badge $type="warning">Interactive</Badge>
-      </Title>
-
+      <Title>Client Component Tests</Title>
+      <TestSummary suites={clientSuites} />
       <Subtitle>
-        Full client-side interactivity with dynamic styling and state management
+        All dynamic tests run on autopilot. Watch for continuous changes.
       </Subtitle>
 
-      <ControlPanel>
-        <ControlGroup>
-          <ControlLabel>Component Variant</ControlLabel>
-          <Select value={variant} onChange={e => setVariant(e.target.value as typeof variant)}>
-            <option value="default">Default</option>
-            <option value="active">Active</option>
-            <option value="disabled">Disabled</option>
-            <option value="error">Error</option>
-          </Select>
-        </ControlGroup>
+      {/* 1. Dynamic variant switching */}
+      <Section>
+        <SectionTitle>1. Dynamic variant styling <TestStatus checks={test1Checks} /></SectionTitle>
+        <SectionDesc>
+          The card cycles through variants automatically every 1.5s:
+          default (surface bg) &rarr; active (blue bg) &rarr; error (red tint).
+        </SectionDesc>
+        <HintText>
+          If broken: the card never changes appearance.
+        </HintText>
+        <VariantCard $variant={variant} data-testid="variant-card">
+          Current variant: <strong>{variant}</strong>
+        </VariantCard>
+      </Section>
 
-        <ControlGroup>
-          <ControlLabel>Custom Color</ControlLabel>
-          <Input type="color" value={customColor} onChange={e => setCustomColor(e.target.value)} />
-        </ControlGroup>
-      </ControlPanel>
+      {/* 2. Runtime color via transient prop */}
+      <Section>
+        <SectionTitle>2. Runtime color (transient prop) <TestStatus checks={test2Checks} /></SectionTitle>
+        <SectionDesc>
+          The text below cycles through 5 colors automatically every 1.2s.
+          Uses <code>$color</code> transient prop (not forwarded to DOM).
+        </SectionDesc>
+        <HintText>
+          If broken: text color is static, or an unknown-attribute DOM warning appears.
+        </HintText>
+        <ColorText $color={color} data-testid="color-text">
+          Color: {color}
+        </ColorText>
+      </Section>
 
-      <TestArea>
-        <h2 style={{ marginBottom: '24px' }}>Dynamic Components</h2>
+      {/* 3. Keyframe animation */}
+      <Section>
+        <SectionTitle>3. Keyframe animation <TestStatus checks={test3Checks} /></SectionTitle>
+        <SectionDesc>
+          The box should continuously bounce up and down in a loop.
+        </SectionDesc>
+        <HintText>
+          If broken: the box is static (no movement).
+        </HintText>
+        <BouncingBox data-testid="bouncing-box" />
+      </Section>
 
-        <TestCard $variant={variant}>
-          <TestText>
-            <strong>Variant Test Card ({variant})</strong>
-            <br />
-            This card demonstrates conditional styling based on the selected variant.
-            The styles are computed dynamically on every state change.
-          </TestText>
-        </TestCard>
+      {/* 4. attrs() behavior (#5689, #5691) */}
+      <Section>
+        <SectionTitle>4. attrs() static props <TestStatus checks={test4Checks} /></SectionTitle>
+        <SectionDesc>
+          The button gets <code>disabled</code> from{' '}
+          <code>.attrs({'{'} disabled: true {'}'})</code>. It should be
+          greyed out and unclickable.
+        </SectionDesc>
+        <HintText>
+          If broken: the button looks normal and is clickable.
+        </HintText>
+        <DisabledButton data-testid="disabled-btn" onClick={() => alert('should not fire')}>
+          Cannot click me
+        </DisabledButton>
+      </Section>
 
-        <TestText $customColor={customColor}>
-          <strong>Runtime Color Test</strong>
-          <br />
-          This text color updates in real-time as you adjust the color picker.
-          Current value: <code>{customColor}</code>
-        </TestText>
+      {/* 5. Explicit undefined preserves prop (#5683) */}
+      <Section>
+        <SectionTitle>5. Explicit undefined override (#5683) <TestStatus checks={test5Checks} /></SectionTitle>
+        <SectionDesc>
+          Passing <code>as={'{undefined}'}</code> should render the default
+          element (button), not crash.
+        </SectionDesc>
+        <HintText>If broken: component crashes or renders the wrong element type.</HintText>
+        <UndefinedAsTest as={undefined} data-testid="undefined-as">Renders as default (button)</UndefinedAsTest>
+      </Section>
 
-        <TestText>
-          <strong>Theme-Based Styling</strong>
-          <br />
-          This text uses values from the theme context. Try switching between light and dark
-          mode using the button in the top-right corner to see the theme update.
-        </TestText>
-      </TestArea>
+      {/* 6. css helper composition */}
+      <Section>
+        <SectionTitle>6. css helper composition <TestStatus checks={test6Checks} /></SectionTitle>
+        <SectionDesc>
+          Shared style fragments via the <code>css</code> helper should compose
+          correctly. The text should truncate with an ellipsis.
+        </SectionDesc>
+        <HintText>If broken: text wraps instead of truncating with an ellipsis.</HintText>
+        <TruncatedText data-testid="truncated-text">
+          This text should truncate with an ellipsis if it overflows its container width instead of wrapping to multiple lines.
+        </TruncatedText>
+      </Section>
 
-      <TestArea>
-        <h2 style={{ marginBottom: '16px' }}>
-          React 19 + styled-components Features
-          <Badge $type="success">New</Badge>
-        </h2>
-        <ul style={{ paddingLeft: '20px', lineHeight: '1.8' }}>
-          <li>Automatic style deduplication and hoisting</li>
-          <li>Client-side hydration with zero layout shift</li>
-          <li>Transient props ($prop) prevent DOM attribute warnings</li>
-          <li>CSS helper for composable style fragments</li>
-          <li>Keyframe animations with automatic name generation</li>
-          <li>TypeScript support with theme inference</li>
-        </ul>
-      </TestArea>
+      {/* 7. Theme switching */}
+      <Section>
+        <SectionTitle>7. Theme reactivity <TestStatus checks={test7Checks} /></SectionTitle>
+        <SectionDesc>
+          Toggle dark mode (top-right button). All four swatches should change
+          color simultaneously.
+        </SectionDesc>
+        <HintText>If broken: swatches don&apos;t change when toggling dark mode.</HintText>
+        <ThemeSwatches>
+          <Swatch $color="primary" $flip={flipCount} data-testid="swatch-primary" />
+          <Swatch $color="accent" $flip={flipCount} />
+          <Swatch $color="danger" $flip={flipCount} />
+          <Swatch $color="success" $flip={flipCount} data-testid="swatch-success" />
+        </ThemeSwatches>
+      </Section>
     </Container>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Styled components
+// ---------------------------------------------------------------------------
+
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+`;
+
+const Container = styled.div``;
+
+const Title = styled.h1`
+  color: ${p => p.theme.colors.text};
+  font-size: 32px;
+  margin-bottom: 8px;
+  margin-top: 48px;
+`;
+
+const Subtitle = styled.p`
+  color: ${p => p.theme.colors.textMuted};
+  font-size: 14px;
+  margin-bottom: 32px;
+`;
+
+const VariantCard = styled.div<{ $variant: Variant }>`
+  padding: 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s;
+
+  ${p =>
+    p.$variant === 'active'
+      ? css`
+          background: ${p.theme.colors.primary};
+          color: white;
+          border: 1px solid ${p.theme.colors.primary};
+        `
+      : p.$variant === 'error'
+        ? css`
+            background: ${p.theme.colors.danger}15;
+            color: ${p.theme.colors.danger};
+            border: 1px solid ${p.theme.colors.danger};
+          `
+        : css`
+            background: ${p.theme.colors.surface};
+            color: ${p.theme.colors.text};
+            border: 1px solid ${p.theme.colors.border};
+          `}
+`;
+
+const ColorText = styled.p<{ $color: string }>`
+  color: ${p => p.$color};
+  font-size: 24px;
+  font-weight: 700;
+  font-family: monospace;
+  transition: color 0.3s;
+`;
+
+const BouncingBox = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: ${p => p.theme.colors.primary};
+  animation: ${bounce} 1s ease-in-out infinite;
+`;
+
+const DisabledButton = styled.button.attrs({ disabled: true })`
+  padding: 10px 20px;
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: 6px;
+  background: ${p => p.theme.colors.surface};
+  color: ${p => p.theme.colors.textMuted};
+  font-size: 14px;
+  cursor: not-allowed;
+  opacity: 0.6;
+`;
+
+const UndefinedAsTest = styled.button`
+  padding: 10px 20px;
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: 6px;
+  background: ${p => p.theme.colors.surface};
+  color: ${p => p.theme.colors.text};
+  font-size: 14px;
+  cursor: pointer;
+`;
+
+const truncate = css`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const TruncatedText = styled.p`
+  ${truncate}
+  max-width: 300px;
+  font-size: 14px;
+  color: ${p => p.theme.colors.text};
+  background: ${p => p.theme.colors.surface};
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: 8px;
+  padding: 16px;
+`;
+
+const ThemeSwatches = styled.div`
+  display: flex;
+  gap: 16px;
+`;
+
+/**
+ * Swatch colors are intentionally polar opposites between light/dark
+ * so the theme reactivity test produces a dramatic, unmistakable shift.
+ * These are separate from the main theme colors used by the rest of the UI.
+ */
+const swatchColors = {
+  light: { primary: '#0070f3', accent: '#7c3aed', danger: '#dc2626', success: '#16a34a' },
+  dark: { primary: '#f97316', accent: '#eab308', danger: '#06b6d4', success: '#ec4899' },
+};
+
+const Swatch = styled.div<{
+  $color: 'primary' | 'accent' | 'danger' | 'success';
+  $flip: number;
+}>`
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  background: ${p => swatchColors.light[p.$color]};
+  transition: background 0.6s, transform 0.6s;
+  transform: perspective(400px) rotateY(${p => p.$flip * 180}deg);
+
+  @media (prefers-color-scheme: dark) {
+    background: ${p => swatchColors.dark[p.$color]};
+  }
+
+  .dark & {
+    background: ${p => swatchColors.dark[p.$color]};
+  }
+
+  .light & {
+    background: ${p => swatchColors.light[p.$color]};
+  }
+
+  &:nth-child(2) { transition-delay: 0.05s; }
+  &:nth-child(3) { transition-delay: 0.1s; }
+  &:nth-child(4) { transition-delay: 0.15s; }
+`;

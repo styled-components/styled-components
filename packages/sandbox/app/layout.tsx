@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import StyledComponentsRegistry from './lib/registry';
+import { CustomThemeProvider } from './components/theme-provider';
 
 export const metadata: Metadata = {
   title: 'styled-components RSC Test',
@@ -13,7 +14,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#1a1a1a' },
+    { media: '(prefers-color-scheme: dark)', color: '#111827' },
   ],
 };
 
@@ -21,7 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
+        <StyledComponentsRegistry>
+          <CustomThemeProvider>{children}</CustomThemeProvider>
+        </StyledComponentsRegistry>
       </body>
     </html>
   );

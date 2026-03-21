@@ -1,23 +1,34 @@
+import styled from 'styled-components';
+import { HintText } from '../../components/test-ui';
+
 export default function PageA() {
   return (
-    <div
-      style={{
-        background: 'rgba(233, 69, 96, 0.1)',
-        borderRadius: '12px',
-        padding: '32px',
-        border: '1px solid rgba(233, 69, 96, 0.3)',
-      }}
-    >
+    <Card>
       <h2>Page A</h2>
-      <p style={{ lineHeight: 1.8 }}>
-        You navigated here via client-side routing. The dark gradient background
-        and serif font from the layout's <code>createGlobalStyle</code> should
-        still be active.
-      </p>
-      <p style={{ lineHeight: 1.8, opacity: 0.7 }}>
-        If you see a plain white background or sans-serif font, the layout's
-        global style was incorrectly removed during navigation.
-      </p>
-    </div>
+      <Text>
+        Navigated here via client-side routing. The gradient background and
+        rainbow top border from the layout&apos;s <code>createGlobalStyle</code>{' '}
+        should still be active.
+      </Text>
+      <HintText>
+        If broken: gradient or top border disappear — the layout&apos;s global
+        style was removed during navigation.
+      </HintText>
+    </Card>
   );
 }
+
+const Card = styled.div`
+  background: var(--sc-colors-surface, #f9fafb);
+  border-radius: 10px;
+  padding: 24px;
+  border: 1px solid var(--sc-colors-border, #e5e7eb);
+`;
+
+const Text = styled.p`
+  line-height: 1.7;
+  margin-bottom: 16px;
+  color: var(--sc-colors-textMuted, #6b7280);
+  font-size: 14px;
+`;
+
