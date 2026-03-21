@@ -28,8 +28,12 @@ const defaultOptions: SheetOptions = {
 };
 
 /** Contains the main stylesheet logic for stringification and caching */
+const KEYFRAMES_ID_PREFIX = 'sc-keyframes-';
+
 export default class StyleSheet implements Sheet {
   gs: GlobalStylesAllocationMap;
+  /** Keyframe component IDs for efficient RSC rendering (avoids scanning all names) */
+  keyframeIds: Set<string>;
   names: NamesAllocationMap;
   options: SheetOptions;
   server: boolean;
@@ -51,6 +55,7 @@ export default class StyleSheet implements Sheet {
     };
 
     this.gs = globalStyles;
+    this.keyframeIds = new Set();
     this.names = new Map(names as NamesAllocationMap);
     this.server = !!options.isServer;
 
@@ -75,6 +80,8 @@ export default class StyleSheet implements Sheet {
       this.gs,
       (withNames && this.names) || undefined
     );
+
+    newSheet.keyframeIds = new Set(this.keyframeIds);
 
     // If we're reconstructing with a new target on the client, check if the container changed
     // This handles the case where StyleSheetManager's target prop changes (e.g., from undefined to shadowRoot)
@@ -108,6 +115,10 @@ export default class StyleSheet implements Sheet {
   /** Mark a group's name as known for caching */
   registerName(id: string, name: string) {
     getGroupForId(id);
+
+    if (id.startsWith(KEYFRAMES_ID_PREFIX)) {
+      this.keyframeIds.add(id);
+    }
 
     const existing = this.names.get(id);
     if (existing) {
