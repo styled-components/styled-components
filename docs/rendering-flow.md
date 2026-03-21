@@ -64,13 +64,7 @@ sequenceDiagram
     GroupedTag-->>StyleSheet: complete
     StyleSheet-->>ComponentStyle: complete
 
-    alt RSC Mode
-        ComponentStyle->>GroupedTag: getGroup(groupId)
-        GroupedTag-->>ComponentStyle: CSS string
-        ComponentStyle-->>StyledComponentImpl: className, css
-    else Client Mode
-        ComponentStyle-->>StyledComponentImpl: className, empty css
-    end
+    ComponentStyle-->>StyledComponentImpl: className
 
     Note over StyledComponentImpl,DOM: 5. ELEMENT CREATION
     StyledComponentImpl->>StyledComponentImpl: buildClassName(foldedIds + styledId + generated + props)
@@ -78,8 +72,10 @@ sequenceDiagram
     Note over StyledComponentImpl: Bypasses React.createElement<br/>overhead (~60-120x faster)
 
     alt RSC Mode
-        StyledComponentImpl->>StyledComponentImpl: rawElement(Fragment, [styleTag, element])
-        Note over React: React 19 hoists<br/>style tags to head
+        StyledComponentImpl->>GroupedTag: getGroup() for inheritance chain + keyframes
+        StyledComponentImpl->>StyledComponentImpl: wrap base CSS in :where() for zero specificity
+        StyledComponentImpl->>StyledComponentImpl: emit Fragment with inline style tag + element
+        Note over StyledComponentImpl: No precedence attr —<br/>avoids React 19 Float hoisting
     end
 
     React-->>User: DOM element with injected styles
