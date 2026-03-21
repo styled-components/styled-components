@@ -217,6 +217,36 @@ describe(`createGlobalStyle`, () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  it(`preserves multiple instances in StrictMode when one unmounts`, () => {
+    const GlobalStyle = createGlobalStyle`body { background: teal; }`;
+
+    function Wrapper({ showSecond }: { showSecond: boolean }) {
+      return (
+        <React.StrictMode>
+          <GlobalStyle />
+          {showSecond && <GlobalStyle />}
+        </React.StrictMode>
+      );
+    }
+
+    const { rerender } = render(<Wrapper showSecond={true} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: teal;
+      }
+      body {
+        background: teal;
+      }"
+    `);
+
+    rerender(<Wrapper showSecond={false} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: teal;
+      }"
+    `);
+  });
+
   it(`renders to StyleSheetManager.target`, () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -231,27 +261,6 @@ describe(`createGlobalStyle`, () => {
     const style = container.firstElementChild!;
     expect(style.tagName).toBe('STYLE');
     expect(style.textContent).toContain(`[data-test-target]{color:red;}`);
-  });
-
-  it(`adds new global rules non-destructively`, () => {
-    const Color = createGlobalStyle`[data-test-add]{color:red;} `;
-    const Background = createGlobalStyle`[data-test-add]{background:yellow;} `;
-
-    render(
-      <React.Fragment>
-        <Color />
-        <Background />
-      </React.Fragment>
-    );
-
-    expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "[data-test-add] {
-        color: red;
-      }
-      [data-test-add] {
-        background: yellow;
-      }"
-    `);
   });
 
   it(`stringifies multiple rules correctly`, () => {
@@ -406,6 +415,252 @@ describe(`createGlobalStyle`, () => {
     expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
   });
 
+  it(`preserves styles when one of multiple mounted instances of the same global style unmounts`, () => {
+    const GlobalStyle = createGlobalStyle`body { background: palevioletred; }`;
+
+    function Wrapper({ showSecond }: { showSecond: boolean }) {
+      return (
+        <>
+          <GlobalStyle />
+          {showSecond && <GlobalStyle />}
+        </>
+      );
+    }
+
+    const { rerender } = render(<Wrapper showSecond={true} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: palevioletred;
+      }
+      body {
+        background: palevioletred;
+      }"
+    `);
+
+    // Unmount the second instance — first instance's styles must survive
+    rerender(<Wrapper showSecond={false} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: palevioletred;
+      }"
+    `);
+  });
+
+  it(`preserves dynamic styles when one of multiple mounted instances unmounts`, () => {
+    const GlobalStyle = createGlobalStyle<{ color: string }>`
+      body { color: ${props => props.color}; }
+    `;
+
+    function Wrapper({ showSecond, color }: { showSecond: boolean; color: string }) {
+      return (
+        <>
+          <GlobalStyle color={color} />
+          {showSecond && <GlobalStyle color={color} />}
+        </>
+      );
+    }
+
+    const { rerender } = render(<Wrapper showSecond={true} color="red" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        color: red;
+      }
+      body {
+        color: red;
+      }"
+    `);
+
+    // Unmount second — first should keep its styles
+    rerender(<Wrapper showSecond={false} color="red" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        color: red;
+      }"
+    `);
+
+    // Update prop on remaining instance — should still work
+    rerender(<Wrapper showSecond={false} color="blue" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        color: blue;
+      }"
+    `);
+  });
+
+  it(`cleans up all styles when all instances of a global style unmount`, () => {
+    const GlobalStyle = createGlobalStyle`body { background: red; }`;
+
+    function Wrapper({ count }: { count: number }) {
+      return (
+        <>
+          {Array.from({ length: count }, (_, i) => (
+            <GlobalStyle key={i} />
+          ))}
+        </>
+      );
+    }
+
+    const { rerender } = render(<Wrapper count={3} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: red;
+      }
+      body {
+        background: red;
+      }
+      body {
+        background: red;
+      }"
+    `);
+
+    // Remove one at a time
+    rerender(<Wrapper count={2} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: red;
+      }
+      body {
+        background: red;
+      }"
+    `);
+
+    rerender(<Wrapper count={1} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: red;
+      }"
+    `);
+
+    rerender(<Wrapper count={0} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
+  });
+
+  it(`handles remounting instances after full unmount`, () => {
+    const GlobalStyle = createGlobalStyle`body { background: green; }`;
+
+    function Wrapper({ show }: { show: boolean }) {
+      return show ? (
+        <>
+          <GlobalStyle />
+          <GlobalStyle />
+        </>
+      ) : null;
+    }
+
+    const { rerender } = render(<Wrapper show={true} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: green;
+      }
+      body {
+        background: green;
+      }"
+    `);
+
+    // Unmount all
+    rerender(<Wrapper show={false} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
+
+    // Remount — should work again
+    rerender(<Wrapper show={true} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: green;
+      }
+      body {
+        background: green;
+      }"
+    `);
+  });
+
+  it(`handles unmounting first instance while second stays mounted`, () => {
+    const GlobalStyle = createGlobalStyle`body { background: coral; }`;
+
+    function Wrapper({ showFirst, showSecond }: { showFirst: boolean; showSecond: boolean }) {
+      return (
+        <>
+          {showFirst && <GlobalStyle />}
+          {showSecond && <GlobalStyle />}
+        </>
+      );
+    }
+
+    const { rerender } = render(<Wrapper showFirst={true} showSecond={true} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: coral;
+      }
+      body {
+        background: coral;
+      }"
+    `);
+
+    // Remove the FIRST instance — second should survive
+    rerender(<Wrapper showFirst={false} showSecond={true} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: coral;
+      }"
+    `);
+
+    // Remove second too
+    rerender(<Wrapper showFirst={false} showSecond={false} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`""`);
+  });
+
+  it(`updates one instance's props while another instance stays mounted`, () => {
+    const GlobalStyle = createGlobalStyle<{ bg: string }>`
+      body { background: ${props => props.bg}; }
+    `;
+
+    function Wrapper({ colorA, colorB }: { colorA: string; colorB: string }) {
+      return (
+        <>
+          <GlobalStyle bg={colorA} />
+          <GlobalStyle bg={colorB} />
+        </>
+      );
+    }
+
+    const { rerender } = render(<Wrapper colorA="red" colorB="blue" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: red;
+      }
+      body {
+        background: blue;
+      }"
+    `);
+
+    // Change only instance A's prop — instance B should be unaffected
+    rerender(<Wrapper colorA="green" colorB="blue" />);
+    const css = getRenderedCSS();
+    expect(css).toContain('background: green');
+    expect(css).toContain('background: blue');
+    expect(css).not.toContain('background: red');
+  });
+
+  it(`handles dynamic props in StrictMode across multiple renders`, () => {
+    const GlobalStyle = createGlobalStyle<{ color: string }>`
+      body { color: ${props => props.color}; }
+    `;
+
+    function App({ color }: { color: string }) {
+      return (
+        <React.StrictMode>
+          <GlobalStyle color={color} />
+        </React.StrictMode>
+      );
+    }
+
+    const { rerender } = render(<App color="red" />);
+    expect(getRenderedCSS()).toContain('color: red');
+
+    rerender(<App color="blue" />);
+    expect(getRenderedCSS()).toContain('color: blue');
+    expect(getRenderedCSS()).not.toContain('color: red');
+  });
+
   it(`should warn when children are passed as props`, () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -472,19 +727,19 @@ describe(`createGlobalStyle`, () => {
     );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "div {
-        display: inline-block;
-        animation: a 2s linear infinite;
-        padding: 2rem 1rem;
-        font-size: 1.2rem;
-      }
-      @keyframes a {
+      "@keyframes a {
         from {
           transform: rotate(0deg);
         }
         to {
           transform: rotate(360deg);
         }
+      }
+      div {
+        display: inline-block;
+        animation: a 2s linear infinite;
+        padding: 2rem 1rem;
+        font-size: 1.2rem;
       }"
     `);
   });

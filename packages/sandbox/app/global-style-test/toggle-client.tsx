@@ -1,12 +1,38 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createGlobalStyle } from 'styled-components';
 
-export default function ToggleClient({ children }: { children: React.ReactNode }) {
+/**
+ * Conditional global style — should be removed from <head> when unmounted.
+ */
+const BodyLockStyles = createGlobalStyle`
+  body {
+    overflow: hidden !important;
+    outline: 6px solid #e94560 !important;
+    outline-offset: -6px;
+  }
+`;
+
+export default function ToggleClient() {
   const [show, setShow] = useState(false);
 
   return (
-    <div>
+    <div
+      style={{
+        background: 'rgba(255,255,255,0.05)',
+        borderRadius: '12px',
+        padding: '32px',
+        border: '1px solid rgba(255,255,255,0.1)',
+        marginBottom: '24px',
+      }}
+    >
+      <h2>Conditional Unmount</h2>
+      <p style={{ lineHeight: 1.8, marginBottom: '16px' }}>
+        Toggle to mount/unmount a <code>createGlobalStyle</code> that adds a thick pink border to the
+        viewport and locks scrolling. The <code>&lt;style&gt;</code> tag should appear in{' '}
+        <code>&lt;head&gt;</code> when mounted and disappear when unmounted.
+      </p>
       <button
         onClick={() => setShow(v => !v)}
         style={{
@@ -22,14 +48,13 @@ export default function ToggleClient({ children }: { children: React.ReactNode }
       >
         {show ? 'Remove conditional style' : 'Add conditional style'}
       </button>
-      {show && children}
+      {show && <BodyLockStyles />}
       <p style={{ marginTop: '16px', opacity: 0.7 }}>
         <strong>Status:</strong> Conditional global style is{' '}
         <span style={{ color: show ? '#e94560' : '#2ecc71', fontWeight: 700 }}>
           {show ? 'MOUNTED' : 'UNMOUNTED'}
         </span>
-        . Inspect <code>&lt;head&gt;</code> for the{' '}
-        <code>data-styled-global</code> style tag.
+        . Inspect <code>&lt;head&gt;</code> for the <code>data-styled-global</code> style tag.
       </p>
     </div>
   );

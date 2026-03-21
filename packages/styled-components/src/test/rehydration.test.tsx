@@ -300,9 +300,9 @@ describe('rehydration', () => {
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           html { font-size: 16px; }/*!sc*/
-          ${SC_ATTR}.g1[id="sc-global-a1"]{content: "sc-global-a1,"}/*!sc*/
+          ${SC_ATTR}.g1[id="sc-global-a"]{content: "sc-global-a1,"}/*!sc*/
           body { background: papayawhip; }/*!sc*/
-          ${SC_ATTR}.g2[id="sc-global-b1"]{content: "sc-global-b1,"}/*!sc*/
+          ${SC_ATTR}.g2[id="sc-global-b"]{content: "sc-global-b1,"}/*!sc*/
           .c { color: blue; }/*!sc*/
           ${SC_ATTR}.g3[id="ONE"]{content: "c,"}/*!sc*/
           .d { color: red; }/*!sc*/
@@ -399,6 +399,82 @@ describe('rehydration', () => {
         }"
       `);
     });
+
+    it('should preserve rehydrated static global styles when one of multiple instances unmounts', () => {
+      // Rehydrate two instances of the same static global style
+      // (the beforeEach already set up sc-global-a with one instance)
+      // Create the same global style on the client and mount two instances
+      const GlobalStyle = createGlobalStyle`
+        html { font-size: 16px; }
+      `;
+
+      function Wrapper({ showSecond }: { showSecond: boolean }) {
+        return (
+          <>
+            <GlobalStyle />
+            {showSecond && <GlobalStyle />}
+          </>
+        );
+      }
+
+      const { rerender } = render(<Wrapper showSecond={true} />);
+
+      // Both instances should render their styles
+      expect(getRenderedCSS()).toContain('font-size: 16px');
+
+      // Unmount second instance — first instance's styles must survive
+      rerender(<Wrapper showSecond={false} />);
+      expect(getRenderedCSS()).toContain('font-size: 16px');
+    });
+
+    it('should preserve rehydrated dynamic global styles when one of multiple instances unmounts', () => {
+      // Create a dynamic global style (has interpolation, not static)
+      const GlobalStyle = createGlobalStyle<{ size: string }>`
+        html { font-size: ${props => props.size}; }
+      `;
+
+      function Wrapper({ showSecond }: { showSecond: boolean }) {
+        return (
+          <>
+            <GlobalStyle size="16px" />
+            {showSecond && <GlobalStyle size="16px" />}
+          </>
+        );
+      }
+
+      const { rerender } = render(<Wrapper showSecond={true} />);
+      expect(getRenderedCSS()).toContain('font-size: 16px');
+
+      // Unmount second instance — first instance's styles must survive
+      rerender(<Wrapper showSecond={false} />);
+      expect(getRenderedCSS()).toContain('font-size: 16px');
+    });
+
+    it('should handle prop change on surviving instance after rehydration + unmount', () => {
+      const GlobalStyle = createGlobalStyle<{ size: string }>`
+        html { font-size: ${props => props.size}; }
+      `;
+
+      function Wrapper({ showSecond, size }: { showSecond: boolean; size: string }) {
+        return (
+          <>
+            <GlobalStyle size={size} />
+            {showSecond && <GlobalStyle size={size} />}
+          </>
+        );
+      }
+
+      const { rerender } = render(<Wrapper showSecond={true} size="16px" />);
+      expect(getRenderedCSS()).toContain('font-size: 16px');
+
+      // Unmount second, then change prop on survivor
+      rerender(<Wrapper showSecond={false} size="16px" />);
+      expect(getRenderedCSS()).toContain('font-size: 16px');
+
+      rerender(<Wrapper showSecond={false} size="20px" />);
+      expect(getRenderedCSS()).toContain('font-size: 20px');
+      expect(getRenderedCSS()).not.toContain('font-size: 16px');
+    });
   });
 
   describe('with keyframes', () => {
@@ -484,13 +560,13 @@ describe('rehydration', () => {
             opacity: 0;
           }
         }
-        .b {
-          animation: keyframe_144 1s both;
-        }
         @keyframes keyframe_144 {
           from {
             opacity: 1;
           }
+        }
+        .b {
+          animation: keyframe_144 1s both;
         }"
       `);
     });
@@ -528,16 +604,16 @@ describe('rehydration', () => {
             opacity: 0;
           }
         }
+        @keyframes keyframe_144 {
+          from {
+            opacity: 1;
+          }
+        }
         .d {
           animation: keyframe_880 1s both;
         }
         .c {
           animation: keyframe_144 1s both;
-        }
-        @keyframes keyframe_144 {
-          from {
-            opacity: 1;
-          }
         }"
       `);
     });
@@ -573,16 +649,16 @@ describe('rehydration', () => {
             opacity: 0;
           }
         }
+        @keyframes keyframe_144 {
+          from {
+            opacity: 1;
+          }
+        }
         .d {
           animation: keyframe_880 1s both;
         }
         .c {
           animation: keyframe_144 1s both;
-        }
-        @keyframes keyframe_144 {
-          from {
-            opacity: 1;
-          }
         }"
       `);
     });

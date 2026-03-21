@@ -1,4 +1,5 @@
 import StyleSheet from '../sheet';
+import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { Keyframes as KeyframesType, Stringifier } from '../types';
 import styledError from '../utils/error';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
@@ -16,6 +17,12 @@ export default class Keyframes implements KeyframesType {
     this.name = name;
     this.id = `sc-keyframes-${name}`;
     this.rules = rules;
+
+    // Eagerly register the group so keyframes defined before components
+    // get a lower group ID and appear before them in the stylesheet.
+    // Uses getGroupForId directly (not StyleSheet.registerId) because
+    // GroupIDAllocator is pure JS — safe for native builds.
+    getGroupForId(this.id);
 
     setToString(this, () => {
       throw styledError(12, String(this.name));

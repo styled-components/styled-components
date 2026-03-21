@@ -1,5 +1,6 @@
 import { createGlobalStyle } from 'styled-components';
 import NavClient from './nav-client';
+import ToggleClient from './toggle-client';
 
 /**
  * Persistent global style living in a shared layout.
@@ -31,6 +32,7 @@ export default function GlobalStyleTestLayout({ children }: { children: React.Re
           pages — the style should remain applied throughout.
         </p>
         <NavClient />
+        <ToggleClient />
         {children}
       </div>
     </>

@@ -1,10 +1,9 @@
 import React from 'react';
-import { IS_RSC, STATIC_EXECUTION_CONTEXT } from '../constants';
+import { IS_RSC, SPLITTER, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
-import { getGroupForId } from '../sheet/GroupIDAllocator';
 import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
@@ -25,18 +24,24 @@ export default function createGlobalStyle<Props extends object>(
     checkDynamicCreation(styledComponentId);
   }
 
-  // Use a WeakMap to maintain stable instances per stylesheet
-  const instanceMap = new WeakMap<StyleSheet, number>();
-
   const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const ssc = useStyleSheetContext();
     const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
 
-    // Get or create instance ID for this stylesheet
-    let instance = instanceMap.get(ssc.styleSheet);
-    if (instance === undefined) {
+    // Each mount needs a unique instance ID for the shared-group instanceRules cache.
+    // __SERVER__ is a build-time constant: the dead branch is entirely eliminated,
+    // so React never sees a conditional hook call.
+    // Server bundle: direct allocation (one-shot renders, no stability needed).
+    // Browser bundle: useRef for stable ID across re-renders + useLayoutEffect cleanup.
+    let instance: number;
+    if (__SERVER__) {
       instance = ssc.styleSheet.allocateGSInstance(styledComponentId);
-      instanceMap.set(ssc.styleSheet, instance);
+    } else {
+      const instanceRef = React.useRef<number | null>(null);
+      if (instanceRef.current === null) {
+        instanceRef.current = ssc.styleSheet.allocateGSInstance(styledComponentId);
+      }
+      instance = instanceRef.current;
     }
 
     if (
@@ -58,13 +63,12 @@ export default function createGlobalStyle<Props extends object>(
       );
     }
 
-    // Render styles during component execution for server/RSC (where effects don't run).
-    // In client mode, styles are rendered in the useLayoutEffect below to avoid double work.
-    if (__SERVER__ || IS_RSC) {
-      const shouldRenderStyles = typeof window === 'undefined' || !ssc.styleSheet.server;
-      if (shouldRenderStyles) {
-        renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
-      }
+    // Render styles during component execution for server environments.
+    // Uses __SERVER__ (build-time constant) OR styleSheet.server (runtime flag set by
+    // ServerStyleSheet) because some bundlers (Turbopack) resolve the browser entry
+    // for SSR of client components, making __SERVER__ false on the server.
+    if (__SERVER__ || IS_RSC || ssc.styleSheet.server) {
+      renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
     }
 
     // Client-side lifecycle: render styles in effect and clean up on unmount.
@@ -87,17 +91,32 @@ export default function createGlobalStyle<Props extends object>(
     // resources even after unmount. Global styles need lifecycle-based cleanup
     // for conditional rendering (e.g. body lock on modal open/close).
     if (IS_RSC) {
-      const id = styledComponentId + instance;
-      const css =
-        typeof window === 'undefined' ? ssc.styleSheet.getTag().getGroup(getGroupForId(id)) : '';
+      // Each instance emits only its own rules (not the entire shared group)
+      // because RSC renders are independent and each instance needs its own style tag.
+      const entry =
+        typeof window === 'undefined' ? globalStyle.instanceRules.get(instance) : undefined;
+      let css = '';
+      if (entry) {
+        const rules = entry.rules;
+        for (let i = 0; i < rules.length; i++) {
+          css += rules[i] + SPLITTER;
+        }
+      }
 
       if (css) {
+        globalStyle.instanceRules.delete(instance);
         return React.createElement('style', {
           key: `${styledComponentId}-${instance}`,
           'data-styled-global': styledComponentId,
           children: css,
         });
       }
+    }
+
+    // Clean up server instance cache — no useLayoutEffect cleanup runs on the
+    // server, so instanceRules would grow unboundedly across SSR requests.
+    if (__SERVER__ || ssc.styleSheet.server) {
+      globalStyle.instanceRules.delete(instance);
     }
 
     return null;
