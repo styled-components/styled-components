@@ -55,8 +55,6 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
   const [override, setOverride] = useState<ThemePreset | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
-  const activeTheme = override ?? getSystemTheme();
-
   useEffect(() => {
     setHydrated(true);
 
@@ -86,16 +84,12 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
     });
   };
 
-  const label = override
-    ? `${override === 'light' ? 'Light' : 'Dark'} mode`
-    : hydrated
-      ? `Auto (${activeTheme})`
-      : 'Auto';
+  const label = override ? `${override === 'light' ? 'Light' : 'Dark'} mode` : 'Auto';
 
   return (
     <ThemeProvider theme={themeContract}>
       <BaseStyle $enableTransition={hydrated} />
-      <ThemeToggle onClick={toggleTheme}>
+      <ThemeToggle onClick={toggleTheme} data-auto={override === null ? '' : undefined}>
         {label}
       </ThemeToggle>
       {children}
@@ -125,5 +119,15 @@ const ThemeToggle = styled.button`
 
   &:active {
     transform: scale(0.95);
+  }
+
+  &[data-auto]::after {
+    content: ' (light)';
+  }
+
+  @media (prefers-color-scheme: dark) {
+    &[data-auto]::after {
+      content: ' (dark)';
+    }
   }
 `;
