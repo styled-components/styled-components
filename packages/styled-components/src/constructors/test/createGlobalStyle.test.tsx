@@ -985,4 +985,27 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     expect(gs.instanceRules.size).toBe(0);
     expect(sheet.toString()).toBe('');
   });
+
+  it('does not accumulate style rules across render/unmount cycles (#5674)', () => {
+    const rules = css`
+      .perf-a {
+        color: red;
+      }
+      .perf-b {
+        color: blue;
+      }
+    `;
+    const gs = new GlobalStyle(rules, 'sc-global-accum-test');
+    const ctx = { theme: {} } as any;
+
+    for (let i = 1; i <= 10; i++) {
+      gs.renderStyles(i, ctx, sheet, mainStylis);
+      gs.removeStyles(i, sheet);
+    }
+
+    // After 10 render/remove cycles, all rules should be cleaned up.
+    // The bug: renderStyles without removeStyles accumulated rules unboundedly.
+    expect(gs.instanceRules.size).toBe(0);
+    expect(sheet.toString()).toBe('');
+  });
 });
