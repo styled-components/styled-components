@@ -62,12 +62,23 @@ function walkTheme(
 /** Build `var(--prefix-a-b, fallback)` accessor object */
 function buildVars<T extends Record<string, any>>(obj: T, varPrefix: string): CSSVarTheme<T> {
   const result: Record<string, any> = {};
-  walkTheme(
-    obj,
-    varPrefix,
-    result,
-    (fullPath, val) => 'var(--' + varPrefix + fullPath + ', ' + val + ')'
-  );
+  walkTheme(obj, varPrefix, result, (fullPath, val) => {
+    if (process.env.NODE_ENV !== 'production') {
+      const str = String(val);
+      let depth = 0;
+      for (let i = 0; i < str.length; i++) {
+        if (str.charCodeAt(i) === 40) depth++;
+        else if (str.charCodeAt(i) === 41) depth--;
+        if (depth < 0) break;
+      }
+      if (depth !== 0) {
+        console.warn(
+          `createTheme: value "${str}" at "${fullPath}" contains unbalanced parentheses and may break the var() fallback`
+        );
+      }
+    }
+    return 'var(--' + varPrefix + fullPath + ', ' + val + ')';
+  });
   return result as CSSVarTheme<T>;
 }
 
