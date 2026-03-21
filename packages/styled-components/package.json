@@ -57,7 +57,6 @@
   "homepage": "https://styled-components.com",
   "dependencies": {
     "@emotion/is-prop-valid": "1.4.0",
-    "@emotion/unitless": "0.10.0",
     "@types/stylis": "4.2.7",
     "css-to-react-native": "3.2.0",
     "csstype": "3.2.3",
@@ -136,7 +135,7 @@
     "files": [
       {
         "path": "./dist/styled-components.min.js",
-        "maxSize": "12.8kB"
+        "maxSize": "12.3kB"
       }
     ]
   },
