@@ -1,7 +1,7 @@
 {
   "name": "styled-components",
-  "version": "6.3.12",
-  "description": "CSS for the <Component> Age. Style components your way with speed, strong typing, and flexibility.",
+  "version": "6.4.0-prerelease.4",
+  "description": "Fast, expressive styling for React.",
   "publishConfig": {
     "access": "public"
   },
@@ -135,7 +135,7 @@
     "files": [
       {
         "path": "./dist/styled-components.min.js",
-        "maxSize": "12.3kB"
+        "maxSize": "12.35kB"
       }
     ]
   },

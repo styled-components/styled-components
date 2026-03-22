@@ -148,7 +148,7 @@ interface CreateThemeOptions {
 }
 
 /**
- * Create a theme contract that bridges `ThemeProvider` and CSS custom properties.
+ * Create a theme backed by CSS custom properties, bridging `ThemeProvider` and CSS variables.
  *
  * Returns an object with the same shape as the input theme, but every leaf value
  * is a `var(--prefix-*, fallback)` CSS string. Use these in styled component
