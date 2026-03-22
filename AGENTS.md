@@ -39,7 +39,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 ## Build Architecture
 
-- `__SERVER__` is a build-time constant that enables dead-code elimination for SSR paths in browser builds
+- `__SERVER__` is a build-time constant that enables dead-code elimination for SSR paths in browser builds. NEVER use `__SERVER__` as the sole gate for behavior that needs paired cleanup (e.g. `useLayoutEffect`). Jest resolves the server build (`main` field) in jsdom, where `__SERVER__=true` eliminates cleanup but DOM mutations still occur. Gate on `styleSheet.server` or `IS_RSC` instead.
 - `IS_BROWSER` (`typeof window !== 'undefined'`) is a runtime check -- bundlers CANNOT tree-shake code behind it
 - `IS_RSC` (`typeof React.createContext === 'undefined'`) is a module-level constant. In React 19, `createContext` exists in all environments, so `IS_RSC` evaluates to `false` at runtime. It remains useful as a build-time constant: bundlers can replace it for dead-code elimination in server-only bundles.
 - The `browser` field in package.json maps server bundles to browser-specific alternatives. Preferred over `exports` (which caused TS2742 in composite projects).
