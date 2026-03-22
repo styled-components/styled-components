@@ -29,7 +29,7 @@
     "size": "bundlewatch",
     "prettier": "prettier src --write",
     "prettier:check": "prettier src --check",
-    "prepublishOnly": "cp ../../README.md . && pnpm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "repository": {
     "type": "git",
