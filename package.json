@@ -5,7 +5,6 @@
     "build": "pnpm --filter styled-components build",
     "sandbox": "pnpm --filter sandbox dev",
     "release": "pnpm --filter styled-components prepublishOnly && changeset publish",
-    "postbuild": "cp README.md packages/styled-components/",
     "postinstall": "pnpm --filter styled-components generateErrors",
     "prettier": "pnpm --filter styled-components prettier:check",
     "size": "pnpm --filter styled-components size",
