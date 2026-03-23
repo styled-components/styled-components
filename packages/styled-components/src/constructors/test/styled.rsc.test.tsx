@@ -2,6 +2,20 @@
  * @jest-environment node
  */
 
+// Mock React.cache (not available in React 18 test env, but needed for RSC dedup)
+const mockCacheStore = new Map<Function, any>();
+
+jest.mock('react', () => {
+  const actual = jest.requireActual('react');
+  return {
+    ...actual,
+    cache: (fn: Function) => () => {
+      if (!mockCacheStore.has(fn)) mockCacheStore.set(fn, fn());
+      return mockCacheStore.get(fn);
+    },
+  };
+});
+
 // Mock IS_RSC before importing the module
 jest.mock('../../constants', () => ({
   ...jest.requireActual('../../constants'),
@@ -14,16 +28,16 @@ import { mainSheet } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
 import styled, { css } from '../../index';
 
-/** Extract all href="..." values from rendered HTML */
-const extractHrefs = (html: string): string[] =>
-  [...html.matchAll(/href="([^"]*)"/g)].map(m => m[1]);
-
 /** Extract all CSS rule text from <style> tags in rendered HTML */
 const extractStyleContents = (html: string): string =>
   [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]).join('');
 
+/** Count <style> tags in rendered HTML */
+const countStyleTags = (html: string): number => (html.match(/<style[^>]*>/g) || []).length;
+
 describe('styled RSC mode', () => {
   beforeEach(() => {
+    mockCacheStore.clear();
     resetGroupIds();
     mainSheet.gs = {};
     mainSheet.names = new Map();
@@ -228,30 +242,15 @@ describe('styled RSC mode', () => {
         </div>
       );
 
-      // Each style tag emits CSS per component group with its own href.
-      // React 19 deduplicates <style> tags by href, so the base component's
-      // style tag (emitted both by <Base> and inside <Extended>) should share
-      // the same href and thus only appear once in the final document.
-      const styleTagHrefs = extractHrefs(html).filter(h => h.startsWith('sc-'));
-      const uniqueHrefs = new Set(styleTagHrefs);
+      // Base and Extended produce different CSS strings (Extended has :where()
+      // wrapping on base CSS), so both emit their own <style> tag.
+      expect(countStyleTags(html)).toBe(2);
 
-      // If dedup works, unique hrefs === total hrefs (no duplicates in output).
-      // With React 18 renderToString (no Float), tags aren't deduped at render
-      // time, but the hrefs must still be identical so React 19 CAN dedup them.
-      const baseHrefs = styleTagHrefs.filter(
-        h =>
-          // Find hrefs that appear more than once (the base component's)
-          styleTagHrefs.indexOf(h) !== styleTagHrefs.lastIndexOf(h)
-      );
-      if (baseHrefs.length > 0) {
-        // All duplicate hrefs should be the same value (the base's)
-        expect(new Set(baseHrefs).size).toBe(1);
-      }
-
-      // Regardless, no href should contain spaces
-      for (const href of uniqueHrefs) {
-        expect(href).not.toMatch(/\s/);
-      }
+      // All CSS should be present
+      const allCSS = extractStyleContents(html);
+      expect(allCSS).toContain('display:flex');
+      expect(allCSS).toContain('padding:16px');
+      expect(allCSS).toContain('color:red');
     });
 
     it('should preserve CSS for multiple siblings extending the same base', () => {
@@ -312,14 +311,6 @@ describe('styled RSC mode', () => {
       expect(allCSS).toContain('background:red');
       expect(allCSS).toContain('background:blue');
       expect(allCSS).toContain('border:1px solid #ccc');
-
-      // The two Extended renders should produce different hrefs for the
-      // DynamicBase level (because the CSS content differs), preventing
-      // React 19 from incorrectly deduplicating them.
-      const hrefs = extractHrefs(html).filter(h => h.startsWith('sc-'));
-      for (const href of hrefs) {
-        expect(href).not.toMatch(/\s/);
-      }
     });
   });
 
@@ -1180,6 +1171,108 @@ describe('styled RSC mode', () => {
       // Extension CSS should be present and not wrapped
       expect(allCSS).toContain('color:red');
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
+    });
+  });
+
+  describe('RSC style tag deduplication', () => {
+    it('should emit only one style tag for multiple instances of the same static component', () => {
+      const Button = styled.button`
+        padding: 8px;
+        color: blue;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <div>
+          <Button>A</Button>
+          <Button>B</Button>
+          <Button>C</Button>
+          <Button>D</Button>
+          <Button>E</Button>
+        </div>
+      );
+
+      expect(countStyleTags(html)).toBe(1);
+      expect(extractStyleContents(html)).toContain('padding:8px');
+    });
+
+    it('should emit only one style tag for dynamic components with identical props', () => {
+      const Box = styled.div<{ $color: string }>`
+        color: ${p => p.$color};
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <div>
+          <Box $color="red" />
+          <Box $color="red" />
+          <Box $color="red" />
+        </div>
+      );
+
+      expect(countStyleTags(html)).toBe(1);
+      expect(extractStyleContents(html)).toContain('color:red');
+    });
+
+    it('should emit separate style tags for dynamic components with different props', () => {
+      const Box = styled.div<{ $color: string }>`
+        color: ${p => p.$color};
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <div>
+          <Box $color="red" />
+          <Box $color="blue" />
+          <Box $color="green" />
+        </div>
+      );
+
+      expect(countStyleTags(html)).toBe(3);
+      const allCSS = extractStyleContents(html);
+      expect(allCSS).toContain('color:red');
+      expect(allCSS).toContain('color:blue');
+      expect(allCSS).toContain('color:green');
+    });
+
+    it('should deduplicate across multiple instances of extended component', () => {
+      const Base = styled.div`
+        display: flex;
+      `;
+      const Extended = styled(Base)`
+        color: red;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <div>
+          <Extended />
+          <Extended />
+          <Extended />
+        </div>
+      );
+
+      // All three Extended instances produce the same CSS → one tag
+      expect(countStyleTags(html)).toBe(1);
+      const allCSS = extractStyleContents(html);
+      expect(allCSS).toContain('display:flex');
+      expect(allCSS).toContain('color:red');
+    });
+
+    it('should emit separate tags for base and extended rendered together', () => {
+      const Base = styled.div`
+        display: flex;
+      `;
+      const Extended = styled(Base)`
+        color: red;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <div>
+          <Base />
+          <Extended />
+        </div>
+      );
+
+      // Base emits its own CSS, Extended emits base(:where())+extension
+      // These are different CSS strings, so both get their own tag
+      expect(countStyleTags(html)).toBe(2);
     });
   });
 });

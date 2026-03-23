@@ -116,6 +116,16 @@ function resolveContext<Props extends BaseObject>(
 
 let seenUnknownProps = new Set();
 
+/** Per-render dedup for RSC inline style tags via React.cache (React 19+). */
+let getEmittedCSS: (() => Set<string>) | null = null;
+if (IS_RSC) {
+  const reactCache: (<T extends (...args: any[]) => any>(fn: T) => T) | undefined = (React as any)
+    .cache;
+  if (reactCache) {
+    getEmittedCSS = reactCache(() => new Set<string>());
+  }
+}
+
 /** Cache RegExp objects for :where() wrapping to avoid recompilation per render */
 const whereRegExpCache = new Map<string, RegExp>();
 function getWhereRegExp(name: string): RegExp {
@@ -262,6 +272,14 @@ function useStyledComponentImpl<Props extends BaseObject>(
     css = kfCss + css;
 
     if (css) {
+      if (getEmittedCSS) {
+        const emitted = getEmittedCSS();
+        if (emitted.has(css)) {
+          return element;
+        }
+        emitted.add(css);
+      }
+
       return React.createElement(
         React.Fragment,
         null,
