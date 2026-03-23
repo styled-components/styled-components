@@ -63,6 +63,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - Inline body styles naturally appear after the registry's `<head>` styles in source order, so cross-boundary extensions (RSC extending a client component) win the cascade.
 - Base-level CSS in inheritance chains is wrapped in `:where()` for zero specificity. This prevents duplicate base CSS (from sibling extensions sharing a base) from overriding earlier extensions' styles.
 - No cleanup of RSC style tags is needed -- they are the sole source of CSS for server-only components.
+- RSC inline `<style>` tags are deduplicated per render via `React.cache` (React 19+). Multiple instances of the same component with identical CSS emit only one `<style>` tag. Different prop combinations (different CSS) get separate tags.
 - React 19 Float (`precedence` attribute) must NOT be used: it merges same-precedence tags, strips custom `data-*` attributes, and hoists to `<head>` where ordering relative to the registry is unpredictable.
 
 ## createTheme
