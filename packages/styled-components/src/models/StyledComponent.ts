@@ -264,31 +264,39 @@ function useStyledComponentImpl<Props extends BaseObject>(
       cs = cs.baseStyle;
     }
 
-    // Prepend keyframe rules (build string in iteration order, prepend once)
-    let kfCss = '';
-    ssc.styleSheet.keyframeIds.forEach(kfId => {
-      kfCss += tag.getGroup(getGroupForId(kfId));
-    });
-    css = kfCss + css;
-
-    if (css) {
-      if (getEmittedCSS) {
-        const emitted = getEmittedCSS();
-        if (emitted.has(css)) {
-          return element;
+    // Keyframes emit in their own <style> tag, deduped by ID. They register
+    // mid-render so prepending to component CSS breaks getEmittedCSS dedup.
+    const emitted = getEmittedCSS ? getEmittedCSS() : null;
+    let kfElement: React.ReactElement | null = null;
+    if (ssc.styleSheet.keyframeIds.size > 0) {
+      let kfCss = '';
+      for (const kfId of ssc.styleSheet.keyframeIds) {
+        const kfRules = tag.getGroup(getGroupForId(kfId));
+        if (kfRules && (!emitted || !emitted.has(kfId))) {
+          if (emitted) emitted.add(kfId);
+          kfCss += kfRules;
         }
-        emitted.add(css);
       }
+      if (kfCss) {
+        kfElement = React.createElement('style', {
+          key: 'sc-kf-' + componentStyle.componentId,
+          children: kfCss,
+        });
+      }
+    }
 
-      return React.createElement(
-        React.Fragment,
-        null,
-        React.createElement('style', {
-          key: 'sc-' + componentStyle.componentId,
-          children: css,
-        }),
-        element
-      );
+    const cssDeduped = css && emitted ? emitted.has(css) : false;
+    if (css && !cssDeduped) {
+      if (emitted) emitted.add(css);
+    }
+
+    const styleElement =
+      css && !cssDeduped
+        ? React.createElement('style', { key: 'sc-' + componentStyle.componentId, children: css })
+        : null;
+
+    if (kfElement || styleElement) {
+      return React.createElement(React.Fragment, null, kfElement, styleElement, element);
     }
   }
 
