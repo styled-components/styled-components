@@ -26,7 +26,7 @@ import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { mainSheet } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
-import styled, { css } from '../../index';
+import styled, { css, keyframes } from '../../index';
 
 /** Extract all CSS rule text from <style> tags in rendered HTML */
 const extractStyleContents = (html: string): string =>
@@ -1272,6 +1272,84 @@ describe('styled RSC mode', () => {
 
       // Base emits its own CSS, Extended emits base(:where())+extension
       // These are different CSS strings, so both get their own tag
+      expect(countStyleTags(html)).toBe(2);
+    });
+  });
+
+  describe('RSC keyframe emission', () => {
+    it('should emit keyframes in a dedicated style tag', () => {
+      const pulse = keyframes`
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+      `;
+
+      const Dot = styled.div`
+        animation: ${pulse} 2s infinite;
+      `;
+
+      const html = ReactDOMServer.renderToString(<Dot />);
+
+      expect(extractStyleContents(html)).toMatchInlineSnapshot(`
+        "@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}/*!sc*/
+        .huNysR{animation:gZZrBJ 2s infinite;}/*!sc*/
+        "
+      `);
+      expect(countStyleTags(html)).toBe(2);
+    });
+
+    it('should deduplicate keyframes across multiple components', () => {
+      const fade = keyframes`
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+      `;
+
+      const A = styled.div`
+        animation: ${fade} 1s;
+      `;
+      const B = styled.span`
+        animation: ${fade} 2s;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <>
+          <A />
+          <B />
+        </>
+      );
+
+      // @keyframes should appear exactly once despite two components using it
+      expect(extractStyleContents(html)).toMatchInlineSnapshot(`
+        "@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}/*!sc*/
+        .lpqWJr{animation:gZZrBJ 1s;}/*!sc*/
+        .jRhGtv{animation:gZZrBJ 2s;}/*!sc*/
+        "
+      `);
+      expect(countStyleTags(html)).toBe(3);
+    });
+
+    it('should emit keyframes even when component CSS is deduped', () => {
+      const spin = keyframes`
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      `;
+
+      const Spinner = styled.div`
+        animation: ${spin} 1s linear infinite;
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        <>
+          <Spinner />
+          <Spinner />
+        </>
+      );
+
+      // Two instances, but only one set of styles (component CSS + keyframe both deduped)
+      expect(extractStyleContents(html)).toMatchInlineSnapshot(`
+        "@keyframes dnfVul{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}/*!sc*/
+        .kctRFm{animation:dnfVul 1s linear infinite;}/*!sc*/
+        "
+      `);
       expect(countStyleTags(html)).toBe(2);
     });
   });
