@@ -8,6 +8,17 @@ import createStylisInstance from '../utils/stylis';
 export const mainSheet: StyleSheet = new StyleSheet();
 export const mainStylis: Stringifier = createStylisInstance();
 
+/** Per-render mainSheet reset to prevent HMR accumulation (see AGENTS.md § RSC Style Injection). */
+const ensureSheetReset: (() => void) | null = IS_RSC
+  ? (((React as any).cache as (<T extends (...args: any[]) => any>(fn: T) => T) | undefined)?.(
+      () => {
+        mainSheet.names.clear();
+        mainSheet.keyframeIds.clear();
+        mainSheet.clearTag();
+      }
+    ) ?? null)
+  : null;
+
 export type IStyleSheetContext = {
   shouldForwardProp?: ShouldForwardProp<'web'> | undefined;
   styleSheet: StyleSheet;
@@ -43,8 +54,13 @@ export const StylisContext = !IS_RSC
 export const StylisConsumer = StylisContext.Consumer;
 
 export function useStyleSheetContext() {
-  // Skip useContext if we're in an RSC environment without context support
-  return !IS_RSC ? React.useContext(StyleSheetContext) : defaultContextValue;
+  if (!IS_RSC) return React.useContext(StyleSheetContext);
+
+  // Reset mainSheet once per render to prevent HMR accumulation.
+  // React.cache ensures this runs exactly once per server render.
+  if (ensureSheetReset) ensureSheetReset();
+
+  return defaultContextValue;
 }
 
 export type IStyleSheetManager = React.PropsWithChildren<{
