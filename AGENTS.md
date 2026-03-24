@@ -64,6 +64,8 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - Base-level CSS in inheritance chains is wrapped in `:where()` for zero specificity. This prevents duplicate base CSS (from sibling extensions sharing a base) from overriding earlier extensions' styles.
 - No cleanup of RSC style tags is needed -- they are the sole source of CSS for server-only components.
 - RSC inline `<style>` tags are deduplicated per render via `React.cache` (React 19+). Multiple instances of the same component with identical CSS emit only one `<style>` tag. Different prop combinations (different CSS) get separate tags.
+- Keyframe rules are emitted in a dedicated `<style>` tag, deduped separately by keyframe ID. They must NOT be prepended to component CSS strings--keyframes register mid-render, so prepending them causes inconsistent strings that break `getEmittedCSS` dedup.
+- `mainSheet` is reset once per server render via `React.cache` (clears `names`, `keyframeIds`, `tag`) to prevent stale CSS accumulating across HMR cycles. `keyframeIds` is safe to clear because components re-register keyframes via `keyframe.inject()` during render.
 - React 19 Float (`precedence` attribute) must NOT be used: it merges same-precedence tags, strips custom `data-*` attributes, and hoists to `<head>` where ordering relative to the registry is unpredictable.
 
 ## createTheme
