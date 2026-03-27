@@ -2,13 +2,14 @@
 'styled-components': minor
 ---
 
-Memoize style injection for dynamic components via shallow context comparison. Client-only — server renders are unaffected.
+Significant render performance improvements across all dynamic styling scenarios. Client-only — server renders are unaffected.
 
-When a styled component re-renders with unchanged props and theme, the expensive `flatten` + `hash` + `generateName` pipeline is now skipped entirely via a `useRef`-based single-entry cache. A fast path for single-function interpolations also reduces cache-miss cost by avoiding `flatten`'s type dispatch and array allocation.
+Styled components now cache style computation results at multiple levels, so re-renders that don't change styling skip expensive work entirely. Components that share the same CSS (e.g., list items with the same color) also benefit from shared caching across siblings.
 
 Benchmarks vs 6.3.12:
 
-- **Parent state change cascading to styled children (the most common re-render pattern):** 3.3x faster for 50 children, 3.5x for 100
-- **First mount of dynamic component trees:** +33% for individual components, +51% for sibling-heavy layouts
-- **Prop changes cycling through many values (cache miss):** +39% for 50 children, +47% for 100
+- **Parent re-render cascading to children (most common pattern):** 3.3x faster for 50 children, 3.3x for 100
+- **First mount of dynamic component trees:** 1.7x for individual components, 2.5x for sibling-heavy layouts
+- **Prop changes cycling through many values:** 2.3x for 50 children, 2.4x for 100
+- **Heavy, dynamic layouts (10K children cycling colors):** 1.9x without attrs, 1.6x with attrs chains
 - No regressions on any benchmark

@@ -5,11 +5,10 @@ import { ExecutionContext, RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
 import getComponentName from '../utils/getComponentName';
-import { hash, phash, phashN } from '../utils/hash';
+import { hash, phash } from '../utils/hash';
 import isKeyframes from '../utils/isKeyframes';
 import isPlainObject from '../utils/isPlainObject';
 import isStatelessFunction from '../utils/isStatelessFunction';
-import isStaticRules from '../utils/isStaticRules';
 import { joinStringArray, joinStrings } from '../utils/joinStrings';
 
 const SEED = hash(SC_VERSION);
@@ -21,17 +20,11 @@ export default class ComponentStyle {
   baseHash: number;
   baseStyle: ComponentStyle | null | undefined;
   componentId: string;
-  isStatic: boolean;
   rules: RuleSet<any>;
-  staticRulesId: string;
+  dynamicNameCache: Map<string, string> | undefined;
 
   constructor(rules: RuleSet<any>, componentId: string, baseStyle?: ComponentStyle | undefined) {
     this.rules = rules;
-    this.staticRulesId = '';
-    this.isStatic =
-      process.env.NODE_ENV === 'production' &&
-      (baseStyle === undefined || baseStyle.isStatic) &&
-      isStaticRules(rules);
     this.componentId = componentId;
     this.baseHash = phash(SEED, componentId);
     this.baseStyle = baseStyle;
@@ -50,26 +43,7 @@ export default class ComponentStyle {
       ? this.baseStyle.generateAndInjectStyles(executionContext, styleSheet, stylis)
       : '';
 
-    // force dynamic classnames if user-supplied stylis plugins are in use
-    if (this.isStatic && !stylis.hash) {
-      if (this.staticRulesId && styleSheet.hasNameForId(this.componentId, this.staticRulesId)) {
-        names = joinStrings(names, this.staticRulesId);
-      } else {
-        const cssStatic = joinStringArray(
-          flatten(this.rules, executionContext, styleSheet, stylis) as string[]
-        );
-        const name = generateName(phash(this.baseHash, cssStatic) >>> 0);
-
-        if (!styleSheet.hasNameForId(this.componentId, name)) {
-          const cssStaticFormatted = stylis(cssStatic, '.' + name, undefined, this.componentId);
-          styleSheet.insertRules(this.componentId, name, cssStaticFormatted);
-        }
-
-        names = joinStrings(names, name);
-        this.staticRulesId = name;
-      }
-    } else {
-      let dynamicHash = phash(this.baseHash, stylis.hash);
+    {
       let css = '';
 
       for (let i = 0; i < this.rules.length; i++) {
@@ -77,21 +51,14 @@ export default class ComponentStyle {
 
         if (typeof partRule === 'string') {
           css += partRule;
-
-          if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule);
         } else if (partRule) {
-          // Fast path: single interpolation function returning a string (the common case
-          // in template literals). Avoids flatten's type dispatching, array allocation,
-          // and joinStringArray overhead. Falls through to flatten for non-string returns
-          // (keyframes, styled components, objects, arrays).
-          let partString: string;
+          // Fast path: inline function call for the common case (interpolation
+          // returning a string). Avoids flatten's type dispatch and array alloc.
           if (isStatelessFunction(partRule)) {
             const fnResult = partRule(executionContext);
             if (typeof fnResult === 'string') {
-              partString = fnResult;
-            } else if (fnResult === undefined || fnResult === null || fnResult === false) {
-              partString = '';
-            } else {
+              css += fnResult;
+            } else if (fnResult !== undefined && fnResult !== null && fnResult !== false) {
               if (
                 process.env.NODE_ENV !== 'production' &&
                 typeof fnResult === 'object' &&
@@ -106,25 +73,29 @@ export default class ComponentStyle {
                 );
               }
 
-              partString = joinStringArray(
+              css += joinStringArray(
                 flatten(fnResult, executionContext, styleSheet, stylis) as string[]
               );
             }
           } else {
-            partString = joinStringArray(
+            css += joinStringArray(
               flatten(partRule, executionContext, styleSheet, stylis) as string[]
             );
           }
-          // The same value can switch positions in the array, so we include "i" in the hash.
-          // Split into two calls to avoid temp string allocation (partString + i).
-          // phash processes right-to-left, so phash(h, a+b) === phash(phash(h, b), a).
-          dynamicHash = phash(phashN(dynamicHash, i), partString);
-          css += partString;
         }
       }
 
       if (css) {
-        const name = generateName(dynamicHash >>> 0);
+        // Cache css->name to skip phash+generateName for repeat CSS strings.
+        // The CSS string fully determines the class name for a given component,
+        // so a Map lookup replaces O(cssLen) hashing on cache hit.
+        if (!this.dynamicNameCache) this.dynamicNameCache = new Map();
+        const cacheKey = stylis.hash ? stylis.hash + css : css;
+        let name = this.dynamicNameCache.get(cacheKey);
+        if (!name) {
+          name = generateName(phash(phash(this.baseHash, stylis.hash), css) >>> 0);
+          this.dynamicNameCache.set(cacheKey, name);
+        }
 
         if (!styleSheet.hasNameForId(this.componentId, name)) {
           const cssFormatted = stylis(css, '.' + name, undefined, this.componentId);
