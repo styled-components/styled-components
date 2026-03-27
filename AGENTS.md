@@ -97,7 +97,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 ## TypeScript Type Performance
 
-- `OverrideStyle` accounts for ~50% of type instantiations. Cannot be simplified without breaking `exactOptionalPropertyTypes` or JSX overload resolution. Do not touch without a major version plan.
+- `OverrideStyle` accounts for ~22% of type instantiations (measured via ablation). Cannot be simplified without breaking `exactOptionalPropertyTypes` or JSX overload resolution. Do not touch without a major version plan.
 - Use built-in `NoInfer` (TS 5.4+) internally; the export in `types.ts` is for downstream consumers only
 - `FastOmit<A, K> & B` (intersection) is 2.4x fewer instantiations than a single mapped type with per-key conditionals
 - Homomorphic mapped types (`{ [K in keyof P]: ... }`) break React JSX overload resolution
