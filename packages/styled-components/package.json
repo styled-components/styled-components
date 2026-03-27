@@ -26,6 +26,7 @@
     "test:types": "tsc --noEmit --project tsconfig.test-types.json",
     "test:web": "jest -c jest.config.main.js",
     "test:native": "jest -c jest.config.native.js --forceExit",
+    "bench": "jest -c jest.config.bench.js --verbose --no-coverage",
     "size": "bundlewatch",
     "prettier": "prettier src --write",
     "prettier:check": "prettier src --check",
