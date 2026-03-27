@@ -1,9 +1,14 @@
 import { SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
+import type { AnyComponent } from '../types';
 import { ExecutionContext, RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
+import getComponentName from '../utils/getComponentName';
 import { hash, phash, phashN } from '../utils/hash';
+import isKeyframes from '../utils/isKeyframes';
+import isPlainObject from '../utils/isPlainObject';
+import isStatelessFunction from '../utils/isStatelessFunction';
 import isStaticRules from '../utils/isStaticRules';
 import { joinStringArray, joinStrings } from '../utils/joinStrings';
 
@@ -75,9 +80,41 @@ export default class ComponentStyle {
 
           if (process.env.NODE_ENV !== 'production') dynamicHash = phash(dynamicHash, partRule);
         } else if (partRule) {
-          const partString = joinStringArray(
-            flatten(partRule, executionContext, styleSheet, stylis) as string[]
-          );
+          // Fast path: single interpolation function returning a string (the common case
+          // in template literals). Avoids flatten's type dispatching, array allocation,
+          // and joinStringArray overhead. Falls through to flatten for non-string returns
+          // (keyframes, styled components, objects, arrays).
+          let partString: string;
+          if (isStatelessFunction(partRule)) {
+            const fnResult = partRule(executionContext);
+            if (typeof fnResult === 'string') {
+              partString = fnResult;
+            } else if (fnResult === undefined || fnResult === null || fnResult === false) {
+              partString = '';
+            } else {
+              if (
+                process.env.NODE_ENV !== 'production' &&
+                typeof fnResult === 'object' &&
+                !Array.isArray(fnResult) &&
+                !isKeyframes(fnResult) &&
+                !isPlainObject(fnResult)
+              ) {
+                console.error(
+                  `${getComponentName(
+                    partRule as AnyComponent
+                  )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
+                );
+              }
+
+              partString = joinStringArray(
+                flatten(fnResult, executionContext, styleSheet, stylis) as string[]
+              );
+            }
+          } else {
+            partString = joinStringArray(
+              flatten(partRule, executionContext, styleSheet, stylis) as string[]
+            );
+          }
           // The same value can switch positions in the array, so we include "i" in the hash.
           // Split into two calls to avoid temp string allocation (partString + i).
           // phash processes right-to-left, so phash(h, a+b) === phash(phash(h, b), a).
