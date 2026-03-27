@@ -38,6 +38,10 @@ import ComponentStyle from './ComponentStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
+declare const __SERVER__: boolean;
+
+const hasOwn = Object.prototype.hasOwnProperty;
+
 const identifiers: { [key: string]: number } = {};
 
 /* We depend on components having unique IDs */
@@ -61,6 +65,23 @@ function generateId(
   return parentComponentId ? parentComponentId + '-' + componentId : componentId;
 }
 
+/**
+ * Shallow-compare two context objects using a stored key count to avoid
+ * a second iteration pass. Returns true if all own-property values match.
+ */
+function shallowEqualContext(prev: object, next: object, prevKeyCount: number): boolean {
+  const a = prev as Record<string, unknown>;
+  const b = next as Record<string, unknown>;
+  let nextKeyCount = 0;
+  for (const key in b) {
+    if (hasOwn.call(b, key)) {
+      nextKeyCount++;
+      if (a[key] !== b[key]) return false;
+    }
+  }
+  return nextKeyCount === prevKeyCount;
+}
+
 function useInjectedStyle<T extends ExecutionContext>(
   componentStyle: ComponentStyle,
   resolvedAttrs: T,
@@ -76,6 +97,18 @@ function useInjectedStyle<T extends ExecutionContext>(
   return className;
 }
 
+// Cached render inputs + style result: [prevProps, prevTheme, prevStyleSheet, prevStylis,
+// prevPropsKeyCount, cachedContext, cachedClassName]
+type RenderCache = [
+  object, // prevProps
+  DefaultTheme | undefined, // prevTheme
+  StyleSheet, // prevStyleSheet
+  Stringifier, // prevStylis
+  number, // prevPropsKeyCount
+  object, // cachedContext
+  string, // cachedClassName
+];
+
 function resolveContext<Props extends BaseObject>(
   attrs: Attrs<React.HTMLAttributes<Element> & Props>[],
   props: ExecutionProps & Props,
@@ -88,10 +121,8 @@ function resolveContext<Props extends BaseObject>(
     theme,
   } as React.HTMLAttributes<Element> & ExecutionContext & Props;
 
-  let attrDef;
-
-  for (let i = 0; i < attrs.length; i += 1) {
-    attrDef = attrs[i];
+  for (let i = 0; i < attrs.length; i++) {
+    const attrDef = attrs[i];
     // Pass a shallow copy to function attrs so the callback's captured
     // reference isn't mutated by subsequent attrs processing (#3336).
     const resolvedAttrDef = isFunction(attrDef) ? attrDef({ ...context }) : attrDef;
@@ -140,6 +171,42 @@ function getWhereRegExp(name: string): RegExp {
   return re;
 }
 
+function buildPropsForElement(
+  context: Record<string, any>,
+  elementToBeCreated: WebTarget,
+  theme: DefaultTheme | undefined,
+  shouldForwardProp: ((prop: string, el: WebTarget) => boolean) | undefined
+): Dict<any> {
+  const propsForElement: Dict<any> = {};
+
+  for (const key in context) {
+    if (context[key] === undefined) {
+      // Omit undefined values from props passed to wrapped element.
+    } else if (key[0] === '$' || key === 'as' || (key === 'theme' && context.theme === theme)) {
+      // Omit transient props and execution props.
+    } else if (key === 'forwardedAs') {
+      propsForElement.as = context.forwardedAs;
+    } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
+      propsForElement[key] = context[key];
+
+      if (
+        !shouldForwardProp &&
+        process.env.NODE_ENV === 'development' &&
+        !isPropValid(key) &&
+        !seenUnknownProps.has(key) &&
+        domElements.has(elementToBeCreated as any)
+      ) {
+        seenUnknownProps.add(key);
+        console.warn(
+          `styled-components: it looks like an unknown prop "${key}" is being sent through to the DOM, which will likely trigger a React console error. If you would like automatic filtering of unknown props, you can opt-into that behavior via \`<StyleSheetManager shouldForwardProp={...}>\` (connect an API like \`@emotion/is-prop-valid\`) or consider using transient props (\`$\` prefix for automatic filtering.)`
+        );
+      }
+    }
+  }
+
+  return propsForElement;
+}
+
 function useStyledComponentImpl<Props extends BaseObject>(
   forwardedComponent: IStyledComponent<'web', Props>,
   props: ExecutionProps & Props,
@@ -168,44 +235,60 @@ function useStyledComponentImpl<Props extends BaseObject>(
   const theme =
     determineTheme(props, contextTheme, defaultProps) || (IS_RSC ? undefined : EMPTY_OBJECT);
 
-  const context = resolveContext<Props>(componentAttrs, props, theme);
-  const elementToBeCreated: WebTarget = context.as || target;
-  const propsForElement: Dict<any> = {};
+  let context: React.HTMLAttributes<Element> & ExecutionContext & Props;
+  let generatedClassName: string;
 
-  for (const key in context) {
-    // @ts-expect-error context may have arbitrary properties from attrs
-    if (context[key] === undefined) {
-      // Omit undefined values from props passed to wrapped element.
-      // This enables using .attrs() to remove props, for example.
-    } else if (key[0] === '$' || key === 'as' || (key === 'theme' && context.theme === theme)) {
-      // Omit transient props and execution props.
-    } else if (key === 'forwardedAs') {
-      propsForElement.as = context.forwardedAs;
-    } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
-      // @ts-expect-error context may have arbitrary properties from attrs
-      propsForElement[key] = context[key];
+  // Client-only render cache: skip resolveContext and generateAndInjectStyles
+  // when props+theme haven't changed. propsForElement is always rebuilt since
+  // it's mutated with className/ref after construction.
+  // __SERVER__ and IS_RSC are build/module-level constants for dead-code elimination.
+  if (!__SERVER__ && !IS_RSC) {
+    const renderCacheRef = React.useRef<RenderCache | null>(null);
+    const prev = renderCacheRef.current;
 
-      if (
-        !shouldForwardProp &&
-        process.env.NODE_ENV === 'development' &&
-        !isPropValid(key) &&
-        !seenUnknownProps.has(key) &&
-        // Only warn on DOM Element.
-        domElements.has(elementToBeCreated as any)
-      ) {
-        seenUnknownProps.add(key);
-        console.warn(
-          `styled-components: it looks like an unknown prop "${key}" is being sent through to the DOM, which will likely trigger a React console error. If you would like automatic filtering of unknown props, you can opt-into that behavior via \`<StyleSheetManager shouldForwardProp={...}>\` (connect an API like \`@emotion/is-prop-valid\`) or consider using transient props (\`$\` prefix for automatic filtering.)`
-        );
+    if (
+      prev !== null &&
+      prev[1] === theme &&
+      prev[2] === ssc.styleSheet &&
+      prev[3] === ssc.stylis &&
+      shallowEqualContext(prev[0], props, prev[4])
+    ) {
+      context = prev[5] as typeof context;
+      generatedClassName = prev[6];
+    } else {
+      context = resolveContext<Props>(componentAttrs, props, theme);
+      generatedClassName = useInjectedStyle(componentStyle, context, ssc.styleSheet, ssc.stylis);
+
+      let propsKeyCount = 0;
+      for (const key in props) {
+        if (hasOwn.call(props, key)) propsKeyCount++;
       }
+      renderCacheRef.current = [
+        props,
+        theme,
+        ssc.styleSheet,
+        ssc.stylis,
+        propsKeyCount,
+        context,
+        generatedClassName,
+      ];
     }
+  } else {
+    context = resolveContext<Props>(componentAttrs, props, theme);
+    generatedClassName = useInjectedStyle(componentStyle, context, ssc.styleSheet, ssc.stylis);
   }
-
-  const generatedClassName = useInjectedStyle(componentStyle, context, ssc.styleSheet, ssc.stylis);
 
   if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {
     forwardedComponent.warnTooManyClasses(generatedClassName);
   }
+
+  const elementToBeCreated: WebTarget = context.as || target;
+  const propsForElement = buildPropsForElement(
+    context,
+    elementToBeCreated,
+    theme,
+    shouldForwardProp
+  );
 
   let classString = joinStrings(foldedComponentIds, styledComponentId);
   if (generatedClassName) {
@@ -216,16 +299,12 @@ function useStyledComponentImpl<Props extends BaseObject>(
   }
 
   propsForElement[
-    // handle custom elements which React doesn't properly alias
     isTag(elementToBeCreated) &&
     !domElements.has(elementToBeCreated as Extract<typeof domElements, string>)
       ? 'class'
       : 'className'
   ] = classString;
 
-  // forwardedRef is coming from React.forwardRef.
-  // But it might not exist. Since React 19 handles `ref` like a prop, it only define it if there is a value.
-  // We don't want to inject an empty ref.
   if (forwardedRef) {
     propsForElement.ref = forwardedRef;
   }

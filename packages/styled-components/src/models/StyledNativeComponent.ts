@@ -23,6 +23,21 @@ import isStyledComponent from '../utils/isStyledComponent';
 import merge from '../utils/mixinDeep';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
+function shallowEqualContext(prev: object, next: object, prevKeyCount: number): boolean {
+  const a = prev as Record<string, unknown>;
+  const b = next as Record<string, unknown>;
+  let nextKeyCount = 0;
+  for (const key in b) {
+    if (hasOwn.call(b, key)) {
+      nextKeyCount++;
+      if (a[key] !== b[key]) return false;
+    }
+  }
+  return nextKeyCount === prevKeyCount;
+}
+
 function useResolvedAttrs<Props extends object>(
   theme: DefaultTheme = EMPTY_OBJECT,
   props: Props,
@@ -35,7 +50,11 @@ function useResolvedAttrs<Props extends object>(
   const resolvedAttrs: Dict<any> = {};
 
   for (let i = 0; i < attrs.length; i++) {
-    const resolvedAttrDef = isFunction(attrs[i]) ? (attrs[i] as Function)(context) : attrs[i];
+    // Pass a shallow copy to function attrs so the callback's captured
+    // reference isn't mutated by subsequent attrs processing (#3336).
+    const resolvedAttrDef = isFunction(attrs[i])
+      ? (attrs[i] as Function)({ ...context })
+      : attrs[i];
 
     for (const key in resolvedAttrDef) {
       // @ts-expect-error bad types
@@ -72,7 +91,19 @@ function useStyledComponentImpl<Props extends StyledComponentImplProps>(
 
   const [context, attrs] = useResolvedAttrs<Props>(theme || EMPTY_OBJECT, props, componentAttrs);
 
-  const generatedStyles = inlineStyle.generateStyleObject(context);
+  let generatedStyles: ReturnType<typeof inlineStyle.generateStyleObject>;
+  const styleCacheRef = React.useRef<[object, object, number] | null>(null);
+  const prevStyle = styleCacheRef.current;
+  if (prevStyle !== null && shallowEqualContext(prevStyle[0], context, prevStyle[2])) {
+    generatedStyles = prevStyle[1];
+  } else {
+    generatedStyles = inlineStyle.generateStyleObject(context);
+    let keyCount = 0;
+    for (const key in context) {
+      if (hasOwn.call(context, key)) keyCount++;
+    }
+    styleCacheRef.current = [context, generatedStyles, keyCount];
+  }
 
   const refToForward = forwardedRef;
 
