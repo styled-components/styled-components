@@ -16,6 +16,8 @@
   <a href="https://bundlephobia.com/result?p=styled-components" title="styled-components latest minified+gzip size"><img src="https://badgen.net/bundlephobia/minzip/styled-components" alt="gzip size"></a>
 </div>
 
+---
+
 styled-components is largely maintained by one person. Please help fund the project for consistent long-term support and updates: [Open Collective](https://opencollective.com/styled-components)
 
 ---
