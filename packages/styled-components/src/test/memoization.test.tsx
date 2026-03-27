@@ -117,7 +117,6 @@ describe('memoization correctness', () => {
     }
 
     const renderer = TestRenderer.create(<Parent />);
-    const firstClass = renderer.root.findByType(Child).children[0];
     const initial = parentRenderCount;
 
     act(() => {
