@@ -274,7 +274,7 @@ export type ICreateStylisInstance = {
  * Takes an element and recurses through it's rules added the namespace to the start of each selector.
  * Takes into account media queries by recursing through child rules if they are present.
  */
-function recursivelySetNamepace(compiled: stylis.Element[], namespace: String): stylis.Element[] {
+function recursivelySetNamespace(compiled: stylis.Element[], namespace: string): stylis.Element[] {
   for (let i = 0; i < compiled.length; i++) {
     const rule = compiled[i];
     if (rule.type === 'rule') {
@@ -291,7 +291,7 @@ function recursivelySetNamepace(compiled: stylis.Element[], namespace: String): 
     }
 
     if (Array.isArray(rule.children) && rule.type !== '@keyframes') {
-      rule.children = recursivelySetNamepace(rule.children, namespace);
+      rule.children = recursivelySetNamespace(rule.children, namespace);
     }
   }
   return compiled;
@@ -392,7 +392,7 @@ export default function createStylisInstance(
     );
 
     if (options.namespace) {
-      compiled = recursivelySetNamepace(compiled, options.namespace);
+      compiled = recursivelySetNamespace(compiled, options.namespace);
     }
 
     _stack = [];
