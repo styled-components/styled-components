@@ -5,6 +5,7 @@ const Box = ({ color, fixed = false, layout = 'column', outer = false, ...other 
   <View
     {...other}
     style={[
+      styles.base,
       styles[`color${color}`],
       fixed && styles.fixed,
       layout === 'row' && styles.row,
@@ -14,8 +15,10 @@ const Box = ({ color, fixed = false, layout = 'column', outer = false, ...other 
 );
 
 const styles = StyleSheet.create({
-  outer: {
+  base: {
     alignSelf: 'flex-start',
+  },
+  outer: {
     padding: 4,
   },
   row: {

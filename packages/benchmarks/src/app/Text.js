@@ -1,7 +1,7 @@
 import { bool } from 'prop-types';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { colors } from './theme';
+import { font } from './constants';
 
 class AppText extends React.Component {
   static displayName = '@app/Text';
@@ -19,9 +19,10 @@ class AppText extends React.Component {
 
 const styles = StyleSheet.create({
   baseText: {
-    color: colors.textBlack,
-    fontSize: '1rem',
-    lineHeight: '1.3125em',
+    color: 'var(--bench-text)',
+    fontFamily: font,
+    fontSize: 13,
+    lineHeight: '1.4',
   },
 });
 

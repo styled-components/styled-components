@@ -2,11 +2,96 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Performance tests</title>
+  <title>styled-components benchmarks</title>
   <meta name="viewport" content="width=device-width">
   <style>
-    html, body { height: 100%; width: 100%; overflow: hidden; }
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --bench-bg: #f7f8fa;
+      --bench-surface: #fff;
+      --bench-surface-alt: #f7f8fa;
+      --bench-border: #e2e5e9;
+      --bench-text: #1a1d21;
+      --bench-text-secondary: #5e6470;
+      --bench-text-muted: #94a3b8;
+      --bench-accent: #3b82f6;
+      --bench-accent-light: #eff6ff;
+      --bench-danger: #ef4444;
+      --bench-muted-btn: #64748b;
+      --bench-checkbox-border: #cbd5e1;
+      --bench-scrollbar: #c4c9d0;
+      --bench-scrollbar-hover: #9ca3af;
+      --bench-backdrop: rgba(0, 0, 0, 0.5);
+      --bench-dialog-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      --bench-view-bg: #111;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bench-bg: #18191b;
+        --bench-surface: #242628;
+        --bench-surface-alt: #1e1f21;
+        --bench-border: #3a3c40;
+        --bench-text: #e0e2e6;
+        --bench-text-secondary: #9ca0a8;
+        --bench-text-muted: #6b7080;
+        --bench-accent: #3b82f6;
+        --bench-accent-light: #1e293b;
+        --bench-danger: #dc2626;
+        --bench-muted-btn: #52565e;
+        --bench-checkbox-border: #4a4d54;
+        --bench-scrollbar: #4a4d54;
+        --bench-scrollbar-hover: #6b7080;
+        --bench-backdrop: rgba(0, 0, 0, 0.7);
+        --bench-dialog-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        --bench-view-bg: #0a0a0a;
+      }
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bench-bg);
+      color: var(--bench-text);
+      -webkit-font-smoothing: antialiased;
+    }
+
     .root { height: 100%; overflow: hidden; }
+
+    [data-bench-btn] {
+      transition: filter 0.12s ease, transform 0.08s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    [data-bench-btn]:hover:not([data-disabled="true"]) {
+      filter: brightness(1.08);
+    }
+    [data-bench-btn]:active:not([data-disabled="true"]) {
+      filter: brightness(0.92);
+      transform: scale(0.98);
+    }
+    [data-bench-btn][data-disabled="true"] {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    [data-bench-picker]:hover { border-color: var(--bench-text-muted); }
+    [data-bench-check]:hover { background: var(--bench-surface-alt); }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--bench-scrollbar); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--bench-scrollbar-hover); }
+
+    select {
+      font-family: inherit;
+      font-size: 13px;
+      color: inherit;
+    }
   </style>
 </head>
 <body>

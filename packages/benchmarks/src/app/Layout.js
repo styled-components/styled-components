@@ -1,15 +1,7 @@
-import { colors } from './theme';
-import { element } from 'prop-types';
 import React, { Component } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export default class Layout extends Component {
-  static propTypes = {
-    actionPanel: element,
-    listPanel: element,
-    viewPanel: element
-  };
-
   state = {
     widescreen: false
   };
@@ -22,7 +14,7 @@ export default class Layout extends Component {
         <View style={[widescreen ? styles.grow : styles.stackPanel, styles.layer]}>
           {viewPanel}
         </View>
-        <View style={styles.grow}>
+        <View style={[styles.grow, styles.controlSide]}>
           <View style={[styles.grow, styles.layer]}>{listPanel}</View>
           <View style={styles.divider} />
           <View style={styles.layer}>{actionPanel}</View>
@@ -44,17 +36,18 @@ export default class Layout extends Component {
 
 const styles = StyleSheet.create({
   root: {
-    height: '100%'
+    height: '100%',
+    backgroundColor: 'var(--bench-bg)',
   },
   row: {
     flexDirection: 'row'
   },
+  controlSide: {
+    backgroundColor: 'var(--bench-surface)',
+  },
   divider: {
-    height: 10,
-    backgroundColor: colors.fadedGray,
-    borderBottomWidth: 1,
-    borderTopWidth: 1,
-    borderColor: colors.mediumGray
+    height: 1,
+    backgroundColor: 'var(--bench-border)',
   },
   grow: {
     flex: 1

@@ -1,5 +1,4 @@
-import { css, styled } from 'goober';
-import View from './View';
+import { styled } from 'goober';
 
 const getColor = color => {
   switch (color) {
@@ -20,15 +19,23 @@ const getColor = color => {
   }
 };
 
-export default styled(View)`
+export default styled('div')`
+  align-items: stretch;
+  border-width: 0;
+  border-style: solid;
+  box-sizing: border-box;
+  display: flex;
+  flex-basis: auto;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  min-height: 0;
+  min-width: 0;
   align-self: flex-start;
   background-color: ${p => getColor(p.color)};
   flex-direction: ${p => (p.layout === 'column' ? 'column' : 'row')};
   padding: ${p => (p.outer ? '4px' : '0')};
-  ${p =>
-    p.fixed &&
-    css`
-      height: 6px;
-      width: 6px;
-    `}
+  height: ${p => (p.fixed ? '6px' : 'auto')};
+  width: ${p => (p.fixed ? '6px' : 'auto')};
 `;

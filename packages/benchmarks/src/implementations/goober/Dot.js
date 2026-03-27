@@ -1,7 +1,18 @@
 import { styled } from 'goober';
-import View from './View';
 
-const Dot = styled(View)`
+export default styled('div')`
+  align-items: stretch;
+  border-width: 0;
+  border-style: solid;
+  box-sizing: border-box;
+  display: flex;
+  flex-basis: auto;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  min-height: 0;
+  min-width: 0;
   position: absolute;
   cursor: pointer;
   width: 0;
@@ -17,5 +28,3 @@ const Dot = styled(View)`
   border-bottom-width: ${p => `${p.size / 2}px`};
   border-left-width: ${p => `${p.size / 2}px`};
 `;
-
-export default Dot;

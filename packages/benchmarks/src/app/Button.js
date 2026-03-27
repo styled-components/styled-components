@@ -1,59 +1,57 @@
-import React, { Component } from 'react';
-import { StyleSheet, Text, TouchableHighlight } from 'react-native';
+import React from 'react';
+import { font } from './constants';
 
-export default class Button extends Component {
-  static displayName = '@app/Button';
+export default function Button({ accessibilityLabel, color, disabled, onPress, style, testID, title, variant }) {
+  const isStop = variant === 'stop';
+  const isMuted = variant === 'muted';
 
-  render() {
-    const {
-      accessibilityLabel,
-      color,
-      disabled,
-      onPress,
-      style,
-      textStyle,
-      testID,
-      title,
-    } = this.props;
+  const bg = isStop
+    ? 'var(--bench-danger)'
+    : isMuted
+      ? 'var(--bench-muted-btn)'
+      : color || 'var(--bench-accent)';
 
-    return (
-      <TouchableHighlight
-        accessibilityLabel={accessibilityLabel}
-        accessibilityRole="button"
-        disabled={disabled}
-        onPress={onPress}
-        style={[
-          styles.button,
-          style,
-          color && { backgroundColor: color },
-          disabled && styles.buttonDisabled,
-        ]}
-        testID={testID}
+  return (
+    <div
+      data-bench-btn=""
+      data-disabled={disabled ? 'true' : undefined}
+      data-testid={testID}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-label={accessibilityLabel}
+      aria-disabled={disabled || undefined}
+      onClick={disabled ? undefined : onPress}
+      onKeyDown={disabled ? undefined : e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onPress();
+        }
+      }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: bg,
+        borderRadius: 6,
+        padding: '8px 12px',
+        outline: 'none',
+        ...style,
+      }}
+    >
+      <span
+        style={spanStyle}
       >
-        <Text style={[styles.text, textStyle, disabled && styles.textDisabled]}>{title}</Text>
-      </TouchableHighlight>
-    );
-  }
+        {title}
+      </span>
+    </div>
+  );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: '#2196F3',
-    borderRadius: 0,
-    justifyContent: 'center',
-  },
-  text: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '500',
-    padding: 8,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-  },
-  buttonDisabled: {
-    backgroundColor: '#dfdfdf',
-  },
-  textDisabled: {
-    color: '#a1a1a1',
-  },
-});
+const spanStyle = {
+  color: '#fff',
+  fontSize: 12,
+  fontWeight: 600,
+  fontFamily: font,
+  letterSpacing: '0.02em',
+  whiteSpace: 'nowrap',
+};

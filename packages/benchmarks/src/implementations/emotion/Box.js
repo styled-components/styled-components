@@ -34,16 +34,11 @@ const styles = {
 };
 
 const Box = styled(View)(
+  { alignSelf: 'flex-start' },
   p => styles[`color${p.color}`],
-  p => p.fixed && styles.fixed,
-  p => p.layout === 'row' && styles.row,
-  p => p.outer && styles.outer
+  p => (p.fixed ?? false) && styles.fixed,
+  p => (p.layout ?? 'column') === 'row' && styles.row,
+  p => (p.outer ?? false) && styles.outer
 );
-
-Box.defaultProps = {
-  fixed: false,
-  layout: 'column',
-  outer: false,
-};
 
 export default Box;

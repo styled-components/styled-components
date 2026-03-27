@@ -5,6 +5,7 @@ const Box = ({ color, fixed = false, layout = 'column', outer = false, ...other 
   <View
     {...other}
     style={{
+      alignSelf: 'flex-start',
       ...styles[`color${color}`],
       ...(fixed && styles.fixed),
       ...(layout === 'row' && styles.row),
