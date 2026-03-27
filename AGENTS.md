@@ -111,11 +111,17 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 ## Dynamic Re-render Hot Path
 
-1. `stylis` compile+serialize: ~1-5us (unavoidable)
-2. `flatten()` interpolation evaluation: ~2-5us for 5 interpolations (unavoidable)
-3. `phash()` hashing: ~0.3us per CSS string (unavoidable)
-4. String accumulation / array operations: 0.05-0.2us (optimizable)
-5. Cache lookups (`hasNameForId`, `generateName`): negligible
+Cache hit (props+theme unchanged -- most common re-render):
+- `shallowEqualContext`: ~0.2us -- compares props via for-in + stored key count
+- Everything else skipped (resolveContext, flatten, hash, generateName, buildPropsForElement still runs)
+
+Cache miss (props changed):
+1. `resolveContext`: object spread + attrs evaluation
+2. `flatten()` fast path: inline function call for string-returning interpolations, ~0.05us each
+3. `dynamicNameCache` lookup: Map.get on CSS string -- O(1), skips phash+generateName on hit
+4. `phash()` + `generateName`: only on dynamicNameCache miss (first time seeing this CSS)
+5. `stylis` compile+serialize: only when `hasNameForId` misses (first injection of this class)
+6. `hasNameForId`: Map.has -- negligible
 
 ## Rendering Flow
 
