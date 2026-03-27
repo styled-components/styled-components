@@ -275,22 +275,26 @@ export type ICreateStylisInstance = {
  * Takes into account media queries by recursing through child rules if they are present.
  */
 function recursivelySetNamepace(compiled: stylis.Element[], namespace: String): stylis.Element[] {
-  return compiled.map(rule => {
+  for (let i = 0; i < compiled.length; i++) {
+    const rule = compiled[i];
     if (rule.type === 'rule') {
       // add the namespace to the start
-      rule.value = `${namespace} ${rule.value}`;
+      rule.value = namespace + ' ' + rule.value;
       // add the namespace after each comma for subsequent selectors.
-      rule.value = rule.value.replaceAll(',', `,${namespace} `);
-      rule.props = (rule.props as string[]).map(prop => {
-        return `${namespace} ${prop}`;
-      });
+      rule.value = rule.value.replaceAll(',', ',' + namespace + ' ');
+      const props = rule.props as string[];
+      const newProps: string[] = [];
+      for (let j = 0; j < props.length; j++) {
+        newProps[j] = namespace + ' ' + props[j];
+      }
+      rule.props = newProps;
     }
 
     if (Array.isArray(rule.children) && rule.type !== '@keyframes') {
       rule.children = recursivelySetNamepace(rule.children, namespace);
     }
-    return rule;
-  });
+  }
+  return compiled;
 }
 
 export default function createStylisInstance(
@@ -384,7 +388,7 @@ export default function createStylisInstance(
 
     const flatCSS = sanitizeCSS(stripLineComments(css));
     let compiled = stylis.compile(
-      prefix || selector ? `${prefix} ${selector} { ${flatCSS} }` : flatCSS
+      prefix || selector ? prefix + ' ' + selector + ' { ' + flatCSS + ' }' : flatCSS
     );
 
     if (options.namespace) {

@@ -49,13 +49,16 @@ function generateId(
   // Ensure that no displayName can lead to duplicate componentIds
   identifiers[name] = (identifiers[name] || 0) + 1;
 
-  const componentId = `${name}-${generateComponentId(
-    // SC_VERSION gives us isolation between multiple runtimes on the page at once
-    // this is improved further with use of the babel plugin "namespace" feature
-    SC_VERSION + name + identifiers[name]
-  )}`;
+  const componentId =
+    name +
+    '-' +
+    generateComponentId(
+      // SC_VERSION gives us isolation between multiple runtimes on the page at once
+      // this is improved further with use of the babel plugin "namespace" feature
+      SC_VERSION + name + identifiers[name]
+    );
 
-  return parentComponentId ? `${parentComponentId}-${componentId}` : componentId;
+  return parentComponentId ? parentComponentId + '-' + componentId : componentId;
 }
 
 function useInjectedStyle<T extends ExecutionContext>(
@@ -253,11 +256,11 @@ function useStyledComponentImpl<Props extends BaseObject>(
         // longer names that share a prefix (e.g. `.a` vs `.ab`).
         const names = ssc.styleSheet.names.get(cs.componentId);
         if (names) {
-          names.forEach(name => {
+          for (const name of names) {
             const re = getWhereRegExp(name);
             re.lastIndex = 0;
             levelCss = levelCss.replace(re, ':where(.' + name + ')');
-          });
+          }
         }
       }
       css = levelCss + css;
@@ -324,7 +327,7 @@ function createStyledComponent<
 
   const styledComponentId =
     options.displayName && options.componentId
-      ? `${escape(options.displayName)}-${options.componentId}`
+      ? escape(options.displayName) + '-' + options.componentId
       : options.componentId || componentId;
 
   // fold the underlying StyledComponent attrs up (implicit extend)

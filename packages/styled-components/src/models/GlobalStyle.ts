@@ -95,8 +95,8 @@ export default class GlobalStyle<Props extends object> {
   private rebuildGroup(styleSheet: StyleSheet): void {
     const id = this.componentId;
     styleSheet.clearRules(id);
-    this.instanceRules.forEach(entry => {
+    for (const entry of this.instanceRules.values()) {
       styleSheet.insertRules(id, entry.name, entry.rules);
-    });
+    }
   }
 }
