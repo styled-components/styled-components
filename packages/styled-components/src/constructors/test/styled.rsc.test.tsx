@@ -1291,7 +1291,7 @@ describe('styled RSC mode', () => {
 
       expect(extractStyleContents(html)).toMatchInlineSnapshot(`
         "@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}/*!sc*/
-        .huNysR{animation:gZZrBJ 2s infinite;}/*!sc*/
+        .gFlEQA{animation:gZZrBJ 2s infinite;}/*!sc*/
         "
       `);
       expect(countStyleTags(html)).toBe(2);
@@ -1320,8 +1320,8 @@ describe('styled RSC mode', () => {
       // @keyframes should appear exactly once despite two components using it
       expect(extractStyleContents(html)).toMatchInlineSnapshot(`
         "@keyframes gZZrBJ{0%{opacity:1;}100%{opacity:0;}}/*!sc*/
-        .lpqWJr{animation:gZZrBJ 1s;}/*!sc*/
-        .jRhGtv{animation:gZZrBJ 2s;}/*!sc*/
+        .ckIbam{animation:gZZrBJ 1s;}/*!sc*/
+        .ggSqLC{animation:gZZrBJ 2s;}/*!sc*/
         "
       `);
       expect(countStyleTags(html)).toBe(3);
@@ -1347,7 +1347,7 @@ describe('styled RSC mode', () => {
       // Two instances, but only one set of styles (component CSS + keyframe both deduped)
       expect(extractStyleContents(html)).toMatchInlineSnapshot(`
         "@keyframes dnfVul{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}/*!sc*/
-        .kctRFm{animation:dnfVul 1s linear infinite;}/*!sc*/
+        .JSmtD{animation:dnfVul 1s linear infinite;}/*!sc*/
         "
       `);
       expect(countStyleTags(html)).toBe(2);

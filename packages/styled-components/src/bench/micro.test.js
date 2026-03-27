@@ -395,4 +395,161 @@ describe('stress benchmarks', () => {
       t.unmount();
     });
   });
+
+  it('10K decomposition (cache-miss cycling colors)', () => {
+    const N = 10_000;
+    const ITERS = 50;
+    const COLORS = [
+      '#e63946',
+      '#f1faee',
+      '#a8dadc',
+      '#457b9d',
+      '#1d3557',
+      '#264653',
+      '#2a9d8f',
+      '#e9c46a',
+      '#f4a261',
+      '#e76f51',
+      '#606c38',
+      '#283618',
+      '#fefae0',
+      '#dda15e',
+      '#bc6c25',
+      '#cdb4db',
+      '#ffc8dd',
+      '#ffafcc',
+      '#bde0fe',
+      '#a2d2ff',
+      '#d8e2dc',
+      '#ffe5d9',
+      '#ffcad4',
+      '#f4acb7',
+      '#9d8189',
+      '#ff6b6b',
+      '#4ecdc4',
+      '#45b7d1',
+      '#96ceb4',
+      '#ffeaa7',
+    ];
+
+    console.log('\n--- 10K decomposition (cache-miss, cycling 30 colors) ---');
+
+    // 1. React.createElement cost alone (no rendering)
+    bench('createElement 10K elements', ITERS, count => {
+      for (let i = 0; i < N; i++) {
+        React.createElement('div', {
+          key: i,
+          style: { color: COLORS[(i + count) % 30] },
+        });
+      }
+    });
+
+    // 2. React reconciliation: plain divs, no styled-components
+    function PlainParent({ count }) {
+      const children = [];
+      for (let i = 0; i < N; i++) {
+        children.push(
+          React.createElement('div', {
+            key: i,
+            style: { color: COLORS[(i + count) % 30] },
+          })
+        );
+      }
+      return React.createElement('div', null, ...children);
+    }
+    let renderer = TestRenderer.create(React.createElement(PlainParent, { count: 0 }));
+    bench('React reconcile 10K plain divs', ITERS, i => {
+      renderer.update(React.createElement(PlainParent, { count: i }));
+    });
+    renderer.unmount();
+
+    // 3. styled-components: full render (the number we're decomposing)
+    const SCDiv = styled.div`
+      color: ${p => p.$color || 'red'};
+    `;
+    function SCParent({ count }) {
+      const children = [];
+      for (let i = 0; i < N; i++) {
+        children.push(
+          React.createElement(SCDiv, {
+            key: i,
+            $color: COLORS[(i + count) % 30],
+          })
+        );
+      }
+      return React.createElement('div', null, ...children);
+    }
+    renderer = TestRenderer.create(React.createElement(SCParent, { count: 0 }));
+    const scTotal = bench('SC full render 10K cycling', ITERS, i => {
+      renderer.update(React.createElement(SCParent, { count: i }));
+    });
+    renderer.unmount();
+
+    // 4. Isolate SC overhead: styled(ForwardRef) wrapper that does nothing
+    // (measures React.forwardRef + hook overhead without style computation)
+    const NoopStyled = React.forwardRef(function NoopStyled(props, ref) {
+      React.useContext(styledMod.ThemeContext || React.createContext({}));
+      React.useRef(null);
+      const out = {};
+      for (const key in props) {
+        if (key[0] !== '$' && key !== 'as' && key !== 'theme') out[key] = props[key];
+      }
+      if (ref) out.ref = ref;
+      out.className = 'sc-noop sc-abc';
+      return React.createElement('div', out);
+    });
+    function NoopParent({ count }) {
+      const children = [];
+      for (let i = 0; i < N; i++) {
+        children.push(
+          React.createElement(NoopStyled, {
+            key: i,
+            $color: COLORS[(i + count) % 30],
+          })
+        );
+      }
+      return React.createElement('div', null, ...children);
+    }
+    renderer = TestRenderer.create(React.createElement(NoopParent, { count: 0 }));
+    bench('React forwardRef+hooks 10K (no style)', ITERS, i => {
+      renderer.update(React.createElement(NoopParent, { count: i }));
+    });
+    renderer.unmount();
+
+    // 5. Just the interpolation function calls (the irreducible minimum)
+    const interpolationFn = p => p.$color || 'red';
+    bench('interpolation fn 10K calls', ITERS, count => {
+      for (let i = 0; i < N; i++) {
+        interpolationFn({ $color: COLORS[(i + count) % 30] });
+      }
+    });
+
+    // 6. resolveContext equivalent: object spread + theme
+    bench('object spread (props+theme) 10K', ITERS, count => {
+      for (let i = 0; i < N; i++) {
+        const props = { $color: COLORS[(i + count) % 30] };
+        const ctx = { ...props, className: undefined, theme: {} };
+        r = ctx;
+      }
+    });
+
+    // 7. buildPropsForElement equivalent: iterate+filter context keys
+    const sampleCtx = { $color: 'red', theme: {}, className: undefined };
+    bench('props filtering 10K iterations', ITERS, () => {
+      for (let i = 0; i < N; i++) {
+        const out = {};
+        for (const key in sampleCtx) {
+          if (sampleCtx[key] === undefined) continue;
+          if (key[0] === '$' || key === 'as' || key === 'theme') continue;
+          out[key] = sampleCtx[key];
+        }
+        r = out;
+      }
+    });
+
+    console.log('\n  Budget breakdown (subtract bottom-up to find where time goes):');
+    console.log('  SC total - forwardRef baseline = SC style overhead');
+    console.log('  forwardRef baseline - plain divs = React component wrapper cost');
+    console.log('  plain divs - createElement = React reconciliation cost');
+  });
 });
