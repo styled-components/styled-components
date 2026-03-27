@@ -33,11 +33,11 @@ export const objToCssArray = (obj: Dict<any>): string[] => {
 
     // @ts-expect-error Property 'isCss' does not exist on type 'any[]'
     if ((Array.isArray(val) && val.isCss) || isFunction(val)) {
-      rules.push(`${hyphenate(key)}:`, val, ';');
+      rules.push(hyphenate(key) + ':', val, ';');
     } else if (isPlainObject(val)) {
-      rules.push(`${key} {`, ...objToCssArray(val), '}');
+      rules.push(key + ' {', ...objToCssArray(val), '}');
     } else {
-      rules.push(`${hyphenate(key)}: ${addUnitIfNeeded(key, val)};`);
+      rules.push(hyphenate(key) + ': ' + addUnitIfNeeded(key, val) + ';');
     }
   }
 

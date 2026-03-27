@@ -120,7 +120,7 @@ export default function createGlobalStyle<Props extends object>(
       if (css) {
         globalStyle.instanceRules.delete(instance);
         return React.createElement('style', {
-          key: `${styledComponentId}-${instance}`,
+          key: styledComponentId + '-' + instance,
           'data-styled-global': styledComponentId,
           children: css,
         });

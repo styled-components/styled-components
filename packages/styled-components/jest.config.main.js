@@ -5,5 +5,5 @@ module.exports = Object.assign({}, baseConfig, {
   setupFiles: ['<rootDir>/src/test/globals.ts'],
   setupFilesAfterEnv: ['<rootDir>/test-utils/setupTestFramework.ts'],
   testEnvironment: 'jsdom',
-  testPathIgnorePatterns: ['<rootDir>/src/native', '<rootDir>/src/primitives', 'treeshake\\.test'],
+  testPathIgnorePatterns: ['<rootDir>/src/native', '<rootDir>/src/primitives', 'treeshake\\.test', '<rootDir>/src/bench'],
 });

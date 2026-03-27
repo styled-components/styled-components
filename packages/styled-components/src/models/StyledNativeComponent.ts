@@ -34,15 +34,14 @@ function useResolvedAttrs<Props extends object>(
   const context: ExecutionContext & Props = { ...props, theme };
   const resolvedAttrs: Dict<any> = {};
 
-  attrs.forEach(attrDef => {
-    let resolvedAttrDef = isFunction(attrDef) ? attrDef(context) : attrDef;
-    let key;
+  for (let i = 0; i < attrs.length; i++) {
+    const resolvedAttrDef = isFunction(attrs[i]) ? (attrs[i] as Function)(context) : attrs[i];
 
-    for (key in resolvedAttrDef) {
+    for (const key in resolvedAttrDef) {
       // @ts-expect-error bad types
       context[key] = resolvedAttrs[key] = resolvedAttrDef[key];
     }
-  });
+  }
 
   return [context, resolvedAttrs] as const;
 }

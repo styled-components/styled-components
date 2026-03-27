@@ -3,7 +3,7 @@ import StyleSheet from '../sheet';
 import { ExecutionContext, RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
-import { hash, phash } from '../utils/hash';
+import { hash, phash, phashN } from '../utils/hash';
 import isStaticRules from '../utils/isStaticRules';
 import { joinStringArray, joinStrings } from '../utils/joinStrings';
 
@@ -79,9 +79,9 @@ export default class ComponentStyle {
             flatten(partRule, executionContext, styleSheet, stylis) as string[]
           );
           // The same value can switch positions in the array, so we include "i" in the hash.
-          // Split into two phash calls to avoid temp string allocation (partString + i).
+          // Split into two calls to avoid temp string allocation (partString + i).
           // phash processes right-to-left, so phash(h, a+b) === phash(phash(h, b), a).
-          dynamicHash = phash(phash(dynamicHash, String(i)), partString);
+          dynamicHash = phash(phashN(dynamicHash, i), partString);
           css += partString;
         }
       }

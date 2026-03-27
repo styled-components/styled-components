@@ -65,11 +65,11 @@ export const outputSheet = (sheet: Sheet) => {
     const selector = SC_ATTR + '.g' + group + '[id="' + id + '"]';
 
     let content = '';
-    names.forEach(name => {
+    for (const name of names) {
       if (name.length > 0) {
         content += name + ',';
       }
-    });
+    }
 
     // NOTE: It's easier to collect rules and have the marker
     // after the actual rules to simplify the rehydration

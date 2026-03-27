@@ -52,7 +52,7 @@ export default function addUnitIfNeeded(name: string, value: any) {
   }
 
   if (typeof value === 'number' && value !== 0 && !(name in unitless) && !name.startsWith('--')) {
-    return `${value}px`; // Presumes implicit 'px' suffix for unitless numbers except for CSS variables
+    return value + 'px'; // Presumes implicit 'px' suffix for unitless numbers except for CSS variables
   }
 
   return String(value).trim();
