@@ -3,6 +3,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './app/App';
+import ParentRerender from './cases/ParentRerender';
 import SierpinskiTriangle from './cases/SierpinskiTriangle';
 import Tree from './cases/Tree';
 import impl from './impl';
@@ -49,6 +50,20 @@ const tests = {
     getComponentProps: ({ cycle }) => {
       return { components, s: 200, renderCount: cycle, x: 0, y: 0 };
     },
+    Provider: components.Provider,
+    sampleCount: 1000,
+  })),
+  'Parent rerender (5000 children)': createTestBlock(components => ({
+    benchmarkType: 'update',
+    Component: ParentRerender,
+    getComponentProps: ({ cycle }) => ({ components, count: cycle, childCount: 5000 }),
+    Provider: components.Provider,
+    sampleCount: 1000,
+  })),
+  'Parent rerender (10000 children)': createTestBlock(components => ({
+    benchmarkType: 'update',
+    Component: ParentRerender,
+    getComponentProps: ({ cycle }) => ({ components, count: cycle, childCount: 10000 }),
     Provider: components.Provider,
     sampleCount: 1000,
   })),
