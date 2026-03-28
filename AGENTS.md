@@ -35,7 +35,9 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - `pnpm --filter sandbox dev` -- Start Next.js dev server
 - `pnpm --filter styled-components test:web` -- Test web build
 - `pnpm --filter styled-components test:native` -- Test React Native
-- `pnpm --filter styled-components bench` -- Run performance benchmarks
+- `pnpm --filter styled-components bench` -- Run all benchmarks (web + native)
+- `pnpm --filter styled-components bench:web` -- Run web benchmarks
+- `pnpm --filter styled-components bench:native` -- Run native benchmarks (parser + render)
 
 ## Build Architecture
 
