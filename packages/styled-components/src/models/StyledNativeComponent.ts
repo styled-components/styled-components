@@ -38,36 +38,50 @@ function shallowEqualContext(prev: object, next: object, prevKeyCount: number): 
   return nextKeyCount === prevKeyCount;
 }
 
-function useResolvedAttrs<Props extends object>(
+function resolveContext<Props extends object>(
   theme: DefaultTheme = EMPTY_OBJECT,
   props: Props,
   attrs: Attrs<Props>[]
-) {
-  // NOTE: can't memoize this
-  // returns [context, resolvedAttrs]
-  // where resolvedAttrs is only the things injected by the attrs themselves
+): ExecutionContext & Props {
   const context: ExecutionContext & Props = { ...props, theme };
-  const resolvedAttrs: Dict<any> = {};
 
   for (let i = 0; i < attrs.length; i++) {
-    // Pass a shallow copy to function attrs so the callback's captured
-    // reference isn't mutated by subsequent attrs processing (#3336).
     const resolvedAttrDef = isFunction(attrs[i])
       ? (attrs[i] as Function)({ ...context })
       : attrs[i];
 
     for (const key in resolvedAttrDef) {
       // @ts-expect-error bad types
-      context[key] = resolvedAttrs[key] = resolvedAttrDef[key];
+      context[key] = resolvedAttrDef[key];
     }
   }
 
-  return [context, resolvedAttrs] as const;
+  return context;
 }
 
 interface StyledComponentImplProps extends ExecutionProps {
   style?: any;
 }
+
+function buildPropsForElement(
+  context: Record<string, any>,
+  elementToBeCreated: NativeTarget,
+  shouldForwardProp: ((prop: string, el: NativeTarget) => boolean) | undefined
+): Dict<any> {
+  const propsForElement: Dict<any> = {};
+  for (const key in context) {
+    if (key[0] === '$' || key === 'as' || key === 'theme') continue;
+    else if (key === 'forwardedAs') {
+      propsForElement.as = context[key];
+    } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
+      propsForElement[key] = context[key];
+    }
+  }
+  return propsForElement;
+}
+
+// [prevProps, prevTheme, prevPropsKeyCount, cachedContext, cachedStyles]
+type RenderCache = [object, DefaultTheme | undefined, number, object, any];
 
 function useStyledComponentImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
@@ -82,45 +96,34 @@ function useStyledComponentImpl<Props extends StyledComponentImplProps>(
     target,
   } = forwardedComponent;
 
+  // Guard exists for RSC: useContext is undefined in server component environments
   const contextTheme = React.useContext ? React.useContext(ThemeContext) : undefined;
+  const theme = determineTheme(props, contextTheme, defaultProps) || EMPTY_OBJECT;
 
-  // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
-  // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
-  // should be an immutable value, but behave for now.
-  const theme = determineTheme(props, contextTheme, defaultProps);
+  let context: ExecutionContext & Props;
+  let generatedStyles: any;
 
-  const [context, attrs] = useResolvedAttrs<Props>(theme || EMPTY_OBJECT, props, componentAttrs);
+  const renderCacheRef = React.useRef ? React.useRef<RenderCache | null>(null) : { current: null };
+  const prev = renderCacheRef.current;
 
-  let generatedStyles: ReturnType<typeof inlineStyle.generateStyleObject>;
-  const styleCacheRef = React.useRef<[object, object, number] | null>(null);
-  const prevStyle = styleCacheRef.current;
-  if (prevStyle !== null && shallowEqualContext(prevStyle[0], context, prevStyle[2])) {
-    generatedStyles = prevStyle[1];
+  if (prev !== null && prev[1] === theme && shallowEqualContext(prev[0], props, prev[2])) {
+    context = prev[3] as typeof context;
+    generatedStyles = prev[4];
   } else {
+    context = resolveContext<Props>(theme, props, componentAttrs);
     generatedStyles = inlineStyle.generateStyleObject(context);
-    let keyCount = 0;
-    for (const key in context) {
-      if (hasOwn.call(context, key)) keyCount++;
+
+    let propsKeyCount = 0;
+    for (const key in props) {
+      if (hasOwn.call(props, key)) propsKeyCount++;
     }
-    styleCacheRef.current = [context, generatedStyles, keyCount];
+    renderCacheRef.current = [props, theme, propsKeyCount, context, generatedStyles];
   }
 
-  const refToForward = forwardedRef;
+  const elementToBeCreated: NativeTarget = (context as any).as || props.as || target;
+  const propsForElement = buildPropsForElement(context, elementToBeCreated, shouldForwardProp);
 
-  const elementToBeCreated: NativeTarget = attrs.as || props.as || target;
-
-  const computedProps: Dict<any> = attrs !== props ? { ...props, ...attrs } : props;
-  const propsForElement: Dict<any> = {};
-
-  for (const key in computedProps) {
-    if (key[0] === '$' || key === 'as') continue;
-    else if (key === 'forwardedAs') {
-      propsForElement.as = computedProps[key];
-    } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
-      propsForElement[key] = computedProps[key];
-    }
-  }
-
+  // Guard exists for RSC: useMemo is undefined in server component environments
   propsForElement.style = React.useMemo
     ? React.useMemo(
         () =>
@@ -136,11 +139,9 @@ function useStyledComponentImpl<Props extends StyledComponentImplProps>(
       : props.style
         ? [generatedStyles].concat(props.style)
         : generatedStyles;
-  // forwardedRef is coming from React.forwardRef.
-  // But it might not exist. Since React 19 handles `ref` like a prop, it only define it if there is a value.
-  // We don't want to inject an empty ref.
+
   if (forwardedRef) {
-    propsForElement.ref = refToForward;
+    propsForElement.ref = forwardedRef;
   }
 
   return createElement(elementToBeCreated, propsForElement);
