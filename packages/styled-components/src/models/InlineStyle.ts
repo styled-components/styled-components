@@ -61,18 +61,24 @@ export function parseCSSDeclarations(rawCss: string): [string, string][] {
   let i = 0;
 
   while (i < len) {
-    // skip whitespace, stray semicolons, and braces (from selectors leaking through)
-    while (
-      i < len &&
-      (css[i] === ' ' ||
-        css[i] === '\n' ||
-        css[i] === '\r' ||
-        css[i] === '\t' ||
-        css[i] === ';' ||
-        css[i] === '{' ||
-        css[i] === '}')
-    )
-      i++;
+    // skip whitespace, stray semicolons, and brace-delimited blocks (selectors/at-rules leaking through)
+    while (i < len) {
+      const c = css[i];
+      if (c === ' ' || c === '\n' || c === '\r' || c === '\t' || c === ';' || c === '}') {
+        i++;
+      } else if (c === '{') {
+        // skip entire block (handles `.foo { color: red; font-size: 12px; }`)
+        let depth = 1;
+        i++;
+        while (i < len && depth > 0) {
+          if (css[i] === '{') depth++;
+          else if (css[i] === '}') depth--;
+          i++;
+        }
+      } else {
+        break;
+      }
+    }
 
     if (i >= len) break;
 
@@ -122,14 +128,32 @@ export function parseCSSDeclarations(rawCss: string): [string, string][] {
     const value = css.substring(colonIdx + 1, j).trim();
 
     if (prop && value) {
-      if (process.env.NODE_ENV !== 'production' && (prop[0] === '@' || prop.indexOf('{') !== -1)) {
-        console.warn(
-          `[styled-components/native] "${prop}" is not supported as an inline style and will be ignored. ` +
-            'Only CSS declarations (property: value) are supported in React Native.'
-        );
-      } else {
-        pairs.push([prop, value]);
+      // Selector or at-rule detected: warn and skip entire block (including nested declarations)
+      if (prop[0] === '@' || prop.indexOf('{') !== -1) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            `[styled-components/native] "${prop}" is not supported as an inline style and will be ignored. ` +
+              'Only CSS declarations (property: value) are supported in React Native.'
+          );
+        }
+        // Skip to matching closing brace (the `{` is inside prop, value may contain more declarations)
+        let depth = 1;
+        let k = j;
+        // Count any `{` in value portion that weren't part of prop
+        for (let vi = colonIdx + 1; vi < j; vi++) {
+          if (css[vi] === '{') depth++;
+          else if (css[vi] === '}') depth--;
+        }
+        // Scan forward for remaining unmatched braces
+        while (k < len && depth > 0) {
+          if (css[k] === '{') depth++;
+          else if (css[k] === '}') depth--;
+          k++;
+        }
+        i = k;
+        continue;
       }
+      pairs.push([prop, value]);
     }
 
     i = j + 1; // skip past the semicolon
