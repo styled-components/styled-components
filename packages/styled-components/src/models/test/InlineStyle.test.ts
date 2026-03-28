@@ -551,11 +551,35 @@ describe('parseCSSDeclarations', () => {
       );
     });
 
+    it('excludes all declarations inside a selector block', () => {
+      expect(parseCSSDeclarations('.foo { color: red; font-size: 12px; }')).toMatchInlineSnapshot(
+        `[]`
+      );
+    });
+
+    it('recovers declarations after a selector block', () => {
+      expect(parseCSSDeclarations('.foo { color: red; font-size: 12px; } opacity: 1;'))
+        .toMatchInlineSnapshot(`
+        [
+          [
+            "opacity",
+            "1",
+          ],
+        ]
+      `);
+    });
+
     it('warns and excludes at-rules', () => {
       expect(parseCSSDeclarations('@media screen { color: red; }')).toMatchInlineSnapshot(`[]`);
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining('not supported as an inline style')
       );
+    });
+
+    it('excludes all declarations inside an at-rule block', () => {
+      expect(
+        parseCSSDeclarations('@media screen { color: red; font-size: 12px; }')
+      ).toMatchInlineSnapshot(`[]`);
     });
 
     it('drops unterminated double quote and recovers', () => {
