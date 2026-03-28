@@ -117,6 +117,7 @@ export type IStyleSheetManager = React.PropsWithChildren<{
   target?: undefined | InsertionTarget;
 }>;
 
+/** Configure style injection for descendant styled components (target element, stylis plugins, prop forwarding). */
 export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
   // In RSC environments without context support, StyleSheetManager becomes a no-op
   if (IS_RSC || !React.useMemo) {

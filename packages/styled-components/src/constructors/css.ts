@@ -12,6 +12,18 @@ import isPlainObject from '../utils/isPlainObject';
 const addTag = <T extends RuleSet<any>>(arg: T): T & { isCss: true } =>
   Object.assign(arg, { isCss: true } as const);
 
+/**
+ * Tag a CSS template literal for use in styled components, createGlobalStyle, or attrs.
+ * Enables interpolation type-checking and shared style blocks.
+ *
+ * ```tsx
+ * const truncate = css`
+ *   white-space: nowrap;
+ *   overflow: hidden;
+ *   text-overflow: ellipsis;
+ * `;
+ * ```
+ */
 function css(styles: Styles<object>, ...interpolations: Interpolation<object>[]): RuleSet<object>;
 function css<Props extends object>(
   styles: Styles<NoInfer<Props>>,
