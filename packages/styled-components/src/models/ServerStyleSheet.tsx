@@ -11,6 +11,16 @@ import { StyleSheetManager } from './StyleSheetManager';
 
 const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
 
+/**
+ * Collect styled-components CSS during server-side rendering.
+ *
+ * ```tsx
+ * const sheet = new ServerStyleSheet();
+ * const html = renderToString(sheet.collectStyles(<App />));
+ * const styleTags = sheet.getStyleTags();
+ * sheet.seal();
+ * ```
+ */
 export default class ServerStyleSheet {
   instance: StyleSheet;
   sealed: boolean;

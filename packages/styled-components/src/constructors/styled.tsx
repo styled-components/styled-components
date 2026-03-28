@@ -4,6 +4,14 @@ import { BaseObject, KnownTarget, WebTarget } from '../types';
 import domElements, { SupportedHTMLElements } from '../utils/domElements';
 import constructWithOptions, { Styled as StyledInstance } from './constructWithOptions';
 
+/**
+ * Create a styled component from an HTML element or React component.
+ *
+ * ```tsx
+ * const Button = styled.button`color: red;`;
+ * const Link = styled(RouterLink)`text-decoration: none;`;
+ * ```
+ */
 const baseStyled = <Target extends WebTarget, InjectedProps extends object = BaseObject>(
   tag: Target
 ) =>

@@ -12,6 +12,7 @@ type WithThemeOuterProps<T extends AnyComponent> = Omit<
 > &
   ExecutionProps;
 
+/** Higher-order component that injects the current theme as a prop. Prefer `useTheme` in function components. */
 export default function withTheme<T extends AnyComponent>(
   Component: T
 ): React.ForwardRefExoticComponent<
