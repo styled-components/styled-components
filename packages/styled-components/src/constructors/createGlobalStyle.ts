@@ -89,14 +89,14 @@ export default function createGlobalStyle<Props extends object>(
     // Client-side lifecycle: render styles in effect and clean up on unmount.
     // __SERVER__ and IS_RSC are build/module-level constants, so this doesn't violate rules of hooks.
     if (!__SERVER__ && !IS_RSC) {
-      // For static global styles, renderStyles exits early after the first injection
-      // (via hasNameForId check in GlobalStyle.renderStyles). We still need the effect
-      // for initial injection and unmount cleanup, but we use a narrow deps array
-      // to avoid unnecessary effect re-runs on every render.
+      // globalStyle is included in deps so HMR-induced module re-evaluation
+      // (which creates a new GlobalStyle instance) triggers effect re-run.
+      // For static rules, renderStyles exits early after the first injection
+      // (via hasNameForId check), so the extra dep is effectively free at runtime.
       // eslint-disable-next-line react-hooks/exhaustive-deps
       const effectDeps = globalStyle.isStatic
-        ? [instance, ssc.styleSheet]
-        : [instance, props, ssc.styleSheet, theme, ssc.stylis];
+        ? [instance, ssc.styleSheet, globalStyle]
+        : [instance, props, ssc.styleSheet, theme, ssc.stylis, globalStyle];
 
       React.useLayoutEffect(() => {
         if (!ssc.styleSheet.server) {

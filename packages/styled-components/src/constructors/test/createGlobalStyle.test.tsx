@@ -814,6 +814,110 @@ describe(`createGlobalStyle`, () => {
   });
 });
 
+describe('createGlobalStyle HMR', () => {
+  /**
+   * Simulate React Fast Refresh "hot patching": the module re-evaluates,
+   * createGlobalStyle produces a new inner render function (with a new
+   * globalStyle closure), but the component FIBER stays mounted.
+   *
+   * We achieve this with a DynamicRenderer wrapper that calls the inner
+   * GlobalStyleComponent as a render function (like a custom hook) on
+   * the wrapper's fiber.  Swapping the render function mimics Fast Refresh
+   * replacing the closure without unmounting.
+   *
+   * The fix: including `globalStyle` in useLayoutEffect deps so that
+   * the new object reference from the re-evaluated module triggers
+   * effect cleanup + re-run.
+   */
+
+  beforeEach(() => {
+    resetStyled();
+  });
+
+  /**
+   * Call the inner GlobalStyleComponent render function directly on a
+   * stable host fiber — hooks attach to the host, state is preserved,
+   * but the closure (and thus `globalStyle`) changes when we swap `renderFn`.
+   */
+  function DynamicRenderer({ renderFn }: { renderFn: (props: any) => React.ReactNode }) {
+    return renderFn({}) as React.ReactElement;
+  }
+
+  it('updates static CSS when the globalStyle closure changes (Fast Refresh simulation)', () => {
+    const V1 = createGlobalStyle`[data-hmr]{color:red;}`;
+    const V2 = createGlobalStyle`[data-hmr]{color:blue;}`;
+
+    // Extract the inner GlobalStyleComponent from the React.memo wrapper.
+    // This is the function whose closure holds `globalStyle` and `renderStyles`.
+    const innerV1 = (V1 as any).type;
+    const innerV2 = (V2 as any).type;
+
+    // Mount V1's render function on the DynamicRenderer fiber
+    const { rerender } = render(<DynamicRenderer renderFn={innerV1} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "[data-hmr] {
+        color: red;
+      }"
+    `);
+
+    // "HMR patch" — swap to V2's render function on the SAME fiber.
+    // DynamicRenderer's fiber stays mounted; hooks are preserved.
+    // The useLayoutEffect callback now captures V2's globalStyle.
+    // With fix: deps include globalStyle (new ref) → effect re-runs.
+    // Without fix: deps are [instance, styleSheet] (unchanged) → effect skipped.
+    rerender(<DynamicRenderer renderFn={innerV2} />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "[data-hmr] {
+        color: blue;
+      }"
+    `);
+  });
+
+  it('updates dynamic CSS when the globalStyle closure changes (Fast Refresh simulation)', () => {
+    const V1 = createGlobalStyle<{ bg: string }>`
+      body { background: ${props => props.bg}; font-size: 14px; }
+    `;
+    const V2 = createGlobalStyle<{ bg: string }>`
+      body { background: ${props => props.bg}; font-size: 18px; margin: 0; }
+    `;
+
+    const innerV1 = (V1 as any).type;
+    const innerV2 = (V2 as any).type;
+
+    const { rerender } = render(
+      <DynamicRenderer renderFn={(p: any) => innerV1({ bg: 'red', ...p })} />
+    );
+    expect(getRenderedCSS()).toContain('background: red');
+    expect(getRenderedCSS()).toContain('font-size: 14px');
+
+    // Swap closure, same props
+    rerender(<DynamicRenderer renderFn={(p: any) => innerV2({ bg: 'red', ...p })} />);
+
+    expect(getRenderedCSS()).toContain('background: red');
+    expect(getRenderedCSS()).toContain('font-size: 18px');
+    expect(getRenderedCSS()).toContain('margin: 0');
+    expect(getRenderedCSS()).not.toContain('font-size: 14px');
+  });
+
+  it('cleans up old group when globalStyle closure changes', () => {
+    const V1 = createGlobalStyle`[data-hmr-cleanup]{outline:1px solid red;}`;
+    const V2 = createGlobalStyle`[data-hmr-cleanup]{border:1px solid blue;}`;
+
+    const innerV1 = (V1 as any).type;
+    const innerV2 = (V2 as any).type;
+
+    const { rerender } = render(<DynamicRenderer renderFn={innerV1} />);
+    expect(getRenderedCSS()).toContain('outline');
+
+    rerender(<DynamicRenderer renderFn={innerV2} />);
+
+    // Old styles must be gone, new styles present
+    expect(getRenderedCSS()).not.toContain('outline');
+    expect(getRenderedCSS()).toContain('border');
+  });
+});
+
 describe('GlobalStyle.renderStyles (unit)', () => {
   /**
    * These tests exercise GlobalStyle.renderStyles() directly to cover
