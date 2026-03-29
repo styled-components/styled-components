@@ -98,8 +98,17 @@ export default function createGlobalStyle<Props extends object>(
         ? [instance, ssc.styleSheet, globalStyle]
         : [instance, props, ssc.styleSheet, theme, ssc.stylis, globalStyle];
 
+      const prevGlobalStyleRef = React.useRef(globalStyle);
+
       React.useLayoutEffect(() => {
         if (!ssc.styleSheet.server) {
+          // HMR creates a new globalStyle instance but the componentId stays stable
+          // (SWC plugin assigns by file location), so stale hasNameForId hits skip injection.
+          if (prevGlobalStyleRef.current !== globalStyle) {
+            ssc.styleSheet.clearRules(styledComponentId);
+            prevGlobalStyleRef.current = globalStyle;
+          }
+
           renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
         }
 

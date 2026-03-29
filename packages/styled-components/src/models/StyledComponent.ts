@@ -107,6 +107,7 @@ type RenderCache = [
   number, // prevPropsKeyCount
   object, // cachedContext
   string, // cachedClassName
+  ComponentStyle, // prevComponentStyle (for HMR invalidation)
 ];
 
 function resolveContext<Props extends BaseObject>(
@@ -251,6 +252,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
       prev[1] === theme &&
       prev[2] === ssc.styleSheet &&
       prev[3] === ssc.stylis &&
+      prev[7] === componentStyle &&
       shallowEqualContext(prev[0], props, prev[4])
     ) {
       context = prev[5] as typeof context;
@@ -271,6 +273,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
         propsKeyCount,
         context,
         generatedClassName,
+        componentStyle,
       ];
     }
   } else {
