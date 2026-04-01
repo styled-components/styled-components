@@ -132,6 +132,51 @@ const test7Checks: TestCheck[] = [
   },
 ];
 
+const test8Checks: TestCheck[] = [
+  {
+    ref: 'nth-first',
+    type: 'style',
+    prop: 'color',
+    expected: 'rgb(220, 38, 38)',
+    label: ':first-of-type item is red',
+  },
+  {
+    ref: 'nth-last',
+    type: 'style',
+    prop: 'color',
+    expected: 'rgb(37, 99, 235)',
+    label: ':last-of-type item is blue',
+  },
+  {
+    ref: 'nth-second',
+    type: 'style',
+    prop: 'color',
+    expected: 'rgb(22, 163, 74)',
+    label: ':nth-of-type(2) item is green',
+  },
+  {
+    ref: 'nthchild-first',
+    type: 'style',
+    prop: 'color',
+    expected: 'rgb(220, 38, 38)',
+    label: ':first-child item is red (plugin fix)',
+  },
+  {
+    ref: 'nthchild-last',
+    type: 'style',
+    prop: 'color',
+    expected: 'rgb(37, 99, 235)',
+    label: ':last-child item is blue (plugin fix)',
+  },
+  {
+    ref: 'nthchild-second',
+    type: 'style',
+    prop: 'color',
+    expected: 'rgb(22, 163, 74)',
+    label: ':nth-child(2) item is green (plugin fix)',
+  },
+];
+
 const rscSuites = [
   { name: '1. Module-level', checks: test1Checks },
   { name: '2. Cross-boundary', checks: test2Checks },
@@ -140,6 +185,7 @@ const rscSuites = [
   { name: '5. Dynamic props', checks: test5Checks },
   { name: '6. as prop', checks: test6Checks },
   { name: '7. CSS vars', checks: test7Checks },
+  { name: '8. Child-index selectors', checks: test8Checks },
 ];
 
 export default function RSCTestPage() {
@@ -380,6 +426,48 @@ export default function RSCTestPage() {
             </VarText>
             <VarBadge>var(--sc-accent)</VarBadge>
           </VarCard>
+        </Demo>
+      </Section>
+      {/* 8. Child-index selectors in RSC */}
+      <Section>
+        <SectionTitle>
+          8. Child-index selectors in RSC <TestStatus checks={test8Checks} />
+        </SectionTitle>
+        <SectionDesc>
+          RSC emits inline <Code>&lt;style&gt;</Code> tags as siblings of the styled element. These
+          tags are real DOM children, so <Code>:first-child</Code>, <Code>:last-child</Code>, and{' '}
+          <Code>:nth-child()</Code> would normally count them and produce wrong results. This page
+          uses <Code>stylisPluginRSC</Code> via <Code>StyleSheetManager</Code> to rewrite these
+          selectors automatically. Both columns should match.
+        </SectionDesc>
+        <HintText>
+          If broken: the <Code>:nth-child</Code> column colors don&apos;t match the{' '}
+          <Code>:nth-of-type</Code> column. Inspect the DOM to see the{' '}
+          <Code>&lt;style data-styled&gt;</Code> tag before the list items.
+        </HintText>
+        <Demo>
+          <Row>
+            <Column>
+              <ColumnLabel>
+                <Code>:nth-child</Code> (fixed by plugin):
+              </ColumnLabel>
+              <NthDemoList>
+                <NthChildItem data-testid="nthchild-first">First (should be red)</NthChildItem>
+                <NthChildItem data-testid="nthchild-second">Second (should be green)</NthChildItem>
+                <NthChildItem data-testid="nthchild-last">Third (should be blue)</NthChildItem>
+              </NthDemoList>
+            </Column>
+            <Column>
+              <ColumnLabel>
+                <Code>:nth-of-type</Code> (naturally safe):
+              </ColumnLabel>
+              <NthDemoList>
+                <NthItem data-testid="nth-first">First (should be red)</NthItem>
+                <NthItem data-testid="nth-second">Second (should be green)</NthItem>
+                <NthItem data-testid="nth-last">Third (should be blue)</NthItem>
+              </NthDemoList>
+            </Column>
+          </Row>
         </Demo>
       </Section>
     </Container>
@@ -626,4 +714,56 @@ const VarBadge = styled.span`
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
+`;
+
+// ---------------------------------------------------------------------------
+// 8. Child-index selectors in RSC
+// ---------------------------------------------------------------------------
+
+const NthDemoList = styled.ul`
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const NthBaseItem = styled.li`
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: ${theme.colors.text};
+  background: ${theme.colors.background};
+  border: 1px solid ${theme.colors.border};
+`;
+
+const NthItem = styled(NthBaseItem)`
+  &:first-of-type {
+    color: #dc2626;
+    border-color: #dc2626;
+  }
+  &:nth-of-type(2) {
+    color: #16a34a;
+    border-color: #16a34a;
+  }
+  &:last-of-type {
+    color: #2563eb;
+    border-color: #2563eb;
+  }
+`;
+
+const NthChildItem = styled(NthBaseItem)`
+  &:first-child {
+    color: #dc2626;
+    border-color: #dc2626;
+  }
+  &:nth-child(2) {
+    color: #16a34a;
+    border-color: #16a34a;
+  }
+  &:last-child {
+    color: #2563eb;
+    border-color: #2563eb;
+  }
 `;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
 import { type ThemePreset } from '../lib/test-themes';
 import { darkThemeVarOverrides, lightThemeVarOverrides } from '../lib/dark-theme-script';
@@ -51,36 +51,51 @@ function getSystemTheme(): ThemePreset {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+function getStoredTheme(): ThemePreset | null {
+  try {
+    const stored = localStorage.getItem('theme');
+    if (stored === 'dark' || stored === 'light') return stored;
+  } catch {}
+  return null;
+}
+
 export function CustomThemeProvider({ children }: { children: React.ReactNode }) {
   const [override, setOverride] = useState<ThemePreset | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const overrideRef = useRef(override);
+  overrideRef.current = override;
 
   useEffect(() => {
+    setOverride(getStoredTheme());
     setHydrated(true);
 
     const mql = window.matchMedia('(prefers-color-scheme: dark)');
     const onchange = () => {
-      if (override === null) {
-        // Remove manual class so the media query takes over
+      if (overrideRef.current === null) {
         document.documentElement.classList.remove('dark', 'light');
       }
     };
     mql.addEventListener('change', onchange);
     return () => mql.removeEventListener('change', onchange);
-  }, [override]);
+  }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     const root = document.documentElement.classList;
     root.remove('dark', 'light');
     if (override) {
       root.add(override);
+      localStorage.setItem('theme', override);
+    } else {
+      localStorage.removeItem('theme');
     }
-  }, [override]);
+  }, [override, hydrated]);
 
   const toggleTheme = () => {
     setOverride(prev => {
-      const current = prev ?? getSystemTheme();
-      return current === 'light' ? 'dark' : 'light';
+      if (prev === null) return getSystemTheme() === 'light' ? 'dark' : 'light';
+      if (prev === 'dark') return 'light';
+      return null;
     });
   };
 
