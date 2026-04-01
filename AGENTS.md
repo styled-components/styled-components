@@ -10,7 +10,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 - NEVER use `precedence` or `href` on `<style>` elements -- React 19 Float merges same-precedence tags, strips custom `data-*` attributes, and hoists to `<head>` where source ordering is unpredictable. RSC style tags must be plain inline `<style>` (server component output is not hydrated, so no mismatch).
 - The native entry must NEVER transitively import DOM code via value imports. Use `import type` and branded `Symbol.for()` checks instead of `instanceof`. Verify: `grep -c 'document\.' native/dist/styled-components.native.cjs.js` must be 0. RN/Hermes 0.79+ fails at module evaluation time on `document` references.
-- Server detection requires three mechanisms combined: `__SERVER__` (build-time constant), `IS_RSC` (module-level constant), and `styleSheet.server` (runtime flag from `ServerStyleSheet`). Always use `__SERVER__ || IS_RSC || ssc.styleSheet.server`. `IS_RSC` evaluates to `false` at runtime in React 19 RSC (`createContext` exists everywhere) but still serves as a build-time constant for dead-code elimination.
+- Server detection requires three mechanisms combined: `__SERVER__` (build-time constant), `IS_RSC` (module-level constant), and `styleSheet.server` (runtime flag from `ServerStyleSheet`). Always use `__SERVER__ || IS_RSC || ssc.styleSheet.server`. `IS_RSC` is `true` at runtime in React 19 server components because React's `react-server` export condition serves a stripped build without `createContext`. Bundlers (Next.js/Turbopack) use this condition automatically.
 - Turbopack resolves the `browser` entry for SSR of client components, making `__SERVER__` false on the server. `styleSheet.server` is the runtime fallback.
 - `React.useRef` is `undefined` in RSC server components. Gate behind `__SERVER__` for dead-code elimination, never use `typeof React.useRef === 'function'` (runtime conditional hook).
 - `new Array(n)` creates HOLEY_ELEMENTS arrays that infect V8 type feedback -- 3.9x regression observed in GroupedTag.
@@ -43,7 +43,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 - `__SERVER__` is a build-time constant that enables dead-code elimination for SSR paths in browser builds. NEVER use `__SERVER__` as the sole gate for behavior that needs paired cleanup (e.g. `useLayoutEffect`). Jest resolves the server build (`main` field) in jsdom, where `__SERVER__=true` eliminates cleanup but DOM mutations still occur. Gate on `styleSheet.server` or `IS_RSC` instead.
 - `IS_BROWSER` (`typeof window !== 'undefined'`) is a runtime check -- bundlers CANNOT tree-shake code behind it
-- `IS_RSC` (`typeof React.createContext === 'undefined'`) is a module-level constant. In React 19, `createContext` exists in all environments, so `IS_RSC` evaluates to `false` at runtime. It remains useful as a build-time constant: bundlers can replace it for dead-code elimination in server-only bundles.
+- `IS_RSC` (`typeof React.createContext === 'undefined'`) is a module-level constant. React 19's `react-server` export condition strips `createContext` from the server build, so `IS_RSC` is `true` at runtime in server components. In browser/standalone/native builds, rollup replaces the expression with `false` for dead-code elimination.
 - The `browser` field in package.json maps server bundles to browser-specific alternatives. Preferred over `exports` (which caused TS2742 in composite projects).
 - CSS injection ordering: group IDs allocated at call time (when `styled()`, `createGlobalStyle()`, or `keyframes()` is called) -- lower ID = earlier in stylesheet
 - Keyframes eagerly register via `getGroupForId(this.id)` in constructor (not `StyleSheet.registerId`, to avoid DOM imports in native builds)
@@ -61,7 +61,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 ## RSC Style Injection
 
-- RSC components emit plain inline `<style>` tags (no `precedence`, no `href`, no `data-styled-rsc`). Server component output is NOT hydrated by React, so inline tags cause no hydration mismatch.
+- RSC components emit plain inline `<style data-styled>` tags (no `precedence`, no `href`). Server component output is NOT hydrated by React, so inline tags cause no hydration mismatch. The `data-styled` attribute is safe because Float only strips attrs during client hydration, which never runs on RSC output.
 - Inline body styles naturally appear after the registry's `<head>` styles in source order, so cross-boundary extensions (RSC extending a client component) win the cascade.
 - Base-level CSS in inheritance chains is wrapped in `:where()` for zero specificity. This prevents duplicate base CSS (from sibling extensions sharing a base) from overriding earlier extensions' styles.
 - No cleanup of RSC style tags is needed -- they are the sole source of CSS for server-only components.
@@ -69,6 +69,9 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - Keyframe rules are emitted in a dedicated `<style>` tag, deduped separately by keyframe ID. They must NOT be prepended to component CSS strings--keyframes register mid-render, so prepending them causes inconsistent strings that break `getEmittedCSS` dedup.
 - `mainSheet` is reset once per server render via `React.cache` (clears `names`, `keyframeIds`, `tag`) to prevent stale CSS accumulating across HMR cycles. `keyframeIds` is safe to clear because components re-register keyframes via `keyframe.inject()` during render.
 - React 19 Float (`precedence` attribute) must NOT be used: it merges same-precedence tags, strips custom `data-*` attributes, and hoists to `<head>` where ordering relative to the registry is unpredictable.
+- `StyleSheetManager` works in RSC via module-level `rscContextOverride` slot. Single-threaded RSC renders + `React.cache` reset per render make this safe. `stylisPlugins` and `shouldForwardProp` are applied even without `createContext`.
+- `stylisPluginRSC` is an opt-in stylis plugin that rewrites `:first-child`/`:last-child`/`:nth-child()` to exclude `style[data-styled]` from the child count using CSS Selectors L4 `of S` syntax. Exported from `index.ts` only (not `base.ts`) for UMD tree-shaking. Uses `/*#__PURE__*/ Object.defineProperty` for stable `.name` after minification.
+- RSC inline `<style>` tags break child-index pseudo-selectors because they become real DOM children. `:first-of-type`/`:nth-of-type()` are naturally immune (filter by tag name). The plugin is needed only for `:*-child` selectors.
 
 ## createTheme
 
@@ -76,8 +79,9 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - Pass the contract to `ThemeProvider` for stable class name hashes across themes (no hydration mismatch on light/dark)
 - `resolve(el?)` reads computed CSS var values from the DOM -- client-only, returns plain object with resolved values
 - `raw` property holds the original theme object
+- `vars` property holds bare CSS custom property names (`--sc-path`) -- same shape as theme, use in `createGlobalStyle` for dark mode overrides: `${vars.colors.bg}: #111;`
 - Options: `prefix` (default `"sc"`), `selector` (default `":root"`, use `":host"` for Shadow DOM)
-- Dark mode: declare CSS vars via `@media (prefers-color-scheme: dark)` and `.dark` class overrides in a `createGlobalStyle`, not via JS state -- avoids hydration flash
+- Dark mode: use `vars` + `css` partial for DRY overrides in `@media (prefers-color-scheme: dark)` and `.dark` class -- avoids hydration flash and hand-written var names
 - `reconstructWithOptions` must copy `keyframeIds` Set to the new sheet
 
 ## attrs Behavior
