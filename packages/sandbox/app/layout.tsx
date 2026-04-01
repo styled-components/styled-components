@@ -18,9 +18,14 @@ export const viewport: Viewport = {
   ],
 };
 
+const themeScript = `(function(){try{var d=document.documentElement,s=localStorage.getItem('theme');if(s==='dark'||s==='light'){d.classList.add(s)}else if(window.matchMedia('(prefers-color-scheme:dark)').matches){d.classList.add('dark')}}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body suppressHydrationWarning>
         <StyledComponentsRegistry>
           <CustomThemeProvider>{children}</CustomThemeProvider>
