@@ -26,6 +26,25 @@ type ThemeContract<T> = CSSVarTheme<T> & {
   /** The original theme object, for passing to `ThemeProvider`. */
   raw: T;
   /**
+   * Same shape as the theme but every leaf is the bare CSS custom property
+   * name (e.g. `"--sc-colors-primary"`). Useful for building dark mode
+   * overrides without hand-writing variable names.
+   *
+   * @example
+   * ```tsx
+   * const { vars } = createTheme({ colors: { bg: '#fff', text: '#000' } });
+   * vars.colors.bg  // "--sc-colors-bg"
+   *
+   * const DarkMode = createGlobalStyle`
+   *   .dark {
+   *     ${vars.colors.bg}: #111;
+   *     ${vars.colors.text}: #eee;
+   *   }
+   * `;
+   * ```
+   */
+  vars: CSSVarTheme<T>;
+  /**
    * Read the current resolved CSS variable values from the DOM and return
    * an object with the same shape as the original theme. Each leaf is the
    * computed value (e.g. `"#0070f3"`), not the `var()` reference.
@@ -59,8 +78,15 @@ function walkTheme(
   }
 }
 
-/** Build `var(--prefix-a-b, fallback)` accessor object */
-function buildVars<T extends Record<string, any>>(obj: T, varPrefix: string): CSSVarTheme<T> {
+/** Build bare CSS custom property names: `--prefix-a-b` */
+function buildVarNames<T extends Record<string, any>>(obj: T, varPrefix: string): CSSVarTheme<T> {
+  const result: Record<string, any> = {};
+  walkTheme(obj, varPrefix, result, fullPath => '--' + varPrefix + fullPath);
+  return result as CSSVarTheme<T>;
+}
+
+/** Build `var(--prefix-a-b, fallback)` references with dev-mode parenthesis validation */
+function buildVarRefs<T extends Record<string, any>>(obj: T, varPrefix: string): CSSVarTheme<T> {
   const result: Record<string, any> = {};
   walkTheme(obj, varPrefix, result, (fullPath, val) => {
     if (process.env.NODE_ENV !== 'production') {
@@ -183,7 +209,8 @@ export default function createTheme<T extends Record<string, any>>(
 ): ThemeContract<T> {
   const pfx = (options?.prefix ?? 'sc') + '-';
   const sel = options?.selector ?? ':root';
-  const vars = buildVars(defaultTheme, pfx);
+  const varNames = buildVarNames(defaultTheme, pfx);
+  const varRefs = buildVarRefs(defaultTheme, pfx);
 
   const GlobalStyle = createGlobalStyle`
     ${sel} {
@@ -191,9 +218,10 @@ export default function createTheme<T extends Record<string, any>>(
     }
   `;
 
-  return Object.assign(vars, {
+  return Object.assign(varRefs, {
     GlobalStyle,
     raw: defaultTheme,
+    vars: varNames,
     resolve(el?: Element): T {
       if (!IS_BROWSER) {
         throw new Error('createTheme.resolve() is client-only');
