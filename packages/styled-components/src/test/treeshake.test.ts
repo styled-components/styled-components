@@ -114,6 +114,64 @@ describe('native build isolation', () => {
   });
 });
 
+describe('stylisPluginRSC tree-shaking', () => {
+  it('is excluded from the standalone UMD bundle', () => {
+    const minified = read('styled-components.min.js');
+    expect(minified).not.toContain('stylisPluginRSC');
+    expect(minified).not.toContain('rewriteSelector');
+    expect(minified).not.toContain(':not(style[data-styled])');
+  });
+
+  it('is available in ESM builds for downstream tree-shaking', () => {
+    const browserESM = read('styled-components.browser.esm.js');
+    const serverESM = read('styled-components.esm.js');
+    expect(browserESM).toContain('stylisPluginRSC');
+    expect(serverESM).toContain('stylisPluginRSC');
+  });
+
+  it('is eliminated by webpack when unused', async () => {
+    const webpack = require('webpack');
+    const os = require('os');
+
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-treeshake-'));
+    const entryFile = path.join(tmpDir, 'entry.js');
+    const outputFile = path.join(tmpDir, 'bundle.js');
+
+    try {
+      fs.writeFileSync(
+        entryFile,
+        `import styled from '${distDir}/styled-components.browser.esm.js';\nconsole.log(styled.div);\n`
+      );
+
+      const stats: any = await new Promise((resolve, reject) => {
+        webpack(
+          {
+            mode: 'production',
+            entry: entryFile,
+            output: { path: tmpDir, filename: 'bundle.js' },
+            externals: { react: 'React', 'react-dom': 'ReactDOM' },
+          },
+          (err: any, stats: any) => (err ? reject(err) : resolve(stats))
+        );
+      });
+
+      if (stats.hasErrors()) {
+        throw new Error(stats.compilation.errors.map((e: any) => e.message).join('\n'));
+      }
+
+      const bundle = fs.readFileSync(outputFile, 'utf8');
+      expect(bundle).not.toContain('rewriteSelector');
+      expect(bundle).not.toContain('stylisPluginRSC');
+      expect(bundle).not.toContain(':not(style[data-styled])');
+
+      // Sanity: core styled-components code IS present
+      expect(bundle.length).toBeGreaterThan(1000);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  }, 30000);
+});
+
 describe('ESM tree-shakeability', () => {
   it('browser ESM uses named exports', () => {
     const browserESM = read('styled-components.browser.esm.js');

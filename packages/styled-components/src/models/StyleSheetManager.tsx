@@ -8,13 +8,24 @@ import createStylisInstance from '../utils/stylis';
 export const mainSheet: StyleSheet = new StyleSheet();
 export const mainStylis: Stringifier = createStylisInstance();
 
-/** Per-render mainSheet reset to prevent HMR accumulation (see AGENTS.md § RSC Style Injection). */
+/**
+ * RSC context slot — module-level mutable state scoped per render via React.cache.
+ * In RSC, createContext doesn't exist, so StyleSheetManager writes here and
+ * useStyleSheetContext reads from here. Single-threaded RSC renders guarantee
+ * no concurrent mutation. React.cache ensures reset between renders.
+ */
+let rscContextOverride: IStyleSheetContext | null = null;
+let rscLastPlugins: stylis.Middleware[] | undefined;
+let rscCachedStylis: Stringifier = mainStylis;
+
+/** Per-render reset to prevent HMR accumulation (see AGENTS.md § RSC Style Injection). */
 const ensureSheetReset: (() => void) | null = IS_RSC
   ? (((React as any).cache as (<T extends (...args: any[]) => any>(fn: T) => T) | undefined)?.(
       () => {
         mainSheet.names.clear();
         mainSheet.keyframeIds.clear();
         mainSheet.clearTag();
+        rscContextOverride = null;
       }
     ) ?? null)
   : null;
@@ -57,10 +68,11 @@ export function useStyleSheetContext() {
   if (!IS_RSC) return React.useContext(StyleSheetContext);
 
   // Reset mainSheet once per render to prevent HMR accumulation.
-  // React.cache ensures this runs exactly once per server render.
+  // React.cache ensures this runs exactly once per render, so calling
+  // it here AND in StyleSheetManager is safe — whichever runs first wins.
   if (ensureSheetReset) ensureSheetReset();
 
-  return defaultContextValue;
+  return rscContextOverride || defaultContextValue;
 }
 
 export type IStyleSheetManager = React.PropsWithChildren<{
@@ -119,8 +131,26 @@ export type IStyleSheetManager = React.PropsWithChildren<{
 
 /** Configure style injection for descendant styled components (target element, stylis plugins, prop forwarding). */
 export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
-  // In RSC environments without context support, StyleSheetManager becomes a no-op
-  if (IS_RSC || !React.useMemo) {
+  // In RSC, context doesn't exist but we can set module-level state.
+  // Single-threaded RSC renders + React.cache reset make this safe.
+  if (IS_RSC) {
+    // Reset once per render (React.cache scopes this per request)
+    if (ensureSheetReset) ensureSheetReset();
+
+    if (props.stylisPlugins || props.shouldForwardProp) {
+      // Cache stylis instance across renders when plugins array ref is stable
+      if (props.stylisPlugins && props.stylisPlugins !== rscLastPlugins) {
+        rscLastPlugins = props.stylisPlugins;
+        rscCachedStylis = createStylisInstance({ plugins: props.stylisPlugins });
+      }
+
+      rscContextOverride = {
+        shouldForwardProp: props.shouldForwardProp,
+        styleSheet: mainSheet,
+        stylis: props.stylisPlugins ? rscCachedStylis : mainStylis,
+      };
+    }
+
     return props.children as React.JSX.Element;
   }
 
