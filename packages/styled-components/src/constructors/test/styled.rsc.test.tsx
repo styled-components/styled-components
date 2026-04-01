@@ -27,6 +27,8 @@ import ReactDOMServer from 'react-dom/server';
 import { mainSheet } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
 import styled, { css, keyframes } from '../../index';
+import { StyleSheetManager } from '../../models/StyleSheetManager';
+import stylisPluginRSC from '../../utils/stylisPluginRSC';
 
 /** Extract all CSS rule text from <style> tags in rendered HTML */
 const extractStyleContents = (html: string): string =>
@@ -1351,6 +1353,59 @@ describe('styled RSC mode', () => {
         "
       `);
       expect(countStyleTags(html)).toBe(2);
+    });
+  });
+
+  describe('StyleSheetManager in RSC', () => {
+    it('should apply stylisPlugins to RSC output', () => {
+      const Item = styled.li`
+        &:first-child {
+          color: red;
+        }
+        &:last-child {
+          color: blue;
+        }
+        &:nth-child(2) {
+          color: green;
+        }
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        React.createElement(
+          StyleSheetManager,
+          { stylisPlugins: [stylisPluginRSC] },
+          React.createElement(
+            'ul',
+            null,
+            React.createElement(Item, null, 'First'),
+            React.createElement(Item, null, 'Second'),
+            React.createElement(Item, null, 'Third')
+          )
+        )
+      );
+
+      const allCSS = extractStyleContents(html);
+      expect(allCSS).toContain(':nth-child(1 of :not(style[data-styled]))');
+      expect(allCSS).toContain(':nth-last-child(1 of :not(style[data-styled]))');
+      expect(allCSS).toContain(':nth-child(2 of :not(style[data-styled]))');
+      expect(allCSS).not.toContain(':first-child');
+      expect(allCSS).not.toContain(':last-child');
+    });
+
+    it('should use default stylis when no plugins provided', () => {
+      const Item = styled.li`
+        &:first-child {
+          color: red;
+        }
+      `;
+
+      const html = ReactDOMServer.renderToString(
+        React.createElement('ul', null, React.createElement(Item, null, 'First'))
+      );
+
+      const allCSS = extractStyleContents(html);
+      expect(allCSS).toContain(':first-child');
+      expect(allCSS).not.toContain(':not(style');
     });
   });
 });

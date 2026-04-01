@@ -1,6 +1,6 @@
 import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
-import { IS_RSC, SC_VERSION } from '../constants';
+import { IS_RSC, SC_ATTR, SC_VERSION } from '../constants';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
 import type StyleSheet from '../sheet';
 import type {
@@ -364,6 +364,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
       }
       if (kfCss) {
         kfElement = React.createElement('style', {
+          [SC_ATTR]: '',
           key: 'sc-kf-' + componentStyle.componentId,
           children: kfCss,
         });
@@ -377,7 +378,11 @@ function useStyledComponentImpl<Props extends BaseObject>(
 
     const styleElement =
       css && !cssDeduped
-        ? React.createElement('style', { key: 'sc-' + componentStyle.componentId, children: css })
+        ? React.createElement('style', {
+            [SC_ATTR]: '',
+            key: 'sc-' + componentStyle.componentId,
+            children: css,
+          })
         : null;
 
     if (kfElement || styleElement) {
