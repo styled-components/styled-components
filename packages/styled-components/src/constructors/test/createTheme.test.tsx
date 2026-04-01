@@ -27,6 +27,16 @@ describe('createTheme', () => {
       const theme = createTheme(input);
       expect(theme.raw).toBe(input);
     });
+
+    it('exposes bare CSS variable names via vars', () => {
+      const theme = createTheme(
+        { colors: { primary: '#0070f3', text: '#111' }, spacing: { md: '16px' } },
+        { prefix: 'app' }
+      );
+      expect(theme.vars.colors.primary).toBe('--app-colors-primary');
+      expect(theme.vars.colors.text).toBe('--app-colors-text');
+      expect(theme.vars.spacing.md).toBe('--app-spacing-md');
+    });
   });
 
   describe('unbalanced parentheses warning', () => {
