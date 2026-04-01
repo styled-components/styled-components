@@ -281,6 +281,9 @@ importers:
       typescript:
         specifier: ^5.4.5
         version: 5.9.3
+      webpack:
+        specifier: ^5.105.4
+        version: 5.105.4(webpack-cli@5.1.4)
 
   packages/styled-components/native:
     devDependencies:
