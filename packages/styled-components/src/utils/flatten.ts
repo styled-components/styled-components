@@ -9,6 +9,7 @@ import {
   Stringifier,
   StyledObject,
 } from '../types';
+import { cssTagged } from './cssTagged';
 import addUnitIfNeeded from './addUnitIfNeeded';
 import getComponentName from './getComponentName';
 import hyphenate from './hyphenateStyleName';
@@ -31,8 +32,7 @@ export const objToCssArray = (obj: Dict<any>): string[] => {
     const val = obj[key];
     if (!obj.hasOwnProperty(key) || isFalsish(val)) continue;
 
-    // @ts-expect-error Property 'isCss' does not exist on type 'any[]'
-    if ((Array.isArray(val) && val.isCss) || isFunction(val)) {
+    if ((Array.isArray(val) && cssTagged.has(val)) || isFunction(val)) {
       rules.push(hyphenate(key) + ':', val, ';');
     } else if (isPlainObject(val)) {
       rules.push(key + ' {', ...objToCssArray(val), '}');
@@ -51,25 +51,20 @@ export default function flatten<Props extends object>(
   stylisInstance?: Stringifier | undefined,
   result: RuleSet<Props> = []
 ): RuleSet<Props> {
-  if (typeof chunk === 'string') {
-    if (chunk) result.push(chunk);
-    return result;
-  }
-
   if (isFalsish(chunk)) {
     return result;
   }
 
-  /* Handle other components */
-  if (isStyledComponent(chunk)) {
-    result.push(`.${(chunk as unknown as IStyledComponent<'web', any>).styledComponentId}`);
+  const t = typeof chunk;
+
+  if (t === 'string') {
+    result.push(chunk as string);
     return result;
   }
 
-  /* Either execute or defer the function */
-  if (isFunction(chunk)) {
+  if (t === 'function') {
     if (isStatelessFunction(chunk) && executionContext) {
-      const fnResult = chunk(executionContext);
+      const fnResult = (chunk as Function)(executionContext);
 
       if (
         process.env.NODE_ENV !== 'production' &&
@@ -93,6 +88,18 @@ export default function flatten<Props extends object>(
     }
   }
 
+  if (Array.isArray(chunk)) {
+    for (let i = 0; i < chunk.length; i++) {
+      flatten<Props>(chunk[i], executionContext, styleSheet, stylisInstance, result);
+    }
+    return result;
+  }
+
+  if (isStyledComponent(chunk)) {
+    result.push(`.${(chunk as unknown as IStyledComponent<'web', any>).styledComponentId}`);
+    return result;
+  }
+
   if (isKeyframes(chunk)) {
     if (styleSheet) {
       chunk.inject(styleSheet, stylisInstance);
@@ -103,21 +110,12 @@ export default function flatten<Props extends object>(
     return result;
   }
 
-  /* Handle objects */
   if (isPlainObject(chunk)) {
     const cssArr = objToCssArray(chunk as StyledObject<Props>);
     for (let i = 0; i < cssArr.length; i++) result.push(cssArr[i]);
     return result;
   }
 
-  if (!Array.isArray(chunk)) {
-    result.push(chunk.toString());
-    return result;
-  }
-
-  for (let i = 0; i < chunk.length; i++) {
-    flatten<Props>(chunk[i], executionContext, styleSheet, stylisInstance, result);
-  }
-
+  result.push((chunk as any).toString());
   return result;
 }

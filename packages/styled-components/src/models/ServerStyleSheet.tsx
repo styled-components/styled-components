@@ -9,18 +9,8 @@ import { joinStringArray } from '../utils/joinStrings';
 import getNonce from '../utils/nonce';
 import { StyleSheetManager } from './StyleSheetManager';
 
-const CLOSING_TAG_R = /^\s*<\/[a-z]/i;
+const CLOSING_TAG_R = /*#__PURE__*/ /^\s*<\/[a-z]/i;
 
-/**
- * Collect styled-components CSS during server-side rendering.
- *
- * ```tsx
- * const sheet = new ServerStyleSheet();
- * const html = renderToString(sheet.collectStyles(<App />));
- * const styleTags = sheet.getStyleTags();
- * sheet.seal();
- * ```
- */
 export default class ServerStyleSheet {
   instance: StyleSheet;
   sealed: boolean;
@@ -104,15 +94,11 @@ export default class ServerStyleSheet {
         _: string,
         callback: Function
       ) {
-        // Get the chunk and retrieve the sheet's CSS as an HTML chunk,
-        // then reset its rules so we get only new ones for the next chunk
         const renderedHtml = chunk.toString();
         const html = _emitSheetCSS();
 
         sheet.clearTag();
 
-        // prepend style html to chunk, unless the start of the chunk is a
-        // closing tag in which case append right after that
         if (CLOSING_TAG_R.test(renderedHtml)) {
           const endOfClosingTag = renderedHtml.indexOf('>') + 1;
           const before = renderedHtml.slice(0, endOfClosingTag);
@@ -127,17 +113,13 @@ export default class ServerStyleSheet {
       },
     });
 
-    // Type guard to determine stream type
     if ('on' in input && typeof input.on === 'function' && 'pipe' in input) {
-      // NodeJS.ReadableStream
       const readableStream = input as NodeJS.ReadableStream;
       readableStream.on('error', err => {
-        // forward the error to the transform stream
         transformer.emit('error', err);
       });
       return readableStream.pipe(transformer);
     } else if ('pipe' in input && typeof input.pipe === 'function') {
-      // React PipeableStream
       const pipeableStream = input as PipeableStream;
       return pipeableStream.pipe(transformer);
     } else {

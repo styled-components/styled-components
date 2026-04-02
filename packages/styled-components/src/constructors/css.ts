@@ -5,12 +5,12 @@ import interleave from '../utils/interleave';
 import isFunction from '../utils/isFunction';
 import isPlainObject from '../utils/isPlainObject';
 
-/**
- * Used when flattening object styles to determine if we should
- * expand an array of styles.
- */
-const addTag = <T extends RuleSet<any>>(arg: T): T & { isCss: true } =>
-  Object.assign(arg, { isCss: true } as const);
+import { cssTagged } from '../utils/cssTagged';
+
+const addTag = <T extends RuleSet<any>>(arg: T): T & { isCss: true } => {
+  cssTagged.add(arg);
+  return arg as T & { isCss: true };
+};
 
 /**
  * Tag a CSS template literal for use in styled components, createGlobalStyle, or attrs.

@@ -1,5 +1,5 @@
 import React from 'react';
-import { IS_RSC, SPLITTER, STATIC_EXECUTION_CONTEXT } from '../constants';
+import { IS_RSC, STATIC_EXECUTION_CONTEXT } from '../constants';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
@@ -8,9 +8,14 @@ import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } 
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
+import { joinRules, stripSplitter } from '../utils/joinStrings';
+import { createRSCCache } from '../utils/rscCache';
 import css from './css';
 
 declare const __SERVER__: boolean;
+
+/** Per-render dedup for RSC global style tags (same pattern as StyledComponent). */
+const getEmittedGlobalCSS = createRSCCache(() => new Set<string>());
 
 /**
  * Create a component that injects global CSS when mounted. Supports theming and dynamic props.
@@ -124,24 +129,26 @@ export default function createGlobalStyle<Props extends object>(
     // resources even after unmount. Global styles need lifecycle-based cleanup
     // for conditional rendering (e.g. body lock on modal open/close).
     if (IS_RSC) {
-      // Each instance emits only its own rules (not the entire shared group)
-      // because RSC renders are independent and each instance needs its own style tag.
       const entry =
         typeof window === 'undefined' ? globalStyle.instanceRules.get(instance) : undefined;
-      let css = '';
-      if (entry) {
-        const rules = entry.rules;
-        for (let i = 0; i < rules.length; i++) {
-          css += rules[i] + SPLITTER;
-        }
-      }
+      const css = entry ? joinRules(entry.rules) : '';
 
       if (css) {
         globalStyle.instanceRules.delete(instance);
+
+        // Dedup: static by componentId + stylis hash, dynamic by CSS string.
+        // Stylis hash ensures different SSM configs emit separate variants.
+        const emitted = getEmittedGlobalCSS ? getEmittedGlobalCSS() : null;
+        if (emitted) {
+          const key = globalStyle.isStatic ? styledComponentId + ssc.stylis.hash : css;
+          if (emitted.has(key)) return null;
+          emitted.add(key);
+        }
+
         return React.createElement('style', {
           key: styledComponentId + '-' + instance,
           'data-styled-global': styledComponentId,
-          children: css,
+          children: stripSplitter(css),
         });
       }
     }
