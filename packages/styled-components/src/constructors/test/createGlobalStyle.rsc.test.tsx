@@ -2,6 +2,20 @@
  * @jest-environment node
  */
 
+// Mock React.cache (not available in React 18 test env, but needed for RSC dedup)
+const mockCacheStore = new Map<Function, any>();
+
+jest.mock('react', () => {
+  const actual = jest.requireActual('react');
+  return {
+    ...actual,
+    cache: (fn: Function) => () => {
+      if (!mockCacheStore.has(fn)) mockCacheStore.set(fn, fn());
+      return mockCacheStore.get(fn);
+    },
+  };
+});
+
 // Mock IS_RSC before importing the module
 jest.mock('../../constants', () => ({
   ...jest.requireActual('../../constants'),
@@ -13,6 +27,9 @@ import ReactDOMServer from 'react-dom/server';
 import createGlobalStyle from '../createGlobalStyle';
 
 describe('createGlobalStyle RSC mode', () => {
+  beforeEach(() => {
+    mockCacheStore.clear();
+  });
   it('renders style tag without precedence so it can be unmounted', () => {
     const GlobalStyle = createGlobalStyle`
       body { background: red; }
@@ -66,9 +83,6 @@ describe('createGlobalStyle RSC mode', () => {
     );
 
     expect(html).toMatchInlineSnapshot(`
-      <style data-styled-global="sc-global-yXuMc">
-        body{margin:0;}
-      </style>
       <style data-styled-global="sc-global-yXuMc">
         body{margin:0;}
       </style>
