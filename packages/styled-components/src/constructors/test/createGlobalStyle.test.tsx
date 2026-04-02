@@ -176,8 +176,11 @@ describe(`createGlobalStyle`, () => {
     });
 
     // Styles should be present after StrictMode's render-unmount-remount cycle
-    expect(getRenderedCSS()).toContain('[data-strict-test]');
-    expect(getRenderedCSS()).toContain('color: red');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "[data-strict-test] {
+        color: red;
+      }"
+    `);
     expect(spy).not.toHaveBeenCalled();
   });
 
@@ -196,7 +199,11 @@ describe(`createGlobalStyle`, () => {
     );
 
     // Styles should be present
-    expect(getRenderedCSS()).toContain('[data-strict-unmount]');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "[data-strict-unmount] {
+        background: blue;
+      }"
+    `);
 
     // Unmount
     unmount();
@@ -215,7 +222,11 @@ describe(`createGlobalStyle`, () => {
     );
 
     // Styles should be re-injected
-    expect(getRenderedCSS()).toContain('[data-strict-unmount]');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "[data-strict-unmount] {
+        background: blue;
+      }"
+    `);
     expect(spy).not.toHaveBeenCalled();
   });
 
@@ -262,7 +273,7 @@ describe(`createGlobalStyle`, () => {
 
     const style = container.firstElementChild!;
     expect(style.tagName).toBe('STYLE');
-    expect(style.textContent).toContain(`[data-test-target]{color:red;}`);
+    expect(style.textContent).toMatchInlineSnapshot(`"[data-test-target]{color:red;}"`);
   });
 
   it(`stringifies multiple rules correctly`, () => {
@@ -636,10 +647,14 @@ describe(`createGlobalStyle`, () => {
 
     // Change only instance A's prop — instance B should be unaffected
     rerender(<Wrapper colorA="green" colorB="blue" />);
-    const css = getRenderedCSS();
-    expect(css).toContain('background: green');
-    expect(css).toContain('background: blue');
-    expect(css).not.toContain('background: red');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: blue;
+      }
+      body {
+        background: green;
+      }"
+    `);
   });
 
   it(`handles dynamic props in StrictMode across multiple renders`, () => {
@@ -656,11 +671,18 @@ describe(`createGlobalStyle`, () => {
     }
 
     const { rerender } = render(<App color="red" />);
-    expect(getRenderedCSS()).toContain('color: red');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        color: red;
+      }"
+    `);
 
     rerender(<App color="blue" />);
-    expect(getRenderedCSS()).toContain('color: blue');
-    expect(getRenderedCSS()).not.toContain('color: red');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        color: blue;
+      }"
+    `);
   });
 
   it(`should warn when children are passed as props`, () => {
@@ -888,16 +910,23 @@ describe('createGlobalStyle HMR', () => {
     const { rerender } = render(
       <DynamicRenderer renderFn={(p: any) => innerV1({ bg: 'red', ...p })} />
     );
-    expect(getRenderedCSS()).toContain('background: red');
-    expect(getRenderedCSS()).toContain('font-size: 14px');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: red;
+        font-size: 14px;
+      }"
+    `);
 
     // Swap closure, same props
     rerender(<DynamicRenderer renderFn={(p: any) => innerV2({ bg: 'red', ...p })} />);
 
-    expect(getRenderedCSS()).toContain('background: red');
-    expect(getRenderedCSS()).toContain('font-size: 18px');
-    expect(getRenderedCSS()).toContain('margin: 0');
-    expect(getRenderedCSS()).not.toContain('font-size: 14px');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: red;
+        font-size: 18px;
+        margin: 0;
+      }"
+    `);
   });
 
   it('cleans up old group when globalStyle closure changes', () => {
@@ -908,13 +937,20 @@ describe('createGlobalStyle HMR', () => {
     const innerV2 = (V2 as any).type;
 
     const { rerender } = render(<DynamicRenderer renderFn={innerV1} />);
-    expect(getRenderedCSS()).toContain('outline');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "[data-hmr-cleanup] {
+        outline: 1px solid red;
+      }"
+    `);
 
     rerender(<DynamicRenderer renderFn={innerV2} />);
 
     // Old styles must be gone, new styles present
-    expect(getRenderedCSS()).not.toContain('outline');
-    expect(getRenderedCSS()).toContain('border');
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "[data-hmr-cleanup] {
+        border: 1px solid blue;
+      }"
+    `);
   });
 });
 
@@ -971,7 +1007,11 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     expect(clearRulesSpy).toHaveBeenCalled();
 
     // Verify the new CSS is present
-    expect(sheet.toString()).toContain('blue');
+    expect(sheet.toString()).toMatchInlineSnapshot(`
+      "body{color:blue;}/*!sc*/
+      data-styled.g1[id="sc-global-diff-test"]{content:"sc-global-diff-test1,"}/*!sc*/
+      "
+    `);
   });
 
   it('rebuilds group when rule count changes', () => {
@@ -1026,7 +1066,11 @@ describe('GlobalStyle.renderStyles (unit)', () => {
 
     // First render — inserts rules
     gs.renderStyles(1, ctx, sheet, mainStylis);
-    expect(sheet.toString()).toContain('background');
+    expect(sheet.toString()).toMatchInlineSnapshot(`
+      "body{background:pink;}/*!sc*/
+      data-styled.g1[id="sc-global-static-test"]{content:"sc-global-static-test1,"}/*!sc*/
+      "
+    `);
 
     const insertSpy = jest.spyOn(sheet, 'insertRules');
 
@@ -1075,14 +1119,21 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     gs.renderStyles(1, { theme: { color: 'red' } } as any, sheet, mainStylis);
     gs.renderStyles(2, { theme: { color: 'blue' } } as any, sheet, mainStylis);
     expect(gs.instanceRules.size).toBe(2);
-    expect(sheet.toString()).toContain('red');
-    expect(sheet.toString()).toContain('blue');
+    expect(sheet.toString()).toMatchInlineSnapshot(`
+      "body{color:red;}/*!sc*/
+      body{color:blue;}/*!sc*/
+      data-styled.g1[id="sc-global-remove-test"]{content:"sc-global-remove-test1,sc-global-remove-test2,"}/*!sc*/
+      "
+    `);
 
     // Remove instance 1 — instance 2 should survive
     gs.removeStyles(1, sheet);
     expect(gs.instanceRules.size).toBe(1);
-    expect(sheet.toString()).not.toContain('red');
-    expect(sheet.toString()).toContain('blue');
+    expect(sheet.toString()).toMatchInlineSnapshot(`
+      "body{color:blue;}/*!sc*/
+      data-styled.g1[id="sc-global-remove-test"]{content:"sc-global-remove-test2,"}/*!sc*/
+      "
+    `);
 
     // Remove instance 2 — all gone
     gs.removeStyles(2, sheet);
