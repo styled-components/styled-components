@@ -57,7 +57,13 @@ describe('styled RSC mode', () => {
       // Inline <style> tag emitted (no precedence — server component output
       // isn't hydrated, so no mismatch; inline body styles come after
       // registry <head> styles for correct cascade ordering)
-      expect(html).toContain('<style');
+      expect(html).toMatchInlineSnapshot(`
+        <style data-styled>
+          .dkAAnv{padding:8px;}/*!sc*/
+        </style>
+        <button class="sc-kqxcKS dkAAnv">
+        </button>
+      `);
       expect(html).not.toContain('precedence');
       expect(html).not.toContain('data-styled-rsc');
     });
@@ -73,16 +79,11 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // Both base and extension CSS present
-      expect(allCSS).toContain('display:flex');
-      expect(allCSS).toContain('color:red');
-
-      // Base CSS wrapped in :where() for zero specificity — prevents
-      // duplicate base CSS in sibling extensions from overriding
-      // earlier extensions' styles
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:flex/);
-      // Extension CSS uses normal selector
-      expect(allCSS).toMatch(/\.\w+\{[^}]*color:red/);
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.gXogWk){display:flex;}/*!sc*/
+        .kWExMu{color:red;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
     });
   });
@@ -116,12 +117,11 @@ describe('styled RSC mode', () => {
 
       // All CSS from both base and extended must be present in the RSC output.
       // The element has class names for both, so both rulesets must exist.
-      expect(allCSS).toContain('width:24px');
-      expect(allCSS).toContain('height:24px');
-      expect(allCSS).toContain('display:inline-block');
-      expect(allCSS).toContain('vertical-align:middle');
-      expect(allCSS).toContain('fill:currentColor');
-      expect(allCSS).toContain('color:#007bff');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.eKVOAC){width:24px;height:24px;display:inline-block;vertical-align:middle;}/*!sc*/
+        .gdNspF{fill:currentColor;color:#007bff;}/*!sc*/
+        "
+      `);
     });
 
     it('should include all ancestor CSS across a three-level inheritance chain', () => {
@@ -142,12 +142,12 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       // Every level in the chain must contribute its CSS rules
-      expect(allCSS).toContain('font-family:system-ui,sans-serif');
-      expect(allCSS).toContain('line-height:1.5');
-      expect(allCSS).toContain('font-weight:700');
-      expect(allCSS).toContain('font-size:24px');
-      expect(allCSS).toContain('color:#1a1a2e');
-      expect(allCSS).toContain('margin-bottom:16px');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.lhhwAB){font-family:system-ui,sans-serif;line-height:1.5;}/*!sc*/
+        :where(.fgpciD){font-weight:700;font-size:24px;}/*!sc*/
+        .cptdlK{color:#1a1a2e;margin-bottom:16px;}/*!sc*/
+        "
+      `);
     });
 
     it('should preserve base CSS with dynamic interpolations in the extended component', () => {
@@ -165,11 +165,11 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       // Base Card styles must be present even though only StatusCard renders
-      expect(allCSS).toContain('border-radius:8px');
-      expect(allCSS).toContain('overflow:hidden');
-      // Extended styles with resolved interpolation
-      expect(allCSS).toContain('#dc3545');
-      expect(allCSS).toContain('padding:16px');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.gqwZoS){border-radius:8px;box-shadow:0 2px 4px rgba(0, 0, 0, 0.1);overflow:hidden;}/*!sc*/
+        .kohxli{border-left:4px solid #dc3545;padding:16px;}/*!sc*/
+        "
+      `);
     });
 
     it('should include base CSS with the css helper used in interpolation', () => {
@@ -191,13 +191,12 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<BadgeLabel>Status</BadgeLabel>);
       const allCSS = extractStyleContents(html);
 
-      // Base CSS (including interpolated css`` helper) must be present
-      expect(allCSS).toContain('font-size:14px');
-      expect(allCSS).toContain('text-overflow:ellipsis');
-      expect(allCSS).toContain('white-space:nowrap');
-      // Extended styles
-      expect(allCSS).toContain('border-radius:12px');
-      expect(allCSS).toContain('padding:2px 8px');
+      // Base CSS (including interpolated css`` helper) and extended styles
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.gToIGM){font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}/*!sc*/
+        .bOXrbI{background:#e9ecef;border-radius:12px;padding:2px 8px;}/*!sc*/
+        "
+      `);
     });
 
     it('should correctly output CSS when base and extended render on the same page', () => {
@@ -221,11 +220,13 @@ describe('styled RSC mode', () => {
       );
       const allCSS = extractStyleContents(html);
 
-      // Avatar's base styles should be present
-      expect(allCSS).toContain('border-radius:50%');
-      expect(allCSS).toContain('object-fit:cover');
-      // LargeAvatar's own styles
-      expect(allCSS).toContain('border:3px solid #fff');
+      // Avatar's base styles and LargeAvatar's own styles
+      expect(allCSS).toMatchInlineSnapshot(`
+        ".pPjvh{width:48px;height:48px;border-radius:50%;object-fit:cover;}/*!sc*/
+        :where(.pPjvh){width:48px;height:48px;border-radius:50%;object-fit:cover;}/*!sc*/
+        .kdLHkh{width:96px;height:96px;border:3px solid #fff;}/*!sc*/
+        "
+      `);
     });
 
     it('should not duplicate base CSS when base and extended render on the same page', () => {
@@ -250,9 +251,12 @@ describe('styled RSC mode', () => {
 
       // All CSS should be present
       const allCSS = extractStyleContents(html);
-      expect(allCSS).toContain('display:flex');
-      expect(allCSS).toContain('padding:16px');
-      expect(allCSS).toContain('color:red');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ".jPTSk{display:flex;padding:16px;}/*!sc*/
+        :where(.jPTSk){display:flex;padding:16px;}/*!sc*/
+        .pTFQI{color:red;}/*!sc*/
+        "
+      `);
     });
 
     it('should preserve CSS for multiple siblings extending the same base', () => {
@@ -280,13 +284,14 @@ describe('styled RSC mode', () => {
       );
       const allCSS = extractStyleContents(html);
 
-      // Base styles must be present for both variants
-      expect(allCSS).toContain('cursor:pointer');
-      expect(allCSS).toContain('border-radius:4px');
-      expect(allCSS).toContain('font-size:14px');
-      // Each variant's own styles
-      expect(allCSS).toContain('#007bff');
-      expect(allCSS).toContain('#dc3545');
+      // Base styles and each variant's own styles
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.hwBkAG){padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}/*!sc*/
+        .bgpGYu{background:#007bff;color:#fff;}/*!sc*/
+        :where(.hwBkAG){padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}/*!sc*/
+        .kmNeMx{background:#dc3545;color:#fff;}/*!sc*/
+        "
+      `);
     });
 
     it('should not lose CSS when a dynamic base renders with different props', () => {
@@ -310,9 +315,14 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       // Both dynamic variants must be present
-      expect(allCSS).toContain('background:red');
-      expect(allCSS).toContain('background:blue');
-      expect(allCSS).toContain('border:1px solid #ccc');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.gowlGE){background:red;padding:16px;}/*!sc*/
+        .hlBihq{border:1px solid #ccc;}/*!sc*/
+        :where(.gowlGE){background:red;padding:16px;}/*!sc*/
+        :where(.wQpdx){background:blue;padding:16px;}/*!sc*/
+        .hlBihq{border:1px solid #ccc;}/*!sc*/
+        "
+      `);
     });
   });
 
@@ -407,9 +417,12 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       // Both the root and media query base selectors should be wrapped
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*font-size:14px/);
-      expect(allCSS).toContain('@media');
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*font-size:16px/);
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.MPhKa){font-size:14px;}/*!sc*/
+        @media (min-width: 768px){:where(.MPhKa){font-size:16px;}}/*!sc*/
+        .eSKXDt{color:red;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
     });
 
@@ -473,8 +486,12 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       // renderToString HTML-encodes quotes (&#x27;)
-      expect(allCSS).toContain('content:&#x27;.item&#x27;');
-      expect(allCSS).toContain('url(&#x27;./bg.png&#x27;)');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.jOAKGK){background:url(&#x27;./bg.png&#x27;);}/*!sc*/
+        :where(.jOAKGK)::before{content:&#x27;.item&#x27;;}/*!sc*/
+        .jaqQRC{color:red;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\([^)]*\.item/);
       expect(allCSS).not.toMatch(/:where\([^)]*\.\/bg/);
       assertValidWhereSelectors(allCSS);
@@ -497,9 +514,14 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       assertValidWhereSelectors(allCSS);
-      expect(allCSS).toContain('color:red');
-      expect(allCSS).toContain('color:blue');
-      expect(allCSS).toContain('font-size:16px');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.bkJFZM){color:red;}/*!sc*/
+        .lygzl{font-size:16px;}/*!sc*/
+        :where(.bkJFZM){color:red;}/*!sc*/
+        :where(.xrcgh){color:blue;}/*!sc*/
+        .lygzl{font-size:16px;}/*!sc*/
+        "
+      `);
     });
 
     it('should handle siblings extending the same base with overriding properties', () => {
@@ -523,11 +545,13 @@ describe('styled RSC mode', () => {
       );
       const allCSS = extractStyleContents(html);
 
-      // Base CSS wrapped in :where() so it doesn't override extensions
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*background:white/);
-      // Extension CSS uses normal selectors and wins the cascade
-      expect(allCSS).toContain('background:red');
-      expect(allCSS).toContain('background:blue');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.jorrHQ){display:flex;padding:16px;background:white;}/*!sc*/
+        .eQKZa-D{background:red;}/*!sc*/
+        :where(.jorrHQ){display:flex;padding:16px;background:white;}/*!sc*/
+        .heroSN{background:blue;}/*!sc*/
+        "
+      `);
       // Both extension selectors must NOT be wrapped
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*background:red/);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*background:blue/);
@@ -591,9 +615,11 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       // Both selectors in the comma list should be wrapped
-      expect(allCSS).toMatch(/:where\(\.\w+\):hover/);
-      expect(allCSS).toMatch(/:where\(\.\w+\):focus/);
-      expect(allCSS).toContain('outline:2px solid blue');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.frloER):hover,:where(.frloER):focus{outline:2px solid blue;}/*!sc*/
+        .eAgOEJ{color:black;}/*!sc*/
+        "
+      `);
     });
 
     it('should wrap dynamic base that changes class names across renders', () => {
@@ -639,9 +665,12 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      expect(allCSS).toContain('@supports');
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:flex/);
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:grid/);
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.LxJPL){display:flex;}/*!sc*/
+        @supports (display: grid){:where(.LxJPL){display:grid;grid-template-columns:1fr 1fr;}}/*!sc*/
+        .jQsHcG{gap:16px;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*gap:16px/);
     });
 
@@ -671,7 +700,10 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Solo />);
       const allCSS = extractStyleContents(html);
 
-      expect(allCSS).toContain('color:purple');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ".bETiNX{color:purple;}/*!sc*/
+        "
+      `);
       // No :where() at all — no base to wrap
       expect(allCSS).not.toContain(':where(');
     });
@@ -694,8 +726,10 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<DangerButton>Delete</DangerButton>);
       const allCSS = extractStyleContents(html);
 
-      expect(allCSS).toContain('background:#dc2626');
-      expect(allCSS).toContain('color:white');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ".ihqdNg{background:#dc2626;color:white;}/*!sc*/
+        "
+      `);
     });
 
     it('should pass className through to the wrapped component', () => {
@@ -707,11 +741,14 @@ describe('styled RSC mode', () => {
 
       const html = ReactDOMServer.renderToString(<ExtButton>Click</ExtButton>);
 
-      // The rendered button should have the generated className
-      expect(html).toMatch(/class="[^"]*sc-[^"]*"/);
-      // CSS should be in a style tag
-      expect(html).toContain('<style');
-      expect(html).toContain('padding:12px');
+      expect(html).toMatchInlineSnapshot(`
+        <style data-styled>
+          .bgLEXZ{padding:12px;}/*!sc*/
+        </style>
+        <button class="sc-jATbBc bgLEXZ">
+          Click
+        </button>
+      `);
     });
 
     it('should not use precedence on cross-boundary style tags', () => {
@@ -723,9 +760,14 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
 
       // No precedence — inline style tags avoid Float merging/stripping
+      expect(html).toMatchInlineSnapshot(`
+        <style data-styled>
+          .dOYIGf{margin:8px;}/*!sc*/
+        </style>
+        <div class="sc-kmyQvR dOYIGf">
+        </div>
+      `);
       expect(html).not.toContain('precedence');
-      expect(html).not.toContain('data-precedence');
-      expect(html).toContain('margin:8px');
     });
 
     it('should handle multiple cross-boundary extensions of different components', () => {
@@ -746,8 +788,11 @@ describe('styled RSC mode', () => {
       );
       const allCSS = extractStyleContents(html);
 
-      expect(allCSS).toContain('border:2px solid red');
-      expect(allCSS).toContain('background:blue');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ".cgQZXh{border:2px solid red;}/*!sc*/
+        .ixTLAr{background:blue;}/*!sc*/
+        "
+      `);
     });
 
     it('should forward props through cross-boundary extensions', () => {
@@ -761,8 +806,15 @@ describe('styled RSC mode', () => {
         <StyledInput type="email" placeholder="test@example.com" />
       );
 
-      expect(html).toContain('type="email"');
-      expect(html).toContain('placeholder="test@example.com"');
+      expect(html).toMatchInlineSnapshot(`
+        <style data-styled>
+          .jaOmec{border:1px solid gray;}/*!sc*/
+        </style>
+        <input type="email"
+               placeholder="test@example.com"
+               class="sc-bIUkwt jaOmec"
+        >
+      `);
     });
 
     it('should support dynamic interpolations in cross-boundary extensions', () => {
@@ -782,9 +834,12 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       // Both dynamic variants should have their CSS emitted
-      expect(allCSS).toContain('background:red');
-      expect(allCSS).toContain('background:blue');
-      expect(allCSS).toContain('padding:16px');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ".gdqHel{background:red;padding:16px;}/*!sc*/
+        .gdqHel{background:red;padding:16px;}/*!sc*/
+        .bbSQXs{background:blue;padding:16px;}/*!sc*/
+        "
+      `);
     });
 
     it('should support attrs on cross-boundary extensions', () => {
@@ -796,8 +851,16 @@ describe('styled RSC mode', () => {
 
       const html = ReactDOMServer.renderToString(<SubmitButton>Submit</SubmitButton>);
 
-      expect(html).toContain('type="submit"');
-      expect(extractStyleContents(html)).toContain('font-weight:bold');
+      expect(html).toMatchInlineSnapshot(`
+        <style data-styled>
+          .hHYycf{font-weight:bold;}/*!sc*/
+        </style>
+        <button type="submit"
+                class="sc-DZqlT hHYycf"
+        >
+          Submit
+        </button>
+      `);
     });
 
     it('should produce each style tag after its component element for correct source ordering', () => {
@@ -853,11 +916,12 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // The content value should be preserved (HTML-encoded quotes)
-      expect(allCSS).toContain('.sc-something');
-      // Base CSS should be :where()-wrapped
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*padding:8px/);
-      // Extension CSS not wrapped
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.eEETyJ){padding:8px;}/*!sc*/
+        :where(.eEETyJ)::before{content:&#x27;.sc-something&#x27;;}/*!sc*/
+        .hQbJBd{color:red;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
       assertValidWhereSelectors(allCSS);
     });
@@ -874,10 +938,11 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // url() value should not be corrupted by :where() wrapping
-      // (dots in paths are not class selectors)
-      expect(allCSS).toContain('image.png');
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:block/);
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.lhSFnz){background:url(./../image.png);display:block;}/*!sc*/
+        .hKuLJx{color:green;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:green/);
       assertValidWhereSelectors(allCSS);
     });
@@ -896,9 +961,12 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // The attribute value .foo should not become :where(.foo)
-      expect(allCSS).toContain('background:yellow');
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*margin:4px/);
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.iXsZT){margin:4px;}/*!sc*/
+        :where(.iXsZT)[data-value=&#x27;.foo&#x27;]{background:yellow;}/*!sc*/
+        .lmEGQf{color:blue;}/*!sc*/
+        "
+      `);
       assertValidWhereSelectors(allCSS);
     });
 
@@ -916,10 +984,13 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // The user's :where(.other) should not become :where(:where(.other))
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.gkqpoA){padding:12px;}/*!sc*/
+        :where(.gkqpoA) :where(.other){color:red;}/*!sc*/
+        .iyYATl{margin:8px;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toContain(':where(:where(');
-      expect(allCSS).toContain('color:red');
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*padding:12px/);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*margin:8px/);
     });
 
@@ -937,9 +1008,12 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // @supports content should be preserved
-      expect(allCSS).toContain('@supports');
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:flex/);
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.geZqlp){display:flex;}/*!sc*/
+        @supports selector(.test){:where(.geZqlp){display:grid;}}/*!sc*/
+        .iFxBFf{gap:8px;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*gap:8px/);
       assertValidWhereSelectors(allCSS);
     });
@@ -960,7 +1034,12 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      expect(allCSS).toContain('container-type:inline-size');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.cZxZla){container-type:inline-size;}/*!sc*/
+        @container (min-width: 300px){:where(.cZxZla){font-size:18px;}}/*!sc*/
+        .bYTfcQ{color:navy;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:navy/);
       assertValidWhereSelectors(allCSS);
     });
@@ -977,8 +1056,11 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // The custom property value .something should be preserved
-      expect(allCSS).toContain('.something');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.cGRrKj){--my-var:.something;color:var(--my-var);}/*!sc*/
+        .betquV{font-size:14px;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*font-size:14px/);
       assertValidWhereSelectors(allCSS);
     });
@@ -1006,14 +1088,11 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // All pseudo-class selectors in the comma list should be :where()-wrapped
-      expect(allCSS).toMatch(/:where\(\.\w+\):hover/);
-      expect(allCSS).toMatch(/:where\(\.\w+\):focus/);
-      expect(allCSS).toMatch(/:where\(\.\w+\):active/);
-      expect(allCSS).toMatch(/:where\(\.\w+\):first-child/);
-      expect(allCSS).toMatch(/:where\(\.\w+\):last-child/);
-      expect(allCSS).toMatch(/:where\(\.\w+\):not\(:disabled\)/);
-      expect(allCSS).toContain('outline:none');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.LbguG):hover,:where(.LbguG):focus,:where(.LbguG):active,:where(.LbguG):visited,:where(.LbguG):first-child,:where(.LbguG):last-child,:where(.LbguG):nth-child(2),:where(.LbguG):nth-child(3),:where(.LbguG):nth-child(4),:where(.LbguG):nth-child(5),:where(.LbguG):not(:disabled){outline:none;}/*!sc*/
+        .bNUiDM{border:1px solid black;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*border:1px solid black/);
     });
 
@@ -1029,8 +1108,11 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // animation-name value should not be wrapped
-      expect(allCSS).toContain('sc-keyframes-abc');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.bukIwd){animation-name:sc-keyframes-abc;animation-duration:1s;}/*!sc*/
+        .fmVlju{opacity:1;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toContain(':where(sc-keyframes-abc)');
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*opacity:1/);
       assertValidWhereSelectors(allCSS);
@@ -1053,13 +1135,12 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // Base selectors at all nesting levels should be wrapped
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:black/);
-      expect(allCSS).toContain('@media');
-      expect(allCSS).toContain('@supports');
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*color:gray/);
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*display:grid/);
-      // Extension not wrapped
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.lgASzU){color:black;}/*!sc*/
+        @media (min-width: 768px){:where(.lgASzU){color:gray;}@supports (display: grid){:where(.lgASzU){display:grid;}}}/*!sc*/
+        .eRZTcE{font-weight:bold;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*font-weight:bold/);
     });
 
@@ -1096,8 +1177,12 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      expect(allCSS).toContain('2022');
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*margin:0/);
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.kcLobF){margin:0;}/*!sc*/
+        :where(.kcLobF)::before{content:&#x27;\\2022&#x27;;}/*!sc*/
+        .ifGgos{padding:4px;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*padding:4px/);
       assertValidWhereSelectors(allCSS);
     });
@@ -1153,10 +1238,12 @@ describe('styled RSC mode', () => {
       const html = ReactDOMServer.renderToString(<Extended />);
       const allCSS = extractStyleContents(html);
 
-      // The OtherComponent's class selector should appear in the CSS
-      // and the base's own class should be :where()-wrapped
-      expect(allCSS).toContain('font-weight:bold');
-      expect(allCSS).toMatch(/:where\(\.\w+\)\{[^}]*padding:8px/);
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.hvemzY){padding:8px;}/*!sc*/
+        :where(.hvemzY) .sc-gZWqmv{font-weight:bold;}/*!sc*/
+        .kUZxHW{margin:16px;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*margin:16px/);
       assertValidWhereSelectors(allCSS);
     });
@@ -1171,7 +1258,10 @@ describe('styled RSC mode', () => {
       const allCSS = extractStyleContents(html);
 
       // Extension CSS should be present and not wrapped
-      expect(allCSS).toContain('color:red');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ".jACqxy{color:red;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toMatch(/:where\(\.\w+\)\{[^}]*color:red/);
     });
   });
@@ -1194,7 +1284,10 @@ describe('styled RSC mode', () => {
       );
 
       expect(countStyleTags(html)).toBe(1);
-      expect(extractStyleContents(html)).toContain('padding:8px');
+      expect(extractStyleContents(html)).toMatchInlineSnapshot(`
+        ".cBBLZJ{padding:8px;color:blue;}/*!sc*/
+        "
+      `);
     });
 
     it('should emit only one style tag for dynamic components with identical props', () => {
@@ -1211,7 +1304,10 @@ describe('styled RSC mode', () => {
       );
 
       expect(countStyleTags(html)).toBe(1);
-      expect(extractStyleContents(html)).toContain('color:red');
+      expect(extractStyleContents(html)).toMatchInlineSnapshot(`
+        ".fZxRoX{color:red;}/*!sc*/
+        "
+      `);
     });
 
     it('should emit separate style tags for dynamic components with different props', () => {
@@ -1229,9 +1325,15 @@ describe('styled RSC mode', () => {
 
       expect(countStyleTags(html)).toBe(3);
       const allCSS = extractStyleContents(html);
-      expect(allCSS).toContain('color:red');
-      expect(allCSS).toContain('color:blue');
-      expect(allCSS).toContain('color:green');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ".eWYHRw{color:red;}/*!sc*/
+        .eWYHRw{color:red;}/*!sc*/
+        .ewymLl{color:blue;}/*!sc*/
+        .eWYHRw{color:red;}/*!sc*/
+        .ewymLl{color:blue;}/*!sc*/
+        .eLnNPM{color:green;}/*!sc*/
+        "
+      `);
     });
 
     it('should deduplicate across multiple instances of extended component', () => {
@@ -1253,8 +1355,11 @@ describe('styled RSC mode', () => {
       // All three Extended instances produce the same CSS → one tag
       expect(countStyleTags(html)).toBe(1);
       const allCSS = extractStyleContents(html);
-      expect(allCSS).toContain('display:flex');
-      expect(allCSS).toContain('color:red');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ":where(.iGfVxq){display:flex;}/*!sc*/
+        .bVimwG{color:red;}/*!sc*/
+        "
+      `);
     });
 
     it('should emit separate tags for base and extended rendered together', () => {
@@ -1385,9 +1490,12 @@ describe('styled RSC mode', () => {
       );
 
       const allCSS = extractStyleContents(html);
-      expect(allCSS).toContain(':nth-child(1 of :not(style[data-styled]))');
-      expect(allCSS).toContain(':nth-last-child(1 of :not(style[data-styled]))');
-      expect(allCSS).toContain(':nth-child(2 of :not(style[data-styled]))');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ".keeiwF:nth-child(1 of :not(style[data-styled])){color:red;}/*!sc*/
+        .keeiwF:nth-last-child(1 of :not(style[data-styled])){color:blue;}/*!sc*/
+        .keeiwF:nth-child(2 of :not(style[data-styled])){color:green;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toContain(':first-child');
       expect(allCSS).not.toContain(':last-child');
     });
@@ -1404,7 +1512,10 @@ describe('styled RSC mode', () => {
       );
 
       const allCSS = extractStyleContents(html);
-      expect(allCSS).toContain(':first-child');
+      expect(allCSS).toMatchInlineSnapshot(`
+        ".hGNQav:first-child{color:red;}/*!sc*/
+        "
+      `);
       expect(allCSS).not.toContain(':not(style');
     });
   });
