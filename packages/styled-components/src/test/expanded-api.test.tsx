@@ -33,27 +33,63 @@ describe('expanded api', () => {
       const Comp = styled.div``;
       const Comp2 = styled.div``;
       expect(Comp.styledComponentId).toBe('sc-a');
-      expect(render(<Comp />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="sc-a"
+          />
+        </DocumentFragment>
+      `);
       expect(Comp2.styledComponentId).toBe('sc-b');
-      expect(render(<Comp2 />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp2 />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="sc-b"
+          />
+        </DocumentFragment>
+      `);
     });
 
     it('should be generated from displayName + hash', () => {
       const Comp = styled.div.withConfig({ displayName: 'Comp' })``;
       const Comp2 = styled.div.withConfig({ displayName: 'Comp2' })``;
       expect(Comp.styledComponentId).toBe('Comp-a');
-      expect(render(<Comp />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="Comp-a"
+          />
+        </DocumentFragment>
+      `);
       expect(Comp2.styledComponentId).toBe('Comp2-b');
-      expect(render(<Comp2 />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp2 />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="Comp2-b"
+          />
+        </DocumentFragment>
+      `);
     });
 
     it('should be attached if passed in', () => {
       const Comp = styled.div.withConfig({ componentId: 'LOLOMG' })``;
       const Comp2 = styled.div.withConfig({ componentId: 'OMGLOL' })``;
       expect(Comp.styledComponentId).toBe('LOLOMG');
-      expect(render(<Comp />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="LOLOMG"
+          />
+        </DocumentFragment>
+      `);
       expect(Comp2.styledComponentId).toBe('OMGLOL');
-      expect(render(<Comp2 />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp2 />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="OMGLOL"
+          />
+        </DocumentFragment>
+      `);
     });
 
     it('should be combined with displayName if both passed in', () => {
@@ -66,9 +102,21 @@ describe('expanded api', () => {
         componentId: 'OMGLOL',
       })``;
       expect(Comp.styledComponentId).toBe('Comp-LOLOMG');
-      expect(render(<Comp />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="Comp-LOLOMG"
+          />
+        </DocumentFragment>
+      `);
       expect(Comp2.styledComponentId).toBe('Comp2-OMGLOL');
-      expect(render(<Comp2 />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp2 />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="Comp2-OMGLOL"
+          />
+        </DocumentFragment>
+      `);
     });
   });
 
@@ -78,7 +126,13 @@ describe('expanded api', () => {
         .withConfig({ componentId: 'id-1' })
         .withConfig({ displayName: 'dn-2' })``;
       expect(Comp.displayName).toBe('dn-2');
-      expect(render(<Comp />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="dn-2-id-1"
+          />
+        </DocumentFragment>
+      `);
     });
 
     it('should keep the last value passed in when merging', () => {
@@ -86,7 +140,13 @@ describe('expanded api', () => {
         .withConfig({ displayName: 'dn-2', componentId: 'id-3' })
         .withConfig({ displayName: 'dn-5', componentId: 'id-4' })``;
       expect(Comp.displayName).toBe('dn-5');
-      expect(render(<Comp />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="dn-5-id-4"
+          />
+        </DocumentFragment>
+      `);
     });
   });
 
@@ -96,7 +156,13 @@ describe('expanded api', () => {
         color: red;
       `;
 
-      expect(render(<Comp as="span" />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp as="span" />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <span
+            class="sc-a b"
+          />
+        </DocumentFragment>
+      `);
     });
 
     it('changes the rendered element type when used with attrs', () => {
@@ -106,7 +172,13 @@ describe('expanded api', () => {
         color: red;
       `;
 
-      expect(render(<Comp />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <header
+            class="sc-a b"
+          />
+        </DocumentFragment>
+      `);
     });
 
     it('prefers attrs over props', () => {
@@ -131,7 +203,13 @@ describe('expanded api', () => {
         color: red;
       `;
 
-      expect(render(<Comp as={Override} />).asFragment()).toMatchSnapshot();
+      expect(render(<Comp as={Override} />).asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <figure
+            class="sc-a b"
+          />
+        </DocumentFragment>
+      `);
     });
 
     it('transfers all styles that have been applied', () => {

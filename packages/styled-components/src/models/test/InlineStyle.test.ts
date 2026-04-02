@@ -947,6 +947,507 @@ describe('parseCSSDeclarations', () => {
     });
   });
 
+  describe('stress tests', () => {
+    let warnSpy: jest.SpyInstance;
+    beforeEach(() => {
+      warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+    afterEach(() => {
+      warnSpy.mockRestore();
+    });
+
+    it('deeply nested braces in data URI SVG', () => {
+      expect(
+        parseCSSDeclarations('background: url("data:image/svg+xml,<svg>{}</svg>"); color: red;')
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "background",
+            "url("data:image/svg+xml,<svg>{}</svg>")",
+          ],
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('deeply nested braces in unquoted data URI', () => {
+      expect(
+        parseCSSDeclarations('background: url(data:image/svg+xml,<svg>{}{}{}</svg>); color: red;')
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "background",
+            "url(data:image/svg+xml,<svg>{}{}{}</svg>)",
+          ],
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('unbalanced double quote recovers gracefully', () => {
+      expect(parseCSSDeclarations('content: "unclosed; color: red;')).toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('unterminated string'));
+    });
+
+    it('unbalanced single quote recovers gracefully', () => {
+      expect(parseCSSDeclarations("content: 'unclosed; color: red;")).toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('unbalanced quote with no recovery semicolons', () => {
+      expect(parseCSSDeclarations('content: "unclosed forever')).toMatchInlineSnapshot(`[]`);
+    });
+
+    it('comments in various positions', () => {
+      expect(
+        parseCSSDeclarations(
+          '/* before */ color: red; margin /* mid */: 10px; padding: /* inner */ 5px;'
+        )
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+          [
+            "margin",
+            "10px",
+          ],
+          [
+            "padding",
+            "5px",
+          ],
+        ]
+      `);
+    });
+
+    it('comment between property name chars', () => {
+      expect(parseCSSDeclarations('col/* x */or: red;')).toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('empty declarations with excessive semicolons', () => {
+      expect(parseCSSDeclarations(';;; color: red;;;')).toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('only semicolons and whitespace', () => {
+      expect(parseCSSDeclarations('; ; ; \n ; \t ;')).toMatchInlineSnapshot(`[]`);
+    });
+
+    it('declarations with colons in URL values', () => {
+      expect(
+        parseCSSDeclarations('background: url(https://example.com:8080/img.png); content: "a:b";')
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "background",
+            "url(https://example.com:8080/img.png)",
+          ],
+          [
+            "content",
+            ""a:b"",
+          ],
+        ]
+      `);
+    });
+
+    it('multiple colons in custom property value', () => {
+      expect(parseCSSDeclarations('--url: http://a:b@host:9090/path;')).toMatchInlineSnapshot(`
+        [
+          [
+            "--url",
+            "http://a:b@host:9090/path",
+          ],
+        ]
+      `);
+    });
+
+    it('escaped double quote inside double-quoted string', () => {
+      expect(parseCSSDeclarations('content: "hello\\"world"; color: red;')).toMatchInlineSnapshot(`
+        [
+          [
+            "content",
+            ""hello\\"world"",
+          ],
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('escaped single quote inside single-quoted string', () => {
+      expect(parseCSSDeclarations("content: 'hello\\'world'; color: red;")).toMatchInlineSnapshot(`
+        [
+          [
+            "content",
+            "'hello\\'world'",
+          ],
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('multiple escaped quotes in sequence', () => {
+      expect(parseCSSDeclarations('content: "a\\"b\\"c"; color: red;')).toMatchInlineSnapshot(`
+        [
+          [
+            "content",
+            ""a\\"b\\"c"",
+          ],
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('very long single declaration value (10000+ chars)', () => {
+      const longValue = 'a'.repeat(10001);
+      const result = parseCSSDeclarations(`content: "${longValue}"; color: red;`);
+      expect(result).toHaveLength(2);
+      expect(result[0][0]).toBe('content');
+      expect(result[0][1].length).toBe(10003); // quotes + value
+      expect(result[1]).toMatchInlineSnapshot(`
+        [
+          "color",
+          "red",
+        ]
+      `);
+    });
+
+    it('very long property name', () => {
+      const longProp = 'x'.repeat(5000);
+      const result = parseCSSDeclarations(`${longProp}: red;`);
+      expect(result).toHaveLength(1);
+      expect(result[0][0]).toBe(longProp);
+      expect(result[0][1]).toBe('red');
+    });
+
+    it('mixed valid and invalid declarations', () => {
+      expect(parseCSSDeclarations('!!!invalid!!!; color: red; @media screen; font-size: 14px;'))
+        .toMatchInlineSnapshot(`
+        [
+          [
+            "!!!invalid!!!; color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('garbage before first valid declaration', () => {
+      expect(parseCSSDeclarations('some garbage without colons or semis\ncolor: red;'))
+        .toMatchInlineSnapshot(`
+        [
+          [
+            "some garbage without colons or semis
+        color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('@font-face block is skipped, subsequent declarations recovered', () => {
+      expect(
+        parseCSSDeclarations('@font-face { font-family: "Test"; src: url(test.woff); } color: red;')
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('not supported as an inline style')
+      );
+    });
+
+    it('@keyframes block is skipped', () => {
+      expect(
+        parseCSSDeclarations(
+          '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } color: red;'
+        )
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('nested at-rule blocks are fully skipped', () => {
+      expect(
+        parseCSSDeclarations('@supports (display: grid) { .foo { display: grid; } } color: red;')
+      ).toMatchInlineSnapshot(`[]`);
+    });
+
+    it('bare brace block at start is skipped', () => {
+      expect(parseCSSDeclarations('{ display: none; } color: red;')).toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('whitespace: tabs, carriage returns, form feed, and vertical tab', () => {
+      // Tabs everywhere
+      expect(parseCSSDeclarations('\t\tcolor\t:\t\tred\t;\t\tfont-size\t:\t12px\t;\t'))
+        .toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+          [
+            "font-size",
+            "12px",
+          ],
+        ]
+      `);
+
+      // Carriage returns mixed with newlines
+      expect(parseCSSDeclarations('color: red;\r\n\r\nfont-size: 12px;\r\rmargin: 0;\n\n'))
+        .toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+          [
+            "font-size",
+            "12px",
+          ],
+          [
+            "margin",
+            "0",
+          ],
+        ]
+      `);
+
+      // Form feed and vertical tab
+      expect(parseCSSDeclarations('color: red;\x0cfont-size: 12px;\x0bmargin: 0;'))
+        .toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+          [
+            "font-size",
+            "12px",
+          ],
+          [
+            "margin",
+            "0",
+          ],
+        ]
+      `);
+    });
+
+    it('multiple brace blocks interleaved with declarations', () => {
+      expect(
+        parseCSSDeclarations('color: red; .a { x: 1; } font-size: 14px; .b { y: 2; } margin: 0;')
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+          [
+            "font-size",
+            "14px",
+          ],
+          [
+            "margin",
+            "0",
+          ],
+        ]
+      `);
+    });
+
+    it('deeply nested brace blocks', () => {
+      expect(
+        parseCSSDeclarations(
+          '@media screen { @supports (display: grid) { .foo { color: red; } } } font-size: 14px;'
+        )
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "font-size",
+            "14px",
+          ],
+        ]
+      `);
+    });
+
+    it('value with both parens and quotes containing colons and semicolons', () => {
+      expect(
+        parseCSSDeclarations('background: url("https://example.com:443/path?a=1;b=2"); color: red;')
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "background",
+            "url("https://example.com:443/path?a=1;b=2")",
+          ],
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('unclosed paren at end of input recovers via fallback semicolon search', () => {
+      expect(parseCSSDeclarations('transform: rotate(45deg; color: red; margin: 10px;'))
+        .toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+          [
+            "margin",
+            "10px",
+          ],
+        ]
+      `);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('unclosed parenthesis'));
+    });
+
+    it('both unclosed paren and unclosed quote in sequence', () => {
+      expect(parseCSSDeclarations('a: url(broken; b: "unterminated; c: valid; d: 10px;'))
+        .toMatchInlineSnapshot(`
+        [
+          [
+            "c",
+            "valid",
+          ],
+          [
+            "d",
+            "10px",
+          ],
+        ]
+      `);
+    });
+
+    it('empty string value between quotes', () => {
+      expect(parseCSSDeclarations("content: ''; color: red;")).toMatchInlineSnapshot(`
+        [
+          [
+            "content",
+            "''",
+          ],
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
+    });
+
+    it('degenerate inputs: single char, just colon, just semicolon, only braces', () => {
+      expect(parseCSSDeclarations('x')).toMatchInlineSnapshot(`[]`);
+      expect(parseCSSDeclarations(':')).toMatchInlineSnapshot(`[]`);
+      expect(parseCSSDeclarations(';')).toMatchInlineSnapshot(`[]`);
+      expect(parseCSSDeclarations('{{{}}}')).toMatchInlineSnapshot(`[]`);
+    });
+
+    it('property with hyphens and numbers', () => {
+      expect(
+        parseCSSDeclarations(
+          '-webkit-line-clamp: 3; --custom-100: blue; border-top-left-radius: 4px;'
+        )
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "-webkit-line-clamp",
+            "3",
+          ],
+          [
+            "--custom-100",
+            "blue",
+          ],
+          [
+            "border-top-left-radius",
+            "4px",
+          ],
+        ]
+      `);
+    });
+
+    it('1000 semicolons with no declarations', () => {
+      expect(parseCSSDeclarations(';'.repeat(1000))).toMatchInlineSnapshot(`[]`);
+    });
+
+    it('alternating valid declarations and comments', () => {
+      expect(
+        parseCSSDeclarations(
+          '/* 1 */ color: red; /* 2 */ font-size: 12px; /* 3 */ margin: 0; /* 4 */'
+        )
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+          [
+            "font-size",
+            "12px",
+          ],
+          [
+            "margin",
+            "0",
+          ],
+        ]
+      `);
+    });
+  });
+
   it('matches postcss output for a variety of valid declarations', () => {
     const cases: [string, [string, string][]][] = [
       ['color: red;', [['color', 'red']]],

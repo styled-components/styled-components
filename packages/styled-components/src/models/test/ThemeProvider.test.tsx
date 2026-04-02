@@ -25,7 +25,13 @@ describe('ThemeProvider', () => {
     const child = <p>Child!</p>;
     const wrapper = render(<ThemeProvider theme={{ main: 'black' }}>{child}</ThemeProvider>);
 
-    expect(wrapper.asFragment()).toMatchSnapshot();
+    expect(wrapper.asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <p>
+          Child!
+        </p>
+      </DocumentFragment>
+    `);
   });
 
   it('should merge its theme with an outer theme', () => {
