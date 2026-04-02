@@ -183,7 +183,18 @@ describe('props', () => {
           background-color: green;
         }"
       `);
-      expect(wrapper.asFragment()).toMatchSnapshot();
+      expect(wrapper.asFragment()).toMatchInlineSnapshot(`
+        <DocumentFragment>
+          <div
+            class="sc-a c"
+            id="test-1"
+          />
+          <div
+            class="sc-a sc-b d"
+            id="test-2"
+          />
+        </DocumentFragment>
+      `);
     });
 
     it('should filter out props when using "as" to a custom component', () => {

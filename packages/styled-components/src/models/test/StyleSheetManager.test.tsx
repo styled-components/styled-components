@@ -112,8 +112,37 @@ describe('StyleSheetManager', () => {
       </div>
     );
 
-    expect(document.head.innerHTML).toMatchSnapshot();
-    expect(document.body.innerHTML).toMatchSnapshot();
+    expect(document.head.innerHTML).toMatchInlineSnapshot(`
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .d{color:red;}
+      </style>
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .e{color:blue;}
+      </style>
+    `);
+    expect(document.body.innerHTML).toMatchInlineSnapshot(`
+      <div>
+        <div>
+          <h1 class="sc-a d">
+          </h1>
+          <div>
+            <h2 class="sc-b e">
+            </h2>
+            <h3 class="sc-c f">
+            </h3>
+          </div>
+        </div>
+      </div>
+      <style data-styled="active"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .f{color:green;}
+      </style>
+    `);
   });
 
   // https://github.com/styled-components/styled-components/issues/1634
