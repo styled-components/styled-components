@@ -2,10 +2,22 @@ import { RULESET, type Middleware } from 'stylis';
 import { SC_ATTR } from '../constants';
 
 /**
- * Rewrites :first-child, :last-child, :nth-child(), and :nth-last-child()
- * to exclude styled-components' own `<style data-styled>` tags from the
- * child count, preventing inline style injection (RSC/SSR) from disrupting
- * child-index pseudo-selectors.
+ * Rewrites CSS selectors that break when styled-components' inline
+ * `<style data-styled>` tags appear in the DOM (RSC/SSR):
+ *
+ * 1. Child-index pseudo-selectors (:first-child, :nth-child, etc.) are
+ *    rewritten using CSS Selectors Level 4 `of S` syntax to exclude
+ *    style tags from the child count. This is a precise, spec-level fix.
+ *
+ * 2. Adjacent sibling combinators (+) are expanded with fallback selectors
+ *    that match when 1 or 2 `<style data-styled>` tags are interleaved
+ *    between siblings. The RSC render path emits Fragment[kfStyle?, compStyle?,
+ *    element] per component, so a component's style tags always precede its own
+ *    element — the maximum between any two elements is 2 (the next component's
+ *    keyframe + component CSS). Known limitations:
+ *    - `+` inside pseudo-functions (:is(), :has(), :where(), :not()) is not
+ *      expanded. Prefer :first-of-type/:nth-of-type or ~ (general sibling).
+ *    - Each `+` adds 2 fallback selectors, increasing CSS output size.
  *
  * ```jsx
  * import { StyleSheetManager, stylisPluginRSC } from 'styled-components';
@@ -23,6 +35,7 @@ const CHILD_RE =
   /:(?:(first)-child|(last)-child|(only)-child|(nth-child)\(([^()]+)\)|(nth-last-child)\(([^()]+)\))/g;
 
 const EXCLUDE = `:not(style[${SC_ATTR}])`;
+const STYLE_TAG = `style[${SC_ATTR}]`;
 
 function rewriteSelector(selector: string): string {
   if (selector.indexOf('-child') === -1) return selector;
@@ -45,13 +58,63 @@ function rewriteSelector(selector: string): string {
   );
 }
 
+/**
+ * Find positions of `+` combinators in a selector, skipping `+` inside
+ * parentheses (e.g. `:nth-child(2n+1)`) and brackets (e.g. `[attr*="+"]`).
+ */
+function findAdjacentCombinators(selector: string): number[] {
+  const positions: number[] = [];
+  let parenDepth = 0;
+  let bracketDepth = 0;
+  for (let i = 0; i < selector.length; i++) {
+    const ch = selector.charCodeAt(i);
+    if (ch === 40 /* ( */) parenDepth++;
+    else if (ch === 41 /* ) */) parenDepth--;
+    else if (ch === 91 /* [ */) bracketDepth++;
+    else if (ch === 93 /* ] */) bracketDepth--;
+    else if (
+      ch === 43 /* + */ &&
+      parenDepth === 0 &&
+      bracketDepth === 0 &&
+      // Skip CSS-escaped characters: \+ is a literal + in a class/id name
+      (i === 0 || selector.charCodeAt(i - 1) !== 92) /* \ */
+    ) {
+      positions.push(i);
+    }
+  }
+  return positions;
+}
+
+/**
+ * Expand each `+` combinator to also match when 1 or 2 `<style data-styled>`
+ * tags are interleaved. Each `+` is expanded independently (linear, not
+ * exponential), producing 2 additional selectors per `+` combinator.
+ *
+ * `A+B` → original + `A+style[data-styled]+B` + `A+style[data-styled]+style[data-styled]+B`
+ */
+function expandAdjacentSibling(selector: string, out: string[]): void {
+  // Fast path: no + at all (indexOf is faster than the char-by-char scan)
+  if (selector.indexOf('+') === -1) return;
+
+  const positions = findAdjacentCombinators(selector);
+  for (let i = 0; i < positions.length; i++) {
+    const pos = positions[i];
+    const before = selector.slice(0, pos);
+    const after = selector.slice(pos + 1);
+    out.push(before + '+' + STYLE_TAG + '+' + after);
+    out.push(before + '+' + STYLE_TAG + '+' + STYLE_TAG + '+' + after);
+  }
+}
+
 function stylisPluginRSC(element: Parameters<Middleware>[0]) {
   if (element.type === RULESET) {
     // New array — stylis caches AST objects, in-place mutation corrupts the cache
     const props = element.props as string[];
     const newProps: string[] = [];
     for (let i = 0; i < props.length; i++) {
-      newProps[i] = rewriteSelector(props[i]);
+      const rewritten = rewriteSelector(props[i]);
+      newProps.push(rewritten);
+      expandAdjacentSibling(rewritten, newProps);
     }
     element.props = newProps;
   }

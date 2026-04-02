@@ -34,12 +34,16 @@ export type IStyleSheetContext = {
   shouldForwardProp?: ShouldForwardProp<'web'> | undefined;
   styleSheet: StyleSheet;
   stylis: Stringifier;
+  /** Preserved for inheritance — inner SSMs that set namespace/vendorPrefixes
+   *  but not stylisPlugins can still inherit the parent's plugins. */
+  stylisPlugins?: stylis.Middleware[] | undefined;
 };
 
 const defaultContextValue: IStyleSheetContext = {
   shouldForwardProp: undefined,
   styleSheet: mainSheet,
   stylis: mainStylis,
+  stylisPlugins: undefined,
 };
 
 // Create context only if createContext is available, otherwise create a fallback
@@ -55,14 +59,6 @@ export const StyleSheetContext = !IS_RSC
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
 
 export type IStylisContext = Stringifier | void;
-export const StylisContext = !IS_RSC
-  ? React.createContext<IStylisContext>(undefined)
-  : ({
-      Provider: ({ children }: { children: React.ReactNode; value?: IStylisContext }) => children,
-      Consumer: ({ children }: { children: (value: IStylisContext) => React.ReactNode }) =>
-        children(undefined),
-    } as React.Context<IStylisContext>);
-export const StylisConsumer = StylisContext.Consumer;
 
 export function useStyleSheetContext() {
   if (!IS_RSC) return React.useContext(StyleSheetContext);
@@ -109,6 +105,10 @@ export type IStyleSheetManager = React.PropsWithChildren<{
    *
    * Manually composing `styled.{element}.withConfig({shouldForwardProp})` will
    * override this default.
+   *
+   * When nested inside another `StyleSheetManager`, omitting this prop inherits
+   * the parent's function. Pass `undefined` explicitly or a passthrough function
+   * to disable inherited behavior for a subtree.
    */
   shouldForwardProp?: undefined | IStyleSheetContext['shouldForwardProp'];
   /**
@@ -116,6 +116,10 @@ export type IStyleSheetManager = React.PropsWithChildren<{
    * Check out [what's available on npm*](https://www.npmjs.com/search?q=keywords%3Astylis).
    *
    * \* The plugin(s) must be compatible with stylis v4 or above.
+   *
+   * When nested inside another `StyleSheetManager`, omitting this prop inherits
+   * the parent's plugins. Pass an empty array (`[]`) to explicitly disable
+   * inherited plugins for a subtree.
    */
   stylisPlugins?: undefined | stylis.Middleware[];
   /**
@@ -137,24 +141,59 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     // Reset once per render (React.cache scopes this per request)
     if (ensureSheetReset) ensureSheetReset();
 
-    if (props.stylisPlugins || props.shouldForwardProp) {
-      // Cache stylis instance across renders when plugins array ref is stable
+    // Merge with existing override: inherit parent values when props are omitted.
+    const parentOverride = rscContextOverride || defaultContextValue;
+
+    // Build a stylis instance when any stylis-related prop is provided.
+    // Cache it when the plugins array ref is stable.
+    const hasStylisProps =
+      props.stylisPlugins !== undefined ||
+      props.namespace !== undefined ||
+      props.enableVendorPrefixes !== undefined;
+
+    if (hasStylisProps) {
       if (props.stylisPlugins && props.stylisPlugins !== rscLastPlugins) {
         rscLastPlugins = props.stylisPlugins;
-        rscCachedStylis = createStylisInstance({ plugins: props.stylisPlugins });
+        rscCachedStylis = createStylisInstance({
+          options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
+          plugins: props.stylisPlugins,
+        });
+      } else if (props.namespace !== undefined || props.enableVendorPrefixes !== undefined) {
+        // Namespace or prefix changed without new plugins — create fresh instance
+        // using inherited plugins from parent.
+        rscCachedStylis = createStylisInstance({
+          options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
+          plugins: props.stylisPlugins ?? parentOverride.stylisPlugins,
+        });
       }
+    }
 
+    const resolvedStylis = hasStylisProps
+      ? props.stylisPlugins !== undefined && !props.stylisPlugins.length
+        ? mainStylis
+        : rscCachedStylis
+      : parentOverride.stylis;
+    const resolvedShouldForwardProp =
+      'shouldForwardProp' in props ? props.shouldForwardProp : parentOverride.shouldForwardProp;
+
+    const resolvedPlugins = props.stylisPlugins ?? parentOverride.stylisPlugins;
+
+    if (resolvedStylis !== mainStylis || resolvedShouldForwardProp) {
       rscContextOverride = {
-        shouldForwardProp: props.shouldForwardProp,
+        shouldForwardProp: resolvedShouldForwardProp,
         styleSheet: mainSheet,
-        stylis: props.stylisPlugins ? rscCachedStylis : mainStylis,
+        stylis: resolvedStylis,
+        stylisPlugins: resolvedPlugins,
       };
+    } else {
+      rscContextOverride = null;
     }
 
     return props.children as React.JSX.Element;
   }
 
-  const { styleSheet } = useStyleSheetContext();
+  const parentContext = useStyleSheetContext();
+  const { styleSheet } = parentContext;
 
   const resolvedStyleSheet = React.useMemo(() => {
     let sheet = styleSheet;
@@ -162,7 +201,12 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     if (props.sheet) {
       sheet = props.sheet;
     } else if (props.target) {
-      sheet = sheet.reconstructWithOptions({ target: props.target, nonce: props.nonce }, false);
+      sheet = sheet.reconstructWithOptions(
+        props.nonce !== undefined
+          ? { target: props.target, nonce: props.nonce }
+          : { target: props.target },
+        false
+      );
     } else if (props.nonce !== undefined) {
       sheet = sheet.reconstructWithOptions({ nonce: props.nonce });
     }
@@ -174,27 +218,49 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     return sheet;
   }, [props.disableCSSOMInjection, props.nonce, props.sheet, props.target, styleSheet]);
 
+  // Inherit parent stylis when no stylis-related props are provided.
+  // When any stylis option (namespace, vendorPrefixes) changes, create a new
+  // instance but still inherit plugins from the parent if stylisPlugins is omitted.
+  // An explicit empty array disables inherited plugins.
   const stylis = React.useMemo(
     () =>
-      createStylisInstance({
-        options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
-        plugins: props.stylisPlugins,
-      }),
-    [props.enableVendorPrefixes, props.namespace, props.stylisPlugins]
+      props.stylisPlugins === undefined &&
+      props.namespace === undefined &&
+      props.enableVendorPrefixes === undefined
+        ? parentContext.stylis
+        : createStylisInstance({
+            options: { namespace: props.namespace, prefix: props.enableVendorPrefixes },
+            plugins: props.stylisPlugins ?? parentContext.stylisPlugins,
+          }),
+    [
+      props.enableVendorPrefixes,
+      props.namespace,
+      props.stylisPlugins,
+      parentContext.stylis,
+      parentContext.stylisPlugins,
+    ]
   );
+
+  // Inherit parent shouldForwardProp when not provided.
+  const shouldForwardProp =
+    'shouldForwardProp' in props ? props.shouldForwardProp : parentContext.shouldForwardProp;
+
+  // Resolve which plugins to propagate: own > parent > none
+  const resolvedPlugins = props.stylisPlugins ?? parentContext.stylisPlugins;
 
   const styleSheetContextValue = React.useMemo(
     () => ({
-      shouldForwardProp: props.shouldForwardProp,
+      shouldForwardProp,
       styleSheet: resolvedStyleSheet,
       stylis,
+      stylisPlugins: resolvedPlugins,
     }),
-    [props.shouldForwardProp, resolvedStyleSheet, stylis]
+    [shouldForwardProp, resolvedStyleSheet, stylis, resolvedPlugins]
   );
 
   return (
     <StyleSheetContext.Provider value={styleSheetContextValue}>
-      <StylisContext.Provider value={stylis}>{props.children}</StylisContext.Provider>
+      {props.children}
     </StyleSheetContext.Provider>
   );
 }

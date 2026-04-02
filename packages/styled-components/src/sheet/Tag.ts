@@ -2,9 +2,11 @@ import { InsertionTarget } from '../types';
 import { getSheet, makeStyleTag } from './dom';
 import { SheetOptions, Tag } from './types';
 
+declare const __SERVER__: boolean;
+
 /** Create a CSSStyleSheet-like tag depending on the environment */
 export const makeTag = ({ isServer, useCSSOMInjection, target, nonce }: SheetOptions) => {
-  if (isServer) {
+  if (__SERVER__ && isServer) {
     return new VirtualTag(target);
   } else if (useCSSOMInjection) {
     return new CSSOMTag(target, nonce);

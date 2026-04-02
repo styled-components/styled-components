@@ -1,6 +1,6 @@
 import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
-import { IS_RSC, SC_ATTR, SC_VERSION } from '../constants';
+import { IS_RSC, SC_ATTR, SC_VERSION, SPLITTER } from '../constants';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
 import type StyleSheet from '../sheet';
 import type {
@@ -22,7 +22,6 @@ import type {
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
 import determineTheme from '../utils/determineTheme';
-import domElements from '../utils/domElements';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import escape from '../utils/escape';
 import generateComponentId from '../utils/generateComponentId';
@@ -31,10 +30,11 @@ import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
-import { joinStrings } from '../utils/joinStrings';
+import { joinStrings, stripSplitter } from '../utils/joinStrings';
 import merge from '../utils/mixinDeep';
+import { createRSCCache } from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
-import ComponentStyle from './ComponentStyle';
+import ComponentStyle, { getCompiledCSS } from './ComponentStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
@@ -122,11 +122,12 @@ function resolveContext<Props extends BaseObject>(
     theme,
   } as React.HTMLAttributes<Element> & ExecutionContext & Props;
 
+  const needsCopy = attrs.length > 1;
   for (let i = 0; i < attrs.length; i++) {
     const attrDef = attrs[i];
-    // Pass a shallow copy to function attrs so the callback's captured
-    // reference isn't mutated by subsequent attrs processing (#3336).
-    const resolvedAttrDef = isFunction(attrDef) ? attrDef({ ...context }) : attrDef;
+    const resolvedAttrDef = isFunction(attrDef)
+      ? attrDef(needsCopy ? { ...context } : context)
+      : attrDef;
 
     for (const key in resolvedAttrDef) {
       if (key === 'className') {
@@ -149,17 +150,10 @@ function resolveContext<Props extends BaseObject>(
   return context;
 }
 
-let seenUnknownProps = new Set();
+let seenUnknownProps: Set<string> | undefined;
 
-/** Per-render dedup for RSC inline style tags via React.cache (React 19+). */
-let getEmittedCSS: (() => Set<string>) | null = null;
-if (IS_RSC) {
-  const reactCache: (<T extends (...args: any[]) => any>(fn: T) => T) | undefined = (React as any)
-    .cache;
-  if (reactCache) {
-    getEmittedCSS = reactCache(() => new Set<string>());
-  }
-}
+/** Per-render tracking of emitted class names and keyframe IDs for RSC dedup. */
+const getEmittedNames = createRSCCache(() => new Set<string>());
 
 /** Cache RegExp objects for :where() wrapping to avoid recompilation per render */
 const whereRegExpCache = new Map<string, RegExp>();
@@ -170,6 +164,19 @@ function getWhereRegExp(name: string): RegExp {
     whereRegExpCache.set(name, re);
   }
   return re;
+}
+
+/** Wrap base-level CSS class selectors in :where() for zero specificity (RSC inheritance). */
+function wrapBaseInWhere(levelCss: string, componentId: string, styleSheet: StyleSheet): string {
+  const names = styleSheet.names.get(componentId);
+  if (names) {
+    for (const name of names) {
+      const re = getWhereRegExp(name);
+      re.lastIndex = 0;
+      levelCss = levelCss.replace(re, ':where(.' + name + ')');
+    }
+  }
+  return levelCss;
 }
 
 function buildPropsForElement(
@@ -194,8 +201,9 @@ function buildPropsForElement(
         !shouldForwardProp &&
         process.env.NODE_ENV === 'development' &&
         !isPropValid(key) &&
-        !seenUnknownProps.has(key) &&
-        domElements.has(elementToBeCreated as any)
+        !(seenUnknownProps || (seenUnknownProps = new Set())).has(key) &&
+        isTag(elementToBeCreated) &&
+        !elementToBeCreated.includes('-')
       ) {
         seenUnknownProps.add(key);
         console.warn(
@@ -302,10 +310,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
   }
 
   propsForElement[
-    isTag(elementToBeCreated) &&
-    !domElements.has(elementToBeCreated as Extract<typeof domElements, string>)
-      ? 'class'
-      : 'className'
+    isTag(elementToBeCreated) && elementToBeCreated.includes('-') ? 'class' : 'className'
   ] = classString;
 
   if (forwardedRef) {
@@ -319,74 +324,95 @@ function useStyledComponentImpl<Props extends BaseObject>(
   // hydrated, so no mismatch. Inline body styles come after the registry's
   // <head> styles in source order, so extensions naturally win (#5672).
   if (IS_RSC) {
-    const tag = ssc.styleSheet.getTag();
-    let css = '';
+    const emitted = getEmittedNames ? getEmittedNames() : null;
 
-    // Walk the inheritance chain and collect CSS for all levels.
-    // Base levels are wrapped in :where() so they have zero specificity —
-    // this prevents duplicate base CSS in sibling extensions from
-    // overriding earlier extensions' styles (#5672).
-    let cs: ComponentStyle | null | undefined = componentStyle;
-    while (cs) {
-      let levelCss = tag.getGroup(getGroupForId(cs.componentId));
-      if (levelCss && cs !== componentStyle) {
-        // Base level: wrap selectors in :where() for zero specificity.
-        // Class names are content-dependent hashes — a component's name is
-        // derived from its CSS, so the name cannot appear in that CSS.
-        // Cross-component collisions are impossible since names are scoped
-        // per componentId. Use negative lookahead to avoid corrupting
-        // longer names that share a prefix (e.g. `.a` vs `.ab`).
-        const names = ssc.styleSheet.names.get(cs.componentId);
-        if (names) {
-          for (const name of names) {
-            const re = getWhereRegExp(name);
-            re.lastIndex = 0;
-            levelCss = levelCss.replace(re, ':where(.' + name + ')');
+    let newNames: string[] | null = null;
+    let totalNames = 0;
+    let css = '';
+    let usedCache = true;
+
+    let walk: ComponentStyle | null | undefined = componentStyle;
+    while (walk) {
+      const names = ssc.styleSheet.names.get(walk.componentId);
+      if (names) {
+        totalNames += names.size;
+        for (const name of names) {
+          if (!emitted || !emitted.has(name)) {
+            if (!newNames) newNames = [];
+            newNames.push(name);
+            if (emitted) emitted.add(name);
           }
         }
       }
-      css = levelCss + css;
-      cs = cs.baseStyle;
-    }
 
-    // Keyframes emit in their own <style> tag, deduped by ID. They register
-    // mid-render so prepending to component CSS breaks getEmittedCSS dedup.
-    const emitted = getEmittedCSS ? getEmittedCSS() : null;
-    let kfElement: React.ReactElement | null = null;
-    if (ssc.styleSheet.keyframeIds.size > 0) {
-      let kfCss = '';
-      for (const kfId of ssc.styleSheet.keyframeIds) {
-        const kfRules = tag.getGroup(getGroupForId(kfId));
-        if (kfRules && (!emitted || !emitted.has(kfId))) {
-          if (emitted) emitted.add(kfId);
-          kfCss += kfRules;
+      if (newNames && usedCache) {
+        let levelCss = getCompiledCSS(walk, ssc.styleSheet);
+        if (levelCss === null) {
+          usedCache = false;
+        } else {
+          if (walk !== componentStyle) {
+            levelCss = wrapBaseInWhere(levelCss, walk.componentId, ssc.styleSheet);
+          }
+          css = levelCss + css;
         }
       }
-      if (kfCss) {
-        kfElement = React.createElement('style', {
-          [SC_ATTR]: '',
-          key: 'sc-kf-' + componentStyle.componentId,
-          children: kfCss,
-        });
+
+      walk = walk.baseStyle;
+    }
+
+    if (newNames && !usedCache) {
+      css = '';
+      const tag = ssc.styleSheet.getTag();
+      let cs: ComponentStyle | null | undefined = componentStyle;
+      while (cs) {
+        let levelCss = tag.getGroup(getGroupForId(cs.componentId));
+        if (levelCss && cs !== componentStyle) {
+          levelCss = wrapBaseInWhere(levelCss, cs.componentId, ssc.styleSheet);
+        }
+        css = levelCss + css;
+        cs = cs.baseStyle;
       }
     }
 
-    const cssDeduped = css && emitted ? emitted.has(css) : false;
-    if (css && !cssDeduped) {
-      if (emitted) emitted.add(css);
+    let kfCss = '';
+    if (ssc.styleSheet.keyframeIds.size > 0) {
+      const kfTag = ssc.styleSheet.getTag();
+      for (const kfId of ssc.styleSheet.keyframeIds) {
+        if (emitted && emitted.has(kfId)) continue;
+        const kfRules = kfTag.getGroup(getGroupForId(kfId));
+        if (kfRules) {
+          kfCss += kfRules;
+          if (emitted) emitted.add(kfId);
+        }
+      }
     }
 
-    const styleElement =
-      css && !cssDeduped
-        ? React.createElement('style', {
-            [SC_ATTR]: '',
-            key: 'sc-' + componentStyle.componentId,
-            children: css,
-          })
-        : null;
+    if (css && emitted && newNames && newNames.length < totalNames) {
+      const rules = css.split(SPLITTER);
+      let filtered = '';
+      for (let i = 0; i < rules.length; i++) {
+        const rule = rules[i];
+        if (!rule) continue;
+        for (let j = 0; j < newNames.length; j++) {
+          const re = getWhereRegExp(newNames[j]);
+          re.lastIndex = 0;
+          if (re.test(rule)) {
+            filtered += rule + SPLITTER;
+            break;
+          }
+        }
+      }
+      css = filtered;
+    }
 
-    if (kfElement || styleElement) {
-      return React.createElement(React.Fragment, null, kfElement, styleElement, element);
+    const combined = stripSplitter(kfCss + css);
+    if (combined) {
+      const styleElement = React.createElement('style', {
+        [SC_ATTR]: '',
+        key: 'sc-' + componentStyle.componentId,
+        children: combined,
+      });
+      return React.createElement(React.Fragment, null, styleElement, element);
     }
   }
 

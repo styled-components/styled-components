@@ -118,23 +118,20 @@ function stripLineComments(css: string): string {
 }
 
 /**
- * Checks if CSS has unbalanced closing braces that would cause stylis
- * to prematurely close rule blocks.
- * Optimized with early bail and charCodeAt for performance.
+ * Single-pass CSS sanitizer: validates brace balance and removes declarations
+ * with unbalanced braces. Returns the input unchanged when CSS is valid.
  */
-function hasUnbalancedBraces(css: string): boolean {
-  // Fast path: no closing brace means can't have unbalanced braces
-  if (css.indexOf('}') === -1) return false;
+function sanitizeCSS(css: string): string {
+  if (css.indexOf('}') === -1) return css;
 
   const len = css.length;
   let depth = 0;
-  let inString = 0; // 0 = none, char code when in string
+  let inString = 0;
   let inComment = false;
 
   for (let i = 0; i < len; i++) {
     const code = css.charCodeAt(i);
 
-    // Handle CSS comments
     if (inString === 0 && !inComment && code === SLASH && css.charCodeAt(i + 1) === ASTERISK) {
       inComment = true;
       i++;
@@ -148,7 +145,6 @@ function hasUnbalancedBraces(css: string): boolean {
       continue;
     }
 
-    // Track string state
     if (
       (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) &&
       (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)
@@ -162,40 +158,25 @@ function hasUnbalancedBraces(css: string): boolean {
     }
     if (inString !== 0) continue;
 
-    // Track brace depth
     if (code === OPEN_BRACE) {
       depth++;
     } else if (code === CLOSE_BRACE) {
       depth--;
-      if (depth < 0) return true;
+      if (depth < 0) break;
     }
   }
 
-  return depth !== 0 || inString !== 0;
-}
+  if (depth === 0 && inString === 0) return css;
 
-/**
- * Sanitizes CSS by removing declarations with unbalanced braces.
- * This contains invalid syntax to just the affected declaration.
- * Optimized with charCodeAt for performance.
- */
-function sanitizeCSS(css: string): string {
-  // Fast path: valid CSS passes through unchanged
-  if (!hasUnbalancedBraces(css)) {
-    return css;
-  }
-
-  const len = css.length;
   let result = '';
   let declStart = 0;
   let braceDepth = 0;
-  let inString = 0;
-  let inComment = false;
+  inString = 0;
+  inComment = false;
 
   for (let i = 0; i < len; i++) {
     const code = css.charCodeAt(i);
 
-    // Handle CSS comments
     if (inString === 0 && !inComment && code === SLASH && css.charCodeAt(i + 1) === ASTERISK) {
       inComment = true;
       i++;
@@ -209,7 +190,6 @@ function sanitizeCSS(css: string): string {
       continue;
     }
 
-    // Track string state
     if (
       (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) &&
       (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)
@@ -229,7 +209,6 @@ function sanitizeCSS(css: string): string {
       braceDepth--;
 
       if (braceDepth < 0) {
-        // Extra closing brace - skip to next semicolon or newline
         let skipEnd = i + 1;
         while (skipEnd < len) {
           const skipCode = css.charCodeAt(skipEnd);
@@ -254,12 +233,8 @@ function sanitizeCSS(css: string): string {
     }
   }
 
-  // Add remaining valid content
-  if (declStart < len) {
-    const remaining = css.substring(declStart);
-    if (!hasUnbalancedBraces(remaining)) {
-      result += remaining;
-    }
+  if (declStart < len && braceDepth === 0 && inString === 0) {
+    result += css.substring(declStart);
   }
 
   return result;
@@ -401,17 +376,17 @@ export default function createStylisInstance(
     return _stack;
   };
 
-  stringifyRules.hash = plugins.length
-    ? plugins
-        .reduce((acc, plugin) => {
-          if (!plugin.name) {
-            throwStyledError(15);
-          }
-
-          return phash(acc, plugin.name);
-        }, SEED)
-        .toString()
-    : '';
+  // Hash includes plugins + options so different stylis configs produce
+  // different class names and cache keys.
+  const o = options as ICreateStylisInstance['options'];
+  let h = SEED;
+  for (let i = 0; i < plugins.length; i++) {
+    if (!plugins[i].name) throwStyledError(15);
+    h = phash(h, plugins[i].name);
+  }
+  if (o?.namespace) h = phash(h, o.namespace);
+  if (o?.prefix) h = phash(h, 'p');
+  stringifyRules.hash = h !== SEED ? h.toString() : '';
 
   return stringifyRules;
 }

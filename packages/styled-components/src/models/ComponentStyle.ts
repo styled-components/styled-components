@@ -1,4 +1,4 @@
-import { SC_VERSION } from '../constants';
+import { IS_RSC, SC_VERSION } from '../constants';
 import StyleSheet from '../sheet';
 import type { AnyComponent } from '../types';
 import { ExecutionContext, RuleSet, Stringifier } from '../types';
@@ -9,9 +9,54 @@ import { hash, phash } from '../utils/hash';
 import isKeyframes from '../utils/isKeyframes';
 import isPlainObject from '../utils/isPlainObject';
 import isStatelessFunction from '../utils/isStatelessFunction';
-import { joinStringArray, joinStrings } from '../utils/joinStrings';
+import { joinRules, joinStringArray, joinStrings } from '../utils/joinStrings';
 
 const SEED = hash(SC_VERSION);
+
+/**
+ * RSC optimization: caches compiled CSS per class name so the RSC emission
+ * path can read directly without round-tripping through the sheet tag.
+ * WeakMap keyed by ComponentStyle to avoid adding fields to the class
+ * (which would increase the browser bundle where IS_RSC is eliminated).
+ */
+const compiledCSSCache: WeakMap<ComponentStyle, Map<string, string>> | null = IS_RSC
+  ? new WeakMap()
+  : null;
+
+/** Store compiled CSS for a ComponentStyle's class name (RSC only). */
+function cacheCompiledCSS(cs: ComponentStyle, name: string, rules: string[]): void {
+  if (!compiledCSSCache) return;
+  let map = compiledCSSCache.get(cs);
+  if (!map) {
+    map = new Map();
+    compiledCSSCache.set(cs, map);
+  }
+  map.set(name, joinRules(rules));
+}
+
+/** Check if compiled CSS is cached for a name (RSC only). */
+function hasCompiledCSS(cs: ComponentStyle, name: string): boolean {
+  return compiledCSSCache?.get(cs)?.has(name) ?? false;
+}
+
+/**
+ * Get all compiled CSS for a ComponentStyle's registered names.
+ * Returns null on any cache miss (caller falls back to getGroup).
+ */
+export function getCompiledCSS(cs: ComponentStyle, styleSheet: StyleSheet): string | null {
+  if (!compiledCSSCache) return null;
+  const map = compiledCSSCache.get(cs);
+  if (!map) return null;
+  const names = styleSheet.names.get(cs.componentId);
+  if (!names) return null;
+  let css = '';
+  for (const name of names) {
+    const compiled = map.get(name);
+    if (!compiled) return null;
+    css += compiled;
+  }
+  return css;
+}
 
 /**
  * ComponentStyle is all the CSS-specific stuff, not the React-specific stuff.
@@ -98,8 +143,15 @@ export default class ComponentStyle {
         }
 
         if (!styleSheet.hasNameForId(this.componentId, name)) {
-          const cssFormatted = stylis(css, '.' + name, undefined, this.componentId);
-          styleSheet.insertRules(this.componentId, name, cssFormatted);
+          if (IS_RSC && hasCompiledCSS(this, name)) {
+            // RSC cold render with cached compilation: register the name
+            // without re-running stylis or writing to the tag.
+            styleSheet.registerName(this.componentId, name);
+          } else {
+            const cssFormatted = stylis(css, '.' + name, undefined, this.componentId);
+            if (IS_RSC) cacheCompiledCSS(this, name, cssFormatted);
+            styleSheet.insertRules(this.componentId, name, cssFormatted);
+          }
         }
 
         names = joinStrings(names, name);
