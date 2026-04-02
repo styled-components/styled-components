@@ -73,7 +73,11 @@ describe(`createGlobalStyle`, () => {
     // First render with a fixed instance number (simulates WeakMap caching)
     gs.renderStyles(1, executionContext, sheet, mainStylis);
     expect(gs.instanceRules.size).toBe(1);
-    expect(sheet.toString()).toContain('color');
+    expect(sheet.toString()).toMatchInlineSnapshot(`
+      "body{color:red;}/*!sc*/
+      data-styled.g3[id="sc-global-clearTag-test"]{content:"sc-global-clearTag-test1,"}/*!sc*/
+      "
+    `);
 
     // Simulate Next.js registry: collect styles, then clearTag
     sheet.clearTag();
@@ -83,7 +87,11 @@ describe(`createGlobalStyle`, () => {
     // computeRules produces identical rules. rulesEqual returns true.
     // rebuildGroup is skipped. Tag is empty. CSS is lost.
     gs.renderStyles(1, executionContext, sheet, mainStylis);
-    expect(sheet.toString()).toContain('color');
+    expect(sheet.toString()).toMatchInlineSnapshot(`
+      "body{color:red;}/*!sc*/
+      data-styled.g3[id="sc-global-clearTag-test"]{content:"sc-global-clearTag-test1,"}/*!sc*/
+      "
+    `);
   });
 });
 

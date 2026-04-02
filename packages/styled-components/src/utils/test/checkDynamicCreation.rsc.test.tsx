@@ -35,7 +35,13 @@ describe('checkDynamicCreation RSC mode', () => {
 
     const html = ReactDOMServer.renderToString(React.createElement(App));
 
-    expect(html).toContain('color:red');
+    expect(html).toMatchInlineSnapshot(`
+      <style data-styled>
+        .YKVKw{color:red;}/*!sc*/
+      </style>
+      <div class="sc-kqxcKS YKVKw">
+      </div>
+    `);
     // In RSC mode, the dynamic creation check is skipped entirely
     expect(spy).not.toHaveBeenCalled();
 

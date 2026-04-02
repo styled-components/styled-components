@@ -20,7 +20,11 @@ describe('withTheme RSC mode', () => {
 
     const html = ReactDOMServer.renderToString(React.createElement(Themed, { label: 'hello' }));
 
-    expect(html).toContain('hello');
+    expect(html).toMatchInlineSnapshot(`
+      <span>
+        hello
+      </span>
+    `);
   });
 
   it('receives undefined as theme in RSC mode', () => {
