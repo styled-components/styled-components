@@ -105,8 +105,19 @@ describe('CSS injection ordering', () => {
       render(<FadingDiv />);
 
       const css = getRenderedCSS();
-      expect(css).toContain('@keyframes');
-      expect(css).toContain('animation:');
+      expect(css).toMatchInlineSnapshot(`
+        "@keyframes bdINEB {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        .a {
+          animation: bdINEB 1s ease-in;
+        }"
+      `);
       expect(posIn(css, '@keyframes')).toBeLessThan(posIn(css, 'animation:'));
     });
 
@@ -247,13 +258,23 @@ describe('CSS injection ordering', () => {
 
       // Unmount global style — its CSS is removed
       rerender(<App showGlobal={false} />);
-      expect(getRenderedCSS()).not.toContain('background: coral');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        ".a {
+          color: navy;
+        }"
+      `);
 
       // Remount — new instance inserts into same shared group → still before Comp
       rerender(<App showGlobal={true} />);
       css = getRenderedCSS();
-      expect(css).toContain('background: coral');
-      expect(css).toContain('color: navy');
+      expect(css).toMatchInlineSnapshot(`
+        "body {
+          background: coral;
+        }
+        .a {
+          color: navy;
+        }"
+      `);
       expect(posIn(css, 'background: coral')).toBeLessThan(posIn(css, 'color: navy'));
     });
 
@@ -433,16 +454,25 @@ describe('CSS injection ordering', () => {
       // Remove two instances (keys 1 and 2 unmount, key 0 stays)
       rerender(<App count={1} />);
       css = getRenderedCSS();
-      expect(css).toContain('background: teal');
-      expect(css).toContain('color: white');
+      expect(css).toMatchInlineSnapshot(`
+        "body {
+          background: teal;
+        }
+        .a {
+          color: white;
+        }"
+      `);
       // Surviving instance still before component
       expect(posIn(css, 'background: teal')).toBeLessThan(posIn(css, 'color: white'));
 
       // Remove all
       rerender(<App count={0} />);
       css = getRenderedCSS();
-      expect(css).not.toContain('background: teal');
-      expect(css).toContain('color: white');
+      expect(css).toMatchInlineSnapshot(`
+        ".a {
+          color: white;
+        }"
+      `);
     });
 
     it('should maintain ordering with dynamic props across instances', () => {
@@ -471,8 +501,15 @@ describe('CSS injection ordering', () => {
       // Remove second instance — first's styles must survive in correct position
       rerender(<App showSecond={false} />);
       css = getRenderedCSS();
+      expect(css).toMatchInlineSnapshot(`
+        "body {
+          background: red;
+        }
+        .a {
+          color: navy;
+        }"
+      `);
       expect(posIn(css, 'background: red')).toBeLessThan(posIn(css, 'color: navy'));
-      expect(css).not.toContain('background: blue');
     });
   });
 
@@ -552,9 +589,14 @@ describe('CSS injection ordering', () => {
 
         rerender(<App showA={false} />);
         css = getRenderedCSS();
-        expect(css).not.toContain('font-size: 16px');
-        expect(css).toContain('margin: 0');
-        expect(css).toContain('color: blue');
+        expect(css).toMatchInlineSnapshot(`
+          "body {
+            margin: 0;
+          }
+          .a {
+            color: blue;
+          }"
+        `);
         expect(posIn(css, 'margin: 0')).toBeLessThan(posIn(css, 'color: blue'));
       });
 
@@ -582,9 +624,14 @@ describe('CSS injection ordering', () => {
 
         rerender(<App showB={false} />);
         css = getRenderedCSS();
-        expect(css).toContain('font-size: 16px');
-        expect(css).not.toContain('margin: 0');
-        expect(css).toContain('color: blue');
+        expect(css).toMatchInlineSnapshot(`
+          "html {
+            font-size: 16px;
+          }
+          .a {
+            color: blue;
+          }"
+        `);
         expect(posIn(css, 'font-size: 16px')).toBeLessThan(posIn(css, 'color: blue'));
       });
 
@@ -606,14 +653,24 @@ describe('CSS injection ordering', () => {
         }
 
         const { rerender } = render(<App showGlobals={true} />);
-        expect(getRenderedCSS()).toContain('font-size: 16px');
-        expect(getRenderedCSS()).toContain('margin: 0');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          "html {
+            font-size: 16px;
+          }
+          body {
+            margin: 0;
+          }
+          .a {
+            color: blue;
+          }"
+        `);
 
         rerender(<App showGlobals={false} />);
-        const css = getRenderedCSS();
-        expect(css).not.toContain('font-size: 16px');
-        expect(css).not.toContain('margin: 0');
-        expect(css).toContain('color: blue');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          ".a {
+            color: blue;
+          }"
+        `);
       });
 
       it('should maintain definition order when GlobalB is added after initial mount', () => {
@@ -667,28 +724,53 @@ describe('CSS injection ordering', () => {
         }
 
         const { rerender } = render(<App keys={[0, 1, 2]} />);
-        expect(getRenderedCSS()).toContain('--idx: 0');
-        expect(getRenderedCSS()).toContain('--idx: 1');
-        expect(getRenderedCSS()).toContain('--idx: 2');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          "body {
+            --idx: 0;
+          }
+          body {
+            --idx: 1;
+          }
+          body {
+            --idx: 2;
+          }
+          .a {
+            color: red;
+          }"
+        `);
 
         // Unmount key=2
         rerender(<App keys={[0, 1]} />);
-        let css = getRenderedCSS();
-        expect(css).toContain('--idx: 0');
-        expect(css).toContain('--idx: 1');
-        expect(css).not.toContain('--idx: 2');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          "body {
+            --idx: 0;
+          }
+          body {
+            --idx: 1;
+          }
+          .a {
+            color: red;
+          }"
+        `);
 
         // Unmount key=1
         rerender(<App keys={[0]} />);
-        css = getRenderedCSS();
-        expect(css).toContain('--idx: 0');
-        expect(css).not.toContain('--idx: 1');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          "body {
+            --idx: 0;
+          }
+          .a {
+            color: red;
+          }"
+        `);
 
         // Unmount key=0
         rerender(<App keys={[]} />);
-        css = getRenderedCSS();
-        expect(css).not.toContain('--idx: 0');
-        expect(css).toContain('color: red');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          ".a {
+            color: red;
+          }"
+        `);
       });
 
       it('should handle unmount order 0→1→2 correctly', () => {
@@ -714,22 +796,36 @@ describe('CSS injection ordering', () => {
 
         // Unmount key=0
         rerender(<App keys={[1, 2]} />);
-        let css = getRenderedCSS();
-        expect(css).not.toContain('--idx: 0');
-        expect(css).toContain('--idx: 1');
-        expect(css).toContain('--idx: 2');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          "body {
+            --idx: 1;
+          }
+          body {
+            --idx: 2;
+          }
+          .a {
+            color: red;
+          }"
+        `);
 
         // Unmount key=1
         rerender(<App keys={[2]} />);
-        css = getRenderedCSS();
-        expect(css).not.toContain('--idx: 1');
-        expect(css).toContain('--idx: 2');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          "body {
+            --idx: 2;
+          }
+          .a {
+            color: red;
+          }"
+        `);
 
         // Unmount key=2
         rerender(<App keys={[]} />);
-        css = getRenderedCSS();
-        expect(css).not.toContain('--idx: 2');
-        expect(css).toContain('color: red');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          ".a {
+            color: red;
+          }"
+        `);
       });
 
       it('should handle unmount order 1→0→2 correctly', () => {
@@ -755,22 +851,36 @@ describe('CSS injection ordering', () => {
 
         // Unmount key=1
         rerender(<App keys={[0, 2]} />);
-        let css = getRenderedCSS();
-        expect(css).toContain('--idx: 0');
-        expect(css).not.toContain('--idx: 1');
-        expect(css).toContain('--idx: 2');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          "body {
+            --idx: 0;
+          }
+          body {
+            --idx: 2;
+          }
+          .a {
+            color: red;
+          }"
+        `);
 
         // Unmount key=0
         rerender(<App keys={[2]} />);
-        css = getRenderedCSS();
-        expect(css).not.toContain('--idx: 0');
-        expect(css).toContain('--idx: 2');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          "body {
+            --idx: 2;
+          }
+          .a {
+            color: red;
+          }"
+        `);
 
         // Unmount key=2
         rerender(<App keys={[]} />);
-        css = getRenderedCSS();
-        expect(css).not.toContain('--idx: 2');
-        expect(css).toContain('color: red');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          ".a {
+            color: red;
+          }"
+        `);
       });
 
       it('should place remounted instance in the shared group after unmounting middle instance', () => {
@@ -796,13 +906,21 @@ describe('CSS injection ordering', () => {
 
         // Unmount middle (key=1)
         rerender(<App keys={[0, 2]} />);
-        let css = getRenderedCSS();
-        expect(css).not.toContain('--idx: 1');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          "body {
+            --idx: 0;
+          }
+          body {
+            --idx: 2;
+          }
+          .a {
+            color: red;
+          }"
+        `);
 
         // Remount a new instance (key=3) — should appear in the shared group, before Comp
         rerender(<App keys={[0, 2, 3]} />);
-        css = getRenderedCSS();
-        expect(css).toContain('--idx: 3');
+        const css = getRenderedCSS();
         // All global instances should be before the component
         expect(posIn(css, '--idx: 0')).toBeLessThan(posIn(css, 'color: red'));
         expect(posIn(css, '--idx: 2')).toBeLessThan(posIn(css, 'color: red'));
@@ -875,7 +993,17 @@ describe('CSS injection ordering', () => {
         // Unmount GlobalA
         rerender(<App showA={false} />);
         css = getRenderedCSS();
-        expect(css).not.toContain('font-size: 16px');
+        expect(css).toMatchInlineSnapshot(`
+          ".a {
+            color: red;
+          }
+          body {
+            margin: 0;
+          }
+          .b {
+            color: blue;
+          }"
+        `);
         // GlobalB (definition order before CompB) should still appear before CompB
         expect(posIn(css, 'margin: 0')).toBeLessThan(posIn(css, 'color: blue'));
         // CompA was defined before GlobalB, so CompA still before GlobalB
@@ -927,13 +1055,23 @@ describe('CSS injection ordering', () => {
 
         // Mount component first (triggers keyframes injection)
         const { rerender } = render(<App showGlobal={false} />);
-        let css = getRenderedCSS();
-        expect(css).toContain('@keyframes');
-        expect(css).toContain('animation:');
+        expect(getRenderedCSS()).toMatchInlineSnapshot(`
+          "@keyframes cFMmbV {
+            from {
+              opacity: 0;
+            }
+            to {
+              opacity: 1;
+            }
+          }
+          .a {
+            animation: cFMmbV 1s;
+          }"
+        `);
 
         // Now mount global style — definition order: keyframes→global→component
         rerender(<App showGlobal={true} />);
-        css = getRenderedCSS();
+        const css = getRenderedCSS();
         expect(posIn(css, '@keyframes')).toBeLessThan(posIn(css, 'margin: 0'));
         expect(posIn(css, 'margin: 0')).toBeLessThan(posIn(css, 'animation:'));
       });
