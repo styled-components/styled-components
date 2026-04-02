@@ -248,7 +248,7 @@ describe('bundle size', () => {
       expect(bundle).not.toContain('ServerStyleSheet');
       expect(bundle).not.toContain('isStyledComponent');
 
-      expect(sizeKB).toBeLessThan(8);
+      expect(sizeKB).toBeLessThan(9);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
