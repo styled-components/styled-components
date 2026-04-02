@@ -309,7 +309,7 @@ describe('keyframes', () => {
     );
 
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      "@keyframes a-1567285458 {
+      "@keyframes ahjdkdY {
         0% {
           right: 0%;
         }
@@ -318,7 +318,7 @@ describe('keyframes', () => {
         }
       }
       .c {
-        animation: a-1567285458 2s linear infinite;
+        animation: ahjdkdY 2s linear infinite;
       }"
     `);
   });
@@ -358,7 +358,7 @@ describe('keyframes', () => {
           left: 100%;
         }
       }
-      @keyframes a-1567285458 {
+      @keyframes ahjdkdY {
         0% {
           right: 0%;
         }
@@ -370,7 +370,7 @@ describe('keyframes', () => {
         animation: a 2s linear infinite;
       }
       .d {
-        animation: a-1567285458 2s linear infinite;
+        animation: ahjdkdY 2s linear infinite;
       }"
     `);
   });
@@ -401,7 +401,7 @@ describe('keyframes', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        @keyframes a{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}.animparent .c{color:blue;animation:a 0.75s infinite linear;}
+        @keyframes ahpOEuS{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}.animparent .c{color:blue;animation:ahpOEuS 0.75s infinite linear;}
       </style>
     `);
   });

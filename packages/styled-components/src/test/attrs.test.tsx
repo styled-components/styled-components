@@ -19,26 +19,52 @@ describe('attrs', () => {
 
   it('work fine with an empty object', () => {
     const Comp = styled.div.attrs({})``;
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('work fine with a function that returns an empty object', () => {
     const Comp = styled.div.attrs(() => ({}))``;
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('pass a simple attr via object', () => {
     const Comp = styled.button.attrs({
       type: 'button',
     })``;
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <button
+          class="sc-a"
+          type="button"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('pass a simple attr via function with object return', () => {
     const Comp = styled.button.attrs(() => ({
       type: 'button',
     }))``;
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <button
+          class="sc-a"
+          type="button"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('pass a React component', () => {
@@ -62,7 +88,15 @@ describe('attrs', () => {
       component: ReactComponent,
     }))``;
 
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <button>
+          <p>
+            React Component
+          </p>
+        </button>
+      </DocumentFragment>
+    `);
   });
 
   it('should not call a function passed to attrs as an object value', () => {
@@ -124,8 +158,22 @@ describe('attrs', () => {
       type: p.$submit ? 'submit' : 'button',
     }))``;
 
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
-    expect(render(<Comp $submit />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <button
+          class="sc-a"
+          type="button"
+        />
+      </DocumentFragment>
+    `);
+    expect(render(<Comp $submit />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <button
+          class="sc-a"
+          type="submit"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('should replace props with attrs', () => {
@@ -134,9 +182,33 @@ describe('attrs', () => {
       tabIndex: 0,
     }))``;
 
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
-    expect(render(<Comp type="reset" />).asFragment()).toMatchSnapshot();
-    expect(render(<Comp type="reset" tabIndex={-1} />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <button
+          class="sc-a"
+          tabindex="0"
+          type="button"
+        />
+      </DocumentFragment>
+    `);
+    expect(render(<Comp type="reset" />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <button
+          class="sc-a"
+          tabindex="0"
+          type="button"
+        />
+      </DocumentFragment>
+    `);
+    expect(render(<Comp type="reset" tabIndex={-1} />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <button
+          class="sc-a"
+          tabindex="0"
+          type="button"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('should merge className', () => {
@@ -144,7 +216,13 @@ describe('attrs', () => {
       className: 'meow nya',
     }))``;
 
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a meow nya"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('should merge className from folded attrs', () => {
@@ -168,8 +246,20 @@ describe('attrs', () => {
       className: `meow ${p.$purr ? 'purr' : 'nya'}`,
     }))``;
 
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
-    expect(render(<Comp $purr />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a meow nya"
+        />
+      </DocumentFragment>
+    `);
+    expect(render(<Comp $purr />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a meow purr"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('should merge style', () => {
@@ -193,7 +283,15 @@ describe('attrs', () => {
       'data-foo': 'bar',
       'aria-label': 'A simple FooBar',
     }))``;
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          aria-label="A simple FooBar"
+          class="sc-a"
+          data-foo="bar"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('merge attrs', () => {
@@ -205,7 +303,15 @@ describe('attrs', () => {
       .attrs(() => ({
         type: 'submit',
       }))``;
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <button
+          class="sc-a"
+          tabindex="0"
+          type="submit"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('merge attrs when inheriting SC', () => {
@@ -216,7 +322,15 @@ describe('attrs', () => {
     const Child = styled(Parent).attrs(() => ({
       type: 'submit',
     }))``;
-    expect(render(<Child />).asFragment()).toMatchSnapshot();
+    expect(render(<Child />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <button
+          class="sc-a sc-b"
+          tabindex="0"
+          type="submit"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('pass attrs to style block', () => {
@@ -230,7 +344,15 @@ describe('attrs', () => {
         color: red;
       }
     `;
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <a
+          class="sc-a b"
+          data-active-class-name="--is-active"
+          href="#"
+        />
+      </DocumentFragment>
+    `);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: blue;
@@ -245,21 +367,49 @@ describe('attrs', () => {
     const Comp = styled.div.attrs(() => ({
       children: 'Probably a bad idea',
     }))``;
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a"
+        >
+          Probably a bad idea
+        </div>
+      </DocumentFragment>
+    `);
   });
 
   it('should pass through complex children as well', () => {
     const Comp = styled.div.attrs(() => ({
       children: <span>Probably a bad idea</span>,
     }))``;
-    expect(render(<Comp />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a"
+        >
+          <span>
+            Probably a bad idea
+          </span>
+        </div>
+      </DocumentFragment>
+    `);
   });
 
   it('should override children of course', () => {
     const Comp = styled.div.attrs(() => ({
       children: <span>Amazing</span>,
     }))``;
-    expect(render(<Comp>Something else</Comp>).asFragment()).toMatchSnapshot();
+    expect(render(<Comp>Something else</Comp>).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a"
+        >
+          <span>
+            Amazing
+          </span>
+        </div>
+      </DocumentFragment>
+    `);
   });
 
   it('should shallow merge "style" prop + attr instead of overwriting', () => {
@@ -332,13 +482,26 @@ describe('attrs', () => {
       $textColor: 'red',
     }))``;
 
-    expect(render(<StyledComp />).asFragment()).toMatchSnapshot();
+    expect(render(<StyledComp />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a sc-b c"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('should apply given "as" prop to the progressive type', () => {
     const Comp = styled.div.attrs({ as: 'video' as const })``;
 
-    expect(render(<Comp loop />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp loop />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <video
+          class="sc-a"
+          loop=""
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('aliasing an alternate theme via attrs makes it through to the child component', () => {
@@ -351,7 +514,14 @@ describe('attrs', () => {
       theme: p.alternateTheme!,
     }))``;
 
-    expect(render(<Comp alternateTheme={{ foo: 'bar' }} />).asFragment()).toMatchSnapshot();
+    expect(render(<Comp alternateTheme={{ foo: 'bar' }} />).asFragment()).toMatchInlineSnapshot(`
+      <DocumentFragment>
+        <div
+          class="sc-a"
+          data-theme="{"foo":"bar"}"
+        />
+      </DocumentFragment>
+    `);
   });
 
   it('should preserve explicitly passed undefined props', () => {

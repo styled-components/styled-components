@@ -177,6 +177,20 @@ describe('stylis', () => {
       `);
     });
 
+    it('drops remaining content when unterminated string causes brace imbalance', () => {
+      expect(
+        stylisTest(`
+        width: 100px;
+        content: "unterminated }
+        background: red;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;}",
+        ]
+      `);
+    });
+
     it('handles valid CSS unchanged (fast path)', () => {
       expect(
         stylisTest(`

@@ -65,8 +65,19 @@ describe('ssr', () => {
     const html = renderToString(sheet.collectStyles(<Heading>Hello SSR!</Heading>));
     const css = sheet.getStyleTags();
 
-    expect(html).toMatchSnapshot();
-    expect(css).toMatchSnapshot();
+    expect(html).toMatchInlineSnapshot(`
+      <h1 class="sc-a b">
+        Hello SSR!
+      </h1>
+    `);
+    expect(css).toMatchInlineSnapshot(`
+      <style data-styled="true"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .b{color:red;}/*!sc*/
+      data-styled.g1[id="sc-a"]{content:"b,"}/*!sc*/
+      </style>
+    `);
   });
 
   it('should extract both global and local CSS', () => {
@@ -88,8 +99,21 @@ describe('ssr', () => {
     );
     const css = sheet.getStyleTags();
 
-    expect(html).toMatchSnapshot();
-    expect(css).toMatchSnapshot();
+    expect(html).toMatchInlineSnapshot(`
+      <h1 class="sc-b c">
+        Hello SSR!
+      </h1>
+    `);
+    expect(css).toMatchInlineSnapshot(`
+      <style data-styled="true"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        body{background:papayawhip;}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      .c{color:red;}/*!sc*/
+      data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
+      </style>
+    `);
   });
 
   it('should emit nothing when no styles were generated', () => {
@@ -116,10 +140,31 @@ describe('ssr', () => {
     renderToString(sheet.collectStyles(<Component />));
 
     const cssTags = sheet.getStyleTags();
-    expect(cssTags).toMatchSnapshot();
+    expect(cssTags).toMatchInlineSnapshot(`
+      <style data-styled="true"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        body{background:papayawhip;}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      </style>
+    `);
 
     const cssElements = sheet.getStyleElement();
-    expect(cssElements).toMatchSnapshot();
+    expect(cssElements).toMatchInlineSnapshot(`
+      [
+        <style
+          dangerouslySetInnerHTML={
+            {
+              "__html": "body{background:papayawhip;}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      ",
+            }
+          }
+          data-styled=""
+          data-styled-version="JEST_MOCK_VERSION"
+        />,
+      ]
+    `);
   });
 
   it('should not spill ServerStyleSheets into each other', () => {
@@ -138,10 +183,24 @@ describe('ssr', () => {
     renderToString(sheetB.collectStyles(<B />));
     const cssB = sheetB.getStyleTags();
 
-    expect(cssA).toContain('red');
+    expect(cssA).toMatchInlineSnapshot(`
+      <style data-styled="true"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .c{color:red;}/*!sc*/
+      data-styled.g1[id="sc-a"]{content:"c,"}/*!sc*/
+      </style>
+    `);
     expect(cssA).not.toContain('green');
     expect(cssB).not.toContain('red');
-    expect(cssB).toContain('green');
+    expect(cssB).toMatchInlineSnapshot(`
+      <style data-styled="true"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .d{color:green;}/*!sc*/
+      data-styled.g2[id="sc-b"]{content:"d,"}/*!sc*/
+      </style>
+    `);
   });
 
   it('should add a nonce to the stylesheet if webpack nonce is detected in the global scope', () => {
@@ -165,8 +224,22 @@ describe('ssr', () => {
     );
     const css = sheet.getStyleTags();
 
-    expect(html).toMatchSnapshot();
-    expect(css).toMatchSnapshot();
+    expect(html).toMatchInlineSnapshot(`
+      <h1 class="sc-b c">
+        Hello SSR!
+      </h1>
+    `);
+    expect(css).toMatchInlineSnapshot(`
+      <style nonce="foo"
+             data-styled="true"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        body{background:papayawhip;}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      .c{color:red;}/*!sc*/
+      data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
+      </style>
+    `);
   });
 
   it('should render CSS in the order the components were defined, not rendered', () => {
@@ -188,8 +261,24 @@ describe('ssr', () => {
     );
     const css = sheet.getStyleTags();
 
-    expect(html).toMatchSnapshot();
-    expect(css).toMatchSnapshot();
+    expect(html).toMatchInlineSnapshot(`
+      <div>
+        <h2 class="TWO a">
+        </h2>
+        <h1 class="ONE b">
+        </h1>
+      </div>
+    `);
+    expect(css).toMatchInlineSnapshot(`
+      <style data-styled="true"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .b{color:red;}/*!sc*/
+      data-styled.g1[id="ONE"]{content:"b,"}/*!sc*/
+      .a{color:blue;}/*!sc*/
+      data-styled.g2[id="TWO"]{content:"a,"}/*!sc*/
+      </style>
+    `);
   });
 
   it('should return a generated React style element', () => {
@@ -215,7 +304,19 @@ describe('ssr', () => {
 
     expect(element.props.dangerouslySetInnerHTML).toBeDefined();
     expect(element.props.children).not.toBeDefined();
-    expect(element.props).toMatchSnapshot();
+    expect(element.props).toMatchInlineSnapshot(`
+      {
+        "dangerouslySetInnerHTML": {
+          "__html": "body{background:papayawhip;}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      .c{color:red;}/*!sc*/
+      data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
+      ",
+        },
+        "data-styled": "",
+        "data-styled-version": "JEST_MOCK_VERSION",
+      }
+    `);
   });
 
   it('should return a generated React style element with nonce if webpack nonce is preset in the global scope', () => {
@@ -254,7 +355,15 @@ describe('ssr', () => {
     renderToString(sheet.collectStyles(<Heading>Hello!</Heading>));
 
     const css = sheet.getStyleTags();
-    expect(css).toContain('nonce="constructor-nonce"');
+    expect(css).toMatchInlineSnapshot(`
+      <style nonce="constructor-nonce"
+             data-styled="true"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .b{color:red;}/*!sc*/
+      data-styled.g1[id="sc-a"]{content:"b,"}/*!sc*/
+      </style>
+    `);
     expect(css).not.toContain('auto-nonce');
   });
 
@@ -281,7 +390,15 @@ describe('ssr', () => {
     renderToString(sheet.collectStyles(<Heading>Hello!</Heading>));
 
     const css = sheet.getStyleTags();
-    expect(css).toContain('nonce="detected-nonce"');
+    expect(css).toMatchInlineSnapshot(`
+      <style nonce="detected-nonce"
+             data-styled="true"
+             data-styled-version="JEST_MOCK_VERSION"
+      >
+        .b{color:green;}/*!sc*/
+      data-styled.g1[id="sc-a"]{content:"b,"}/*!sc*/
+      </style>
+    `);
   });
 
   it('should omit nonce attribute when no nonce is available', () => {
@@ -680,8 +797,15 @@ describe('ssr', () => {
       );
       const css = sheet.getStyleTags();
 
-      expect(css).toContain('red');
-      expect(css).toContain('blue');
+      expect(css).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .b{color:red;}/*!sc*/
+        .c{color:blue;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"b,c,"}/*!sc*/
+        </style>
+      `);
       expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/has been created dynamically/i));
     });
 
@@ -731,7 +855,14 @@ describe('ssr', () => {
       renderToString(sheet.collectStyles(<StyledDiv $color="purple">Content</StyledDiv>));
       const css = sheet.getStyleTags();
 
-      expect(css).toContain('purple');
+      expect(css).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .b{color:purple;padding:10px;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"b,"}/*!sc*/
+        </style>
+      `);
       expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/has been created dynamically/i));
     });
 
@@ -776,9 +907,16 @@ describe('ssr', () => {
       );
       const css = sheet.getStyleTags();
 
-      expect(css).toContain('blue');
-      expect(css).toContain('gray');
-      expect(css).toContain('red');
+      expect(css).toMatchInlineSnapshot(`
+        <style data-styled="true"
+               data-styled-version="JEST_MOCK_VERSION"
+        >
+          .b{background:blue;padding:8px;}/*!sc*/
+        .c{background:gray;padding:16px;}/*!sc*/
+        .d{background:red;padding:24px;}/*!sc*/
+        data-styled.g1[id="sc-a"]{content:"b,c,d,"}/*!sc*/
+        </style>
+      `);
       expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/has been created dynamically/i));
     });
   });

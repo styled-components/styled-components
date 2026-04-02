@@ -420,11 +420,40 @@ describe('rehydration', () => {
       const { rerender } = render(<Wrapper showSecond={true} />);
 
       // Both instances should render their styles
-      expect(getRenderedCSS()).toContain('font-size: 16px');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "html {
+          font-size: 16px;
+        }
+        html {
+          font-size: 16px;
+        }
+        body {
+          background: papayawhip;
+        }
+        .c {
+          color: blue;
+        }
+        .d {
+          color: red;
+        }"
+      `);
 
       // Unmount second instance — first instance's styles must survive
       rerender(<Wrapper showSecond={false} />);
-      expect(getRenderedCSS()).toContain('font-size: 16px');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "html {
+          font-size: 16px;
+        }
+        body {
+          background: papayawhip;
+        }
+        .c {
+          color: blue;
+        }
+        .d {
+          color: red;
+        }"
+      `);
     });
 
     it('should preserve rehydrated dynamic global styles when one of multiple instances unmounts', () => {
@@ -443,11 +472,40 @@ describe('rehydration', () => {
       }
 
       const { rerender } = render(<Wrapper showSecond={true} />);
-      expect(getRenderedCSS()).toContain('font-size: 16px');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "html {
+          font-size: 16px;
+        }
+        html {
+          font-size: 16px;
+        }
+        body {
+          background: papayawhip;
+        }
+        .c {
+          color: blue;
+        }
+        .d {
+          color: red;
+        }"
+      `);
 
       // Unmount second instance — first instance's styles must survive
       rerender(<Wrapper showSecond={false} />);
-      expect(getRenderedCSS()).toContain('font-size: 16px');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "html {
+          font-size: 16px;
+        }
+        body {
+          background: papayawhip;
+        }
+        .c {
+          color: blue;
+        }
+        .d {
+          color: red;
+        }"
+      `);
     });
 
     it('should handle prop change on surviving instance after rehydration + unmount', () => {
@@ -465,14 +523,56 @@ describe('rehydration', () => {
       }
 
       const { rerender } = render(<Wrapper showSecond={true} size="16px" />);
-      expect(getRenderedCSS()).toContain('font-size: 16px');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "html {
+          font-size: 16px;
+        }
+        html {
+          font-size: 16px;
+        }
+        body {
+          background: papayawhip;
+        }
+        .c {
+          color: blue;
+        }
+        .d {
+          color: red;
+        }"
+      `);
 
       // Unmount second, then change prop on survivor
       rerender(<Wrapper showSecond={false} size="16px" />);
-      expect(getRenderedCSS()).toContain('font-size: 16px');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "html {
+          font-size: 16px;
+        }
+        body {
+          background: papayawhip;
+        }
+        .c {
+          color: blue;
+        }
+        .d {
+          color: red;
+        }"
+      `);
 
       rerender(<Wrapper showSecond={false} size="20px" />);
-      expect(getRenderedCSS()).toContain('font-size: 20px');
+      expect(getRenderedCSS()).toMatchInlineSnapshot(`
+        "html {
+          font-size: 20px;
+        }
+        body {
+          background: papayawhip;
+        }
+        .c {
+          color: blue;
+        }
+        .d {
+          color: red;
+        }"
+      `);
       expect(getRenderedCSS()).not.toContain('font-size: 16px');
     });
   });

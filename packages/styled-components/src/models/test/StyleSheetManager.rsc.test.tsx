@@ -44,7 +44,11 @@ describe('StyleSheetManager RSC mode', () => {
       React.createElement(StyleSheetManager, null, React.createElement('div', null, 'hello'))
     );
 
-    expect(html).toContain('hello');
+    expect(html).toMatchInlineSnapshot(`
+      <div>
+        hello
+      </div>
+    `);
   });
 
   it('styled components render correctly inside StyleSheetManager', () => {
@@ -57,7 +61,12 @@ describe('StyleSheetManager RSC mode', () => {
       React.createElement(StyleSheetManager, null, React.createElement(Box))
     );
 
-    expect(html).toContain('display:flex');
-    expect(html).toContain('padding:8px');
+    expect(html).toMatchInlineSnapshot(`
+      <style data-styled>
+        .bRHkvB{display:flex;padding:8px;}
+      </style>
+      <div class="sc-kqxcKS bRHkvB">
+      </div>
+    `);
   });
 });

@@ -36,6 +36,12 @@ describe('dead-code elimination: browser build', () => {
   it('exports createTheme', () => {
     expect(browserESM).toContain('createTheme');
   });
+
+  it('eliminates ServerStyleSheet streaming internals', () => {
+    expect(browserESM).not.toContain('CLOSING_TAG');
+    expect(browserESM).not.toContain('appendStyleChunks');
+    expect(browserESM).not.toContain('Transform');
+  });
 });
 
 describe('dead-code elimination: server build', () => {
@@ -166,6 +172,83 @@ describe('stylisPluginRSC tree-shaking', () => {
 
       // Sanity: core styled-components code IS present
       expect(bundle.length).toBeGreaterThan(1000);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  }, 30000);
+});
+
+describe('bundle size', () => {
+  it('standalone minified bundle is under 13kB gzip', () => {
+    const zlib = require('zlib');
+    const minified = fs.readFileSync(path.join(distDir, 'styled-components.min.js'));
+    const gzipped = zlib.gzipSync(minified);
+    const sizeKB = gzipped.length / 1024;
+
+    console.log(`  styled-components.min.js: ${sizeKB.toFixed(2)}kB gzip`);
+
+    expect(sizeKB).toBeLessThan(13);
+  });
+
+  it('production bundle size with real bundler tree-shaking', async () => {
+    const webpack = require('webpack');
+    const zlib = require('zlib');
+    const os = require('os');
+
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-size-'));
+    const entryFile = path.join(tmpDir, 'entry.js');
+
+    try {
+      fs.writeFileSync(
+        entryFile,
+        [
+          `import styled, { css, keyframes, createGlobalStyle, ThemeProvider } from '${distDir}/styled-components.browser.esm.js';`,
+          'const fade = keyframes`from{opacity:1}to{opacity:0}`;',
+          'const mixin = css`color: red;`;',
+          'const GlobalStyle = createGlobalStyle`body{margin:0}`;',
+          'const Box = styled.div`${mixin}animation:${fade} 1s;`;',
+          'const Link = styled(Box)`text-decoration:none;`;',
+          'export { Box, Link, GlobalStyle, ThemeProvider };',
+        ].join('\n')
+      );
+
+      const stats: any = await new Promise((resolve, reject) => {
+        webpack(
+          {
+            mode: 'production',
+            entry: entryFile,
+            output: { path: tmpDir, filename: 'bundle.js', library: { type: 'module' } },
+            experiments: { outputModule: true },
+            externals: {
+              react: 'react',
+              'react-dom': 'react-dom',
+              '@emotion/is-prop-valid': '@emotion/is-prop-valid',
+              stylis: 'stylis',
+            },
+          },
+          (err: any, stats: any) => (err ? reject(err) : resolve(stats))
+        );
+      });
+
+      if (stats.hasErrors()) {
+        throw new Error(stats.compilation.errors.map((e: any) => e.message).join('\n'));
+      }
+
+      const bundle = fs.readFileSync(path.join(tmpDir, 'bundle.js'), 'utf8');
+      const gzipped = zlib.gzipSync(bundle);
+      const sizeKB = gzipped.length / 1024;
+
+      console.log(`  production bundle (webpack): ${sizeKB.toFixed(2)}kB gzip`);
+
+      // Verify unused exports are tree-shaken
+      expect(bundle).not.toContain('WithTheme');
+      expect(bundle).not.toContain('stylisPluginRSC');
+      expect(bundle).not.toContain('rewriteSelector');
+      expect(bundle).not.toContain(':not(style[data-styled])');
+      expect(bundle).not.toContain('ServerStyleSheet');
+      expect(bundle).not.toContain('isStyledComponent');
+
+      expect(sizeKB).toBeLessThan(8);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }

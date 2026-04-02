@@ -39,12 +39,12 @@ describe('memoization correctness', () => {
 
     const renderer = TestRenderer.create(<Comp $color="red" />);
     const redClass = renderer.root.findByType('div').props.className;
-    expect(getCSS(document)).toContain('color:red');
+    expect(getCSS(document)).toMatchInlineSnapshot(`".b{color:red;}"`);
 
     renderer.update(<Comp $color="blue" />);
     const blueClass = renderer.root.findByType('div').props.className;
     expect(blueClass).not.toBe(redClass);
-    expect(getCSS(document)).toContain('color:blue');
+    expect(getCSS(document)).toMatchInlineSnapshot(`".b{color:red;}.c{color:blue;}"`);
 
     renderer.unmount();
   });
@@ -63,7 +63,9 @@ describe('memoization correctness', () => {
     }
 
     // i=99 -> odd -> blue
-    expect(getCSS(document)).toContain('color:blue');
+    expect(getCSS(document)).toMatchInlineSnapshot(
+      `".b{color:red;font-size:14px;}.c{color:blue;font-size:16px;}"`
+    );
 
     // Back to red — should get the same className as the first render
     renderer.update(<Comp $color="red" />);
@@ -84,7 +86,7 @@ describe('memoization correctness', () => {
       </ThemeProvider>
     );
     const redClass = renderer.root.findByType('div').props.className;
-    expect(getCSS(document)).toContain('color:red');
+    expect(getCSS(document)).toMatchInlineSnapshot(`".b{color:red;}"`);
 
     renderer.update(
       <ThemeProvider theme={{ color: 'blue' }}>
@@ -93,7 +95,7 @@ describe('memoization correctness', () => {
     );
     const blueClass = renderer.root.findByType('div').props.className;
     expect(blueClass).not.toBe(redClass);
-    expect(getCSS(document)).toContain('color:blue');
+    expect(getCSS(document)).toMatchInlineSnapshot(`".b{color:red;}.c{color:blue;}"`);
 
     renderer.unmount();
   });
@@ -130,7 +132,7 @@ describe('memoization correctness', () => {
     });
 
     expect(parentRenderCount).toBe(initial + 3);
-    expect(getCSS(document)).toContain('color:red');
+    expect(getCSS(document)).toMatchInlineSnapshot(`".b{color:red;}"`);
 
     renderer.unmount();
   });
@@ -175,14 +177,16 @@ describe('memoization correctness', () => {
 
     const renderer = TestRenderer.create(<Extended $color="red" />);
     const first = renderer.root.findByType('div').props.className;
-    expect(getCSS(document)).toContain('color:red');
+    expect(getCSS(document)).toMatchInlineSnapshot(`".c{color:red;}.d{font-weight:bold;}"`);
 
     renderer.update(<Extended $color="red" />);
     expect(renderer.root.findByType('div').props.className).toBe(first);
 
     renderer.update(<Extended $color="blue" />);
     expect(renderer.root.findByType('div').props.className).not.toBe(first);
-    expect(getCSS(document)).toContain('color:blue');
+    expect(getCSS(document)).toMatchInlineSnapshot(
+      `".c{color:red;}.e{color:blue;}.d{font-weight:bold;}"`
+    );
 
     renderer.unmount();
   });
@@ -211,7 +215,9 @@ describe('memoization correctness', () => {
 
     renderer.update(<Comp {...props} $c="purple" />);
     expect(renderer.root.findByType('div').props.className).not.toBe(first);
-    expect(getCSS(document)).toContain('border-color:purple');
+    expect(getCSS(document)).toMatchInlineSnapshot(
+      `".b{color:red;background:white;border-color:blue;outline-color:green;text-decoration-color:yellow;}.c{color:red;background:white;border-color:purple;outline-color:green;text-decoration-color:yellow;}"`
+    );
 
     renderer.unmount();
   });
@@ -248,10 +254,9 @@ describe('memoization correctness', () => {
       </div>
     );
 
-    const css = getCSS(document);
-    expect(css).toContain('color:red');
-    expect(css).toContain('color:blue');
-    expect(css).toContain('color:green');
+    expect(getCSS(document)).toMatchInlineSnapshot(
+      `".b{color:red;}.c{color:blue;}.d{color:green;}"`
+    );
 
     // Re-render — each sibling caches independently
     renderer.update(
@@ -262,10 +267,9 @@ describe('memoization correctness', () => {
       </div>
     );
 
-    const css2 = getCSS(document);
-    expect(css2).toContain('color:red');
-    expect(css2).toContain('color:blue');
-    expect(css2).toContain('color:green');
+    expect(getCSS(document)).toMatchInlineSnapshot(
+      `".b{color:red;}.c{color:blue;}.d{color:green;}"`
+    );
 
     renderer.unmount();
   });

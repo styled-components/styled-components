@@ -25,7 +25,7 @@ describe('createGlobalStyle RSC mode', () => {
     // This would break conditional global styles (e.g. body lock on modal).
     expect(html).toMatchInlineSnapshot(`
       <style data-styled-global="sc-global-khwQqP">
-        body{background:red;}/*!sc*/
+        body{background:red;}
       </style>
     `);
   });
@@ -41,12 +41,12 @@ describe('createGlobalStyle RSC mode', () => {
     // Same component should produce same key even with different prop values
     expect(html1).toMatchInlineSnapshot(`
       <style data-styled-global="sc-global-kVtqfD">
-        body{background:red;}/*!sc*/
+        body{background:red;}
       </style>
     `);
     expect(html2).toMatchInlineSnapshot(`
       <style data-styled-global="sc-global-kVtqfD">
-        body{background:blue;}/*!sc*/
+        body{background:blue;}
       </style>
     `);
   });
@@ -65,10 +65,14 @@ describe('createGlobalStyle RSC mode', () => {
       </>
     );
 
-    // Each instance should emit its own <style> tag
-    const styleMatches = html.match(/<style/g);
-    expect(styleMatches).toHaveLength(2);
-    expect(html).toContain('body{margin:0;}');
+    expect(html).toMatchInlineSnapshot(`
+      <style data-styled-global="sc-global-yXuMc">
+        body{margin:0;}
+      </style>
+      <style data-styled-global="sc-global-yXuMc">
+        body{margin:0;}
+      </style>
+    `);
   });
 
   it('renders multiple instances with different dynamic props in one tree', () => {
@@ -83,11 +87,14 @@ describe('createGlobalStyle RSC mode', () => {
       </>
     );
 
-    // Each instance should emit its own <style> tag with its own CSS
-    expect(html).toContain('background:red;');
-    expect(html).toContain('background:blue;');
-    const styleMatches = html.match(/<style/g);
-    expect(styleMatches).toHaveLength(2);
+    expect(html).toMatchInlineSnapshot(`
+      <style data-styled-global="sc-global-kVtqfD">
+        body{background:red;}
+      </style>
+      <style data-styled-global="sc-global-kVtqfD">
+        body{background:blue;}
+      </style>
+    `);
   });
 
   it('emits correct CSS across independent RSC render passes (no hydration)', () => {
@@ -100,16 +107,21 @@ describe('createGlobalStyle RSC mode', () => {
     const html2 = ReactDOMServer.renderToString(<GlobalStyle $size="16px" />);
     const html3 = ReactDOMServer.renderToString(<GlobalStyle $size="18px" />);
 
-    // Each should produce correct, independent output
-    expect(html1).toContain('font-size:14px;');
-    expect(html2).toContain('font-size:16px;');
-    expect(html3).toContain('font-size:18px;');
-
-    // No cross-contamination — each render's output should only contain its own CSS
-    expect(html1).not.toContain('16px');
-    expect(html1).not.toContain('18px');
-    expect(html2).not.toContain('14px');
-    expect(html3).not.toContain('14px');
+    expect(html1).toMatchInlineSnapshot(`
+      <style data-styled-global="sc-global-fLdnMX">
+        html{font-size:14px;}
+      </style>
+    `);
+    expect(html2).toMatchInlineSnapshot(`
+      <style data-styled-global="sc-global-fLdnMX">
+        html{font-size:16px;}
+      </style>
+    `);
+    expect(html3).toMatchInlineSnapshot(`
+      <style data-styled-global="sc-global-fLdnMX">
+        html{font-size:18px;}
+      </style>
+    `);
   });
 
   it('renders themed global style gracefully in RSC (theme is undefined)', () => {
@@ -119,7 +131,11 @@ describe('createGlobalStyle RSC mode', () => {
 
     // No ThemeProvider in RSC — theme is undefined, should not crash
     const html = ReactDOMServer.renderToString(<GlobalStyle />);
-    expect(html).toContain('color:black;');
+    expect(html).toMatchInlineSnapshot(`
+      <style data-styled-global="sc-global-ekSA-DU">
+        body{color:black;}
+      </style>
+    `);
   });
 
   it('renders global style and styled component in the same RSC tree', () => {
@@ -139,9 +155,16 @@ describe('createGlobalStyle RSC mode', () => {
       </>
     );
 
-    // Both should emit their styles — global as data-styled-global, component via precedence
-    expect(html).toContain('margin:0;');
-    expect(html).toContain('color:red;');
-    expect(html).toContain('data-styled-global');
+    expect(html).toMatchInlineSnapshot(`
+      <style data-styled-global="sc-global-yXuMc">
+        body{margin:0;}
+      </style>
+      <style data-styled>
+        .eBSjvc{color:red;}
+      </style>
+      <h1 class="sc-kqxcKS eBSjvc">
+        Hello
+      </h1>
+    `);
   });
 });
