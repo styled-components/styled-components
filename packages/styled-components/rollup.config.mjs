@@ -5,7 +5,7 @@ import json from 'rollup-plugin-json';
 import nodeResolve from 'rollup-plugin-node-resolve';
 import replace from 'rollup-plugin-replace';
 import sourceMaps from 'rollup-plugin-sourcemaps';
-import { terser } from 'rollup-plugin-terser';
+import terser from '@rollup/plugin-terser';
 const req = createRequire(import.meta.url);
 
 const pkg = req('./package.json');

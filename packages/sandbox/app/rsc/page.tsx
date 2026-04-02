@@ -1,4 +1,4 @@
-import styled, { keyframes } from 'styled-components';
+import styled, { createGlobalStyle, keyframes } from 'styled-components';
 import { TestStatus, type TestCheck } from '../components/auto-test';
 import { TestSummary } from '../components/test-summary';
 import BackLink from '../components/back-link';
@@ -177,6 +177,16 @@ const test8Checks: TestCheck[] = [
   },
 ];
 
+const test9Checks: TestCheck[] = [
+  {
+    ref: 'dedup-marker',
+    type: 'style',
+    prop: 'border-style',
+    expected: 'dashed',
+    label: 'Dedup marker has dashed border',
+  },
+];
+
 const rscSuites = [
   { name: '1. Module-level', checks: test1Checks },
   { name: '2. Cross-boundary', checks: test2Checks },
@@ -186,6 +196,7 @@ const rscSuites = [
   { name: '6. as prop', checks: test6Checks },
   { name: '7. CSS vars', checks: test7Checks },
   { name: '8. Child-index selectors', checks: test8Checks },
+  { name: '9. GlobalStyle dedup', checks: test9Checks },
 ];
 
 export default function RSCTestPage() {
@@ -468,6 +479,33 @@ export default function RSCTestPage() {
               </NthDemoList>
             </Column>
           </Row>
+        </Demo>
+      </Section>
+
+      {/* 9. GlobalStyle dedup in RSC */}
+      <Section>
+        <SectionTitle>
+          9. GlobalStyle dedup in RSC <TestStatus checks={test9Checks} />
+        </SectionTitle>
+        <SectionDesc>
+          Multiple instances of the same static <Code>createGlobalStyle</Code> in one RSC render
+          should emit only one <Code>&lt;style&gt;</Code> tag (identical CSS is deduped via{' '}
+          <Code>React.cache</Code>). Inspect the HTML source to verify only one{' '}
+          <Code>data-styled-global=&quot;{DedupGlobalStyle.styledComponentId}&quot;</Code> tag exists.
+        </SectionDesc>
+        <HintText>
+          If broken: you&apos;ll see multiple identical <Code>&lt;style data-styled-global&gt;</Code>{' '}
+          tags in the page source. The visual test below just confirms the global style applied.
+        </HintText>
+        <DedupGlobalStyle />
+        <DedupGlobalStyle />
+        <DedupGlobalStyle />
+        <Demo>
+          <DedupMarker data-testid="dedup-marker">
+            This box has a dashed border from <Code>DedupGlobalStyle</Code>. Check page source — the
+            global style tag should appear only once despite three{' '}
+            <Code>&lt;DedupGlobalStyle /&gt;</Code> instances above.
+          </DedupMarker>
         </Demo>
       </Section>
     </Container>
@@ -766,4 +804,22 @@ const NthChildItem = styled(NthBaseItem)`
     color: #2563eb;
     border-color: #2563eb;
   }
+`;
+
+// ---------------------------------------------------------------------------
+// 9. GlobalStyle dedup
+// ---------------------------------------------------------------------------
+
+const DedupGlobalStyle = createGlobalStyle`
+  [data-testid="dedup-marker"] {
+    border-style: dashed !important;
+  }
+`;
+
+const DedupMarker = styled.div`
+  padding: 16px;
+  border: 2px solid ${theme.colors.border};
+  border-radius: 8px;
+  font-size: 14px;
+  color: ${theme.colors.text};
 `;

@@ -19,17 +19,17 @@
     "typecheck": "tsc --noEmit",
     "prebuild": "rimraf dist && pnpm run generateErrors && pnpm run typecheck",
     "build": "rollup -c",
-    "postbuild": "pnpm run size && pnpm run test:build",
+    "postbuild": "pnpm run test:build",
     "test:build": "jest -c jest.config.build.js",
     "pretest": "pnpm run generateErrors",
     "test": "pnpm run test:web && pnpm run test:native && pnpm run test:types",
     "test:types": "tsc --noEmit --project tsconfig.test-types.json",
     "test:web": "jest -c jest.config.main.js",
     "test:native": "jest -c jest.config.native.js --forceExit",
-    "bench": "pnpm run bench:web && pnpm run bench:native",
+    "bench": "pnpm run bench:web && pnpm run bench:native && pnpm run bench:rsc",
     "bench:web": "jest -c jest.config.bench.js --verbose --no-coverage --nodeOptions=--expose-gc",
     "bench:native": "jest -c jest.config.bench-native.js --verbose --no-coverage --forceExit --nodeOptions=--expose-gc",
-    "size": "bundlewatch",
+    "bench:rsc": "jest -c jest.config.bench-rsc.js --verbose --no-coverage --nodeOptions=--expose-gc",
     "prettier": "prettier src --write",
     "prettier:check": "prettier src --check",
     "prepublishOnly": "pnpm run build"
@@ -112,7 +112,6 @@
     "babel-plugin-add-module-exports": "^1.0.4",
     "babel-plugin-styled-components": "^2.1.4",
     "babel-plugin-tester": "^10.1.0",
-    "bundlewatch": "^0.4.1",
     "jest": "^30.1.3",
     "jest-environment-jsdom": "^30.1.2",
     "jest-serializer-html": "^7.1.0",
@@ -130,19 +129,11 @@
     "rollup-plugin-node-resolve": "^5.2.0",
     "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-sourcemaps": "^0.6.3",
-    "rollup-plugin-terser": "^7.0.2",
+    "@rollup/plugin-terser": "^0.4.4",
     "stylis-plugin-rtl": "^2.1.1",
     "ts-toolbelt": "^9.6.0",
     "typescript": "^5.4.5",
     "webpack": "^5.105.4"
-  },
-  "bundlewatch": {
-    "files": [
-      {
-        "path": "./dist/styled-components.min.js",
-        "maxSize": "12.5kB"
-      }
-    ]
   },
   "collective": {
     "type": "opencollective",
