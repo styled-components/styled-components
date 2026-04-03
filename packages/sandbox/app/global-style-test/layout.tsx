@@ -1,5 +1,4 @@
 import styled, { createGlobalStyle } from 'styled-components';
-import BackLink from '../components/back-link';
 import AutopilotClient from './autopilot-client';
 import { GlobalStyleChecks } from './global-style-checks';
 import NavClient from './nav-client';
@@ -30,11 +29,10 @@ export default function GlobalStyleTestLayout({ children }: { children: React.Re
     <>
       <LayoutGlobalStyle />
       <Wrapper>
-        <BackLink />
         <PageTitle>Global Style Lifecycle Tests</PageTitle>
         <Desc>
-          The colorful gradient background comes from a{' '}
-          <code>createGlobalStyle</code> in this shared layout.
+          The colorful gradient background comes from a <code>createGlobalStyle</code> in this
+          shared layout.
         </Desc>
         <GlobalStyleChecks />
         <NavClient />
@@ -60,4 +58,3 @@ const Desc = styled.p`
   margin-bottom: 8px;
   color: var(--sc-colors-textMuted, #6b7280);
 `;
-
