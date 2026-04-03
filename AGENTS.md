@@ -108,7 +108,12 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - Use built-in `NoInfer` (TS 5.4+) internally; the export in `types.ts` is for downstream consumers only
 - `FastOmit<A, K> & B` (intersection) is 2.4x fewer instantiations than a single mapped type with per-key conditionals
 - Homomorphic mapped types (`{ [K in keyof P]: ... }`) break React JSX overload resolution
-- Profile: `npx tsc --noEmit --extendedDiagnostics --project tsconfig.test-types.json` with 200+ styled components
+- Flattening nested `Substitute` into parallel `FastOmit`s increases instantiations — TS deduplicates nested structures better
+- Don't replace built-in `Omit` with `FastOmit` in `OverrideStyle` — built-in `Omit` (Pick + Exclude) is more optimized (+17% instantiations when replaced)
+- Variance annotations (`out`/`in out`) on `Styled`, `PolymorphicComponent`, `IStyledComponentBase`, etc. reduce variance computation (-72%) and memory (-16%)
+- `domElements.forEach` uses `(styled as any)` cast — types are already declared via mapped type on the styled const, avoiding 120 redundant `Styled<>` instantiations
+- Profile: `~/.claude/tools/tsc-perf.sh measure tsconfig.test-types.json` or `npx tsc --noEmit --extendedDiagnostics --project tsconfig.test-types.json`. Delete tsbuildinfo for clean measurement.
+- `npx @typescript/analyze-trace /tmp/tsc-perf-trace` detects hot spots and duplicate packages
 
 ## V8 Gotchas
 
