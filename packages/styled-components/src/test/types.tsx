@@ -294,9 +294,10 @@ const Text = styled.p``;
   ref={(el: HTMLLabelElement | null) => {}}
   onCopy={(e: React.ClipboardEvent<HTMLLabelElement>) => {}}
 />;
-<Text as="label" ref={(e: HTMLLabelElement | null) => {}} />;
+// @ts-expect-error As prop should change the ref type to HTMLVideoElement
+<Text as="video" ref={(e: HTMLLabelElement | null) => {}} />;
 // TODO(#4305): should error (ref should narrow to HTMLLabelElement via as="label")
-// but RefAttributes<any> on the polymorphic overload accepts any ref type.
+// but ForwardRefExoticComponent base signature accepts any ref type.
 <Text as="label" ref={(e: HTMLParagraphElement | null) => {}} />;
 
 const AttrObjectAsLabel = styled(Text).attrs({ as: 'label' })``;
@@ -478,6 +479,21 @@ TargetWithStaticProperties.foo = 'bar';
 
 const StyledTargetWithStaticProperties = styled(TargetWithStaticProperties)``;
 StyledTargetWithStaticProperties.foo;
+
+// Untyped ref callback must infer the element type, not `any` (#5687)
+const InferredRefDiv = styled.div``;
+<InferredRefDiv
+  ref={ref => {
+    ref;
+  }}
+/>;
+
+const InferredRefButton = styled.button``;
+<InferredRefButton
+  ref={ref => {
+    ref;
+  }}
+/>;
 
 /**
  * forwardedAs ref typing

@@ -38,7 +38,7 @@ export type AnyComponent<P extends BaseObject = any> =
 export type KnownTarget = SupportedHTMLElements | AnyComponent;
 
 export type WebTarget =
-  | string // allow custom elements, etc.
+  | (string & {}) // allow custom elements while preserving literal autocomplete
   | KnownTarget;
 
 export type NativeTarget = AnyComponent;
@@ -232,8 +232,7 @@ export interface PolymorphicComponent<
     AsTarget extends StyledTarget<R> | void = void,
     ForwardedAsTarget extends StyledTarget<R> | void = void,
   >(
-    props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget> &
-      React.RefAttributes<any>
+    props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget>
   ): React.JSX.Element;
 }
 
