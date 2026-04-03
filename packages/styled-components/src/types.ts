@@ -158,15 +158,15 @@ export interface ShouldForwardProp<R extends Runtime> {
   (prop: string, elementToBeCreated: StyledTarget<R>): boolean;
 }
 
-export interface CommonStatics<R extends Runtime, Props extends BaseObject> {
+export interface CommonStatics<out R extends Runtime, in out Props extends BaseObject> {
   attrs: Attrs<Props>[];
   target: StyledTarget<R>;
   shouldForwardProp?: ShouldForwardProp<R> | undefined;
 }
 
 export interface IStyledStatics<
-  R extends Runtime,
-  OuterProps extends BaseObject,
+  out R extends Runtime,
+  in out OuterProps extends BaseObject,
 > extends CommonStatics<R, OuterProps> {
   componentStyle: R extends 'web' ? ComponentStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
@@ -220,58 +220,67 @@ export type PolymorphicComponentProps<
  * any specialized props in the target component.
  */
 export interface PolymorphicComponent<
-  R extends Runtime,
-  BaseProps extends BaseObject,
+  out R extends Runtime,
+  in out BaseProps extends BaseObject,
 > extends React.ForwardRefExoticComponent<
   BaseProps & {
     as?: StyledTarget<R> | undefined;
     forwardedAs?: StyledTarget<R> | undefined;
   }
 > {
-  <
-    AsTarget extends StyledTarget<R> | void = void,
-    ForwardedAsTarget extends StyledTarget<R> | void = void,
-  >(
-    props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget>
+  // Overload for `as` polymorphism. `as` is required here to prevent TS from
+  // falling back to the constraint type (`StyledTarget<R>`) which is too wide.
+  <AsTarget extends StyledTarget<R>, ForwardedAsTarget extends StyledTarget<R> | void = void>(
+    props: PolymorphicComponentProps<R, BaseProps, AsTarget, ForwardedAsTarget> & { as: AsTarget }
+  ): React.JSX.Element;
+
+  // Overload for `forwardedAs` polymorphism (without `as`).
+  <ForwardedAsTarget extends StyledTarget<R>>(
+    props: PolymorphicComponentProps<R, BaseProps, void, ForwardedAsTarget> & {
+      forwardedAs: ForwardedAsTarget;
+    }
+  ): React.JSX.Element;
+
+  // Default overload (no `as`/`forwardedAs`). Avoids Substitute so ref callbacks
+  // get contextual typing even with spread props (#5687).
+  (
+    props: OverrideStyle<
+      NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> &
+        FastOmit<ExecutionProps, 'as' | 'forwardedAs'> & {
+          as?: void;
+          forwardedAs?: void;
+        }
+    >
   ): React.JSX.Element;
 }
 
-export interface IStyledComponentBase<R extends Runtime, Props extends BaseObject = BaseObject>
+export interface IStyledComponentBase<
+  out R extends Runtime,
+  in out Props extends BaseObject = BaseObject,
+>
   extends PolymorphicComponent<R, Props>, IStyledStatics<R, Props>, StyledComponentBrand {
   defaultProps?: (ExecutionProps & Partial<Props>) | undefined;
   toString: () => string;
 }
 
+/**
+ * Intersected with `string` so styled components can be used as computed
+ * property keys in object styles: `{ [MyComponent]: { ... } }`.
+ * The conditional `R extends 'web' ? string : {}` was removed to avoid
+ * a type alias with a conditional — type aliases require full structural
+ * comparison on every use, while this unconditional intersection is cheaper.
+ */
 export type IStyledComponent<
   R extends Runtime,
   Props extends BaseObject = BaseObject,
-> = IStyledComponentBase<R, Props> &
-  /**
-   * TypeScript doesn't allow using a styled component as a key inside object
-   * styles because "A computed property name must be of type 'string', 'number',
-   * 'symbol', or 'any'.". The toString() method only exists in the web runtime.
-   * This hack intersects the `IStyledComponent` type with the built-in `string`
-   * type to keep TSC happy.
-   *
-   * @example
-   *  const H1 = styled.h1({
-   *    fontSize: '2rem'
-   *  });
-   *
-   *  const Header = styled.header({
-   *    [H1]: {
-   *      marginBottom: '1rem'
-   *    }
-   *  })
-   */
-  (R extends 'web' ? string : {});
+> = IStyledComponentBase<R, Props> & string;
 
 // corresponds to createStyledComponent
 export interface IStyledComponentFactory<
-  R extends Runtime,
-  Target extends StyledTarget<R>,
-  OuterProps extends BaseObject,
-  OuterStatics extends BaseObject = BaseObject,
+  out R extends Runtime,
+  in Target extends StyledTarget<R>,
+  in out OuterProps extends BaseObject,
+  out OuterStatics extends BaseObject = BaseObject,
 > {
   <Props extends BaseObject = BaseObject, Statics extends BaseObject = BaseObject>(
     target: Target,

@@ -488,6 +488,20 @@ const InferredRefDiv = styled.div``;
   }}
 />;
 
+// Ref callback inference must survive spread of ComponentPropsWithoutRef (#5687)
+const StyledCheckbox = styled.input``;
+type CheckboxProps = React.ComponentPropsWithoutRef<typeof StyledCheckbox>;
+const checkboxProps: CheckboxProps = { value: 'on' };
+<StyledCheckbox
+  // The ref callback MUST remain untyped — the bug is that TS can't infer the
+  // parameter type when props are spread. Adding an explicit type annotation
+  // (e.g. `ref: HTMLInputElement`) masks the failure. Do not "fix" by adding one.
+  ref={ref => {
+    ref;
+  }}
+  {...checkboxProps}
+/>;
+
 /**
  * forwardedAs ref typing
  */

@@ -13,6 +13,7 @@ overrides:
   brace-expansion: '>=2.0.2'
   lodash: '>=4.17.21'
   yaml: '>=2.7.1'
+  '@types/react': 18.3.28
 
 importers:
 
@@ -105,11 +106,11 @@ importers:
         specifier: ^22.19.15
         version: 22.19.15
       '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
+        specifier: 18.3.28
+        version: 18.3.28
       '@types/react-dom':
         specifier: ^19
-        version: 19.2.3(@types/react@19.2.14)
+        version: 19.2.3(@types/react@18.3.28)
       next:
         specifier: ^16.2.1
         version: 16.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -202,7 +203,7 @@ importers:
         specifier: ^18.19.31
         version: 18.19.130
       '@types/react':
-        specifier: ^18
+        specifier: 18.3.28
         version: 18.3.28
       '@types/react-dom':
         specifier: ^18
@@ -1711,7 +1712,7 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       '@testing-library/dom': ^10.0.0
-      '@types/react': ^18.0.0 || ^19.0.0
+      '@types/react': 18.3.28
       '@types/react-dom': ^18.0.0 || ^19.0.0
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
@@ -1808,12 +1809,12 @@ packages:
   '@types/react-dom@18.3.7':
     resolution: {integrity: sha512-MEe3UeoENYVFXzoXEWsvcpg6ZvlrFNlOQ7EOsvhI3CfAXwzPfO8Qwuxd40nepsYKqyyVQnTdEfv68q91yLcKrQ==}
     peerDependencies:
-      '@types/react': ^18.0.0
+      '@types/react': 18.3.28
 
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
     peerDependencies:
-      '@types/react': ^19.2.0
+      '@types/react': 18.3.28
 
   '@types/react-frame-component@4.1.6':
     resolution: {integrity: sha512-Q99Hv1ky8sdoTIZw5YLGDbbWOcCdwRemxQ7BUU/ypLw2LZ6maov3EuztH5cyBUB4Lnd4MXF/6zwBYQhD/C+Vrg==}
@@ -1824,20 +1825,11 @@ packages:
   '@types/react-test-renderer@18.3.1':
     resolution: {integrity: sha512-vAhnk0tG2eGa37lkU9+s5SoroCsRI08xnsWFiAXOuPH2jqzMbcXvKExXViPi1P5fIklDeCvXqyrdmipFaSkZrA==}
 
-  '@types/react@16.14.69':
-    resolution: {integrity: sha512-NdnAamzkxLX9LBssSdt9Q0tQ3LR94hYxotI4/sRUs1vHKFXaDx9xDbK8S4wuw5bwrxiiXbTYyhKeITtFnwDvEA==}
-
   '@types/react@18.3.28':
     resolution: {integrity: sha512-z9VXpC7MWrhfWipitjNdgCauoMLRdIILQsAEV+ZesIzBq/oUlxk0m3ApZuMFCXdnS4U7KrI+l3WRUEGQ8K1QKw==}
 
-  '@types/react@19.2.14':
-    resolution: {integrity: sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==}
-
   '@types/resolve@0.0.8':
     resolution: {integrity: sha512-auApPaJf3NPfe18hSoJkp8EbZzer2ISk7o8mCC3M9he/a04+gbMF97NkpD2S8riMGvm4BMRI59/SZQSaLTKpsQ==}
-
-  '@types/scheduler@0.16.8':
-    resolution: {integrity: sha512-WZLiwShhwLRmeV6zH+GkbOFT6Z6VklCItrDioxUnv+u4Ll+8vKeFySoFyK/0ctcRpOmwAicELfmys1sDc/Rw+A==}
 
   '@types/shallowequal@1.1.5':
     resolution: {integrity: sha512-8afr1hbNqvZ/FBMY2mcfkkbk7xhlTZN4lVCgQf55YdjUQpWLemmrcvcHg94vjw+ZVIfPa3UZz/sOE6CkaMlDnQ==}
@@ -6934,7 +6926,7 @@ snapshots:
   '@types/enzyme@3.10.19':
     dependencies:
       '@types/cheerio': 0.22.35
-      '@types/react': 16.14.69
+      '@types/react': 18.3.28
 
   '@types/eslint-scope@3.7.7':
     dependencies:
@@ -6995,9 +6987,9 @@ snapshots:
     dependencies:
       '@types/react': 18.3.28
 
-  '@types/react-dom@19.2.3(@types/react@19.2.14)':
+  '@types/react-dom@19.2.3(@types/react@18.3.28)':
     dependencies:
-      '@types/react': 19.2.14
+      '@types/react': 18.3.28
 
   '@types/react-frame-component@4.1.6':
     dependencies:
@@ -7005,32 +6997,20 @@ snapshots:
 
   '@types/react-native@0.71.13':
     dependencies:
-      '@types/react': 19.2.14
+      '@types/react': 18.3.28
 
   '@types/react-test-renderer@18.3.1':
     dependencies:
       '@types/react': 18.3.28
-
-  '@types/react@16.14.69':
-    dependencies:
-      '@types/prop-types': 15.7.15
-      '@types/scheduler': 0.16.8
-      csstype: 3.2.3
 
   '@types/react@18.3.28':
     dependencies:
       '@types/prop-types': 15.7.15
       csstype: 3.2.3
 
-  '@types/react@19.2.14':
-    dependencies:
-      csstype: 3.2.3
-
   '@types/resolve@0.0.8':
     dependencies:
       '@types/node': 18.19.130
-
-  '@types/scheduler@0.16.8': {}
 
   '@types/shallowequal@1.1.5': {}
 

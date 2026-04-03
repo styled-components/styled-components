@@ -42,11 +42,11 @@ type AttrsTarget<
   : FallbackTarget;
 
 export interface Styled<
-  R extends Runtime,
-  Target extends StyledTarget<R>,
-  OuterProps extends object,
-  OuterStatics extends object = BaseObject,
-  AttrsKeys extends keyof any = never,
+  out R extends Runtime,
+  out Target extends StyledTarget<R>,
+  in out OuterProps extends object,
+  out OuterStatics extends object = BaseObject,
+  out AttrsKeys extends keyof any = never,
 > {
   <Props extends object = BaseObject, Statics extends object = BaseObject>(
     initialStyles: Styles<Substitute<OuterProps, NoInfer<Props>>>,

@@ -25,10 +25,11 @@ const styled = baseStyled as typeof baseStyled & {
   [E in SupportedHTMLElements]: StyledInstance<'web', E, React.JSX.IntrinsicElements[E]>;
 };
 
-// Shorthands for all valid HTML Elements
+// Shorthands for all valid HTML Elements.
+// The type assertion avoids 120 Styled<> instantiations during type checking —
+// the correct types are declared on the `styled` const above via the mapped type.
 domElements.forEach(domElement => {
-  // @ts-expect-error some react typing bs
-  styled[domElement] = baseStyled<typeof domElement>(domElement);
+  (styled as any)[domElement] = baseStyled(domElement);
 });
 
 export default styled;
