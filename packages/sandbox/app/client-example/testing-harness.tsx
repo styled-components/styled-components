@@ -15,11 +15,23 @@ const test2Checks: TestCheck[] = [
 ];
 
 const test3Checks: TestCheck[] = [
-  { ref: 'bouncing-box', type: 'style-not', prop: 'animation-name', expected: 'none', label: 'Box has animation' },
+  {
+    ref: 'bouncing-box',
+    type: 'style-not',
+    prop: 'animation-name',
+    expected: 'none',
+    label: 'Box has animation',
+  },
 ];
 
 const test4Checks: TestCheck[] = [
-  { ref: 'disabled-btn', type: 'attr', prop: 'disabled', expected: '', label: 'Button is disabled' },
+  {
+    ref: 'disabled-btn',
+    type: 'attr',
+    prop: 'disabled',
+    expected: '',
+    label: 'Button is disabled',
+  },
 ];
 
 const test5Checks: TestCheck[] = [
@@ -27,8 +39,20 @@ const test5Checks: TestCheck[] = [
 ];
 
 const test6Checks: TestCheck[] = [
-  { ref: 'truncated-text', type: 'style', prop: 'text-overflow', expected: 'ellipsis', label: 'Text truncates' },
-  { ref: 'truncated-text', type: 'style', prop: 'white-space', expected: 'nowrap', label: 'No wrap' },
+  {
+    ref: 'truncated-text',
+    type: 'style',
+    prop: 'text-overflow',
+    expected: 'ellipsis',
+    label: 'Text truncates',
+  },
+  {
+    ref: 'truncated-text',
+    type: 'style',
+    prop: 'white-space',
+    expected: 'nowrap',
+    label: 'No wrap',
+  },
 ];
 
 const test7Checks: TestCheck[] = [
@@ -86,20 +110,18 @@ export function ClientTestingHarness() {
     <Container>
       <Title>Client Component Tests</Title>
       <TestSummary suites={clientSuites} />
-      <Subtitle>
-        All dynamic tests run on autopilot. Watch for continuous changes.
-      </Subtitle>
+      <Subtitle>All dynamic tests run on autopilot. Watch for continuous changes.</Subtitle>
 
       {/* 1. Dynamic variant switching */}
       <Section>
-        <SectionTitle>1. Dynamic variant styling <TestStatus checks={test1Checks} /></SectionTitle>
+        <SectionTitle>
+          1. Dynamic variant styling <TestStatus checks={test1Checks} />
+        </SectionTitle>
         <SectionDesc>
-          The card cycles through variants automatically every 1.5s:
-          default (surface bg) &rarr; active (blue bg) &rarr; error (red tint).
+          The card cycles through variants automatically every 1.5s: default (surface bg) &rarr;
+          active (blue bg) &rarr; error (red tint).
         </SectionDesc>
-        <HintText>
-          If broken: the card never changes appearance.
-        </HintText>
+        <HintText>If broken: the card never changes appearance.</HintText>
         <VariantCard $variant={variant} data-testid="variant-card">
           Current variant: <strong>{variant}</strong>
         </VariantCard>
@@ -107,10 +129,12 @@ export function ClientTestingHarness() {
 
       {/* 2. Runtime color via transient prop */}
       <Section>
-        <SectionTitle>2. Runtime color (transient prop) <TestStatus checks={test2Checks} /></SectionTitle>
+        <SectionTitle>
+          2. Runtime color (transient prop) <TestStatus checks={test2Checks} />
+        </SectionTitle>
         <SectionDesc>
-          The text below cycles through 5 colors automatically every 1.2s.
-          Uses <code>$color</code> transient prop (not forwarded to DOM).
+          The text below cycles through 5 colors automatically every 1.2s. Uses <code>$color</code>{' '}
+          transient prop (not forwarded to DOM).
         </SectionDesc>
         <HintText>
           If broken: text color is static, or an unknown-attribute DOM warning appears.
@@ -122,27 +146,27 @@ export function ClientTestingHarness() {
 
       {/* 3. Keyframe animation */}
       <Section>
-        <SectionTitle>3. Keyframe animation <TestStatus checks={test3Checks} /></SectionTitle>
-        <SectionDesc>
-          The box should continuously bounce up and down in a loop.
-        </SectionDesc>
-        <HintText>
-          If broken: the box is static (no movement).
-        </HintText>
+        <SectionTitle>
+          3. Keyframe animation <TestStatus checks={test3Checks} />
+        </SectionTitle>
+        <SectionDesc>The box should continuously bounce up and down in a loop.</SectionDesc>
+        <HintText>If broken: the box is static (no movement).</HintText>
         <BouncingBox data-testid="bouncing-box" />
       </Section>
 
       {/* 4. attrs() behavior (#5689, #5691) */}
       <Section>
-        <SectionTitle>4. attrs() static props <TestStatus checks={test4Checks} /></SectionTitle>
+        <SectionTitle>
+          4. attrs() static props <TestStatus checks={test4Checks} />
+        </SectionTitle>
         <SectionDesc>
           The button gets <code>disabled</code> from{' '}
-          <code>.attrs({'{'} disabled: true {'}'})</code>. It should be
-          greyed out and unclickable.
+          <code>
+            .attrs({'{'} disabled: true {'}'})
+          </code>
+          . It should be greyed out and unclickable.
         </SectionDesc>
-        <HintText>
-          If broken: the button looks normal and is clickable.
-        </HintText>
+        <HintText>If broken: the button looks normal and is clickable.</HintText>
         <DisabledButton data-testid="disabled-btn" onClick={() => alert('should not fire')}>
           Cannot click me
         </DisabledButton>
@@ -150,34 +174,42 @@ export function ClientTestingHarness() {
 
       {/* 5. Explicit undefined preserves prop (#5683) */}
       <Section>
-        <SectionTitle>5. Explicit undefined override (#5683) <TestStatus checks={test5Checks} /></SectionTitle>
+        <SectionTitle>
+          5. Explicit undefined override (#5683) <TestStatus checks={test5Checks} />
+        </SectionTitle>
         <SectionDesc>
-          Passing <code>as={'{undefined}'}</code> should render the default
-          element (button), not crash.
+          Passing <code>as={'{undefined}'}</code> should render the default element (button), not
+          crash.
         </SectionDesc>
         <HintText>If broken: component crashes or renders the wrong element type.</HintText>
-        <UndefinedAsTest as={undefined} data-testid="undefined-as">Renders as default (button)</UndefinedAsTest>
+        <UndefinedAsTest as={undefined} data-testid="undefined-as">
+          Renders as default (button)
+        </UndefinedAsTest>
       </Section>
 
       {/* 6. css helper composition */}
       <Section>
-        <SectionTitle>6. css helper composition <TestStatus checks={test6Checks} /></SectionTitle>
+        <SectionTitle>
+          6. css helper composition <TestStatus checks={test6Checks} />
+        </SectionTitle>
         <SectionDesc>
-          Shared style fragments via the <code>css</code> helper should compose
-          correctly. The text should truncate with an ellipsis.
+          Shared style fragments via the <code>css</code> helper should compose correctly. The text
+          should truncate with an ellipsis.
         </SectionDesc>
         <HintText>If broken: text wraps instead of truncating with an ellipsis.</HintText>
         <TruncatedText data-testid="truncated-text">
-          This text should truncate with an ellipsis if it overflows its container width instead of wrapping to multiple lines.
+          This text should truncate with an ellipsis if it overflows its container width instead of
+          wrapping to multiple lines.
         </TruncatedText>
       </Section>
 
       {/* 7. Theme switching */}
       <Section>
-        <SectionTitle>7. Theme reactivity <TestStatus checks={test7Checks} /></SectionTitle>
+        <SectionTitle>
+          7. Theme reactivity <TestStatus checks={test7Checks} />
+        </SectionTitle>
         <SectionDesc>
-          Toggle dark mode (top-right button). All four swatches should change
-          color simultaneously.
+          Toggle dark mode (top-right button). All four swatches should change color simultaneously.
         </SectionDesc>
         <HintText>If broken: swatches don&apos;t change when toggling dark mode.</HintText>
         <ThemeSwatches>
@@ -229,16 +261,16 @@ const VariantCard = styled.div<{ $variant: Variant }>`
           border: 1px solid ${p.theme.colors.primary};
         `
       : p.$variant === 'error'
-        ? css`
-            background: ${p.theme.colors.danger}15;
-            color: ${p.theme.colors.danger};
-            border: 1px solid ${p.theme.colors.danger};
-          `
-        : css`
-            background: ${p.theme.colors.surface};
-            color: ${p.theme.colors.text};
-            border: 1px solid ${p.theme.colors.border};
-          `}
+      ? css`
+          background: ${p.theme.colors.danger}15;
+          color: ${p.theme.colors.danger};
+          border: 1px solid ${p.theme.colors.danger};
+        `
+      : css`
+          background: ${p.theme.colors.surface};
+          color: ${p.theme.colors.text};
+          border: 1px solid ${p.theme.colors.border};
+        `}
 `;
 
 const ColorText = styled.p<{ $color: string }>`
@@ -333,7 +365,13 @@ const Swatch = styled.div<{
     background: ${p => swatchColors.light[p.$color]};
   }
 
-  &:nth-child(2) { transition-delay: 0.05s; }
-  &:nth-child(3) { transition-delay: 0.1s; }
-  &:nth-child(4) { transition-delay: 0.15s; }
+  &:nth-child(2) {
+    transition-delay: 0.05s;
+  }
+  &:nth-child(3) {
+    transition-delay: 0.1s;
+  }
+  &:nth-child(4) {
+    transition-delay: 0.15s;
+  }
 `;

@@ -57,7 +57,9 @@ export function runCheck(check: TestCheck): Result {
   }
 
   // style check (or style-not: pass when value does NOT match)
-  const actual = getComputedStyle(el).getPropertyValue(check.prop || '').trim();
+  const actual = getComputedStyle(el)
+    .getPropertyValue(check.prop || '')
+    .trim();
   let resolved = check.expectedVar
     ? getComputedStyle(document.documentElement).getPropertyValue(check.expectedVar).trim()
     : check.expected || '';
@@ -93,7 +95,12 @@ export function TestStatus({ checks }: { checks: TestCheck[] }) {
   const allPass = results.every(r => r.pass);
 
   return (
-    <Indicator $pass={allPass} title={results.map(r => (r.pass ? '\u2713' : '\u2717') + ' ' + r.label + ': ' + r.detail).join('\n')}>
+    <Indicator
+      $pass={allPass}
+      title={results
+        .map(r => (r.pass ? '\u2713' : '\u2717') + ' ' + r.label + ': ' + r.detail)
+        .join('\n')}
+    >
       {allPass ? '\u2713' : '\u2717'}
     </Indicator>
   );

@@ -60,6 +60,7 @@ const Summary = styled.p<{ $pass: boolean }>`
   margin: 24px 0;
   font-size: 13px;
   font-weight: 700;
-  color: ${p => (p.$pass ? 'var(--sc-colors-success, #16a34a)' : 'var(--sc-colors-danger, #dc2626)')};
+  color: ${p =>
+    p.$pass ? 'var(--sc-colors-success, #16a34a)' : 'var(--sc-colors-danger, #dc2626)'};
   animation: ${fadeIn} 0.3s ease-in;
 `;
