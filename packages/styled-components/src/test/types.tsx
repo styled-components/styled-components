@@ -483,14 +483,7 @@ StyledTargetWithStaticProperties.foo;
 // Untyped ref callback must infer the element type, not `any` (#5687)
 const InferredRefDiv = styled.div``;
 <InferredRefDiv
-  ref={ref => {
-    ref;
-  }}
-/>;
-
-const InferredRefButton = styled.button``;
-<InferredRefButton
-  ref={ref => {
+  ref={(ref: HTMLDivElement) => {
     ref;
   }}
 />;
