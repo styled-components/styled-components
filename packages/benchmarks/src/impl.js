@@ -5,6 +5,7 @@ const { dependencies } = packageJson;
 
 const dependencyMap = {
   emotion: '@emotion/styled',
+  tailwind: 'tailwindcss',
 };
 
 const toImplementations = context =>

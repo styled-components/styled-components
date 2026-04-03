@@ -19,7 +19,14 @@ module.exports = {
     rules: [
       {
         test: /\.css$/i,
-        use: ['style-loader', 'css-loader'],
+        use: [
+          'style-loader',
+          'css-loader',
+          {
+            loader: '@tailwindcss/webpack',
+            options: { base: path.join(appDirectory, 'src') },
+          },
+        ],
       },
       {
         test: /\.js$/,

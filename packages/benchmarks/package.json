@@ -3,12 +3,12 @@
   "private": true,
   "scripts": {
     "build": "webpack-cli --config webpack.config.js",
-    "open": "open ./index.html",
-    "start": "node run-headless.js"
+    "open": "open ./index.html"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
+    "@tailwindcss/webpack": "4.2.2",
     "classnames": "2.5.1",
     "d3-scale-chromatic": "3.1.0",
     "goober": "2.1.18",
@@ -18,7 +18,8 @@
     "react-native-web": "0.19.13",
     "styled-components": "workspace:*",
     "styled-components-v6": "npm:styled-components@6.3.12",
-    "styled-jsx": "5.1.7"
+    "styled-jsx": "5.1.7",
+    "tailwindcss": "4.2.2"
   },
   "devDependencies": {
     "@babel/core": "^7.24.5",
@@ -31,7 +32,9 @@
     "webpack": "^5.105.4",
     "webpack-cli": "^5.1.4"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "*.css"
+  ],
   "engines": {
     "node": ">=14"
   }

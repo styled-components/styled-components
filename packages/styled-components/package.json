@@ -68,10 +68,10 @@
     "tslib": "2.8.1"
   },
   "peerDependencies": {
+    "css-to-react-native": ">= 3.2.0",
     "react": ">= 16.8.0",
     "react-dom": ">= 16.8.0",
-    "react-native": ">= 0.68.0",
-    "css-to-react-native": ">= 3.2.0"
+    "react-native": ">= 0.68.0"
   },
   "peerDependenciesMeta": {
     "react-dom": {
@@ -94,6 +94,7 @@
     "@babel/preset-env": "^7.24.5",
     "@babel/preset-react": "^7.24.1",
     "@babel/preset-typescript": "^7.24.1",
+    "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.8.0",
@@ -129,7 +130,6 @@
     "rollup-plugin-node-resolve": "^5.2.0",
     "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-sourcemaps": "^0.6.3",
-    "@rollup/plugin-terser": "^0.4.4",
     "stylis-plugin-rtl": "^2.1.1",
     "ts-toolbelt": "^9.6.0",
     "typescript": "^5.4.5",
