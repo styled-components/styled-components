@@ -233,7 +233,7 @@ const Shell = styled.div`
   min-height: 100vh;
   background: ${p => p.theme.colors.background};
   font-family: ${p => p.theme.typography.fontFamily};
-  margin: -${theme.spacing.large};
+  margin: calc(-1 * ${theme.spacing.large});
 `;
 
 const Sidebar = styled.aside`
