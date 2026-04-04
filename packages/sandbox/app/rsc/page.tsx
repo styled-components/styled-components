@@ -1,7 +1,6 @@
 import styled, { createGlobalStyle, keyframes } from 'styled-components';
 import { TestStatus, type TestCheck } from '../components/auto-test';
 import { TestSummary } from '../components/test-summary';
-import BackLink from '../components/back-link';
 import ClientButton from '../components/client-button';
 import {
   Section,
@@ -202,7 +201,6 @@ const rscSuites = [
 export default function RSCTestPage() {
   return (
     <Container>
-      <BackLink />
       <Title>RSC Integration Tests</Title>
       <TestSummary suites={rscSuites} />
 
@@ -491,11 +489,13 @@ export default function RSCTestPage() {
           Multiple instances of the same static <Code>createGlobalStyle</Code> in one RSC render
           should emit only one <Code>&lt;style&gt;</Code> tag (identical CSS is deduped via{' '}
           <Code>React.cache</Code>). Inspect the HTML source to verify only one{' '}
-          <Code>data-styled-global=&quot;{DedupGlobalStyle.styledComponentId}&quot;</Code> tag exists.
+          <Code>data-styled-global=&quot;{DedupGlobalStyle.styledComponentId}&quot;</Code> tag
+          exists.
         </SectionDesc>
         <HintText>
-          If broken: you&apos;ll see multiple identical <Code>&lt;style data-styled-global&gt;</Code>{' '}
-          tags in the page source. The visual test below just confirms the global style applied.
+          If broken: you&apos;ll see multiple identical{' '}
+          <Code>&lt;style data-styled-global&gt;</Code> tags in the page source. The visual test
+          below just confirms the global style applied.
         </HintText>
         <DedupGlobalStyle />
         <DedupGlobalStyle />
@@ -662,7 +662,8 @@ const StatusBadge = styled.span<{ $status: 'ok' | 'warn' | 'error' }>`
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
-  background: ${p => `color-mix(in srgb, ${statusColor[p.$status]} 20%, ${theme.colors.background})`};
+  background: ${p =>
+    `color-mix(in srgb, ${statusColor[p.$status]} 20%, ${theme.colors.background})`};
   color: ${p => statusColor[p.$status]};
 `;
 

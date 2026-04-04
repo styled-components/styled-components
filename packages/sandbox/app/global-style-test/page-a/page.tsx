@@ -6,13 +6,12 @@ export default function PageA() {
     <Card>
       <h2>Page A</h2>
       <Text>
-        Navigated here via client-side routing. The gradient background and
-        rainbow top border from the layout&apos;s <code>createGlobalStyle</code>{' '}
-        should still be active.
+        Navigated here via client-side routing. The gradient background and rainbow top border from
+        the layout&apos;s <code>createGlobalStyle</code> should still be active.
       </Text>
       <HintText>
-        If broken: gradient or top border disappear — the layout&apos;s global
-        style was removed during navigation.
+        If broken: gradient or top border disappear — the layout&apos;s global style was removed
+        during navigation.
       </HintText>
     </Card>
   );
@@ -31,4 +30,3 @@ const Text = styled.p`
   color: var(--sc-colors-textMuted, #6b7280);
   font-size: 14px;
 `;
-

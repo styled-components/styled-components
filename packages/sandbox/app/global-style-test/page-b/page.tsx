@@ -6,14 +6,12 @@ export default function PageB() {
     <Card>
       <h2>Page B</h2>
       <Text>
-        Another route under the same layout. Try navigating rapidly between
-        all three tabs &mdash; the gradient and top border should never flicker
-        or disappear.
+        Another route under the same layout. Try navigating rapidly between all three tabs &mdash;
+        the gradient and top border should never flicker or disappear.
       </Text>
       <HintText>
-        If broken: styles flash or disappear during rapid navigation. The
-        layout&apos;s <code>createGlobalStyle</code> should stay mounted across
-        all child route transitions.
+        If broken: styles flash or disappear during rapid navigation. The layout&apos;s{' '}
+        <code>createGlobalStyle</code> should stay mounted across all child route transitions.
       </HintText>
     </Card>
   );
@@ -32,4 +30,3 @@ const Text = styled.p`
   color: var(--sc-colors-textMuted, #6b7280);
   font-size: 14px;
 `;
-

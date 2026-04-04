@@ -1,16 +1,30 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { ThemeProvider, createGlobalStyle } from 'styled-components';
 import { type ThemePreset } from '../lib/test-themes';
 import { darkThemeVarOverrides, lightThemeVarOverrides } from '../lib/dark-theme-script';
 import themeContract from '../lib/theme';
 
-/**
- * Pure-CSS dark mode: vars are set via @media query (auto) or .dark/.light
- * class overrides (manual). No JS needed for the initial paint.
- * ThemeProvider still provides the theme object for interpolations.
- */
+interface ThemeToggleContextValue {
+  toggle: () => void;
+  label: string;
+}
+
+const ThemeToggleContext = createContext<ThemeToggleContextValue | null>(null);
+
+export function useThemeToggle() {
+  return useContext(ThemeToggleContext);
+}
+
 const BaseStyle = createGlobalStyle<{ $enableTransition: boolean }>`
   :root {
     ${lightThemeVarOverrides}
@@ -39,10 +53,12 @@ const BaseStyle = createGlobalStyle<{ $enableTransition: boolean }>`
 
   body {
     margin: 0;
+    display: flex;
+    min-height: 100vh;
     background-color: var(--sc-colors-background);
     font-family: system-ui, -apple-system, sans-serif;
     color: var(--sc-colors-text);
-    ${p => p.$enableTransition ? 'transition: background-color 0.3s ease, color 0.3s ease;' : ''}
+    ${p => (p.$enableTransition ? 'transition: background-color 0.3s ease, color 0.3s ease;' : '')}
   }
 `;
 
@@ -91,58 +107,21 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
     }
   }, [override, hydrated]);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setOverride(prev => {
       if (prev === null) return getSystemTheme() === 'light' ? 'dark' : 'light';
       if (prev === 'dark') return 'light';
       return null;
     });
-  };
+  }, []);
 
   const label = override ? `${override === 'light' ? 'Light' : 'Dark'} mode` : 'Auto';
+  const toggleValue = useMemo(() => ({ toggle: toggleTheme, label }), [toggleTheme, label]);
 
   return (
     <ThemeProvider theme={themeContract}>
       <BaseStyle $enableTransition={hydrated} />
-      <ThemeToggle onClick={toggleTheme} data-auto={override === null ? '' : undefined}>
-        {label}
-      </ThemeToggle>
-      {children}
+      <ThemeToggleContext.Provider value={toggleValue}>{children}</ThemeToggleContext.Provider>
     </ThemeProvider>
   );
 }
-
-const ThemeToggle = styled.button`
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: var(--sc-colors-primary);
-  color: var(--sc-colors-background);
-  border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  z-index: 1000;
-  transition: transform 0.15s, opacity 0.15s;
-
-  &:hover {
-    opacity: 0.9;
-    transform: scale(1.05);
-  }
-
-  &:active {
-    transform: scale(0.95);
-  }
-
-  &[data-auto]::after {
-    content: ' (light)';
-  }
-
-  @media (prefers-color-scheme: dark) {
-    &[data-auto]::after {
-      content: ' (dark)';
-    }
-  }
-`;

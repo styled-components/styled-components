@@ -35,11 +35,14 @@ const NavLink = styled(Link)<{ $active: boolean }>`
   font-weight: 600;
   font-size: 14px;
   color: ${p => (p.$active ? '#fff' : 'var(--sc-colors-text, #111827)')};
-  background: ${p => (p.$active ? 'var(--sc-colors-primary, #0070f3)' : 'var(--sc-colors-surface, #f9fafb)')};
-  border: 1px solid ${p => (p.$active ? 'var(--sc-colors-primary, #0070f3)' : 'var(--sc-colors-border, #e5e7eb)')};
+  background: ${p =>
+    p.$active ? 'var(--sc-colors-primary, #0070f3)' : 'var(--sc-colors-surface, #f9fafb)'};
+  border: 1px solid
+    ${p => (p.$active ? 'var(--sc-colors-primary, #0070f3)' : 'var(--sc-colors-border, #e5e7eb)')};
   transition: background 0.15s;
 
   &:hover {
-    background: ${p => (p.$active ? 'var(--sc-colors-primary, #0070f3)' : 'var(--sc-colors-border, #e5e7eb)')};
+    background: ${p =>
+      p.$active ? 'var(--sc-colors-primary, #0070f3)' : 'var(--sc-colors-border, #e5e7eb)'};
   }
 `;

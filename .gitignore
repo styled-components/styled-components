@@ -10,7 +10,7 @@ dist
 bundle-stats.html
 .vscode
 __diff_output__
-lib
+/lib
 sandbox/node_modules
 *.log
 test-results.json

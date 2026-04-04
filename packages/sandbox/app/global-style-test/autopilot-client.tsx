@@ -110,7 +110,10 @@ export default function AutopilotClient() {
 
       const tid = setTimeout(() => {
         const outline = getComputedStyle(document.body).outlineStyle;
-        r.push({ label: 'Outline removed (unmounted)', pass: outline === 'none' || outline === '' });
+        r.push({
+          label: 'Outline removed (unmounted)',
+          pass: outline === 'none' || outline === '',
+        });
 
         const overflow = getComputedStyle(document.body).overflow;
         r.push({ label: 'Scroll restored (unmounted)', pass: overflow !== 'hidden' });
@@ -145,7 +148,9 @@ export default function AutopilotClient() {
 
       {done && (
         <ResultsBox $allPass={passed === results.length}>
-          <ResultTitle>{passed}/{results.length} passing</ResultTitle>
+          <ResultTitle>
+            {passed}/{results.length} passing
+          </ResultTitle>
           {results.map((r, i) => (
             <ResultRow key={i}>
               <ResultIcon $pass={r.pass}>{r.pass ? '\u2713' : '\u2717'}</ResultIcon>
@@ -208,8 +213,11 @@ const fadeIn = keyframes`
 const ResultsBox = styled.div<{ $allPass: boolean }>`
   padding: 16px;
   border-radius: 8px;
-  border: 1px solid ${p => (p.$allPass ? 'var(--sc-colors-success, #16a34a)' : 'var(--sc-colors-danger, #dc2626)')}40;
-  background: ${p => (p.$allPass ? 'var(--sc-colors-success, #16a34a)' : 'var(--sc-colors-danger, #dc2626)')}08;
+  border: 1px solid
+    ${p =>
+      p.$allPass ? 'var(--sc-colors-success, #16a34a)' : 'var(--sc-colors-danger, #dc2626)'}40;
+  background: ${p =>
+    p.$allPass ? 'var(--sc-colors-success, #16a34a)' : 'var(--sc-colors-danger, #dc2626)'}08;
   animation: ${fadeIn} 0.3s ease-in;
 `;
 
@@ -230,6 +238,7 @@ const ResultRow = styled.div`
 `;
 
 const ResultIcon = styled.span<{ $pass: boolean }>`
-  color: ${p => (p.$pass ? 'var(--sc-colors-success, #16a34a)' : 'var(--sc-colors-danger, #dc2626)')};
+  color: ${p =>
+    p.$pass ? 'var(--sc-colors-success, #16a34a)' : 'var(--sc-colors-danger, #dc2626)'};
   font-weight: 700;
 `;
