@@ -804,7 +804,7 @@ describe('styled RSC mode', () => {
       `);
     });
 
-    it('should produce each style tag after its component element for correct source ordering', () => {
+    it('should produce each style tag before its component element for correct source ordering', () => {
       const ClientBase = (props: React.JSX.IntrinsicElements['div']) => <div {...props} />;
 
       const Extended = styled(ClientBase)`

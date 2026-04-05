@@ -132,7 +132,7 @@ describe('keyframes', () => {
         animation: css`
           ${animation} 2s linear infinite
         `,
-        ':hover': {
+        '&:hover': {
           animation: css`
             ${animation} 10s linear infinite
           `,
@@ -155,7 +155,7 @@ describe('keyframes', () => {
         .c {
           animation: a 2s linear infinite;
         }
-        .c :hover {
+        .c:hover {
           animation: a 10s linear infinite;
         }
       }"

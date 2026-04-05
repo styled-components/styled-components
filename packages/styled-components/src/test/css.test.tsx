@@ -13,7 +13,7 @@ describe('css features', () => {
     styled = resetStyled();
   });
 
-  it('should add vendor prefixes in the right order', () => {
+  it('should pass through transition property unchanged', () => {
     const Comp = styled.div`
       transition: opacity 0.3s;
     `;
@@ -25,7 +25,7 @@ describe('css features', () => {
     `);
   });
 
-  it('should add vendor prefixes for display', () => {
+  it('should pass through flexbox properties unchanged', () => {
     const Comp = styled.div`
       display: flex;
       flex-direction: column;

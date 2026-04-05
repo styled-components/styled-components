@@ -552,7 +552,7 @@ describe('basic', () => {
       process.env.NODE_ENV = originalEnv;
     });
 
-    it('should inject two different styles if the same compnoent is mounted with different props and css', () => {
+    it('should inject two different styles if the same component is mounted with different props and css', () => {
       const Comp = styled.div<{ $variant: 'text' | 'background' }>`
         color: ${props => props.$variant == 'text' && 'red'};
         background-color: ${props => props.$variant == 'background' && 'red'};
