@@ -31,44 +31,11 @@ import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import styled, { keyframes, createGlobalStyle } from '../index';
 
-const { performance } = require('perf_hooks');
-const gc = typeof globalThis.gc === 'function' ? globalThis.gc : null;
+import { bench as _bench } from './bench-utils';
 
-function bench(name: string, iterations: number, fn: (i: number) => void): number {
-  if (gc) gc();
-
-  const warmup = Math.min(Math.max(iterations / 10, 10), 200);
-  for (let i = 0; i < warmup; i++) fn(i);
-
-  const samples: number[] = [];
-  const RUNS = 5;
-  for (let run = 0; run < RUNS; run++) {
-    if (gc) gc();
-    // Reset per-render caches between iterations
-    mockCacheStore.clear();
-    const t0 = performance.now();
-    for (let i = 0; i < iterations; i++) {
-      mockCacheStore.clear();
-      fn(i);
-    }
-    samples.push(performance.now() - t0);
-  }
-
-  samples.sort((a, b) => a - b);
-  const median = samples[Math.floor(RUNS / 2)];
-  const ops = (iterations / median) * 1000;
-  const opsStr =
-    ops >= 1e6
-      ? (ops / 1e6).toFixed(1) + 'M/s'
-      : ops >= 1e3
-        ? (ops / 1e3).toFixed(1) + 'K/s'
-        : ops.toFixed(0) + '/s';
-  const spread = (((samples[RUNS - 1] - samples[0]) / median) * 100).toFixed(0);
-  console.log(
-    `  ${name.padEnd(55)} ${median.toFixed(1).padStart(8)}ms  ${opsStr.padStart(10)}  ±${spread}%`
-  );
-  return median;
-}
+const rscOpts = { warmupMax: 200, beforeIteration: () => mockCacheStore.clear() };
+const bench = (name: string, iterations: number, fn: (i: number) => void) =>
+  _bench(name, iterations, fn, rscOpts);
 
 describe('RSC benchmarks', () => {
   it('React baseline (renderToString without SC)', () => {
