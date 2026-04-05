@@ -136,11 +136,10 @@ export function parseCSSDeclarations(rawCss: string): [string, string][] {
               'Only CSS declarations (property: value) are supported in React Native.'
           );
         }
-        // Skip to matching closing brace (the `{` is inside prop, value may contain more declarations)
-        let depth = 1;
+        // Skip to matching closing brace — count braces in both prop and value
+        let depth = 0;
         let k = j;
-        // Count any `{` in value portion that weren't part of prop
-        for (let vi = colonIdx + 1; vi < j; vi++) {
+        for (let vi = i; vi < j; vi++) {
           if (css[vi] === '{') depth++;
           else if (css[vi] === '}') depth--;
         }

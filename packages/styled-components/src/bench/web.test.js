@@ -7,49 +7,14 @@
  * activate and results reflect real-world performance.
  */
 
-const { performance } = require('perf_hooks');
 const React = require('react');
 const TestRenderer = require('react-test-renderer');
 const styledMod = require('../../src');
 const styled = styledMod.default || styledMod;
+const { bench: _bench, COLORS } = require('./bench-utils');
 
-// Expose GC if available (node --expose-gc)
-const gc = typeof globalThis.gc === 'function' ? globalThis.gc : null;
-
-function bench(name, iterations, fn) {
-  // Force GC before measurement to reduce mid-run pauses
-  if (gc) gc();
-
-  // Warmup: run enough iterations for V8 to JIT-optimize
-  const warmup = Math.min(Math.max(iterations / 10, 100), 1000);
-  for (let i = 0; i < warmup; i++) fn(i);
-
-  // Multiple samples for stability
-  const samples = [];
-  const RUNS = 3;
-  for (let run = 0; run < RUNS; run++) {
-    if (gc) gc();
-    const t0 = performance.now();
-    for (let i = 0; i < iterations; i++) fn(i);
-    samples.push(performance.now() - t0);
-  }
-
-  // Use median to reduce GC spike impact
-  samples.sort((a, b) => a - b);
-  const median = samples[Math.floor(RUNS / 2)];
-  const ops = (iterations / median) * 1000;
-  const opsStr =
-    ops >= 1e6
-      ? (ops / 1e6).toFixed(1) + 'M/s'
-      : ops >= 1e3
-        ? (ops / 1e3).toFixed(1) + 'K/s'
-        : ops.toFixed(0) + '/s';
-  const spread = (((samples[RUNS - 1] - samples[0]) / median) * 100).toFixed(0);
-  console.log(
-    `  ${name.padEnd(50)} ${median.toFixed(1).padStart(8)}ms  ${opsStr.padStart(10)}  ±${spread}%`
-  );
-  return median;
-}
+const webOpts = { runs: 3, nameWidth: 50 };
+const bench = (name, iterations, fn) => _bench(name, iterations, fn, webOpts);
 
 let r;
 
@@ -243,38 +208,6 @@ describe('stress benchmarks', () => {
     renderer.unmount();
 
     console.log('\n--- Parent re-render (children props cycling 30 colors) ---');
-    const COLORS = [
-      '#e63946',
-      '#f1faee',
-      '#a8dadc',
-      '#457b9d',
-      '#1d3557',
-      '#264653',
-      '#2a9d8f',
-      '#e9c46a',
-      '#f4a261',
-      '#e76f51',
-      '#606c38',
-      '#283618',
-      '#fefae0',
-      '#dda15e',
-      '#bc6c25',
-      '#cdb4db',
-      '#ffc8dd',
-      '#ffafcc',
-      '#bde0fe',
-      '#a2d2ff',
-      '#d8e2dc',
-      '#ffe5d9',
-      '#ffcad4',
-      '#f4acb7',
-      '#9d8189',
-      '#ff6b6b',
-      '#4ecdc4',
-      '#45b7d1',
-      '#96ceb4',
-      '#ffeaa7',
-    ];
 
     function CyclingParent({ count, n }) {
       const children = [];
@@ -399,38 +332,6 @@ describe('stress benchmarks', () => {
   it('10K decomposition (cache-miss cycling colors)', () => {
     const N = 10_000;
     const ITERS = 50;
-    const COLORS = [
-      '#e63946',
-      '#f1faee',
-      '#a8dadc',
-      '#457b9d',
-      '#1d3557',
-      '#264653',
-      '#2a9d8f',
-      '#e9c46a',
-      '#f4a261',
-      '#e76f51',
-      '#606c38',
-      '#283618',
-      '#fefae0',
-      '#dda15e',
-      '#bc6c25',
-      '#cdb4db',
-      '#ffc8dd',
-      '#ffafcc',
-      '#bde0fe',
-      '#a2d2ff',
-      '#d8e2dc',
-      '#ffe5d9',
-      '#ffcad4',
-      '#f4acb7',
-      '#9d8189',
-      '#ff6b6b',
-      '#4ecdc4',
-      '#45b7d1',
-      '#96ceb4',
-      '#ffeaa7',
-    ];
 
     console.log('\n--- 10K decomposition (cache-miss, cycling 30 colors) ---');
 

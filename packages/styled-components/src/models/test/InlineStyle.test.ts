@@ -1217,10 +1217,17 @@ describe('parseCSSDeclarations', () => {
       `);
     });
 
-    it('nested at-rule blocks are fully skipped', () => {
+    it('nested at-rule blocks are fully skipped and recovery continues', () => {
       expect(
         parseCSSDeclarations('@supports (display: grid) { .foo { display: grid; } } color: red;')
-      ).toMatchInlineSnapshot(`[]`);
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "color",
+            "red",
+          ],
+        ]
+      `);
     });
 
     it('bare brace block at start is skipped', () => {

@@ -48,7 +48,7 @@ describe('with styles', () => {
     `);
   });
 
-  it('amperstand should refer to the static class when making a self-referential combo selector', () => {
+  it('ampersand should refer to the static class when making a self-referential combo selector', () => {
     const Comp = styled.div<{ color: string }>`
       background: red;
       color: ${p => p.color};

@@ -20,29 +20,47 @@ const OPEN_PAREN = 40; // (
 const CLOSE_PAREN = 41; // )
 
 /**
- * Strips JS-style line comments (//) from CSS, handling comments anywhere
- * in the line while preserving strings, url() contents, and valid CSS.
- * Optimized with early bail and charCodeAt for performance.
+ * Check if a quote at position i is escaped. A quote is escaped when preceded
+ * by an ODD number of backslashes (\", \\\", etc.). An even number means the
+ * backslashes themselves are escaped and the quote is real (\\", \\\\", etc.).
  */
-function stripLineComments(css: string): string {
-  // Fast path: no // means no line comments
-  if (css.indexOf('//') === -1) return css;
+export function isEscaped(css: string, i: number): boolean {
+  let backslashes = 0;
+  while (--i >= 0 && css.charCodeAt(i) === BACKSLASH) backslashes++;
+  return (backslashes & 1) === 1;
+}
+
+/**
+ * Unified CSS preprocessor: strips JS-style line comments (//) and validates
+ * brace balance in a single pass. Handles strings, parenthesized expressions
+ * (any function call), and block comments with one shared state machine.
+ *
+ * Fast paths:
+ *   - No // and no } → return unchanged (zero work)
+ *   - No // but has } → brace-only validation (lightweight single pass)
+ *   - Has // → full unified pass (strip comments + count braces simultaneously)
+ */
+export function preprocessCSS(css: string): string {
+  const hasLineComments = css.indexOf('//') !== -1;
+  const hasCloseBrace = css.indexOf('}') !== -1;
+
+  if (!hasLineComments && !hasCloseBrace) return css;
+
+  if (!hasLineComments) return sanitizeBraces(css);
 
   const len = css.length;
-  const parts: string[] = [];
+  let out = '';
   let start = 0;
   let i = 0;
-  let inString = 0; // 0 = none, DOUBLE_QUOTE or SINGLE_QUOTE when in string
-  let urlDepth = 0; // Track nesting depth inside url()
+  let inString = 0;
+  let parenDepth = 0;
+  let braceDepth = 0;
+  let modified = false;
 
   while (i < len) {
     const code = css.charCodeAt(i);
 
-    // Track string state
-    if (
-      (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) &&
-      (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)
-    ) {
+    if ((code === DOUBLE_QUOTE || code === SINGLE_QUOTE) && !isEscaped(css, i)) {
       if (inString === 0) {
         inString = code;
       } else if (inString === code) {
@@ -52,127 +70,89 @@ function stripLineComments(css: string): string {
       continue;
     }
 
-    // Skip string content
     if (inString !== 0) {
       i++;
       continue;
     }
 
-    // Handle CSS block comments: skip /* ... */ entirely
     if (code === SLASH && i + 1 < len && css.charCodeAt(i + 1) === ASTERISK) {
       i += 2;
       while (i + 1 < len && !(css.charCodeAt(i) === ASTERISK && css.charCodeAt(i + 1) === SLASH)) {
         i++;
       }
-      i += 2; // skip past */
+      i += 2;
       continue;
     }
 
-    // Track url() context - check for 'url(' (case insensitive via | 32)
-    if (
-      code === OPEN_PAREN &&
-      i >= 3 &&
-      (css.charCodeAt(i - 1) | 32) === 108 && // l
-      (css.charCodeAt(i - 2) | 32) === 114 && // r
-      (css.charCodeAt(i - 3) | 32) === 117 // u
-    ) {
-      urlDepth = 1;
+    if (code === OPEN_PAREN) {
+      parenDepth++;
       i++;
       continue;
     }
 
-    // Track nested parentheses inside url()
-    if (urlDepth > 0) {
-      if (code === CLOSE_PAREN) urlDepth--;
-      else if (code === OPEN_PAREN) urlDepth++;
+    if (code === CLOSE_PAREN) {
+      if (parenDepth > 0) parenDepth--;
       i++;
       continue;
     }
 
-    // Strip orphaned */ (no matching /*) — invalid CSS that breaks parsing
+    // Inside parentheses (any function call), skip comment/brace detection
+    // so that url(https://...), image-set(), etc. are preserved
+    if (parenDepth > 0) {
+      i++;
+      continue;
+    }
+
     if (code === ASTERISK && i + 1 < len && css.charCodeAt(i + 1) === SLASH) {
-      if (i > start) parts.push(css.substring(start, i));
+      out += css.substring(start, i);
       i += 2;
       start = i;
+      modified = true;
       continue;
     }
 
-    // Check for line comment (only when not in url())
     if (code === SLASH && i + 1 < len && css.charCodeAt(i + 1) === SLASH) {
-      if (i > start) parts.push(css.substring(start, i));
-      // Skip to end of line
+      out += css.substring(start, i);
       while (i < len && css.charCodeAt(i) !== NEWLINE) {
         i++;
       }
       start = i;
+      modified = true;
       continue;
+    }
+
+    if (code === OPEN_BRACE) {
+      braceDepth++;
+    } else if (code === CLOSE_BRACE) {
+      braceDepth--;
     }
 
     i++;
   }
 
-  // No comments found after indexOf check means // was in a string or url()
-  if (start === 0) return css;
-  if (start < len) parts.push(css.substring(start));
-  return parts.join('');
+  if (!modified) {
+    if (braceDepth === 0) return css;
+    return sanitizeBraces(css);
+  }
+
+  if (start < len) out += css.substring(start);
+
+  if (braceDepth === 0) return out;
+  return sanitizeBraces(out);
 }
 
 /**
- * Single-pass CSS sanitizer: validates brace balance and removes declarations
- * with unbalanced braces. Returns the input unchanged when CSS is valid.
+ * Removes declarations with unbalanced braces from CSS.
+ * Only called when preprocessCSS detects brace imbalance.
  */
-function sanitizeCSS(css: string): string {
-  if (css.indexOf('}') === -1) return css;
-
+function sanitizeBraces(css: string): string {
   const len = css.length;
-  let depth = 0;
-  let inString = 0;
-  let inComment = false;
-
-  for (let i = 0; i < len; i++) {
-    const code = css.charCodeAt(i);
-
-    if (inString === 0 && !inComment && code === SLASH && css.charCodeAt(i + 1) === ASTERISK) {
-      inComment = true;
-      i++;
-      continue;
-    }
-    if (inComment) {
-      if (code === ASTERISK && css.charCodeAt(i + 1) === SLASH) {
-        inComment = false;
-        i++;
-      }
-      continue;
-    }
-
-    if (
-      (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) &&
-      (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)
-    ) {
-      if (inString === 0) {
-        inString = code;
-      } else if (inString === code) {
-        inString = 0;
-      }
-      continue;
-    }
-    if (inString !== 0) continue;
-
-    if (code === OPEN_BRACE) {
-      depth++;
-    } else if (code === CLOSE_BRACE) {
-      depth--;
-      if (depth < 0) break;
-    }
-  }
-
-  if (depth === 0 && inString === 0) return css;
-
   let result = '';
   let declStart = 0;
   let braceDepth = 0;
-  inString = 0;
-  inComment = false;
+  let inString = 0;
+  let inComment = false;
+  let imbalanced = false;
 
   for (let i = 0; i < len; i++) {
     const code = css.charCodeAt(i);
@@ -190,10 +170,7 @@ function sanitizeCSS(css: string): string {
       continue;
     }
 
-    if (
-      (code === DOUBLE_QUOTE || code === SINGLE_QUOTE) &&
-      (i === 0 || css.charCodeAt(i - 1) !== BACKSLASH)
-    ) {
+    if ((code === DOUBLE_QUOTE || code === SINGLE_QUOTE) && !isEscaped(css, i)) {
       if (inString === 0) {
         inString = code;
       } else if (inString === code) {
@@ -209,6 +186,7 @@ function sanitizeCSS(css: string): string {
       braceDepth--;
 
       if (braceDepth < 0) {
+        imbalanced = true;
         let skipEnd = i + 1;
         while (skipEnd < len) {
           const skipCode = css.charCodeAt(skipEnd);
@@ -232,6 +210,8 @@ function sanitizeCSS(css: string): string {
       declStart = i + 1;
     }
   }
+
+  if (!imbalanced && braceDepth === 0 && inString === 0) return css;
 
   if (declStart < len && braceDepth === 0 && inString === 0) {
     result += css.substring(declStart);
@@ -361,7 +341,7 @@ export default function createStylisInstance(
     _selector = selector;
     _selectorRegexp = undefined; // Reset for lazy creation per call
 
-    const flatCSS = sanitizeCSS(stripLineComments(css));
+    const flatCSS = preprocessCSS(css);
     let compiled = stylis.compile(
       prefix || selector ? prefix + ' ' + selector + ' { ' + flatCSS + ' }' : flatCSS
     );

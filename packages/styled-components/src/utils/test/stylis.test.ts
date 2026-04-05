@@ -250,7 +250,9 @@ background-color: green;`)
       `);
     });
 
-    it('strips line comments within multiline declarations', () => {
+    it('preserves // inside function call parens (calc, etc.)', () => {
+      // // inside parens is preserved — paren-depth tracking protects
+      // all function arguments, not just url()
       expect(
         stylisTest(`width: 100px;
 height: calc(
@@ -261,9 +263,22 @@ background-color: green;`)
       ).toMatchInlineSnapshot(`
         [
           ".a{width:100px;height:calc(
-          50vh 
-          - 20px 
+          50vh // viewport height
+          - 20px // header
         );background-color:green;}",
+        ]
+      `);
+    });
+
+    it('strips line comments after closing paren', () => {
+      expect(
+        stylisTest(`
+        height: calc(50vh - 20px); // viewport minus header
+        background-color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{height:calc(50vh - 20px);background-color:green;}",
         ]
       `);
     });
@@ -499,8 +514,7 @@ background-color: green;`)
       `);
     });
 
-    it('does not match url inside other words (word boundary check)', () => {
-      // 'foourl(' should not be treated as url()
+    it('preserves foourl() inside string (string tracking)', () => {
       expect(
         stylisTest(`
         width: 100px; // comment
@@ -510,6 +524,21 @@ background-color: green;`)
       ).toMatchInlineSnapshot(`
         [
           ".a{width:100px;content:"foourl(https://example.com)";background-color:green;}",
+        ]
+      `);
+    });
+
+    it('preserves // inside any function call via paren-depth tracking', () => {
+      // Paren-depth tracking protects // inside ALL function calls,
+      // not just url() — no function name list needed
+      expect(
+        stylisTest(`
+        background: foourl(https://example.com/image.png); // comment
+        color: green;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background:foourl(https://example.com/image.png);color:green;}",
         ]
       `);
     });
@@ -1085,6 +1114,295 @@ background-color: green;`)
       ).toMatchInlineSnapshot(`
         [
           ".a{color:red;font-size:20px;}",
+        ]
+      `);
+    });
+  });
+
+  describe('preprocessCSS unified-path edge cases', () => {
+    // Path 3j: comment stripping + brace imbalance fire together
+    it('handles comment stripping that reveals brace imbalance', () => {
+      expect(
+        stylisTest(`
+        width: 100px;
+        height: 50px}// malformed brace before comment
+        color: red;
+        font-size: 16px}// second malformed
+        background: blue;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;color:red;background:blue;}",
+        ]
+      `);
+    });
+
+    it('handles nested rule with comment after opening brace', () => {
+      expect(
+        stylisTest(`
+        width: 100px;
+        .nested {// comment inside rule
+          color: red;
+        }
+        background: blue;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;background:blue;}",
+          ".a .nested{color:red;}",
+        ]
+      `);
+    });
+
+    it('handles brace inside line comment (not counted)', () => {
+      expect(
+        stylisTest(`
+        width: 100px;
+        // this } should not affect brace counting
+        color: red;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;color:red;}",
+        ]
+      `);
+    });
+
+    it('handles opening brace inside line comment (not counted)', () => {
+      expect(
+        stylisTest(`
+        width: 100px;
+        // this { should not affect brace counting
+        color: red;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;color:red;}",
+        ]
+      `);
+    });
+
+    // Orphaned */ — only stripped when the full tokenizer runs (// present)
+    it('passes orphaned */ through when no // present (fast path)', () => {
+      expect(
+        stylisTest(`
+        color: red;
+        */ background: blue;
+        font-size: 16px;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{color:red;*/background:blue;font-size:16px;}",
+        ]
+      `);
+    });
+
+    it('strips orphaned */ when // is also present (full tokenizer)', () => {
+      expect(
+        stylisTest(`
+        color: red;
+        */ background: blue; // comment
+        font-size: 16px;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{color:red;background:blue;font-size:16px;}",
+        ]
+      `);
+    });
+
+    it('strips multiple orphaned */ tokens when // triggers full tokenizer', () => {
+      expect(
+        stylisTest(`
+        color: red; // start
+        */ font-size: 20px;
+        */ background: blue;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{color:red;font-size:20px;background:blue;}",
+        ]
+      `);
+    });
+
+    // Empty / whitespace inputs
+    it('handles empty string', () => {
+      expect(stylisTest('')).toMatchInlineSnapshot(`[]`);
+    });
+
+    it('handles whitespace-only input', () => {
+      expect(stylisTest('   \n\t  ')).toMatchInlineSnapshot(`[]`);
+    });
+
+    // Block comments only (no //)
+    it('handles input that is only a block comment', () => {
+      expect(stylisTest('/* nothing here */')).toMatchInlineSnapshot(`[]`);
+    });
+
+    it('handles mix of only block and line comments', () => {
+      expect(stylisTest('/* first */ // second')).toMatchInlineSnapshot(`[]`);
+    });
+
+    // Nested block comments (CSS doesn't support them)
+    it('handles nested block comments (closes at first */)', () => {
+      expect(
+        stylisTest(`
+        /* outer /* inner */ color: red;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{color:red;}",
+        ]
+      `);
+    });
+
+    // url() with bare paths (no protocol)
+    it('preserves url() with bare absolute path', () => {
+      expect(
+        stylisTest(`
+        background: url(/images/logo.png); // comment
+        color: red;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background:url(/images/logo.png);color:red;}",
+        ]
+      `);
+    });
+
+    it('preserves url() with relative path', () => {
+      expect(
+        stylisTest(`
+        background: url(../assets/bg.png); // comment
+        color: red;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background:url(../assets/bg.png);color:red;}",
+        ]
+      `);
+    });
+
+    // url() with encoded braces
+    it('preserves url() with encoded braces in data URI', () => {
+      expect(
+        stylisTest(`
+        background: url(data:image/svg+xml,%3Csvg%7B%7D%3C/svg%3E); // svg
+        color: red;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{background:url(data:image/svg+xml,%3Csvg%7B%7D%3C/svg%3E);color:red;}",
+        ]
+      `);
+    });
+
+    // @supports and @layer with //
+    it('handles // inside @supports block', () => {
+      expect(
+        stylisTest(`
+        @supports (display: grid) {
+          display: grid; // use grid
+          gap: 16px;
+        }
+        color: red;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{color:red;}",
+          "@supports (display: grid){.a{display:grid;gap:16px;}}",
+        ]
+      `);
+    });
+
+    it('handles // inside @layer block', () => {
+      expect(
+        stylisTest(`
+        @layer utilities {
+          color: red; // utility color
+        }
+        font-size: 16px;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{font-size:16px;}",
+          "@layer utilities{.a{color:red;}}",
+        ]
+      `);
+    });
+
+    // Fast path: no // and no } (path 1)
+    it('returns unchanged when no // and no } (fast path)', () => {
+      expect(
+        stylisTest(`
+        color: red;
+        font-size: 16px;
+        background: blue;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{color:red;font-size:16px;background:blue;}",
+        ]
+      `);
+    });
+
+    // Backtick in CSS content (not a CSS string delimiter)
+    it('handles backtick in content value', () => {
+      expect(
+        stylisTest(`
+        content: "\`"; // backtick
+        color: red;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{content:"\`";color:red;}",
+        ]
+      `);
+    });
+
+    // \\\\ in template literal = \\ in CSS = escaped backslash, so " closes the string
+    it('handles escaped backslash before closing quote', () => {
+      expect(
+        stylisTest(`
+        content: "test\\\\";
+        color: red; // comment
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{content:"test\\\\";color:red;}",
+        ]
+      `);
+    });
+
+    // Complex path 3j: comment removal changes what sanitizeBraces sees
+    it('handles line comment hiding a closing brace from sanitizer', () => {
+      expect(
+        stylisTest(`
+        width: 100px;
+        }// this brace is NOT in the comment, it's before it
+        color: red;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{width:100px;color:red;}",
+        ]
+      `);
+    });
+
+    it('handles line comment between balanced braces', () => {
+      expect(
+        stylisTest(`
+        &:hover {
+          // hover styles
+          color: red;
+          background: blue; // bg
+        }
+        font-size: 16px;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{font-size:16px;}",
+          ".a:hover{color:red;background:blue;}",
         ]
       `);
     });

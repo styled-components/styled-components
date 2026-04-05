@@ -1,5 +1,6 @@
 import { RULESET, type Middleware } from 'stylis';
 import { SC_ATTR } from '../constants';
+import { isEscaped } from './stylis';
 
 /**
  * Rewrites CSS selectors that break when styled-components' inline
@@ -30,7 +31,6 @@ import { SC_ATTR } from '../constants';
  * Requires browser support for CSS Selectors Level 4 `of S` syntax
  * (Chrome 111+, Firefox 113+, Safari 9+).
  */
-// Single pass: matches :first-child, :last-child, :only-child, :nth-child(...), :nth-last-child(...)
 const CHILD_RE =
   /:(?:(first)-child|(last)-child|(only)-child|(nth-child)\(([^()]+)\)|(nth-last-child)\(([^()]+)\))/g;
 
@@ -51,7 +51,6 @@ function rewriteSelector(selector: string): string {
         if (nthArgs.indexOf(' of ') !== -1) return _match;
         return `:nth-child(${nthArgs} of ${EXCLUDE})`;
       }
-      // nthLast
       if (nthLastArgs.indexOf(' of ') !== -1) return _match;
       return `:nth-last-child(${nthLastArgs} of ${EXCLUDE})`;
     }
@@ -59,11 +58,15 @@ function rewriteSelector(selector: string): string {
 }
 
 /**
- * Find positions of `+` combinators in a selector, skipping `+` inside
- * parentheses (e.g. `:nth-child(2n+1)`) and brackets (e.g. `[attr*="+"]`).
+ * Expand each `+` combinator to also match when 1 or 2 `<style data-styled>`
+ * tags are interleaved. Skips `+` inside parentheses, brackets, and after
+ * backslash escapes. Pushes expanded selectors directly to `out`.
+ *
+ * `A+B` → `A+style[data-styled]+B` + `A+style[data-styled]+style[data-styled]+B`
  */
-function findAdjacentCombinators(selector: string): number[] {
-  const positions: number[] = [];
+function expandAdjacentSibling(selector: string, out: string[]): void {
+  if (selector.indexOf('+') === -1) return;
+
   let parenDepth = 0;
   let bracketDepth = 0;
   for (let i = 0; i < selector.length; i++) {
@@ -76,33 +79,13 @@ function findAdjacentCombinators(selector: string): number[] {
       ch === 43 /* + */ &&
       parenDepth === 0 &&
       bracketDepth === 0 &&
-      // Skip CSS-escaped characters: \+ is a literal + in a class/id name
-      (i === 0 || selector.charCodeAt(i - 1) !== 92) /* \ */
+      !isEscaped(selector, i)
     ) {
-      positions.push(i);
+      const before = selector.substring(0, i);
+      const after = selector.substring(i + 1);
+      out.push(before + '+' + STYLE_TAG + '+' + after);
+      out.push(before + '+' + STYLE_TAG + '+' + STYLE_TAG + '+' + after);
     }
-  }
-  return positions;
-}
-
-/**
- * Expand each `+` combinator to also match when 1 or 2 `<style data-styled>`
- * tags are interleaved. Each `+` is expanded independently (linear, not
- * exponential), producing 2 additional selectors per `+` combinator.
- *
- * `A+B` → original + `A+style[data-styled]+B` + `A+style[data-styled]+style[data-styled]+B`
- */
-function expandAdjacentSibling(selector: string, out: string[]): void {
-  // Fast path: no + at all (indexOf is faster than the char-by-char scan)
-  if (selector.indexOf('+') === -1) return;
-
-  const positions = findAdjacentCombinators(selector);
-  for (let i = 0; i < positions.length; i++) {
-    const pos = positions[i];
-    const before = selector.slice(0, pos);
-    const after = selector.slice(pos + 1);
-    out.push(before + '+' + STYLE_TAG + '+' + after);
-    out.push(before + '+' + STYLE_TAG + '+' + STYLE_TAG + '+' + after);
   }
 }
 

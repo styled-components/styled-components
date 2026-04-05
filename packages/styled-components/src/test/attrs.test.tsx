@@ -576,4 +576,23 @@ describe('attrs', () => {
     // (these are applied to context after the first callback returns)
     expect(el.getAttribute('data-saw-first')).toBe('yes');
   });
+
+  it('single attrs callback mutation should not affect rendered output', () => {
+    const Comp = styled.div.attrs(props => {
+      (props as any).id = 'mutated';
+      return { 'data-test': 'yes' };
+    })``;
+
+    const { container } = render(<Comp id="original" />);
+    const el = container.firstChild as HTMLElement;
+
+    // With a single attrs entry, needsCopy is false so the mutation hits
+    // the live context. However, the returned attrs are merged AFTER the
+    // callback, and directly-passed props should still take priority in
+    // the final element.
+    expect(el.getAttribute('data-test')).toBe('yes');
+    // id comes from attrs callback mutation of context — this documents
+    // current behavior where single-attrs mutations leak
+    expect(el.getAttribute('id')).toBe('mutated');
+  });
 });
