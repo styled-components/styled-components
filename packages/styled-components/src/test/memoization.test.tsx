@@ -317,4 +317,33 @@ describe('memoization correctness', () => {
 
     renderer.unmount();
   });
+
+  it('bounds dynamicNameCache size for free-form interpolations', () => {
+    // Regression: dynamicNameCache previously grew unbounded for components
+    // with free-form string interpolations, leaking for the lifetime of
+    // the component definition.
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const Comp = styled.div<{ $value: string }>`
+      color: ${p => p.$value};
+    `;
+
+    const renderer = TestRenderer.create(<Comp $value="rgb(0,0,0)" />);
+    for (let i = 0; i < 500; i++) {
+      renderer.update(<Comp $value={`rgb(${i},${i},${i})`} />);
+    }
+
+    const { dynamicNameCache } = Comp.componentStyle;
+    expect(dynamicNameCache?.size).toBeGreaterThan(0);
+    expect(dynamicNameCache?.size).toBeLessThanOrEqual(200);
+
+    const recentValue = 'rgb(499,499,499)';
+    renderer.update(<Comp $value={recentValue} />);
+    const recentClass = renderer.root.findByType('div').props.className;
+    renderer.update(<Comp $value="rgb(0,0,0)" />);
+    renderer.update(<Comp $value={recentValue} />);
+    expect(renderer.root.findByType('div').props.className).toBe(recentClass);
+
+    renderer.unmount();
+    warnSpy.mockRestore();
+  });
 });
