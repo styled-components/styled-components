@@ -6,6 +6,7 @@
  */
 import React, { useState } from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
+import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../utils/createWarnTooManyClasses';
 import { getCSS, resetStyled } from './utils';
 
 let styled: ReturnType<typeof resetStyled>;
@@ -327,21 +328,25 @@ describe('memoization correctness', () => {
       color: ${p => p.$value};
     `;
 
+    const churnCount = TOO_MANY_CLASSES_LIMIT * 2 + 100;
     const renderer = TestRenderer.create(<Comp $value="rgb(0,0,0)" />);
-    for (let i = 0; i < 500; i++) {
+    for (let i = 0; i < churnCount; i++) {
       renderer.update(<Comp $value={`rgb(${i},${i},${i})`} />);
     }
 
     const { dynamicNameCache } = Comp.componentStyle;
     expect(dynamicNameCache?.size).toBeGreaterThan(0);
-    expect(dynamicNameCache?.size).toBeLessThanOrEqual(200);
+    expect(dynamicNameCache?.size).toBeLessThanOrEqual(TOO_MANY_CLASSES_LIMIT);
 
     // Locks the single-source-of-truth invariant: the dev warning must
     // have fired before eviction began. Both share LIMIT, so a future
     // change that desyncs them would let the cache evict silently.
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Over 200 classes'));
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(`Over ${TOO_MANY_CLASSES_LIMIT} classes`)
+    );
 
-    const recentValue = 'rgb(499,499,499)';
+    const recent = churnCount - 1;
+    const recentValue = `rgb(${recent},${recent},${recent})`;
     renderer.update(<Comp $value={recentValue} />);
     const recentClass = renderer.root.findByType('div').props.className;
     renderer.update(<Comp $value="rgb(0,0,0)" />);
