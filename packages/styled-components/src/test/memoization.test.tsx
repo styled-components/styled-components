@@ -336,6 +336,11 @@ describe('memoization correctness', () => {
     expect(dynamicNameCache?.size).toBeGreaterThan(0);
     expect(dynamicNameCache?.size).toBeLessThanOrEqual(200);
 
+    // Locks the single-source-of-truth invariant: the dev warning must
+    // have fired before eviction began. Both share LIMIT, so a future
+    // change that desyncs them would let the cache evict silently.
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Over 200 classes'));
+
     const recentValue = 'rgb(499,499,499)';
     renderer.update(<Comp $value={recentValue} />);
     const recentClass = renderer.root.findByType('div').props.className;
