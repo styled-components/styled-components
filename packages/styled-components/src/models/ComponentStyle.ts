@@ -5,6 +5,7 @@ import { ExecutionContext, RuleSet, Stringifier } from '../types';
 import flatten from '../utils/flatten';
 import generateName from '../utils/generateAlphabeticName';
 import getComponentName from '../utils/getComponentName';
+import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../utils/createWarnTooManyClasses';
 import { hash, phash } from '../utils/hash';
 import isKeyframes from '../utils/isKeyframes';
 import isPlainObject from '../utils/isPlainObject';
@@ -12,6 +13,17 @@ import isStatelessFunction from '../utils/isStatelessFunction';
 import { joinRules, joinStringArray, joinStrings } from '../utils/joinStrings';
 
 const SEED = hash(SC_VERSION);
+
+/**
+ * Upper bound on dynamicNameCache entries per ComponentStyle instance.
+ * Without this cap, components with free-form string interpolations
+ * (e.g. `color: ${p => p.$color}` where $color is unbounded user input)
+ * leak memory for the lifetime of the component definition. Aligned to
+ * the warnTooManyClasses dev threshold so the warning and the eviction
+ * share a single source of truth: by the time you start dropping cache
+ * entries, the dev warning has already told you why.
+ */
+const MAX_DYNAMIC_NAME_CACHE = TOO_MANY_CLASSES_LIMIT;
 
 /**
  * RSC optimization: caches compiled CSS per class name so the RSC emission
@@ -139,6 +151,10 @@ export default class ComponentStyle {
         let name = this.dynamicNameCache.get(cacheKey);
         if (!name) {
           name = generateName(phash(phash(this.baseHash, stylis.hash), css) >>> 0);
+          if (this.dynamicNameCache.size >= MAX_DYNAMIC_NAME_CACHE) {
+            const oldest = this.dynamicNameCache.keys().next().value;
+            if (oldest !== undefined) this.dynamicNameCache.delete(oldest);
+          }
           this.dynamicNameCache.set(cacheKey, name);
         }
 
