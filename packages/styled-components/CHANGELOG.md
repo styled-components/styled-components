@@ -1,5 +1,91 @@
 # styled-components
 
+## 6.4.0
+
+### Minor Changes
+
+- b0f3d29: `.attrs()` improvements: props supplied via attrs are now automatically made optional on the resulting component (previously required even when attrs provided a default). Also fixes a bug where the attrs callback received a mutable props object that could be changed by subsequent attrs processing; it now receives an immutable snapshot.
+- 2a973d8: Dropped IE11 support: ES2015 build target, inlined unitless CSS properties (removing @emotion/unitless dependency), removed legacy React class statics from hoist and other unnecessary code.
+- 9e07d95: Add `createTheme(defaultTheme, options?)` for CSS variable theming that works across RSC and client components.
+
+  Returns an object with the same shape where every leaf is `var(--prefix-path, fallback)`. Pass it to `ThemeProvider` for stable class name hashes across themes (no hydration mismatch on light/dark switch).
+
+  ```ts
+  const theme = createTheme({ colors: { primary: '#0070f3' } });
+  // theme.colors.primary → "var(--sc-colors-primary, #0070f3)"
+  // theme.raw → original object
+  // theme.vars.colors.primary → "--sc-colors-primary"
+  // theme.resolve(el?) → computed values from DOM (client-only)
+  // theme.GlobalStyle → component that emits CSS var declarations
+  ```
+
+  `vars` exposes bare CSS custom property names (same shape as the theme) for use in `createGlobalStyle` dark mode overrides without hand-writing variable names:
+
+  ```ts
+  const { vars } = createTheme({ colors: { bg: '#fff', text: '#000' } });
+
+  const DarkOverrides = createGlobalStyle`
+    @media (prefers-color-scheme: dark) {
+      :root {
+        ${vars.colors.bg}: #111;
+        ${vars.colors.text}: #eee;
+      }
+    }
+  `;
+  ```
+
+  Options: `prefix` (default `"sc"`), `selector` (default `":root"`, use `":host"` for Shadow DOM).
+
+- 79cc7b4: Add first-class CSP nonce support. Nonces can now be configured via `StyleSheetManager`'s `nonce` prop (recommended for Next.js, Remix), `ServerStyleSheet`'s constructor, `<meta property="csp-nonce">` (Vite convention), `<meta name="sc-nonce">`, or the legacy `__webpack_nonce__` global.
+- b0f3d29: Rearchitect `createGlobalStyle` to use shared stylesheet groups.
+
+  All instances of a `createGlobalStyle` component now share a single stylesheet group, registered once at definition time. This fixes unmounting one instance removing styles needed by others (#5695), styles scattering after remount (#3146), and group ID leaks during SSR (#3022).
+
+  CSS injection order is now fully determined at definition time (lower group ID = earlier in stylesheet). Render order no longer affects CSS order. Keyframes defined before a component correctly appear before that component's rules.
+
+  Also fixes: O(n^2) performance regression in jsdom test environments from unbounded rule accumulation, and stale static global styles during client-side HMR (effect deps now include the `globalStyle` reference so module re-evaluation triggers re-injection).
+
+- b0f3d29: Significant render performance improvements via three-layer memoization and hot-path micro-optimizations. Client-only; server renders are unaffected.
+
+  Re-renders that don't change styling now skip style resolution entirely. Components sharing the same CSS (e.g., list items) benefit from cross-sibling caching. Hot-path changes include `forEach` → `for`/`for...of`, template literal → manual concat, and reduced allocations.
+
+  Benchmarks vs 6.3.12:
+
+  - **Parent re-render (most common):** 3.3x faster
+  - **First mount:** 1.7-2.5x faster
+  - **Prop cycling:** 2.3-2.4x faster
+  - **10K heavy layouts:** 1.9x faster
+  - No regressions on any benchmark
+
+- 9ada92b: React Server Components support: inline style injection, deduplication, and a new `stylisPluginRSC` for child-index selector fixes.
+
+  **Inline style injection:** RSC-rendered styled components emit `<style data-styled>` tags alongside their elements. CSS is deduplicated per render via `React.cache` (React 19+). Extended components use `:where()` zero-specificity wrapping on base CSS so extensions always win the cascade regardless of injection order.
+
+  **`StyleSheetManager` works in RSC:** `stylisPlugins` and `shouldForwardProp` are now applied in server component environments where React context is unavailable.
+
+  **`stylisPluginRSC`** — opt-in stylis plugin that fixes `:first-child`, `:last-child`, `:nth-child()`, and `:nth-last-child()` selectors broken by inline `<style>` tags shifting child indices. Rewrites them using CSS Selectors Level 4 `of S` syntax to exclude styled-components style tags from the count.
+
+  ```jsx
+  import { StyleSheetManager, stylisPluginRSC } from 'styled-components';
+
+  <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>{children}</StyleSheetManager>;
+  ```
+
+  The plugin rewrites `:first-child`, `:last-child`, `:nth-child()`, and `:nth-last-child()` using CSS Selectors Level 4 `of S` syntax to exclude injected style tags from the child count.
+
+  Browser support: Chrome 111+, Firefox 113+, Safari 9+ (~93% global). In unsupported browsers, the entire CSS rule is dropped — only opt in if your audience supports it. Use `:first-of-type` / `:nth-of-type()` as a universally compatible alternative.
+
+  **HMR:** Stale styles during client-side HMR are detected and invalidated when module re-evaluation creates new component instances while IDs remain stable (SWC plugin assigns IDs by file location). `createGlobalStyle` additionally clears stale sheet entries when the instance changes between renders.
+
+  The plugin is fully tree-shakeable — zero bytes in bundles that don't import it.
+
+### Patch Changes
+
+- b0f3d29: Expose `as` and `forwardedAs` props in `React.ComponentProps` extraction for styled components
+- 553cbb4: Fix memory leak in long-running apps using components with free-form string interpolations (e.g. `color: ${p => p.$dynamicValue}` where the value comes from unbounded user input).
+- b0f3d29: React Native improvements: replaced postcss with a lightweight CSS declaration parser, fixing `nanoid` crashes in Expo/Metro (#5705) and improving parse speed 4-6x. Parent re-renders with unchanged children are 2.6-3.2x faster via cache-first render. Updated native component alias list (removed 5 dead components, added 4 missing). Added `react-native` as an optional peer dependency.
+- 74e8b76: Smaller install footprint via unused dependency cleanup.
+
 ## 6.3.12
 
 ### Patch Changes

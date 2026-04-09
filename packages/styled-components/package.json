@@ -1,6 +1,6 @@
 {
   "name": "styled-components",
-  "version": "6.3.12",
+  "version": "6.4.0",
   "description": "Fast, expressive styling for React.",
   "publishConfig": {
     "access": "public"
