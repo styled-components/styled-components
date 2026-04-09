@@ -27,9 +27,24 @@ const isFalsish = (chunk: any): chunk is undefined | null | false | '' =>
 
 const CLIENT_REFERENCE = Symbol.for('react.client.reference');
 
-/** Detect RSC client reference proxies (opaque — no styledComponentId or other metadata). */
-function isClientReference(chunk: any): boolean {
-  return chunk != null && chunk.$$typeof === CLIENT_REFERENCE;
+interface ClientReference {
+  $$typeof: symbol;
+  $$id?: string;
+  $$async?: boolean;
+  name?: string;
+}
+
+function isClientReference(chunk: unknown): chunk is ClientReference {
+  return (chunk as any).$$typeof === CLIENT_REFERENCE;
+}
+
+// React encodes $$id as "modulePath#exportName"
+function warnClientReference(ref: ClientReference): void {
+  const id = ref.$$id;
+  const label = (id && id.includes('#') ? id.split('#').pop() : id) || ref.name || 'unknown';
+  console.warn(
+    `Interpolating a client component (${label}) as a selector is not supported in server components. The component selector pattern requires access to the component's internal class name, which is not available across the server/client boundary. Use a plain CSS class selector instead.`
+  );
 }
 
 export const objToCssArray = (obj: Dict<any>): string[] => {
@@ -69,20 +84,12 @@ export default function flatten<Props extends object>(
     return result;
   }
 
-  if (isClientReference(chunk)) {
-    if (process.env.NODE_ENV !== 'production') {
-      const ref = chunk as any;
-      const id: string | undefined = ref.$$id;
-      const label = (id && id.includes('#') ? id.split('#').pop() : id) || ref.name || 'unknown';
-      console.warn(
-        `Interpolating a client component (${label}) as a selector is not supported in server components. The component selector pattern requires access to the component's internal class name, which is not available across the server/client boundary. Use a plain CSS class selector instead.`
-      );
+  if (t === 'function') {
+    if (isClientReference(chunk)) {
+      if (process.env.NODE_ENV !== 'production') warnClientReference(chunk);
+      return result;
     }
 
-    return result;
-  }
-
-  if (t === 'function') {
     if (isStatelessFunction(chunk) && executionContext) {
       const fnResult = (chunk as Function)(executionContext);
 
@@ -127,6 +134,12 @@ export default function flatten<Props extends object>(
     } else {
       result.push(chunk);
     }
+    return result;
+  }
+
+  // Module-level client reference proxies (typeof 'object') pass isPlainObject — catch before
+  if (isClientReference(chunk)) {
+    if (process.env.NODE_ENV !== 'production') warnClientReference(chunk);
     return result;
   }
 
