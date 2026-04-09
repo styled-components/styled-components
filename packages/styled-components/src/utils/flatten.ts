@@ -25,6 +25,13 @@ import isStyledComponent from './isStyledComponent';
 const isFalsish = (chunk: any): chunk is undefined | null | false | '' =>
   chunk === undefined || chunk === null || chunk === false || chunk === '';
 
+const CLIENT_REFERENCE = Symbol.for('react.client.reference');
+
+/** Detect RSC client reference proxies (opaque — no styledComponentId or other metadata). */
+function isClientReference(chunk: any): boolean {
+  return chunk != null && chunk.$$typeof === CLIENT_REFERENCE;
+}
+
 export const objToCssArray = (obj: Dict<any>): string[] => {
   const rules = [];
 
@@ -59,6 +66,19 @@ export default function flatten<Props extends object>(
 
   if (t === 'string') {
     result.push(chunk as string);
+    return result;
+  }
+
+  if (isClientReference(chunk)) {
+    if (process.env.NODE_ENV !== 'production') {
+      const ref = chunk as any;
+      const id: string | undefined = ref.$$id;
+      const label = (id && id.includes('#') ? id.split('#').pop() : id) || ref.name || 'unknown';
+      console.warn(
+        `Interpolating a client component (${label}) as a selector is not supported in server components. The component selector pattern requires access to the component's internal class name, which is not available across the server/client boundary. Use a plain CSS class selector instead.`
+      );
+    }
+
     return result;
   }
 
