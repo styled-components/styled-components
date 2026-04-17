@@ -1,5 +1,12 @@
 # styled-components
 
+## 6.4.1
+
+### Patch Changes
+
+- 49d09ae: Fix a performance regression in 6.4.0 where dynamic `createGlobalStyle` components caused significant re-render slowdowns. Also restores pre-6.4 cascade ordering when multiple instances of the same `createGlobalStyle` coexist.
+- eca95b2: Fix outdated dev-mode error messages for keyframes-in-untagged-strings and component-selector references that still pointed at `www.styled-components.com` and described behavior from styled-components v3.
+
 ## 6.4.0
 
 ### Minor Changes
