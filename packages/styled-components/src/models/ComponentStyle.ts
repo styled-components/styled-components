@@ -126,7 +126,7 @@ export default class ComponentStyle {
                 console.error(
                   `${getComponentName(
                     partRule as AnyComponent
-                  )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
+                  )} is not a styled component and cannot be referred to via component selector. See https://styled-components.com/docs/advanced#referring-to-other-components for more details.`
                 );
               }
 

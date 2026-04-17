@@ -27,7 +27,7 @@ if (
   navigator.product === 'ReactNative'
 ) {
   console.warn(
-    `It looks like you've imported 'styled-components' on React Native.\nPerhaps you're looking to import 'styled-components/native'?\nRead more about this at https://www.styled-components.com/docs/basics#react-native`
+    `It looks like you've imported 'styled-components' on React Native.\nPerhaps you're looking to import 'styled-components/native'?\nRead more about this at https://styled-components.com/docs/basics#react-native`
   );
 }
 

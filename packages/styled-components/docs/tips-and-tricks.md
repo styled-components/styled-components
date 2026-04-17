@@ -134,7 +134,7 @@ const Box = styled.div`
 
 And voila! 💅
 
-_Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals](https://www.styled-components.com/docs/advanced#tagged-template-literals)_
+_Not clear on why `css` is needed in the above example? Check the article on [Tagged Template Literals](https://styled-components.com/docs/advanced#tagged-template-literals)_
 
 ### Media Templates
 
