@@ -81,7 +81,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Build release notes from pending changesets
+      - name: Snapshot version bump (in-place, not committed)
+        if: steps.changesets.outputs.has_pending == 'true'
+        run: |
+          pnpm changeset version --snapshot prerelease
+          echo "## Snapshot versions" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          for pkg_json in packages/*/package.json; do
+            is_private=$(jq -r '.private // false' "$pkg_json")
+            [ "$is_private" = "true" ] && continue
+            echo "$(jq -r '.name' "$pkg_json")@$(jq -r '.version' "$pkg_json")" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build release notes per package
         if: steps.changesets.outputs.has_pending == 'true'
         shell: bash
         run: |
@@ -89,18 +102,32 @@ jobs:
           node - <<'NODE'
           (async () => {
             const fs = require('fs');
+            const path = require('path');
+            const { execSync } = require('child_process');
             const readChangesets = require('@changesets/read').default;
             const git = require('@changesets/git');
             const { getReleaseLine } = require('@changesets/cli/changelog').default;
 
             const cwd = process.cwd();
-            const changesets = await readChangesets(cwd);
-            if (changesets.length === 0) return;
+            const repo = process.env.GITHUB_REPOSITORY;
 
-            const paths = changesets.map(c => `.changeset/${c.id}.md`);
-            const shaMap = await git.getCommitsThatAddFiles(paths, { cwd, short: true });
-            for (const cs of changesets) {
-              cs.commit = shaMap.get(`.changeset/${cs.id}.md`) || undefined;
+            const packagesDir = path.join(cwd, 'packages');
+            const packages = [];
+            for (const d of fs.readdirSync(packagesDir)) {
+              const jsonPath = path.join(packagesDir, d, 'package.json');
+              if (!fs.existsSync(jsonPath)) continue;
+              const pkg = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+              if (pkg.private) continue;
+              packages.push(pkg);
+            }
+
+            const changesets = await readChangesets(cwd);
+            if (changesets.length) {
+              const paths = changesets.map(c => `.changeset/${c.id}.md`);
+              const shaMap = await git.getCommitsThatAddFiles(paths, { cwd, short: true });
+              for (const cs of changesets) {
+                cs.commit = shaMap.get(`.changeset/${cs.id}.md`) || undefined;
+              }
             }
 
             const byPkg = new Map();
@@ -117,34 +144,37 @@ jobs:
             }
 
             const labels = { major: 'Major Changes', minor: 'Minor Changes', patch: 'Patch Changes' };
-            for (const [name, groups] of byPkg) {
+            for (const pkg of packages) {
+              const groups = byPkg.get(pkg.name);
               const parts = [];
-              for (const t of ['major', 'minor', 'patch']) {
-                if (groups[t].length === 0) continue;
-                parts.push(`### ${labels[t]}`, '');
-                for (const { changeset, type } of groups[t]) {
-                  parts.push(await getReleaseLine(changeset, type));
+              if (groups) {
+                for (const t of ['major', 'minor', 'patch']) {
+                  if (groups[t].length === 0) continue;
+                  parts.push(`### ${labels[t]}`, '');
+                  for (const { changeset, type } of groups[t]) {
+                    parts.push(await getReleaseLine(changeset, type));
+                  }
+                  parts.push('');
                 }
-                parts.push('');
               }
-              const safe = name.replace(/[@/]/g, '_');
+              if (parts.length === 0) parts.push('Internal changes only.', '');
+
+              let prevTag = '';
+              try {
+                prevTag = execSync(`git tag --list '${pkg.name}@*' --sort=-v:refname`, { encoding: 'utf8' })
+                  .split('\n').filter(Boolean)[0] || '';
+              } catch {}
+              if (prevTag) {
+                const currentTag = `${pkg.name}@${pkg.version}`;
+                const compareUrl = `https://github.com/${repo}/compare/${encodeURIComponent(prevTag)}...${encodeURIComponent(currentTag)}`;
+                parts.push(`**Full Changelog**: ${compareUrl}`);
+              }
+
+              const safe = pkg.name.replace(/[@/]/g, '_');
               fs.writeFileSync(`/tmp/release-notes/${safe}.md`, parts.join('\n'));
             }
           })().catch(err => { console.error(err); process.exit(1); });
           NODE
-
-      - name: Snapshot version bump (in-place, not committed)
-        if: steps.changesets.outputs.has_pending == 'true'
-        run: |
-          pnpm changeset version --snapshot prerelease
-          echo "## Snapshot versions" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          for pkg_json in packages/*/package.json; do
-            is_private=$(jq -r '.private // false' "$pkg_json")
-            [ "$is_private" = "true" ] && continue
-            echo "$(jq -r '.name' "$pkg_json")@$(jq -r '.version' "$pkg_json")" | tee -a "$GITHUB_STEP_SUMMARY"
-          done
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish to npm test tag
         if: steps.changesets.outputs.has_pending == 'true'
@@ -168,6 +198,6 @@ jobs:
             if [ -s "$notes_file" ]; then
               gh release create "$ref" --prerelease --title "$ref" --notes-file "$notes_file"
             else
-              gh release create "$ref" --prerelease --title "$ref" --generate-notes
+              gh release create "$ref" --prerelease --title "$ref" --notes "Internal changes only."
             fi
           done
