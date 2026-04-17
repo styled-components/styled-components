@@ -1,0 +1,87 @@
+name: Prerelease
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  prerelease:
+    name: Prerelease
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          cache: "pnpm"
+          node-version-file: ".nvmrc"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check for pending changesets
+        id: changesets
+        shell: bash
+        run: |
+          shopt -s nullglob
+          count=0
+          for f in .changeset/*.md; do
+            [ "$(basename "$f")" = "README.md" ] && continue
+            count=$((count + 1))
+          done
+          echo "has_pending=$([ $count -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Configure git identity
+        if: steps.changesets.outputs.has_pending == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Snapshot version bump (in-place, not committed)
+        if: steps.changesets.outputs.has_pending == 'true'
+        run: |
+          pnpm changeset version --snapshot prerelease
+          echo "## Snapshot versions" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          for pkg_json in packages/*/package.json; do
+            is_private=$(jq -r '.private // false' "$pkg_json")
+            [ "$is_private" = "true" ] && continue
+            echo "$(jq -r '.name' "$pkg_json")@$(jq -r '.version' "$pkg_json")" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish to npm test tag
+        if: steps.changesets.outputs.has_pending == 'true'
+        run: pnpm release --tag test --no-git-tag
+
+      - name: Create git tag + GitHub prerelease per published package
+        if: steps.changesets.outputs.has_pending == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for pkg_json in packages/*/package.json; do
+            is_private=$(jq -r '.private // false' "$pkg_json")
+            [ "$is_private" = "true" ] && continue
+            name=$(jq -r '.name' "$pkg_json")
+            version=$(jq -r '.version' "$pkg_json")
+            ref="${name}@${version}"
+            git tag -a "$ref" -m "$ref"
+            git push origin "refs/tags/$ref"
+            gh release create "$ref" \
+              --prerelease \
+              --title "$ref" \
+              --generate-notes
+          done
