@@ -1,23 +1,23 @@
 import * as stylis from 'stylis';
 import { Stringifier } from '../types';
+import {
+  ASTERISK,
+  BACKSLASH,
+  CLOSE_BRACE,
+  CLOSE_PAREN,
+  DOUBLE_QUOTE,
+  NEWLINE,
+  OPEN_BRACE,
+  OPEN_PAREN,
+  SEMICOLON,
+  SINGLE_QUOTE,
+  SLASH,
+} from './charCodes';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
 import { SEED, phash } from './hash';
 
 const AMP_REGEX = /&/g;
-
-// Character codes for fast comparison
-const DOUBLE_QUOTE = 34; // "
-const SINGLE_QUOTE = 39; // '
-const SLASH = 47; // /
-const ASTERISK = 42; // *
-const BACKSLASH = 92; // \
-const OPEN_BRACE = 123; // {
-const CLOSE_BRACE = 125; // }
-const SEMICOLON = 59; // ;
-const NEWLINE = 10; // \n
-const OPEN_PAREN = 40; // (
-const CLOSE_PAREN = 41; // )
 
 /**
  * Check if a quote at position i is escaped. A quote is escaped when preceded
@@ -230,23 +230,26 @@ export type ICreateStylisInstance = {
  * Takes into account media queries by recursing through child rules if they are present.
  */
 function recursivelySetNamespace(compiled: stylis.Element[], namespace: string): stylis.Element[] {
+  // Stylis AST can share `props` arrays between a top-level rule and a nested
+  // copy of the same rule inside @media, so we must allocate a replacement
+  // array rather than mutating in place. Hoist the concat operands to save
+  // a per-rule/per-prop string alloc.
+  const prefix = namespace + ' ';
+  const commaReplace = ',' + prefix;
   for (let i = 0; i < compiled.length; i++) {
     const rule = compiled[i];
     if (rule.type === 'rule') {
-      // add the namespace to the start
-      rule.value = namespace + ' ' + rule.value;
-      // add the namespace after each comma for subsequent selectors.
-      rule.value = rule.value.replaceAll(',', ',' + namespace + ' ');
+      rule.value = (prefix + rule.value).replaceAll(',', commaReplace);
       const props = rule.props as string[];
       const newProps: string[] = [];
       for (let j = 0; j < props.length; j++) {
-        newProps[j] = namespace + ' ' + props[j];
+        newProps[j] = prefix + props[j];
       }
       rule.props = newProps;
     }
 
     if (Array.isArray(rule.children) && rule.type !== '@keyframes') {
-      rule.children = recursivelySetNamespace(rule.children, namespace);
+      recursivelySetNamespace(rule.children, namespace);
     }
   }
   return compiled;
