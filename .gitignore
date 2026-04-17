@@ -24,3 +24,4 @@ update-dynamic-styles-trace.json
 **/next-env.d.ts
 **/dist-test
 .claude
+node-compile-cache
