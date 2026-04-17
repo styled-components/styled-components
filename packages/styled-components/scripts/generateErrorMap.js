@@ -15,7 +15,7 @@ const errorMap = md
   }, {});
 
 fs.writeFileSync(
-  path.join(__dirname, '../src/utils/errors.js'),
-  `export default ${JSON.stringify(errorMap)};`,
+  path.join(__dirname, '../src/utils/errors.ts'),
+  `export default ${JSON.stringify(errorMap)};\n`,
   'utf8'
 );
