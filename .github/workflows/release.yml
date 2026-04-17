@@ -48,6 +48,8 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
@@ -79,6 +81,58 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      - name: Build release notes from pending changesets
+        if: steps.changesets.outputs.has_pending == 'true'
+        shell: bash
+        run: |
+          mkdir -p /tmp/release-notes
+          node - <<'NODE'
+          (async () => {
+            const fs = require('fs');
+            const readChangesets = require('@changesets/read').default;
+            const git = require('@changesets/git');
+            const { getReleaseLine } = require('@changesets/cli/changelog').default;
+
+            const cwd = process.cwd();
+            const changesets = await readChangesets(cwd);
+            if (changesets.length === 0) return;
+
+            const paths = changesets.map(c => `.changeset/${c.id}.md`);
+            const shaMap = await git.getCommitsThatAddFiles(paths, { cwd, short: true });
+            for (const cs of changesets) {
+              cs.commit = shaMap.get(`.changeset/${cs.id}.md`) || undefined;
+            }
+
+            const byPkg = new Map();
+            for (const cs of changesets) {
+              for (const release of cs.releases) {
+                if (release.type === 'none') continue;
+                let groups = byPkg.get(release.name);
+                if (!groups) {
+                  groups = { major: [], minor: [], patch: [] };
+                  byPkg.set(release.name, groups);
+                }
+                groups[release.type].push({ changeset: cs, type: release.type });
+              }
+            }
+
+            const labels = { major: 'Major Changes', minor: 'Minor Changes', patch: 'Patch Changes' };
+            for (const [name, groups] of byPkg) {
+              const parts = [];
+              for (const t of ['major', 'minor', 'patch']) {
+                if (groups[t].length === 0) continue;
+                parts.push(`### ${labels[t]}`, '');
+                for (const { changeset, type } of groups[t]) {
+                  parts.push(await getReleaseLine(changeset, type));
+                }
+                parts.push('');
+              }
+              const safe = name.replace(/[@/]/g, '_');
+              fs.writeFileSync(`/tmp/release-notes/${safe}.md`, parts.join('\n'));
+            }
+          })().catch(err => { console.error(err); process.exit(1); });
+          NODE
+
       - name: Snapshot version bump (in-place, not committed)
         if: steps.changesets.outputs.has_pending == 'true'
         run: |
@@ -107,10 +161,13 @@ jobs:
             name=$(jq -r '.name' "$pkg_json")
             version=$(jq -r '.version' "$pkg_json")
             ref="${name}@${version}"
+            safe=$(printf '%s' "$name" | tr '@/' '_')
+            notes_file="/tmp/release-notes/${safe}.md"
             git tag -a "$ref" -m "$ref"
             git push origin "refs/tags/$ref"
-            gh release create "$ref" \
-              --prerelease \
-              --title "$ref" \
-              --generate-notes
+            if [ -s "$notes_file" ]; then
+              gh release create "$ref" --prerelease --title "$ref" --notes-file "$notes_file"
+            else
+              gh release create "$ref" --prerelease --title "$ref" --generate-notes
+            fi
           done
