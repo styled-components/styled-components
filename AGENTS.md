@@ -76,7 +76,6 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - RSC inline `<style>` tags are deduplicated per render via name-based tracking in a `React.cache`-scoped Set. Dedup hits skip CSS collection entirely (no getGroup, no :where() wrapping). Dynamic components with multiple variants only emit CSS for new names, not the full accumulated group. Compiled CSS is cached on ComponentStyle/Keyframes via WeakMap (persists across React.cache resets, dead-code eliminated in browser build).
 - Keyframe rules are emitted in a dedicated `<style>` tag, deduped separately by keyframe ID. They must NOT be prepended to component CSS strings--keyframes register mid-render, so prepending them causes inconsistent strings that break `getEmittedCSS` dedup.
 - `mainSheet` is reset once per server render via `React.cache` (clears `names`, `keyframeIds`, `tag`) to prevent stale CSS accumulating across HMR cycles. `keyframeIds` is safe to clear because components re-register keyframes via `keyframe.inject()` during render.
-- React 19 Float (`precedence` attribute) must NOT be used: it merges same-precedence tags, strips custom `data-*` attributes, and hoists to `<head>` where ordering relative to the registry is unpredictable.
 - `StyleSheetManager` works in RSC via module-level `rscContextOverride` slot. Single-threaded RSC renders + `React.cache` reset per render make this safe. Nested SSMs inherit `stylisPlugins`, `shouldForwardProp`, and `nonce` from parent. `stylisPlugins={[]}` explicitly disables inheritance. `namespace` and `enableVendorPrefixes` are supported in RSC.
 - `stylisPluginRSC` is an opt-in stylis plugin that rewrites `:first-child`/`:last-child`/`:nth-child()` to exclude `style[data-styled]` from the child count using CSS Selectors L4 `of S` syntax. Exported from `index.ts` only (not `base.ts`) for UMD tree-shaking. Uses `/*#__PURE__*/ Object.defineProperty` for stable `.name` after minification.
 - RSC inline `<style>` tags break child-index pseudo-selectors because they become real DOM children. `:first-of-type`/`:nth-of-type()` are naturally immune (filter by tag name). The plugin is needed only for `:*-child` selectors.
@@ -124,7 +123,6 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 ## V8 Gotchas
 
-- `new Array(n)` creates HOLEY_ELEMENTS arrays -- 3.9x regression (see Critical Constraints)
 - `private` modifier is not allowed on anonymous class expressions (`export const Foo = class { ... }`)
 - `import type * from 'stream'` still triggers bundler module resolution even though TypeScript strips it
 
