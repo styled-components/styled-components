@@ -94,12 +94,21 @@ export default function createGlobalStyle<Props extends object>(
     // Client-side lifecycle: render styles in effect and clean up on unmount.
     // __SERVER__ and IS_RSC are build/module-level constants, so this doesn't violate rules of hooks.
     if (!__SERVER__ && !IS_RSC) {
-      // globalStyle is included in deps so HMR-induced module re-evaluation
+      // Split into two effects so cleanup (removeStyles → full rebuildGroup) only
+      // fires on actual unmount or sheet/globalStyle swap -- NOT on every prop change.
+      //
+      // For dynamic globals, `props` is a new reference every render, so the render
+      // effect re-runs each render. If cleanup ran on every re-run, each render would
+      // do two full rebuildGroups (delete + reinsert all instances), which dominates
+      // CPU on apps with frequent parent re-renders (issue #5730). Splitting lets
+      // renderStyles' rulesEqual fast-path skip rebuildGroup when CSS is unchanged.
+      //
+      // globalStyle is included in render deps so HMR-induced module re-evaluation
       // (which creates a new GlobalStyle instance) triggers effect re-run.
       // For static rules, renderStyles exits early after the first injection
       // (via hasNameForId check), so the extra dep is effectively free at runtime.
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      const effectDeps = globalStyle.isStatic
+      const renderDeps = globalStyle.isStatic
         ? [instance, ssc.styleSheet, globalStyle]
         : [instance, props, ssc.styleSheet, theme, ssc.stylis, globalStyle];
 
@@ -116,11 +125,18 @@ export default function createGlobalStyle<Props extends object>(
 
           renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
         }
+      }, renderDeps);
 
+      // Cleanup-only effect: fires on unmount, sheet swap, or HMR globalStyle swap.
+      // Closure captures the specific globalStyle/sheet that owned this instance's
+      // rules so HMR cleanup targets the prior module's state.
+      React.useLayoutEffect(() => {
         return () => {
-          globalStyle.removeStyles(instance, ssc.styleSheet);
+          if (!ssc.styleSheet.server) {
+            globalStyle.removeStyles(instance, ssc.styleSheet);
+          }
         };
-      }, effectDeps);
+      }, [instance, ssc.styleSheet, globalStyle]);
     }
 
     // RSC mode: output style tag.

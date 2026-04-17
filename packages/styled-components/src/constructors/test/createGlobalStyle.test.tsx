@@ -645,14 +645,16 @@ describe(`createGlobalStyle`, () => {
       }"
     `);
 
-    // Change only instance A's prop — instance B should be unaffected
+    // Change only instance A's prop — instance B's CSS is unchanged, and
+    // rule order must remain mount-order (A then B) so cascade doesn't flip
+    // based on which instance updated last.
     rerender(<Wrapper colorA="green" colorB="blue" />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
-        background: blue;
+        background: green;
       }
       body {
-        background: green;
+        background: blue;
       }"
     `);
   });
@@ -957,10 +959,9 @@ describe('createGlobalStyle HMR', () => {
 describe('GlobalStyle.renderStyles (unit)', () => {
   /**
    * These tests exercise GlobalStyle.renderStyles() directly to cover
-   * the rulesEqual fast-path (lines 57-68 in GlobalStyle.ts) which is
-   * unreachable through the React component lifecycle because
-   * useLayoutEffect cleanup always deletes instanceRules before the
-   * next effect re-runs renderStyles.
+   * the rulesEqual fast-path on the pure model. The React lifecycle
+   * path also reaches this fast-path now -- see the lifecycle tests
+   * below (`useLayoutEffect rebuildGroup`).
    */
 
   let sheet: StyleSheet;
@@ -1162,5 +1163,99 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     // The bug: renderStyles without removeStyles accumulated rules unboundedly.
     expect(gs.instanceRules.size).toBe(0);
     expect(sheet.toString()).toBe('');
+  });
+});
+
+describe('createGlobalStyle useLayoutEffect rebuildGroup (#5730)', () => {
+  beforeEach(() => {
+    resetStyled();
+  });
+
+  it('skips rebuildGroup when parent re-renders with unchanged global style props', () => {
+    const GlobalStyle = createGlobalStyle<{ bg: string }>`
+      body { background: ${props => props.bg}; }
+    `;
+
+    function Parent({ bg, counter }: { bg: string; counter: number }) {
+      // `counter` forces Parent to re-render without changing `bg`.
+      return (
+        <>
+          <span data-testid="counter">{counter}</span>
+          <GlobalStyle bg={bg} />
+        </>
+      );
+    }
+
+    const { rerender } = render(<Parent bg="red" counter={0} />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: red;
+      }"
+    `);
+
+    // Spy on the shared-group rebuild cost. With the fix, unchanged CSS must
+    // NOT clearRules on each unrelated parent re-render.
+    const clearRulesSpy = jest.spyOn(StyleSheet.prototype, 'clearRules');
+
+    for (let i = 1; i <= 5; i++) {
+      rerender(<Parent bg="red" counter={i} />);
+    }
+
+    expect(clearRulesSpy).not.toHaveBeenCalled();
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: red;
+      }"
+    `);
+
+    clearRulesSpy.mockRestore();
+  });
+
+  it('still rebuilds when the dynamic global style CSS actually changes', () => {
+    const GlobalStyle = createGlobalStyle<{ bg: string }>`
+      body { background: ${props => props.bg}; }
+    `;
+
+    const { rerender } = render(<GlobalStyle bg="red" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: red;
+      }"
+    `);
+
+    rerender(<GlobalStyle bg="blue" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "body {
+        background: blue;
+      }"
+    `);
+  });
+
+  it('still cleans up on unmount after many re-renders', async () => {
+    const GlobalStyle = createGlobalStyle<{ bg: string }>`
+      [data-5730-cleanup] { background: ${props => props.bg}; }
+    `;
+
+    function App({ show, counter }: { show: boolean; counter: number }) {
+      return show ? (
+        <>
+          <span>{counter}</span>
+          <GlobalStyle bg="red" />
+        </>
+      ) : null;
+    }
+
+    const { rerender } = render(<App show counter={0} />);
+
+    for (let i = 1; i <= 5; i++) {
+      rerender(<App show counter={i} />);
+    }
+
+    expect(getRenderedCSS()).toContain('[data-5730-cleanup]');
+
+    rerender(<App show={false} counter={99} />);
+    await Promise.resolve();
+
+    expect(getRenderedCSS()).not.toContain('[data-5730-cleanup]');
   });
 });
