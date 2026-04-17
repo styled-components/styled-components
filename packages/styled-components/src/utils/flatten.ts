@@ -7,7 +7,6 @@ import {
   IStyledComponent,
   RuleSet,
   Stringifier,
-  StyledObject,
 } from '../types';
 import { cssTagged } from './cssTagged';
 import addUnitIfNeeded from './addUnitIfNeeded';
@@ -47,9 +46,8 @@ function warnClientReference(ref: ClientReference): void {
   );
 }
 
-export const objToCssArray = (obj: Dict<any>): string[] => {
-  const rules = [];
-
+/** Internal accumulator form — avoids allocating a temp array per nesting level. */
+function objToCssArrayInto(obj: Dict<any>, rules: any[]): void {
   for (const key in obj) {
     const val = obj[key];
     if (!obj.hasOwnProperty(key) || isFalsish(val)) continue;
@@ -57,12 +55,18 @@ export const objToCssArray = (obj: Dict<any>): string[] => {
     if ((Array.isArray(val) && cssTagged.has(val)) || isFunction(val)) {
       rules.push(hyphenate(key) + ':', val, ';');
     } else if (isPlainObject(val)) {
-      rules.push(key + ' {', ...objToCssArray(val), '}');
+      rules.push(key + ' {');
+      objToCssArrayInto(val, rules);
+      rules.push('}');
     } else {
       rules.push(hyphenate(key) + ': ' + addUnitIfNeeded(key, val) + ';');
     }
   }
+}
 
+export const objToCssArray = (obj: Dict<any>): string[] => {
+  const rules: any[] = [];
+  objToCssArrayInto(obj, rules);
   return rules;
 };
 
@@ -144,8 +148,7 @@ export default function flatten<Props extends object>(
   }
 
   if (isPlainObject(chunk)) {
-    const cssArr = objToCssArray(chunk as StyledObject<Props>);
-    for (let i = 0; i < cssArr.length; i++) result.push(cssArr[i]);
+    objToCssArrayInto(chunk as Dict<any>, result);
     return result;
   }
 
