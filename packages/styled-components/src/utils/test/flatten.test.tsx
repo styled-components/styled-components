@@ -142,7 +142,7 @@ describe('flatten', () => {
     render(<Bar />);
 
     expect((console.error as jest.Mock<Console['warn']>).mock.calls[0][0]).toMatchInlineSnapshot(
-      `"Foo is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details."`
+      `"Foo is not a styled component and cannot be referred to via component selector. See https://styled-components.com/docs/advanced#referring-to-other-components for more details."`
     );
   });
 

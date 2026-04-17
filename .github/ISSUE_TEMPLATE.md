@@ -5,7 +5,7 @@ Thank you for contributing and please follow this guide before creating an issue
 1. Do you have a usage question?
 =============================
 - Look for prior or closed issues (but please avoid replying to them if they're old)
-- Check the docs: https://www.styled-components.com/docs
+- Check the docs: https://styled-components.com/docs
 - Look for/ask questions on stack overflow: https://stackoverflow.com/questions/ask?tags=styled-components
 
 2. Think you found a bug?
