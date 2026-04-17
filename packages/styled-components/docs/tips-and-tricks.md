@@ -16,12 +16,12 @@ const Button = styled.button`
 
 Now your designer has added a new comment section to your articles, and they want the buttons in that section to be smaller than the regular ones.
 
-Using interpolated functions, adjusting the button size is easy as pie:
+Using interpolated functions, adjusting the button size is easy as pie. Prefix props you don't want passed to the DOM with `$` (transient props):
 
 ```JS
 const Button = styled.button`
   /* If it's a small button use less padding */
-  padding: ${props => props.small ? '0.25em 1em' : '0.5em 2em'};
+  padding: ${props => props.$small ? '0.25em 1em' : '0.5em 2em'};
 
   /* …more styles here… */
 `;
@@ -31,7 +31,7 @@ Then, in your comment section, you can simply say that the `<Button>` should be 
 
 ```JSX
 <Button>This is a normal button!</Button>
-<Button small>This is a small button!</Button>
+<Button $small>This is a small button!</Button>
 ```
 
 ## Using JavaScript to our advantage
@@ -180,7 +180,7 @@ Pretty easy, huh?
 
 ### Refs to DOM nodes
 
-styled-components makes use of the new React 16.3 API [`forwardRef`](https://reactjs.org/docs/forwarding-refs.html). Thus, set refs like you would on any other component and they will automatically resolve to the underlying DOM element or wrapped component class instance.
+styled-components uses React's [`forwardRef`](https://react.dev/reference/react/forwardRef) under the hood. Set refs like you would on any other component and they will automatically resolve to the underlying DOM element or wrapped component class instance.
 
 ```JSX
 const StyledInput = styled.input`

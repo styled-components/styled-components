@@ -22,12 +22,7 @@ export default function Page() {
 }
 ```
 
-**How it works:**
-
-- Styled-components automatically detects RSC environments (when `React.createContext` is unavailable)
-- Styles are rendered as `<style>` tags with React 19's `precedence` attribute
-- React automatically hoists styles to `<head>` and deduplicates them
-- Zero configuration required!
+RSC environments are detected automatically—no configuration required. Styles are emitted alongside each component's markup and deduplicated per render.
 
 **For Next.js App Router (SSR Style Extraction):**
 
@@ -73,18 +68,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-**Why the registry is needed:**
-
-- Extracts styles during server rendering using `useServerInsertedHTML`
-- Ensures styles are sent inline with HTML for no-JS support
-- React 19's automatic style hoisting only works post-hydration on the client
-- Without the registry, pages will have no styles until JavaScript loads
+The registry collects styles from client components during SSR so pages are fully styled on first paint (no FOUC, works with JavaScript disabled). Server components don't need it.
 
 **Requirements:**
 
-- React 19+ for automatic RSC support with style hoisting (client-side)
-- Registry pattern required for SSR style extraction (all React versions)
-- For React 16.8-18.x: traditional SSR with `ServerStyleSheet` continues to work as before
+- React 16.8+ for client components
+- React 19+ for RSC
 
 **For traditional SSR (Next.js Pages Router, custom SSR):**
 

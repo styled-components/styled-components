@@ -14,7 +14,7 @@ It's important to note that all repositories under the `styled-components` banne
 
 ## What if you have problems that cannot be discussed in a public issue?
 
-These days, we highly recommend trying a tool like [ChatGPT](https://chat.openai.com/) to get instant feedback and tips. [@quantizor](https://x.com/quantizor) can be reached on X to start a private conversation, but please keep in mind that response is not guaranteed since open source is volunteer effort and subject to personal availability.
+These days, we highly recommend trying an AI coding assistant to get instant feedback and tips. [@quantizor](https://x.com/quantizor) can be reached on X to start a private conversation, but please keep in mind that response is not guaranteed since open source is volunteer effort and subject to personal availability.
 
 ## Code contributions
 
