@@ -104,7 +104,7 @@ describe('rehydrateSheet', () => {
 data-styled.g11[id=\"idA\"]{content:\"nameA,\"}/*!sc*/
 .b {}/*!sc*/
 data-styled.g22[id=\"idB\"]{content:\"nameB,\"}/*!sc*/
-.a{color:burgundy;}/*!sc*/
+.a {color: burgundy;}/*!sc*/
 data-styled.g23[id=\"sc-kqxcKS\"]{content:\"a,\"}/*!sc*/
 </style>
     `.trim()

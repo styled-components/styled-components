@@ -11,17 +11,7 @@ describe('withTheme', () => {
     warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
-  it('should not throw an error when defaultProps is defined', () => {
-    const Component = () => <div>Wrapped Component</div>;
-    Component.defaultProps = {
-      theme: {},
-    };
-
-    const WrappedComponent = withTheme(Component);
-    render(<WrappedComponent />);
-  });
-
-  it('should not throw an error when defaultProps is not defined', () => {
+  it('should not throw an error when rendered', () => {
     expect(() => {
       const Component = () => <div>Wrapped Component</div>;
       const WrappedComponent = withTheme(Component);
@@ -29,12 +19,12 @@ describe('withTheme', () => {
     }).not.toThrow();
   });
 
-  it('should throw a warning when no default theme is provided', () => {
+  it('should throw a warning when no theme is provided', () => {
     const Comp = () => <div>Wrapped Component</div>;
     const WrappedComponent = withTheme(Comp);
     render(<WrappedComponent />);
     expect(warn.mock.calls[0][0]).toMatchInlineSnapshot(
-      `"[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class "Comp""`
+      `"[withTheme] You are not using a ThemeProvider nor passing a theme prop to component "Comp""`
     );
   });
 

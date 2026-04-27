@@ -1,4 +1,3 @@
-declare let SC_DISABLE_SPEEDY: boolean | null | undefined;
 declare let __VERSION__: string;
 
 import React from 'react';
@@ -24,26 +23,6 @@ export const IS_BROWSER = typeof window !== 'undefined' && typeof document !== '
  * inlining and terser dead-code elimination for all RSC branches.
  */
 export const IS_RSC: boolean = typeof React.createContext === 'undefined';
-
-function readSpeedyFlag(name: string): boolean | undefined {
-  if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
-    const val = process.env[name];
-    if (val !== undefined && val !== '') {
-      return val !== 'false';
-    }
-  }
-  return undefined;
-}
-
-export const DISABLE_SPEEDY = Boolean(
-  typeof SC_DISABLE_SPEEDY === 'boolean'
-    ? SC_DISABLE_SPEEDY
-    : (readSpeedyFlag('REACT_APP_SC_DISABLE_SPEEDY') ??
-        readSpeedyFlag('SC_DISABLE_SPEEDY') ??
-        (typeof process !== 'undefined' && typeof process.env !== 'undefined'
-          ? process.env.NODE_ENV !== 'production'
-          : true))
-);
 
 export const KEYFRAMES_ID_PREFIX = 'sc-keyframes-';
 

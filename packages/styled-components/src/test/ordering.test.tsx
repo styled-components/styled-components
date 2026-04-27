@@ -389,7 +389,7 @@ describe('CSS injection ordering', () => {
         </StyleSheetManager>
       );
 
-      const source = target.innerHTML;
+      const source = getCSS(target);
       const redPos = source.indexOf('color:red');
       const bluePos = source.indexOf('color:blue');
       expect(redPos).toBeGreaterThanOrEqual(0);

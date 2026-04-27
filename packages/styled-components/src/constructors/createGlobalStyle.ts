@@ -42,22 +42,7 @@ export default function createGlobalStyle<Props extends object>(
   const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const ssc = useStyleSheetContext();
     const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
-
-    // Each mount needs a unique instance ID for the shared-group instanceRules cache.
-    // __SERVER__ is a build-time constant: the dead branch is entirely eliminated,
-    // so React never sees a conditional hook call.
-    // Server bundle: direct allocation (one-shot renders, no stability needed).
-    // Browser bundle: useRef for stable ID across re-renders + useLayoutEffect cleanup.
-    let instance: number;
-    if (__SERVER__) {
-      instance = ssc.styleSheet.allocateGSInstance(styledComponentId);
-    } else {
-      const instanceRef = React.useRef<number | null>(null);
-      if (instanceRef.current === null) {
-        instanceRef.current = ssc.styleSheet.allocateGSInstance(styledComponentId);
-      }
-      instance = instanceRef.current;
-    }
+    const instance = React.useId();
 
     if (
       process.env.NODE_ENV !== 'production' &&
@@ -179,7 +164,7 @@ export default function createGlobalStyle<Props extends object>(
   };
 
   function renderStyles(
-    instance: number,
+    instance: string,
     props: ExecutionProps,
     styleSheet: StyleSheet,
     theme: DefaultTheme | undefined,
@@ -195,12 +180,16 @@ export default function createGlobalStyle<Props extends object>(
     } else {
       const context = {
         ...props,
-        theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
+        theme: determineTheme(props, theme),
       } as ExecutionContext & Props;
 
       globalStyle.renderStyles(instance, context, styleSheet, stylis);
     }
   }
 
-  return React.memo(GlobalStyleComponent);
+  const memoized = React.memo(GlobalStyleComponent) as React.NamedExoticComponent<
+    ExecutionProps & Props
+  > & { styledComponentId: string };
+  memoized.styledComponentId = styledComponentId;
+  return memoized;
 }

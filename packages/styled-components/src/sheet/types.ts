@@ -22,11 +22,9 @@ export type SheetOptions = {
   isServer: boolean;
   nonce?: string | undefined;
   target?: InsertionTarget | undefined;
-  useCSSOMInjection: boolean;
 };
 
 export interface Sheet {
-  allocateGSInstance(id: string): number;
   clearNames(id: string): void;
   clearRules(id: string): void;
   clearTag(): void;

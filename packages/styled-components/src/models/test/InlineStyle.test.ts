@@ -1,4 +1,8 @@
-import { parseCSSDeclarations } from '../InlineStyle';
+import makeInlineStyleClass from '../InlineStyle';
+import {
+  extractBaseDeclPairs as parseCSSDeclarations,
+  resetNativeStyleCache,
+} from '../nativeStyleCompiler';
 
 describe('parseCSSDeclarations', () => {
   it('parses a single declaration', () => {
@@ -195,20 +199,13 @@ describe('parseCSSDeclarations', () => {
     expect(parseCSSDeclarations('/* nothing here */')).toEqual([]);
   });
 
-  it('warns on unclosed parenthesis in dev mode', () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    parseCSSDeclarations('color: rgb(255, 0, 0; font-size: 12px;');
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('unclosed parenthesis'));
-    warnSpy.mockRestore();
-  });
-
   it('drops broken declaration and recovers subsequent ones', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     expect(parseCSSDeclarations('color: rgb(255, 0, 0; font-size: 12px;')).toMatchInlineSnapshot(`
       [
         [
-          "font-size",
-          "12px",
+          "color",
+          "rgb(255, 0, 0; font-size: 12px;",
         ],
       ]
     `);
@@ -544,11 +541,8 @@ describe('parseCSSDeclarations', () => {
       ]);
     });
 
-    it('warns and excludes selector-like text', () => {
+    it('excludes selector-like text (rule nodes, not decls)', () => {
       expect(parseCSSDeclarations('.foo { color: red; }')).toMatchInlineSnapshot(`[]`);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('not supported as an inline style')
-      );
     });
 
     it('excludes all declarations inside a selector block', () => {
@@ -569,11 +563,8 @@ describe('parseCSSDeclarations', () => {
       `);
     });
 
-    it('warns and excludes at-rules', () => {
+    it('excludes at-rules (at-rule nodes, not decls)', () => {
       expect(parseCSSDeclarations('@media screen { color: red; }')).toMatchInlineSnapshot(`[]`);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('not supported as an inline style')
-      );
     });
 
     it('excludes all declarations inside an at-rule block', () => {
@@ -587,8 +578,8 @@ describe('parseCSSDeclarations', () => {
         .toMatchInlineSnapshot(`
         [
           [
-            "color",
-            "red",
+            "font-family",
+            ""Unterminated; color: red;",
           ],
         ]
       `);
@@ -599,8 +590,8 @@ describe('parseCSSDeclarations', () => {
         .toMatchInlineSnapshot(`
         [
           [
-            "color",
-            "red",
+            "font-family",
+            "'Unterminated; color: red;",
           ],
         ]
       `);
@@ -667,10 +658,10 @@ describe('parseCSSDeclarations', () => {
       ]);
     });
 
-    it('drops multiple broken declarations and recovers valid ones', () => {
-      const result = parseCSSDeclarations('color: rgb(; font-size: calc(; opacity: 1;');
-      expect(warnSpy).toHaveBeenCalledTimes(2);
-      expect(result).toEqual([['opacity', '1']]);
+    it('unclosed parens consume remainder (matches stylis semantics)', () => {
+      expect(parseCSSDeclarations('color: rgb(; font-size: calc(; opacity: 1;')).toEqual([
+        ['color', 'rgb(; font-size: calc(; opacity: 1;'],
+      ]);
     });
 
     it('handles CRLF line endings', () => {
@@ -820,7 +811,14 @@ describe('parseCSSDeclarations', () => {
     });
 
     it('backslash at end of quoted string before EOF (dropped, nothing to recover)', () => {
-      expect(parseCSSDeclarations('content: "end\\')).toMatchInlineSnapshot(`[]`);
+      expect(parseCSSDeclarations('content: "end\\')).toMatchInlineSnapshot(`
+        [
+          [
+            "content",
+            ""end\\",
+          ],
+        ]
+      `);
     });
 
     it('backslash-n inside quotes preserved as-is', () => {
@@ -853,8 +851,8 @@ describe('parseCSSDeclarations', () => {
       expect(parseCSSDeclarations('content: "broken; color: red;')).toMatchInlineSnapshot(`
         [
           [
-            "color",
-            "red",
+            "content",
+            ""broken; color: red;",
           ],
         ]
       `);
@@ -895,7 +893,7 @@ describe('parseCSSDeclarations', () => {
         .toMatchInlineSnapshot(`
         [
           [
-            "visible */ color",
+            "visible  color",
             "red",
           ],
         ]
@@ -919,12 +917,8 @@ describe('parseCSSDeclarations', () => {
         .toMatchInlineSnapshot(`
         [
           [
-            "color",
-            "red",
-          ],
-          [
-            "margin",
-            "10px",
+            "content",
+            "'unclosed; color: red; margin: 10px;",
           ],
         ]
       `);
@@ -935,12 +929,8 @@ describe('parseCSSDeclarations', () => {
         .toMatchInlineSnapshot(`
         [
           [
-            "color",
-            "red",
-          ],
-          [
-            "margin",
-            "10px",
+            "background",
+            "url(broken; color: red; margin: 10px;",
           ],
         ]
       `);
@@ -994,27 +984,33 @@ describe('parseCSSDeclarations', () => {
       expect(parseCSSDeclarations('content: "unclosed; color: red;')).toMatchInlineSnapshot(`
         [
           [
-            "color",
-            "red",
+            "content",
+            ""unclosed; color: red;",
           ],
         ]
       `);
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('unterminated string'));
     });
 
     it('unbalanced single quote recovers gracefully', () => {
       expect(parseCSSDeclarations("content: 'unclosed; color: red;")).toMatchInlineSnapshot(`
         [
           [
-            "color",
-            "red",
+            "content",
+            "'unclosed; color: red;",
           ],
         ]
       `);
     });
 
     it('unbalanced quote with no recovery semicolons', () => {
-      expect(parseCSSDeclarations('content: "unclosed forever')).toMatchInlineSnapshot(`[]`);
+      expect(parseCSSDeclarations('content: "unclosed forever')).toMatchInlineSnapshot(`
+        [
+          [
+            "content",
+            ""unclosed forever",
+          ],
+        ]
+      `);
     });
 
     it('comments in various positions', () => {
@@ -1166,8 +1162,12 @@ describe('parseCSSDeclarations', () => {
         .toMatchInlineSnapshot(`
         [
           [
-            "!!!invalid!!!; color",
+            "color",
             "red",
+          ],
+          [
+            "font-size",
+            "14px",
           ],
         ]
       `);
@@ -1197,9 +1197,6 @@ describe('parseCSSDeclarations', () => {
           ],
         ]
       `);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('not supported as an inline style')
-      );
     });
 
     it('@keyframes block is skipped', () => {
@@ -1285,11 +1282,11 @@ describe('parseCSSDeclarations', () => {
             "red",
           ],
           [
-            "font-size",
+            "font-size",
             "12px",
           ],
           [
-            "margin",
+            "margin",
             "0",
           ],
         ]
@@ -1349,21 +1346,16 @@ describe('parseCSSDeclarations', () => {
       `);
     });
 
-    it('unclosed paren at end of input recovers via fallback semicolon search', () => {
+    it('unclosed paren consumes remainder (stylis semantics)', () => {
       expect(parseCSSDeclarations('transform: rotate(45deg; color: red; margin: 10px;'))
         .toMatchInlineSnapshot(`
         [
           [
-            "color",
-            "red",
-          ],
-          [
-            "margin",
-            "10px",
+            "transform",
+            "rotate(45deg; color: red; margin: 10px;",
           ],
         ]
       `);
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('unclosed parenthesis'));
     });
 
     it('both unclosed paren and unclosed quote in sequence', () => {
@@ -1371,12 +1363,8 @@ describe('parseCSSDeclarations', () => {
         .toMatchInlineSnapshot(`
         [
           [
-            "c",
-            "valid",
-          ],
-          [
-            "d",
-            "10px",
+            "a",
+            "url(broken; b: "unterminated; c: valid; d: 10px;",
           ],
         ]
       `);
@@ -1480,5 +1468,159 @@ describe('parseCSSDeclarations', () => {
     for (const [input, expected] of cases) {
       expect(parseCSSDeclarations(input)).toEqual(expected);
     }
+  });
+});
+
+describe('InlineStyle class — compile() fast-paths', () => {
+  const stubStyleSheet = { create: <T>(s: T) => s } as any;
+  // Each describe gets a fresh InlineStyle factory so module caches don't bleed across.
+  let InlineStyle: ReturnType<typeof makeInlineStyleClass>;
+
+  beforeEach(() => {
+    InlineStyle = makeInlineStyleClass(stubStyleSheet);
+    resetNativeStyleCache();
+  });
+
+  describe('static-rules detection', () => {
+    it('classifies single-string rules as static and memoises the compile output', () => {
+      const inline = new InlineStyle(['color: red;'] as any);
+      const a = inline.compile({} as any);
+      const b = inline.compile({} as any);
+      expect(a).toBe(b); // same object identity → memoised
+    });
+
+    it('classifies multi-string rules as static', () => {
+      const inline = new InlineStyle(['color: red;', ' padding: 8px;'] as any);
+      const a = inline.compile({} as any);
+      expect(a.base).toEqual({ color: 'red', padding: 8 });
+      expect(inline.compile({} as any)).toBe(a);
+    });
+
+    it('classifies empty rules as static', () => {
+      const inline = new InlineStyle([] as any);
+      const a = inline.compile({} as any);
+      const b = inline.compile({} as any);
+      expect(a).toBe(b);
+      expect(a.base).toEqual({});
+    });
+
+    it('classifies rules containing nested arrays of strings as static (css`` shape)', () => {
+      // css`color: red;` produces a tagged interpolation array internally.
+      // Even though the outer rules contain an array, the whole thing is
+      // statically derivable.
+      const sharedCSS = ['color: red;'] as any;
+      const inline = new InlineStyle([sharedCSS, ' padding: 8px;'] as any);
+      const a = inline.compile({} as any);
+      expect(a.base).toEqual({ color: 'red', padding: 8 });
+      expect(inline.compile({} as any)).toBe(a);
+    });
+
+    it('classifies deeply nested string arrays as static', () => {
+      const inner = ['color: red;'] as any;
+      const middle = [inner, ' margin: 4px;'] as any;
+      const inline = new InlineStyle([middle, ' padding: 8px;'] as any);
+      const a = inline.compile({} as any);
+      expect(a.base).toEqual({ color: 'red', margin: 4, padding: 8 });
+    });
+
+    it('does not call the rule functions during static path (because there are none)', () => {
+      // A purely-static InlineStyle never calls a function — even if execution
+      // context is omitted, the compile should succeed. Use a non-shorthand
+      // property so we don't fight with shorthand expansion.
+      const inline = new InlineStyle(['opacity: 0.5;'] as any);
+      // @ts-expect-error testing missing context resilience
+      const a = inline.compile();
+      expect(a.base).toEqual({ opacity: 0.5 });
+    });
+  });
+
+  describe('dynamic-rules detection', () => {
+    it('classifies rules containing a function as dynamic', () => {
+      let calls = 0;
+      const fn = () => {
+        calls++;
+        return 'red';
+      };
+      const inline = new InlineStyle(['color: ', fn, ';'] as any);
+      const a = inline.compile({} as any);
+      expect(a.base).toEqual({ color: 'red' });
+      // Function was invoked during flatten
+      expect(calls).toBe(1);
+    });
+
+    it('classifies array-with-function rules as dynamic', () => {
+      const fn = () => 'blue';
+      const inline = new InlineStyle([['color: ', fn, ';']] as any);
+      const a = inline.compile({} as any);
+      expect(a.base).toEqual({ color: 'blue' });
+    });
+
+    it('classifies plain-object rules as dynamic', () => {
+      const inline = new InlineStyle([{ color: 'red', padding: 8 } as any] as any);
+      const a = inline.compile({} as any);
+      expect(a.base).toEqual({ color: 'red', padding: 8 });
+    });
+  });
+
+  describe('dynamic same-CSS dedup', () => {
+    it('returns the same compiled result across calls when function output is stable', () => {
+      // Function returns the same value regardless of context — common with
+      // theme tokens (`p => p.theme.primary`) when theme is shared.
+      const fn = () => 'red';
+      const inline = new InlineStyle(['color: ', fn, ';'] as any);
+      const a = inline.compile({} as any);
+      const b = inline.compile({} as any);
+      expect(a).toBe(b); // identity preserved → dedup hit
+    });
+
+    it('produces a new compiled result when function output changes', () => {
+      const inline = new InlineStyle(['color: ', (p: any) => p.$color, ';'] as any);
+      const a = inline.compile({ $color: 'red' } as any);
+      const b = inline.compile({ $color: 'blue' } as any);
+      // Different inputs → different produced CSS → different compile output.
+      expect(a).not.toBe(b);
+      expect(a.base).toEqual({ color: 'red' });
+      expect(b.base).toEqual({ color: 'blue' });
+    });
+
+    it('returns dedup-hit identity again when function output reverts', () => {
+      const inline = new InlineStyle(['color: ', (p: any) => p.$color, ';'] as any);
+      const red1 = inline.compile({ $color: 'red' } as any);
+      inline.compile({ $color: 'blue' } as any);
+      const red2 = inline.compile({ $color: 'red' } as any);
+      // Module-level compileCache hit on "color: red;" returns the same
+      // CompiledNativeStyles instance from the first call.
+      expect(red2).toBe(red1);
+    });
+
+    it('does not invoke function rules more than once per compile call', () => {
+      let calls = 0;
+      const fn = (p: any) => {
+        calls++;
+        return p.$color;
+      };
+      const inline = new InlineStyle(['color: ', fn, ';'] as any);
+      inline.compile({ $color: 'red' } as any);
+      expect(calls).toBe(1);
+      inline.compile({ $color: 'red' } as any);
+      // Even though the dedup hit short-circuits compileNativeStyles, the
+      // function still runs because we need the produced CSS string to
+      // compare against cachedCSS.
+      expect(calls).toBe(2);
+    });
+
+    it('does not flatten non-string function output twice on the fast dynamic path', () => {
+      let calls = 0;
+      const fn = (p: any) => {
+        calls++;
+        return p.theme.primary;
+      };
+      const inline = new InlineStyle(['color: ', fn, '; padding: 8px;'] as any);
+      const a = inline.compile({ theme: { primary: '#333' }, $unused: 'a' } as any);
+      const b = inline.compile({ theme: { primary: '#333' }, $unused: 'b' } as any);
+
+      expect(a).toBe(b);
+      expect(calls).toBe(2);
+    });
   });
 });

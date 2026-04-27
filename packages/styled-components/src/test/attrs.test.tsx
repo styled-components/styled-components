@@ -132,18 +132,18 @@ describe('attrs', () => {
     `);
   });
 
-  it('defaultProps are merged into what function attrs receives', () => {
+  it('theme from ThemeProvider is visible to function attrs', () => {
     const Comp = styled.button.attrs<DataAttributes>(props => ({
       'data-color': props.theme!.color,
     }))``;
 
-    Comp.defaultProps = {
-      theme: {
-        color: 'red',
-      },
-    };
-
-    expect(render(<Comp />).asFragment()).toMatchInlineSnapshot(`
+    expect(
+      render(
+        <ThemeProvider theme={{ color: 'red' }}>
+          <Comp />
+        </ThemeProvider>
+      ).asFragment()
+    ).toMatchInlineSnapshot(`
       <DocumentFragment>
         <button
           class="sc-a"
@@ -545,6 +545,27 @@ describe('attrs', () => {
 
     const { container } = render(<Comp />);
     expect(container.querySelector('div')!.hasAttribute('data-removed')).toBe(false);
+  });
+
+  it('function-form attrs supports user-overridable defaults', () => {
+    // Replacement for the v6 `defaultProps` pattern where user props could
+    // override built-in defaults. In v7, object-form attrs always win over
+    // props; the function form is the escape hatch that reads props first
+    // and only falls back to the default.
+    const Button = styled('button').attrs<{ variant?: 'primary' | 'danger' }>(p => ({
+      variant: p.variant || 'primary',
+      'data-variant': p.variant || 'primary',
+    }))``;
+
+    const withDefault = render(<Button />);
+    expect(withDefault.container.querySelector('button')!.getAttribute('data-variant')).toBe(
+      'primary'
+    );
+
+    const withOverride = render(<Button variant="danger" />);
+    expect(withOverride.container.querySelector('button')!.getAttribute('data-variant')).toBe(
+      'danger'
+    );
   });
 
   it('should not mutate the props object passed to attrs callbacks', () => {

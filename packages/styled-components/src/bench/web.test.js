@@ -1,10 +1,21 @@
 /**
- * Integrated stress benchmarks for styled-components.
+ * Integrated stress benchmarks for styled-components (react-test-renderer).
  *
- * Run: pnpm --filter styled-components bench
+ * Run this file only (with reduced iterations for faster / CI-friendly runs):
+ *   pnpm --filter styled-components bench:web:stress
+ *
+ * Full web bench suite (parser, preprocess, v6 vs v7, responsive, etc.):
+ *   pnpm --filter styled-components bench:web
+ *
+ * Optional env (see bench-utils.ts): SC_BENCH_ITER_SCALE, SC_BENCH_RUNS
  *
  * Runs in NODE_ENV=production (via setup.js) so isStatic fast-paths
  * activate and results reflect real-world performance.
+ *
+ * Sections:
+ *   - creation at scale: cost of styled() / attrs / extension factories
+ *   - render at scale: mount/unmount, siblings, parent re-renders, attrs at 1K–10K children
+ *   - 10K decomposition: isolate createElement vs reconcile vs SC render vs forwardRef baseline
  */
 
 const React = require('react');

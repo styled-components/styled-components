@@ -16,7 +16,6 @@ import { resetGroupIds } from '../../sheet/GroupIDAllocator';
 describe('checkDynamicCreation RSC mode', () => {
   beforeEach(() => {
     resetGroupIds();
-    mainSheet.gs = {};
     mainSheet.names = new Map();
     mainSheet.clearTag();
   });

@@ -353,6 +353,14 @@ const StyledComponentVeryLargeUnion = styled(UnstyledComponentVeryLargeUnion)`
   color: ${props => props.theme?.waz || 'black'};
 `;
 
+// #5725 — TS2590 regression: applying .attrs() on a VeryLargeUnionType-keyed
+// component must not push the attrs-optional type pipeline over TS's
+// complexity budget.
+const VeryLargeUnionWithAttrs = styled(UnstyledComponentVeryLargeUnion).attrs({
+  foo: 'add' as const,
+})``;
+<VeryLargeUnionWithAttrs />;
+
 // Can provide div props into attrs
 const AttrFunctionRequiredTest2 = styled.div.attrs(_ => ({
   color: '',
@@ -770,3 +778,55 @@ const ToggleWithAttrs = styled(ToggleBase).attrs({ isOpen: false })``;
 <ToggleWithAttrs />;
 // @ts-expect-error isOpen is boolean, not string
 <ToggleWithAttrs isOpen="yes" onToggle={() => {}} />;
+
+// #5725 — TS2590 regression repro: styled(complex-discriminated-union).attrs({...})
+// Mirrors antd's Button shape: large prop interface + discriminated-union variant
+// keys. The 6.4.0 attrs-optionality change must remain compatible with this.
+type AntdSize = 'small' | 'middle' | 'large';
+type AntdColor =
+  | 'default'
+  | 'primary'
+  | 'danger'
+  | 'pink'
+  | 'purple'
+  | 'cyan'
+  | 'blue'
+  | 'geekblue'
+  | 'magenta'
+  | 'volcano'
+  | 'orange'
+  | 'gold'
+  | 'lime'
+  | 'green';
+type AntdVariant = 'outlined' | 'dashed' | 'solid' | 'filled' | 'text' | 'link';
+interface FakeAntdButtonProps {
+  size?: AntdSize;
+  color?: AntdColor;
+  variant?: AntdVariant;
+  block?: boolean;
+  disabled?: boolean;
+  ghost?: boolean;
+  href?: string;
+  htmlType?: 'submit' | 'reset' | 'button';
+  icon?: React.ReactNode;
+  iconPosition?: 'start' | 'end';
+  loading?: boolean | { delay?: number; icon?: React.ReactNode };
+  shape?: 'default' | 'circle' | 'round';
+  type?: 'default' | 'primary' | 'dashed' | 'link' | 'text' | 'ghost';
+  onClick?: React.MouseEventHandler<HTMLElement>;
+  className?: string;
+  style?: React.CSSProperties;
+  children?: React.ReactNode;
+}
+const FakeAntdButton: React.FC<FakeAntdButtonProps> = () => null;
+// The repro from the issue: setting size + color + variant via attrs.
+const ScButton = styled(FakeAntdButton).attrs({
+  size: 'small',
+  color: 'default',
+  variant: 'filled',
+})`
+  height: 18px;
+`;
+// Should compile without TS2590; should be usable without re-supplying the attrs.
+<ScButton onClick={() => {}}>click</ScButton>;
+<ScButton size="large" />;

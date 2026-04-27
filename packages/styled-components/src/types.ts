@@ -293,9 +293,27 @@ export interface IInlineStyleConstructor<Props extends BaseObject> {
   new (rules: RuleSet<Props>): IInlineStyle<Props>;
 }
 
+interface CompileOutput {
+  base: object;
+  conditional: Array<{
+    type: 'media' | 'container' | 'supports' | 'pseudo';
+    condition: string;
+    containerName?: string;
+    styles: object;
+  }>;
+  keyframes: Array<{
+    name: string;
+    frames: Array<{ stops: string[]; decls: Array<[string, string]> }>;
+  }>;
+}
+
 export interface IInlineStyle<Props extends BaseObject> {
   rules: RuleSet<Props>;
-  generateStyleObject(executionContext: ExecutionContext & Props): object;
+  /** Set at construction; the factory reads it once to pick the fast vs full render impl. */
+  fastEligible: boolean;
+  /** Compiled output for fully-static CSS (populated at construction); null when CSS has function interpolations. */
+  staticCompiled: CompileOutput | null;
+  compile(executionContext: ExecutionContext & Props): CompileOutput;
 }
 
 export type CSSProperties = CSS.Properties<number | (string & {})>;
@@ -362,9 +380,17 @@ export type Substitute<A extends BaseObject, B extends BaseObject> = keyof B ext
 /**
  * Makes keys in K optional while keeping all others required.
  * Used to make attrs-provided props optional on the final component.
+ *
+ * Single-pass formulation using key-remapping over `keyof P` —
+ * required keys (those NOT in K) keep their modifier; the K keys are
+ * spliced in from a separate mapped type with `?` applied. Avoids the
+ * `FastOmit<P, K> & Partial<Pick<P, K>>` form which builds an
+ * intermediate `Pick` type that can blow up TS's complexity budget on
+ * deeply-discriminated component prop unions (e.g. antd Button — see
+ * #5725).
  */
-export type MakeAttrsOptional<P extends BaseObject, K extends keyof any> = keyof K extends never
+export type MakeAttrsOptional<P extends BaseObject, K extends keyof any> = [K] extends [never]
   ? P
-  : FastOmit<P, K & keyof P> & Partial<Pick<P, K & keyof P>>;
+  : FastOmit<P, K & keyof P> & { [Key in Extract<keyof P, K>]?: P[Key] };
 
 export type InsertionTarget = HTMLElement | ShadowRoot;

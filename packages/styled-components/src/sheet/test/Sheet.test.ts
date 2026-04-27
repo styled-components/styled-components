@@ -56,17 +56,14 @@ it('converts to string correctly', () => {
 
 describe('reconstructWithOptions', () => {
   it('creates a new sheet with merged options', () => {
-    const originalSheet = new StyleSheet({ isServer: true, useCSSOMInjection: false });
+    const originalSheet = new StyleSheet({ isServer: true });
     originalSheet.insertRules('id1', 'name1', ['.original {}']);
 
-    const newSheet = originalSheet.reconstructWithOptions({ useCSSOMInjection: true });
+    const newSheet = originalSheet.reconstructWithOptions({ nonce: 'abc' });
 
     // New sheet should have merged options
     expect(newSheet.options.isServer).toBe(true);
-    expect(newSheet.options.useCSSOMInjection).toBe(true);
-
-    // New sheet should share global styles
-    expect(newSheet.gs).toBe(originalSheet.gs);
+    expect(newSheet.options.nonce).toBe('abc');
 
     // New sheet should preserve names
     expect(newSheet.hasNameForId('id1', 'name1')).toBe(true);

@@ -1,5 +1,5 @@
 import { C } from 'ts-toolbelt';
-import { CSSOMTag, TextTag, VirtualTag } from '../Tag';
+import { CSSOMTag, VirtualTag } from '../Tag';
 import { Tag } from '../types';
 
 const describeTag = (TagClass: C.Class<[], Tag>) => {
@@ -35,10 +35,6 @@ describe('CSSOMTag', () => {
     expect(childNodes.length).toBe(1);
     expect(childNodes[0].nodeName).toBe('#text');
   });
-});
-
-describe('TextTag', () => {
-  describeTag(TextTag);
 });
 
 describe('VirtualTag', () => {

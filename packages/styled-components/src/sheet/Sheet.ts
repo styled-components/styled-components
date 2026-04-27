@@ -1,4 +1,4 @@
-import { DISABLE_SPEEDY, IS_BROWSER, KEYFRAMES_ID_PREFIX } from '../constants';
+import { IS_BROWSER, KEYFRAMES_ID_PREFIX } from '../constants';
 import { InsertionTarget } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import { setToString } from '../utils/setToString';
@@ -13,23 +13,17 @@ let SHOULD_REHYDRATE = IS_BROWSER;
 type SheetConstructorArgs = {
   isServer?: boolean;
   nonce?: string | undefined;
-  useCSSOMInjection?: boolean;
   target?: InsertionTarget | undefined;
 };
 
-type GlobalStylesAllocationMap = {
-  [key: string]: number;
-};
 type NamesAllocationMap = Map<string, Set<string>>;
 
 const defaultOptions: SheetOptions = {
   isServer: !IS_BROWSER,
-  useCSSOMInjection: !DISABLE_SPEEDY,
 };
 
 /** Contains the main stylesheet logic for stringification and caching */
 export default class StyleSheet implements Sheet {
-  gs: GlobalStylesAllocationMap;
   /** Keyframe component IDs for efficient RSC rendering (avoids scanning all names) */
   keyframeIds: Set<string>;
   names: NamesAllocationMap;
@@ -44,7 +38,6 @@ export default class StyleSheet implements Sheet {
 
   constructor(
     options: SheetConstructorArgs = EMPTY_OBJECT as Object,
-    globalStyles: GlobalStylesAllocationMap = {},
     names?: NamesAllocationMap | undefined
   ) {
     this.options = {
@@ -52,7 +45,6 @@ export default class StyleSheet implements Sheet {
       ...options,
     };
 
-    this.gs = globalStyles;
     this.keyframeIds = new Set();
     this.names = new Map(names as NamesAllocationMap);
     this.server = !!options.isServer;
@@ -75,7 +67,6 @@ export default class StyleSheet implements Sheet {
   reconstructWithOptions(options: SheetConstructorArgs, withNames = true) {
     const newSheet = new StyleSheet(
       { ...this.options, ...options },
-      this.gs,
       (withNames && this.names) || undefined
     );
 
@@ -94,10 +85,6 @@ export default class StyleSheet implements Sheet {
     }
 
     return newSheet;
-  }
-
-  allocateGSInstance(id: string) {
-    return (this.gs[id] = (this.gs[id] || 0) + 1);
   }
 
   /** Lazily initialises a GroupedTag for when it's actually needed */

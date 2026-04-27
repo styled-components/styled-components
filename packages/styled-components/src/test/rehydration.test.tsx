@@ -209,7 +209,7 @@ describe('rehydration', () => {
           color: red;
         }
         data-styled.g2[id="TWO"] {
-          content: "b,"
+          content: "b,";
         }"
       `);
     });
@@ -300,9 +300,9 @@ describe('rehydration', () => {
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
           html { font-size: 16px; }/*!sc*/
-          ${SC_ATTR}.g1[id="sc-global-a"]{content: "sc-global-a1,"}/*!sc*/
+          ${SC_ATTR}.g1[id="sc-global-a"]{content: "sc-global-a,"}/*!sc*/
           body { background: papayawhip; }/*!sc*/
-          ${SC_ATTR}.g2[id="sc-global-b"]{content: "sc-global-b1,"}/*!sc*/
+          ${SC_ATTR}.g2[id="sc-global-b"]{content: "sc-global-b,"}/*!sc*/
           .c { color: blue; }/*!sc*/
           ${SC_ATTR}.g3[id="ONE"]{content: "c,"}/*!sc*/
           .d { color: red; }/*!sc*/
@@ -422,9 +422,6 @@ describe('rehydration', () => {
       // Both instances should render their styles
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
         "html {
-          font-size: 16px;
-        }
-        html {
           font-size: 16px;
         }
         body {
@@ -578,10 +575,14 @@ describe('rehydration', () => {
   });
 
   describe('with keyframes', () => {
+    // v7 dropped the runtime vendor prefixer, so SSR markup contains the
+    // unprefixed `@keyframes` form only. The seed below mirrors real v7
+    // SSR output. (Pre-v7 seeds also included `@-webkit-keyframes` and exercised
+    // jsdom's CSSOM dedup quirks, which weren't actually testing sc behavior.)
     beforeEach(() => {
       document.head.innerHTML = `
         <style ${SC_ATTR} ${SC_ATTR_VERSION}="${__VERSION__}">
-          @-webkit-keyframes keyframe_880 {from {opacity: 0;}}@keyframes keyframe_880 {from {opacity: 0;}}/*!sc*/
+          @keyframes keyframe_880 {from {opacity: 0;}}/*!sc*/
           ${SC_ATTR}.g1[id="sc-keyframes-keyframe_880"]{content: "keyframe_880,"}/*!sc*/
         </style>
       `;
@@ -591,12 +592,7 @@ describe('rehydration', () => {
 
     it('should not touch existing styles', () => {
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "@-webkit-keyframes keyframe_880 {
-          from {
-            opacity: 0;
-          }
-        }
-        @keyframes keyframe_880 {
+        "@keyframes keyframe_880 {
           from {
             opacity: 0;
           }
@@ -619,12 +615,7 @@ describe('rehydration', () => {
       render(<A />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "@-webkit-keyframes keyframe_880 {
-          from {
-            opacity: 0;
-          }
-        }
-        @keyframes keyframe_880 {
+        "@keyframes keyframe_880 {
           from {
             opacity: 0;
           }
@@ -650,12 +641,7 @@ describe('rehydration', () => {
       render(<A />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "@-webkit-keyframes keyframe_880 {
-          from {
-            opacity: 0;
-          }
-        }
-        @keyframes keyframe_880 {
+        "@keyframes keyframe_880 {
           from {
             opacity: 0;
           }
@@ -694,12 +680,7 @@ describe('rehydration', () => {
       render(<A />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "@-webkit-keyframes keyframe_880 {
-          from {
-            opacity: 0;
-          }
-        }
-        @keyframes keyframe_880 {
+        "@keyframes keyframe_880 {
           from {
             opacity: 0;
           }
@@ -739,12 +720,7 @@ describe('rehydration', () => {
       render(<A $animation={fadeIn} />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        "@-webkit-keyframes keyframe_880 {
-          from {
-            opacity: 0;
-          }
-        }
-        @keyframes keyframe_880 {
+        "@keyframes keyframe_880 {
           from {
             opacity: 0;
           }

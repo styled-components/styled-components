@@ -4,8 +4,8 @@
  * Verifies that the useRef-based shallow context comparison correctly
  * caches and invalidates under various scenarios.
  */
+import { act, fireEvent, render } from '@testing-library/react';
 import React, { useState } from 'react';
-import TestRenderer, { act } from 'react-test-renderer';
 import { LIMIT as TOO_MANY_CLASSES_LIMIT } from '../utils/createWarnTooManyClasses';
 import { getCSS, resetStyled } from './utils';
 
@@ -15,22 +15,26 @@ beforeEach(() => {
   styled = resetStyled();
 });
 
+function getDivClass(container: HTMLElement): string {
+  return container.querySelector('div')!.className;
+}
+
 describe('memoization correctness', () => {
   it('returns same className on re-render with identical props', () => {
     const Comp = styled.div<{ $color: string }>`
       color: ${p => p.$color};
     `;
 
-    const renderer = TestRenderer.create(<Comp $color="red" />);
-    const first = renderer.root.findByType('div').props.className;
+    const { container, rerender, unmount } = render(<Comp $color="red" />);
+    const first = getDivClass(container);
 
-    renderer.update(<Comp $color="red" />);
-    expect(renderer.root.findByType('div').props.className).toBe(first);
+    rerender(<Comp $color="red" />);
+    expect(getDivClass(container)).toBe(first);
 
-    renderer.update(<Comp $color="red" />);
-    expect(renderer.root.findByType('div').props.className).toBe(first);
+    rerender(<Comp $color="red" />);
+    expect(getDivClass(container)).toBe(first);
 
-    renderer.unmount();
+    unmount();
   });
 
   it('generates new className when a prop changes', () => {
@@ -38,16 +42,19 @@ describe('memoization correctness', () => {
       color: ${p => p.$color};
     `;
 
-    const renderer = TestRenderer.create(<Comp $color="red" />);
-    const redClass = renderer.root.findByType('div').props.className;
+    const { container, rerender, unmount } = render(<Comp $color="red" />);
+    const redClass = getDivClass(container);
     expect(getCSS(document)).toMatchInlineSnapshot(`".b{color:red;}"`);
 
-    renderer.update(<Comp $color="blue" />);
-    const blueClass = renderer.root.findByType('div').props.className;
+    rerender(<Comp $color="blue" />);
+    const blueClass = getDivClass(container);
     expect(blueClass).not.toBe(redClass);
-    expect(getCSS(document)).toMatchInlineSnapshot(`".b{color:red;}.c{color:blue;}"`);
+    expect(getCSS(document)).toMatchInlineSnapshot(`
+      ".b{color:red;}
+      .c{color:blue;}"
+    `);
 
-    renderer.unmount();
+    unmount();
   });
 
   it('handles rapid prop toggling correctly', () => {
@@ -56,23 +63,22 @@ describe('memoization correctness', () => {
       font-size: ${p => (p.$color === 'red' ? '14px' : '16px')};
     `;
 
-    const renderer = TestRenderer.create(<Comp $color="red" />);
-    const redClass = renderer.root.findByType('div').props.className;
+    const { container, rerender, unmount } = render(<Comp $color="red" />);
+    const redClass = getDivClass(container);
 
     for (let i = 0; i < 100; i++) {
-      renderer.update(<Comp $color={i % 2 === 0 ? 'red' : 'blue'} />);
+      rerender(<Comp $color={i % 2 === 0 ? 'red' : 'blue'} />);
     }
 
-    // i=99 -> odd -> blue
-    expect(getCSS(document)).toMatchInlineSnapshot(
-      `".b{color:red;font-size:14px;}.c{color:blue;font-size:16px;}"`
-    );
+    expect(getCSS(document)).toMatchInlineSnapshot(`
+      ".b{color:red; font-size:14px;}
+      .c{color:blue; font-size:16px;}"
+    `);
 
-    // Back to red — should get the same className as the first render
-    renderer.update(<Comp $color="red" />);
-    expect(renderer.root.findByType('div').props.className).toBe(redClass);
+    rerender(<Comp $color="red" />);
+    expect(getDivClass(container)).toBe(redClass);
 
-    renderer.unmount();
+    unmount();
   });
 
   it('invalidates when theme changes', () => {
@@ -81,24 +87,27 @@ describe('memoization correctness', () => {
       color: ${(p: any) => p.theme.color || 'black'};
     `;
 
-    const renderer = TestRenderer.create(
+    const { container, rerender, unmount } = render(
       <ThemeProvider theme={{ color: 'red' }}>
         <Comp />
       </ThemeProvider>
     );
-    const redClass = renderer.root.findByType('div').props.className;
+    const redClass = getDivClass(container);
     expect(getCSS(document)).toMatchInlineSnapshot(`".b{color:red;}"`);
 
-    renderer.update(
+    rerender(
       <ThemeProvider theme={{ color: 'blue' }}>
         <Comp />
       </ThemeProvider>
     );
-    const blueClass = renderer.root.findByType('div').props.className;
+    const blueClass = getDivClass(container);
     expect(blueClass).not.toBe(redClass);
-    expect(getCSS(document)).toMatchInlineSnapshot(`".b{color:red;}.c{color:blue;}"`);
+    expect(getCSS(document)).toMatchInlineSnapshot(`
+      ".b{color:red;}
+      .c{color:blue;}"
+    `);
 
-    renderer.unmount();
+    unmount();
   });
 
   it('handles parent re-render without prop changes', () => {
@@ -119,23 +128,24 @@ describe('memoization correctness', () => {
       );
     }
 
-    const renderer = TestRenderer.create(<Parent />);
+    const { container, unmount } = render(<Parent />);
     const initial = parentRenderCount;
+    const button = container.querySelector('button')!;
 
     act(() => {
-      renderer.root.findByType('button').props.onClick();
+      fireEvent.click(button);
     });
     act(() => {
-      renderer.root.findByType('button').props.onClick();
+      fireEvent.click(button);
     });
     act(() => {
-      renderer.root.findByType('button').props.onClick();
+      fireEvent.click(button);
     });
 
     expect(parentRenderCount).toBe(initial + 3);
     expect(getCSS(document)).toMatchInlineSnapshot(`".b{color:red;}"`);
 
-    renderer.unmount();
+    unmount();
   });
 
   it('works with static attrs', () => {
@@ -143,13 +153,13 @@ describe('memoization correctness', () => {
       color: ${p => p.$color};
     `;
 
-    const renderer = TestRenderer.create(<Comp $color="red" />);
-    const first = renderer.root.findByType('div').props.className;
+    const { container, rerender, unmount } = render(<Comp $color="red" />);
+    const first = getDivClass(container);
 
-    renderer.update(<Comp $color="red" />);
-    expect(renderer.root.findByType('div').props.className).toBe(first);
+    rerender(<Comp $color="red" />);
+    expect(getDivClass(container)).toBe(first);
 
-    renderer.unmount();
+    unmount();
   });
 
   it('works with function attrs that produce stable values', () => {
@@ -159,13 +169,13 @@ describe('memoization correctness', () => {
       color: red;
     `;
 
-    const renderer = TestRenderer.create(<Comp $size={100} />);
-    const first = renderer.root.findByType('div').props.className;
+    const { container, rerender, unmount } = render(<Comp $size={100} />);
+    const first = getDivClass(container);
 
-    renderer.update(<Comp $size={100} />);
-    expect(renderer.root.findByType('div').props.className).toBe(first);
+    rerender(<Comp $size={100} />);
+    expect(getDivClass(container)).toBe(first);
 
-    renderer.unmount();
+    unmount();
   });
 
   it('works with extended components', () => {
@@ -176,20 +186,25 @@ describe('memoization correctness', () => {
       font-weight: bold;
     `;
 
-    const renderer = TestRenderer.create(<Extended $color="red" />);
-    const first = renderer.root.findByType('div').props.className;
-    expect(getCSS(document)).toMatchInlineSnapshot(`".c{color:red;}.d{font-weight:bold;}"`);
+    const { container, rerender, unmount } = render(<Extended $color="red" />);
+    const first = getDivClass(container);
+    expect(getCSS(document)).toMatchInlineSnapshot(`
+      ".c{color:red;}
+      .d{font-weight:bold;}"
+    `);
 
-    renderer.update(<Extended $color="red" />);
-    expect(renderer.root.findByType('div').props.className).toBe(first);
+    rerender(<Extended $color="red" />);
+    expect(getDivClass(container)).toBe(first);
 
-    renderer.update(<Extended $color="blue" />);
-    expect(renderer.root.findByType('div').props.className).not.toBe(first);
-    expect(getCSS(document)).toMatchInlineSnapshot(
-      `".c{color:red;}.e{color:blue;}.d{font-weight:bold;}"`
-    );
+    rerender(<Extended $color="blue" />);
+    expect(getDivClass(container)).not.toBe(first);
+    expect(getCSS(document)).toMatchInlineSnapshot(`
+      ".c{color:red;}
+      .e{color:blue;}
+      .d{font-weight:bold;}"
+    `);
 
-    renderer.unmount();
+    unmount();
   });
 
   it('handles many interpolations correctly', () => {
@@ -208,19 +223,20 @@ describe('memoization correctness', () => {
     `;
 
     const props = { $a: 'red', $b: 'white', $c: 'blue', $d: 'green', $e: 'yellow' };
-    const renderer = TestRenderer.create(<Comp {...props} />);
-    const first = renderer.root.findByType('div').props.className;
+    const { container, rerender, unmount } = render(<Comp {...props} />);
+    const first = getDivClass(container);
 
-    renderer.update(<Comp {...props} />);
-    expect(renderer.root.findByType('div').props.className).toBe(first);
+    rerender(<Comp {...props} />);
+    expect(getDivClass(container)).toBe(first);
 
-    renderer.update(<Comp {...props} $c="purple" />);
-    expect(renderer.root.findByType('div').props.className).not.toBe(first);
-    expect(getCSS(document)).toMatchInlineSnapshot(
-      `".b{color:red;background:white;border-color:blue;outline-color:green;text-decoration-color:yellow;}.c{color:red;background:white;border-color:purple;outline-color:green;text-decoration-color:yellow;}"`
-    );
+    rerender(<Comp {...props} $c="purple" />);
+    expect(getDivClass(container)).not.toBe(first);
+    expect(getCSS(document)).toMatchInlineSnapshot(`
+      ".b{color:red; background:white; border-color:blue; outline-color:green; text-decoration-color:yellow;}
+      .c{color:red; background:white; border-color:purple; outline-color:green; text-decoration-color:yellow;}"
+    `);
 
-    renderer.unmount();
+    unmount();
   });
 
   it('handles adding/removing props', () => {
@@ -229,17 +245,17 @@ describe('memoization correctness', () => {
       font-size: ${p => p.$size || '14px'};
     `;
 
-    const renderer = TestRenderer.create(<Comp $color="red" />);
-    const onePropsClass = renderer.root.findByType('div').props.className;
+    const { container, rerender, unmount } = render(<Comp $color="red" />);
+    const onePropsClass = getDivClass(container);
 
-    renderer.update(<Comp $color="red" $size="16px" />);
-    const twoPropsClass = renderer.root.findByType('div').props.className;
+    rerender(<Comp $color="red" $size="16px" />);
+    const twoPropsClass = getDivClass(container);
     expect(twoPropsClass).not.toBe(onePropsClass);
 
-    renderer.update(<Comp $color="red" />);
-    expect(renderer.root.findByType('div').props.className).toBe(onePropsClass);
+    rerender(<Comp $color="red" />);
+    expect(getDivClass(container)).toBe(onePropsClass);
 
-    renderer.unmount();
+    unmount();
   });
 
   it('handles concurrent siblings with different props', () => {
@@ -247,7 +263,7 @@ describe('memoization correctness', () => {
       color: ${p => p.$color};
     `;
 
-    const renderer = TestRenderer.create(
+    const { rerender, unmount } = render(
       <div>
         <Comp $color="red" />
         <Comp $color="blue" />
@@ -255,12 +271,13 @@ describe('memoization correctness', () => {
       </div>
     );
 
-    expect(getCSS(document)).toMatchInlineSnapshot(
-      `".b{color:red;}.c{color:blue;}.d{color:green;}"`
-    );
+    expect(getCSS(document)).toMatchInlineSnapshot(`
+      ".b{color:red;}
+      .c{color:blue;}
+      .d{color:green;}"
+    `);
 
-    // Re-render — each sibling caches independently
-    renderer.update(
+    rerender(
       <div>
         <Comp $color="red" />
         <Comp $color="blue" />
@@ -268,11 +285,13 @@ describe('memoization correctness', () => {
       </div>
     );
 
-    expect(getCSS(document)).toMatchInlineSnapshot(
-      `".b{color:red;}.c{color:blue;}.d{color:green;}"`
-    );
+    expect(getCSS(document)).toMatchInlineSnapshot(`
+      ".b{color:red;}
+      .c{color:blue;}
+      .d{color:green;}"
+    `);
 
-    renderer.unmount();
+    unmount();
   });
 
   it('siblings update classNames correctly when props cycle', () => {
@@ -280,80 +299,73 @@ describe('memoization correctness', () => {
       color: ${p => p.$color};
     `;
 
-    const renderer = TestRenderer.create(
+    const { container, rerender, unmount } = render(
       <div>
         <Comp $color="red" />
         <Comp $color="blue" />
       </div>
     );
 
-    const children = renderer.root.findAllByType(Comp);
-    const redClass = children[0].findByType('div').props.className;
-    const blueClass = children[1].findByType('div').props.className;
+    const siblings = () => Array.from(container.firstElementChild!.children) as HTMLElement[];
+    const [redEl, blueEl] = siblings();
+    const redClass = redEl.className;
+    const blueClass = blueEl.className;
     expect(redClass).not.toBe(blueClass);
 
-    // Swap colors — each child should get the other's className
-    renderer.update(
+    rerender(
       <div>
         <Comp $color="blue" />
         <Comp $color="red" />
       </div>
     );
 
-    const children2 = renderer.root.findAllByType(Comp);
-    expect(children2[0].findByType('div').props.className).toBe(blueClass);
-    expect(children2[1].findByType('div').props.className).toBe(redClass);
+    const [s2a, s2b] = siblings();
+    expect(s2a.className).toBe(blueClass);
+    expect(s2b.className).toBe(redClass);
 
-    // Back to original — should restore original classNames
-    renderer.update(
+    rerender(
       <div>
         <Comp $color="red" />
         <Comp $color="blue" />
       </div>
     );
 
-    const children3 = renderer.root.findAllByType(Comp);
-    expect(children3[0].findByType('div').props.className).toBe(redClass);
-    expect(children3[1].findByType('div').props.className).toBe(blueClass);
+    const [s3a, s3b] = siblings();
+    expect(s3a.className).toBe(redClass);
+    expect(s3b.className).toBe(blueClass);
 
-    renderer.unmount();
+    unmount();
   });
 
   it('bounds dynamicNameCache size for free-form interpolations', () => {
-    // Regression: dynamicNameCache previously grew unbounded for components
-    // with free-form string interpolations, leaking for the lifetime of
-    // the component definition.
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Comp = styled.div<{ $value: string }>`
       color: ${p => p.$value};
     `;
 
     const churnCount = TOO_MANY_CLASSES_LIMIT * 2 + 100;
-    const renderer = TestRenderer.create(<Comp $value="rgb(0,0,0)" />);
+    const { container, rerender, unmount } = render(<Comp $value="rgb(0,0,0)" />);
     for (let i = 0; i < churnCount; i++) {
-      renderer.update(<Comp $value={`rgb(${i},${i},${i})`} />);
+      rerender(<Comp $value={`rgb(${i},${i},${i})`} />);
     }
 
     const { dynamicNameCache } = Comp.componentStyle;
     expect(dynamicNameCache?.size).toBeGreaterThan(0);
     expect(dynamicNameCache?.size).toBeLessThanOrEqual(TOO_MANY_CLASSES_LIMIT);
 
-    // Locks the single-source-of-truth invariant: the dev warning must
-    // have fired before eviction began. Both share LIMIT, so a future
-    // change that desyncs them would let the cache evict silently.
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining(`Over ${TOO_MANY_CLASSES_LIMIT} classes`)
     );
 
     const recent = churnCount - 1;
     const recentValue = `rgb(${recent},${recent},${recent})`;
-    renderer.update(<Comp $value={recentValue} />);
-    const recentClass = renderer.root.findByType('div').props.className;
-    renderer.update(<Comp $value="rgb(0,0,0)" />);
-    renderer.update(<Comp $value={recentValue} />);
-    expect(renderer.root.findByType('div').props.className).toBe(recentClass);
+    rerender(<Comp $value={recentValue} />);
+    const recentClass = getDivClass(container);
+    rerender(<Comp $value="rgb(0,0,0)" />);
+    rerender(<Comp $value={recentValue} />);
+    expect(getDivClass(container)).toBe(recentClass);
 
-    renderer.unmount();
+    unmount();
     warnSpy.mockRestore();
   });
 });

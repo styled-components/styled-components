@@ -10,22 +10,21 @@ type WithThemeOuterProps<T extends AnyComponent> = Omit<
   React.ComponentPropsWithRef<T>,
   keyof ExecutionProps
 > &
-  ExecutionProps;
+  ExecutionProps & {
+    ref?: React.Ref<any> | undefined;
+  };
 
 /** Higher-order component that injects the current theme as a prop. Prefer `useTheme` in function components. */
 export default function withTheme<T extends AnyComponent>(
   Component: T
-): React.ForwardRefExoticComponent<
-  React.PropsWithoutRef<WithThemeOuterProps<T>> & React.RefAttributes<any>
-> &
-  NonReactStatics<T> {
-  const WithTheme = React.forwardRef<any, WithThemeOuterProps<T>>((props, ref) => {
+): React.FC<WithThemeOuterProps<T>> & NonReactStatics<T> {
+  const WithTheme: React.FC<WithThemeOuterProps<T>> = props => {
     const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
-    const themeProp = determineTheme(props, theme, Component.defaultProps);
+    const themeProp = determineTheme(props, theme);
 
     if (process.env.NODE_ENV !== 'production' && themeProp === undefined) {
       console.warn(
-        `[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class "${getComponentName(
+        `[withTheme] You are not using a ThemeProvider nor passing a theme prop to component "${getComponentName(
           Component
         )}"`
       );
@@ -34,9 +33,8 @@ export default function withTheme<T extends AnyComponent>(
     return React.createElement(Component, {
       ...props,
       theme: themeProp,
-      ref,
     } as React.ComponentPropsWithRef<T>);
-  });
+  };
 
   WithTheme.displayName = `WithTheme(${getComponentName(Component)})`;
 

@@ -127,16 +127,16 @@ describe('with styles', () => {
       .a[disabled] > .a[disabled] {
         margin-top: 4px;
       }
-      .sc-gRlPMw + .sc-gRlPMw {
+      .sc-kqxcKS + .sc-kqxcKS {
         margin-left: 4px;
       }
-      .sc-gRlPMw + .sc-gRlPMw ~ .sc-gRlPMw {
+      .sc-kqxcKS + .sc-kqxcKS ~ .sc-kqxcKS {
         background: black;
       }
-      .sc-gRlPMw ~ .sc-gRlPMw {
+      .sc-kqxcKS ~ .sc-kqxcKS {
         margin-right: 4px;
       }
-      .sc-gRlPMw > .sc-gRlPMw {
+      .sc-kqxcKS > .sc-kqxcKS {
         margin-top: 4px;
       }
       .foo .a {
@@ -167,16 +167,16 @@ describe('with styles', () => {
       .b[disabled] > .b[disabled] {
         margin-top: 4px;
       }
-      .sc-gRlPMw + .sc-gRlPMw {
+      .sc-kqxcKS + .sc-kqxcKS {
         margin-left: 4px;
       }
-      .sc-gRlPMw + .sc-gRlPMw ~ .sc-gRlPMw {
+      .sc-kqxcKS + .sc-kqxcKS ~ .sc-kqxcKS {
         background: black;
       }
-      .sc-gRlPMw ~ .sc-gRlPMw {
+      .sc-kqxcKS ~ .sc-kqxcKS {
         margin-right: 4px;
       }
-      .sc-gRlPMw > .sc-gRlPMw {
+      .sc-kqxcKS > .sc-kqxcKS {
         margin-top: 4px;
       }
       .foo .b {

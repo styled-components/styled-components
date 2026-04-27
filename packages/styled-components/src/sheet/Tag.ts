@@ -4,15 +4,18 @@ import { SheetOptions, Tag } from './types';
 
 declare const __SERVER__: boolean;
 
-/** Create a CSSStyleSheet-like tag depending on the environment */
-export const makeTag = ({ isServer, useCSSOMInjection, target, nonce }: SheetOptions) => {
+/** Create a CSSStyleSheet-like tag depending on the environment.
+ *
+ * Browser builds always use CSSOM injection (`sheet.insertRule`); it's the
+ * fastest path on every modern browser, and tools that need the CSS as
+ * text should call `extractCSS()` rather than fall back to text-mode
+ * injection at runtime. Server builds use a virtual tag that just collects
+ * rule strings for later serialization. */
+export const makeTag = ({ isServer, target, nonce }: SheetOptions) => {
   if (__SERVER__ && isServer) {
     return new VirtualTag(target);
-  } else if (useCSSOMInjection) {
-    return new CSSOMTag(target, nonce);
-  } else {
-    return new TextTag(target, nonce);
   }
+  return new CSSOMTag(target, nonce);
 };
 
 export const CSSOMTag = class CSSOMTag implements Tag {
@@ -53,44 +56,6 @@ export const CSSOMTag = class CSSOMTag implements Tag {
     // Avoid IE11 quirk where cssText is inaccessible on some invalid rules
     if (rule && rule.cssText) {
       return rule.cssText;
-    } else {
-      return '';
-    }
-  }
-};
-
-/** A Tag that emulates the CSSStyleSheet API but uses text nodes */
-export const TextTag = class TextTag implements Tag {
-  element: HTMLStyleElement;
-  nodes: NodeListOf<Node>;
-  length: number;
-
-  constructor(target?: InsertionTarget | undefined, nonce?: string | undefined) {
-    this.element = makeStyleTag(target, nonce);
-    this.nodes = this.element.childNodes;
-    this.length = 0;
-  }
-
-  insertRule(index: number, rule: string) {
-    if (index <= this.length && index >= 0) {
-      const node = document.createTextNode(rule);
-      const refNode = this.nodes[index];
-      this.element.insertBefore(node, refNode || null);
-      this.length++;
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  deleteRule(index: number) {
-    this.element.removeChild(this.nodes[index]);
-    this.length--;
-  }
-
-  getRule(index: number) {
-    if (index < this.length) {
-      return this.nodes[index].textContent as string;
     } else {
       return '';
     }

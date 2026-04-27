@@ -1,6 +1,6 @@
 import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
-import { IS_RSC, SC_ATTR, SC_VERSION, SPLITTER } from '../constants';
+import { IS_RSC, SC_ATTR, SC_VERSION } from '../constants';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
 import type StyleSheet from '../sheet';
 import type {
@@ -30,11 +30,10 @@ import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
-import { joinStrings, stripSplitter } from '../utils/joinStrings';
-import merge from '../utils/mixinDeep';
+import { joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
 import { createRSCCache } from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
-import ComponentStyle, { getCompiledCSS } from './ComponentStyle';
+import ComponentStyle, { GeneratedStyle } from './ComponentStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
@@ -43,6 +42,12 @@ declare const __SERVER__: boolean;
 const hasOwn = Object.prototype.hasOwnProperty;
 
 const identifiers: { [key: string]: number } = {};
+
+/** Test-only: clear the per-displayName counter so component IDs stay stable
+ *  across tests. Not for production use. */
+export const resetIdentifiers = (): void => {
+  for (const k in identifiers) delete identifiers[k];
+};
 
 /* We depend on components having unique IDs */
 function generateId(
@@ -95,6 +100,27 @@ function useInjectedStyle<T extends ExecutionContext>(
   }
 
   return className;
+}
+
+/**
+ * RSC counterpart to `useInjectedStyle`. Runs `generate()` to produce the
+ * inheritance chain's compiled CSS without writing to the tag; registers
+ * each new class name so repeat renders of the same component/props skip
+ * stylis compilation. Returns both the class name (for the element) and
+ * the generated levels (consumed by the inline <style> emission).
+ */
+function rscGenerateAndRegister<T extends ExecutionContext>(
+  componentStyle: ComponentStyle,
+  resolvedAttrs: T,
+  styleSheet: StyleSheet,
+  stylis: Stringifier
+): GeneratedStyle {
+  const generated = componentStyle.generate(resolvedAttrs, styleSheet, stylis);
+  for (let i = 0; i < generated.levels.length; i++) {
+    const level = generated.levels[i];
+    if (level.isNew) styleSheet.registerName(level.componentId, level.name);
+  }
+  return generated;
 }
 
 // Cached render inputs + style result: [prevProps, prevTheme, prevStyleSheet, prevStylis,
@@ -166,17 +192,11 @@ function getWhereRegExp(name: string): RegExp {
   return re;
 }
 
-/** Wrap base-level CSS class selectors in :where() for zero specificity (RSC inheritance). */
-function wrapBaseInWhere(levelCss: string, componentId: string, styleSheet: StyleSheet): string {
-  const names = styleSheet.names.get(componentId);
-  if (names) {
-    for (const name of names) {
-      const re = getWhereRegExp(name);
-      re.lastIndex = 0;
-      levelCss = levelCss.replace(re, ':where(.' + name + ')');
-    }
-  }
-  return levelCss;
+/** Wrap a single level's class selector in :where() for zero specificity (RSC inheritance). */
+function wrapLevelInWhere(levelCss: string, name: string): string {
+  const re = getWhereRegExp(name);
+  re.lastIndex = 0;
+  return levelCss.replace(re, ':where(.' + name + ')');
 }
 
 function buildPropsForElement(
@@ -190,7 +210,12 @@ function buildPropsForElement(
   for (const key in context) {
     if (context[key] === undefined) {
       // Omit undefined values from props passed to wrapped element.
-    } else if (key[0] === '$' || key === 'as' || (key === 'theme' && context.theme === theme)) {
+    } else if (
+      key[0] === '$' ||
+      key === 'as' ||
+      key === 'ref' || // React 19 ref-as-prop: the ref is re-attached explicitly below.
+      (key === 'theme' && context.theme === theme)
+    ) {
       // Omit transient props and execution props.
     } else if (key === 'forwardedAs') {
       propsForElement.as = context.forwardedAs;
@@ -216,7 +241,7 @@ function buildPropsForElement(
   return propsForElement;
 }
 
-function useStyledComponentImpl<Props extends BaseObject>(
+function useImpl<Props extends BaseObject>(
   forwardedComponent: IStyledComponent<'web', Props>,
   props: ExecutionProps & Props,
   forwardedRef: Ref<Element>
@@ -224,7 +249,6 @@ function useStyledComponentImpl<Props extends BaseObject>(
   const {
     attrs: componentAttrs,
     componentStyle,
-    defaultProps,
     foldedComponentIds,
     styledComponentId,
     target,
@@ -241,11 +265,11 @@ function useStyledComponentImpl<Props extends BaseObject>(
   // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
   // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
   // should be an immutable value, but behave for now.
-  const theme =
-    determineTheme(props, contextTheme, defaultProps) || (IS_RSC ? undefined : EMPTY_OBJECT);
+  const theme = determineTheme(props, contextTheme) || (IS_RSC ? undefined : EMPTY_OBJECT);
 
   let context: React.HTMLAttributes<Element> & ExecutionContext & Props;
   let generatedClassName: string;
+  let generatedStyle: GeneratedStyle | null = null;
 
   // Client-only render cache: skip resolveContext and generateAndInjectStyles
   // when props+theme haven't changed. propsForElement is always rebuilt since
@@ -286,7 +310,15 @@ function useStyledComponentImpl<Props extends BaseObject>(
     }
   } else {
     context = resolveContext<Props>(componentAttrs, props, theme);
-    generatedClassName = useInjectedStyle(componentStyle, context, ssc.styleSheet, ssc.stylis);
+    if (IS_RSC) {
+      generatedStyle = rscGenerateAndRegister(componentStyle, context, ssc.styleSheet, ssc.stylis);
+      generatedClassName = generatedStyle.className;
+      if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
+        React.useDebugValue(generatedClassName);
+      }
+    } else {
+      generatedClassName = useInjectedStyle(componentStyle, context, ssc.styleSheet, ssc.stylis);
+    }
   }
 
   if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {
@@ -323,57 +355,29 @@ function useStyledComponentImpl<Props extends BaseObject>(
   // as an inline <style> tag. No `precedence` — server component output isn't
   // hydrated, so no mismatch. Inline body styles come after the registry's
   // <head> styles in source order, so extensions naturally win (#5672).
-  if (IS_RSC) {
+  if (IS_RSC && generatedStyle) {
     const emitted = getEmittedNames ? getEmittedNames() : null;
-
-    let newNames: string[] | null = null;
-    let totalNames = 0;
+    const levels = generatedStyle.levels;
+    const lastIdx = levels.length - 1;
     let css = '';
-    let usedCache = true;
 
-    let walk: ComponentStyle | null | undefined = componentStyle;
-    while (walk) {
-      const names = ssc.styleSheet.names.get(walk.componentId);
-      if (names) {
-        totalNames += names.size;
-        for (const name of names) {
-          if (!emitted || !emitted.has(name)) {
-            if (!newNames) newNames = [];
-            newNames.push(name);
-            if (emitted) emitted.add(name);
-          }
-        }
+    for (let i = 0; i < levels.length; i++) {
+      const level = levels[i];
+      if (emitted && emitted.has(level.name)) continue;
+      if (level.rules.length === 0) continue;
+
+      let levelCss = joinRules(level.rules);
+      if (i !== lastIdx) {
+        // Base levels in an inheritance chain are wrapped in :where() so their
+        // specificity is zero, letting any extension override without !important.
+        levelCss = wrapLevelInWhere(levelCss, level.name);
       }
-
-      if (newNames && usedCache) {
-        let levelCss = getCompiledCSS(walk, ssc.styleSheet);
-        if (levelCss === null) {
-          usedCache = false;
-        } else {
-          if (walk !== componentStyle) {
-            levelCss = wrapBaseInWhere(levelCss, walk.componentId, ssc.styleSheet);
-          }
-          css = levelCss + css;
-        }
-      }
-
-      walk = walk.baseStyle;
+      css += levelCss;
+      if (emitted) emitted.add(level.name);
     }
 
-    if (newNames && !usedCache) {
-      css = '';
-      const tag = ssc.styleSheet.getTag();
-      let cs: ComponentStyle | null | undefined = componentStyle;
-      while (cs) {
-        let levelCss = tag.getGroup(getGroupForId(cs.componentId));
-        if (levelCss && cs !== componentStyle) {
-          levelCss = wrapBaseInWhere(levelCss, cs.componentId, ssc.styleSheet);
-        }
-        css = levelCss + css;
-        cs = cs.baseStyle;
-      }
-    }
-
+    // Keyframes are tag-resident: flatten()'s keyframes.inject() writes them
+    // during generate(); read compiled CSS out of the group here.
     let kfCss = '';
     if (ssc.styleSheet.keyframeIds.size > 0) {
       const kfTag = ssc.styleSheet.getTag();
@@ -385,24 +389,6 @@ function useStyledComponentImpl<Props extends BaseObject>(
           if (emitted) emitted.add(kfId);
         }
       }
-    }
-
-    if (css && emitted && newNames && newNames.length < totalNames) {
-      const rules = css.split(SPLITTER);
-      let filtered = '';
-      for (let i = 0; i < rules.length; i++) {
-        const rule = rules[i];
-        if (!rule) continue;
-        for (let j = 0; j < newNames.length; j++) {
-          const re = getWhereRegExp(newNames[j]);
-          re.lastIndex = 0;
-          if (re.test(rule)) {
-            filtered += rule + SPLITTER;
-            break;
-          }
-        }
-      }
-      css = filtered;
     }
 
     const combined = stripSplitter(kfCss + css);
@@ -472,27 +458,26 @@ function createStyledComponent<
     isTargetStyledComp ? (styledComponentTarget.componentStyle as ComponentStyle) : undefined
   );
 
-  function forwardRefRender(
-    props: PropsWithoutRef<ExecutionProps & OuterProps>,
-    ref: Ref<Element>
-  ) {
-    return useStyledComponentImpl<OuterProps>(
+  /**
+   * React 19 treats `ref` as a regular prop for function components, so SC
+   * stopped wrapping this render function in `React.forwardRef`. Pass props
+   * through as-is (avoiding a per-render rest-spread allocation) and read
+   * `ref` as a direct property lookup. `buildPropsForElement` is responsible
+   * for NOT forwarding the `ref` key onto the underlying element.
+   */
+  function RenderStyledComponent(
+    props: ExecutionProps & OuterProps & { ref?: Ref<Element> }
+  ): React.JSX.Element {
+    return useImpl<OuterProps>(
       WrappedStyledComponent,
       props as ExecutionProps & OuterProps,
-      ref
+      (props as { ref?: Ref<Element> }).ref as Ref<Element>
     );
   }
 
-  forwardRefRender.displayName = displayName;
+  RenderStyledComponent.displayName = displayName;
 
-  /**
-   * forwardRef creates a new interim component, which we'll take advantage of
-   * instead of extending ParentComponent to create _another_ interim class
-   */
-  let WrappedStyledComponent = React.forwardRef(forwardRefRender) as unknown as IStyledComponent<
-    'web',
-    any
-  > &
+  let WrappedStyledComponent = RenderStyledComponent as unknown as IStyledComponent<'web', any> &
     Statics;
   WrappedStyledComponent.attrs = finalAttrs;
   WrappedStyledComponent.componentStyle = componentStyle;
@@ -509,18 +494,6 @@ function createStyledComponent<
 
   // fold the underlying StyledComponent target up since we folded the styles
   WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
-
-  Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
-    get() {
-      return this._foldedDefaultProps;
-    },
-
-    set(obj) {
-      this._foldedDefaultProps = isTargetStyledComp
-        ? merge({}, styledComponentTarget.defaultProps, obj)
-        : obj;
-    },
-  });
 
   if (process.env.NODE_ENV !== 'production') {
     checkDynamicCreation(displayName, styledComponentId);

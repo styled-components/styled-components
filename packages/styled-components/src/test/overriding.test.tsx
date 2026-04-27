@@ -1,6 +1,5 @@
 import { render } from '@testing-library/react';
 import React from 'react';
-import { AnyComponent } from '../types';
 import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
@@ -85,38 +84,19 @@ describe('extending', () => {
   });
 
   describe('inheritance', () => {
-    const setupParent = () => {
-      const colors = {
-        primary: 'red',
-        secondary: 'blue',
-        tertiary: 'green',
-      };
+    const colors = {
+      primary: 'red',
+      secondary: 'blue',
+      tertiary: 'green',
+    };
 
-      const Parent = styled.h1<{ color?: keyof typeof colors }>`
+    it('should apply the outermost attrs color value across an extended chain', () => {
+      const Parent = styled.h1.attrs<{ color?: keyof typeof colors }>({ color: 'primary' })`
         position: relative;
         color: ${props => colors[props.color!]};
       `;
-
-      return Parent;
-    };
-
-    const addDefaultProps = (Parent: AnyComponent, Child: AnyComponent, Grandson: AnyComponent) => {
-      Parent.defaultProps = {
-        color: 'primary',
-      };
-      Child.defaultProps = {
-        color: 'secondary',
-      };
-      Grandson.defaultProps = {
-        color: 'tertiary',
-      };
-    };
-
-    it('should override parents defaultProps', () => {
-      const Parent = setupParent();
-      const Child = styled(Parent)``;
-      const Grandson = styled(Child)``;
-      addDefaultProps(Parent, Child, Grandson);
+      const Child = styled(Parent).attrs({ color: 'secondary' })``;
+      const Grandson = styled(Child).attrs({ color: 'tertiary' })``;
       render(<Parent />);
       render(<Child />);
       render(<Grandson />);
@@ -138,11 +118,13 @@ describe('extending', () => {
     });
 
     describe('when overriding with another component', () => {
-      it('should override parents defaultProps', () => {
-        const Parent = setupParent();
-        const Child = styled(Parent).attrs({ as: 'h2' })``;
-        const Grandson = styled(Child).attrs(() => ({ as: 'h3' }))``;
-        addDefaultProps(Parent, Child, Grandson);
+      it('should apply the outermost attrs color value alongside a new element target', () => {
+        const Parent = styled.h1.attrs<{ color?: keyof typeof colors }>({ color: 'primary' })`
+          position: relative;
+          color: ${props => colors[props.color!]};
+        `;
+        const Child = styled(Parent).attrs({ as: 'h2', color: 'secondary' })``;
+        const Grandson = styled(Child).attrs({ as: 'h3', color: 'tertiary' })``;
         render(<Parent />);
         render(<Child />);
         render(<Grandson />);
@@ -163,11 +145,13 @@ describe('extending', () => {
         `);
       });
 
-      it('should evaluate grandsons props', () => {
-        const Parent = setupParent();
-        const Child = styled(Parent).attrs({ as: 'h2' })``;
-        const Grandson = styled(Child).attrs(() => ({ as: 'h3' }))``;
-        addDefaultProps(Parent, Child, Grandson);
+      it('should render each level with its own attrs and as target', () => {
+        const Parent = styled.h1.attrs<{ color?: keyof typeof colors }>({ color: 'primary' })`
+          position: relative;
+          color: ${props => colors[props.color!]};
+        `;
+        const Child = styled(Parent).attrs({ as: 'h2', color: 'secondary' })``;
+        const Grandson = styled(Child).attrs({ as: 'h3', color: 'tertiary' })``;
 
         expect(render(<Parent />).asFragment()).toMatchInlineSnapshot(`
           <DocumentFragment>
@@ -185,12 +169,11 @@ describe('extending', () => {
             />
           </DocumentFragment>
         `);
-
-        expect(render(<Grandson color="primary" />).asFragment()).toMatchInlineSnapshot(`
+        expect(render(<Grandson />).asFragment()).toMatchInlineSnapshot(`
           <DocumentFragment>
             <h3
-              class="sc-a sc-b sc-c d"
-              color="primary"
+              class="sc-a sc-b sc-c f"
+              color="tertiary"
             />
           </DocumentFragment>
         `);
@@ -202,6 +185,10 @@ describe('extending', () => {
           .e {
             position: relative;
             color: blue;
+          }
+          .f {
+            position: relative;
+            color: green;
           }"
         `);
       });

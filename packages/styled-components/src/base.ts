@@ -18,6 +18,7 @@ import {
 } from './models/StyleSheetManager';
 /* Import components */
 import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from './models/ThemeProvider';
+import extractCSS from './utils/extractCSS';
 import isStyledComponent from './utils/isStyledComponent';
 
 /* Warning if you've imported this file on React Native */
@@ -70,6 +71,7 @@ export {
   createGlobalStyle,
   createTheme,
   css,
+  extractCSS,
   isStyledComponent,
   keyframes,
   useTheme,

@@ -5,7 +5,13 @@
 import { resetStyled } from './utils';
 
 import React from 'react';
-import { renderToNodeStream, renderToPipeableStream, renderToString } from 'react-dom/server';
+import { renderToPipeableStream, renderToString } from 'react-dom/server';
+// `renderToNodeStream` was removed in React 19. SC still supports its SSR
+// pipeline via `renderToPipeableStream`; the legacy tests below are gated on
+// whether the function is present, so they silently skip in R19 test runs.
+const renderToNodeStream: typeof renderToPipeableStream | undefined = (
+  require('react-dom/server') as any
+).renderToNodeStream;
 import stylisRTLPlugin from 'stylis-plugin-rtl';
 import createGlobalStyle from '../constructors/createGlobalStyle';
 import ServerStyleSheet from '../models/ServerStyleSheet';
@@ -18,17 +24,16 @@ jest.mock('../utils/nonce', () => {
 
 let styled: ReturnType<typeof resetStyled>;
 
-// Test helper to run streaming tests with both stream types
-const streamingTestCases = [
-  {
-    name: 'renderToNodeStream (legacy)',
-    renderFn: renderToNodeStream,
-  },
-  {
-    name: 'renderToPipeableStream',
-    renderFn: renderToPipeableStream,
-  },
-] as const;
+// Test helper to run streaming tests with both stream types (legacy
+// renderToNodeStream was removed in React 19 and is skipped when absent).
+const streamingTestCases = (
+  [
+    renderToNodeStream
+      ? { name: 'renderToNodeStream (legacy)', renderFn: renderToNodeStream }
+      : null,
+    { name: 'renderToPipeableStream', renderFn: renderToPipeableStream },
+  ] as const
+).filter(Boolean) as { name: string; renderFn: typeof renderToPipeableStream }[];
 
 /**
  * Helper function to create parameterized streaming tests
@@ -109,7 +114,7 @@ describe('ssr', () => {
              data-styled-version="JEST_MOCK_VERSION"
       >
         body{background:papayawhip;}/*!sc*/
-      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a,"}/*!sc*/
       .c{color:red;}/*!sc*/
       data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
       </style>
@@ -145,24 +150,29 @@ describe('ssr', () => {
              data-styled-version="JEST_MOCK_VERSION"
       >
         body{background:papayawhip;}/*!sc*/
-      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a,"}/*!sc*/
       </style>
     `);
 
     const cssElements = sheet.getStyleElement();
     expect(cssElements).toMatchInlineSnapshot(`
       [
-        <style
-          dangerouslySetInnerHTML={
-            {
+        {
+          "$$typeof": Symbol(react.transitional.element),
+          "_owner": null,
+          "_store": {},
+          "key": "sc-0-0",
+          "props": {
+            "dangerouslySetInnerHTML": {
               "__html": "body{background:papayawhip;}/*!sc*/
-      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a,"}/*!sc*/
       ",
-            }
-          }
-          data-styled=""
-          data-styled-version="JEST_MOCK_VERSION"
-        />,
+            },
+            "data-styled": "",
+            "data-styled-version": "JEST_MOCK_VERSION",
+          },
+          "type": "style",
+        },
       ]
     `);
   });
@@ -235,7 +245,7 @@ describe('ssr', () => {
              data-styled-version="JEST_MOCK_VERSION"
       >
         body{background:papayawhip;}/*!sc*/
-      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a,"}/*!sc*/
       .c{color:red;}/*!sc*/
       data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
       </style>
@@ -308,7 +318,7 @@ describe('ssr', () => {
       {
         "dangerouslySetInnerHTML": {
           "__html": "body{background:papayawhip;}/*!sc*/
-      data-styled.g1[id="sc-global-a"]{content:"sc-global-a1,"}/*!sc*/
+      data-styled.g1[id="sc-global-a"]{content:"sc-global-a,"}/*!sc*/
       .c{color:red;}/*!sc*/
       data-styled.g2[id="sc-b"]{content:"c,"}/*!sc*/
       ",
@@ -729,7 +739,8 @@ describe('ssr', () => {
     }
   );
 
-  it('should work with stylesheet manager and passed stylis plugins', () => {
+  it('emits a dev warning when a legacy stylis plugin is passed (v7)', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Heading = styled.h1`
       padding-left: 5px;
     `;
@@ -737,26 +748,18 @@ describe('ssr', () => {
     const sheet = new ServerStyleSheet();
     const html = renderToString(
       sheet.collectStyles(
-        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+        <StyleSheetManager plugins={[stylisRTLPlugin]}>
           <Heading>Hello SSR!</Heading>
         </StyleSheetManager>
       )
     );
     const css = sheet.getStyleTags();
 
-    expect(html).toMatchInlineSnapshot(`
-      <h1 class="sc-a b">
-        Hello SSR!
-      </h1>
-    `);
-    expect(css).toMatchInlineSnapshot(`
-      <style data-styled="true"
-             data-styled-version="JEST_MOCK_VERSION"
-      >
-        .b{padding-right:5px;}/*!sc*/
-      data-styled.g1[id="sc-a"]{content:"b,"}/*!sc*/
-      </style>
-    `);
+    // Plugin is a no-op in v7; padding-left is emitted unchanged.
+    expect(html).toContain('class="sc-a b"');
+    expect(css).toContain('padding-left:5px');
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('is not supported in v7'));
+    warnSpy.mockRestore();
   });
 
   describe('dynamic creation warnings', () => {

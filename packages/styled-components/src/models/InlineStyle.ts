@@ -1,6 +1,4 @@
-import transformDeclPairs from 'css-to-react-native';
 import {
-  Dict,
   ExecutionContext,
   IInlineStyle,
   IInlineStyleConstructor,
@@ -8,213 +6,276 @@ import {
   StyleSheet,
 } from '../types';
 import flatten from '../utils/flatten';
-import generateComponentId from '../utils/generateComponentId';
+import isStatelessFunction from '../utils/isStatelessFunction';
 import { joinStringArray } from '../utils/joinStrings';
+import {
+  compileNativeStyles,
+  CompiledNativeStyles,
+  cssToStyleObject,
+  resetNativeStyleCache,
+  RN_UNSUPPORTED_VALUES,
+} from './nativeStyleCompiler';
 
-// List of CSS values not supported by React Native
-export const RN_UNSUPPORTED_VALUES = ['fit-content', 'min-content', 'max-content'];
-
-function stripComments(css: string): string {
-  if (css.indexOf('/*') === -1) return css;
-  let result = '';
-  let i = 0;
-  let quote = 0; // 0 = none, 34 = ", 39 = '
-  const len = css.length;
-  while (i < len) {
-    const ch = css.charCodeAt(i);
-    if (quote) {
-      if (ch === 92) {
-        // backslash: copy it and the next char (escape sequence)
-        result += css.substring(i, i + 2);
-        i += 2;
-        continue;
-      }
-      if (ch === quote) quote = 0;
-      result += css[i];
-      i++;
-    } else if (ch === 34 || ch === 39) {
-      quote = ch;
-      result += css[i];
-      i++;
-    } else if (ch === 47 && css.charCodeAt(i + 1) === 42) {
-      // /* comment */
-      const end = css.indexOf('*/', i + 2);
-      if (end === -1) break;
-      i = end + 2;
-    } else {
-      result += css[i];
-      i++;
-    }
-  }
-  return result;
-}
-
-/**
- * Extract CSS declaration pairs from flat CSS text.
- * Only handles `property: value;` — selectors, at-rules, and nesting
- * are not supported (and not expected in the native inline style path).
- */
-export function parseCSSDeclarations(rawCss: string): [string, string][] {
-  const css = stripComments(rawCss);
-  const pairs: [string, string][] = [];
-  const len = css.length;
-  let i = 0;
-
-  while (i < len) {
-    // skip whitespace, stray semicolons, and brace-delimited blocks (selectors/at-rules leaking through)
-    while (i < len) {
-      const c = css[i];
-      if (c === ' ' || c === '\n' || c === '\r' || c === '\t' || c === ';' || c === '}') {
-        i++;
-      } else if (c === '{') {
-        // skip entire block (handles `.foo { color: red; font-size: 12px; }`)
-        let depth = 1;
-        i++;
-        while (i < len && depth > 0) {
-          if (css[i] === '{') depth++;
-          else if (css[i] === '}') depth--;
-          i++;
-        }
-      } else {
-        break;
-      }
-    }
-
-    if (i >= len) break;
-
-    // find the colon separating property from value
-    const colonIdx = css.indexOf(':', i);
-    if (colonIdx === -1) break;
-
-    const prop = css.substring(i, colonIdx).trim();
-
-    let parenDepth = 0;
-    let quote = 0; // 0 = none, 34 = ", 39 = '
-    let j = colonIdx + 1;
-    while (j < len) {
-      const ch = css.charCodeAt(j);
-      if (quote) {
-        if (ch === 92) {
-          j++; // skip escaped character
-        } else if (ch === quote) {
-          quote = 0;
-        }
-      } else if (ch === 34 || ch === 39) {
-        quote = ch;
-      } else if (ch === 40) {
-        parenDepth++;
-      } else if (ch === 41) {
-        if (parenDepth > 0) parenDepth--;
-      } else if (ch === 59 && parenDepth === 0) {
-        break;
-      }
-      j++;
-    }
-
-    // Unclosed quote or paren: drop this declaration, find first ; to resume from
-    if (j >= len && (quote !== 0 || parenDepth > 0)) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn(
-          `[styled-components/native] Invalid CSS in declaration "${prop}": ` +
-            (quote ? 'unterminated string' : 'unclosed parenthesis') +
-            '. This declaration was dropped.'
-        );
-      }
-      const semi = css.indexOf(';', colonIdx + 1);
-      i = semi !== -1 ? semi + 1 : len;
-      continue;
-    }
-
-    const value = css.substring(colonIdx + 1, j).trim();
-
-    if (prop && value) {
-      // Selector or at-rule detected: warn and skip entire block (including nested declarations)
-      if (prop[0] === '@' || prop.indexOf('{') !== -1) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(
-            `[styled-components/native] "${prop}" is not supported as an inline style and will be ignored. ` +
-              'Only CSS declarations (property: value) are supported in React Native.'
-          );
-        }
-        // Skip to matching closing brace — count braces in both prop and value
-        let depth = 0;
-        let k = j;
-        for (let vi = i; vi < j; vi++) {
-          if (css[vi] === '{') depth++;
-          else if (css[vi] === '}') depth--;
-        }
-        // Scan forward for remaining unmatched braces
-        while (k < len && depth > 0) {
-          if (css[k] === '{') depth++;
-          else if (css[k] === '}') depth--;
-          k++;
-        }
-        i = k;
-        continue;
-      }
-      pairs.push([prop, value]);
-    }
-
-    i = j + 1; // skip past the semicolon
-  }
-
-  return pairs;
-}
-
-let generated: Dict<any> = {};
+export { RN_UNSUPPORTED_VALUES, cssToStyleObject };
+export type { CompiledNativeStyles };
 
 /** Clear the cached CSS-to-style-object mappings. Useful in tests or long-running RN apps with highly dynamic styles. */
-export const resetStyleCache = (): void => {
-  generated = {};
+export const resetStyleCache = resetNativeStyleCache;
+
+function flattenRulesToCSS<Props extends object>(
+  rules: RuleSet<Props>,
+  executionContext: ExecutionContext & Props
+): string {
+  let flatCSS = '';
+  for (let i = 0; i < rules.length; i++) {
+    const partRule = rules[i];
+    if (typeof partRule === 'string') {
+      flatCSS += partRule;
+    } else if (partRule) {
+      if (isStatelessFunction(partRule)) {
+        const fnResult = (partRule as (ctx: ExecutionContext & Props) => unknown)(executionContext);
+        if (typeof fnResult === 'string') {
+          flatCSS += fnResult;
+        } else if (fnResult !== undefined && fnResult !== null && fnResult !== false) {
+          flatCSS += joinStringArray(flatten(fnResult as any, executionContext) as string[]);
+        }
+      } else {
+        flatCSS += joinStringArray(flatten(partRule as any, executionContext) as string[]);
+      }
+    }
+  }
+  return flatCSS;
+}
+
+type DynamicStringRulesResult = {
+  css: string;
+  outputs: string[];
+  unchanged: boolean;
 };
 
 /**
- * Parse flat CSS into a style object via css-to-react-native, with caching.
- */
-export function cssToStyleObject(flatCSS: string, styleSheet: StyleSheet) {
-  const hash = generateComponentId(flatCSS);
-
-  if (!generated[hash]) {
-    const declPairs: [string, string][] = [];
-    for (const [prop, value] of parseCSSDeclarations(flatCSS)) {
-      if (RN_UNSUPPORTED_VALUES.includes(value)) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(
-            `[styled-components/native] The value "${value}" for property "${prop}" is not supported in React Native and will be ignored.`
-          );
-        }
-      } else {
-        declPairs.push([prop, value]);
-      }
-    }
-
-    // RN does not support differing border values for Image components (but does for View).
-    // https://github.com/styled-components/styled-components/issues/4181
-    const styleObject = transformDeclPairs(declPairs, ['borderWidth', 'borderColor']);
-
-    generated[hash] = styleSheet.create({ generated: styleObject }).generated;
-  }
-  return generated[hash];
-}
-
-/**
- * InlineStyle takes arbitrary CSS and generates a flat object
+ * InlineStyle takes arbitrary CSS and produces a {@link CompiledNativeStyles}
+ * structure consumable by the native render path.
+ *
+ * Two hot-path optimizations live here, both eliding repeated work
+ * across renders:
+ *
+ * 1. Static-rules: when every rule is a plain string (no interpolations,
+ *    keyframes, styled components, nested arrays), the compiled output
+ *    is invariant. We pre-concatenate the CSS at construction and
+ *    memoise the compiled result on the instance; compile() becomes a
+ *    single property read.
+ *
+ * 2. Dynamic-rules same-CSS: when a function rule produces a string
+ *    identical to the previous render (common with stable theme tokens
+ *    or non-CSS-affecting prop changes), we return the cached compile
+ *    output directly without running preprocessCSS + hash + Map.get.
+ *    Falls back to the full compile path on a CSS change.
  */
 export default function makeInlineStyleClass<Props extends object>(styleSheet: StyleSheet) {
   const InlineStyle: IInlineStyleConstructor<Props> = class InlineStyle implements IInlineStyle<Props> {
     rules: RuleSet<Props>;
+    /** Pre-joined static CSS, set when every rule is a string. */
+    private staticCSS: string | null;
+    /** Memoised compile output (used for both static and dynamic paths). */
+    private cachedCompiled: CompiledNativeStyles | null = null;
+    /** Last produced dynamic CSS — short-circuit when the next call matches. */
+    private cachedCSS: string | null = null;
+    /** Last string outputs from function interpolations on the fast dynamic path. */
+    private cachedDynamicOutputs: string[] | null = null;
+    /** Consecutive dynamic-output changes; repeated misses fall back to single-pass flattening. */
+    private dynamicOutputMisses = 0;
+    /** Set at construction; the factory reads it once to pick the fast vs full render impl. */
+    fastEligible = false;
+    /** Compiled output for static CSS (eagerly resolved at construction); null when rules have function interpolations. */
+    staticCompiled: CompiledNativeStyles | null = null;
 
     constructor(rules: RuleSet<Props>) {
       this.rules = rules;
+      this.staticCSS = isAllStaticStrings(rules) ? joinStringRules(rules) : null;
+      if (this.staticCSS !== null) {
+        const compiled = compileNativeStyles(this.staticCSS, styleSheet);
+        this.staticCompiled = compiled;
+        this.fastEligible =
+          compiled.conditional.length === 0 &&
+          compiled.resolvers === undefined &&
+          compiled.startingStyle === undefined;
+      } else if (!sourceContainsResponsiveFeatures(rules)) {
+        // Source has function interpolations but no responsive markers (no `@media`/pseudo
+        // states/viewport units/etc). By contract, function interpolations produce simple
+        // decls only — so the compile output will have empty conditional/resolvers/
+        // startingStyle, and the fast path is sound. Verified on first compile in dev.
+        this.fastEligible = true;
+      }
     }
 
-    generateStyleObject(executionContext: ExecutionContext & Props) {
-      const flatCSS = joinStringArray(
-        flatten(this.rules as RuleSet<object>, executionContext) as string[]
-      );
-      return cssToStyleObject(flatCSS, styleSheet);
+    compile(executionContext: ExecutionContext & Props): CompiledNativeStyles {
+      if (this.staticCompiled !== null) {
+        return this.staticCompiled;
+      }
+      const fastDynamic =
+        this.dynamicOutputMisses < 2
+          ? tryFlattenDynamicStringRules(this.rules, executionContext, this.cachedDynamicOutputs)
+          : null;
+      let css: string;
+      if (fastDynamic !== null) {
+        if (fastDynamic.unchanged && this.cachedCompiled !== null) {
+          this.dynamicOutputMisses = 0;
+          return this.cachedCompiled;
+        }
+        if (this.cachedCompiled !== null) this.dynamicOutputMisses++;
+        this.cachedDynamicOutputs = fastDynamic.outputs;
+        css = fastDynamic.css;
+      } else {
+        if (this.dynamicOutputMisses < 2) this.cachedDynamicOutputs = null;
+        css = flattenRulesToCSS(this.rules, executionContext);
+      }
+      if (css === this.cachedCSS && this.cachedCompiled !== null) {
+        this.dynamicOutputMisses = 0;
+        return this.cachedCompiled;
+      }
+      this.cachedCSS = css;
+      return (this.cachedCompiled = compileNativeStyles(css, styleSheet));
     }
   };
 
   return InlineStyle;
+}
+
+/**
+ * Recursively check whether every rule is a plain string (or a nested
+ * array of plain strings, which is the shape css`` produces). Anything
+ * else — function, keyframes, styled component, plain object — keeps us
+ * on the dynamic path because it requires an execution context to flatten.
+ *
+ * The recursion bound is the depth of css`` nesting, which is shallow
+ * in practice (rare to nest >2 levels).
+ */
+function isAllStaticStrings(rules: ReadonlyArray<unknown>): boolean {
+  for (let i = 0; i < rules.length; i++) {
+    const r = rules[i];
+    if (typeof r === 'string') continue;
+    if (Array.isArray(r) && isAllStaticStrings(r)) continue;
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Markers in CSS source that indicate the component will produce a non-trivial
+ * compiled shape — anything the fast render path can't handle without the
+ * responsive infrastructure:
+ *
+ *   - `@media`/`@container`/`@supports`/`@scope`/`@starting-style` at-rules
+ *   - pseudo states `:hover` / `:focus` / `:active` / `:pressed` / `:disabled` / `:focused` / `:focus-visible`
+ *   - viewport units (`vw`/`vh`/`dvh`/`svw`/`svh`/`lvw`/`lvh`/`vmin`/`vmax`)
+ *   - container units (`cqw`/`cqh`/`cqi`/`cqb`/`cqmin`/`cqmax`)
+ *   - `light-dark()` color function
+ *
+ * Viewport- and container-unit detection requires a digit immediately before
+ * the unit, avoiding false positives in plain words like `view` / `vector`.
+ */
+const RESPONSIVE_RE =
+  /@(?:media|container|supports|scope|starting-style)\b|:(?:hover|focus|active|pressed|disabled|focused|focus-visible)\b|\d(?:vw|vh|dvw|dvh|svw|svh|lvw|lvh|vmin|vmax|cqw|cqh|cqi|cqb|cqmin|cqmax)\b|light-dark\(/i;
+
+/**
+ * Walk the rule literals and report whether any string segment contains a
+ * marker that disqualifies the component from the fast render path. Function
+ * interpolations are skipped — by contract they produce simple decls, not
+ * @rules / pseudo states / responsive values. Violations of that contract
+ * are surfaced via a dev-mode warning on first compile (see
+ * `verifyFastContract`).
+ */
+function sourceContainsResponsiveFeatures(rules: ReadonlyArray<unknown>): boolean {
+  for (let i = 0; i < rules.length; i++) {
+    const r = rules[i];
+    if (typeof r === 'string') {
+      if (RESPONSIVE_RE.test(r)) return true;
+    } else if (Array.isArray(r)) {
+      if (sourceContainsResponsiveFeatures(r)) return true;
+    }
+  }
+  return false;
+}
+
+function joinStringRules(rules: ReadonlyArray<unknown>): string {
+  let css = '';
+  for (let i = 0; i < rules.length; i++) {
+    const r = rules[i];
+    if (typeof r === 'string') css += r;
+    else if (Array.isArray(r)) css += joinStringRules(r);
+  }
+  return css;
+}
+
+/**
+ * Fast dynamic path for the common native template shape:
+ *   ['color:', props => props.$color, ';']
+ *
+ * Function interpolations still run once per compile call, but when every
+ * function returns the same string as last time we can return the cached
+ * compiled object without rebuilding the full CSS string. More complex rule
+ * outputs fall back to `flatten()`, preserving object/array/keyframe behavior.
+ */
+function tryFlattenDynamicStringRules<Props extends object>(
+  rules: RuleSet<Props>,
+  executionContext: ExecutionContext & Props,
+  previousOutputs: string[] | null
+): DynamicStringRulesResult | null {
+  // `outputs` aliases `previousOutputs` while we're matching its prefix and
+  // hasn't been forked. As soon as a function returns something different from
+  // the previous render, materialize a fresh slice and continue building from
+  // there. Avoids allocating any array when every output matches.
+  let outputs: string[] = previousOutputs === null ? [] : previousOutputs;
+  let forked = previousOutputs === null;
+  let outputIndex = 0;
+
+  for (let i = 0; i < rules.length; i++) {
+    const partRule = rules[i];
+    if (typeof partRule === 'string' || !partRule) continue;
+
+    if (isStatelessFunction(partRule)) {
+      const fnResult = (partRule as (ctx: ExecutionContext & Props) => unknown)(executionContext);
+      let output: string;
+      if (typeof fnResult === 'string') {
+        output = fnResult;
+      } else if (fnResult === undefined || fnResult === null || fnResult === false) {
+        output = '';
+      } else {
+        return null;
+      }
+      if (!forked) {
+        if (outputs[outputIndex] === output) {
+          outputIndex++;
+          continue;
+        }
+        outputs = outputs.slice(0, outputIndex);
+        forked = true;
+      }
+      outputs.push(output);
+      outputIndex++;
+      continue;
+    }
+
+    if (Array.isArray(partRule) && isAllStaticStrings(partRule)) continue;
+    return null;
+  }
+
+  if (!forked && outputIndex === outputs.length) {
+    return { css: '', outputs, unchanged: true };
+  }
+
+  let css = '';
+  outputIndex = 0;
+  for (let i = 0; i < rules.length; i++) {
+    const partRule = rules[i];
+    if (typeof partRule === 'string') {
+      css += partRule;
+    } else if (isStatelessFunction(partRule)) {
+      css += outputs[outputIndex++];
+    } else if (Array.isArray(partRule)) {
+      css += joinStringRules(partRule);
+    }
+  }
+  return { css, outputs, unchanged: false };
 }

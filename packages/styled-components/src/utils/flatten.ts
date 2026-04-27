@@ -64,12 +64,6 @@ function objToCssArrayInto(obj: Dict<any>, rules: any[]): void {
   }
 }
 
-export const objToCssArray = (obj: Dict<any>): string[] => {
-  const rules: any[] = [];
-  objToCssArrayInto(obj, rules);
-  return rules;
-};
-
 export default function flatten<Props extends object>(
   chunk: Interpolation<object>,
   executionContext?: (ExecutionContext & Props) | undefined,
