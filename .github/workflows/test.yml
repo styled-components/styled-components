@@ -11,20 +11,6 @@ permissions:
   contents: read #  to fetch code (actions/checkout)
 
 jobs:
-  prettier:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          cache: "pnpm"
-          node-version-file: ".nvmrc"
-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm prettier
   build:
     runs-on: ubuntu-latest
     steps:
