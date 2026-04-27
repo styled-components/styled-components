@@ -9,7 +9,7 @@ import {
   CLOSE_PAREN,
   COLON,
   DOUBLE_QUOTE,
-  NEWLINE,
+  LF,
   OPEN_BRACE,
   OPEN_PAREN,
   SEMICOLON,
@@ -129,7 +129,7 @@ export function preprocessCSS(css: string): string {
         continue;
       }
       out += css.substring(start, i);
-      while (i < len && css.charCodeAt(i) !== NEWLINE) {
+      while (i < len && css.charCodeAt(i) !== LF) {
         i++;
       }
       start = i;
@@ -209,7 +209,7 @@ function sanitizeBraces(css: string): string {
         let skipEnd = i + 1;
         while (skipEnd < len) {
           const skipCode = css.charCodeAt(skipEnd);
-          if (skipCode === SEMICOLON || skipCode === NEWLINE) break;
+          if (skipCode === SEMICOLON || skipCode === LF) break;
           skipEnd++;
         }
         if (skipEnd < len && css.charCodeAt(skipEnd) === SEMICOLON) skipEnd++;

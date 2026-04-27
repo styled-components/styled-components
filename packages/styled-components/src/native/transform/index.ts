@@ -1,4 +1,5 @@
 import { Dict } from '../../types';
+import * as $ from '../../utils/charCodes';
 import { warnOnce } from './dev';
 import { PASSTHROUGH_PROPS } from './passthrough';
 import { staticColorFunctionToHex } from './polyfills/colorMath';
@@ -26,7 +27,7 @@ function camelize(prop: string): string {
   const hit = camelCache[prop];
   if (hit !== undefined) return hit;
   // Custom properties are returned as-is (the parser may pass `--foo`)
-  if (prop.length > 1 && prop.charCodeAt(0) === 45 /* - */ && prop.charCodeAt(1) === 45) {
+  if (prop.length > 1 && prop.charCodeAt(0) === $.HYPHEN && prop.charCodeAt(1) === $.HYPHEN) {
     camelCache[prop] = prop;
     return prop;
   }
@@ -34,13 +35,13 @@ function camelize(prop: string): string {
   let toUpper = false;
   let i = 0;
   // Strip vendor prefix
-  if (prop.charCodeAt(0) === 45 /* - */) {
+  if (prop.charCodeAt(0) === $.HYPHEN) {
     const end = prop.indexOf('-', 1);
     if (end !== -1) i = end + 1;
   }
   for (; i < prop.length; i++) {
     const c = prop.charCodeAt(i);
-    if (c === 45 /* - */) {
+    if (c === $.HYPHEN) {
       toUpper = true;
       continue;
     }

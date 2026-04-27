@@ -1,3 +1,4 @@
+import * as $ from '../utils/charCodes';
 import { AtRuleNode, KeyframeFrame, KeyframesNode, Node, NodeKind, Root, RuleNode } from './ast';
 import { stripCommaSpaces } from './parser';
 
@@ -42,31 +43,31 @@ function stripCombinatorSpaces(sel: string): string {
   for (let i = 0; i < len; i++) {
     const c = sel.charCodeAt(i);
     if (quote !== 0) {
-      if (c === 92 /* \ */) {
+      if (c === $.BACKSLASH) {
         i++;
         continue;
       }
       if (c === quote) quote = 0;
-    } else if (c === 34 /* " */ || c === 39 /* ' */) {
+    } else if (c === $.DOUBLE_QUOTE || c === $.SINGLE_QUOTE) {
       quote = c;
-    } else if (c === 40 /* ( */) {
+    } else if (c === $.OPEN_PAREN) {
       paren++;
-    } else if (c === 41 /* ) */) {
+    } else if (c === $.CLOSE_PAREN) {
       if (paren > 0) paren--;
-    } else if (c === 91 /* [ */) {
+    } else if (c === $.OPEN_BRACKET) {
       bracket++;
-    } else if (c === 93 /* ] */) {
+    } else if (c === $.CLOSE_BRACKET) {
       if (bracket > 0) bracket--;
     } else if (
       paren === 0 &&
       bracket === 0 &&
-      (c === 62 /* > */ || c === 43 /* + */ || c === 126) /* ~ */
+      (c === 62 /* > */ || c === $.PLUS || c === 126) /* ~ */
     ) {
       // Find left boundary of emitted segment (trim trailing whitespace).
       let left = i;
       while (left > segStart) {
         const p = sel.charCodeAt(left - 1);
-        if (p === 32 || p === 9 || p === 10 || p === 13) left--;
+        if (p === $.SPACE || p === $.TAB || p === $.LF || p === $.CR) left--;
         else break;
       }
       out += sel.substring(segStart, left);
@@ -75,7 +76,7 @@ function stripCombinatorSpaces(sel: string): string {
       let j = i + 1;
       while (j < len) {
         const n = sel.charCodeAt(j);
-        if (n === 32 || n === 9 || n === 10 || n === 13) j++;
+        if (n === $.SPACE || n === $.TAB || n === $.LF || n === $.CR) j++;
         else break;
       }
       segStart = j;
@@ -99,7 +100,7 @@ function stripCombinatorSpaces(sel: string): string {
  * `:is()` first arm. This helper restores the contract that
  * cross-product only fires on actually-separate selectors.
  */
-function splitTopLevelCommas(s: string): string[] {
+export function splitTopLevelCommas(s: string): string[] {
   if (s.indexOf(',') === -1) return [s];
   const len = s.length;
   const out: string[] = [];
@@ -110,24 +111,24 @@ function splitTopLevelCommas(s: string): string[] {
   for (let i = 0; i < len; i++) {
     const c = s.charCodeAt(i);
     if (quote !== 0) {
-      if (c === 92 /* \ */) {
+      if (c === $.BACKSLASH) {
         i++;
         continue;
       }
       if (c === quote) quote = 0;
       continue;
     }
-    if (c === 34 /* " */ || c === 39 /* ' */) {
+    if (c === $.DOUBLE_QUOTE || c === $.SINGLE_QUOTE) {
       quote = c;
-    } else if (c === 40 /* ( */) {
+    } else if (c === $.OPEN_PAREN) {
       paren++;
-    } else if (c === 41 /* ) */) {
+    } else if (c === $.CLOSE_PAREN) {
       if (paren > 0) paren--;
-    } else if (c === 91 /* [ */) {
+    } else if (c === $.OPEN_BRACKET) {
       bracket++;
-    } else if (c === 93 /* ] */) {
+    } else if (c === $.CLOSE_BRACKET) {
       if (bracket > 0) bracket--;
-    } else if (c === 44 /* , */ && paren === 0 && bracket === 0) {
+    } else if (c === $.COMMA && paren === 0 && bracket === 0) {
       out.push(s.substring(segStart, i));
       segStart = i + 1;
     }
@@ -397,11 +398,11 @@ function applySelfReferenceRewrite(
     const isBoundary =
       after >= len ||
       !(
-        (afterCh >= 48 && afterCh <= 57) || // 0-9
-        (afterCh >= 65 && afterCh <= 90) || // A-Z
-        (afterCh >= 97 && afterCh <= 122) || // a-z
-        afterCh === 95 || // _
-        afterCh === 45 // -
+        (afterCh >= $.DIGIT_0 && afterCh <= $.DIGIT_9) ||
+        (afterCh >= $.UPPER_A && afterCh <= $.UPPER_Z) ||
+        (afterCh >= $.LOWER_A && afterCh <= $.LOWER_Z) ||
+        afterCh === $.UNDERSCORE ||
+        afterCh === $.HYPHEN
       );
     out += compiledSelector.substring(i, idx);
     if (isBoundary) {

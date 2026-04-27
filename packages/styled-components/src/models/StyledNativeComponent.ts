@@ -120,6 +120,20 @@ function buildResolveEnv(
   };
 }
 
+// Mutable scratch env reused across container-query evaluations.
+// matchMedia reads only `width`/`height` for container queries; the
+// other fields are fixed defaults that never matter to the parser. We
+// rewrite width/height in place rather than allocating a fresh object
+// per condition per render.
+const CONTAINER_ENV: MediaQueryEnv = {
+  width: 0,
+  height: 0,
+  colorScheme: undefined,
+  reduceMotion: false,
+  fontScale: 1,
+  pixelRatio: 1,
+};
+
 /** Evaluate whether an at-rule bucket (media/container/supports) matches. */
 function conditionMatches(
   entry: ConditionalStyle,
@@ -133,15 +147,9 @@ function conditionMatches(
     const name = entry.containerName;
     const container = name ? containerCtx.named[name] : null;
     if (!container) return false;
-    const containerEnv: MediaQueryEnv = {
-      width: container.width,
-      height: container.height,
-      colorScheme: undefined,
-      reduceMotion: false,
-      fontScale: 1,
-      pixelRatio: 1,
-    };
-    return matchMedia(entry.condition, containerEnv);
+    CONTAINER_ENV.width = container.width;
+    CONTAINER_ENV.height = container.height;
+    return matchMedia(entry.condition, CONTAINER_ENV);
   }
   return false;
 }
@@ -316,7 +324,7 @@ function useFastImpl<Props extends StyledComponentImplProps>(
   props: Props,
   forwardedRef: Ref<any>
 ): React.ReactElement {
-  const { inlineStyle, defaultProps, target } = forwardedComponent;
+  const { inlineStyle, target } = forwardedComponent;
   const theme = useContext(ThemeContext);
 
   const renderCacheRef = React.useRef<FastRenderCache | null>(null);
@@ -327,7 +335,6 @@ function useFastImpl<Props extends StyledComponentImplProps>(
   }
 
   const executionContext = {
-    ...(defaultProps as any),
     ...props,
     theme: determineTheme(props, theme as DefaultTheme | undefined) ?? EMPTY_OBJECT,
   } as ExecutionContext & Props;
@@ -536,16 +543,19 @@ function ContainerPublisher({
     return { nearest: entry, named };
   }, [entry, name, parent]);
 
-  // Compose with any user-supplied onLayout. Allocate the wrapped
-  // listener exactly once per (onLayout, existingOnLayout) pair.
   const finalProps = elementProps;
   const existingOnLayout = finalProps.onLayout;
-  finalProps.onLayout = existingOnLayout
-    ? (e: any) => {
-        onLayout(e);
-        existingOnLayout(e);
-      }
-    : onLayout;
+  const composedOnLayout = React.useMemo(
+    () =>
+      existingOnLayout
+        ? (e: any) => {
+            onLayout(e);
+            existingOnLayout(e);
+          }
+        : onLayout,
+    [onLayout, existingOnLayout]
+  );
+  finalProps.onLayout = composedOnLayout;
 
   return createElement(
     ContainerContext.Provider,

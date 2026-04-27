@@ -1,4 +1,6 @@
 import { SC_ATTR } from '../constants';
+import { splitTopLevelCommas } from '../parser/emit-web';
+import * as $ from './charCodes';
 import { isEscaped } from './cssCompile';
 
 /**
@@ -45,58 +47,17 @@ function expandAdjacentSibling(selector: string, out: string[]): void {
   let bracketDepth = 0;
   for (let i = 0; i < selector.length; i++) {
     const ch = selector.charCodeAt(i);
-    if (ch === 40 /* ( */) parenDepth++;
-    else if (ch === 41 /* ) */) parenDepth--;
-    else if (ch === 91 /* [ */) bracketDepth++;
-    else if (ch === 93 /* ] */) bracketDepth--;
-    else if (
-      ch === 43 /* + */ &&
-      parenDepth === 0 &&
-      bracketDepth === 0 &&
-      !isEscaped(selector, i)
-    ) {
+    if (ch === $.OPEN_PAREN) parenDepth++;
+    else if (ch === $.CLOSE_PAREN) parenDepth--;
+    else if (ch === $.OPEN_BRACKET) bracketDepth++;
+    else if (ch === $.CLOSE_BRACKET) bracketDepth--;
+    else if (ch === $.PLUS && parenDepth === 0 && bracketDepth === 0 && !isEscaped(selector, i)) {
       const before = selector.substring(0, i);
       const after = selector.substring(i + 1);
       out.push(before + '+' + STYLE_TAG + '+' + after);
       out.push(before + '+' + STYLE_TAG + '+' + STYLE_TAG + '+' + after);
     }
   }
-}
-
-/**
- * Split a comma-separated selector list, respecting `,` inside parens/brackets/strings.
- */
-function splitTopLevelCommas(selector: string): string[] {
-  if (selector.indexOf(',') === -1) return [selector];
-  const out: string[] = [];
-  const len = selector.length;
-  let start = 0;
-  let paren = 0;
-  let bracket = 0;
-  let quote = 0;
-  for (let i = 0; i < len; i++) {
-    const c = selector.charCodeAt(i);
-    if (quote !== 0) {
-      if (c === 92) {
-        i++;
-        continue;
-      }
-      if (c === quote) quote = 0;
-    } else if (c === 34 || c === 39) {
-      quote = c;
-    } else if (c === 40) paren++;
-    else if (c === 41) {
-      if (paren > 0) paren--;
-    } else if (c === 91) bracket++;
-    else if (c === 93) {
-      if (bracket > 0) bracket--;
-    } else if (c === 44 && paren === 0 && bracket === 0) {
-      out.push(selector.substring(start, i));
-      start = i + 1;
-    }
-  }
-  out.push(selector.substring(start));
-  return out;
 }
 
 /**

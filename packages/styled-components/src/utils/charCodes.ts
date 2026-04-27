@@ -7,8 +7,6 @@
 export const NUL = 0;
 export const TAB = 9; // \t
 export const LF = 10; // \n
-/** @deprecated use LF */
-export const NEWLINE = 10;
 export const CR = 13; // \r
 export const SPACE = 32; // ' '
 export const DOUBLE_QUOTE = 34; // "

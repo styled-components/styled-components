@@ -74,11 +74,12 @@ const KNOWN_PSEUDOS: Record<string, PseudoState> = {
  * second + nth accesses are effectively O(1) without us computing a
  * djb2 + base-52 name on each call.
  *
- * Compile-cache ceiling: FIFO-evicted at this count. Justified via
+ * Compile-cache ceiling: single-entry FIFO eviction at this count, matching
+ * `ComponentStyle.dynamicNameCache`. Justified via
  * `src/native/transform/test/stress.test.ts::compileNativeStyles` —
- * 2,000 distinct CSS compiles with LIMIT=200 completes in ~7ms with
- * ΔheapUsed under 6MB; 10×150 cache-hit reruns complete in ~3ms with
- * ΔheapUsed under 1MB. Adjust only with a new measurement pass.
+ * 2,000 distinct CSS compiles with LIMIT=200 stays under ~7ms / 6MB heap;
+ * 10×150 cache-hit reruns complete in ~3ms / under 1MB heap. Adjust only
+ * with a new measurement pass.
  */
 let compileCache = new Map<string, CompiledNativeStyles>();
 const CACHE_LIMIT = 200;
@@ -107,9 +108,8 @@ export function compileNativeStyles(rawCSS: string, styleSheet: StyleSheet): Com
   const compiled = compileRoot(ast, styleSheet);
 
   if (compileCache.size >= CACHE_LIMIT) {
-    // FIFO eviction: replace the whole cache. Matches ComponentStyle's
-    // dynamicNameCache bounding strategy in spirit (bounded, simple, cheap).
-    compileCache = new Map();
+    const oldest = compileCache.keys().next().value;
+    if (oldest !== undefined) compileCache.delete(oldest);
   }
   compileCache.set(rawCSS, compiled);
   return compiled;

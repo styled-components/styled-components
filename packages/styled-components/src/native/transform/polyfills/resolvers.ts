@@ -50,12 +50,7 @@ export function buildResolver(value: unknown): Resolver | null {
   // Viewport / container units start with a digit, `-`, `+`, or `.`. Skip
   // both regex tests for everything else (colors, idents, percent strings)
   // — those dominate real-world base-dict contents.
-  if (
-    (c0 >= 0x30 && c0 <= 0x39) ||
-    c0 === 0x2d /* - */ ||
-    c0 === 0x2e /* . */ ||
-    c0 === 0x2b /* + */
-  ) {
+  if ((c0 >= $.DIGIT_0 && c0 <= $.DIGIT_9) || c0 === $.HYPHEN || c0 === $.DOT || c0 === $.PLUS) {
     const vp = VP_UNIT_RE.exec(value);
     if (vp !== null) return buildViewportResolver(parseFloat(vp[1]), vp[2].toLowerCase());
     const cq = CQ_UNIT_RE.exec(value);

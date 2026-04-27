@@ -9,6 +9,8 @@
  * `borderRadius` which accepts `"10px"` strings since 0.78).
  */
 
+import * as $ from '../../utils/charCodes';
+
 const UNITLESS_NUMERIC_PROPS = new Set([
   'opacity',
   'flex',
@@ -39,12 +41,7 @@ export function coerceRawValue(prop: string, value: string): number | string | n
   // could plausibly match. Saves a regex call per non-numeric value
   // (colors, idents, hex), which dominate real-world inputs.
   const c0 = value.charCodeAt(0);
-  if (
-    (c0 >= 0x30 && c0 <= 0x39) ||
-    c0 === 0x2d /* - */ ||
-    c0 === 0x2e /* . */ ||
-    c0 === 0x2b /* + */
-  ) {
+  if ((c0 >= $.DIGIT_0 && c0 <= $.DIGIT_9) || c0 === $.HYPHEN || c0 === $.DOT || c0 === $.PLUS) {
     const match = NPX_RE.exec(value);
     if (match) return parseFloat(match[1]);
   }
