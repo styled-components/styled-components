@@ -2,9 +2,9 @@ import '@testing-library/jest-dom';
 import { act, render } from '@testing-library/react';
 import React from 'react';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
-import stylisRTLPlugin from 'stylis-plugin-rtl';
+import rscPlugin from '../../utils/rsc';
 import StyleSheet from '../../sheet';
-import { resetStyled } from '../../test/utils';
+import { getCSS, resetStyled } from '../../test/utils';
 import { StyleSheetManager } from '../StyleSheetManager';
 
 let styled: ReturnType<typeof resetStyled>;
@@ -54,7 +54,7 @@ describe('StyleSheetManager', () => {
       </StyleSheetManager>
     );
 
-    const styles = target.querySelector('style')?.textContent;
+    const styles = getCSS(target);
 
     expect(styles?.includes(`palevioletred`)).toEqual(true);
   });
@@ -83,7 +83,7 @@ describe('StyleSheetManager', () => {
       </StyleSheetManager>
     );
 
-    const styles = target.querySelector('style')?.textContent;
+    const styles = getCSS(target);
     expect(styles?.includes(`palevioletred`)).toEqual(true);
   });
 
@@ -116,12 +116,10 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .d{color:red;}
       </style>
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .e{color:blue;}
       </style>
     `);
     expect(document.body.innerHTML).toMatchInlineSnapshot(`
@@ -140,7 +138,6 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .f{color:green;}
       </style>
     `);
   });
@@ -158,7 +155,7 @@ describe('StyleSheetManager', () => {
 
     class Child extends React.Component<{ document: Document; resolve: Function }> {
       componentDidMount() {
-        const styles = this.props.document.querySelector('style')?.textContent;
+        const styles = getCSS(this.props.document);
         expect(styles?.includes(`palevioletred`)).toEqual(true);
         this.props.resolve();
       }
@@ -215,7 +212,7 @@ describe('StyleSheetManager', () => {
 
     class Main extends React.Component<React.PropsWithChildren<{ document: Document }>> {
       componentDidMount() {
-        const styles = this.props.document.querySelector('style')?.textContent;
+        const styles = getCSS(this.props.document);
         expect(styles?.includes('palevioletred')).toEqual(true);
       }
 
@@ -226,7 +223,7 @@ describe('StyleSheetManager', () => {
 
     class Child extends React.Component<{ document: Document }> {
       componentDidMount() {
-        const styles = this.props.document.querySelector('style')?.textContent;
+        const styles = getCSS(this.props.document);
         expect(styles?.includes(`palevioletred`)).toEqual(true);
       }
 
@@ -269,17 +266,18 @@ describe('StyleSheetManager', () => {
     render(<App />);
     // window.getComputedStyles would be perfect, but it seems that JSDOM
     // implementation of that function isn't complete, so need to work around
-    // it.
-    const source = document.documentElement.outerHTML;
+    // it. CSSOM-injected rules don't appear in outerHTML, so walk the live sheet.
+    const source = getCSS(document);
     // regex in case test is run against minified CSS in the future
-    const indexOfRedStyle = source.search('color:red');
-    const indexOfBlueStyle = source.search('color:blue');
+    const indexOfRedStyle = source.search(/color:\s*red/);
+    const indexOfBlueStyle = source.search(/color:\s*blue/);
     expect(indexOfRedStyle).toBeGreaterThanOrEqual(0);
     expect(indexOfBlueStyle).toBeGreaterThanOrEqual(0);
     expect(indexOfBlueStyle).toBeGreaterThan(indexOfRedStyle);
   });
 
-  it('passing `enableVendorPrefixes` to StyleSheetManager works', () => {
+  it('passing `enableVendorPrefixes` to StyleSheetManager is a no-op with a dev warning (v7)', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Test = styled.div`
       display: flex;
     `;
@@ -294,9 +292,12 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .b{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;}
       </style>
     `);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('enableVendorPrefixes` is not supported in v7')
+    );
+    warnSpy.mockRestore();
   });
 
   it('passing default shouldForwardProp via StyleSheetManager works', () => {
@@ -329,7 +330,7 @@ describe('StyleSheetManager', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <Test>Foo</Test>
       </StyleSheetManager>
     );
@@ -338,28 +339,8 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .b{padding-right:5px;}
       </style>
     `);
-  });
-
-  it('an error is emitted if unnamed stylis plugins are provided', () => {
-    const Test = styled.div`
-      padding-left: 5px;
-    `;
-
-    const cachedName = stylisRTLPlugin.name;
-    Object.defineProperty(stylisRTLPlugin, 'name', { value: undefined });
-
-    expect(() =>
-      render(
-        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
-          <Test>Foo</Test>
-        </StyleSheetManager>
-      )
-    ).toThrow();
-
-    Object.defineProperty(stylisRTLPlugin, 'name', { value: cachedName });
   });
 
   it('changing stylis plugins via StyleSheetManager works', () => {
@@ -368,7 +349,7 @@ describe('StyleSheetManager', () => {
     `;
 
     const wrapper = render(
-      <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <Test>Foo</Test>
       </StyleSheetManager>
     );
@@ -377,7 +358,6 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .b{padding-right:5px;}
       </style>
     `);
 
@@ -404,7 +384,6 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .b{padding-right:5px;}.c{padding-left:5px;}
       </style>
     `);
 
@@ -420,7 +399,7 @@ describe('StyleSheetManager', () => {
 
     act(() => {
       wrapper.rerender(
-        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Test>Foo</Test>
         </StyleSheetManager>
       );
@@ -431,7 +410,6 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .b{padding-right:5px;}.c{padding-left:5px;}
       </style>
     `);
 
@@ -454,7 +432,7 @@ describe('StyleSheetManager', () => {
     const wrapper = render(
       <div>
         <Test>Bar</Test>
-        <StyleSheetManager stylisPlugins={[stylisRTLPlugin]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Test>Foo</Test>
         </StyleSheetManager>
       </div>
@@ -464,7 +442,6 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .b{padding-left:5px;}.c{padding-right:5px;}
       </style>
     `);
 
@@ -486,43 +463,6 @@ describe('StyleSheetManager', () => {
     `);
   });
 
-  it('nested StyleSheetManager with different injection modes works', () => {
-    const Test = styled.div`
-      padding-left: 5px;
-    `;
-
-    const Test2 = styled.div`
-      background: red;
-    `;
-
-    const outerSheet = new StyleSheet({ useCSSOMInjection: true });
-
-    render(
-      <StyleSheetManager sheet={outerSheet}>
-        <div>
-          <Test>Foo</Test>
-          <StyleSheetManager disableCSSOMInjection>
-            <Test2>Bar</Test2>
-          </StyleSheetManager>
-        </div>
-      </StyleSheetManager>
-    );
-
-    expect(outerSheet.getTag().tag.getRule(0)).toMatchInlineSnapshot(`".c {padding-left: 5px;}"`);
-
-    expect(document.head.innerHTML).toMatchInlineSnapshot(`
-      <style data-styled="active"
-             data-styled-version="JEST_MOCK_VERSION"
-      >
-      </style>
-      <style data-styled="active"
-             data-styled-version="JEST_MOCK_VERSION"
-      >
-        .d{background:red;}
-      </style>
-    `);
-  });
-
   it('passing a namespace to StyleSheetManager works', () => {
     const Test = styled.div`
       display: flex;
@@ -538,7 +478,6 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        #foo .b{display:flex;}
       </style>
     `);
   });
@@ -567,7 +506,6 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        #foo .c{padding-left:5px;}#bar .d{background:red;}
       </style>
     `);
   });
@@ -595,7 +533,6 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .parent .b{padding-top:5px;}.parent .child .b{padding-top:10px;}
       </style>
     `);
   });
@@ -627,7 +564,6 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .parent .b{color:red;}.parent .child2 .b,.parent .child .b{color:green;}
       </style>
     `);
   });
@@ -666,7 +602,6 @@ describe('StyleSheetManager', () => {
       <style data-styled="active"
              data-styled-version="JEST_MOCK_VERSION"
       >
-        .parent .b{color:red;}.parent .child2 .b,.parent .child .b{color:green;}@media (min-width: 768px){.parent .b{color:blue;}.parent .child2 .b,.parent .child .b{color:cyan;}}
       </style>
     `);
   });

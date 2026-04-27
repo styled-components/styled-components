@@ -3,12 +3,12 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import { resetStyled } from '../../test/utils';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
-import stylisPluginRSC from '../stylisPluginRSC';
-import { RULESET } from 'stylis';
+import rscPlugin from '../rsc';
+import { rewriteSelectorForRSC } from '../rscSelectorRewrite';
 
 let styled: ReturnType<typeof resetStyled>;
 
-describe('stylisPluginRSC', () => {
+describe('rscPlugin', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     document.head.innerHTML = '';
@@ -16,8 +16,16 @@ describe('stylisPluginRSC', () => {
   });
 
   function getInjectedCSS(): string {
-    return Array.from(document.querySelectorAll('style[data-styled]'))
-      .map(el => el.textContent || '')
+    // CSSOM-injected rules don't appear in textContent — walk the live sheet.
+    return Array.from(document.querySelectorAll<HTMLStyleElement>('style[data-styled]'))
+      .map(el => {
+        if (el.sheet && el.sheet.cssRules.length) {
+          return Array.from(el.sheet.cssRules)
+            .map(r => r.cssText)
+            .join('');
+        }
+        return el.textContent || '';
+      })
       .join('');
   }
 
@@ -29,7 +37,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>First</Item>
         </ul>
@@ -37,7 +45,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".b:nth-child(1 of :not(style[data-styled])){color:red;}"`
+      `".b:nth-child(1 of :not(style[data-styled])) {color: red;}"`
     );
   });
 
@@ -49,7 +57,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>Last</Item>
         </ul>
@@ -57,7 +65,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".b:nth-last-child(1 of :not(style[data-styled])){color:blue;}"`
+      `".b:nth-last-child(1 of :not(style[data-styled])) {color: blue;}"`
     );
   });
 
@@ -69,7 +77,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>Second</Item>
         </ul>
@@ -77,7 +85,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".b:nth-child(2 of :not(style[data-styled])){color:green;}"`
+      `".b:nth-child(2 of :not(style[data-styled])) {color: green;}"`
     );
   });
 
@@ -89,7 +97,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>Item</Item>
         </ul>
@@ -97,7 +105,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".b:nth-last-child(2 of :not(style[data-styled])){color:purple;}"`
+      `".b:nth-last-child(2 of :not(style[data-styled])) {color: purple;}"`
     );
   });
 
@@ -109,7 +117,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>Odd</Item>
         </ul>
@@ -117,7 +125,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".b:nth-child(2n + 1 of :not(style[data-styled])){background:gray;}"`
+      `".b:nth-child(2n + 1 of :not(style[data-styled])) {background: gray;}"`
     );
   });
 
@@ -132,7 +140,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>Item</Item>
         </ul>
@@ -140,7 +148,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".b:nth-child(odd of :not(style[data-styled])){background:#eee;}.b:nth-child(even of :not(style[data-styled])){background:#fff;}"`
+      `".b:nth-child(odd of :not(style[data-styled])) {background: #eee;}.b:nth-child(even of :not(style[data-styled])) {background: #fff;}"`
     );
   });
 
@@ -152,14 +160,14 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>Item</Item>
         </ul>
       </StyleSheetManager>
     );
 
-    expect(getInjectedCSS()).toMatchInlineSnapshot(`".b:nth-child(2 of .special){color:gold;}"`);
+    expect(getInjectedCSS()).toMatchInlineSnapshot(`".b:nth-child(2 of .special) {color: gold;}"`);
   });
 
   it('should handle multiple pseudo-classes on the same selector', () => {
@@ -171,7 +179,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>Item</Item>
         </ul>
@@ -179,7 +187,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".b:nth-child(1 of :not(style[data-styled])),.b:nth-last-child(1 of :not(style[data-styled])){font-weight:bold;}"`
+      `".b:nth-child(1 of :not(style[data-styled])),.b:nth-last-child(1 of :not(style[data-styled])) {font-weight: bold;}"`
     );
   });
 
@@ -197,13 +205,13 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <Button>Click</Button>
       </StyleSheetManager>
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".b:hover{color:red;}.b:focus{outline:2px solid blue;}.b:first-of-type{margin-left:0;}"`
+      `".b:hover {color: red;}.b:focus {outline: 2px solid blue;}.b:first-of-type {margin-left: 0;}"`
     );
   });
 
@@ -220,7 +228,7 @@ describe('stylisPluginRSC', () => {
       </ul>
     );
 
-    expect(getInjectedCSS()).toMatchInlineSnapshot(`".b:first-child{color:red;}"`);
+    expect(getInjectedCSS()).toMatchInlineSnapshot(`".b:first-child {color: red;}"`);
   });
 
   it('should rewrite :first-child inside a media query', () => {
@@ -233,7 +241,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>First</Item>
         </ul>
@@ -241,7 +249,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `"@media (min-width: 768px){.b:nth-child(1 of :not(style[data-styled])){color:red;}}"`
+      `"@media (min-width: 768px) {.b:nth-child(1 of :not(style[data-styled])) {color: red;}}"`
     );
   });
 
@@ -253,7 +261,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>First</Item>
         </ul>
@@ -261,7 +269,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".parent .b:nth-child(1 of :not(style[data-styled])){color:red;}"`
+      `".parent .b:nth-child(1 of :not(style[data-styled])) {color: red;}"`
     );
   });
 
@@ -276,7 +284,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>First</Item>
         </ul>
@@ -284,7 +292,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".b:nth-child(1 of :not(style[data-styled])):hover{color:red;}.b:not(.foo):nth-child(2 of :not(style[data-styled])){color:blue;}"`
+      `".b:nth-child(1 of :not(style[data-styled])):hover {color: red;}.b:not(.foo):nth-child(2 of :not(style[data-styled])) {color: blue;}"`
     );
   });
 
@@ -296,7 +304,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>First</Item>
         </ul>
@@ -304,7 +312,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".b:nth-child(-n + 3 of :not(style[data-styled])){color:red;}"`
+      `".b:nth-child(-n + 3 of :not(style[data-styled])) {color: red;}"`
     );
   });
 
@@ -316,7 +324,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>First</Item>
         </ul>
@@ -324,7 +332,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".b:nth-child(3 of :not(style[data-styled])){color:red;}"`
+      `".b:nth-child(3 of :not(style[data-styled])) {color: red;}"`
     );
   });
 
@@ -336,7 +344,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <Item>Only</Item>
         </ul>
@@ -344,7 +352,7 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".b:nth-child(1 of :not(style[data-styled])):nth-last-child(1 of :not(style[data-styled])){color:red;}"`
+      `".b:nth-child(1 of :not(style[data-styled])):nth-last-child(1 of :not(style[data-styled])) {color: red;}"`
     );
   });
 
@@ -366,7 +374,7 @@ describe('stylisPluginRSC', () => {
     `;
 
     render(
-      <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+      <StyleSheetManager plugins={[rscPlugin]}>
         <ul>
           <First>First</First>
           <Last>Last</Last>
@@ -376,12 +384,12 @@ describe('stylisPluginRSC', () => {
     );
 
     expect(getInjectedCSS()).toMatchInlineSnapshot(
-      `".d:nth-child(1 of :not(style[data-styled])){color:red;}.e:nth-last-child(1 of :not(style[data-styled])){color:blue;}.f:hover{color:green;}"`
+      `".d:nth-child(1 of :not(style[data-styled])) {color: red;}.e:nth-last-child(1 of :not(style[data-styled])) {color: blue;}.f:hover {color: green;}"`
     );
   });
 
-  it('should have a name property for stylis hash computation', () => {
-    expect(stylisPluginRSC.name).toBe('stylisPluginRSC');
+  it('should have a name property for hash computation', () => {
+    expect(rscPlugin.name).toBe('rsc');
   });
 
   describe('adjacent sibling combinator (+)', () => {
@@ -393,14 +401,14 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
           <Item>B</Item>
         </StyleSheetManager>
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a+.sc-a,.b+style[data-styled]+.b,.b+style[data-styled]+style[data-styled]+.b{margin-top:8px;}"`
+        `".sc-a+.sc-a,.sc-a+style[data-styled]+.sc-a,.sc-a+style[data-styled]+style[data-styled]+.sc-a {margin-top: 8px;}"`
       );
     });
 
@@ -412,13 +420,13 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
         </StyleSheetManager>
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".item+.b,.item+style[data-styled]+.b,.item+style[data-styled]+style[data-styled]+.b{color:red;}"`
+        `".item+.b,.item+style[data-styled]+.b,.item+style[data-styled]+style[data-styled]+.b {color: red;}"`
       );
     });
 
@@ -430,13 +438,13 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
         </StyleSheetManager>
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".b+.sibling,.b+style[data-styled]+.sibling,.b+style[data-styled]+style[data-styled]+.sibling{color:blue;}"`
+        `".b+.sibling,.b+style[data-styled]+.sibling,.b+style[data-styled]+style[data-styled]+.sibling {color: blue;}"`
       );
     });
 
@@ -448,14 +456,14 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
           <Item>B</Item>
         </StyleSheetManager>
       );
 
       // ~ is immune — no expansion needed
-      expect(getInjectedCSS()).toMatchInlineSnapshot(`".sc-a~.sc-a{color:green;}"`);
+      expect(getInjectedCSS()).toMatchInlineSnapshot(`".sc-a~.sc-a {color: green;}"`);
     });
 
     it('should not expand + inside :nth-child(2n+1)', () => {
@@ -466,7 +474,7 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <ul>
             <Item>Item</Item>
           </ul>
@@ -475,7 +483,7 @@ describe('stylisPluginRSC', () => {
 
       // The + inside (2n+1) must not be treated as a combinator
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".b:nth-child(2n + 1 of :not(style[data-styled])){color:red;}"`
+        `".b:nth-child(2n + 1 of :not(style[data-styled])) {color: red;}"`
       );
     });
 
@@ -487,13 +495,13 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
         </StyleSheetManager>
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".b+.b:nth-child(1 of :not(style[data-styled])),.b+style[data-styled]+.b:nth-child(1 of :not(style[data-styled])),.b+style[data-styled]+style[data-styled]+.b:nth-child(1 of :not(style[data-styled])){color:red;}"`
+        `".b+.b:nth-child(1 of :not(style[data-styled])),.b+style[data-styled]+.b:nth-child(1 of :not(style[data-styled])),.b+style[data-styled]+style[data-styled]+.b:nth-child(1 of :not(style[data-styled])) {color: red;}"`
       );
     });
 
@@ -505,7 +513,7 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
           <Item>B</Item>
           <Item>C</Item>
@@ -513,7 +521,7 @@ describe('stylisPluginRSC', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a+.sc-a+.sc-a,.b+style[data-styled]+.b+.b,.b+style[data-styled]+style[data-styled]+.b+.b,.b+.b+style[data-styled]+.b,.b+.b+style[data-styled]+style[data-styled]+.b{color:purple;}"`
+        `".sc-a+.sc-a+.sc-a,.sc-a+style[data-styled]+.sc-a+.sc-a,.sc-a+style[data-styled]+style[data-styled]+.sc-a+.sc-a,.sc-a+.sc-a+style[data-styled]+.sc-a,.sc-a+.sc-a+style[data-styled]+style[data-styled]+.sc-a {color: purple;}"`
       );
     });
 
@@ -527,14 +535,14 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
           <Item>B</Item>
         </StyleSheetManager>
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `"@media (min-width: 768px){.sc-a+.sc-a,.b+style[data-styled]+.b,.b+style[data-styled]+style[data-styled]+.b{gap:16px;}}"`
+        `"@media (min-width: 768px) {.sc-a+.sc-a,.sc-a+style[data-styled]+.sc-a,.sc-a+style[data-styled]+style[data-styled]+.sc-a {gap: 16px;}}"`
       );
     });
 
@@ -546,14 +554,14 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
           <Item>B</Item>
         </StyleSheetManager>
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a[data-icon='+']+.sc-a,.b[data-icon='+']+style[data-styled]+.b,.b[data-icon='+']+style[data-styled]+style[data-styled]+.b{color:red;}"`
+        `".sc-a[data-icon='+']+.sc-a,.sc-a[data-icon='+']+style[data-styled]+.sc-a,.sc-a[data-icon='+']+style[data-styled]+style[data-styled]+.sc-a {color: red;}"`
       );
     });
 
@@ -565,13 +573,13 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
         </StyleSheetManager>
       );
 
       // + inside :has() is a relative selector, should not be expanded
-      expect(getInjectedCSS()).toMatchInlineSnapshot(`".b:has(+ .next){color:red;}"`);
+      expect(getInjectedCSS()).toMatchInlineSnapshot(`".b:has(+ .next) {color: red;}"`);
     });
 
     it('should not expand + inside :is()', () => {
@@ -582,14 +590,14 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
           <Item>B</Item>
         </StyleSheetManager>
       );
 
       // + inside :is() should not be expanded at selector level
-      expect(getInjectedCSS()).toMatchInlineSnapshot(`":is(.b + .b){color:red;}"`);
+      expect(getInjectedCSS()).toMatchInlineSnapshot(`":is(.b + .b) {color: red;}"`);
     });
 
     it('should not expand + inside :not()', () => {
@@ -600,12 +608,12 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
         </StyleSheetManager>
       );
 
-      expect(getInjectedCSS()).toMatchInlineSnapshot(`".b:not(.foo + .bar){color:red;}"`);
+      expect(getInjectedCSS()).toMatchInlineSnapshot(`".b:not(.foo + .bar) {color: red;}"`);
     });
 
     it('should handle mixed combinators: > then + then ~', () => {
@@ -616,7 +624,7 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
           <Item>B</Item>
           <Item>C</Item>
@@ -624,7 +632,7 @@ describe('stylisPluginRSC', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".parent>.b+.b~.b,.parent>.b+style[data-styled]+.b~.b,.parent>.b+style[data-styled]+style[data-styled]+.b~.b{color:red;}"`
+        `".parent>.b+.b~.b,.parent>.b+style[data-styled]+.b~.b,.parent>.b+style[data-styled]+style[data-styled]+.b~.b {color: red;}"`
       );
     });
 
@@ -636,40 +644,24 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
           <Item>B</Item>
         </StyleSheetManager>
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a:has(+ .next)+.sc-a,.b:has(+ .next)+style[data-styled]+.b,.b:has(+ .next)+style[data-styled]+style[data-styled]+.b{color:red;}"`
+        `".sc-a:has(+ .next)+.sc-a,.sc-a:has(+ .next)+style[data-styled]+.sc-a,.sc-a:has(+ .next)+style[data-styled]+style[data-styled]+.sc-a {color: red;}"`
       );
     });
 
     it('should not treat CSS-escaped + as a combinator', () => {
-      // Test the plugin directly with a mock stylis RULESET element.
-      // In CSS, .a\+b is a class containing a literal +. Stylis preserves
-      // the escape as .a\+b in the props array. The selector .a\+b+.c has
-      // \+ (escaped, part of class name) and + (real combinator).
-      const element = {
-        type: RULESET,
-        // stylis would produce this from: .a\+b + .c { color: red }
-        props: ['.a\\+b+.c'],
-        value: '.a\\+b+.c',
-        children: [],
-      };
-
-      stylisPluginRSC(element);
-
-      // The escaped \+ must survive in all selectors; only the real combinator expanded
-      expect(element.props).toMatchInlineSnapshot(`
-        [
-          ".a\\+b+.c",
-          ".a\\+b+style[data-styled]+.c",
-          ".a\\+b+style[data-styled]+style[data-styled]+.c",
-        ]
-      `);
+      // In CSS, .a\+b is a class containing a literal +. The selector .a\+b+.c
+      // has \+ (escaped, part of class name) and + (real combinator). The RSC
+      // rewrite must expand only the real combinator.
+      expect(rewriteSelectorForRSC('.a\\+b+.c')).toMatchInlineSnapshot(
+        `".a\\+b+.c,.a\\+b+style[data-styled]+.c,.a\\+b+style[data-styled]+style[data-styled]+.c"`
+      );
     });
 
     it('should handle + between attribute selectors', () => {
@@ -680,14 +672,14 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item data-a>A</Item>
           <Item data-b>B</Item>
         </StyleSheetManager>
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".b[data-a]+.b[data-b],.b[data-a]+style[data-styled]+.b[data-b],.b[data-a]+style[data-styled]+style[data-styled]+.b[data-b]{color:red;}"`
+        `".b[data-a]+.b[data-b],.b[data-a]+style[data-styled]+.b[data-b],.b[data-a]+style[data-styled]+style[data-styled]+.b[data-b] {color: red;}"`
       );
     });
 
@@ -699,14 +691,14 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
           <Item>B</Item>
         </StyleSheetManager>
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a[href*='a+b']+.sc-a,.b[href*='a+b']+style[data-styled]+.b,.b[href*='a+b']+style[data-styled]+style[data-styled]+.b{color:red;}"`
+        `".sc-a[href*='a+b']+.sc-a,.sc-a[href*='a+b']+style[data-styled]+.sc-a,.sc-a[href*='a+b']+style[data-styled]+style[data-styled]+.sc-a {color: red;}"`
       );
     });
 
@@ -718,7 +710,7 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <ul>
             <Item>A</Item>
             <Item>B</Item>
@@ -727,7 +719,7 @@ describe('stylisPluginRSC', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".b:nth-child(2n + 1 of :not(style[data-styled]))+.b:nth-child(3n + 2 of :not(style[data-styled])),.b:nth-child(2n + 1 of :not(style[data-styled]))+style[data-styled]+.b:nth-child(3n + 2 of :not(style[data-styled])),.b:nth-child(2n + 1 of :not(style[data-styled]))+style[data-styled]+style[data-styled]+.b:nth-child(3n + 2 of :not(style[data-styled])){color:red;}"`
+        `".b:nth-child(2n + 1 of :not(style[data-styled]))+.b:nth-child(3n + 2 of :not(style[data-styled])),.b:nth-child(2n + 1 of :not(style[data-styled]))+style[data-styled]+.b:nth-child(3n + 2 of :not(style[data-styled])),.b:nth-child(2n + 1 of :not(style[data-styled]))+style[data-styled]+style[data-styled]+.b:nth-child(3n + 2 of :not(style[data-styled])) {color: red;}"`
       );
     });
 
@@ -739,7 +731,7 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>1</Item>
           <Item>2</Item>
           <Item>3</Item>
@@ -750,7 +742,7 @@ describe('stylisPluginRSC', () => {
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a+.sc-a+.sc-a+.sc-a+.sc-a+.sc-a,.b+style[data-styled]+.b+.b+.b+.b+.b,.b+style[data-styled]+style[data-styled]+.b+.b+.b+.b+.b,.b+.b+style[data-styled]+.b+.b+.b+.b,.b+.b+style[data-styled]+style[data-styled]+.b+.b+.b+.b,.b+.b+.b+style[data-styled]+.b+.b+.b,.b+.b+.b+style[data-styled]+style[data-styled]+.b+.b+.b,.b+.b+.b+.b+style[data-styled]+.b+.b,.b+.b+.b+.b+style[data-styled]+style[data-styled]+.b+.b,.b+.b+.b+.b+.b+style[data-styled]+.b,.b+.b+.b+.b+.b+style[data-styled]+style[data-styled]+.b{color:red;}"`
+        `".sc-a+.sc-a+.sc-a+.sc-a+.sc-a+.sc-a,.sc-a+style[data-styled]+.sc-a+.sc-a+.sc-a+.sc-a+.sc-a,.sc-a+style[data-styled]+style[data-styled]+.sc-a+.sc-a+.sc-a+.sc-a+.sc-a,.sc-a+.sc-a+style[data-styled]+.sc-a+.sc-a+.sc-a+.sc-a,.sc-a+.sc-a+style[data-styled]+style[data-styled]+.sc-a+.sc-a+.sc-a+.sc-a,.sc-a+.sc-a+.sc-a+style[data-styled]+.sc-a+.sc-a+.sc-a,.sc-a+.sc-a+.sc-a+style[data-styled]+style[data-styled]+.sc-a+.sc-a+.sc-a,.sc-a+.sc-a+.sc-a+.sc-a+style[data-styled]+.sc-a+.sc-a,.sc-a+.sc-a+.sc-a+.sc-a+style[data-styled]+style[data-styled]+.sc-a+.sc-a,.sc-a+.sc-a+.sc-a+.sc-a+.sc-a+style[data-styled]+.sc-a,.sc-a+.sc-a+.sc-a+.sc-a+.sc-a+style[data-styled]+style[data-styled]+.sc-a {color: red;}"`
       );
     });
 
@@ -762,14 +754,14 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item id="first">A</Item>
           <Item id="second">B</Item>
         </StyleSheetManager>
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".b#first+.b#second,.b#first+style[data-styled]+.b#second,.b#first+style[data-styled]+style[data-styled]+.b#second{color:red;}"`
+        `".b#first+.b#second,.b#first+style[data-styled]+.b#second,.b#first+style[data-styled]+style[data-styled]+.b#second {color: red;}"`
       );
     });
 
@@ -781,13 +773,13 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
         </StyleSheetManager>
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `"*+.b,*+style[data-styled]+.b,*+style[data-styled]+style[data-styled]+.b{margin-top:8px;}"`
+        `"*+.b,*+style[data-styled]+.b,*+style[data-styled]+style[data-styled]+.b {margin-top: 8px;}"`
       );
     });
 
@@ -799,14 +791,14 @@ describe('stylisPluginRSC', () => {
       `;
 
       render(
-        <StyleSheetManager stylisPlugins={[stylisPluginRSC]}>
+        <StyleSheetManager plugins={[rscPlugin]}>
           <Item>A</Item>
           <Item>B</Item>
         </StyleSheetManager>
       );
 
       expect(getInjectedCSS()).toMatchInlineSnapshot(
-        `".sc-a:is(:has(+ .a), .x)+.sc-a,.b:is(:has(+ .a), .x)+style[data-styled]+.b,.b:is(:has(+ .a), .x)+style[data-styled]+style[data-styled]+.b{color:red;}"`
+        `".sc-a:is(:has(+ .a), .x)+.sc-a,.sc-a:is(:has(+ .a), .x)+style[data-styled]+.sc-a,.sc-a:is(:has(+ .a), .x)+style[data-styled]+style[data-styled]+.sc-a {color: red;}"`
       );
     });
   });
