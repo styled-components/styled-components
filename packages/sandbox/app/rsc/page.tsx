@@ -446,7 +446,7 @@ export default function RSCTestPage() {
           RSC emits inline <Code>&lt;style&gt;</Code> tags as siblings of the styled element. These
           tags are real DOM children, so <Code>:first-child</Code>, <Code>:last-child</Code>, and{' '}
           <Code>:nth-child()</Code> would normally count them and produce wrong results. This page
-          uses <Code>stylisPluginRSC</Code> via <Code>StyleSheetManager</Code> to rewrite these
+          uses <Code>rscPlugin</Code> via <Code>StyleSheetManager</Code> to rewrite these
           selectors automatically. Both columns should match.
         </SectionDesc>
         <HintText>

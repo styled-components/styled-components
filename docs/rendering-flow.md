@@ -9,7 +9,7 @@ sequenceDiagram
     participant createStyledComponent
     participant ComponentStyle
     participant React
-    participant StyledComponentImpl
+    participant useImpl
     participant StyleSheetManager
     participant StyleSheet
     participant GroupedTag
@@ -27,13 +27,13 @@ sequenceDiagram
 
     Note over User,React: 2. COMPONENT RENDER
     User->>React: render StyledComponent
-    React->>StyledComponentImpl: useStyledComponentImpl(component, props, ref)
-    StyledComponentImpl->>StyleSheetManager: useStyleSheetContext()
-    StyleSheetManager-->>StyledComponentImpl: styleSheet, stylis, shouldForwardProp
+    React->>useImpl: useImpl(component, props, ref)
+    useImpl->>StyleSheetManager: useStyleSheetContext()
+    StyleSheetManager-->>useImpl: styleSheet, stylis, shouldForwardProp
 
-    Note over StyledComponentImpl,ComponentStyle: 3. STYLE PROCESSING
-    StyledComponentImpl->>StyledComponentImpl: resolveContext(attrs, props, theme)
-    StyledComponentImpl->>ComponentStyle: generateAndInjectStyles(context, styleSheet, stylis)
+    Note over useImpl,ComponentStyle: 3. STYLE PROCESSING
+    useImpl->>useImpl: resolveContext(attrs, props, theme)
+    useImpl->>ComponentStyle: generateAndInjectStyles(context, styleSheet, stylis)
 
     ComponentStyle->>ComponentStyle: flatten(rules, context)
     Note over ComponentStyle: Process interpolations,<br/>execute functions,<br/>handle nested components
@@ -64,18 +64,18 @@ sequenceDiagram
     GroupedTag-->>StyleSheet: complete
     StyleSheet-->>ComponentStyle: complete
 
-    ComponentStyle-->>StyledComponentImpl: className
+    ComponentStyle-->>useImpl: className
 
-    Note over StyledComponentImpl,DOM: 5. ELEMENT CREATION
-    StyledComponentImpl->>StyledComponentImpl: buildClassName(foldedIds + styledId + generated + props)
-    StyledComponentImpl->>StyledComponentImpl: rawElement(type, props, ref)
-    Note over StyledComponentImpl: Bypasses React.createElement<br/>overhead (~60-120x faster)
+    Note over useImpl,DOM: 5. ELEMENT CREATION
+    useImpl->>useImpl: buildClassName(foldedIds + styledId + generated + props)
+    useImpl->>useImpl: rawElement(type, props, ref)
+    Note over useImpl: Bypasses React.createElement<br/>overhead (~60-120x faster)
 
     alt RSC Mode
-        StyledComponentImpl->>GroupedTag: getGroup() for inheritance chain + keyframes
-        StyledComponentImpl->>StyledComponentImpl: wrap base CSS in :where() for zero specificity
-        StyledComponentImpl->>StyledComponentImpl: emit Fragment with inline style tag + element
-        Note over StyledComponentImpl: No precedence attr —<br/>avoids React 19 Float hoisting
+        useImpl->>GroupedTag: getGroup() for inheritance chain + keyframes
+        useImpl->>useImpl: wrap base CSS in :where() for zero specificity
+        useImpl->>useImpl: emit Fragment with inline style tag + element
+        Note over useImpl: No precedence attr —<br/>avoids React 19 Float hoisting
     end
 
     React-->>User: DOM element with injected styles

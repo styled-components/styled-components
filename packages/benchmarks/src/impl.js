@@ -6,6 +6,8 @@ const { dependencies } = packageJson;
 const dependencyMap = {
   emotion: '@emotion/styled',
   tailwind: 'tailwindcss',
+  'styled-components-native': 'styled-components',
+  'styled-components-native-v6': 'styled-components-v6',
 };
 
 const toImplementations = context =>

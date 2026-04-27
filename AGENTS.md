@@ -9,15 +9,17 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 ## Critical Constraints
 
 - NEVER use `precedence` or `href` on `<style>` elements -- React 19 Float merges same-precedence tags, strips custom `data-*` attributes, and hoists to `<head>` where source ordering is unpredictable. RSC style tags must be plain inline `<style>` (server component output is not hydrated, so no mismatch).
-- The native entry must NEVER transitively import DOM code via value imports. Use `import type` and branded `Symbol.for()` checks instead of `instanceof`. Verify: `grep -c 'document\.' native/dist/styled-components.native.cjs.js` must be 0. RN/Hermes 0.79+ fails at module evaluation time on `document` references.
+- The native entry must NEVER transitively import DOM code via value imports. Use `import type` and branded `Symbol.for()` checks instead of `instanceof`. Verify: `grep -c 'document\.' native/dist/styled-components.native.cjs.js` must be 0. RN/Hermes 0.85+ fails at module evaluation time on `document` references.
 - Server detection requires three mechanisms combined: `__SERVER__` (build-time constant), `IS_RSC` (module-level constant), and `styleSheet.server` (runtime flag from `ServerStyleSheet`). Always use `__SERVER__ || IS_RSC || ssc.styleSheet.server`. `IS_RSC` is `true` at runtime in React 19 server components because React's `react-server` export condition serves a stripped build without `createContext`. Bundlers (Next.js/Turbopack) use this condition automatically.
 - Turbopack resolves the `browser` entry for SSR of client components, making `__SERVER__` false on the server. `styleSheet.server` is the runtime fallback.
 - `React.useRef` is `undefined` in RSC server components. Gate behind `__SERVER__` for dead-code elimination, never use `typeof React.useRef === 'function'` (runtime conditional hook).
 - `new Array(n)` creates HOLEY_ELEMENTS arrays that infect V8 type feedback -- 3.9x regression observed in GroupedTag.
+- In-house CSS parser (v7) is the SOLE CSS emission path. Stylis is a devDependency used only for benchmarking + cross-testing. When changing CSS-output behavior, update the parity corpus at `src/parser/parity.test.ts` -- SSR class-name hash stability across the v6→v7 upgrade depends on byte-identical output against the stylis baseline.
+- React Native responsive runtime (`src/native/responsive.ts`) eagerly captures `Dimensions` / `Appearance` / `AccessibilityInfo` / `PixelRatio` at module load. NEVER re-resolve them inside effect closures -- Jest teardown breaks lazy RN property getters.
 
 ## Mandates
 
-- React 16.8 compat
+- React 19+ compat (v7 peer floor)
 - Always microbenchmark to validate optimizations -- and bench the realistic workload, not a synthetic best case. Revert changes that pessimize the path actual callers take, even if they win in isolation.
 - Optimize for low memory pressure and monomorphic functions
 
@@ -29,7 +31,7 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - Always run the formatter (`pnpm --filter styled-components prettier`) before committing code changes
 - Public-facing docs (README, `packages/*/README.md`, `docs/*`, FAQ, sandbox README) describe user-observable behavior only. Implementation details -- React Float/`precedence`, stylis internals, `React.cache`, V8 optimizations -- belong in AGENTS.md unless the answer to a user question specifically requires them.
 - Links to the site use the bare domain (`https://styled-components.com`). There is no `www` subdomain.
-- After editing `packages/styled-components/src/utils/errors.md`, run `pnpm run generateErrors` before tests -- Jest snapshots compare against the compiled error map and will fail silently otherwise.
+- After editing `packages/styled-components/src/utils/errors.md`, run `pnpm run generateErrors` before tests -- Jest snapshots compare against the compiled error map and will fail silently otherwise. The generator writes `errors.ts` only; if a stale `errors.js` exists alongside it, Jest's module resolver will prefer the `.js` and silently use stale text. Delete any stray `errors.js` if error-text snapshots start failing.
 - The repo-root `src/utils/errors.md` is marked "DO NOT EDIT" but is kept in sync for URL/content fixes that mirror the canonical `packages/styled-components/src/utils/errors.md`. Update links in place; never change its structure or error numbering.
 - Don't name specific AI providers in contributor-facing docs. "An AI coding assistant" is the neutral phrasing.
 - Don't hard-wrap prose in PR bodies, issue bodies, or GitHub comments. Write paragraphs as single lines with blank lines between them -- markdown re-flows automatically and hard wraps look broken in mobile viewers and quoted replies. Commit message bodies may still use the 72-char convention.
@@ -42,9 +44,23 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - `pnpm --filter styled-components test:web` -- Test web build
 - `pnpm --filter styled-components test:native` -- Test React Native
 - `pnpm --filter styled-components bench` -- Run all benchmarks (web + native + RSC)
-- `pnpm --filter styled-components bench:web` -- Run web benchmarks
-- `pnpm --filter styled-components bench:native` -- Run native benchmarks (parser + render)
+- `pnpm --filter styled-components bench:web` -- Run web benchmarks (includes `parser-pipeline` parser-vs-stylis, `parser-strategies` node-representation bench, `responsive` runtime bench, and `v6-vs-v7` head-to-head comparison)
+- `pnpm --filter styled-components bench:web:stress` -- Stress benchmarks only (`src/bench/web.test.js`); uses `SC_BENCH_ITER_SCALE=0.2` and `SC_BENCH_RUNS=3` for quicker runs
+- Native render perf: use `packages/ios-benchmark` (real Hermes V1 on iOS sim). The previous in-tree native React-rendering bench was retired — `react-test-renderer` 19.2 + RN preset doesn't synchronously invoke function components, and even if it did the V8 numbers wouldn't predict Hermes behavior. Algorithm-shape benches (parser, responsive, RSC) still run via `bench:web` / `bench:rsc`.
 - `pnpm --filter styled-components bench:rsc` -- Run RSC benchmarks (renderToString + dedup + React baseline)
+
+## Profiling (Bun)
+
+Bun can record a **CPU profile** and emit a **markdown** report (`--cpu-prof-md`: hot functions, per-file time, call relationships — grep- and review-friendly). Optionally also write Chrome’s JSON (`.cpuprofile`) with `--cpu-prof` for the same run.
+
+From `packages/styled-components` (add `--cpu-prof-dir=./.cpu-profiles` to keep artifacts out of the tree; that directory is gitignored):
+
+- **In-house web parser (preprocess + parse + emit) on large fixtures:**  
+  `bun --cpu-prof --cpu-prof-md --cpu-prof-name=parser-profile --cpu-prof-dir=./.cpu-profiles src/parser/profile-harness.ts`
+- **Native pipeline (`transformDecl`, `tokenize`, `compileNativeStyles`, etc.):**  
+  `bun --cpu-prof --cpu-prof-md --cpu-prof-name=native-profile --cpu-prof-dir=./.cpu-profiles src/native/profile-pipeline.ts`
+
+`--cpu-prof-name` sets the output basename. If you omit `--cpu-prof-dir`, the profile file(s) are written in the current directory (Bun may use a name **without** a `.md` extension even for markdown content — the file is still markdown). See Bun’s docs for `BUN_OPTIONS` and `--cpu-prof-interval`.
 
 ## Build Architecture
 
@@ -52,17 +68,21 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - `IS_BROWSER` (`typeof window !== 'undefined'`) is a runtime check -- bundlers CANNOT tree-shake code behind it
 - `IS_RSC` (`typeof React.createContext === 'undefined'`) is a module-level constant. React 19's `react-server` export condition strips `createContext` from the server build, so `IS_RSC` is `true` at runtime in server components. In browser/standalone/native builds, rollup replaces the expression with `false` for dead-code elimination.
 - The `browser` field in package.json maps server bundles to browser-specific alternatives. Preferred over `exports` (which caused TS2742 in composite projects).
+- Subpath entries (`styled-components/native`, `styled-components/plugins`) use a physical `<subpath>/package.json` with `main`/`module`/`types`/`jsnext:main` fields mirroring the main package. No `exports` field — avoids the TS2742 issue. Add the subpath directory to the top-level package.json `files` array so it's published.
 - CSS injection ordering: group IDs allocated at call time (when `styled()`, `createGlobalStyle()`, or `keyframes()` is called) -- lower ID = earlier in stylesheet
 - Keyframes eagerly register via `getGroupForId(this.id)` in constructor (not `StyleSheet.registerId`, to avoid DOM imports in native builds)
+- Browser builds always use CSSOM injection; the v6 `disableCSSOMInjection` prop and `SC_DISABLE_SPEEDY` env vars are gone in v7. Consumers wanting CSS as text call `extractCSS()` — extraction tooling, micro-frontend cloning, prerender, iframe/Shadow DOM transfer.
+- `hoistNonReactStatics` MUST never copy React identity markers (`$$typeof`/`$$id`/`$$async`/`$$bound`) from a target. Without that block, `styled(ClientComponent)` from RSC silently drops every extension — the wrapper inherits the client-reference identity and React skips its render body. See #5672.
 
 ## GlobalStyle Shared-Group Architecture
 
 - All instances of a `createGlobalStyle` share ONE stylesheet group, registered at `createGlobalStyle()` call time via `StyleSheet.registerId(componentId)`
 - The returned component is wrapped in `React.memo`
-- Instance IDs allocated via `allocateGSInstance`: server uses direct allocation (one-shot renders), client uses `useRef` for stability across re-renders
-- `instanceRules: Map<number, { name: string; rules: string[] }>` tracks each mount's compiled CSS on the module-level `GlobalStyle` object
+- Instance IDs come from `React.useId()` — stable across server/client via React 19's hydration contract, uniform across __SERVER__ and browser builds (no branching around useRef)
+- `instanceRules: Map<string, { name: string; rules: string[] }>` tracks each mount's compiled CSS on the module-level `GlobalStyle` object
 - `rebuildGroup()` clears the shared group and re-inserts from surviving instances -- O(N) where N is mounted instances (typically 1-3)
 - `computeRules()` flattens + compiles CSS and caches in `instanceRules` -- the single source of truth for rebuild
+- Static globals dedup by `componentId` alone (all instances share identical CSS, so the registered name is the componentId, not `componentId + instance`). Multi-mount static globals emit 1 copy regardless of mount count. Dynamic globals keep `componentId + instance` since CSS varies per-mount.
 - Inline rules-equality comparison skips CSSOM rebuild when CSS is unchanged, but ONLY on the client (`!styleSheet.server`). SSR `clearTag()` invalidates the DOM tag but NOT module-level caches (`instanceRules`), so cache-based fast-paths must check `!styleSheet.server`.
 - Server-side `instanceRules` entries must be explicitly deleted after style collection (no `useLayoutEffect` cleanup runs on server)
 - Client lifecycle uses TWO `useLayoutEffect`s: one runs `renderStyles` on render/dep change, a separate one holds the `removeStyles` cleanup keyed on `[instance, sheet, globalStyle]` so cleanup fires only on unmount/sheet-swap/HMR -- not on every prop change. A single effect with per-render cleanup wipes `instanceRules` before the rulesEqual fast-path can hit, causing a double `rebuildGroup` per render of every dynamic global style (see #5730).
@@ -73,11 +93,12 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - Inline body styles naturally appear after the registry's `<head>` styles in source order, so cross-boundary extensions (RSC extending a client component) win the cascade.
 - Base-level CSS in inheritance chains is wrapped in `:where()` for zero specificity. This prevents duplicate base CSS (from sibling extensions sharing a base) from overriding earlier extensions' styles.
 - No cleanup of RSC style tags is needed -- they are the sole source of CSS for server-only components.
-- RSC inline `<style>` tags are deduplicated per render via name-based tracking in a `React.cache`-scoped Set. Dedup hits skip CSS collection entirely (no getGroup, no :where() wrapping). Dynamic components with multiple variants only emit CSS for new names, not the full accumulated group. Compiled CSS is cached on ComponentStyle/Keyframes via WeakMap (persists across React.cache resets, dead-code eliminated in browser build).
+- RSC inline `<style>` tags are deduplicated per render via name-based tracking in a `React.cache`-scoped Set. Dedup hits skip CSS collection entirely (no :where() wrapping, no further work). Dynamic components with multiple variants only emit CSS for new names, not the full accumulated group.
+- Component style generation and injection are split: `ComponentStyle.generate(ctx, sheet, stylis)` returns `{ className, levels: Array<{ componentId, name, rules, isNew }> }` without writing to the sheet. `ComponentStyle.inject(sheet, generated)` commits new levels. RSC renders call `generate()` + `registerName()` only (no `insertRules` — the `<style>` tag IS the delivery); client + SSR call `generate()` + `inject()`. `generateAndInjectStyles` remains as a thin wrapper. Keyframes continue to write to the sheet during `flatten()` — the RSC emit block reads compiled keyframe CSS from the tag via `getGroup`.
 - Keyframe rules are emitted in a dedicated `<style>` tag, deduped separately by keyframe ID. They must NOT be prepended to component CSS strings--keyframes register mid-render, so prepending them causes inconsistent strings that break `getEmittedCSS` dedup.
 - `mainSheet` is reset once per server render via `React.cache` (clears `names`, `keyframeIds`, `tag`) to prevent stale CSS accumulating across HMR cycles. `keyframeIds` is safe to clear because components re-register keyframes via `keyframe.inject()` during render.
-- `StyleSheetManager` works in RSC via module-level `rscContextOverride` slot. Single-threaded RSC renders + `React.cache` reset per render make this safe. Nested SSMs inherit `stylisPlugins`, `shouldForwardProp`, and `nonce` from parent. `stylisPlugins={[]}` explicitly disables inheritance. `namespace` and `enableVendorPrefixes` are supported in RSC.
-- `stylisPluginRSC` is an opt-in stylis plugin that rewrites `:first-child`/`:last-child`/`:nth-child()` to exclude `style[data-styled]` from the child count using CSS Selectors L4 `of S` syntax. Exported from `index.ts` only (not `base.ts`) for UMD tree-shaking. Uses `/*#__PURE__*/ Object.defineProperty` for stable `.name` after minification.
+- `StyleSheetManager` works in RSC via module-level `rscContextOverride` slot. Single-threaded RSC renders + `React.cache` reset per render make this safe. Nested SSMs inherit `plugins`, `shouldForwardProp`, and `nonce` from parent. `plugins={[]}` explicitly disables inheritance. `namespace` is supported in RSC. `enableVendorPrefixes` is a no-op with dev warning (v7 dropped the runtime prefixer).
+- `rscPlugin` is an opt-in plugin object that rewrites `:first-child`/`:last-child`/`:nth-child()` to exclude `style[data-styled]` from the child count using CSS Selectors L4 `of S` syntax. The rewrite function is attached as the plugin's `rw` property, so the rewrite logic tree-shakes out of builds that don't import the plugin. Exported from `styled-components/plugins` (not the main entry) so plugin code only enters the consumer bundle on explicit opt-in.
 - RSC inline `<style>` tags break child-index pseudo-selectors because they become real DOM children. `:first-of-type`/`:nth-of-type()` are naturally immune (filter by tag name). The plugin is needed only for `:*-child` selectors.
 
 ## createTheme
@@ -110,7 +131,8 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 
 ## TypeScript Type Performance
 
-- `OverrideStyle` accounts for ~22% of type instantiations (measured via ablation). Cannot be simplified without breaking `exactOptionalPropertyTypes` or JSX overload resolution. Do not touch without a major version plan.
+- `OverrideStyle` accounts for ~22% of type instantiations (measured via ablation). Cannot be simplified without breaking `exactOptionalPropertyTypes` or JSX overload resolution. Do not touch without a major version plan. The `& {}` wrap on `(S & {})` inside `style?: CSSPropertiesWithVars | (S & {})` is a real undefined-filter under `exactOptionalPropertyTypes: true` — DO NOT remove it. Without it, both `style?:` AND `style: undefined` become assignable, which changes semantics.
+- `MakeAttrsOptional<P, K>` is `FastOmit<P, K> & { [Key in Extract<keyof P, K>]?: P[Key] }` — direct mapped type rather than `Partial<Pick<P, K>>`. The latter forces TS to materialize an intermediate `Pick<P, K>` type that union-distributes across heavily-discriminated component prop types (antd `Button`, MUI), exploding past the TS complexity ceiling (TS2590). Direct mapped type avoids the intermediate. Saves ~6.5% total instantiations on the styled-components type test corpus (#5725).
 - Use built-in `NoInfer` (TS 5.4+) internally; the export in `types.ts` is for downstream consumers only
 - `FastOmit<A, K> & B` (intersection) is 2.4x fewer instantiations than a single mapped type with per-key conditionals
 - Homomorphic mapped types (`{ [K in keyof P]: ... }`) break React JSX overload resolution
@@ -126,25 +148,108 @@ NOTE: CLAUDE.md is a symlink to this file (AGENTS.md). Edit AGENTS.md directly.
 - `private` modifier is not allowed on anonymous class expressions (`export const Foo = class { ... }`)
 - `import type * from 'stream'` still triggers bundler module resolution even though TypeScript strips it
 
-## Stylis AST
+## CSS Parser (v7, in-house)
 
-- `stylis.compile()` can alias the same `props` array between a top-level rule and its `@media`-nested copy. Never mutate `rule.props` in place -- allocate a fresh array. `rule.value` is a plain string and safe to reassign.
+- Lives at `packages/styled-components/src/parser/`. SOLE CSS parsing + web emission path in v7. Stylis is a devDependency used only for benchmarks + cross-tests.
+- Files: `ast.ts` (discriminated union, numeric const enum), `parser.ts` (single-pass recursive descent), `emit-web.ts` (AST → CSS string), `emit-fast.ts` (flat-CSS bypass, no AST), `profile-harness.ts` (bun `--cpu-prof-md` target).
+- Wired through `createStylisInstance` in `src/utils/cssCompile.ts::compileWithInternalParser`. The `SC_USE_STYLIS` env escape hatch was removed with stylis itself.
+- Output is byte-identical to stylis output from v6: SSR class-name hash stability across the v6→v7 upgrade depends on this. Parity corpus at `src/parser/parity.test.ts` covers 60+ cases; `src/utils/test/cssCompile.test.ts` (101 cases) also runs through the in-house path via `createStylisInstance`.
+- Handles CSS Nesting L1 (including comma-parent cross-product: parent `div, span` + child `h1 em` → `div h1 em, span h1 em`), `@media`/`@container`/`@supports`/`@layer`/`@scope`/`@starting-style`/`@property`/`@keyframes`, self-reference rewrite (`& + &` → `.componentId + .componentId`), namespace post-resolution prepending.
+- Self-reference rewrite gate (matches stylis): compiled selector must START and END with `X` AND removing all `X` must leave non-empty content. `.a.a.a` fails the gate (removing leaves empty); `.a + .a` passes.
+- Namespace prepending happens POST `&` resolution in the emitter. Do NOT pass `namespace` as the resolution parent — nested `.child &` style selectors would resolve `&` to `namespace + parent` instead of `parent`.
+- At-rule body handling: `@font-face`, `@page`, `@property`, `@counter-style`, `@color-profile`, `@viewport`, `@font-feature-values`, `@font-palette-values` emit bare declarations (no selector wrap). Every other at-rule body inherits the parent selector.
+- Silently dropped on emit (matches stylis): `@charset`, empty rule bodies, empty at-rule bodies, declarations with empty values (`color: ;`). Block comments stripped during `preprocessCSS`. Exception: empty values for CSS custom properties (`--my-prop: ;`) ARE preserved — the empty value is part of the Custom Properties L1 spec and used by patterns like scroll-driven animations as a guaranteed-invalid sentinel (#4374). v6/stylis dropped them; v7 keeps them.
+- Selector cross-product expansion (parent `A, B` + child `C` → `A C, B C`) is paren/bracket/string-aware: commas inside `:is()`, `:where()`, `:has()`, `[attr*="a,b"]`, or quoted strings are NOT treated as parent boundaries. Prior naive `.split(',')` produced nonsense like `:is(.a:hover .grandchild, .b)` for nested rules under `:is()` selectors (#4279). Fix lives in `splitTopLevelCommas` in `emit-web.ts`.
+- `ParseOptions.keepCommaSpaces` skips stylis-parity comma-space stripping inside decl values. The native path opts in (`css-to-react-native` needs the space in font-family fallback chains); the web path leaves it off for byte parity.
+- Perf (Node V8, hybrid = fast path + AST fallback): 1.5-2.9x faster than stylis across scales. Bench: `src/bench/parser-pipeline.bench.test.ts`. Strategy decisions (numeric const enum tags, substring-based normalize, etc.) captured in `knowledge_parser_perf_v8.md` global memory. Hermes numbers pending Phase 4.
+- `EmitOptions.rw` is a post-resolution selector callback. `rscPlugin` uses it to rewrite child-pseudo selectors and expand `+` combinators. The rewrite function lives inside `src/utils/rscSelectorRewrite.ts` and is attached to the plugin object as its `rw` property, so the rewrite code tree-shakes out of builds that don't import the plugin.
+- `EmitOptions.decl` is a declaration-transform callback invoked on every emitted `prop: value` pair. Wired at three emit sites (top-level decls, decl-body at-rules, keyframe frames) through the shared `formatDecl(prop, value, transform)` helper. Used by first-party `rtl` plugin; tree-shaken out when no plugin supplies a `decl`.
+- URL-scheme guard in `preprocessCSS`: `//` following a colon (as in `https://...`) is treated as a URL, NOT a line comment. Without this guard, URL values inside custom properties get truncated.
 - Character code constants live in `src/utils/charCodes.ts`. Import from there rather than redefining local copies.
+
+## Native CSS Engine (v7)
+
+- `packages/styled-components/src/models/nativeStyleCompiler.ts` walks the parser AST once per unique CSS string and produces `{ base, conditional, keyframes, startingStyle?, resolvers? }`. Results cached as `Map<rawCSS, CompiledNativeStyles>` with FIFO eviction at `LIMIT=200` (empirically validated — see `src/native/transform/test/stress.test.ts`). Cache key is the raw input string (V8 caches a string's hash on first access; warm hits are O(1) Map.get) — no manual djb2/base52 hashing.
+- `base`: flat RN style object from top-level declarations (registered via `StyleSheet.create`).
+- `conditional`: array of `{ type: 'media' | 'container' | 'supports' | 'pseudo', condition, containerName?, pseudo?, styles }`. Evaluated per-render in `useImpl` (the responsive-aware native render impl) against the live `MediaQueryEnv` + `ContainerContext`. The optional `pseudo` field tags composite buckets (pseudo nested inside an at-rule) so the render gates on BOTH the outer condition and the pseudo state.
+- `keyframes`: collected at parse time for animation-adapter handoff (v7.1). Zero-cost when no adapter is installed.
+- `startingStyle`: `@starting-style { … }` body captured for the animation-adapter's first-render pass.
+- `resolvers`: `Array<[styleKey, Resolver]>` — render-time polyfill bucket. Populated when a base-style value references a viewport unit (`vw`/`vh`/`dvh`/…), container unit (`cqw`/`cqh`/…), `light-dark()`, `env(safe-area-inset-*)`, or a createTheme sentinel (`\0<prefix>:path:fallback`). `useImpl` applies resolvers against the current `ResolveEnv` (`{ media, container, theme, insets, rootFontSize }`) via `applyResolvers()` from `src/native/transform/polyfills/resolvers.ts`. Fast-path: no allocation when `resolvers` is undefined.
+- Pseudo-state mapping (v7.0): `&:hover`, `&:focus`, `&:focused` (alias), `&:active`/`&:pressed`, `&:disabled` → state props consumed by `Pressable`/`TextInput`'s `style` callback. Complex selectors and combinators are NOT supported yet — dev warning + silent skip. `&:is(:state, :state, …)` and `&:where(…)` fan out into N parallel pseudo buckets when every argument is one of the above states — equivalent to the `:state,…` union predicate.
+- Fast path: components with zero conditionals + zero resolvers return the flat `base` object. Responsive hooks still run (hook-rules require consistency) but don't pay any matching cost.
+- `InlineStyle` (per-component compile entry, `src/models/InlineStyle.ts`) carries TWO instance-level fast-paths:
+  1. **Static rules** — when every rule is a plain string (or a nested array of plain strings, the shape `css\`\`` produces) the CSS is invariant. We pre-join at construction and memoise the compiled output on the instance; subsequent `compile()` calls become a single property read (~2ns). `isAllStaticStrings()` recurses through nested arrays.
+  2. **Dynamic same-CSS dedup** — when a function rule produces a string identical to the prior render (common with stable theme tokens), we return the cached compiled output without running preprocessCSS + Map.get.
+  Together these eliminate the per-render compile cost for the vast majority of styled native components.
+- `walkRoot` and `collectDecls` produce flat `[prop1, value1, prop2, value2, …]` string arrays (not tuple-of-tuples). Saves a 2-element array allocation per decl during cold compile.
+- `pushDecl` inlines the `RN_UNSUPPORTED_VALUES` check as three string identity compares (cheaper than `Array.indexOf` on a 3-element list).
+- Transform layer: `packages/styled-components/src/native/transform/` — in-house replacement for `css-to-react-native` (dropped in v7.0). `transformDecl(prop, value)` dispatches: pass-through → sentinel bypass → shorthand expansion → static polyfill (math fns / color math) → raw coercion. Tokenizer is AST-integrated (walks parser output) with security hardening (bidi strip, disallowed control-char reject, prototype-pollution-guarded theme paths) and Unicode-whitespace resilience (NBSP / ZWSP / BOM / line-separators all treated as whitespace). Shorthand registry at `shorthands.ts` — margin/padding/border/flex/flex-flow/font/font-family/font-variant/aspect-ratio/text-decoration/text-shadow/shadow-offset/place-content. Directional helpers (`directional`, `directionalColor`) accept pre-computed key arrays (e.g. `MARGIN_KEYS = ['marginTop', 'marginRight', 'marginBottom', 'marginLeft']`) hoisted at the call site to eliminate per-call `prefix + dir + suffix` string concatenation. Single-value inputs emit the bare prop (`{borderWidth: 10}`).
+- Tokens are monomorphic — every token-factory funnels through `makeToken()` which sets all 12 properties in the same order, producing one V8 hidden class. Per-kind narrow shapes produced 8+ hidden classes and turned hot `tok.kind` / `tok.value` reads megamorphic. Memory cost ~96B/token (was ~32-48B); for typical 4-token values the IC win dominates the alloc cost.
+- `finalizeRawPairs` memoises `transformDecl` output at the `(prop, value)` pair level. Two-level `Map<prop, Map<value, result>>` — avoids the per-call `prop + '\x1f' + value` string allocation. Bounded at 1000 total entries via a module-level `pairCacheSize` counter (the outer Map's `.size` reflects unique props, not total cached pairs). Measurement-validated in stress.test.ts.
+- Compile-time polyfills: `calc()` / `min()` / `max()` / `clamp()` over static px/percent arms resolve to numbers at transform time. `oklch()`, `oklab()`, `lch()`, `lab()` resolve to sRGB hex. `color-mix(in srgb, …)` resolves to hex when all operands are static literals (named colors in `NAMED_TO_HEX` table). `linear()` easing parses to a lookup-table for the v7.1 animation adapter. `line-clamp: N` maps to `{ numberOfLines: N, overflow: 'hidden' }`. Logical shorthands (`margin-inline`, `margin-block`, `padding-inline`, `padding-block`, `inset-inline`, `inset-block`) expand to the RN logical-longhand pairs (`marginStart`/`marginEnd` etc.).
+- Pass-through list: `transform`, `boxShadow`, `filter`, `backgroundImage`, `backgroundSize`/`Position`/`Repeat`, `mixBlendMode`, `isolation`, `cursor`, `pointerEvents`, `userSelect`. RN 0.85 parses these natively; we hand through the CSS string.
+- Container queries: `$containerName` prop on a styled component publishes its `onLayout` size as a named container via `ContainerContext.Provider`. Unnamed containers are not supported in v7.0.
+- Media query parser (`src/native/responsive.ts`) supports `min-*` / `max-*` features, `orientation`, `prefers-color-scheme`, `prefers-reduced-motion`, `and` / `,` compound queries, AND CSS Media Queries Level 4 range syntax (`(width >= 400px)`, `(400px <= width <= 800px)`, reversed-operand forms). Parsed queries are cached in a module-level `Map`; cold parse cost is amortised.
+- RN teardown safety: `responsive.ts` eagerly captures `Dimensions` / `Appearance` / `AccessibilityInfo` / `PixelRatio` references at module load. Accessing them inside `useEffect` after Jest teardown throws "import after tearDown"; eager capture avoids it.
+
+## createTheme (native parity, v7.0)
+
+- `createTheme.ts` (web) emits `var(--prefix-path, fallback)` strings and a `createGlobalStyle`-based `.GlobalStyle` that declares `:root { --prefix-…: … }`. Cascade handles per-variable inheritance.
+- `createTheme.native.ts` (native) emits sentinel strings `\0<prefix>:<dot.path>:<fallback>` and a no-op `GlobalStyle`. Imported exclusively by `src/native/index.ts` so the native bundle never transitively pulls in `createGlobalStyle` (which carries DOM code) — enforced by `src/test/treeshake.test.ts`.
+- Sentinel leaves are detected by the resolver runner (`polyfills/resolvers.ts::buildResolver`) at compile time (in `nativeStyleCompiler.extractResolvers`) and resolved at render time against the deep-merged `ThemeContext` from the enclosing `<ThemeProvider>` stack.
+- `ThemeProvider` on native deep-merges inner theme into outer (branching on build-time `__NATIVE__`). Web keeps its shallow spread — CSS cascade handles per-leaf inheritance there. Deep-merge is ONLY used on native to avoid surprise behavior changes on web.
+- Theme-path resolution is prototype-pollution-guarded via `isSafeThemePath` — paths containing `__proto__`, `constructor`, `prototype` are rejected at tokenize time, so a crafted CSS interpolation can't write into shared object plumbing.
+- `resolve()` on native returns the `raw` default theme. Live overrides are already applied per-render via the resolver pass; consumers rarely need a snapshot.
+
+## WPT CSS parity corpus
+
+- Web Platform Tests CSS parsing fixtures (BSD-3-Clause) live under `packages/styled-components/src/parser/wpt-corpus/`. The committed canonical form is `corpus.json` — a flat assertion list produced by `scripts/extract.mjs`. The intermediate `raw/` HTML tree is gitignored; `pnpm wpt:fetch` re-pulls it from upstream when a refresh is needed.
+- Extractor recognises `test_valid_value(…)` / `test_invalid_value(…)` / `test_computed_value(…)` direct calls, `fuzzy_test_computed_color(…)` (css-color tests), and the `tests = [[value, expected], …]` loop pattern. Output schema: `{ source, kind: 'valid' | 'invalid' | 'computed', property, value, expected?, description? }`.
+- Three parity suites consume the corpus: `wpt-web-roundtrip.test.ts` (parser/emitter preserves input value), `wpt-color-polyfill.test.ts` (static color-math polyfill matches browser-computed RGB within 3/255 per channel), `wpt-math-polyfill.test.ts` (calc/min/max/clamp static resolution matches browser within 0.01).
+- To bump the pinned WPT commit: edit the `PIN` default in `scripts/fetch.sh`, run `pnpm wpt:refresh` to re-fetch raw/ and regenerate `corpus.json`, then update the recorded SHA in `LICENSE.md` (the legal attribution of which upstream version we vendored) and commit the new `corpus.json`.
+
+## Build-time constants
+
+- `__SERVER__` (boolean) — `true` in the server build, `false` in browser/native/standalone/plugins.
+- `__NATIVE__` (boolean) — `true` ONLY in the native build. Web/server/standalone/plugins all get `false`. Used by `ThemeProvider.tsx` to branch on deep-merge semantics; `rollup.config.mjs` injects the literal via `rollup-plugin-replace`, the jest native setup (`src/test/native-setup.ts`) flips it to `true` so jest-side createTheme tests reach the native branch.
+
+## Plugins (`styled-components/plugins` subpath)
+
+- Plugins live off the main import. Consumers opt in: `import { rtlPlugin, rscPlugin } from 'styled-components/plugins'`. Prop is `plugins=` (not `stylisPlugins=` — that legacy name was retired in v7).
+- `SCPlugin` contract (narrower than v6's stylis plugin API):
+  - `name`: required. Contributes to the compiler's hash so identical plugin sets share class-name caches across SSMs. Unnamed plugins throw error #15. First-party plugins keep `.name` short (single word) since the value is only ever hashed.
+  - `rw?: (selector) => string`: rewrites each fully-resolved selector (post namespace + `&`)
+  - `decl?: (prop, value) => { prop, value } | void`: rewrites each emitted declaration. Fires on top-level decls, decl-body at-rules (`@font-face` etc), AND keyframe frames — all three sites share one `formatDecl` helper in `emit-web.ts`.
+- First-party `rtlPlugin`: physical side swaps (padding-left ↔ padding-right, border-radius corners, etc), direction-keyword flips on `float`/`clear`/`text-align`/`caption-side`, 4-value shorthand position swap. Logical properties pass through.
+- First-party `rscPlugin`: rewrites child-pseudo selectors and `+` combinators so RSC-emitted inline `<style>` tags don't break child-index selectors. Adding a new first-party plugin requires updating the allow-list in `warnUnsupportedPlugins` to silence the "unsupported plugin" dev warning.
+- Unknown plugin shapes emit a one-time dev warning via `warnUnsupportedPlugins`. Arbitrary stylis v6 plugins (e.g. declaration-transform plugins beyond rtl) are not compatible — SCPlugin's narrower contract is the forward path.
+- Plugin composition in `createStylisInstance`: `rw` hooks chain left-to-right; `decl` hooks chain left-to-right with an earlier transform's output fed into the next.
 
 ## Dynamic Re-render Hot Path
 
-Cache hit (props+theme unchanged -- most common re-render):
+Cache hit (props+theme unchanged -- most common re-render, ~180 ns/op):
 - `shallowEqualContext`: ~0.2us -- compares props via for-in + stored key count
-- Everything else skipped (resolveContext, flatten, hash, generateName, buildPropsForElement still runs)
+- Everything else skipped (resolveContext, generate, inject, phash, generateName)
+- `buildPropsForElement` still runs per render (props iterated + filtered). V8 profile shows ~85-90% of the 180 ns goes to React reconciliation; our layer is below the profiler noise floor.
 
 Cache miss (props changed):
 1. `resolveContext`: object spread + attrs evaluation
-2. `flatten()` fast path: inline function call for string-returning interpolations, ~0.05us each
-3. `dynamicNameCache` lookup: Map.get on CSS string -- O(1), skips phash+generateName on hit
-4. `phash()` + `generateName`: only on dynamicNameCache miss (first time seeing this CSS)
-5. `stylis` compile+serialize: only when `hasNameForId` misses (first injection of this class)
-6. `hasNameForId`: Map.has -- negligible
+2. `generate()`: walks baseStyle chain, accumulates per-level CSS, allocates `levels: GeneratedLevel[]` (sliced along the chain so siblings don't share a mutable ref)
+3. `flatten()` fast path inside `generate()`: inline function call for string-returning interpolations, ~0.05us each
+4. `dynamicNameCache` lookup (per-ComponentStyle, LIMIT=200, FIFO eviction): Map.get on CSS string -- O(1), skips phash+generateName on hit
+5. `phash()` + `generateName`: only on dynamicNameCache miss (first time seeing this CSS)
+6. `stylis(css, '.'+name, ...)` compile + serialize: only when `hasNameForId` misses (first injection of this class)
+7. `inject()` walks `levels`, calls `insertRules` only on `isNew`. Returns the class chain string.
+
+## Native Render Hot Path
+
+The native render entry has three paths and a selection rule:
+
+- The **full path** carries the responsive infrastructure: a single module-level subscription over RN Dimensions / Appearance / AccessibilityInfo (one subscription per tree, never per component — per-component subscriptions would dispatch a setState per mounted styled component when an async RN API resolves post-mount, producing a visible second-paint blip on big trees), a render cache that covers both compile output and assembled style so reference-equal renders short-circuit, and an opt-in container-publishing sub-component that only mounts when `$containerName` is set.
+- The **fast-static path** is for components whose CSS is provably static and free of any responsive feature (no media/container queries, no pseudo states, no resolver-bearing values like viewport units / `light-dark()` / theme sentinels, no `@starting-style`) AND have no attrs AND no custom `shouldForwardProp`. Zero hooks: skips `useContext` (no resolvers means CSS never reads theme), `useMediaEnv`, `useContainerContext`, and the render cache. Returns the pre-registered StyleSheet ID directly, composing only with user-supplied `style`. `$containerName` routes through a sub-component so the publish-side hook only fires when the feature is used.
+- The **fast-dynamic path** is for components whose CSS has function interpolations BUT the source contains no responsive markers. Two hooks (`useContext` for theme + `useRef` for the cache), with a 6-slot prop-equal render cache that mirrors the full path's hot-path short-circuit. On stable-prop renders we skip the compile, style composition, AND the `buildPropsForElement` allocation — the cached `propsForElement` is reused directly. Critical at scale: at 1000 stable-prop children the cache delivers ~9% headroom over v6 instead of regressing.
+- **Selection is frozen at component construction time** — InlineStyle eagerly compiles static CSS so eligibility is known before the first render, and the styled-component factory selects one render function for the component's lifetime. Hook order per instance is therefore stable. Extending a fast-eligible component with responsive CSS flips eligibility off on the extension's InlineStyle since rules are concatenated before the check.
 
 ## Rendering Flow
 
-See [docs/rendering-flow.md](docs/rendering-flow.md) for the full sequence diagram.
+See [docs/rendering-flow.md](docs/rendering-flow.md) for the full sequence diagram. The diagram describes the web flow only.
