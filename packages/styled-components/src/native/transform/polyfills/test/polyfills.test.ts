@@ -127,6 +127,21 @@ describe('static color math', () => {
     expect(hex).toMatch(/^#[0-9a-f]{6}$/);
   });
 
+  it('color-mix: in oklch perceptual mix produces valid hex', () => {
+    const tok = tokenize('color-mix(in oklch, red, blue)')[0];
+    const hex = staticColorFunctionToHex(tok);
+    expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+    // Perceptual mix differs from naive sRGB midpoint #800080
+    expect(hex).not.toBe('#800080');
+  });
+
+  it('color-mix: percentages summing < 100 scale the alpha (Color L5 §3.1)', () => {
+    const tok = tokenize('color-mix(in oklch, red 30%, blue 20%)')[0];
+    const hex = staticColorFunctionToHex(tok);
+    // 30 + 20 = 50, so alpha = 0.5 → 8-digit hex with `80` alpha byte
+    expect(hex).toMatch(/^#[0-9a-f]{6}80$/);
+  });
+
   it('transformDecl wires color-math into backgroundColor', () => {
     const out = transformDecl('backgroundColor', 'color-mix(in srgb, red, blue)');
     // red + blue 50/50 in sRGB display space = #800080

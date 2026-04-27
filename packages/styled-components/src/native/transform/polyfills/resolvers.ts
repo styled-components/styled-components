@@ -1,5 +1,6 @@
 import { MediaQueryEnv } from '../../responsive';
 import * as $ from '../../../utils/charCodes';
+import { isSafeThemePath } from '../sanitize';
 
 /**
  * Environment passed to each {@link Resolver} at render time. Composes
@@ -161,6 +162,7 @@ function buildThemeResolver(value: string): Resolver | null {
   const path =
     secondColon === -1 ? value.slice(firstColon + 1) : value.slice(firstColon + 1, secondColon);
   const fallback = secondColon === -1 ? '' : value.slice(secondColon + 1);
+  if (!isSafeThemePath(path)) return null;
   const segments = path.split('.');
 
   return env => {

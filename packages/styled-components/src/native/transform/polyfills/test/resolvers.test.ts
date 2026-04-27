@@ -83,6 +83,13 @@ describe('runtime resolvers', () => {
     expect(r({ ...baseEnv, theme: { spacing: { md: { desktop: 24 } } } })).toBe(24);
     expect(r({ ...baseEnv, theme: { spacing: null } })).toBe('16px');
   });
+
+  it('rejects theme paths that would walk the prototype chain', () => {
+    expect(buildResolver('\0sc:__proto__.toString:fb')).toBeNull();
+    expect(buildResolver('\0sc:constructor.name:fb')).toBeNull();
+    expect(buildResolver('\0sc:colors.__proto__:fb')).toBeNull();
+    expect(buildResolver('\0sc:prototype:fb')).toBeNull();
+  });
 });
 
 describe('applyResolvers', () => {

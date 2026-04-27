@@ -100,9 +100,8 @@ function isWhitespace(c: number): boolean {
  * `argTokens` on demand.
  */
 export function tokenize(value: string): Token[] {
-  // Security + robustness: strip bidi controls, reject disallowed C0
-  // control bytes, enforce length ceiling. Fast-path skips the scan
-  // when the input is well-formed.
+  // Strip bidi controls and reject disallowed C0 control bytes. Fast-path
+  // skips the scan when the input is well-formed.
   value = sanitizeValue(value);
   const tokens: Token[] = [];
   const len = value.length;
