@@ -50,6 +50,35 @@ export const ThemeContext = !IS_RSC
 
 export const ThemeConsumer = ThemeContext.Consumer;
 
+/**
+ * Recursive deep merge — used on native to compose nested `<ThemeProvider>`
+ * overrides with the default theme. On web the CSS `var()` cascade handles
+ * per-variable inheritance naturally, so a shallow spread suffices. On
+ * native there's no cascade: the full resolved theme object must carry
+ * every leaf from every ancestor.
+ */
+function deepMergeTheme(outer: DefaultTheme | undefined, inner: DefaultTheme): DefaultTheme {
+  if (outer == null) return inner;
+  const out: Record<string, any> = { ...outer };
+  for (const k in inner) {
+    const v = (inner as Record<string, any>)[k];
+    const o = (outer as Record<string, any>)[k];
+    if (
+      v !== null &&
+      typeof v === 'object' &&
+      !Array.isArray(v) &&
+      o !== null &&
+      typeof o === 'object' &&
+      !Array.isArray(o)
+    ) {
+      out[k] = deepMergeTheme(o, v);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme | undefined): DefaultTheme {
   if (!theme) {
     throw styledError(14);
@@ -73,6 +102,13 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme | undefined)
     throw styledError(8);
   }
 
+  // Native uses deep-merge so createTheme() sentinel values from the
+  // outer theme propagate through unless specifically overridden. The
+  // web path keeps its original shallow-spread because the CSS cascade
+  // handles per-variable inheritance.
+  if (__NATIVE__) {
+    return outerTheme ? deepMergeTheme(outerTheme, theme) : theme;
+  }
   return outerTheme ? { ...outerTheme, ...theme } : theme;
 }
 

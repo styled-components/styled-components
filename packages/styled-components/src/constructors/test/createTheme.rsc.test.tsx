@@ -28,7 +28,7 @@ import { mainSheet } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
 import styled, { createGlobalStyle, createTheme } from '../../index';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
-import stylisPluginRSC from '../../utils/stylisPluginRSC';
+import rscPlugin from '../../utils/rsc';
 
 /** Extract all CSS rule text from <style> tags in rendered HTML */
 const extractStyleContents = (html: string): string =>
@@ -38,7 +38,6 @@ describe('createTheme RSC integration', () => {
   beforeEach(() => {
     mockCacheStore.clear();
     resetGroupIds();
-    mainSheet.gs = {};
     mainSheet.names = new Map();
     mainSheet.clearTag();
   });
@@ -191,7 +190,7 @@ describe('createTheme RSC integration', () => {
     });
   });
 
-  describe('createTheme + stylisPluginRSC', () => {
+  describe('createTheme + rscPlugin', () => {
     it('should rewrite :first-child while preserving var() theme references', () => {
       const theme = createTheme({
         colors: { highlight: 'coral', normal: '#333' },
@@ -207,7 +206,7 @@ describe('createTheme RSC integration', () => {
       const html = ReactDOMServer.renderToString(
         React.createElement(
           StyleSheetManager,
-          { stylisPlugins: [stylisPluginRSC] },
+          { plugins: [rscPlugin] },
           React.createElement(
             'ul',
             null,

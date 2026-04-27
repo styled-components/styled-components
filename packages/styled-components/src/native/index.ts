@@ -1,5 +1,6 @@
 import React from 'react';
 import constructWithOptions, { Styled } from '../constructors/constructWithOptions';
+import createTheme from '../constructors/createTheme.native';
 import css from '../constructors/css';
 import withTheme from '../hoc/withTheme';
 import _InlineStyle, { cssToStyleObject } from '../models/InlineStyle';
@@ -115,6 +116,17 @@ export {
   StyledOptions,
 } from '../types';
 export {
+  ContainerContext,
+  matchMedia,
+  useBreakpoint,
+  useContainer,
+  useContainerQuery,
+  useMediaEnv,
+  useMediaQuery,
+} from './responsive';
+export type { ContainerEntry, MediaQueryEnv } from './responsive';
+export {
+  createTheme,
   css,
   styled as default,
   isStyledComponent,

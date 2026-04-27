@@ -1,100 +1,26 @@
 import { IS_BROWSER } from '../constants';
+import * as $ from '../utils/charCodes';
 import createGlobalStyle from './createGlobalStyle';
-
-type ThemeLeaf = string | number;
-
-/**
- * Recursively maps a theme object so every leaf value becomes
- * a `var(--sc-path, fallback)` CSS string.
- */
-type CSSVarTheme<T> = {
-  [K in keyof T]: T[K] extends ThemeLeaf ? string : CSSVarTheme<T[K]>;
-};
-
-/**
- * The object returned by `createTheme`. Same shape as the input theme but
- * every leaf is a CSS `var()` reference. Also carries a `GlobalStyle`
- * component and the original `raw` theme object.
- */
-type ThemeContract<T> = CSSVarTheme<T> & {
-  /**
-   * A `createGlobalStyle` component that emits `:root` CSS custom properties
-   * from the current ThemeProvider context. Mount this once at the root of
-   * your app so RSC components can consume theme values via CSS variables.
-   */
-  GlobalStyle: ReturnType<typeof createGlobalStyle>;
-  /** The original theme object, for passing to `ThemeProvider`. */
-  raw: T;
-  /**
-   * Same shape as the theme but every leaf is the bare CSS custom property
-   * name (e.g. `"--sc-colors-primary"`). Useful for building dark mode
-   * overrides without hand-writing variable names.
-   *
-   * @example
-   * ```tsx
-   * const { vars } = createTheme({ colors: { bg: '#fff', text: '#000' } });
-   * vars.colors.bg  // "--sc-colors-bg"
-   *
-   * const DarkMode = createGlobalStyle`
-   *   .dark {
-   *     ${vars.colors.bg}: #111;
-   *     ${vars.colors.text}: #eee;
-   *   }
-   * `;
-   * ```
-   */
-  vars: CSSVarTheme<T>;
-  /**
-   * Read the current resolved CSS variable values from the DOM and return
-   * an object with the same shape as the original theme. Each leaf is the
-   * computed value (e.g. `"#0070f3"`), not the `var()` reference.
-   *
-   * Optionally pass a target element to read scoped variables from
-   * (defaults to `document.documentElement`).
-   *
-   * Client-only — throws if called on the server.
-   */
-  resolve(el?: Element): T;
-};
-
-/** Shared recursive traversal — calls `leafFn` for each leaf, recurses for objects. */
-function walkTheme(
-  obj: Record<string, any>,
-  varPrefix: string,
-  result: Record<string, any>,
-  leafFn: (fullPath: string, val: any, key: string) => any,
-  path?: string
-): void {
-  for (const key in obj) {
-    const val = obj[key];
-    const fullPath = path ? path + '-' + key : key;
-    if (typeof val === 'object' && val !== null) {
-      const nested: Record<string, any> = {};
-      walkTheme(val, varPrefix, nested, leafFn, fullPath);
-      result[key] = nested;
-    } else {
-      result[key] = leafFn(fullPath, val, key);
-    }
-  }
-}
+import { walkTheme } from './createTheme.shared';
+import type { CSSVarTheme, ThemeContract } from './createTheme.types';
 
 /** Build bare CSS custom property names: `--prefix-a-b` */
 function buildVarNames<T extends Record<string, any>>(obj: T, varPrefix: string): CSSVarTheme<T> {
   const result: Record<string, any> = {};
-  walkTheme(obj, varPrefix, result, fullPath => '--' + varPrefix + fullPath);
+  walkTheme(obj, '-', result, fullPath => '--' + varPrefix + fullPath);
   return result as CSSVarTheme<T>;
 }
 
 /** Build `var(--prefix-a-b, fallback)` references with dev-mode parenthesis validation */
 function buildVarRefs<T extends Record<string, any>>(obj: T, varPrefix: string): CSSVarTheme<T> {
   const result: Record<string, any> = {};
-  walkTheme(obj, varPrefix, result, (fullPath, val) => {
+  walkTheme(obj, '-', result, (fullPath, val) => {
     if (process.env.NODE_ENV !== 'production') {
       const str = String(val);
       let depth = 0;
       for (let i = 0; i < str.length; i++) {
-        if (str.charCodeAt(i) === 40) depth++;
-        else if (str.charCodeAt(i) === 41) depth--;
+        if (str.charCodeAt(i) === $.OPEN_PAREN) depth++;
+        else if (str.charCodeAt(i) === $.CLOSE_PAREN) depth--;
         if (depth < 0) break;
       }
       if (depth !== 0) {
@@ -115,7 +41,7 @@ function resolveVars<T extends Record<string, any>>(
   styles: CSSStyleDeclaration
 ): T {
   const result: Record<string, any> = {};
-  walkTheme(obj, varPrefix, result, (fullPath, val) => {
+  walkTheme(obj, '-', result, (fullPath, val) => {
     const resolved = styles.getPropertyValue('--' + varPrefix + fullPath).trim();
     return resolved || val;
   });
