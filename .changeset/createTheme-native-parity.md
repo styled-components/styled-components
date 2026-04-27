@@ -21,6 +21,4 @@ const Card = styled.View`
 </ThemeProvider>
 ```
 
-Nested `ThemeProvider`s on React Native deep-merge their theme objects so an inner override that only touches one leaf doesn't wipe the siblings it inherited — for example, a child provider that sets `colors.text` keeps `colors.bg` from the ancestor. Web behavior is unchanged: the CSS variable cascade continues to handle per-leaf inheritance.
-
-Viewport units (`vw` / `vh` / `dvh` / `svh` / `lvh`), container query units (`cqw` / `cqh` / `cqmin` / `cqmax`), `light-dark(...)`, and `env(safe-area-inset-*)` now work in React Native style templates and re-evaluate on every render with the current dimensions / appearance / safe-area insets. Components that don't reference any of these pay no extra cost.
+Nested `ThemeProvider`s on React Native deep-merge their theme objects so an inner override that only touches one leaf doesn't wipe the siblings it inherited — a child provider that sets `colors.text` keeps `colors.bg` from the ancestor. Web behavior is unchanged: the CSS variable cascade continues to handle per-leaf inheritance.
