@@ -419,10 +419,12 @@ function extractContainerName(prelude: string): string | undefined {
  * `prop + '\x1f' + value` string allocation that was a measurable
  * 8-15% slice of the cold profile.
  *
- * Bound at 1000 total entries with FIFO eviction. Measured in
- * `src/native/transform/test/stress.test.ts` — 50k repeated pair
- * transforms stay within a linear-allocation envelope, and the
- * eviction path handles 2,000 distinct pairs in ~7ms. Adjust only
+ * Bound at 1000 total entries; the eviction path replaces both Maps in one
+ * shot rather than tracking per-pair insertion order (single-FIFO would
+ * need a parallel queue across the inner Maps, and the 1000-entry ceiling
+ * is rarely hit). Measured in `src/native/transform/test/stress.test.ts` —
+ * 50k repeated pair transforms stay within a linear-allocation envelope,
+ * and the eviction path handles 2,000 distinct pairs in ~7ms. Adjust only
  * with a new measurement pass.
  */
 const PAIR_CACHE_LIMIT = 1000;
