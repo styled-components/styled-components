@@ -1,15 +1,19 @@
-import createStylisInstance, { ICreateStylisInstance } from '../stylis';
+import { emitWeb } from '../../parser/emit-web';
+import { parse } from '../../parser/parser';
+import createStylisInstance, { ICreateStylisInstance, preprocessCSS } from '../cssCompile';
+import rtl from '../../plugins/rtl';
+import rscPlugin from '../rsc';
 
-function stylisTest(css: string, options: ICreateStylisInstance = {}): string[] {
-  const stylis = createStylisInstance(options);
+function runCssCompile(css: string, options: ICreateStylisInstance = {}): string[] {
+  const stringifier = createStylisInstance(options);
   const componentId = 'a';
-  return stylis(css, `.${componentId}`, undefined, componentId);
+  return stringifier(css, `.${componentId}`, undefined, componentId);
 }
 
-describe('stylis', () => {
+describe('cssCompile', () => {
   it('handles simple rules', () => {
     expect(
-      stylisTest(`
+      runCssCompile(`
       background: yellow;
       color: red;
     `)
@@ -22,7 +26,7 @@ describe('stylis', () => {
 
   it('splits css with multiple rules', () => {
     expect(
-      stylisTest(`
+      runCssCompile(`
       background: yellow;
       color: red;
       @media (min-width: 500px) {
@@ -39,7 +43,7 @@ describe('stylis', () => {
 
   it('splits css with encoded closing curly brace', () => {
     expect(
-      stylisTest(`
+      runCssCompile(`
       @media (min-width: 500px) {
         &::before {
           content: "}";
@@ -53,42 +57,15 @@ describe('stylis', () => {
     `);
   });
 
-  it('splits vendor-prefixed rules', () => {
-    expect(
-      stylisTest(
-        `
-      &::placeholder {
-        color: red;
-      }
-
-      // this currently does not split correctly
-      @media (min-width: 500px) {
-        &::placeholder {
-          content: "}";
-        }
-      }
-    `,
-        { options: { prefix: true } }
-      )
-    ).toMatchInlineSnapshot(`
-      [
-        ".a::-webkit-input-placeholder{color:red;}",
-        ".a::-moz-placeholder{color:red;}",
-        ".a:-ms-input-placeholder{color:red;}",
-        ".a::placeholder{color:red;}",
-        "@media (min-width: 500px){.a::-webkit-input-placeholder{content:"}";}}",
-        "@media (min-width: 500px){.a::-moz-placeholder{content:"}";}}",
-        "@media (min-width: 500px){.a:-ms-input-placeholder{content:"}";}}",
-        "@media (min-width: 500px){.a::placeholder{content:"}";}}",
-      ]
-    `);
-  });
+  // Removed in v7: the runtime vendor-prefixer is gone. enableVendorPrefixes
+  // is a no-op with a dev warning. See the v7.x auto-prefixer task for the
+  // planned replacement driven by caniuse-lite data at build time.
 
   describe('malformed CSS handling', () => {
     it('preserves styles after declaration with unbalanced closing brace', () => {
       // Simulates: line-height: ${() => "14px}"}
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         height: 100px;
         line-height: 14px}";
@@ -103,7 +80,7 @@ describe('stylis', () => {
 
     it('handles multiple malformed declarations', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         foo: bar}";
         height: 50px;
@@ -119,7 +96,7 @@ describe('stylis', () => {
 
     it('handles malformed declaration followed by @media query', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         line-height: 14px}";
         @media (min-width: 500px) {
@@ -137,7 +114,7 @@ describe('stylis', () => {
 
     it('preserves properly quoted braces in content', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         content: "}";
         background-color: green;
@@ -151,7 +128,7 @@ describe('stylis', () => {
 
     it('handles extra brace not in quotes', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         height: 50px}
         background-color: green;
@@ -165,7 +142,7 @@ describe('stylis', () => {
 
     it('handles extra opening brace in string', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         content: "{test";
         background-color: green;
@@ -179,7 +156,7 @@ describe('stylis', () => {
 
     it('drops remaining content when unterminated string causes brace imbalance', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         content: "unterminated }
         background: red;
@@ -193,7 +170,7 @@ describe('stylis', () => {
 
     it('handles valid CSS unchanged (fast path)', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         height: 100px;
         border-radius: 50%;
@@ -210,7 +187,7 @@ describe('stylis', () => {
   describe('line comment handling (issue #5613)', () => {
     it('strips line comments at start of line', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         // this is a comment
         width: 100px;
         background-color: green;
@@ -224,7 +201,7 @@ describe('stylis', () => {
 
     it('strips line comments at end of line', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px; // some comment
         background-color: green;
       `)
@@ -237,7 +214,7 @@ describe('stylis', () => {
 
     it('strips line comments after multiline calc()', () => {
       expect(
-        stylisTest(`max-height: calc(
+        runCssCompile(`max-height: calc(
   100px + 200px
 ); // comment
 background-color: green;`)
@@ -254,7 +231,7 @@ background-color: green;`)
       // // inside parens is preserved — paren-depth tracking protects
       // all function arguments, not just url()
       expect(
-        stylisTest(`width: 100px;
+        runCssCompile(`width: 100px;
 height: calc(
   50vh // viewport height
   - 20px // header
@@ -272,7 +249,7 @@ background-color: green;`)
 
     it('strips line comments after closing paren', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         height: calc(50vh - 20px); // viewport minus header
         background-color: green;
       `)
@@ -285,7 +262,7 @@ background-color: green;`)
 
     it('preserves // inside block comments (issue #5658)', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /* http://example.com */
         font-size: 40px;
         color: red;
@@ -299,7 +276,7 @@ background-color: green;`)
 
     it('preserves styles after block comment with // on same line', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px; /* http://example.com */ color: red;
       `)
       ).toMatchInlineSnapshot(`
@@ -311,7 +288,7 @@ background-color: green;`)
 
     it('preserves // inside strings', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         content: "http://example.com";
         background-color: green;
@@ -327,7 +304,7 @@ background-color: green;`)
   describe('url() function handling', () => {
     it('preserves unquoted https:// URL in url()', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background-image: url(https://example.com/image.png);
         background-color: green;
       `)
@@ -340,7 +317,7 @@ background-color: green;`)
 
     it('preserves unquoted http:// URL in url()', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background-image: url(http://example.com/image.png);
         background-color: green;
       `)
@@ -353,7 +330,7 @@ background-color: green;`)
 
     it('preserves double-quoted URL in url()', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background-image: url("https://example.com/image.png");
         background-color: green;
       `)
@@ -366,7 +343,7 @@ background-color: green;`)
 
     it('preserves single-quoted URL in url()', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background-image: url('https://example.com/image.png');
         background-color: green;
       `)
@@ -379,7 +356,7 @@ background-color: green;`)
 
     it('preserves data URL in url()', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background-image: url(data:image/png;base64,iVBORw0KGgo=);
         background-color: green;
       `)
@@ -392,7 +369,7 @@ background-color: green;`)
 
     it('preserves URL with path and query params', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background-image: url(https://example.com/path/to/image.png?v=1&size=large);
         background-color: green;
       `)
@@ -405,7 +382,7 @@ background-color: green;`)
 
     it('preserves multiple url() declarations', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background-image: url(https://example.com/bg.png);
         cursor: url(https://example.com/cursor.png), auto;
         list-style-image: url(https://example.com/bullet.png);
@@ -419,7 +396,7 @@ background-color: green;`)
 
     it('preserves @font-face with unquoted URL', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         @font-face {
           font-family: 'MyFont';
           src: url(https://example.com/fonts/myfont.woff2) format('woff2');
@@ -434,7 +411,7 @@ background-color: green;`)
 
     it('preserves @font-face with multiple src URLs', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         @font-face {
           font-family: 'MyFont';
           src: url(https://example.com/fonts/myfont.woff2) format('woff2'),
@@ -450,7 +427,7 @@ background-color: green;`)
 
     it('preserves @import with URL', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         @import url(https://example.com/styles.css);
         background-color: green;
       `)
@@ -464,7 +441,7 @@ background-color: green;`)
 
     it('preserves url() with file:// protocol', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background-image: url(file:///path/to/image.png);
         background-color: green;
       `)
@@ -477,7 +454,7 @@ background-color: green;`)
 
     it('preserves url() with protocol-relative URL', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background-image: url(//example.com/image.png);
         background-color: green;
       `)
@@ -490,7 +467,7 @@ background-color: green;`)
 
     it('handles mix of url() and line comments', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background-image: url(https://example.com/image.png); // this is a comment
         background-color: green;
       `)
@@ -503,7 +480,7 @@ background-color: green;`)
 
     it('preserves srcset URLs in image-set()', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background-image: image-set(url(https://example.com/image.png) 1x, url(https://example.com/image@2x.png) 2x);
         background-color: green;
       `)
@@ -516,7 +493,7 @@ background-color: green;`)
 
     it('preserves foourl() inside string (string tracking)', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px; // comment
         content: "foourl(https://example.com)";
         background-color: green;
@@ -532,7 +509,7 @@ background-color: green;`)
       // Paren-depth tracking protects // inside ALL function calls,
       // not just url() — no function name list needed
       expect(
-        stylisTest(`
+        runCssCompile(`
         background: foourl(https://example.com/image.png); // comment
         color: green;
       `)
@@ -544,10 +521,65 @@ background-color: green;`)
     });
 
     it('preserves url() at the start of CSS', () => {
-      expect(stylisTest(`background-image: url(https://example.com/image.png);`))
+      expect(runCssCompile(`background-image: url(https://example.com/image.png);`))
         .toMatchInlineSnapshot(`
         [
           ".a{background-image:url(https://example.com/image.png);}",
+        ]
+      `);
+    });
+  });
+
+  describe('empty custom property values (#4374)', () => {
+    // CSS Custom Properties L1 — `--name: ` (empty) is a valid declaration.
+    // Stylis dropped these; our in-house parser preserves them.
+
+    it('preserves an empty custom property value at the top level', () => {
+      expect(runCssCompile(`--my-prop: ;`)).toMatchInlineSnapshot(`
+        [
+          ".a{--my-prop:;}",
+        ]
+      `);
+    });
+
+    it('preserves an empty custom property value inside @keyframes', () => {
+      expect(
+        runCssCompile(`
+        @keyframes spin {
+          from, to {
+            --my-prop: ;
+          }
+        }
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          "@keyframes spin{from,to{--my-prop:;}}",
+        ]
+      `);
+    });
+
+    it('still drops empty values for regular properties', () => {
+      expect(
+        runCssCompile(`
+        color: ;
+        font-size: 12px;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{font-size:12px;}",
+        ]
+      `);
+    });
+
+    it('preserves empty custom property alongside dropped regular property', () => {
+      expect(
+        runCssCompile(`
+        color: ;
+        --kept: ;
+      `)
+      ).toMatchInlineSnapshot(`
+        [
+          ".a{--kept:;}",
         ]
       `);
     });
@@ -558,7 +590,7 @@ background-color: green;`)
 
     it('handles empty block comment followed by //', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /**/ // this is a line comment
         color: red;
       `)
@@ -571,7 +603,7 @@ background-color: green;`)
 
     it('handles block comment with asterisks that mimic closing: /* a ** // b */', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /* a ** // b */
         color: red;
       `)
@@ -584,7 +616,7 @@ background-color: green;`)
 
     it('handles adjacent block comments separated by //', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /* first */ // line comment
         /* second */
         color: red;
@@ -598,7 +630,7 @@ background-color: green;`)
 
     it('handles block comment immediately followed by line comment (no space)', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /* block */// line
         color: red;
       `)
@@ -611,7 +643,7 @@ background-color: green;`)
 
     it('handles unclosed block comment with // (eats remaining CSS)', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         color: blue;
         /* unclosed http://example.com
         font-size: 40px;
@@ -624,7 +656,7 @@ background-color: green;`)
     });
 
     it('handles block comment where */ is at the very end of input', () => {
-      expect(stylisTest(`color: red; /* http://example.com */`)).toMatchInlineSnapshot(`
+      expect(runCssCompile(`color: red; /* http://example.com */`)).toMatchInlineSnapshot(`
         [
           ".a{color:red;}",
         ]
@@ -633,7 +665,7 @@ background-color: green;`)
 
     it('handles multiple // inside a single block comment', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /* http://a.com and http://b.com and ftp://c.com */
         color: red;
       `)
@@ -646,7 +678,7 @@ background-color: green;`)
 
     it('handles block comment containing only //', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /* // */
         color: red;
       `)
@@ -659,7 +691,7 @@ background-color: green;`)
 
     it('handles block comment with */ lookalike: /* a * / b */', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /* a * / b // c */
         color: red;
       `)
@@ -674,7 +706,7 @@ background-color: green;`)
 
     it('handles string containing /* followed by // outside string', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         content: "/*"; // this should be stripped
         color: red;
       `)
@@ -687,7 +719,7 @@ background-color: green;`)
 
     it('handles string containing */ followed by // outside string', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         content: "*/"; // this should be stripped
         color: red;
       `)
@@ -700,7 +732,7 @@ background-color: green;`)
 
     it('handles single-quoted string with //', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         content: 'http://example.com';
         color: red;
       `)
@@ -713,7 +745,7 @@ background-color: green;`)
 
     it('handles alternating quote types with //', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         content: "it's a // test";
         color: red;
       `)
@@ -726,7 +758,7 @@ background-color: green;`)
 
     it('handles single-quoted string containing double quote and //', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         content: 'say "http://hello"';
         color: red;
       `)
@@ -740,7 +772,7 @@ background-color: green;`)
     // --- Line comment boundary conditions ---
 
     it('handles // at the very end of input (no trailing newline)', () => {
-      expect(stylisTest(`color: red; //`)).toMatchInlineSnapshot(`
+      expect(runCssCompile(`color: red; //`)).toMatchInlineSnapshot(`
         [
           ".a{color:red;}",
         ]
@@ -749,7 +781,7 @@ background-color: green;`)
 
     it('handles // with nothing after it on line', () => {
       expect(
-        stylisTest(`color: red; //
+        runCssCompile(`color: red; //
         font-size: 20px;`)
       ).toMatchInlineSnapshot(`
         [
@@ -760,7 +792,7 @@ background-color: green;`)
 
     it('handles multiple // on the same line', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         color: red; // first // second // third
         font-size: 20px;
       `)
@@ -773,7 +805,7 @@ background-color: green;`)
 
     it('handles consecutive lines of only comments', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         // comment 1
         // comment 2
         // comment 3
@@ -787,12 +819,12 @@ background-color: green;`)
     });
 
     it('handles input that is entirely a line comment', () => {
-      expect(stylisTest(`// nothing here`)).toMatchInlineSnapshot(`[]`);
+      expect(runCssCompile(`// nothing here`)).toMatchInlineSnapshot(`[]`);
     });
 
     it('strips line comment between two declarations on same line (semicolon before //)', () => {
       expect(
-        stylisTest(`color: red; // middle comment
+        runCssCompile(`color: red; // middle comment
         font-size: 20px; // end comment
         background: blue;`)
       ).toMatchInlineSnapshot(`
@@ -806,7 +838,7 @@ background-color: green;`)
 
     it('handles url() containing block comment syntax', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background: url(http://example.com/*.png);
         color: red;
       `)
@@ -819,7 +851,7 @@ background-color: green;`)
 
     it('handles url() immediately followed by // comment', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background: url(http://example.com/img.png);// comment
         color: red;
       `)
@@ -832,7 +864,7 @@ background-color: green;`)
 
     it('handles uppercased URL() with //', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background: URL(http://example.com/img.png);
         color: red;
       `)
@@ -845,7 +877,7 @@ background-color: green;`)
 
     it('handles mixed-case Url() with //', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background: Url(http://example.com/img.png);
         color: red;
       `)
@@ -860,7 +892,7 @@ background-color: green;`)
 
     it('handles block comment with //, then url with //, then line comment', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /* see http://spec.example.com */
         background: url(https://cdn.example.com/bg.png);
         color: red; // TODO: change later
@@ -875,7 +907,7 @@ background-color: green;`)
 
     it('handles string, block comment, url, and line comment all with //', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         content: "http://example.com";
         /* http://spec.example.com */
         background: url(https://cdn.example.com/bg.png);
@@ -891,7 +923,7 @@ background-color: green;`)
 
     it('handles // in every possible context in one CSS block', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         content: "//not-a-comment";
         /* //also-not-a-comment */
         background: url(//protocol-relative.example.com/img.png);
@@ -909,7 +941,7 @@ background-color: green;`)
 
     it('strips orphaned */ without opening /* followed by //', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         color: red;
         */ // whatever
         font-size: 20px;
@@ -923,7 +955,7 @@ background-color: green;`)
 
     it('handles block comment with // immediately before closing */', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /* http://example.com// */
         color: red;
       `)
@@ -936,7 +968,7 @@ background-color: green;`)
 
     it('handles line comment containing */ (should not close a nonexistent block comment)', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         color: blue;
         // this comment has */ in it
         font-size: 20px;
@@ -950,7 +982,7 @@ background-color: green;`)
 
     it('handles block comment with // on multiple lines', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /*
           http://line1.com
           http://line2.com
@@ -967,7 +999,7 @@ background-color: green;`)
 
     it('handles line comment followed by block comment on next line', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         color: blue; // line comment
         /* block comment http://example.com */
         font-size: 20px;
@@ -983,7 +1015,7 @@ background-color: green;`)
 
     it('handles unbalanced brace inside block comment with //', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         /* } http://example.com */
         color: red;
@@ -997,7 +1029,7 @@ background-color: green;`)
 
     it('handles unbalanced brace after line comment stripping', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         height: 50px}// malformed
         color: red;
@@ -1011,7 +1043,7 @@ background-color: green;`)
 
     it('handles // inside @media block with url()', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         @media (min-width: 500px) {
           background: url(https://example.com/img.png);
           color: red; // comment inside media
@@ -1028,7 +1060,7 @@ background-color: green;`)
 
     it('handles // inside nested selectors', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         &:hover {
           color: red; // hover color
           /* http://design-system-spec */
@@ -1046,7 +1078,7 @@ background-color: green;`)
 
     it('handles rapid alternation of // and /* */ on same line', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /* a */ color: red; /* http://b */ font-size: 20px; // end
         background: blue;
       `)
@@ -1061,7 +1093,7 @@ background-color: green;`)
 
     it('handles escaped single quote inside single-quoted string with // after', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         content: 'it\\'s';
         color: red; // comment
       `)
@@ -1074,7 +1106,7 @@ background-color: green;`)
 
     it('handles empty string values with // after', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         content: "";
         color: red; // comment
       `)
@@ -1086,7 +1118,7 @@ background-color: green;`)
     });
 
     it('handles string at very start of CSS with //', () => {
-      expect(stylisTest(`content: "//test"; color: red;`)).toMatchInlineSnapshot(`
+      expect(runCssCompile(`content: "//test"; color: red;`)).toMatchInlineSnapshot(`
         [
           ".a{content:"//test";color:red;}",
         ]
@@ -1097,7 +1129,7 @@ background-color: green;`)
 
     it('handles // in a custom property value', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         --my-url: "https://example.com"; // comment
         color: var(--my-url);
       `)
@@ -1110,7 +1142,7 @@ background-color: green;`)
 
     it('handles multiple block comments with // on one line', () => {
       expect(
-        stylisTest(`/* http://a */ color: red; /* http://b */ font-size: 20px; /* http://c */`)
+        runCssCompile(`/* http://a */ color: red; /* http://b */ font-size: 20px; /* http://c */`)
       ).toMatchInlineSnapshot(`
         [
           ".a{color:red;font-size:20px;}",
@@ -1123,7 +1155,7 @@ background-color: green;`)
     // Path 3j: comment stripping + brace imbalance fire together
     it('handles comment stripping that reveals brace imbalance', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         height: 50px}// malformed brace before comment
         color: red;
@@ -1139,7 +1171,7 @@ background-color: green;`)
 
     it('handles nested rule with comment after opening brace', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         .nested {// comment inside rule
           color: red;
@@ -1156,7 +1188,7 @@ background-color: green;`)
 
     it('handles brace inside line comment (not counted)', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         // this } should not affect brace counting
         color: red;
@@ -1170,7 +1202,7 @@ background-color: green;`)
 
     it('handles opening brace inside line comment (not counted)', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         // this { should not affect brace counting
         color: red;
@@ -1184,22 +1216,26 @@ background-color: green;`)
 
     // Orphaned */ — only stripped when the full tokenizer runs (// present)
     it('passes orphaned */ through when no // present (fast path)', () => {
+      // Orphan `*/` (without matching `/*`) is a pathological input. The v7
+      // parser preserves whitespace as-is (`*/ background`), stylis collapsed
+      // it (`*/background`). Either behavior is acceptable — the input is
+      // malformed. This test locks v7 behavior.
       expect(
-        stylisTest(`
+        runCssCompile(`
         color: red;
         */ background: blue;
         font-size: 16px;
       `)
       ).toMatchInlineSnapshot(`
         [
-          ".a{color:red;*/background:blue;font-size:16px;}",
+          ".a{color:red;*/ background:blue;font-size:16px;}",
         ]
       `);
     });
 
     it('strips orphaned */ when // is also present (full tokenizer)', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         color: red;
         */ background: blue; // comment
         font-size: 16px;
@@ -1213,7 +1249,7 @@ background-color: green;`)
 
     it('strips multiple orphaned */ tokens when // triggers full tokenizer', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         color: red; // start
         */ font-size: 20px;
         */ background: blue;
@@ -1227,26 +1263,26 @@ background-color: green;`)
 
     // Empty / whitespace inputs
     it('handles empty string', () => {
-      expect(stylisTest('')).toMatchInlineSnapshot(`[]`);
+      expect(runCssCompile('')).toMatchInlineSnapshot(`[]`);
     });
 
     it('handles whitespace-only input', () => {
-      expect(stylisTest('   \n\t  ')).toMatchInlineSnapshot(`[]`);
+      expect(runCssCompile('   \n\t  ')).toMatchInlineSnapshot(`[]`);
     });
 
     // Block comments only (no //)
     it('handles input that is only a block comment', () => {
-      expect(stylisTest('/* nothing here */')).toMatchInlineSnapshot(`[]`);
+      expect(runCssCompile('/* nothing here */')).toMatchInlineSnapshot(`[]`);
     });
 
     it('handles mix of only block and line comments', () => {
-      expect(stylisTest('/* first */ // second')).toMatchInlineSnapshot(`[]`);
+      expect(runCssCompile('/* first */ // second')).toMatchInlineSnapshot(`[]`);
     });
 
     // Nested block comments (CSS doesn't support them)
     it('handles nested block comments (closes at first */)', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         /* outer /* inner */ color: red;
       `)
       ).toMatchInlineSnapshot(`
@@ -1259,7 +1295,7 @@ background-color: green;`)
     // url() with bare paths (no protocol)
     it('preserves url() with bare absolute path', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background: url(/images/logo.png); // comment
         color: red;
       `)
@@ -1272,7 +1308,7 @@ background-color: green;`)
 
     it('preserves url() with relative path', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background: url(../assets/bg.png); // comment
         color: red;
       `)
@@ -1286,7 +1322,7 @@ background-color: green;`)
     // url() with encoded braces
     it('preserves url() with encoded braces in data URI', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         background: url(data:image/svg+xml,%3Csvg%7B%7D%3C/svg%3E); // svg
         color: red;
       `)
@@ -1300,7 +1336,7 @@ background-color: green;`)
     // @supports and @layer with //
     it('handles // inside @supports block', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         @supports (display: grid) {
           display: grid; // use grid
           gap: 16px;
@@ -1317,7 +1353,7 @@ background-color: green;`)
 
     it('handles // inside @layer block', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         @layer utilities {
           color: red; // utility color
         }
@@ -1334,7 +1370,7 @@ background-color: green;`)
     // Fast path: no // and no } (path 1)
     it('returns unchanged when no // and no } (fast path)', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         color: red;
         font-size: 16px;
         background: blue;
@@ -1349,7 +1385,7 @@ background-color: green;`)
     // Backtick in CSS content (not a CSS string delimiter)
     it('handles backtick in content value', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         content: "\`"; // backtick
         color: red;
       `)
@@ -1363,7 +1399,7 @@ background-color: green;`)
     // \\\\ in template literal = \\ in CSS = escaped backslash, so " closes the string
     it('handles escaped backslash before closing quote', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         content: "test\\\\";
         color: red; // comment
       `)
@@ -1377,7 +1413,7 @@ background-color: green;`)
     // Complex path 3j: comment removal changes what sanitizeBraces sees
     it('handles line comment hiding a closing brace from sanitizer', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         width: 100px;
         }// this brace is NOT in the comment, it's before it
         color: red;
@@ -1391,7 +1427,7 @@ background-color: green;`)
 
     it('handles line comment between balanced braces', () => {
       expect(
-        stylisTest(`
+        runCssCompile(`
         &:hover {
           // hover styles
           color: red;
@@ -1403,6 +1439,48 @@ background-color: green;`)
         [
           ".a{font-size:16px;}",
           ".a:hover{color:red;background:blue;}",
+        ]
+      `);
+    });
+  });
+
+  describe('flat fast path (parseEmitFlat vs full parser)', () => {
+    it('matches full parser for flat declarations (default stringifier)', () => {
+      const css = `color: red;\nbackground: blue;`;
+      const fromInstance = runCssCompile(css);
+      const flatCSS = preprocessCSS(css);
+      const viaFull = emitWeb(parse('.a{' + flatCSS + '}'), '', {
+        selfRefSelector: '.a',
+        componentId: 'a',
+      });
+      expect(fromInstance).toEqual(viaFull);
+    });
+
+    it('uses full parser when namespace is set (no fast path)', () => {
+      const stringifier = createStylisInstance({ options: { namespace: '.ns' } });
+      expect(stringifier(`color: red;`, '.a', undefined, 'a')).toMatchInlineSnapshot(`
+        [
+          ".ns .a{color:red;}",
+        ]
+      `);
+    });
+
+    it('uses full parser when rtl decl transform is active', () => {
+      const stringifier = createStylisInstance({ plugins: [rtl] });
+      expect(stringifier(`margin-left: 8px; padding-left: 4px;`, '.a', undefined, 'a'))
+        .toMatchInlineSnapshot(`
+        [
+          ".a{margin-right:8px;padding-right:4px;}",
+        ]
+      `);
+    });
+
+    it('uses full parser when rscPlugin rw is active', () => {
+      const stringifier = createStylisInstance({ plugins: [rscPlugin] });
+      expect(stringifier(`color: red;`, '.a:hover:first-child', undefined, 'a'))
+        .toMatchInlineSnapshot(`
+        [
+          ".a:hover:nth-child(1 of :not(style[data-styled])){color:red;}",
         ]
       `);
     });

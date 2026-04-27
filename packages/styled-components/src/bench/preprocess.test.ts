@@ -8,8 +8,8 @@
  * Run: npx jest -c jest.config.bench.js -- preprocess
  */
 
-import { preprocessCSS } from '../utils/stylis';
-import createStylisInstance from '../utils/stylis';
+import { preprocessCSS } from '../utils/cssCompile';
+import createStylisInstance from '../utils/cssCompile';
 import { bench as _bench } from './bench-utils';
 
 const ppOpts = { runs: 7, precision: 2 };
