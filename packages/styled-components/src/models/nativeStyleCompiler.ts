@@ -73,19 +73,9 @@ const KNOWN_PSEUDOS: Record<string, PseudoState> = {
   disabled: 'disabled',
 };
 
-/**
- * Compile cache. Keyed by the preprocessed CSS string itself — V8 caches
- * a string's hash code on the string object after first lookup, so the
- * second + nth accesses are effectively O(1) without us computing a
- * djb2 + base-52 name on each call.
- *
- * Compile-cache ceiling: single-entry FIFO eviction at this count, matching
- * `ComponentStyle.dynamicNameCache`. Justified via
- * `src/native/transform/test/stress.test.ts::compileNativeStyles` —
- * 2,000 distinct CSS compiles with LIMIT=200 stays under ~7ms / 6MB heap;
- * 10×150 cache-hit reruns complete in ~3ms / under 1MB heap. Adjust only
- * with a new measurement pass.
- */
+// Keyed by raw CSS string; V8 caches a string's hash on first access so
+// warm hits skip the djb2/base-52 work. Single-entry FIFO at the ceiling
+// matches `ComponentStyle.dynamicNameCache`.
 let compileCache = new Map<string, CompiledNativeStyles>();
 const CACHE_LIMIT = 200;
 
@@ -217,7 +207,7 @@ function handleRootRule(node: RuleNode, conditional: ConditionalStyle[]): void {
     return;
   }
 
-  // `&[attr]` / `&[attr=value]` — evaluate against props at render time.
+  // `&[attr]` / `&[attr=value]`: evaluate against props at render time.
   const attr = detectAttrSelector(node.selectors);
   if (attr) {
     const decls = collectDecls(node.children);

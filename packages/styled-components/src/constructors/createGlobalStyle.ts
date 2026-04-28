@@ -63,35 +63,19 @@ export default function createGlobalStyle<Props extends object>(
       );
     }
 
-    // Render styles during component execution for RSC or explicit ServerStyleSheet.
-    // Gate on IS_RSC or styleSheet.server (runtime flag from ServerStyleSheet),
-    // NOT on __SERVER__ alone. The server build sets __SERVER__=true and eliminates
-    // useLayoutEffect, so if we rendered here without cleanup, styles would
-    // accumulate unboundedly in jsdom test environments (O(n²) regression).
-    // On a real server without ServerStyleSheet, VirtualTag is used and styles are
-    // discarded anyway, so skipping this path has no functional impact.
-    // Turbopack resolves the browser entry for SSR, so __SERVER__ is false there;
-    // styleSheet.server handles that case at runtime.
+    // Gate on IS_RSC or `styleSheet.server` rather than `__SERVER__`: the
+    // server build elides useLayoutEffect, so rendering here without cleanup
+    // produced an O(n²) jsdom regression. Turbopack also picks the browser
+    // entry for SSR, where the runtime flag is the only signal.
     if (IS_RSC || ssc.styleSheet.server) {
       renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
     }
 
-    // Client-side lifecycle: render styles in effect and clean up on unmount.
-    // __SERVER__ and IS_RSC are build/module-level constants, so this doesn't violate rules of hooks.
     if (!__SERVER__ && !IS_RSC) {
-      // Split into two effects so cleanup (removeStyles → full rebuildGroup) only
-      // fires on actual unmount or sheet/globalStyle swap -- NOT on every prop change.
-      //
-      // For dynamic globals, `props` is a new reference every render, so the render
-      // effect re-runs each render. If cleanup ran on every re-run, each render would
-      // do two full rebuildGroups (delete + reinsert all instances), which dominates
-      // CPU on apps with frequent parent re-renders (issue #5730). Splitting lets
-      // renderStyles' rulesEqual fast-path skip rebuildGroup when CSS is unchanged.
-      //
-      // globalStyle is included in render deps so HMR-induced module re-evaluation
-      // (which creates a new GlobalStyle instance) triggers effect re-run.
-      // For static rules, renderStyles exits early after the first injection
-      // (via hasNameForId check), so the extra dep is effectively free at runtime.
+      // Two effects: cleanup (removeStyles → rebuildGroup) only fires on
+      // unmount/sheet/globalStyle swap, not every render — dynamic globals
+      // would otherwise rebuild twice per render (issue #5730). Including
+      // globalStyle in deps lets HMR-replaced instances trigger re-injection.
       // eslint-disable-next-line react-hooks/exhaustive-deps
       const renderDeps = globalStyle.isStatic
         ? [instance, ssc.styleSheet, globalStyle]

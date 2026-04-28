@@ -21,4 +21,4 @@ const Card = styled.View`
 </ThemeProvider>
 ```
 
-Nested `ThemeProvider`s on React Native deep-merge their theme objects so an inner override that only touches one leaf doesn't wipe the siblings it inherited — a child provider that sets `colors.text` keeps `colors.bg` from the ancestor. Web behavior is unchanged: the CSS variable cascade continues to handle per-leaf inheritance.
+Nested `ThemeProvider`s on React Native deep-merge their theme objects so an inner override that only touches one leaf doesn't wipe the siblings it inherited; a child provider that sets `colors.text` keeps `colors.bg` from the ancestor. Web behavior is unchanged: the CSS variable cascade continues to handle per-leaf inheritance.

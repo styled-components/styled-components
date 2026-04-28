@@ -59,8 +59,7 @@ export default class ComponentStyle {
     this.baseHash = phash(SEED, componentId);
     this.baseStyle = baseStyle;
 
-    // NOTE: This registers the componentId, which ensures a consistent order
-    // for this component's styles compared to others
+    // Registers the componentId so injection order matches creation order.
     StyleSheet.registerId(componentId);
   }
 
@@ -86,8 +85,7 @@ export default class ComponentStyle {
       if (typeof partRule === 'string') {
         css += partRule;
       } else if (partRule) {
-        // Fast path: inline function call for the common case (interpolation
-        // returning a string). Avoids flatten's type dispatch and array alloc.
+        // Fast path for the common string-returning interpolation; skips flatten.
         if (isStatelessFunction(partRule)) {
           const fnResult = partRule(executionContext);
           if (typeof fnResult === 'string') {
@@ -128,9 +126,7 @@ export default class ComponentStyle {
       };
     }
 
-    // Cache css->name to skip phash+generateName for repeat CSS strings.
-    // The CSS string fully determines the class name for a given component,
-    // so a Map lookup replaces O(cssLen) hashing on cache hit.
+    // Cache css→name to skip phash+generateName on repeat CSS.
     if (!this.dynamicNameCache) this.dynamicNameCache = new Map();
     const cacheKey = stylis.hash ? stylis.hash + css : css;
     let name = this.dynamicNameCache.get(cacheKey);

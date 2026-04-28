@@ -53,25 +53,6 @@ type DynamicStringRulesResult = {
   unchanged: boolean;
 };
 
-/**
- * InlineStyle takes arbitrary CSS and produces a {@link CompiledNativeStyles}
- * structure consumable by the native render path.
- *
- * Two hot-path optimizations live here, both eliding repeated work
- * across renders:
- *
- * 1. Static-rules: when every rule is a plain string (no interpolations,
- *    keyframes, styled components, nested arrays), the compiled output
- *    is invariant. We pre-concatenate the CSS at construction and
- *    memoise the compiled result on the instance; compile() becomes a
- *    single property read.
- *
- * 2. Dynamic-rules same-CSS: when a function rule produces a string
- *    identical to the previous render (common with stable theme tokens
- *    or non-CSS-affecting prop changes), we return the cached compile
- *    output directly without running preprocessCSS + hash + Map.get.
- *    Falls back to the full compile path on a CSS change.
- */
 export default function makeInlineStyleClass<Props extends object>(styleSheet: StyleSheet) {
   const InlineStyle: IInlineStyleConstructor<Props> = class InlineStyle implements IInlineStyle<Props> {
     rules: RuleSet<Props>;
@@ -161,23 +142,9 @@ function isAllStaticStrings(rules: ReadonlyArray<unknown>): boolean {
   return true;
 }
 
-/**
- * Markers in CSS source that indicate the component will produce a non-trivial
- * compiled shape — anything the fast render path can't handle without the
- * responsive infrastructure:
- *
- *   - `@media`/`@container`/`@supports`/`@scope`/`@starting-style` at-rules
- *   - pseudo states `:hover` / `:focus` / `:focus-visible` / `:active` / `:disabled`
- *   - viewport units (`vw`/`vh`/`dvh`/`svw`/`svh`/`lvw`/`lvh`/`vmin`/`vmax`)
- *   - container units (`cqw`/`cqh`/`cqi`/`cqb`/`cqmin`/`cqmax`)
- *   - `light-dark()` color function
- *   - `env(...)` references (safe-area insets, etc.) that need a render-time resolver
- *   - `\0` sentinel marker emitted by `createTheme.native.ts` leaves
- *   - attribute selectors `&[attr=value]` that need per-render prop evaluation
- *
- * Viewport- and container-unit detection requires a digit immediately before
- * the unit, avoiding false positives in plain words like `view` / `vector`.
- */
+// Markers that disqualify a component from the fast render path.
+// Viewport/container units require a leading digit so plain words like
+// `view` / `vector` don't false-positive.
 const RESPONSIVE_RE =
   /@(?:media|container|supports|scope|starting-style)\b|:(?:hover|focus|focus-visible|active|disabled)\b|\d(?:vw|vh|dvw|dvh|svw|svh|lvw|lvh|vmin|vmax|cqw|cqh|cqi|cqb|cqmin|cqmax)\b|light-dark\(|\benv\(|\0|&\[/i;
 

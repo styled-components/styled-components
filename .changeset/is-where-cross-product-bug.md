@@ -15,4 +15,4 @@ const Card = styled.div`
 `;
 ```
 
-The grandchild rule used to compile to `:is(.card-class:hover .grandchild, .parent:hover .card-class) .child .grandchild { color: blue; }` — the `.grandchild` token leaked into the `:is()` parens. It now compiles correctly to `:is(.card-class:hover, .parent:hover .card-class) .child .grandchild { color: blue; }`. The same fix applies to commas inside `[attr*="a,b"]` and other paren/bracket-protected contexts.
+The grandchild rule used to compile to `:is(.card-class:hover .grandchild, .parent:hover .card-class) .child .grandchild { color: blue; }`, where the `.grandchild` token leaked into the `:is()` parens. It now compiles correctly to `:is(.card-class:hover, .parent:hover .card-class) .child .grandchild { color: blue; }`. The same fix applies to commas inside `[attr*="a,b"]` and other paren/bracket-protected contexts.

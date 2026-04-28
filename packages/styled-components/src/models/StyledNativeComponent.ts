@@ -247,24 +247,7 @@ function hasPseudo(conditional: ConditionalStyle[]): boolean {
   return false;
 }
 
-// Entries stable across renders are cached on the render-cache ref and
-// reused on subsequent renders when their inputs are unchanged. The
-// extended shape lets us skip the entire style-assembly block (and the
-// fresh array allocation it implies) on parent re-renders where the
-// child's props, theme, env, and ancestor container context are all
-// reference-equal — so the underlying RN component receives the same
-// `style` reference frame-over-frame and RN-web does not re-apply.
-//
-// [
-//   prevProps,           // 0
-//   prevTheme,           // 1
-//   prevPropsKeyCount,   // 2
-//   cachedContext,       // 3
-//   cachedCompiled,      // 4
-//   cachedEnv,           // 5  — MediaQueryEnv ref from useMediaEnv
-//   cachedContainerCtx,  // 6  — ContainerContextValue from useContainerContext
-//   cachedFinalStyle,    // 7  — assembled style passed to the RN element
-// ]
+// [props, theme, propsKeyCount, context, compiled, env, containerCtx, finalStyle]
 type RenderCache = [
   object,
   DefaultTheme | undefined,

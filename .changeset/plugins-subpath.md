@@ -25,4 +25,4 @@ Migration:
 +<StyleSheetManager plugins={[rtlPlugin, rscPlugin]}>
 ```
 
-Custom plugins authored against the v6 stylis contract need to port to the narrower plugin interface, which exposes `rw` (selector rewrite) and `decl` (declaration rewrite) hooks — implement either or both. Plugins are tree-shaken out of any app that doesn't import them.
+Custom plugins authored against the v6 stylis contract need to port to the narrower plugin interface, which exposes `rw` (selector rewrite) and `decl` (declaration rewrite) hooks; implement either or both. Plugins are tree-shaken out of any app that doesn't import them.

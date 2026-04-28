@@ -26,15 +26,8 @@ const KNOWN_STATICS = {
   callee: true,
   arguments: true,
   arity: true,
-  // React's internal identity discriminators. Hoisting these from an RSC
-  // reference target (`'use client'` / `'use server'` boundary) makes the
-  // wrapper itself look like that reference, so React skips calling its
-  // function body — extending such a component via `styled(...)` would
-  // silently drop all extension styles. See #5672.
-  //   $$typeof — Symbol.for('react.client.reference' | 'react.server.reference' | …)
-  //   $$id     — module-export id on both reference kinds
-  //   $$async  — client reference flag
-  //   $$bound  — server reference bound-args slot
+  // React identity markers; hoisting from an RSC reference target makes
+  // the wrapper look like the reference and React skips its body (#5672).
   $$typeof: true,
   $$id: true,
   $$async: true,

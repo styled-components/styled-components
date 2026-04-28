@@ -262,19 +262,12 @@ function useImpl<Props extends BaseObject>(
     React.useDebugValue(styledComponentId);
   }
 
-  // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
-  // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
-  // should be an immutable value, but behave for now.
   const theme = determineTheme(props, contextTheme) || (IS_RSC ? undefined : EMPTY_OBJECT);
 
   let context: React.HTMLAttributes<Element> & ExecutionContext & Props;
   let generatedClassName: string;
   let generatedStyle: GeneratedStyle | null = null;
 
-  // Client-only render cache: skip resolveContext and generateAndInjectStyles
-  // when props+theme haven't changed. propsForElement is always rebuilt since
-  // it's mutated with className/ref after construction.
-  // __SERVER__ and IS_RSC are build/module-level constants for dead-code elimination.
   if (!__SERVER__ && !IS_RSC) {
     const renderCacheRef = React.useRef<RenderCache | null>(null);
     const prev = renderCacheRef.current;

@@ -162,7 +162,7 @@ export type IStyleSheetManager = React.PropsWithChildren<{
   target?: undefined | InsertionTarget;
 }>;
 
-// Set/Reset tokens drive `rscContextOverride` in document order — RSC
+// Set/Reset tokens drive `rscContextOverride` in document order. RSC
 // renders fragment children serially, so a Reset after children restores
 // the parent override before sibling subtrees render.
 function RscOverrideSet({ value }: { value: IStyleSheetContext | null }): null {
