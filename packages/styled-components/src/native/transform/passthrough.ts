@@ -8,14 +8,14 @@
  * when each prop shipped.
  */
 export const PASSTHROUGH_PROPS: ReadonlySet<string> = new Set([
-  // Transforms — RN parses CSS string form since 0.74
+  // Transforms; RN parses CSS string form since 0.74
   'transform',
   'transformOrigin',
   // Shadows as CSS strings since 0.76; array form also fine
   'boxShadow',
-  // Filters — RN parses string/array since 0.83
+  // Filters; RN parses string/array since 0.83
   'filter',
-  // Backgrounds — RN parses gradient/url since 0.83
+  // Backgrounds; RN parses gradient/url since 0.83
   'backgroundImage',
   'backgroundSize',
   'backgroundPosition',

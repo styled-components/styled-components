@@ -73,7 +73,7 @@ export default function createGlobalStyle<Props extends object>(
 
     if (!__SERVER__ && !IS_RSC) {
       // Two effects: cleanup (removeStyles → rebuildGroup) only fires on
-      // unmount/sheet/globalStyle swap, not every render — dynamic globals
+      // unmount/sheet/globalStyle swap, not every render; dynamic globals
       // would otherwise rebuild twice per render (issue #5730). Including
       // globalStyle in deps lets HMR-replaced instances trigger re-injection.
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,7 +138,7 @@ export default function createGlobalStyle<Props extends object>(
       }
     }
 
-    // Clean up server instance cache — no useLayoutEffect cleanup runs on the
+    // Clean up server instance cache; no useLayoutEffect cleanup runs on the
     // server, so instanceRules would grow unboundedly across SSR requests.
     if (__SERVER__ || ssc.styleSheet.server) {
       globalStyle.instanceRules.delete(instance);

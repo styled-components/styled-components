@@ -291,7 +291,7 @@ function createFastElement(
 }
 
 /**
- * Fast render path for fully-static CSS — eligibility is frozen at construction
+ * Fast render path for fully-static CSS; eligibility is frozen at construction
  * (see {@link IInlineStyle.fastEligible}) so hook ordering stays stable across
  * renders. Zero hooks: skips `useContext` (no resolvers means CSS never reads
  * theme), `useMediaEnv`, `useContainerContext`, and the render cache. Returns
@@ -321,7 +321,7 @@ type FastRenderCache = [object, DefaultTheme | undefined, number, any, Dict<any>
  * Fast render impl for dynamic-CSS components whose source contains no
  * responsive features. Two hooks (`useContext` + `useRef`) versus the full
  * impl's four, plus a 6-slot prop-equal render cache mirroring the full
- * impl's hot path — on stable-prop renders we skip the compile, style
+ * impl's hot path; on stable-prop renders we skip the compile, style
  * composition, AND the `buildPropsForElement` allocation.
  */
 function useFastImpl<Props extends StyledComponentImplProps>(
@@ -496,12 +496,12 @@ function useImpl<Props extends StyledComponentImplProps>(
     propsForElement.ref = forwardedRef;
   }
 
-  // Container publishing is rare — the vast majority of styled components
+  // Container publishing is rare; the vast majority of styled components
   // never set `$containerName`. Hoisting the publish-side hooks (useState
   // + useRef + 2× useMemo) into a sub-component that only mounts when
   // `containerName` is set keeps the common-case render at 3 hooks
-  // (useContext theme, useMediaEnv, useContainerContext) + 1 useRef cache
-  // — close to v6's three-hook baseline despite the new modern-CSS plumbing.
+  // (useContext theme, useMediaEnv, useContainerContext) + 1 useRef cache,
+  // close to v6's three-hook baseline despite the new modern-CSS plumbing.
   if (containerName) {
     return createElement(ContainerPublisher, {
       name: containerName,
@@ -690,7 +690,7 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
           : useFastImpl
         : useImpl;
 
-    // React 19 ref-as-prop — no forwardRef wrapper.
+    // React 19 ref-as-prop; no forwardRef wrapper.
     const RenderStyledComponent: {
       (props: ExecutionProps & OuterProps & { ref?: React.Ref<any> }): React.JSX.Element;
       displayName?: string;

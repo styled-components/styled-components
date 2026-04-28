@@ -111,7 +111,7 @@ export function preprocessCSS(css: string): string {
       }
       i += 2;
       // When the comment is bordered by whitespace on both sides, collapse the
-      // pair to a single space — matches stylis output so v6→v7 hash is stable
+      // pair to a single space; matches stylis output so v6→v7 hash is stable
       // for templates that interleave selectors with annotative comments
       // (`a /* foo */ b`).
       const prevCh = out.length > 0 ? out.charCodeAt(out.length - 1) : 0;
@@ -268,7 +268,7 @@ function sanitizeBraces(css: string): string {
 /**
  * Declaration-transform hook. Return `undefined` to pass through unchanged.
  * Return `{ prop, value }` to override. The transform runs on every emitted
- * declaration — keep it monomorphic and cheap.
+ * declaration; keep it monomorphic and cheap.
  */
 export type DeclTransform = (
   prop: string,
@@ -289,7 +289,7 @@ export interface SCPlugin {
   /**
    * Required. Contributes to the compiler's hash so identical plugin sets share
    * class-name caches across `StyleSheetManager` instances. Unnamed plugins
-   * throw at runtime — see error #15.
+   * throw at runtime; see error #15.
    */
   name: string;
   rw?: ((selector: string) => string) | undefined;

@@ -20,7 +20,7 @@ export const enum TokenKind {
 
 /**
  * A single token produced by tokenize(). Every kind populates the same
- * 12 properties — fields irrelevant to the kind are `undefined`.
+ * 12 properties; fields irrelevant to the kind are `undefined`.
  *
  * The "always present, possibly undefined" shape (rather than `field?:`
  * optional) is deliberate: it forces every token factory to produce the
@@ -34,7 +34,7 @@ export const enum TokenKind {
  */
 export interface Token {
   kind: TokenKind;
-  /** Exact source substring — useful for pass-through emission. */
+  /** Exact source substring; useful for pass-through emission. */
   raw: string;
   /** Length / Percent / Angle / Time / Number / Op(arithmetic). Numeric value. */
   value: number | undefined;
@@ -64,7 +64,7 @@ export interface Token {
 
 /**
  * All token factories funnel through {@link makeToken} to produce objects
- * with the same property-add order — that's what V8 keys hidden classes
+ * with the same property-add order; that's what V8 keys hidden classes
  * off of. Per-kind factories would produce 8+ distinct hidden classes
  * and turn the hot `.kind` / `.value` / `.unit` reads in shorthand and
  * polyfill handlers megamorphic.

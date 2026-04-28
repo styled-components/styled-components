@@ -18,7 +18,7 @@ const BORDER_COLOR_KEYS = [
 const VALID_BORDER_STYLES = new Set(['solid', 'dotted', 'dashed', 'none']);
 
 /**
- * `border: <width> || <style> || <color>` — order-agnostic composite.
+ * `border: <width> || <style> || <color>`; order-agnostic composite.
  * v7 fix vs. CSSTN: `border: none` now emits `borderStyle: 'none'`
  * (not `'solid'`), matching web.
  */
@@ -80,7 +80,7 @@ export function borderColorShorthand(tokens: Token[]) {
 }
 
 /**
- * `border-style: <style>` — RN only accepts a single style, not per-side.
+ * `border-style: <style>`; RN only accepts a single style, not per-side.
  * When multiple styles are supplied, we dev-warn and use the first.
  */
 export function borderStyleShorthand(tokens: Token[]): Dict<any> | null {

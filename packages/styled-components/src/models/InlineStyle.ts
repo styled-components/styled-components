@@ -60,7 +60,7 @@ export default function makeInlineStyleClass<Props extends object>(styleSheet: S
     private staticCSS: string | null;
     /** Memoised compile output (used for both static and dynamic paths). */
     private cachedCompiled: CompiledNativeStyles | null = null;
-    /** Last produced dynamic CSS — short-circuit when the next call matches. */
+    /** Last produced dynamic CSS; short-circuit when the next call matches. */
     private cachedCSS: string | null = null;
     /** Last string outputs from function interpolations on the fast dynamic path. */
     private cachedDynamicOutputs: string[] | null = null;
@@ -84,7 +84,7 @@ export default function makeInlineStyleClass<Props extends object>(styleSheet: S
       } else if (!sourceContainsResponsiveFeatures(rules)) {
         // Source has function interpolations but no responsive markers (no `@media`/pseudo
         // states/viewport units/etc). By contract, function interpolations produce simple
-        // decls only — so the compile output will have empty conditional/resolvers/
+        // decls only; so the compile output will have empty conditional/resolvers/
         // startingStyle, and the fast path is sound. Verified on first compile in dev.
         this.fastEligible = true;
       }
@@ -126,7 +126,7 @@ export default function makeInlineStyleClass<Props extends object>(styleSheet: S
 /**
  * Recursively check whether every rule is a plain string (or a nested
  * array of plain strings, which is the shape css`` produces). Anything
- * else — function, keyframes, styled component, plain object — keeps us
+ * else (function, keyframes, styled component, plain object) keeps us
  * on the dynamic path because it requires an execution context to flatten.
  *
  * The recursion bound is the depth of css`` nesting, which is shallow
@@ -151,7 +151,7 @@ const RESPONSIVE_RE =
 /**
  * Walk the rule literals and report whether any string segment contains a
  * marker that disqualifies the component from the fast render path. Function
- * interpolations are skipped — by contract they produce simple decls, not
+ * interpolations are skipped; by contract they produce simple decls, not
  * @rules / pseudo states / responsive values. Violations of that contract
  * are surfaced via a dev-mode warning on first compile (see
  * `verifyFastContract`).

@@ -4,7 +4,7 @@ import type { SCPlugin } from '../utils/cssCompile';
  * Direct prop-name swaps (1:1 mapping). Physical `left`/`right` sides swap
  * positions so LTR-authored CSS renders correctly in RTL locales. Logical
  * properties (`margin-inline-start`, `padding-block-end`) are intentionally
- * NOT swapped — they already flip with writing direction.
+ * NOT swapped; they already flip with writing direction.
  */
 const PROP_SWAP: Record<string, string> = {
   left: 'right',
@@ -74,7 +74,7 @@ function tokenizeShorthand(value: string): string[] {
 
 /**
  * Swap positions 1 and 3 (right and left) of a 4-value shorthand.
- * Leaves 1/2/3-value forms untouched — they're directionally symmetric.
+ * Leaves 1/2/3-value forms untouched; they're directionally symmetric.
  */
 function swapFourValue(value: string): string {
   const tokens = tokenizeShorthand(value);
@@ -89,7 +89,7 @@ function swapFourValue(value: string): string {
  * (`padding-left` → `padding-right`), direction keyword values (`float: left`
  * → `float: right`), and 4-value shorthand position swap (`margin: 1 2 3 4`
  * → `margin: 1 4 3 2`). Logical properties (`margin-inline-start` etc) are
- * passed through — they already flip with writing direction.
+ * passed through; they already flip with writing direction.
  *
  * Transforms the author's LTR-authored CSS at emit time. For per-component
  * opt-in, scope a `<StyleSheetManager plugins={[rtlPlugin]}>` around the

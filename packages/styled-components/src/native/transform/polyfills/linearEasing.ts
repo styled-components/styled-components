@@ -2,7 +2,7 @@ import { Token, TokenKind } from '../tokens';
 import { tokenizeFunctionArgs } from '../tokenize';
 
 /**
- * `linear()` easing — CSS animation timing function expressed as a
+ * `linear()` easing; CSS animation timing function expressed as a
  * piecewise-linear curve. Captured here so the v7.1 animation adapter
  * can consume the resolved control points without re-parsing the CSS
  * value at render time.
@@ -13,7 +13,7 @@ import { tokenizeFunctionArgs } from '../tokenize';
  *   <number> <percent> <percent>
  *
  * Multiple percents on a single value mean the same output value at
- * different progress times — flat steps in the interpolation.
+ * different progress times; flat steps in the interpolation.
  *
  * Stops without explicit input times are linearly distributed across
  * 0..1, with the first stop pinned to 0 and the last to 1 per the

@@ -23,7 +23,7 @@ import {
  * Fast-path parse+emit for flat CSS (declarations only, no nesting, no @-rules).
  *
  * Walks the input once, writing directly to the output string. Skips AST
- * construction entirely — no intermediate prop/value substrings per decl.
+ * construction entirely; no intermediate prop/value substrings per decl.
  *
  * Returns `null` if the input contains `{` or `@` (nested rules or at-rules),
  * signalling the caller to fall back to the full parser+emitter.
@@ -47,14 +47,14 @@ export function parseEmitFlat(css: string, selector: string): string[] | null {
     }
     if (i >= len) break;
 
-    // Bail immediately if we see a brace or at-rule — not flat CSS.
+    // Bail immediately if we see a brace or at-rule; not flat CSS.
     const firstChar = css.charCodeAt(i);
     if (firstChar === OPEN_BRACE || firstChar === AT || firstChar === CLOSE_BRACE) {
       return null;
     }
 
     // Scan for `:` (colon) then `;` or EOF. Track paren/quote depth.
-    // If we encounter `{` mid-scan, bail — this is a selector, not a decl.
+    // If we encounter `{` mid-scan, bail; this is a selector, not a decl.
     const propStart = i;
     let colon = -1;
     let paren = 0;
@@ -80,10 +80,10 @@ export function parseEmitFlat(css: string, selector: string): string[] | null {
           i++;
           break;
         } else if (c === OPEN_BRACE) {
-          // Nested rule — bail to full parser.
+          // Nested rule; bail to full parser.
           return null;
         } else if (c === SEMICOLON || c === CLOSE_BRACE) {
-          // Malformed or unexpected terminator — skip this run.
+          // Malformed or unexpected terminator; skip this run.
           i++;
           colon = -2;
           break;
@@ -104,7 +104,7 @@ export function parseEmitFlat(css: string, selector: string): string[] | null {
     }
 
     // Scan value, tracking whether it contains a comma (for normalization).
-    // If `{` appears at paren depth 0, bail — prop:value{...} is a block
+    // If `{` appears at paren depth 0, bail; prop:value{...} is a block
     // like `@font-face { ... }` inside a selector, which needs the AST.
     const valueStart = i;
     let hasComma = false;
@@ -149,7 +149,7 @@ export function parseEmitFlat(css: string, selector: string): string[] | null {
     }
 
     // Custom Properties L1: `--x: ` with only whitespace is a valid
-    // guaranteed-invalid value — must emit `--x:;` (see #4374, emit-web parity).
+    // guaranteed-invalid value; must emit `--x:;` (see #4374, emit-web parity).
     const isCustomProp =
       propEnd - propStart >= 2 &&
       css.charCodeAt(propStart) === HYPHEN &&
@@ -157,7 +157,7 @@ export function parseEmitFlat(css: string, selector: string): string[] | null {
 
     if (propEnd > propStart && (ve > vs || isCustomProp)) {
       if (hasContent) output += ';';
-      // Direct substring writes — no intermediate string
+      // Direct substring writes; no intermediate string
       output += css.substring(propStart, propEnd);
       output += ':';
       if (ve > vs) {

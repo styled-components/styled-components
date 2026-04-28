@@ -8,7 +8,7 @@ export const mainSheet: StyleSheet = new StyleSheet();
 export const mainStylis: Stringifier = createStylisInstance();
 
 /**
- * RSC context slot — module-level mutable state scoped per render via React.cache.
+ * RSC context slot; module-level mutable state scoped per render via React.cache.
  * In RSC, createContext doesn't exist, so StyleSheetManager writes here and
  * useStyleSheetContext reads from here. Single-threaded RSC renders guarantee
  * no concurrent mutation. React.cache ensures reset between renders.
@@ -19,7 +19,7 @@ let rscCachedStylis: Stringifier = mainStylis;
 
 /** Dev-only warning for legacy plugins other than the first-party ones. Fired once per plugin name.
  *
- * Unnamed plugins are not handled here — they throw error #15 from
+ * Unnamed plugins are not handled here; they throw error #15 from
  * `createStylisInstance` when the hash is computed, so this loop never sees
  * them. The first-party allow-list and warning text live entirely inside the
  * function body so terser eliminates them in production along with the rest of
@@ -48,7 +48,7 @@ function warnIfVendorPrefixesRequested(value: boolean | undefined): void {
   warnedVendorPrefixes = true;
   console.warn(
     `[styled-components] \`enableVendorPrefixes\` is not supported in v7. ` +
-      `styled-components no longer bundles a vendor prefixer — modern browsers ` +
+      `styled-components no longer bundles a vendor prefixer; modern browsers ` +
       `handle supported CSS natively. For Safari-only properties that still need ` +
       `prefixes (e.g. \`-webkit-backdrop-filter\`), write both the prefixed and ` +
       `unprefixed declaration manually, or use a build-time PostCSS transform.`
@@ -69,7 +69,7 @@ export type IStyleSheetContext = {
   shouldForwardProp?: ShouldForwardProp<'web'> | undefined;
   styleSheet: StyleSheet;
   stylis: Stringifier;
-  /** Preserved for inheritance — inner SSMs that set namespace/vendorPrefixes
+  /** Preserved for inheritance; inner SSMs that set namespace/vendorPrefixes
    *  but not plugins can still inherit the parent's plugins. */
   plugins?: SCPlugin[] | undefined;
 };
@@ -100,7 +100,7 @@ export function useStyleSheetContext() {
 
   // Reset mainSheet once per render to prevent HMR accumulation.
   // React.cache ensures this runs exactly once per render, so calling
-  // it here AND in StyleSheetManager is safe — whichever runs first wins.
+  // it here AND in StyleSheetManager is safe; whichever runs first wins.
   if (ensureSheetReset) ensureSheetReset();
 
   return rscContextOverride || defaultContextValue;
@@ -201,7 +201,7 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
           plugins: props.plugins,
         });
       } else if (props.namespace !== undefined) {
-        // Namespace changed without new plugins — create fresh instance
+        // Namespace changed without new plugins; create fresh instance
         // using inherited plugins from parent.
         rscCachedStylis = createStylisInstance({
           options: { namespace: props.namespace },

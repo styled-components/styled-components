@@ -50,7 +50,7 @@ function resolveVars<T extends Record<string, any>>(
 
 /**
  * Emit CSS var declarations by walking `shape` for structure and reading
- * values from `theme`. This avoids hardcoded skip lists — only keys
+ * values from `theme`. This avoids hardcoded skip lists; only keys
  * present in the original theme shape are traversed.
  */
 function emitVarDeclarations(
@@ -104,7 +104,7 @@ interface CreateThemeOptions {
  *
  * Returns an object with the same shape as the input theme, but every leaf value
  * is a `var(--prefix-*, fallback)` CSS string. Use these in styled component
- * templates — they work in both client and RSC contexts.
+ * templates; they work in both client and RSC contexts.
  *
  * Mount the returned `GlobalStyle` component inside your `ThemeProvider` to emit
  * the CSS variables. When the theme changes (e.g. light → dark), the variables

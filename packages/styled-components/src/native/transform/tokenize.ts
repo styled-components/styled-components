@@ -90,13 +90,13 @@ function isWhitespace(c: number): boolean {
 
 /**
  * Tokenize a CSS declaration value into a flat stream. Whitespace is
- * consumed but not emitted — component separators are comma / slash /
+ * consumed but not emitted; component separators are comma / slash /
  * juxtaposition. Callers that need space-boundary info should read
  * raw positions off the returned tokens.
  *
  * Function calls are captured as a single {@link TokenKind.Function}
  * token with `args` carrying the raw interior substring. Nested
- * tokenization is lazy — {@link tokenizeFunctionArgs} populates
+ * tokenization is lazy; {@link tokenizeFunctionArgs} populates
  * `argTokens` on demand.
  */
 export function tokenize(value: string): Token[] {
@@ -128,7 +128,7 @@ export function tokenize(value: string): Token[] {
         i = end;
         continue;
       }
-      // Malformed — skip the $.NUL byte and continue
+      // Malformed; skip the $.NUL byte and continue
       i++;
       continue;
     }
@@ -140,7 +140,7 @@ export function tokenize(value: string): Token[] {
       continue;
     }
 
-    // Slash (context-dependent — rgb(r g b / a) uses it, calc uses / as op.
+    // Slash (context-dependent; rgb(r g b / a) uses it, calc uses / as op.
     // We emit as Slash; calc consumers remap to Op.)
     if (c === $.SLASH) {
       tokens.push(SLASH_TOKEN);
@@ -174,7 +174,7 @@ export function tokenize(value: string): Token[] {
         i = j;
         continue;
       }
-      // Not a valid hex — treat as ident start if followed by ident chars
+      // Not a valid hex; treat as ident start if followed by ident chars
       // (e.g. `#custom-ident` in some grammars). Fallthrough to ident handling.
     }
 
@@ -188,7 +188,7 @@ export function tokenize(value: string): Token[] {
         i = end + 1;
         continue;
       }
-      // Unterminated string — consume the rest as a single raw token
+      // Unterminated string; consume the rest as a single raw token
       tokens.push(stringToken(value.substring(i), value.substring(i + 1), c));
       i = len;
       continue;
@@ -214,7 +214,7 @@ export function tokenize(value: string): Token[] {
       }
     }
 
-    // Bare minus — op in calc / separator
+    // Bare minus; op in calc / separator
     if (c === $.HYPHEN) {
       tokens.push(opToken('-'));
       i++;
@@ -234,14 +234,14 @@ export function tokenize(value: string): Token[] {
           i = argsEnd + 1;
           continue;
         }
-        // Unmatched paren — treat as ident including the '(' and rest
+        // Unmatched paren; treat as ident including the '(' and rest
       }
       tokens.push(identToken(value.substring(i, identEnd)));
       i = identEnd;
       continue;
     }
 
-    // Unknown character — skip to avoid infinite loops. In a well-formed
+    // Unknown character; skip to avoid infinite loops. In a well-formed
     // CSS value this shouldn't happen; the preprocessor has already
     // scrubbed comments and validated braces.
     i++;
@@ -364,7 +364,7 @@ function classifyUnit(raw: string, value: number, unit: string): Token {
 
 function findSentinelEnd(value: string, start: number): number {
   // Sentinels terminate at whitespace, comma, slash, or end of string.
-  // Format: \0<prefix>:<dot.path>:<fallback> — fallback may contain any
+  // Format: \0<prefix>:<dot.path>:<fallback>; fallback may contain any
   // printable char except whitespace/comma/slash.
   let i = start + 1;
   const len = value.length;

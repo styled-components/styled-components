@@ -23,7 +23,7 @@ export default class Keyframes implements KeyframesType {
     // Eagerly register the group so keyframes defined before components
     // get a lower group ID and appear before them in the stylesheet.
     // Uses getGroupForId directly (not StyleSheet.registerId) because
-    // GroupIDAllocator is pure JS — safe for native builds.
+    // GroupIDAllocator is pure JS; safe for native builds.
     getGroupForId(this.id);
 
     setToString(this, () => {

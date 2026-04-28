@@ -3,7 +3,7 @@ import type { ThemeContract } from './createTheme.types';
 
 interface CreateThemeOptions {
   prefix?: string;
-  /** Ignored on native — only web uses selector scoping. */
+  /** Ignored on native; only web uses selector scoping. */
   selector?: string;
 }
 

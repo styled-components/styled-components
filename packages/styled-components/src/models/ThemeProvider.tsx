@@ -51,7 +51,7 @@ export const ThemeContext = !IS_RSC
 export const ThemeConsumer = ThemeContext.Consumer;
 
 /**
- * Recursive deep merge — used on native to compose nested `<ThemeProvider>`
+ * Recursive deep merge; used on native to compose nested `<ThemeProvider>`
  * overrides with the default theme. On web the CSS `var()` cascade handles
  * per-variable inheritance naturally, so a shallow spread suffices. On
  * native there's no cascade: the full resolved theme object must carry

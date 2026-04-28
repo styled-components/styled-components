@@ -23,7 +23,7 @@ const FONT_VARIANTS = new Set(['small-caps']);
 
 /**
  * `font: [<style>] [<weight>] [<variant>] <size>[/<line-height>] <family>`
- * Slash handled inline — pre-stripping loses line-height association.
+ * Slash handled inline; pre-stripping loses line-height association.
  */
 export function fontShorthand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(tokens);
@@ -144,7 +144,7 @@ function tokenLength(t: Token): number | string {
 
 function readFontFamily(stream: TokenStream): string | null {
   // Read the first family name. CSS allows multiple fallback families
-  // separated by commas; RN's `fontFamily` is a single string — we
+  // separated by commas; RN's `fontFamily` is a single string; we
   // return the first family and document the limitation. Use `raw` not
   // `name` so the family's original casing is preserved (RN is
   // case-sensitive when matching platform fonts).

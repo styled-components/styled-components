@@ -45,7 +45,7 @@ export interface ParseOptions {
  *
  * Assumes the input has already passed through `preprocessCSS` from
  * src/utils/cssCompile.ts, which normalizes braces, strips line comments,
- * and handles unbalanced strings. This parser is STRICT — it assumes
+ * and handles unbalanced strings. This parser is STRICT; it assumes
  * well-formed input.
  */
 export function parse(css: string, options?: ParseOptions): Root {
@@ -186,7 +186,7 @@ function pushDecl(ctx: ParseContext, out: Node[], start: number, colon: number, 
   if (!prop) return;
   const value = normalizeValue(ctx, colon + 1, end);
   // Empty value is invalid for regular properties (drop), but valid for
-  // custom properties — `--my-prop: ;` is a legitimate CSS declaration
+  // custom properties; `--my-prop: ;` is a legitimate CSS declaration
   // (CSS Custom Properties L1) used by scroll-driven animations and other
   // techniques that rely on the empty value as a "guaranteed-invalid" sentinel.
   if (!value && !isCustomProperty(prop)) return;
@@ -226,7 +226,7 @@ function normalizeValue(ctx: ParseContext, start: number, end: number): string {
 
 /**
  * Strip whitespace after top-level commas (outside parens/brackets/strings).
- * Substring-based writes — avoids per-character concatenation cost.
+ * Substring-based writes; avoids per-character concatenation cost.
  * Exported for the emitter's at-rule prelude handling.
  */
 export function stripCommaSpaces(s: string): string {
@@ -532,8 +532,8 @@ function parseFrameDecls(ctx: ParseContext): DeclNode[] {
  * and any other paren/bracket-bounded context. Used in two modes:
  *
  *   - parser-side (`trim=true`): each part is trimmed and empty parts are
- *     dropped — matches the contract for selectors and keyframe stops.
- *   - emit-side (`trim=false`): substrings preserved verbatim — matches
+ *     dropped; matches the contract for selectors and keyframe stops.
+ *   - emit-side (`trim=false`): substrings preserved verbatim; matches
  *     the contract for selector cross-product and the `rscPlugin` selector
  *     rewriter where downstream callers expect raw segments.
  */

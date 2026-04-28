@@ -265,7 +265,7 @@ export interface IStyledComponentBase<
  * Intersected with `string` so styled components can be used as computed
  * property keys in object styles: `{ [MyComponent]: { ... } }`.
  * The conditional `R extends 'web' ? string : {}` was removed to avoid
- * a type alias with a conditional — type aliases require full structural
+ * a type alias with a conditional; type aliases require full structural
  * comparison on every use, while this unconditional intersection is cheaper.
  */
 export type IStyledComponent<
@@ -386,7 +386,7 @@ export type Substitute<A extends BaseObject, B extends BaseObject> = keyof B ext
  * spliced in from a separate mapped type with `?` applied. Avoids the
  * `FastOmit<P, K> & Partial<Pick<P, K>>` form which builds an
  * intermediate `Pick` type that can blow up TS's complexity budget on
- * deeply-discriminated component prop unions (e.g. antd Button — see
+ * deeply-discriminated component prop unions (e.g. antd Button; see
  * #5725).
  */
 export type MakeAttrsOptional<P extends BaseObject, K extends keyof any> = [K] extends [never]

@@ -5,7 +5,7 @@ import { getIdForGroup } from '../sheet/GroupIDAllocator';
 /**
  * Read the current CSS from a stylesheet as a plain string.
  *
- * Useful when something downstream needs the CSS as text — extraction tooling,
+ * Useful when something downstream needs the CSS as text; extraction tooling,
  * static-render pipelines, micro-frontend cloning, or transferring styles into
  * a Shadow DOM / iframe context. Without this, runtime-injected rules live in
  * CSSOM and aren't visible in `<style>` text content.

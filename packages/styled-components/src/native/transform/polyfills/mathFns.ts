@@ -8,12 +8,12 @@ import { tokenizeFunctionArgs } from '../tokenize';
  * Resolves to a {@link NumericResult} that the decl-transform layer
  * emits as a bare number (for unitless props) or `"Npx"` string.
  * Returns `null` if any sub-expression contains viewport / container
- * units / var() / un-evaluable tokens — the caller then emits a
+ * units / var() / un-evaluable tokens; the caller then emits a
  * runtime resolver or passes through the original source.
  */
 export interface NumericResult {
   value: number;
-  /** Canonical unit — `'px'` / `'%'` / `''` for bare number. */
+  /** Canonical unit; `'px'` / `'%'` / `''` for bare number. */
   unit: string;
 }
 
@@ -150,7 +150,7 @@ function toNumeric(t: Token | NumericResult | undefined): NumericResult | null {
   if (t.kind === TokenKind.Length) {
     if (t.unit === 'px' || t.unit === '') return { value: t.value!, unit: t.unit || '' };
     if (t.value === 0) return { value: 0, unit: '' };
-    return null; // em/rem/vh/etc. — dynamic, caller defers
+    return null; // em/rem/vh/etc.; dynamic, caller defers
   }
   if (t.kind === TokenKind.Percent) return { value: t.value!, unit: '%' };
   return null;

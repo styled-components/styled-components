@@ -27,7 +27,7 @@ const EMPTY_RULES: string[] = [];
  */
 const MAX_DYNAMIC_NAME_CACHE = TOO_MANY_CLASSES_LIMIT;
 
-/** Per-level output of `generate()` — one entry per link in the inheritance chain. */
+/** Per-level output of `generate()`; one entry per link in the inheritance chain. */
 type GeneratedLevel = {
   componentId: string;
   name: string;

@@ -7,9 +7,9 @@ import { isEscaped } from './cssCompile';
  * RSC-specific CSS selector rewrites. Inline `<style data-styled>` tags
  * appear as real DOM children in RSC output, which breaks:
  *
- * 1. Child-index pseudo-selectors (:first-child, :nth-child(...)) — rewritten
+ * 1. Child-index pseudo-selectors (:first-child, :nth-child(...)); rewritten
  *    using CSS Selectors Level 4 `of S` syntax to exclude style tags.
- * 2. Adjacent-sibling combinators (+) — expanded with fallback alternates
+ * 2. Adjacent-sibling combinators (+); expanded with fallback alternates
  *    matching when 1–2 interleaved style tags sit between siblings.
  *
  * Used as `postProcessSelector` in emit-web when the StyleSheetManager

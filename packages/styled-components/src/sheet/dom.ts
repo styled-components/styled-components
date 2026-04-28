@@ -40,7 +40,7 @@ export const getSheet = (tag: HTMLStyleElement): CSSStyleSheet => {
   }
 
   // Avoid Firefox quirk where the style element might not have a sheet property.
-  // Use the tag's root node to find styleSheets — document.styleSheets doesn't
+  // Use the tag's root node to find styleSheets; document.styleSheets doesn't
   // include sheets inside shadow roots.
   const root = tag.getRootNode() as Document | ShadowRoot;
   const styleSheets = root.styleSheets ?? document.styleSheets;

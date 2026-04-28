@@ -2,7 +2,7 @@ import { warnOnce } from './dev';
 
 /**
  * Bidirectional control characters. These can be used to spoof visual
- * ordering of text and hide the true content of a string — most famously
+ * ordering of text and hide the true content of a string; most famously
  * exploited against source code (Trojan Source, CVE-2021-42574) but
  * equally applicable to CSS values where a `url()` could be visually
  * reordered to disguise the real target. We strip them unconditionally.
@@ -21,13 +21,13 @@ function isBidiControl(c: number): boolean {
  * Control characters we reject outright. CSS allows TAB/LF/FF/CR/SPACE
  * and the char-range inside strings/url() per the spec's hex-escape
  * grammar, but a raw control byte inside a declaration value is never
- * legitimate — in practice it's either editor corruption or an
+ * legitimate; in practice it's either editor corruption or an
  * injection attempt. Whitespace-class control chars are tolerated by
  * the tokenizer upstream; everything else in U+0000..U+001F and U+007F
  * is suspect.
  */
 function isDisallowedControl(c: number): boolean {
-  if (c === 0 /* NUL — used as sentinel prefix; preserved and validated separately */) return false;
+  if (c === 0 /* NUL; used as sentinel prefix; preserved and validated separately */) return false;
   if (c === 9 || c === 10 || c === 12 || c === 13 || c === 11) return false; // TAB / LF / FF / CR / VT
   if (c < 0x20) return true; // C0 controls minus whitespace
   if (c === 0x7f) return true; // DEL
@@ -81,7 +81,7 @@ export function sanitizeValue(value: string): string {
   for (let i = 0; i < value.length; i++) {
     const c = value.charCodeAt(i);
     if (c === 0) {
-      out += value[i]; // NUL kept — sentinel prefix
+      out += value[i]; // NUL kept; sentinel prefix
       continue;
     }
     if (isDisallowedControl(c) || (c >= 0x80 && isBidiControl(c))) continue;

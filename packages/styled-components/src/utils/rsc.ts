@@ -4,7 +4,7 @@ import { rewriteSelectorForRSC } from './rscSelectorRewrite';
  * Opt-in marker for StyleSheetManager that enables RSC-safe selector
  * rewriting. Pass via `<StyleSheetManager plugins={[rscPlugin]}>`.
  *
- * As of v7, styled-components no longer runs stylis at runtime — the in-house
+ * As of v7, styled-components no longer runs stylis at runtime; the in-house
  * parser handles all CSS emission. This export attaches the rewrite function
  * to the plugin object itself so bundlers tree-shake the rewrite logic out
  * of builds that don't import the plugin.

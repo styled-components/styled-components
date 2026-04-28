@@ -46,7 +46,7 @@ export interface MediaQueryEnv {
 
 type Dimension = 'width' | 'height';
 
-/** Inclusive when `inclusive` is true — matches `<=` vs `<` (and `>=` vs `>`). */
+/** Inclusive when `inclusive` is true; matches `<=` vs `<` (and `>=` vs `>`). */
 type RangeBound = { value: number; inclusive: boolean } | null;
 
 type Feature =
@@ -104,15 +104,15 @@ function parseFeature(raw: string): Feature | null {
   }
   if (!s) return null;
 
-  // Media Queries Level 4 range syntax — `(width >= 400px)`, `(400px < width < 800px)`.
+  // Media Queries Level 4 range syntax; `(width >= 400px)`, `(400px < width < 800px)`.
   // If the expression contains an operator but doesn't parse as a valid range,
-  // it's malformed — return null outright instead of falling through to the
+  // it's malformed; return null outright instead of falling through to the
   // colon branch (which would treat it as the always-true `any` feature).
   if (s.indexOf('<') !== -1 || s.indexOf('>') !== -1) {
     return parseRange(s);
   }
 
-  // Boolean features without value, e.g. `all` — treat as always-true.
+  // Boolean features without value, e.g. `all`; treat as always-true.
   const colon = s.indexOf(':');
   if (colon === -1) return { kind: 'any' };
 
@@ -226,7 +226,7 @@ function findDimension(tokens: string[]): Dimension | null {
 
 function parseLength(v: string): number {
   // Accepts `400px`, `400`, `25em` (1em assumed 16px). Unknown units return NaN
-  // which will evaluate to false in comparisons — a safe silent fallback.
+  // which will evaluate to false in comparisons; a safe silent fallback.
   const num = parseFloat(v);
   if (v.endsWith('em') || v.endsWith('rem')) return num * 16;
   return num;
@@ -462,7 +462,7 @@ function getMediaSnapshot(): MediaQueryEnv {
 }
 
 /**
- * React hook — returns the current `MediaQueryEnv`. Single shared
+ * React hook; returns the current `MediaQueryEnv`. Single shared
  * subscription across all consumers; the hook itself reduces to one
  * `useSyncExternalStore` call. Re-renders fire only when one of the
  * snapshot fields actually changed.
@@ -541,7 +541,7 @@ export function useContainer(name?: string): ContainerEntry | null {
 
 /**
  * Evaluate a container query against an ancestor container. Returns false
- * when no matching container is registered (silently — matches CSS behavior
+ * when no matching container is registered (silently; matches CSS behavior
  * of zero-match when no container exists).
  */
 export function useContainerQuery(query: string, name?: string): boolean {
@@ -559,7 +559,7 @@ export function useContainerQuery(query: string, name?: string): boolean {
 }
 
 /**
- * Exported for tests — resets the parsed-query cache and the media-env
+ * Exported for tests; resets the parsed-query cache and the media-env
  * store so cross-test contamination cannot occur. Detaches the global
  * Dimensions / Appearance / AccessibilityInfo listeners so the next
  * subscriber re-registers them and any test-installed spy can capture

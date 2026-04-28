@@ -345,7 +345,7 @@ function useImpl<Props extends BaseObject>(
   const element = createElement(elementToBeCreated, propsForElement);
 
   // RSC mode: emit this component's CSS (and its inheritance chain + keyframes)
-  // as an inline <style> tag. No `precedence` — server component output isn't
+  // as an inline <style> tag. No `precedence`; server component output isn't
   // hydrated, so no mismatch. Inline body styles come after the registry's
   // <head> styles in source order, so extensions naturally win (#5672).
   if (IS_RSC && generatedStyle) {

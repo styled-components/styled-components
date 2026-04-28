@@ -1,6 +1,6 @@
 /**
  * Rollup injects `__VERSION__` / `__SERVER__` / `__NATIVE__` in packaged builds.
- * Bun run directly on `.ts` sources has no such pass — this side-effect import
+ * Bun run directly on `.ts` sources has no such pass; this side-effect import
  * must be the first import in harness entry files so `constants.ts` and
  * consumers see the globals.
  */

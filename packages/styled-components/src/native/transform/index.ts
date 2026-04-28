@@ -12,10 +12,10 @@ import { coerceRawValue } from './units';
 /**
  * Camelize a CSS property name. Custom properties (`--var-name`) pass
  * through unchanged. Vendor prefixes (`-webkit-*`, `-ms-*`) are stripped
- * entirely — they never apply to RN, and the remaining name is
+ * entirely; they never apply to RN, and the remaining name is
  * camelized.
  *
- * Hot-path — cached per-process. Uses a prototypeless object instead of
+ * Hot-path; cached per-process. Uses a prototypeless object instead of
  * Map; for short string keys with high hit rate (prop names recur across
  * every styled component), V8 inline-caches dictionary access faster than
  * Map.get's getter-call. The `null` sentinel distinguishes "no entry" from
@@ -52,7 +52,7 @@ function camelize(prop: string): string {
   return out;
 }
 
-// Side-effect import — populates the shorthand registry. Kept separate
+// Side-effect import; populates the shorthand registry. Kept separate
 // so the registry module and the shorthand modules can tree-shake
 // independently (polyfills reuse getShorthand without dragging in the
 // full shorthand set).
@@ -80,7 +80,7 @@ export function transformDecl(prop: string, rawValue: string): Dict<any> {
   }
 
   // Sentinel-bearing values (single createTheme token like `\0sc:…`)
-  // bypass shorthand expansion — they're atomic placeholders that the
+  // bypass shorthand expansion; they're atomic placeholders that the
   // render-time resolver replaces with the concrete theme value.
   if (rawValue.length > 0 && rawValue.charCodeAt(0) === 0) {
     return { [camel]: rawValue };
@@ -139,7 +139,7 @@ function mightBeMathFn(v: string): boolean {
 }
 
 function mightBeModernColor(v: string): boolean {
-  // Cheap prefix check — `oklch(`, `oklab(`, `lch(`, `lab(`, `color-mix(`.
+  // Cheap prefix check; `oklch(`, `oklab(`, `lch(`, `lab(`, `color-mix(`.
   // RN already handles hex / rgb / hsl / hwb; no polyfill needed for those.
   // Branch on first char so we only test the matching family.
   if (v.length < 5) return false;

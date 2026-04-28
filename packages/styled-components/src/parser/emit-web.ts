@@ -125,7 +125,7 @@ export interface EmitOptions {
    * Final-stage selector transform. Used by RSC's child-selector rewrite so
    * `:first-child` / `:nth-child()` exclude `<style data-styled>` tags. Runs
    * after namespace + self-reference resolution. Short name keeps bundle size
-   * down — object keys aren't mangled by minifiers.
+   * down; object keys aren't mangled by minifiers.
    */
   rw?: ((selector: string) => string) | undefined;
   /**
@@ -230,7 +230,7 @@ function emitAtRule(
   }
 
   if (DECL_BODY_AT_RULES.has(node.name)) {
-    // Body is bare declarations — emit inline, no selector wrap.
+    // Body is bare declarations; emit inline, no selector wrap.
     const declTransform = options && options.decl;
     const decls: string[] = [];
     for (let i = 0; i < node.children.length; i++) {
@@ -243,7 +243,7 @@ function emitAtRule(
     return header + '{' + decls.join(';') + ';}';
   }
 
-  // Body contains rules and/or declarations — inherit the parent selector.
+  // Body contains rules and/or declarations; inherit the parent selector.
   const childStrings = emitNodes(node.children, currentSelector, options);
   if (childStrings.length === 0) return '';
   return header + '{' + childStrings.join('') + '}';
@@ -253,7 +253,7 @@ function emitKeyframes(node: KeyframesNode, options: EmitOptions | undefined): s
   const frames: string[] = [];
   for (let i = 0; i < node.frames.length; i++) {
     const frame = node.frames[i];
-    // Empty frames (`from { }`) drop — matches stylis output for v6→v7 hash stability.
+    // Empty frames (`from { }`) drop; matches stylis output for v6→v7 hash stability.
     if (frame.children.length === 0) continue;
     frames.push(emitFrame(frame, options));
   }

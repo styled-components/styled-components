@@ -173,7 +173,7 @@ function labToRgb(L: number, a: number, b: number, alpha: number): RGB {
 // ─── sRGB ↔ Oklab + sRGB ↔ Lab round-trips ──────────────────────────
 //
 // Mixing `in oklab` / `in oklch` / `in lab` / `in lch` MUST do the
-// math in those spaces — not in linear-light sRGB. The user-facing
+// math in those spaces; not in linear-light sRGB. The user-facing
 // guarantee is perceptual interpolation; substituting linear-RGB
 // produces visibly different (worse) results.
 
@@ -237,7 +237,7 @@ const SUPPORTED_MIX_SPACES = new Set(['srgb', 'oklab', 'oklch', 'lab', 'lch']);
  * We only include the ~16 primary CSS names most likely to appear as
  * literal operands; anything else passes through as null (caller
  * defers). RN's own `@react-native/normalize-colors` has the full
- * list but it's a runtime facility — we need static strings here.
+ * list but it's a runtime facility; we need static strings here.
  */
 const NAMED_TO_HEX: Record<string, string> = {
   black: '000000',
@@ -454,7 +454,7 @@ function readChannels(
         vals.push((t.value! / 100) * scale);
       }
     } else {
-      // Ident (e.g. `none`, `from`) — we don't support dynamic forms
+      // Ident (e.g. `none`, `from`); we don't support dynamic forms
       return null;
     }
   }

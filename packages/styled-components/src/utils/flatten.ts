@@ -46,7 +46,7 @@ function warnClientReference(ref: ClientReference): void {
   );
 }
 
-/** Internal accumulator form — avoids allocating a temp array per nesting level. */
+/** Internal accumulator form; avoids allocating a temp array per nesting level. */
 function objToCssArrayInto(obj: Dict<any>, rules: any[]): void {
   for (const key in obj) {
     const val = obj[key];
@@ -135,7 +135,7 @@ export default function flatten<Props extends object>(
     return result;
   }
 
-  // Module-level client reference proxies (typeof 'object') pass isPlainObject — catch before
+  // Module-level client reference proxies (typeof 'object') pass isPlainObject; catch before
   if (isClientReference(chunk)) {
     if (process.env.NODE_ENV !== 'production') warnClientReference(chunk);
     return result;

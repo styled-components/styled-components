@@ -40,7 +40,7 @@ export default class GlobalStyle<Props extends object> {
 
     if (this.isStatic) {
       // Static globals share identical CSS across mounts, so the registered name
-      // is `componentId` alone — dedups multi-mount and decouples rehydration
+      // is `componentId` alone; dedups multi-mount and decouples rehydration
       // from React's useId format.
       if (!styleSheet.hasNameForId(id, id)) {
         const entry = this.computeRules(instance, executionContext, styleSheet, stylis);
@@ -115,7 +115,7 @@ export default class GlobalStyle<Props extends object> {
 
   /**
    * Clear all CSS rules in the shared group and re-insert from surviving instances.
-   * Must run synchronously — no yielding between clear and re-insert.
+   * Must run synchronously; no yielding between clear and re-insert.
    * Static globals: all instances share identical CSS, emit once.
    */
   private rebuildGroup(styleSheet: StyleSheet): void {

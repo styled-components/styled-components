@@ -1,6 +1,6 @@
 /**
  * Shared helpers for the web (`createTheme.ts`) and native
- * (`createTheme.native.ts`) entry points. Imported by both — keeps the
+ * (`createTheme.native.ts`) entry points. Imported by both; keeps the
  * tree-walking + path concatenation logic in one place so changes
  * stay coherent across platforms.
  */

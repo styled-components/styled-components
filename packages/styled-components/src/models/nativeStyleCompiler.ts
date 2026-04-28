@@ -89,7 +89,7 @@ export function resetNativeStyleCache(): void {
  * Compile a CSS string into a React Native style structure. Walks the
  * parser AST once, producing base + conditional + keyframes buckets.
  *
- * Cache key is the RAW input string — preprocessing is the second-most
+ * Cache key is the RAW input string; preprocessing is the second-most
  * expensive step (after parse), so caching against raw input lets warm
  * cache hits skip both preprocess and parse. The same raw input always
  * produces the same preprocessed output, so this is collision-safe.
@@ -329,7 +329,7 @@ function collectDecls(nodes: ParserNode[]): string[] {
 }
 
 function pushDecl(out: string[], node: DeclNode): void {
-  // Inline check (was Array.indexOf on a 3-element list — hot enough to
+  // Inline check (was Array.indexOf on a 3-element list; hot enough to
   // show up in cold profile despite being O(3)). Three string identity
   // compares are faster than the indexOf machinery.
   const v = node.value;
@@ -342,7 +342,7 @@ function pushDecl(out: string[], node: DeclNode): void {
     return;
   }
   // Push prop and value as siblings in a flat array. Saves a 2-tuple
-  // allocation per decl vs the prior `[prop, value]` shape — measurable
+  // allocation per decl vs the prior `[prop, value]` shape; measurable
   // 5-7% cold-path win on medium/large CSS.
   out.push(node.prop, v);
 }
@@ -350,7 +350,7 @@ function pushDecl(out: string[], node: DeclNode): void {
 function detectPseudoState(selectors: string[]): PseudoState | null {
   if (selectors.length !== 1) return null;
   const sel = selectors[0];
-  // Match `&:<pseudo>` — the only native-supported selector shape in v7.0.
+  // Match `&:<pseudo>`; the only native-supported selector shape in v7.0.
   if (sel.length < 3 || sel.charCodeAt(0) !== $.AMPERSAND || sel.charCodeAt(1) !== $.COLON) {
     return null;
   }
@@ -541,7 +541,7 @@ export function cssToStyleObject(flatCSS: string, styleSheet: StyleSheet): Dict<
 
 /**
  * Extract raw `[prop, value]` pairs for top-level declarations.
- * Exported for tests — consumers should use `compileNativeStyles` or
+ * Exported for tests; consumers should use `compileNativeStyles` or
  * `cssToStyleObject` instead. Preprocessing + parser semantics apply:
  * comments stripped, malformed blocks skipped, RN_UNSUPPORTED_VALUES warn+drop.
  */

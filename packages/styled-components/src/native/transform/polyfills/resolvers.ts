@@ -21,7 +21,7 @@ export interface ResolveEnv {
 /**
  * A function that resolves a single style-prop value at render time
  * against the current {@link ResolveEnv}. Returns the resolved value
- * to write into the merged style object — number, string, or null
+ * to write into the merged style object; number, string, or null
  * (drop the key).
  */
 export type Resolver = (env: ResolveEnv) => number | string | null;
@@ -44,12 +44,12 @@ export function buildResolver(value: unknown): Resolver | null {
 
   const c0 = value.charCodeAt(0);
 
-  // createTheme sentinel — `\0<prefix>:<path>:<fallback>`
+  // createTheme sentinel; `\0<prefix>:<path>:<fallback>`
   if (c0 === 0) return buildThemeResolver(value);
 
   // Viewport / container units start with a digit, `-`, `+`, or `.`. Skip
-  // both regex tests for everything else (colors, idents, percent strings)
-  // — those dominate real-world base-dict contents.
+  // both regex tests for everything else (colors, idents, percent strings),
+  // which dominate real-world base-dict contents.
   if ((c0 >= $.DIGIT_0 && c0 <= $.DIGIT_9) || c0 === $.HYPHEN || c0 === $.DOT || c0 === $.PLUS) {
     const vp = VP_UNIT_RE.exec(value);
     if (vp !== null) return buildViewportResolver(parseFloat(vp[1]), vp[2].toLowerCase());
@@ -58,7 +58,7 @@ export function buildResolver(value: unknown): Resolver | null {
     return null;
   }
 
-  // Non-numeric prefix — only `light-dark(` and `env(` remain as candidates.
+  // Non-numeric prefix; only `light-dark(` and `env(` remain as candidates.
   if (c0 === 0x6c /* l */ && value.startsWith('light-dark(')) return buildLightDarkResolver(value);
   if (c0 === 0x65 /* e */ && value.startsWith('env(')) return buildEnvResolver(value);
 
@@ -92,7 +92,7 @@ function buildViewportResolver(n: number, unit: string): Resolver {
 function buildContainerResolver(n: number, unit: string): Resolver {
   return env => {
     const c = env.container;
-    if (c === null) return n; // no ancestor container — fall back to raw number
+    if (c === null) return n; // no ancestor container; fall back to raw number
     const w = c.width;
     const h = c.height;
     switch (unit) {
@@ -113,7 +113,7 @@ function buildContainerResolver(n: number, unit: string): Resolver {
 }
 
 function buildLightDarkResolver(value: string): Resolver | null {
-  // `light-dark(<light>, <dark>)` — split on the top-level comma.
+  // `light-dark(<light>, <dark>)`; split on the top-level comma.
   const inner = value.slice('light-dark('.length, -1).trim();
   const commaIdx = topLevelCommaIdx(inner);
   if (commaIdx === -1) return null;
@@ -192,7 +192,7 @@ function topLevelCommaIdx(s: string): number {
 function parseLengthLiteral(s: string): number | string | null {
   const m = /^(-?\d*\.?\d+)(px)?$/.exec(s.trim());
   if (m !== null) return parseFloat(m[1]);
-  return s; // percent / auto / whatever — caller will pass through
+  return s; // percent / auto / whatever; caller will pass through
 }
 
 /**

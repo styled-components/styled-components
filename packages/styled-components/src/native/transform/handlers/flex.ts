@@ -61,7 +61,7 @@ export function flexShorthand(tokens: Token[]): Dict<any> | null {
   };
 }
 
-/** `flex-flow: <direction> || <wrap>` — order-agnostic, either/both. */
+/** `flex-flow: <direction> || <wrap>`; order-agnostic, either/both. */
 export function flexFlowShorthand(tokens: Token[]): Dict<any> | null {
   const stream = new TokenStream(withoutSlashes(tokens));
   let flexDirection: string | undefined;

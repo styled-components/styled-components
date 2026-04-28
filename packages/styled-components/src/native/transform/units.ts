@@ -4,7 +4,7 @@
  * to plain JS primitives where possible.
  *
  * RN's own DimensionValue is `number | 'auto' | '${number}%' | null`.
- * We never try to emit `'10px'` — RN treats strings-with-units as
+ * We never try to emit `'10px'`; RN treats strings-with-units as
  * invalid for dimension props (outside of a few exceptions like
  * `borderRadius` which accepts `"10px"` strings since 0.78).
  */
@@ -37,7 +37,7 @@ export function coerceRawValue(prop: string, value: string): number | string | n
     const n = Number(value);
     return Number.isFinite(n) ? n : value;
   }
-  // Numeric-prefix gate — only run the `N`/`Npx` regex when the value
+  // Numeric-prefix gate; only run the `N`/`Npx` regex when the value
   // could plausibly match. Saves a regex call per non-numeric value
   // (colors, idents, hex), which dominate real-world inputs.
   const c0 = value.charCodeAt(0);

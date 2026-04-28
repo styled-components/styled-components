@@ -3,7 +3,7 @@
 //
 // Convention: when a file references 3+ codes from this module, prefer
 // `import * as $ from '../utils/charCodes'` and reference as `$.AMPERSAND`
-// — keeps diffs focused when adding / removing constants at call sites.
+// to keep diffs focused when adding / removing constants at call sites.
 export const NUL = 0;
 export const TAB = 9; // \t
 export const LF = 10; // \n

@@ -23,7 +23,7 @@ export function withoutSlashes(tokens: Token[]): Token[] {
 /**
  * Read the next "value" token that counts as a length-like unit for
  * directional shorthands (margin/padding/border*): LENGTH (inc. 0),
- * NUMBER (bare — stylis/cssTN behavior, emits as-is), PERCENT.
+ * NUMBER (bare; stylis/cssTN behavior, emits as-is), PERCENT.
  * Returns the token or `null` on mismatch.
  */
 export function consumeDimensionLike(stream: TokenStream): Token | null {
@@ -43,7 +43,7 @@ export function consumeDimensionLike(stream: TokenStream): Token | null {
 
 /**
  * Read the next "color-like" token: hex, color keyword, color function,
- * `currentColor`. Conservative — anything RN's normalize-colors accepts.
+ * `currentColor`. Conservative; anything RN's normalize-colors accepts.
  */
 export function consumeColor(stream: TokenStream): Token | null {
   const t = stream.peek();
@@ -198,7 +198,7 @@ function acceptDimensionLike(t: Token): Token | null {
 
 /**
  * Small named-color set (practical, not exhaustive). RN's normalize-colors
- * has the full list — we only use this to *recognize* idents as colors for
+ * has the full list; we only use this to *recognize* idents as colors for
  * composite shorthands like `border: 1px solid red`, not to normalize them.
  */
 const NAMED_COLORS = new Set([
