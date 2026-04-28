@@ -12,4 +12,15 @@ React Native: the CSS-to-style-object translation layer is now built in. Several
 - `box-shadow` with spread and inset pass through as CSS strings.
 - `mix-blend-mode`, `isolation`, `cursor` flow through.
 
+```tsx
+import styled from 'styled-components/native';
+
+const Tile = styled.View`
+  background-image: linear-gradient(135deg, hsl(220 80% 60%), hsl(280 70% 50%));
+  filter: blur(2px) saturate(1.5);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
+  transform: matrix(1, 0, 0, 1, 8, 0);
+`;
+```
+
 The transform layer also fixes `border: none` emitting `border-style: solid` on native; it now emits `border-style: none` to match the rest of the ecosystem.
