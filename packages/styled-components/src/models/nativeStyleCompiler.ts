@@ -520,12 +520,18 @@ function extractContainerName(prelude: string): string | undefined {
  * 8-15% slice of the cold profile.
  *
  * Bound at 1000 total entries; the eviction path replaces both Maps in one
- * shot rather than tracking per-pair insertion order (single-FIFO would
- * need a parallel queue across the inner Maps, and the 1000-entry ceiling
- * is rarely hit). Measured in `src/native/transform/test/stress.test.ts` —
- * 50k repeated pair transforms stay within a linear-allocation envelope,
- * and the eviction path handles 2,000 distinct pairs in ~7ms. Adjust only
- * with a new measurement pass.
+ * shot rather than tracking per-pair insertion order. The "wave recompile"
+ * concern that motivates per-entry FIFO is real in theory but empirically
+ * loses to whole-flush by 3-4x — the bookkeeping overhead (parallel order
+ * Map / composite-key tracking) costs more than the work it avoids, and
+ * `transformDecl` itself runs either way for genuine misses. Measured
+ * 2026-04-27 against composite-key FIFO and a 2-level + order-Map FIFO;
+ * whole-flush won in every eviction scenario (wave, rolling window) and
+ * tied or won in within-ceiling steady state. Re-validate with a fresh
+ * measurement pass before changing this. Stress coverage lives in
+ * `src/native/transform/test/stress.test.ts` — 50k repeated pair
+ * transforms stay within a linear-allocation envelope and 2,000 distinct
+ * pairs evict in ~7ms.
  */
 const PAIR_CACHE_LIMIT = 1000;
 let pairCache = new Map<string, Map<string, Record<string, any>>>();
