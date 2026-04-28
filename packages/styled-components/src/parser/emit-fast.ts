@@ -20,17 +20,8 @@ import {
 } from '../utils/charCodes';
 
 /**
- * Fast-path parse+emit for flat CSS (declarations only, no nesting, no @-rules).
- *
- * Walks the input once, writing directly to the output string. Skips AST
- * construction entirely; no intermediate prop/value substrings per decl.
- *
- * Returns `null` if the input contains `{` or `@` (nested rules or at-rules),
- * signalling the caller to fall back to the full parser+emitter.
- *
- * Performance technique learned from markdown-to-jsx: walk input, emit output,
- * never materialize intermediate node objects. V8 cons-string concat on `+=`
- * is cheap for substring-sized chunks.
+ * Fast parse+emit for flat decl-only CSS. Returns null if the input
+ * contains `{` or `@`, signalling the caller to fall back to the full parser.
  */
 export function parseEmitFlat(css: string, selector: string): string[] | null {
   const len = css.length;
@@ -157,7 +148,6 @@ export function parseEmitFlat(css: string, selector: string): string[] | null {
 
     if (propEnd > propStart && (ve > vs || isCustomProp)) {
       if (hasContent) output += ';';
-      // Direct substring writes; no intermediate string
       output += css.substring(propStart, propEnd);
       output += ':';
       if (ve > vs) {
@@ -177,11 +167,7 @@ export function parseEmitFlat(css: string, selector: string): string[] | null {
   return [selector + '{' + output + ';}'];
 }
 
-/**
- * Walk the CSS range `[start, end)` and emit with top-level-comma whitespace
- * stripped, directly into a new string. Avoids the intermediate substring
- * that `stripCommaSpaces(css.substring(start, end))` would allocate.
- */
+/** Emit comma-space-stripped CSS over a range without allocating an intermediate substring. */
 function stripCommasInline(css: string, start: number, end: number): string {
   let out = '';
   let paren = 0;

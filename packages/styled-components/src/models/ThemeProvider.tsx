@@ -3,8 +3,6 @@ import { IS_RSC } from '../constants';
 import styledError from '../utils/error';
 import isFunction from '../utils/isFunction';
 
-// Helper type for the `DefaultTheme` interface that enforces an object type & exclusively allows
-// for typed keys.
 type DefaultThemeAsObject<T = object> = Record<keyof T, any>;
 
 /**
@@ -116,13 +114,7 @@ function mergeTheme(theme: ThemeArgument, outerTheme?: DefaultTheme | undefined)
   return outerTheme ? { ...outerTheme, ...theme } : theme;
 }
 
-/**
- * Returns the current theme (as provided by the closest ancestor `ThemeProvider`.)
- *
- * If no `ThemeProvider` is found, the function will error. If you need access to the theme in an
- * uncertain composition scenario, `React.useContext(ThemeContext)` will not emit an error if there
- * is no `ThemeProvider` ancestor.
- */
+/** Returns the current theme; throws if no `ThemeProvider` ancestor. */
 export function useTheme(): DefaultTheme {
   // Skip useContext if we're in an RSC environment without context support
   const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
@@ -134,9 +126,6 @@ export function useTheme(): DefaultTheme {
   return theme;
 }
 
-/**
- * Provide a theme to an entire react component tree via context
- */
 export default function ThemeProvider(props: Props): React.JSX.Element | null {
   // In RSC environments without context support, ThemeProvider becomes a no-op
   if (IS_RSC) {

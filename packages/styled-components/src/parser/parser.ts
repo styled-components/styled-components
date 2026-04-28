@@ -65,16 +65,7 @@ interface ParseContext {
   keepCommaSpaces: boolean;
 }
 
-/**
- * Single-pass parse of a CSS block body. On each iteration, scans forward from
- * the current position looking for the first meaningful delimiter while
- * tracking the first colon, open-paren depth, and active quote. Handles three
- * outcomes in a single scan:
- *
- *   - `;` or `}` with a colon seen  → declaration
- *   - `{`                            → rule (if no colon) or declaration-looking-rule
- *   - `}` without a colon            → trailing whitespace or malformed, discard
- */
+/** Single-pass parse of a CSS block body. */
 function parseBlock(ctx: ParseContext): Node[] {
   const css = ctx.css;
   const len = ctx.len;
@@ -106,9 +97,6 @@ function parseBlock(ctx: ParseContext): Node[] {
       continue;
     }
 
-    // Scan forward looking for `:`, `{`, `;`, or `}` at paren depth 0.
-    // Tracks the first colon so we know this block is a declaration if the
-    // run terminates with `;` or `}`.
     const start = i;
     let colon = -1;
     let paren = 0;
@@ -123,10 +111,8 @@ function parseBlock(ctx: ParseContext): Node[] {
         }
         if (c === quote) quote = 0;
       } else if (c === BACKSLASH) {
-        // CSS escape: `\:` in an ident is a literal colon, NOT a decl boundary.
-        // Same for `\;`, `\{`, etc. Consume the escaped char so the boundary
-        // scanner doesn't stop on it. Stylis-parity for property names like
-        // `foo\:bar` and selectors with escaped delimiters.
+        // CSS escape (`\:`, `\;`, `\{`, …): consume the escaped char so the
+        // boundary scanner doesn't stop on it. Stylis-parity.
         i += 2;
         continue;
       } else if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) {
@@ -139,7 +125,6 @@ function parseBlock(ctx: ParseContext): Node[] {
         if (c === COLON) {
           if (colon === -1) colon = i;
         } else if (c === OPEN_BRACE) {
-          // Rule start. Selector runs from start..i.
           const selectorText = trimRange(css, start, i);
           const selectors =
             selectorText.indexOf(',') === -1
@@ -148,11 +133,9 @@ function parseBlock(ctx: ParseContext): Node[] {
           ctx.i = i + 1;
           const children = parseBlock(ctx);
           out.push({ kind: NodeKind.Rule, selectors, children });
-          // Re-enter outer while with updated ctx.i
           i = -1;
           break;
         } else if (c === SEMICOLON || c === CLOSE_BRACE) {
-          // End of declaration run.
           if (colon !== -1) {
             pushDecl(ctx, out, start, colon, i);
           }
@@ -168,7 +151,7 @@ function parseBlock(ctx: ParseContext): Node[] {
       i++;
     }
 
-    if (i === -1) continue; // loop body handled ctx.i already
+    if (i === -1) continue;
 
     // EOF reached. Treat as terminal declaration if we saw a colon.
     if (colon !== -1) {

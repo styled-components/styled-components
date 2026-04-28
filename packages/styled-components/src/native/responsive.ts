@@ -33,8 +33,6 @@ function getRN(): RNApis {
   return rnApis;
 }
 
-// ---------- media query parsing + evaluation ----------
-
 export interface MediaQueryEnv {
   width: number;
   height: number;
@@ -46,7 +44,6 @@ export interface MediaQueryEnv {
 
 type Dimension = 'width' | 'height';
 
-/** Inclusive when `inclusive` is true; matches `<=` vs `<` (and `>=` vs `>`). */
 type RangeBound = { value: number; inclusive: boolean } | null;
 
 type Feature =
@@ -112,7 +109,6 @@ function parseFeature(raw: string): Feature | null {
     return parseRange(s);
   }
 
-  // Boolean features without value, e.g. `all`; treat as always-true.
   const colon = s.indexOf(':');
   if (colon === -1) return { kind: 'any' };
 
@@ -178,7 +174,6 @@ function parseRange(s: string): Feature | null {
   let upper: RangeBound = null;
 
   if (operators.length === 1) {
-    // Two tokens, one operator. e.g. `width >= 400px` or `400px < width`.
     const [a, b] = tokens;
     const op = operators[0];
     if (a.toLowerCase() === dim) {
@@ -195,7 +190,6 @@ function parseRange(s: string): Feature | null {
       return null;
     }
   } else {
-    // Three tokens, two operators: sandwich form `lower OP width OP upper`.
     const [a, mid, c] = tokens;
     if (mid.toLowerCase() !== dim) return null;
     const lo = parseLength(a);
@@ -233,8 +227,6 @@ function parseLength(v: string): number {
 }
 
 function splitTopLevel(s: string, sep: string): string[] {
-  // Split on `,` or the literal word `and` at paren depth 0. The `and` path
-  // matches the whole-word token between parens, not letters inside identifiers.
   const out: string[] = [];
   const len = s.length;
   let depth = 0;
@@ -325,8 +317,6 @@ function matchFeature(f: Feature, env: MediaQueryEnv): boolean {
       return true;
   }
 }
-
-// ---------- reactive hooks ----------
 
 function safeReadDimensions(RN: any): { width: number; height: number; fontScale: number } {
   try {
@@ -461,30 +451,17 @@ function getMediaSnapshot(): MediaQueryEnv {
   return mediaSnapshot;
 }
 
-/**
- * React hook; returns the current `MediaQueryEnv`. Single shared
- * subscription across all consumers; the hook itself reduces to one
- * `useSyncExternalStore` call. Re-renders fire only when one of the
- * snapshot fields actually changed.
- */
+/** Current `MediaQueryEnv`; uses a shared subscription via `useSyncExternalStore`. */
 export function useMediaEnv(): MediaQueryEnv {
   return React.useSyncExternalStore(subscribeMedia, getMediaSnapshot, getMediaSnapshot);
 }
 
-/**
- * Evaluate a single `@media`-style query against the live RN environment.
- * Re-renders on Dimensions / Appearance / reduce-motion changes.
- */
 export function useMediaQuery(query: string): boolean {
   const env = useMediaEnv();
   return matchMedia(query, env);
 }
 
-/**
- * Return the active breakpoint key from `theme.breakpoints`. Given
- * `{ sm: 480, md: 768, lg: 1024 }`, returns the largest key whose value
- * is ≤ the current width. Returns `undefined` if no breakpoints or none match.
- */
+/** Largest breakpoint key whose value is ≤ the current width; undefined if none match. */
 export function useBreakpoint<T extends Record<string, number>>(
   breakpoints: T
 ): keyof T | undefined {
@@ -502,8 +479,6 @@ export function useBreakpoint<T extends Record<string, number>>(
   }
   return active;
 }
-
-// ---------- container queries ----------
 
 export interface ContainerEntry {
   name?: string | undefined;
@@ -529,21 +504,13 @@ export function useContainerContext(): ContainerContextValue {
   return useContext(ContainerContext);
 }
 
-/**
- * Look up a container by optional name. Falls back to nearest unnamed
- * container when name is absent.
- */
 export function useContainer(name?: string): ContainerEntry | null {
   const ctx = useContext(ContainerContext);
   if (name) return ctx.named[name] ?? null;
   return ctx.nearest;
 }
 
-/**
- * Evaluate a container query against an ancestor container. Returns false
- * when no matching container is registered (silently; matches CSS behavior
- * of zero-match when no container exists).
- */
+/** Returns false when no matching container is registered (matches CSS zero-match behavior). */
 export function useContainerQuery(query: string, name?: string): boolean {
   const container = useContainer(name);
   if (!container) return false;
@@ -558,13 +525,7 @@ export function useContainerQuery(query: string, name?: string): boolean {
   return matchMedia(query, env);
 }
 
-/**
- * Exported for tests; resets the parsed-query cache and the media-env
- * store so cross-test contamination cannot occur. Detaches the global
- * Dimensions / Appearance / AccessibilityInfo listeners so the next
- * subscriber re-registers them and any test-installed spy can capture
- * the call.
- */
+/** Test utility: clears caches and detaches RN listeners so the next subscriber re-registers. */
 export function resetResponsiveCache(): void {
   queryCache.clear();
   mediaListeners.clear();

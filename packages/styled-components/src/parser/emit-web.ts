@@ -85,12 +85,9 @@ function stripCombinatorSpaces(sel: string): string {
   return out;
 }
 
-// `splitTopLevelCommas` lives in `parser.ts` (single canonical implementation
-// shared by both the parser and the emit pipeline). Re-exported so the
-// `rscPlugin` selector rewriter can keep its existing import path.
+// Re-export so `rscPlugin`'s selector rewriter keeps its existing import path.
 export { splitTopLevelCommas };
 
-/** Apply the decl plugin hook (if any) and format the pair as `prop:value`. */
 function formatDecl(
   prop: string,
   value: string,

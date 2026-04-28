@@ -13,10 +13,6 @@ export interface ExoticComponentWithDisplayName<
   displayName?: string | undefined;
 }
 
-/**
- * Use this type to disambiguate between a styled-component instance
- * and a StyleFunction or any other type of function.
- */
 export type StyledComponentBrand = { readonly _sc: symbol };
 
 export type BaseObject = {};
@@ -53,19 +49,7 @@ export interface StyledOptions<R extends Runtime, Props extends BaseObject> {
 
 export type Dict<T = any> = { [key: string]: T };
 
-/**
- * This type is intended for when data attributes are composed via
- * the `.attrs` API:
- *
- * ```tsx
- * styled.div.attrs<DataAttributes>({ 'data-testid': 'foo' })``
- * ```
- *
- * Would love to figure out how to support this natively without having to
- * manually compose the type, but haven't figured out a way to do so yet that
- * doesn't cause specificity loss (see `test/types.tsx` if you attempt to embed
- * `DataAttributes` directly in the `Attrs<>` type.)
- */
+/** Data-attributes helper for `.attrs<DataAttributes>(...)`. */
 export type DataAttributes = { [key: `data-${string}`]: any };
 
 export type ExecutionProps = {
@@ -84,12 +68,7 @@ export type ExecutionProps = {
   theme?: DefaultTheme | undefined;
 };
 
-/**
- * ExecutionProps but with `theme` narrowed from optional to required.
- *
- * Note: in RSC environments where ThemeProvider is a no-op,
- * `theme` will be `undefined` at runtime.
- */
+/** `theme` narrowed to required (still `undefined` at runtime in RSC). */
 export interface ExecutionContext extends ExecutionProps {
   theme: DefaultTheme;
 }
@@ -178,9 +157,6 @@ export interface IStyledStatics<
     | undefined;
 }
 
-/**
- * Used by PolymorphicComponent to define prop override cascading order.
- */
 export type PolymorphicComponentProps<
   R extends Runtime,
   BaseProps extends BaseObject,
@@ -240,8 +216,7 @@ export interface PolymorphicComponent<
     }
   ): React.JSX.Element;
 
-  // Default overload (no `as`/`forwardedAs`). Avoids Substitute so ref callbacks
-  // get contextual typing even with spread props (#5687).
+  // Default overload: avoids Substitute for ref-callback typing under spread (#5687).
   (
     props: OverrideStyle<
       NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> &
@@ -261,19 +236,12 @@ export interface IStyledComponentBase<
   toString: () => string;
 }
 
-/**
- * Intersected with `string` so styled components can be used as computed
- * property keys in object styles: `{ [MyComponent]: { ... } }`.
- * The conditional `R extends 'web' ? string : {}` was removed to avoid
- * a type alias with a conditional; type aliases require full structural
- * comparison on every use, while this unconditional intersection is cheaper.
- */
+/** Intersected with `string` so styled components can serve as computed object keys. */
 export type IStyledComponent<
   R extends Runtime,
   Props extends BaseObject = BaseObject,
 > = IStyledComponentBase<R, Props> & string;
 
-// corresponds to createStyledComponent
 export interface IStyledComponentFactory<
   out R extends Runtime,
   in Target extends StyledTarget<R>,
@@ -309,9 +277,8 @@ interface CompileOutput {
 
 export interface IInlineStyle<Props extends BaseObject> {
   rules: RuleSet<Props>;
-  /** Set at construction; the factory reads it once to pick the fast vs full render impl. */
   fastEligible: boolean;
-  /** Compiled output for fully-static CSS (populated at construction); null when CSS has function interpolations. */
+  /** Set at construction; null when rules contain function interpolations. */
   staticCompiled: CompileOutput | null;
   compile(executionContext: ExecutionContext & Props): CompileOutput;
 }

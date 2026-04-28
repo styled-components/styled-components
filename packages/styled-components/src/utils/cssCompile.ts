@@ -36,17 +36,7 @@ export function isEscaped(css: string, i: number): boolean {
   return (backslashes & 1) === 1;
 }
 
-/**
- * Unified CSS preprocessor: strips JS-style line comments (//), strips CSS
- * block comments (/* ... * /), and validates brace balance in a single pass.
- * Handles strings, parenthesized expressions (any function call), and block
- * comments with one shared state machine.
- *
- * Fast paths:
- *   - No //, no /*, no } → return unchanged (zero work)
- *   - No //, no /*, has } → brace-only validation (lightweight single pass)
- *   - Otherwise         → full unified pass
- */
+/** Strip JS-style line comments + CSS block comments and validate brace balance in one pass. */
 export function preprocessCSS(css: string): string {
   const hasLineComments = css.indexOf('//') !== -1;
   const hasBlockComments = css.indexOf('/*') !== -1;
@@ -183,10 +173,6 @@ export function preprocessCSS(css: string): string {
   return sanitizeBraces(out);
 }
 
-/**
- * Removes declarations with unbalanced braces from CSS.
- * Only called when preprocessCSS detects brace imbalance.
- */
 function sanitizeBraces(css: string): string {
   const len = css.length;
   let result = '';
@@ -265,32 +251,20 @@ function sanitizeBraces(css: string): string {
   return result;
 }
 
-/**
- * Declaration-transform hook. Return `undefined` to pass through unchanged.
- * Return `{ prop, value }` to override. The transform runs on every emitted
- * declaration; keep it monomorphic and cheap.
- */
+/** Declaration transform: return `{prop, value}` to override or undefined to pass. Keep monomorphic. */
 export type DeclTransform = (
   prop: string,
   value: string
 ) => { prop: string; value: string } | undefined | void;
 
 /**
- * Minimal plugin-shape recognised by createStylisInstance. Plugins are opt-in
- * markers carrying optional transforms. Shipping transforms inside the plugin
- * object lets bundlers tree-shake the implementation out of builds that don't
- * import the plugin. Unknown plugin shapes emit a one-time dev warning in
- * StyleSheetManager and are otherwise ignored.
- *
- *   - `rw`   rewrites each fully-resolved selector (post namespace + `&` resolution)
- *   - `decl` rewrites each emitted declaration (prop / value pair)
+ * Plugin shape: opt-in markers with optional `rw` (selector rewrite,
+ * post namespace + `&` resolution) and `decl` (declaration rewrite) hooks.
+ * Shipping transforms inside the plugin object lets bundlers tree-shake
+ * implementations out of builds that don't import them.
  */
 export interface SCPlugin {
-  /**
-   * Required. Contributes to the compiler's hash so identical plugin sets share
-   * class-name caches across `StyleSheetManager` instances. Unnamed plugins
-   * throw at runtime; see error #15.
-   */
+  /** Contributes to the compiler hash so plugin sets get distinct caches. Throws #15 if missing. */
   name: string;
   rw?: ((selector: string) => string) | undefined;
   decl?: DeclTransform | undefined;
@@ -301,18 +275,7 @@ export type ICreateStylisInstance = {
   plugins?: SCPlugin[] | undefined;
 };
 
-/**
- * In-house CSS compiler: wraps the input under the given selector, parses to
- * an AST (or the flat decl fast path), and emits web CSS rule strings.
- * Byte-identical to the output the stylis-backed path produced in v6, so
- * cached class-name hashes and server-rendered markup rehydrate cleanly
- * against v7.
- *
- * selector / prefix / componentId interpretation:
- *   - If both `prefix` and `selector` are empty, CSS is root-level (e.g., @keyframes defs)
- *     and is emitted without any selector wrapping.
- *   - Otherwise the CSS is wrapped under `${prefix} ${selector}` with the usual `&` rules.
- */
+/** Byte-identical to v6 stylis output for hash + SSR rehydration stability. */
 function compileWithInternalParser(
   flatCSS: string,
   selector: string,
@@ -356,10 +319,7 @@ export default function createStylisInstance(
     plugins = EMPTY_ARRAY as unknown as SCPlugin[],
   }: ICreateStylisInstance = EMPTY_OBJECT as object
 ) {
-  // Plugins contribute their `rw` / `decl` transformers (if any). Functions
-  // ship with the plugin module, so users who don't import a plugin never
-  // pull its transform code into their bundle. Multiple plugins compose
-  // left-to-right.
+  // Multiple plugins compose left-to-right.
   let postProcessSelector: ((s: string) => string) | undefined;
   let postProcessDecl: DeclTransform | undefined;
   for (let i = 0; i < plugins.length; i++) {

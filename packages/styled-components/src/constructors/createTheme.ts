@@ -4,14 +4,12 @@ import createGlobalStyle from './createGlobalStyle';
 import { walkTheme } from './createTheme.shared';
 import type { CSSVarTheme, ThemeContract } from './createTheme.types';
 
-/** Build bare CSS custom property names: `--prefix-a-b` */
 function buildVarNames<T extends Record<string, any>>(obj: T, varPrefix: string): CSSVarTheme<T> {
   const result: Record<string, any> = {};
   walkTheme(obj, '-', result, fullPath => '--' + varPrefix + fullPath);
   return result as CSSVarTheme<T>;
 }
 
-/** Build `var(--prefix-a-b, fallback)` references with dev-mode parenthesis validation */
 function buildVarRefs<T extends Record<string, any>>(obj: T, varPrefix: string): CSSVarTheme<T> {
   const result: Record<string, any> = {};
   walkTheme(obj, '-', result, (fullPath, val) => {
@@ -34,7 +32,6 @@ function buildVarRefs<T extends Record<string, any>>(obj: T, varPrefix: string):
   return result as CSSVarTheme<T>;
 }
 
-/** Read computed CSS variable values from the DOM */
 function resolveVars<T extends Record<string, any>>(
   obj: T,
   varPrefix: string,
@@ -48,11 +45,7 @@ function resolveVars<T extends Record<string, any>>(
   return result as T;
 }
 
-/**
- * Emit CSS var declarations by walking `shape` for structure and reading
- * values from `theme`. This avoids hardcoded skip lists; only keys
- * present in the original theme shape are traversed.
- */
+/** Walk `shape` (not `theme`) so only keys in the original contract emit declarations. */
 function emitVarDeclarations(
   shape: Record<string, any>,
   theme: Record<string, any>,
