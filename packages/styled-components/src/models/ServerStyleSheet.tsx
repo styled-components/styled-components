@@ -58,17 +58,19 @@ export default class ServerStyleSheet {
     const css = this.instance.toString();
     if (!css) return [];
 
-    const props = {
+    const nonce = this.instance.options.nonce || getNonce();
+    const props: {
+      [SC_ATTR]: string;
+      [SC_ATTR_VERSION]: string;
+      dangerouslySetInnerHTML: { __html: string };
+      nonce?: string;
+    } = {
       [SC_ATTR]: '',
       [SC_ATTR_VERSION]: SC_VERSION,
-      dangerouslySetInnerHTML: {
-        __html: css,
-      },
+      dangerouslySetInnerHTML: { __html: css },
     };
-
-    const nonce = this.instance.options.nonce || getNonce();
     if (nonce) {
-      (props as any).nonce = nonce;
+      props.nonce = nonce;
     }
 
     // v4 returned an array for this fn, so we'll do the same for v5 for backward compat

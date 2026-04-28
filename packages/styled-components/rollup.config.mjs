@@ -222,9 +222,14 @@ const nativeConfig = {
       file: 'native/dist/styled-components.native.esm.js',
     }),
   ],
+  // The native build runs only `nativeTypescriptPlugin` so declarations land
+  // in `native/dist/` once. Concatenating `commonPlugins` previously
+  // included `defaultTypescriptPlugin` too, which wrote a parallel d.ts tree
+  // into `native/dist/dist/` and `native/dist/native/` — those shadow trees
+  // shipped to npm.
   plugins: [
     nativeTypescriptPlugin,
-    ...commonPlugins,
+    ...basePlugins,
     replace({
       __SERVER__: JSON.stringify(false),
       __NATIVE__: JSON.stringify(true),

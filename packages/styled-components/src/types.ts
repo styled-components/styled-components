@@ -10,7 +10,6 @@ export { CSS, DefaultTheme, SupportedHTMLElements };
 export interface ExoticComponentWithDisplayName<
   P extends BaseObject = {},
 > extends React.ExoticComponent<P> {
-  defaultProps?: Partial<P> | undefined;
   displayName?: string | undefined;
 }
 
@@ -259,7 +258,6 @@ export interface IStyledComponentBase<
   in out Props extends BaseObject = BaseObject,
 >
   extends PolymorphicComponent<R, Props>, IStyledStatics<R, Props>, StyledComponentBrand {
-  defaultProps?: (ExecutionProps & Partial<Props>) | undefined;
   toString: () => string;
 }
 
@@ -296,9 +294,11 @@ export interface IInlineStyleConstructor<Props extends BaseObject> {
 interface CompileOutput {
   base: object;
   conditional: Array<{
-    type: 'media' | 'container' | 'supports' | 'pseudo';
+    type: 'media' | 'container' | 'supports' | 'pseudo' | 'attr';
     condition: string;
     containerName?: string;
+    attribute?: string;
+    attrValue?: string;
     styles: object;
   }>;
   keyframes: Array<{

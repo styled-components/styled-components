@@ -830,3 +830,13 @@ const ScButton = styled(FakeAntdButton).attrs({
 // Should compile without TS2590; should be usable without re-supplying the attrs.
 <ScButton onClick={() => {}}>click</ScButton>;
 <ScButton size="large" />;
+
+/**
+ * v7 dropped the runtime defaultProps fold. The public type should reflect that
+ * by NOT exposing a `defaultProps` slot on styled components — assignments to it
+ * must error so users discover the change at type-check time instead of
+ * silently-ignored at runtime.
+ */
+const StyledForDefaultPropsCheck = styled.div<{ foo?: string }>``;
+// @ts-expect-error v7 removed defaultProps; use .attrs() instead
+StyledForDefaultPropsCheck.defaultProps = { foo: 'bar' };
