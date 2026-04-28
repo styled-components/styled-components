@@ -451,7 +451,6 @@ function getMediaSnapshot(): MediaQueryEnv {
   return mediaSnapshot;
 }
 
-/** Current `MediaQueryEnv`; uses a shared subscription via `useSyncExternalStore`. */
 export function useMediaEnv(): MediaQueryEnv {
   return React.useSyncExternalStore(subscribeMedia, getMediaSnapshot, getMediaSnapshot);
 }
