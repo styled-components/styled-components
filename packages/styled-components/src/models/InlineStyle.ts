@@ -56,19 +56,14 @@ type DynamicStringRulesResult = {
 export default function makeInlineStyleClass<Props extends object>(styleSheet: StyleSheet) {
   const InlineStyle: IInlineStyleConstructor<Props> = class InlineStyle implements IInlineStyle<Props> {
     rules: RuleSet<Props>;
-    /** Pre-joined static CSS, set when every rule is a string. */
     private staticCSS: string | null;
-    /** Memoised compile output (used for both static and dynamic paths). */
     private cachedCompiled: CompiledNativeStyles | null = null;
-    /** Last produced dynamic CSS; short-circuit when the next call matches. */
     private cachedCSS: string | null = null;
-    /** Last string outputs from function interpolations on the fast dynamic path. */
     private cachedDynamicOutputs: string[] | null = null;
-    /** Consecutive dynamic-output changes; repeated misses fall back to single-pass flattening. */
+    /** Repeated misses fall back to single-pass flattening. */
     private dynamicOutputMisses = 0;
-    /** Set at construction; the factory reads it once to pick the fast vs full render impl. */
+    /** Set at construction; frozen for the component lifetime to keep hook order stable. */
     fastEligible = false;
-    /** Compiled output for static CSS (eagerly resolved at construction); null when rules have function interpolations. */
     staticCompiled: CompiledNativeStyles | null = null;
 
     constructor(rules: RuleSet<Props>) {
@@ -123,15 +118,6 @@ export default function makeInlineStyleClass<Props extends object>(styleSheet: S
   return InlineStyle;
 }
 
-/**
- * Recursively check whether every rule is a plain string (or a nested
- * array of plain strings, which is the shape css`` produces). Anything
- * else (function, keyframes, styled component, plain object) keeps us
- * on the dynamic path because it requires an execution context to flatten.
- *
- * The recursion bound is the depth of css`` nesting, which is shallow
- * in practice (rare to nest >2 levels).
- */
 function isAllStaticStrings(rules: ReadonlyArray<unknown>): boolean {
   for (let i = 0; i < rules.length; i++) {
     const r = rules[i];
@@ -148,14 +134,8 @@ function isAllStaticStrings(rules: ReadonlyArray<unknown>): boolean {
 const RESPONSIVE_RE =
   /@(?:media|container|supports|scope|starting-style)\b|:(?:hover|focus|focus-visible|active|disabled)\b|\d(?:vw|vh|dvw|dvh|svw|svh|lvw|lvh|vmin|vmax|cqw|cqh|cqi|cqb|cqmin|cqmax)\b|light-dark\(|\benv\(|\0|&\[/i;
 
-/**
- * Walk the rule literals and report whether any string segment contains a
- * marker that disqualifies the component from the fast render path. Function
- * interpolations are skipped; by contract they produce simple decls, not
- * @rules / pseudo states / responsive values. Violations of that contract
- * are surfaced via a dev-mode warning on first compile (see
- * `verifyFastContract`).
- */
+// Function interpolations skip the regex check; by contract they produce
+// simple decls. `verifyFastContract` warns in dev when that contract breaks.
 function sourceContainsResponsiveFeatures(rules: ReadonlyArray<unknown>): boolean {
   for (let i = 0; i < rules.length; i++) {
     const r = rules[i];

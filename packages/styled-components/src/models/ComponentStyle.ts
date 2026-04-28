@@ -32,7 +32,6 @@ type GeneratedLevel = {
   componentId: string;
   name: string;
   rules: string[];
-  /** True when this level's class name is not yet known to the sheet. */
   isNew: boolean;
 };
 
@@ -151,7 +150,6 @@ export default class ComponentStyle {
     };
   }
 
-  /** Commit a `GeneratedStyle` to the sheet, returning the joined class name. */
   inject(styleSheet: StyleSheet, generated: GeneratedStyle): string {
     const levels = generated.levels;
     for (let i = 0; i < levels.length; i++) {

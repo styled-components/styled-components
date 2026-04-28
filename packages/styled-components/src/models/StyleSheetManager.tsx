@@ -7,24 +7,15 @@ import createStylisInstance, { SCPlugin } from '../utils/cssCompile';
 export const mainSheet: StyleSheet = new StyleSheet();
 export const mainStylis: Stringifier = createStylisInstance();
 
-/**
- * RSC context slot; module-level mutable state scoped per render via React.cache.
- * In RSC, createContext doesn't exist, so StyleSheetManager writes here and
- * useStyleSheetContext reads from here. Single-threaded RSC renders guarantee
- * no concurrent mutation. React.cache ensures reset between renders.
- */
+// RSC has no createContext; module-level slot is set by StyleSheetManager via
+// Set/Reset tokens (see RscOverrideSet below) and read by useStyleSheetContext.
 let rscContextOverride: IStyleSheetContext | null = null;
 let rscLastPlugins: SCPlugin[] | undefined;
 let rscCachedStylis: Stringifier = mainStylis;
 
-/** Dev-only warning for legacy plugins other than the first-party ones. Fired once per plugin name.
- *
- * Unnamed plugins are not handled here; they throw error #15 from
- * `createStylisInstance` when the hash is computed, so this loop never sees
- * them. The first-party allow-list and warning text live entirely inside the
- * function body so terser eliminates them in production along with the rest of
- * the dev-only block. Hoisting them to module scope leaks the literal plugin
- * names into the production bundle and trips the tree-shake test. */
+// Allow-list and warning text live INSIDE the function body so terser
+// eliminates them in production; hoisting leaks names into the bundle
+// and trips the tree-shake test. (Unnamed plugins throw #15 elsewhere.)
 const warnedPluginNames = new Set<string>();
 function warnUnsupportedPlugins(plugins: SCPlugin[] | undefined): void {
   if (process.env.NODE_ENV === 'production' || !plugins) return;
@@ -122,22 +113,12 @@ export type IStyleSheetManager = React.PropsWithChildren<{
    */
   sheet?: undefined | StyleSheet;
   /**
-   * Starting in v6, styled-components no longer does its own prop validation
-   * and recommends use of transient props "$prop" to pass style-only props to
-   * components. If for some reason you are not able to use transient props, a
-   * prop validation function can be provided via `StyleSheetManager`, such as
-   * `@emotion/is-prop-valid`.
-   *
-   * When the return value is `true`, props will be forwarded to the DOM/underlying
-   * component. If return value is `false`, the prop will be discarded after styles
-   * are calculated.
-   *
-   * Manually composing `styled.{element}.withConfig({shouldForwardProp})` will
-   * override this default.
-   *
-   * When nested inside another `StyleSheetManager`, omitting this prop inherits
-   * the parent's function. Pass `undefined` explicitly or a passthrough function
-   * to disable inherited behavior for a subtree.
+   * Filter which props reach the underlying DOM element. Return `true` to
+   * forward, `false` to drop. Prefer transient props (`$prop`) when
+   * possible; reach for this when integrating with libraries like
+   * `@emotion/is-prop-valid`. Component-level `withConfig({shouldForwardProp})`
+   * overrides this. Nested SSMs inherit the parent's function unless this
+   * prop is set to `undefined` or a passthrough.
    */
   shouldForwardProp?: undefined | IStyleSheetContext['shouldForwardProp'];
   /**

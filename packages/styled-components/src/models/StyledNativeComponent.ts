@@ -91,15 +91,6 @@ function buildPropsForElement(
   return propsForElement;
 }
 
-/**
- * Build the {@link ResolveEnv} consumed by render-time polyfills
- * (viewport / container units, `light-dark()`, `env()`, theme tokens).
- * Only called when `compiled.resolvers` is populated, so the per-render
- * cost is paid by components that actually use those features.
- *
- * Safe-area insets default to zero. When SafeAreaProvider is wired up,
- * upstream replaces this default at the call site.
- */
 const EMPTY_INSETS = Object.freeze({ top: 0, right: 0, bottom: 0, left: 0 });
 const DEFAULT_ROOT_FONT_SIZE = 16;
 
@@ -134,7 +125,6 @@ const CONTAINER_ENV: MediaQueryEnv = {
   pixelRatio: 1,
 };
 
-/** Evaluate whether an at-rule bucket (media/container/supports) matches. */
 function conditionMatches(
   entry: ConditionalStyle,
   env: MediaQueryEnv,
@@ -154,12 +144,7 @@ function conditionMatches(
   return false;
 }
 
-/**
- * Collect active unconditional-on-pseudo bucket styles under the given env +
- * container ctx + element props. Buckets gated on a pseudo (`&:hover` nested
- * inside a `@media`/`@container`) are skipped here and resolved by the state
- * callback. Attribute buckets evaluate against props.
- */
+// Pseudo-gated buckets are skipped here and resolved by the state callback.
 function matchConditionals(
   conditional: ConditionalStyle[],
   env: MediaQueryEnv,
@@ -179,12 +164,7 @@ function matchConditionals(
   return out;
 }
 
-/**
- * Evaluate an attribute-selector bucket against the element's props. The
- * presence-only form `&[attr]` matches when the prop is defined; the
- * `&[attr=value]` forms compare against a stringified value, with boolean
- * coercion so `aria-pressed={true}` and `aria-pressed="true"` both hit.
- */
+// Boolean coercion lets `aria-pressed={true}` and `aria-pressed="true"` both hit.
 function attrMatches(entry: ConditionalStyle, props: Record<string, unknown>): boolean {
   const name = entry.attribute;
   if (!name) return false;
@@ -195,10 +175,7 @@ function attrMatches(entry: ConditionalStyle, props: Record<string, unknown>): b
   return stringified === entry.attrValue;
 }
 
-/**
- * Map our compiler's pseudo-state names to the boolean field
- * Pressable/TextInput exposes on its `style` callback's `state` arg.
- */
+// Maps our pseudo-state names to the field RN's `style` callback exposes.
 const PSEUDO_TO_STATE_KEY: Record<PseudoState, 'pressed' | 'hovered' | 'focused' | 'disabled'> = {
   pressed: 'pressed',
   hover: 'hovered',
@@ -213,13 +190,6 @@ function pseudoActive(
   return !!state[PSEUDO_TO_STATE_KEY[pseudo]];
 }
 
-/**
- * Resolve pseudo-gated buckets against a Pressable/TextInput state object.
- * Handles both root-level pseudo buckets (`&:hover { ... }`) and composite
- * buckets where a pseudo is nested inside an at-rule
- * (`@media (...) { &:hover { ... } }`). Composite buckets require BOTH the
- * outer at-rule AND the pseudo to be active.
- */
 function pseudoStylesForState(
   conditional: ConditionalStyle[],
   state: { pressed?: boolean; hovered?: boolean; focused?: boolean; disabled?: boolean },
@@ -290,16 +260,8 @@ function createFastElement(
   return createElement(elementToBeCreated, propsForElement);
 }
 
-/**
- * Fast render path for fully-static CSS; eligibility is frozen at construction
- * (see {@link IInlineStyle.fastEligible}) so hook ordering stays stable across
- * renders. Zero hooks: skips `useContext` (no resolvers means CSS never reads
- * theme), `useMediaEnv`, `useContainerContext`, and the render cache. Returns
- * the pre-registered StyleSheet ID directly.
- *
- * `props.$containerName` dispatches to {@link FastContainerPublisher} so the
- * publish-side hooks only fire when the feature is used.
- */
+// Eligibility is frozen at construction (IInlineStyle.fastEligible) so hook
+// ordering stays stable; this path uses zero hooks.
 function useStaticImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
   props: Props,
@@ -317,13 +279,8 @@ function useStaticImpl<Props extends StyledComponentImplProps>(
 // [prevProps, prevTheme, prevPropsKeyCount, composedStyle, propsForElement, elementToBeCreated]
 type FastRenderCache = [object, DefaultTheme | undefined, number, any, Dict<any>, NativeTarget];
 
-/**
- * Fast render impl for dynamic-CSS components whose source contains no
- * responsive features. Two hooks (`useContext` + `useRef`) versus the full
- * impl's four, plus a 6-slot prop-equal render cache mirroring the full
- * impl's hot path; on stable-prop renders we skip the compile, style
- * composition, AND the `buildPropsForElement` allocation.
- */
+// Dynamic CSS without responsive features: 2 hooks + 6-slot prop-equal cache.
+// Stable-prop renders skip compile, style composition, and buildPropsForElement.
 function useFastImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
   props: Props,
