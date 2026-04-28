@@ -68,4 +68,40 @@ describe('StyleSheetManager RSC mode', () => {
       </div>
     `);
   });
+
+  it('nested SSM does not leak its override to a sibling subtree of the outer SSM', () => {
+    const pluginOuter = { name: 'outerplug', rw: (s: string) => s };
+    const pluginInner = { name: 'innerplug', rw: (s: string) => s };
+
+    const seen: Array<{ tag: string; plugins: readonly { name: string }[] | undefined }> = [];
+    function Probe({ tag }: { tag: string }) {
+      const ctx = useStyleSheetContext();
+      seen.push({ tag, plugins: ctx.plugins });
+      return React.createElement('span', null, tag);
+    }
+
+    ReactDOMServer.renderToString(
+      React.createElement(
+        StyleSheetManager,
+        { plugins: [pluginOuter] },
+        React.createElement(Probe, { tag: 'A' }),
+        React.createElement(
+          StyleSheetManager,
+          { plugins: [pluginInner] },
+          React.createElement(Probe, { tag: 'B' })
+        ),
+        React.createElement(Probe, { tag: 'C' })
+      )
+    );
+
+    const byTag = Object.fromEntries(
+      seen.map(({ tag, plugins }) => [tag, plugins?.map(p => p.name) ?? null])
+    );
+    expect(byTag.A).toEqual(['outerplug']);
+    expect(byTag.B).toEqual(['innerplug']);
+    // C is the regression case: before the save/restore tokens it saw the
+    // inner SSM's plugins because the leaked override survived past the
+    // inner subtree.
+    expect(byTag.C).toEqual(['outerplug']);
+  });
 });

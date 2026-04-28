@@ -56,20 +56,23 @@ function warnIfVendorPrefixesRequested(value: boolean | undefined): void {
 }
 
 /**
- * Per-render reset. Keyframes still register through the sheet via
+ * Per-render sheet reset. Keyframes register through the sheet via
  * flatten()'s keyframes.inject() call, so the tag accumulates them across
- * sequential SSR requests unless cleared. Also clears names + rscContextOverride
- * so the shared sheet behaves like a fresh per-request one.
+ * sequential SSR requests unless cleared. The `rscContextOverride` slot is
+ * NOT touched here — it's managed by the Set/Reset tokens emitted from
+ * StyleSheetManager so its lifecycle tracks the SSM tree, not the request.
+ *
+ * `React.cache` shipped in React 19; the v7 peer floor is React 19+, so
+ * we call it directly without a fallback. A consumer running on an older
+ * React in RSC mode (which itself isn't possible) would see a clear
+ * `cache is not a function` error rather than silent staleness.
  */
 const ensureSheetReset: (() => void) | null = IS_RSC
-  ? (((React as any).cache as (<T extends (...args: any[]) => any>(fn: T) => T) | undefined)?.(
-      () => {
-        mainSheet.names.clear();
-        mainSheet.keyframeIds.clear();
-        mainSheet.clearTag();
-        rscContextOverride = null;
-      }
-    ) ?? null)
+  ? React.cache(() => {
+      mainSheet.names.clear();
+      mainSheet.keyframeIds.clear();
+      mainSheet.clearTag();
+    })
   : null;
 
 export type IStyleSheetContext = {
@@ -169,16 +172,35 @@ export type IStyleSheetManager = React.PropsWithChildren<{
   target?: undefined | InsertionTarget;
 }>;
 
+/**
+ * Server tokens that mutate the global override slot in document order.
+ * RSC renders children top-to-bottom synchronously, so an outer SSM emits a
+ * Set token before its children and a Reset token after them; nested SSMs
+ * stack their own tokens, and the parent's Reset restores the override before
+ * subsequent sibling subtrees render. This is the cleanup hook RSC otherwise
+ * lacks (no `useEffect`, no `createContext`).
+ */
+function RscOverrideSet({ value }: { value: IStyleSheetContext | null }): null {
+  rscContextOverride = value;
+  return null;
+}
+
+function RscOverrideReset({ value }: { value: IStyleSheetContext | null }): null {
+  rscContextOverride = value;
+  return null;
+}
+
 /** Configure style injection for descendant styled components (target element, plugins, prop forwarding). */
 export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
-  // In RSC, context doesn't exist but we can set module-level state.
-  // Single-threaded RSC renders + React.cache reset make this safe.
+  // In RSC, context doesn't exist but we can drive module-level state via
+  // serial document-order render. Set/Reset tokens guarantee the override is
+  // restored when control returns to the parent's sibling subtree.
   if (IS_RSC) {
-    // Reset once per render (React.cache scopes this per request)
     if (ensureSheetReset) ensureSheetReset();
 
     // Merge with existing override: inherit parent values when props are omitted.
-    const parentOverride = rscContextOverride || defaultContextValue;
+    const parentOverride = rscContextOverride;
+    const parentResolved = parentOverride || defaultContextValue;
 
     // Build a stylis instance when any stylis-related prop is provided.
     // Cache it when the plugins array ref is stable.
@@ -201,7 +223,7 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
         // using inherited plugins from parent.
         rscCachedStylis = createStylisInstance({
           options: { namespace: props.namespace },
-          plugins: props.plugins ?? parentOverride.plugins,
+          plugins: props.plugins ?? parentResolved.plugins,
         });
       }
     }
@@ -210,24 +232,29 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
       ? props.plugins !== undefined && !props.plugins.length
         ? mainStylis
         : rscCachedStylis
-      : parentOverride.stylis;
+      : parentResolved.stylis;
     const resolvedShouldForwardProp =
-      'shouldForwardProp' in props ? props.shouldForwardProp : parentOverride.shouldForwardProp;
+      'shouldForwardProp' in props ? props.shouldForwardProp : parentResolved.shouldForwardProp;
 
-    const resolvedPlugins = props.plugins ?? parentOverride.plugins;
+    const resolvedPlugins = props.plugins ?? parentResolved.plugins;
 
-    if (resolvedStylis !== mainStylis || resolvedShouldForwardProp) {
-      rscContextOverride = {
-        shouldForwardProp: resolvedShouldForwardProp,
-        styleSheet: mainSheet,
-        stylis: resolvedStylis,
-        plugins: resolvedPlugins,
-      };
-    } else {
-      rscContextOverride = null;
-    }
+    const ownOverride: IStyleSheetContext | null =
+      resolvedStylis !== mainStylis || resolvedShouldForwardProp
+        ? {
+            shouldForwardProp: resolvedShouldForwardProp,
+            styleSheet: mainSheet,
+            stylis: resolvedStylis,
+            plugins: resolvedPlugins,
+          }
+        : null;
 
-    return props.children as React.JSX.Element;
+    return (
+      <>
+        <RscOverrideSet value={ownOverride} />
+        {props.children}
+        <RscOverrideReset value={parentOverride} />
+      </>
+    );
   }
 
   const parentContext = useStyleSheetContext();
