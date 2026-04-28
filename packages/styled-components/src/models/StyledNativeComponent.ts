@@ -156,21 +156,43 @@ function conditionMatches(
 
 /**
  * Collect active unconditional-on-pseudo bucket styles under the given env +
- * container ctx. Buckets that ALSO gate on a pseudo (`&:hover` nested inside
- * a `@media`/`@container`) are skipped here and resolved by the state callback.
+ * container ctx + element props. Buckets gated on a pseudo (`&:hover` nested
+ * inside a `@media`/`@container`) are skipped here and resolved by the state
+ * callback. Attribute buckets evaluate against props.
  */
 function matchConditionals(
   conditional: ConditionalStyle[],
   env: MediaQueryEnv,
-  containerCtx: { named: Readonly<Record<string, { width: number; height: number }>> }
+  containerCtx: { named: Readonly<Record<string, { width: number; height: number }>> },
+  props: Record<string, unknown>
 ): object[] {
   const out: object[] = [];
   for (let i = 0; i < conditional.length; i++) {
     const entry = conditional[i];
     if (entry.type === 'pseudo' || entry.pseudo) continue;
+    if (entry.type === 'attr') {
+      if (attrMatches(entry, props)) out.push(entry.styles);
+      continue;
+    }
     if (conditionMatches(entry, env, containerCtx)) out.push(entry.styles);
   }
   return out;
+}
+
+/**
+ * Evaluate an attribute-selector bucket against the element's props. The
+ * presence-only form `&[attr]` matches when the prop is defined; the
+ * `&[attr=value]` forms compare against a stringified value, with boolean
+ * coercion so `aria-pressed={true}` and `aria-pressed="true"` both hit.
+ */
+function attrMatches(entry: ConditionalStyle, props: Record<string, unknown>): boolean {
+  const name = entry.attribute;
+  if (!name) return false;
+  const raw = props[name];
+  if (raw === undefined) return false;
+  if (entry.attrValue === undefined) return true;
+  const stringified = typeof raw === 'boolean' ? (raw ? 'true' : 'false') : String(raw);
+  return stringified === entry.attrValue;
 }
 
 /**
@@ -461,7 +483,14 @@ function useImpl<Props extends StyledComponentImplProps>(
         if (hasOwn.call(props, key)) propsKeyCount++;
       }
     }
-    finalStyle = assembleFinalStyle(compiled, env, containerCtx, theme, props.style);
+    finalStyle = assembleFinalStyle(
+      compiled,
+      env,
+      containerCtx,
+      theme,
+      props.style,
+      props as unknown as Record<string, unknown>
+    );
     renderCacheRef.current = [
       props,
       theme,
@@ -574,13 +603,14 @@ function assembleFinalStyle(
   env: MediaQueryEnv,
   containerCtx: ContainerContextValue,
   theme: Record<string, any>,
-  userStyle: any
+  userStyle: any,
+  props: Record<string, unknown>
 ): any {
   const hasConditional = compiled.conditional.length > 0;
   const hasPseudoState = hasConditional && hasPseudo(compiled.conditional);
 
   const activeConditional = hasConditional
-    ? matchConditionals(compiled.conditional, env, containerCtx)
+    ? matchConditionals(compiled.conditional, env, containerCtx, props)
     : EMPTY_ARRAY;
 
   const base = compiled.resolvers

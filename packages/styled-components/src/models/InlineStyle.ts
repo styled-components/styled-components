@@ -167,16 +167,19 @@ function isAllStaticStrings(rules: ReadonlyArray<unknown>): boolean {
  * responsive infrastructure:
  *
  *   - `@media`/`@container`/`@supports`/`@scope`/`@starting-style` at-rules
- *   - pseudo states `:hover` / `:focus` / `:active` / `:pressed` / `:disabled` / `:focused` / `:focus-visible`
+ *   - pseudo states `:hover` / `:focus` / `:focus-visible` / `:active` / `:disabled`
  *   - viewport units (`vw`/`vh`/`dvh`/`svw`/`svh`/`lvw`/`lvh`/`vmin`/`vmax`)
  *   - container units (`cqw`/`cqh`/`cqi`/`cqb`/`cqmin`/`cqmax`)
  *   - `light-dark()` color function
+ *   - `env(...)` references (safe-area insets, etc.) that need a render-time resolver
+ *   - `\0` sentinel marker emitted by `createTheme.native.ts` leaves
+ *   - attribute selectors `&[attr=value]` that need per-render prop evaluation
  *
  * Viewport- and container-unit detection requires a digit immediately before
  * the unit, avoiding false positives in plain words like `view` / `vector`.
  */
 const RESPONSIVE_RE =
-  /@(?:media|container|supports|scope|starting-style)\b|:(?:hover|focus|active|pressed|disabled|focused|focus-visible)\b|\d(?:vw|vh|dvw|dvh|svw|svh|lvw|lvh|vmin|vmax|cqw|cqh|cqi|cqb|cqmin|cqmax)\b|light-dark\(/i;
+  /@(?:media|container|supports|scope|starting-style)\b|:(?:hover|focus|focus-visible|active|disabled)\b|\d(?:vw|vh|dvw|dvh|svw|svh|lvw|lvh|vmin|vmax|cqw|cqh|cqi|cqb|cqmin|cqmax)\b|light-dark\(|\benv\(|\0|&\[/i;
 
 /**
  * Walk the rule literals and report whether any string segment contains a

@@ -715,5 +715,21 @@ describe('native', () => {
       `;
       expect(Extended.inlineStyle.fastEligible).toBe(false);
     });
+
+    it('dynamic-rule CSS containing env() must NOT be fast-eligible (resolver pass needed)', () => {
+      const Comp = styled.View<{ $color: string }>`
+        color: ${p => p.$color};
+        padding-top: env(safe-area-inset-top);
+      `;
+      expect(Comp.inlineStyle.fastEligible).toBe(false);
+    });
+
+    it('dynamic-rule CSS containing a createTheme sentinel must NOT be fast-eligible', () => {
+      const Comp = styled.View<{ $w: number }>`
+        width: ${p => p.$w}px;
+        color: \0sc:colors.bg:#fff;
+      `;
+      expect(Comp.inlineStyle.fastEligible).toBe(false);
+    });
   });
 });

@@ -76,7 +76,7 @@ const CSS_SAMPLES = {
     }
     @container card (min-width: 300px) {
       color: blue;
-      &:pressed { opacity: 0.5; }
+      &:active { opacity: 0.5; }
     }
     &:hover { color: purple; }
     &:focus { border-color: red; }
@@ -92,7 +92,7 @@ const CSS_SAMPLES = {
       css += `@container c${i} (min-width: ${i * 100}px) { opacity: ${i / 10}; }\n`;
     }
     css +=
-      '&:hover { color: blue; } &:focus { border-color: red; } &:pressed { opacity: 0.5; } &:disabled { opacity: 0.3; }';
+      '&:hover { color: blue; } &:focus { border-color: red; } &:active { opacity: 0.5; } &:disabled { opacity: 0.3; }';
     return css;
   })(),
 };

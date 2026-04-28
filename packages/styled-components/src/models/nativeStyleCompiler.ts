@@ -8,7 +8,7 @@ import { preprocessCSS } from '../utils/cssCompile';
 
 export const RN_UNSUPPORTED_VALUES = ['fit-content', 'min-content', 'max-content'];
 
-export type ConditionType = 'media' | 'container' | 'supports' | 'pseudo';
+export type ConditionType = 'media' | 'container' | 'supports' | 'pseudo' | 'attr';
 
 export type PseudoState = 'hover' | 'focus' | 'pressed' | 'disabled';
 
@@ -17,6 +17,8 @@ export interface ConditionalStyle {
   /**
    * For media/container/supports: the raw prelude (e.g. `(min-width: 400px)`).
    * For pseudo: the pseudo-state name (`hover`, `pressed`, etc.) from {@link PseudoState}.
+   * For attr: the attribute name (mirrored from {@link attribute}; render-time
+   * logic reads `attribute`).
    * When type is `container`, {@link containerName} holds the optional named-container.
    */
   condition: string;
@@ -27,6 +29,10 @@ export interface ConditionalStyle {
    * the bucket only when BOTH the outer condition AND the pseudo-state hold.
    */
   pseudo?: PseudoState;
+  /** For type 'attr': the attribute name to read from props at render time. */
+  attribute?: string;
+  /** For type 'attr': the value to match (string compare with boolean coercion). */
+  attrValue?: string;
   styles: Dict<any>;
 }
 
@@ -62,9 +68,8 @@ export interface CompiledNativeStyles {
 const KNOWN_PSEUDOS: Record<string, PseudoState> = {
   hover: 'hover',
   focus: 'focus',
-  focused: 'focus',
+  'focus-visible': 'focus',
   active: 'pressed',
-  pressed: 'pressed',
   disabled: 'disabled',
 };
 
@@ -212,11 +217,31 @@ function handleRootRule(node: RuleNode, conditional: ConditionalStyle[]): void {
     return;
   }
 
+  // Attribute selectors: `&[attr]` (presence) or `&[attr=value]` /
+  // `&[attr='value']` / `&[attr="value"]` (exact match). Evaluated against
+  // the rendered element's props so the same CSS works on web (native
+  // cascade) and native (this polyfill). Most useful for `aria-*` since RN
+  // forwards those to platform a11y services.
+  const attr = detectAttrSelector(node.selectors);
+  if (attr) {
+    const decls = collectDecls(node.children);
+    if (decls.length === 0) return;
+    const entry: ConditionalStyle = {
+      type: 'attr',
+      condition: attr.attribute,
+      attribute: attr.attribute,
+      styles: finalizeRawPairs(decls),
+    };
+    if (attr.value !== undefined) entry.attrValue = attr.value;
+    conditional.push(entry);
+    return;
+  }
+
   if (process.env.NODE_ENV !== 'production') {
     console.warn(
       `[styled-components/native] Complex selectors are not supported yet (received: ${node.selectors.join(
         ', '
-      )}). Only pseudo-state selectors (\`&:hover\`, \`&:focus\`, \`&:pressed\`, \`&:disabled\`) and \`&:is(...)\` / \`&:where(...)\` enumerations of those states are supported on native. The rule was ignored.`
+      )}). Only pseudo-state selectors (\`&:hover\`, \`&:focus\`, \`&:focus-visible\`, \`&:active\`, \`&:disabled\`), attribute selectors (\`&[aria-pressed]\`, \`&[aria-pressed='true']\`), and \`&:is(...)\` / \`&:where(...)\` enumerations of pseudo states are supported on native. The rule was ignored.`
     );
   }
 }
@@ -388,6 +413,81 @@ function detectIsWherePseudoSet(selectors: string[]): PseudoState[] | null {
     states.push(mapped);
   }
   return states.length > 0 ? states : null;
+}
+
+/**
+ * Detect an attribute-selector rule. Supports presence-only `&[attr]` and
+ * the `=` operator with quoted or unquoted values. Other operators (`~=`,
+ * `^=`, `$=`, `*=`, `|=`) fall through to the "complex selectors" warning.
+ * Web resolves all of these natively via the cascade; native evaluates
+ * against the rendered element's props at render time.
+ */
+function detectAttrSelector(selectors: string[]): { attribute: string; value?: string } | null {
+  if (selectors.length !== 1) return null;
+  const sel = selectors[0];
+  if (
+    sel.length < 4 ||
+    sel.charCodeAt(0) !== $.AMPERSAND ||
+    sel.charCodeAt(1) !== $.OPEN_BRACKET ||
+    sel.charCodeAt(sel.length - 1) !== $.CLOSE_BRACKET
+  ) {
+    return null;
+  }
+  const inner = sel.substring(2, sel.length - 1);
+  const eqIdx = inner.indexOf('=');
+  if (eqIdx === -1) {
+    const name = inner.trim();
+    return isAttrName(name) ? { attribute: name } : null;
+  }
+  if (eqIdx > 0) {
+    const before = inner.charCodeAt(eqIdx - 1);
+    if (
+      before === $.TILDE ||
+      before === $.PIPE ||
+      before === 0x5e /* ^ */ ||
+      before === 0x24 /* $ */ ||
+      before === $.ASTERISK
+    ) {
+      return null;
+    }
+  }
+  const name = inner.substring(0, eqIdx).trim();
+  if (!isAttrName(name)) return null;
+  let raw = inner.substring(eqIdx + 1).trim();
+  if (raw.length >= 2 && raw.charCodeAt(raw.length - 2) === $.SPACE) {
+    const flag = raw.charCodeAt(raw.length - 1);
+    if (flag === 0x69 || flag === 0x73 || flag === 0x49 || flag === 0x53) {
+      raw = raw.substring(0, raw.length - 2).trim();
+    }
+  }
+  let value = raw;
+  if (value.length >= 2) {
+    const first = value.charCodeAt(0);
+    const last = value.charCodeAt(value.length - 1);
+    if (
+      (first === $.SINGLE_QUOTE && last === $.SINGLE_QUOTE) ||
+      (first === $.DOUBLE_QUOTE && last === $.DOUBLE_QUOTE)
+    ) {
+      value = value.substring(1, value.length - 1);
+    }
+  }
+  return { attribute: name, value };
+}
+
+function isAttrName(name: string): boolean {
+  if (name.length === 0) return false;
+  for (let i = 0; i < name.length; i++) {
+    const c = name.charCodeAt(i);
+    const ok =
+      (c >= $.LOWER_A && c <= $.LOWER_Z) ||
+      (c >= $.UPPER_A && c <= $.UPPER_Z) ||
+      (c >= $.DIGIT_0 && c <= $.DIGIT_9) ||
+      c === $.HYPHEN ||
+      c === $.UNDERSCORE ||
+      c === $.COLON;
+    if (!ok) return false;
+  }
+  return true;
 }
 
 /**

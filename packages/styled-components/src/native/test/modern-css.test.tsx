@@ -477,10 +477,10 @@ describe('modern CSS on React Native', () => {
   });
 
   describe('pseudo-state conditionals', () => {
-    it('produces a function style that resolves pressed state', () => {
+    it('produces a function style that resolves pressed state from &:active', () => {
       const Comp = styled.View`
         background-color: white;
-        &:pressed {
+        &:active {
           opacity: 0.5;
         }
       `;
@@ -511,10 +511,26 @@ describe('modern CSS on React Native', () => {
       expect(pressable.props.style({ hovered: false })).toEqual([{ color: 'black' }]);
     });
 
+    it('aliases :focus-visible to :focus on native (web parity for portable code)', () => {
+      const Comp = styled.View`
+        color: black;
+        &:focus-visible {
+          color: orange;
+        }
+      `;
+      const tree = TestRenderer.create(<Comp />);
+      const pressable = tree.root.findByType(View);
+      expect(pressable.props.style({ focused: true })).toEqual([
+        { color: 'black' },
+        { color: 'orange' },
+      ]);
+      expect(pressable.props.style({ focused: false })).toEqual([{ color: 'black' }]);
+    });
+
     it('merges user style function under pseudo state', () => {
       const Comp = styled.View<{ style?: any }>`
         background-color: white;
-        &:pressed {
+        &:active {
           opacity: 0.5;
         }
       `;
@@ -527,6 +543,64 @@ describe('modern CSS on React Native', () => {
         { opacity: 0.5 },
         { borderWidth: 2 },
       ]);
+    });
+  });
+
+  describe('attribute selectors', () => {
+    it('applies styles when [aria-pressed="true"] matches a string prop', () => {
+      const Toggle = styled.View<{ 'aria-pressed'?: 'true' | 'false' | boolean }>`
+        background-color: white;
+        &[aria-pressed='true'] {
+          background-color: yellow;
+        }
+      `;
+      const onTree = TestRenderer.create(<Toggle aria-pressed="true" />);
+      expect(onTree.root.findByType(View).props.style).toEqual([
+        { backgroundColor: 'white' },
+        { backgroundColor: 'yellow' },
+      ]);
+
+      const offTree = TestRenderer.create(<Toggle aria-pressed="false" />);
+      expect(offTree.root.findByType(View).props.style).toEqual({ backgroundColor: 'white' });
+    });
+
+    it('coerces boolean props so [aria-pressed="true"] matches aria-pressed={true}', () => {
+      const Toggle = styled.View<{ 'aria-pressed'?: 'true' | 'false' | boolean }>`
+        background-color: white;
+        &[aria-pressed='true'] {
+          background-color: yellow;
+        }
+      `;
+      const tree = TestRenderer.create(<Toggle aria-pressed={true} />);
+      expect(tree.root.findByType(View).props.style).toEqual([
+        { backgroundColor: 'white' },
+        { backgroundColor: 'yellow' },
+      ]);
+    });
+
+    it('bare `&[attr]` matches when the prop is defined regardless of value', () => {
+      const Comp = styled.View<{ 'aria-busy'?: boolean }>`
+        color: black;
+        &[aria-busy] {
+          color: gray;
+        }
+      `;
+      const onTree = TestRenderer.create(<Comp aria-busy />);
+      expect(onTree.root.findByType(View).props.style).toEqual([
+        { color: 'black' },
+        { color: 'gray' },
+      ]);
+
+      // Also matches when explicitly false — presence not truthiness.
+      const falseTree = TestRenderer.create(<Comp aria-busy={false} />);
+      expect(falseTree.root.findByType(View).props.style).toEqual([
+        { color: 'black' },
+        { color: 'gray' },
+      ]);
+
+      // Doesn't match when prop is omitted entirely.
+      const offTree = TestRenderer.create(<Comp />);
+      expect(offTree.root.findByType(View).props.style).toEqual({ color: 'black' });
     });
   });
 
@@ -581,7 +655,7 @@ describe('modern CSS on React Native', () => {
         @media (min-width: 500px) {
           padding-top: 20px;
         }
-        &:pressed {
+        &:active {
           opacity: 0.5;
         }
       `;
@@ -609,7 +683,7 @@ describe('modern CSS on React Native', () => {
         &:focus {
           border-color: red;
         }
-        &:pressed {
+        &:active {
           opacity: 0.5;
         }
         &:disabled {
@@ -678,7 +752,7 @@ describe('modern CSS on React Native', () => {
         color: black;
         @container card (min-width: 100px) {
           padding-top: 4px;
-          &:pressed {
+          &:active {
             opacity: 0.5;
           }
         }
@@ -709,7 +783,7 @@ describe('modern CSS on React Native', () => {
       const Comp = styled.View`
         color: black;
         @container card (min-width: 100px) {
-          &:pressed {
+          &:active {
             opacity: 0.5;
           }
         }

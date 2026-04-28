@@ -3,7 +3,7 @@ import TestRenderer from 'react-test-renderer';
 import { View } from 'react-native';
 
 import createTheme from '../../constructors/createTheme';
-import ThemeProvider from '../../models/ThemeProvider';
+import ThemeProvider, { ThemeContext } from '../../models/ThemeProvider';
 import styled from '..';
 
 describe('createTheme — native parity', () => {
@@ -104,5 +104,77 @@ describe('createTheme — native parity', () => {
     const theme = createTheme({ colors: { bg: '#fff' } });
     const tree = TestRenderer.create(<theme.GlobalStyle />);
     expect(tree.toJSON()).toBeNull();
+  });
+
+  it('deep-merge preserves class-instance leaves rather than copying their own enumerable keys onto a plain object', () => {
+    class TokenBag {
+      constructor(public id: string) {}
+      label(): string {
+        return `tag:${this.id}`;
+      }
+    }
+    const outerBag = new TokenBag('outer');
+    const innerBag = new TokenBag('inner');
+    const Box = styled(View)<{ $bag?: TokenBag }>`
+      color: ${p => (p.$bag instanceof TokenBag ? p.$bag.label() : 'plain')};
+    `;
+    let resolvedBag: unknown = null;
+    const Probe: React.FC = () => {
+      const t = React.useContext(ThemeContext) as { bag?: TokenBag } | undefined;
+      resolvedBag = t?.bag;
+      return null;
+    };
+    TestRenderer.create(
+      <ThemeProvider theme={{ bag: outerBag }}>
+        <ThemeProvider theme={{ bag: innerBag }}>
+          <Probe />
+          <Box />
+        </ThemeProvider>
+      </ThemeProvider>
+    );
+    expect(resolvedBag).toBeInstanceOf(TokenBag);
+    expect((resolvedBag as TokenBag).label()).toBe('tag:inner');
+  });
+
+  it('falls through to fallback when a path segment hits a prototype-chain member (e.g. toString)', () => {
+    // `theme[':toString']` reaches Object.prototype.toString without an `Object.hasOwn`
+    // guard, returning a function value that crashes RN's renderer downstream.
+    // We expect the resolver to treat it as missing and use the fallback instead.
+    const theme = createTheme({ colors: { bg: '#fff' } });
+    // Manually craft a sentinel pointing at `toString`. Mirrors the format
+    // createTheme.native.ts emits for real theme leaves.
+    const sentinel = '\0sc:toString:#abcdef';
+    const Box = styled(View)`
+      background-color: ${sentinel};
+    `;
+    const tree = TestRenderer.create(
+      <ThemeProvider theme={theme.raw}>
+        <Box />
+      </ThemeProvider>
+    );
+    expect(tree.root.findByType(View).props.style).toEqual(
+      expect.objectContaining({ backgroundColor: '#abcdef' })
+    );
+  });
+
+  it('preserves colon-bearing leaf values (URLs, time strings) through the sentinel round-trip', () => {
+    const theme = createTheme({
+      images: { hero: 'url(http://example.com/x.png)' },
+      times: { open: '12:00' },
+    });
+    const Box = styled(View)`
+      background-color: ${theme.images.hero};
+      border-color: ${theme.times.open};
+    `;
+    // No ThemeProvider override — fallback path must round-trip the literal value
+    // even though it contains additional `:` characters after the path/fallback boundary.
+    const tree = TestRenderer.create(<Box />);
+    const view = tree.root.findByType(View);
+    expect(view.props.style).toEqual(
+      expect.objectContaining({
+        backgroundColor: 'url(http://example.com/x.png)',
+        borderColor: '12:00',
+      })
+    );
   });
 });

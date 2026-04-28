@@ -81,7 +81,8 @@ function polarToLabAB(c: number, hDeg: number): [number, number] {
 }
 
 function parseOklch(tok: Token): RGB | null {
-  const args = readChannels(tok, 3);
+  // CSS Color L4: oklch L percent → 0..1, C percent → 0..0.4, hue rejects percent.
+  const args = readChannels(tok, OKLCH_SCALES);
   if (args === null) return null;
   const [l, c, h, alpha] = args;
   const [a, b] = polarToLabAB(c, h);
@@ -89,11 +90,17 @@ function parseOklch(tok: Token): RGB | null {
 }
 
 function parseOklab(tok: Token): RGB | null {
-  const args = readChannels(tok, 3);
+  // CSS Color L4: oklab L percent → 0..1, a/b percent → ±0.4.
+  const args = readChannels(tok, OKLAB_SCALES);
   if (args === null) return null;
   const [l, a, b, alpha] = args;
   return oklabToRgb(l, a, b, alpha);
 }
+
+const OKLAB_SCALES: [number, number, number] = [1, 0.4, 0.4];
+const OKLCH_SCALES: [number, number, number] = [1, 0.4, NaN];
+const LAB_SCALES: [number, number, number] = [100, 125, 125];
+const LCH_SCALES: [number, number, number] = [100, 150, NaN];
 
 function oklabToRgb(L: number, a: number, b: number, alpha: number): RGB {
   // Oklab to linear sRGB (Bottosson's matrices)
@@ -122,7 +129,8 @@ function linearToSrgb(v: number): number {
 // ─── lch / lab → sRGB ─────────────────────────────────────────────
 
 function parseLch(tok: Token): RGB | null {
-  const args = readChannels(tok, 3);
+  // CSS Color L4: lch L percent → 0..100, C percent → 0..150, hue rejects percent.
+  const args = readChannels(tok, LCH_SCALES);
   if (args === null) return null;
   const [l, c, h, alpha] = args;
   const [a, b] = polarToLabAB(c, h);
@@ -130,7 +138,8 @@ function parseLch(tok: Token): RGB | null {
 }
 
 function parseLab(tok: Token): RGB | null {
-  const args = readChannels(tok, 3);
+  // CSS Color L4: lab L percent → 0..100, a/b percent → ±125.
+  const args = readChannels(tok, LAB_SCALES);
   if (args === null) return null;
   const [l, a, b, alpha] = args;
   return labToRgb(l, a, b, alpha);
@@ -408,7 +417,19 @@ function srgbToLinear(v: number): number {
   return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
 }
 
-function readChannels(tok: Token, count: number): [number, number, number, number] | null {
+/**
+ * Read three channel values + optional alpha from an `oklab`/`oklch`/`lab`/`lch`
+ * function token. Each color space scales percents differently per CSS Color L4:
+ * `scales[i]` is what `100%` maps to for channel `i`. Pass `NaN` to reject
+ * percent for that channel (used for hue, where percent isn't valid).
+ *
+ * Number form (no `%`) is taken as-is. Alpha after `/` is normalised to 0..1
+ * regardless of input form.
+ */
+function readChannels(
+  tok: Token,
+  scales: readonly [number, number, number]
+): [number, number, number, number] | null {
   const args = tokenizeFunctionArgs(tok);
   const vals: number[] = [];
   let alpha = 1;
@@ -424,15 +445,19 @@ function readChannels(tok: Token, count: number): [number, number, number, numbe
       if (sawSlash) alpha = t.value!;
       else vals.push(t.value!);
     } else if (t.kind === TokenKind.Percent) {
-      // For L in oklch: 0-100% → 0-1
-      const v = t.value! / 100;
-      if (sawSlash) alpha = v;
-      else vals.push(v);
+      if (sawSlash) {
+        alpha = t.value! / 100;
+      } else {
+        const idx = vals.length;
+        const scale = idx < scales.length ? scales[idx] : NaN;
+        if (Number.isNaN(scale)) return null;
+        vals.push((t.value! / 100) * scale);
+      }
     } else {
       // Ident (e.g. `none`, `from`) — we don't support dynamic forms
       return null;
     }
   }
-  if (vals.length !== count) return null;
+  if (vals.length !== 3) return null;
   return [vals[0], vals[1], vals[2], alpha];
 }

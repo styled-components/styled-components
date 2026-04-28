@@ -56,21 +56,25 @@ export const ThemeConsumer = ThemeContext.Consumer;
  * per-variable inheritance naturally, so a shallow spread suffices. On
  * native there's no cascade: the full resolved theme object must carry
  * every leaf from every ancestor.
+ *
+ * Only PLAIN objects (prototype `Object.prototype` or `null`) recurse.
+ * Class instances, `Date`, `RegExp`, `Map`, `Set`, etc. are taken whole from
+ * the inner theme so their prototype methods stay intact.
  */
+function isPlainObject(o: unknown): o is Record<string, any> {
+  if (o === null || typeof o !== 'object') return false;
+  const proto = Object.getPrototypeOf(o);
+  return proto === null || proto === Object.prototype;
+}
+
 function deepMergeTheme(outer: DefaultTheme | undefined, inner: DefaultTheme): DefaultTheme {
   if (outer == null) return inner;
   const out: Record<string, any> = { ...outer };
   for (const k in inner) {
+    if (!Object.prototype.hasOwnProperty.call(inner, k)) continue;
     const v = (inner as Record<string, any>)[k];
     const o = (outer as Record<string, any>)[k];
-    if (
-      v !== null &&
-      typeof v === 'object' &&
-      !Array.isArray(v) &&
-      o !== null &&
-      typeof o === 'object' &&
-      !Array.isArray(o)
-    ) {
+    if (isPlainObject(v) && isPlainObject(o)) {
       out[k] = deepMergeTheme(o, v);
     } else {
       out[k] = v;

@@ -141,7 +141,7 @@ const CSS_LARGE = (() => {
   css += `@container (min-width: 300px) { color: blue; }\n`;
   css += `&:hover { color: purple; }\n`;
   css += `&:focus { border-color: red; }\n`;
-  css += `&:pressed { opacity: 0.5; }\n`;
+  css += `&:active { opacity: 0.5; }\n`;
   css += `&:disabled { opacity: 0.3; }\n`;
   for (let i = 0; i < 5; i++) {
     css += `&:is(:hover, :focus) { transform: scale(${1 + i * 0.05}); }\n`;

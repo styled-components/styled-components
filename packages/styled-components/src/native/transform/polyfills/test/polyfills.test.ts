@@ -142,6 +142,54 @@ describe('static color math', () => {
     expect(hex).toMatch(/^#[0-9a-f]{6}80$/);
   });
 
+  it('lab(50% 0 0) is mid-gray (L=50 in CIE Lab, not L=0.5)', () => {
+    // Per CSS Color L4, lab() L percent maps to 0..100 (not 0..1 like oklab).
+    // L=50, a=0, b=0 → neutral mid-gray ≈ #777777.
+    const tok = tokenize('lab(50% 0 0)')[0];
+    const hex = staticColorFunctionToHex(tok);
+    expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+    const r = parseInt(hex!.slice(1, 3), 16);
+    expect(r).toBeGreaterThan(0x60);
+    expect(r).toBeLessThan(0xa0);
+  });
+
+  it('lab(50 0 0) (number form) matches lab(50% 0 0) (percent form)', () => {
+    const numTok = tokenize('lab(50 0 0)')[0];
+    const pctTok = tokenize('lab(50% 0 0)')[0];
+    expect(staticColorFunctionToHex(numTok)).toBe(staticColorFunctionToHex(pctTok));
+  });
+
+  it('lch(50% 0 0) is mid-gray (L=50 in CIE Lch)', () => {
+    const tok = tokenize('lch(50% 0 0)')[0];
+    const hex = staticColorFunctionToHex(tok);
+    const r = parseInt(hex!.slice(1, 3), 16);
+    expect(r).toBeGreaterThan(0x60);
+    expect(r).toBeLessThan(0xa0);
+  });
+
+  it('oklab(50% 0 0) keeps L=0.5 mapping (oklab L is 0..1)', () => {
+    const tok = tokenize('oklab(50% 0 0)')[0];
+    const hex = staticColorFunctionToHex(tok);
+    const r = parseInt(hex!.slice(1, 3), 16);
+    // oklab L=0.5 → mid-gray-ish on the perceptual ramp
+    expect(r).toBeGreaterThan(0x50);
+    expect(r).toBeLessThan(0xa0);
+  });
+
+  it('lab(50% 100% 0) scales a-axis percent to ±125 per CSS Color L4', () => {
+    // a=100% means fully red on the a-axis (positive a = red direction).
+    // Per spec, 100% maps to a=125 (lab a/b range is ±125).
+    const tok = tokenize('lab(50% 100% 0)')[0];
+    const hex = staticColorFunctionToHex(tok);
+    expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+    // Should be reddish — r channel dominant.
+    const r = parseInt(hex!.slice(1, 3), 16);
+    const g = parseInt(hex!.slice(3, 5), 16);
+    const b = parseInt(hex!.slice(5, 7), 16);
+    expect(r).toBeGreaterThan(g);
+    expect(r).toBeGreaterThan(b);
+  });
+
   it('transformDecl wires color-math into backgroundColor', () => {
     const out = transformDecl('backgroundColor', 'color-mix(in srgb, red, blue)');
     // red + blue 50/50 in sRGB display space = #800080

@@ -137,9 +137,8 @@ describe('compileNativeStyles', () => {
       const pseudos = [
         ['&:hover', 'hover'],
         ['&:focus', 'focus'],
-        ['&:focused', 'focus'],
+        ['&:focus-visible', 'focus'],
         ['&:active', 'pressed'],
-        ['&:pressed', 'pressed'],
         ['&:disabled', 'disabled'],
       ];
       for (const [selector, mapped] of pseudos) {
@@ -189,7 +188,7 @@ describe('compileNativeStyles', () => {
     it('preserves containerName on composite pseudo buckets', () => {
       const r = compile(`
         @container card (min-width: 300px) {
-          &:pressed { opacity: 0.5; }
+          &:active { opacity: 0.5; }
         }
       `);
       expect(r.conditional[0]).toEqual({
@@ -314,9 +313,9 @@ describe('compileNativeStyles', () => {
       expect(r.conditional[0].styles).toEqual(r.conditional[1].styles);
     });
 
-    it('&:where(:pressed, :disabled) expands the same way (zero specificity is a no-op on RN)', () => {
+    it('&:where(:active, :disabled) expands the same way (zero specificity is a no-op on RN)', () => {
       const r = compile(`
-        &:where(:pressed, :disabled) {
+        &:where(:active, :disabled) {
           opacity: 0.5;
         }
       `);

@@ -163,7 +163,11 @@ function buildThemeResolver(value: string): Resolver | null {
   return env => {
     let v: any = env.theme;
     for (let i = 0; i < segments.length; i++) {
-      if (v == null || typeof v !== 'object') {
+      if (
+        v == null ||
+        typeof v !== 'object' ||
+        !Object.prototype.hasOwnProperty.call(v, segments[i])
+      ) {
         v = undefined;
         break;
       }
