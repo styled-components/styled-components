@@ -75,7 +75,7 @@ ThemeProvider: "theme" prop is required.
 
 ## 15
 
-A stylis plugin has been supplied that is not named. We need a name for each plugin to be able to prevent styling collisions between different stylis configurations within the same app. Before you pass your plugin to `<StyleSheetManager plugins={[]}>`, please make sure each plugin is uniquely-named, e.g.
+A plugin has been supplied that is not named. We need a name for each plugin to be able to prevent styling collisions between different plugin configurations within the same app. Before you pass your plugin to `<StyleSheetManager plugins={[]}>`, please make sure each plugin is uniquely-named, e.g.
 
 ```js
 Object.defineProperty(importedPlugin, 'name', { value: 'some-unique-name' });
