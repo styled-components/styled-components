@@ -10,6 +10,7 @@
  * in production, add it here FIRST (red), fix the emitter (green), ship.
  */
 
+import * as actualStylis from 'stylis';
 import createStylisInstance from '../utils/cssCompile';
 import { preprocessCSS } from '../utils/cssCompile';
 import { emitWeb } from './emit-web';
@@ -23,6 +24,19 @@ function stylisOut(css: string): string[] {
 
 function parserOut(css: string): string[] {
   return emitWeb(parse(preprocessCSS(css)), '.a');
+}
+
+/**
+ * Real stylis output (the v6 baseline). Used by the upstream-stylis-parity
+ * suite to lock down corner cases where v6→v7 hash stability depends on
+ * byte-identical output.
+ */
+function upstreamStylisOut(css: string): string {
+  return actualStylis.serialize(actualStylis.compile(css), actualStylis.stringify);
+}
+
+function ourOutFlat(css: string): string {
+  return parserOut(css).join('');
 }
 
 const cases: Array<{ name: string; css: string; skip?: boolean; skipReason?: string }> = [
@@ -47,6 +61,14 @@ const cases: Array<{ name: string; css: string; skip?: boolean; skipReason?: str
   {
     name: '@keyframes comma stops',
     css: `@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`,
+  },
+  {
+    name: '@keyframes drops empty frames (parity with stylis)',
+    css: `@keyframes spin { from { } to { opacity: 1; } }`,
+  },
+  {
+    name: '@keyframes drops every-frame-empty bodies',
+    css: `@keyframes none { 0% {} 50% {} 100% {} }`,
   },
   {
     name: 'bare nested selectors',
@@ -193,4 +215,54 @@ describe('parser ↔ stylis wild parity corpus', () => {
       expect(actual).toEqual(expected);
     });
   }
+});
+
+/**
+ * Spot-check parity against actual upstream stylis (NOT against our own
+ * pipeline). Class-name hash stability across the v6→v7 upgrade depends on
+ * byte-identical output for these cases.
+ */
+describe('upstream stylis byte-identical parity', () => {
+  const upstreamCases: Array<{ name: string; css: string }> = [
+    {
+      name: 'empty keyframe frames are dropped',
+      css: '@keyframes spin { from { } to { opacity: 1; } }',
+    },
+    {
+      name: 'all-empty keyframe collapses to empty body',
+      css: '@keyframes none { 0% {} 50% {} 100% {} }',
+    },
+    {
+      // The component-id prefix differs between bare-stylis output and our
+      // pipeline (we always prepend `.a`), so comment behavior is asserted
+      // separately via `preprocessCSS` directly. See the dedicated suite below.
+      name: 'block comment behavior tested separately (preprocess only)',
+      css: '@keyframes spin { 0% { opacity: 0; } 100% { opacity: 1; } }',
+    },
+  ];
+  for (const c of upstreamCases) {
+    it(c.name, () => {
+      expect(ourOutFlat(c.css)).toEqual(upstreamStylisOut(c.css));
+    });
+  }
+});
+
+describe('preprocessCSS comment-whitespace parity', () => {
+  it('a /* foo */ b collapses surrounding whitespace to a single space', () => {
+    expect(preprocessCSS('a /* foo */ b { color: red; }')).toEqual('a b { color: red; }');
+  });
+
+  it('a/* foo */b strips just the comment when no surrounding whitespace', () => {
+    expect(preprocessCSS('a/* foo */b { color: red; }')).toEqual('ab { color: red; }');
+  });
+
+  it('comment between two declarations leaves only a single space', () => {
+    expect(preprocessCSS('color: red; /* note */ background: blue;')).toEqual(
+      'color: red; background: blue;'
+    );
+  });
+
+  it('comment at start of value strips without leaving double space', () => {
+    expect(preprocessCSS('color: /* note */ red;')).toEqual('color: red;');
+  });
 });

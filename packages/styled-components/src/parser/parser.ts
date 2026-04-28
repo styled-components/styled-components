@@ -122,6 +122,13 @@ function parseBlock(ctx: ParseContext): Node[] {
           continue;
         }
         if (c === quote) quote = 0;
+      } else if (c === BACKSLASH) {
+        // CSS escape: `\:` in an ident is a literal colon, NOT a decl boundary.
+        // Same for `\;`, `\{`, etc. Consume the escaped char so the boundary
+        // scanner doesn't stop on it. Stylis-parity for property names like
+        // `foo\:bar` and selectors with escaped delimiters.
+        i += 2;
+        continue;
       } else if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) {
         quote = c;
       } else if (c === OPEN_PAREN) {
@@ -135,7 +142,9 @@ function parseBlock(ctx: ParseContext): Node[] {
           // Rule start. Selector runs from start..i.
           const selectorText = trimRange(css, start, i);
           const selectors =
-            selectorText.indexOf(',') === -1 ? [selectorText] : splitSelectors(selectorText);
+            selectorText.indexOf(',') === -1
+              ? [selectorText]
+              : splitTopLevelCommas(selectorText, true);
           ctx.i = i + 1;
           const children = parseBlock(ctx);
           out.push({ kind: NodeKind.Rule, selectors, children });
@@ -331,6 +340,9 @@ function parseAtRule(ctx: ParseContext): AtRuleNode | KeyframesNode {
         continue;
       }
       if (c === quote) quote = 0;
+    } else if (c === BACKSLASH) {
+      j += 2;
+      continue;
     } else if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) {
       quote = c;
     } else if (c === OPEN_PAREN) {
@@ -418,7 +430,8 @@ function parseKeyframesBody(ctx: ParseContext): KeyframeFrame[] {
     }
 
     const stopsText = trimRange(css, start, j);
-    const stops = stopsText.indexOf(',') === -1 ? [stopsText] : splitSelectors(stopsText);
+    const stops =
+      stopsText.indexOf(',') === -1 ? [stopsText] : splitTopLevelCommas(stopsText, true);
     ctx.i = j + 1;
 
     const children = parseFrameDecls(ctx);
@@ -462,6 +475,9 @@ function parseFrameDecls(ctx: ParseContext): DeclNode[] {
           continue;
         }
         if (c === quote) quote = 0;
+      } else if (c === BACKSLASH) {
+        i += 2;
+        continue;
       } else if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) {
         quote = c;
       } else if (c === OPEN_PAREN) {
@@ -511,12 +527,23 @@ function parseFrameDecls(ctx: ParseContext): DeclNode[] {
 }
 
 /**
- * Split a selector list on top-level commas, preserving commas inside
- * `:is()`, `:where()`, `:has()`, `[attr="a,b"]`, etc.
+ * Split a comma-separated list at the top level only, preserving commas
+ * inside `:is()`, `:where()`, `:has()`, `[attr="a,b"]`, quoted strings,
+ * and any other paren/bracket-bounded context. Used in two modes:
+ *
+ *   - parser-side (`trim=true`): each part is trimmed and empty parts are
+ *     dropped — matches the contract for selectors and keyframe stops.
+ *   - emit-side (`trim=false`): substrings preserved verbatim — matches
+ *     the contract for selector cross-product and the `rscPlugin` selector
+ *     rewriter where downstream callers expect raw segments.
  */
-export function splitSelectors(raw: string): string[] {
-  if (raw.indexOf(',') === -1) return [raw];
-  const parts: string[] = [];
+export function splitTopLevelCommas(raw: string, trim = false): string[] {
+  if (raw.indexOf(',') === -1) {
+    if (!trim) return [raw];
+    const single = trimRange(raw, 0, raw.length);
+    return single ? [single] : [];
+  }
+  const out: string[] = [];
   const len = raw.length;
   let start = 0;
   let paren = 0;
@@ -531,7 +558,9 @@ export function splitSelectors(raw: string): string[] {
         continue;
       }
       if (c === quote) quote = 0;
-    } else if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) {
+      continue;
+    }
+    if (c === DOUBLE_QUOTE || c === SINGLE_QUOTE) {
       quote = c;
     } else if (c === OPEN_PAREN) {
       paren++;
@@ -542,13 +571,20 @@ export function splitSelectors(raw: string): string[] {
     } else if (c === CLOSE_BRACKET) {
       if (bracket > 0) bracket--;
     } else if (c === COMMA && paren === 0 && bracket === 0) {
-      const part = trimRange(raw, start, i);
-      if (part) parts.push(part);
+      if (trim) {
+        const part = trimRange(raw, start, i);
+        if (part) out.push(part);
+      } else {
+        out.push(raw.substring(start, i));
+      }
       start = i + 1;
     }
   }
-
-  const tail = trimRange(raw, start, len);
-  if (tail) parts.push(tail);
-  return parts;
+  if (trim) {
+    const tail = trimRange(raw, start, len);
+    if (tail) out.push(tail);
+  } else {
+    out.push(raw.substring(start, len));
+  }
+  return out;
 }

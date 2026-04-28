@@ -1,6 +1,6 @@
 import * as $ from '../utils/charCodes';
 import { AtRuleNode, KeyframeFrame, KeyframesNode, Node, NodeKind, Root, RuleNode } from './ast';
-import { stripCommaSpaces } from './parser';
+import { splitTopLevelCommas, stripCommaSpaces } from './parser';
 
 /**
  * At-rule names whose bodies are direct declarations (no nested selector wrap).
@@ -58,11 +58,7 @@ function stripCombinatorSpaces(sel: string): string {
       bracket++;
     } else if (c === $.CLOSE_BRACKET) {
       if (bracket > 0) bracket--;
-    } else if (
-      paren === 0 &&
-      bracket === 0 &&
-      (c === 62 /* > */ || c === $.PLUS || c === 126) /* ~ */
-    ) {
+    } else if (paren === 0 && bracket === 0 && (c === $.GT || c === $.PLUS || c === $.TILDE)) {
       // Find left boundary of emitted segment (trim trailing whitespace).
       let left = i;
       while (left > segStart) {
@@ -89,53 +85,10 @@ function stripCombinatorSpaces(sel: string): string {
   return out;
 }
 
-/**
- * Split a selector on TOP-LEVEL commas only — commas inside parens
- * (`:is(a,b)`, `[attr=...]` style brackets, quoted strings) stay put.
- *
- * Naive `s.split(',')` was the source of #4279: parent selectors like
- * `:is(.a, .b) .child` got split into `[':is(.a', ' .b) .child']`, then
- * cross-producted with child rules — producing nonsense like
- * `:is(.a:hover .grandchild, .b)` where the child got injected INTO the
- * `:is()` first arm. This helper restores the contract that
- * cross-product only fires on actually-separate selectors.
- */
-export function splitTopLevelCommas(s: string): string[] {
-  if (s.indexOf(',') === -1) return [s];
-  const len = s.length;
-  const out: string[] = [];
-  let segStart = 0;
-  let paren = 0;
-  let bracket = 0;
-  let quote = 0;
-  for (let i = 0; i < len; i++) {
-    const c = s.charCodeAt(i);
-    if (quote !== 0) {
-      if (c === $.BACKSLASH) {
-        i++;
-        continue;
-      }
-      if (c === quote) quote = 0;
-      continue;
-    }
-    if (c === $.DOUBLE_QUOTE || c === $.SINGLE_QUOTE) {
-      quote = c;
-    } else if (c === $.OPEN_PAREN) {
-      paren++;
-    } else if (c === $.CLOSE_PAREN) {
-      if (paren > 0) paren--;
-    } else if (c === $.OPEN_BRACKET) {
-      bracket++;
-    } else if (c === $.CLOSE_BRACKET) {
-      if (bracket > 0) bracket--;
-    } else if (c === $.COMMA && paren === 0 && bracket === 0) {
-      out.push(s.substring(segStart, i));
-      segStart = i + 1;
-    }
-  }
-  out.push(s.substring(segStart, len));
-  return out;
-}
+// `splitTopLevelCommas` lives in `parser.ts` (single canonical implementation
+// shared by both the parser and the emit pipeline). Re-exported so the
+// `rscPlugin` selector rewriter can keep its existing import path.
+export { splitTopLevelCommas };
 
 /** Apply the decl plugin hook (if any) and format the pair as `prop:value`. */
 function formatDecl(
@@ -299,7 +252,10 @@ function emitAtRule(
 function emitKeyframes(node: KeyframesNode, options: EmitOptions | undefined): string {
   const frames: string[] = [];
   for (let i = 0; i < node.frames.length; i++) {
-    frames.push(emitFrame(node.frames[i], options));
+    const frame = node.frames[i];
+    // Empty frames (`from { }`) drop — matches stylis output for v6→v7 hash stability.
+    if (frame.children.length === 0) continue;
+    frames.push(emitFrame(frame, options));
   }
   const header = '@' + node.name + (node.prelude ? ' ' + node.prelude : '');
   return header + '{' + frames.join('') + '}';

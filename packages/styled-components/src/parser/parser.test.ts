@@ -1,5 +1,7 @@
 import { NodeKind } from './ast';
-import { parse, splitSelectors } from './parser';
+import { parse, splitTopLevelCommas } from './parser';
+
+const splitSelectors = (raw: string) => splitTopLevelCommas(raw, true);
 
 describe('parser', () => {
   it('parses a single declaration', () => {
@@ -266,5 +268,25 @@ describe('parser', () => {
     expect(parse(';;;color: red;;;')).toEqual([
       { kind: NodeKind.Decl, prop: 'color', value: 'red' },
     ]);
+  });
+
+  describe('CSS escape sequences in declarations', () => {
+    it('treats `\\:` in a property name as a literal colon, not a decl boundary', () => {
+      expect(parse('foo\\:bar: 10px;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'foo\\:bar', value: '10px' },
+      ]);
+    });
+
+    it('treats `\\:` in a custom property name correctly', () => {
+      expect(parse('--my\\:prop: 10px;')).toEqual([
+        { kind: NodeKind.Decl, prop: '--my\\:prop', value: '10px' },
+      ]);
+    });
+
+    it('treats `\\;` as part of the value, not a decl terminator', () => {
+      expect(parse('content: "a\\;b";')).toEqual([
+        { kind: NodeKind.Decl, prop: 'content', value: '"a\\;b"' },
+      ]);
+    });
   });
 });

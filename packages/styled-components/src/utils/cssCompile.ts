@@ -8,6 +8,7 @@ import {
   CLOSE_BRACE,
   CLOSE_PAREN,
   COLON,
+  CR,
   DOUBLE_QUOTE,
   LF,
   OPEN_BRACE,
@@ -15,6 +16,8 @@ import {
   SEMICOLON,
   SINGLE_QUOTE,
   SLASH,
+  SPACE,
+  TAB,
 } from './charCodes';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
@@ -107,6 +110,29 @@ export function preprocessCSS(css: string): string {
         i++;
       }
       i += 2;
+      // When the comment is bordered by whitespace on both sides, collapse the
+      // pair to a single space — matches stylis output so v6→v7 hash is stable
+      // for templates that interleave selectors with annotative comments
+      // (`a /* foo */ b`).
+      const prevCh = out.length > 0 ? out.charCodeAt(out.length - 1) : 0;
+      if (
+        (prevCh === SPACE || prevCh === TAB || prevCh === LF || prevCh === CR) &&
+        i < len &&
+        (css.charCodeAt(i) === SPACE ||
+          css.charCodeAt(i) === TAB ||
+          css.charCodeAt(i) === LF ||
+          css.charCodeAt(i) === CR)
+      ) {
+        while (
+          i < len &&
+          (css.charCodeAt(i) === SPACE ||
+            css.charCodeAt(i) === TAB ||
+            css.charCodeAt(i) === LF ||
+            css.charCodeAt(i) === CR)
+        ) {
+          i++;
+        }
+      }
       start = i;
       modified = true;
       continue;

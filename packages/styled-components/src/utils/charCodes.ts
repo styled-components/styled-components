@@ -26,6 +26,9 @@ export const DIGIT_0 = 48; // 0
 export const DIGIT_9 = 57; // 9
 export const COLON = 58; // :
 export const SEMICOLON = 59; // ;
+export const LT = 60; // <
+export const EQ = 61; // =
+export const GT = 62; // >
 export const AT = 64; // @
 export const UPPER_A = 65; // A
 export const UPPER_E = 69; // E
@@ -38,6 +41,8 @@ export const LOWER_A = 97; // a
 export const LOWER_E = 101; // e
 export const LOWER_Z = 122; // z
 export const OPEN_BRACE = 123; // {
+export const PIPE = 124; // |
 export const CLOSE_BRACE = 125; // }
+export const TILDE = 126; // ~
 /** Offset from an ASCII uppercase letter to its lowercase counterpart. */
 export const UPPER_TO_LOWER = 32;
