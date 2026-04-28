@@ -55,18 +55,8 @@ function warnIfVendorPrefixesRequested(value: boolean | undefined): void {
   );
 }
 
-/**
- * Per-render sheet reset. Keyframes register through the sheet via
- * flatten()'s keyframes.inject() call, so the tag accumulates them across
- * sequential SSR requests unless cleared. The `rscContextOverride` slot is
- * NOT touched here — it's managed by the Set/Reset tokens emitted from
- * StyleSheetManager so its lifecycle tracks the SSM tree, not the request.
- *
- * `React.cache` shipped in React 19; the v7 peer floor is React 19+, so
- * we call it directly without a fallback. A consumer running on an older
- * React in RSC mode (which itself isn't possible) would see a clear
- * `cache is not a function` error rather than silent staleness.
- */
+// Per-render sheet reset; the rscContextOverride slot is NOT touched here
+// (Set/Reset tokens manage it instead).
 const ensureSheetReset: (() => void) | null = IS_RSC
   ? React.cache(() => {
       mainSheet.names.clear();
@@ -172,14 +162,9 @@ export type IStyleSheetManager = React.PropsWithChildren<{
   target?: undefined | InsertionTarget;
 }>;
 
-/**
- * Server tokens that mutate the global override slot in document order.
- * RSC renders children top-to-bottom synchronously, so an outer SSM emits a
- * Set token before its children and a Reset token after them; nested SSMs
- * stack their own tokens, and the parent's Reset restores the override before
- * subsequent sibling subtrees render. This is the cleanup hook RSC otherwise
- * lacks (no `useEffect`, no `createContext`).
- */
+// Set/Reset tokens drive `rscContextOverride` in document order — RSC
+// renders fragment children serially, so a Reset after children restores
+// the parent override before sibling subtrees render.
 function RscOverrideSet({ value }: { value: IStyleSheetContext | null }): null {
   rscContextOverride = value;
   return null;
@@ -192,9 +177,6 @@ function RscOverrideReset({ value }: { value: IStyleSheetContext | null }): null
 
 /** Configure style injection for descendant styled components (target element, plugins, prop forwarding). */
 export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
-  // In RSC, context doesn't exist but we can drive module-level state via
-  // serial document-order render. Set/Reset tokens guarantee the override is
-  // restored when control returns to the parent's sibling subtree.
   if (IS_RSC) {
     if (ensureSheetReset) ensureSheetReset();
 

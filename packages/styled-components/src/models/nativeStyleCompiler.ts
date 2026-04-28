@@ -217,11 +217,7 @@ function handleRootRule(node: RuleNode, conditional: ConditionalStyle[]): void {
     return;
   }
 
-  // Attribute selectors: `&[attr]` (presence) or `&[attr=value]` /
-  // `&[attr='value']` / `&[attr="value"]` (exact match). Evaluated against
-  // the rendered element's props so the same CSS works on web (native
-  // cascade) and native (this polyfill). Most useful for `aria-*` since RN
-  // forwards those to platform a11y services.
+  // `&[attr]` / `&[attr=value]` — evaluate against props at render time.
   const attr = detectAttrSelector(node.selectors);
   if (attr) {
     const decls = collectDecls(node.children);
@@ -415,13 +411,7 @@ function detectIsWherePseudoSet(selectors: string[]): PseudoState[] | null {
   return states.length > 0 ? states : null;
 }
 
-/**
- * Detect an attribute-selector rule. Supports presence-only `&[attr]` and
- * the `=` operator with quoted or unquoted values. Other operators (`~=`,
- * `^=`, `$=`, `*=`, `|=`) fall through to the "complex selectors" warning.
- * Web resolves all of these natively via the cascade; native evaluates
- * against the rendered element's props at render time.
- */
+/** `&[attr]` (presence) or `&[attr=value]` (exact). `=` operator only. */
 function detectAttrSelector(selectors: string[]): { attribute: string; value?: string } | null {
   if (selectors.length !== 1) return null;
   const sel = selectors[0];
@@ -506,33 +496,10 @@ function extractContainerName(prelude: string): string | undefined {
   return prelude.substring(0, i);
 }
 
-/**
- * Per-pair memoisation of transform output.
- *
- * The in-house transform dominates cold-compile cost: each pair tokenises
- * the value and dispatches through shorthand expansion. In realistic apps
- * the same `(prop, value)` pairs recur across many components (e.g.
- * `padding-top: 8px`, `color: #333`). Caching per-pair reduces repeated
- * work to a Map lookup.
- *
- * Two-level Map<prop, Map<value, result>>. Avoids the per-call
- * `prop + '\x1f' + value` string allocation that was a measurable
- * 8-15% slice of the cold profile.
- *
- * Bound at 1000 total entries; the eviction path replaces both Maps in one
- * shot rather than tracking per-pair insertion order. The "wave recompile"
- * concern that motivates per-entry FIFO is real in theory but empirically
- * loses to whole-flush by 3-4x — the bookkeeping overhead (parallel order
- * Map / composite-key tracking) costs more than the work it avoids, and
- * `transformDecl` itself runs either way for genuine misses. Measured
- * 2026-04-27 against composite-key FIFO and a 2-level + order-Map FIFO;
- * whole-flush won in every eviction scenario (wave, rolling window) and
- * tied or won in within-ceiling steady state. Re-validate with a fresh
- * measurement pass before changing this. Stress coverage lives in
- * `src/native/transform/test/stress.test.ts` — 50k repeated pair
- * transforms stay within a linear-allocation envelope and 2,000 distinct
- * pairs evict in ~7ms.
- */
+// Two-level Map<prop, Map<value, result>>; whole-Map flush at the ceiling.
+// The two levels avoid the per-call `prop + '\x1f' + value` string alloc
+// that was 8-15% of cold-compile profile. Whole-flush beat per-entry FIFO
+// by 3-4x in measurement; don't change without re-measuring.
 const PAIR_CACHE_LIMIT = 1000;
 let pairCache = new Map<string, Map<string, Record<string, any>>>();
 let pairCacheSize = 0;
