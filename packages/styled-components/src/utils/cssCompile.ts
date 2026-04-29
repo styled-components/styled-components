@@ -1,5 +1,4 @@
 import { emitWeb } from '../parser/emit-web';
-import { parseEmitFlat } from '../parser/emit-fast';
 import { parse } from '../parser/parser';
 import { compileWebFilled } from '../parser/compile';
 import type { Compiler } from '../types';
@@ -332,26 +331,14 @@ export default function createCompiler(
   // Byte-identical to v6 stylis output for hash + SSR rehydration stability.
   const compileString = (css: string, selector = '', prefix = '', componentId = '&'): string[] => {
     const flatCSS = preprocessCSS(css);
-    const namespace = options.namespace;
     const wrapSelector = prefix || selector ? (prefix ? prefix + ' ' : '') + selector : '';
-    if (
-      wrapSelector &&
-      !namespace &&
-      !postProcessSelector &&
-      !postProcessDecl &&
-      flatCSS.indexOf('{') === -1 &&
-      flatCSS.indexOf('@') === -1
-    ) {
-      const fast = parseEmitFlat(flatCSS, wrapSelector);
-      if (fast !== null) return fast;
-    }
     const wrappedCSS = wrapSelector ? wrapSelector + '{' + flatCSS + '}' : flatCSS;
     const ast = parse(wrappedCSS);
     if (ast.length === 0) return [];
     return emitWeb(ast, '', {
       selfRefSelector: selector,
       componentId,
-      namespace,
+      namespace: options.namespace,
       rw: postProcessSelector,
       decl: postProcessDecl,
     });

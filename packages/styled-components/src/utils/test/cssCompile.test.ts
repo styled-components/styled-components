@@ -1444,8 +1444,8 @@ background-color: green;`)
     });
   });
 
-  describe('flat fast path (parseEmitFlat vs full parser)', () => {
-    it('matches full parser for flat declarations (default compiler)', () => {
+  describe('flat decl-only inputs', () => {
+    it('compiles flat declarations against the AST emitter', () => {
       const css = `color: red;\nbackground: blue;`;
       const fromInstance = runCssCompile(css);
       const flatCSS = preprocessCSS(css);
@@ -1456,7 +1456,7 @@ background-color: green;`)
       expect(fromInstance).toEqual(viaFull);
     });
 
-    it('uses full parser when namespace is set (no fast path)', () => {
+    it('honors namespace option', () => {
       const compiler = createCompiler({ options: { namespace: '.ns' } });
       expect(compiler.compile(`color: red;`, '.a', undefined, 'a')).toMatchInlineSnapshot(`
         [
@@ -1465,7 +1465,7 @@ background-color: green;`)
       `);
     });
 
-    it('uses full parser when rtl decl transform is active', () => {
+    it('runs decl transform from rtl plugin', () => {
       const compiler = createCompiler({ plugins: [rtl] });
       expect(compiler.compile(`margin-left: 8px; padding-left: 4px;`, '.a', undefined, 'a'))
         .toMatchInlineSnapshot(`
@@ -1475,7 +1475,7 @@ background-color: green;`)
       `);
     });
 
-    it('uses full parser when rscPlugin rw is active', () => {
+    it('runs selector rewrite from rscPlugin', () => {
       const compiler = createCompiler({ plugins: [rscPlugin] });
       expect(compiler.compile(`color: red;`, '.a:hover:first-child', undefined, 'a'))
         .toMatchInlineSnapshot(`

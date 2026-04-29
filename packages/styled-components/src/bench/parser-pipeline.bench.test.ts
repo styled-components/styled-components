@@ -14,7 +14,6 @@
  */
 
 import * as stylis from 'stylis';
-import { parseEmitFlat } from '../parser/emit-fast';
 import { emitWeb } from '../parser/emit-web';
 import { parse } from '../parser/parser';
 import { preprocessCSS } from '../utils/cssCompile';
@@ -220,28 +219,11 @@ function parserFull(css: string): string[] {
   return emitWeb(parse(preprocessCSS(css)), '.a');
 }
 
-/**
- * Use fast path when cheap indexOf pre-check confirms flat CSS.
- * indexOf is SIMD-backed on V8, far cheaper than byte-walking.
- */
-function parserHybrid(css: string): string[] {
-  const pp = preprocessCSS(css);
-  if (pp.indexOf('{') === -1 && pp.indexOf('@') === -1) {
-    const fast = parseEmitFlat(pp, '.a');
-    if (fast !== null) return fast;
-  }
-  const ast = parse(pp);
-  return emitWeb(ast, '.a');
-}
-
 describe('parser pipeline vs stylis pipeline', () => {
   it('parses + emits CSS_TINY', () => {
     console.log('\n--- CSS_TINY ---');
     bench('parser AST path             ', 50000, () => {
       parserFull(CSS_TINY);
-    });
-    bench('parser hybrid (fast+AST)    ', 50000, () => {
-      parserHybrid(CSS_TINY);
     });
     bench('stylis (compile + serialize)', 50000, () => {
       stylisFull(CSS_TINY);
@@ -253,9 +235,6 @@ describe('parser pipeline vs stylis pipeline', () => {
     bench('parser AST path             ', 30000, () => {
       parserFull(CSS_SMALL);
     });
-    bench('parser hybrid (fast+AST)    ', 30000, () => {
-      parserHybrid(CSS_SMALL);
-    });
     bench('stylis (compile + serialize)', 30000, () => {
       stylisFull(CSS_SMALL);
     });
@@ -266,21 +245,15 @@ describe('parser pipeline vs stylis pipeline', () => {
     bench('parser AST path             ', 10000, () => {
       parserFull(CSS_MEDIUM);
     });
-    bench('parser hybrid (fast+AST)    ', 10000, () => {
-      parserHybrid(CSS_MEDIUM);
-    });
     bench('stylis (compile + serialize)', 10000, () => {
       stylisFull(CSS_MEDIUM);
     });
   });
 
   it('parses + emits CSS_MEDIA_NESTED', () => {
-    console.log('\n--- CSS_MEDIA_NESTED (fast-path bails, uses AST) ---');
+    console.log('\n--- CSS_MEDIA_NESTED ---');
     bench('parser AST path             ', 10000, () => {
       parserFull(CSS_MEDIA_NESTED);
-    });
-    bench('parser hybrid (fast+AST)    ', 10000, () => {
-      parserHybrid(CSS_MEDIA_NESTED);
     });
     bench('stylis (compile + serialize)', 10000, () => {
       stylisFull(CSS_MEDIA_NESTED);
@@ -288,12 +261,9 @@ describe('parser pipeline vs stylis pipeline', () => {
   });
 
   it('parses + emits CSS_KEYFRAMES', () => {
-    console.log('\n--- CSS_KEYFRAMES (fast-path bails on @) ---');
+    console.log('\n--- CSS_KEYFRAMES ---');
     bench('parser AST path             ', 10000, () => {
       parserFull(CSS_KEYFRAMES);
-    });
-    bench('parser hybrid (fast+AST)    ', 10000, () => {
-      parserHybrid(CSS_KEYFRAMES);
     });
     bench('stylis (compile + serialize)', 10000, () => {
       stylisFull(CSS_KEYFRAMES);
@@ -305,9 +275,6 @@ describe('parser pipeline vs stylis pipeline', () => {
     bench('parser AST path             ', 2000, () => {
       parserFull(CSS_LARGE);
     });
-    bench('parser hybrid (fast+AST)    ', 2000, () => {
-      parserHybrid(CSS_LARGE);
-    });
     bench('stylis (compile + serialize)', 2000, () => {
       stylisFull(CSS_LARGE);
     });
@@ -317,9 +284,6 @@ describe('parser pipeline vs stylis pipeline', () => {
     console.log(`\n--- CSS_HUGE (${CSS_HUGE.length}B, library-scale bundle) ---`);
     bench('parser AST path             ', 500, () => {
       parserFull(CSS_HUGE);
-    });
-    bench('parser hybrid (fast+AST)    ', 500, () => {
-      parserHybrid(CSS_HUGE);
     });
     bench('stylis (compile + serialize)', 500, () => {
       stylisFull(CSS_HUGE);
@@ -332,9 +296,6 @@ describe('parser pipeline vs stylis pipeline', () => {
     );
     bench('parser AST path             ', 10000, () => {
       parserFull(CSS_COMMA_HEAVY);
-    });
-    bench('parser hybrid (fast+AST)    ', 10000, () => {
-      parserHybrid(CSS_COMMA_HEAVY);
     });
     bench('stylis (compile + serialize)', 10000, () => {
       stylisFull(CSS_COMMA_HEAVY);
@@ -355,7 +316,6 @@ describe('parser pipeline vs stylis pipeline', () => {
       CSS_COMMA_HEAVY,
     ]) {
       expect(parserFull(css)).toEqual(stylisFull(css));
-      expect(parserHybrid(css)).toEqual(stylisFull(css));
     }
   });
 });
