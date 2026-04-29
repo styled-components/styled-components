@@ -1,5 +1,5 @@
 import React from 'react';
-import { IS_RSC } from '../constants';
+import { IS_RSC } from '../utils/isRsc';
 import styledError from '../utils/error';
 import isFunction from '../utils/isFunction';
 

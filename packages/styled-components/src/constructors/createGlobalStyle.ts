@@ -1,5 +1,6 @@
 import React from 'react';
-import { IS_RSC, STATIC_EXECUTION_CONTEXT } from '../constants';
+import { STATIC_EXECUTION_CONTEXT } from '../constants';
+import { IS_RSC } from '../utils/isRsc';
 import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { IS_RSC } from '../constants';
+import { IS_RSC } from '../utils/isRsc';
 import { ThemeContext } from '../models/ThemeProvider';
 import { AnyComponent, ExecutionProps } from '../types';
 import determineTheme from '../utils/determineTheme';

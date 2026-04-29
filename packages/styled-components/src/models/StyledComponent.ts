@@ -1,6 +1,7 @@
 import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
-import { IS_RSC, SC_ATTR, SC_VERSION } from '../constants';
+import { SC_ATTR, SC_VERSION } from '../constants';
+import { IS_RSC } from '../utils/isRsc';
 import { getGroupForId } from '../sheet/GroupIDAllocator';
 import type StyleSheet from '../sheet';
 import type {

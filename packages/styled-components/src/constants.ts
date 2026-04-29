@@ -1,7 +1,5 @@
 declare let __VERSION__: string;
 
-import React from 'react';
-
 export const SC_ATTR: string =
   (typeof process !== 'undefined' &&
     typeof process.env !== 'undefined' &&
@@ -14,15 +12,6 @@ export const SC_VERSION = __VERSION__;
 export const SPLITTER = '/*!sc*/\n';
 
 export const IS_BROWSER = typeof window !== 'undefined' && typeof document !== 'undefined';
-
-/**
- * True when running in a React Server Component environment (createContext
- * is unavailable). In browser / standalone / native builds the entire
- * expression is replaced with the literal `false` via rollup-plugin-replace
- * with empty delimiters (exact string match), enabling rollup constant
- * inlining and terser dead-code elimination for all RSC branches.
- */
-export const IS_RSC: boolean = typeof React.createContext === 'undefined';
 
 export const KEYFRAMES_ID_PREFIX = 'sc-keyframes-';
 

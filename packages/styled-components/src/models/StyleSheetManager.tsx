@@ -1,5 +1,5 @@
 import React from 'react';
-import { IS_RSC } from '../constants';
+import { IS_RSC } from '../utils/isRsc';
 import StyleSheet from '../sheet';
 import { InsertionTarget, ShouldForwardProp, Stringifier } from '../types';
 import createStylisInstance, { SCPlugin } from '../utils/cssCompile';
