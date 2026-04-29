@@ -29,6 +29,7 @@ const Card = styled.View`
 - Logical shorthands `margin-inline`, `margin-block`, `padding-inline`, `padding-block`, `inset-inline`, `inset-block` expand to the React Native logical-longhand props.
 - `line-clamp: N` maps to `numberOfLines: N` + `overflow: hidden`.
 - `&:is(:hover, :focus)` and `&:where(:pressed, :disabled)` expand into the union of individual pseudo-state buckets so the declared styles apply to each state.
+- `@media (min-aspect-ratio: 16/9)`, `(max-aspect-ratio: 1/1)`, and exact `(aspect-ratio: 4/3)` match the device's current width-to-height ratio. Bare numbers are treated as `<n>/1` per spec.
 - `@starting-style { ... }` is captured on the native compile output for the upcoming animation adapter.
 
 Features React Native does not yet support (`position: fixed`, `position: sticky`, `backdrop-filter`, 3D transforms, `text-shadow`, scroll-snap, view-transitions, form-state selectors, and more) are listed in the "React Native CSS Features" compatibility tracker maintained alongside the library.

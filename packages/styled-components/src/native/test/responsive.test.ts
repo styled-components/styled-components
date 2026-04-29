@@ -106,6 +106,70 @@ describe('matchMedia', () => {
     });
   });
 
+  describe('aspect-ratio', () => {
+    it('matches min-aspect-ratio when viewport is wider than the ratio', () => {
+      // 16/9 ≈ 1.778 — a 1920×1080 window (1.778) matches; a 4:3 window (1.333) does not
+      expect(matchMedia('(min-aspect-ratio: 16/9)', env({ width: 1920, height: 1080 }))).toBe(true);
+      expect(matchMedia('(min-aspect-ratio: 16/9)', env({ width: 1024, height: 768 }))).toBe(false);
+    });
+
+    it('matches max-aspect-ratio when viewport is narrower than the ratio', () => {
+      expect(matchMedia('(max-aspect-ratio: 1/1)', env({ width: 375, height: 667 }))).toBe(true);
+      expect(matchMedia('(max-aspect-ratio: 1/1)', env({ width: 800, height: 400 }))).toBe(false);
+    });
+
+    it('matches exact aspect-ratio with float tolerance', () => {
+      expect(matchMedia('(aspect-ratio: 16/9)', env({ width: 1920, height: 1080 }))).toBe(true);
+      expect(matchMedia('(aspect-ratio: 1/1)', env({ width: 500, height: 500 }))).toBe(true);
+      expect(matchMedia('(aspect-ratio: 16/9)', env({ width: 1024, height: 768 }))).toBe(false);
+    });
+
+    it('treats a bare number as ratio/1', () => {
+      expect(matchMedia('(min-aspect-ratio: 1.5)', env({ width: 600, height: 400 }))).toBe(true);
+      expect(matchMedia('(min-aspect-ratio: 2)', env({ width: 600, height: 400 }))).toBe(false);
+    });
+
+    it('tolerates whitespace around the slash', () => {
+      expect(matchMedia('(min-aspect-ratio: 4 / 3)', env({ width: 400, height: 300 }))).toBe(true);
+    });
+
+    it('rejects malformed values without falling through to always-true', () => {
+      // Bad ratios → feature returns null → query parses to no clauses → matchMedia returns false
+      expect(matchMedia('(min-aspect-ratio: 0/1)', env({ width: 800, height: 600 }))).toBe(false);
+      expect(matchMedia('(min-aspect-ratio: 1/0)', env({ width: 800, height: 600 }))).toBe(false);
+      expect(matchMedia('(min-aspect-ratio: -1/1)', env({ width: 800, height: 600 }))).toBe(false);
+      expect(matchMedia('(min-aspect-ratio: foo)', env({ width: 800, height: 600 }))).toBe(false);
+    });
+
+    it('safely handles zero-height env without dividing by zero', () => {
+      expect(matchMedia('(min-aspect-ratio: 1/1)', env({ width: 100, height: 0 }))).toBe(false);
+    });
+
+    it('combines with orientation in compound clauses', () => {
+      // Wide-and-landscape should match; portrait-but-wide-ratio is impossible (height >= width
+      // implies ratio <= 1) so this combo proves AND semantics.
+      expect(
+        matchMedia(
+          '(min-aspect-ratio: 16/9) and (orientation: landscape)',
+          env({ width: 1920, height: 1080 })
+        )
+      ).toBe(true);
+      expect(
+        matchMedia(
+          '(min-aspect-ratio: 16/9) and (orientation: portrait)',
+          env({ width: 1920, height: 1080 })
+        )
+      ).toBe(false);
+    });
+
+    it('caches parsed aspect-ratio queries', () => {
+      const a = parseMediaQuery('(min-aspect-ratio: 16/9)');
+      const b = parseMediaQuery('(min-aspect-ratio: 16/9)');
+      expect(a).toBe(b);
+      expect(a[0]).toEqual([{ kind: 'aspectRatio', min: 16 / 9 }]);
+    });
+  });
+
   describe('compound and OR queries', () => {
     it('evaluates AND of features', () => {
       expect(

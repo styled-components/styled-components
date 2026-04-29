@@ -56,6 +56,8 @@ type Feature =
   | { kind: 'orientation'; value: 'portrait' | 'landscape' }
   | { kind: 'colorScheme'; value: 'light' | 'dark' }
   | { kind: 'reduceMotion'; value: 'reduce' | 'no-preference' }
+  /** `<ratio>` as defined by CSS Values L4 (`16/9`, `4 / 3`, or a bare number). */
+  | { kind: 'aspectRatio'; min?: number; max?: number; exact?: number }
   | { kind: 'any' };
 
 type Clause = Feature[];
@@ -132,9 +134,38 @@ function parseFeature(raw: string): Feature | null {
       return value === 'reduce' || value === 'no-preference'
         ? { kind: 'reduceMotion', value }
         : null;
+    case 'aspect-ratio': {
+      const r = parseRatio(value);
+      return r === null ? null : { kind: 'aspectRatio', exact: r };
+    }
+    case 'min-aspect-ratio': {
+      const r = parseRatio(value);
+      return r === null ? null : { kind: 'aspectRatio', min: r };
+    }
+    case 'max-aspect-ratio': {
+      const r = parseRatio(value);
+      return r === null ? null : { kind: 'aspectRatio', max: r };
+    }
     default:
       return null;
   }
+}
+
+function parseRatio(raw: string): number | null {
+  // CSS Values L4 <ratio>: `<number> / <number>` or bare `<number>` (means `/1`).
+  const slash = raw.indexOf('/');
+  let num: number;
+  let den: number;
+  if (slash === -1) {
+    num = parseFloat(raw);
+    den = 1;
+  } else {
+    num = parseFloat(raw.substring(0, slash).trim());
+    den = parseFloat(raw.substring(slash + 1).trim());
+  }
+  if (!Number.isFinite(num) || !Number.isFinite(den)) return null;
+  if (num <= 0 || den <= 0) return null;
+  return num / den;
 }
 
 const RANGE_TOKEN_RE = /<=|>=|<|>/g;
@@ -313,6 +344,14 @@ function matchFeature(f: Feature, env: MediaQueryEnv): boolean {
       return env.colorScheme === f.value;
     case 'reduceMotion':
       return f.value === 'reduce' ? env.reduceMotion : !env.reduceMotion;
+    case 'aspectRatio': {
+      if (env.height <= 0) return false;
+      const ratio = env.width / env.height;
+      if (f.exact !== undefined && Math.abs(ratio - f.exact) > 1e-9) return false;
+      if (f.min !== undefined && ratio < f.min) return false;
+      if (f.max !== undefined && ratio > f.max) return false;
+      return true;
+    }
     case 'any':
       return true;
   }
