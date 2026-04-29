@@ -8,7 +8,7 @@
  * Run with `pnpm --filter styled-components bench:web` (the bench jest config
  * picks up `.bench.test.ts`).
  */
-import { compileNativeStyles, resetNativeStyleCache } from '../models/nativeStyleCompiler';
+import { toNativeStyles, resetNativeStyleCache } from '../models/nativeStyleCompiler';
 // Access to the content-cache reset only (keeps pair-level memoisation warm,
 // which is the realistic production shape — users see new unique CSS strings
 // but the prop/value pairs within recur across components).
@@ -156,44 +156,44 @@ describe('responsive runtime microbenchmarks', () => {
     });
   });
 
-  describe('compileNativeStyles', () => {
+  describe('toNativeStyles', () => {
     it('cold compile cost — cache reset each iteration', () => {
       bench(
         'compile flat (no conditionals)    ',
         5000,
-        () => compileNativeStyles(CSS_SAMPLES.flat, stubStyleSheet),
+        () => toNativeStyles(CSS_SAMPLES.flat, stubStyleSheet),
         { beforeIteration: () => resetNativeStyleCache() }
       );
       bench(
         'compile one @media               ',
         5000,
-        () => compileNativeStyles(CSS_SAMPLES.oneMedia, stubStyleSheet),
+        () => toNativeStyles(CSS_SAMPLES.oneMedia, stubStyleSheet),
         { beforeIteration: () => resetNativeStyleCache() }
       );
       bench(
         'compile one @container            ',
         5000,
-        () => compileNativeStyles(CSS_SAMPLES.oneContainer, stubStyleSheet),
+        () => toNativeStyles(CSS_SAMPLES.oneContainer, stubStyleSheet),
         { beforeIteration: () => resetNativeStyleCache() }
       );
       bench(
         'compile composite (3 at-rules + 4 pseudos)',
         2000,
-        () => compileNativeStyles(CSS_SAMPLES.composite, stubStyleSheet),
+        () => toNativeStyles(CSS_SAMPLES.composite, stubStyleSheet),
         { beforeIteration: () => resetNativeStyleCache() }
       );
       bench(
         'compile heavy (10 @media + 5 @container)',
         500,
-        () => compileNativeStyles(CSS_SAMPLES.heavy, stubStyleSheet),
+        () => toNativeStyles(CSS_SAMPLES.heavy, stubStyleSheet),
         { beforeIteration: () => resetNativeStyleCache() }
       );
     });
 
     it('cached compile cost — typical re-render pattern', () => {
-      compileNativeStyles(CSS_SAMPLES.composite, stubStyleSheet);
+      toNativeStyles(CSS_SAMPLES.composite, stubStyleSheet);
       bench('compile composite (cached)        ', 500_000, () =>
-        compileNativeStyles(CSS_SAMPLES.composite, stubStyleSheet)
+        toNativeStyles(CSS_SAMPLES.composite, stubStyleSheet)
       );
     });
 
@@ -204,20 +204,20 @@ describe('responsive runtime microbenchmarks', () => {
       let counter = 0;
       const vary = (css: string) => `/*#${counter++}*/\n${css}`;
       // Warm the pair cache on all samples first.
-      compileNativeStyles(CSS_SAMPLES.flat, stubStyleSheet);
-      compileNativeStyles(CSS_SAMPLES.oneMedia, stubStyleSheet);
-      compileNativeStyles(CSS_SAMPLES.oneContainer, stubStyleSheet);
-      compileNativeStyles(CSS_SAMPLES.composite, stubStyleSheet);
-      compileNativeStyles(CSS_SAMPLES.heavy, stubStyleSheet);
+      toNativeStyles(CSS_SAMPLES.flat, stubStyleSheet);
+      toNativeStyles(CSS_SAMPLES.oneMedia, stubStyleSheet);
+      toNativeStyles(CSS_SAMPLES.oneContainer, stubStyleSheet);
+      toNativeStyles(CSS_SAMPLES.composite, stubStyleSheet);
+      toNativeStyles(CSS_SAMPLES.heavy, stubStyleSheet);
 
       bench('compile flat (pair cache warm)    ', 2000, () =>
-        compileNativeStyles(vary(CSS_SAMPLES.flat), stubStyleSheet)
+        toNativeStyles(vary(CSS_SAMPLES.flat), stubStyleSheet)
       );
       bench('compile composite (pair cache warm)', 1000, () =>
-        compileNativeStyles(vary(CSS_SAMPLES.composite), stubStyleSheet)
+        toNativeStyles(vary(CSS_SAMPLES.composite), stubStyleSheet)
       );
       bench('compile heavy (pair cache warm)   ', 500, () =>
-        compileNativeStyles(vary(CSS_SAMPLES.heavy), stubStyleSheet)
+        toNativeStyles(vary(CSS_SAMPLES.heavy), stubStyleSheet)
       );
     });
   });

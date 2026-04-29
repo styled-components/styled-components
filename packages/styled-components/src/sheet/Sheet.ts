@@ -3,7 +3,7 @@ import { InsertionTarget } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
 import { setToString } from '../utils/setToString';
 import { makeGroupedTag } from './GroupedTag';
-import { getGroupForId } from './GroupIDAllocator';
+import { groupForId } from './GroupIDAllocator';
 import { getRehydrationContainer, outputSheet, rehydrateSheet } from './Rehydration';
 import { makeTag } from './Tag';
 import { GroupedTag, Sheet, SheetOptions } from './types';
@@ -33,7 +33,7 @@ export default class StyleSheet implements Sheet {
 
   /** Register a group ID to give it an index */
   static registerId(id: string): number {
-    return getGroupForId(id);
+    return groupForId(id);
   }
 
   constructor(
@@ -99,7 +99,7 @@ export default class StyleSheet implements Sheet {
 
   /** Mark a group's name as known for caching */
   registerName(id: string, name: string) {
-    getGroupForId(id);
+    groupForId(id);
 
     if (id.startsWith(KEYFRAMES_ID_PREFIX)) {
       this.keyframeIds.add(id);
@@ -116,7 +116,7 @@ export default class StyleSheet implements Sheet {
   /** Insert new rules which also marks the name as known */
   insertRules(id: string, name: string, rules: string[]) {
     this.registerName(id, name);
-    this.getTag().insertRules(getGroupForId(id), rules);
+    this.getTag().insertRules(groupForId(id), rules);
   }
 
   /** Clears all cached names for a given group ID */
@@ -128,7 +128,7 @@ export default class StyleSheet implements Sheet {
 
   /** Clears all rules for a given group ID */
   clearRules(id: string) {
-    this.getTag().clearGroup(getGroupForId(id));
+    this.getTag().clearGroup(groupForId(id));
     this.clearNames(id);
   }
 

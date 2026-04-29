@@ -1,9 +1,8 @@
+import { evaluateForFastPath, FastPathFragment } from '../parser/compile';
+import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
 import StyleSheet from '../sheet';
-import { ExecutionContext, RuleSet, Stringifier } from '../types';
-import flatten from '../utils/flatten';
-import isStatelessFunction from '../utils/isStatelessFunction';
+import { Compiler, ExecutionContext, RuleSet } from '../types';
 import isStaticRules from '../utils/isStaticRules';
-import { joinStringArray } from '../utils/joinStrings';
 
 type InstanceEntry = { name: string; rules: string[] };
 
@@ -20,6 +19,10 @@ export default class GlobalStyle<Props extends object> {
     this.componentId = componentId;
     this.isStatic = isStaticRules(rules);
 
+    // Synthesize a Source if the rules array predates `css(...)` (synthetic
+    // / test fixtures). No-op when source is already attached.
+    synthesizeSourceForRuleSet(rules);
+
     // Pre-register the shared group so global styles defined before
     // components always appear before them in the stylesheet.
     StyleSheet.registerId(this.componentId);
@@ -34,7 +37,7 @@ export default class GlobalStyle<Props extends object> {
     instance: string,
     executionContext: ExecutionContext & Props,
     styleSheet: StyleSheet,
-    stylis: Stringifier
+    compiler: Compiler
   ): void {
     const id = this.componentId;
 
@@ -43,12 +46,12 @@ export default class GlobalStyle<Props extends object> {
       // is `componentId` alone; dedups multi-mount and decouples rehydration
       // from React's useId format.
       if (!styleSheet.hasNameForId(id, id)) {
-        const entry = this.computeRules(instance, executionContext, styleSheet, stylis);
+        const entry = this.computeRules(instance, executionContext, styleSheet, compiler);
         styleSheet.insertRules(id, entry.name, entry.rules);
       } else if (!this.instanceRules.has(instance)) {
         // Rehydrated or sibling-mounted style: populate cache so rebuildGroup
         // can restore survivors if another instance unmounts.
-        this.computeRules(instance, executionContext, styleSheet, stylis);
+        this.computeRules(instance, executionContext, styleSheet, compiler);
       }
       return;
     }
@@ -57,7 +60,7 @@ export default class GlobalStyle<Props extends object> {
     // The fast-path is only safe on the client where the tag persists between renders.
     // During SSR, clearTag() destroys the tag between requests, so we must always rebuild.
     const prev = this.instanceRules.get(instance);
-    this.computeRules(instance, executionContext, styleSheet, stylis);
+    this.computeRules(instance, executionContext, styleSheet, compiler);
     if (!styleSheet.server && prev) {
       const a = prev.rules;
       const b = this.instanceRules.get(instance)!.rules;
@@ -79,35 +82,46 @@ export default class GlobalStyle<Props extends object> {
     instance: string,
     executionContext: ExecutionContext & Props,
     styleSheet: StyleSheet,
-    stylis: Stringifier
+    compiler: Compiler
   ): InstanceEntry {
-    let flatCSS = '';
-    for (let i = 0; i < this.rules.length; i++) {
-      const partRule = this.rules[i];
-      if (typeof partRule === 'string') {
-        flatCSS += partRule;
-      } else if (partRule) {
-        if (isStatelessFunction(partRule)) {
-          const fnResult = (partRule as (ctx: ExecutionContext & Props) => unknown)(
-            executionContext
-          );
-          if (typeof fnResult === 'string') {
-            flatCSS += fnResult;
-          } else if (fnResult !== undefined && fnResult !== null && fnResult !== false) {
-            flatCSS += joinStringArray(
-              flatten(fnResult as any, executionContext, styleSheet, stylis) as string[]
-            );
+    // Source-driven AST emit: feed the construction-time AST + filled
+    // interpolation values directly into `compiler.emit` with an empty
+    // parent selector (global styles have no `.componentId` wrapper).
+    // No string round-trip: the AST that came out of `parseSource` is the
+    // one that goes into `emit-web`.
+    let rules: string[] = [];
+    const source = getSource(this.rules);
+    if (source !== undefined) {
+      const fragments: (FastPathFragment | null)[] = [];
+      const filled = evaluateForFastPath(
+        source,
+        executionContext,
+        undefined,
+        styleSheet,
+        compiler,
+        fragments
+      );
+      if (filled !== null) {
+        let hasFragments = false;
+        for (let i = 0; i < fragments.length; i++) {
+          if (fragments[i] !== null) {
+            hasFragments = true;
+            break;
           }
-        } else {
-          flatCSS += joinStringArray(
-            flatten(partRule as any, executionContext, styleSheet, stylis) as string[]
-          );
         }
+        const out = compiler.emit(
+          source,
+          filled,
+          '',
+          this.componentId,
+          hasFragments ? fragments : null
+        );
+        if (out !== null) rules = out;
       }
     }
     const entry: InstanceEntry = {
       name: this.isStatic ? this.componentId : this.componentId + instance,
-      rules: stylis(flatCSS, ''),
+      rules,
     };
     this.instanceRules.set(instance, entry);
     return entry;

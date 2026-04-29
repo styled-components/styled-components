@@ -2,14 +2,14 @@
  * CSS preprocessing throughput at different scales.
  *
  * Measures preprocessCSS (comment stripping + brace validation) in isolation,
- * and the full stylis pipeline (preprocess + compile + serialize) to show
- * how preprocessing cost relates to total compilation.
+ * and the full compile pipeline (preprocess + parse + emit) to show how
+ * preprocessing cost relates to total compilation.
  *
  * Run: npx jest -c jest.config.bench.js -- preprocess
  */
 
 import { preprocessCSS } from '../utils/cssCompile';
-import createStylisInstance from '../utils/cssCompile';
+import createCompiler from '../utils/cssCompile';
 import { bench as _bench } from './bench-utils';
 
 const ppOpts = { runs: 7, precision: 2 };
@@ -103,17 +103,21 @@ describe('preprocessing benchmarks', () => {
     bench('large (20 nested rules + comments)', 20_000, () => preprocessCSS(CSS_LARGE));
   });
 
-  it('full stylis pipeline (preprocess + compile + serialize)', () => {
-    const stylis = createStylisInstance();
+  it('full compile pipeline (preprocess + parse + emit)', () => {
+    const compiler = createCompiler();
     const N = 50_000;
-    console.log(`\n--- full stylis pipeline (${N.toLocaleString()} iterations, median of 7) ---`);
+    console.log(`\n--- full compile pipeline (${N.toLocaleString()} iterations, median of 7) ---`);
 
-    bench('small (3 decls, no comments)', N, () => stylis(CSS_SMALL, '.a', '', '&'));
-    bench('medium (16 decls, no comments)', N, () => stylis(CSS_MEDIUM, '.a', '', '&'));
+    bench('small (3 decls, no comments)', N, () => compiler.compile(CSS_SMALL, '.a', '', '&'));
+    bench('medium (16 decls, no comments)', N, () => compiler.compile(CSS_MEDIUM, '.a', '', '&'));
     bench('medium (16 decls, 6 line comments)', N, () =>
-      stylis(CSS_MEDIUM_COMMENTED, '.a', '', '&')
+      compiler.compile(CSS_MEDIUM_COMMENTED, '.a', '', '&')
     );
-    bench('complex (urls + strings + block + line)', N, () => stylis(CSS_COMPLEX, '.a', '', '&'));
-    bench('large (20 nested rules + comments)', 5_000, () => stylis(CSS_LARGE, '.a', '', '&'));
+    bench('complex (urls + strings + block + line)', N, () =>
+      compiler.compile(CSS_COMPLEX, '.a', '', '&')
+    );
+    bench('large (20 nested rules + comments)', 5_000, () =>
+      compiler.compile(CSS_LARGE, '.a', '', '&')
+    );
   });
 });

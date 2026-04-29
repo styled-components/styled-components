@@ -5,21 +5,17 @@
  * in isolation from the render pipeline. Integration behavior lives in
  * `src/native/test/modern-css.test.tsx`.
  */
-import {
-  compileNativeStyles,
-  CompiledNativeStyles,
-  resetNativeStyleCache,
-} from '../nativeStyleCompiler';
+import { toNativeStyles, NativeStyles, resetNativeStyleCache } from '../nativeStyleCompiler';
 
 const stubStyleSheet = {
   create: <T extends object>(styles: T) => styles,
 } as any;
 
-function compile(css: string): CompiledNativeStyles {
-  return compileNativeStyles(css, stubStyleSheet);
+function compile(css: string): NativeStyles {
+  return toNativeStyles(css, stubStyleSheet);
 }
 
-describe('compileNativeStyles', () => {
+describe('toNativeStyles', () => {
   let warnSpy: jest.SpyInstance;
 
   beforeEach(() => {

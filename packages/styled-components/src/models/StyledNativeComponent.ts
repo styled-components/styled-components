@@ -9,13 +9,14 @@ import {
   useMediaEnv,
 } from '../native/responsive';
 import { applyResolvers, ResolveEnv } from '../native/transform/polyfills/resolvers';
+import { concatSourceInputs } from '../parser/source';
 import type {
   Attrs,
   BaseObject,
   Dict,
   ExecutionContext,
   ExecutionProps,
-  IInlineStyleConstructor,
+  INativeStyleConstructor,
   IStyledComponent,
   IStyledComponentFactory,
   IStyledStatics,
@@ -30,23 +31,20 @@ import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
-import type { CompiledNativeStyles, ConditionalStyle, PseudoState } from './nativeStyleCompiler';
+import shallowEqualContext from '../utils/shallowEqualContext';
+import type { NativeStyles, ConditionalStyle, PseudoState } from './nativeStyleCompiler';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
-function shallowEqualContext(prev: object, next: object, prevKeyCount: number): boolean {
-  const a = prev as Record<string, unknown>;
-  const b = next as Record<string, unknown>;
-  let nextKeyCount = 0;
-  for (const key in b) {
-    if (hasOwn.call(b, key)) {
-      nextKeyCount++;
-      if (a[key] !== b[key]) return false;
-    }
-  }
-  return nextKeyCount === prevKeyCount;
-}
+const HOIST_EXCLUDE = {
+  attrs: true,
+  nativeStyle: true,
+  displayName: true,
+  shouldForwardProp: true,
+  styledComponentId: true,
+  target: true,
+} as const;
 
 function resolveContext<Props extends object>(
   theme: DefaultTheme = EMPTY_OBJECT,
@@ -61,8 +59,8 @@ function resolveContext<Props extends object>(
       : attrs[i];
 
     for (const key in resolvedAttrDef) {
-      // @ts-expect-error bad types
-      context[key] = resolvedAttrDef[key];
+      // attrs intentionally add arbitrary keys; cast at the assignment site.
+      (context as unknown as Dict<unknown>)[key] = (resolvedAttrDef as Dict<unknown>)[key];
     }
   }
 
@@ -79,16 +77,16 @@ function buildPropsForElement(
   elementToBeCreated: NativeTarget,
   shouldForwardProp: ((prop: string, el: NativeTarget) => boolean) | undefined
 ): Dict<any> {
-  const propsForElement: Dict<any> = {};
+  const out: Dict<any> = {};
   for (const key in context) {
     if (key[0] === '$' || key === 'as' || key === 'theme' || key === 'ref') continue;
     else if (key === 'forwardedAs') {
-      propsForElement.as = context[key];
+      out.as = context[key];
     } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
-      propsForElement[key] = context[key];
+      out[key] = context[key];
     }
   }
-  return propsForElement;
+  return out;
 }
 
 const EMPTY_INSETS = Object.freeze({ top: 0, right: 0, bottom: 0, left: 0 });
@@ -223,7 +221,7 @@ type RenderCache = [
   DefaultTheme | undefined,
   number,
   object,
-  CompiledNativeStyles,
+  NativeStyles,
   MediaQueryEnv,
   ContainerContextValue,
   any,
@@ -234,7 +232,7 @@ type RenderCache = [
  * `Pressable`/`TextInput` accept a function for `style` (state callback);
  * pass-through that shape by wrapping the function call.
  */
-function composeWithBase(base: object, userStyle: any): any {
+function composeBase(base: object, userStyle: any): any {
   if (userStyle === undefined || userStyle === null) return base;
   if (isFunction(userStyle)) {
     return (state: any) => {
@@ -247,46 +245,46 @@ function composeWithBase(base: object, userStyle: any): any {
 
 function createFastElement(
   elementToBeCreated: NativeTarget,
-  propsForElement: Dict<any>,
+  elementProps: Dict<any>,
   containerName: string | undefined
 ): React.ReactElement {
   if (containerName) {
     return createElement(FastContainerPublisher, {
       name: containerName,
       elementType: elementToBeCreated,
-      elementProps: propsForElement,
+      elementProps,
     });
   }
-  return createElement(elementToBeCreated, propsForElement);
+  return createElement(elementToBeCreated, elementProps);
 }
 
-// Eligibility is frozen at construction (IInlineStyle.fastEligible) so hook
+// Eligibility is frozen at construction (INativeStyle.fastEligible) so hook
 // ordering stays stable; this path uses zero hooks.
 function useStaticImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
   props: Props,
   forwardedRef: Ref<any>
 ): React.ReactElement {
-  const { inlineStyle, target } = forwardedComponent;
-  const base = inlineStyle.staticCompiled!.base;
+  const { nativeStyle, target } = forwardedComponent;
+  const base = nativeStyle.staticCompiled!.base;
   const elementToBeCreated: NativeTarget = (props.as as NativeTarget) || target;
-  const propsForElement = buildPropsForElement(props, elementToBeCreated, undefined);
-  propsForElement.style = composeWithBase(base, props.style);
-  if (forwardedRef) propsForElement.ref = forwardedRef;
-  return createFastElement(elementToBeCreated, propsForElement, props.$containerName);
+  const elementProps = buildPropsForElement(props, elementToBeCreated, undefined);
+  elementProps.style = composeBase(base, props.style);
+  if (forwardedRef) elementProps.ref = forwardedRef;
+  return createFastElement(elementToBeCreated, elementProps, props.$containerName);
 }
 
-// [prevProps, prevTheme, prevPropsKeyCount, composedStyle, propsForElement, elementToBeCreated]
+// [prevProps, prevTheme, prevPropsKeyCount, composedStyle, elementProps, elementToBeCreated]
 type FastRenderCache = [object, DefaultTheme | undefined, number, any, Dict<any>, NativeTarget];
 
 // Dynamic CSS without responsive features: 2 hooks + 6-slot prop-equal cache.
-// Stable-prop renders skip compile, style composition, and buildPropsForElement.
+// Stable-prop renders skip compile, style composition, and prop building.
 function useFastImpl<Props extends StyledComponentImplProps>(
   forwardedComponent: IStyledComponent<'native', Props>,
   props: Props,
   forwardedRef: Ref<any>
 ): React.ReactElement {
-  const { inlineStyle, target } = forwardedComponent;
+  const { nativeStyle, target } = forwardedComponent;
   const theme = useContext(ThemeContext);
 
   const renderCacheRef = React.useRef<FastRenderCache | null>(null);
@@ -301,17 +299,17 @@ function useFastImpl<Props extends StyledComponentImplProps>(
     theme: determineTheme(props, theme as DefaultTheme | undefined) ?? EMPTY_OBJECT,
   } as ExecutionContext & Props;
 
-  const compiled = inlineStyle.compile(executionContext);
+  const compiled = nativeStyle.compile(executionContext);
 
   if (process.env.NODE_ENV !== 'production') {
     verifyFastContract(forwardedComponent, compiled);
   }
 
-  const composedStyle = composeWithBase(compiled.base, props.style);
+  const composedStyle = composeBase(compiled.base, props.style);
   const elementToBeCreated: NativeTarget = (props.as as NativeTarget) || target;
-  const propsForElement = buildPropsForElement(props, elementToBeCreated, undefined);
-  propsForElement.style = composedStyle;
-  if (forwardedRef) propsForElement.ref = forwardedRef;
+  const elementProps = buildPropsForElement(props, elementToBeCreated, undefined);
+  elementProps.style = composedStyle;
+  if (forwardedRef) elementProps.ref = forwardedRef;
 
   let propsKeyCount = 0;
   for (const key in props) {
@@ -322,17 +320,17 @@ function useFastImpl<Props extends StyledComponentImplProps>(
     theme,
     propsKeyCount,
     composedStyle,
-    propsForElement,
+    elementProps,
     elementToBeCreated,
   ];
 
-  return createFastElement(elementToBeCreated, propsForElement, props.$containerName);
+  return createFastElement(elementToBeCreated, elementProps, props.$containerName);
 }
 
 const fastContractWarned = new WeakSet<object>();
 function verifyFastContract(
   forwardedComponent: IStyledComponent<'native', any>,
-  compiled: CompiledNativeStyles
+  compiled: NativeStyles
 ) {
   if (fastContractWarned.has(forwardedComponent)) return;
   if (
@@ -378,7 +376,7 @@ function useImpl<Props extends StyledComponentImplProps>(
   props: Props,
   forwardedRef: Ref<any>
 ) {
-  const { attrs: componentAttrs, inlineStyle, shouldForwardProp, target } = forwardedComponent;
+  const { attrs: componentAttrs, nativeStyle, shouldForwardProp, target } = forwardedComponent;
 
   // Guard exists for RSC: useContext is undefined in server component environments
   const contextTheme = React.useContext ? React.useContext(ThemeContext) : undefined;
@@ -393,7 +391,7 @@ function useImpl<Props extends StyledComponentImplProps>(
   const prev = renderCacheRef.current;
 
   let context: ExecutionContext & Props;
-  let compiled: CompiledNativeStyles;
+  let compiled: NativeStyles;
   let finalStyle: any;
   let propsKeyCount = prev !== null ? prev[2] : 0;
 
@@ -417,7 +415,7 @@ function useImpl<Props extends StyledComponentImplProps>(
       compiled = prev![4];
     } else {
       context = resolveContext<Props>(theme, props, componentAttrs);
-      compiled = inlineStyle.compile(context);
+      compiled = nativeStyle.compile(context);
       propsKeyCount = 0;
       for (const key in props) {
         if (hasOwn.call(props, key)) propsKeyCount++;
@@ -445,12 +443,12 @@ function useImpl<Props extends StyledComponentImplProps>(
 
   const containerName = (context as any).$containerName as string | undefined;
   const elementToBeCreated: NativeTarget = (context as any).as || props.as || target;
-  const propsForElement = buildPropsForElement(context, elementToBeCreated, shouldForwardProp);
+  const elementProps = buildPropsForElement(context, elementToBeCreated, shouldForwardProp);
 
-  propsForElement.style = finalStyle;
+  elementProps.style = finalStyle;
 
   if (forwardedRef) {
-    propsForElement.ref = forwardedRef;
+    elementProps.ref = forwardedRef;
   }
 
   // Container publishing is rare; the vast majority of styled components
@@ -464,11 +462,11 @@ function useImpl<Props extends StyledComponentImplProps>(
       name: containerName,
       parent: containerCtx,
       elementType: elementToBeCreated,
-      elementProps: propsForElement,
+      elementProps,
     } as ContainerPublisherProps);
   }
 
-  return createElement(elementToBeCreated, propsForElement);
+  return createElement(elementToBeCreated, elementProps);
 }
 
 interface ContainerPublisherProps {
@@ -539,7 +537,7 @@ function ContainerPublisher({
  * to a single property read without paying for any of this work.
  */
 function assembleFinalStyle(
-  compiled: CompiledNativeStyles,
+  compiled: NativeStyles,
   env: MediaQueryEnv,
   containerCtx: ContainerContextValue,
   theme: Record<string, any>,
@@ -593,7 +591,7 @@ function assembleFinalStyle(
   return base;
 }
 
-export default (InlineStyle: IInlineStyleConstructor<any>) => {
+export default (NativeStyle: INativeStyleConstructor<any>) => {
   const createStyledNativeComponent = <
     Target extends NativeTarget,
     OuterProps extends ExecutionProps,
@@ -631,9 +629,16 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       }
     }
 
-    const inlineStyleInstance = new InlineStyle(
-      isTargetStyledComp ? styledComponentTarget.inlineStyle.rules.concat(rules) : rules
-    ) as InstanceType<IInlineStyleConstructor<OuterProps>>;
+    const finalRules = isTargetStyledComp
+      ? concatSourceInputs(
+          styledComponentTarget.nativeStyle.rules.concat(rules),
+          styledComponentTarget.nativeStyle.rules,
+          rules
+        )
+      : rules;
+    const nativeStyleInstance = new NativeStyle(finalRules) as InstanceType<
+      INativeStyleConstructor<OuterProps>
+    >;
 
     // Pick the render impl once, frozen at construction. Hook ordering stays stable
     // per component for the lifetime of the WrappedStyledComponent. Fast paths require
@@ -641,14 +646,21 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
     // manipulation the fast bodies don't inline).
     const fastGatesPass = finalAttrs.length === 0 && shouldForwardProp === undefined;
     const impl =
-      fastGatesPass && inlineStyleInstance.fastEligible
-        ? inlineStyleInstance.staticCompiled !== null
+      fastGatesPass && nativeStyleInstance.fastEligible
+        ? nativeStyleInstance.staticCompiled !== null
           ? useStaticImpl
           : useFastImpl
         : useImpl;
 
-    // React 19 ref-as-prop; no forwardRef wrapper.
-    const RenderStyledComponent: {
+    // React 19 ref-as-prop; no forwardRef wrapper. Wrapping in `React.memo`
+    // means the parent's re-render skips this component entirely when its
+    // props are shallow-equal to the previous render — eliminating the hook
+    // calls, our render-cache check, and React's reconciliation work for the
+    // child subtree. The internal render-cache in `useFastImpl` / `useImpl`
+    // remains as a layered fallback for the harder cases (different prop
+    // references with same values, env or container-context shifts) that
+    // memo doesn't catch.
+    const RenderInner: {
       (props: ExecutionProps & OuterProps & { ref?: React.Ref<any> }): React.JSX.Element;
       displayName?: string;
     } = props =>
@@ -657,7 +669,8 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
         props as ExecutionProps & OuterProps,
         props.ref as React.Ref<any>
       );
-
+    RenderInner.displayName = displayName;
+    const RenderStyledComponent = React.memo(RenderInner) as unknown as typeof RenderInner;
     RenderStyledComponent.displayName = displayName;
 
     let WrappedStyledComponent = RenderStyledComponent as unknown as IStyledComponent<
@@ -667,24 +680,20 @@ export default (InlineStyle: IInlineStyleConstructor<any>) => {
       Statics;
 
     WrappedStyledComponent.attrs = finalAttrs;
-    WrappedStyledComponent.inlineStyle = inlineStyleInstance;
+    WrappedStyledComponent.nativeStyle = nativeStyleInstance;
     WrappedStyledComponent.displayName = displayName;
     WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
 
-    // @ts-expect-error we don't actually need this for anything other than detection of a styled-component
     WrappedStyledComponent.styledComponentId = true;
 
     // fold the underlying StyledComponent target up since we folded the styles
     WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
 
-    hoist<typeof WrappedStyledComponent, typeof target>(WrappedStyledComponent, target, {
-      // all SC-specific things should not be hoisted
-      attrs: true,
-      inlineStyle: true,
-      displayName: true,
-      shouldForwardProp: true,
-      target: true,
-    } as { [key in keyof OmitNever<IStyledStatics<'native', Target>>]: true });
+    hoist<typeof WrappedStyledComponent, typeof target>(
+      WrappedStyledComponent,
+      target,
+      HOIST_EXCLUDE as { [key in keyof OmitNever<IStyledStatics<'native', Target>>]: true }
+    );
 
     return WrappedStyledComponent;
   };

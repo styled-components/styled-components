@@ -5,7 +5,7 @@ import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import GlobalStyle from '../../models/GlobalStyle';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
-import { mainStylis } from '../../models/StyleSheetManager';
+import { mainCompiler } from '../../models/StyleSheetManager';
 import StyleSheet from '../../sheet';
 import { STATIC_EXECUTION_CONTEXT } from '../../constants';
 import { stripComments, stripWhitespace } from '../../test/utils';
@@ -71,7 +71,7 @@ describe(`createGlobalStyle`, () => {
     const executionContext = { theme: {} } as any;
 
     // First render with a fixed instance id (simulates stable useId across renders)
-    gs.renderStyles('1', executionContext, sheet, mainStylis);
+    gs.renderStyles('1', executionContext, sheet, mainCompiler);
     expect(gs.instanceRules.size).toBe(1);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body{color:red;}/*!sc*/
@@ -86,7 +86,7 @@ describe(`createGlobalStyle`, () => {
     // Bug: instanceRules still has instance 1's entry from render 1.
     // computeRules produces identical rules. rulesEqual returns true.
     // rebuildGroup is skipped. Tag is empty. CSS is lost.
-    gs.renderStyles('1', executionContext, sheet, mainStylis);
+    gs.renderStyles('1', executionContext, sheet, mainCompiler);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body{color:red;}/*!sc*/
       data-styled.g3[id="sc-global-clearTag-test"]{content:"sc-global-clearTag-test1,"}/*!sc*/

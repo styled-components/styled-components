@@ -7,9 +7,12 @@ import {
   COLON,
   COMMA,
   CR,
+  DIGIT_0,
+  DIGIT_9,
   DOUBLE_QUOTE,
   HYPHEN,
   LF,
+  NUL,
   OPEN_BRACE,
   OPEN_BRACKET,
   OPEN_PAREN,
@@ -17,6 +20,7 @@ import {
   SINGLE_QUOTE,
   SPACE,
   TAB,
+  UPPER_J,
 } from '../utils/charCodes';
 import {
   AtRuleNode,
@@ -95,6 +99,21 @@ function parseBlock(ctx: ParseContext): Node[] {
       ctx.i = i;
       out.push(parseAtRule(ctx));
       continue;
+    }
+
+    // Block-level interpolation sentinel: `\0J<index>\0`. Emitted by
+    // `parseSource` when the surrounding template strings put `${expr}` at
+    // a statement boundary (after `;` / `{` / `}` or at the start of input).
+    // The interpolation's value is filled in at render time as a sibling of
+    // Decl/Rule/AtRule. Embedded sentinels (`\0I<index>\0`) ride through in
+    // value or selector strings and are resolved at fill time without a node.
+    if (first === NUL && i + 2 < len && css.charCodeAt(i + 1) === UPPER_J) {
+      const interp = readInterpolationSentinel(css, i, len);
+      if (interp !== null) {
+        out.push({ kind: NodeKind.Interpolation, index: interp.index });
+        ctx.i = interp.end;
+        continue;
+      }
     }
 
     const start = i;
@@ -209,8 +228,11 @@ function normalizeValue(ctx: ParseContext, start: number, end: number): string {
 
 /**
  * Strip whitespace after top-level commas (outside parens/brackets/strings).
- * Substring-based writes; avoids per-character concatenation cost.
- * Exported for the emitter's at-rule prelude handling.
+ * Optimistic: defer the substring + concat work until we actually find
+ * whitespace to strip after a top-level comma. Inputs whose commas are
+ * already tight (`a,b,c`) — common in compact author CSS — pay only the
+ * single charCode walk and return unchanged. Exported for the emitter's
+ * at-rule prelude handling.
  */
 export function stripCommaSpaces(s: string): string {
   if (s.indexOf(',') === -1) return s;
@@ -240,17 +262,18 @@ export function stripCommaSpaces(s: string): string {
     } else if (c === CLOSE_BRACKET) {
       if (bracket > 0) bracket--;
     } else if (c === COMMA && paren === 0 && bracket === 0) {
-      // Emit segment up to and including the comma.
-      out += s.substring(segStart, i + 1);
-      // Skip whitespace after.
+      // Look ahead: only commit a segment if there's whitespace to strip.
       let j = i + 1;
       while (j < len) {
         const n = s.charCodeAt(j);
         if (n === SPACE || n === TAB || n === LF || n === CR) j++;
         else break;
       }
-      segStart = j;
-      i = j - 1;
+      if (j > i + 1) {
+        out += s.substring(segStart, i + 1);
+        segStart = j;
+        i = j - 1;
+      }
     }
   }
 
@@ -570,4 +593,32 @@ export function splitTopLevelCommas(raw: string, trim = false): string[] {
     out.push(raw.substring(start, len));
   }
   return out;
+}
+
+/**
+ * Read a `\0J<digits>\0` interpolation sentinel starting at `i` (which must
+ * already be the leading NUL). Returns the parsed index and the position
+ * just past the trailing NUL, or `null` if the sentinel is malformed.
+ */
+function readInterpolationSentinel(
+  css: string,
+  i: number,
+  len: number
+): { index: number; end: number } | null {
+  // Caller already verified css[i] === NUL and css[i+1] is the marker letter.
+  let j = i + 2;
+  let index = 0;
+  let digits = 0;
+  while (j < len) {
+    const c = css.charCodeAt(j);
+    if (c >= DIGIT_0 && c <= DIGIT_9) {
+      index = index * 10 + (c - DIGIT_0);
+      digits++;
+      j++;
+      continue;
+    }
+    break;
+  }
+  if (digits === 0 || j >= len || css.charCodeAt(j) !== NUL) return null;
+  return { index, end: j + 1 };
 }

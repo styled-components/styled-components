@@ -1,4 +1,4 @@
-import makeInlineStyleClass from '../InlineStyle';
+import makeNativeStyleClass from '../NativeStyle';
 import {
   extractBaseDeclPairs as parseCSSDeclarations,
   resetNativeStyleCache,
@@ -1471,33 +1471,33 @@ describe('parseCSSDeclarations', () => {
   });
 });
 
-describe('InlineStyle class — compile() fast-paths', () => {
+describe('NativeStyle class — compile() fast-paths', () => {
   const stubStyleSheet = { create: <T>(s: T) => s } as any;
-  // Each describe gets a fresh InlineStyle factory so module caches don't bleed across.
-  let InlineStyle: ReturnType<typeof makeInlineStyleClass>;
+  // Each describe gets a fresh NativeStyle factory so module caches don't bleed across.
+  let NativeStyle: ReturnType<typeof makeNativeStyleClass>;
 
   beforeEach(() => {
-    InlineStyle = makeInlineStyleClass(stubStyleSheet);
+    NativeStyle = makeNativeStyleClass(stubStyleSheet);
     resetNativeStyleCache();
   });
 
   describe('static-rules detection', () => {
     it('classifies single-string rules as static and memoises the compile output', () => {
-      const inline = new InlineStyle(['color: red;'] as any);
+      const inline = new NativeStyle(['color: red;'] as any);
       const a = inline.compile({} as any);
       const b = inline.compile({} as any);
       expect(a).toBe(b); // same object identity → memoised
     });
 
     it('classifies multi-string rules as static', () => {
-      const inline = new InlineStyle(['color: red;', ' padding: 8px;'] as any);
+      const inline = new NativeStyle(['color: red;', ' padding: 8px;'] as any);
       const a = inline.compile({} as any);
       expect(a.base).toEqual({ color: 'red', padding: 8 });
       expect(inline.compile({} as any)).toBe(a);
     });
 
     it('classifies empty rules as static', () => {
-      const inline = new InlineStyle([] as any);
+      const inline = new NativeStyle([] as any);
       const a = inline.compile({} as any);
       const b = inline.compile({} as any);
       expect(a).toBe(b);
@@ -1509,7 +1509,7 @@ describe('InlineStyle class — compile() fast-paths', () => {
       // Even though the outer rules contain an array, the whole thing is
       // statically derivable.
       const sharedCSS = ['color: red;'] as any;
-      const inline = new InlineStyle([sharedCSS, ' padding: 8px;'] as any);
+      const inline = new NativeStyle([sharedCSS, ' padding: 8px;'] as any);
       const a = inline.compile({} as any);
       expect(a.base).toEqual({ color: 'red', padding: 8 });
       expect(inline.compile({} as any)).toBe(a);
@@ -1518,16 +1518,16 @@ describe('InlineStyle class — compile() fast-paths', () => {
     it('classifies deeply nested string arrays as static', () => {
       const inner = ['color: red;'] as any;
       const middle = [inner, ' margin: 4px;'] as any;
-      const inline = new InlineStyle([middle, ' padding: 8px;'] as any);
+      const inline = new NativeStyle([middle, ' padding: 8px;'] as any);
       const a = inline.compile({} as any);
       expect(a.base).toEqual({ color: 'red', margin: 4, padding: 8 });
     });
 
     it('does not call the rule functions during static path (because there are none)', () => {
-      // A purely-static InlineStyle never calls a function — even if execution
+      // A purely-static NativeStyle never calls a function — even if execution
       // context is omitted, the compile should succeed. Use a non-shorthand
       // property so we don't fight with shorthand expansion.
-      const inline = new InlineStyle(['opacity: 0.5;'] as any);
+      const inline = new NativeStyle(['opacity: 0.5;'] as any);
       // @ts-expect-error testing missing context resilience
       const a = inline.compile();
       expect(a.base).toEqual({ opacity: 0.5 });
@@ -1541,7 +1541,7 @@ describe('InlineStyle class — compile() fast-paths', () => {
         calls++;
         return 'red';
       };
-      const inline = new InlineStyle(['color: ', fn, ';'] as any);
+      const inline = new NativeStyle(['color: ', fn, ';'] as any);
       const a = inline.compile({} as any);
       expect(a.base).toEqual({ color: 'red' });
       // Function was invoked during flatten
@@ -1550,13 +1550,13 @@ describe('InlineStyle class — compile() fast-paths', () => {
 
     it('classifies array-with-function rules as dynamic', () => {
       const fn = () => 'blue';
-      const inline = new InlineStyle([['color: ', fn, ';']] as any);
+      const inline = new NativeStyle([['color: ', fn, ';']] as any);
       const a = inline.compile({} as any);
       expect(a.base).toEqual({ color: 'blue' });
     });
 
     it('classifies plain-object rules as dynamic', () => {
-      const inline = new InlineStyle([{ color: 'red', padding: 8 } as any] as any);
+      const inline = new NativeStyle([{ color: 'red', padding: 8 } as any] as any);
       const a = inline.compile({} as any);
       expect(a.base).toEqual({ color: 'red', padding: 8 });
     });
@@ -1567,14 +1567,14 @@ describe('InlineStyle class — compile() fast-paths', () => {
       // Function returns the same value regardless of context — common with
       // theme tokens (`p => p.theme.primary`) when theme is shared.
       const fn = () => 'red';
-      const inline = new InlineStyle(['color: ', fn, ';'] as any);
+      const inline = new NativeStyle(['color: ', fn, ';'] as any);
       const a = inline.compile({} as any);
       const b = inline.compile({} as any);
       expect(a).toBe(b); // identity preserved → dedup hit
     });
 
     it('produces a new compiled result when function output changes', () => {
-      const inline = new InlineStyle(['color: ', (p: any) => p.$color, ';'] as any);
+      const inline = new NativeStyle(['color: ', (p: any) => p.$color, ';'] as any);
       const a = inline.compile({ $color: 'red' } as any);
       const b = inline.compile({ $color: 'blue' } as any);
       // Different inputs → different produced CSS → different compile output.
@@ -1584,12 +1584,12 @@ describe('InlineStyle class — compile() fast-paths', () => {
     });
 
     it('returns dedup-hit identity again when function output reverts', () => {
-      const inline = new InlineStyle(['color: ', (p: any) => p.$color, ';'] as any);
+      const inline = new NativeStyle(['color: ', (p: any) => p.$color, ';'] as any);
       const red1 = inline.compile({ $color: 'red' } as any);
       inline.compile({ $color: 'blue' } as any);
       const red2 = inline.compile({ $color: 'red' } as any);
       // Module-level compileCache hit on "color: red;" returns the same
-      // CompiledNativeStyles instance from the first call.
+      // NativeStyles instance from the first call.
       expect(red2).toBe(red1);
     });
 
@@ -1599,11 +1599,11 @@ describe('InlineStyle class — compile() fast-paths', () => {
         calls++;
         return p.$color;
       };
-      const inline = new InlineStyle(['color: ', fn, ';'] as any);
+      const inline = new NativeStyle(['color: ', fn, ';'] as any);
       inline.compile({ $color: 'red' } as any);
       expect(calls).toBe(1);
       inline.compile({ $color: 'red' } as any);
-      // Even though the dedup hit short-circuits compileNativeStyles, the
+      // Even though the dedup hit short-circuits toNativeStyles, the
       // function still runs because we need the produced CSS string to
       // compare against cachedCSS.
       expect(calls).toBe(2);
@@ -1615,7 +1615,7 @@ describe('InlineStyle class — compile() fast-paths', () => {
         calls++;
         return p.theme.primary;
       };
-      const inline = new InlineStyle(['color: ', fn, '; padding: 8px;'] as any);
+      const inline = new NativeStyle(['color: ', fn, '; padding: 8px;'] as any);
       const a = inline.compile({ theme: { primary: '#333' }, $unused: 'a' } as any);
       const b = inline.compile({ theme: { primary: '#333' }, $unused: 'b' } as any);
 

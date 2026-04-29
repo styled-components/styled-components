@@ -1,4 +1,4 @@
-import { StyledTarget } from '../types';
+import type { StyledTarget } from '../types';
 
 export default function getComponentName(target: StyledTarget<any>) {
   return (

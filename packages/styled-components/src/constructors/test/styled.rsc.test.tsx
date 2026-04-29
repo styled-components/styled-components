@@ -22,7 +22,7 @@ jest.mock('../../utils/isRsc', () => ({ IS_RSC: true }));
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { resetIdentifiers } from '../../models/StyledComponent';
-import { mainSheet } from '../../models/StyleSheetManager';
+import { mainSheet, __resetRSCOverrideForTesting } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
 import styled, { css, keyframes } from '../../index';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
@@ -42,6 +42,7 @@ describe('styled RSC mode', () => {
     resetIdentifiers();
     mainSheet.names = new Map();
     mainSheet.clearTag();
+    __resetRSCOverrideForTesting();
   });
 
   describe('RSC style tag emission (#5672)', () => {

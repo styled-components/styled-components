@@ -2,7 +2,7 @@ import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
 import { SC_ATTR, SC_VERSION } from '../constants';
 import { IS_RSC } from '../utils/isRsc';
-import { getGroupForId } from '../sheet/GroupIDAllocator';
+import { groupForId } from '../sheet/GroupIDAllocator';
 import type StyleSheet from '../sheet';
 import type {
   AnyComponent,
@@ -12,16 +12,19 @@ import type {
   ExecutionContext,
   ExecutionProps,
   IStyledComponent,
+  Compiler,
   IStyledComponentFactory,
   IStyledStatics,
   OmitNever,
   RuleSet,
-  Stringifier,
   StyledOptions,
   WebTarget,
 } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
-import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
+import createWarnTooManyClasses, {
+  LIMIT as TOO_MANY_CLASSES_LIMIT,
+} from '../utils/createWarnTooManyClasses';
+import { fifoSet } from '../utils/fifoMap';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import escape from '../utils/escape';
@@ -34,7 +37,8 @@ import isTag from '../utils/isTag';
 import { joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
 import { createRSCCache } from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
-import ComponentStyle, { GeneratedStyle } from './ComponentStyle';
+import shallowEqualContext from '../utils/shallowEqualContext';
+import WebStyle, { GeneratedStyle } from './WebStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
@@ -43,6 +47,32 @@ declare const __SERVER__: boolean;
 const hasOwn = Object.prototype.hasOwnProperty;
 
 const identifiers: { [key: string]: number } = {};
+
+/**
+ * Hoist excludelist: SC-specific statics are already copied explicitly
+ * above, so hoisting them again would stomp the wrapper's own values.
+ * Hoisted to module scope so we don't allocate a fresh `{...}` literal on
+ * every styled-component construction.
+ */
+/**
+ * Shared `toString` for styled components: returns `.styledComponentId` so
+ * `${StyledFoo}` interpolation resolves to the class selector. Defined at
+ * module scope so every styled component shares one function reference
+ * instead of allocating a fresh closure per construction.
+ */
+function styledToString(this: { styledComponentId: string }): string {
+  return '.' + this.styledComponentId;
+}
+
+const HOIST_EXCLUDE = {
+  attrs: true,
+  webStyle: true,
+  displayName: true,
+  foldedComponentIds: true,
+  shouldForwardProp: true,
+  styledComponentId: true,
+  target: true,
+} as const;
 
 /** Test-only: clear the per-displayName counter so component IDs stay stable
  *  across tests. Not for production use. */
@@ -71,30 +101,13 @@ function generateId(
   return parentComponentId ? parentComponentId + '-' + componentId : componentId;
 }
 
-/**
- * Shallow-compare two context objects using a stored key count to avoid
- * a second iteration pass. Returns true if all own-property values match.
- */
-function shallowEqualContext(prev: object, next: object, prevKeyCount: number): boolean {
-  const a = prev as Record<string, unknown>;
-  const b = next as Record<string, unknown>;
-  let nextKeyCount = 0;
-  for (const key in b) {
-    if (hasOwn.call(b, key)) {
-      nextKeyCount++;
-      if (a[key] !== b[key]) return false;
-    }
-  }
-  return nextKeyCount === prevKeyCount;
-}
-
 function useInjectedStyle<T extends ExecutionContext>(
-  componentStyle: ComponentStyle,
+  webStyle: WebStyle,
   resolvedAttrs: T,
   styleSheet: StyleSheet,
-  stylis: Stringifier
+  compiler: Compiler
 ): string {
-  const className = componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet, stylis);
+  const className = webStyle.flush(resolvedAttrs, styleSheet, compiler);
 
   if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
     React.useDebugValue(className);
@@ -107,16 +120,16 @@ function useInjectedStyle<T extends ExecutionContext>(
  * RSC counterpart to `useInjectedStyle`. Runs `generate()` to produce the
  * inheritance chain's compiled CSS without writing to the tag; registers
  * each new class name so repeat renders of the same component/props skip
- * stylis compilation. Returns both the class name (for the element) and
- * the generated levels (consumed by the inline <style> emission).
+ * compilation. Returns both the class name (for the element) and the
+ * generated levels (consumed by the inline <style> emission).
  */
-function rscGenerateAndRegister<T extends ExecutionContext>(
-  componentStyle: ComponentStyle,
+function rscFlush<T extends ExecutionContext>(
+  webStyle: WebStyle,
   resolvedAttrs: T,
   styleSheet: StyleSheet,
-  stylis: Stringifier
+  compiler: Compiler
 ): GeneratedStyle {
-  const generated = componentStyle.generate(resolvedAttrs, styleSheet, stylis);
+  const generated = webStyle.generate(resolvedAttrs, styleSheet, compiler);
   for (let i = 0; i < generated.levels.length; i++) {
     const level = generated.levels[i];
     if (level.isNew) styleSheet.registerName(level.componentId, level.name);
@@ -124,17 +137,17 @@ function rscGenerateAndRegister<T extends ExecutionContext>(
   return generated;
 }
 
-// Cached render inputs + style result: [prevProps, prevTheme, prevStyleSheet, prevStylis,
+// Cached render inputs + style result: [prevProps, prevTheme, prevStyleSheet, prevCompiler,
 // prevPropsKeyCount, cachedContext, cachedClassName]
 type RenderCache = [
   object, // prevProps
   DefaultTheme | undefined, // prevTheme
   StyleSheet, // prevStyleSheet
-  Stringifier, // prevStylis
+  Compiler, // prevCompiler
   number, // prevPropsKeyCount
   object, // cachedContext
   string, // cachedClassName
-  ComponentStyle, // prevComponentStyle (for HMR invalidation)
+  WebStyle, // prevWebStyle (for HMR invalidation)
 ];
 
 function resolveContext<Props extends BaseObject>(
@@ -162,10 +175,11 @@ function resolveContext<Props extends BaseObject>(
       } else if (key === 'style') {
         context.style = { ...context.style, ...(resolvedAttrDef[key] as React.CSSProperties) };
       } else if (!(key in props && (props as any)[key] === undefined)) {
-        // Apply attr value unless the user explicitly passed undefined for this prop,
-        // which signals intent to reset the value.
-        // @ts-expect-error attrs can dynamically add arbitrary properties
-        context[key] = resolvedAttrDef[key];
+        // Apply attr value unless the user explicitly passed undefined for this
+        // prop, which signals intent to reset the value. Cast at the
+        // assignment site since attrs intentionally add arbitrary keys to
+        // the resolved context.
+        (context as unknown as Dict<unknown>)[key] = (resolvedAttrDef as Dict<unknown>)[key];
       }
     }
   }
@@ -182,13 +196,18 @@ let seenUnknownProps: Set<string> | undefined;
 /** Per-render tracking of emitted class names and keyframe IDs for RSC dedup. */
 const getEmittedNames = createRSCCache(() => new Set<string>());
 
-/** Cache RegExp objects for :where() wrapping to avoid recompilation per render */
+/**
+ * Cache RegExp objects for :where() wrapping to avoid recompilation per
+ * render. Bounded with FIFO eviction at the same threshold the
+ * warn-too-many-classes machinery uses; without the cap, RSC SSR with
+ * unbounded class-name variation would leak a regex per unique class.
+ */
 const whereRegExpCache = new Map<string, RegExp>();
 function getWhereRegExp(name: string): RegExp {
   let re = whereRegExpCache.get(name);
   if (!re) {
     re = new RegExp('\\.' + name + '(?![a-zA-Z0-9_-])', 'g');
-    whereRegExpCache.set(name, re);
+    fifoSet(whereRegExpCache, name, re, TOO_MANY_CLASSES_LIMIT);
   }
   return re;
 }
@@ -206,7 +225,7 @@ function buildPropsForElement(
   theme: DefaultTheme | undefined,
   shouldForwardProp: ((prop: string, el: WebTarget) => boolean) | undefined
 ): Dict<any> {
-  const propsForElement: Dict<any> = {};
+  const out: Dict<any> = {};
 
   for (const key in context) {
     if (context[key] === undefined) {
@@ -219,9 +238,9 @@ function buildPropsForElement(
     ) {
       // Omit transient props and execution props.
     } else if (key === 'forwardedAs') {
-      propsForElement.as = context.forwardedAs;
+      out.as = context.forwardedAs;
     } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
-      propsForElement[key] = context[key];
+      out[key] = context[key];
 
       if (
         !shouldForwardProp &&
@@ -239,7 +258,7 @@ function buildPropsForElement(
     }
   }
 
-  return propsForElement;
+  return out;
 }
 
 function useImpl<Props extends BaseObject>(
@@ -249,7 +268,7 @@ function useImpl<Props extends BaseObject>(
 ) {
   const {
     attrs: componentAttrs,
-    componentStyle,
+    webStyle,
     foldedComponentIds,
     styledComponentId,
     target,
@@ -277,15 +296,15 @@ function useImpl<Props extends BaseObject>(
       prev !== null &&
       prev[1] === theme &&
       prev[2] === ssc.styleSheet &&
-      prev[3] === ssc.stylis &&
-      prev[7] === componentStyle &&
+      prev[3] === ssc.compiler &&
+      prev[7] === webStyle &&
       shallowEqualContext(prev[0], props, prev[4])
     ) {
       context = prev[5] as typeof context;
       generatedClassName = prev[6];
     } else {
       context = resolveContext<Props>(componentAttrs, props, theme);
-      generatedClassName = useInjectedStyle(componentStyle, context, ssc.styleSheet, ssc.stylis);
+      generatedClassName = useInjectedStyle(webStyle, context, ssc.styleSheet, ssc.compiler);
 
       let propsKeyCount = 0;
       for (const key in props) {
@@ -295,23 +314,23 @@ function useImpl<Props extends BaseObject>(
         props,
         theme,
         ssc.styleSheet,
-        ssc.stylis,
+        ssc.compiler,
         propsKeyCount,
         context,
         generatedClassName,
-        componentStyle,
+        webStyle,
       ];
     }
   } else {
     context = resolveContext<Props>(componentAttrs, props, theme);
     if (IS_RSC) {
-      generatedStyle = rscGenerateAndRegister(componentStyle, context, ssc.styleSheet, ssc.stylis);
+      generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler);
       generatedClassName = generatedStyle.className;
       if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
         React.useDebugValue(generatedClassName);
       }
     } else {
-      generatedClassName = useInjectedStyle(componentStyle, context, ssc.styleSheet, ssc.stylis);
+      generatedClassName = useInjectedStyle(webStyle, context, ssc.styleSheet, ssc.compiler);
     }
   }
 
@@ -320,12 +339,7 @@ function useImpl<Props extends BaseObject>(
   }
 
   const elementToBeCreated: WebTarget = context.as || target;
-  const propsForElement = buildPropsForElement(
-    context,
-    elementToBeCreated,
-    theme,
-    shouldForwardProp
-  );
+  const elementProps = buildPropsForElement(context, elementToBeCreated, theme, shouldForwardProp);
 
   let classString = joinStrings(foldedComponentIds, styledComponentId);
   if (generatedClassName) {
@@ -335,15 +349,15 @@ function useImpl<Props extends BaseObject>(
     classString += ' ' + context.className;
   }
 
-  propsForElement[
+  elementProps[
     isTag(elementToBeCreated) && elementToBeCreated.includes('-') ? 'class' : 'className'
   ] = classString;
 
   if (forwardedRef) {
-    propsForElement.ref = forwardedRef;
+    elementProps.ref = forwardedRef;
   }
 
-  const element = createElement(elementToBeCreated, propsForElement);
+  const element = createElement(elementToBeCreated, elementProps);
 
   // RSC mode: emit this component's CSS (and its inheritance chain + keyframes)
   // as an inline <style> tag. No `precedence`; server component output isn't
@@ -377,7 +391,7 @@ function useImpl<Props extends BaseObject>(
       const kfTag = ssc.styleSheet.getTag();
       for (const kfId of ssc.styleSheet.keyframeIds) {
         if (emitted && emitted.has(kfId)) continue;
-        const kfRules = kfTag.getGroup(getGroupForId(kfId));
+        const kfRules = kfTag.getGroup(groupForId(kfId));
         if (kfRules) {
           kfCss += kfRules;
           if (emitted) emitted.add(kfId);
@@ -389,7 +403,7 @@ function useImpl<Props extends BaseObject>(
     if (combined) {
       const styleElement = React.createElement('style', {
         [SC_ATTR]: '',
-        key: 'sc-' + componentStyle.componentId,
+        key: 'sc-' + webStyle.componentId,
         children: combined,
       });
       return React.createElement(React.Fragment, null, styleElement, element);
@@ -446,35 +460,39 @@ function createStyledComponent<
     }
   }
 
-  const componentStyle = new ComponentStyle(
+  const webStyle = new WebStyle(
     rules,
     styledComponentId,
-    isTargetStyledComp ? (styledComponentTarget.componentStyle as ComponentStyle) : undefined
+    isTargetStyledComp ? styledComponentTarget.webStyle : undefined
   );
 
   /**
-   * React 19 treats `ref` as a regular prop for function components, so SC
-   * stopped wrapping this render function in `React.forwardRef`. Pass props
-   * through as-is (avoiding a per-render rest-spread allocation) and read
-   * `ref` as a direct property lookup. `buildPropsForElement` is responsible
-   * for NOT forwarding the `ref` key onto the underlying element.
+   * React 19 ref-as-prop; no `React.forwardRef` wrapper. Wrapping in
+   * `React.memo` lets the parent's re-render skip this component entirely
+   * when its props are shallow-equal to the previous render — the hook
+   * calls, the per-instance render cache check, and React's reconciliation
+   * for the child subtree all sit out. The internal render-cache inside
+   * `useImpl` remains as a layered fallback for harder cases (different
+   * prop references with same values, theme/sheet shifts) that memo doesn't
+   * catch, and for components that always re-evaluate (e.g. dynamic-only).
    */
-  function RenderStyledComponent(
-    props: ExecutionProps & OuterProps & { ref?: Ref<Element> }
-  ): React.JSX.Element {
-    return useImpl<OuterProps>(
+  const RenderInner: {
+    (props: ExecutionProps & OuterProps & { ref?: Ref<Element> }): React.JSX.Element;
+    displayName?: string;
+  } = props =>
+    useImpl<OuterProps>(
       WrappedStyledComponent,
       props as ExecutionProps & OuterProps,
       (props as { ref?: Ref<Element> }).ref as Ref<Element>
     );
-  }
-
+  RenderInner.displayName = displayName;
+  const RenderStyledComponent = React.memo(RenderInner) as unknown as typeof RenderInner;
   RenderStyledComponent.displayName = displayName;
 
   let WrappedStyledComponent = RenderStyledComponent as unknown as IStyledComponent<'web', any> &
     Statics;
   WrappedStyledComponent.attrs = finalAttrs;
-  WrappedStyledComponent.componentStyle = componentStyle;
+  WrappedStyledComponent.webStyle = webStyle;
   WrappedStyledComponent.displayName = displayName;
   WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
 
@@ -498,7 +516,11 @@ function createStyledComponent<
     );
   }
 
-  setToString(WrappedStyledComponent, () => `.${WrappedStyledComponent.styledComponentId}`);
+  // Shared toString: reads `this.styledComponentId` so a single function
+  // serves every styled component instead of allocating a per-component
+  // closure. ${StyledFoo} interpolation calls toString() with the styled
+  // component as `this`, so the lookup binds correctly.
+  setToString(WrappedStyledComponent, styledToString);
 
   if (isCompositeComponent) {
     const compositeComponentTarget = target as AnyComponent;
@@ -506,16 +528,7 @@ function createStyledComponent<
     hoist<typeof WrappedStyledComponent, typeof compositeComponentTarget>(
       WrappedStyledComponent,
       compositeComponentTarget,
-      {
-        // all SC-specific things should not be hoisted
-        attrs: true,
-        componentStyle: true,
-        displayName: true,
-        foldedComponentIds: true,
-        shouldForwardProp: true,
-        styledComponentId: true,
-        target: true,
-      } as { [key in keyof OmitNever<IStyledStatics<'web', OuterProps>>]: true }
+      HOIST_EXCLUDE as { [key in keyof OmitNever<IStyledStatics<'web', OuterProps>>]: true }
     );
   }
 

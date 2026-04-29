@@ -1,12 +1,12 @@
 import { KEYFRAMES_ID_PREFIX } from '../constants';
 import StyleSheet from '../sheet';
-import { getGroupForId } from '../sheet/GroupIDAllocator';
-import { Keyframes as KeyframesType, Stringifier } from '../types';
+import { groupForId } from '../sheet/GroupIDAllocator';
+import { Compiler, Keyframes as KeyframesType } from '../types';
 import styledError from '../utils/error';
 import generateAlphabeticName from '../utils/generateAlphabeticName';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
 import { setToString } from '../utils/setToString';
-import { mainStylis } from './StyleSheetManager';
+import { mainCompiler } from './StyleSheetManager';
 
 export default class Keyframes implements KeyframesType {
   readonly [KEYFRAMES_SYMBOL] = true as const;
@@ -22,29 +22,27 @@ export default class Keyframes implements KeyframesType {
 
     // Eagerly register the group so keyframes defined before components
     // get a lower group ID and appear before them in the stylesheet.
-    // Uses getGroupForId directly (not StyleSheet.registerId) because
+    // Uses groupForId directly (not StyleSheet.registerId) because
     // GroupIDAllocator is pure JS; safe for native builds.
-    getGroupForId(this.id);
+    groupForId(this.id);
 
     setToString(this, () => {
       throw styledError(12, String(this.name));
     });
   }
 
-  inject = (styleSheet: StyleSheet, stylisInstance: Stringifier = mainStylis): void => {
-    const resolvedName = this.getName(stylisInstance);
+  inject = (styleSheet: StyleSheet, compiler: Compiler = mainCompiler): void => {
+    const resolvedName = this.getName(compiler);
     if (!styleSheet.hasNameForId(this.id, resolvedName)) {
       styleSheet.insertRules(
         this.id,
         resolvedName,
-        stylisInstance(this.rules, resolvedName, '@keyframes')
+        compiler.compile(this.rules, resolvedName, '@keyframes')
       );
     }
   };
 
-  getName(stylisInstance: Stringifier = mainStylis): string {
-    return stylisInstance.hash
-      ? this.name + generateAlphabeticName(+stylisInstance.hash >>> 0)
-      : this.name;
+  getName(compiler: Compiler = mainCompiler): string {
+    return compiler.hash ? this.name + generateAlphabeticName(+compiler.hash >>> 0) : this.name;
   }
 }

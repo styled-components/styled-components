@@ -1,7 +1,8 @@
 import { emitWeb } from '../parser/emit-web';
 import { parseEmitFlat } from '../parser/emit-fast';
 import { parse } from '../parser/parser';
-import { Stringifier } from '../types';
+import { compileWebFilled } from '../parser/compile';
+import type { Compiler } from '../types';
 import {
   ASTERISK,
   BACKSLASH,
@@ -175,7 +176,13 @@ export function preprocessCSS(css: string): string {
 
 function sanitizeBraces(css: string): string {
   const len = css.length;
+  // Optimistic: stay in pure-scan mode (no result allocation) until the first
+  // event that demands rewriting (a comment to strip, or a brace imbalance).
+  // Balanced comment-free input — the dominant production case from
+  // `preprocessCSS:48` — hits the early-return at the bottom and pays only
+  // one O(n) charCode walk with zero substring or concat work.
   let result = '';
+  let resultActive = false;
   let declStart = 0;
   let braceDepth = 0;
   let inString = 0;
@@ -186,8 +193,14 @@ function sanitizeBraces(css: string): string {
     const code = css.charCodeAt(i);
 
     if (inString === 0 && !inComment && code === SLASH && css.charCodeAt(i + 1) === ASTERISK) {
-      // Emit everything collected since last declStart up to the comment.
-      result += css.substring(declStart, i);
+      if (resultActive) {
+        result += css.substring(declStart, i);
+      } else {
+        // First comment: capture everything up to it in one substring rather
+        // than `css.substring(0, declStart) + css.substring(declStart, i)`.
+        result = css.substring(0, i);
+        resultActive = true;
+      }
       inComment = true;
       i++;
       continue;
@@ -217,6 +230,10 @@ function sanitizeBraces(css: string): string {
       braceDepth--;
 
       if (braceDepth < 0) {
+        if (!resultActive) {
+          result = css.substring(0, declStart);
+          resultActive = true;
+        }
         imbalanced = true;
         let skipEnd = i + 1;
         while (skipEnd < len) {
@@ -233,16 +250,21 @@ function sanitizeBraces(css: string): string {
       }
 
       if (braceDepth === 0) {
-        result += css.substring(declStart, i + 1);
+        if (resultActive) result += css.substring(declStart, i + 1);
         declStart = i + 1;
       }
     } else if (code === SEMICOLON && braceDepth === 0) {
-      result += css.substring(declStart, i + 1);
+      if (resultActive) result += css.substring(declStart, i + 1);
       declStart = i + 1;
     }
   }
 
   if (!imbalanced && braceDepth === 0 && inString === 0) return css;
+
+  // Imbalance OR braceDepth ended non-zero OR unclosed string. If we never
+  // activated the result builder (e.g. a stray opening brace with no matching
+  // close), backfill the good prefix now so we drop the unclosed tail.
+  if (!resultActive) result = css.substring(0, declStart);
 
   if (declStart < len && braceDepth === 0 && inString === 0) {
     result += css.substring(declStart);
@@ -270,54 +292,16 @@ export interface SCPlugin {
   decl?: DeclTransform | undefined;
 }
 
-export type ICreateStylisInstance = {
+export type ICreateCompiler = {
   options?: { namespace?: string | undefined } | undefined;
   plugins?: SCPlugin[] | undefined;
 };
 
-/** Byte-identical to v6 stylis output for hash + SSR rehydration stability. */
-function compileWithInternalParser(
-  flatCSS: string,
-  selector: string,
-  prefix: string,
-  componentId: string,
-  namespace: string | undefined,
-  postProcessSelector: ((s: string) => string) | undefined,
-  postProcessDecl: DeclTransform | undefined
-): string[] {
-  const wrapSelector = prefix || selector ? (prefix ? prefix + ' ' : '') + selector : '';
-  if (
-    wrapSelector &&
-    !namespace &&
-    !postProcessSelector &&
-    !postProcessDecl &&
-    flatCSS.indexOf('{') === -1 &&
-    flatCSS.indexOf('@') === -1
-  ) {
-    const fast = parseEmitFlat(flatCSS, wrapSelector);
-    if (fast !== null) {
-      return fast;
-    }
-  }
-  const wrappedCSS = wrapSelector ? wrapSelector + '{' + flatCSS + '}' : flatCSS;
-
-  const ast = parse(wrappedCSS);
-  if (ast.length === 0) return [];
-
-  return emitWeb(ast, '', {
-    selfRefSelector: selector,
-    componentId,
-    namespace,
-    rw: postProcessSelector,
-    decl: postProcessDecl,
-  });
-}
-
-export default function createStylisInstance(
+export default function createCompiler(
   {
     options = EMPTY_OBJECT as object,
     plugins = EMPTY_ARRAY as unknown as SCPlugin[],
-  }: ICreateStylisInstance = EMPTY_OBJECT as object
+  }: ICreateCompiler = EMPTY_OBJECT as object
 ) {
   // Multiple plugins compose left-to-right.
   let postProcessSelector: ((s: string) => string) | undefined;
@@ -345,27 +329,37 @@ export default function createStylisInstance(
     }
   }
 
-  const stringifyRules: Stringifier = (
-    css: string,
-    selector = '',
-    prefix = '',
-    componentId = '&'
-  ) => {
+  // Byte-identical to v6 stylis output for hash + SSR rehydration stability.
+  const compileString = (css: string, selector = '', prefix = '', componentId = '&'): string[] => {
     const flatCSS = preprocessCSS(css);
-    return compileWithInternalParser(
-      flatCSS,
-      selector,
-      prefix,
+    const namespace = options.namespace;
+    const wrapSelector = prefix || selector ? (prefix ? prefix + ' ' : '') + selector : '';
+    if (
+      wrapSelector &&
+      !namespace &&
+      !postProcessSelector &&
+      !postProcessDecl &&
+      flatCSS.indexOf('{') === -1 &&
+      flatCSS.indexOf('@') === -1
+    ) {
+      const fast = parseEmitFlat(flatCSS, wrapSelector);
+      if (fast !== null) return fast;
+    }
+    const wrappedCSS = wrapSelector ? wrapSelector + '{' + flatCSS + '}' : flatCSS;
+    const ast = parse(wrappedCSS);
+    if (ast.length === 0) return [];
+    return emitWeb(ast, '', {
+      selfRefSelector: selector,
       componentId,
-      options.namespace,
-      postProcessSelector,
-      postProcessDecl
-    );
+      namespace,
+      rw: postProcessSelector,
+      decl: postProcessDecl,
+    });
   };
 
   // Hash includes plugins + options so different configs produce
   // different class names and cache keys.
-  const o = options as ICreateStylisInstance['options'];
+  const o = options as ICreateCompiler['options'];
   let h = SEED;
   for (let i = 0; i < plugins.length; i++) {
     const name = plugins[i]?.name;
@@ -373,7 +367,25 @@ export default function createStylisInstance(
     h = phash(h, name);
   }
   if (o?.namespace) h = phash(h, o.namespace);
-  stringifyRules.hash = h !== SEED ? h.toString() : '';
 
-  return stringifyRules;
+  const compiler: Compiler = {
+    hash: h !== SEED ? h.toString() : '',
+    compile: compileString,
+    emit: (source, filled, parentSelector, componentId, fragments) =>
+      compileWebFilled(
+        source,
+        filled,
+        parentSelector,
+        {
+          selfRefSelector: parentSelector,
+          componentId,
+          namespace: options.namespace,
+          rw: postProcessSelector,
+          decl: postProcessDecl,
+        },
+        fragments
+      ),
+  };
+
+  return compiler;
 }

@@ -8,7 +8,7 @@ declare const __VERSION__: string;
 /* NOTE:
    Sometimes we add an empty function interpolation into some
    styled-components to skip the static optimisation in
-   ComponentStyle. This will look like this:
+   WebStyle. This will look like this:
    ${() => ''}
    */
 let styled: ReturnType<typeof resetStyled>;

@@ -2,7 +2,7 @@ import React, { PropsWithChildren } from 'react';
 import { Image, Text, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
-import { RN_UNSUPPORTED_VALUES } from '../../models/InlineStyle';
+import { RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
@@ -585,7 +585,7 @@ describe('native', () => {
         color: red;
         padding-top: 10px;
       `;
-      expect(Comp.inlineStyle.fastEligible).toBe(true);
+      expect(Comp.nativeStyle.fastEligible).toBe(true);
     });
 
     it('flags components with attrs as not fast-eligible', () => {
@@ -593,9 +593,9 @@ describe('native', () => {
         color: red;
       `;
       // CSS itself is static, but attrs forces full impl. Eligibility on the
-      // InlineStyle is still about the CSS — the gate at the factory layer
+      // NativeStyle is still about the CSS — the gate at the factory layer
       // additionally checks attrs. We expose the CSS-level flag here.
-      expect(Comp.inlineStyle.fastEligible).toBe(true);
+      expect(Comp.nativeStyle.fastEligible).toBe(true);
     });
 
     it('function-interpolated CSS without responsive features is fast-eligible (fast path)', () => {
@@ -606,7 +606,7 @@ describe('native', () => {
       // (no @media/@container/pseudo states/viewport units/light-dark()).
       // The fast render path handles this: 1 hook (theme) + per-render
       // dynamic compile with same-CSS fast path.
-      expect(Comp.inlineStyle.fastEligible).toBe(true);
+      expect(Comp.nativeStyle.fastEligible).toBe(true);
     });
 
     it('function-interpolated CSS with @media conditionals is not fast-eligible', () => {
@@ -616,7 +616,7 @@ describe('native', () => {
           padding: 8px;
         }
       `;
-      expect(Comp.inlineStyle.fastEligible).toBe(false);
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
     });
 
     it('function-interpolated CSS with pseudo states is not fast-eligible', () => {
@@ -626,7 +626,7 @@ describe('native', () => {
           opacity: 0.5;
         }
       `;
-      expect(Comp.inlineStyle.fastEligible).toBe(false);
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
     });
 
     it('function-interpolated CSS with viewport units is not fast-eligible', () => {
@@ -634,7 +634,7 @@ describe('native', () => {
         width: ${p => p.$w}px;
         height: 50vh;
       `;
-      expect(Comp.inlineStyle.fastEligible).toBe(false);
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
     });
 
     it('flags CSS with @media conditionals as not fast-eligible', () => {
@@ -644,7 +644,7 @@ describe('native', () => {
           color: blue;
         }
       `;
-      expect(Comp.inlineStyle.fastEligible).toBe(false);
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
     });
 
     it('flags CSS with pseudo states as not fast-eligible', () => {
@@ -654,7 +654,7 @@ describe('native', () => {
           color: blue;
         }
       `;
-      expect(Comp.inlineStyle.fastEligible).toBe(false);
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
     });
 
     it('fast path renders with style + as + ref', () => {
@@ -693,11 +693,11 @@ describe('native', () => {
       const Base = styled.View`
         padding-top: 10px;
       `;
-      expect(Base.inlineStyle.fastEligible).toBe(true);
+      expect(Base.nativeStyle.fastEligible).toBe(true);
       const Extended = styled(Base)<{ $color: string }>`
         color: ${p => p.$color};
       `;
-      expect(Extended.inlineStyle.fastEligible).toBe(true);
+      expect(Extended.nativeStyle.fastEligible).toBe(true);
       const wrapper = TestRenderer.create(<Extended $color="red" />);
       const view = wrapper.root.findByType(View);
       expect(view.props.style).toEqual({ paddingTop: 10, color: 'red' });
@@ -707,13 +707,13 @@ describe('native', () => {
       const Base = styled.View`
         padding-top: 10px;
       `;
-      expect(Base.inlineStyle.fastEligible).toBe(true);
+      expect(Base.nativeStyle.fastEligible).toBe(true);
       const Extended = styled(Base)`
         @media (min-width: 500px) {
           color: blue;
         }
       `;
-      expect(Extended.inlineStyle.fastEligible).toBe(false);
+      expect(Extended.nativeStyle.fastEligible).toBe(false);
     });
 
     it('dynamic-rule CSS containing env() must NOT be fast-eligible (resolver pass needed)', () => {
@@ -721,7 +721,7 @@ describe('native', () => {
         color: ${p => p.$color};
         padding-top: env(safe-area-inset-top);
       `;
-      expect(Comp.inlineStyle.fastEligible).toBe(false);
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
     });
 
     it('dynamic-rule CSS containing a createTheme sentinel must NOT be fast-eligible', () => {
@@ -729,7 +729,7 @@ describe('native', () => {
         width: ${p => p.$w}px;
         color: \0sc:colors.bg:#fff;
       `;
-      expect(Comp.inlineStyle.fastEligible).toBe(false);
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
     });
   });
 });

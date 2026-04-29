@@ -1,6 +1,6 @@
 import { mainSheet } from '../models/StyleSheetManager';
 import StyleSheet from '../sheet';
-import { getIdForGroup } from '../sheet/GroupIDAllocator';
+import { idForGroup } from '../sheet/GroupIDAllocator';
 
 /**
  * Read the current CSS from a stylesheet as a plain string.
@@ -21,7 +21,7 @@ export default function extractCSS(sheet: StyleSheet = mainSheet): string {
   const tag = sheet.getTag();
   let css = '';
   for (let group = 0; group < tag.length; group++) {
-    if (getIdForGroup(group) === undefined) continue;
+    if (idForGroup(group) === undefined) continue;
     css += tag.getGroup(group);
   }
   return css;

@@ -293,8 +293,8 @@ function parseColorMix(tok: Token): RGB | null {
   const space = first[1].name!;
   if (!SUPPORTED_MIX_SPACES.has(space)) return null;
 
-  const [ca, pa] = parseColorAndPct(parts[1]);
-  const [cb, pb] = parseColorAndPct(parts[2]);
+  const [ca, pa] = parseColorPct(parts[1]);
+  const [cb, pb] = parseColorPct(parts[2]);
   if (ca === null || cb === null) return null;
 
   // Weights + alpha multiplier per CSS Color Level 5 §3.1. When both
@@ -372,7 +372,7 @@ function mixLab(A: LabTriple, B: LabTriple, wA: number, wB: number, polar: boole
   return { L, a: c * Math.cos(hr), b: c * Math.sin(hr), alpha };
 }
 
-function parseColorAndPct(tokens: Token[]): [RGB | null, number | null] {
+function parseColorPct(tokens: Token[]): [RGB | null, number | null] {
   let color: RGB | null = null;
   let pct: number | null = null;
   for (let i = 0; i < tokens.length; i++) {

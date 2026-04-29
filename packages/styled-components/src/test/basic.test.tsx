@@ -381,7 +381,7 @@ describe('basic', () => {
       const Outer = styled(Inner)``;
 
       expect(Outer.styledComponentId).not.toBe(Inner.styledComponentId);
-      expect(Outer.componentStyle).not.toEqual(Inner.componentStyle);
+      expect(Outer.webStyle).not.toEqual(Inner.webStyle);
     });
 
     it('should not fold components if there is an interim HOC', () => {

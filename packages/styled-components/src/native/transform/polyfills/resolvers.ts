@@ -45,27 +45,27 @@ export function buildResolver(value: unknown): Resolver | null {
   const c0 = value.charCodeAt(0);
 
   // createTheme sentinel; `\0<prefix>:<path>:<fallback>`
-  if (c0 === 0) return buildThemeResolver(value);
+  if (c0 === 0) return themeResolver(value);
 
   // Viewport / container units start with a digit, `-`, `+`, or `.`. Skip
   // both regex tests for everything else (colors, idents, percent strings),
   // which dominate real-world base-dict contents.
   if ((c0 >= $.DIGIT_0 && c0 <= $.DIGIT_9) || c0 === $.HYPHEN || c0 === $.DOT || c0 === $.PLUS) {
     const vp = VP_UNIT_RE.exec(value);
-    if (vp !== null) return buildViewportResolver(parseFloat(vp[1]), vp[2].toLowerCase());
+    if (vp !== null) return viewportResolver(parseFloat(vp[1]), vp[2].toLowerCase());
     const cq = CQ_UNIT_RE.exec(value);
-    if (cq !== null) return buildContainerResolver(parseFloat(cq[1]), cq[2].toLowerCase());
+    if (cq !== null) return containerResolver(parseFloat(cq[1]), cq[2].toLowerCase());
     return null;
   }
 
   // Non-numeric prefix; only `light-dark(` and `env(` remain as candidates.
-  if (c0 === 0x6c /* l */ && value.startsWith('light-dark(')) return buildLightDarkResolver(value);
-  if (c0 === 0x65 /* e */ && value.startsWith('env(')) return buildEnvResolver(value);
+  if (c0 === 0x6c /* l */ && value.startsWith('light-dark(')) return lightDarkResolver(value);
+  if (c0 === 0x65 /* e */ && value.startsWith('env(')) return envResolver(value);
 
   return null;
 }
 
-function buildViewportResolver(n: number, unit: string): Resolver {
+function viewportResolver(n: number, unit: string): Resolver {
   return env => {
     const { width: w, height: h } = env.media;
     switch (unit) {
@@ -89,7 +89,7 @@ function buildViewportResolver(n: number, unit: string): Resolver {
   };
 }
 
-function buildContainerResolver(n: number, unit: string): Resolver {
+function containerResolver(n: number, unit: string): Resolver {
   return env => {
     const c = env.container;
     if (c === null) return n; // no ancestor container; fall back to raw number
@@ -112,7 +112,7 @@ function buildContainerResolver(n: number, unit: string): Resolver {
   };
 }
 
-function buildLightDarkResolver(value: string): Resolver | null {
+function lightDarkResolver(value: string): Resolver | null {
   // `light-dark(<light>, <dark>)`; split on the top-level comma.
   const inner = value.slice('light-dark('.length, -1).trim();
   const commaIdx = topLevelCommaIdx(inner);
@@ -127,7 +127,7 @@ function buildLightDarkResolver(value: string): Resolver | null {
  * family. Falls back to the literal fallback (if provided) or null for
  * everything else, which the caller interprets as "drop".
  */
-function buildEnvResolver(value: string): Resolver | null {
+function envResolver(value: string): Resolver | null {
   const inner = value.slice('env('.length, -1).trim();
   const commaIdx = topLevelCommaIdx(inner);
   const name = (commaIdx === -1 ? inner : inner.slice(0, commaIdx)).trim();
@@ -150,7 +150,7 @@ function buildEnvResolver(value: string): Resolver | null {
   }
 }
 
-function buildThemeResolver(value: string): Resolver | null {
+function themeResolver(value: string): Resolver | null {
   const firstColon = value.indexOf(':', 1);
   if (firstColon === -1) return null;
   const secondColon = value.indexOf(':', firstColon + 1);

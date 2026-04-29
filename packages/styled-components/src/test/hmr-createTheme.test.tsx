@@ -31,7 +31,7 @@ describe('HMR + createTheme interaction', () => {
 
     // Simulate HMR: module re-evaluates, createTheme called with new defaults.
     // The SWC plugin keeps componentId stable, but styled() creates a NEW
-    // ComponentStyle instance with different rules (new token strings).
+    // WebStyle instance with different rules (new token strings).
     const themeV2 = createTheme({ colors: { primary: 'blue', text: 'white' } });
     const CompV2 = styled.div`
       color: ${themeV2.colors.primary};
@@ -239,9 +239,9 @@ describe('HMR + createTheme interaction', () => {
     expect(css).toContain('var(--v2-color, red)');
   });
 
-  it('render cache busts when ComponentStyle instance changes (HMR invalidation)', () => {
-    // The render cache tuple stores componentStyle at index [7].
-    // On HMR, styled() creates a new ComponentStyle, so prev[7] !== componentStyle.
+  it('render cache busts when WebStyle instance changes (HMR invalidation)', () => {
+    // The render cache tuple stores webStyle at index [7].
+    // On HMR, styled() creates a new WebStyle, so prev[7] !== webStyle.
     // This forces re-computation even if props/theme are identical.
     const themeV1 = createTheme({ gap: '8px' });
     const CompV1 = styled.div.withConfig({ componentId: 'sc-hmr-rendercache' })`
@@ -254,7 +254,7 @@ describe('HMR + createTheme interaction', () => {
     rerender(<CompV1 />);
     const classAfterCacheHit = container.firstElementChild!.className;
 
-    // Now simulate HMR: new ComponentStyle instance, same CSS
+    // Now simulate HMR: new WebStyle instance, same CSS
     const themeV1Copy = createTheme({ gap: '8px' });
     const CompV1Reval = styled.div.withConfig({ componentId: 'sc-hmr-rendercache' })`
       gap: ${themeV1Copy.gap};

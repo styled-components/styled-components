@@ -17,12 +17,12 @@ import './bunProfileGlobals';
 
 import { transformDecl } from './transform';
 import { tokenize } from './transform/tokenize';
-import { compileNativeStyles, resetNativeStyleCache } from '../models/nativeStyleCompiler';
+import { toNativeStyles, resetNativeStyleCache } from '../models/nativeStyleCompiler';
 import { applyResolvers, ResolveEnv } from './transform/polyfills/resolvers';
-import makeInlineStyleClass from '../models/InlineStyle';
+import makeNativeStyleClass from '../models/NativeStyle';
 
 const stubStyleSheet = { create: <T extends object>(s: T) => s } as any;
-const InlineStyle = makeInlineStyleClass(stubStyleSheet);
+const NativeStyle = makeNativeStyleClass(stubStyleSheet);
 
 function bench(name: string, iters: number, fn: (i?: number) => void): number {
   if (typeof (globalThis as any).gc === 'function') (globalThis as any).gc();
@@ -105,7 +105,7 @@ bench('tokenize complex (oklch(0.628 0.258 29.234 / 0.9))', 200_000, () =>
 bench('tokenize compound (4 8 12 16 px-mix)', 200_000, () => tokenize('4px 8px 12px 16px'));
 
 // ────────────────────────────────────────────────────────────────────
-// compileNativeStyles — full path including parser
+// toNativeStyles — full path including parser
 // ────────────────────────────────────────────────────────────────────
 
 const CSS_TINY = 'color: red;';
@@ -163,62 +163,62 @@ const CSS_SENTINEL = `
   padding: 8px;
 `;
 
-console.log('\n=== compileNativeStyles cold (cache reset each iter) ===');
+console.log('\n=== toNativeStyles cold (cache reset each iter) ===');
 bench('cold tiny (1 decl)', 20_000, () => {
   resetNativeStyleCache();
-  compileNativeStyles(CSS_TINY, stubStyleSheet);
+  toNativeStyles(CSS_TINY, stubStyleSheet);
 });
 bench('cold small (5 decls)', 10_000, () => {
   resetNativeStyleCache();
-  compileNativeStyles(CSS_SMALL, stubStyleSheet);
+  toNativeStyles(CSS_SMALL, stubStyleSheet);
 });
 bench('cold medium (15 decls)', 5_000, () => {
   resetNativeStyleCache();
-  compileNativeStyles(CSS_MEDIUM, stubStyleSheet);
+  toNativeStyles(CSS_MEDIUM, stubStyleSheet);
 });
 bench('cold large (medium + nested rules + at-rules)', 2_000, () => {
   resetNativeStyleCache();
-  compileNativeStyles(CSS_LARGE, stubStyleSheet);
+  toNativeStyles(CSS_LARGE, stubStyleSheet);
 });
 bench('cold polyfill-heavy', 5_000, () => {
   resetNativeStyleCache();
-  compileNativeStyles(CSS_POLYFILL, stubStyleSheet);
+  toNativeStyles(CSS_POLYFILL, stubStyleSheet);
 });
 bench('cold sentinel (createTheme)', 5_000, () => {
   resetNativeStyleCache();
-  compileNativeStyles(CSS_SENTINEL, stubStyleSheet);
+  toNativeStyles(CSS_SENTINEL, stubStyleSheet);
 });
 
-console.log('\n=== compileNativeStyles warm (cache hit) ===');
-bench('warm tiny', 1_000_000, () => compileNativeStyles(CSS_TINY, stubStyleSheet));
-bench('warm small', 1_000_000, () => compileNativeStyles(CSS_SMALL, stubStyleSheet));
-bench('warm medium', 1_000_000, () => compileNativeStyles(CSS_MEDIUM, stubStyleSheet));
-bench('warm large', 500_000, () => compileNativeStyles(CSS_LARGE, stubStyleSheet));
-bench('warm polyfill', 500_000, () => compileNativeStyles(CSS_POLYFILL, stubStyleSheet));
-bench('warm sentinel', 500_000, () => compileNativeStyles(CSS_SENTINEL, stubStyleSheet));
+console.log('\n=== toNativeStyles warm (cache hit) ===');
+bench('warm tiny', 1_000_000, () => toNativeStyles(CSS_TINY, stubStyleSheet));
+bench('warm small', 1_000_000, () => toNativeStyles(CSS_SMALL, stubStyleSheet));
+bench('warm medium', 1_000_000, () => toNativeStyles(CSS_MEDIUM, stubStyleSheet));
+bench('warm large', 500_000, () => toNativeStyles(CSS_LARGE, stubStyleSheet));
+bench('warm polyfill', 500_000, () => toNativeStyles(CSS_POLYFILL, stubStyleSheet));
+bench('warm sentinel', 500_000, () => toNativeStyles(CSS_SENTINEL, stubStyleSheet));
 
 // ────────────────────────────────────────────────────────────────────
 // applyResolvers — render-time pass over compiled output
 // ────────────────────────────────────────────────────────────────────
 
 // ────────────────────────────────────────────────────────────────────
-// InlineStyle.compile — the actual per-render entry point used by
+// NativeStyle.compile — the actual per-render entry point used by
 // StyledNativeComponent. Static-rules fast-path lives here.
 // ────────────────────────────────────────────────────────────────────
 
-console.log('\n=== InlineStyle.compile (per-render entry) ===');
-const isStaticTiny = new InlineStyle([CSS_TINY] as any);
-const isStaticSmall = new InlineStyle([CSS_SMALL] as any);
-const isStaticMedium = new InlineStyle([CSS_MEDIUM] as any);
-const isStaticLarge = new InlineStyle([CSS_LARGE] as any);
-const isDynamicTiny = new InlineStyle(['color: ', (p: any) => p.$color, ';'] as any);
-const isDynamicMedium = new InlineStyle([
+console.log('\n=== NativeStyle.compile (per-render entry) ===');
+const isStaticTiny = new NativeStyle([CSS_TINY] as any);
+const isStaticSmall = new NativeStyle([CSS_SMALL] as any);
+const isStaticMedium = new NativeStyle([CSS_MEDIUM] as any);
+const isStaticLarge = new NativeStyle([CSS_LARGE] as any);
+const isDynamicTiny = new NativeStyle(['color: ', (p: any) => p.$color, ';'] as any);
+const isDynamicMedium = new NativeStyle([
   CSS_MEDIUM + ' color: ',
   (p: any) => p.$color,
   ';',
 ] as any);
 // Dynamic but the function output is stable (e.g., theme token doesn't change)
-const isDynamicStable = new InlineStyle([
+const isDynamicStable = new NativeStyle([
   'color: ',
   (p: any) => p.theme.primary,
   '; padding: 8px;',
@@ -226,12 +226,12 @@ const isDynamicStable = new InlineStyle([
 
 const ctx: any = { theme: { primary: '#333' }, $color: 'red' };
 
-bench('static tiny — InlineStyle.compile', 5_000_000, () => isStaticTiny.compile(ctx));
-bench('static small — InlineStyle.compile', 5_000_000, () => isStaticSmall.compile(ctx));
-bench('static medium — InlineStyle.compile', 5_000_000, () => isStaticMedium.compile(ctx));
-bench('static large — InlineStyle.compile', 5_000_000, () => isStaticLarge.compile(ctx));
+bench('static tiny — NativeStyle.compile', 5_000_000, () => isStaticTiny.compile(ctx));
+bench('static small — NativeStyle.compile', 5_000_000, () => isStaticSmall.compile(ctx));
+bench('static medium — NativeStyle.compile', 5_000_000, () => isStaticMedium.compile(ctx));
+bench('static large — NativeStyle.compile', 5_000_000, () => isStaticLarge.compile(ctx));
 bench(
-  'dynamic tiny — InlineStyle.compile (varying prop)',
+  'dynamic tiny — NativeStyle.compile (varying prop)',
   1_000_000,
   (() => {
     let i = 0;
@@ -242,7 +242,7 @@ bench(
   })()
 );
 bench(
-  'dynamic medium — InlineStyle.compile (varying prop)',
+  'dynamic medium — NativeStyle.compile (varying prop)',
   500_000,
   (() => {
     let i = 0;
@@ -266,12 +266,12 @@ bench(
 );
 
 console.log('\n=== applyResolvers (render-time pass) ===');
-const compiledNoResolvers = compileNativeStyles(CSS_MEDIUM, stubStyleSheet);
-const compiledWithResolvers = compileNativeStyles(
+const compiledNoResolvers = toNativeStyles(CSS_MEDIUM, stubStyleSheet);
+const compiledWithResolvers = toNativeStyles(
   'width: 100vw; height: 50vh; color: light-dark(white, black); padding-top: env(safe-area-inset-top, 0);',
   stubStyleSheet
 );
-const compiledSentinel = compileNativeStyles(CSS_SENTINEL, stubStyleSheet);
+const compiledSentinel = toNativeStyles(CSS_SENTINEL, stubStyleSheet);
 
 const env: ResolveEnv = {
   media: {

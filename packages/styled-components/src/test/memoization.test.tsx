@@ -337,7 +337,7 @@ describe('memoization correctness', () => {
     unmount();
   });
 
-  it('bounds dynamicNameCache size for free-form interpolations', () => {
+  it('bounds per-instance caches for free-form interpolations', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const Comp = styled.div<{ $value: string }>`
       color: ${p => p.$value};
@@ -349,9 +349,11 @@ describe('memoization correctness', () => {
       rerender(<Comp $value={`rgb(${i},${i},${i})`} />);
     }
 
-    const { dynamicNameCache } = Comp.componentStyle;
-    expect(dynamicNameCache?.size).toBeGreaterThan(0);
-    expect(dynamicNameCache?.size).toBeLessThanOrEqual(TOO_MANY_CLASSES_LIMIT);
+    const { interpKeyCache, cssKeyCache } = Comp.webStyle;
+    expect(interpKeyCache?.size).toBeGreaterThan(0);
+    expect(interpKeyCache?.size).toBeLessThanOrEqual(TOO_MANY_CLASSES_LIMIT);
+    expect(cssKeyCache?.size).toBeGreaterThan(0);
+    expect(cssKeyCache?.size).toBeLessThanOrEqual(TOO_MANY_CLASSES_LIMIT);
 
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining(`Over ${TOO_MANY_CLASSES_LIMIT} classes`)

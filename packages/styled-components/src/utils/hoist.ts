@@ -1,5 +1,5 @@
 import React from 'react';
-import { AnyComponent } from '../types';
+import type { AnyComponent } from '../types';
 
 // copied from react-is
 const REACT_MEMO_TYPE = Symbol.for('react.memo');

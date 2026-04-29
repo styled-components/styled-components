@@ -9,7 +9,6 @@ import { mainSheet } from '../models/StyleSheetManager';
 import { resetGroupIds } from '../sheet/GroupIDAllocator';
 import { rehydrateSheet } from '../sheet/Rehydration';
 import styledError from '../utils/error';
-import { joinStringArray } from '../utils/joinStrings';
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let mockIndex = 0;
@@ -74,19 +73,17 @@ export const stripWhitespace = (str: string) =>
     .replace(/\s+/g, ' ');
 
 export const getCSS = (scope: Document | HTMLElement) =>
-  joinStringArray(
-    Array.from(scope.querySelectorAll('style')).map(tag => {
+  Array.from(scope.querySelectorAll('style'))
+    .map(tag => {
       // CSSOM-injected rules don't appear in textContent — walk the live sheet.
       if (tag.sheet && tag.sheet.cssRules.length) {
-        return joinStringArray(
-          Array.from(tag.sheet.cssRules).map(r => r.cssText),
-          '\n'
-        );
+        return Array.from(tag.sheet.cssRules)
+          .map(r => r.cssText)
+          .join('\n');
       }
       return tag.innerHTML;
-    }),
-    '\n'
-  )
+    })
+    .join('\n')
     .replace(/ {/g, '{')
     .replace(/:\s+/g, ':')
     .replace(/:\s+;/g, ':;');

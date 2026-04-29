@@ -2,7 +2,7 @@ import { act, render } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import React from 'react';
 import GlobalStyle from '../../models/GlobalStyle';
-import { mainStylis, StyleSheetManager } from '../../models/StyleSheetManager';
+import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
 import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
@@ -947,13 +947,13 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const ctx = { theme: { color: 'red' } } as any;
 
     // First render — populates instanceRules
-    gs.renderStyles('1', ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     expect(gs.instanceRules.has('1')).toBe(true);
 
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
     // Second render with same CSS — should hit fast-path and skip rebuildGroup
-    gs.renderStyles('1', ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     expect(clearRulesSpy).not.toHaveBeenCalled();
   });
 
@@ -966,11 +966,11 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const gs = new GlobalStyle(rules, 'sc-global-diff-test');
 
     // First render
-    gs.renderStyles('1', { theme: { color: 'red' } } as any, sheet, mainStylis);
+    gs.renderStyles('1', { theme: { color: 'red' } } as any, sheet, mainCompiler);
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
     // Second render with different CSS — should NOT hit fast-path
-    gs.renderStyles('1', { theme: { color: 'blue' } } as any, sheet, mainStylis);
+    gs.renderStyles('1', { theme: { color: 'blue' } } as any, sheet, mainCompiler);
     expect(clearRulesSpy).toHaveBeenCalled();
 
     // Verify the new CSS is present
@@ -994,12 +994,12 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const ctx = { theme: {} } as any;
 
     // First render — one rule
-    gs.renderStyles('1', ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
     // Add extra rule content and re-render
     extraRule = 'div { background: green; }';
-    gs.renderStyles('1', ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     expect(clearRulesSpy).toHaveBeenCalled();
   });
 
@@ -1014,11 +1014,11 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const ctx = { theme: { color: 'red' } } as any;
 
     // First render
-    gs.renderStyles('1', ctx, serverSheet, mainStylis);
+    gs.renderStyles('1', ctx, serverSheet, mainCompiler);
     const clearRulesSpy = jest.spyOn(serverSheet, 'clearRules');
 
     // Same CSS — server must always rebuild (clearTag invalidates DOM)
-    gs.renderStyles('1', ctx, serverSheet, mainStylis);
+    gs.renderStyles('1', ctx, serverSheet, mainCompiler);
     expect(clearRulesSpy).toHaveBeenCalled();
   });
 
@@ -1032,7 +1032,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const ctx = { theme: {} } as any;
 
     // First render — inserts rules
-    gs.renderStyles('1', ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body {background: pink;}/*!sc*/
       data-styled.g1[id="sc-global-static-test"]{content:"sc-global-static-test,"}/*!sc*/
@@ -1042,7 +1042,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const insertSpy = jest.spyOn(sheet, 'insertRules');
 
     // Second render — name already registered, should skip
-    gs.renderStyles('1', ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     expect(insertSpy).not.toHaveBeenCalled();
   });
 
@@ -1056,7 +1056,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const ctx = { theme: {} } as any;
 
     // First render — inserts rules and populates cache
-    gs.renderStyles('1', ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     expect(gs.instanceRules.has('1')).toBe(true);
     const entry1 = gs.instanceRules.get('1')!;
 
@@ -1066,7 +1066,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
 
     // Re-render — should repopulate cache from computation (not re-insert)
     const insertSpy = jest.spyOn(sheet, 'insertRules');
-    gs.renderStyles('1', ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     expect(gs.instanceRules.has('1')).toBe(true);
     expect(insertSpy).not.toHaveBeenCalled();
 
@@ -1083,8 +1083,8 @@ describe('GlobalStyle.renderStyles (unit)', () => {
     const gs = new GlobalStyle(rules, 'sc-global-remove-test');
 
     // Mount two instances
-    gs.renderStyles('1', { theme: { color: 'red' } } as any, sheet, mainStylis);
-    gs.renderStyles('2', { theme: { color: 'blue' } } as any, sheet, mainStylis);
+    gs.renderStyles('1', { theme: { color: 'red' } } as any, sheet, mainCompiler);
+    gs.renderStyles('2', { theme: { color: 'blue' } } as any, sheet, mainCompiler);
     expect(gs.instanceRules.size).toBe(2);
     expect(sheet.toString()).toMatchInlineSnapshot(`
       "body {color: red;}/*!sc*/
@@ -1122,7 +1122,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
 
     for (let i = 1; i <= 10; i++) {
       const id = String(i);
-      gs.renderStyles(id, ctx, sheet, mainStylis);
+      gs.renderStyles(id, ctx, sheet, mainCompiler);
       gs.removeStyles(id, sheet);
     }
 

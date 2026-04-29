@@ -1,11 +1,11 @@
 import type * as CSS from 'csstype';
-import React from 'react';
-import ComponentStyle from './models/ComponentStyle';
-import { DefaultTheme } from './models/ThemeProvider';
-import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
+import type React from 'react';
+import type WebStyle from './models/WebStyle';
+import type { DefaultTheme } from './models/ThemeProvider';
+import type createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 import type { SupportedHTMLElements } from './utils/domElements';
 
-export { CSS, DefaultTheme, SupportedHTMLElements };
+export type { CSS, DefaultTheme, SupportedHTMLElements };
 
 export interface ExoticComponentWithDisplayName<
   P extends BaseObject = {},
@@ -122,14 +122,49 @@ export interface Flattener<Props extends BaseObject> {
   ): Interpolation<Props>[];
 }
 
-export interface Stringifier {
-  (
+export interface Compiler {
+  hash: string;
+  /**
+   * String-input emit path. Used by callers that have a freshly-built CSS
+   * string and a parent selector — keyframes, global styles, and the rare
+   * fallback when a `RuleSet` has no construction-time `Source` attached.
+   *
+   * Wraps the input in `prefix + selector { css }`, runs `preprocessCSS +
+   * parser + emit-web` with the active plugin set + namespace, and returns
+   * the resulting rule strings ready for `insertRules`. Output is
+   * byte-identical to v6 stylis output for hash + SSR rehydration
+   * stability.
+   *
+   * `prefix` carries at-rule wrapping (e.g. `'@keyframes'` for keyframe
+   * registration). When both `selector` and `prefix` are empty the input
+   * is parsed unwrapped (used by `createGlobalStyle`).
+   */
+  compile: (
     css: string,
     selector?: string | undefined,
     prefix?: string | undefined,
     componentId?: string | undefined
-  ): string[];
-  hash: string;
+  ) => string[];
+  /**
+   * Source-input fast emit path. Walks the construction-time AST + filled
+   * interpolation values, skipping the per-render `preprocessCSS + parse`
+   * work `compile` performs against a freshly joined CSS string. Returns
+   * `null` only on shape bailouts the fast path doesn't yet cover; callers
+   * fall through to `compile` in that case.
+   *
+   * `fragments` is the parallel side table populated by
+   * `evaluateForFastPath` for slots that resolved to a `css\`...\`` fragment.
+   * Same plugin set, namespace, and decl/selector transforms feed through;
+   * output is byte-equal to `compile` by construction (same parser, same
+   * emitter).
+   */
+  emit: (
+    source: import('./parser/source').Source,
+    filled: ReadonlyArray<string>,
+    parentSelector: string,
+    componentId: string,
+    fragments?: ReadonlyArray<import('./parser/compile').FastPathFragment | null> | null
+  ) => string[] | null;
 }
 
 export interface ShouldForwardProp<R extends Runtime> {
@@ -146,12 +181,15 @@ export interface IStyledStatics<
   out R extends Runtime,
   in out OuterProps extends BaseObject,
 > extends CommonStatics<R, OuterProps> {
-  componentStyle: R extends 'web' ? ComponentStyle : never;
+  webStyle: R extends 'web' ? WebStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
   foldedComponentIds: R extends 'web' ? string : never;
-  inlineStyle: R extends 'native' ? InstanceType<IInlineStyleConstructor<OuterProps>> : never;
+  nativeStyle: R extends 'native' ? InstanceType<INativeStyleConstructor<OuterProps>> : never;
   target: StyledTarget<R>;
-  styledComponentId: R extends 'web' ? string : never;
+  // Web emits a real component id used for class chaining; native uses a
+  // boolean sentinel so `isStyledComponent`'s `'styledComponentId' in target`
+  // duck check works uniformly across runtimes.
+  styledComponentId: R extends 'web' ? string : true;
   warnTooManyClasses?:
     | (R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never)
     | undefined;
@@ -255,8 +293,8 @@ export interface IStyledComponentFactory<
   ): IStyledComponent<R, Substitute<OuterProps, Props>> & OuterStatics & Statics;
 }
 
-export interface IInlineStyleConstructor<Props extends BaseObject> {
-  new (rules: RuleSet<Props>): IInlineStyle<Props>;
+export interface INativeStyleConstructor<Props extends BaseObject> {
+  new (rules: RuleSet<Props>): INativeStyle<Props>;
 }
 
 interface CompileOutput {
@@ -275,7 +313,7 @@ interface CompileOutput {
   }>;
 }
 
-export interface IInlineStyle<Props extends BaseObject> {
+export interface INativeStyle<Props extends BaseObject> {
   rules: RuleSet<Props>;
   fastEligible: boolean;
   /** Set at construction; null when rules contain function interpolations. */

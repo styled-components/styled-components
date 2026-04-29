@@ -1,13 +1,13 @@
 import { emitWeb } from '../../parser/emit-web';
 import { parse } from '../../parser/parser';
-import createStylisInstance, { ICreateStylisInstance, preprocessCSS } from '../cssCompile';
+import createCompiler, { ICreateCompiler, preprocessCSS } from '../cssCompile';
 import rtl from '../../plugins/rtl';
 import rscPlugin from '../../plugins/rsc';
 
-function runCssCompile(css: string, options: ICreateStylisInstance = {}): string[] {
-  const stringifier = createStylisInstance(options);
+function runCssCompile(css: string, options: ICreateCompiler = {}): string[] {
+  const compiler = createCompiler(options);
   const componentId = 'a';
-  return stringifier(css, `.${componentId}`, undefined, componentId);
+  return compiler.compile(css, `.${componentId}`, undefined, componentId);
 }
 
 describe('cssCompile', () => {
@@ -1445,7 +1445,7 @@ background-color: green;`)
   });
 
   describe('flat fast path (parseEmitFlat vs full parser)', () => {
-    it('matches full parser for flat declarations (default stringifier)', () => {
+    it('matches full parser for flat declarations (default compiler)', () => {
       const css = `color: red;\nbackground: blue;`;
       const fromInstance = runCssCompile(css);
       const flatCSS = preprocessCSS(css);
@@ -1457,8 +1457,8 @@ background-color: green;`)
     });
 
     it('uses full parser when namespace is set (no fast path)', () => {
-      const stringifier = createStylisInstance({ options: { namespace: '.ns' } });
-      expect(stringifier(`color: red;`, '.a', undefined, 'a')).toMatchInlineSnapshot(`
+      const compiler = createCompiler({ options: { namespace: '.ns' } });
+      expect(compiler.compile(`color: red;`, '.a', undefined, 'a')).toMatchInlineSnapshot(`
         [
           ".ns .a{color:red;}",
         ]
@@ -1466,8 +1466,8 @@ background-color: green;`)
     });
 
     it('uses full parser when rtl decl transform is active', () => {
-      const stringifier = createStylisInstance({ plugins: [rtl] });
-      expect(stringifier(`margin-left: 8px; padding-left: 4px;`, '.a', undefined, 'a'))
+      const compiler = createCompiler({ plugins: [rtl] });
+      expect(compiler.compile(`margin-left: 8px; padding-left: 4px;`, '.a', undefined, 'a'))
         .toMatchInlineSnapshot(`
         [
           ".a{margin-right:8px;padding-right:4px;}",
@@ -1476,8 +1476,8 @@ background-color: green;`)
     });
 
     it('uses full parser when rscPlugin rw is active', () => {
-      const stringifier = createStylisInstance({ plugins: [rscPlugin] });
-      expect(stringifier(`color: red;`, '.a:hover:first-child', undefined, 'a'))
+      const compiler = createCompiler({ plugins: [rscPlugin] });
+      expect(compiler.compile(`color: red;`, '.a:hover:first-child', undefined, 'a'))
         .toMatchInlineSnapshot(`
         [
           ".a:hover:nth-child(1 of :not(style[data-styled])){color:red;}",

@@ -116,7 +116,7 @@ describe('reconstructWithOptions', () => {
       const newSheet = originalSheet.reconstructWithOptions({ target: shadowRoot });
 
       // Should have rehydrated from shadow root
-      expect(GroupIDAllocator.getIdForGroup(15)).toBe('shadowTestId');
+      expect(GroupIDAllocator.idForGroup(15)).toBe('shadowTestId');
       expect(newSheet.hasNameForId('shadowTestId', 'shadowTestName')).toBe(true);
 
       // Cleanup
@@ -155,7 +155,7 @@ describe('reconstructWithOptions', () => {
       const newSheet = originalSheet.reconstructWithOptions({ target: shadowRoot2 });
 
       // Should have rehydrated from second shadow root
-      expect(GroupIDAllocator.getIdForGroup(17)).toBe('shadow2Id');
+      expect(GroupIDAllocator.idForGroup(17)).toBe('shadow2Id');
       expect(newSheet.hasNameForId('shadow2Id', 'shadow2Name')).toBe(true);
 
       // Cleanup
@@ -215,7 +215,7 @@ describe('reconstructWithOptions', () => {
       const newSheet = originalSheet.reconstructWithOptions({ target: shadowRoot });
 
       // Should NOT rehydrate on server
-      expect(GroupIDAllocator.getIdForGroup(19)).toBe(undefined);
+      expect(GroupIDAllocator.idForGroup(19)).toBe(undefined);
       expect(newSheet.hasNameForId('serverTestId', 'serverTestName')).toBe(false);
 
       // Cleanup

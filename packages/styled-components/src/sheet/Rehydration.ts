@@ -1,6 +1,6 @@
 import { SC_ATTR, SC_ATTR_ACTIVE, SC_ATTR_VERSION, SC_VERSION, SPLITTER } from '../constants';
 import { InsertionTarget } from '../types';
-import { getIdForGroup, setGroupForId } from './GroupIDAllocator';
+import { idForGroup, setGroupForId } from './GroupIDAllocator';
 import { Sheet } from './types';
 
 const SELECTOR = `style[${SC_ATTR}][${SC_ATTR_VERSION}="${SC_VERSION}"]`;
@@ -53,7 +53,7 @@ export const outputSheet = (sheet: Sheet) => {
 
   let css = '';
   for (let group = 0; group < length; group++) {
-    const id = getIdForGroup(group);
+    const id = idForGroup(group);
     if (id === undefined) continue;
 
     const names = sheet.names.get(id);

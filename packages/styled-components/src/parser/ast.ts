@@ -3,6 +3,7 @@ export const enum NodeKind {
   Rule = 2,
   AtRule = 3,
   Keyframes = 4,
+  Interpolation = 5,
 }
 
 export interface DeclNode {
@@ -36,6 +37,19 @@ export interface KeyframesNode {
   frames: KeyframeFrame[];
 }
 
-export type Node = DeclNode | RuleNode | AtRuleNode | KeyframesNode;
+/**
+ * Block-level interpolation. Occupies the same position as Decl/Rule/AtRule
+ * siblings. `interpolations[index]` is evaluated at render time and spliced
+ * in. Interpolations whose evaluation produces CSS subtrees (`css\`...\``-style
+ * fragments, conditional blocks) live here; value-position interpolations
+ * inside decls remain as `\0I<index>\0` sentinels in the parent decl's `value`
+ * string.
+ */
+export interface InterpolationNode {
+  kind: NodeKind.Interpolation;
+  index: number;
+}
+
+export type Node = DeclNode | RuleNode | AtRuleNode | KeyframesNode | InterpolationNode;
 
 export type Root = Node[];

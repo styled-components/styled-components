@@ -6,7 +6,7 @@ import { AnyComponent, DataAttributes } from '../types';
 import { getRenderedCSS, resetStyled } from './utils';
 
 // Disable isStaticRules optimisation since we're not
-// testing for ComponentStyle specifics here
+// testing for WebStyle specifics here
 jest.mock('../utils/isStaticRules', () => () => false);
 
 let styled: ReturnType<typeof resetStyled>;

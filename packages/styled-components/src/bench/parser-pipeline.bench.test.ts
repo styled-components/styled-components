@@ -1,8 +1,14 @@
 /**
  * Full pipeline (parse + emit) vs stylis (compile + serialize).
  *
- * Measures the actual production path: raw CSS string in, array of rule
- * strings out. This is the number that matters for real render throughput.
+ * Baseline-comparison bench: tracks throughput of the in-house compiler
+ * relative to the displaced library. Stylis is retained as a
+ * devDependency to back this comparison and the byte-parity corpus.
+ *
+ * Output is a changelog / marketing signal, not a v7-internal regression
+ * detector — for those see `src/bench/web.test.js` (stress + render
+ * throughput) and `src/bench/v6-vs-v7.bench.test.js` (cross-major head
+ * to head).
  *
  * Run: pnpm --filter styled-components bench:web -- parser-pipeline
  */

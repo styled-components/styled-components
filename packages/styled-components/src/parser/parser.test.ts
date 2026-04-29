@@ -289,4 +289,70 @@ describe('parser', () => {
       ]);
     });
   });
+
+  describe('interpolation sentinels', () => {
+    // `\0J<index>\0` = standalone block-level interpolation (emit Interpolation node).
+    // `\0I<index>\0` = embedded interpolation (stays opaque inside value/selector strings).
+    // Both kinds are emitted by `parseSource` based on surrounding template-literal
+    // context; the parser only recognizes `\0J` as a structural node.
+
+    it('emits Interpolation node for a standalone sentinel', () => {
+      expect(parse('\0J0\0')).toEqual([{ kind: NodeKind.Interpolation, index: 0 }]);
+    });
+
+    it('emits Interpolation between decls', () => {
+      expect(parse('color: red; \0J0\0 margin: 0;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: 'red' },
+        { kind: NodeKind.Interpolation, index: 0 },
+        { kind: NodeKind.Decl, prop: 'margin', value: '0' },
+      ]);
+    });
+
+    it('handles multi-digit indices', () => {
+      expect(parse('\0J0\0\0J12\0\0J345\0')).toEqual([
+        { kind: NodeKind.Interpolation, index: 0 },
+        { kind: NodeKind.Interpolation, index: 12 },
+        { kind: NodeKind.Interpolation, index: 345 },
+      ]);
+    });
+
+    it('preserves embedded sentinels in declaration values', () => {
+      expect(parse('color: \0I0\0;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: '\0I0\0' },
+      ]);
+    });
+
+    it('preserves embedded sentinels in selectors before `{`', () => {
+      // `${OtherComponent} & { ... }` becomes `\0I0\0 & { ... }`. The sentinel
+      // is `\0I` (embedded); it rides in the selector string and resolves
+      // at fill time without producing an Interpolation node.
+      expect(parse('\0I0\0 & { color: red; }')).toEqual([
+        {
+          kind: NodeKind.Rule,
+          selectors: ['\0I0\0 &'],
+          children: [{ kind: NodeKind.Decl, prop: 'color', value: 'red' }],
+        },
+      ]);
+    });
+
+    it('keeps existing `\0sc:...` theme sentinels as opaque value content', () => {
+      // Native theme sentinels start with `\0s` (lowercase), distinct from `\0I`/`\0J`.
+      expect(parse('color: \0sc:fg:#000\0;')).toEqual([
+        { kind: NodeKind.Decl, prop: 'color', value: '\0sc:fg:#000\0' },
+      ]);
+    });
+
+    it('falls through on malformed sentinels (no digits)', () => {
+      // `\0J\0` with no digits between the markers should not be recognized.
+      // Malformed input is treated as a stray decl and silently dropped.
+      expect(parse('\0J\0')).toEqual([]);
+    });
+
+    it('does not emit Interpolation node for embedded `\0I` sentinels', () => {
+      // Even if an `\0I0\0` lands in block position, the parser treats it as
+      // opaque text. A bug in parseSource would surface as malformed CSS,
+      // not as a misclassified node.
+      expect(parse('\0I0\0')).toEqual([]);
+    });
+  });
 });

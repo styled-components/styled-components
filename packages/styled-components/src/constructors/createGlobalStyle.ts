@@ -5,7 +5,7 @@ import GlobalStyle from '../models/GlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
-import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
+import { Compiler, ExecutionContext, ExecutionProps, Interpolation, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
@@ -47,8 +47,7 @@ export default function createGlobalStyle<Props extends object>(
 
     if (
       process.env.NODE_ENV !== 'production' &&
-      // @ts-expect-error invariant check
-      React.Children.count(props.children)
+      React.Children.count((props as { children?: React.ReactNode }).children)
     ) {
       console.warn(
         `The global style component ${styledComponentId} was given child JSX. createGlobalStyle does not render children.`
@@ -69,7 +68,7 @@ export default function createGlobalStyle<Props extends object>(
     // produced an O(n²) jsdom regression. Turbopack also picks the browser
     // entry for SSR, where the runtime flag is the only signal.
     if (IS_RSC || ssc.styleSheet.server) {
-      renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
+      renderStyles(instance, props, ssc.styleSheet, theme, ssc.compiler);
     }
 
     if (!__SERVER__ && !IS_RSC) {
@@ -80,7 +79,7 @@ export default function createGlobalStyle<Props extends object>(
       // eslint-disable-next-line react-hooks/exhaustive-deps
       const renderDeps = globalStyle.isStatic
         ? [instance, ssc.styleSheet, globalStyle]
-        : [instance, props, ssc.styleSheet, theme, ssc.stylis, globalStyle];
+        : [instance, props, ssc.styleSheet, theme, ssc.compiler, globalStyle];
 
       const prevGlobalStyleRef = React.useRef(globalStyle);
 
@@ -93,7 +92,7 @@ export default function createGlobalStyle<Props extends object>(
             prevGlobalStyleRef.current = globalStyle;
           }
 
-          renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
+          renderStyles(instance, props, ssc.styleSheet, theme, ssc.compiler);
         }
       }, renderDeps);
 
@@ -122,11 +121,11 @@ export default function createGlobalStyle<Props extends object>(
       if (css) {
         globalStyle.instanceRules.delete(instance);
 
-        // Dedup: static by componentId + stylis hash, dynamic by CSS string.
-        // Stylis hash ensures different SSM configs emit separate variants.
+        // Dedup: static by componentId + compiler hash, dynamic by CSS string.
+        // Compiler hash ensures different SSM configs emit separate variants.
         const emitted = getEmittedGlobalCSS ? getEmittedGlobalCSS() : null;
         if (emitted) {
-          const key = globalStyle.isStatic ? styledComponentId + ssc.stylis.hash : css;
+          const key = globalStyle.isStatic ? styledComponentId + ssc.compiler.hash : css;
           if (emitted.has(key)) return null;
           emitted.add(key);
         }
@@ -153,14 +152,14 @@ export default function createGlobalStyle<Props extends object>(
     props: ExecutionProps,
     styleSheet: StyleSheet,
     theme: DefaultTheme | undefined,
-    stylis: Stringifier
+    compiler: Compiler
   ) {
     if (globalStyle.isStatic) {
       globalStyle.renderStyles(
         instance,
         STATIC_EXECUTION_CONTEXT as unknown as ExecutionContext & Props,
         styleSheet,
-        stylis
+        compiler
       );
     } else {
       const context = {
@@ -168,7 +167,7 @@ export default function createGlobalStyle<Props extends object>(
         theme: determineTheme(props, theme),
       } as ExecutionContext & Props;
 
-      globalStyle.renderStyles(instance, context, styleSheet, stylis);
+      globalStyle.renderStyles(instance, context, styleSheet, compiler);
     }
   }
 

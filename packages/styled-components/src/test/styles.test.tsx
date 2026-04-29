@@ -408,6 +408,36 @@ describe('with styles', () => {
     `);
   });
 
+  it('block-position ternary between two css fragments emits per-branch classes', () => {
+    const Comp = styled.div<{ $primary?: boolean }>`
+      ${p =>
+        p.$primary
+          ? css`
+              background: blue;
+              color: white;
+            `
+          : css`
+              background: white;
+              color: blue;
+            `}
+    `;
+
+    const { rerender } = render(<Comp $primary />);
+    rerender(<Comp />);
+    rerender(<Comp $primary />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        background: blue;
+        color: white;
+      }
+      .b {
+        background: white;
+        color: blue;
+      }"
+    `);
+  });
+
   it('conditional styles should only apply to the relevant component instance', () => {
     interface IconProps {
       $color?: string;

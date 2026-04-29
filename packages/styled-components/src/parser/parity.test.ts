@@ -1,25 +1,29 @@
 /**
- * parser ↔ stylis output parity corpus.
+ * In-house compiler ↔ stylis output parity corpus.
  *
- * Runs a broad CSS corpus through both pipelines and asserts byte-identical
- * output. This is the blocking validation before swapping stylis out in
- * src/utils/cssCompile.ts.
+ * Asserts byte-identical CSS output between the in-house compiler and the
+ * v6 stylis baseline across a broad corpus. Load-bearing regression guard
+ * for v6→v7 SSR class-name stability: classNames are hashed from emitted
+ * CSS, so any byte drift breaks hydration on upgrade. Stylis is retained
+ * as a devDependency specifically to back this test plus the
+ * parser-pipeline bench.
  *
- * Coverage target: every shape we've seen in the existing cssCompile.test.ts and
- * real-world styled-components templates. When a new failure mode is discovered
- * in production, add it here FIRST (red), fix the emitter (green), ship.
+ * Coverage target: every shape we've seen in the existing cssCompile.test.ts
+ * and real-world styled-components templates. When a new failure mode is
+ * discovered in production, add it here FIRST (red), fix the emitter (green),
+ * ship.
  */
 
 import * as actualStylis from 'stylis';
-import createStylisInstance from '../utils/cssCompile';
+import createCompiler from '../utils/cssCompile';
 import { preprocessCSS } from '../utils/cssCompile';
 import { emitWeb } from './emit-web';
 import { parse } from './parser';
 
-const stylis = createStylisInstance();
+const compiler = createCompiler();
 
-function stylisOut(css: string): string[] {
-  return stylis(css, '.a', undefined, 'a');
+function compilerOut(css: string): string[] {
+  return compiler.compile(css, '.a', undefined, 'a');
 }
 
 function parserOut(css: string): string[] {
@@ -27,9 +31,9 @@ function parserOut(css: string): string[] {
 }
 
 /**
- * Real stylis output (the v6 baseline). Used by the upstream-stylis-parity
- * suite to lock down corner cases where v6→v7 hash stability depends on
- * byte-identical output.
+ * Real upstream stylis output (the v6 baseline). Used by the upstream-stylis
+ * parity suite to lock down corner cases where v6→v7 hash stability depends
+ * on byte-identical output.
  */
 function upstreamStylisOut(css: string): string {
   return actualStylis.serialize(actualStylis.compile(css), actualStylis.stringify);
@@ -127,7 +131,7 @@ describe('parser ↔ stylis parity corpus', () => {
   for (const c of cases) {
     const runner = c.skip ? it.skip : it;
     runner(c.name + (c.skip ? ` [skipped: ${c.skipReason}]` : ''), () => {
-      const expected = stylisOut(c.css);
+      const expected = compilerOut(c.css);
       const actual = parserOut(c.css);
       expect(actual).toEqual(expected);
     });
@@ -210,7 +214,7 @@ describe('parser ↔ stylis wild parity corpus', () => {
   for (let i = 0; i < wildCases.length; i++) {
     const css = wildCases[i];
     it(`case #${i}: ${css.slice(0, 60).replace(/\s+/g, ' ')}…`, () => {
-      const expected = stylisOut(css);
+      const expected = compilerOut(css);
       const actual = parserOut(css);
       expect(actual).toEqual(expected);
     });

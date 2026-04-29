@@ -5,6 +5,7 @@ import { parse } from '../parser/parser';
 import { Dict, StyleSheet } from '../types';
 import * as $ from '../utils/charCodes';
 import { preprocessCSS } from '../utils/cssCompile';
+import { fifoSet } from '../utils/fifoMap';
 
 export const RN_UNSUPPORTED_VALUES = ['fit-content', 'min-content', 'max-content'];
 
@@ -41,7 +42,7 @@ export interface CompiledKeyframes {
   frames: Array<{ stops: string[]; decls: Array<[string, string]> }>;
 }
 
-export interface CompiledNativeStyles {
+export interface NativeStyles {
   /** Unconditional declarations applied every render. */
   base: Dict<any>;
   /** Conditional buckets; render-time matches decide which merge onto base. */
@@ -74,9 +75,9 @@ const KNOWN_PSEUDOS: Record<string, PseudoState> = {
 };
 
 // Keyed by raw CSS string; V8 caches a string's hash on first access so
-// warm hits skip the djb2/base-52 work. Single-entry FIFO at the ceiling
-// matches `ComponentStyle.dynamicNameCache`.
-let compileCache = new Map<string, CompiledNativeStyles>();
+// warm hits skip the djb2/base-52 work. FIFO at the ceiling matches the
+// per-instance caches on `WebStyle` and `NativeStyle`.
+let compileCache = new Map<string, NativeStyles>();
 const CACHE_LIMIT = 200;
 
 export function resetNativeStyleCache(): void {
@@ -86,31 +87,41 @@ export function resetNativeStyleCache(): void {
 }
 
 /**
- * Compile a CSS string into a React Native style structure. Walks the
- * parser AST once, producing base + conditional + keyframes buckets.
+ * Translate a CSS string into the React Native runtime style structure
+ * (`{ base, conditional, keyframes, startingStyle?, resolvers? }`). Output
+ * is neither a CSS string nor an AST — it's the third representation the
+ * engine speaks: RN-runtime data shaped for the render impl to apply.
+ *
+ * The translation does three things in one pass: parse the CSS, route
+ * each node into the bucket the runtime evaluates it from (base style,
+ * conditional gate, keyframe set, resolver function), and run each
+ * declaration through the per-pair transform layer (camelCase, numeric
+ * coercion, color-math polyfills, shorthand expansion).
  *
  * Cache key is the RAW input string; preprocessing is the second-most
  * expensive step (after parse), so caching against raw input lets warm
  * cache hits skip both preprocess and parse. The same raw input always
  * produces the same preprocessed output, so this is collision-safe.
  */
-export function compileNativeStyles(rawCSS: string, styleSheet: StyleSheet): CompiledNativeStyles {
+export function toNativeStyles(rawCSS: string, styleSheet: StyleSheet): NativeStyles {
   const cached = compileCache.get(rawCSS);
   if (cached !== undefined) return cached;
 
   const preprocessed = preprocessCSS(rawCSS);
   const ast = parse(preprocessed, { keepCommaSpaces: true });
-  const compiled = compileRoot(ast, styleSheet);
+  const compiled = astToNativeStyles(ast, styleSheet);
 
-  if (compileCache.size >= CACHE_LIMIT) {
-    const oldest = compileCache.keys().next().value;
-    if (oldest !== undefined) compileCache.delete(oldest);
-  }
-  compileCache.set(rawCSS, compiled);
+  fifoSet(compileCache, rawCSS, compiled, CACHE_LIMIT);
   return compiled;
 }
 
-function compileRoot(ast: Root, styleSheet: StyleSheet): CompiledNativeStyles {
+/**
+ * Translate a pre-parsed AST into the RN runtime style structure. Used by
+ * the construction-time Source path in `NativeStyle.compile` to skip the
+ * `string -> AST` round-trip when the AST is already in hand from
+ * `parseSource()` time.
+ */
+export function astToNativeStyles(ast: Root, styleSheet: StyleSheet): NativeStyles {
   // Flat string array form: [prop1, value1, prop2, value2, …]. Avoids
   // allocating a 2-tuple per decl (was the dominant alloc in cold profile).
   const baseDecls: string[] = [];
@@ -120,15 +131,15 @@ function compileRoot(ast: Root, styleSheet: StyleSheet): CompiledNativeStyles {
 
   walkRoot(ast, baseDecls, conditional, keyframes, startingDecls);
 
-  const baseRaw = baseDecls.length > 0 ? finalizeRawPairs(baseDecls) : {};
+  const baseRaw = baseDecls.length > 0 ? pairsToObject(baseDecls) : {};
   const { base: resolvedBase, resolvers } = extractResolvers(baseRaw);
   // Pass the resolved (static) portion through StyleSheet.create for
   // RN's shared-stylesheet registration. Dynamic values skip the sheet
   // (they're applied per-render and don't benefit from registration).
   const base = baseDecls.length > 0 ? styleSheet.create({ generated: resolvedBase }).generated : {};
-  const out: CompiledNativeStyles = { base, conditional, keyframes };
+  const out: NativeStyles = { base, conditional, keyframes };
   if (startingDecls.length > 0) {
-    out.startingStyle = finalizeRawPairs(startingDecls);
+    out.startingStyle = pairsToObject(startingDecls);
   }
   if (resolvers.length > 0) {
     out.resolvers = resolvers;
@@ -181,14 +192,14 @@ function walkRoot(
 }
 
 function handleRootRule(node: RuleNode, conditional: ConditionalStyle[]): void {
-  const pseudo = detectPseudoState(node.selectors);
+  const pseudo = detectPseudo(node.selectors);
   if (pseudo) {
     const decls = collectDecls(node.children);
     if (decls.length === 0) return;
     conditional.push({
       type: 'pseudo',
       condition: pseudo,
-      styles: finalizeRawPairs(decls),
+      styles: pairsToObject(decls),
     });
     return;
   }
@@ -196,11 +207,11 @@ function handleRootRule(node: RuleNode, conditional: ConditionalStyle[]): void {
   // Polyfill: &:is(:state1, :state2, …) and &:where(...) fan out into
   // N parallel pseudo buckets so `&:is(:hover, :focus)` produces the
   // same styles regardless of which state is active.
-  const isWhereStates = detectIsWherePseudoSet(node.selectors);
+  const isWhereStates = detectIsWhereStates(node.selectors);
   if (isWhereStates) {
     const decls = collectDecls(node.children);
     if (decls.length === 0) return;
-    const styles = finalizeRawPairs(decls);
+    const styles = pairsToObject(decls);
     for (let i = 0; i < isWhereStates.length; i++) {
       conditional.push({ type: 'pseudo', condition: isWhereStates[i], styles });
     }
@@ -208,7 +219,7 @@ function handleRootRule(node: RuleNode, conditional: ConditionalStyle[]): void {
   }
 
   // `&[attr]` / `&[attr=value]`: evaluate against props at render time.
-  const attr = detectAttrSelector(node.selectors);
+  const attr = detectAttr(node.selectors);
   if (attr) {
     const decls = collectDecls(node.children);
     if (decls.length === 0) return;
@@ -216,7 +227,7 @@ function handleRootRule(node: RuleNode, conditional: ConditionalStyle[]): void {
       type: 'attr',
       condition: attr.attribute,
       attribute: attr.attribute,
-      styles: finalizeRawPairs(decls),
+      styles: pairsToObject(decls),
     };
     if (attr.value !== undefined) entry.attrValue = attr.value;
     conditional.push(entry);
@@ -263,7 +274,7 @@ function handleAtRule(
       const entry: ConditionalStyle = {
         type: name,
         condition,
-        styles: finalizeRawPairs(decls),
+        styles: pairsToObject(decls),
       };
       if (containerName) entry.containerName = containerName;
       conditional.push(entry);
@@ -274,7 +285,7 @@ function handleAtRule(
     for (let i = 0; i < node.children.length; i++) {
       const child = node.children[i];
       if (child.kind !== NodeKind.Rule) continue;
-      const pseudo = detectPseudoState(child.selectors);
+      const pseudo = detectPseudo(child.selectors);
       if (!pseudo) continue;
       const childDecls = collectDecls(child.children);
       if (childDecls.length === 0) continue;
@@ -282,7 +293,7 @@ function handleAtRule(
         type: name,
         condition,
         pseudo,
-        styles: finalizeRawPairs(childDecls),
+        styles: pairsToObject(childDecls),
       };
       if (containerName) entry.containerName = containerName;
       conditional.push(entry);
@@ -347,7 +358,7 @@ function pushDecl(out: string[], node: DeclNode): void {
   out.push(node.prop, v);
 }
 
-function detectPseudoState(selectors: string[]): PseudoState | null {
+function detectPseudo(selectors: string[]): PseudoState | null {
   if (selectors.length !== 1) return null;
   const sel = selectors[0];
   // Match `&:<pseudo>`; the only native-supported selector shape in v7.0.
@@ -369,7 +380,7 @@ function detectPseudoState(selectors: string[]): PseudoState | null {
  * we can emit N parallel pseudo buckets with the same decls, which is
  * semantically equivalent (union-of-states in the state-predicate sense).
  */
-function detectIsWherePseudoSet(selectors: string[]): PseudoState[] | null {
+function detectIsWhereStates(selectors: string[]): PseudoState[] | null {
   if (selectors.length !== 1) return null;
   const sel = selectors[0];
   // `&:is(...)` or `&:where(...)`
@@ -402,7 +413,7 @@ function detectIsWherePseudoSet(selectors: string[]): PseudoState[] | null {
 }
 
 /** `&[attr]` (presence) or `&[attr=value]` (exact). `=` operator only. */
-function detectAttrSelector(selectors: string[]): { attribute: string; value?: string } | null {
+function detectAttr(selectors: string[]): { attribute: string; value?: string } | null {
   if (selectors.length !== 1) return null;
   const sel = selectors[0];
   if (
@@ -520,7 +531,7 @@ function transformPair(prop: string, value: string): Record<string, any> {
  * each pair and merging into the output dict. The flat-array shape is
  * 5-7% faster cold-compile than tuple-of-tuples (no per-decl alloc).
  */
-function finalizeRawPairs(pairs: string[]): Dict<any> {
+function pairsToObject(pairs: string[]): Dict<any> {
   const out: Dict<any> = {};
   for (let i = 0; i < pairs.length; i += 2) {
     const partial = transformPair(pairs[i], pairs[i + 1]);
@@ -530,18 +541,22 @@ function finalizeRawPairs(pairs: string[]): Dict<any> {
 }
 
 /**
- * Legacy flat-CSS entry point. Used by `toStyleSheet(css\`...\`)`.
- * Returns the frozen, StyleSheet-registered base object only.
- * Conditional styles and keyframes are dropped (toStyleSheet is a pure helper
- * with no render context to evaluate them against).
+ * Public-helper entry point: backs `toStyleSheet(css\`...\`)` from the
+ * native build, which produces a plain RN style object users can pass into
+ * any `style=` prop without a styled wrapper. Returns the frozen,
+ * StyleSheet-registered `base` only — `conditional` and `keyframes` are
+ * dropped since `toStyleSheet` is a pure helper without render context.
+ *
+ * Production styled-component compilation goes through `toNativeStyles` /
+ * `astToNativeStyles` directly; this is a thin slice on top.
  */
 export function cssToStyleObject(flatCSS: string, styleSheet: StyleSheet): Dict<any> {
-  return compileNativeStyles(flatCSS, styleSheet).base;
+  return toNativeStyles(flatCSS, styleSheet).base;
 }
 
 /**
  * Extract raw `[prop, value]` pairs for top-level declarations.
- * Exported for tests; consumers should use `compileNativeStyles` or
+ * Exported for tests; consumers should use `toNativeStyles` or
  * `cssToStyleObject` instead. Preprocessing + parser semantics apply:
  * comments stripped, malformed blocks skipped, RN_UNSUPPORTED_VALUES warn+drop.
  */

@@ -1,17 +1,17 @@
 import React from 'react';
 import { IS_RSC } from '../utils/isRsc';
 import StyleSheet from '../sheet';
-import { InsertionTarget, ShouldForwardProp, Stringifier } from '../types';
-import createStylisInstance, { SCPlugin } from '../utils/cssCompile';
+import { Compiler, InsertionTarget, ShouldForwardProp } from '../types';
+import createCompiler, { SCPlugin } from '../utils/cssCompile';
 
 export const mainSheet: StyleSheet = new StyleSheet();
-export const mainStylis: Stringifier = createStylisInstance();
+export const mainCompiler: Compiler = createCompiler();
 
 // RSC has no createContext; module-level slot is set by StyleSheetManager via
 // Set/Reset tokens (see RscOverrideSet below) and read by useStyleSheetContext.
 let rscContextOverride: IStyleSheetContext | null = null;
 let rscLastPlugins: SCPlugin[] | undefined;
-let rscCachedStylis: Stringifier = mainStylis;
+let rscCachedCompiler: Compiler = mainCompiler;
 
 // Allow-list and warning text live INSIDE the function body so terser
 // eliminates them in production; hoisting leaks names into the bundle
@@ -46,8 +46,8 @@ function warnIfVendorPrefixesRequested(value: boolean | undefined): void {
   );
 }
 
-// Per-render sheet reset; the rscContextOverride slot is NOT touched here
-// (Set/Reset tokens manage it instead).
+// Per-render sheet reset; the override slot is mutated by the SSM render
+// function instead of by token components (see comment in StyleSheetManager).
 const ensureSheetReset: (() => void) | null = IS_RSC
   ? React.cache(() => {
       mainSheet.names.clear();
@@ -56,10 +56,22 @@ const ensureSheetReset: (() => void) | null = IS_RSC
     })
   : null;
 
+/**
+ * Reset the module-level RSC override slot. Test-only — production code
+ * never reads this. The slot persists across `ReactDOMServer.renderToString`
+ * calls in jest, so suites that simulate RSC mode call this in `beforeEach`
+ * to start each render from a clean default context.
+ */
+export function __resetRSCOverrideForTesting(): void {
+  rscContextOverride = null;
+  rscLastPlugins = undefined;
+  rscCachedCompiler = mainCompiler;
+}
+
 export type IStyleSheetContext = {
   shouldForwardProp?: ShouldForwardProp<'web'> | undefined;
   styleSheet: StyleSheet;
-  stylis: Stringifier;
+  compiler: Compiler;
   /** Preserved for inheritance; inner SSMs that set namespace/vendorPrefixes
    *  but not plugins can still inherit the parent's plugins. */
   plugins?: SCPlugin[] | undefined;
@@ -68,7 +80,7 @@ export type IStyleSheetContext = {
 const defaultContextValue: IStyleSheetContext = {
   shouldForwardProp: undefined,
   styleSheet: mainSheet,
-  stylis: mainStylis,
+  compiler: mainCompiler,
   plugins: undefined,
 };
 
@@ -84,7 +96,7 @@ export const StyleSheetContext = !IS_RSC
 
 export const StyleSheetConsumer = StyleSheetContext.Consumer;
 
-export type IStylisContext = Stringifier | void;
+export type ICompilerContext = Compiler | void;
 
 export function useStyleSheetContext() {
   if (!IS_RSC) return React.useContext(StyleSheetContext);
@@ -143,19 +155,6 @@ export type IStyleSheetManager = React.PropsWithChildren<{
   target?: undefined | InsertionTarget;
 }>;
 
-// Set/Reset tokens drive `rscContextOverride` in document order. RSC
-// renders fragment children serially, so a Reset after children restores
-// the parent override before sibling subtrees render.
-function RscOverrideSet({ value }: { value: IStyleSheetContext | null }): null {
-  rscContextOverride = value;
-  return null;
-}
-
-function RscOverrideReset({ value }: { value: IStyleSheetContext | null }): null {
-  rscContextOverride = value;
-  return null;
-}
-
 /** Configure style injection for descendant styled components (target element, plugins, prop forwarding). */
 export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element {
   if (IS_RSC) {
@@ -165,59 +164,62 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     const parentOverride = rscContextOverride;
     const parentResolved = parentOverride || defaultContextValue;
 
-    // Build a stylis instance when any stylis-related prop is provided.
+    // Build a compiler instance when any compiler-related prop is provided.
     // Cache it when the plugins array ref is stable.
-    const hasStylisProps =
+    const hasCompilerProps =
       props.plugins !== undefined ||
       props.namespace !== undefined ||
       props.enableVendorPrefixes !== undefined;
 
-    if (hasStylisProps) {
+    if (hasCompilerProps) {
       warnUnsupportedPlugins(props.plugins);
       warnIfVendorPrefixesRequested(props.enableVendorPrefixes);
       if (props.plugins && props.plugins !== rscLastPlugins) {
         rscLastPlugins = props.plugins;
-        rscCachedStylis = createStylisInstance({
+        rscCachedCompiler = createCompiler({
           options: { namespace: props.namespace },
           plugins: props.plugins,
         });
       } else if (props.namespace !== undefined) {
         // Namespace changed without new plugins; create fresh instance
         // using inherited plugins from parent.
-        rscCachedStylis = createStylisInstance({
+        rscCachedCompiler = createCompiler({
           options: { namespace: props.namespace },
           plugins: props.plugins ?? parentResolved.plugins,
         });
       }
     }
 
-    const resolvedStylis = hasStylisProps
+    const resolvedCompiler = hasCompilerProps
       ? props.plugins !== undefined && !props.plugins.length
-        ? mainStylis
-        : rscCachedStylis
-      : parentResolved.stylis;
+        ? mainCompiler
+        : rscCachedCompiler
+      : parentResolved.compiler;
     const resolvedShouldForwardProp =
       'shouldForwardProp' in props ? props.shouldForwardProp : parentResolved.shouldForwardProp;
 
     const resolvedPlugins = props.plugins ?? parentResolved.plugins;
 
     const ownOverride: IStyleSheetContext | null =
-      resolvedStylis !== mainStylis || resolvedShouldForwardProp
+      resolvedCompiler !== mainCompiler || resolvedShouldForwardProp
         ? {
             shouldForwardProp: resolvedShouldForwardProp,
             styleSheet: mainSheet,
-            stylis: resolvedStylis,
+            compiler: resolvedCompiler,
             plugins: resolvedPlugins,
           }
         : null;
 
-    return (
-      <>
-        <RscOverrideSet value={ownOverride} />
-        {props.children}
-        <RscOverrideReset value={parentOverride} />
-      </>
-    );
+    // Mutate the slot directly. React 19 Flight calls all immediate children
+    // of a fragment eagerly before descending, so a Set/Reset child-token
+    // pattern resets the slot before the actual children read it. Setting
+    // here ensures descendants observe the override; the trade-off is that
+    // sibling subtrees of a nested SSM inherit the inner override until the
+    // next SSM resets it. For most apps with one top-level RSC SSM that's
+    // fine. AsyncLocalStorage would close the gap for nested cases.
+    rscContextOverride = ownOverride;
+
+    return <>{props.children}</>;
   }
 
   const parentContext = useStyleSheetContext();
@@ -242,21 +244,21 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     return sheet;
   }, [props.nonce, props.sheet, props.target, styleSheet]);
 
-  // Inherit parent stylis when no stylis-related props are provided.
-  // When any stylis option (namespace, vendorPrefixes) changes, create a new
-  // instance but still inherit plugins from the parent if plugins is omitted.
-  // An explicit empty array disables inherited plugins.
-  const stylis = React.useMemo(() => {
+  // Inherit parent compiler when no compiler-related props are provided.
+  // When any compiler option (namespace, vendorPrefixes) changes, create a
+  // new instance but still inherit plugins from the parent if plugins is
+  // omitted. An explicit empty array disables inherited plugins.
+  const compiler = React.useMemo(() => {
     if (
       props.plugins === undefined &&
       props.namespace === undefined &&
       props.enableVendorPrefixes === undefined
     ) {
-      return parentContext.stylis;
+      return parentContext.compiler;
     }
     warnUnsupportedPlugins(props.plugins);
     warnIfVendorPrefixesRequested(props.enableVendorPrefixes);
-    return createStylisInstance({
+    return createCompiler({
       options: { namespace: props.namespace },
       plugins: props.plugins ?? parentContext.plugins,
     });
@@ -264,7 +266,7 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     props.enableVendorPrefixes,
     props.namespace,
     props.plugins,
-    parentContext.stylis,
+    parentContext.compiler,
     parentContext.plugins,
   ]);
 
@@ -279,10 +281,10 @@ export function StyleSheetManager(props: IStyleSheetManager): React.JSX.Element 
     () => ({
       shouldForwardProp,
       styleSheet: resolvedStyleSheet,
-      stylis,
+      compiler,
       plugins: resolvedPlugins,
     }),
-    [shouldForwardProp, resolvedStyleSheet, stylis, resolvedPlugins]
+    [shouldForwardProp, resolvedStyleSheet, compiler, resolvedPlugins]
   );
 
   return (

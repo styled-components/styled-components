@@ -1,4 +1,4 @@
-import { DefaultTheme, ExecutionProps } from '../types';
+import type { DefaultTheme, ExecutionProps } from '../types';
 
 export default function determineTheme(
   props: ExecutionProps,

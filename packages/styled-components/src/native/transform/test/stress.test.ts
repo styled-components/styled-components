@@ -12,7 +12,7 @@
  * only fail on a real regression.
  */
 
-import { compileNativeStyles, resetNativeStyleCache } from '../../../models/nativeStyleCompiler';
+import { toNativeStyles, resetNativeStyleCache } from '../../../models/nativeStyleCompiler';
 import { transformDecl } from '../index';
 
 // Minimal StyleSheet stub — create() just returns the object wrapped.
@@ -92,7 +92,7 @@ describe('transform stress — cache bounds driven by measurement', () => {
   // exercise them at realistic + pathological scale so we can
   // evidence-tune the ceilings.
 
-  it('compileNativeStyles caches repeated CSS hits efficiently', () => {
+  it('toNativeStyles caches repeated CSS hits efficiently', () => {
     // Build 150 distinct CSS strings — below the compileCache LIMIT (200)
     // so every call hits the cache after the first.
     const cssStrings = Array.from(
@@ -100,12 +100,12 @@ describe('transform stress — cache bounds driven by measurement', () => {
       (_, i) => `padding: ${i}px; color: rgb(${i}, 0, 0);`
     );
     // Prime the cache.
-    for (const css of cssStrings) compileNativeStyles(css, MOCK_SHEET);
+    for (const css of cssStrings) toNativeStyles(css, MOCK_SHEET);
     const start = heapUsedMB();
     const t0 = Date.now();
     // 10 repeat passes — all cache hits.
     for (let pass = 0; pass < 10; pass++) {
-      for (const css of cssStrings) compileNativeStyles(css, MOCK_SHEET);
+      for (const css of cssStrings) toNativeStyles(css, MOCK_SHEET);
     }
     const ms = Date.now() - t0;
     const delta = heapUsedMB() - start;
@@ -113,12 +113,12 @@ describe('transform stress — cache bounds driven by measurement', () => {
     expect(ms).toBeLessThan(100); // should be sub-100ms given pure cache hits
   });
 
-  it('compileNativeStyles evicts at the LIMIT threshold without unbounded growth', () => {
+  it('toNativeStyles evicts at the LIMIT threshold without unbounded growth', () => {
     // Generate 2,000 distinct CSS strings — forces many evictions at LIMIT=200.
     const start = heapUsedMB();
     const t0 = Date.now();
     for (let i = 0; i < 2_000; i++) {
-      compileNativeStyles(`padding: ${i}px; margin: ${i}px;`, MOCK_SHEET);
+      toNativeStyles(`padding: ${i}px; margin: ${i}px;`, MOCK_SHEET);
     }
     const ms = Date.now() - t0;
     const delta = heapUsedMB() - start;

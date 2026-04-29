@@ -5,7 +5,6 @@ import StyleSheet from '../sheet';
 import styledError from '../utils/error';
 
 declare const __SERVER__: boolean;
-import { joinStringArray } from '../utils/joinStrings';
 import getNonce from '../utils/nonce';
 import { StyleSheetManager } from './StyleSheetManager';
 
@@ -29,7 +28,7 @@ export default class ServerStyleSheet {
       `${SC_ATTR}="true"`,
       `${SC_ATTR_VERSION}="${SC_VERSION}"`,
     ];
-    const htmlAttr = joinStringArray(attrs.filter(Boolean) as string[], ' ');
+    const htmlAttr = (attrs.filter(Boolean) as string[]).join(' ');
 
     return `<style ${htmlAttr}>${css}</style>`;
   };
