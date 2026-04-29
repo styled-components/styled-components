@@ -29,7 +29,7 @@ import { mainSheet } from '../../models/StyleSheetManager';
 import { resetGroupIds } from '../../sheet/GroupIDAllocator';
 import styled, { css, keyframes } from '../../index';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
-import rscPlugin from '../../utils/rsc';
+import rscPlugin from '../../plugins/rsc';
 
 /** Extract all CSS rule text from <style> tags in rendered HTML */
 const extractStyleContents = (html: string): string =>

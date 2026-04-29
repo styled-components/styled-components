@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import React from 'react';
-import rscPlugin from '../../utils/rsc';
+import rscPlugin from '../../plugins/rsc';
 import Keyframes from '../../models/Keyframes';
 import { StyleSheetManager } from '../../models/StyleSheetManager';
 import { getRenderedCSS, resetStyled } from '../../test/utils';

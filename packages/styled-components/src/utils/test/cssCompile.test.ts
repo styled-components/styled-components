@@ -2,7 +2,7 @@ import { emitWeb } from '../../parser/emit-web';
 import { parse } from '../../parser/parser';
 import createStylisInstance, { ICreateStylisInstance, preprocessCSS } from '../cssCompile';
 import rtl from '../../plugins/rtl';
-import rscPlugin from '../rsc';
+import rscPlugin from '../../plugins/rsc';
 
 function runCssCompile(css: string, options: ICreateStylisInstance = {}): string[] {
   const stringifier = createStylisInstance(options);

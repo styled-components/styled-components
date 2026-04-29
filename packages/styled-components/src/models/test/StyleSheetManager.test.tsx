@@ -2,7 +2,7 @@ import '@testing-library/jest-dom';
 import { act, render } from '@testing-library/react';
 import React from 'react';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
-import rscPlugin from '../../utils/rsc';
+import rscPlugin from '../../plugins/rsc';
 import StyleSheet from '../../sheet';
 import { getCSS, resetStyled } from '../../test/utils';
 import { StyleSheetManager } from '../StyleSheetManager';

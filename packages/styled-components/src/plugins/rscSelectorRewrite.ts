@@ -1,7 +1,7 @@
 import { SC_ATTR } from '../constants';
 import { splitTopLevelCommas } from '../parser/emit-web';
-import * as $ from './charCodes';
-import { isEscaped } from './cssCompile';
+import * as $ from '../utils/charCodes';
+import { isEscaped } from '../utils/cssCompile';
 
 // RSC selector rewrites: child-index pseudos use Selectors L4 `of S` syntax,
 // `+` combinators expand with style-tag-tolerant alternates. Both adapt for
