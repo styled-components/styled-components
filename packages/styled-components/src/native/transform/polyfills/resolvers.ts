@@ -26,8 +26,12 @@ export interface ResolveEnv {
  */
 export type Resolver = (env: ResolveEnv) => number | string | null;
 
-const VP_UNIT_RE = /^(-?\d*\.?\d+)(vw|vh|vmin|vmax|dvh|svh|lvh|dvw|svw|lvw)$/i;
-const CQ_UNIT_RE = /^(-?\d*\.?\d+)(cqw|cqh|cqmin|cqmax|cqi|cqb)$/i;
+// Number form `-?(?:\d+(?:\.\d+)?|\.\d+)` matches `123`, `123.45`, `.45`,
+// and the negatives. Unambiguous (no overlap between branches) so the
+// engine can't backtrack on long digit runs — closes CodeQL polynomial
+// redos finding from PR #5735.
+const VP_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(vw|vh|vmin|vmax|dvh|svh|lvh|dvw|svw|lvw)$/i;
+const CQ_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(cqw|cqh|cqmin|cqmax|cqi|cqb)$/i;
 
 /**
  * Inspect a style-object value. If it references a pattern that must be
@@ -190,7 +194,7 @@ function topLevelCommaIdx(s: string): number {
 }
 
 function parseLengthLiteral(s: string): number | string | null {
-  const m = /^(-?\d*\.?\d+)(px)?$/.exec(s.trim());
+  const m = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(px)?$/.exec(s.trim());
   if (m !== null) return parseFloat(m[1]);
   return s; // percent / auto / whatever; caller will pass through
 }
