@@ -29,8 +29,8 @@
     "overrides": {
       "@types/react": "19",
       "@types/react-dom": "19",
-      "react": "19",
-      "react-dom": "19",
+      "react": "19.2.3",
+      "react-dom": "19.2.3",
       "fast-xml-parser": ">=5.7.0",
       "postcss": ">=8.5.10",
       "serialize-javascript": ">=7.0.5"

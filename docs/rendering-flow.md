@@ -7,7 +7,7 @@ sequenceDiagram
     participant User
     participant styled
     participant createStyledComponent
-    participant ComponentStyle
+    participant WebStyle
     participant React
     participant useImpl
     participant StyleSheetManager
@@ -19,9 +19,9 @@ sequenceDiagram
     Note over User,styled: 1. COMPONENT CREATION
     User->>styled: styled.div with CSS rules
     styled->>createStyledComponent: createStyledComponent(target, options, rules)
-    createStyledComponent->>ComponentStyle: new ComponentStyle(rules, componentId)
-    ComponentStyle->>StyleSheet: StyleSheet.registerId(componentId)
-    StyleSheet-->>ComponentStyle: group allocated
+    createStyledComponent->>WebStyle: new WebStyle(rules, componentId)
+    WebStyle->>StyleSheet: StyleSheet.registerId(componentId)
+    StyleSheet-->>WebStyle: group allocated
     createStyledComponent->>React: React.forwardRef(forwardRefRender)
     createStyledComponent-->>User: StyledComponent
 
@@ -29,22 +29,22 @@ sequenceDiagram
     User->>React: render StyledComponent
     React->>useImpl: useImpl(component, props, ref)
     useImpl->>StyleSheetManager: useStyleSheetContext()
-    StyleSheetManager-->>useImpl: styleSheet, stylis, shouldForwardProp
+    StyleSheetManager-->>useImpl: styleSheet, compiler, shouldForwardProp
 
-    Note over useImpl,ComponentStyle: 3. STYLE PROCESSING
+    Note over useImpl,WebStyle: 3. STYLE PROCESSING
     useImpl->>useImpl: resolveContext(attrs, props, theme)
-    useImpl->>ComponentStyle: generateAndInjectStyles(context, styleSheet, stylis)
+    useImpl->>WebStyle: flush(context, styleSheet, compiler)
 
-    ComponentStyle->>ComponentStyle: flatten(rules, context)
-    Note over ComponentStyle: Process interpolations,<br/>execute functions,<br/>handle nested components
+    WebStyle->>WebStyle: flatten(rules, context)
+    Note over WebStyle: Process interpolations,<br/>execute functions,<br/>handle nested components
 
-    ComponentStyle->>ComponentStyle: hash(CSS string)
-    ComponentStyle->>ComponentStyle: generateName(hash)
-    ComponentStyle->>ComponentStyle: stylis(css, className)
-    Note over ComponentStyle: Parse & prefix CSS,<br/>apply plugins,<br/>scope to className
+    WebStyle->>WebStyle: hash(CSS string)
+    WebStyle->>WebStyle: generateName(hash)
+    WebStyle->>WebStyle: compiler(css, className)
+    Note over WebStyle: Parse CSS,<br/>apply plugins,<br/>scope to className
 
-    Note over ComponentStyle,DOM: 4. STYLE INJECTION
-    ComponentStyle->>StyleSheet: insertRules(componentId, className, formattedCSS)
+    Note over WebStyle,DOM: 4. STYLE INJECTION
+    WebStyle->>StyleSheet: insertRules(componentId, className, formattedCSS)
     StyleSheet->>StyleSheet: registerName(componentId, className)
     StyleSheet->>GroupedTag: getTag().insertRules(groupId, rules)
     GroupedTag->>GroupedTag: indexOfGroup(groupId)
@@ -62,9 +62,9 @@ sequenceDiagram
 
     Tag-->>GroupedTag: success
     GroupedTag-->>StyleSheet: complete
-    StyleSheet-->>ComponentStyle: complete
+    StyleSheet-->>WebStyle: complete
 
-    ComponentStyle-->>useImpl: className
+    WebStyle-->>useImpl: className
 
     Note over useImpl,DOM: 5. ELEMENT CREATION
     useImpl->>useImpl: buildClassName(foldedIds + styledId + generated + props)
