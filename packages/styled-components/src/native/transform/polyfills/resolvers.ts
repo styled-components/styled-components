@@ -37,7 +37,7 @@ const CQ_UNIT_RE = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(cqw|cqh|cqmin|cqmax|cqi|cqb)$/i
  * Inspect a style-object value. If it references a pattern that must be
  * resolved at render time, return a {@link Resolver}. Otherwise `null`.
  *
- * `nativeStyleCompiler.extractResolvers` calls this for each base-style
+ * `compileNative.extractResolvers` calls this for each base-style
  * value at compile time and stores the returned Resolvers on the
  * compiled bucket; the StyledNativeComponent render path then runs
  * them against the current env via {@link applyResolvers}.

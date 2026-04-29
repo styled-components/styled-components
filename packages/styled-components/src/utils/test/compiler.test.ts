@@ -1,6 +1,6 @@
 import { emitWeb } from '../../parser/emit-web';
 import { parse } from '../../parser/parser';
-import createCompiler, { ICreateCompiler, preprocessCSS } from '../cssCompile';
+import createCompiler, { ICreateCompiler, normalize } from '../compiler';
 import rtl from '../../plugins/rtl';
 import rscPlugin from '../../plugins/rsc';
 
@@ -10,7 +10,7 @@ function runCssCompile(css: string, options: ICreateCompiler = {}): string[] {
   return compiler.compile(css, `.${componentId}`, undefined, componentId);
 }
 
-describe('cssCompile', () => {
+describe('compiler', () => {
   it('handles simple rules', () => {
     expect(
       runCssCompile(`
@@ -1151,7 +1151,7 @@ background-color: green;`)
     });
   });
 
-  describe('preprocessCSS unified-path edge cases', () => {
+  describe('normalize unified-path edge cases', () => {
     // Path 3j: comment stripping + brace imbalance fire together
     it('handles comment stripping that reveals brace imbalance', () => {
       expect(
@@ -1448,7 +1448,7 @@ background-color: green;`)
     it('compiles flat declarations against the AST emitter', () => {
       const css = `color: red;\nbackground: blue;`;
       const fromInstance = runCssCompile(css);
-      const flatCSS = preprocessCSS(css);
+      const flatCSS = normalize(css);
       const viaFull = emitWeb(parse('.a{' + flatCSS + '}'), '', {
         selfRefSelector: '.a',
         componentId: 'a',

@@ -16,7 +16,7 @@
 import * as stylis from 'stylis';
 import { emitWeb } from '../parser/emit-web';
 import { parse } from '../parser/parser';
-import { preprocessCSS } from '../utils/cssCompile';
+import { normalize } from '../utils/compiler';
 import { bench as _bench } from './bench-utils';
 
 const opts = { runs: 7, precision: 2, nameWidth: 50 };
@@ -209,14 +209,14 @@ animation: slide 0.3s ease-out, fade 0.5s linear, bounce 0.8s cubic-bezier(0.2, 
 function stylisFull(css: string): string[] {
   const out: string[] = [];
   stylis.serialize(
-    stylis.compile(`.a{${preprocessCSS(css)}}`),
+    stylis.compile(`.a{${normalize(css)}}`),
     stylis.middleware([stylis.stringify, stylis.rulesheet(v => out.push(v))])
   );
   return out;
 }
 
 function parserFull(css: string): string[] {
-  return emitWeb(parse(preprocessCSS(css)), '.a');
+  return emitWeb(parse(normalize(css)), '.a');
 }
 
 describe('parser pipeline vs stylis pipeline', () => {

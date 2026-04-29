@@ -2,7 +2,7 @@ import React from 'react';
 import { IS_RSC } from '../utils/isRsc';
 import StyleSheet from '../sheet';
 import { Compiler, InsertionTarget, ShouldForwardProp } from '../types';
-import createCompiler, { SCPlugin } from '../utils/cssCompile';
+import createCompiler, { SCPlugin } from '../utils/compiler';
 
 export const mainSheet: StyleSheet = new StyleSheet();
 export const mainCompiler: Compiler = createCompiler();

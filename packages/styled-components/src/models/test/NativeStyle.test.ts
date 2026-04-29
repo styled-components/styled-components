@@ -2,7 +2,7 @@ import makeNativeStyleClass from '../NativeStyle';
 import {
   extractBaseDeclPairs as parseCSSDeclarations,
   resetNativeStyleCache,
-} from '../nativeStyleCompiler';
+} from '../compileNative';
 
 describe('parseCSSDeclarations', () => {
   it('parses a single declaration', () => {

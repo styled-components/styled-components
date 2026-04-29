@@ -9,11 +9,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
  * render. Extracted to one place because the implementation is identical
  * across platforms.
  */
-export default function shallowEqualContext(
-  prev: object,
-  next: object,
-  prevKeyCount: number
-): boolean {
+export default function shallowEqual(prev: object, next: object, prevKeyCount: number): boolean {
   const a = prev as Record<string, unknown>;
   const b = next as Record<string, unknown>;
   let nextKeyCount = 0;

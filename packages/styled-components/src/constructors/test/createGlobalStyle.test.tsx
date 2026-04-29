@@ -1,7 +1,7 @@
 import { act, render } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import React from 'react';
-import GlobalStyle from '../../models/GlobalStyle';
+import WebGlobalStyle from '../../models/WebGlobalStyle';
 import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
 import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
@@ -922,9 +922,9 @@ describe('createGlobalStyle HMR', () => {
   });
 });
 
-describe('GlobalStyle.renderStyles (unit)', () => {
+describe('WebGlobalStyle.renderStyles (unit)', () => {
   /**
-   * These tests exercise GlobalStyle.renderStyles() directly to cover
+   * These tests exercise WebGlobalStyle.renderStyles() directly to cover
    * the rulesEqual fast-path on the pure model. The React lifecycle
    * path also reaches this fast-path now -- see the lifecycle tests
    * below (`useLayoutEffect rebuildGroup`).
@@ -943,7 +943,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         color: ${(p: { theme: { color: string } }) => p.theme.color};
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-eq-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-eq-test');
     const ctx = { theme: { color: 'red' } } as any;
 
     // First render — populates instanceRules
@@ -963,7 +963,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         color: ${(p: { theme: { color: string } }) => p.theme.color};
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-diff-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-diff-test');
 
     // First render
     gs.renderStyles('1', { theme: { color: 'red' } } as any, sheet, mainCompiler);
@@ -990,7 +990,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
       }
       ${() => extraRule}
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-count-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-count-test');
     const ctx = { theme: {} } as any;
 
     // First render — one rule
@@ -1010,7 +1010,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         color: ${(p: { theme: { color: string } }) => p.theme.color};
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-server-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-server-test');
     const ctx = { theme: { color: 'red' } } as any;
 
     // First render
@@ -1028,7 +1028,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         background: pink;
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-static-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-static-test');
     const ctx = { theme: {} } as any;
 
     // First render — inserts rules
@@ -1052,7 +1052,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         background: teal;
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-rehydrate-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-rehydrate-test');
     const ctx = { theme: {} } as any;
 
     // First render — inserts rules and populates cache
@@ -1080,7 +1080,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         color: ${(p: { theme: { color: string } }) => p.theme.color};
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-remove-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-remove-test');
 
     // Mount two instances
     gs.renderStyles('1', { theme: { color: 'red' } } as any, sheet, mainCompiler);
@@ -1117,7 +1117,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         color: blue;
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-accum-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-accum-test');
     const ctx = { theme: {} } as any;
 
     for (let i = 1; i <= 10; i++) {

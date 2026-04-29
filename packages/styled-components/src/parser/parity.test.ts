@@ -8,15 +8,15 @@
  * as a devDependency specifically to back this test plus the
  * parser-pipeline bench.
  *
- * Coverage target: every shape we've seen in the existing cssCompile.test.ts
+ * Coverage target: every shape we've seen in the existing compiler.test.ts
  * and real-world styled-components templates. When a new failure mode is
  * discovered in production, add it here FIRST (red), fix the emitter (green),
  * ship.
  */
 
 import * as actualStylis from 'stylis';
-import createCompiler from '../utils/cssCompile';
-import { preprocessCSS } from '../utils/cssCompile';
+import createCompiler from '../utils/compiler';
+import { normalize } from '../utils/compiler';
 import { emitWeb } from './emit-web';
 import { parse } from './parser';
 
@@ -27,7 +27,7 @@ function compilerOut(css: string): string[] {
 }
 
 function parserOut(css: string): string[] {
-  return emitWeb(parse(preprocessCSS(css)), '.a');
+  return emitWeb(parse(normalize(css)), '.a');
 }
 
 /**
@@ -239,7 +239,7 @@ describe('upstream stylis byte-identical parity', () => {
     {
       // The component-id prefix differs between bare-stylis output and our
       // pipeline (we always prepend `.a`), so comment behavior is asserted
-      // separately via `preprocessCSS` directly. See the dedicated suite below.
+      // separately via `normalize` directly. See the dedicated suite below.
       name: 'block comment behavior tested separately (preprocess only)',
       css: '@keyframes spin { 0% { opacity: 0; } 100% { opacity: 1; } }',
     },
@@ -251,22 +251,22 @@ describe('upstream stylis byte-identical parity', () => {
   }
 });
 
-describe('preprocessCSS comment-whitespace parity', () => {
+describe('normalize comment-whitespace parity', () => {
   it('a /* foo */ b collapses surrounding whitespace to a single space', () => {
-    expect(preprocessCSS('a /* foo */ b { color: red; }')).toEqual('a b { color: red; }');
+    expect(normalize('a /* foo */ b { color: red; }')).toEqual('a b { color: red; }');
   });
 
   it('a/* foo */b strips just the comment when no surrounding whitespace', () => {
-    expect(preprocessCSS('a/* foo */b { color: red; }')).toEqual('ab { color: red; }');
+    expect(normalize('a/* foo */b { color: red; }')).toEqual('ab { color: red; }');
   });
 
   it('comment between two declarations leaves only a single space', () => {
-    expect(preprocessCSS('color: red; /* note */ background: blue;')).toEqual(
+    expect(normalize('color: red; /* note */ background: blue;')).toEqual(
       'color: red; background: blue;'
     );
   });
 
   it('comment at start of value strips without leaving double space', () => {
-    expect(preprocessCSS('color: /* note */ red;')).toEqual('color: red;');
+    expect(normalize('color: /* note */ red;')).toEqual('color: red;');
   });
 });

@@ -18,7 +18,7 @@ import {
 } from '../utils/charCodes';
 import type { RuleSet } from '../types';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
-import { preprocessCSS } from '../utils/preprocessCSS';
+import { normalize } from '../utils/normalize';
 import { NodeKind, Root } from './ast';
 import { parse, ParseOptions } from './parser';
 
@@ -98,7 +98,7 @@ export function parseSource(
   options?: ParseOptions
 ): Source {
   const css = interleaveWithSentinels(strings, interpolations.length);
-  const preprocessed = preprocessCSS(css);
+  const preprocessed = normalize(css);
   const ast = parse(preprocessed, options);
   const n = interpolations.length;
   const kinds: InterpolationKind[] = new Array(n);

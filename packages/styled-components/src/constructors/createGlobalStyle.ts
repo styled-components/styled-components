@@ -1,7 +1,7 @@
 import React from 'react';
 import { STATIC_EXECUTION_CONTEXT } from '../constants';
 import { IS_RSC } from '../utils/isRsc';
-import GlobalStyle from '../models/GlobalStyle';
+import WebGlobalStyle from '../models/WebGlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
@@ -34,7 +34,7 @@ export default function createGlobalStyle<Props extends object>(
 ) {
   const rules = css<Props>(strings, ...interpolations);
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
-  const globalStyle = new GlobalStyle<Props>(rules, styledComponentId);
+  const globalStyle = new WebGlobalStyle<Props>(rules, styledComponentId);
 
   if (process.env.NODE_ENV !== 'production') {
     checkDynamicCreation(styledComponentId);

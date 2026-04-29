@@ -28,7 +28,7 @@ export function isEscaped(css: string, i: number): boolean {
 }
 
 /** Strip JS-style line comments + CSS block comments and validate brace balance in one pass. */
-export function preprocessCSS(css: string): string {
+export function normalize(css: string): string {
   const hasLineComments = css.indexOf('//') !== -1;
   const hasBlockComments = css.indexOf('/*') !== -1;
   const hasCloseBrace = css.indexOf('}') !== -1;
@@ -169,7 +169,7 @@ function sanitizeBraces(css: string): string {
   // Optimistic: stay in pure-scan mode (no result allocation) until the first
   // event that demands rewriting (a comment to strip, or a brace imbalance).
   // Balanced comment-free input — the dominant production case from
-  // `preprocessCSS:48` — hits the early-return at the bottom and pays only
+  // `normalize` — hits the early-return at the bottom and pays only
   // one O(n) charCode walk with zero substring or concat work.
   let result = '';
   let resultActive = false;

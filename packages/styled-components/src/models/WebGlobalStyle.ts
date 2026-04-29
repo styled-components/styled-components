@@ -6,7 +6,7 @@ import isStaticRules from '../utils/isStaticRules';
 
 type InstanceEntry = { name: string; rules: string[] };
 
-export default class GlobalStyle<Props extends object> {
+export default class WebGlobalStyle<Props extends object> {
   componentId: string;
   isStatic: boolean;
   rules: RuleSet<Props>;

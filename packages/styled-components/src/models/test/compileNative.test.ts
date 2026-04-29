@@ -5,7 +5,7 @@
  * in isolation from the render pipeline. Integration behavior lives in
  * `src/native/test/modern-css.test.tsx`.
  */
-import { toNativeStyles, NativeStyles, resetNativeStyleCache } from '../nativeStyleCompiler';
+import { toNativeStyles, NativeStyles, resetNativeStyleCache } from '../compileNative';
 
 const stubStyleSheet = {
   create: <T extends object>(styles: T) => styles,

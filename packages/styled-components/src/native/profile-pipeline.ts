@@ -17,7 +17,7 @@ import './bunProfileGlobals';
 
 import { transformDecl } from './transform';
 import { tokenize } from './transform/tokenize';
-import { toNativeStyles, resetNativeStyleCache } from '../models/nativeStyleCompiler';
+import { toNativeStyles, resetNativeStyleCache } from '../models/compileNative';
 import { applyResolvers, ResolveEnv } from './transform/polyfills/resolvers';
 import makeNativeStyleClass from '../models/NativeStyle';
 

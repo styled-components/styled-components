@@ -22,7 +22,7 @@ import {
   cssToStyleObject,
   resetNativeStyleCache,
   RN_UNSUPPORTED_VALUES,
-} from './nativeStyleCompiler';
+} from './compileNative';
 
 export { RN_UNSUPPORTED_VALUES, cssToStyleObject };
 export type { NativeStyles };

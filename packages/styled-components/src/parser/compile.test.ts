@@ -1,7 +1,7 @@
 import css from '../constructors/css';
 import Keyframes from '../models/Keyframes';
 import StyleSheet from '../sheet';
-import createCompiler from '../utils/cssCompile';
+import createCompiler from '../utils/compiler';
 import { compileWeb } from './compile';
 import { parseSource } from './source';
 

@@ -5,9 +5,9 @@ import type { Compiler } from '../types';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from './empties';
 import throwStyledError from './error';
 import { SEED, phash } from './hash';
-import { preprocessCSS } from './preprocessCSS';
+import { normalize } from './normalize';
 
-export { isEscaped, preprocessCSS } from './preprocessCSS';
+export { isEscaped, normalize } from './normalize';
 
 /** Declaration transform: return `{prop, value}` to override or undefined to pass. Keep monomorphic. */
 export type DeclTransform = (
@@ -67,7 +67,7 @@ export default function createCompiler(
 
   // Byte-identical to v6 stylis output for hash + SSR rehydration stability.
   const compileString = (css: string, selector = '', prefix = '', componentId = '&'): string[] => {
-    const flatCSS = preprocessCSS(css);
+    const flatCSS = normalize(css);
     const wrapSelector = prefix || selector ? (prefix ? prefix + ' ' : '') + selector : '';
     const wrappedCSS = wrapSelector ? wrapSelector + '{' + flatCSS + '}' : flatCSS;
     const ast = parse(wrappedCSS);

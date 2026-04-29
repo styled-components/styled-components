@@ -8,7 +8,7 @@
  * Run with `pnpm --filter styled-components bench:web` (the bench jest config
  * picks up `.bench.test.ts`).
  */
-import { toNativeStyles, resetNativeStyleCache } from '../models/nativeStyleCompiler';
+import { toNativeStyles, resetNativeStyleCache } from '../models/compileNative';
 // Access to the content-cache reset only (keeps pair-level memoisation warm,
 // which is the realistic production shape — users see new unique CSS strings
 // but the prop/value pairs within recur across components).

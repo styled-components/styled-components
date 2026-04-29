@@ -12,7 +12,7 @@
  * only fail on a real regression.
  */
 
-import { toNativeStyles, resetNativeStyleCache } from '../../../models/nativeStyleCompiler';
+import { toNativeStyles, resetNativeStyleCache } from '../../../models/compileNative';
 import { transformDecl } from '../index';
 
 // Minimal StyleSheet stub — create() just returns the object wrapped.
@@ -56,7 +56,7 @@ describe('transform stress — cache bounds driven by measurement', () => {
     const delta = heapUsedMB() - start;
     console.log(`[stress] 50k repeated transformDecl pairs Δheap: ${delta.toFixed(2)} MB`);
     // `transformDecl` itself is uncached — each call allocates a result
-    // object. The real cache is in `nativeStyleCompiler.transformPair`
+    // object. The real cache is in `compileNative.transformPair`
     // (keyed by prop+value). So heap growth proportional to call count
     // is EXPECTED here; what we're checking is that it scales roughly
     // linearly without a leak or cache pathology.
@@ -84,11 +84,11 @@ describe('transform stress — cache bounds driven by measurement', () => {
     expect(ms).toBeLessThan(5000);
   });
 
-  // ─── nativeStyleCompiler cache-layer stress ───────────────────────────
+  // ─── compileNative cache-layer stress ─────────────────────────────────
   //
   // The CSS-string compile cache (`compileCache`, default LIMIT=200) and
   // the per-pair cache (`pairCache`, default LIMIT=1000) in
-  // nativeStyleCompiler.ts were inherited as round numbers. These tests
+  // compileNative.ts were inherited as round numbers. These tests
   // exercise them at realistic + pathological scale so we can
   // evidence-tune the ceilings.
 

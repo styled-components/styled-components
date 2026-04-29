@@ -4,7 +4,7 @@ import { buildResolver, Resolver } from '../native/transform/polyfills/resolvers
 import { parse } from '../parser/parser';
 import { Dict, StyleSheet } from '../types';
 import * as $ from '../utils/charCodes';
-import { preprocessCSS } from '../utils/preprocessCSS';
+import { normalize } from '../utils/normalize';
 import { fifoSet } from '../utils/fifoMap';
 
 export const RN_UNSUPPORTED_VALUES = ['fit-content', 'min-content', 'max-content'];
@@ -107,7 +107,7 @@ export function toNativeStyles(rawCSS: string, styleSheet: StyleSheet): NativeSt
   const cached = compileCache.get(rawCSS);
   if (cached !== undefined) return cached;
 
-  const preprocessed = preprocessCSS(rawCSS);
+  const preprocessed = normalize(rawCSS);
   const ast = parse(preprocessed, { keepCommaSpaces: true });
   const compiled = astToNativeStyles(ast, styleSheet);
 
@@ -561,7 +561,7 @@ export function cssToStyleObject(flatCSS: string, styleSheet: StyleSheet): Dict<
  * comments stripped, malformed blocks skipped, RN_UNSUPPORTED_VALUES warn+drop.
  */
 export function extractBaseDeclPairs(rawCSS: string): Array<[string, string]> {
-  const preprocessed = preprocessCSS(rawCSS);
+  const preprocessed = normalize(rawCSS);
   const ast = parse(preprocessed, { keepCommaSpaces: true });
   const pairs: Array<[string, string]> = [];
   for (let i = 0; i < ast.length; i++) {

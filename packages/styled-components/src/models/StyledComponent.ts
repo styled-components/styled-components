@@ -37,7 +37,7 @@ import isTag from '../utils/isTag';
 import { joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
 import { createRSCCache } from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
-import shallowEqualContext from '../utils/shallowEqualContext';
+import shallowEqual from '../utils/shallowEqual';
 import WebStyle, { GeneratedStyle } from './WebStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
@@ -298,7 +298,7 @@ function useImpl<Props extends BaseObject>(
       prev[2] === ssc.styleSheet &&
       prev[3] === ssc.compiler &&
       prev[7] === webStyle &&
-      shallowEqualContext(prev[0], props, prev[4])
+      shallowEqual(prev[0], props, prev[4])
     ) {
       context = prev[5] as typeof context;
       generatedClassName = prev[6];

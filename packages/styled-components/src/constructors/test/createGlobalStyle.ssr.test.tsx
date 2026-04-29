@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
-import GlobalStyle from '../../models/GlobalStyle';
+import WebGlobalStyle from '../../models/WebGlobalStyle';
 import ServerStyleSheet from '../../models/ServerStyleSheet';
 import { mainCompiler } from '../../models/StyleSheetManager';
 import StyleSheet from '../../sheet';
@@ -66,7 +66,7 @@ describe(`createGlobalStyle`, () => {
         color: ${() => 'red'};
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-clearTag-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-clearTag-test');
     const sheet = new StyleSheet({ isServer: true });
     const executionContext = { theme: {} } as any;
 

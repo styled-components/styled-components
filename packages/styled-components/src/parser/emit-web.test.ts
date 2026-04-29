@@ -1,9 +1,9 @@
 import { emitWeb } from './emit-web';
 import { parse } from './parser';
-import { preprocessCSS } from '../utils/cssCompile';
+import { normalize } from '../utils/compiler';
 
 function emit(css: string, selector = '.a'): string[] {
-  return emitWeb(parse(preprocessCSS(css)), selector);
+  return emitWeb(parse(normalize(css)), selector);
 }
 
 describe('web emitter — output parity with stylis', () => {

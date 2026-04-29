@@ -129,7 +129,7 @@ export interface Compiler {
    * string and a parent selector — keyframes, global styles, and the rare
    * fallback when a `RuleSet` has no construction-time `Source` attached.
    *
-   * Wraps the input in `prefix + selector { css }`, runs `preprocessCSS +
+   * Wraps the input in `prefix + selector { css }`, runs `normalize +
    * parser + emit-web` with the active plugin set + namespace, and returns
    * the resulting rule strings ready for `insertRules`. Output is
    * byte-identical to v6 stylis output for hash + SSR rehydration
@@ -147,7 +147,7 @@ export interface Compiler {
   ) => string[];
   /**
    * Source-input fast emit path. Walks the construction-time AST + filled
-   * interpolation values, skipping the per-render `preprocessCSS + parse`
+   * interpolation values, skipping the per-render `normalize + parse`
    * work `compile` performs against a freshly joined CSS string. Returns
    * `null` only on shape bailouts the fast path doesn't yet cover; callers
    * fall through to `compile` in that case.

@@ -47,8 +47,8 @@ export interface ParseOptions {
 /**
  * Parse a preprocessed CSS string into a parser AST.
  *
- * Assumes the input has already passed through `preprocessCSS` from
- * src/utils/cssCompile.ts, which normalizes braces, strips line comments,
+ * Assumes the input has already passed through `normalize` from
+ * src/utils/normalize.ts, which normalizes braces, strips line comments,
  * and handles unbalanced strings. This parser is STRICT; it assumes
  * well-formed input.
  */

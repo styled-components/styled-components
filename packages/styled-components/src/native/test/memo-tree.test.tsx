@@ -713,7 +713,7 @@ describe('edge cases: trying to break memo', () => {
       //
       //   1. React.memo uses Object.is. Object.is(+0, -0) === false → memo
       //      does NOT bail; impl runs.
-      //   2. Our internal shallowEqualContext (per-instance render cache in
+      //   2. Our internal shallowEqual (per-instance render cache in
       //      useImpl) uses ===. 0 === -0 is true → cache reports "equal" and
       //      returns the cached element without re-running the interpolation.
       //

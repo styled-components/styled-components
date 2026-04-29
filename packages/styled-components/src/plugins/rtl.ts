@@ -1,4 +1,4 @@
-import type { SCPlugin } from '../utils/cssCompile';
+import type { SCPlugin } from '../utils/compiler';
 
 /**
  * Direct prop-name swaps (1:1 mapping). Physical `left`/`right` sides swap

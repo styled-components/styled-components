@@ -31,8 +31,8 @@ import generateDisplayName from '../utils/generateDisplayName';
 import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
-import shallowEqualContext from '../utils/shallowEqualContext';
-import type { NativeStyles, ConditionalStyle, PseudoState } from './nativeStyleCompiler';
+import shallowEqual from '../utils/shallowEqual';
+import type { NativeStyles, ConditionalStyle, PseudoState } from './compileNative';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
 const hasOwn = Object.prototype.hasOwnProperty;
@@ -290,7 +290,7 @@ function useFastImpl<Props extends StyledComponentImplProps>(
   const renderCacheRef = React.useRef<FastRenderCache | null>(null);
   const prev = renderCacheRef.current;
 
-  if (prev !== null && prev[1] === theme && shallowEqualContext(prev[0], props, prev[2])) {
+  if (prev !== null && prev[1] === theme && shallowEqual(prev[0], props, prev[2])) {
     return createFastElement(prev[5], prev[4], props.$containerName);
   }
 
@@ -395,8 +395,7 @@ function useImpl<Props extends StyledComponentImplProps>(
   let finalStyle: any;
   let propsKeyCount = prev !== null ? prev[2] : 0;
 
-  const propsMatch =
-    prev !== null && prev[1] === theme && shallowEqualContext(prev[0], props, prev[2]);
+  const propsMatch = prev !== null && prev[1] === theme && shallowEqual(prev[0], props, prev[2]);
 
   if (propsMatch && prev![5] === env && prev![6] === containerCtx) {
     // Full hit: every input that influences finalStyle is reference-equal
