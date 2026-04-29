@@ -5,13 +5,13 @@
 Two paths feed the web emitter today:
 
 - **Source / AST direct** (`src/parser/compile.ts`). Construction-time AST walks at render time, fills sentinels with evaluated interpolation values, runs `emit-web`.
-- **Legacy** (`flatten` + `joinStringArray` + `compiler(css, ...)` from `utils/cssCompile.ts`). Resolves interpolations to a JS string, then `preprocessCSS` + `parse` + `emit-web` runs at render time.
+- **Legacy** (`flatten` + `joinStringArray` + `compiler(css, ...)` from `utils/compiler.ts`). Resolves interpolations to a JS string, then `normalize` + `parse` + `emit-web` runs at render time.
 
 The fast path is used when `evaluateForFastPath` returns a non-null filled[]. Otherwise we bail to legacy. Both funnel through `emit-web` so output is byte-identical for any case the fast path covers.
 
 ## Goal
 
-`emit-web` is the only emitter; `parser.parse` happens once at construction time only; `flatten`, `joinStringArray`, and the per-render `preprocessCSS + parse` calls in `createCompiler` are deleted.
+`emit-web` is the only emitter; `parser.parse` happens once at construction time only; `flatten`, `joinStringArray`, and the per-render `normalize + parse` calls in `createCompiler` are deleted.
 
 ## Bailouts to retire (in order)
 
@@ -53,14 +53,14 @@ The fast path is used when `evaluateForFastPath` returns a non-null filled[]. Ot
 
 After B-D land, only the multi-arg-fn and unknown-object bailouts remain. Both are dev-error-shaped; production hit rate near zero. At that point:
 - Delete `flatten.ts` and `joinStringArray.ts`.
-- `utils/cssCompile.ts::createCompiler` becomes a thin wrapper around `compile.ts::compileWebFilled`. The legacy `compile(css, selector, prefix, componentId)` callable goes away; `compile.emit(source, filled, parentSelector, componentId)` becomes the only call shape.
+- `utils/compiler.ts::createCompiler` becomes a thin wrapper around `compile.ts::compileWebFilled`. The legacy `compile(css, selector, prefix, componentId)` callable goes away; `compile.emit(source, filled, parentSelector, componentId)` becomes the only call shape.
 - `WebStyle.generate` and `NativeStyle.compile` stop carrying their dual-path logic. Two of the three caches (`dynamicNameCache`, `interpKeyCache`) collapse into one keyed on the filled tuple.
 - Remove the `compiler(css, ...)` callable from `Compiler` type. Update `jest-styled-components` invariants doc - this is a private API but worth flagging the shape change for downstream tooling.
 - Bench: expected modest win on cold-render (-1 parse pass), larger win on warm-render (no `flatten` walk). Bundle drops ~0.5-0.8 kB gzip from the deleted modules.
 
 ### Phase F - parser collapse (optional, post-v7.0)
 
-`parser.parse` runs at construction time only. `preprocessCSS` becomes an internal helper of `parseSource`. The "wrap in `selector{...}`" trick in `createCompiler` becomes unnecessary. We can simplify `parser.ts` by dropping the wrapping logic and the selfRefSelector-as-parent option that only the legacy path used.
+`parser.parse` runs at construction time only. `normalize` becomes an internal helper of `parseSource`. The "wrap in `selector{...}`" trick in `createCompiler` becomes unnecessary. We can simplify `parser.ts` by dropping the wrapping logic and the selfRefSelector-as-parent option that only the legacy path used.
 
 ## Open questions
 
