@@ -1,5 +1,5 @@
 import * as $ from '../../utils/charCodes';
-import { isEscaped } from '../../utils/cssCompile';
+import { isEscaped } from '../../utils/preprocessCSS';
 import { isSafeThemePath, sanitizeValue } from './sanitize';
 import {
   Token,

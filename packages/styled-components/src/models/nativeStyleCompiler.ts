@@ -4,7 +4,7 @@ import { buildResolver, Resolver } from '../native/transform/polyfills/resolvers
 import { parse } from '../parser/parser';
 import { Dict, StyleSheet } from '../types';
 import * as $ from '../utils/charCodes';
-import { preprocessCSS } from '../utils/cssCompile';
+import { preprocessCSS } from '../utils/preprocessCSS';
 import { fifoSet } from '../utils/fifoMap';
 
 export const RN_UNSUPPORTED_VALUES = ['fit-content', 'min-content', 'max-content'];

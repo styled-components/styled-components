@@ -18,7 +18,7 @@ import {
 } from '../utils/charCodes';
 import type { RuleSet } from '../types';
 import { KEYFRAMES_SYMBOL } from '../utils/isKeyframes';
-import { preprocessCSS } from '../utils/cssCompile';
+import { preprocessCSS } from '../utils/preprocessCSS';
 import { NodeKind, Root } from './ast';
 import { parse, ParseOptions } from './parser';
 

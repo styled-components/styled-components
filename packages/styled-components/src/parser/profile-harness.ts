@@ -12,7 +12,7 @@
 
 import { emitWeb } from './emit-web';
 import { parse } from './parser';
-import { preprocessCSS } from '../utils/cssCompile';
+import { preprocessCSS } from '../utils/preprocessCSS';
 
 // Reuse the CSS_LARGE and CSS_HUGE shapes from the bench. Inlined here so the
 // harness can run standalone without the jest bench infra.
