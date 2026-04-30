@@ -3,11 +3,9 @@
   "private": true,
   "types": "./dist/native/index.d.ts",
   "main": "./dist/styled-components.native.cjs.js",
-  "jsnext:main": "./dist/styled-components.native.esm.js",
   "module": "./dist/styled-components.native.esm.js",
   "devDependencies": {
-    "@types/react-native": "^0.71",
-    "react": "^18",
-    "react-native": "~0.71"
+    "react": "^19",
+    "react-native": "~0.85.2"
   }
 }

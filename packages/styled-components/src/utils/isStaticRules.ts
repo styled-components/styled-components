@@ -1,4 +1,4 @@
-import { RuleSet } from '../types';
+import type { RuleSet } from '../types';
 import isFunction from './isFunction';
 import isStyledComponent from './isStyledComponent';
 

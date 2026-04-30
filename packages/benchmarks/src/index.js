@@ -1,7 +1,7 @@
 /* global document */
 
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import App from './app/App';
 import ParentRerender from './cases/ParentRerender';
 import SierpinskiTriangle from './cases/SierpinskiTriangle';
@@ -69,4 +69,4 @@ const tests = {
   })),
 };
 
-ReactDOM.render(<App tests={tests} />, document.querySelector('.root'));
+createRoot(document.querySelector('.root')).render(<App tests={tests} />);

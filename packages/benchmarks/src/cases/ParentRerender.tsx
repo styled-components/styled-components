@@ -32,12 +32,17 @@ interface IParentRerender {
   childCount: number;
 }
 
+// Fixed pixel viewport so layout is deterministic across runs and the
+// children (mostly 0×0 + 6×6 fixed boxes) actually have a rectangle to
+// flow inside. `100%` would resolve against an auto-sized parent chain
+// and collapse to ~0×0, leaving the test invisible on screen.
 const wrapperStyle: React.CSSProperties = {
   display: 'flex',
   flexWrap: 'wrap',
   alignContent: 'flex-start',
-  width: '100%',
-  height: '100%',
+  width: 800,
+  height: 600,
+  outline: '1px solid var(--bench-border)',
 };
 
 export default function ParentRerender({ components, count, childCount }: IParentRerender) {

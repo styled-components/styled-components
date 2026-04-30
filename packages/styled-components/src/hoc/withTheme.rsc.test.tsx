@@ -2,10 +2,7 @@
  * @jest-environment node
  */
 
-jest.mock('../constants', () => ({
-  ...jest.requireActual('../constants'),
-  IS_RSC: true,
-}));
+jest.mock('../utils/isRsc', () => ({ IS_RSC: true }));
 
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';

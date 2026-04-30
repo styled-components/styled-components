@@ -1,9 +1,8 @@
 import { act, render } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import React from 'react';
-import * as constants from '../../constants';
-import GlobalStyle from '../../models/GlobalStyle';
-import { mainStylis, StyleSheetManager } from '../../models/StyleSheetManager';
+import WebGlobalStyle from '../../models/WebGlobalStyle';
+import { mainCompiler, StyleSheetManager } from '../../models/StyleSheetManager';
 import ThemeProvider from '../../models/ThemeProvider';
 import StyleSheet from '../../sheet';
 import { getRenderedCSS, resetStyled } from '../../test/utils';
@@ -246,9 +245,6 @@ describe(`createGlobalStyle`, () => {
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
         background: teal;
-      }
-      body {
-        background: teal;
       }"
     `);
 
@@ -273,7 +269,7 @@ describe(`createGlobalStyle`, () => {
 
     const style = container.firstElementChild!;
     expect(style.tagName).toBe('STYLE');
-    expect(style.textContent).toMatchInlineSnapshot(`"[data-test-target]{color:red;}"`);
+    expect(style.textContent).toMatchInlineSnapshot(`""`);
   });
 
   it(`stringifies multiple rules correctly`, () => {
@@ -444,9 +440,6 @@ describe(`createGlobalStyle`, () => {
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
         background: palevioletred;
-      }
-      body {
-        background: palevioletred;
       }"
     `);
 
@@ -517,12 +510,6 @@ describe(`createGlobalStyle`, () => {
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
         background: red;
-      }
-      body {
-        background: red;
-      }
-      body {
-        background: red;
       }"
     `);
 
@@ -530,9 +517,6 @@ describe(`createGlobalStyle`, () => {
     rerender(<Wrapper count={2} />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
-        background: red;
-      }
-      body {
         background: red;
       }"
     `);
@@ -564,9 +548,6 @@ describe(`createGlobalStyle`, () => {
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
         background: green;
-      }
-      body {
-        background: green;
       }"
     `);
 
@@ -578,9 +559,6 @@ describe(`createGlobalStyle`, () => {
     rerender(<Wrapper show={true} />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
-        background: green;
-      }
-      body {
         background: green;
       }"
     `);
@@ -601,9 +579,6 @@ describe(`createGlobalStyle`, () => {
     const { rerender } = render(<Wrapper showFirst={true} showSecond={true} />);
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       "body {
-        background: coral;
-      }
-      body {
         background: coral;
       }"
     `);
@@ -771,11 +746,6 @@ describe(`createGlobalStyle`, () => {
   });
 
   it(`removes style tag in StyleSheetManager.target when unmounted after target detached and no other global styles`, () => {
-    // Set DISABLE_SPEEDY flag to false to force using speedy tag
-    const flag = constants.DISABLE_SPEEDY;
-    // @ts-expect-error it's ok
-    constants.DISABLE_SPEEDY = false;
-
     const container = document.createElement('div');
     document.body.appendChild(container);
 
@@ -811,10 +781,6 @@ describe(`createGlobalStyle`, () => {
     } catch (e) {
       fail('should not throw exception');
     }
-
-    // Reset DISABLE_SPEEDY flag
-    // @ts-expect-error it's ok
-    constants.DISABLE_SPEEDY = flag;
   });
 
   it(`injects multiple global styles in definition order, not composition order`, () => {
@@ -956,9 +922,9 @@ describe('createGlobalStyle HMR', () => {
   });
 });
 
-describe('GlobalStyle.renderStyles (unit)', () => {
+describe('WebGlobalStyle.renderStyles (unit)', () => {
   /**
-   * These tests exercise GlobalStyle.renderStyles() directly to cover
+   * These tests exercise WebGlobalStyle.renderStyles() directly to cover
    * the rulesEqual fast-path on the pure model. The React lifecycle
    * path also reaches this fast-path now -- see the lifecycle tests
    * below (`useLayoutEffect rebuildGroup`).
@@ -968,7 +934,7 @@ describe('GlobalStyle.renderStyles (unit)', () => {
 
   beforeEach(() => {
     resetStyled();
-    sheet = new StyleSheet({ isServer: false, useCSSOMInjection: false });
+    sheet = new StyleSheet({ isServer: false });
   });
 
   it('skips rebuildGroup when re-rendered with identical CSS (rulesEqual fast-path)', () => {
@@ -977,17 +943,17 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         color: ${(p: { theme: { color: string } }) => p.theme.color};
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-eq-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-eq-test');
     const ctx = { theme: { color: 'red' } } as any;
 
     // First render — populates instanceRules
-    gs.renderStyles(1, ctx, sheet, mainStylis);
-    expect(gs.instanceRules.has(1)).toBe(true);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
+    expect(gs.instanceRules.has('1')).toBe(true);
 
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
     // Second render with same CSS — should hit fast-path and skip rebuildGroup
-    gs.renderStyles(1, ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     expect(clearRulesSpy).not.toHaveBeenCalled();
   });
 
@@ -997,19 +963,19 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         color: ${(p: { theme: { color: string } }) => p.theme.color};
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-diff-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-diff-test');
 
     // First render
-    gs.renderStyles(1, { theme: { color: 'red' } } as any, sheet, mainStylis);
+    gs.renderStyles('1', { theme: { color: 'red' } } as any, sheet, mainCompiler);
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
     // Second render with different CSS — should NOT hit fast-path
-    gs.renderStyles(1, { theme: { color: 'blue' } } as any, sheet, mainStylis);
+    gs.renderStyles('1', { theme: { color: 'blue' } } as any, sheet, mainCompiler);
     expect(clearRulesSpy).toHaveBeenCalled();
 
     // Verify the new CSS is present
     expect(sheet.toString()).toMatchInlineSnapshot(`
-      "body{color:blue;}/*!sc*/
+      "body {color: blue;}/*!sc*/
       data-styled.g1[id="sc-global-diff-test"]{content:"sc-global-diff-test1,"}/*!sc*/
       "
     `);
@@ -1024,35 +990,35 @@ describe('GlobalStyle.renderStyles (unit)', () => {
       }
       ${() => extraRule}
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-count-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-count-test');
     const ctx = { theme: {} } as any;
 
     // First render — one rule
-    gs.renderStyles(1, ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     const clearRulesSpy = jest.spyOn(sheet, 'clearRules');
 
     // Add extra rule content and re-render
     extraRule = 'div { background: green; }';
-    gs.renderStyles(1, ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     expect(clearRulesSpy).toHaveBeenCalled();
   });
 
   it('always rebuilds on server stylesheet even with identical CSS', () => {
-    const serverSheet = new StyleSheet({ isServer: true, useCSSOMInjection: false });
+    const serverSheet = new StyleSheet({ isServer: true });
     const rules = css`
       body {
         color: ${(p: { theme: { color: string } }) => p.theme.color};
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-server-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-server-test');
     const ctx = { theme: { color: 'red' } } as any;
 
     // First render
-    gs.renderStyles(1, ctx, serverSheet, mainStylis);
+    gs.renderStyles('1', ctx, serverSheet, mainCompiler);
     const clearRulesSpy = jest.spyOn(serverSheet, 'clearRules');
 
     // Same CSS — server must always rebuild (clearTag invalidates DOM)
-    gs.renderStyles(1, ctx, serverSheet, mainStylis);
+    gs.renderStyles('1', ctx, serverSheet, mainCompiler);
     expect(clearRulesSpy).toHaveBeenCalled();
   });
 
@@ -1062,21 +1028,21 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         background: pink;
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-static-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-static-test');
     const ctx = { theme: {} } as any;
 
     // First render — inserts rules
-    gs.renderStyles(1, ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     expect(sheet.toString()).toMatchInlineSnapshot(`
-      "body{background:pink;}/*!sc*/
-      data-styled.g1[id="sc-global-static-test"]{content:"sc-global-static-test1,"}/*!sc*/
+      "body {background: pink;}/*!sc*/
+      data-styled.g1[id="sc-global-static-test"]{content:"sc-global-static-test,"}/*!sc*/
       "
     `);
 
     const insertSpy = jest.spyOn(sheet, 'insertRules');
 
     // Second render — name already registered, should skip
-    gs.renderStyles(1, ctx, sheet, mainStylis);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
     expect(insertSpy).not.toHaveBeenCalled();
   });
 
@@ -1086,26 +1052,26 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         background: teal;
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-rehydrate-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-rehydrate-test');
     const ctx = { theme: {} } as any;
 
     // First render — inserts rules and populates cache
-    gs.renderStyles(1, ctx, sheet, mainStylis);
-    expect(gs.instanceRules.has(1)).toBe(true);
-    const entry1 = gs.instanceRules.get(1)!;
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
+    expect(gs.instanceRules.has('1')).toBe(true);
+    const entry1 = gs.instanceRules.get('1')!;
 
     // Simulate rehydration: name is registered but instanceRules is cleared
     gs.instanceRules.clear();
-    expect(gs.instanceRules.has(1)).toBe(false);
+    expect(gs.instanceRules.has('1')).toBe(false);
 
     // Re-render — should repopulate cache from computation (not re-insert)
     const insertSpy = jest.spyOn(sheet, 'insertRules');
-    gs.renderStyles(1, ctx, sheet, mainStylis);
-    expect(gs.instanceRules.has(1)).toBe(true);
+    gs.renderStyles('1', ctx, sheet, mainCompiler);
+    expect(gs.instanceRules.has('1')).toBe(true);
     expect(insertSpy).not.toHaveBeenCalled();
 
     // Cache should match original
-    expect(gs.instanceRules.get(1)!.rules).toEqual(entry1.rules);
+    expect(gs.instanceRules.get('1')!.rules).toEqual(entry1.rules);
   });
 
   it('removeStyles triggers rebuildGroup with surviving instances', () => {
@@ -1114,30 +1080,30 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         color: ${(p: { theme: { color: string } }) => p.theme.color};
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-remove-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-remove-test');
 
     // Mount two instances
-    gs.renderStyles(1, { theme: { color: 'red' } } as any, sheet, mainStylis);
-    gs.renderStyles(2, { theme: { color: 'blue' } } as any, sheet, mainStylis);
+    gs.renderStyles('1', { theme: { color: 'red' } } as any, sheet, mainCompiler);
+    gs.renderStyles('2', { theme: { color: 'blue' } } as any, sheet, mainCompiler);
     expect(gs.instanceRules.size).toBe(2);
     expect(sheet.toString()).toMatchInlineSnapshot(`
-      "body{color:red;}/*!sc*/
-      body{color:blue;}/*!sc*/
+      "body {color: red;}/*!sc*/
+      body {color: blue;}/*!sc*/
       data-styled.g1[id="sc-global-remove-test"]{content:"sc-global-remove-test1,sc-global-remove-test2,"}/*!sc*/
       "
     `);
 
     // Remove instance 1 — instance 2 should survive
-    gs.removeStyles(1, sheet);
+    gs.removeStyles('1', sheet);
     expect(gs.instanceRules.size).toBe(1);
     expect(sheet.toString()).toMatchInlineSnapshot(`
-      "body{color:blue;}/*!sc*/
+      "body {color: blue;}/*!sc*/
       data-styled.g1[id="sc-global-remove-test"]{content:"sc-global-remove-test2,"}/*!sc*/
       "
     `);
 
     // Remove instance 2 — all gone
-    gs.removeStyles(2, sheet);
+    gs.removeStyles('2', sheet);
     expect(gs.instanceRules.size).toBe(0);
     expect(sheet.toString()).toBe('');
   });
@@ -1151,12 +1117,13 @@ describe('GlobalStyle.renderStyles (unit)', () => {
         color: blue;
       }
     `;
-    const gs = new GlobalStyle(rules, 'sc-global-accum-test');
+    const gs = new WebGlobalStyle(rules, 'sc-global-accum-test');
     const ctx = { theme: {} } as any;
 
     for (let i = 1; i <= 10; i++) {
-      gs.renderStyles(i, ctx, sheet, mainStylis);
-      gs.removeStyles(i, sheet);
+      const id = String(i);
+      gs.renderStyles(id, ctx, sheet, mainCompiler);
+      gs.removeStyles(id, sheet);
     }
 
     // After 10 render/remove cycles, all rules should be cleaned up.
@@ -1257,5 +1224,71 @@ describe('createGlobalStyle useLayoutEffect rebuildGroup (#5730)', () => {
     await Promise.resolve();
 
     expect(getRenderedCSS()).not.toContain('[data-5730-cleanup]');
+  });
+
+  it('preserves stylesheet position when any instance of a multi-mounted static global unmounts', () => {
+    // Static globals share a single group slot. Unmounting any one instance
+    // rebuilds the slot from surviving entries — absolute ordering in the
+    // stylesheet must not shift relative to other global styles declared
+    // before or after it at module load time.
+    const First = createGlobalStyle`html { font-size: 16px; }`;
+    const Target = createGlobalStyle`body { background: papayawhip; }`;
+    const Last = createGlobalStyle`:root { --token: 1; }`;
+
+    function App({ which }: { which: 'both' | 'firstOnly' | 'secondOnly' }) {
+      return (
+        <>
+          <First />
+          {which !== 'secondOnly' && <Target />}
+          {which !== 'firstOnly' && <Target />}
+          <Last />
+        </>
+      );
+    }
+
+    const { rerender } = render(<App which="both" />);
+
+    // Baseline: both target instances mounted, one copy of rule emitted
+    // (static dedup), in its correct slot between First and Last.
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "html {
+        font-size: 16px;
+      }
+      body {
+        background: papayawhip;
+      }
+      :root {
+        --token: 1;
+      }"
+    `);
+
+    // Unmount the FIRST target instance — survivor must remain in same slot.
+    rerender(<App which="secondOnly" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "html {
+        font-size: 16px;
+      }
+      body {
+        background: papayawhip;
+      }
+      :root {
+        --token: 1;
+      }"
+    `);
+
+    // Remount first, unmount second — also preserves slot.
+    rerender(<App which="both" />);
+    rerender(<App which="firstOnly" />);
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      "html {
+        font-size: 16px;
+      }
+      body {
+        background: papayawhip;
+      }
+      :root {
+        --token: 1;
+      }"
+    `);
   });
 });

@@ -1,19 +1,20 @@
 import React from 'react';
 import constructWithOptions, { Styled } from '../constructors/constructWithOptions';
+import createTheme from '../constructors/createTheme.native';
 import css from '../constructors/css';
 import withTheme from '../hoc/withTheme';
-import _InlineStyle, { cssToStyleObject } from '../models/InlineStyle';
+import _NativeStyle, { cssToStyleObject } from '../models/NativeStyle';
 import _StyledNativeComponent from '../models/StyledNativeComponent';
 import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from '../models/ThemeProvider';
+import { buildHashCSS, evaluateForFastPath, FastPathFragment } from '../parser/compile';
+import { getSource, synthesizeSourceForRuleSet } from '../parser/source';
 import { NativeTarget, RuleSet } from '../types';
-import flatten from '../utils/flatten';
 import isStyledComponent from '../utils/isStyledComponent';
-import { joinStringArray } from '../utils/joinStrings';
 
 const reactNative = require('react-native') as Awaited<typeof import('react-native')>;
 
-const InlineStyle = _InlineStyle(reactNative.StyleSheet);
-const StyledNativeComponent = _StyledNativeComponent(InlineStyle);
+const NativeStyle = _NativeStyle(reactNative.StyleSheet);
+const StyledNativeComponent = _StyledNativeComponent(NativeStyle);
 
 /**
  * Create a styled component for React Native.
@@ -92,7 +93,30 @@ aliases.forEach(alias =>
  * ```
  */
 const toStyleSheet = (rules: RuleSet<object>) => {
-  const flatCSS = joinStringArray(flatten(rules) as string[]);
+  synthesizeSourceForRuleSet(rules);
+  const source = getSource(rules);
+  let flatCSS = '';
+  if (source !== undefined) {
+    const fragments: (FastPathFragment | null)[] = [];
+    const filled = evaluateForFastPath(
+      source,
+      {} as never,
+      undefined,
+      undefined,
+      undefined,
+      fragments
+    );
+    if (filled !== null) {
+      let hasFragments = false;
+      for (let i = 0; i < fragments.length; i++) {
+        if (fragments[i] !== null) {
+          hasFragments = true;
+          break;
+        }
+      }
+      flatCSS = buildHashCSS(source.strings, filled, hasFragments ? fragments : null);
+    }
+  }
   return cssToStyleObject(flatCSS, reactNative.StyleSheet);
 };
 
@@ -110,11 +134,23 @@ export {
   NativeTarget,
   PolymorphicComponent,
   PolymorphicComponentProps,
+  RuleSet,
   Runtime,
   StyledObject,
   StyledOptions,
 } from '../types';
 export {
+  ContainerContext,
+  matchMedia,
+  useBreakpoint,
+  useContainer,
+  useContainerQuery,
+  useMediaEnv,
+  useMediaQuery,
+} from './responsive';
+export type { ContainerEntry, MediaQueryEnv } from './responsive';
+export {
+  createTheme,
   css,
   styled as default,
   isStyledComponent,

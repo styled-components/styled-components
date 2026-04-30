@@ -12,7 +12,7 @@ export const resetGroupIds = () => {
   nextFreeGroup = 1;
 };
 
-export const getGroupForId = (id: string): number => {
+export const groupForId = (id: string): number => {
   if (groupIDRegister.has(id)) {
     return groupIDRegister.get(id) as any;
   }
@@ -32,7 +32,7 @@ export const getGroupForId = (id: string): number => {
   return group;
 };
 
-export const getIdForGroup = (group: number): void | string => {
+export const idForGroup = (group: number): void | string => {
   return reverseRegister.get(group);
 };
 

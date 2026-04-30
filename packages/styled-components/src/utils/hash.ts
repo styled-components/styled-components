@@ -13,13 +13,6 @@ export const phash = (h: number, x: string) => {
   return h;
 };
 
-// Hash a non-negative integer, avoiding String() allocation for single digits.
-// Equivalent to phash(h, String(n)) for n >= 0.
-export const phashN = (h: number, n: number) => {
-  if (n >= 0 && n < 10) return (h * 33) ^ (n + 48);
-  return phash(h, '' + n);
-};
-
 // This is a djb2 hashing function
 export const hash = (x: string) => {
   return phash(SEED, x);

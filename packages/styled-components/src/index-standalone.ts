@@ -3,13 +3,12 @@ import * as secondary from './base';
 import styled from './constructors/styled';
 
 /**
- * eliminates the need to do styled.default since the other APIs
- * are directly assigned as properties to the main function
- * */
-for (const key in secondary) {
-  // @ts-expect-error shush
-  styled[key] = secondary[key];
-}
+ * Eliminates the need to do `styled.default`; the secondary APIs are
+ * attached as own-properties on the main `styled` function so consumers
+ * can `import styled from 'styled-components'; styled.css; styled.keyframes`
+ * etc.
+ */
+Object.assign(styled, secondary);
 
 export default styled;
 export { styled };

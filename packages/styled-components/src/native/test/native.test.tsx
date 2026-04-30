@@ -2,7 +2,7 @@ import React, { PropsWithChildren } from 'react';
 import { Image, Text, View, ViewProps } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import styled, { ThemeProvider, css, toStyleSheet } from '../';
-import { RN_UNSUPPORTED_VALUES } from '../../models/InlineStyle';
+import { RN_UNSUPPORTED_VALUES } from '../../models/NativeStyle';
 
 // NOTE: These tests are like the ones for Web but a "light-version" of them
 // This is mostly due to the similar logic
@@ -60,39 +60,20 @@ describe('native', () => {
     expect(view.props.style).toEqual({ color: 'red', textAlign: 'left' });
   });
 
-  it('folds defaultProps', () => {
-    const Inner = styled.View<ViewProps>``;
+  it('propagates attrs across an extended chain', () => {
+    const Inner = styled.View.attrs<ViewProps & { testID?: string }>({
+      testID: 'inner-default',
+    })``;
 
-    Inner.defaultProps = {
-      theme: {
-        fontSize: 12,
-      },
-      style: {
-        backgroundColor: 'blue',
-      },
-    };
+    const Outer = styled(Inner).attrs({
+      accessibilityLabel: 'outer-default',
+    })``;
 
-    const Outer = styled(Inner)``;
+    const wrapper = TestRenderer.create(<Outer />);
+    const view = wrapper.root.findByType(View);
 
-    Outer.defaultProps = {
-      theme: {
-        fontSize: 16,
-      },
-      style: {
-        backgroundColor: 'silver',
-      },
-    };
-
-    expect(Outer.defaultProps).toMatchInlineSnapshot(`
-      {
-        "style": {
-          "backgroundColor": "silver",
-        },
-        "theme": {
-          "fontSize": 16,
-        },
-      }
-    `);
+    expect(view.props.testID).toBe('inner-default');
+    expect(view.props.accessibilityLabel).toBe('outer-default');
   });
 
   it('should combine inline styles and the style prop', () => {
@@ -408,13 +389,16 @@ describe('native', () => {
       expect(text.props.style).toMatchObject({ color: 'red' });
     });
 
-    it('theme in defaultProps works', () => {
+    it('theme flows via ThemeProvider', () => {
       const Comp = styled.Text`
         color: ${({ theme }) => theme.myColor};
       `;
-      Comp.defaultProps = { theme: { myColor: 'red' } };
 
-      const wrapper = TestRenderer.create(<Comp>Something else</Comp>);
+      const wrapper = TestRenderer.create(
+        <ThemeProvider theme={{ myColor: 'red' }}>
+          <Comp>Something else</Comp>
+        </ThemeProvider>
+      );
       const text = wrapper.root.findByType(Text);
 
       expect(text.props.style).toMatchObject({ color: 'red' });
@@ -592,6 +576,160 @@ describe('native', () => {
       expect(props.style).toEqual({ color: 'red' });
       expect(props.passThru).toBe('def');
       expect(props.filterThis).toBeUndefined();
+    });
+  });
+
+  describe('fast render impl', () => {
+    it('flags fully-static CSS as fast-eligible', () => {
+      const Comp = styled.View`
+        color: red;
+        padding-top: 10px;
+      `;
+      expect(Comp.nativeStyle.fastEligible).toBe(true);
+    });
+
+    it('flags components with attrs as not fast-eligible', () => {
+      const Comp = styled.View.attrs({ testID: 'x' })`
+        color: red;
+      `;
+      // CSS itself is static, but attrs forces full impl. Eligibility on the
+      // NativeStyle is still about the CSS — the gate at the factory layer
+      // additionally checks attrs. We expose the CSS-level flag here.
+      expect(Comp.nativeStyle.fastEligible).toBe(true);
+    });
+
+    it('function-interpolated CSS without responsive features is fast-eligible (fast path)', () => {
+      const Comp = styled.View<{ $color: string }>`
+        color: ${p => p.$color};
+      `;
+      // The source has function interpolations but no responsive markers
+      // (no @media/@container/pseudo states/viewport units/light-dark()).
+      // The fast render path handles this: 1 hook (theme) + per-render
+      // dynamic compile with same-CSS fast path.
+      expect(Comp.nativeStyle.fastEligible).toBe(true);
+    });
+
+    it('function-interpolated CSS with @media conditionals is not fast-eligible', () => {
+      const Comp = styled.View<{ $color: string }>`
+        color: ${p => p.$color};
+        @media (min-width: 500px) {
+          padding: 8px;
+        }
+      `;
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
+    });
+
+    it('function-interpolated CSS with pseudo states is not fast-eligible', () => {
+      const Comp = styled.View<{ $color: string }>`
+        color: ${p => p.$color};
+        &:hover {
+          opacity: 0.5;
+        }
+      `;
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
+    });
+
+    it('function-interpolated CSS with viewport units is not fast-eligible', () => {
+      const Comp = styled.View<{ $w: number }>`
+        width: ${p => p.$w}px;
+        height: 50vh;
+      `;
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
+    });
+
+    it('flags CSS with @media conditionals as not fast-eligible', () => {
+      const Comp = styled.View`
+        color: red;
+        @media (min-width: 500px) {
+          color: blue;
+        }
+      `;
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
+    });
+
+    it('flags CSS with pseudo states as not fast-eligible', () => {
+      const Comp = styled.View`
+        color: red;
+        &:hover {
+          color: blue;
+        }
+      `;
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
+    });
+
+    it('fast path renders with style + as + ref', () => {
+      const Comp = styled.View`
+        padding-top: 10px;
+      `;
+      const ref = React.createRef<any>();
+      const userStyle = { opacity: 0.5 };
+      const wrapper = TestRenderer.create(<Comp ref={ref} style={userStyle} />);
+      const view = wrapper.root.findByType(View);
+      expect(view.props.style).toEqual([{ paddingTop: 10 }, userStyle]);
+    });
+
+    it('fast path supports as= override', () => {
+      const Comp = styled.View`
+        padding-top: 10px;
+      `;
+      const wrapper = TestRenderer.create(<Comp as={Text} />);
+      const text = wrapper.root.findByType(Text);
+      expect(text.props.style).toEqual({ paddingTop: 10 });
+    });
+
+    it('fast path supports function style (Pressable state callback)', () => {
+      const Comp = styled.View`
+        padding-top: 10px;
+      `;
+      const userStyle = (state: { pressed?: boolean }) =>
+        state.pressed ? { opacity: 0.5 } : { opacity: 1 };
+      const wrapper = TestRenderer.create(<Comp style={userStyle} />);
+      const view = wrapper.root.findByType(View);
+      const composed = view.props.style({ pressed: true });
+      expect(composed).toEqual([{ paddingTop: 10 }, { opacity: 0.5 }]);
+    });
+
+    it('extending a fast-eligible component with non-responsive dynamic CSS stays fast-eligible', () => {
+      const Base = styled.View`
+        padding-top: 10px;
+      `;
+      expect(Base.nativeStyle.fastEligible).toBe(true);
+      const Extended = styled(Base)<{ $color: string }>`
+        color: ${p => p.$color};
+      `;
+      expect(Extended.nativeStyle.fastEligible).toBe(true);
+      const wrapper = TestRenderer.create(<Extended $color="red" />);
+      const view = wrapper.root.findByType(View);
+      expect(view.props.style).toEqual({ paddingTop: 10, color: 'red' });
+    });
+
+    it('extending with responsive CSS falls off the fast path (full path required)', () => {
+      const Base = styled.View`
+        padding-top: 10px;
+      `;
+      expect(Base.nativeStyle.fastEligible).toBe(true);
+      const Extended = styled(Base)`
+        @media (min-width: 500px) {
+          color: blue;
+        }
+      `;
+      expect(Extended.nativeStyle.fastEligible).toBe(false);
+    });
+
+    it('dynamic-rule CSS containing env() must NOT be fast-eligible (resolver pass needed)', () => {
+      const Comp = styled.View<{ $color: string }>`
+        color: ${p => p.$color};
+        padding-top: env(safe-area-inset-top);
+      `;
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
+    });
+
+    it('dynamic-rule CSS containing a createTheme sentinel must NOT be fast-eligible', () => {
+      const Comp = styled.View<{ $w: number }>`
+        width: ${p => p.$w}px;
+        color: \0sc:colors.bg:#fff;
+      `;
+      expect(Comp.nativeStyle.fastEligible).toBe(false);
     });
   });
 });

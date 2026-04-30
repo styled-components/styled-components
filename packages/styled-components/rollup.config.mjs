@@ -142,6 +142,7 @@ const standaloneBaseConfig = {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
+      __NATIVE__: JSON.stringify(false),
     }),
     replace({
       delimiters: ['', ''],
@@ -185,6 +186,7 @@ const serverConfig = {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(true),
+      __NATIVE__: JSON.stringify(false),
     }),
     minifierPlugin
   ),
@@ -199,6 +201,7 @@ const browserConfig = {
   plugins: configBase.plugins.concat(
     replace({
       __SERVER__: JSON.stringify(false),
+      __NATIVE__: JSON.stringify(false),
     }),
     replace({
       delimiters: ['', ''],
@@ -219,9 +222,18 @@ const nativeConfig = {
       file: 'native/dist/styled-components.native.esm.js',
     }),
   ],
+  // The native build runs only `nativeTypescriptPlugin` so declarations land
+  // in `native/dist/` once. Concatenating `commonPlugins` previously
+  // included `defaultTypescriptPlugin` too, which wrote a parallel d.ts tree
+  // into `native/dist/dist/` and `native/dist/native/` — those shadow trees
+  // shipped to npm.
   plugins: [
     nativeTypescriptPlugin,
-    ...commonPlugins,
+    ...basePlugins,
+    replace({
+      __SERVER__: JSON.stringify(false),
+      __NATIVE__: JSON.stringify(true),
+    }),
     replace({
       delimiters: ['', ''],
       "typeof React.createContext === 'undefined'": JSON.stringify(false),
@@ -230,4 +242,24 @@ const nativeConfig = {
   ],
 };
 
-export default [standaloneConfig, standaloneProdConfig, serverConfig, browserConfig, nativeConfig];
+const pluginsConfig = {
+  ...configBase,
+  input: './src/plugins/index.ts',
+  output: [
+    getESM({ file: 'dist/plugins.esm.js' }),
+    getCJS({ file: 'dist/plugins.cjs.js' }),
+  ],
+  plugins: configBase.plugins.concat(
+    replace({
+      __SERVER__: JSON.stringify(false),
+      __NATIVE__: JSON.stringify(false),
+    }),
+    replace({
+      delimiters: ['', ''],
+      "typeof React.createContext === 'undefined'": JSON.stringify(false),
+    }),
+    minifierPlugin
+  ),
+};
+
+export default [standaloneConfig, standaloneProdConfig, serverConfig, browserConfig, nativeConfig, pluginsConfig];

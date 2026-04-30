@@ -127,16 +127,16 @@ describe('with styles', () => {
       .a[disabled] > .a[disabled] {
         margin-top: 4px;
       }
-      .sc-gRlPMw + .sc-gRlPMw {
+      .sc-kqxcKS + .sc-kqxcKS {
         margin-left: 4px;
       }
-      .sc-gRlPMw + .sc-gRlPMw ~ .sc-gRlPMw {
+      .sc-kqxcKS + .sc-kqxcKS ~ .sc-kqxcKS {
         background: black;
       }
-      .sc-gRlPMw ~ .sc-gRlPMw {
+      .sc-kqxcKS ~ .sc-kqxcKS {
         margin-right: 4px;
       }
-      .sc-gRlPMw > .sc-gRlPMw {
+      .sc-kqxcKS > .sc-kqxcKS {
         margin-top: 4px;
       }
       .foo .a {
@@ -167,16 +167,16 @@ describe('with styles', () => {
       .b[disabled] > .b[disabled] {
         margin-top: 4px;
       }
-      .sc-gRlPMw + .sc-gRlPMw {
+      .sc-kqxcKS + .sc-kqxcKS {
         margin-left: 4px;
       }
-      .sc-gRlPMw + .sc-gRlPMw ~ .sc-gRlPMw {
+      .sc-kqxcKS + .sc-kqxcKS ~ .sc-kqxcKS {
         background: black;
       }
-      .sc-gRlPMw ~ .sc-gRlPMw {
+      .sc-kqxcKS ~ .sc-kqxcKS {
         margin-right: 4px;
       }
-      .sc-gRlPMw > .sc-gRlPMw {
+      .sc-kqxcKS > .sc-kqxcKS {
         margin-top: 4px;
       }
       .foo .b {
@@ -404,6 +404,36 @@ describe('with styles', () => {
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".a {
         color: green;
+      }"
+    `);
+  });
+
+  it('block-position ternary between two css fragments emits per-branch classes', () => {
+    const Comp = styled.div<{ $primary?: boolean }>`
+      ${p =>
+        p.$primary
+          ? css`
+              background: blue;
+              color: white;
+            `
+          : css`
+              background: white;
+              color: blue;
+            `}
+    `;
+
+    const { rerender } = render(<Comp $primary />);
+    rerender(<Comp />);
+    rerender(<Comp $primary />);
+
+    expect(getRenderedCSS()).toMatchInlineSnapshot(`
+      ".a {
+        background: blue;
+        color: white;
+      }
+      .b {
+        background: white;
+        color: blue;
       }"
     `);
   });

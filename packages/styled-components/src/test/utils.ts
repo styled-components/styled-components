@@ -4,11 +4,11 @@
  */
 import beautify from 'js-beautify';
 import styled from '../constructors/styled';
+import { resetIdentifiers } from '../models/StyledComponent';
 import { mainSheet } from '../models/StyleSheetManager';
 import { resetGroupIds } from '../sheet/GroupIDAllocator';
 import { rehydrateSheet } from '../sheet/Rehydration';
 import styledError from '../utils/error';
-import { joinStringArray } from '../utils/joinStrings';
 
 /* Ignore hashing, just return class names sequentially as .a .b .c etc */
 let mockIndex = 0;
@@ -44,10 +44,14 @@ export const resetStyled = (isServer = false) => {
     }
 
     document.head.innerHTML = '';
+    // Tests sometimes mount style tags into custom containers in document.body
+    // (via StyleSheetManager target= or container test setups); clear them too
+    // so the next test's getCSS() doesn't pick up stale rules from prior runs.
+    document.body.querySelectorAll('style').forEach(el => el.remove());
   }
 
   resetGroupIds();
-  mainSheet.gs = {};
+  resetIdentifiers();
   mainSheet.names = new Map();
   mainSheet.clearTag();
   mockIndex = 0;
@@ -69,10 +73,17 @@ export const stripWhitespace = (str: string) =>
     .replace(/\s+/g, ' ');
 
 export const getCSS = (scope: Document | HTMLElement) =>
-  joinStringArray(
-    Array.from(scope.querySelectorAll('style')).map(tag => tag.innerHTML),
-    '\n'
-  )
+  Array.from(scope.querySelectorAll('style'))
+    .map(tag => {
+      // CSSOM-injected rules don't appear in textContent — walk the live sheet.
+      if (tag.sheet && tag.sheet.cssRules.length) {
+        return Array.from(tag.sheet.cssRules)
+          .map(r => r.cssText)
+          .join('\n');
+      }
+      return tag.innerHTML;
+    })
+    .join('\n')
     .replace(/ {/g, '{')
     .replace(/:\s+/g, ':')
     .replace(/:\s+;/g, ':;');

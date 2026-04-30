@@ -34,6 +34,8 @@ function saveSettings(state) {
       currentLibraryName: state.currentLibraryName,
       sortBy: state.sortBy,
       groupByBenchmark: state.groupByBenchmark,
+      autoSelectedLibraries: state.autoSelectedLibraries,
+      autoSelectedBenchmarks: state.autoSelectedBenchmarks,
     }));
   } catch (e) {
     // ignore
@@ -54,14 +56,29 @@ export default class App extends Component {
     const currentLibraryName = libraryNames.includes(saved.currentLibraryName)
       ? saved.currentLibraryName
       : 'styled-components';
+    const allLibraries = Object.keys(props.tests[currentBenchmarkName]);
+    const allBenchmarks = Object.keys(props.tests);
+    const allChecked = items =>
+      items.reduce((acc, k) => {
+        acc[k] = true;
+        return acc;
+      }, {});
     this.state = {
       currentBenchmarkName,
       currentLibraryName,
       status: 'idle',
       results: [],
       autoQueue: null,
-      showSuiteDialog: false,
-      suiteSelectedLibraries: {},
+      // null | 'benchmark' | 'suite'
+      dialogMode: null,
+      autoSelectedLibraries:
+        saved.autoSelectedLibraries && Object.keys(saved.autoSelectedLibraries).length
+          ? saved.autoSelectedLibraries
+          : allChecked(allLibraries),
+      autoSelectedBenchmarks:
+        saved.autoSelectedBenchmarks && Object.keys(saved.autoSelectedBenchmarks).length
+          ? saved.autoSelectedBenchmarks
+          : allChecked(allBenchmarks),
       sortBy: saved.sortBy || 'none',
       groupByBenchmark: saved.groupByBenchmark || false,
     };
@@ -69,7 +86,7 @@ export default class App extends Component {
 
   render() {
     const { tests } = this.props;
-    const { currentBenchmarkName, status, currentLibraryName, results, autoQueue, showSuiteDialog } = this.state;
+    const { currentBenchmarkName, status, currentLibraryName, results, autoQueue, dialogMode } = this.state;
     const currentImplementation = tests[currentBenchmarkName][currentLibraryName];
     const { Component, Provider, getComponentProps, sampleCount } = currentImplementation;
     const isRunning = status === 'running';
@@ -119,43 +136,40 @@ export default class App extends Component {
             </div>
 
             <div style={actionStyles.buttons}>
-              {isAutoRunning ? (
+              {isRunning ? (
                 <Button
-                  onPress={this._handleStopAutoRun}
+                  onPress={this._handleStop}
                   style={actionStyles.button}
                   variant="stop"
-                  title={'Stop (' + autoQueue.length + ' remaining)'}
-                  testID="stop-auto-button"
+                  title={
+                    isAutoRunning ? 'Stop (' + autoQueue.length + ' remaining)' : 'Stop'
+                  }
+                  testID="stop-button"
                 />
               ) : (
                 <React.Fragment>
                   <Button
                     onPress={this._handleStart}
                     style={actionStyles.button}
-                    title={isRunning ? 'Running...' : 'Run'}
-                    disabled={isRunning}
+                    title="Run"
                     testID="run-button"
                   />
                   <Button
-                    onPress={this._handleAutoRunBenchmark}
+                    onPress={this._handleShowAutoBenchmarkDialog}
                     style={actionStyles.button}
                     title="Auto Benchmark"
-                    disabled={isRunning}
                     testID="auto-benchmark-button"
                   />
                   <Button
-                    onPress={this._handleShowSuiteDialog}
+                    onPress={this._handleShowAutoSuiteDialog}
                     style={actionStyles.button}
                     variant="muted"
                     title="Auto Suite"
-                    disabled={isRunning}
                     testID="auto-suite-button"
                   />
                 </React.Fragment>
               )}
             </div>
-
-            {isRunning ? <Overlay /> : null}
           </div>
         }
         listPanel={
@@ -247,66 +261,130 @@ export default class App extends Component {
           </View>
         }
       />
-      {showSuiteDialog ? this._renderSuiteDialog() : null}
+      {dialogMode ? this._renderAutoDialog() : null}
     </React.Fragment>
     );
   }
 
-  _renderSuiteDialog() {
+  _renderAutoDialog() {
     const { tests } = this.props;
-    const { suiteSelectedLibraries } = this.state;
+    const { dialogMode, autoSelectedLibraries, autoSelectedBenchmarks, currentBenchmarkName } =
+      this.state;
     const allBenchmarks = Object.keys(tests);
     const allLibraries = Object.keys(tests[allBenchmarks[0]]);
-    const selectedCount = Object.values(suiteSelectedLibraries).filter(Boolean).length;
+    const selectedLibCount = allLibraries.filter(l => autoSelectedLibraries[l]).length;
+    const selectedBenchCount = allBenchmarks.filter(b => autoSelectedBenchmarks[b]).length;
+    const isSuite = dialogMode === 'suite';
+    const totalRuns = isSuite ? selectedBenchCount * selectedLibCount : selectedLibCount;
+    const canRun = isSuite ? selectedBenchCount > 0 && selectedLibCount > 0 : selectedLibCount > 0;
+
+    const renderCheckRow = (key, label, checked, onToggle) => (
+      <div
+        key={key}
+        data-bench-check=""
+        style={dialogStyles.checkRow}
+        onClick={() => onToggle(key)}
+      >
+        <div
+          style={{
+            ...dialogStyles.checkbox,
+            ...(checked ? dialogStyles.checkboxChecked : {}),
+          }}
+        >
+          {checked ? (
+            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+              <path
+                d="M1 4l2.5 2.5L9 1"
+                stroke="#fff"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          ) : null}
+        </div>
+        <div style={dialogStyles.checkLabel}>{label}</div>
+      </div>
+    );
+
+    const renderColumn = (title, items, selected, onToggle, onAll, onNone, withDivider) => (
+      <div
+        style={{
+          ...dialogStyles.column,
+          ...(withDivider ? dialogStyles.columnDivider : null),
+        }}
+      >
+        <div style={dialogStyles.columnHeader}>
+          <div style={dialogStyles.columnTitle}>{title}</div>
+          <div style={dialogStyles.columnActions}>
+            <span style={dialogStyles.columnAction} onClick={onAll}>
+              All
+            </span>
+            <span style={dialogStyles.columnActionSep}>·</span>
+            <span style={dialogStyles.columnAction} onClick={onNone}>
+              None
+            </span>
+          </div>
+        </div>
+        <div style={dialogStyles.columnList}>
+          {items.map(item => renderCheckRow(item, item, !!selected[item], onToggle))}
+        </div>
+      </div>
+    );
 
     return (
-      <div style={dialogStyles.backdrop} onClick={this._handleCancelSuiteDialog}>
-        <div style={dialogStyles.box} onClick={e => e.stopPropagation()}>
+      <div style={dialogStyles.backdrop} onClick={this._handleCancelAutoDialog}>
+        <div
+          style={{
+            ...dialogStyles.box,
+            ...(isSuite ? dialogStyles.boxWide : null),
+          }}
+          onClick={e => e.stopPropagation()}
+        >
           <div style={dialogStyles.header}>
-            <div style={dialogStyles.title}>Auto Suite</div>
+            <div style={dialogStyles.title}>{isSuite ? 'Auto Suite' : 'Auto Benchmark'}</div>
             <div style={dialogStyles.subtitle}>
-              Runs all {allBenchmarks.length} benchmarks for each selected library.
+              {isSuite
+                ? 'Runs each selected benchmark on each selected library.'
+                : 'Runs the "' + currentBenchmarkName + '" benchmark on each selected library.'}
             </div>
           </div>
 
-          <div style={dialogStyles.list}>
-            {allLibraries.map(lib => {
-              const checked = suiteSelectedLibraries[lib] !== false;
-              return (
-                <div
-                  key={lib}
-                  data-bench-check=""
-                  style={dialogStyles.checkRow}
-                  onClick={() => this._handleToggleSuiteLibrary(lib)}
-                >
-                  <div style={{
-                    ...dialogStyles.checkbox,
-                    ...(checked ? dialogStyles.checkboxChecked : {}),
-                  }}>
-                    {checked ? (
-                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                        <path d="M1 4l2.5 2.5L9 1" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    ) : null}
-                  </div>
-                  <div style={dialogStyles.checkLabel}>{lib}</div>
-                </div>
-              );
-            })}
+          <div style={dialogStyles.columns}>
+            {isSuite
+              ? renderColumn(
+                  'Benchmarks',
+                  allBenchmarks,
+                  autoSelectedBenchmarks,
+                  this._handleToggleAutoBenchmark,
+                  () => this._setAllAuto('benchmarks', true),
+                  () => this._setAllAuto('benchmarks', false),
+                  true
+                )
+              : null}
+            {renderColumn(
+              'Libraries',
+              allLibraries,
+              autoSelectedLibraries,
+              this._handleToggleAutoLibrary,
+              () => this._setAllAuto('libraries', true),
+              () => this._setAllAuto('libraries', false),
+              false
+            )}
           </div>
 
           <div style={dialogStyles.footer}>
             <Button
-              onPress={this._handleCancelSuiteDialog}
+              onPress={this._handleCancelAutoDialog}
               style={dialogStyles.footerBtn}
               variant="muted"
               title="Cancel"
             />
             <Button
-              onPress={this._handleStartSuite}
+              onPress={this._handleStartAuto}
               style={dialogStyles.footerBtn}
-              title={'Run ' + selectedCount + ' libraries'}
-              disabled={selectedCount === 0}
+              title={'Run ' + totalRuns + (totalRuns === 1 ? ' run' : ' runs')}
+              disabled={!canRun}
             />
           </div>
         </div>
@@ -341,57 +419,88 @@ export default class App extends Component {
     );
   };
 
-  _handleAutoRunBenchmark = () => {
-    const { tests } = this.props;
-    const { currentBenchmarkName } = this.state;
-    const allLibraries = Object.keys(tests[currentBenchmarkName]);
-    const [first, ...rest] = allLibraries;
-    const queue = rest.map(lib => ({ benchmarkName: currentBenchmarkName, libraryName: lib }));
-    this._startAutoRun(currentBenchmarkName, first, queue);
+  _handleShowAutoBenchmarkDialog = () => {
+    this.setState({ dialogMode: 'benchmark' });
   };
 
-  _handleShowSuiteDialog = () => {
-    const { tests } = this.props;
-    const allLibraries = Object.keys(tests[Object.keys(tests)[0]]);
-    const selected = {};
-    for (const lib of allLibraries) {
-      selected[lib] = true;
-    }
-    this.setState({ showSuiteDialog: true, suiteSelectedLibraries: selected });
+  _handleShowAutoSuiteDialog = () => {
+    this.setState({ dialogMode: 'suite' });
   };
 
-  _handleCancelSuiteDialog = () => {
-    this.setState({ showSuiteDialog: false });
+  _handleCancelAutoDialog = () => {
+    this.setState({ dialogMode: null });
   };
 
-  _handleToggleSuiteLibrary = lib => {
-    this.setState(state => ({
-      suiteSelectedLibraries: {
-        ...state.suiteSelectedLibraries,
-        [lib]: !state.suiteSelectedLibraries[lib],
-      },
-    }));
-  };
-
-  _handleStartSuite = () => {
-    const { tests } = this.props;
-    const { suiteSelectedLibraries } = this.state;
-    const allBenchmarks = Object.keys(tests);
-    const selectedLibraries = Object.keys(suiteSelectedLibraries).filter(
-      lib => suiteSelectedLibraries[lib]
+  _handleToggleAutoLibrary = lib => {
+    this.setState(
+      state => ({
+        autoSelectedLibraries: {
+          ...state.autoSelectedLibraries,
+          [lib]: !state.autoSelectedLibraries[lib],
+        },
+      }),
+      () => saveSettings(this.state)
     );
+  };
 
+  _handleToggleAutoBenchmark = bench => {
+    this.setState(
+      state => ({
+        autoSelectedBenchmarks: {
+          ...state.autoSelectedBenchmarks,
+          [bench]: !state.autoSelectedBenchmarks[bench],
+        },
+      }),
+      () => saveSettings(this.state)
+    );
+  };
+
+  _setAllAuto = (kind, value) => {
+    const { tests } = this.props;
+    if (kind === 'libraries') {
+      const allLibraries = Object.keys(tests[Object.keys(tests)[0]]);
+      const next = {};
+      for (const lib of allLibraries) next[lib] = value;
+      this.setState({ autoSelectedLibraries: next }, () => saveSettings(this.state));
+    } else if (kind === 'benchmarks') {
+      const allBenchmarks = Object.keys(tests);
+      const next = {};
+      for (const b of allBenchmarks) next[b] = value;
+      this.setState({ autoSelectedBenchmarks: next }, () => saveSettings(this.state));
+    }
+  };
+
+  _handleStartAuto = () => {
+    const { tests } = this.props;
+    const {
+      dialogMode,
+      autoSelectedLibraries,
+      autoSelectedBenchmarks,
+      currentBenchmarkName,
+    } = this.state;
+
+    const allBenchmarks = Object.keys(tests);
+    const allLibraries = Object.keys(tests[allBenchmarks[0]]);
+    const selectedLibraries = allLibraries.filter(lib => autoSelectedLibraries[lib]);
     if (selectedLibraries.length === 0) return;
 
+    let benchmarks;
+    if (dialogMode === 'suite') {
+      benchmarks = allBenchmarks.filter(b => autoSelectedBenchmarks[b]);
+      if (benchmarks.length === 0) return;
+    } else {
+      benchmarks = [currentBenchmarkName];
+    }
+
     const queue = [];
-    for (const benchmarkName of allBenchmarks) {
+    for (const benchmarkName of benchmarks) {
       for (const libraryName of selectedLibraries) {
         queue.push({ benchmarkName, libraryName });
       }
     }
 
     const [first, ...rest] = queue;
-    this.setState({ showSuiteDialog: false });
+    this.setState({ dialogMode: null });
     this._startAutoRun(first.benchmarkName, first.libraryName, rest);
   };
 
@@ -413,8 +522,12 @@ export default class App extends Component {
     );
   }
 
-  _handleStopAutoRun = () => {
-    this.setState({ autoQueue: [] });
+  _handleStop = () => {
+    if (this._benchmarkRef && typeof this._benchmarkRef.stop === 'function') {
+      this._benchmarkRef.stop();
+    }
+    clearTimeout(this._waitTimer);
+    this.setState({ status: 'idle', autoQueue: null });
   };
 
   _waitForRefAndStart(attempts = 0) {
@@ -808,6 +921,66 @@ const dialogStyles = {
     maxHeight: '80%',
     boxShadow: 'var(--bench-dialog-shadow)',
     overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  boxWide: {
+    width: 560,
+  },
+  columns: {
+    display: 'flex',
+    flexDirection: 'row',
+    flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
+  },
+  column: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
+    minHeight: 0,
+  },
+  columnDivider: {
+    borderRight: '1px solid var(--bench-border)',
+  },
+  columnHeader: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '10px 16px 6px',
+    borderBottom: '1px solid var(--bench-border)',
+  },
+  columnTitle: {
+    fontSize: 11,
+    fontWeight: 600,
+    fontFamily: font,
+    color: 'var(--bench-text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  columnActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+  },
+  columnAction: {
+    fontSize: 11,
+    fontFamily: font,
+    color: 'var(--bench-accent)',
+    cursor: 'pointer',
+    userSelect: 'none',
+  },
+  columnActionSep: {
+    fontSize: 11,
+    color: 'var(--bench-text-muted)',
+    userSelect: 'none',
+  },
+  columnList: {
+    padding: '8px 0',
+    overflow: 'auto',
+    flex: 1,
   },
   header: {
     padding: '20px 20px 12px',

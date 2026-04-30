@@ -381,7 +381,7 @@ describe('basic', () => {
       const Outer = styled(Inner)``;
 
       expect(Outer.styledComponentId).not.toBe(Inner.styledComponentId);
-      expect(Outer.componentStyle).not.toEqual(Inner.componentStyle);
+      expect(Outer.webStyle).not.toEqual(Inner.webStyle);
     });
 
     it('should not fold components if there is an interim HOC', () => {
@@ -406,56 +406,43 @@ describe('basic', () => {
       const rendered = render(<Outer />);
 
       expect(getRenderedCSS()).toMatchInlineSnapshot(`
-        ".d {
+        ".c {
           color: red;
         }
-        .c {
+        .d {
           color: green;
         }"
       `);
       expect(rendered.asFragment()).toMatchInlineSnapshot(`
         <DocumentFragment>
           <div
-            class="sc-a d sc-b c"
+            class="sc-a sc-b c d"
           />
         </DocumentFragment>
       `);
     });
 
-    it('folds defaultProps', () => {
-      const Inner = styled.div``;
-
-      Inner.defaultProps = {
-        theme: {
-          fontSize: 12,
-        },
+    it('merges attrs across an extended chain', () => {
+      const Inner = styled.div.attrs({
         style: {
           background: 'blue',
           textAlign: 'center',
         },
-      };
+      })``;
 
-      const Outer = styled(Inner)``;
-
-      Outer.defaultProps = {
-        theme: {
-          fontSize: 16,
-        },
+      const Outer = styled(Inner).attrs({
         style: {
           background: 'silver',
         },
-      };
+      })``;
 
-      expect(Outer.defaultProps).toMatchInlineSnapshot(`
-        {
-          "style": {
-            "background": "silver",
-            "textAlign": "center",
-          },
-          "theme": {
-            "fontSize": 16,
-          },
-        }
+      const { asFragment } = render(<Outer />);
+
+      expect(asFragment().firstChild).toMatchInlineSnapshot(`
+        <div
+          class="sc-a sc-b"
+          style="background: silver; text-align: center;"
+        />
       `);
     });
 
@@ -502,6 +489,31 @@ describe('basic', () => {
       );
 
       expect(console.error).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('extending a ruleless component (#5727)', () => {
+    it('applies the new rules when wrapping an empty styled component', () => {
+      const Inner = styled(({ className }: { className?: string }) => (
+        <span data-testid="inner" className={className}>
+          inner
+        </span>
+      ))``;
+      const Outer = styled(Inner)`
+        color: red;
+        width: 100px;
+      `;
+
+      const { getByTestId } = render(<Outer />);
+      const className = getByTestId('inner').className;
+      const css = getRenderedCSS();
+
+      expect(css).toMatch(/color:\s*red/);
+      expect(css).toMatch(/width:\s*100px/);
+
+      const cssClassMatch = css.match(/\.([a-zA-Z][\w-]*)\s*\{[^}]*color:\s*red/);
+      expect(cssClassMatch).not.toBeNull();
+      expect(className.split(/\s+/)).toContain(cssClassMatch![1]);
     });
   });
 

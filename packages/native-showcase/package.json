@@ -1,0 +1,46 @@
+{
+  "name": "native-showcase",
+  "version": "0.0.1",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start --port 8081",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
+    "web": "expo start --web",
+    "prebuild": "expo prebuild",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@expo-google-fonts/figtree": "*",
+    "@expo-google-fonts/jetbrains-mono": "*",
+    "@expo/metro-runtime": "canary",
+    "@react-native-async-storage/async-storage": "~2.2.0",
+    "expo": "canary",
+    "expo-constants": "canary",
+    "expo-font": "canary",
+    "expo-linking": "canary",
+    "expo-router": "canary",
+    "expo-splash-screen": "canary",
+    "expo-status-bar": "canary",
+    "expo-system-ui": "canary",
+    "p3-color": "workspace:*",
+    "react": "19",
+    "react-dom": "19",
+    "react-native": "0.85.2",
+    "react-native-gesture-handler": "*",
+    "react-native-safe-area-context": "*",
+    "react-native-screens": "*",
+    "react-native-web": "~0.21.2",
+    "styled-components": "workspace:*"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/react": "^19",
+    "pretty-format": "29.7.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">= 22.11.0"
+  }
+}

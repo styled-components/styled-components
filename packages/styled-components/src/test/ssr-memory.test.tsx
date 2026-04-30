@@ -164,9 +164,9 @@ describe('SSR memory growth', () => {
       expect(cssOutputs[i]).toBe(cssOutputs[0]);
     }
 
-    // The CSS should contain exactly 3 copies of the rule (one per instance)
+    // Static globals dedup across mounts — 3 instances emit 1 copy of the rule
     const ruleCount = (stripWhitespace(stripComments(cssOutputs[0])).match(/margin:0/g) || [])
       .length;
-    expect(ruleCount).toBe(3);
+    expect(ruleCount).toBe(1);
   });
 });

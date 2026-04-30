@@ -7,9 +7,9 @@ sequenceDiagram
     participant User
     participant styled
     participant createStyledComponent
-    participant ComponentStyle
+    participant WebStyle
     participant React
-    participant StyledComponentImpl
+    participant useImpl
     participant StyleSheetManager
     participant StyleSheet
     participant GroupedTag
@@ -19,32 +19,32 @@ sequenceDiagram
     Note over User,styled: 1. COMPONENT CREATION
     User->>styled: styled.div with CSS rules
     styled->>createStyledComponent: createStyledComponent(target, options, rules)
-    createStyledComponent->>ComponentStyle: new ComponentStyle(rules, componentId)
-    ComponentStyle->>StyleSheet: StyleSheet.registerId(componentId)
-    StyleSheet-->>ComponentStyle: group allocated
+    createStyledComponent->>WebStyle: new WebStyle(rules, componentId)
+    WebStyle->>StyleSheet: StyleSheet.registerId(componentId)
+    StyleSheet-->>WebStyle: group allocated
     createStyledComponent->>React: React.forwardRef(forwardRefRender)
     createStyledComponent-->>User: StyledComponent
 
     Note over User,React: 2. COMPONENT RENDER
     User->>React: render StyledComponent
-    React->>StyledComponentImpl: useStyledComponentImpl(component, props, ref)
-    StyledComponentImpl->>StyleSheetManager: useStyleSheetContext()
-    StyleSheetManager-->>StyledComponentImpl: styleSheet, stylis, shouldForwardProp
+    React->>useImpl: useImpl(component, props, ref)
+    useImpl->>StyleSheetManager: useStyleSheetContext()
+    StyleSheetManager-->>useImpl: styleSheet, compiler, shouldForwardProp
 
-    Note over StyledComponentImpl,ComponentStyle: 3. STYLE PROCESSING
-    StyledComponentImpl->>StyledComponentImpl: resolveContext(attrs, props, theme)
-    StyledComponentImpl->>ComponentStyle: generateAndInjectStyles(context, styleSheet, stylis)
+    Note over useImpl,WebStyle: 3. STYLE PROCESSING
+    useImpl->>useImpl: resolveContext(attrs, props, theme)
+    useImpl->>WebStyle: flush(context, styleSheet, compiler)
 
-    ComponentStyle->>ComponentStyle: flatten(rules, context)
-    Note over ComponentStyle: Process interpolations,<br/>execute functions,<br/>handle nested components
+    WebStyle->>WebStyle: flatten(rules, context)
+    Note over WebStyle: Process interpolations,<br/>execute functions,<br/>handle nested components
 
-    ComponentStyle->>ComponentStyle: hash(CSS string)
-    ComponentStyle->>ComponentStyle: generateName(hash)
-    ComponentStyle->>ComponentStyle: stylis(css, className)
-    Note over ComponentStyle: Parse & prefix CSS,<br/>apply plugins,<br/>scope to className
+    WebStyle->>WebStyle: hash(CSS string)
+    WebStyle->>WebStyle: generateName(hash)
+    WebStyle->>WebStyle: compiler(css, className)
+    Note over WebStyle: Parse CSS,<br/>apply plugins,<br/>scope to className
 
-    Note over ComponentStyle,DOM: 4. STYLE INJECTION
-    ComponentStyle->>StyleSheet: insertRules(componentId, className, formattedCSS)
+    Note over WebStyle,DOM: 4. STYLE INJECTION
+    WebStyle->>StyleSheet: insertRules(componentId, className, formattedCSS)
     StyleSheet->>StyleSheet: registerName(componentId, className)
     StyleSheet->>GroupedTag: getTag().insertRules(groupId, rules)
     GroupedTag->>GroupedTag: indexOfGroup(groupId)
@@ -62,20 +62,20 @@ sequenceDiagram
 
     Tag-->>GroupedTag: success
     GroupedTag-->>StyleSheet: complete
-    StyleSheet-->>ComponentStyle: complete
+    StyleSheet-->>WebStyle: complete
 
-    ComponentStyle-->>StyledComponentImpl: className
+    WebStyle-->>useImpl: className
 
-    Note over StyledComponentImpl,DOM: 5. ELEMENT CREATION
-    StyledComponentImpl->>StyledComponentImpl: buildClassName(foldedIds + styledId + generated + props)
-    StyledComponentImpl->>StyledComponentImpl: rawElement(type, props, ref)
-    Note over StyledComponentImpl: Bypasses React.createElement<br/>overhead (~60-120x faster)
+    Note over useImpl,DOM: 5. ELEMENT CREATION
+    useImpl->>useImpl: buildClassName(foldedIds + styledId + generated + props)
+    useImpl->>useImpl: rawElement(type, props, ref)
+    Note over useImpl: Bypasses React.createElement<br/>overhead (~60-120x faster)
 
     alt RSC Mode
-        StyledComponentImpl->>GroupedTag: getGroup() for inheritance chain + keyframes
-        StyledComponentImpl->>StyledComponentImpl: wrap base CSS in :where() for zero specificity
-        StyledComponentImpl->>StyledComponentImpl: emit Fragment with inline style tag + element
-        Note over StyledComponentImpl: No precedence attr —<br/>avoids React 19 Float hoisting
+        useImpl->>GroupedTag: getGroup() for inheritance chain + keyframes
+        useImpl->>useImpl: wrap base CSS in :where() for zero specificity
+        useImpl->>useImpl: emit Fragment with inline style tag + element
+        Note over useImpl: No precedence attr —<br/>avoids React 19 Float hoisting
     end
 
     React-->>User: DOM element with injected styles

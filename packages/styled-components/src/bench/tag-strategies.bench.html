@@ -1,0 +1,361 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Tag-strategy bench (Blink/Gecko/WebKit)</title>
+    <style>
+      body {
+        font-family: system-ui;
+        margin: 24px;
+        max-width: 980px;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 12px;
+        font-size: 13px;
+        line-height: 1.5;
+        white-space: pre;
+        overflow-x: auto;
+      }
+      .winner {
+        background: #d4edda;
+      }
+      .loser {
+        background: #f8d7da;
+      }
+      .meta {
+        color: #555;
+        font-size: 12px;
+      }
+      h2 {
+        margin-top: 28px;
+      }
+      button {
+        font-size: 14px;
+        padding: 8px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tag-injection strategy bench</h1>
+    <p class="meta">
+      Real-browser bench for the CSSOM-vs-textNode tag strategies in <code>src/sheet/Tag.ts</code>.
+      jsdom can't measure CSSOM <code>insertRule</code> cost, so this lives outside the jest bench
+      suite — open in Blink/Gecko/WebKit to compare. Runs each comparison 9 times, reports median ms
+      and %.
+    </p>
+    <button id="run">Run benchmarks</button>
+    <p class="meta">UA: <code id="ua"></code></p>
+    <pre id="out">Press "Run benchmarks".</pre>
+
+    <script>
+      document.getElementById('ua').textContent = navigator.userAgent;
+      const out = document.getElementById('out');
+      function log(s) {
+        out.textContent += s + '\n';
+        out.scrollTop = out.scrollHeight;
+      }
+
+      // ---------- Tag implementations (mirrors src/sheet/Tag.ts) ----------
+
+      function makeStyleEl() {
+        const el = document.createElement('style');
+        document.head.appendChild(el);
+        return el;
+      }
+
+      class CSSOMTag {
+        constructor() {
+          this.element = makeStyleEl();
+          this.element.appendChild(document.createTextNode(''));
+          this.sheet = this.element.sheet;
+          this.length = 0;
+        }
+        insertRule(idx, rule) {
+          try {
+            this.sheet.insertRule(rule, idx);
+            this.length++;
+            return true;
+          } catch {
+            return false;
+          }
+        }
+        deleteRule(idx) {
+          this.sheet.deleteRule(idx);
+          this.length--;
+        }
+        destroy() {
+          this.element.remove();
+        }
+      }
+
+      class TextTag {
+        constructor() {
+          this.element = makeStyleEl();
+          this.nodes = this.element.childNodes;
+          this.length = 0;
+        }
+        insertRule(idx, rule) {
+          if (idx <= this.length && idx >= 0) {
+            const node = document.createTextNode(rule);
+            const ref = this.nodes[idx];
+            this.element.insertBefore(node, ref || null);
+            this.length++;
+            return true;
+          }
+          return false;
+        }
+        deleteRule(idx) {
+          this.element.removeChild(this.nodes[idx]);
+          this.length--;
+        }
+        destroy() {
+          this.element.remove();
+        }
+      }
+
+      // Constructable Stylesheet — modern alternative to both. One CSSStyleSheet per
+      // component, attached via document.adoptedStyleSheets.
+      class ConstructableTag {
+        constructor() {
+          this.sheet = new CSSStyleSheet();
+          document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.sheet];
+          this.length = 0;
+        }
+        insertRule(idx, rule) {
+          try {
+            this.sheet.insertRule(rule, idx);
+            this.length++;
+            return true;
+          } catch {
+            return false;
+          }
+        }
+        deleteRule(idx) {
+          this.sheet.deleteRule(idx);
+          this.length--;
+        }
+        destroy() {
+          document.adoptedStyleSheets = document.adoptedStyleSheets.filter(s => s !== this.sheet);
+        }
+      }
+
+      // ---------- Workload helpers ----------
+
+      const RULES_PER_COMPONENT = 4;
+      const NUM_COMPONENTS = 200;
+      const ALL_RULES = [];
+      for (let i = 0; i < NUM_COMPONENTS; i++) {
+        const cls = `.c${i.toString(36)}`;
+        ALL_RULES.push([
+          `${cls}{color:#${(i * 31).toString(16).slice(0, 6).padStart(6, '0')};padding:8px}`,
+          `${cls}:hover{opacity:0.8}`,
+          `@media (min-width:768px){${cls}{padding:16px}}`,
+          `${cls}>span{font-weight:600}`,
+        ]);
+      }
+
+      class SharedGroupedTag {
+        constructor(tag, max) {
+          this.tag = tag;
+          this.groupSizes = new Uint32Array(max);
+        }
+        indexOfGroup(group) {
+          let idx = 0;
+          for (let i = 0; i < group; i++) idx += this.groupSizes[i];
+          return idx;
+        }
+        insertRules(group, rules) {
+          let idx = this.indexOfGroup(group + 1);
+          for (let i = 0; i < rules.length; i++) {
+            if (this.tag.insertRule(idx, rules[i])) {
+              this.groupSizes[group]++;
+              idx++;
+            }
+          }
+        }
+        clearGroup(group) {
+          const start = this.indexOfGroup(group);
+          const len = this.groupSizes[group];
+          for (let i = 0; i < len; i++) this.tag.deleteRule(start);
+          this.groupSizes[group] = 0;
+        }
+        destroy() {
+          this.tag.destroy();
+        }
+      }
+
+      class PerComponentTagMap {
+        constructor(factory) {
+          this.tags = new Map();
+          this.factory = factory;
+        }
+        insertRules(id, rules) {
+          let tag = this.tags.get(id);
+          if (!tag) {
+            tag = this.factory();
+            this.tags.set(id, tag);
+          }
+          for (const r of rules) tag.insertRule(tag.length, r);
+        }
+        clearComponent(id) {
+          const t = this.tags.get(id);
+          if (t) t.destroy();
+          this.tags.delete(id);
+        }
+        destroyAll() {
+          for (const t of this.tags.values()) t.destroy();
+          this.tags.clear();
+        }
+      }
+
+      function timeIt(fn, runs = 9, warmup = 3) {
+        for (let i = 0; i < warmup; i++) fn();
+        const samples = [];
+        for (let i = 0; i < runs; i++) {
+          const t0 = performance.now();
+          fn();
+          samples.push(performance.now() - t0);
+        }
+        samples.sort((a, b) => a - b);
+        return samples[Math.floor(runs / 2)];
+      }
+
+      function compare(label, a, b, runs = 9) {
+        const aT = timeIt(a, runs);
+        const bT = timeIt(b, runs);
+        const ratio = aT / bT;
+        const winner = aT < bT ? 'A' : 'B';
+        const pct = (Math.abs(aT - bT) / Math.max(aT, bT)) * 100;
+        log(
+          `${label.padEnd(50)}  A=${aT.toFixed(2)}ms  B=${bT.toFixed(2)}ms  ${winner} faster by ${pct.toFixed(1)}%`
+        );
+        return { aT, bT, ratio };
+      }
+
+      // Cleanup helper — DOM accumulates between runs.
+      function purgeStyleEls() {
+        for (const el of document.querySelectorAll('style')) el.remove();
+        document.adoptedStyleSheets = [];
+      }
+
+      // ---------- Workloads ----------
+
+      function workloadColdMount(makeTag, perComponent) {
+        return () => {
+          purgeStyleEls();
+          if (perComponent) {
+            const map = new PerComponentTagMap(makeTag);
+            for (let i = 0; i < NUM_COMPONENTS; i++) map.insertRules(i, ALL_RULES[i]);
+            map.destroyAll();
+          } else {
+            const grouped = new SharedGroupedTag(makeTag(), NUM_COMPONENTS);
+            for (let i = 0; i < NUM_COMPONENTS; i++) grouped.insertRules(i, ALL_RULES[i]);
+            grouped.destroy();
+          }
+        };
+      }
+
+      function workloadHMRCycle(makeTag, perComponent) {
+        return () => {
+          purgeStyleEls();
+          if (perComponent) {
+            const map = new PerComponentTagMap(makeTag);
+            for (let i = 0; i < 50; i++) map.insertRules(i, ALL_RULES[i]);
+            for (let cycle = 0; cycle < 4; cycle++) {
+              for (let i = 0; i < 50; i++) {
+                map.clearComponent(i);
+                map.insertRules(i, ALL_RULES[i]);
+              }
+            }
+            map.destroyAll();
+          } else {
+            const grouped = new SharedGroupedTag(makeTag(), 50);
+            for (let i = 0; i < 50; i++) grouped.insertRules(i, ALL_RULES[i]);
+            for (let cycle = 0; cycle < 4; cycle++) {
+              for (let i = 0; i < 50; i++) {
+                grouped.clearGroup(i);
+                grouped.insertRules(i, ALL_RULES[i]);
+              }
+            }
+            grouped.destroy();
+          }
+        };
+      }
+
+      function workloadAppendOnly(makeTag, perComponent, N = 500) {
+        return () => {
+          purgeStyleEls();
+          if (perComponent) {
+            const map = new PerComponentTagMap(makeTag);
+            for (let i = 0; i < N; i++) map.insertRules(i, ALL_RULES[i % NUM_COMPONENTS]);
+            map.destroyAll();
+          } else {
+            const grouped = new SharedGroupedTag(makeTag(), N);
+            for (let i = 0; i < N; i++) grouped.insertRules(i, ALL_RULES[i % NUM_COMPONENTS]);
+            grouped.destroy();
+          }
+        };
+      }
+
+      const make = {
+        cssom: () => new CSSOMTag(),
+        text: () => new TextTag(),
+        constructable: () => new ConstructableTag(),
+      };
+
+      // ---------- Run ----------
+
+      document.getElementById('run').onclick = async () => {
+        out.textContent = '';
+        log('=== Cold mount: 200 components × 4 rules ===');
+        compare(
+          'shared CSSOM vs shared Text',
+          workloadColdMount(make.cssom, false),
+          workloadColdMount(make.text, false)
+        );
+        compare(
+          'shared CSSOM vs per-component CSSOM',
+          workloadColdMount(make.cssom, false),
+          workloadColdMount(make.cssom, true)
+        );
+        compare(
+          'shared Text vs per-component Text',
+          workloadColdMount(make.text, false),
+          workloadColdMount(make.text, true)
+        );
+        compare(
+          'per-component CSSOM vs per-component Constructable',
+          workloadColdMount(make.cssom, true),
+          workloadColdMount(make.constructable, true)
+        );
+
+        log('\n=== HMR cycle: 50 components × 4 clear+reinsert ===');
+        compare(
+          'shared CSSOM clearGroup vs per-comp tag-replace (CSSOM)',
+          workloadHMRCycle(make.cssom, false),
+          workloadHMRCycle(make.cssom, true)
+        );
+        compare(
+          'shared Text clearGroup vs per-comp tag-replace (Text)',
+          workloadHMRCycle(make.text, false),
+          workloadHMRCycle(make.text, true)
+        );
+
+        log('\n=== Append-only: 500 inserts ===');
+        compare(
+          'shared CSSOM (indexOfGroup walk) vs per-component CSSOM',
+          workloadAppendOnly(make.cssom, false),
+          workloadAppendOnly(make.cssom, true)
+        );
+        compare(
+          'shared Text (indexOfGroup walk) vs per-component Text',
+          workloadAppendOnly(make.text, false),
+          workloadAppendOnly(make.text, true)
+        );
+
+        log('\nDone.');
+      };
+    </script>
+  </body>
+</html>

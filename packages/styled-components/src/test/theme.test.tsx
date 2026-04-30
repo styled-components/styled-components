@@ -51,18 +51,17 @@ describe('theming', () => {
     `);
   });
 
-  it('should properly allow a component to fallback to its default props when a theme is not provided', () => {
-    const Comp1 = styled.div`
-      color: ${props => props.theme.test!.color};
-    `;
-
-    Comp1.defaultProps = {
+  it('should properly allow a component to fall back to a theme set via attrs when a ThemeProvider is not used', () => {
+    const Comp1 = styled.div.attrs({
       theme: {
         test: {
           color: 'purple',
         },
       },
-    };
+    })`
+      color: ${props => props.theme.test!.color};
+    `;
+
     render(
       <div>
         <Comp1 />
@@ -76,18 +75,13 @@ describe('theming', () => {
   });
 
   // https://github.com/styled-components/styled-components/issues/344
-  it('should use ThemeProvider theme instead of defaultProps theme', () => {
-    const Comp1 = styled.div`
+  it('should use ThemeProvider theme instead of a fallback theme set via function attrs', () => {
+    const Comp1 = styled.div.attrs(p => ({
+      theme: p.theme || { test: { color: 'purple' } },
+    }))`
       color: ${props => props.theme.test?.color};
     `;
 
-    Comp1.defaultProps = {
-      theme: {
-        test: {
-          color: 'purple',
-        },
-      },
-    };
     const theme = { test: { color: 'green' } };
 
     render(
@@ -98,32 +92,6 @@ describe('theming', () => {
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
       ".b {
         color: green;
-      }"
-    `);
-  });
-
-  it('should properly allow a component to override the theme with a prop even if it is equal to defaultProps theme', () => {
-    const Comp1 = styled.div`
-      color: ${props => props.theme.test!.color};
-    `;
-
-    Comp1.defaultProps = {
-      theme: {
-        test: {
-          color: 'purple',
-        },
-      },
-    };
-    const theme = { test: { color: 'green' } };
-
-    render(
-      <ThemeProvider theme={theme}>
-        <Comp1 theme={{ test: { color: 'purple' } }} />
-      </ThemeProvider>
-    );
-    expect(getRenderedCSS()).toMatchInlineSnapshot(`
-      ".b {
-        color: purple;
       }"
     `);
   });
@@ -242,16 +210,14 @@ describe('theming', () => {
     `);
   });
 
-  it('should properly render with the same theme from default props on re-render', () => {
-    const Comp1 = styled.div`
-      color: ${props => props.theme.color};
-    `;
-
-    Comp1.defaultProps = {
+  it('should properly render with the same theme from attrs on re-render', () => {
+    const Comp1 = styled.div.attrs({
       theme: {
         color: 'purple',
       },
-    };
+    })`
+      color: ${props => props.theme.color};
+    `;
 
     const jsx = <Comp1 />;
 
@@ -310,14 +276,12 @@ describe('theming', () => {
   });
 
   it('should properly update style if props used in styles is changed', () => {
-    const Comp1 = styled.div<{ zIndex?: number }>`
+    const Comp1 = styled.div.attrs<{ zIndex?: number }>(p => ({
+      zIndex: p.zIndex ?? 0,
+    }))`
       color: ${props => props.theme.color};
       z-index: ${props => props.zIndex};
     `;
-
-    Comp1.defaultProps = {
-      zIndex: 0,
-    };
 
     const wrapper = render(
       <ThemeProvider
@@ -357,14 +321,13 @@ describe('theming', () => {
       }"
     `);
 
-    Comp1.defaultProps.zIndex = 1;
     wrapper.rerender(
       <ThemeProvider
         theme={{
           color: 'pink',
         }}
       >
-        <Comp1 />
+        <Comp1 zIndex={1} />
       </ThemeProvider>
     );
     expect(getRenderedCSS()).toMatchInlineSnapshot(`
@@ -459,16 +422,12 @@ describe('theming', () => {
   });
 
   // https://github.com/styled-components/styled-components/issues/445
-  it('should use ThemeProvider theme instead of defaultProps theme after initial render', () => {
-    const Text = styled.div`
+  it('should use ThemeProvider theme instead of a fallback theme set via function attrs after initial render', () => {
+    const Text = styled.div.attrs(p => ({
+      theme: p.theme || { color: 'purple' },
+    }))`
       color: ${props => props.theme.color};
     `;
-
-    Text.defaultProps = {
-      theme: {
-        color: 'purple',
-      },
-    };
 
     const Theme = (props: React.ComponentProps<typeof Text>) => (
       <ThemeProvider theme={{ color: 'green' }}>
@@ -543,7 +502,7 @@ describe('theming', () => {
   });
 
   // https://github.com/styled-components/styled-components/issues/1130
-  it('should not break without a ThemeProvider if it has a defaultTheme', () => {
+  it('should not break without a ThemeProvider when a theme prop is passed directly', () => {
     const MyDiv: React.FunctionComponent<{ theme: DefaultTheme }> = ({ theme }) => (
       <div>{theme.color}</div>
     );
@@ -551,25 +510,12 @@ describe('theming', () => {
     const theme = { color: 'red' };
     const newTheme = { color: 'blue' };
 
-    const consoleWarn = console.warn;
-
-    jest
-      .spyOn(console, 'warn')
-      .mockImplementation(msg =>
-        !msg.includes('You are not using a ThemeProvider') ? consoleWarn(msg) : null
-      );
-
-    MyDivWithTheme.defaultProps = { theme };
-
-    const wrapper = render(<MyDivWithTheme />);
+    const wrapper = render(<MyDivWithTheme theme={theme} />);
 
     expect(wrapper.getByText('red')).toBeDefined();
 
     // Change theme
-    MyDivWithTheme.defaultProps = { theme: newTheme };
-
-    // Change theme
-    wrapper.rerender(<MyDivWithTheme />);
+    wrapper.rerender(<MyDivWithTheme theme={newTheme} />);
 
     expect(wrapper.getByText('blue')).toBeDefined();
   });

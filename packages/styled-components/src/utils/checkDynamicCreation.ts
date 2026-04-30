@@ -1,5 +1,5 @@
 import React from 'react';
-import { IS_RSC } from '../constants';
+import { IS_RSC } from './isRsc';
 
 const invalidHookCallRe = /invalid hook call/i;
 const seen = new Set();

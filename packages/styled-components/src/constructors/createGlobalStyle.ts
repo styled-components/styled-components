@@ -1,10 +1,11 @@
 import React from 'react';
-import { IS_RSC, STATIC_EXECUTION_CONTEXT } from '../constants';
-import GlobalStyle from '../models/GlobalStyle';
+import { STATIC_EXECUTION_CONTEXT } from '../constants';
+import { IS_RSC } from '../utils/isRsc';
+import WebGlobalStyle from '../models/WebGlobalStyle';
 import { useStyleSheetContext } from '../models/StyleSheetManager';
 import { DefaultTheme, ThemeContext } from '../models/ThemeProvider';
 import StyleSheet from '../sheet';
-import { ExecutionContext, ExecutionProps, Interpolation, Stringifier, Styles } from '../types';
+import { Compiler, ExecutionContext, ExecutionProps, Interpolation, Styles } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
 import determineTheme from '../utils/determineTheme';
 import generateComponentId from '../utils/generateComponentId';
@@ -33,7 +34,7 @@ export default function createGlobalStyle<Props extends object>(
 ) {
   const rules = css<Props>(strings, ...interpolations);
   const styledComponentId = `sc-global-${generateComponentId(JSON.stringify(rules))}`;
-  const globalStyle = new GlobalStyle<Props>(rules, styledComponentId);
+  const globalStyle = new WebGlobalStyle<Props>(rules, styledComponentId);
 
   if (process.env.NODE_ENV !== 'production') {
     checkDynamicCreation(styledComponentId);
@@ -42,27 +43,11 @@ export default function createGlobalStyle<Props extends object>(
   const GlobalStyleComponent: React.ComponentType<ExecutionProps & Props> = props => {
     const ssc = useStyleSheetContext();
     const theme = !IS_RSC ? React.useContext(ThemeContext) : undefined;
-
-    // Each mount needs a unique instance ID for the shared-group instanceRules cache.
-    // __SERVER__ is a build-time constant: the dead branch is entirely eliminated,
-    // so React never sees a conditional hook call.
-    // Server bundle: direct allocation (one-shot renders, no stability needed).
-    // Browser bundle: useRef for stable ID across re-renders + useLayoutEffect cleanup.
-    let instance: number;
-    if (__SERVER__) {
-      instance = ssc.styleSheet.allocateGSInstance(styledComponentId);
-    } else {
-      const instanceRef = React.useRef<number | null>(null);
-      if (instanceRef.current === null) {
-        instanceRef.current = ssc.styleSheet.allocateGSInstance(styledComponentId);
-      }
-      instance = instanceRef.current;
-    }
+    const instance = React.useId();
 
     if (
       process.env.NODE_ENV !== 'production' &&
-      // @ts-expect-error invariant check
-      React.Children.count(props.children)
+      React.Children.count((props as { children?: React.ReactNode }).children)
     ) {
       console.warn(
         `The global style component ${styledComponentId} was given child JSX. createGlobalStyle does not render children.`
@@ -78,39 +63,23 @@ export default function createGlobalStyle<Props extends object>(
       );
     }
 
-    // Render styles during component execution for RSC or explicit ServerStyleSheet.
-    // Gate on IS_RSC or styleSheet.server (runtime flag from ServerStyleSheet),
-    // NOT on __SERVER__ alone. The server build sets __SERVER__=true and eliminates
-    // useLayoutEffect, so if we rendered here without cleanup, styles would
-    // accumulate unboundedly in jsdom test environments (O(n²) regression).
-    // On a real server without ServerStyleSheet, VirtualTag is used and styles are
-    // discarded anyway, so skipping this path has no functional impact.
-    // Turbopack resolves the browser entry for SSR, so __SERVER__ is false there;
-    // styleSheet.server handles that case at runtime.
+    // Gate on IS_RSC or `styleSheet.server` rather than `__SERVER__`: the
+    // server build elides useLayoutEffect, so rendering here without cleanup
+    // produced an O(n²) jsdom regression. Turbopack also picks the browser
+    // entry for SSR, where the runtime flag is the only signal.
     if (IS_RSC || ssc.styleSheet.server) {
-      renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
+      renderStyles(instance, props, ssc.styleSheet, theme, ssc.compiler);
     }
 
-    // Client-side lifecycle: render styles in effect and clean up on unmount.
-    // __SERVER__ and IS_RSC are build/module-level constants, so this doesn't violate rules of hooks.
     if (!__SERVER__ && !IS_RSC) {
-      // Split into two effects so cleanup (removeStyles → full rebuildGroup) only
-      // fires on actual unmount or sheet/globalStyle swap -- NOT on every prop change.
-      //
-      // For dynamic globals, `props` is a new reference every render, so the render
-      // effect re-runs each render. If cleanup ran on every re-run, each render would
-      // do two full rebuildGroups (delete + reinsert all instances), which dominates
-      // CPU on apps with frequent parent re-renders (issue #5730). Splitting lets
-      // renderStyles' rulesEqual fast-path skip rebuildGroup when CSS is unchanged.
-      //
-      // globalStyle is included in render deps so HMR-induced module re-evaluation
-      // (which creates a new GlobalStyle instance) triggers effect re-run.
-      // For static rules, renderStyles exits early after the first injection
-      // (via hasNameForId check), so the extra dep is effectively free at runtime.
+      // Two effects: cleanup (removeStyles → rebuildGroup) only fires on
+      // unmount/sheet/globalStyle swap, not every render; dynamic globals
+      // would otherwise rebuild twice per render (issue #5730). Including
+      // globalStyle in deps lets HMR-replaced instances trigger re-injection.
       // eslint-disable-next-line react-hooks/exhaustive-deps
       const renderDeps = globalStyle.isStatic
         ? [instance, ssc.styleSheet, globalStyle]
-        : [instance, props, ssc.styleSheet, theme, ssc.stylis, globalStyle];
+        : [instance, props, ssc.styleSheet, theme, ssc.compiler, globalStyle];
 
       const prevGlobalStyleRef = React.useRef(globalStyle);
 
@@ -123,7 +92,7 @@ export default function createGlobalStyle<Props extends object>(
             prevGlobalStyleRef.current = globalStyle;
           }
 
-          renderStyles(instance, props, ssc.styleSheet, theme, ssc.stylis);
+          renderStyles(instance, props, ssc.styleSheet, theme, ssc.compiler);
         }
       }, renderDeps);
 
@@ -152,11 +121,11 @@ export default function createGlobalStyle<Props extends object>(
       if (css) {
         globalStyle.instanceRules.delete(instance);
 
-        // Dedup: static by componentId + stylis hash, dynamic by CSS string.
-        // Stylis hash ensures different SSM configs emit separate variants.
+        // Dedup: static by componentId + compiler hash, dynamic by CSS string.
+        // Compiler hash ensures different SSM configs emit separate variants.
         const emitted = getEmittedGlobalCSS ? getEmittedGlobalCSS() : null;
         if (emitted) {
-          const key = globalStyle.isStatic ? styledComponentId + ssc.stylis.hash : css;
+          const key = globalStyle.isStatic ? styledComponentId + ssc.compiler.hash : css;
           if (emitted.has(key)) return null;
           emitted.add(key);
         }
@@ -169,7 +138,7 @@ export default function createGlobalStyle<Props extends object>(
       }
     }
 
-    // Clean up server instance cache — no useLayoutEffect cleanup runs on the
+    // Clean up server instance cache; no useLayoutEffect cleanup runs on the
     // server, so instanceRules would grow unboundedly across SSR requests.
     if (__SERVER__ || ssc.styleSheet.server) {
       globalStyle.instanceRules.delete(instance);
@@ -179,28 +148,32 @@ export default function createGlobalStyle<Props extends object>(
   };
 
   function renderStyles(
-    instance: number,
+    instance: string,
     props: ExecutionProps,
     styleSheet: StyleSheet,
     theme: DefaultTheme | undefined,
-    stylis: Stringifier
+    compiler: Compiler
   ) {
     if (globalStyle.isStatic) {
       globalStyle.renderStyles(
         instance,
         STATIC_EXECUTION_CONTEXT as unknown as ExecutionContext & Props,
         styleSheet,
-        stylis
+        compiler
       );
     } else {
       const context = {
         ...props,
-        theme: determineTheme(props, theme, GlobalStyleComponent.defaultProps),
+        theme: determineTheme(props, theme),
       } as ExecutionContext & Props;
 
-      globalStyle.renderStyles(instance, context, styleSheet, stylis);
+      globalStyle.renderStyles(instance, context, styleSheet, compiler);
     }
   }
 
-  return React.memo(GlobalStyleComponent);
+  const memoized = React.memo(GlobalStyleComponent) as React.NamedExoticComponent<
+    ExecutionProps & Props
+  > & { styledComponentId: string };
+  memoized.styledComponentId = styledComponentId;
+  return memoized;
 }

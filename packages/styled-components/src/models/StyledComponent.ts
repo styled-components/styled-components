@@ -1,7 +1,8 @@
 import isPropValid from '@emotion/is-prop-valid';
 import React, { createElement, PropsWithoutRef, Ref } from 'react';
-import { IS_RSC, SC_ATTR, SC_VERSION, SPLITTER } from '../constants';
-import { getGroupForId } from '../sheet/GroupIDAllocator';
+import { SC_ATTR, SC_VERSION } from '../constants';
+import { IS_RSC } from '../utils/isRsc';
+import { groupForId } from '../sheet/GroupIDAllocator';
 import type StyleSheet from '../sheet';
 import type {
   AnyComponent,
@@ -11,16 +12,19 @@ import type {
   ExecutionContext,
   ExecutionProps,
   IStyledComponent,
+  Compiler,
   IStyledComponentFactory,
   IStyledStatics,
   OmitNever,
   RuleSet,
-  Stringifier,
   StyledOptions,
   WebTarget,
 } from '../types';
 import { checkDynamicCreation } from '../utils/checkDynamicCreation';
-import createWarnTooManyClasses from '../utils/createWarnTooManyClasses';
+import createWarnTooManyClasses, {
+  LIMIT as TOO_MANY_CLASSES_LIMIT,
+} from '../utils/createWarnTooManyClasses';
+import { fifoSet } from '../utils/fifoMap';
 import determineTheme from '../utils/determineTheme';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../utils/empties';
 import escape from '../utils/escape';
@@ -30,11 +34,11 @@ import hoist from '../utils/hoist';
 import isFunction from '../utils/isFunction';
 import isStyledComponent from '../utils/isStyledComponent';
 import isTag from '../utils/isTag';
-import { joinStrings, stripSplitter } from '../utils/joinStrings';
-import merge from '../utils/mixinDeep';
+import { joinRules, joinStrings, stripSplitter } from '../utils/joinStrings';
 import { createRSCCache } from '../utils/rscCache';
 import { setToString } from '../utils/setToString';
-import ComponentStyle, { getCompiledCSS } from './ComponentStyle';
+import shallowEqual from '../utils/shallowEqual';
+import WebStyle, { GeneratedStyle } from './WebStyle';
 import { useStyleSheetContext } from './StyleSheetManager';
 import { DefaultTheme, ThemeContext } from './ThemeProvider';
 
@@ -43,6 +47,38 @@ declare const __SERVER__: boolean;
 const hasOwn = Object.prototype.hasOwnProperty;
 
 const identifiers: { [key: string]: number } = {};
+
+/**
+ * Hoist excludelist: SC-specific statics are already copied explicitly
+ * above, so hoisting them again would stomp the wrapper's own values.
+ * Hoisted to module scope so we don't allocate a fresh `{...}` literal on
+ * every styled-component construction.
+ */
+/**
+ * Shared `toString` for styled components: returns `.styledComponentId` so
+ * `${StyledFoo}` interpolation resolves to the class selector. Defined at
+ * module scope so every styled component shares one function reference
+ * instead of allocating a fresh closure per construction.
+ */
+function styledToString(this: { styledComponentId: string }): string {
+  return '.' + this.styledComponentId;
+}
+
+const HOIST_EXCLUDE = {
+  attrs: true,
+  webStyle: true,
+  displayName: true,
+  foldedComponentIds: true,
+  shouldForwardProp: true,
+  styledComponentId: true,
+  target: true,
+} as const;
+
+/** Test-only: clear the per-displayName counter so component IDs stay stable
+ *  across tests. Not for production use. */
+export const resetIdentifiers = (): void => {
+  for (const k in identifiers) delete identifiers[k];
+};
 
 /* We depend on components having unique IDs */
 function generateId(
@@ -65,30 +101,13 @@ function generateId(
   return parentComponentId ? parentComponentId + '-' + componentId : componentId;
 }
 
-/**
- * Shallow-compare two context objects using a stored key count to avoid
- * a second iteration pass. Returns true if all own-property values match.
- */
-function shallowEqualContext(prev: object, next: object, prevKeyCount: number): boolean {
-  const a = prev as Record<string, unknown>;
-  const b = next as Record<string, unknown>;
-  let nextKeyCount = 0;
-  for (const key in b) {
-    if (hasOwn.call(b, key)) {
-      nextKeyCount++;
-      if (a[key] !== b[key]) return false;
-    }
-  }
-  return nextKeyCount === prevKeyCount;
-}
-
 function useInjectedStyle<T extends ExecutionContext>(
-  componentStyle: ComponentStyle,
+  webStyle: WebStyle,
   resolvedAttrs: T,
   styleSheet: StyleSheet,
-  stylis: Stringifier
+  compiler: Compiler
 ): string {
-  const className = componentStyle.generateAndInjectStyles(resolvedAttrs, styleSheet, stylis);
+  const className = webStyle.flush(resolvedAttrs, styleSheet, compiler);
 
   if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
     React.useDebugValue(className);
@@ -97,17 +116,38 @@ function useInjectedStyle<T extends ExecutionContext>(
   return className;
 }
 
-// Cached render inputs + style result: [prevProps, prevTheme, prevStyleSheet, prevStylis,
+/**
+ * RSC counterpart to `useInjectedStyle`. Runs `generate()` to produce the
+ * inheritance chain's compiled CSS without writing to the tag; registers
+ * each new class name so repeat renders of the same component/props skip
+ * compilation. Returns both the class name (for the element) and the
+ * generated levels (consumed by the inline <style> emission).
+ */
+function rscFlush<T extends ExecutionContext>(
+  webStyle: WebStyle,
+  resolvedAttrs: T,
+  styleSheet: StyleSheet,
+  compiler: Compiler
+): GeneratedStyle {
+  const generated = webStyle.generate(resolvedAttrs, styleSheet, compiler);
+  for (let i = 0; i < generated.levels.length; i++) {
+    const level = generated.levels[i];
+    if (level.isNew) styleSheet.registerName(level.componentId, level.name);
+  }
+  return generated;
+}
+
+// Cached render inputs + style result: [prevProps, prevTheme, prevStyleSheet, prevCompiler,
 // prevPropsKeyCount, cachedContext, cachedClassName]
 type RenderCache = [
   object, // prevProps
   DefaultTheme | undefined, // prevTheme
   StyleSheet, // prevStyleSheet
-  Stringifier, // prevStylis
+  Compiler, // prevCompiler
   number, // prevPropsKeyCount
   object, // cachedContext
   string, // cachedClassName
-  ComponentStyle, // prevComponentStyle (for HMR invalidation)
+  WebStyle, // prevWebStyle (for HMR invalidation)
 ];
 
 function resolveContext<Props extends BaseObject>(
@@ -135,10 +175,11 @@ function resolveContext<Props extends BaseObject>(
       } else if (key === 'style') {
         context.style = { ...context.style, ...(resolvedAttrDef[key] as React.CSSProperties) };
       } else if (!(key in props && (props as any)[key] === undefined)) {
-        // Apply attr value unless the user explicitly passed undefined for this prop,
-        // which signals intent to reset the value.
-        // @ts-expect-error attrs can dynamically add arbitrary properties
-        context[key] = resolvedAttrDef[key];
+        // Apply attr value unless the user explicitly passed undefined for this
+        // prop, which signals intent to reset the value. Cast at the
+        // assignment site since attrs intentionally add arbitrary keys to
+        // the resolved context.
+        (context as unknown as Dict<unknown>)[key] = (resolvedAttrDef as Dict<unknown>)[key];
       }
     }
   }
@@ -155,28 +196,27 @@ let seenUnknownProps: Set<string> | undefined;
 /** Per-render tracking of emitted class names and keyframe IDs for RSC dedup. */
 const getEmittedNames = createRSCCache(() => new Set<string>());
 
-/** Cache RegExp objects for :where() wrapping to avoid recompilation per render */
+/**
+ * Cache RegExp objects for :where() wrapping to avoid recompilation per
+ * render. Bounded with FIFO eviction at the same threshold the
+ * warn-too-many-classes machinery uses; without the cap, RSC SSR with
+ * unbounded class-name variation would leak a regex per unique class.
+ */
 const whereRegExpCache = new Map<string, RegExp>();
 function getWhereRegExp(name: string): RegExp {
   let re = whereRegExpCache.get(name);
   if (!re) {
     re = new RegExp('\\.' + name + '(?![a-zA-Z0-9_-])', 'g');
-    whereRegExpCache.set(name, re);
+    fifoSet(whereRegExpCache, name, re, TOO_MANY_CLASSES_LIMIT);
   }
   return re;
 }
 
-/** Wrap base-level CSS class selectors in :where() for zero specificity (RSC inheritance). */
-function wrapBaseInWhere(levelCss: string, componentId: string, styleSheet: StyleSheet): string {
-  const names = styleSheet.names.get(componentId);
-  if (names) {
-    for (const name of names) {
-      const re = getWhereRegExp(name);
-      re.lastIndex = 0;
-      levelCss = levelCss.replace(re, ':where(.' + name + ')');
-    }
-  }
-  return levelCss;
+/** Wrap a single level's class selector in :where() for zero specificity (RSC inheritance). */
+function wrapLevelInWhere(levelCss: string, name: string): string {
+  const re = getWhereRegExp(name);
+  re.lastIndex = 0;
+  return levelCss.replace(re, ':where(.' + name + ')');
 }
 
 function buildPropsForElement(
@@ -185,17 +225,22 @@ function buildPropsForElement(
   theme: DefaultTheme | undefined,
   shouldForwardProp: ((prop: string, el: WebTarget) => boolean) | undefined
 ): Dict<any> {
-  const propsForElement: Dict<any> = {};
+  const out: Dict<any> = {};
 
   for (const key in context) {
     if (context[key] === undefined) {
       // Omit undefined values from props passed to wrapped element.
-    } else if (key[0] === '$' || key === 'as' || (key === 'theme' && context.theme === theme)) {
+    } else if (
+      key[0] === '$' ||
+      key === 'as' ||
+      key === 'ref' || // React 19 ref-as-prop: the ref is re-attached explicitly below.
+      (key === 'theme' && context.theme === theme)
+    ) {
       // Omit transient props and execution props.
     } else if (key === 'forwardedAs') {
-      propsForElement.as = context.forwardedAs;
+      out.as = context.forwardedAs;
     } else if (!shouldForwardProp || shouldForwardProp(key, elementToBeCreated)) {
-      propsForElement[key] = context[key];
+      out[key] = context[key];
 
       if (
         !shouldForwardProp &&
@@ -213,18 +258,17 @@ function buildPropsForElement(
     }
   }
 
-  return propsForElement;
+  return out;
 }
 
-function useStyledComponentImpl<Props extends BaseObject>(
+function useImpl<Props extends BaseObject>(
   forwardedComponent: IStyledComponent<'web', Props>,
   props: ExecutionProps & Props,
   forwardedRef: Ref<Element>
 ) {
   const {
     attrs: componentAttrs,
-    componentStyle,
-    defaultProps,
+    webStyle,
     foldedComponentIds,
     styledComponentId,
     target,
@@ -238,19 +282,12 @@ function useStyledComponentImpl<Props extends BaseObject>(
     React.useDebugValue(styledComponentId);
   }
 
-  // NOTE: the non-hooks version only subscribes to this when !componentStyle.isStatic,
-  // but that'd be against the rules-of-hooks. We could be naughty and do it anyway as it
-  // should be an immutable value, but behave for now.
-  const theme =
-    determineTheme(props, contextTheme, defaultProps) || (IS_RSC ? undefined : EMPTY_OBJECT);
+  const theme = determineTheme(props, contextTheme) || (IS_RSC ? undefined : EMPTY_OBJECT);
 
   let context: React.HTMLAttributes<Element> & ExecutionContext & Props;
   let generatedClassName: string;
+  let generatedStyle: GeneratedStyle | null = null;
 
-  // Client-only render cache: skip resolveContext and generateAndInjectStyles
-  // when props+theme haven't changed. propsForElement is always rebuilt since
-  // it's mutated with className/ref after construction.
-  // __SERVER__ and IS_RSC are build/module-level constants for dead-code elimination.
   if (!__SERVER__ && !IS_RSC) {
     const renderCacheRef = React.useRef<RenderCache | null>(null);
     const prev = renderCacheRef.current;
@@ -259,15 +296,15 @@ function useStyledComponentImpl<Props extends BaseObject>(
       prev !== null &&
       prev[1] === theme &&
       prev[2] === ssc.styleSheet &&
-      prev[3] === ssc.stylis &&
-      prev[7] === componentStyle &&
-      shallowEqualContext(prev[0], props, prev[4])
+      prev[3] === ssc.compiler &&
+      prev[7] === webStyle &&
+      shallowEqual(prev[0], props, prev[4])
     ) {
       context = prev[5] as typeof context;
       generatedClassName = prev[6];
     } else {
       context = resolveContext<Props>(componentAttrs, props, theme);
-      generatedClassName = useInjectedStyle(componentStyle, context, ssc.styleSheet, ssc.stylis);
+      generatedClassName = useInjectedStyle(webStyle, context, ssc.styleSheet, ssc.compiler);
 
       let propsKeyCount = 0;
       for (const key in props) {
@@ -277,16 +314,24 @@ function useStyledComponentImpl<Props extends BaseObject>(
         props,
         theme,
         ssc.styleSheet,
-        ssc.stylis,
+        ssc.compiler,
         propsKeyCount,
         context,
         generatedClassName,
-        componentStyle,
+        webStyle,
       ];
     }
   } else {
     context = resolveContext<Props>(componentAttrs, props, theme);
-    generatedClassName = useInjectedStyle(componentStyle, context, ssc.styleSheet, ssc.stylis);
+    if (IS_RSC) {
+      generatedStyle = rscFlush(webStyle, context, ssc.styleSheet, ssc.compiler);
+      generatedClassName = generatedStyle.className;
+      if (process.env.NODE_ENV !== 'production' && React.useDebugValue) {
+        React.useDebugValue(generatedClassName);
+      }
+    } else {
+      generatedClassName = useInjectedStyle(webStyle, context, ssc.styleSheet, ssc.compiler);
+    }
   }
 
   if (process.env.NODE_ENV !== 'production' && forwardedComponent.warnTooManyClasses) {
@@ -294,12 +339,7 @@ function useStyledComponentImpl<Props extends BaseObject>(
   }
 
   const elementToBeCreated: WebTarget = context.as || target;
-  const propsForElement = buildPropsForElement(
-    context,
-    elementToBeCreated,
-    theme,
-    shouldForwardProp
-  );
+  const elementProps = buildPropsForElement(context, elementToBeCreated, theme, shouldForwardProp);
 
   let classString = joinStrings(foldedComponentIds, styledComponentId);
   if (generatedClassName) {
@@ -309,77 +349,49 @@ function useStyledComponentImpl<Props extends BaseObject>(
     classString += ' ' + context.className;
   }
 
-  propsForElement[
+  elementProps[
     isTag(elementToBeCreated) && elementToBeCreated.includes('-') ? 'class' : 'className'
   ] = classString;
 
   if (forwardedRef) {
-    propsForElement.ref = forwardedRef;
+    elementProps.ref = forwardedRef;
   }
 
-  const element = createElement(elementToBeCreated, propsForElement);
+  const element = createElement(elementToBeCreated, elementProps);
 
   // RSC mode: emit this component's CSS (and its inheritance chain + keyframes)
-  // as an inline <style> tag. No `precedence` — server component output isn't
+  // as an inline <style> tag. No `precedence`; server component output isn't
   // hydrated, so no mismatch. Inline body styles come after the registry's
   // <head> styles in source order, so extensions naturally win (#5672).
-  if (IS_RSC) {
+  if (IS_RSC && generatedStyle) {
     const emitted = getEmittedNames ? getEmittedNames() : null;
-
-    let newNames: string[] | null = null;
-    let totalNames = 0;
+    const levels = generatedStyle.levels;
+    const lastIdx = levels.length - 1;
     let css = '';
-    let usedCache = true;
 
-    let walk: ComponentStyle | null | undefined = componentStyle;
-    while (walk) {
-      const names = ssc.styleSheet.names.get(walk.componentId);
-      if (names) {
-        totalNames += names.size;
-        for (const name of names) {
-          if (!emitted || !emitted.has(name)) {
-            if (!newNames) newNames = [];
-            newNames.push(name);
-            if (emitted) emitted.add(name);
-          }
-        }
+    for (let i = 0; i < levels.length; i++) {
+      const level = levels[i];
+      if (emitted && emitted.has(level.name)) continue;
+      if (level.rules.length === 0) continue;
+
+      let levelCss = joinRules(level.rules);
+      if (i !== lastIdx) {
+        // Base levels in an inheritance chain are wrapped in :where() so their
+        // specificity is zero, letting any extension override without !important.
+        levelCss = wrapLevelInWhere(levelCss, level.name);
       }
-
-      if (newNames && usedCache) {
-        let levelCss = getCompiledCSS(walk, ssc.styleSheet);
-        if (levelCss === null) {
-          usedCache = false;
-        } else {
-          if (walk !== componentStyle) {
-            levelCss = wrapBaseInWhere(levelCss, walk.componentId, ssc.styleSheet);
-          }
-          css = levelCss + css;
-        }
-      }
-
-      walk = walk.baseStyle;
+      css += levelCss;
+      if (emitted) emitted.add(level.name);
     }
 
-    if (newNames && !usedCache) {
-      css = '';
-      const tag = ssc.styleSheet.getTag();
-      let cs: ComponentStyle | null | undefined = componentStyle;
-      while (cs) {
-        let levelCss = tag.getGroup(getGroupForId(cs.componentId));
-        if (levelCss && cs !== componentStyle) {
-          levelCss = wrapBaseInWhere(levelCss, cs.componentId, ssc.styleSheet);
-        }
-        css = levelCss + css;
-        cs = cs.baseStyle;
-      }
-    }
-
+    // Keyframes are tag-resident: flatten()'s keyframes.inject() writes them
+    // during generate(); read compiled CSS out of the group here.
     let kfCss = '';
     if (ssc.styleSheet.keyframeIds.size > 0) {
       const kfTag = ssc.styleSheet.getTag();
       for (const kfId of ssc.styleSheet.keyframeIds) {
         if (emitted && emitted.has(kfId)) continue;
-        const kfRules = kfTag.getGroup(getGroupForId(kfId));
+        const kfRules = kfTag.getGroup(groupForId(kfId));
         if (kfRules) {
           kfCss += kfRules;
           if (emitted) emitted.add(kfId);
@@ -387,29 +399,11 @@ function useStyledComponentImpl<Props extends BaseObject>(
       }
     }
 
-    if (css && emitted && newNames && newNames.length < totalNames) {
-      const rules = css.split(SPLITTER);
-      let filtered = '';
-      for (let i = 0; i < rules.length; i++) {
-        const rule = rules[i];
-        if (!rule) continue;
-        for (let j = 0; j < newNames.length; j++) {
-          const re = getWhereRegExp(newNames[j]);
-          re.lastIndex = 0;
-          if (re.test(rule)) {
-            filtered += rule + SPLITTER;
-            break;
-          }
-        }
-      }
-      css = filtered;
-    }
-
     const combined = stripSplitter(kfCss + css);
     if (combined) {
       const styleElement = React.createElement('style', {
         [SC_ATTR]: '',
-        key: 'sc-' + componentStyle.componentId,
+        key: 'sc-' + webStyle.componentId,
         children: combined,
       });
       return React.createElement(React.Fragment, null, styleElement, element);
@@ -466,36 +460,39 @@ function createStyledComponent<
     }
   }
 
-  const componentStyle = new ComponentStyle(
+  const webStyle = new WebStyle(
     rules,
     styledComponentId,
-    isTargetStyledComp ? (styledComponentTarget.componentStyle as ComponentStyle) : undefined
+    isTargetStyledComp ? styledComponentTarget.webStyle : undefined
   );
 
-  function forwardRefRender(
-    props: PropsWithoutRef<ExecutionProps & OuterProps>,
-    ref: Ref<Element>
-  ) {
-    return useStyledComponentImpl<OuterProps>(
+  /**
+   * React 19 ref-as-prop; no `React.forwardRef` wrapper. Wrapping in
+   * `React.memo` lets the parent's re-render skip this component entirely
+   * when its props are shallow-equal to the previous render — the hook
+   * calls, the per-instance render cache check, and React's reconciliation
+   * for the child subtree all sit out. The internal render-cache inside
+   * `useImpl` remains as a layered fallback for harder cases (different
+   * prop references with same values, theme/sheet shifts) that memo doesn't
+   * catch, and for components that always re-evaluate (e.g. dynamic-only).
+   */
+  const RenderInner: {
+    (props: ExecutionProps & OuterProps & { ref?: Ref<Element> }): React.JSX.Element;
+    displayName?: string;
+  } = props =>
+    useImpl<OuterProps>(
       WrappedStyledComponent,
       props as ExecutionProps & OuterProps,
-      ref
+      (props as { ref?: Ref<Element> }).ref as Ref<Element>
     );
-  }
+  RenderInner.displayName = displayName;
+  const RenderStyledComponent = React.memo(RenderInner) as unknown as typeof RenderInner;
+  RenderStyledComponent.displayName = displayName;
 
-  forwardRefRender.displayName = displayName;
-
-  /**
-   * forwardRef creates a new interim component, which we'll take advantage of
-   * instead of extending ParentComponent to create _another_ interim class
-   */
-  let WrappedStyledComponent = React.forwardRef(forwardRefRender) as unknown as IStyledComponent<
-    'web',
-    any
-  > &
+  let WrappedStyledComponent = RenderStyledComponent as unknown as IStyledComponent<'web', any> &
     Statics;
   WrappedStyledComponent.attrs = finalAttrs;
-  WrappedStyledComponent.componentStyle = componentStyle;
+  WrappedStyledComponent.webStyle = webStyle;
   WrappedStyledComponent.displayName = displayName;
   WrappedStyledComponent.shouldForwardProp = shouldForwardProp;
 
@@ -510,18 +507,6 @@ function createStyledComponent<
   // fold the underlying StyledComponent target up since we folded the styles
   WrappedStyledComponent.target = isTargetStyledComp ? styledComponentTarget.target : target;
 
-  Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
-    get() {
-      return this._foldedDefaultProps;
-    },
-
-    set(obj) {
-      this._foldedDefaultProps = isTargetStyledComp
-        ? merge({}, styledComponentTarget.defaultProps, obj)
-        : obj;
-    },
-  });
-
   if (process.env.NODE_ENV !== 'production') {
     checkDynamicCreation(displayName, styledComponentId);
 
@@ -531,7 +516,11 @@ function createStyledComponent<
     );
   }
 
-  setToString(WrappedStyledComponent, () => `.${WrappedStyledComponent.styledComponentId}`);
+  // Shared toString: reads `this.styledComponentId` so a single function
+  // serves every styled component instead of allocating a per-component
+  // closure. ${StyledFoo} interpolation calls toString() with the styled
+  // component as `this`, so the lookup binds correctly.
+  setToString(WrappedStyledComponent, styledToString);
 
   if (isCompositeComponent) {
     const compositeComponentTarget = target as AnyComponent;
@@ -539,16 +528,7 @@ function createStyledComponent<
     hoist<typeof WrappedStyledComponent, typeof compositeComponentTarget>(
       WrappedStyledComponent,
       compositeComponentTarget,
-      {
-        // all SC-specific things should not be hoisted
-        attrs: true,
-        componentStyle: true,
-        displayName: true,
-        foldedComponentIds: true,
-        shouldForwardProp: true,
-        styledComponentId: true,
-        target: true,
-      } as { [key in keyof OmitNever<IStyledStatics<'web', OuterProps>>]: true }
+      HOIST_EXCLUDE as { [key in keyof OmitNever<IStyledStatics<'web', OuterProps>>]: true }
     );
   }
 

@@ -7,10 +7,6 @@ export function joinStrings(a?: string | undefined, b?: string | undefined): str
   return a && b ? a + ' ' + b : a || b || '';
 }
 
-export function joinStringArray(arr: string[], sep?: string | undefined): string {
-  return arr.join(sep || '');
-}
-
 /** Join compiled CSS rules with the SC splitter delimiter. */
 export function joinRules(rules: string[]): string {
   let css = '';

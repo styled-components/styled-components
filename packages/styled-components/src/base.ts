@@ -9,15 +9,16 @@ import withTheme from './hoc/withTheme';
 /* Import hooks */
 import ServerStyleSheet from './models/ServerStyleSheet';
 import {
+  ICompilerContext,
   IStyleSheetContext,
   IStyleSheetManager,
-  IStylisContext,
   StyleSheetConsumer,
   StyleSheetContext,
   StyleSheetManager,
 } from './models/StyleSheetManager';
 /* Import components */
 import ThemeProvider, { ThemeConsumer, ThemeContext, useTheme } from './models/ThemeProvider';
+import extractCSS from './utils/extractCSS';
 import isStyledComponent from './utils/isStyledComponent';
 
 /* Warning if you've imported this file on React Native */
@@ -39,27 +40,25 @@ if (
   process.env.NODE_ENV !== 'test' &&
   typeof window !== 'undefined'
 ) {
-  // @ts-expect-error dynamic key not in window object
-  window[windowGlobalKey] ||= 0;
-
-  // @ts-expect-error dynamic key not in window object
-  if (window[windowGlobalKey] === 1) {
+  // Window doesn't model dynamic string-keyed globals; cast once at the
+  // boundary instead of suppressing the same error three times below.
+  const w = window as unknown as Record<string, number>;
+  w[windowGlobalKey] ||= 0;
+  if (w[windowGlobalKey] === 1) {
     console.warn(
       `It looks like there are several instances of 'styled-components' initialized in this application. This may cause dynamic styles to not render properly, errors during the rehydration process, a missing theme prop, and makes your application bigger without good reason.\n\nSee https://styled-components.com/docs/faqs#why-am-i-getting-a-warning-about-several-instances-of-module-on-the-page for more info.`
     );
   }
-
-  // @ts-expect-error dynamic key not in window object
-  window[windowGlobalKey] += 1;
+  w[windowGlobalKey] += 1;
 }
 
 /* Export everything */
 export * from './secretInternals';
 export { Attrs, DefaultTheme, Keyframes, ShouldForwardProp } from './types';
 export {
+  ICompilerContext,
   IStyleSheetContext,
   IStyleSheetManager,
-  IStylisContext,
   ServerStyleSheet,
   StyleSheetConsumer,
   StyleSheetContext,
@@ -70,6 +69,7 @@ export {
   createGlobalStyle,
   createTheme,
   css,
+  extractCSS,
   isStyledComponent,
   keyframes,
   useTheme,

@@ -1,23 +1,19 @@
 import type * as CSS from 'csstype';
-import React from 'react';
-import ComponentStyle from './models/ComponentStyle';
-import { DefaultTheme } from './models/ThemeProvider';
-import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
+import type React from 'react';
+import type WebStyle from './models/WebStyle';
+import type { DefaultTheme } from './models/ThemeProvider';
+import type { Resolver } from './native/transform/polyfills/resolvers';
+import type createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 import type { SupportedHTMLElements } from './utils/domElements';
 
-export { CSS, DefaultTheme, SupportedHTMLElements };
+export type { CSS, DefaultTheme, SupportedHTMLElements };
 
 export interface ExoticComponentWithDisplayName<
   P extends BaseObject = {},
 > extends React.ExoticComponent<P> {
-  defaultProps?: Partial<P> | undefined;
   displayName?: string | undefined;
 }
 
-/**
- * Use this type to disambiguate between a styled-component instance
- * and a StyleFunction or any other type of function.
- */
 export type StyledComponentBrand = { readonly _sc: symbol };
 
 export type BaseObject = {};
@@ -54,19 +50,7 @@ export interface StyledOptions<R extends Runtime, Props extends BaseObject> {
 
 export type Dict<T = any> = { [key: string]: T };
 
-/**
- * This type is intended for when data attributes are composed via
- * the `.attrs` API:
- *
- * ```tsx
- * styled.div.attrs<DataAttributes>({ 'data-testid': 'foo' })``
- * ```
- *
- * Would love to figure out how to support this natively without having to
- * manually compose the type, but haven't figured out a way to do so yet that
- * doesn't cause specificity loss (see `test/types.tsx` if you attempt to embed
- * `DataAttributes` directly in the `Attrs<>` type.)
- */
+/** Data-attributes helper for `.attrs<DataAttributes>(...)`. */
 export type DataAttributes = { [key: `data-${string}`]: any };
 
 export type ExecutionProps = {
@@ -85,12 +69,7 @@ export type ExecutionProps = {
   theme?: DefaultTheme | undefined;
 };
 
-/**
- * ExecutionProps but with `theme` narrowed from optional to required.
- *
- * Note: in RSC environments where ThemeProvider is a no-op,
- * `theme` will be `undefined` at runtime.
- */
+/** `theme` narrowed to required (still `undefined` at runtime in RSC). */
 export interface ExecutionContext extends ExecutionProps {
   theme: DefaultTheme;
 }
@@ -144,14 +123,49 @@ export interface Flattener<Props extends BaseObject> {
   ): Interpolation<Props>[];
 }
 
-export interface Stringifier {
-  (
+export interface Compiler {
+  hash: string;
+  /**
+   * String-input emit path. Used by callers that have a freshly-built CSS
+   * string and a parent selector — keyframes, global styles, and the rare
+   * fallback when a `RuleSet` has no construction-time `Source` attached.
+   *
+   * Wraps the input in `prefix + selector { css }`, runs `normalize +
+   * parser + emit-web` with the active plugin set + namespace, and returns
+   * the resulting rule strings ready for `insertRules`. Output is
+   * byte-identical to v6 stylis output for hash + SSR rehydration
+   * stability.
+   *
+   * `prefix` carries at-rule wrapping (e.g. `'@keyframes'` for keyframe
+   * registration). When both `selector` and `prefix` are empty the input
+   * is parsed unwrapped (used by `createGlobalStyle`).
+   */
+  compile: (
     css: string,
     selector?: string | undefined,
     prefix?: string | undefined,
     componentId?: string | undefined
-  ): string[];
-  hash: string;
+  ) => string[];
+  /**
+   * Source-input fast emit path. Walks the construction-time AST + filled
+   * interpolation values, skipping the per-render `normalize + parse`
+   * work `compile` performs against a freshly joined CSS string. Returns
+   * `null` only on shape bailouts the fast path doesn't yet cover; callers
+   * fall through to `compile` in that case.
+   *
+   * `fragments` is the parallel side table populated by
+   * `evaluateForFastPath` for slots that resolved to a `css\`...\`` fragment.
+   * Same plugin set, namespace, and decl/selector transforms feed through;
+   * output is byte-equal to `compile` by construction (same parser, same
+   * emitter).
+   */
+  emit: (
+    source: import('./parser/source').Source,
+    filled: ReadonlyArray<string>,
+    parentSelector: string,
+    componentId: string,
+    fragments?: ReadonlyArray<import('./parser/compile').FastPathFragment | null> | null
+  ) => string[] | null;
 }
 
 export interface ShouldForwardProp<R extends Runtime> {
@@ -168,20 +182,21 @@ export interface IStyledStatics<
   out R extends Runtime,
   in out OuterProps extends BaseObject,
 > extends CommonStatics<R, OuterProps> {
-  componentStyle: R extends 'web' ? ComponentStyle : never;
+  webStyle: R extends 'web' ? WebStyle : never;
   // this is here because we want the uppermost displayName retained in a folding scenario
   foldedComponentIds: R extends 'web' ? string : never;
-  inlineStyle: R extends 'native' ? InstanceType<IInlineStyleConstructor<OuterProps>> : never;
+  nativeStyle: R extends 'native' ? InstanceType<INativeStyleConstructor<OuterProps>> : never;
   target: StyledTarget<R>;
-  styledComponentId: R extends 'web' ? string : never;
+  // Both runtimes emit a unique string id. Web uses it for class chaining;
+  // native uses it so `${StyledComp}` interpolations into a css template
+  // produce a unique selector token (otherwise multi-component rules would
+  // collide on a single sentinel value).
+  styledComponentId: string;
   warnTooManyClasses?:
     | (R extends 'web' ? ReturnType<typeof createWarnTooManyClasses> : never)
     | undefined;
 }
 
-/**
- * Used by PolymorphicComponent to define prop override cascading order.
- */
 export type PolymorphicComponentProps<
   R extends Runtime,
   BaseProps extends BaseObject,
@@ -241,8 +256,7 @@ export interface PolymorphicComponent<
     }
   ): React.JSX.Element;
 
-  // Default overload (no `as`/`forwardedAs`). Avoids Substitute so ref callbacks
-  // get contextual typing even with spread props (#5687).
+  // Default overload: avoids Substitute for ref-callback typing under spread (#5687).
   (
     props: OverrideStyle<
       NoInfer<FastOmit<BaseProps, keyof ExecutionProps>> &
@@ -259,23 +273,15 @@ export interface IStyledComponentBase<
   in out Props extends BaseObject = BaseObject,
 >
   extends PolymorphicComponent<R, Props>, IStyledStatics<R, Props>, StyledComponentBrand {
-  defaultProps?: (ExecutionProps & Partial<Props>) | undefined;
   toString: () => string;
 }
 
-/**
- * Intersected with `string` so styled components can be used as computed
- * property keys in object styles: `{ [MyComponent]: { ... } }`.
- * The conditional `R extends 'web' ? string : {}` was removed to avoid
- * a type alias with a conditional — type aliases require full structural
- * comparison on every use, while this unconditional intersection is cheaper.
- */
+/** Intersected with `string` so styled components can serve as computed object keys. */
 export type IStyledComponent<
   R extends Runtime,
   Props extends BaseObject = BaseObject,
 > = IStyledComponentBase<R, Props> & string;
 
-// corresponds to createStyledComponent
 export interface IStyledComponentFactory<
   out R extends Runtime,
   in Target extends StyledTarget<R>,
@@ -289,13 +295,34 @@ export interface IStyledComponentFactory<
   ): IStyledComponent<R, Substitute<OuterProps, Props>> & OuterStatics & Statics;
 }
 
-export interface IInlineStyleConstructor<Props extends BaseObject> {
-  new (rules: RuleSet<Props>): IInlineStyle<Props>;
+export interface INativeStyleConstructor<Props extends BaseObject> {
+  new (rules: RuleSet<Props>): INativeStyle<Props>;
 }
 
-export interface IInlineStyle<Props extends BaseObject> {
+interface CompileOutput {
+  base: object;
+  conditional: Array<{
+    type: 'media' | 'container' | 'supports' | 'pseudo' | 'attr';
+    condition: string;
+    containerName?: string;
+    attribute?: string;
+    attrValue?: string;
+    styles: object;
+  }>;
+  keyframes: Array<{
+    name: string;
+    frames: Array<{ stops: string[]; decls: Dict<any>; resolvers?: Array<[string, Resolver]> }>;
+  }>;
+  /** Element-level props lifted from the style object (e.g. `numberOfLines`). */
+  specialCases?: Dict<any>;
+}
+
+export interface INativeStyle<Props extends BaseObject> {
   rules: RuleSet<Props>;
-  generateStyleObject(executionContext: ExecutionContext & Props): object;
+  fastEligible: boolean;
+  /** Set at construction; null when rules contain function interpolations. */
+  staticCompiled: CompileOutput | null;
+  compile(executionContext: ExecutionContext & Props): CompileOutput;
 }
 
 export type CSSProperties = CSS.Properties<number | (string & {})>;
@@ -362,9 +389,17 @@ export type Substitute<A extends BaseObject, B extends BaseObject> = keyof B ext
 /**
  * Makes keys in K optional while keeping all others required.
  * Used to make attrs-provided props optional on the final component.
+ *
+ * Single-pass formulation using key-remapping over `keyof P` —
+ * required keys (those NOT in K) keep their modifier; the K keys are
+ * spliced in from a separate mapped type with `?` applied. Avoids the
+ * `FastOmit<P, K> & Partial<Pick<P, K>>` form which builds an
+ * intermediate `Pick` type that can blow up TS's complexity budget on
+ * deeply-discriminated component prop unions (e.g. antd Button; see
+ * #5725).
  */
-export type MakeAttrsOptional<P extends BaseObject, K extends keyof any> = keyof K extends never
+export type MakeAttrsOptional<P extends BaseObject, K extends keyof any> = [K] extends [never]
   ? P
-  : FastOmit<P, K & keyof P> & Partial<Pick<P, K & keyof P>>;
+  : FastOmit<P, K & keyof P> & { [Key in Extract<keyof P, K>]?: P[Key] };
 
 export type InsertionTarget = HTMLElement | ShadowRoot;

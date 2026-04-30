@@ -1,5 +1,5 @@
 import React from 'react';
-import { AnyComponent } from '../types';
+import type { AnyComponent } from '../types';
 
 // copied from react-is
 const REACT_MEMO_TYPE = Symbol.for('react.memo');
@@ -26,6 +26,12 @@ const KNOWN_STATICS = {
   callee: true,
   arguments: true,
   arity: true,
+  // React identity markers; hoisting from an RSC reference target makes
+  // the wrapper look like the reference and React skips its body (#5672).
+  $$typeof: true,
+  $$id: true,
+  $$async: true,
+  $$bound: true,
 };
 
 const FORWARD_REF_STATICS = {
@@ -79,6 +85,7 @@ const getOwnPropertySymbols = Object.getOwnPropertySymbols;
 const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
 const getPrototypeOf = Object.getPrototypeOf;
 const objectPrototype = Object.prototype;
+const functionPrototype = Function.prototype;
 
 type ExcludeList = {
   [key: string]: true;
@@ -103,8 +110,16 @@ export default function hoistNonReactStatics<
   if (typeof sourceComponent !== 'string') {
     // don't hoist over string (html) components
 
+    // React 19 ref-as-prop means styled components are plain functions —
+    // `getPrototypeOf(fn)` returns Function.prototype, which has no statics
+    // worth hoisting (`length`/`name`/`apply`/`bind`/…). Skipping it avoids
+    // an extra pass through KNOWN_STATICS per styled-component creation.
     const inheritedComponent = getPrototypeOf(sourceComponent);
-    if (inheritedComponent && inheritedComponent !== objectPrototype) {
+    if (
+      inheritedComponent &&
+      inheritedComponent !== objectPrototype &&
+      inheritedComponent !== functionPrototype
+    ) {
       hoistNonReactStatics(targetComponent, inheritedComponent, excludelist);
     }
 
