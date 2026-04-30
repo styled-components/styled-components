@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Native Showcase",
+    "slug": "native-showcase",
+    "scheme": "native-showcase",
+    "version": "0.0.1",
+    "orientation": "default",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.styledcomponents.nativeshowcase",
+      "infoPlist": {
+        "ReactNativeReleaseLevel": "experimental"
+      }
+    },
+    "android": {
+      "package": "com.styledcomponents.nativeshowcase"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-router"]
+  }
+}
