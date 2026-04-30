@@ -19,6 +19,7 @@ update-dynamic-styles-trace.json
 .rollup.cache
 .build
 .next
+.expo
 *.tsbuildinfo
 **/next-env.d.ts
 **/dist-test

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "ios": "react-native run-ios --simulator='iPhone 17'",
-    "start": "react-native start",
+    "start": "react-native start --port 8083",
     "pods": "cd ios && bundle install && bundle exec pod install"
   },
   "dependencies": {
