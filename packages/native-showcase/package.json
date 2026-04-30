@@ -24,6 +24,7 @@
     "expo-splash-screen": "canary",
     "expo-status-bar": "canary",
     "expo-system-ui": "canary",
+    "p3-color": "workspace:*",
     "react": "19",
     "react-dom": "19",
     "react-native": "0.85.2",

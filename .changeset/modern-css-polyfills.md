@@ -20,8 +20,8 @@ const Card = styled.View`
 ```
 
 - `clamp(10px, 50%, 400px)` / `min(100px, 50vw)` / `max(200px, 100vh)` / `calc(100vw - 40px)` with any mix of static and runtime-resolvable arms.
-- `oklch(...)`, `oklab(...)`, `lch(...)`, `lab(...)` convert to sRGB hex for React Native's color parser.
-- `color-mix(in <space>, …)` resolves through the requested space: `srgb` mixes in display-space sRGB; `oklab`, `oklch`, `lab`, `lch` mix perceptually and convert back to sRGB for output.
+- `oklch(...)`, `oklab(...)`, `lch(...)`, `lab(...)` resolve to a color React Native can render. React Native's color parser is sRGB-only and does not support wide-gamut spaces (Display P3 and beyond) by default; out-of-gamut inputs are mapped down via a hue-preserving gamut-mapping algorithm rather than clipped per channel, so the rendered color stays as close as possible to what was written.
+- `color-mix(in <space>, …)` resolves through the requested space: `srgb` mixes in display-space sRGB; `oklab`, `oklch`, `lab`, `lch` mix perceptually and convert back to sRGB for output, with the same gamut-mapping fallback when the mixed result lands outside sRGB.
 - Viewport units `vw` / `vh` / `vmin` / `vmax` / `dvh` / `svh` / `lvh` scale to the current window dimensions.
 - Container query units `cqw` / `cqh` / `cqmin` / `cqmax` scale to the nearest ancestor container.
 - `light-dark(light, dark)` swaps based on OS appearance.

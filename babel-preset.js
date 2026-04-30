@@ -17,11 +17,7 @@ module.exports = () => ({
     '@babel/preset-react',
     '@babel/preset-typescript',
   ],
-  plugins: [
-    '@babel/plugin-transform-flow-strip-types',
-    ['@babel/plugin-proposal-object-rest-spread', { loose: true }],
-    ['@babel/plugin-proposal-class-properties', { loose: true }],
-  ].filter(Boolean),
+  plugins: ['@babel/plugin-transform-flow-strip-types'],
   overrides: [
     // Our own build uses `add-module-exports` so CJS consumers get the default
     // export at `require(...)` directly. RN's source assumes native ESM->CJS

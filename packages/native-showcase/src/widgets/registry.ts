@@ -46,9 +46,9 @@ export interface FidgetEntry {
 export const fidgets: ReadonlyArray<FidgetEntry> = [
   {
     slug: 'color-spaces-gallery',
-    title: 'oklch palette',
-    summary: 'Four-hue tonal palette in oklch, compiled to sRGB at transform time. Plus color-mix interpolation comparison across srgb / oklab / oklch.',
-    feature: 'oklch / color-mix',
+    title: 'oklch palette · sRGB vs P3',
+    summary: 'Four-hue oklch palette compiled to sRGB by the polyfill, paired with the same tokens rendered natively in Display-P3 via a tiny Expo module on iOS.',
+    feature: 'oklch / color-mix / P3',
     category: 'Color',
     Widget: ColorSpacesGallery,
   },

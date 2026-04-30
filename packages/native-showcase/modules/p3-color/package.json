@@ -1,0 +1,8 @@
+{
+  "name": "p3-color",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Local Expo module that renders a Display-P3 backgroundColor view (iOS-only). Used by the styled-components native showcase to compare wide-gamut output against the in-tree sRGB color polyfill.",
+  "main": "src/index.tsx",
+  "types": "src/index.tsx"
+}

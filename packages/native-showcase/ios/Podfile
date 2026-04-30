@@ -62,5 +62,19 @@ target 'NativeShowcase' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+
+    # ExpoModulesCore requires iOS 16.4. Several community pods still ship
+    # podspecs pinned to 15.1; importing ExpoModulesCore from them fails the
+    # Swift module-compatibility check. Bump every pod target to match the
+    # Podfile's platform.
+    deployment_target = (podfile_properties['ios.deploymentTarget'] || '16.4').to_s
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if current.nil? || Gem::Version.new(current) < Gem::Version.new(deployment_target)
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = deployment_target
+        end
+      end
+    end
   end
 end
